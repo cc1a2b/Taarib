@@ -1,0 +1,32 @@
+[package]
+name = "taarib-lawha"
+description = "لوحة تعريب — the glyph atlas: glyph sets collected by shaping real strings, shelf packing, exact-EDT signed distance fields, the glyph map, and runtime growth with rectangle eviction."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# Same reasoning as taarib-saff: the atlas is compiled inside Studio and grown
+# inside a game process, and neither of those is allowed to reach the machine
+# through this crate. Pages are produced as bytes; somebody else writes them.
+# `default-features` cannot be overridden on a workspace-inherited
+# dependency unless the root sets it too, and taarib-usus has no default
+# features to switch off — the `wajiha`/`mukhattatat` features are opt-in.
+taarib-usus = { workspace = true }
+taarib-saff = { workspace = true }
+
+etagere = { workspace = true }
+rustc-hash = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+# The glyph transport reports what it could not place — misplaced marks, kerning
+# pairs one correction could not serve — and a number nobody is told is a number
+# nobody acts on. Emitting it, not writing it: this crate still opens no file.
+tracing = { workspace = true }

@@ -1,0 +1,637 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/luba.json",
+  "title": "Luba",
+  "description": "A discovered game.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/LubaId",
+      "description": "Taarib's identity for this game."
+    },
+    "masadir": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/MasdarLuba"
+      },
+      "description": "Every launcher identity it is known by, in discovery order."
+    },
+    "ism": {
+      "type": "string",
+      "description": "The name as the launcher gives it, kept verbatim for display."
+    },
+    "jidhr": {
+      "type": "string",
+      "description": "The installation root."
+    },
+    "tanfidhi": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The executable Taarib will probe and launch, once it is known."
+    },
+    "hajm": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0,
+      "description": "Size on disk in bytes, as the launcher reports it."
+    },
+    "akhir_laab": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "When the user last played, RFC 3339, where the launcher records it."
+    },
+    "akhir_tahdith": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "When the launcher last updated the game, RFC 3339."
+    },
+    "bina": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BinaId"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The build currently installed."
+    },
+    "suwar": {
+      "$ref": "#/$defs/SuwarLuba",
+      "description": "Artwork and its extracted colour."
+    },
+    "beea": {
+      "$ref": "#/$defs/BeeatTawafuq",
+      "description": "The compatibility layer the game runs behind."
+    },
+    "mawjuda": {
+      "type": "boolean",
+      "description": "Whether the game is still present on disk. An uninstalled game is kept rather than deleted, so its patches, projects and backups survive a reinstall."
+    },
+    "mukhfiya": {
+      "type": "boolean",
+      "description": "Hidden from the library by the user."
+    }
+  },
+  "required": [
+    "id",
+    "masadir",
+    "ism",
+    "jidhr",
+    "hajm",
+    "suwar",
+    "beea",
+    "mawjuda",
+    "mukhfiya"
+  ],
+  "$defs": {
+    "LubaId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Taarib's own stable identity for a game."
+    },
+    "MasdarLuba": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "steam"
+            },
+            "muarrif": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "Steam, by application identifier."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "epic"
+            },
+            "muarrif": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "The Epic Games Store, by catalogue item identifier."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "gog"
+            },
+            "muarrif": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "GOG, by product identifier."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "ea"
+            },
+            "muarrif": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "The EA app, by content identifier."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "ubisoft"
+            },
+            "muarrif": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "Ubisoft Connect, by installation identifier."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "battle_net"
+            },
+            "muarrif": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "Battle.net, by product code."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "xbox"
+            },
+            "muarrif": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "The Microsoft Store, by package family name."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "itch"
+            },
+            "muarrif": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "itch.io, by game identifier."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "amazon"
+            },
+            "muarrif": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "Amazon Games, by the product ASIN its own catalogue keys on."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "rockstar"
+            },
+            "muarrif": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "The Rockstar Games Launcher, by title identifier."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "riot"
+            },
+            "muarrif": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "The Riot client, by product slug — `valorant`, `league_of_legends`."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "heroic"
+            },
+            "muarrif": {
+              "$ref": "#/$defs/MasdarLuba"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "Heroic, which manages games that belong to another store; the wrapped source is the real identity, and Heroic is how it is installed."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "lutris"
+            },
+            "muarrif": {
+              "$ref": "#/$defs/MasdarLutris"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "Lutris, which does the same for a much wider set of sources, including ones with no store behind them at all."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "bottles"
+            },
+            "muarrif": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "Bottles, which manages Wine prefixes rather than games; the identity is the bottle's name and the program's path inside it."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "legendary"
+            },
+            "muarrif": {
+              "$ref": "#/$defs/MasdarLuba"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "Legendary, the command-line Epic client. Its catalogue is Epic's, so the wrapped source is always an [`MasdarLuba::Epic`]."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "playnite"
+            },
+            "muarrif": {
+              "$ref": "#/$defs/MasdarPlaynite"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "Playnite, a library manager that aggregates every other launcher."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manassa": {
+              "type": "string",
+              "const": "yadawi"
+            },
+            "muarrif": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "manassa",
+            "muarrif"
+          ],
+          "description": "A game the user pointed at directly, identified by a hash of its executable path so that the identity is stable across restarts."
+        }
+      ],
+      "description": "Where a game came from, keeping that launcher's own identifier intact."
+    },
+    "MasdarLutris": {
+      "type": "object",
+      "properties": {
+        "silaa": {
+          "type": "string",
+          "description": "Lutris's own slug for the entry, always present."
+        },
+        "asl": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MasdarLuba"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The store behind it, when Lutris records one."
+        }
+      },
+      "required": [
+        "silaa"
+      ],
+      "description": "What a Lutris entry actually is."
+    },
+    "MasdarPlaynite": {
+      "type": "object",
+      "properties": {
+        "muarrif": {
+          "type": "string",
+          "description": "Playnite's own GUID for the entry, always present."
+        },
+        "asl": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MasdarLuba"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The store behind it, when Playnite's plugin recorded one."
+        }
+      },
+      "required": [
+        "muarrif"
+      ],
+      "description": "What a Playnite entry actually is."
+    },
+    "BinaId": {
+      "type": "object",
+      "properties": {
+        "manassa": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The launcher's own build identifier, where the launcher has one. Steam reports a numeric `buildid`; GOG reports a build hash; several launchers report nothing at all, which is exactly why the fingerprint exists."
+        },
+        "basma": {
+          "$ref": "#/$defs/Basma",
+          "description": "The fingerprint of the text-bearing files."
+        },
+        "adad_malaffat": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How many files went into the fingerprint, so that a fingerprint computed over a partially downloaded installation is recognisable as one."
+        },
+        "waqt": {
+          "type": "string",
+          "description": "When the fingerprint was computed, RFC 3339."
+        }
+      },
+      "required": [
+        "basma",
+        "adad_malaffat",
+        "waqt"
+      ],
+      "description": "Which build of a game is installed."
+    },
+    "Basma": {
+      "type": "string",
+      "description": "A 256-bit content fingerprint.",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "SuwarLuba": {
+      "type": "object",
+      "properties": {
+        "ghilaf": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The vertical cover, which is what the library grid shows."
+        },
+        "batl": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The wide banner, which is what the detail header shows."
+        },
+        "shiar": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The small logo overlaid on the banner."
+        },
+        "lawn": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LawnBariz"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The dominant colour extracted from the cover at import time."
+        }
+      },
+      "description": "A game's artwork, stored content-addressed in the cache."
+    },
+    "LawnBariz": {
+      "type": "object",
+      "properties": {
+        "ahmar": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Red channel."
+        },
+        "akhdar": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Green channel."
+        },
+        "azraq": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Blue channel."
+        }
+      },
+      "required": [
+        "ahmar",
+        "akhdar",
+        "azraq"
+      ],
+      "description": "A colour taken from a game's own cover artwork."
+    },
+    "BeeatTawafuq": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "asli"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "The game is native to the operating system it runs on."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "isdar": {
+              "type": "string",
+              "description": "The Proton build name, as Steam reports it."
+            },
+            "beea": {
+              "type": "string",
+              "description": "The Wine prefix root — the directory containing `drive_c`."
+            },
+            "naw": {
+              "type": "string",
+              "const": "proton"
+            }
+          },
+          "required": [
+            "naw",
+            "isdar",
+            "beea"
+          ],
+          "description": "A Windows game running under Proton on Linux."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "isdar": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The Wine build, when it can be determined."
+            },
+            "beea": {
+              "type": "string",
+              "description": "The Wine prefix root."
+            },
+            "naw": {
+              "type": "string",
+              "const": "wine"
+            }
+          },
+          "required": [
+            "naw",
+            "beea"
+          ],
+          "description": "A Windows game running under plain Wine, Lutris, Bottles or Heroic."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "rosetta"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "An Intel game running under Rosetta 2 on Apple Silicon."
+        }
+      ],
+      "description": "What a game process is running behind."
+    }
+  }
+}

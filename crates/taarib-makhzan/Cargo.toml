@@ -1,0 +1,25 @@
+[package]
+name = "taarib-makhzan"
+description = "مخزن تعريب — the local store: a WAL-mode SQLite pool, the hijra migration runner, and the ledgers every other crate reads and writes through."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+
+rusqlite = { workspace = true }
+r2d2 = { workspace = true }
+r2d2_sqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/hukm_lugha_rasmiya.json",
+  "title": "HukmLughaRasmiya",
+  "description": "Whether a game already speaks Arabic, and everything that says so.",
+  "type": "object",
+  "properties": {
+    "wajiha": {
+      "$ref": "#/$defs/TughtiyaLugha",
+      "description": "Whether the menus, settings and prompts are Arabic."
+    },
+    "nusus": {
+      "$ref": "#/$defs/TughtiyaLugha",
+      "description": "Whether the dialogue and narration are Arabic."
+    },
+    "thiqa": {
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "How much the verdict is worth, 0 to 100."
+    },
+    "dalail": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DaleelLugha"
+      },
+      "description": "Everything that was observed, heaviest first."
+    },
+    "majhul": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What could not be seen, one sentence each."
+    },
+    "lughat_muallana": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The launcher's declared languages, verbatim, in the launcher's own spelling and sorted."
+    },
+    "isdar_fahs": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "The version of the detector that produced this. A verdict from an older detector is recomputed rather than trusted."
+    },
+    "waqt": {
+      "type": "string",
+      "description": "When it was decided, RFC 3339."
+    }
+  },
+  "required": [
+    "wajiha",
+    "nusus",
+    "thiqa",
+    "dalail",
+    "majhul",
+    "lughat_muallana",
+    "isdar_fahs",
+    "waqt"
+  ],
+  "$defs": {
+    "TughtiyaLugha": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "muakkada",
+          "description": "Evidence says this half is Arabic."
+        },
+        {
+          "type": "string",
+          "const": "ghaiba",
+          "description": "Evidence says this half is not Arabic."
+        },
+        {
+          "type": "string",
+          "const": "majhula",
+          "description": "Nothing seen either way."
+        }
+      ],
+      "description": "Whether one half of a game — its interface, or its subtitles — already reaches the player in Arabic."
+    },
+    "DaleelLugha": {
+      "type": "object",
+      "properties": {
+        "naw": {
+          "$ref": "#/$defs/NawDaleelLugha",
+          "description": "How it was observed."
+        },
+        "wasf": {
+          "type": "string",
+          "description": "What was observed, stated plainly."
+        },
+        "mawqi": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Where — a store key, a path inside a container, a path under the install root."
+        },
+        "wazn": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "How much this observation is worth, 0 to 100."
+        }
+      },
+      "required": [
+        "naw",
+        "wasf",
+        "wazn"
+      ],
+      "description": "One observation behind an official-Arabic verdict."
+    },
+    "NawDaleelLugha": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "lughat_matjar",
+          "description": "The launcher's own declared language metadata — Steam's `supported_languages`, an `AppxManifest` resource list, and their kin."
+        },
+        {
+          "type": "string",
+          "const": "mawrid_muharrik",
+          "description": "A compiled localization resource the engine ships: an Unreal `.locres` under a culture directory, a Unity string table carrying a locale code. The strongest of the three, because it is the game's own files rather than a store listing somebody may have forgotten to update."
+        },
+        {
+          "type": "string",
+          "const": "masar_thaqafa",
+          "description": "A locale-named file or directory in the game's own data, recognised by its shape rather than opened."
+        }
+      ],
+      "description": "How a fact about a game's official Arabic was learned."
+    }
+  }
+}

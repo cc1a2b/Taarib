@@ -1,0 +1,95 @@
+[package]
+name = "taarib-studio"
+description = "استوديو تعريب — the desktop application: the window, the managed state, and the command surface the React interface is generated from."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "taarib-studio"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+taarib-usus = { workspace = true, features = ["wajiha"] }
+taarib-mustalahat = { workspace = true, features = ["wajiha"] }
+# The library screen is the one place the whole discovery pipeline is run:
+# scan every launcher, merge duplicates by content fingerprint, and gate on
+# whether each game is actually installed. The command returns rows; nothing
+# about how they look is decided here.
+taarib-kashf = { workspace = true }
+# The library, the build, the capability report and the installation record.
+taarib-makhzan = { workspace = true }
+# The engine probe behind the detail screen's tier card.
+taarib-muharrik = { workspace = true }
+# The patch listings, the build match, the ranking and the download.
+taarib-mustawda = { workspace = true }
+# Verification, removal and the running-game check.
+taarib-tathbeet = { workspace = true }
+# The anti-cheat scan and the first-run acknowledgement.
+taarib-aman = { workspace = true }
+# The compiled owner key the one-click install verifies against, and the
+# Ed25519 verifier it hands the pipeline.
+taarib-khatm = { workspace = true }
+# Reading a downloaded package's manifest to bind the install.
+taarib-ruqaa = { workspace = true }
+# The binding type the package manifest deserializes into.
+taarib-tarqee = { workspace = true }
+# The workspace opens and rewrites the translation project on disk, and its
+# Unity reader is half of the official-Arabic probe.
+taarib-istikhraj = { workspace = true, features = ["wajiha"] }
+# The other half: `.pak` and IoStore containers, read for the cultures the
+# publisher compiled into the game. `taarib-kashf` states why this cannot be its
+# own dependency — unreal depends on muharrik depends on kashf — and hands the
+# reader in through the `FahisMawarid` port instead. The studio is where that
+# port can be implemented, because nothing depends on the studio.
+taarib-muhawwil-unreal = { workspace = true }
+# Memory, glossary, quality flags, and the machine-translation batch runner.
+taarib-tarjama = { workspace = true, features = ["wajiha"] }
+# The real layout engine behind the workspace's live preview.
+taarib-saff = { workspace = true }
+# Merge, history, assignments, and the shared-bundle importer.
+taarib-warsha = { workspace = true }
+# The anchored-comment type the workspace surfaces.
+taarib-taqdeem = { workspace = true }
+# The overlay tier's vocabulary: regions, the reading history, and the
+# disclosure record the overlay screen reads and writes.
+taarib-tabaqa = { workspace = true }
+# Application self-update: the signed channel, the verified download, the swap.
+taarib-tahdith = { workspace = true }
+# The one-button automatic pipeline: probe, extract, translate, lay out,
+# compile, sign, install. The command layer drives it and owns none of it.
+taarib-tilqai = { workspace = true }
+# Minting the local editor identity, once.
+uuid = { workspace = true }
+# Fingerprinting compiled and signed packages for the local listing index.
+blake3 = { workspace = true }
+# RFC 3339 rendering of filesystem timestamps on the diagnostics screen.
+jiff = { workspace = true }
+# Verifying the bundled component tree against its staging manifest.
+sha2 = { workspace = true }
+# The self-update channel's signed manifest and its resumable download.
+reqwest = { workspace = true }
+# The uninstaller's confirmation dialog, for the path with no Studio window.
+rfd = { workspace = true }
+# The workspace's mutex: no poisoning, so no unwrap at every lock.
+parking_lot = { workspace = true }
+tauri = { workspace = true }
+tauri-plugin-single-instance = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+specta = { workspace = true }
+specta-typescript = { workspace = true }
+tauri-specta = { workspace = true }

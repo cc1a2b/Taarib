@@ -1,0 +1,225 @@
+{
+  "mukhattat": 1,
+  "isdar": "1.0.0",
+  "wasf": "The fonts Taarib ships. Every entry is validated against the Arabic OpenType requirement in Decision 6 before it is allowed to shape a single string. A family's sifat lists only the tags taarib-saff's shaping plan actually drives (SIFAT_WASL_KAMILA in wasl.rs, plus clig), and only those every face of that family declares: a face-count of one is what a font picker can promise, and a tag no shaper asks for tells a reader nothing. The values were read out of the pinned files, not copied from an upstream feature list.",
+  "sifat_matluba": ["init", "medi", "fina", "rlig", "mark"],
+  "nitaqat_matluba": ["U+0600-06FF", "U+0750-077F", "U+FE70-FEFF"],
+  "khutut": [
+    {
+      "muarrif": "IBMPlexSansArabic",
+      "aila": "IBM Plex Sans Arabic",
+      "sinf": "sans",
+      "istikhdam": ["wajiha"],
+      "mutaghayyir": false,
+      "awzan": [400, 500, 600],
+      "milaffat": [
+        { "wazn": 400, "namat": "asli", "malaf": "sans/IBMPlexSansArabic-Regular.ttf" },
+        { "wazn": 500, "namat": "asli", "malaf": "sans/IBMPlexSansArabic-Medium.ttf" },
+        { "wazn": 600, "namat": "asli", "malaf": "sans/IBMPlexSansArabic-SemiBold.ttf" }
+      ],
+      "sifat": ["ccmp", "locl", "fina", "medi", "init", "rlig", "calt", "liga", "kern", "mark", "mkmk"],
+      "nitaqat": ["U+0000-00FF", "U+0600-06FF", "U+0750-077F", "U+08A0-08FF", "U+FB50-FDFF", "U+FE70-FEFF", "U+2000-206F"],
+      "lughat": ["ar", "fa", "ur"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "sans/IBMPlex-OFL.txt",
+      "masdar": "https://github.com/IBM/plex",
+      "isdar_khatt": "1.005",
+      "sabab": "Drawn for interface work rather than display: low-contrast strokes, open counters, and a Latin companion that shares its vertical metrics, so a mixed Arabic-Latin line does not visibly step."
+    },
+    {
+      "muarrif": "IBMPlexSans",
+      "aila": "IBM Plex Sans",
+      "sinf": "latin",
+      "istikhdam": ["wajiha"],
+      "mutaghayyir": false,
+      "awzan": [400, 500, 600],
+      "milaffat": [
+        { "wazn": 400, "namat": "asli", "malaf": "latin/IBMPlexSans-Regular.ttf" },
+        { "wazn": 400, "namat": "maail", "malaf": "latin/IBMPlexSans-Italic.ttf" },
+        { "wazn": 500, "namat": "asli", "malaf": "latin/IBMPlexSans-Medium.ttf" },
+        { "wazn": 600, "namat": "asli", "malaf": "latin/IBMPlexSans-SemiBold.ttf" }
+      ],
+      "sifat": ["ccmp", "locl", "liga", "kern", "mark"],
+      "nitaqat": ["U+0000-00FF", "U+0100-017F", "U+2000-206F", "U+20A0-20BF"],
+      "lughat": ["en"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "latin/IBMPlex-OFL.txt",
+      "masdar": "https://github.com/IBM/plex",
+      "isdar_khatt": "3.005",
+      "sabab": "The Latin companion of the interface Arabic. Shares metrics, weight axis and design language, which is what keeps a bilingual interface from looking assembled from two products."
+    },
+    {
+      "muarrif": "IBMPlexMono",
+      "aila": "IBM Plex Mono",
+      "sinf": "mono",
+      "istikhdam": ["wajiha"],
+      "mutaghayyir": false,
+      "awzan": [400, 500],
+      "milaffat": [
+        { "wazn": 400, "namat": "asli", "malaf": "latin/IBMPlexMono-Regular.ttf" },
+        { "wazn": 500, "namat": "asli", "malaf": "latin/IBMPlexMono-Medium.ttf" }
+      ],
+      "sifat": ["ccmp", "locl", "mark"],
+      "nitaqat": ["U+0000-00FF", "U+2000-206F"],
+      "lughat": ["en"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "latin/IBMPlex-OFL.txt",
+      "masdar": "https://github.com/IBM/plex",
+      "isdar_khatt": "2.004",
+      "sabab": "Identifiers, paths, hashes and build numbers. A slashed zero and unambiguous 1/l/I matter when a user is reading a build id back to a maintainer."
+    },
+    {
+      "muarrif": "NotoNaskhArabic",
+      "aila": "Noto Naskh Arabic",
+      "sinf": "naskh",
+      "istikhdam": ["luba"],
+      "mutaghayyir": true,
+      "mihwar": [{ "ism": "wght", "min": 400, "aqsa": 700, "iftiradi": 400 }],
+      "awzan": [400, 500, 600, 700],
+      "milaffat": [
+        { "wazn": 400, "namat": "asli", "malaf": "naskh/NotoNaskhArabic[wght].ttf" }
+      ],
+      "sifat": ["ccmp", "locl", "fina", "medi", "init", "rlig", "liga", "kern", "mark", "mkmk"],
+      "nitaqat": ["U+0000-00FF", "U+0600-06FF", "U+0750-077F", "U+0870-089F", "U+08A0-08FF", "U+FB50-FDFF", "U+FE70-FEFF"],
+      "lughat": ["ar", "fa", "ur"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "naskh/OFL.txt",
+      "masdar": "https://github.com/notofonts/arabic",
+      "isdar_khatt": "2.021",
+      "sabab": "The default for game text. Complete mark and mark-to-mark positioning, and the broadest Arabic-script coverage bundled: it and Noto Sans Arabic are the only two faces here that carry the whole of U+0600-06FF together with the Arabic Supplement and both Extended blocks, which makes it the safe choice when a translator has not chosen a font themselves. It attaches marks but does not attach letters: it carries no GPOS cursive lookups, so a joining stroke is drawn by the glyph rather than positioned by the font."
+    },
+    {
+      "muarrif": "Amiri",
+      "aila": "Amiri",
+      "sinf": "naskh",
+      "istikhdam": ["luba"],
+      "mutaghayyir": false,
+      "awzan": [400, 700],
+      "milaffat": [
+        { "wazn": 400, "namat": "asli", "malaf": "naskh/Amiri-Regular.ttf" },
+        { "wazn": 400, "namat": "maail", "malaf": "naskh/Amiri-Italic.ttf" },
+        { "wazn": 700, "namat": "asli", "malaf": "naskh/Amiri-Bold.ttf" },
+        { "wazn": 700, "namat": "maail", "malaf": "naskh/Amiri-BoldItalic.ttf" }
+      ],
+      "sifat": ["ccmp", "locl", "fina", "medi", "init", "rlig", "liga", "curs", "kern", "mark", "mkmk"],
+      "nitaqat": ["U+0000-00FF", "U+0600-06FF", "U+0750-077F", "U+08A0-08FF", "U+FB50-FDFF", "U+FE70-FEFF"],
+      "lughat": ["ar", "fa", "ur"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "naskh/Amiri-OFL.txt",
+      "masdar": "https://github.com/aliftype/amiri",
+      "isdar_khatt": "1.002",
+      "sabab": "A revival of a classical Naskh with a substitution table deep enough to demonstrate what real shaping does: hundreds of required ligatures and stylistic-set forms that no presentation-form pipeline can reach. It is the only bundled family with GPOS cursive attachment, which is what lets a descending stroke meet the next letter at the height the calligraphy wants rather than at a fixed baseline. It is also the family that best suits narrative and dialogue text."
+    },
+    {
+      "muarrif": "NotoKufiArabic",
+      "aila": "Noto Kufi Arabic",
+      "sinf": "kufi",
+      "istikhdam": ["luba"],
+      "mutaghayyir": true,
+      "mihwar": [{ "ism": "wght", "min": 100, "aqsa": 900, "iftiradi": 400 }],
+      "awzan": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "milaffat": [
+        { "wazn": 400, "namat": "asli", "malaf": "kufi/NotoKufiArabic[wght].ttf" }
+      ],
+      "sifat": ["ccmp", "locl", "fina", "medi", "init", "rlig", "liga", "kern", "mark", "mkmk"],
+      "nitaqat": ["U+0000-00FF", "U+0600-06FF", "U+0750-077F", "U+08A0-08FF", "U+FE70-FEFF"],
+      "lughat": ["ar", "fa", "ur"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "kufi/OFL.txt",
+      "masdar": "https://github.com/notofonts/arabic",
+      "isdar_khatt": "2.109",
+      "sabab": "Geometric, low-contrast, and legible at the small sizes interface chrome uses. The heavy weights hold up in a game's headings where a Naskh would look ornamental."
+    },
+    {
+      "muarrif": "ReemKufi",
+      "aila": "Reem Kufi",
+      "sinf": "kufi",
+      "istikhdam": ["luba"],
+      "mutaghayyir": true,
+      "mihwar": [{ "ism": "wght", "min": 400, "aqsa": 700, "iftiradi": 400 }],
+      "awzan": [400, 500, 600, 700],
+      "milaffat": [
+        { "wazn": 400, "namat": "asli", "malaf": "kufi/ReemKufi[wght].ttf" }
+      ],
+      "sifat": ["ccmp", "locl", "fina", "medi", "init", "rlig", "rclt", "kern", "mark", "mkmk"],
+      "nitaqat": ["U+0000-00FF", "U+0600-06FF"],
+      "lughat": ["ar"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "kufi/ReemKufi-OFL.txt",
+      "masdar": "https://github.com/aliftype/reem-kufi",
+      "isdar_khatt": "2.000",
+      "sabab": "A modern Kufi that actually joins — the four joining forms plus a required-contextual pass — rather than the disconnected letterforms most display Kufis ship, which means it can carry a full sentence and not only a title. The 2.000 redesign carries 118 of the 256 codepoints in the core Arabic block and nothing outside it — no Supplement, no presentation forms — so it is a display face and never a fallback."
+    },
+    {
+      "muarrif": "NotoSansArabic",
+      "aila": "Noto Sans Arabic",
+      "sinf": "sans",
+      "istikhdam": ["luba"],
+      "mutaghayyir": true,
+      "mihwar": [
+        { "ism": "wght", "min": 100, "aqsa": 900, "iftiradi": 400 },
+        { "ism": "wdth", "min": 62.5, "aqsa": 100.0, "iftiradi": 100.0 }
+      ],
+      "awzan": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "milaffat": [
+        { "wazn": 400, "namat": "asli", "malaf": "sans/NotoSansArabic[wdth,wght].ttf" }
+      ],
+      "sifat": ["ccmp", "locl", "fina", "medi", "init", "rlig", "liga", "kern", "mark", "mkmk"],
+      "nitaqat": ["U+0000-00FF", "U+0600-06FF", "U+0750-077F", "U+0870-089F", "U+08A0-08FF", "U+FB50-FDFF", "U+FE70-FEFF"],
+      "lughat": ["ar", "fa", "ur"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "sans/OFL.txt",
+      "masdar": "https://github.com/notofonts/arabic",
+      "isdar_khatt": "2.012",
+      "sabab": "The width axis is the reason this family is bundled: an interface string that overflows its container can be condensed by the font's own designed narrow instance instead of being scaled, which keeps stroke weight consistent with the rest of the screen."
+    },
+    {
+      "muarrif": "Cairo",
+      "aila": "Cairo",
+      "sinf": "sans",
+      "istikhdam": ["luba"],
+      "mutaghayyir": true,
+      "mihwar": [
+        { "ism": "wght", "min": 200, "aqsa": 1000, "iftiradi": 400 },
+        { "ism": "slnt", "min": -11.0, "aqsa": 11.0, "iftiradi": 0.0 }
+      ],
+      "awzan": [200, 300, 400, 500, 600, 700, 800, 900, 1000],
+      "milaffat": [
+        { "wazn": 400, "namat": "asli", "malaf": "sans/Cairo[slnt,wght].ttf" }
+      ],
+      "sifat": ["ccmp", "locl", "fina", "medi", "init", "rlig", "kern", "mark", "mkmk"],
+      "nitaqat": ["U+0000-00FF", "U+0600-06FF", "U+FE70-FEFF"],
+      "lughat": ["ar"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "sans/Cairo-OFL.txt",
+      "masdar": "https://github.com/Gue3bara/Cairo",
+      "isdar_khatt": "3.130",
+      "sabab": "A slant axis and a weight range wide enough to imitate a game's own display treatment, which matters when a title screen was designed around a heavy Latin face. The slant runs both ways, -11 to +11 degrees, so it can also lean with a right-to-left line rather than against it."
+    },
+    {
+      "muarrif": "Tajawal",
+      "aila": "Tajawal",
+      "sinf": "sans",
+      "istikhdam": ["luba"],
+      "mutaghayyir": false,
+      "awzan": [200, 300, 400, 500, 700, 800, 900],
+      "milaffat": [
+        { "wazn": 200, "namat": "asli", "malaf": "sans/Tajawal-ExtraLight.ttf" },
+        { "wazn": 300, "namat": "asli", "malaf": "sans/Tajawal-Light.ttf" },
+        { "wazn": 400, "namat": "asli", "malaf": "sans/Tajawal-Regular.ttf" },
+        { "wazn": 500, "namat": "asli", "malaf": "sans/Tajawal-Medium.ttf" },
+        { "wazn": 700, "namat": "asli", "malaf": "sans/Tajawal-Bold.ttf" },
+        { "wazn": 800, "namat": "asli", "malaf": "sans/Tajawal-ExtraBold.ttf" },
+        { "wazn": 900, "namat": "asli", "malaf": "sans/Tajawal-Black.ttf" }
+      ],
+      "sifat": ["ccmp", "fina", "medi", "init", "rlig", "liga", "kern", "mark", "mkmk"],
+      "nitaqat": ["U+0000-00FF", "U+0600-06FF", "U+FE70-FEFF"],
+      "lughat": ["ar"],
+      "rukhsa": "OFL-1.1",
+      "malaf_rukhsa": "sans/Tajawal-OFL.txt",
+      "masdar": "https://github.com/google/fonts/tree/main/ofl/tajawal",
+      "isdar_khatt": "1.700",
+      "sabab": "Short ascenders and a large x-height equivalent, which is what lets Arabic sit inside interface boxes that were laid out for Latin without the first line of a wrapped paragraph colliding with the box above it."
+    }
+  ]
+}

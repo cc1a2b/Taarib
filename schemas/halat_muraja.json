@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/halat_muraja.json",
+  "title": "HalatMuraja",
+  "description": "Where a translation stands.",
+  "oneOf": [
+    {
+      "type": "string",
+      "const": "lam_tutarjam",
+      "description": "No translation yet."
+    },
+    {
+      "type": "string",
+      "const": "tarjama_aaliya",
+      "description": "A machine produced it and no human has read it."
+    },
+    {
+      "type": "string",
+      "const": "musawwada",
+      "description": "A human wrote or edited it and has not marked it finished."
+    },
+    {
+      "type": "string",
+      "const": "lil_muraja",
+      "description": "Flagged as wanting a second pair of eyes."
+    },
+    {
+      "type": "string",
+      "const": "muakkada",
+      "description": "A human read it and accepted it."
+    },
+    {
+      "type": "string",
+      "const": "marfuda",
+      "description": "A human read it and rejected it."
+    }
+  ]
+}

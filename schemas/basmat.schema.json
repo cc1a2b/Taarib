@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/basmat.schema.json",
+  "title": "Basmat",
+  "description": "The IL2CPP signature database: byte patterns keyed by engine version range, text-package version range, architecture and platform, shipped as data so that supporting a new game build is a change to a file rather than a rebuild of a plugin that lives inside somebody's game directory. Unlike the rest of this directory this file is written by hand, because what it describes is an asset read by the Unity IL2CPP adapter (unity/Taarib.Unity.Il2cpp/Basmat) rather than a Rust vocabulary type; it is the contract that file and its reader share, and it is validated in CI against assets/basmat/basmat.json.",
+  "type": "object",
+  "properties": {
+    "mukhattat": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The schema version this file is written to. Read before any other field and refused outright when it is newer than the reading build, because the fields an older build cannot see are the ones a newer schema would have added to constrain a pattern, and a pattern read with its constraint silently dropped is how the wrong function gets detoured."
+    },
+    "isdar": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "The database's own version, independent of the plugin's. Quoted in diagnostics so a bug report says which data produced a resolution."
+    },
+    "wasf": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What this database is, for whoever opens the file first."
+    },
+    "madakhil": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/MadkhalBasmat"
+      },
+      "description": "Every entry. An empty list is valid and means rung three is unavailable rather than broken."
+    }
+  },
+  "required": [
+    "mukhattat",
+    "isdar",
+    "madakhil"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "MadkhalBasmat": {
+      "type": "object",
+      "properties": {
+        "muarrif": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "maxLength": 96,
+          "description": "This entry's identifier, unique across the file. Appears in every log line and bug report a pattern from this entry produces, so it is chosen to be findable by search: engine range, package range, platform and architecture, in that order."
+        },
+        "mada_muharrik": {
+          "$ref": "#/$defs/MadaIsdar",
+          "description": "The engine version range this entry applies to."
+        },
+        "mada_nusus": {
+          "$ref": "#/$defs/MadaIsdar",
+          "description": "The text-package version range this entry applies to. Written * when the pattern does not depend on it, which is also the only form that applies to a game whose package version could not be read."
+        },
+        "binya": {
+          "$ref": "#/$defs/Binya",
+          "description": "The architecture these patterns were taken from."
+        },
+        "minassa": {
+          "$ref": "#/$defs/Minassa",
+          "description": "The platform these patterns were taken from. Part of the key rather than a note, because the same engine version compiled by MSVC and by Clang emits different prologues for the same function."
+        },
+        "wahda": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "maxLength": 128,
+          "description": "The module the patterns are searched in, with its extension. GameAssembly.dll for everything IL2CPP compiled."
+        },
+        "mulahazat": {
+          "type": "string",
+          "description": "Anything a reader of this entry needs to know: where the builds came from, what is still unverified, what a future contributor should measure."
+        },
+        "ahdaf": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/HadafBasmat"
+          },
+          "description": "The targets this entry knows patterns for."
+        }
+      },
+      "required": [
+        "muarrif",
+        "mada_muharrik",
+        "mada_nusus",
+        "binya",
+        "minassa",
+        "wahda",
+        "ahdaf"
+      ],
+      "additionalProperties": false,
+      "description": "One entry: the four-part key, the module its patterns live in, and the targets it covers."
+    },
+    "HadafBasmat": {
+      "type": "object",
+      "properties": {
+        "miftah": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_]*$",
+          "maxLength": 96,
+          "description": "The key this target is looked up by, and the same string the adapter's resolution target carries in HadafHall.MiftahBasma. Lower case with underscores, because it is quoted in log lines and bug reports where a mixed-case name invites a transcription error."
+        },
+        "wasf": {
+          "type": "string",
+          "description": "The method the key stands for, fully qualified, for a human reading the file."
+        },
+        "badail": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/BadilBasma"
+          },
+          "description": "The patterns for this target, in the order they are tried. Append rather than insert: a variant's position in this list is its number, and that number appears in bug reports which stay readable only if it keeps meaning the same pattern."
+        }
+      },
+      "required": [
+        "miftah",
+        "badail"
+      ],
+      "additionalProperties": false,
+      "description": "One target inside one entry: a key and the patterns that might find it."
+    },
+    "BadilBasma": {
+      "type": "object",
+      "properties": {
+        "namat": {
+          "$ref": "#/$defs/NassNamat",
+          "description": "The byte pattern."
+        },
+        "izaha": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096,
+          "description": "The displacement from a match to the target's entry point, frequently negative because a pattern usually anchors on something distinctive a few bytes inside the function rather than on a prologue thousands of other functions share. Bounded because an offset larger than this is a typo, and a typo applied would resolve an address inside an unrelated function that then passes every predicate."
+        },
+        "shurut": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SharkTahaqquq"
+          },
+          "description": "What the resolved address must satisfy. Omitted or empty means the three defaults: inside the executable image, aligned as the architecture requires, and opening with bytes that look like a function prologue."
+        },
+        "masdar": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The game and build this pattern was read out of, named exactly enough that somebody else could obtain the same binary and check it."
+        },
+        "muhaqqaq": {
+          "type": "boolean",
+          "description": "Whether this pattern has been confirmed against a real binary of the build named in masdar. False is the honest default and does not withhold the pattern: an unverified pattern still has to match uniquely and pass every predicate before anything is detoured, so shipping one costs at worst a rung that declines. The flag exists so a reviewer, a release checklist and a diagnostics bundle can all tell a measurement from a claim."
+        },
+        "mulahazat": {
+          "type": "string",
+          "description": "What the author needed a reader to know: which instruction the anchor is, what was wildcarded and why, what still needs measuring."
+        }
+      },
+      "required": [
+        "namat",
+        "masdar",
+        "muhaqqaq"
+      ],
+      "additionalProperties": false,
+      "description": "One pattern for one target, with its offset, its predicates and its provenance."
+    },
+    "SharkTahaqquq": {
+      "type": "object",
+      "properties": {
+        "naw": {
+          "$ref": "#/$defs/NawShart",
+          "description": "Which check."
+        },
+        "izaha": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096,
+          "description": "The displacement from the resolved address, for the kinds that read bytes. Ignored by the others."
+        },
+        "qeema": {
+          "$ref": "#/$defs/NassNamat",
+          "description": "The bytes expected, or excluded, at that displacement. Required by bayt_ind_izaha and lays_bayt_ind_izaha, and refused for the other kinds, because a value that is silently ignored is a check its author believes is running."
+        }
+      },
+      "required": [
+        "naw"
+      ],
+      "additionalProperties": false,
+      "description": "One condition a resolved address must satisfy before anything is detoured."
+    },
+    "NawShart": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "qism_tanfidhi",
+          "description": "The address lies inside the module's executable image. Catches a negative offset that walked off the front of the section and an anchor near the end that walked off the back."
+        },
+        {
+          "type": "string",
+          "const": "muhadhah",
+          "description": "The address satisfies the architecture's entry-point alignment. Mandatory on ARM64, where an unaligned branch target faults."
+        },
+        {
+          "type": "string",
+          "const": "muqaddima",
+          "description": "The bytes at the address open like a function for this architecture. What separates a match inside a function from a match at one."
+        },
+        {
+          "type": "string",
+          "const": "bayt_ind_izaha",
+          "description": "Named bytes are present at a fixed displacement from the address. For a target whose distinguishing feature is out of the anchor's reach."
+        },
+        {
+          "type": "string",
+          "const": "lays_bayt_ind_izaha",
+          "description": "Named bytes are absent at a fixed displacement. For excluding a known decoy whose prologue is identical and which differs a few instructions later."
+        }
+      ],
+      "description": "What kind of check one validation predicate performs."
+    },
+    "NassNamat": {
+      "type": "string",
+      "pattern": "^(?=.*[0-9A-Fa-f]{2})(?:[0-9A-Fa-f]{2}|\\?\\?|\\?)(?: +(?:[0-9A-Fa-f]{2}|\\?\\?|\\?))+$",
+      "maxLength": 512,
+      "description": "A byte pattern in the conventional IDA form: two-digit hexadecimal bytes and whole-byte wildcards, separated by spaces, as in '48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 20'. Both ?? and ? mean one whole byte; a nibble wildcard such as 4? is not supported, because it costs a shift and two masks on every byte of every window of a forty-megabyte scan to express a precision no prologue has ever needed. At least two bytes, and at least one of them fixed: a pattern of nothing but wildcards matches at every address in the module and identifies nothing."
+    },
+    "MadaIsdar": {
+      "type": "string",
+      "pattern": "^(?:\\*|=?[0-9]{1,6}(?:\\.[0-9]{1,6}){0,2}(?:[abfpc][0-9]{1,6}(?:c[0-9]{1,6})?)?|[\\[(] *(?:[0-9]{1,6}(?:\\.[0-9]{1,6}){0,2}(?:[abfpc][0-9]{1,6}(?:c[0-9]{1,6})?)?)? *, *(?:[0-9]{1,6}(?:\\.[0-9]{1,6}){0,2}(?:[abfpc][0-9]{1,6}(?:c[0-9]{1,6})?)?)? *[\\])])$",
+      "maxLength": 64,
+      "description": "A version range. Four forms: '*' for every version; '=2021.3.16f1' or a bare '2021.3.16f1' for one exact version; and the bracket form '[2021.3, 2023.1)' where '[' and ']' include a bound and '(' and ')' exclude it, with either end left empty for no limit — '(, 2019.4]' and '[2021.3,)'. A bound written with fewer than three components denotes every version beginning with it, and the bracket decides whether that set is in or out: '[2021.3, 2023.1)' holds every 2021.3.x through every 2023.0.x and no 2023.1.x at all. Unity's stage letters order a < b < f = c < p, and Unity 6 renumbered to 6000.x, so ranges are compared numerically per component and never as text."
+    },
+    "Binya": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "x86",
+          "description": "32-bit x86. Still shipped by a surprising number of titles."
+        },
+        {
+          "type": "string",
+          "const": "x8664",
+          "description": "64-bit x86."
+        },
+        {
+          "type": "string",
+          "const": "aarch64",
+          "description": "64-bit ARM: Apple Silicon, Windows on ARM, Android, handhelds."
+        }
+      ],
+      "description": "A processor architecture. The same values Mimariya uses in muharrik.json, so an engine identification and a signature entry cannot disagree about what x8664 means."
+    },
+    "Minassa": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "windows",
+          "description": "Windows."
+        },
+        {
+          "type": "string",
+          "const": "linux",
+          "description": "Linux, including native Steam Deck builds."
+        },
+        {
+          "type": "string",
+          "const": "mac",
+          "description": "macOS."
+        },
+        {
+          "type": "string",
+          "const": "android",
+          "description": "Android."
+        }
+      ],
+      "description": "An operating system a pattern was taken from."
+    }
+  }
+}

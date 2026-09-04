@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/alam_jawda.json",
+  "title": "AlamJawda",
+  "description": "Something wrong, or possibly wrong, with a translation.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "ard": {
+          "type": "number",
+          "format": "float",
+          "description": "Measured width of the translation, in the game's pixels."
+        },
+        "mutah": {
+          "type": "number",
+          "format": "float",
+          "description": "Width available."
+        },
+        "hajm": {
+          "type": "number",
+          "format": "float",
+          "description": "The size it was measured at."
+        },
+        "naw": {
+          "type": "string",
+          "const": "khatar_tajawuz"
+        }
+      },
+      "required": [
+        "naw",
+        "ard",
+        "mutah",
+        "hajm"
+      ],
+      "description": "The translation is wider than the space it has."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "adad": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How many Latin words remain."
+        },
+        "naw": {
+          "type": "string",
+          "const": "nass_latini_mutabaqqi"
+        }
+      },
+      "required": [
+        "naw",
+        "adad"
+      ],
+      "description": "Latin text survives inside an otherwise Arabic translation, which is usually an untranslated fragment rather than an intentional name."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "mustalah": {
+          "type": "string",
+          "description": "The source term."
+        },
+        "mutawaqqa": {
+          "type": "string",
+          "description": "The canonical Arabic it should have used."
+        },
+        "naw": {
+          "type": "string",
+          "const": "mustalah_mukhtalif"
+        }
+      },
+      "required": [
+        "naw",
+        "mustalah",
+        "mutawaqqa"
+      ],
+      "description": "A glossary term was translated inconsistently."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "mafqud": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The atoms that are missing or damaged."
+        },
+        "naw": {
+          "type": "string",
+          "const": "nasq_maksur"
+        }
+      },
+      "required": [
+        "naw",
+        "mafqud"
+      ],
+      "description": "A placeholder or markup span was lost, duplicated, or corrupted."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "qeema": {
+          "type": "number",
+          "format": "float",
+          "description": "Confidence, 0.0 to 1.0."
+        },
+        "naw": {
+          "type": "string",
+          "const": "thiqa_munkhafida"
+        }
+      },
+      "required": [
+        "naw",
+        "qeema"
+      ],
+      "description": "The provider reported low confidence in this translation."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "nisba": {
+          "type": "number",
+          "format": "float",
+          "description": "Target length divided by source length."
+        },
+        "naw": {
+          "type": "string",
+          "const": "nisba_shadha"
+        }
+      },
+      "required": [
+        "naw",
+        "nisba"
+      ],
+      "description": "The translation is suspiciously longer or shorter than its source."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "naw": {
+          "type": "string",
+          "const": "farigh"
+        }
+      },
+      "required": [
+        "naw"
+      ],
+      "description": "The target is empty while the source is not."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "akhar": {
+          "$ref": "#/$defs/NassId",
+          "description": "The other string."
+        },
+        "naw": {
+          "type": "string",
+          "const": "tarjama_mutanaqida"
+        }
+      },
+      "required": [
+        "naw",
+        "akhar"
+      ],
+      "description": "Two identical source strings were translated differently, which players notice immediately when both appear on the same screen."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "naw": {
+          "type": "string",
+          "const": "aaliya_bila_muraja"
+        }
+      },
+      "required": [
+        "naw"
+      ],
+      "description": "A machine produced this translation and no human has read it yet."
+    }
+  ],
+  "$defs": {
+    "NassId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "A string's identity."
+    }
+  }
+}

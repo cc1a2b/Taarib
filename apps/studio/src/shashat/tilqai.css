@@ -1,0 +1,784 @@
+/* ==========================================================================
+   شاشة التعريب التلقائي — the run screen.
+
+   Tokens only, logical properties only, elevation by luminance and hairline.
+
+   Two textures, on purpose. The main column groups its content into panels,
+   because a stage list, a reading report and a verdict are genuinely separate
+   things and the eye needs the boundary. The side rail has no panel at all —
+   one hairline along its leading edge and nothing else — so the figures read as
+   a margin note beside the run rather than as a third box competing with it.
+   The anchor at the top is not a panel either: a heading, two quiet lines and
+   the one action, separated from the body by a single rule.
+   ========================================================================== */
+
+.tilqai {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100%;
+  background-color: var(--sath-0);
+}
+
+/* --- the top strip --------------------------------------------------------- */
+
+.tilqai__shareet-alawi {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tilqai__raji {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.tilqai__raji:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.tilqai__fasl {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+/* --- the scrolling body ---------------------------------------------------- */
+
+.tilqai__jism {
+  min-block-size: 0;
+  padding: var(--misafa-24);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-24);
+}
+
+/* --- the anchor ------------------------------------------------------------
+   No panel. The game, the tier, the one sentence about what this produces, and
+   the single action — separated from everything below it by one rule, which is
+   the only boundary that actually exists here. */
+
+.tilqai__mirsa {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-20);
+  padding-block-end: var(--misafa-20);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* The header ratio every launcher caches, so the picture is shown whole. The
+   width is structural rather than typographic — it sets the height of the whole
+   anchor band — which is why it is a figure here and not a scale step, exactly
+   as the game screen's own cover is. */
+.tilqai__ghilaf {
+  flex: none;
+  inline-size: 132px;
+  aspect-ratio: 460 / 215;
+  object-fit: cover;
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.tilqai__ghilaf--faragh {
+  display: block;
+}
+
+.tilqai__mirsa-nass {
+  flex: 1;
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--misafa-4);
+  align-content: center;
+}
+
+.tilqai__fawq {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.tilqai__ism {
+  font-size: var(--qiyas-6);
+  line-height: var(--irtifa-6);
+  font-weight: var(--wazn-bariz);
+  color: var(--nass-1);
+  text-wrap: balance;
+}
+
+/* The tier is the one fact in the anchor that carries the accent, and it
+   carries it as a rule rather than as coloured text: a coloured line of prose
+   next to a coloured button is two accents arguing. */
+.tilqai__tabaqa {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+}
+
+.tilqai__tabaqa::before {
+  content: '';
+  flex: none;
+  inline-size: var(--samk-hadd-barz);
+  block-size: var(--misafa-12);
+  background-color: var(--tamyeez);
+}
+
+.tilqai__jawda-satr {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.tilqai__mirsa-afal {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+/* --- the two columns ------------------------------------------------------
+   34ch is a text measure, like the 40ch on the game screen and the 56ch every
+   paragraph in the product is held to: the rail carries a paragraph as well as
+   figures, and `--ard-haql` is the measure of a control, not of prose. */
+
+.tilqai__amida,
+.tilqai__haykal-amida {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 34ch);
+  gap: var(--misafa-32);
+  align-items: start;
+}
+
+.tilqai__raisi {
+  display: grid;
+  gap: var(--misafa-24);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.tilqai__janib {
+  display: grid;
+  gap: var(--misafa-24);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+/* The one face with no rail: a verdict that could not be computed has no
+   figures and no result, so the column takes the whole measure rather than
+   leaving a reserved gutter beside an error. */
+.tilqai__amida--mufrad {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 900px) {
+  .tilqai__amida,
+  .tilqai__haykal-amida {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- panels ---------------------------------------------------------------
+   Every vertical step inside a panel is the grid gap, so nothing here carries a
+   margin and a section cannot drift out of rhythm by gaining one. */
+
+.tilqai__qism {
+  display: grid;
+  gap: var(--misafa-12);
+  align-content: start;
+  padding: var(--misafa-20);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.tilqai__qism--khatar {
+  border-inline-start: var(--samk-hadd-barz) solid var(--khatar);
+}
+
+.tilqai__qism--tanbeeh {
+  border-inline-start: var(--samk-hadd-barz) solid var(--tanbeeh);
+}
+
+.tilqai__qism--najah {
+  border-inline-start: var(--samk-hadd-barz) solid var(--najah);
+}
+
+.tilqai__raas-qism {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--misafa-12);
+}
+
+.tilqai__unwan {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.tilqai__unwan-farii {
+  margin-block-start: var(--misafa-4);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-3);
+}
+
+.tilqai__adad-marahil {
+  flex: none;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- prose ---------------------------------------------------------------- */
+
+.tilqai__natija {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.tilqai__nass {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* The quality statement. Stated as a fact in the strongest text colour rather
+   than coloured as a warning: it is not a problem with the result, it is what
+   the result is. */
+.tilqai__jawda {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+/* The next step on a route that is not this one — the capture route's single
+   instruction. It takes the accent because it is the thing to do next. */
+.tilqai__khutwa {
+  padding-inline-start: var(--misafa-12);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tamyeez);
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.tilqai__qarar {
+  margin-block-start: var(--misafa-4);
+  padding-block-start: var(--misafa-12);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+/* The failure code, when a run's own failure is reported inside a panel rather
+   than inside a `.halat` block — a run does not fail by rejecting a command, so
+   it has no error block to sit in. The parts and their weights are the family's,
+   because a code leading a failure is the product's rule and this would
+   otherwise be the one place it is not. */
+.tilqai__qism .halat__ramz {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  min-inline-size: 0;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.tilqai__qism .halat__ramz > svg {
+  flex: none;
+  color: var(--khatar);
+}
+
+.tilqai__qism .halat__ramz > .mono-ltr {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.tilqai__hudud {
+  display: grid;
+  gap: var(--misafa-6);
+}
+
+.tilqai__hudud li {
+  position: relative;
+  padding-inline-start: var(--misafa-16);
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+}
+
+.tilqai__hudud li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: var(--misafa-8);
+  inline-size: var(--misafa-6);
+  block-size: var(--misafa-6);
+  border-radius: 50%;
+  background-color: var(--tanbeeh);
+}
+
+.tilqai__ilgha-nass {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+.tilqai__afal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-8);
+}
+
+/* Busy without `disabled`, so keyboard focus is not dropped mid-run; the guard
+   is in the click handler, exactly as on the game screen. */
+.tilqai .zir[aria-disabled='true'] {
+  cursor: progress;
+}
+
+/* Refused, not busy. `progress` above is right for a control that is mid-run
+   and wrong for one that is off because this build cannot drive the game's
+   engine at all — and those are exactly the buttons that name their reason with
+   `aria-describedby`, so the two are told apart by the thing that already
+   distinguishes them rather than by a second class on the element. */
+.tilqai .zir[aria-disabled='true'][aria-describedby] {
+  cursor: not-allowed;
+}
+
+/* --- the band the resume offer lives in ------------------------------------ */
+
+.tilqai__band {
+  display: grid;
+  gap: var(--misafa-12);
+  padding: var(--misafa-16) var(--misafa-20);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.tilqai__band--tanbeeh {
+  border-inline-start: var(--samk-hadd-barz) solid var(--tanbeeh);
+}
+
+.tilqai__band-unwan {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+/* --- the stages -----------------------------------------------------------
+   Three columns: the marker, what the stage is, and how far through it is. The
+   bar is a fourth row spanning the last two columns, so it starts under the
+   stage's name and ends under its count rather than under the marker.
+
+   The markers are joined by a hairline through their own column, and the
+   segment above a finished stage takes the finished colour — which is what
+   makes five rows read as one run rather than as five separate facts. */
+
+.tilqai__marahil {
+  display: grid;
+  gap: var(--misafa-16);
+}
+
+.tilqai__marhala {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) max-content;
+  column-gap: var(--misafa-12);
+  row-gap: var(--misafa-8);
+  align-items: start;
+}
+
+.tilqai__marhala::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: calc((var(--misafa-12) - var(--samk-hadd)) / 2);
+  inset-block-start: calc(var(--misafa-4) + var(--misafa-12));
+  inset-block-end: calc(-1 * var(--misafa-16));
+  inline-size: var(--samk-hadd);
+  background-color: var(--hadd);
+}
+
+.tilqai__marhala--tammat::before {
+  background-color: var(--najah);
+}
+
+.tilqai__marhala--akhira::before {
+  content: none;
+}
+
+.tilqai__alama {
+  grid-column: 1;
+  grid-row: 1;
+  margin-block-start: var(--misafa-4);
+  inline-size: var(--misafa-12);
+  block-size: var(--misafa-12);
+  border-radius: 50%;
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd-qawi);
+}
+
+/* The running stage is the only lit thing in the list. The ring is an outline
+   rather than a shadow: a glow around a status dot is decoration, and this has
+   to read as the one row that is moving. */
+.tilqai__marhala--jariya .tilqai__alama {
+  background-color: var(--tamyeez);
+  border-color: var(--tamyeez);
+  outline: var(--samk-hadd-barz) solid var(--tamyeez-khafit);
+  outline-offset: var(--samk-hadd-barz);
+}
+
+/* A run the user came back to is stopped on a stage, and that stage still reads
+   as the running one. Hollow rather than lit, so the list says where it got to
+   without claiming that anything is moving. */
+.tilqai__marahil--waqifa .tilqai__marhala--jariya .tilqai__alama {
+  background-color: var(--sath-0);
+  border-color: var(--tamyeez);
+  outline: none;
+}
+
+.tilqai__marhala--tammat .tilqai__alama {
+  background-color: var(--najah);
+  border-color: var(--najah);
+}
+
+.tilqai__marhala--fashilat .tilqai__alama {
+  background-color: var(--khatar);
+  border-color: var(--khatar);
+}
+
+.tilqai__marhala-nass {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  gap: var(--misafa-4);
+  min-inline-size: 0;
+}
+
+.tilqai__marhala-ism {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+}
+
+.tilqai__marhala--jariya .tilqai__marhala-ism {
+  color: var(--nass-1);
+}
+
+.tilqai__marhala--muntazira .tilqai__marhala-ism {
+  color: var(--nass-3);
+}
+
+.tilqai__marhala-amal {
+  max-inline-size: 60ch;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+/* `.mono-ltr` fixes the run's internal order by forcing `direction: ltr`, which
+   also drags its alignment to the physical left — stranding a file name in the
+   middle of a wide row instead of starting it where the Arabic above it starts.
+   `end` resolves against the element's own direction, so it lands the run back
+   on the row's leading edge without a physical property anywhere. */
+.tilqai__marhala-tafsil,
+.tilqai__sabab-mawdu {
+  text-align: end;
+}
+
+.tilqai__marhala-tafsil {
+  color: var(--nass-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tilqai__marhala-adad {
+  grid-column: 3;
+  grid-row: 1;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  text-align: end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tilqai__marhala--jariya .tilqai__marhala-adad {
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.tilqai__marhala--muntazira .tilqai__marhala-adad {
+  color: var(--nass-3);
+}
+
+.tilqai__marhala-hala {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+/* --- the two meters -------------------------------------------------------
+   One idiom, two uses: a stage's own count and the money against its ceiling.
+   Both are two hairlines tall, both are square, and both are drawn only where
+   there is a real denominator behind them. */
+
+.tilqai__shareet-taqaddum {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  block-size: var(--samk-hadd-barz);
+  background-color: var(--sath-3);
+  border-radius: var(--nisf-hadd);
+  overflow: hidden;
+}
+
+.tilqai__shareet-malu,
+.tilqai__miqyas-malu {
+  display: block;
+  block-size: 100%;
+  background-color: var(--tamyeez);
+  transition: inline-size var(--zaman-lawha) var(--munhana);
+}
+
+.tilqai__miqyas {
+  display: grid;
+  gap: var(--misafa-6);
+  margin-block-start: var(--misafa-4);
+}
+
+.tilqai__miqyas-masar {
+  block-size: var(--samk-hadd-barz);
+  background-color: var(--sath-3);
+  border-radius: var(--nisf-hadd);
+  overflow: hidden;
+}
+
+.tilqai__miqyas-nass {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the rail -------------------------------------------------------------
+   A hairline and a margin, not a panel. */
+
+.tilqai__lawha {
+  display: grid;
+  gap: var(--misafa-12);
+  align-content: start;
+  padding-inline-start: var(--misafa-20);
+  border-inline-start: var(--samk-hadd) solid var(--hadd);
+}
+
+.tilqai__unwan-janib {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-3);
+}
+
+/* --- figures --------------------------------------------------------------
+   The label takes the room and the value takes the trailing edge, so a column
+   of figures lines up as a column instead of as a list of sentences that
+   happen to end in digits. */
+
+.tilqai__qiyasat {
+  display: grid;
+  gap: var(--misafa-8);
+}
+
+.tilqai__qiyasat--satri {
+  grid-auto-flow: column;
+  justify-content: start;
+  gap: var(--misafa-24);
+}
+
+.tilqai__qiyas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  column-gap: var(--misafa-12);
+  align-items: baseline;
+}
+
+.tilqai__qiyasat--satri .tilqai__qiyas {
+  display: flex;
+  gap: var(--misafa-8);
+}
+
+.tilqai__qiyas-tasmiya {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.tilqai__qiyas-qeema {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--misafa-6);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.tilqai__qiyas-hamish {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: normal;
+}
+
+/* --- the refusal report ---------------------------------------------------- */
+
+.tilqai__tawassu {
+  overflow: hidden;
+}
+
+.tilqai__tawassu-dakhil {
+  padding-block-start: var(--misafa-4);
+}
+
+.tilqai__asbab {
+  display: grid;
+  gap: var(--misafa-8);
+}
+
+.tilqai__sabab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  column-gap: var(--misafa-12);
+  row-gap: var(--misafa-4);
+  padding: var(--misafa-12);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tanbeeh);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.tilqai__sabab-mawdu {
+  grid-column: 1;
+  color: var(--nass-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tilqai__sabab-adad {
+  grid-column: 2;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.tilqai__sabab-nass {
+  grid-column: 1 / 3;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+/* --- the skeleton ---------------------------------------------------------
+   Built out of the same boxes as the screen it stands in for, so the anchor
+   does not step when the verdict lands. Never shimmering: a shimmer is an
+   animation on a data update. */
+
+.tilqai__haykal {
+  display: grid;
+  gap: var(--misafa-24);
+}
+
+.tilqai__haykal-mirsa {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-20);
+  padding-block-end: var(--misafa-20);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tilqai__haykal-ghilaf {
+  display: block;
+  flex: none;
+  inline-size: 132px;
+  aspect-ratio: 460 / 215;
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.tilqai__haykal-satr-mirsa {
+  flex: 1;
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--misafa-12);
+  align-content: center;
+}
+
+.tilqai__haykal-unwan {
+  display: block;
+  inline-size: 42%;
+  block-size: var(--irtifa-6);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.tilqai__haykal-qism {
+  display: grid;
+  gap: var(--misafa-12);
+  align-content: start;
+  padding: var(--misafa-20);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.tilqai__haykal-lawha {
+  display: grid;
+  gap: var(--misafa-12);
+  align-content: start;
+  padding-inline-start: var(--misafa-20);
+  border-inline-start: var(--samk-hadd) solid var(--hadd);
+}
+
+.tilqai__haykal-unwan-qism {
+  display: block;
+  inline-size: 34%;
+  block-size: var(--irtifa-4);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}

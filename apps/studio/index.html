@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-sima="daken" data-kathafa="murih">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+      The enforced policy is the one in src-tauri/tauri.conf.json, which Tauri
+      serves as a header and rewrites at build time to carry the nonce for its
+      own injected IPC bootstrap. This tag repeats the development policy from
+      that same file so the document is self-describing when it is opened
+      outside the Tauri webview, and so a stray remote reference fails loudly
+      here rather than silently succeeding in a browser tab.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420 http://localhost:1420; media-src 'self' asset: http://asset.localhost; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'; worker-src 'self' blob:"
+    />
+    <!--
+      The first frame, before the stylesheet. In a production build the CSS
+      arrives as a render-blocking <link> that Vite appends to this head, and
+      the module below is deferred behind it, so a user whose saved theme is
+      light would otherwise see one frame of the dark ground before masar.tsx
+      evaluates. This is that module's mirror read, repeated: same key, same
+      fields, same resolution of `nizam`, same attributes. masar.tsx owns the
+      logic; this exists only to be on the root element one frame earlier.
+      Tauri hashes inline scripts it finds here into the served policy, which
+      is why `script-src 'self'` in tauri.conf.json does not block it.
+    -->
+    <script>
+      (function () {
+        var sijill;
+        try {
+          sijill = JSON.parse(localStorage.getItem('taarib.mazhar'));
+        } catch (khata) {
+          return;
+        }
+        if (!sijill || typeof sijill !== 'object') {
+          return;
+        }
+        var jidhr = document.documentElement;
+        if (sijill.lugha === 'injilizi') {
+          jidhr.lang = 'en';
+          jidhr.dir = 'ltr';
+        }
+        var fatih =
+          sijill.sima === 'fatih' ||
+          (sijill.sima === 'nizam' &&
+            matchMedia('(prefers-color-scheme: light)').matches);
+        jidhr.setAttribute('data-sima', fatih ? 'fatih' : 'daken');
+        if (sijill.kathafa === 'mudmaj' || sijill.kathafa === 'kabir') {
+          jidhr.setAttribute('data-kathafa', sijill.kathafa);
+        }
+        if (sijill.tabayun === true) {
+          jidhr.setAttribute('data-tabayun', 'aali');
+        }
+        if (sijill.ihtiram_haraka === false) {
+          jidhr.setAttribute('data-haraka', 'hurr');
+        }
+      })();
+    </script>
+    <meta name="color-scheme" content="dark light" />
+    <!--
+      Emitted into Vite's `public/` by scripts/irsim_ayqunat.py and copied
+      verbatim into `dist/`. It is deliberately not referenced out of
+      `src-tauri/ayqunat/`: a root-absolute href into that directory would 404
+      in a production build, and a relative one would drag a file out of the
+      Rust tree into the web bundle.
+    -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/ayquna.png" />
+    <title>تعريب</title>
+  </head>
+  <body>
+    <div id="jidhr"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,135 @@
+name: Support for a new engine
+description: An engine Taarib does not recognise, or recognises but cannot yet do much with.
+labels: ["muharrik"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the contribution the project wants most, whether you are offering to write it
+        or only reporting that the engine exists.
+
+        Two things worth knowing before you fill this in.
+
+        **An unrecognised engine is not an unsupported game.** Anything Taarib cannot identify
+        falls to tier 3, the translation overlay: the game is not modified at all, and Arabic
+        is drawn over it as a reading aid. So "not recognised" and "cannot be helped" are
+        different claims, and this form is about moving a game *up* from tier 3, not about
+        rescuing it from nothing.
+
+        **There is no engine registry to add a row to.** Adding an engine means one new variant
+        in the shared vocabulary and then repairing roughly eleven `match` arms the compiler
+        points at, plus six lists it does not. That exhaustiveness is deliberate — a wildcard
+        arm would let a new engine fall silently into "no extractor" and ship that way. The
+        full route is in CONTRIBUTING.md under *Adding support for a new game engine*.
+
+  - type: input
+    id: engine
+    attributes:
+      label: The engine, and its version
+      description: >
+        The name the engine's own developers use, and the version range you are talking about.
+        Major versions can be entirely different problems — Godot 3 and Godot 4 are separate
+        rows in this project for exactly that reason.
+      placeholder: Ren'Py 8.x
+    validations:
+      required: true
+
+  - type: input
+    id: game
+    attributes:
+      label: A game that uses it
+      description: >
+        Name one, with its store, and say whether it is obtainable — free, cheap, on a
+        subscription, or not really available. Whether a real shipped game exists to test
+        against decides how strong the resulting evidence can be, and the project is explicit
+        about that distinction in its test headers.
+    validations:
+      required: true
+
+  - type: input
+    id: detected
+    attributes:
+      label: What Taarib currently says the engine is
+      description: >
+        From the game's card in the library. "Not listed at all", "unrecognised", or a wrong
+        answer are all useful, and a *wrong* answer is the most useful of the three — it means
+        an existing detector is claiming evidence it should not.
+
+  - type: textarea
+    id: text
+    attributes:
+      label: Where the engine keeps its text
+      description: >
+        The single most useful thing you can write here. Which files, in what container, in
+        what encoding. Is it a documented format, a format someone has reverse-engineered
+        publicly, or an undocumented blob? Does the engine ship a localisation mechanism of
+        its own that a patch could use instead of rewriting files?
+
+
+        Taarib reads every container with code written in this repository — no third-party
+        game-asset library is used anywhere in extraction — so "there is a Python library that
+        parses it" is useful as documentation and is not a dependency the project can take.
+    validations:
+      required: true
+
+  - type: textarea
+    id: identify
+    attributes:
+      label: How the engine can be identified on disk
+      description: >
+        Detection is by agreement between independent sources, weighted 0 to 100: a file only
+        this engine ships scores 90 or more, a file several engines share scores 40 to 60, a
+        merely suggestive name scores under 30. What would you use — a directory shape, a
+        library the executable imports, an exported symbol, a container header, an embedded
+        version string? Name the specific file or symbol if you know it.
+
+  - type: dropdown
+    id: rendering
+    attributes:
+      label: How the engine draws text
+      description: >
+        This decides which tier is even possible. Tier 1 replaces the text inside the game;
+        tier 2 has Taarib draw over the engine's own text objects; tier 3 does not modify the
+        game at all.
+      options:
+        - It has a text object model that a patch could feed translated strings to
+        - Text goes through a shaping or layout library the engine ships
+        - Text is drawn from a pre-rendered bitmap font or atlas
+        - Text is baked into images
+        - I do not know
+    validations:
+      required: true
+
+  - type: dropdown
+    id: offer
+    attributes:
+      label: Are you offering to write it
+      options:
+        - "Yes, all of it — detection, extraction, the write side and the in-game adapter"
+        - "Yes, the offline half — detection and extraction — but not the in-game adapter"
+        - "I can supply format documentation and test files, not code"
+        - "No, I am reporting that the engine exists"
+    validations:
+      required: true
+
+  - type: textarea
+    id: fixtures
+    attributes:
+      label: Test files
+      description: >
+        Can you produce a container this engine itself wrote — the engine running headless,
+        exporting a small project — rather than one authored by hand from a format
+        description? The project accepts both and requires the test's own header to say which
+        it used, because a fixture the real engine produced is a much stronger proof. Say what
+        you can produce and how.
+
+  - type: checkboxes
+    id: acks
+    attributes:
+      label: Before you submit
+      options:
+        - label: >-
+            I am not attaching any file from a game I do not have the right to redistribute.
+            (The provenance gate exists to keep game assets out of packages; the same applies
+            to issues.)
+          required: true

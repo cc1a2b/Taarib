@@ -1,0 +1,35 @@
+[package]
+name = "taarib-jisr"
+description = "جسر تعريب — the stable C ABI: generation-tagged opaque handles, caller-owned buffers, an allocation-free hot path, the layout cache, and status codes for every non-Rust consumer."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[lib]
+# cdylib for the injected adapters that load it by name; staticlib for the
+# shims that link it; rlib so taarib-wasm and the Rust-side adapters can use the
+# same cache and handle model without going out through C.
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+taarib-saff = { workspace = true }
+taarib-lawha = { workspace = true }
+# This library is loaded into someone else's game process. It resolves no paths
+# and opens no files of its own, so the foundations arrive without `nizam`.
+# `default-features` cannot be overridden on a workspace-inherited
+# dependency unless the root sets it too, and taarib-usus has no default
+# features to switch off — the `wajiha`/`mukhattatat` features are opt-in.
+taarib-usus = { workspace = true }
+
+parking_lot = { workspace = true }
+rustc-hash = { workspace = true }
+
+[build-dependencies]
+cbindgen = { workspace = true }

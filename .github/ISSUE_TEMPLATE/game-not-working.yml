@@ -1,0 +1,193 @@
+name: A game does not work as it should
+description: Not detected, detected wrong, refused, or patched and still in its original language.
+labels: ["luba"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Most of what diagnoses this is already on your machine and takes a minute to collect.
+        Please do not skip the compatibility report — it is the single most useful field here,
+        and it is one button.
+
+        **Before anything: if the game is protected by anti-cheat and Taarib refused it, that
+        refusal is deliberate.** It exists so you do not lose an account. Do not work around
+        it and then report what happens.
+
+  - type: input
+    id: game
+    attributes:
+      label: The game
+      description: The name as the store shows it. If it has editions, say which.
+      placeholder: Hollow Knight (Steam)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: launcher
+    attributes:
+      label: Where it came from
+      description: >
+        Which launcher owns it. This matters more than it looks: discovery, the build
+        identifier, and the install path all come from the launcher, and the same game bought
+        twice is two different discovery paths.
+      options:
+        - Steam
+        - Epic Games
+        - GOG
+        - EA app
+        - Ubisoft Connect
+        - Battle.net
+        - Amazon Games
+        - itch.io
+        - Xbox / Microsoft Store
+        - Rockstar Games Launcher
+        - Riot Client
+        - Heroic (wrapping Epic or GOG)
+        - Legendary
+        - Lutris
+        - Bottles
+        - Playnite
+        - Installed by hand, no launcher
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: build
+    attributes:
+      label: The game's build identifier
+      description: >
+        Steam reports a numeric `buildid` (Properties, Updates, or the app manifest in
+        `steamapps/`); GOG reports a build hash; several launchers report nothing, in which
+        case write "none". A patch is compiled against one build, so a mismatch here explains
+        a whole class of report on its own.
+      placeholder: "18257842"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: How the game runs
+      options:
+        - Windows
+        - Linux, the game's native build
+        - Linux, through Proton or Wine
+        - Steam Deck
+        - macOS
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Taarib's version
+      description: The library screen's status strip, at the foot of the window.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: anchor
+    attributes:
+      label: The build's trust anchor
+      description: >
+        Which signing identity your build trusts. The status strip shows a **Development
+        build** marker when the anchor is `tatwir` — a build compiled from source without
+        `TAARIB_MIFTAH_ISDAR` set, which trusts the development key committed in the tree. A
+        downloaded release shows no such marker; that is `isdar`. The two accept different
+        packages, so a signature or install failure means different things in each.
+      options:
+        - "isdar — a downloaded release, no development marker in the status strip"
+        - "tatwir — the status strip says Development build"
+        - I do not know
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where it goes wrong
+      options:
+        - Taarib does not list the game at all
+        - Taarib lists it but identifies the engine wrongly
+        - Taarib refuses to install into it
+        - The patch installs, the game starts, and it is still in its original language
+        - The patch installs and the game will not start
+        - Restoring the game did not put it back
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: report
+    attributes:
+      label: The compatibility report
+      description: >
+        In Taarib: **Diagnostics → Compatibility report → pick the game → Write the report**.
+        It writes one JSON file and tells you the path. Paste its contents here.
+
+
+        It carries the detected engine and the evidence behind that detection, the tier the
+        game qualifies for, the readiness answer for this build, the named limitations, and
+        the build identifier Taarib recorded. That is most of a diagnosis in one paste, and
+        it contains no credentials — those never leave the system keychain.
+
+
+        If the report cannot be written because no capability report has been stored for the
+        game yet, say so here instead; that is itself a finding.
+      render: json
+    validations:
+      required: true
+
+  - type: dropdown
+    id: jahiziya
+    attributes:
+      label: What the report says under readiness
+      description: >
+        The `jahiziya` field, and the note the game's card shows beneath the tier. It is a
+        fact about your *build*, not about your game: `ghaiba` means the in-game half for
+        that engine is not finished yet, which is a gap an update closes rather than a defect
+        in your install. `docs/tashghil.md` records, engine by engine, exactly where each
+        chain stops today.
+      options:
+        - "ghaiba — none of the tier reaches the screen"
+        - "naqisa — part of it does and a named part does not"
+        - "mukammala — everything the tier promises reaches the screen"
+        - The report does not carry the field
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: >
+        What you did, what you expected, and what you got. If Taarib showed an error, include
+        its code — every one is a `TAARIB-E-####` and the messages are written to be pasted.
+        Screenshots welcome, but the code is worth more than the screenshot.
+    validations:
+      required: true
+
+  - type: textarea
+    id: patch
+    attributes:
+      label: The patch, if one is installed
+      description: >
+        Which patch, from where — the registry, an imported file, a LAN share, or one you
+        compiled yourself — and whether the same thing happens with a different patch or none
+        at all.
+
+  - type: checkboxes
+    id: acks
+    attributes:
+      label: Before you submit
+      options:
+        - label: >-
+            This is not a security issue. (Signature verification, install, restore, the
+            registry client and the injection surface go to SECURITY.md, privately.)
+          required: true
+        - label: >-
+            I have read that the compatibility report contains no credentials, and I have
+            looked at what I am pasting.
+          required: true

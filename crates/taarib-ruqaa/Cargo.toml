@@ -1,0 +1,24 @@
+[package]
+name = "taarib-ruqaa"
+description = "رقعة تعريب — the .ruqaa container format: header, section table, the fixed-layout POD tables five languages read by struct overlay, and the signature block."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+
+bytemuck = { workspace = true }
+zstd = { workspace = true }
+blake3 = { workspace = true }
+memmap2 = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

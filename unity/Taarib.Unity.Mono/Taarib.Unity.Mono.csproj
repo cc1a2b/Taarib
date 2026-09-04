@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Taarib.Unity.Mono — the BepInEx 6 plugin for Unity games whose managed code
+    still runs on Mono, where Assembly-CSharp.dll is real IL and reflection
+    works the ordinary way.
+
+    It supplies the Mono half of what Mushtarak cannot name: the HarmonyX patch
+    sets for each text system that exists in the loaded assemblies
+    (TextMeshPro, UnityEngine.UI.Text and TextGenerator, NGUI UILabel,
+    FairyGUI, world-space TextMesh), the Texture2D and Material calls that make
+    Mushtarak's atlas bytes resident on the GPU, the writes into the mesh
+    arrays each component already owns, and the input-field, typewriter,
+    auto-size and mirroring behaviour that separates a takeover which works
+    from one that merely renders.
+
+    Every reflected member is resolved once at startup and cached as a
+    delegate. A text system that fails to resolve degrades on its own, logs the
+    named reason, and leaves the rest of the game in its original language.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Taarib.Unity.Mono</AssemblyName>
+    <RootNamespace>Taarib.Unity.Mono</RootNamespace>
+    <Description>BepInEx 6 plugin taking over text rendering in Unity games on the Mono scripting backend.</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Label="PluginInfo">
+    <BepInExPluginGuid>com.cc1a2b.taarib.unity.mono</BepInExPluginGuid>
+    <BepInExPluginName>Taarib</BepInExPluginName>
+    <BepInExPluginVersion>$(Version)</BepInExPluginVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Taarib.Unity.Jisr\Taarib.Unity.Jisr.csproj" />
+    <ProjectReference Include="..\Taarib.Unity.Mushtarak\Taarib.Unity.Mushtarak.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Unity.Mono" Version="6.0.0-be.780" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" PrivateAssets="all" />
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.0" PrivateAssets="all" IncludeAssets="compile" />
+  </ItemGroup>
+
+</Project>

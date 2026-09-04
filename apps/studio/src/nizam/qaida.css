@@ -1,0 +1,402 @@
+/* ==========================================================================
+   القاعدة — the reset and the base element styles.
+
+   Only tokens appear below. There is no colour, size, weight or duration in
+   this file that is not read out of the token layer, because the light theme,
+   the high-contrast theme and the three densities are all implemented by
+   re-pointing those tokens and nothing else.
+
+   Everything directional is written with logical properties. Direction is a
+   property of the document, set once by the `dir` attribute on <html>, and
+   inherited from there — never re-declared per component and never mirrored
+   with a physical override.
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  block-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  block-size: 100%;
+  background-color: var(--sath-0);
+  color: var(--nass-1);
+
+  /* The interface face, at the body step of the scale, at the tight interface
+     leading. Arabic reading text opts into --irtifa-qira where it appears;
+     interface chrome never does, because 1.75 turns a dense table into a list
+     of widely separated lines. */
+  font-family: var(--khatt-wajiha);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-wajiha);
+  font-weight: var(--wazn-adi);
+
+  /* Inherited from <html dir="rtl">, so a change of language is a change of
+     one attribute rather than a stylesheet. */
+  direction: inherit;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  /* A desktop application does not scroll as a page. Every scrolling region
+     is a named region inside the layout, and the window itself never moves. */
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#jidhr {
+  block-size: 100%;
+  isolation: isolate;
+}
+
+/* --- typography reset -----------------------------------------------------
+   Headings carry no size or weight of their own: a heading's step comes from
+   the scale at the place it is used, so the document outline stays semantic
+   and the visual hierarchy stays a design decision. */
+
+:where(h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd) {
+  margin: 0;
+}
+
+:where(h1, h2, h3, h4, h5, h6) {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+:where(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+:where(button, input, select, textarea) {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+:where(button) {
+  cursor: default;
+  text-align: start;
+}
+
+:where(button:disabled) {
+  cursor: not-allowed;
+}
+
+:where(img, svg, video, canvas) {
+  display: block;
+  max-inline-size: 100%;
+}
+
+/* One icon stroke weight across the whole product. Declaring it here rather
+   than per icon means a component cannot introduce a second weight, which is
+   the single most common way an icon set stops looking like an icon set. */
+svg {
+  stroke-width: var(--samk-ramz);
+}
+
+:where(table) {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+:where(th) {
+  text-align: start;
+  font-weight: var(--wazn-mutawassit);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* --- focus ----------------------------------------------------------------
+   Every interactive element is reachable from the keyboard and shows where
+   the keyboard is. The ring is the accent, offset far enough to clear a
+   hairline border, and it is drawn for keyboard focus only so that a pointer
+   click does not leave a ring behind it. */
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--tamyeez);
+  outline-offset: 2px;
+}
+
+/* --- selection ------------------------------------------------------------
+   The accent at its faint weight, so selected text stays readable rather than
+   being replaced by a coloured block. */
+
+::selection {
+  background-color: var(--tamyeez-khafit);
+  color: var(--nass-1);
+}
+
+/* --- scrollbars -----------------------------------------------------------
+   Part of the surface, not a browser artefact sitting on top of it: the thumb
+   is a raised surface, the track is nothing at all, and neither one takes
+   space away from the content when it is idle. */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sath-4) transparent;
+}
+
+::-webkit-scrollbar {
+  inline-size: 10px;
+  block-size: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--sath-4);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: var(--nisf-hiwar);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--hadd-qawi);
+}
+
+::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+/* --- identifiers, paths and hashes ---------------------------------------
+   Every identifier in the product goes through this class.
+
+   The bidirectional algorithm resolves a run of neutral characters — the
+   slashes, dots, colons and hyphens that a path or a hash is mostly made of —
+   against the paragraph direction. Inside an Arabic paragraph that direction
+   is right-to-left, so `C:\Games\Hollow Knight\data.win` is reordered on
+   screen into something that is not the path the user has on disk, and a
+   commit hash reads back-to-front. Neither is a rendering nuance: a user who
+   copies the reordered text gets the correct bytes and a user who retypes
+   what they see gets a path that does not exist.
+
+   `direction: ltr` fixes the internal order and `unicode-bidi: isolate` stops
+   that run from influencing, or being influenced by, the Arabic on either
+   side of it. Latin digits are forced too, because a build id written in
+   Arabic-Indic digits is not the build id the launcher reports. */
+
+.mono-ltr {
+  font-family: var(--khatt-uhadi);
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  font-size: var(--qiyas-2);
+
+  /* Plex Mono is bundled at 400 and 500 only. This class sets no weight, so a
+     path or a build hash inside a --wazn-bariz heading inherits 600, finds no
+     face, and the browser draws a synthetic bold — smeared outlines on the one
+     kind of text where the exact shape of a character is the whole point, since
+     an identifier is read glyph by glyph rather than as a word. Refusing the
+     synthesis renders the real 500 instead: a hair lighter than its heading, and
+     correct. */
+  font-synthesis-weight: none;
+}
+
+/* --- reduced motion -------------------------------------------------------
+   Instant, not slower. The token layer already zeroes the durations; this
+   catches anything animated by a library that does not read them. The
+   `data-haraka='hurr'` guard mirrors the token layer's settings override. */
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-haraka='hurr']) *,
+  :root:not([data-haraka='hurr']) *::before,
+  :root:not([data-haraka='hurr']) *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The button, and the empty/error state, unscoped.
+
+   Both of these are base-layer components used by nine screens, and both were
+   declared inside `shashat/maktaba.css` — a screen stylesheet. That worked only
+   because nothing in this application is code-split: `masar.tsx` imports all
+   nine screens statically, so every stylesheet concatenates into one file and
+   the library's copy happened to be emitted before the screens that borrowed
+   it. The first `React.lazy` route would have left the review console with an
+   unstyled button and a half-drawn empty state, with no error anywhere.
+
+   It also broke the variants below outright. A screen stylesheet is emitted
+   AFTER this file, so `.zir` there and `.zir--khatar` here both scored (0,1,0)
+   and the later one won — and because `.zir` sets the `border` shorthand, it
+   reset the `border-color` the variant had just set. The reject button in the
+   review console rendered plain grey. A destructive control that looks
+   identical to Cancel is not a styling slip; it is the wrong button being easy
+   to press.
+
+   So the base class lives here, above the variants that modify it, which is the
+   only order in which a modifier can modify anything.
+   --------------------------------------------------------------------------- */
+
+.zir {
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-12);
+  font-size: var(--qiyas-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  background-color: var(--sath-3);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    border-color var(--zaman-hala) var(--munhana);
+}
+
+.zir:hover {
+  background-color: var(--sath-4);
+  border-color: var(--hadd-qawi);
+  transition: none;
+}
+
+.zir:active {
+  background-color: var(--sath-2);
+}
+
+/* A refused control has to look refused. This was declared five times, once per
+   screen that happened to need it, so any screen that grew a disabled button
+   without also copying the rule showed it identical to a live one — the same
+   failure as the variants above, in the same shape. `aria-disabled` rather than
+   `:disabled` because these are anchors and role-buttons as often as they are
+   `<button>`, and the attribute is what the markup actually carries. */
+
+.zir[aria-disabled='true'] {
+  color: var(--nass-3);
+  background-color: var(--sath-2);
+  border-color: var(--hadd-daif);
+  cursor: not-allowed;
+}
+
+/* The measure is capped because a line of Arabic past about sixty characters
+   stops being a sentence somebody reads and becomes a paragraph somebody
+   skips. Aligned to the start of its region, never floated in the middle of
+   it. */
+
+.halat {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-12);
+  max-inline-size: 56ch;
+  padding: var(--misafa-20);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.halat__unwan {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.halat__nass {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.halat .halat__ramz {
+  font-size: var(--qiyas-1);
+  color: var(--nass-3);
+}
+
+/* Colour carries the intent, not fill: a filled accent button at this size on
+   this ground reads as a component-library default, and the direction forbids
+   that. The border and the label take the hue; the surface stays the same. */
+
+.zir--tamyeez {
+  color: var(--lawn-luba, var(--tamyeez));
+  border-color: var(--lawn-luba, var(--tamyeez));
+}
+
+/* The wash is mixed here rather than read from `--tamyeez-khafit`, because a
+   custom property resolves its `var()`s where it is DECLARED — at the root,
+   where no game has set `--lawn-luba` — so the token can only ever be teal.
+   Mixing at the point of use is what lets a red-accented game hover red. */
+.zir--tamyeez:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--lawn-luba, var(--tamyeez)) var(--nisbat-khafit),
+    transparent
+  );
+  border-color: var(--lawn-luba, var(--tamyeez));
+}
+
+.zir--khatar {
+  color: var(--khatar);
+  border-color: var(--khatar);
+}
+
+.zir--khatar:hover {
+  background-color: var(--sath-4);
+  border-color: var(--khatar);
+}
+
+/* ---------------------------------------------------------------------------
+   The search field keeps the product's chrome, not the engine's.
+
+   WebKit gives `type="search"` an inset appearance and a grey circled ✕ that it
+   draws itself, at its own size, on its own side of the field — physically at
+   the right, which in this document is the *start*, so it lands under the
+   caret. Four screens use one. The type is worth keeping for the semantics and
+   for the keyboard's search key on touch; what has to go is the paint.
+   --------------------------------------------------------------------------- */
+
+input[type='search'] {
+  appearance: none;
+}
+
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
+  appearance: none;
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Native form controls take the product's accent.
+
+   Without this every checkbox and radio in the settings screen renders in the
+   browser's own blue, which is the most recognisable component default there
+   is and sits next to a teal accent everywhere else. One declaration covers
+   every one of them, in both themes, because the token moves with the theme.
+   --------------------------------------------------------------------------- */
+
+:root {
+  accent-color: var(--tamyeez);
+}

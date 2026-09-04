@@ -1,0 +1,98 @@
+[package]
+name = "taarib-tabaqa"
+description = "طبقة تعريب — the universal graphics overlay: presentation hooks for D3D11, D3D12, OpenGL and Vulkan, frame capture, on-screen recognition, and Arabic drawn over the game."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[features]
+# The in-process bootstrap and its `taarib_bidaya` export, compiled only for
+# the cdylib a game loads. Off by default and enabled by no manifest: three
+# payloads export the same symbol, and `taarib-studio` links all three as
+# rlibs, so an always-on export is a duplicate-symbol link failure on the
+# desktop binary. The payload build passes `--features hamula` explicitly, and
+# `taarib-tajmee` refuses to stage a payload whose symbol is absent — so
+# forgetting the flag fails on the build machine rather than shipping a module
+# that loads and returns.
+hamula = []
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+# Shaping and the atlas. The overlay's own control panel labels go through the
+# same path as the translated game text, because a tier-3 renderer that
+# reimplemented text would be the one place in this product where Arabic could
+# be wrong in a way nothing else catches.
+#
+# `taarib-jisr` is deliberately absent. The C ABI exists so that adapters
+# written in other languages can reach the shaping engine; this crate is Rust
+# and calls `saff` directly, and depending on the bridge as well would mean two
+# routes to one engine with only one of them exercised.
+taarib-saff = { workspace = true }
+taarib-lawha = { workspace = true }
+# The bootstrap hooks the first present through the shared hooker and
+# opens the installed patch beside itself.
+taarib-haqn = { workspace = true }
+taarib-ruqaa = { workspace = true }
+
+# One RFC 3339 parse, for the persisted disclosure record. The
+# alternative lives in taarib-tathbeet and would drag the installer,
+# discovery and signing into a game process.
+jiff = { workspace = true }
+
+ash = { workspace = true }
+image = { workspace = true }
+# `mprotect` and `dlopen(RTLD_NOLOAD)` on the non-Windows hook paths, and the
+# `dlsym` that resolves GL entry points there. The `windows` crate covers the
+# same ground on Windows and is target-gated below, so neither pulls the other's
+# platform in.
+libc = { workspace = true }
+# The portable recognizer, and the tensor runtime it loads its models with.
+# ocrs 0.12 requires rten ^0.24 — rten 0.25 exists and is a semver-incompatible
+# 0.x bump, so pinning to the newer one would produce two rten versions in the
+# graph and an `OcrEngine` that will not accept a `Model` this crate loaded.
+# Newest is the wrong answer here; matching ocrs is the right one.
+#
+# `rten-imageproc` is not listed: its `RotatedRect` is reached through
+# `ocrs::TextItem::rotated_rect`, so naming the crate directly would pin a
+# version this crate never constructs a value of.
+ocrs = { workspace = true }
+rten = { workspace = true }
+# GLSL to SPIR-V for the Vulkan backend's two stages, compiled once when the
+# overlay starts. Vulkan is the only API here with no compiler reachable at
+# runtime, and a backend that needed a caller to supply SPIR-V would be a
+# backend that cannot draw on its own.
+naga = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+parking_lot = { workspace = true }
+thiserror = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true }
+# Only for waiting on the OCR engine's `IAsyncOperation`; see `qira.rs`.
+windows-future = { workspace = true }
+
+# Vision, for on-screen recognition on macOS. Reached through the generated
+# framework bindings rather than a hand-written shim: the shim would be a second
+# place the selector names and the argument types have to be right, and it would
+# have to be built by a toolchain this project does not otherwise need.
+#
+# `CGRect` is declared locally with a hand-written `Encode` impl rather than
+# taken from `objc2-core-graphics`, because that type has moved between crates
+# across the objc2 0.2/0.3 line and a local four-`f64` `#[repr(C)]` struct has
+# the identical layout with no version to track. So no Core Graphics dependency.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { workspace = true }
+objc2-foundation = { workspace = true }
+objc2-vision = { workspace = true }

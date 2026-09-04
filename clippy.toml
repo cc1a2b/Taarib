@@ -1,0 +1,43 @@
+# A layout call that allocates is a bug (Phase 3), so the threshold below which
+# clippy stops complaining about large stack values is deliberately generous:
+# reusable buffers live on the stack or in a pool, never behind a fresh Box.
+avoid-breaking-exported-api = false
+too-many-arguments-threshold = 9
+type-complexity-threshold = 500
+enum-variant-size-threshold = 512
+large-error-threshold = 256
+literal-representation-threshold = 16384
+trivial-copy-size-limit = 16
+max-fn-params-bools = 1
+allow-print-in-tests = false
+
+# Names that are domain terms, not abbreviations to be flagged.
+doc-valid-idents = [
+    "BepInEx",
+    "GameMaker",
+    "HarfRust",
+    "IL2CPP",
+    "IoStore",
+    "OpenType",
+    "RGSS3",
+    "RPGMaker",
+    "TextMeshPro",
+    "WebAssembly",
+    "XUnity",
+    "..",
+]
+
+disallowed-methods = [
+    # All three ways of reading the environment, not just the first: a rule that
+    # named `var` alone would be satisfied by writing `var_os`, and the point is
+    # that nothing outside the configuration layer reads the environment at all.
+    { path = "std::env::var", reason = "configuration is resolved by taarib_usus::idadat, not read ad hoc" },
+    { path = "std::env::var_os", reason = "configuration is resolved by taarib_usus::idadat, not read ad hoc" },
+    { path = "std::env::vars", reason = "configuration is resolved by taarib_usus::idadat, not read ad hoc" },
+    { path = "std::process::exit", reason = "return a Khata; the process exits in one place" },
+]
+
+disallowed-types = [
+    { path = "std::sync::Mutex", reason = "use parking_lot::Mutex — no poisoning, no unwrap at every lock" },
+    { path = "std::sync::RwLock", reason = "use parking_lot::RwLock for the same reason" },
+]

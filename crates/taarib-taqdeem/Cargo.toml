@@ -1,0 +1,45 @@
+[package]
+name = "taarib-taqdeem"
+description = "تقديم تعريب — submission and the owner's Review Console: the resumable draft, the pre-flight gate, the queue, anchored comments, sandbox verification, and the atomic signed publishing sequence."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-ruqaa = { workspace = true }
+taarib-tarqee = { workspace = true }
+taarib-khatm = { workspace = true }
+taarib-mustawda = { workspace = true }
+taarib-makhzan = { workspace = true }
+taarib-tathbeet = { workspace = true }
+# Sandbox verification installs the submitted patch through the same safety
+# gate every user install goes through; it gets no private path.
+taarib-aman = { workspace = true }
+
+git2 = { workspace = true }
+jiff = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+# `ReaderStream` only, to turn the package buffer into the chunked request body
+# the staging upload sends; nothing here uses the codec half.
+tokio-util = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+# The shard-writing test needs the *same* patch identity twice, so the record it
+# builds for revision 2 replaces the one for revision 1 rather than sitting
+# beside it. `RuqaaId::jadeeda` mints a fresh v7 each call, so the identity has
+# to be written out.
+uuid = { workspace = true }

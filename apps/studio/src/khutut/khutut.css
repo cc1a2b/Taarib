@@ -1,0 +1,129 @@
+/* ==========================================================================
+   الخطوط — the faces the interface is made of, embedded rather than hoped for.
+
+   `tokens.css` names 'IBM Plex Sans Arabic' first in --khatt-wajiha and
+   'IBM Plex Mono' first in --khatt-uhadi. Without the five declarations below
+   neither name resolves to anything: the stack falls through to Segoe UI on
+   Windows, to Geeza Pro on macOS, and on a Linux box with no Arabic font
+   installed to tofu — in a product whose entire purpose is rendering Arabic.
+
+   The files beside this stylesheet are byte-for-byte the upstream releases
+   pinned in assets/aqfal/qufl_khutut.json and staged by scripts/ijlib_khutut.py,
+   which verifies each against its sha256 and its declared length before writing.
+   Nothing here is subsetted, re-hinted or re-encoded, which is what keeps the
+   OFL's Reserved Font Name clause untriggered — see IBMPlex-OFL.txt, which
+   ships in this directory because §2 requires the licence to travel with every
+   copy of the Font Software, and a copy compiled into the webview's asset
+   bundle is a copy.
+
+   Vite fingerprints and emits these because the URLs are relative to a file
+   under src/; do not move them to public/, where they would ship unhashed and
+   be cached across versions.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   الواجهة — IBM Plex Sans Arabic, at the three weights the token layer
+   declares: --wazn-adi 400, --wazn-mutawassit 500, --wazn-bariz 600.
+
+   No unicode-range on any of these. The family carries its own Latin, drawn
+   to share the Arabic's vertical metrics, and splitting the Latin off to a
+   second family would resolve it to whatever the operating system offers and
+   reintroduce exactly the mid-line baseline step the stack exists to prevent.
+
+   font-display: block, not swap. In a right-to-left interface a fallback face
+   is not a cosmetic difference for one word — the whole line re-measures and
+   re-flows in the opposite direction when the real face lands. A short block
+   period is a still screen; swap is the entire window moving under the cursor.
+   -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./IBMPlexSansArabic-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('./IBMPlexSansArabic-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('./IBMPlexSansArabic-SemiBold.ttf') format('truetype');
+}
+
+/* --------------------------------------------------------------------------
+   اللاتيني — IBM Plex Sans, the second name in --khatt-wajiha and the only
+   thing standing between a game title and the operating system.
+
+   Plex Sans Arabic's Latin is metric-matched and complete through Latin-1, so
+   it wins every codepoint it has and these three faces are never consulted for
+   ordinary text. They exist for the tail: Latin Extended-A, where the Arabic
+   family carries 15 of 128 glyphs. The interface does not choose the strings
+   that land here — a launcher hands it `Ōkami`, `Amnésie`, `Brøderbund` — and
+   per-character fallback means one missing macron is enough to pull that
+   character, alone, out of the bundle and into Segoe UI or into tofu.
+
+   Same three weights as the Arabic, because the fallback has to answer every
+   weight the token layer can ask for; a face missing at 600 is synthesized,
+   and a synthesized bold beside a real one is worse than either.
+   -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./IBMPlexSans-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('./IBMPlexSans-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('./IBMPlexSans-SemiBold.ttf') format('truetype');
+}
+
+/* --------------------------------------------------------------------------
+   الأحادي — IBM Plex Mono, for the `.mono-ltr` runs: paths, commit hashes,
+   build identifiers and glyph indices. Two weights, because that is what the
+   font manifest declares for this family and what the interface asks for.
+
+   Latin only, by design and not by omission: an identifier rendered in Arabic
+   letterforms or Arabic-Indic digits is not the identifier the launcher
+   reported, and `.mono-ltr` already pins direction, isolation and lining
+   digits for the same reason.
+   -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./IBMPlexMono-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('./IBMPlexMono-Medium.ttf') format('truetype');
+}

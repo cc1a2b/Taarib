@@ -1,0 +1,316 @@
+# The gates every change has to pass.
+#
+# Each job here runs a command that a maintainer has been running by hand up to
+# now. Nothing is invented and nothing is relaxed: if a step is green here, the
+# same command is green on a developer's machine, and the other way round.
+#
+# `docs/bina.md` §2 is where those commands and the lint policy behind them are
+# written down. This file is only about where and when they run.
+#
+# (That document's §9 still says "No CI. There is no `.github/` at the
+# repository root." It needs updating now that this directory exists.)
+#
+# Two things about this workspace shape the whole file:
+#
+#   1. `apps/studio/src-tauri` cannot be compiled until the frontend has been
+#      built. `tauri.conf.json` sets `frontendDist` to `../dist`, and
+#      `tauri-codegen` panics with "The `frontendDist` configuration is set to
+#      `../dist` but this path doesn't exist" if the directory is missing.
+#      `apps/studio/dist/` is build output and is not committed, so a fresh
+#      checkout does not have it. That is why the Rust matrix waits on the
+#      `wajiha` job and downloads its `dist` artifact rather than each leg
+#      installing Node and building the interface again. Creating an empty
+#      `dist/` would make the Rust jobs compile and would embed an application
+#      with no interface in it, which is the worst possible kind of green.
+#
+#   2. Three crates — `taarib-mudkhal`, `taarib-tabaqa` and `taarib-haqn` —
+#      carry their real substance behind `#[cfg(windows)]`: the `version.dll`
+#      proxy, the D3D11/D3D12 presentation hooks, and process injection. All
+#      three do compile on Linux, so a Linux-only run reports green while
+#      having compiled none of that code. Windows is therefore a first-class
+#      matrix leg, not an occasional extra. A regression in the Windows halves
+#      of those crates has to fail a pull request, not a release.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+# Deliberately no `paths`/`paths-ignore` filter. A branch-protection rule that
+# requires a check which a path filter skipped leaves the pull request blocked
+# forever with "expected — waiting for status to be reported". Cheap runs on
+# documentation-only changes are the lesser cost.
+
+permissions:
+  contents: read
+
+# One run per branch. Pushes to `main` and merge-queue runs are allowed to
+# finish — their results are the record of what the branch actually is — while
+# superseded pull-request runs are cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  # A CI job compiles a tree once and throws the machine away; incremental
+  # state is pure cost in both build time and cache size.
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+  # The compiler is pinned, never `stable`. Mixing toolchains in one target
+  # directory produces E0514 ("found crate ... compiled by an incompatible
+  # version of rustc"), and this workspace's floor is a real one: `sysinfo`
+  # 0.39.6 requires 1.95.
+  #
+  # This must equal `channel` in `rust-toolchain.toml`. The `Verify the
+  # toolchain pin` step below fails the build if the two ever drift, so bumping
+  # the toolchain file without bumping this value is caught here rather than in
+  # a confusing compile error. Bump all three together: this variable, the
+  # `dtolnay/rust-toolchain@<version>` refs, and `rust-toolchain.toml`.
+  #
+  # Setting RUSTUP_TOOLCHAIN also stops rustup from acting on the nine
+  # cross-compilation targets `rust-toolchain.toml` lists. Those exist for
+  # release packaging on the owner's machine; downloading a Windows, macOS and
+  # wasm standard library onto every runner would add minutes per job to
+  # compile exactly nothing.
+  RUSTUP_TOOLCHAIN: "1.95.0"
+
+jobs:
+  # --------------------------------------------------------------------------
+  # The interface. Also the producer of `apps/studio/dist`, which the Rust
+  # matrix needs before it can compile `taarib-studio`.
+  # --------------------------------------------------------------------------
+  wajiha:
+    name: Interface — typecheck and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/studio
+    steps:
+      - uses: actions/checkout@v7
+
+      # pnpm before setup-node: `cache: pnpm` shells out to `pnpm store path`,
+      # which needs pnpm to already be installed. `package.json` carries no
+      # `packageManager` field, so the version is named here; it is the one the
+      # committed `pnpm-lock.yaml` (lockfileVersion 9) was written by.
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/studio/pnpm-lock.yaml
+
+      # `--frozen-lockfile` is the gate: a dependency added to package.json
+      # without regenerating the lockfile fails here instead of resolving to
+      # whatever happens to be newest on the day CI runs.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Two projects, two invocations, matching `pnpm build`. tsconfig.json
+      # covers `src` under the DOM lib; tsconfig.node.json covers
+      # `vite.config.ts` under the Node lib. Both already set `noEmit`, so
+      # these are pure type checks.
+      - name: Typecheck the application sources
+        run: pnpm exec tsc -p tsconfig.json
+
+      - name: Typecheck the Vite configuration
+        run: pnpm exec tsc -p tsconfig.node.json
+
+      - name: Build
+        run: pnpm exec vite build
+
+      # Consumed by every Rust leg. One day of retention is enough for a
+      # re-run of the same workflow and keeps nothing that outlives the run.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wajiha-dist
+          path: apps/studio/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  # --------------------------------------------------------------------------
+  # The Rust workspace, on both platforms it ships to.
+  # --------------------------------------------------------------------------
+  fahs:
+    name: Rust — ${{ matrix.nizam.ism }}
+    needs: wajiha
+    runs-on: ${{ matrix.nizam.munaffidh }}
+    # A cold Windows leg compiles the `windows` crate with thirty feature
+    # groups, a vendored libgit2, a bundled SQLite and the whole text stack,
+    # three times over (check, clippy, test). Ninety minutes is not enough for
+    # that on an empty cache; this ceiling is here to catch a hang, not to
+    # bound normal work.
+    timeout-minutes: 120
+    defaults:
+      run:
+        # One shell for both legs so every step below is written once. Git Bash
+        # is present on the Windows images.
+        shell: bash
+    strategy:
+      # A Windows-only failure and a Linux-only failure are different bugs and
+      # both are worth seeing in the same run.
+      fail-fast: false
+      matrix:
+        nizam:
+          - ism: Linux
+            munaffidh: ubuntu-24.04
+          # Windows Server 2025 is what `windows-latest` resolves to today; it
+          # is named explicitly so that the next time GitHub moves that alias,
+          # this workspace moves when someone decides to, not overnight.
+          - ism: Windows
+            munaffidh: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+
+      # WebKitGTK and its stack, which `tauri` links on Linux, plus the two
+      # things this workspace pulls in beyond Tauri's own list: `libdbus-1-dev`
+      # for `libdbus-sys` (arriving through the Ayatana tray) and `libssl-dev`,
+      # which `openssl-src` uses while building the OpenSSL that `git2` links
+      # with `vendored-openssl`. Windows needs none of this: MSVC, the Windows
+      # SDK and the WebView2 runtime are already on the image.
+      - name: Install the Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libdbus-1-dev \
+            libssl-dev \
+            pkg-config \
+            build-essential \
+            file
+
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: clippy
+
+      - name: Verify the toolchain pin
+        run: |
+          set -euo pipefail
+          matlub=$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' \
+            rust-toolchain.toml | head -1)
+          if [ "$matlub" != "$RUSTUP_TOOLCHAIN" ]; then
+            risala="rust-toolchain.toml pins ${matlub}; this workflow pins"
+            risala="${risala} ${RUSTUP_TOOLCHAIN}. Bump RUSTUP_TOOLCHAIN and every"
+            risala="${risala} dtolnay/rust-toolchain ref under .github/workflows to match."
+            echo "::error file=rust-toolchain.toml::${risala}"
+            exit 1
+          fi
+          rustc --version
+          cargo --version
+
+      # Keyed on the runner, the compiler and Cargo.lock. `cache-on-failure`
+      # matters here: the first runs of this workflow are expected to fail on
+      # lints, and throwing away twenty minutes of compiled dependencies each
+      # time would make every fix take twenty minutes to verify. Only `main`
+      # writes the cache, so a pull request cannot evict it.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      # See the header: `taarib-studio` does not compile without this.
+      - uses: actions/download-artifact@v8
+        with:
+          name: wajiha-dist
+          path: apps/studio/dist
+
+      # Kept as its own step rather than folded into clippy. Clippy would
+      # report the same compile errors, but "your code does not build" and
+      # "your code builds and trips a lint" are different messages to send a
+      # contributor, and this is the one that fails fastest.
+      - name: cargo check
+        run: cargo check --workspace --all-targets
+
+      # No `-D warnings`, and that is deliberate rather than an oversight.
+      # `Cargo.toml` is this workspace's single source of lint truth: it denies
+      # what must never appear (`unwrap_used`, `expect_used`, `panic`,
+      # `indexing_slicing`, `integer_division`, `print_stdout`, `print_stderr`,
+      # `exit`, and the rest) and it warns on `pedantic`/`nursery`, which are
+      # advisory on purpose. Adding `-D warnings` here would put a second,
+      # stricter lint policy in a file nobody reads while editing Rust, and it
+      # would fail today on a deliberate portability conversion — the
+      # `u64::from` on `statvfs` fields in `crates/taarib-usus/src/manassa.rs`,
+      # which is a no-op on 64-bit Linux and load-bearing on Darwin and 32-bit
+      # Linux. A lint that has to be wrong somewhere is not a gate.
+      #
+      # `--all-targets` is not optional: it is what makes clippy see test code,
+      # and test code is exactly where a stray `unwrap()` gets written.
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets
+
+      - name: cargo test
+        run: cargo test --workspace
+
+  # --------------------------------------------------------------------------
+  # Advisories, licences, banned crates, and what upstream ships inside its own
+  # published sources. Reads `deny.toml`; changes to policy belong there.
+  # --------------------------------------------------------------------------
+  tabaiyat:
+    name: Dependencies — cargo-deny
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      # cargo-deny resolves the graph through `cargo metadata`; it never
+      # compiles anything, so this job needs no system libraries, no frontend
+      # and no cache.
+      - uses: dtolnay/rust-toolchain@1.95.0
+
+      # A prebuilt binary rather than `EmbarkStudios/cargo-deny-action`. The
+      # action is a Docker action, so every run builds its image before it can
+      # start; this pulls one release archive. The version is pinned exactly
+      # because `deny.toml` uses `[bans.build]` with `[[bans.build.bypass]]`
+      # entries, and a cargo-deny that predates that schema would reject the
+      # file rather than the dependencies.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.20.2
+
+      # No `--all-features`: `deny.toml` sets `all-features = false` in
+      # `[graph]` on purpose, and passing the flag here would silently check a
+      # different dependency graph from the one that ships.
+      - name: cargo deny check
+        run: cargo deny check
+
+  # --------------------------------------------------------------------------
+  # Formatting. NOT a gate yet — this job is allowed to fail.
+  # --------------------------------------------------------------------------
+  #
+  # `cargo fmt --all --check` currently reports over five thousand hunks across
+  # the tree, almost all of them from `match_block_trailing_comma` having been
+  # applied by hand in some files and not others. None of that is a defect and
+  # none of it is a contributor's fault, so failing pull requests on it would
+  # teach everyone to ignore a red check — which is worse than having no check.
+  #
+  # The tree-wide reformat is pending. When it lands, delete
+  # `continue-on-error` below and this comment, and the job becomes a gate.
+  # Until then it is here so the size of the gap is visible in every run
+  # instead of being something only the maintainer knows.
+  tanseeq:
+    name: Formatting (advisory, not a gate)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+
+      - name: cargo fmt --check
+        run: cargo fmt --all --check

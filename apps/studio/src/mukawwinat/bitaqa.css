@@ -1,0 +1,705 @@
+/* ==========================================================================
+   البطاقة — the game card.
+
+   THE GOVERNING RULE, restated here because this is the file that enforces it:
+   every card occupies the same OUTER box in every state, and shows the same
+   artwork in every state. No state modifier below changes a width, a height,
+   a padding or a border-width that layout can see. Search this file for
+   `width` or `height` inside a `--mutaha` / `--murakkaba` / `--mukhtara` rule
+   and you should find none.
+
+   The reserve is what makes that possible. Inside the artwork well there is a
+   constant `--ihtiyat-halqa` inset on all four sides — 3 outer ring, 2 gap,
+   3 inner ring, 2 breathing — present whether or not either ring is painted.
+   The rings are absolutely positioned inside it and paint into space that
+   already existed.
+
+   WHAT CHANGED, and why. The strip under the artwork used to hold nothing but
+   the two tabs, so a library with no patches yet — which is every library on
+   first run — drew forty cards each with a 34px empty band at the bottom. The
+   band could not simply be removed: the card's height is a token the grid
+   measures, and collapsing it per state is exactly the reflow the rule above
+   exists to prevent. So the band earns its keep instead. It is now the card's
+   caption: the game's name at the leading edge, the status pair at the
+   trailing edge, and the two aligned on the artwork's own margins.
+
+   That also fixes the title. It used to be typeset onto the generated plate
+   and nowhere else, so a card whose cover finally loaded lost its name unless
+   the artwork happened to spell it. The caption carries the name in both
+   cases, which is what `imagiation.png` asks for.
+
+   The caption's measure is the only thing in the card that a patch state
+   changes, and it changes nothing outside the card: the tab slot is as wide as
+   the widest tab actually drawn, so a game with no patches gives its whole
+   band to its name. The card does not move, the artwork does not move, and the
+   grid never learns that anything happened.
+   ========================================================================== */
+
+.bitaqa {
+  /* The reserve, named once. Three rules below and the plate's own type scale
+     in `bitaqa.tsx` all measure from it, and four copies of the same sum is
+     four places a change to `--samk-halqa` can fail to reach. */
+  --ihtiyat-halqa: calc(
+    var(--samk-halqa) + var(--fajwat-halqa) + var(--samk-halqa) + var(--tanaffus-halqa)
+  );
+  /* The caption's step. Not the interface density — the CARD size, which the
+     user sets independently — so a compact card drops one step of the scale
+     rather than being a standard card with smaller artwork. */
+  --qiyas-unwan-bitaqa: var(--qiyas-2);
+  --irtifa-unwan-bitaqa: var(--irtifa-2);
+  --fajwat-shareet: var(--misafa-8);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  inline-size: var(--ard-bitaqa);
+  /* 158 + 34. Written as the sum of its two parts rather than as 192 so that
+     changing either part cannot leave a stale total behind — which is exactly
+     what happened when the card went from a 240 × 394 portrait to a 314 × 192
+     landscape and every number written as a total had to be found by hand.
+     This is the OUTER box, border included: the grid's probe carries no border
+     and measures exactly this, so the hairline is paid for out of the artwork
+     below. */
+  block-size: calc(var(--irtifa-sura) + var(--irtifa-shareet-bitaqa));
+  border-radius: var(--nisf-lawha);
+  background: var(--sath-1);
+  /* Elevation by luminance and a hairline, like every other surface in the
+     product. This carried `--zill-bitaqa` in every state, which put a soft
+     drop shadow under every card in a ten-thousand-card grid — the one thing
+     `maktaba.css` states the library does not do. A card is lifted off the
+     ground by being lighter than it, not by floating above it. */
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  /* The card is one hit target. The rings, tabs and caption are painted
+     decoration and must never intercept a pointer — a user clicking the green
+     tab is clicking the card, because the tab is status and not a control. */
+  isolation: isolate;
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    border-color var(--zaman-hala) var(--munhana);
+}
+
+/* Hover moves three things by one step each — the surface, the hairline around
+   it and the seat line around the artwork — and Motion lifts the card three
+   pixels. Four small changes at once are felt; one large one is announced, and
+   a grid where every card announces itself is a grid nobody can read. */
+.bitaqa:hover {
+  background: var(--sath-2);
+  border-color: var(--hadd);
+}
+
+/* Focus is drawn OUTSIDE the card bounds and never recolours the status rings.
+   A focus indicator that reused the ring colours would be indistinguishable
+   from a patch state, which is the one thing the rings exist to communicate.
+
+   Two hairlines wide rather than one, because at the compact density the
+   artwork is only 92px tall and a single-pixel ring on it is a rendering
+   artefact;
+   and the card's own border takes the accent underneath, so the indicator
+   reads as belonging to this card at every size rather than hovering near it.
+   The offset is a spacing step, so it grows with the interface. */
+.bitaqa:focus-visible {
+  outline: var(--samk-hadd-barz) solid var(--tamyeez-qawi);
+  outline-offset: var(--misafa-2);
+  border-color: var(--tamyeez);
+}
+
+/* Selection is persistent and visually distinct from both hover and focus: the
+   surface goes two steps up and the whole edge takes the accent — the border
+   and an inset hairline together, which is two pixels of teal all the way
+   round. It carried the card shadow as well, which is the one thing this
+   product's elevation model does not do. */
+.bitaqa--mukhtara,
+.bitaqa--mukhtara:hover {
+  background: var(--sath-3);
+  border-color: var(--tamyeez);
+  box-shadow: inset 0 0 0 var(--samk-hadd) var(--tamyeez);
+}
+
+/* Hovering a card that is already selected still moves, and moves the same
+   one step it would move unselected — from where selection put it. */
+.bitaqa--mukhtara:hover {
+  background: var(--sath-4);
+}
+
+/* --------------------------------------------------------------------------
+   The artwork well and the reserve.
+   -------------------------------------------------------------------------- */
+
+.bitaqa__bir {
+  position: relative;
+  /* The card's hairline is inside its declared width, so the well is the
+     content box and not the token: stating `--ard-bitaqa` here made the well
+     two pixels wider than the box holding it and pushed the reserve off-centre
+     by one pixel on the trailing side. Height the same way — `flex: 1` hands
+     the well whatever the caption band does not take, which is `--irtifa-sura`
+     less the two hairlines, so the band keeps every pixel of its declared
+     height and the artwork pays for the border. */
+  inline-size: 100%;
+  flex: 1 1 auto;
+  min-block-size: 0;
+  /* Inside a rounded border, so one hairline tighter than the card's own
+     corner — an inner radius equal to the outer one leaves a sliver of card
+     visible in the curve. */
+  border-start-start-radius: calc(var(--nisf-lawha) - var(--samk-hadd));
+  border-start-end-radius: calc(var(--nisf-lawha) - var(--samk-hadd));
+  overflow: hidden;
+}
+
+/* The drawn artwork. Absolutely positioned at the reserve's inset rather than
+   given a margin, so that no state can change it by changing a box-model value
+   further out. */
+.bitaqa__sura {
+  position: absolute;
+  inset: var(--ihtiyat-halqa);
+  overflow: hidden;
+  background: var(--sath-0);
+}
+
+/* The seat line.
+
+   Without it a cover is a rectangle of someone else's artwork pasted onto a
+   flat card, and a grid of them is a contact sheet. One hairline at the edge
+   of the well, drawn over the artwork rather than under it, turns the reserve
+   into a mount and the cover into something set into the card. It is the whole
+   of what replaced the drop shadow: the same read of depth, from a boundary
+   instead of from a blur, and at a cost of one pixel per card rather than a
+   composited layer per card.
+
+   It steps up with the card on hover, which is the second of the four small
+   moves that state change is made of. */
+.bitaqa__sura::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 var(--samk-hadd) var(--hadd-daif);
+  transition: box-shadow var(--zaman-hala) var(--munhana);
+}
+
+/* Selection raises the seat line with everything else, by luminance and not by
+   hue: teal here would sit one pixel inside the status rings and read as a
+   third patch state. */
+.bitaqa--mukhtara .bitaqa__sura::after {
+  box-shadow: inset 0 0 0 var(--samk-hadd) var(--hadd-qawi);
+}
+
+/* On hover the mount takes the artwork's own dominant colour, when the card
+   was given one — the cover appears to light the frame it is set into, for as
+   long as the pointer is on it and on one card at a time. It is a hairline and
+   never a fill, it is transient, and it falls back to the same luminance step
+   the rest of the product uses, so a card with no extracted colour still
+   answers the pointer. */
+.bitaqa:hover .bitaqa__sura::after,
+.bitaqa--mukhtara:hover .bitaqa__sura::after {
+  box-shadow: inset 0 0 0 var(--samk-hadd) var(--lawn-ghilaf, var(--hadd));
+}
+
+/* The artwork sits ON TOP of the plate, in the same rectangle, and fades in.
+   Absolute rather than replacing the plate in flow, so the well is never empty
+   for a frame and nothing reflows when a cover finishes decoding. */
+.bitaqa__ghilaf {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity var(--zaman-lawha) var(--munhana);
+  /* No inner shadow, no vignette, no overlay scrim. The direction is explicit:
+     the artwork is shown, not treated. */
+}
+
+.bitaqa__ghilaf--zahira {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   The two rings.
+
+   Both are absolutely positioned inside the well at fixed insets, so painting
+   or not painting one moves nothing. `border` rather than `box-shadow` for the
+   ring itself, because a border of a fixed width on a fixed-inset absolute box
+   cannot affect layout at all.
+   -------------------------------------------------------------------------- */
+
+.bitaqa__halqa-sawt,
+.bitaqa__halqa-nass {
+  position: absolute;
+  border-style: solid;
+  border-color: transparent;
+  pointer-events: none;
+  transition:
+    border-color var(--zaman-hala) var(--munhana),
+    box-shadow var(--zaman-hala) var(--munhana),
+    filter var(--zaman-hala) var(--munhana);
+}
+
+/* Outer: voice. At the very edge of the well. */
+.bitaqa__halqa-sawt {
+  inset: 0;
+  border-width: var(--samk-halqa);
+}
+
+/* Inner: text. One ring plus one gap further in. */
+.bitaqa__halqa-nass {
+  inset: calc(var(--samk-halqa) + var(--fajwat-halqa));
+  border-width: var(--samk-halqa);
+}
+
+/* Nothing in the registry: transparent, but still occupying its inset. */
+.bitaqa__halqa-sawt--khafiya,
+.bitaqa__halqa-nass--khafiya {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* Available, not installed: a hairline outline in its colour, no fill weight
+   and no glow. The border-width does NOT shrink — shrinking it would move the
+   inner ring — so the hairline is expressed with an inset box-shadow inside a
+   transparent border.
+
+   At full strength, not dimmed. What separates *available* from *installed*
+   is a hairline against three pixels, which is a threefold difference in
+   weight and unmistakable at a glance; putting the hairline at three quarters
+   opacity on top of that only made it hard to see at all on the compact
+   density, and a status nobody can see is not a status. */
+.bitaqa__halqa-sawt--mutaha {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 var(--samk-hadd) var(--halqat-sawt);
+}
+
+.bitaqa__halqa-nass--mutaha {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 var(--samk-hadd) var(--halqat-nass);
+}
+
+/* Installed: full weight. The blue reads outside the green because it is the
+   outer ring — which is why voice is outer.
+
+   The ring's own colour is the whole signal. It carried a coloured drop glow
+   as well, which at grid scale meant hundreds of blue and green haloes on
+   screen at once — a bloom effect, not a status indicator. Three pixels of
+   flat colour on the card's surface, two pixels clear of the artwork, reads at
+   every density and survives being scrolled past at speed. */
+.bitaqa__halqa-sawt--murakkaba {
+  border-color: var(--halqat-sawt);
+}
+
+.bitaqa__halqa-nass--murakkaba {
+  border-color: var(--halqat-nass);
+}
+
+/* Hover brightens the rings, at whichever weight they are drawn. Brightness
+   only — no scale, no width change, and the same lift for both states, so a
+   card does not respond differently to the pointer depending on what it holds.
+   The third of the four small moves. */
+.bitaqa:hover .bitaqa__halqa-sawt--murakkaba,
+.bitaqa:hover .bitaqa__halqa-nass--murakkaba,
+.bitaqa:hover .bitaqa__halqa-sawt--mutaha,
+.bitaqa:hover .bitaqa__halqa-nass--mutaha {
+  filter: brightness(1.18);
+}
+
+/* --------------------------------------------------------------------------
+   The two marks: what the card knows about the GAME.
+
+   One strip across the top of the artwork, holding facts that are not patch
+   states — the publisher's own Arabic at the trailing edge, and this build's
+   ability to drive the game's engine at the leading edge. Absolutely positioned
+   inside the reserve, so the strip costs the card no space in any direction and
+   no state changes a box the grid can measure.
+
+   Why here and not in the caption. The trailing edge of the band is where patch
+   state lives, and a third chip beside the two tabs reads as a third patch
+   state. Neither of these is one.
+
+   Why a strip rather than two independently anchored plates. Each was free to
+   grow toward the other, and on the compact card — a 200px well holding
+   `عربية كاملة` and `لا يعمل بعد` at once — they overlapped. Here they are two
+   flex items that shrink and ellipsise instead, and a single one still lands on
+   its own edge: the readiness mark starts the line, the language mark is pushed
+   to the end of it by its own auto margin rather than by `space-between`, which
+   would drag a lone language mark to the leading edge. */
+
+.bitaqa__wusum {
+  position: absolute;
+  /* One spacing step inside the artwork, so the plates sit on the picture
+     rather than on the seat line. */
+  inset-block-start: calc(var(--ihtiyat-halqa) + var(--misafa-6));
+  inset-inline: calc(var(--ihtiyat-halqa) + var(--misafa-6));
+  display: flex;
+  align-items: flex-start;
+  gap: var(--misafa-6);
+  /* The card is one hit target; these are paint. */
+  pointer-events: none;
+}
+
+/* Common to both plates: the product's own ground, a hairline, and the accent
+   carried on one edge alone — the same emphasis rule the panels on the game
+   screen use. The ground is `--sath-0` and not the card's surface because these
+   sit on somebody else's artwork, where the darkest step is the only one that
+   keeps a label legible over an arbitrary picture. */
+.bitaqa__wasm-lugha,
+.bitaqa__wasm-jahiziya {
+  display: inline-flex;
+  align-items: center;
+  /* Shrinkable, so two marks on a compact card cut themselves short rather
+     than pushing each other out of the well. */
+  min-inline-size: 0;
+  padding-block: var(--misafa-2);
+  padding-inline: var(--misafa-6);
+  font-family: var(--khatt-wajiha);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  font-weight: var(--wazn-mutawassit);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd-qawi);
+  border-radius: var(--nisf-tahakkum);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The publisher's own Arabic. Good news, and coloured as such: `--khatar` and
+   `--tanbeeh` would tell an Arabic-speaking player that a game they can already
+   read is a problem, and `--najah` would claim an outcome that is the
+   publisher's rather than Taarib's. The accent faces into the picture. */
+.bitaqa__wasm-lugha {
+  margin-inline-start: auto;
+  color: var(--nass-1);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tamyeez);
+}
+
+/* What this build of Taarib can actually do to this game's engine.
+
+   Amber, because it is a caution and not a failure: the game is fine and the
+   adapter is unwritten, which an update fixes. Red here would tell a user their
+   library is broken.
+
+   Deliberately the quieter of the two. In this build almost every engine
+   answers "not running yet", so this mark is on almost every card at once — and
+   a mark that common has to be readable without being what the page is made of.
+   The label therefore sits one step down, in `--nass-2` against the other's
+   `--nass-1`, and the amber is three pixels of edge rather than a fill. The
+   accent faces into the picture, mirroring the language mark across the well,
+   so the pair reads as one system seen from both ends. */
+.bitaqa__wasm-jahiziya {
+  color: var(--nass-2);
+  border-inline-end: var(--samk-hadd-barz) solid var(--tanbeeh);
+}
+
+/* --------------------------------------------------------------------------
+   The caption band.
+
+   Fixed height, always reserved, and never empty: the game's name holds it
+   open whether or not either patch exists. Name at the leading edge, status
+   pair at the trailing edge, both inset to the artwork's own margins so the
+   band is a continuation of the picture above it rather than a separate strip
+   ruled off underneath it.
+
+   The tab pair is tucked up under the artwork's bottom edge, where it cuts a
+   notch out of the rings' bottom run — that is the join `like.png` draws, and
+   it is what makes the pair read as hanging off the frame instead of sitting
+   on the card. The tuck is two pixels at every card size, which is also what
+   puts the blue tab's lower edge on the caption's own baseline box.
+   -------------------------------------------------------------------------- */
+
+.bitaqa__shareet {
+  position: relative;
+  block-size: var(--irtifa-shareet-bitaqa);
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--fajwat-shareet);
+  /* The reserve, so the name starts exactly where the artwork starts. */
+  padding-inline: var(--ihtiyat-halqa);
+}
+
+/* The name's box, which is the card's and therefore the document's direction.
+   Two elements rather than one, and this is the load-bearing half: a game
+   title is whatever script the publisher wrote it in, and the two things a
+   title needs pull in opposite directions.
+
+   The BOX has to sit on the card's leading edge whatever the title's script,
+   or an Arabic library of mostly Latin titles has every name pushed to the
+   trailing edge and the two kinds of card do not share an alignment. The TEXT
+   has to be typeset in its own base direction, or the ellipsis on a cut title
+   lands at the end the reader started from — `…rontiers of Pandora` instead of
+   `Avatar: Frontiers…`.
+
+   `dir="auto"` on one element gives the second and loses the first, because it
+   makes `text-align: start` resolve against the title rather than against the
+   card. `unicode-bidi: plaintext` does exactly the same thing. So the outer
+   box keeps the card's direction and the inner one takes the title's. */
+.bitaqa__unwan {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  font-size: var(--qiyas-unwan-bitaqa);
+  line-height: var(--irtifa-unwan-bitaqa);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* The name itself, ellipsised the way the rest of the product ellipsises a
+   name it cannot fit — the grid's own section headings included — and never
+   with a tooltip: ten thousand cards that each put a native tooltip under the
+   pointer on hover is a grid that flickers. */
+.bitaqa__unwan-nass {
+  display: inline-block;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Off the baseline, so a title with descenders cannot grow the line box and
+     shift the band's only line off the centre it shares with the tabs. */
+  vertical-align: bottom;
+}
+
+/* The tab slot. As wide as the widest tab actually drawn and no wider, so a
+   game with nothing hands its whole band to its name — and zero wide when
+   there is nothing to draw, which is the common case in a large library.
+   Nothing outside the card can see this: the band's height, the card's box and
+   the artwork are all unchanged. */
+.bitaqa__alsina {
+  flex: none;
+  /* The full band, so the voice tab has a floor to sit on when it needs one. */
+  align-self: stretch;
+  display: grid;
+  /* Both tabs occupy the same cell and are centred in it, which is what puts
+     the green in front of the blue — and centred ON the blue — with a single
+     stacking context and no absolute positioning fragility. */
+  grid-template-areas: 'lisan';
+  justify-items: center;
+  align-items: start;
+}
+
+.bitaqa__lisan {
+  grid-area: lisan;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--misafa-4);
+  /* Square at the top where it meets the artwork, softly rounded below. The
+     negative top margin is what tucks it under the artwork's bottom edge so it
+     reads as attached to the frame rather than floating beneath it. */
+  margin-block-start: calc(var(--misafa-2) * -1);
+  border-start-start-radius: var(--nisf-hadd);
+  border-start-end-radius: var(--nisf-hadd);
+  border-end-start-radius: var(--nisf-lisan);
+  border-end-end-radius: var(--nisf-lisan);
+  font-family: var(--khatt-wajiha);
+  font-size: var(--qiyas-1);
+  font-weight: var(--wazn-mutawassit);
+  line-height: 1;
+  pointer-events: none;
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    border-color var(--zaman-hala) var(--munhana);
+}
+
+/* Voice: wider, taller, behind. */
+.bitaqa__lisan--sawt {
+  inline-size: var(--ard-lisan-sawt);
+  block-size: var(--irtifa-lisan-sawt);
+  z-index: 1;
+}
+
+/* Text: narrower, shorter, in front. */
+.bitaqa__lisan--nass {
+  inline-size: var(--ard-lisan-nass);
+  block-size: var(--irtifa-lisan-nass);
+  z-index: 2;
+}
+
+/* Both patches at once, which is the state `like.png` is drawn for and the
+   only one where the two tabs have to share the band.
+
+   Stacked at the same tuck they read as one object with one legible word on
+   it: the voice tab is six pixels taller than the text tab and its label is
+   centred, so the text tab in front covers it exactly. The voice tab therefore
+   drops to the band's floor when it is not alone, and sets its own label
+   against that floor, which puts `صوت` in the strip of blue below `عربي`
+   rather than behind it — the two-line read the reference draws. It moves only
+   here, and the two states arrive together out of one registry lookup, so
+   nothing is ever seen sliding from one position to the other.
+
+   The label needs about eleven pixels of clear blue below the text tab and the
+   band gives it twelve at the smallest card size, which is why this is a
+   floor-anchored tab and not a taller one: a taller voice tab is a taller
+   band, and the band's height is the card's height. */
+.bitaqa__alsina--muzdawaj .bitaqa__lisan--sawt {
+  align-self: end;
+  align-items: end;
+  margin-block-start: 0;
+  /* Clear of the card's own bottom edge, so the tab reads as sitting in the
+     band rather than as being cropped by it. */
+  margin-block-end: var(--misafa-2);
+}
+
+/* Installed: solid, with the label in the tab's own contrast colour. */
+.bitaqa__lisan--sawt-musmat {
+  background: var(--halqat-sawt);
+  color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--halqat-sawt);
+}
+
+.bitaqa__lisan--nass-musmat {
+  background: var(--halqat-nass);
+  color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--halqat-nass);
+}
+
+/* Available, not installed: unfilled, colour carried in the label and border
+   only. The surface behind it is the card's, so the pair still layers. */
+.bitaqa__lisan--sawt-mafrugh {
+  background: var(--sath-1);
+  color: var(--halqat-sawt);
+  border: var(--samk-hadd) solid var(--halqat-sawt);
+}
+
+.bitaqa__lisan--nass-mafrugh {
+  background: var(--sath-1);
+  color: var(--halqat-nass);
+  border: var(--samk-hadd) solid var(--halqat-nass);
+}
+
+/* An unfilled tab is the card's own surface with a coloured edge, so it has to
+   follow the card up on hover and up again when the card is selected — left at
+   `--sath-1` it turned into a hole punched in a lighter card. */
+.bitaqa:hover .bitaqa__lisan--sawt-mafrugh,
+.bitaqa:hover .bitaqa__lisan--nass-mafrugh {
+  background: var(--sath-2);
+}
+
+.bitaqa--mukhtara .bitaqa__lisan--sawt-mafrugh,
+.bitaqa--mukhtara .bitaqa__lisan--nass-mafrugh {
+  background: var(--sath-3);
+}
+
+.bitaqa--mukhtara:hover .bitaqa__lisan--sawt-mafrugh,
+.bitaqa--mukhtara:hover .bitaqa__lisan--nass-mafrugh {
+  background: var(--sath-4);
+}
+
+.bitaqa__lisan-nass {
+  /* The tab labels are Arabic words — عربي and صوت — and must shape. The
+     interface face is the same one every other string in the product uses. */
+  display: inline-block;
+}
+
+/* An update is available for something already installed: one small mark on
+   the tab. Not an animation, not a badge circle, not a dot outside the card. */
+.bitaqa__alamat-tahdith {
+  inline-size: var(--misafa-4);
+  block-size: var(--misafa-4);
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+  opacity: 0.85;
+}
+
+/* --------------------------------------------------------------------------
+   The generated plate.
+   -------------------------------------------------------------------------- */
+
+.bitaqa__lawha {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--misafa-16);
+  text-align: center;
+  font-family: var(--khatt-wajiha);
+  font-weight: var(--wazn-mutawassit);
+}
+
+.bitaqa__lawha-unwan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+  /* Optically centred rather than mathematically: the launcher mark sits in
+     the lower corner and pulls the visual centre down, so the title is nudged
+     up by the mark's own height. */
+  margin-block-end: var(--misafa-12);
+  line-height: 1.25;
+}
+
+.bitaqa__lawha-satr {
+  display: block;
+}
+
+/* The launcher's mark: small, low-contrast, lower corner. It stays on the
+   plate and is not repeated in the caption — the caption has one line and the
+   name has first claim on it, and a grouped library already prints the
+   launcher once as a section heading above its own row of cards. Logical
+   properties throughout, so it sits in the correct corner in both directions. */
+.bitaqa__lawha-matjar {
+  position: absolute;
+  inset-block-end: var(--misafa-8);
+  inset-inline-start: var(--misafa-8);
+  font-size: var(--qiyas-1);
+  font-weight: var(--wazn-adi);
+  opacity: 0.45;
+}
+
+/* --------------------------------------------------------------------------
+   Density.
+
+   The card scales as ONE unit. Every value below is derived from the same
+   three overrides, so the reserve, the rings and the strip stay in proportion
+   and the artwork stays on whole pixels at each step.
+   -------------------------------------------------------------------------- */
+
+/* The numbers live in `nizam/tokens.css` beside the standard set they are
+   derived from; this file only re-points the card at one of the three sizes.
+   `.bitaqa--qiyasi` needs no rule because the standard values are the ones
+   `:root` declares. */
+
+.bitaqa--mudmaj {
+  --ard-bitaqa: var(--ard-bitaqa-mudmaj);
+  --irtifa-sura: var(--irtifa-sura-mudmaj);
+  --irtifa-shareet-bitaqa: var(--irtifa-shareet-bitaqa-mudmaj);
+  --ard-lisan-sawt: var(--ard-lisan-sawt-mudmaj);
+  --ard-lisan-nass: var(--ard-lisan-nass-mudmaj);
+  --irtifa-lisan-sawt: var(--irtifa-lisan-sawt-mudmaj);
+  --irtifa-lisan-nass: var(--irtifa-lisan-nass-mudmaj);
+  /* A step down the scale rather than the same step in a smaller box: a 220px
+     card has 114px of caption left beside a voice tab, and the point of the
+     compact size is that more fits. */
+  --qiyas-unwan-bitaqa: var(--qiyas-1);
+  --irtifa-unwan-bitaqa: var(--irtifa-1);
+  --fajwat-shareet: var(--misafa-4);
+}
+
+.bitaqa--kabir {
+  --ard-bitaqa: var(--ard-bitaqa-kabir);
+  --irtifa-sura: var(--irtifa-sura-kabir);
+  --irtifa-shareet-bitaqa: var(--irtifa-shareet-bitaqa-kabir);
+  --ard-lisan-sawt: var(--ard-lisan-sawt-kabir);
+  --ard-lisan-nass: var(--ard-lisan-nass-kabir);
+  --irtifa-lisan-sawt: var(--irtifa-lisan-sawt-kabir);
+  --irtifa-lisan-nass: var(--irtifa-lisan-nass-kabir);
+  /* One step up, and the band is 40px: the large size is supposed to feel
+     generous rather than merely scaled. */
+  --qiyas-unwan-bitaqa: var(--qiyas-3);
+  --irtifa-unwan-bitaqa: var(--irtifa-3);
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion.
+
+   Nothing to declare here: every transition above takes its duration from a
+   `--zaman-*` token, and the token layer zeroes all three of those under this
+   same preference. The raise is Motion's, and `haraka` already returns a
+   finished transition when the user asked for less movement.
+   -------------------------------------------------------------------------- */

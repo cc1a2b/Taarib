@@ -1,0 +1,50 @@
+[package]
+name = "taarib-tathbeet"
+description = "تثبيت تعريب — installation, rollback and update survival: framework installation per engine and platform, the manifest of every change, exact restore, and integrity verification."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-ruqaa = { workspace = true }
+taarib-tarqee = { workspace = true }
+taarib-aman = { workspace = true }
+taarib-kashf = { workspace = true }
+taarib-khatm = { workspace = true }
+# The four script engines whose translations are written into the game's own
+# data rather than injected into its process. This crate owns the install
+# pipeline and is therefore the only place that can call them at the moment the
+# manifest is durable and the game is proven not to be running; `nusus` is the
+# single dispatch point and nothing else here reaches into that crate.
+taarib-muhawwil-nusus = { workspace = true }
+
+# The fingerprints the whole reversibility contract rests on. Every original is
+# hashed before it is preserved and every restore is verified against that hash,
+# so this crate computes BLAKE3 itself rather than taking a digest on trust from
+# whoever handed it a file.
+blake3 = { workspace = true }
+# Backups are stored compressed; the recorded fingerprint is of the plaintext, so
+# nothing about verification depends on which release of this library is linked.
+zstd = { workspace = true }
+walkdir = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+# The dispatch proof builds a real package and a real game directory and runs
+# the install step over both; nothing about it is mocked.
+tempfile = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true }

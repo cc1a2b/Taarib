@@ -1,0 +1,33 @@
+[package]
+name = "taarib-wasm"
+description = "نواة تعريب لويب أسمبلي — the WebAssembly build of the Arabic engine, exposing the same shape as the C ABI to the RPG Maker, Electron and canvas adapters."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+taarib-saff = { workspace = true }
+taarib-lawha = { workspace = true }
+# khata only — the error model has to cross into JavaScript with all four of
+# its parts, and the `Khata` type lives here. Without `nizam`, for the same
+# reason `taarib-saff` and `taarib-lawha` state it: the nizam feature pulls in
+# directories, sysinfo, tempfile and a logging sink, none of which exist on
+# wasm32-unknown-unknown and none of which this module is allowed to want.
+# `default-features` cannot be overridden on a workspace-inherited
+# dependency unless the root sets it too, and taarib-usus has no default
+# features to switch off — the `wajiha`/`mukhattatat` features are opt-in.
+taarib-usus = { workspace = true }
+
+wasm-bindgen = { workspace = true }
+js-sys = { workspace = true }
+console_error_panic_hook = { workspace = true }

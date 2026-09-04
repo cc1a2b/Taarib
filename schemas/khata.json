@@ -1,0 +1,591 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/khata.json",
+  "title": "Khata",
+  "description": "A failure, ready to be logged, bundled, or shown to a person.",
+  "type": "object",
+  "properties": {
+    "ramz": {
+      "$ref": "#/$defs/Ramz",
+      "description": "The permanent code."
+    },
+    "khutura": {
+      "$ref": "#/$defs/Khutura",
+      "description": "How badly it hurts."
+    },
+    "arabi": {
+      "type": "string",
+      "description": "The sentence shown to an Arabic-speaking user."
+    },
+    "injilizi": {
+      "type": "string",
+      "description": "The same sentence in English."
+    },
+    "khutwa": {
+      "$ref": "#/$defs/Khutwa",
+      "description": "The one thing the user can do next."
+    },
+    "siyaq": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/QeemaSiyaq"
+      },
+      "description": "Structured context, deterministically ordered."
+    },
+    "sabab": {
+      "anyOf": [
+        {
+          "$ref": "#"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The failure underneath this one, as a value."
+    },
+    "mawqi": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Mawqi"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Where this error was constructed."
+    }
+  },
+  "required": [
+    "ramz",
+    "khutura",
+    "arabi",
+    "injilizi",
+    "khutwa",
+    "siyaq"
+  ],
+  "$defs": {
+    "Ramz": {
+      "type": "string",
+      "description": "A stable, permanent error code.",
+      "pattern": "^TAARIB-E-\\d{4}$"
+    },
+    "Khutura": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "maluma",
+          "description": "Worth recording, invisible to the user."
+        },
+        {
+          "type": "string",
+          "const": "tanbeeh",
+          "description": "The operation continued with a reduced result the user should know about."
+        },
+        {
+          "type": "string",
+          "const": "khatar",
+          "description": "The operation failed. The user asked for something and did not get it."
+        },
+        {
+          "type": "string",
+          "const": "fadih",
+          "description": "The operation failed and left something that needs attention — a partial install, an unrestored backup, a corrupted store."
+        }
+      ],
+      "description": "How badly a failure hurts, which decides how loudly the interface says it."
+    },
+    "Khutwa": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "la_shay"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Nothing to do; the message is complete on its own."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "aada_muhawala"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Try the same operation again — transient network or file lock."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "aada_fahs_maktaba"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Rescan the library."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "aada_fahs_muharrik"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Re-probe this game's engine."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "matlub": {
+              "$ref": "#/$defs/MasarMatlub",
+              "description": "What the user should choose."
+            },
+            "naw": {
+              "type": "string",
+              "const": "ikhtiyar_masar"
+            }
+          },
+          "required": [
+            "naw",
+            "matlub"
+          ],
+          "description": "Point Taarib at a path it could not find."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "ikhtiyar_khatt_aakhar"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Choose a different font — the current one cannot render Arabic."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "qism": {
+              "$ref": "#/$defs/QismIdadat",
+              "description": "The section to open."
+            },
+            "naw": {
+              "type": "string",
+              "const": "fath_idadat"
+            }
+          },
+          "required": [
+            "naw",
+            "qism"
+          ],
+          "description": "Open a section of Settings."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "fath_tashkhis"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Open Diagnostics."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "fath_taqreer_tajawuz"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Open the overflow report for the current patch or submission."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "fath_nusus"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Open the offending strings in the workspace."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "tahdith_taarib"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Update Taarib itself — the data is newer than this build understands."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "iadat_tarkib_ittar"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Reinstall the framework for this game."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "ilgha_tathbeet"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Uninstall the patch and restore the game."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "iadat_mutabaqa_bina"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Re-match the patch against the game's new build."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "tahaqquq_salamat_luba"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Verify the game's files through its own launcher."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "iblagh_lil_musahim"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Contact the patch's contributor."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "iblagh_lil_malik"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Send a diagnostics bundle to the project owner."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "tahrir_masaha"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Free disk space and retry."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "manh_salahiya"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Grant Taarib the permission the operating system refused."
+        }
+      ],
+      "description": "The one concrete thing the user can do next."
+    },
+    "MasarMatlub": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "mujallad_luba",
+          "description": "The folder a game is installed in."
+        },
+        {
+          "type": "string",
+          "const": "malaf_tanfidhi",
+          "description": "A game's executable."
+        },
+        {
+          "type": "string",
+          "const": "mujallad_manassa",
+          "description": "A launcher's installation folder."
+        },
+        {
+          "type": "string",
+          "const": "mujallad_ruqaa",
+          "description": "Where Taarib keeps downloaded patches."
+        },
+        {
+          "type": "string",
+          "const": "malaf_khatt",
+          "description": "A font file."
+        },
+        {
+          "type": "string",
+          "const": "malaf_ruqaa",
+          "description": "A patch file to import."
+        }
+      ],
+      "description": "What kind of path the user is being asked to point at."
+    },
+    "QismIdadat": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "manassat",
+          "description": "Launcher locations."
+        },
+        {
+          "type": "string",
+          "const": "khutut",
+          "description": "Fonts."
+        },
+        {
+          "type": "string",
+          "const": "muzawwidun",
+          "description": "Machine translation providers and credentials."
+        },
+        {
+          "type": "string",
+          "const": "takhzin",
+          "description": "Where patches are stored."
+        },
+        {
+          "type": "string",
+          "const": "masadir",
+          "description": "Registry sources, mirrors and offline shares."
+        },
+        {
+          "type": "string",
+          "const": "tahdith",
+          "description": "Update behaviour."
+        },
+        {
+          "type": "string",
+          "const": "lugha",
+          "description": "Interface language and digits."
+        },
+        {
+          "type": "string",
+          "const": "tashkhis",
+          "description": "Diagnostics level and log retention."
+        }
+      ],
+      "description": "Which part of Settings a [`Khutwa::FathIdadat`] should open."
+    },
+    "QeemaSiyaq": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "nass"
+            },
+            "qeema": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "Free text: a name, an identifier, a reason reported by another system."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "raqm"
+            },
+            "qeema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A signed number."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "hajm"
+            },
+            "qeema": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A byte count, rendered with a unit and the user's digits."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "kasr"
+            },
+            "qeema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A fraction or a measurement in pixels."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "munt"
+            },
+            "qeema": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A flag."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "masar"
+            },
+            "qeema": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A filesystem path, rendered isolated left-to-right inside Arabic text."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "qaima"
+            },
+            "qeema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A list of names — files that failed, strings that overflowed."
+        }
+      ],
+      "description": "A structured context value attached to an error."
+    },
+    "Mawqi": {
+      "type": "object",
+      "properties": {
+        "malaf": {
+          "type": "string",
+          "description": "The source file, relative to the workspace root."
+        },
+        "satr": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "The line number."
+        }
+      },
+      "required": [
+        "malaf",
+        "satr"
+      ],
+      "description": "Where in the source an error was constructed, captured automatically."
+    }
+  }
+}

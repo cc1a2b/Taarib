@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/taghtiya.json",
+  "title": "Taghtiya",
+  "description": "A coverage measurement.",
+  "type": "object",
+  "properties": {
+    "majmu": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Every extracted string."
+    },
+    "mutarjam": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Strings with any translation at all."
+    },
+    "muakkad": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Strings that were reviewed and accepted."
+    },
+    "majmu_takrar": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0,
+      "description": "Total occurrences of every string, as extraction and capture counted them."
+    },
+    "mutarjam_takrar": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0,
+      "description": "Occurrences covered by a translation."
+    },
+    "majmu_awwal": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Strings seen in the opening session of play."
+    },
+    "mutarjam_awwal": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Of those, how many are translated."
+    }
+  },
+  "required": [
+    "majmu",
+    "mutarjam",
+    "muakkad",
+    "majmu_takrar",
+    "mutarjam_takrar",
+    "majmu_awwal",
+    "mutarjam_awwal"
+  ]
+}

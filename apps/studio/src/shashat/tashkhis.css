@@ -1,0 +1,364 @@
+/* شاشة التشخيص — a technical screen: dense, monospaced where it must be, information first. */
+
+.tashkhis {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100%;
+  background-color: var(--sath-0);
+
+  /* The structural constants this screen needs and the token layer does not
+     carry. Stated in rem rather than px so the three densities carry the
+     columns with the type that sits in them. */
+  --ard-wathiqa: 62rem;
+  --ard-mustawa: 4rem;
+  --ard-waqt: 6rem;
+  --ard-hajm: 6rem;
+  --ard-waqt-malaf: 13rem;
+
+  /* The tail is a window on a file, not the file: about twenty of its own
+     lines, said in the line height it is set in rather than as a pixel figure
+     that stops meaning twenty lines the moment the density moves. */
+  --irtifa-dhayl: calc(var(--irtifa-2) * 22);
+}
+
+.tashkhis__shareet-alawi {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tashkhis__raji {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.tashkhis__raji:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.tashkhis__fasl {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.tashkhis__jism {
+  min-block-size: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  max-inline-size: var(--ard-wathiqa);
+  padding: var(--misafa-24);
+}
+
+/* --- sections -------------------------------------------------------------
+   Heading, sentence, content. The only line drawn on this screen is the one
+   between two subjects; a frame around each panel would say three times over
+   what the spacing already says once. */
+
+.tashkhis__qism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+  padding-block: var(--misafa-32);
+}
+
+.tashkhis__qism:first-child {
+  padding-block-start: 0;
+}
+
+.tashkhis__qism + .tashkhis__qism {
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tashkhis__raas-qism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-4);
+  max-inline-size: 68ch;
+}
+
+.tashkhis__unwan-qism {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-bariz);
+  color: var(--nass-1);
+}
+
+.tashkhis__sharh-qism {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  max-inline-size: 68ch;
+  text-wrap: pretty;
+}
+
+.tashkhis__adawat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+.tashkhis__tasmiya {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+}
+
+.tashkhis__haql {
+  min-block-size: var(--irtifa-band);
+  padding-block: var(--misafa-4);
+  padding-inline: var(--misafa-8);
+  font-family: inherit;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  transition: border-color var(--zaman-hala) var(--munhana);
+}
+
+.tashkhis__haql:hover {
+  border-color: var(--hadd-qawi);
+  transition: none;
+}
+
+.tashkhis__haql:focus-visible {
+  border-color: var(--tamyeez);
+}
+
+/* This screen has no number field today; the rule stands with the field styles
+   so one added later cannot arrive wearing the browser's spinner. */
+.tashkhis input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.tashkhis input[type='number']::-webkit-outer-spin-button,
+.tashkhis input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+/* --- empty states --------------------------------------------------------- */
+
+.tashkhis__farigh {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-12);
+  padding: var(--misafa-16);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.tashkhis__farigh-unwan {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  max-inline-size: 60ch;
+  text-wrap: pretty;
+}
+
+/* --- the log files --------------------------------------------------------
+   Three columns on one alignment: the file, its size, and when it was last
+   written. The two figures sit at the end of their own columns so a reader
+   compares them down the list rather than across each row. */
+
+.tashkhis__malaffat {
+  display: flex;
+  flex-direction: column;
+}
+
+.tashkhis__malaf {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--ard-hajm) var(--ard-waqt-malaf);
+  align-items: baseline;
+  gap: var(--misafa-12);
+  min-block-size: var(--irtifa-band);
+  padding-block: var(--misafa-4);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tashkhis__malaf:last-child {
+  border-block-end: 0;
+}
+
+.tashkhis__malaf-ism {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--nass-1);
+}
+
+.tashkhis__malaf-hajm {
+  justify-self: end;
+  color: var(--nass-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tashkhis__malaf-waqt {
+  justify-self: end;
+  color: var(--nass-3);
+  white-space: nowrap;
+}
+
+/* --- the tail -------------------------------------------------------------
+   A log line is a machine's sentence: module paths, identifiers, numbers and
+   punctuation, in an order the bidirectional algorithm would resolve against
+   the Arabic page around it and hand back reordered. The region is set left to
+   right, aligned to its own start, and set in the monospaced face — the three
+   things that make a line readable as the bytes the writer wrote. */
+
+.tashkhis__dhayl {
+  direction: ltr;
+  text-align: start;
+  font-family: var(--khatt-uhadi);
+  max-block-size: var(--irtifa-dhayl);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-block: var(--misafa-8);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.tashkhis__sutur {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Level, time, then the sentence — so the timestamps line up in a column and a
+   message that wraps keeps its own measure instead of running under them. */
+.tashkhis__satr {
+  display: grid;
+  grid-template-columns: var(--ard-mustawa) var(--ard-waqt) minmax(0, 1fr);
+  gap: var(--misafa-8);
+  padding-block: var(--misafa-2);
+  padding-inline: var(--misafa-12);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-2);
+  border-inline-start: calc(var(--samk-hadd) * 2) solid transparent;
+}
+
+.tashkhis__satr-mustawa {
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-3);
+  white-space: nowrap;
+}
+
+.tashkhis__satr-waqt {
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tashkhis__satr-jism {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  color: var(--nass-2);
+}
+
+.tashkhis__satr-hadaf {
+  color: var(--nass-3);
+  margin-inline-end: var(--misafa-8);
+}
+
+.tashkhis__satr-risala {
+  color: var(--nass-1);
+}
+
+.tashkhis__satr-nitaq {
+  color: var(--nass-3);
+  margin-inline-start: var(--misafa-8);
+}
+
+.tashkhis__satr-haql {
+  color: var(--nass-3);
+  margin-inline-start: var(--misafa-8);
+}
+
+.tashkhis__satr-haql-ism {
+  color: var(--nass-2);
+}
+
+/* Severity is carried by the level word, by a gutter rule and by weight before
+   it is carried by hue, so it survives a monochrome display and a reader who
+   cannot separate red from amber. */
+
+.tashkhis__satr--khata {
+  border-inline-start-color: var(--khatar);
+}
+
+.tashkhis__satr--khata .tashkhis__satr-mustawa {
+  color: var(--khatar);
+}
+
+.tashkhis__satr--khata .tashkhis__satr-risala {
+  font-weight: var(--wazn-mutawassit);
+}
+
+.tashkhis__satr--tanbeeh {
+  border-inline-start-color: var(--tanbeeh);
+}
+
+.tashkhis__satr--tanbeeh .tashkhis__satr-mustawa {
+  color: var(--tanbeeh);
+}
+
+.tashkhis__satr--maluma .tashkhis__satr-mustawa {
+  color: var(--maalumat);
+}
+
+/* Detail and trace are the noise a reader scrolls past to reach the two above,
+   so they recede rather than compete. */
+.tashkhis__satr--tafsil .tashkhis__satr-risala,
+.tashkhis__satr--tatabbu .tashkhis__satr-risala {
+  color: var(--nass-2);
+}
+
+/* A line the rotating writer tore mid-record: shown as it stands, because a
+   torn tail is exactly the moment a reader needs the bytes. */
+.tashkhis__satr--khaam .tashkhis__satr-risala {
+  color: var(--nass-3);
+}
+
+/* --- what an action produced ---------------------------------------------- */
+
+.tashkhis__natija {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-4);
+  padding: var(--misafa-12);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: calc(var(--samk-hadd) * 2) solid var(--najah);
+  border-radius: var(--nisf-lawha);
+}
+
+.tashkhis__natija-masar {
+  color: var(--nass-1);
+  overflow-wrap: anywhere;
+}
+
+/* The refused-button rule that stood here is in `nizam/qaida.css` now, with the
+   rest of `.zir`. */

@@ -1,0 +1,796 @@
+/* ==========================================================================
+   المكتبة — the library screen and the shell it is mounted in.
+
+   Every value below is a token. Every directional property is logical, so the
+   sidebar sits on the leading edge in Arabic and on the leading edge in
+   English without a single mirrored rule.
+
+   Nothing here has a gradient or a corner larger than 6px, and nothing that
+   sits in the layout has a shadow: a panel declares its level by being one
+   step lighter than what it sits on and by carrying a hairline, and that is
+   the whole elevation system. The two exceptions are the context menu and the
+   filter panel, which genuinely float over the grid and take `--zill-tafu` for
+   that reason.
+   ========================================================================== */
+
+.hikal {
+  display: grid;
+  grid-template-columns: var(--ard-janib) minmax(0, 1fr);
+  block-size: 100%;
+  background-color: var(--sath-0);
+}
+
+/* --- the rail ------------------------------------------------------------- */
+
+.janib {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  background-color: var(--sath-1);
+  border-inline-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.janib__tarwisa {
+  display: flex;
+  flex: none;
+  align-items: center;
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-16);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.janib__ism {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-bariz);
+  color: var(--nass-1);
+}
+
+.janib__tanaqqul {
+  min-block-size: 0;
+  overflow-y: auto;
+}
+
+/* --- the rail's three runs ------------------------------------------------
+   Six of the eleven screens are scoped to a game, so on this screen they are
+   disabled together. Grouping them under their own heading with one sentence
+   beneath it is what turns six grey lines into an answer; the alternative —
+   hiding them until a game is open — would make the product look smaller than
+   it is and would move the rail under the user every time they opened a game.
+   The runs are separated by a hairline because the boundary between "needs a
+   game" and "does not" is a real one. */
+
+.janib__majmua {
+  padding-block: var(--misafa-8);
+}
+
+.janib__majmua + .janib__majmua {
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.janib__fasl {
+  padding-inline: var(--misafa-16);
+  padding-block-end: var(--misafa-4);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-3);
+}
+
+/* Reading text, not interface text: it is a sentence and it wraps, so it takes
+   the looser Arabic leading the scale carries for exactly this. */
+.janib__tanbih {
+  padding-inline: var(--misafa-16);
+  padding-block-end: var(--misafa-8);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+.band {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-12);
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-16);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+
+  /* The transition is declared on the resting state, so it plays on the way
+     out and not on the way in: a hover that eases in is a hover that arrives
+     late, and the pointer has already moved on by the time it lands. */
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    color var(--zaman-hala) var(--munhana);
+}
+
+.band:hover {
+  background-color: var(--sath-2);
+  color: var(--nass-1);
+  transition: none;
+}
+
+.band--matfi,
+.band--matfi:hover {
+  color: var(--nass-3);
+  background-color: transparent;
+}
+
+.band--nashit,
+.band--nashit:hover {
+  color: var(--nass-1);
+  background-color: var(--tamyeez-khafit);
+  font-weight: var(--wazn-mutawassit);
+}
+
+/* The ring is drawn inside the item: at the full width of the rail an outset
+   ring is cut in half by the sidebar's own border. */
+.band:focus-visible {
+  outline-offset: calc(var(--samk-hadd) * -2);
+}
+
+.band__mushir {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: var(--misafa-4);
+  inline-size: var(--misafa-2);
+  background-color: var(--tamyeez);
+}
+
+/* The glyph is the colour of the line it leads and nothing else: an icon that
+   holds its own colour turns a rail into a legend. */
+.band__ramz {
+  flex: none;
+  inline-size: var(--hajm-ramz-satri);
+  block-size: var(--hajm-ramz-satri);
+}
+
+/* --- the content region --------------------------------------------------- */
+
+.mutawa {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-inline-size: 0;
+  block-size: 100%;
+}
+
+/* The chrome is one line: the screen's name at the reading edge and every
+   control at the far one, with the whole span between them left empty. The
+   count used to sit between the two and made the line read as three things of
+   equal standing; it is now the first line of the content instead. */
+.raas {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  padding-block: var(--misafa-12);
+  padding-inline: var(--misafa-24);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.raas__unwan {
+  font-size: var(--qiyas-5);
+  line-height: var(--irtifa-5);
+  font-weight: var(--wazn-bariz);
+  color: var(--nass-1);
+}
+
+/* The count annotates the result rather than competing with the title, so it
+   sits a step further back in the text scale as well as a step down in size.
+   It keeps its line while the scan is still running: the number arriving must
+   not push the first row of artwork down the screen. */
+.maktaba__adad {
+  flex: none;
+  min-block-size: var(--irtifa-2);
+  margin-block-start: var(--misafa-16);
+  margin-inline: var(--misafa-24);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* One region, one scroll container, one inset. The grid inside carries both —
+   its own `--hashiyat-shabaka` is the library's only margin and its own
+   viewport is the library's only scroller — so this region contributes
+   neither, and the panels that sit under the grid carry their inset
+   themselves. Two nested `overflow: auto` boxes on the landing screen is a
+   wheel gesture that stops at the wrong edge. */
+.jism {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  min-inline-size: 0;
+}
+
+/* The library's own error block: the region's inset, restated because the
+   region no longer has one, and never squeezed by whatever follows it. */
+.jism > .halat {
+  flex: none;
+  margin-block: var(--misafa-24);
+  margin-inline: var(--misafa-24);
+}
+
+/* `.halat`, `.zir` and their parts used to be declared here. They are base-layer
+   components that nine screens use, so they now live in `nizam/qaida.css` —
+   above the `.zir--*` variants, which a screen stylesheet emitted after this
+   file was silently overriding. Nothing screen-specific replaced them; the
+   library styles the empty state through `.shabaka__halat > .halat` in
+   `mukawwinat/shabakat_maktaba.css`, which is scoped and still wins. */
+
+/* --- skeletons -----------------------------------------------------------
+   The same block sizes and the same measure as the content they stand in for,
+   so nothing on the screen moves when the answer arrives. Deliberately still:
+   a shimmering placeholder is an animation on a data update, which this
+   product does not do. */
+
+/* What replaces this is a full-height grid of cards, not a paragraph. So it
+   is laid out as that grid — the card's footprint, the grid's gap, the grid's
+   inset, the region's whole height — and the first row of real artwork lands
+   where the placeholders were rather than a hundred pixels above them. */
+.haykal {
+  flex: 1 1 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--misafa-16);
+  min-block-size: 0;
+  padding-block: var(--misafa-24);
+  padding-inline: var(--misafa-24);
+  overflow: hidden;
+}
+
+.haykal__satr {
+  display: block;
+  block-size: var(--misafa-12);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* Inside the library's skeleton a bar is a card. The three length modifiers
+   below still apply on the screens that stack these as lines of text; here the
+   card's own tokens decide the box, and they outrank the modifiers. */
+.haykal > .haykal__satr {
+  flex: none;
+  inline-size: var(--ard-bitaqa);
+  block-size: calc(var(--irtifa-sura) + var(--irtifa-shareet-bitaqa));
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.haykal__satr--tawil {
+  inline-size: 100%;
+}
+
+.haykal__satr--mutawassit {
+  inline-size: 72%;
+}
+
+.haykal__satr--qasir {
+  inline-size: 40%;
+}
+
+/* --- the status strip ----------------------------------------------------- */
+
+.shareet {
+  display: flex;
+  align-items: center;
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.shareet__haykal {
+  display: flex;
+  align-items: center;
+  inline-size: 100%;
+}
+
+.shareet__qaima {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.shareet__band {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-6);
+  min-inline-size: 0;
+}
+
+.shareet__band dd {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-2);
+  white-space: nowrap;
+}
+
+/* The development-identity badge. The one thing on this strip that is about
+   the running session rather than about the build's provenance, so it is the
+   one thing that carries a colour, a glyph and a border. */
+.shareet__wasm-tatwir {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-6);
+  padding-inline: var(--misafa-8);
+  padding-block: var(--misafa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--tanbeeh);
+  border: var(--samk-hadd) solid var(--tanbeeh);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* Provenance, not status: what is running, at the far end, in the quietest
+   step the scale has. The group is separated from the path by the strip's own
+   flexible space rather than by a rule, because there is no boundary here —
+   only a difference in how much any of it matters. */
+.shareet__band--tarif {
+  flex: none;
+}
+
+.shareet__band--tarif dd {
+  color: var(--nass-3);
+}
+
+/* The data folder takes whatever room is left and truncates rather than
+   pushing the rest of the strip off the edge. */
+.shareet__band--masar {
+  flex: 1 1 auto;
+}
+
+.shareet__band--masar dd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-inline-size: 0;
+  color: var(--nass-3);
+}
+
+/* --- available to a screen reader, absent from the layout ----------------- */
+
+.khafi {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip-path: inset(50%);
+}
+
+/* --- the header's controls -----------------------------------------------
+   Six controls in one row read as six equal things to decide about. They are
+   not four kinds of thing:
+
+     [ search ]   [ status v ]   [ sort v | ^ ]   [ size v ][ grouping v ]
+
+   — the field the user came here to type in, the one control that changes
+   *which* games are on screen, the order they are read in, and how they are
+   drawn. So the row is grouped by a step twice as wide between the kinds as
+   inside them; the sort and its direction share a seam because they are one
+   decision; and the filter is the only control that can be lit, because it is
+   the only one that can be hiding something. No dividers, no second accent.
+
+   The search field carries the row's weight instead: it is the widest thing
+   in it, the only one with the strong hairline and the full-strength text, and
+   the only one with a glyph. That is what the eye lands on first.
+   -------------------------------------------------------------------------- */
+
+.raas__adawat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-16);
+  margin-inline-start: auto;
+}
+
+/* Inside a kind, half the step between kinds. That ratio is the whole grouping
+   mechanism — there is no rule, no box and no divider anywhere in this row. */
+.raas__majmua {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+/* --- the chip: one surface for every control that is not the search field -- */
+
+.raas__ikhtiyar,
+.raas__mihwar-zir,
+.raas__ittijah {
+  block-size: var(--irtifa-band);
+  font-family: inherit;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+  cursor: pointer;
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    border-color var(--zaman-hala) var(--munhana),
+    color var(--zaman-hala) var(--munhana);
+}
+
+.raas__ikhtiyar:hover,
+.raas__mihwar-zir:hover,
+.raas__ittijah:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-3);
+  border-color: var(--hadd);
+  transition: none;
+}
+
+.raas__mihwar-zir:active,
+.raas__ittijah:active {
+  background-color: var(--sath-1);
+}
+
+/* The native popup, the native keyboard and the platform's own hit testing are
+   all worth more than a hand-built listbox; only the closed state is restyled.
+   The engine's own arrow goes with `appearance`, and the product's glyph takes
+   its place — that one detail is what stopped four of these reading as browser
+   furniture. The end padding clears the glyph: it is drawn over the field, so
+   the text has to be told to stop before it. */
+.raas__ikhtiyar {
+  appearance: none;
+  padding-inline: var(--misafa-8)
+    calc(var(--misafa-8) + var(--hajm-ramz-satri) + var(--misafa-6));
+}
+
+.raas__mihwar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Never a hit target of its own: the control underneath it is the target, and
+   an inert glyph that swallows the click is a select that will not open. */
+.raas__sahm {
+  position: absolute;
+  inset-inline-end: var(--misafa-8);
+  inset-block: 0;
+  margin-block: auto;
+  color: var(--nass-3);
+  pointer-events: none;
+}
+
+/* --- the search field ----------------------------------------------------
+   The box is the wrapper and not the input, so that the glyph is a sibling of
+   the text rather than something floated over it. That distinction is not
+   cosmetic: the input carries `dir="auto"` so a Latin game name types
+   left-to-right inside an Arabic interface, which means the input's OWN inline
+   axis flips with what is typed into it — and any padding reserved on it for
+   the glyph would move to the other side the moment a Latin character was
+   entered, putting the caret under the magnifier. The wrapper's direction is
+   the document's and never moves. */
+
+.raas__bahth {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-6);
+  /* The shared field measure plus the room the glyph and its gap take out of
+     it, so what is left for text is the measure the rest of the product
+     reserves for a field rather than the measure minus an icon. */
+  inline-size: calc(var(--ard-haql) + var(--hajm-ramz-satri) + var(--misafa-16));
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-8);
+  /* One step above the chips beside it, and the only step in this row that
+     rises in BOTH palettes: `--sath-2` is lighter than `--sath-0` on dark but
+     darker than `--sath-1` on light, so a chip drawn on it is a chip that is
+     raised on one theme and sunk on the other. `--sath-3` is above the ground
+     in both, which is what makes this the brightest thing in the row wherever
+     the interface is being read. */
+  background-color: var(--sath-3);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    border-color var(--zaman-hala) var(--munhana);
+}
+
+.raas__bahth:hover {
+  border-color: var(--hadd-qawi);
+  transition: none;
+}
+
+/* The ring belongs to the box the user sees, not to the borderless input
+   inside it, which would draw it inset by the box's own padding. */
+.raas__bahth:has(.raas__bahth-haql:focus-visible) {
+  border-color: var(--tamyeez);
+  outline: var(--samk-hadd-barz) solid var(--tamyeez);
+  outline-offset: var(--misafa-2);
+}
+
+.raas__bahth-haql {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  block-size: 100%;
+  font-family: inherit;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-1);
+}
+
+.raas__bahth-haql:focus-visible {
+  outline: none;
+}
+
+.raas__bahth-haql::placeholder {
+  color: var(--nass-3);
+}
+
+/* --- the sort pair -------------------------------------------------------
+   One decision drawn as one control: no gap, one shared seam, and the outer
+   corners rounded so the pair reads as a single chip rather than as two that
+   happen to be touching. The negative margin is exactly one hairline, so the
+   seam is a hairline and not two of them. */
+
+.raas__majmua--multasiqa {
+  gap: 0;
+}
+
+.raas__majmua--multasiqa .raas__ikhtiyar {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.raas__majmua--multasiqa .raas__ittijah {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  margin-inline-start: calc(var(--samk-hadd) * -1);
+}
+
+.raas__ittijah {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--irtifa-band);
+  flex: none;
+}
+
+/* --- the status filter ---------------------------------------------------
+   The only control in the row that can be lit, because it is the only one that
+   can be hiding a game. It takes the accent on its border and its label and
+   never as a fill: a filled accent chip at this size reads as a component
+   library's own badge, which the direction forbids. */
+
+.raas__murashshih {
+  position: relative;
+  display: inline-flex;
+}
+
+.raas__mihwar-zir {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--misafa-6);
+  padding-inline: var(--misafa-8);
+}
+
+.raas__mihwar-zir--nashit,
+.raas__mihwar-zir--nashit:hover {
+  color: var(--tamyeez);
+  border-color: var(--tamyeez);
+}
+
+/* The count, in the accent's own faint wash. Tabular so that a one and a two
+   do not change the chip's width. */
+.raas__wasm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--misafa-16);
+  padding-inline: var(--misafa-4);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--tamyeez);
+  background-color: var(--tamyeez-khafit);
+  border-radius: var(--nisf-tahakkum);
+  font-variant-numeric: tabular-nums;
+}
+
+.raas__ramz {
+  flex: none;
+  color: var(--nass-3);
+}
+
+/* Genuinely floating over the grid, so it takes the product's one shadow. */
+.raas__lawha {
+  position: absolute;
+  z-index: 20;
+  inset-inline-start: 0;
+  inset-block-start: calc(var(--irtifa-band) + var(--misafa-4));
+  display: flex;
+  flex-direction: column;
+  min-inline-size: var(--ard-haql);
+  padding: var(--misafa-4);
+  background-color: var(--sath-3);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-hiwar);
+  box-shadow: var(--zill-tafu);
+}
+
+.raas__khiyar {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  white-space: nowrap;
+  border-radius: var(--nisf-tahakkum);
+  cursor: pointer;
+  transition: background-color var(--zaman-hala) var(--munhana);
+}
+
+.raas__khiyar:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-4);
+  transition: none;
+}
+
+.raas__imsah {
+  block-size: var(--irtifa-band);
+  margin-block-start: var(--misafa-4);
+  padding-inline: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  color: var(--nass-3);
+  text-align: start;
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+  cursor: pointer;
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.raas__imsah:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+/* The manual-add panel's path field. The only survivor of the header's old
+   shared field class, kept because it is a text field on a panel rather than
+   one of the chips above. */
+.maktaba__haql {
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-8);
+  font-family: inherit;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-1);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* --- the context menu ----------------------------------------------------
+   The one thing on this screen that genuinely floats, so the one thing
+   allowed the product's single shadow. */
+
+.maktaba__qaima-siyaq {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 20ch;
+  padding: var(--misafa-4);
+  background-color: var(--sath-3);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-hiwar);
+  box-shadow: var(--zill-tafu);
+}
+
+.maktaba__band-qaima {
+  display: flex;
+  align-items: center;
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-8);
+  text-align: start;
+  font-size: var(--qiyas-2);
+  color: var(--nass-2);
+  background: none;
+  border: none;
+  border-radius: var(--nisf-tahakkum);
+  cursor: pointer;
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    color var(--zaman-hala) var(--munhana);
+}
+
+.maktaba__band-qaima:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-4);
+  transition: none;
+}
+
+/* A refused entry keeps its place in the menu. The hover response is dropped
+   with it: a row that lights up under the pointer and then does nothing reads
+   as broken, which is the impression the reason line exists to prevent. */
+.maktaba__band-qaima[aria-disabled='true'],
+.maktaba__band-qaima[aria-disabled='true']:hover {
+  color: var(--nass-3);
+  background: none;
+  cursor: not-allowed;
+}
+
+.maktaba__sabab-qaima {
+  max-inline-size: 34ch;
+  margin: 0;
+  padding-inline: var(--misafa-8);
+  padding-block-end: var(--misafa-4);
+  font-size: var(--qiyas-1);
+  line-height: 1.4;
+  color: var(--tanbeeh);
+}
+
+/* --- the panels under the grid -------------------------------------------
+   Each carries the region's inset itself, now that the region has none, and
+   none of them may be squeezed by the grid growing into the space. */
+
+.maktaba__idafa {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+  margin-block: var(--misafa-12);
+  margin-inline: var(--misafa-24);
+  padding-block: var(--misafa-12);
+  padding-inline: var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-lawha);
+}
+
+.maktaba__idafa-tasmiya {
+  flex: none;
+  font-size: var(--qiyas-1);
+  color: var(--nass-3);
+}
+
+/* The path is the subject of this panel and takes whatever room is left. */
+.maktaba__idafa .maktaba__haql {
+  flex: 1 1 24ch;
+  inline-size: auto;
+}
+
+.maktaba__idafa-afal {
+  display: flex;
+  gap: var(--misafa-8);
+}
+
+.maktaba__jamai {
+  margin-block-start: var(--misafa-8);
+  margin-inline: var(--misafa-24);
+  font-size: var(--qiyas-2);
+  color: var(--nass-2);
+}
+
+/* The failed actions, stacked as the shared error block, under the grid.
+
+   Three of these can be on screen at once and the region around them no
+   longer scrolls, so this is the one stack that can outgrow the space the
+   grid gives up to it — and therefore the one that keeps a bound and a
+   scrollbar of its own. It is never on the landing path, so the library still
+   has exactly one scroller. */
+.maktaba__akhta {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+  max-block-size: 50%;
+  overflow-y: auto;
+  margin-block: var(--misafa-12) var(--misafa-24);
+  margin-inline: var(--misafa-24);
+}

@@ -1,0 +1,59 @@
+[package]
+name = "taarib-tarqee"
+description = "ترقيع تعريب — the patch compiler: size discovery, precomputed layouts, atlas compilation, the overflow report, build binding, the asset gate, and the interchange importers."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true, features = ["kayanat"] }
+taarib-mustalahat = { workspace = true }
+taarib-saff = { workspace = true }
+taarib-lawha = { workspace = true }
+taarib-ruqaa = { workspace = true }
+# `taarib-khatm` is deliberately NOT a dependency. It holds private-key custody,
+# and `taarib_ruqaa::katib` states the reason plainly: a key reachable from the
+# compiler is a key that leaks with it. Sealing is `HuzmaMabniya::akhtim`, which
+# takes a signature block the caller already produced and a verifier for it, so
+# the key stays in the one crate that owns key custody and never enters this
+# one's address space. A dependency edge that exists "for later" is an edge
+# somebody eventually uses.
+# The compiler consumes an extraction project: `BayanIstikhraj` is what the
+# build binding is derived from, and the normalized string table is what an
+# import maps onto. Neither can be re-derived here — a compiler that recomputed
+# which containers a game's text came from would be a second extractor, and the
+# two would disagree the first time an engine's layout changed.
+taarib-istikhraj = { workspace = true }
+# `taarib-tarjama` is deliberately NOT a dependency either, for a duller reason.
+# The compiler reads Phase 13's *results* — the quality flags and the review
+# record — and both of those live in `taarib-mustalahat`, where every phase can
+# reach them. Nothing here needs a type from the translation crate. Adding it so
+# that four documentation links resolve would compile a crate, and its own
+# database dependency, for four links.
+
+# Fingerprinting the bundled fonts a package declares itself built from, so an
+# installer can prove the font on disk is the one the layouts were computed
+# against. A font swapped after publication reshapes every string, and the hash
+# is what turns that from a silent visual defect into a refusal.
+blake3 = { workspace = true }
+# The two CSV importers — a generic table with configurable columns, and Unity
+# Localization's own export. Both carry quoted fields with embedded newlines, so
+# a split on the delimiter would cut one translated line into two records and
+# report the result as a successful import. Reading the grammar properly is the
+# only way an import can honestly claim it dropped nothing.
+csv = { workspace = true }
+quick-xml = { workspace = true }
+# Precomputing every string at every size is the slowest stage of a compile and
+# is embarrassingly parallel: each layout is independent of every other.
+rayon = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

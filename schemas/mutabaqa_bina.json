@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/mutabaqa_bina.json",
+  "title": "MutabaqaBina",
+  "description": "How well a patch matches the build a user actually has.",
+  "oneOf": [
+    {
+      "type": "string",
+      "const": "tamma",
+      "description": "The patch declares this exact build identifier."
+    },
+    {
+      "type": "string",
+      "const": "basma",
+      "description": "The build identifier moved but the text-bearing files did not, so the patch still applies exactly. This is the tier that keeps patches alive through routine store updates."
+    },
+    {
+      "type": "string",
+      "const": "nitaq",
+      "description": "The build falls inside a compatibility range the contributor declared, with neither an exact identifier nor a fingerprint match."
+    },
+    {
+      "type": "string",
+      "const": "ghayr",
+      "description": "Nothing matches. Shown with the reason, never silently hidden."
+    }
+  ]
+}

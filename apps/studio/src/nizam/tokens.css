@@ -1,0 +1,531 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   طبقة الرموز — the Taarib token layer.
+
+   Every value the interface is allowed to use lives here and nowhere else.
+   A component that writes a raw colour, a raw size or a raw radius is a bug,
+   because the three things the product promises — a light theme, a high
+   contrast theme, and an interface that scales from compact to large — are all
+   implemented by re-pointing the tokens in this file and nothing else.
+
+   Tailwind's own palette, spacing scale, radii, type scale, shadows and easings
+   are deleted below before a single Taarib value is registered, so no utility
+   can silently fall back to a framework default and look like a default.
+   ========================================================================== */
+
+@theme {
+  /* --- deletions: nothing from the framework survives ------------------- */
+  --color-*: initial;
+  --font-*: initial;
+  --font-weight-*: initial;
+  --text-*: initial;
+  --leading-*: initial;
+  --tracking-*: initial;
+  --spacing: initial;
+  --spacing-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+  --blur-*: initial;
+  --ease-*: initial;
+  --animate-*: initial;
+
+  /* --- surfaces --------------------------------------------------------- */
+  --color-sath-0: var(--sath-0);
+  --color-sath-1: var(--sath-1);
+  --color-sath-2: var(--sath-2);
+  --color-sath-3: var(--sath-3);
+  --color-sath-4: var(--sath-4);
+
+  /* --- hairlines -------------------------------------------------------- */
+  --color-hadd-daif: var(--hadd-daif);
+  --color-hadd: var(--hadd);
+  --color-hadd-qawi: var(--hadd-qawi);
+
+  /* --- text ------------------------------------------------------------- */
+  --color-nass-1: var(--nass-1);
+  --color-nass-2: var(--nass-2);
+  --color-nass-3: var(--nass-3);
+
+  /* --- the single accent ------------------------------------------------ */
+  --color-tamyeez: var(--tamyeez);
+  --color-tamyeez-qawi: var(--tamyeez-qawi);
+  --color-tamyeez-khafit: var(--tamyeez-khafit);
+
+  /* --- status: dots, badges and hairlines, never panel fills ------------ */
+  --color-najah: var(--najah);
+  --color-tanbeeh: var(--tanbeeh);
+  --color-khatar: var(--khatar);
+  --color-maalumat: var(--maalumat);
+
+  /* --- families --------------------------------------------------------- */
+  --font-wajiha: var(--khatt-wajiha);
+  --font-latini: var(--khatt-latini);
+  --font-uhadi: var(--khatt-uhadi);
+
+  /* --- the six steps, each carrying its own line height ------------------ */
+  --text-qiyas-1: var(--qiyas-1);
+  --text-qiyas-1--line-height: var(--irtifa-1);
+  --text-qiyas-2: var(--qiyas-2);
+  --text-qiyas-2--line-height: var(--irtifa-2);
+  --text-qiyas-3: var(--qiyas-3);
+  --text-qiyas-3--line-height: var(--irtifa-3);
+  --text-qiyas-4: var(--qiyas-4);
+  --text-qiyas-4--line-height: var(--irtifa-4);
+  --text-qiyas-5: var(--qiyas-5);
+  --text-qiyas-5--line-height: var(--irtifa-5);
+  --text-qiyas-6: var(--qiyas-6);
+  --text-qiyas-6--line-height: var(--irtifa-6);
+
+  --leading-wajiha: var(--irtifa-wajiha);
+  --leading-qira: var(--irtifa-qira);
+
+  /* --- weights: nothing heavier than 600 exists in this product ---------- */
+  --font-weight-adi: var(--wazn-adi);
+  --font-weight-mutawassit: var(--wazn-mutawassit);
+  --font-weight-bariz: var(--wazn-bariz);
+
+  /* --- the eleven spacing steps; nothing between them -------------------- */
+  --spacing-2: var(--misafa-2);
+  --spacing-4: var(--misafa-4);
+  --spacing-6: var(--misafa-6);
+  --spacing-8: var(--misafa-8);
+  --spacing-12: var(--misafa-12);
+  --spacing-16: var(--misafa-16);
+  --spacing-20: var(--misafa-20);
+  --spacing-24: var(--misafa-24);
+  --spacing-32: var(--misafa-32);
+  --spacing-40: var(--misafa-40);
+  --spacing-56: var(--misafa-56);
+
+  /* --- radii: a detail, not a style ------------------------------------- */
+  --radius-tahakkum: var(--nisf-tahakkum);
+  --radius-lawha: var(--nisf-lawha);
+  --radius-hiwar: var(--nisf-hiwar);
+  --radius-hadd: var(--nisf-hadd);
+
+  /* --- the one shadow, for true floating overlays only ------------------- */
+  --shadow-tafu: var(--zill-tafu);
+  --shadow-bitaqa: var(--zill-bitaqa);
+  --shadow-wahj-sawt: var(--wahj-sawt);
+  --shadow-wahj-nass: var(--wahj-nass);
+
+  /* --- the card's two ring colours --------------------------------------- */
+  --color-halqat-sawt: var(--halqat-sawt);
+  --color-halqat-nass: var(--halqat-nass);
+
+  --ease-taarib: var(--munhana);
+}
+
+/* ==========================================================================
+   القيم — the values themselves. Dark is the product's default, not a mode.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* The default density, restated as the base so that a document which has
+     not been told a density yet still renders at the product's default. The
+     [data-kathafa] rules below carry the same specificity and come later, so
+     they win the moment the attribute is present. */
+  font-size: 16px;
+  --irtifa-satr: 36px;
+  --irtifa-band: 28px;
+  --irtifa-shareet: 40px;
+
+  /* --- surfaces: elevation is luminance plus a hairline, never a shadow -- */
+  --sath-0: #0b0c0d;
+  --sath-1: #121415;
+  --sath-2: #17191b;
+  --sath-3: #1d2022;
+  --sath-4: #24272a;
+
+  --hadd-daif: rgba(255, 255, 255, 0.06);
+  --hadd: rgba(255, 255, 255, 0.1);
+  --hadd-qawi: rgba(255, 255, 255, 0.16);
+
+  --nass-1: #e8eaec;
+  --nass-2: #a8aeb4;
+  --nass-3: #6e767d;
+
+  --tamyeez: #2a9d8f;
+  --tamyeez-qawi: #34b4a3;
+
+  /* The wash is the accent at a fraction, and the fraction is a token of its
+     own because it has two consumers: the product accent here, and the
+     per-game accent on a detail screen, which has to wash at the SAME
+     strength in a different hue. A wash written as one literal rgba() could
+     only ever be teal, which is how an accented button ended up with a red
+     border over a faint teal fill on hover. */
+  --nisbat-khafit: 16%;
+  --tamyeez-khafit: color-mix(in srgb, var(--tamyeez) var(--nisbat-khafit), transparent);
+
+  --najah: #57a773;
+  --tanbeeh: #c99a2e;
+  --khatar: #d05353;
+  --maalumat: #5b8dbe;
+
+  /* Overlays float; panels do not. This is the only shadow in the product,
+     and it is tight and dark rather than soft and diffuse. */
+  --zill-tafu: 0 6px 16px rgba(0, 0, 0, 0.46), 0 1px 3px rgba(0, 0, 0, 0.38);
+
+  /* --- families ---------------------------------------------------------
+     The Arabic face leads and the Latin companion follows it in the same
+     stack: a mixed Arabic/Latin line then resolves each script to a face that
+     shares metrics with the other, so the baseline does not step mid-line. */
+  /* The bundled face is named first and alone for Arabic. The system names
+     that used to follow it were not a safety net — they were the bug: with no
+     `@font-face` behind the first name, every platform silently resolved
+     Arabic to Segoe UI, Geeza Pro, or on a minimal Linux to nothing at all,
+     in a product whose entire subject is rendering Arabic correctly. The
+     Latin companion stays in the stack because a game title is Latin and must
+     share metrics with the Arabic around it; `sans-serif` stays as the last
+     resort for a build where the bundled file genuinely failed to load, which
+     is a broken build rather than a supported configuration. */
+  --khatt-wajiha: 'IBM Plex Sans Arabic', 'IBM Plex Sans', sans-serif;
+  --khatt-latini: 'IBM Plex Sans', 'Segoe UI', -apple-system, 'Helvetica Neue',
+    'Noto Sans', Arial, sans-serif;
+  /* Bundled for the same reason: a hash, a path and a build number have to be
+     unambiguous, and the system monospace differs on every platform. */
+  --khatt-uhadi: 'IBM Plex Mono', monospace;
+
+  /* --- the six steps, in rem so that density scales them ----------------
+     The comment on each line is the value at the default density, which is
+     the pair the design direction specifies: size / line height in pixels. */
+  --qiyas-1: 0.6875rem; /* 11 */
+  --irtifa-1: 1rem; /* 16 */
+  --qiyas-2: 0.78125rem; /* 12.5 */
+  --irtifa-2: 1.125rem; /* 18 */
+  --qiyas-3: 0.875rem; /* 14 */
+  --irtifa-3: 1.25rem; /* 20 */
+  --qiyas-4: 1rem; /* 16 */
+  --irtifa-4: 1.5rem; /* 24 */
+  --qiyas-5: 1.25rem; /* 20 */
+  --irtifa-5: 1.75rem; /* 28 */
+  --qiyas-6: 1.75rem; /* 28 */
+  --irtifa-6: 2.125rem; /* 34 */
+
+  /* Interface leading, and the much looser leading Arabic reading text needs:
+     descenders and diacritics collide at Latin line heights. */
+  --irtifa-wajiha: 1.4;
+  --irtifa-qira: 1.75;
+
+  /* A measure the interface reuses: a settings field, a filter input, a rail.
+     Three screens had it as a raw `220px`, which meant it did not move with
+     density and could drift apart between screens. */
+  --ard-haql: 13.75rem;
+
+  /* The measure of a floating surface — the command palette, the undo
+     announcement. In pixels, not rem: a dialog is sized to the window it
+     floats over, and scaling it with the interface density would put a
+     `kabir` palette off the edge of a small screen. Two rules carried it as a
+     raw `560px`. */
+  --ard-hiwar: 560px;
+
+  /* The emphasis border. A leading rule on a panel or a row is two hairlines
+     wide, not one — thin enough to stay a rule, thick enough to read as
+     deliberate. Four files had it as a raw `2px solid`. */
+  --samk-hadd-barz: 2px;
+
+  --wazn-adi: 400;
+  --wazn-mutawassit: 500;
+  --wazn-bariz: 600;
+
+  /* --- spacing: 2 4 6 8 12 16 20 24 32 40 56, and nothing between ------- */
+  --misafa-2: 0.125rem;
+  --misafa-4: 0.25rem;
+  --misafa-6: 0.375rem;
+  --misafa-8: 0.5rem;
+  --misafa-12: 0.75rem;
+  --misafa-16: 1rem;
+  --misafa-20: 1.25rem;
+  --misafa-24: 1.5rem;
+  --misafa-32: 2rem;
+  --misafa-40: 2.5rem;
+  --misafa-56: 3.5rem;
+
+  /* --- radii, in pixels: a corner is not part of the type scale ---------- */
+  --nisf-tahakkum: 3px;
+  --nisf-lawha: 4px;
+  --nisf-hiwar: 6px;
+  --nisf-hadd: 0;
+
+  /* --- structure --------------------------------------------------------
+     The sidebar is a fixed rail, not a fraction of the window: at 3840px a
+     proportional sidebar becomes a wall, and at 1024px it disappears. */
+  --ard-janib: 232px;
+  --ard-qadeeb: 56px;
+  --samk-hadd: 1px;
+
+  /* --- icons: one stroke weight, two sizes, no second family ------------- */
+  --samk-ramz: 1.5px;
+  --hajm-ramz-satri: 16px;
+  --hajm-ramz-tanaqqul: 20px;
+
+  /* --- the card ---------------------------------------------------------
+     The product's visual signature, and the one place in this file where
+     every number is load-bearing rather than a scale step.
+
+     The governing rule: EVERY CARD IS THE SAME SIZE IN EVERY STATE. A game
+     with nothing, a game with text, a game with voice, and a game with both
+     all occupy 314×192 and all show 292×136 of artwork. The status frames are
+     taken from INSIDE the card — out of the artwork's own reserve — never
+     from the layout around it. That is what stops a ten-thousand-card grid
+     from reflowing as patch availability resolves in from the registry.
+
+     314 wide, 158 artwork well + 34 caption band = 192 tall.
+     The reserve is 3 ring + 2 gap + 3 ring + 2 breathing = 10 per side, so the
+     artwork is 292 × 136. Change any one of these five and the other four must
+     change with it, which is why they are adjacent.
+
+     THE SHAPE, AND WHY IT CHANGED
+     The card was portrait, 240 × 394 around a 220 × 340 well, because that is
+     the shape a store page uses. Three things said otherwise once the product
+     was run against a real library on a real screen. The owner's own mockup is
+     landscape. A portrait card wide enough to fill their window is 508 tall,
+     which is a row and a half on screen, against 3.7 rows landscape — the same
+     width showing 2.3× the games. And every `header.jpg` Steam caches is
+     exactly 460 × 215: at 292 × 136 the artwork is that ratio to within a
+     rounding pixel, so it is shown whole, with nothing cropped away. The
+     portrait cover is the rarer file too — 14 of the owner's 17 games have one
+     against 16 with a header.
+
+     Three columns of these, two 24px gaps and the 24px inset every other
+     element on the library screen sits on, come to 1038 in a 1037px region.
+     The old 240 left a quarter of the window in the margins. */
+  --ard-bitaqa: 314px;
+  --irtifa-sura: 158px;
+  --irtifa-shareet-bitaqa: 34px;
+  --samk-halqa: 3px;
+  --fajwat-halqa: 2px;
+  --tanaffus-halqa: 2px;
+
+  /* The two ring colours. Muted, because they sit against artwork and must
+     read as material rather than as a status light. Never violet, never
+     purple, never a gradient — the direction is explicit about all three. */
+  --halqat-sawt: #5f7d99;
+  --halqat-nass: #5f9970;
+
+  /* The glow each lit ring casts: tight, short-radius, offset downward, in
+     the ring's own hue. Not a diffuse blur halo — a soft wide glow reads as
+     decoration and this has to read as the card being made of something. */
+  --wahj-sawt: 0 3px 10px -2px rgba(95, 125, 153, 0.55);
+  --wahj-nass: 0 3px 9px -2px rgba(95, 153, 112, 0.5);
+
+  /* Carried by every card regardless of state, so an unpatched card is not
+     visually flat beside a patched one. Independent of the ring glows and
+     always present underneath them. */
+  --zill-bitaqa: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+
+  /* The tabs. The green sits in front and narrower; the blue sits behind and
+     extends lower and further to both sides, so a card with both shows a
+     layered pair rather than two separate chips. */
+  --ard-lisan-nass: 62px;
+  --ard-lisan-sawt: 96px;
+  --irtifa-lisan-nass: 22px;
+  --irtifa-lisan-sawt: 28px;
+  --nisf-lisan: 7px;
+
+  /* The two other card sizes. These are the user's CARD SIZE choice on the
+     library screen, not the interface density: a large display can want large
+     text and small cards, and the two settings are independent on purpose.
+     The card scales as one unit at 0.7 and 1.3 of the standard set above; the
+     strip and the tabs do not scale linearly because each holds text at a
+     fixed step and would either clip it or float it. The ring reserve stays
+     at 10 per side at every size, so the artwork inside is 148×232 and
+     272×448 — the same rule as the standard card, applied to a different
+     frame. They lived in the card's own stylesheet as fourteen raw pixel
+     values, which is where a change to one of the five load-bearing numbers
+     above would have failed to reach them. */
+  --ard-bitaqa-mudmaj: 220px;
+  --irtifa-sura-mudmaj: 114px;
+  --irtifa-shareet-bitaqa-mudmaj: 28px;
+  --ard-lisan-nass-mudmaj: 52px;
+  --ard-lisan-sawt-mudmaj: 78px;
+  --irtifa-lisan-nass-mudmaj: 18px;
+  --irtifa-lisan-sawt-mudmaj: 22px;
+
+  /* `kabir`'s artwork is 444 × 207, which is the header very close to the
+     native 460 × 215 the file actually holds — the largest step draws the
+     picture at essentially the size it was authored. */
+  --ard-bitaqa-kabir: 466px;
+  --irtifa-sura-kabir: 229px;
+  --irtifa-shareet-bitaqa-kabir: 40px;
+  --ard-lisan-nass-kabir: 78px;
+  --ard-lisan-sawt-kabir: 118px;
+  --irtifa-lisan-nass-kabir: 26px;
+  --irtifa-lisan-sawt-kabir: 32px;
+
+  /* --- motion -----------------------------------------------------------
+     The numeric spring lives in haraka.ts, where Motion consumes it. These
+     are the same three durations for the plain CSS transitions that do not
+     need a spring: hover and press states, which must land within a frame or
+     two of the pointer arriving. */
+  --zaman-hala: 120ms;
+  --zaman-lawha: 180ms;
+  --zaman-masar: 240ms;
+  --munhana: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ==========================================================================
+   السمة الفاتحة — the light palette. Same structure, same hairline logic.
+   ========================================================================== */
+
+[data-sima='fatih'] {
+  color-scheme: light;
+
+  /* Elevation in this product is a luminance step plus a hairline, and in the
+     light palette these five ran 245, 255, 250, 255, 240 — so `--sath-2` was
+     darker than `--sath-1` and `--sath-4`, the highest surface, was darker than
+     the ground everything sits on. A panel meant to read as raised read as
+     recessed, and two pairs were indistinguishable. They ascend now, as the
+     dark set always did. The steps at the top are small because white is the
+     ceiling and there is only so much room beneath it; that is what the
+     hairline is for, and it is why elevation here was never shadow alone. */
+  --sath-0: #f5f6f7;
+  --sath-1: #f9fafb;
+  --sath-2: #fcfcfd;
+  --sath-3: #fefefe;
+  --sath-4: #ffffff;
+
+  --hadd-daif: rgba(0, 0, 0, 0.07);
+  --hadd: rgba(0, 0, 0, 0.11);
+  --hadd-qawi: rgba(0, 0, 0, 0.18);
+
+  --nass-1: #16191c;
+  --nass-2: #4e565d;
+  --nass-3: #838c93;
+
+  --zill-tafu: 0 6px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  /* The card, on light. The rings darken rather than lighten — a muted steel
+     blue that reads as material against #121415 reads as a pale wash against
+     white — and both glows lose most of their alpha, because a coloured glow
+     on a light surface is a smudge at the weight that looks like material on a
+     dark one. The geometry is identical; only the weights move. */
+  --halqat-sawt: #4a637a;
+  --halqat-nass: #4a7a58;
+  --wahj-sawt: 0 3px 10px -2px rgba(74, 99, 122, 0.3);
+  --wahj-nass: 0 3px 9px -2px rgba(74, 122, 88, 0.28);
+  --zill-bitaqa: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================================================
+   التباين العالي — an independent token set, selectable with either palette.
+
+   Text, hairlines, focus rings and status colours are all raised together:
+   a high-contrast mode that only brightens the text leaves the user unable to
+   see where one panel ends and the next begins, which is the thing they turned
+   it on for.
+   ========================================================================== */
+
+[data-tabayun='aali'] {
+  --sath-0: #000000;
+  --sath-1: #0a0b0c;
+  --sath-2: #101214;
+  --sath-3: #16191b;
+  --sath-4: #202427;
+
+  --hadd-daif: rgba(255, 255, 255, 0.22);
+  --hadd: rgba(255, 255, 255, 0.38);
+  --hadd-qawi: rgba(255, 255, 255, 0.62);
+
+  --nass-1: #ffffff;
+  --nass-2: #ccd2d8;
+  --nass-3: #9ba4ab;
+
+  --tamyeez: #3fc7b5;
+  --tamyeez-qawi: #5ad9c8;
+  --nisbat-khafit: 26%;
+  --tamyeez-khafit: color-mix(in srgb, var(--tamyeez) var(--nisbat-khafit), transparent);
+
+  --najah: #6fcb8b;
+  --tanbeeh: #e0b44a;
+  --khatar: #f08585;
+  --maalumat: #85b5e0;
+}
+
+[data-sima='fatih'][data-tabayun='aali'] {
+  /* Same correction as the light set above, and the same reason. The ground
+     gives up pure white so that four surfaces can sit above it: black text on
+     this ground still measures 18.2:1, far past what the high-contrast setting
+     is asking for, and an elevation system whose steps run backwards helps
+     nobody who turned this on to see boundaries more clearly. */
+  --sath-0: #eceff1;
+  --sath-1: #f4f6f7;
+  --sath-2: #f9fafb;
+  --sath-3: #fdfdfe;
+  --sath-4: #ffffff;
+
+  --hadd-daif: rgba(0, 0, 0, 0.24);
+  --hadd: rgba(0, 0, 0, 0.42);
+  --hadd-qawi: rgba(0, 0, 0, 0.68);
+
+  --nass-1: #000000;
+  --nass-2: #2c3338;
+  --nass-3: #4a5157;
+
+  --tamyeez: #14655c;
+  --tamyeez-qawi: #0e4c45;
+  --nisbat-khafit: 18%;
+  --tamyeez-khafit: color-mix(in srgb, var(--tamyeez) var(--nisbat-khafit), transparent);
+
+  --najah: #245f38;
+  --tanbeeh: #7a5709;
+  --khatar: #962626;
+  --maalumat: #22557f;
+}
+
+/* ==========================================================================
+   الكثافة — one root size drives the whole interface.
+
+   Everything typographic and every spacing step is expressed in rem, so all
+   three densities are the same layout at three sizes rather than three
+   layouts. Row heights are stated per density because the design direction
+   fixes them: a table row is a hit target before it is a measurement.
+   ========================================================================== */
+
+[data-kathafa='mudmaj'] {
+  font-size: 15px;
+  --irtifa-satr: 32px;
+  --irtifa-saff-warsha: 48px;
+  --irtifa-saff-nusus: 40px;
+  --irtifa-band: 26px;
+  --irtifa-shareet: 36px;
+}
+
+[data-kathafa='murih'] {
+  font-size: 16px;
+  --irtifa-satr: 36px;
+  --irtifa-saff-warsha: 56px;
+  --irtifa-saff-nusus: 44px;
+  --irtifa-band: 28px;
+  --irtifa-shareet: 40px;
+}
+
+[data-kathafa='kabir'] {
+  font-size: 17px;
+  --irtifa-satr: 40px;
+  --irtifa-saff-warsha: 64px;
+  --irtifa-saff-nusus: 52px;
+  --irtifa-band: 32px;
+  --irtifa-shareet: 44px;
+}
+
+/* ==========================================================================
+   تقليل الحركة — honoured by making transitions instant, never by slowing
+   them down. A user who asks for less motion is not asking for lazier motion.
+   `data-haraka='hurr'` is the settings override for a user who turned the
+   honouring off; without it the platform preference wins.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-haraka='hurr']) {
+    --zaman-hala: 0ms;
+    --zaman-lawha: 0ms;
+    --zaman-masar: 0ms;
+  }
+}

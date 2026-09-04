@@ -1,0 +1,50 @@
+[package]
+name = "taarib-muhawwil-unreal"
+description = "محوّل تعريب لمحرّك أنريل — the Unreal adapter: force full Slate shaping, register the bundled font at runtime, correct measurement and layout, and round-trip the real localization resources."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[features]
+# The in-process bootstrap and its `taarib_bidaya` export, compiled only for
+# the cdylib a game loads. Off by default and enabled by no manifest: three
+# payloads export the same symbol, and `taarib-studio` links all three as
+# rlibs, so an always-on export is a duplicate-symbol link failure on the
+# desktop binary. The payload build passes `--features hamula` explicitly, and
+# `taarib-tajmee` refuses to stage a payload whose symbol is absent — so
+# forgetting the flag fails on the build machine rather than shipping a module
+# that loads and returns.
+hamula = []
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-jisr = { workspace = true }
+taarib-haqn = { workspace = true }
+# The bootstrap opens the installed patch beside itself.
+taarib-ruqaa = { workspace = true }
+# For the pak/IoStore version-range mapping, which Phase 5 already established
+# and which must not be written twice: two tables saying which Unreal version a
+# pak version 8 with four compression slots implies would eventually disagree,
+# and the one consulted less often would be the wrong one.
+taarib-muharrik = { workspace = true }
+
+retour = { workspace = true }
+aes = { workspace = true }
+cbc = { workspace = true }
+zstd = { workspace = true }
+# Zlib and Gzip, which both .pak and IoStore use for their blocks.
+flate2 = { workspace = true }
+memmap2 = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

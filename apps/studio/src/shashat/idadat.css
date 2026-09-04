@@ -1,0 +1,612 @@
+/* شاشة الإعدادات — a settings document on one alignment, not a stack of boxes. */
+
+.idadat {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100%;
+  background-color: var(--sath-0);
+
+  /* The structural constants this screen needs and the token layer does not
+     carry. Stated in rem rather than px so the three densities move the label
+     column with the type inside it, instead of leaving a fixed 220px column
+     beside labels that grew two steps. */
+  --ard-wathiqa: 54rem;
+  --ard-tasmiya: 14rem;
+  --ard-haql: 32rem;
+  --ard-haql-raqm: 8rem;
+  --ard-wasm: 6rem;
+  --fajwat-saff: var(--misafa-16);
+
+  /* Where the control column begins. Every control on the screen — a field, a
+     checkbox, a path list, a credential block — starts on this one line, so the
+     eye can run down it without stepping. */
+  --bad-tahakkum: calc(var(--ard-tasmiya) + var(--fajwat-saff));
+}
+
+.idadat__shareet-alawi {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.idadat__raji {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.idadat__raji:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.idadat__fasl {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.idadat__jism {
+  min-block-size: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  max-inline-size: var(--ard-wathiqa);
+  padding: var(--misafa-24);
+}
+
+.idadat__jari {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-3);
+}
+
+/* --- sections -------------------------------------------------------------
+   A section is a heading, a sentence and a column of controls. It has no fill
+   and no frame: the only boundary drawn on this screen is the one between two
+   subjects, because a border around every group is what makes a settings
+   screen read as a dialog from a decade ago. */
+
+.idadat__qism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  padding-block: var(--misafa-32);
+}
+
+.idadat__qism:first-child {
+  padding-block-start: 0;
+}
+
+.idadat__qism + .idadat__qism {
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* The heading block stands off the controls by twice the gap between two
+   controls, which is the whole of this screen's rhythm: heading, then body. */
+.idadat__raas-qism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-4);
+  margin-block-end: var(--misafa-8);
+  max-inline-size: 68ch;
+}
+
+.idadat__unwan-qism {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-bariz);
+  color: var(--nass-1);
+}
+
+.idadat__sharh-qism {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+/* --- the two columns ------------------------------------------------------ */
+
+.idadat__saff {
+  display: grid;
+  grid-template-columns: var(--ard-tasmiya) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--fajwat-saff);
+  min-block-size: var(--irtifa-band);
+}
+
+/* A row whose control is a block — a list, a credential, a status answer —
+   rather than a single field: the label sits at the top of it instead of
+   halfway down, and the block gets air on both sides of it. */
+.idadat__saff--kutla {
+  align-items: start;
+  margin-block: var(--misafa-8);
+}
+
+.idadat__tasmiya {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* Anything that has no label of its own but still belongs in the control
+   column: a checkbox and its sentence, a list, a status answer. */
+.idadat__mudakhkhal {
+  padding-inline-start: var(--bad-tahakkum);
+}
+
+.idadat__nass-hadi {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  max-inline-size: 68ch;
+}
+
+/* --- controls ------------------------------------------------------------- */
+
+.idadat__haql {
+  inline-size: 100%;
+  max-inline-size: var(--ard-haql);
+  min-block-size: var(--irtifa-band);
+  padding-block: var(--misafa-4);
+  padding-inline: var(--misafa-8);
+  font-family: inherit;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  transition: border-color var(--zaman-hala) var(--munhana);
+}
+
+.idadat__haql:hover {
+  border-color: var(--hadd-qawi);
+  transition: none;
+}
+
+.idadat__haql:focus-visible {
+  border-color: var(--tamyeez);
+}
+
+.idadat__haql::placeholder {
+  color: var(--nass-3);
+}
+
+.idadat__haql.mono-ltr {
+  font-family: var(--khatt-uhadi);
+  font-size: var(--qiyas-2);
+}
+
+.idadat__haql--raqm {
+  max-inline-size: var(--ard-haql-raqm);
+}
+
+.idadat__haql--sirr {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* The spinner is browser furniture, not a control this product drew: it sits
+   over the field's own corner radius, it is a different width in every engine,
+   and it puts a second affordance beside a value that is typed. The field keeps
+   its type — the numeric keypad, the min and step — and loses the buttons. */
+.idadat input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.idadat input[type='number']::-webkit-outer-spin-button,
+.idadat input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+/* Native on purpose. `appearance: none` would also throw away the accent the
+   base layer sets on :root, and a hand-drawn box is exactly what makes a
+   checkbox look like it came out of a component library. Only the size is ours,
+   so a 13px default box does not sit beside 14px labels. */
+.idadat input[type='checkbox'],
+.idadat input[type='radio'] {
+  flex: none;
+  inline-size: var(--hajm-ramz-satri);
+  block-size: var(--hajm-ramz-satri);
+  margin: 0;
+}
+
+.idadat__ikhtiyar {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  min-block-size: var(--irtifa-band);
+  padding-inline-start: var(--bad-tahakkum);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+}
+
+.idadat__saff-afal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+/* The consequence of a setting the user has just turned on. Amber and a leading
+   emphasis rule, because this is the one place in this screen where a choice
+   has an effect on somebody else's work: past it, Taarib will offer to write
+   machine output over a translation a human was paid for. It is drawn only
+   while the setting is on, so a screen full of settings is not a screen full of
+   warnings. */
+.idadat__athar {
+  max-inline-size: 68ch;
+  margin-block-start: var(--misafa-4);
+  padding: var(--misafa-12);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tanbeeh);
+  border-radius: var(--nisf-tahakkum);
+  text-wrap: pretty;
+}
+
+/* --- empty states --------------------------------------------------------- */
+
+.idadat__farigh {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-12);
+  padding: var(--misafa-16);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.idadat__farigh-unwan {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.idadat__farigh-nass {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  max-inline-size: 60ch;
+  text-wrap: pretty;
+}
+
+/* The empty state's action is a field and a button, and it takes the block's
+   width rather than shrinking to its content the way a lone button does. */
+.idadat__farigh .idadat__saff-idafa {
+  align-self: stretch;
+}
+
+/* --- editable path lists -------------------------------------------------- */
+
+.idadat__qaima-masarat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+  inline-size: 100%;
+  max-inline-size: var(--ard-haql);
+}
+
+.idadat__masarat {
+  display: flex;
+  flex-direction: column;
+}
+
+/* One stored path is a record, and the line between two records is a boundary
+   that exists — unlike the frame that used to sit around each one. */
+.idadat__masar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--misafa-8);
+  min-block-size: var(--irtifa-band);
+  padding-block: var(--misafa-4);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.idadat__masar:last-child {
+  border-block-end: 0;
+}
+
+.idadat__masar-nass {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--nass-1);
+}
+
+.idadat__saff-idafa {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+.idadat__saff-idafa .idadat__haql {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* --- fonts ---------------------------------------------------------------- */
+
+.idadat__khutut {
+  display: flex;
+  flex-direction: column;
+  inline-size: 100%;
+  max-inline-size: var(--ard-haql);
+}
+
+/* The tag column is reserved rather than sized to its content, so the tags and
+   the sizes both start on one line down the list instead of stepping with the
+   length of each font's name. */
+.idadat__khatt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--ard-wasm) var(--ard-haql-raqm);
+  align-items: center;
+  gap: var(--misafa-12);
+  min-block-size: var(--irtifa-band);
+  padding-block: var(--misafa-4);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.idadat__khatt:last-child {
+  border-block-end: 0;
+}
+
+.idadat__khatt-ism {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--nass-1);
+}
+
+/* Which faces can shape Arabic is the one fact this list exists to report, so
+   it is the one thing here allowed to carry the accent — outlined, not filled,
+   because a filled chip at this size is a component-library badge. */
+.idadat__wasm {
+  justify-self: start;
+  padding-inline: var(--misafa-6);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  border: var(--samk-hadd) solid currentcolor;
+  border-radius: var(--nisf-tahakkum);
+  white-space: nowrap;
+}
+
+.idadat__wasm--arabi {
+  color: var(--tamyeez);
+}
+
+.idadat__wasm--latini {
+  color: var(--nass-3);
+}
+
+.idadat__khatt-hajm {
+  text-align: end;
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- providers ------------------------------------------------------------
+   A provider is a record, not a table row: nine columns of inputs at eleven
+   pixels each is a form nobody can read, and the credential underneath it had
+   nowhere to live but a cell spanning all nine. Each provider is now a block on
+   the screen's own two columns, so its fields align with every other field on
+   the screen and the credential gets room of its own. */
+
+.idadat__muzawwidun {
+  display: flex;
+  flex-direction: column;
+}
+
+.idadat__muzawwid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  padding-block: var(--misafa-20);
+}
+
+.idadat__muzawwid:first-child {
+  padding-block-start: 0;
+}
+
+.idadat__muzawwid + .idadat__muzawwid {
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.idadat__muzawwid-raas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--misafa-8);
+  margin-block-end: var(--misafa-4);
+}
+
+.idadat__muzawwid-unwan {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.idadat__muzawwid-muarrif {
+  color: var(--nass-3);
+}
+
+.idadat__muzawwid-izala {
+  margin-inline-start: auto;
+}
+
+/* --- the credential -------------------------------------------------------
+   The one block on this screen that touches the system keychain, and the only
+   one whose two buttons act the moment they are pressed rather than at the next
+   save. It is set apart deliberately: its own surface, its own edge, and a
+   state marker that reads by shape as well as by colour. */
+
+.idadat__itimad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-8);
+  margin-inline-start: var(--bad-tahakkum);
+  max-inline-size: var(--ard-haql);
+  padding: var(--misafa-12);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: calc(var(--samk-hadd) * 2) solid var(--hadd-qawi);
+  border-radius: var(--nisf-lawha);
+}
+
+.idadat__itimad-hala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--misafa-8);
+}
+
+.idadat__itimad-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.idadat__itimad-natija {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+/* Filled square, hollow square, filled diamond — three states a reader can tell
+   apart with the colours turned off, which is the point of drawing them. */
+.idadat__itimad-natija::before {
+  content: '';
+  flex: none;
+  align-self: center;
+  inline-size: var(--misafa-8);
+  block-size: var(--misafa-8);
+  border: var(--samk-hadd) solid currentcolor;
+}
+
+.idadat__itimad-natija--mawjud {
+  color: var(--najah);
+}
+
+.idadat__itimad-natija--mawjud::before {
+  background-color: currentcolor;
+}
+
+.idadat__itimad-natija--ghaib {
+  color: var(--nass-2);
+}
+
+.idadat__itimad-natija--taadhur {
+  color: var(--tanbeeh);
+}
+
+.idadat__itimad-natija--taadhur::before {
+  background-color: currentcolor;
+  rotate: 45deg;
+}
+
+/* Nothing to check yet, so nothing is claimed about the keychain. */
+.idadat__itimad-natija--bila::before {
+  content: none;
+}
+
+.idadat__itimad-afal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+/* --- the save bar ---------------------------------------------------------
+   Bleeds to both edges of the scrolling region rather than floating in it as a
+   rounded card, and the negative block end cancels the region's own padding so
+   the bar rests flush at the foot of the document. */
+
+.idadat__shareet-hifz {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-12);
+  margin-inline: calc(var(--misafa-24) * -1);
+  margin-block: var(--misafa-24) calc(var(--misafa-24) * -1);
+  padding: var(--misafa-12) var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-start: var(--samk-hadd) solid var(--hadd);
+}
+
+.idadat__hala-hifz {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+}
+
+.idadat__hala-hifz::before {
+  content: '';
+  flex: none;
+  align-self: center;
+  inline-size: var(--misafa-6);
+  block-size: var(--misafa-6);
+  background-color: currentcolor;
+}
+
+.idadat__hala-hifz--mutaghayyir {
+  color: var(--tanbeeh);
+}
+
+.idadat__hala-hifz--tamma {
+  color: var(--najah);
+}
+
+.idadat__najah {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--najah);
+}
+
+/* The disabled face. Scoped, because a button that cannot be pressed still has
+   to read as a button rather than as a hole in the bar. */
+.idadat .zir[aria-disabled='true'] {
+  color: var(--nass-3);
+  border-color: var(--hadd-daif);
+  background-color: var(--sath-2);
+  cursor: not-allowed;
+}
+
+/* The update card's live answer: absent, offered, or downloading. */
+.idadat__tahdith-hala {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-8);
+}

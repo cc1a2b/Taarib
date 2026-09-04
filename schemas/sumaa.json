@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/sumaa.json",
+  "title": "Sumaa",
+  "description": "A contributor's record, as it appears on every listing they published.",
+  "type": "object",
+  "properties": {
+    "ruqaa_manshura": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Patches published."
+    },
+    "qubila_bila_taadil": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Submissions accepted with no changes requested — the single most honest signal of a careful contributor."
+    },
+    "tulib_taadil": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Submissions that were returned for revision."
+    },
+    "marfuda": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Submissions rejected outright."
+    },
+    "masbuba": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Published patches that were later revoked."
+    },
+    "mutawassit_taqyeem": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "format": "float",
+      "description": "Average rating across their published patches, when anyone has rated."
+    },
+    "adad_taqyeemat": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "How many ratings that average is built on."
+    }
+  },
+  "required": [
+    "ruqaa_manshura",
+    "qubila_bila_taadil",
+    "tulib_taadil",
+    "marfuda",
+    "masbuba",
+    "adad_taqyeemat"
+  ]
+}

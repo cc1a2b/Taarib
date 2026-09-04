@@ -1,0 +1,489 @@
+/* شاشة الطبقة — tokens only, logical properties: the gate, then geometry beside a log. */
+
+.tabaqa {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100%;
+  background-color: var(--sath-0);
+}
+
+.tabaqa__shareet-alawi {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tabaqa__raji {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.tabaqa__raji:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.tabaqa__fasl {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.tabaqa__unwan-luba {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.tabaqa__jism {
+  min-block-size: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-16);
+  padding: var(--misafa-24);
+}
+
+/* --- the disclosure gate --------------------------------------------------
+   A wall of text the user must accept, so it is set as reading matter and not
+   as interface: one measure, reading leading, a lede one step up, and exactly
+   one action at the end of it. The warning rule at the inline start is the
+   only ornament, and it is there because the text is a warning. */
+
+.tabaqa__bawwaba {
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: var(--misafa-40) var(--misafa-24) var(--misafa-56);
+}
+
+.tabaqa__ifsah {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-20);
+  max-inline-size: 64ch;
+  padding-inline-start: var(--misafa-24);
+  border-inline-start: var(--misafa-2) solid var(--tanbeeh);
+}
+
+.tabaqa__ifsah-unwan {
+  font-size: var(--qiyas-5);
+  line-height: var(--irtifa-5);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.tabaqa__ifsah-nass {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-16);
+}
+
+.tabaqa__ifsah-faqra {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* The opening paragraph carries what the tier costs, so it is read at a step
+   above the rest rather than buried in an even column of grey. */
+.tabaqa__ifsah-faqra:first-child {
+  font-size: var(--qiyas-4);
+  color: var(--nass-1);
+}
+
+.tabaqa__ifsah-afal {
+  display: flex;
+  padding-block-start: var(--misafa-16);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tabaqa__ifsah-afal .zir {
+  block-size: var(--irtifa-satr);
+  padding-inline: var(--misafa-20);
+}
+
+/* --- the two columns ------------------------------------------------------ */
+
+.tabaqa__amida {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(24rem, 34rem);
+  min-block-size: 0;
+}
+
+.tabaqa__amud {
+  min-block-size: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-40);
+  padding: var(--misafa-24);
+}
+
+.tabaqa__janib {
+  min-block-size: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-16);
+  padding: var(--misafa-24);
+  border-inline-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tabaqa__qism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+}
+
+.tabaqa__qism-raas {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--misafa-12);
+  padding-block-end: var(--misafa-8);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tabaqa__unwan-qism {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.tabaqa__adad {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+
+.tabaqa__nass-hadi {
+  max-inline-size: 68ch;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+}
+
+.tabaqa__jari {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-3);
+}
+
+.tabaqa__faragh {
+  max-inline-size: 60ch;
+  padding: var(--misafa-20);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+  text-wrap: pretty;
+}
+
+.tabaqa__tahdheer {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+}
+
+/* --- the regions, as geometry --------------------------------------------
+   Every track is either a fixed measure or a fraction, never `auto`: the
+   heading row and the region rows are separate grids, and only tracks that
+   resolve from the container rather than from their own content land on the
+   same edges in both. Four normalized numbers are worth nothing if they
+   cannot be compared straight down the list. */
+
+.tabaqa__jadwal {
+  --amida-mintaqa:
+    var(--hajm-ramz-tanaqqul) minmax(8rem, 2fr) repeat(4, minmax(var(--misafa-56), 1fr))
+    calc(var(--misafa-56) + var(--misafa-24));
+  overflow-x: auto;
+}
+
+.tabaqa__manatiq-raas {
+  display: grid;
+  grid-template-columns: var(--amida-mintaqa);
+  align-items: end;
+  gap: var(--misafa-12);
+  padding: var(--misafa-4) var(--misafa-12);
+  border-inline-start: var(--misafa-2) solid transparent;
+  border-block-end: var(--samk-hadd) solid var(--hadd);
+}
+
+.tabaqa__amud-tasmiya {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  overflow-wrap: anywhere;
+}
+
+.tabaqa__amud-raqm {
+  text-align: end;
+}
+
+.tabaqa__manatiq {
+  display: flex;
+  flex-direction: column;
+}
+
+.tabaqa__mintaqa {
+  display: grid;
+  grid-template-columns: var(--amida-mintaqa);
+  align-items: center;
+  gap: var(--misafa-12);
+  padding: var(--misafa-8) var(--misafa-12);
+  border-inline-start: var(--misafa-2) solid transparent;
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+  transition: background-color var(--zaman-hala) var(--munhana);
+}
+
+.tabaqa__mintaqa:hover {
+  background-color: var(--sath-1);
+  transition: none;
+}
+
+/* A region the scheduler will visit is marked at its inline edge and written
+   at full strength; one it will skip keeps its place and loses its weight. */
+.tabaqa__mintaqa--faala {
+  border-inline-start-color: var(--tamyeez);
+}
+
+.tabaqa__mintaqa--sakina .tabaqa__mintaqa-ism {
+  font-weight: var(--wazn-adi);
+  color: var(--nass-3);
+}
+
+.tabaqa__mintaqa--sakina .tabaqa__raqm {
+  color: var(--nass-3);
+}
+
+.tabaqa__mumakkana {
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.tabaqa__mumakkana input {
+  inline-size: var(--hajm-ramz-satri);
+  block-size: var(--hajm-ramz-satri);
+  cursor: pointer;
+}
+
+.tabaqa__mintaqa-tarif {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+  min-inline-size: 0;
+}
+
+.tabaqa__mintaqa-ism {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  overflow-wrap: anywhere;
+}
+
+.tabaqa__mintaqa-qaida {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+/* Isolated rather than reordered: the value is a percentage in whichever digit
+   system the session chose, and it must not be resolved against the Arabic
+   around it. */
+.tabaqa__raqm {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-1);
+  text-align: end;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* --- the form ------------------------------------------------------------- */
+
+.tabaqa__namudhaj {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-20);
+  max-inline-size: 52rem;
+}
+
+.tabaqa__haql-majmua {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-6);
+  min-inline-size: 0;
+}
+
+.tabaqa__tasmiya {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+}
+
+.tabaqa__haql {
+  padding: var(--misafa-8) var(--misafa-12);
+  font-family: inherit;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  transition: border-color var(--zaman-hala) var(--munhana);
+}
+
+.tabaqa__haql:hover {
+  border-color: var(--hadd-qawi);
+  transition: none;
+}
+
+.tabaqa__haql--raqmi {
+  text-align: end;
+}
+
+.tabaqa__muntaqi {
+  block-size: var(--irtifa-satr);
+  padding-block: 0;
+  background-color: var(--sath-3);
+  cursor: pointer;
+}
+
+.tabaqa__arqam {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--misafa-12);
+}
+
+.tabaqa__ikhtiyarat {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--misafa-12);
+}
+
+.tabaqa__idafa-afal {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-12);
+  padding-block-start: var(--misafa-8);
+}
+
+/* --- the reading history --------------------------------------------------
+   A log: hairline-separated rows, no surfaces, the time at the reading edge
+   and the duration at the far one, so both columns can be read straight down
+   without the eye leaving them. */
+
+.tabaqa__sijill {
+  display: flex;
+  flex-direction: column;
+}
+
+.tabaqa__madkhal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+  padding-block: var(--misafa-8);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tabaqa__madkhal-nass {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  overflow-wrap: anywhere;
+}
+
+.tabaqa__madkhal-arabi {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  overflow-wrap: anywhere;
+}
+
+.tabaqa__madkhal-tafsil {
+  display: flex;
+  align-items: baseline;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-2);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.tabaqa__madkhal-waqt.mono-ltr {
+  flex: none;
+  font-size: var(--qiyas-1);
+}
+
+.tabaqa__madkhal-masdar {
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tabaqa__madkhal-mudda {
+  margin-inline-start: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+  unicode-bidi: isolate;
+}
+
+.tabaqa__mash {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+  padding: var(--misafa-12) var(--misafa-16);
+  background-color: var(--sath-2);
+  border-inline-start: var(--misafa-2) solid var(--khatar);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.tabaqa__mash-afal {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-12);
+}
+
+.tabaqa__muqarr {
+  padding-block-start: var(--misafa-12);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* An action the screen refuses to run must not look like one it will run.
+   The base layer styles `.zir` but not its refused state. */
+/* The refused-button rule that stood here is in `nizam/qaida.css` now, with the
+   rest of `.zir`. */
+
+/* Below this the log cannot hold a column of its own without squeezing the
+   region table into an unreadable width, so it falls under it. */
+@media (max-width: 72rem) {
+  .tabaqa__amida {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .tabaqa__janib {
+    border-inline-start: 0;
+    border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+  }
+}

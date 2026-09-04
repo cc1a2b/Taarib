@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/basma.json",
+  "title": "Basma",
+  "description": "A 256-bit content fingerprint.",
+  "type": "string",
+  "pattern": "^[0-9a-f]{64}$"
+}

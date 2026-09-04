@@ -1,0 +1,25 @@
+# Blank issues are off. Not to make reporting harder — the forms exist because a
+# report about a game that does not name the launcher, the detected engine and
+# the trust anchor cannot be diagnosed, and a maintainer asking for those three
+# things one at a time costs the reporter more than filling them in once.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/cc1a2b/taarib/security/advisories/new
+    about:
+      Never in a public issue. Taarib modifies game installs and verifies signatures against a
+      key compiled into the binary — read SECURITY.md and report privately.
+
+  - name: Contributing a translation
+    url: https://github.com/cc1a2b/taarib/blob/main/CONTRIBUTING.md
+    about:
+      Translations are not submitted here. You do them inside Taarib and press submit; the
+      application forks the registry and opens the pull request for you. A hand-edited
+      registry record is a record nobody verified, and will be closed.
+
+  - name: A translation is wrong or low quality
+    url: https://github.com/cc1a2b/taarib/blob/main/CONTRIBUTING.md
+    about:
+      That is the review queue's job, not an issue's. Say what line is wrong and why, in the
+      review thread for the patch.

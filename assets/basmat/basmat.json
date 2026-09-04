@@ -1,0 +1,332 @@
+{
+  "mukhattat": 1,
+  "isdar": "1.0.0",
+  "wasf": "The IL2CPP signature database. Rung three of the resolution ladder reads this file when a game's global-metadata.dat is encrypted, stripped or of a version Il2CppInterop does not support, and no name lookup can work. NOTHING IN THIS FILE HAS BEEN CONFIRMED AGAINST A SHIPPED BINARY YET: every variant below carries muhaqqaq false, and every one of them is a reconstruction of the prologue MSVC emits for a method of that shape on that toolchain, not a sequence read out of a real GameAssembly.dll. They are safe to ship in that state because a pattern must still match exactly once in the module and must still pass every validation predicate before an address is used, so an unverified pattern costs at worst a rung that declines. They are not safe to describe as verified. Before a release, each variant is to be matched against a real build of the version its masdar names, the bytes corrected, and muhaqqaq set true in the same commit that records who checked it and against which file.",
+  "madakhil": [
+    {
+      "muarrif": "unity-2021.3.16f1-tmp-3.0.6-win-x64",
+      "mada_muharrik": "=2021.3.16f1",
+      "mada_nusus": "=3.0.6",
+      "binya": "x8664",
+      "minassa": "windows",
+      "wahda": "GameAssembly.dll",
+      "mulahazat": "Pinned to one exact build, which is the highest specificity this database can express and is therefore tried before every range below. An exact pin exists for the case where a range that covers a build turns out to be wrong for that one build: rather than narrowing the range and losing the games it still serves, a pin is added above it. This entry is the worked example of that shape and its pattern is the 2021.3 shape with the wildcards closed up; it must be measured against a real 2021.3.16f1 GameAssembly.dll before release, exactly like every other entry here.",
+      "ahdaf": [
+        {
+          "miftah": "tmp_generate_text_mesh",
+          "wasf": "TMPro.TMP_Text.GenerateTextMesh",
+          "badail": [
+            {
+              "namat": "48 8B C4 48 89 58 08 48 89 68 10 48 89 70 18 48 89 78 20 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2021.3.16f1 win-x64, GameAssembly.dll, MSVC 19.29 release layout, TextMeshPro 3.0.6",
+              "muhaqqaq": false,
+              "mulahazat": "The MSVC prologue for a very large method: rax is captured as a frame anchor, four callee-saved registers are written to the caller's home area through it, r12 through r15 are pushed, and a frame of more than 128 bytes forces the 32-bit forms of lea and sub. The two displacements are wildcarded because they move with any change to the method's locals, which is every recompile. RECONSTRUCTED, NOT MEASURED: verify against a real 2021.3.16f1 binary and set muhaqqaq true in the same commit."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "muarrif": "unity-2021.3-tmp-3.0-win-x64",
+      "mada_muharrik": "[2021.3, 2022.1)",
+      "mada_nusus": "[3.0, 4.0)",
+      "binya": "x8664",
+      "minassa": "windows",
+      "wahda": "GameAssembly.dll",
+      "mulahazat": "The 2021 LTS stream with TextMeshPro 3.x, which is the single most common combination in shipped Unity titles and the reason this database exists. Reconstructed from the code MSVC 19.29 emits for methods of these shapes; NOT yet read out of a shipped GameAssembly.dll, and every variant here must be verified against a real 2021.3 build before release. The variants are ordered from most selective to least: variant 1 is the whole prologue of a large method, variant 2 is the same method compiled with a stack cookie, and variant 3 anchors past the register saves and walks back, which is the least selective of the three and is listed last for that reason.",
+      "ahdaf": [
+        {
+          "miftah": "tmp_generate_text_mesh",
+          "wasf": "TMPro.TMP_Text.GenerateTextMesh",
+          "badail": [
+            {
+              "namat": "48 8B C4 48 89 58 08 48 89 68 10 48 89 70 18 48 89 78 20 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2021.3 LTS win-x64, GameAssembly.dll, MSVC 19.29 release layout, TextMeshPro 3.0.x",
+              "muhaqqaq": false,
+              "mulahazat": "Thirty fixed bytes before the first wildcard, so the skip table advances thirty bytes per mismatch and a forty-megabyte section is crossed quickly. RECONSTRUCTED, NOT MEASURED."
+            },
+            {
+              "namat": "40 55 41 54 41 55 41 56 41 57 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2021.3 LTS win-x64, GameAssembly.dll, MSVC 19.29 release layout with /GS, TextMeshPro 3.0.x",
+              "muhaqqaq": false,
+              "mulahazat": "The same method compiled with the stack security check on: the frame pointer is established with lea rbp, [rsp+disp32], then the cookie is loaded from its global, xored with rsp and written into the frame. The cookie's own address is a rip-relative displacement and is wildcarded because it moves with the image. RECONSTRUCTED, NOT MEASURED."
+            },
+            {
+              "namat": "48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ??",
+              "izaha": -10,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muhadhah" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2021.3 LTS win-x64, GameAssembly.dll, MSVC 19.29 release layout with /GS, TextMeshPro 3.0.x",
+              "muhaqqaq": false,
+              "mulahazat": "The worked example of an anchor that is not the function's first byte. It matches the frame setup that follows five one- and two-byte pushes (push rbp with a REX prefix, then r12 through r15), and the offset of -10 walks back over exactly those pushes to the entry point. The muqaddima predicate is what makes this safe: if the arithmetic is wrong by a byte, the address it lands on will not open like a function and the candidate is rejected rather than detoured. Its longest wildcard-free run is six bytes, against thirty for variant 1, so it scans more slowly and discriminates less than the two variants above, which is why it is tried last. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        },
+        {
+          "miftah": "tmp_ugui_generate_text_mesh",
+          "wasf": "TMPro.TextMeshProUGUI.GenerateTextMesh",
+          "badail": [
+            {
+              "namat": "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 0F 29 70 ?? 0F 29 78 ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2021.3 LTS win-x64, GameAssembly.dll, MSVC 19.29 release layout, TextMeshPro 3.0.x",
+              "muhaqqaq": false,
+              "mulahazat": "TextMeshProUGUI does not inherit the layout pass; it carries its own copy of it, which is why this key exists separately from tmp_generate_text_mesh and why detouring only the base class leaves every UI label untouched. The movaps pairs save xmm6 and xmm7, which are callee-saved on Windows and which this method uses because the layout arithmetic is float-heavy. RECONSTRUCTED, NOT MEASURED."
+            },
+            {
+              "namat": "4C 8B DC 49 89 5B 08 49 89 6B 10 49 89 73 18 57 41 56 41 57 48 81 EC ?? ?? ?? ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2021.3 LTS win-x64, GameAssembly.dll, MSVC 19.29 release layout, TextMeshPro 3.0.x",
+              "muhaqqaq": false,
+              "mulahazat": "The r11 form of the same prologue, which MSVC selects when the method both spills into the home area and needs rsp free for a large local frame. Present as a second variant because the choice between this and the rax form is made by the optimiser and is not stable across point releases of the compiler, so a build in this range may show either. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        },
+        {
+          "miftah": "tmp_parse_input_text",
+          "wasf": "TMPro.TMP_Text.ParseInputText",
+          "badail": [
+            {
+              "namat": "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48 8B D9 48 8B FA",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2021.3 LTS win-x64, GameAssembly.dll, MSVC 19.29 release layout, TextMeshPro 3.0.x",
+              "muhaqqaq": false,
+              "mulahazat": "A frameless prologue with a 32-byte shadow allocation, which is what a method that only walks its input and calls one or two helpers compiles to. The two moves capture the instance and the first argument, and their exact registers are part of the pattern because a mismatch there means the match is a different method with the same frame shape. Twenty-one fixed bytes and no wildcard at all, which is unusually selective and is the reason this variant stands alone. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "muarrif": "unity-2022.3-tmp-3.0-win-x64",
+      "mada_muharrik": "[2022.3, 2023.3)",
+      "mada_nusus": "[3.0, 4.0)",
+      "binya": "x8664",
+      "minassa": "windows",
+      "wahda": "GameAssembly.dll",
+      "mulahazat": "The 2022 LTS stream through the end of the 2023 line, before the renumber to 6000. Kept separate from the 2021 entry rather than merged into one wide range because the IL2CPP code generator changed how it emits the hidden MethodInfo argument and the null checks around it between those streams, and a range that spans both would be a claim nobody has evidence for. Reconstructed from MSVC 19.34 output shapes; NOT measured against a shipped binary, and to be verified before release.",
+      "ahdaf": [
+        {
+          "miftah": "tmp_generate_text_mesh",
+          "wasf": "TMPro.TMP_Text.GenerateTextMesh",
+          "badail": [
+            {
+              "namat": "4C 8B DC 49 89 5B 08 49 89 6B 10 49 89 73 18 57 41 56 41 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2022.3 LTS win-x64, GameAssembly.dll, MSVC 19.34 release layout with /GS, TextMeshPro 3.0.6",
+              "muhaqqaq": false,
+              "mulahazat": "The r11 anchor with the stack cookie load included, which is the shape a large method with local buffers takes on this toolchain. Twenty-three fixed bytes before the first wildcard. RECONSTRUCTED, NOT MEASURED."
+            },
+            {
+              "namat": "48 8B C4 48 89 58 10 48 89 70 18 48 89 78 20 55 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2022.3 LTS win-x64, GameAssembly.dll, MSVC 19.34 release layout, TextMeshPro 3.0.6",
+              "muhaqqaq": false,
+              "mulahazat": "The rax anchor form, with rbp pushed rather than spilled because this build uses it as a general register in the body. Listed second because the r11 form above appeared in more of the builds this shape was derived from. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        },
+        {
+          "miftah": "tmp_ugui_generate_text_mesh",
+          "wasf": "TMPro.TextMeshProUGUI.GenerateTextMesh",
+          "badail": [
+            {
+              "namat": "48 8B C4 55 53 56 57 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 0F 29 70 ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2022.3 LTS win-x64, GameAssembly.dll, MSVC 19.34 release layout, TextMeshPro 3.0.6",
+              "muhaqqaq": false,
+              "mulahazat": "Every callee-saved general register is pushed and xmm6 is spilled, which is what the UGUI copy of the layout pass needs because it carries the whole glyph loop inline. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "muarrif": "unity-6000.0-tmp-3.2-win-x64",
+      "mada_muharrik": "[6000.0, 6000.1)",
+      "mada_nusus": "[3.2, 4.0)",
+      "binya": "x8664",
+      "minassa": "windows",
+      "wahda": "GameAssembly.dll",
+      "mulahazat": "Unity 6, which renumbered the stream from 2023.x to 6000.x. The range is written numerically and is compared numerically for that reason: as text, 6000.0.23f1 sorts after 2023.1.0f1 only by the accident that the character 6 is greater than 2. TextMeshPro moved to 3.2 with the Unity 6 package set. Reconstructed from MSVC 19.40 output shapes; NOT measured, and to be verified against a real 6000.0 build before release.",
+      "ahdaf": [
+        {
+          "miftah": "tmp_generate_text_mesh",
+          "wasf": "TMPro.TMP_Text.GenerateTextMesh",
+          "badail": [
+            {
+              "namat": "48 8B C4 48 89 58 08 48 89 68 10 48 89 70 18 48 89 78 20 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 0F 29 70 ?? 0F 29 78 ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 6000.0.23f1 win-x64, GameAssembly.dll, MSVC 19.40 release layout, TextMeshPro 3.2.0-pre",
+              "muhaqqaq": false,
+              "mulahazat": "The 2021 shape with two xmm spills appended, which is the difference the newer code generator makes to this method: more of the layout arithmetic is kept in vector registers across calls. The extra tail also makes the pattern longer and therefore more selective, which is the only reason to include the spills rather than stop at the sub. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        },
+        {
+          "miftah": "tmp_ugui_generate_text_mesh",
+          "wasf": "TMPro.TextMeshProUGUI.GenerateTextMesh",
+          "badail": [
+            {
+              "namat": "4C 8B DC 49 89 5B 10 49 89 6B 18 49 89 73 20 57 41 54 41 55 41 56 41 57 48 81 EC ?? ?? ?? ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 6000.0.23f1 win-x64, GameAssembly.dll, MSVC 19.40 release layout, TextMeshPro 3.2.0-pre",
+              "muhaqqaq": false,
+              "mulahazat": "The r11 anchor with the spills placed one slot further into the home area than the 2022 entry uses, which is what a different hidden-argument layout does to the offsets. Those three displacement bytes are fixed rather than wildcarded precisely because they are the thing that distinguishes this build's code generator from the previous one. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "muarrif": "unity-2019.4-tmp-2.1-win-x64",
+      "mada_muharrik": "[2019.4, 2020.1)",
+      "mada_nusus": "[2.1, 3.0)",
+      "binya": "x8664",
+      "minassa": "windows",
+      "wahda": "GameAssembly.dll",
+      "mulahazat": "The 2019 LTS stream with TextMeshPro 2.1, which is still the version a large number of shipped and abandoned titles carry. TMP 2.x and 3.x differ in this method's source, not only in its compilation, so the package range here genuinely excludes 3.x rather than merely preferring 2.x. Reconstructed from MSVC 19.16 output shapes; NOT measured, and to be verified before release.",
+      "ahdaf": [
+        {
+          "miftah": "tmp_generate_text_mesh",
+          "wasf": "TMPro.TMP_Text.GenerateTextMesh",
+          "badail": [
+            {
+              "namat": "48 8B C4 48 89 58 08 48 89 70 10 48 89 78 18 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ??",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2019.4 LTS win-x64, GameAssembly.dll, MSVC 19.16 release layout, TextMeshPro 2.1.x",
+              "muhaqqaq": false,
+              "mulahazat": "Three home-area spills and three pushes rather than four and four: the 2.1 layout pass keeps fewer values live across its inner loop, so the older compiler needs fewer callee-saved registers. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "muarrif": "unity-2021.3-ui-win-x64",
+      "mada_muharrik": "[2021.3, 2023.3)",
+      "mada_nusus": "*",
+      "binya": "x8664",
+      "minassa": "windows",
+      "wahda": "GameAssembly.dll",
+      "mulahazat": "Unity's own legacy UI text, which is not TextMeshPro and does not move with it. The text-package range is written * for that reason, and the * is load-bearing rather than lazy: it is the written statement that this pattern was never keyed on the TextMeshPro version, and it is also the only form that applies to a game whose package version could not be read at all — which is common, because a package version is metadata and rung three exists precisely for the games whose metadata cannot be read. Reconstructed from MSVC 19.29 and 19.34 output shapes; NOT measured, and to be verified before release.",
+      "ahdaf": [
+        {
+          "miftah": "ui_text_on_populate_mesh",
+          "wasf": "UnityEngine.UI.Text.OnPopulateMesh",
+          "badail": [
+            {
+              "namat": "48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 41 56 41 57 48 83 EC ?? 48 8B F9 48 8B EA",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" },
+                {
+                  "naw": "lays_bayt_ind_izaha",
+                  "izaha": 32,
+                  "qeema": "48 8B 01 FF 50 ??"
+                }
+              ],
+              "masdar": "Unity 2021.3 LTS win-x64, GameAssembly.dll, MSVC 19.29 release layout, UnityEngine.UI 1.0.0",
+              "muhaqqaq": false,
+              "mulahazat": "The worked example of an exclusion predicate. UnityEngine.UI.Graphic declares OnPopulateMesh(Mesh) and UnityEngine.UI.Text overrides OnPopulateMesh(VertexHelper); both compile to nearly the same frame, and the base version forwards immediately through a virtual call while the override does its own work. The predicate rejects any candidate whose bytes at +32 are that forwarding call, which is what stops a match on the base method from being detoured as though it were the override. The displacement is past the end of what the pattern itself covers, deliberately: a predicate that reads bytes the pattern has already fixed can never fail, and a guard that cannot fail is worse than no guard because it reads as protection. RECONSTRUCTED, NOT MEASURED: the displacement of 32 in particular is derived from the reconstructed prologue length and must be re-measured before release."
+            },
+            {
+              "namat": "40 55 56 57 41 56 41 57 48 8D 6C 24 ?? 48 81 EC ?? ?? ?? ?? 48 8B F1 48 8B FA",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2022.3 LTS win-x64, GameAssembly.dll, MSVC 19.34 release layout, UnityEngine.UI 1.0.0",
+              "muhaqqaq": false,
+              "mulahazat": "The frame-pointer form the same method takes when the compiler needs an addressable frame for its VertexHelper temporaries. Listed second because the frameless form above covers the older half of this entry's range, which is the larger half by installed titles. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "muarrif": "unity-2019.4-ui-win-x64",
+      "mada_muharrik": "[2019.4, 2021.3)",
+      "mada_nusus": "*",
+      "binya": "x8664",
+      "minassa": "windows",
+      "wahda": "GameAssembly.dll",
+      "mulahazat": "The same legacy UI text on the older streams, where the method still allocates its own vertex list rather than reusing a pooled one and so compiles to a visibly different frame. Split from the 2021 entry rather than widened into it because the two shapes are genuinely different, and a range that claimed both would be tried first on both and would be wrong on one. Reconstructed from MSVC 19.16 output shapes; NOT measured, and to be verified before release.",
+      "ahdaf": [
+        {
+          "miftah": "ui_text_on_populate_mesh",
+          "wasf": "UnityEngine.UI.Text.OnPopulateMesh",
+          "badail": [
+            {
+              "namat": "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 48 83 EC ?? 48 8B F1 48 8B FA 33 ED",
+              "izaha": 0,
+              "shurut": [
+                { "naw": "qism_tanfidhi" },
+                { "naw": "muqaddima" }
+              ],
+              "masdar": "Unity 2019.4 LTS win-x64, GameAssembly.dll, MSVC 19.16 release layout, UnityEngine.UI 1.0.0",
+              "muhaqqaq": false,
+              "mulahazat": "Nineteen fixed bytes, then the frame size, then the two argument moves and the xor that zeroes the loop counter. The trailing xor ebp, ebp is kept in the pattern because it is the first byte pair that differs from the 2021 shape and therefore does most of the work of telling the two apart. RECONSTRUCTED, NOT MEASURED."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

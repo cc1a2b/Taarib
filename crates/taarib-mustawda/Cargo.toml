@@ -1,0 +1,44 @@
+[package]
+name = "taarib-mustawda"
+description = "مستودع تعريب — the registry client: the global manifest, sharded index fetching, three-tier build matching, resumable downloads with mirror failover, ranking, ratings and full offline sources."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-ruqaa = { workspace = true }
+taarib-tarqee = { workspace = true }
+taarib-aman = { workspace = true }
+taarib-tathbeet = { workspace = true }
+taarib-khatm = { workspace = true }
+# `taarib-makhzan` is deliberately NOT a dependency. The manifest's rollback
+# baseline and the local patch library are persisted by the caller; this crate
+# takes the cached sequence as a parameter and writes only its own shard cache.
+# Shard bodies are served compressed by the transport, so nothing here frames
+# zstd itself and `zstd` is not a dependency either.
+
+reqwest = { workspace = true }
+blake3 = { workspace = true }
+# Only the registry caster (`src/bin/sabk.rs`) uses these two: the signing key's
+# public half is written as hex into the revocation list's signature, and a game
+# identity arrives on its command line as a uuid.
+hex = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+jiff = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+# Free-disk-space probing before a download commits bytes to its destination.
+sysinfo = { workspace = true }

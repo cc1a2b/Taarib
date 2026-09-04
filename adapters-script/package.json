@@ -1,0 +1,16 @@
+{
+  "name": "taarib-adapters-script",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "أدوات بناء ملحقات تعريب — the compiler for the two TypeScript adapters (rows I1 and I2 of docs/tawzee.md §3).",
+  "license": "MPL-2.0",
+  "scripts": {
+    "bina": "node ibni.mjs",
+    "tadqiq": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3"
+  }
+}

@@ -1,0 +1,45 @@
+[package]
+name = "taarib-tarjama"
+description = "ترجمة تعريب — the translation pipeline: providers, game-aware prompting, placeholder protection, translation memory, glossary, batching, quality flags and per-string review."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[features]
+default = []
+# Derive specta::Type so Studio's TypeScript is generated from these
+# definitions rather than written twice. Without this the `cfg_attr` gates
+# throughout this crate are dead and its public types reach the frontend with
+# no generated definition at all.
+wajiha = ["dep:specta", "dep:specta-typescript", "taarib-usus/wajiha", "taarib-mustalahat/wajiha"]
+# Derive schemars::JsonSchema so schemas/ is generated from the same source.
+mukhattatat = ["dep:schemars", "taarib-usus/mukhattatat", "taarib-mustalahat/mukhattatat"]
+
+[dependencies]
+specta = { workspace = true, optional = true }
+specta-typescript = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
+parking_lot = { workspace = true }
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-saff = { workspace = true }
+taarib-makhzan = { workspace = true }
+
+reqwest = { workspace = true }
+governor = { workspace = true }
+keyring = { workspace = true }
+rusqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

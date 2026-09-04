@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/musahim_id.json",
+  "title": "MusahimId",
+  "description": "A contributor's identity: the fingerprint of their public signing key.",
+  "type": "string",
+  "pattern": "^[0-9a-f]{64}$"
+}

@@ -1,0 +1,63 @@
+<Project>
+
+  <!--
+    Settings shared by every project in Taarib.Unity.sln.
+
+    These assemblies are loaded into someone else's game process by BepInEx.
+    They cannot assume a runtime, a package graph, or a reader with the
+    solution open, so the defaults here are chosen for legibility under a
+    debugger attached to a shipped game rather than for authoring comfort.
+  -->
+
+  <PropertyGroup Label="Language">
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Diagnostics">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors></WarningsNotAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!--
+      The documentation file exists for the tooltip a person reads while
+      stepping through a game process, not for a published API reference.
+      CS1591, CS1573 and CS1712 demand a tag on every public member, every
+      parameter and every type parameter; generated sources (MyPluginInfo from
+      BepInEx.PluginInfoProps, Il2CppInterop's proxies) carry none, and the C
+      header at crates/taarib-jisr/include/taarib.h is the authority on
+      parameter semantics rather than a restatement in C#. The warnings that
+      catch documentation which is wrong rather than absent stay as errors:
+      CS1570 malformed XML, CS1572 and CS1734 param tags naming a parameter
+      that does not exist, CS1574/CS1580/CS1581/CS1584 unresolvable cref.
+    -->
+    <NoWarn>$(NoWarn);CS1591;CS1573;CS1712</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Output">
+    <Deterministic>true</Deterministic>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Label="ContinuousIntegration"
+                 Condition="'$(CI)' == 'true' Or '$(GITHUB_ACTIONS)' == 'true' Or '$(TF_BUILD)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Identity">
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
+    <Company>cc1a2b</Company>
+    <Authors>cc1a2b</Authors>
+    <Product>Taarib</Product>
+    <Copyright>Copyright (c) 2026 cc1a2b</Copyright>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RestoreSources>$(RestoreSources);https://api.nuget.org/v3/index.json;https://nuget.bepinex.dev/v3/index.json</RestoreSources>
+  </PropertyGroup>
+
+</Project>

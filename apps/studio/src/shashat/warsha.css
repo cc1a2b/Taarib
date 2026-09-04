@@ -1,0 +1,1113 @@
+/* شاشة الورشة — tokens only, logical properties only, three working panes over one grid. */
+
+.warsha {
+  display: grid;
+
+  /* Four collapsible tracks of chrome above one scrolling body. The body track
+     is named because the skeleton and the error block have to land in it: an
+     unnamed sibling is auto-placed into the next `auto` track, which pins it
+     under the header and leaves the body empty until data arrives. */
+  grid-template-rows: auto auto auto auto [jism] minmax(0, 1fr);
+  block-size: 100%;
+  background-color: var(--sath-0);
+
+  /* Structural constants, in the spirit of --ard-janib: pane widths are a
+     property of the layout rather than a step on the spacing scale, and the
+     skeleton reads the same declaration so nothing shifts when data lands. */
+  --amida-warsha: minmax(260px, 360px) minmax(0, 1fr) minmax(280px, 340px);
+
+  /* The row: the density's own row height plus one step of breathing room.
+     56px at the default density, and it moves with the density instead of
+     staying still while everything around it grows. */
+  --irtifa-satr-warsha: calc(var(--irtifa-satr) + var(--misafa-20));
+}
+
+/* --- the top strip --------------------------------------------------------- */
+
+.warsha__shareet-alawi {
+  display: flex;
+  align-items: baseline;
+  gap: var(--misafa-12);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__raji {
+  align-self: center;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.warsha__raji:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.warsha__fasl {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.warsha__unwan-luba {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+/* The count is context, not headline: it stays out of the way of the name. */
+.warsha__adad-luba {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.warsha__adawat {
+  display: flex;
+  align-self: center;
+  gap: var(--misafa-8);
+  margin-inline-start: auto;
+}
+
+/* --- collapsible panels ---------------------------------------------------- */
+
+.warsha__lawha {
+  overflow: hidden;
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__lawha-dakhil {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-16);
+  padding: var(--misafa-16) var(--misafa-24) var(--misafa-24);
+}
+
+/* --- the filter strip ------------------------------------------------------
+   One bar, not eight controls: every control shares the band height, the state
+   chips are welded into a single segmented group, and the select family is
+   grouped tightly so the larger gap between groups does the separating. */
+
+.warsha__tasfiya {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8) var(--misafa-16);
+  padding: var(--misafa-12) var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__haql {
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-8);
+  font-family: inherit;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+  transition: border-color var(--zaman-hala) var(--munhana);
+}
+
+.warsha__haql:hover {
+  border-color: var(--hadd);
+  transition: none;
+}
+
+.warsha__haql:focus {
+  border-color: var(--tamyeez);
+}
+
+/* A measure, not a pixel width: the field holds about twenty-six characters at
+   whatever size the density is currently rendering them. */
+.warsha__bahth {
+  flex: 1 1 26ch;
+  min-inline-size: 18ch;
+  max-inline-size: 34ch;
+}
+
+.warsha__halat {
+  display: flex;
+  align-items: stretch;
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+  overflow: hidden;
+}
+
+.warsha__qawaim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-4);
+}
+
+.warsha__riqaqa {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--misafa-6);
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-8);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-2);
+  background-color: transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    color var(--zaman-hala) var(--munhana);
+}
+
+.warsha__riqaqa + .warsha__riqaqa {
+  border-inline-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__riqaqa:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-3);
+  transition: none;
+}
+
+.warsha__riqaqa--faal,
+.warsha__riqaqa--faal:hover {
+  color: var(--nass-1);
+  background-color: var(--tamyeez-khafit);
+}
+
+/* The group clips its corners, so an outset ring on a segment is cut in half. */
+.warsha__riqaqa:focus-visible {
+  outline-offset: calc(var(--samk-hadd) * -2);
+}
+
+/* Quiet at rest; it only speaks up once a filter is actually hiding something. */
+.warsha__adad-zahir {
+  margin-inline-start: auto;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.warsha__adad-zahir--murashshah {
+  color: var(--nass-1);
+}
+
+/* --- the three-pane grid ---------------------------------------------------
+   The editor is the work; the list and the rail are where the work is chosen
+   and checked. So the middle pane carries the lighter surface and the two side
+   panes sit back on the ground, separated by hairlines rather than by gaps. */
+
+.warsha__amida {
+  display: grid;
+  grid-row: jism;
+  grid-template-columns: var(--amida-warsha);
+  min-block-size: 0;
+}
+
+/* --- the string list ------------------------------------------------------- */
+
+.warsha__qaima {
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow-y: auto;
+  background-color: var(--sath-0);
+  border-inline-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__qaima:focus-visible {
+  outline-offset: calc(var(--samk-hadd) * -2);
+}
+
+.warsha__qaima--faragh {
+  overflow-y: auto;
+  padding: var(--misafa-24) var(--misafa-16);
+}
+
+/* The shared empty-state block, stripped of its panel: inside a 260px column a
+   bordered box is a box in a box, and the type alone carries the hierarchy. */
+.warsha__qaima--faragh .halat {
+  padding: 0;
+  background-color: transparent;
+  border: none;
+}
+
+.warsha__qaima-jism {
+  position: relative;
+  inline-size: 100%;
+}
+
+.warsha__band {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+}
+
+.warsha__saff {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  inline-size: 100%;
+  block-size: var(--irtifa-satr-warsha);
+  padding-inline: var(--misafa-16);
+  text-align: start;
+  background-color: transparent;
+  border: none;
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+  cursor: pointer;
+  transition: background-color var(--zaman-hala) var(--munhana);
+}
+
+.warsha__saff:hover {
+  background-color: var(--sath-1);
+  transition: none;
+}
+
+.warsha__saff--mukhtar,
+.warsha__saff--mukhtar:hover {
+  background-color: var(--sath-2);
+}
+
+/* The selection marker rides the leading edge, so it is on the right in Arabic
+   and on the left in English without a mirrored rule. */
+.warsha__saff--mukhtar::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: var(--misafa-2);
+  background-color: var(--tamyeez);
+}
+
+/* The column gaps are carried by the items rather than by the track, so a row
+   with nothing in its trailing column ends flush with the ones that do. */
+.warsha__saff-nusus {
+  display: grid;
+  min-inline-size: 0;
+  padding-inline-start: var(--misafa-12);
+}
+
+.warsha__saff-masdar {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.warsha__saff-hadaf {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.warsha__saff-hadaf--faragh {
+  color: var(--nass-3);
+}
+
+.warsha__saff-mizat {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: var(--misafa-6);
+  padding-inline-start: var(--misafa-12);
+}
+
+.warsha__saff-mizat:empty {
+  display: none;
+}
+
+.warsha__saff-taaliq {
+  flex: none;
+  inline-size: var(--misafa-6);
+  block-size: var(--misafa-6);
+  border-radius: 50%;
+  background-color: var(--maalumat);
+}
+
+.warsha__saff-alamat {
+  min-inline-size: var(--misafa-16);
+  padding-inline: var(--misafa-4);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--nass-3);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* A blocking flag takes the hue on its outline and its label, never as a fill:
+   a solid red block at this size is the badge every component library ships. */
+.warsha__saff-alamat--khatir {
+  color: var(--khatar);
+  border-color: var(--khatar);
+}
+
+/* --- review-state marks ----------------------------------------------------
+   Six states, told apart three ways before colour is consulted at all: a
+   square means no human has written the text, a circle means one has; hollow
+   means there is nothing usable in the row yet; a detached ring means the
+   state is a final judgement rather than a stage. Colour then names which of
+   the six it is, for everyone who can see it. */
+
+.warsha__nuqta {
+  flex: none;
+  inline-size: var(--misafa-8);
+  block-size: var(--misafa-8);
+  border: var(--samk-hadd) solid currentColor;
+  border-radius: var(--nisf-tahakkum);
+  background-color: currentColor;
+}
+
+/* A hollow mark is drawn at the thicker stroke: a hairline ring around a six
+   pixel hole is a filled mark to anyone not looking straight at it. */
+.warsha__nuqta--lam_tutarjam {
+  color: var(--nass-3);
+  background-color: transparent;
+  border-width: var(--misafa-2);
+}
+
+.warsha__nuqta--tarjama_aaliya {
+  color: var(--maalumat);
+}
+
+.warsha__nuqta--musawwada {
+  color: var(--tanbeeh);
+  background-color: transparent;
+  border-width: var(--misafa-2);
+  border-radius: 50%;
+}
+
+.warsha__nuqta--lil_muraja {
+  color: var(--tamyeez);
+  border-radius: 50%;
+}
+
+.warsha__nuqta--muakkada {
+  color: var(--najah);
+  border-radius: 50%;
+  outline: var(--samk-hadd) solid currentColor;
+  outline-offset: var(--samk-hadd);
+}
+
+.warsha__nuqta--marfuda {
+  color: var(--khatar);
+  background-color: transparent;
+  border-width: var(--misafa-2);
+  border-radius: 50%;
+  outline: var(--samk-hadd) solid currentColor;
+  outline-offset: var(--samk-hadd);
+}
+
+/* --- the centre column ----------------------------------------------------- */
+
+.warsha__wasat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-24);
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow-y: auto;
+  padding: var(--misafa-24);
+  background-color: var(--sath-1);
+}
+
+.warsha__la-ikhtiyar {
+  max-inline-size: 56ch;
+}
+
+.warsha__muharrir {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+}
+
+.warsha__unwan-qism {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+}
+
+.warsha__tasmiya {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+/* Read here. One step above the pane, at reading leading. */
+.warsha__masdar {
+  padding: var(--misafa-12) var(--misafa-16);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-lawha);
+  user-select: text;
+  text-wrap: pretty;
+}
+
+/* Write here. A well cut into the pane rather than a panel on top of it, and
+   the only place on the screen that uses the fourth type step: the Arabic the
+   contributor is producing is the largest thing they look at. */
+.warsha__tahrir {
+  min-block-size: calc(var(--misafa-56) * 2);
+  padding: var(--misafa-12) var(--misafa-16);
+  font-family: inherit;
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-lawha);
+  resize: block;
+  transition: border-color var(--zaman-hala) var(--munhana);
+}
+
+.warsha__tahrir:hover {
+  border-color: var(--hadd-qawi);
+  transition: none;
+}
+
+.warsha__tahrir:focus {
+  border-color: var(--tamyeez);
+}
+
+.warsha__muharrir-afal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-4);
+}
+
+.warsha__rafd {
+  padding: var(--misafa-8) var(--misafa-12);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--khatar);
+  background-color: var(--sath-2);
+  border-inline-start: var(--misafa-2) solid var(--khatar);
+}
+
+.warsha__alamat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-6);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.warsha__alam {
+  padding: var(--misafa-2) var(--misafa-8);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-2);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.warsha__alam--khatir {
+  color: var(--khatar);
+  background-color: transparent;
+  border-color: var(--khatar);
+}
+
+/* Context is a continuation of the editor, not a second card: one hairline
+   says where the editing stops and the evidence starts. */
+.warsha__siyaq {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+  padding-block-start: var(--misafa-24);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* One two-column grid for the whole list, so every label and every value share
+   a column edge instead of each row measuring its own. */
+.warsha__jadwal {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: var(--misafa-4) var(--misafa-16);
+  margin: 0;
+}
+
+.warsha__saff-jadwal {
+  display: contents;
+}
+
+.warsha__saff-jadwal dt {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  white-space: nowrap;
+}
+
+.warsha__saff-jadwal dd {
+  margin: 0;
+  min-inline-size: 0;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-1);
+}
+
+.warsha__qat {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-inline-size: 100%;
+}
+
+.warsha__jiwar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-4);
+  margin: 0;
+  padding-inline-start: var(--misafa-12);
+  border-inline-start: var(--samk-hadd) solid var(--hadd);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+}
+
+.warsha__taaliqat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.warsha__taaliq {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-4);
+  padding: var(--misafa-12);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-lawha);
+}
+
+.warsha__taaliq-raas {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.warsha__wasm-malik {
+  padding-inline: var(--misafa-4);
+  color: var(--tamyeez);
+  border: var(--samk-hadd) solid var(--tamyeez);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.warsha__wasm-muhall {
+  padding-inline: var(--misafa-4);
+  color: var(--najah);
+  border: var(--samk-hadd) solid var(--najah);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.warsha__taaliq-matn {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+}
+
+.warsha__taaliq-waqt {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the end column --------------------------------------------------------
+   A rail on the ground beside the editor. Its sections are divided by
+   hairlines rather than by gaps, so three panels read as one column. */
+
+.warsha__janib-akhir {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow-y: auto;
+  background-color: var(--sath-0);
+  border-inline-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__iqtirahat,
+.warsha__dufa,
+.warsha__muayana {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-12);
+  padding: var(--misafa-20) var(--misafa-16);
+}
+
+.warsha__dufa,
+.warsha__muayana {
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__mustalahat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-6);
+  inline-size: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.warsha__mustalah {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+}
+
+.warsha__mustalah-masdar {
+  color: var(--nass-2);
+}
+
+.warsha__mustalah-arabi {
+  color: var(--nass-1);
+  font-weight: var(--wazn-mutawassit);
+}
+
+/* The mapping mark, drawn rather than typed.
+   A literal ← is a glyph borrowed from whichever font happens to own U+2190 —
+   a different weight and a different baseline from the text beside it — and it
+   points the wrong way the moment the interface is switched to English. This
+   is a rule and a wedge laid out by the flex algorithm, so the shaft is always
+   on the leading side and the head, cut from a border-inline-start, always
+   points at the inline end. It mirrors with the document and owns no glyph. */
+.warsha__sahm {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  flex: none;
+  color: var(--nass-3);
+}
+
+.warsha__sahm::before {
+  content: '';
+  inline-size: var(--misafa-8);
+  block-size: var(--samk-hadd);
+  background-color: currentColor;
+}
+
+.warsha__sahm::after {
+  content: '';
+  inline-size: 0;
+  block-size: 0;
+  border-block: var(--misafa-2) solid transparent;
+  border-inline-start: var(--misafa-6) solid currentColor;
+}
+
+.warsha__mulahaza {
+  inline-size: 100%;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.warsha__iqtirah {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-6);
+  inline-size: 100%;
+  padding: var(--misafa-12);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.warsha__iqtirah--tamm {
+  border-color: var(--tamyeez);
+}
+
+.warsha__iqtirah-wasm {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.warsha__iqtirah-masdar {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-2);
+}
+
+.warsha__iqtirah-hadaf {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+}
+
+.warsha__dufa-talab,
+.warsha__damj-talab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+.warsha__tahdheer {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--tanbeeh);
+}
+
+/* --- the live preview ------------------------------------------------------ */
+
+.warsha__ghayr-qabil {
+  inline-size: 100%;
+  padding: var(--misafa-8) var(--misafa-12);
+  background-color: var(--sath-2);
+  border-inline-start: var(--misafa-2) solid var(--tanbeeh);
+}
+
+.warsha__ghayr-qabil-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--tanbeeh);
+}
+
+.warsha__satr-qiyas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-4);
+  inline-size: 100%;
+}
+
+.warsha__masar-qiyas {
+  block-size: var(--misafa-4);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+  overflow: hidden;
+}
+
+/* A line that fits is not news, so it is drawn in the neutral. The accent is
+   spent on the one thing that needs a decision: a line that does not fit. */
+.warsha__mila {
+  block-size: 100%;
+  background-color: var(--nass-3);
+}
+
+.warsha__mila--tajawuz {
+  background-color: var(--khatar);
+}
+
+.warsha__satr-nass {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* --- merge conflicts ------------------------------------------------------- */
+
+.warsha__damj-natija {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-12);
+  inline-size: 100%;
+  padding-block-start: var(--misafa-16);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__damj-nizaat {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.warsha__nizaat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+  inline-size: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.warsha__nizaa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  padding: var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.warsha__nizaa-naw {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--tanbeeh);
+}
+
+.warsha__nizaa-masdar {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+}
+
+.warsha__nizaa-ajnab {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(24ch, 1fr));
+  gap: var(--misafa-12);
+}
+
+.warsha__janib {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-8);
+  padding: var(--misafa-12);
+  background-color: var(--sath-3);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.warsha__janib--makhtar {
+  border-color: var(--tamyeez);
+}
+
+.warsha__janib-unwan {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.warsha__janib-hadaf {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+}
+
+.warsha__janib-tafsil {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: var(--misafa-2) var(--misafa-8);
+  inline-size: 100%;
+  margin: 0;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+}
+
+.warsha__janib-tafsil div {
+  display: contents;
+}
+
+.warsha__janib-tafsil dt {
+  color: var(--nass-3);
+  white-space: nowrap;
+}
+
+.warsha__janib-tafsil dd {
+  margin: 0;
+  min-inline-size: 0;
+  color: var(--nass-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.warsha__thalith {
+  inline-size: 100%;
+  min-block-size: calc(var(--misafa-56) + var(--misafa-8));
+  padding: var(--misafa-8);
+  font-family: inherit;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  resize: block;
+  transition: border-color var(--zaman-hala) var(--munhana);
+}
+
+.warsha__thalith:focus {
+  border-color: var(--tamyeez);
+}
+
+/* --- shared bits ----------------------------------------------------------- */
+
+.warsha__nass-hadi {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.warsha__jari {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.warsha__jawda-adad {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.warsha__tadarubat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  inline-size: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.warsha__tadarub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  padding: var(--misafa-12);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-lawha);
+}
+
+.warsha__tadarub-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-1);
+}
+
+.warsha__tadarub-ashkal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-8);
+}
+
+.warsha__jism-khata {
+  grid-row: jism;
+  min-block-size: 0;
+  overflow-y: auto;
+  align-content: start;
+  padding: var(--misafa-24);
+}
+
+/* --- the loading skeleton --------------------------------------------------
+   The same grid, the same surfaces, the same hairlines and the same row height
+   as the screen it stands in for, in the same track. A skeleton that lives in
+   a different box teaches the eye a layout that is about to be replaced. */
+
+.warsha__haykal {
+  display: grid;
+  grid-row: jism;
+  grid-template-columns: var(--amida-warsha);
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.warsha__haykal-amud {
+  min-inline-size: 0;
+  overflow: hidden;
+}
+
+.warsha__haykal-amud--qaima {
+  background-color: var(--sath-0);
+  border-inline-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__haykal-amud--wasat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-16);
+  padding: var(--misafa-24);
+  background-color: var(--sath-1);
+}
+
+.warsha__haykal-amud--akhir {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+  padding: var(--misafa-20) var(--misafa-16);
+  background-color: var(--sath-0);
+  border-inline-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.warsha__haykal-satr {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--misafa-6);
+  block-size: var(--irtifa-satr-warsha);
+  padding-inline: var(--misafa-16);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* Deliberately still. A shimmering placeholder is an animation playing on a
+   data update, which this product does not do anywhere else — the library's
+   own skeleton says so in as many words. This was the only `@keyframes` in the
+   tree and the only place the rule was broken. */
+.warsha__haykal-shakhta {
+  block-size: var(--misafa-8);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.warsha__haykal-shakhta--tawil {
+  inline-size: 68%;
+}
+
+.warsha__haykal-shakhta--qasir {
+  inline-size: 42%;
+  background-color: var(--sath-1);
+}
+
+.warsha__haykal-kutla {
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-lawha);
+}
+
+.warsha__haykal-kutla--masdar {
+  block-size: calc(var(--misafa-56) + var(--misafa-16));
+}
+
+.warsha__haykal-kutla--tahrir {
+  block-size: calc(var(--misafa-56) * 2);
+  background-color: var(--sath-0);
+}
+
+.warsha__haykal-kutla--janib {
+  block-size: var(--misafa-56);
+  background-color: var(--sath-1);
+}

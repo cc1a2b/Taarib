@@ -1,0 +1,23 @@
+[package]
+name = "taarib-mudkhal"
+description = "مدخل تعريب — the loader a game loads on its own: a version.dll proxy on Windows, a preload library on Linux and macOS, whose only job is to bring Taarib's payload modules into the process and then get out of the way."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+# Loaded by the game's own loader, never linked against.
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }

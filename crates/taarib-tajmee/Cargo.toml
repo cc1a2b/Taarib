@@ -1,0 +1,27 @@
+[package]
+name = "taarib-tajmee"
+description = "تجميع تعريب — the staging tool: gathers every already-built native library, plugin assembly, adapter and font into the bundle's resource tree, verifies each against its lock, and fails loudly naming every artifact it could not place."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "taarib-tajmee"
+path = "src/main.rs"
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-tathbeet = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+zip = { workspace = true }

@@ -1,0 +1,170 @@
+{
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/fahras.json",
+  "title": "Fahras",
+  "description": "The index of the JSON Schemas generated from the Taarib vocabulary in crates/taarib-mustalahat.",
+  "mukhattat": 1,
+  "mukhattatat": [
+    {
+      "unwan": "Luba",
+      "malaf": "luba.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/luba.json",
+      "wasf": "A discovered game."
+    },
+    {
+      "unwan": "LubaId",
+      "malaf": "luba_id.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/luba_id.json",
+      "wasf": "Taarib's own stable identity for a game."
+    },
+    {
+      "unwan": "MasdarLuba",
+      "malaf": "masdar_luba.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/masdar_luba.json",
+      "wasf": "Where a game came from, keeping that launcher's own identifier intact."
+    },
+    {
+      "unwan": "HalatLuba",
+      "malaf": "halat_luba.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/halat_luba.json",
+      "wasf": "A game's Arabization status, as the library grid badges it."
+    },
+    {
+      "unwan": "HukmLughaRasmiya",
+      "malaf": "hukm_lugha_rasmiya.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/hukm_lugha_rasmiya.json",
+      "wasf": "Whether a game already speaks Arabic, and everything that says so."
+    },
+    {
+      "unwan": "BinaId",
+      "malaf": "bina_id.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/bina_id.json",
+      "wasf": "Which build of a game is installed."
+    },
+    {
+      "unwan": "Basma",
+      "malaf": "basma.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/basma.json",
+      "wasf": "A 256-bit content fingerprint."
+    },
+    {
+      "unwan": "MutabaqaBina",
+      "malaf": "mutabaqa_bina.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/mutabaqa_bina.json",
+      "wasf": "How well a patch matches the build a user actually has."
+    },
+    {
+      "unwan": "Muharrik",
+      "malaf": "muharrik.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/muharrik.json",
+      "wasf": "An identified engine."
+    },
+    {
+      "unwan": "TaqreerImkaniyat",
+      "malaf": "taqreer_imkaniyat.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/taqreer_imkaniyat.json",
+      "wasf": "What Taarib can do to one specific game, in language a player understands."
+    },
+    {
+      "unwan": "Tabaqa",
+      "malaf": "tabaqa.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/tabaqa.json",
+      "wasf": "Which injection tier applies to a game."
+    },
+    {
+      "unwan": "MudkhalNass",
+      "malaf": "mudkhal_nass.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/mudkhal_nass.json",
+      "wasf": "One translatable string, and everything the product knows about it."
+    },
+    {
+      "unwan": "NassId",
+      "malaf": "nass_id.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/nass_id.json",
+      "wasf": "A string's identity."
+    },
+    {
+      "unwan": "HalatMuraja",
+      "malaf": "halat_muraja.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/halat_muraja.json",
+      "wasf": "Where a translation stands."
+    },
+    {
+      "unwan": "NitaqNasq",
+      "malaf": "nitaq_nasq.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/nitaq_nasq.json",
+      "wasf": "One markup span over the clean text."
+    },
+    {
+      "unwan": "AlamJawda",
+      "malaf": "alam_jawda.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/alam_jawda.json",
+      "wasf": "Something wrong, or possibly wrong, with a translation."
+    },
+    {
+      "unwan": "MulakhkhasRuqaa",
+      "malaf": "mulakhkhas_ruqaa.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/mulakhkhas_ruqaa.json",
+      "wasf": "The small record the registry index carries for one patch."
+    },
+    {
+      "unwan": "RuqaaId",
+      "malaf": "ruqaa_id.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/ruqaa_id.json",
+      "wasf": "A patch lineage, stable across every revision of the same work."
+    },
+    {
+      "unwan": "HalatRuqaa",
+      "malaf": "halat_ruqaa.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/halat_ruqaa.json",
+      "wasf": "Where a patch stands, from a contributor's draft to a published release."
+    },
+    {
+      "unwan": "TareeqaTarjama",
+      "malaf": "tareeqa_tarjama.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/tareeqa_tarjama.json",
+      "wasf": "How a translation was actually produced."
+    },
+    {
+      "unwan": "RukhsaRuqaa",
+      "malaf": "rukhsa_ruqaa.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/rukhsa_ruqaa.json",
+      "wasf": "The licence a contributor publishes their translation under."
+    },
+    {
+      "unwan": "Taghtiya",
+      "malaf": "taghtiya.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/taghtiya.json",
+      "wasf": "A coverage measurement."
+    },
+    {
+      "unwan": "Musahim",
+      "malaf": "musahim.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/musahim.json",
+      "wasf": "A contributor."
+    },
+    {
+      "unwan": "MusahimId",
+      "malaf": "musahim_id.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/musahim_id.json",
+      "wasf": "A contributor's identity: the fingerprint of their public signing key."
+    },
+    {
+      "unwan": "Sumaa",
+      "malaf": "sumaa.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/sumaa.json",
+      "wasf": "A contributor's record, as it appears on every listing they published."
+    },
+    {
+      "unwan": "Khata",
+      "malaf": "khata.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/khata.json",
+      "wasf": "A failure, ready to be logged, bundled, or shown to a person."
+    },
+    {
+      "unwan": "RisalatMustakhdim",
+      "malaf": "risalat_mustakhdim.json",
+      "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/risalat_mustakhdim.json",
+      "wasf": "What the interface shows: a code, a severity, a sentence, and a button."
+    }
+  ]
+}

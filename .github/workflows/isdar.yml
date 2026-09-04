@@ -1,0 +1,282 @@
+# The release build: one complete, installable bundle.
+#
+# `ci.yml` gates changes. This file produces artifacts, and it exists because
+# nothing else did. Every gate in `ci.yml` was green while no job in the
+# repository had ever run `taarib-tajmee`, `dotnet build`, `wasm-bindgen`,
+# `esbuild`/`tsc` or `tauri build` — so a bundle that could actually patch a
+# game was reachable only by hand, and the one that was built that way shipped
+# without `bayan_mukawwinat.json`. That file's absence is the marker for a
+# partial staging, and with it absent every framework component refuses by name:
+# the product started, scanned three drives, found games, and could patch none
+# of them.
+#
+# `workflow_dispatch` rather than a tag trigger, deliberately. A release here is
+# unsigned — `TAARIB_MIFTAH_ISDAR` is generated inside the owner's
+# passphrase-protected keychain and is never a repository secret, per
+# docs/tawzee.md §1 — so what this workflow produces is a *complete* bundle, not
+# a *release* bundle. Making it fire on a tag would put an artifact that reports
+# `tatwir` in its provenance where somebody would reasonably expect a signed one.
+#
+# ## The Windows payload problem
+#
+# Every desktop bundle carries the **windows** game-side payloads whatever host
+# it runs on, because a Linux or macOS client installing into a Wine or Proton
+# game deploys those (docs/tawzee.md §3, "Wine/Proton reach"). Those payloads are
+# `*-pc-windows-msvc` cdylibs and they need `link.exe`, which exists on no Linux
+# or macOS runner. So a non-Windows release takes them from `hamula-windows`
+# below and builds only its own platform's set. A Windows release skips that job
+# and builds all of them itself.
+#
+# Nothing here has to be trusted to get that right. `taarib-tajmee` refuses to
+# write a manifest while anything the matrix names is absent, and it names every
+# absence at once — so a wiring mistake fails this workflow instead of shipping
+# a bundle with a hole in it.
+
+name: Release bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      hadaf:
+        description: The target triple to build a bundle for
+        required: true
+        type: choice
+        default: x86_64-pc-windows-msvc
+        options:
+          - x86_64-pc-windows-msvc
+          - x86_64-unknown-linux-gnu
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+      jalb:
+        description: >-
+          Fetch the pinned BepInEx and font downloads (rows D1 and J1). A runner
+          has no download cache, so this has to stay on unless one is restored.
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+  # Must equal `channel` in `rust-toolchain.toml`; the `isdar` job verifies it.
+  # Setting it also stops rustup acting on that file's nine cross-compilation
+  # targets, so every target this workflow needs is named explicitly below.
+  RUSTUP_TOOLCHAIN: "1.95.0"
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Rows B1, E1, F1, G1, G2 for the two Windows game-side triples, built on the
+  # only kind of runner that can link them, for the releases that cannot.
+  # --------------------------------------------------------------------------
+  hamula-windows:
+    name: Windows game-side payloads
+    if: ${{ !endsWith(inputs.hadaf, '-pc-windows-msvc') }}
+    runs-on: windows-2025
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          targets: x86_64-pc-windows-msvc, i686-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      # The same command `scripts/isdar.sh` runs, with the triple list narrowed
+      # to the two this job exists for. `--features` is package-qualified
+      # because two of the five packages have no `hamula` feature.
+      - name: Build the payload cdylibs
+        run: |
+          set -euo pipefail
+          for muthallath in x86_64-pc-windows-msvc i686-pc-windows-msvc; do
+            cargo build --release --target "$muthallath" \
+              -p taarib-jisr -p taarib-mudkhal -p taarib-tabaqa \
+              -p taarib-muhawwil-unreal -p taarib-muhawwil-godot \
+              --features taarib-tabaqa/hamula,taarib-muhawwil-unreal/hamula,taarib-muhawwil-godot/hamula \
+              --target-dir target
+          done
+
+      # Only the cdylibs. Uploading the target directory would carry gigabytes
+      # of intermediate objects for five files.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: hamula-windows
+          path: |
+            target/x86_64-pc-windows-msvc/release/*.dll
+            target/i686-pc-windows-msvc/release/*.dll
+          if-no-files-found: error
+          retention-days: 1
+
+  # --------------------------------------------------------------------------
+  # Everything else, on the host the bundle is for.
+  # --------------------------------------------------------------------------
+  isdar:
+    name: Bundle — ${{ inputs.hadaf }}
+    needs: hamula-windows
+    # `needs` on a job that may be skipped makes this one skip too unless the
+    # dependency's outcome is checked explicitly.
+    if: ${{ always() && (needs.hamula-windows.result == 'success' || needs.hamula-windows.result == 'skipped') }}
+    runs-on: >-
+      ${{ fromJSON('{
+        "x86_64-pc-windows-msvc": "windows-2025",
+        "x86_64-unknown-linux-gnu": "ubuntu-24.04",
+        "aarch64-apple-darwin": "macos-15",
+        "x86_64-apple-darwin": "macos-15"
+      }')[inputs.hadaf] }}
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      # Tauri's Linux stack, plus `libdbus-1-dev` for `libdbus-sys` (through the
+      # Ayatana tray) and `libssl-dev` for the OpenSSL `git2` vendors. Copied
+      # from `ci.yml`; the two lists must not drift.
+      - name: Install the Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libdbus-1-dev \
+            libssl-dev \
+            pkg-config \
+            build-essential \
+            file
+
+      # wasm32 always, because row H1 is in every bundle. The two Windows game
+      # triples only on a Windows runner — elsewhere they arrive as an artifact.
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          targets: >-
+            ${{ inputs.hadaf }}, wasm32-unknown-unknown${{
+              endsWith(inputs.hadaf, '-pc-windows-msvc')
+                && ', i686-pc-windows-msvc' || '' }}
+
+      - name: Verify the toolchain pin
+        run: |
+          set -euo pipefail
+          matlub=$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' \
+            rust-toolchain.toml | head -1)
+          if [ "$matlub" != "$RUSTUP_TOOLCHAIN" ]; then
+            risala="rust-toolchain.toml pins ${matlub}; this workflow pins"
+            risala="${risala} ${RUSTUP_TOOLCHAIN}. Bump RUSTUP_TOOLCHAIN and every"
+            risala="${risala} dtolnay/rust-toolchain ref under .github/workflows to match."
+            echo "::error file=rust-toolchain.toml::${risala}"
+            exit 1
+          fi
+          rustc --version
+          cargo --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      # Rows C1-C4. `net6.0` is one of the four target frameworks, so the 6.0
+      # runtime is installed beside the 8.0 SDK that builds it; the feeds those
+      # projects restore from are pinned in `unity/Directory.Build.props`.
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # Row H1's two halves are one program, and they refuse each other across
+      # versions — so the version comes out of Cargo.lock rather than being
+      # written here. `--locked` because a build tool resolving its own
+      # dependencies freshly on the day it runs is a build that is not
+      # reproducible.
+      - name: Install wasm-bindgen-cli at the locked version
+        run: |
+          set -euo pipefail
+          matlub=$(awk '
+            /^name = "wasm-bindgen"$/ { wajad = 1; next }
+            wajad && /^version = / { gsub(/[",]/, "", $3); print $3; exit }
+          ' Cargo.lock)
+          echo "Cargo.lock pins wasm-bindgen ${matlub}"
+          cargo install wasm-bindgen-cli --version "$matlub" --locked
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version ^2 --locked
+
+      - uses: actions/download-artifact@v8
+        if: ${{ !endsWith(inputs.hadaf, '-pc-windows-msvc') }}
+        with:
+          name: hamula-windows
+          path: target
+
+      # `download-artifact` does not restore the executable bit, which does not
+      # matter for a `.dll`, but it does flatten nothing — the two `release/`
+      # directories arrive exactly where `masfufa.rs` looks for them. Listed so
+      # that a wiring mistake is visible in the log rather than only in the
+      # refusal count.
+      - name: Show the payloads taken from the Windows job
+        if: ${{ !endsWith(inputs.hadaf, '-pc-windows-msvc') }}
+        run: ls -l target/*-pc-windows-msvc/release/*.dll
+
+      - name: Build the bundle
+        env:
+          TAARIB_HAMULA_MUTHALLATHAT: >-
+            ${{ endsWith(inputs.hadaf, '-pc-windows-msvc') && '' || inputs.hadaf }}
+        run: |
+          set -euo pipefail
+          wusata=(--hadaf "${{ inputs.hadaf }}")
+          if [ "${{ inputs.jalb }}" = "true" ]; then wusata+=(--jalb); fi
+          bash scripts/isdar.sh "${wusata[@]}"
+
+      # The proof, in the log: the manifest exists, and this is what it counts.
+      # `tajmee` already refused to write it if anything was missing, so this
+      # step is a summary rather than a check — but a release whose log does not
+      # say how many components it carries is a release nobody can audit later.
+      - name: Summarise the staged tree
+        run: |
+          set -euo pipefail
+          bayan=apps/studio/src-tauri/mawarid/bayan_mukawwinat.json
+          test -f "$bayan"
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const b = JSON.parse(readFileSync(process.argv[1], "utf8"));
+            const juzur = new Map();
+            for (const m of b.milaffat) {
+              const q = m.masar.split("/");
+              const jidhr = q[0] === "mukawwinat" ? q.slice(0, 4).join("/") : q[0];
+              juzur.set(jidhr, (juzur.get(jidhr) ?? 0) + 1);
+            }
+            const kul = b.milaffat.reduce((a, m) => a + m.hajm, 0);
+            console.log(`schema ${b.mukhattat} | ${b.isdar} | ${b.hadaf}`);
+            console.log(`${b.milaffat.length} file(s), ${(kul / 1048576).toFixed(1)} MiB`);
+            for (const [k, v] of [...juzur].sort()) console.log(`  ${String(v).padStart(5)}  ${k}`);
+          ' "$bayan"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: huzma-${{ inputs.hadaf }}
+          path: |
+            target/${{ inputs.hadaf }}/release/bundle/**
+            apps/studio/src-tauri/mawarid/bayan_mukawwinat.json
+          if-no-files-found: error
+          retention-days: 7

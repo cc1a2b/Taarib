@@ -1,0 +1,411 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/muharrik.json",
+  "title": "Muharrik",
+  "description": "An identified engine.",
+  "type": "object",
+  "properties": {
+    "aila": {
+      "$ref": "#/$defs/AilatMuharrik",
+      "description": "The family."
+    },
+    "isdar": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IsdarMuharrik"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The version, when one could be read."
+    },
+    "khalfiya": {
+      "$ref": "#/$defs/KhalfiyaBarmajiya",
+      "description": "How the game's code runs."
+    },
+    "itarat": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ItarNusus"
+      },
+      "description": "Every text system found."
+    },
+    "rusum": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/WajihaRusum"
+      },
+      "description": "Every graphics API found."
+    },
+    "mimariya": {
+      "$ref": "#/$defs/Mimariya",
+      "description": "The architecture of the game's main executable."
+    },
+    "thiqa": {
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Confidence in this identification, 0 to 100. Conflicting evidence lowers it and is reported rather than averaged away."
+    },
+    "dalail": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Daleel"
+      },
+      "description": "Everything that was observed."
+    }
+  },
+  "required": [
+    "aila",
+    "khalfiya",
+    "itarat",
+    "rusum",
+    "mimariya",
+    "thiqa",
+    "dalail"
+  ],
+  "$defs": {
+    "AilatMuharrik": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "unity",
+          "description": "Unity, either scripting backend."
+        },
+        {
+          "type": "string",
+          "const": "unreal",
+          "description": "Unreal Engine 4 or 5."
+        },
+        {
+          "type": "string",
+          "const": "godot",
+          "description": "Godot 3 or 4."
+        },
+        {
+          "type": "string",
+          "const": "rpg_maker_mv",
+          "description": "RPG Maker MV."
+        },
+        {
+          "type": "string",
+          "const": "rpg_maker_mz",
+          "description": "RPG Maker MZ."
+        },
+        {
+          "type": "string",
+          "const": "rpg_maker_vx_ace",
+          "description": "RPG Maker VX Ace."
+        },
+        {
+          "type": "string",
+          "const": "renpy",
+          "description": "Ren'Py."
+        },
+        {
+          "type": "string",
+          "const": "game_maker",
+          "description": "GameMaker Studio."
+        },
+        {
+          "type": "string",
+          "const": "electron",
+          "description": "Electron, NW.js, or anything else drawing its interface in a browser."
+        },
+        {
+          "type": "string",
+          "const": "majhul",
+          "description": "Nothing Taarib recognises. A first-class answer, not a failure."
+        }
+      ],
+      "description": "The engine family a game is built on."
+    },
+    "IsdarMuharrik": {
+      "type": "object",
+      "properties": {
+        "kabir": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Major version."
+        },
+        "sagheer": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Minor version."
+        },
+        "tasheeh": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Patch version."
+        },
+        "khaam": {
+          "type": "string",
+          "description": "The version string exactly as it was found in the game."
+        },
+        "mushtaqq": {
+          "type": "boolean",
+          "description": "Whether this was inferred rather than read.",
+          "default": false
+        }
+      },
+      "required": [
+        "kabir",
+        "sagheer",
+        "tasheeh",
+        "khaam"
+      ],
+      "description": "An engine version, kept both parsed and raw."
+    },
+    "KhalfiyaBarmajiya": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "mono",
+          "description": "Unity's Mono runtime, with managed assemblies on disk."
+        },
+        {
+          "type": "string",
+          "const": "il2cpp",
+          "description": "Unity's IL2CPP, with the managed code compiled to a native binary."
+        },
+        {
+          "type": "string",
+          "const": "unreal_native",
+          "description": "Unreal's compiled C++ and Blueprints."
+        },
+        {
+          "type": "string",
+          "const": "gd_script",
+          "description": "Godot's own scripting language."
+        },
+        {
+          "type": "string",
+          "const": "godot_c_sharp",
+          "description": "Godot with C#."
+        },
+        {
+          "type": "string",
+          "const": "godot_native",
+          "description": "A Godot project compiled into a custom engine build."
+        },
+        {
+          "type": "string",
+          "const": "java_script",
+          "description": "JavaScript, in NW.js, Electron, or a browser."
+        },
+        {
+          "type": "string",
+          "const": "python",
+          "description": "Python, as Ren'Py uses it."
+        },
+        {
+          "type": "string",
+          "const": "ruby",
+          "description": "Ruby, as RPG Maker VX Ace uses it."
+        },
+        {
+          "type": "string",
+          "const": "game_maker_vm",
+          "description": "GameMaker's own bytecode."
+        },
+        {
+          "type": "string",
+          "const": "majhula",
+          "description": "Nothing identifiable."
+        }
+      ],
+      "description": "How the game's own code is executed."
+    },
+    "ItarNusus": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "text_mesh_pro",
+          "description": "TextMeshPro, in both its UI and world-space components."
+        },
+        {
+          "type": "string",
+          "const": "unity_ui_text",
+          "description": "Unity's legacy UI text."
+        },
+        {
+          "type": "string",
+          "const": "n_gui",
+          "description": "NGUI's labels."
+        },
+        {
+          "type": "string",
+          "const": "fairy_gui",
+          "description": "`FairyGUI`'s text fields."
+        },
+        {
+          "type": "string",
+          "const": "text_mesh",
+          "description": "Unity world-space text meshes."
+        },
+        {
+          "type": "string",
+          "const": "slate",
+          "description": "Unreal's Slate, which already shapes text and only needs correcting."
+        },
+        {
+          "type": "string",
+          "const": "godot_label",
+          "description": "Godot's plain labels."
+        },
+        {
+          "type": "string",
+          "const": "godot_rich_text",
+          "description": "Godot's rich text labels."
+        },
+        {
+          "type": "string",
+          "const": "nafidhat_rpg",
+          "description": "RPG Maker's message and menu windows."
+        },
+        {
+          "type": "string",
+          "const": "nass_renpy",
+          "description": "Ren'Py's text displayables."
+        },
+        {
+          "type": "string",
+          "const": "rasm_game_maker",
+          "description": "GameMaker's text drawing."
+        },
+        {
+          "type": "string",
+          "const": "dom",
+          "description": "Text nodes in a document."
+        },
+        {
+          "type": "string",
+          "const": "canvas",
+          "description": "A canvas the game draws text into itself, where the browser's own shaping never runs."
+        }
+      ],
+      "description": "A text system present in the game, and therefore a surface Taarib can take over."
+    },
+    "WajihaRusum": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "d3d11",
+          "description": "Direct3D 11."
+        },
+        {
+          "type": "string",
+          "const": "d3d12",
+          "description": "Direct3D 12."
+        },
+        {
+          "type": "string",
+          "const": "open_gl",
+          "description": "OpenGL."
+        },
+        {
+          "type": "string",
+          "const": "vulkan",
+          "description": "Vulkan."
+        },
+        {
+          "type": "string",
+          "const": "metal",
+          "description": "Metal."
+        },
+        {
+          "type": "string",
+          "const": "majhula",
+          "description": "Not determined."
+        }
+      ],
+      "description": "A graphics API the game was seen to use, which decides how the overlay attaches when it is needed."
+    },
+    "Mimariya": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "x86",
+          "description": "32-bit x86. Still extremely common in shipped games."
+        },
+        {
+          "type": "string",
+          "const": "x8664",
+          "description": "64-bit x86."
+        },
+        {
+          "type": "string",
+          "const": "aarch64",
+          "description": "64-bit ARM: Apple Silicon, Windows on ARM, ARM handhelds."
+        }
+      ],
+      "description": "A processor architecture, of Taarib or of a game process."
+    },
+    "Daleel": {
+      "type": "object",
+      "properties": {
+        "naw": {
+          "$ref": "#/$defs/NawDaleel",
+          "description": "How it was observed."
+        },
+        "wasf": {
+          "type": "string",
+          "description": "What was observed, stated plainly."
+        },
+        "mawqi": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Where, relative to the game's root."
+        },
+        "wazn": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "How much this observation is worth, 0 to 100."
+        }
+      },
+      "required": [
+        "naw",
+        "wasf",
+        "wazn"
+      ],
+      "description": "One observation that contributed to an engine identification."
+    },
+    "NawDaleel": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "binyat_mujallad",
+          "description": "A directory or file the engine always ships."
+        },
+        {
+          "type": "string",
+          "const": "tawqi_thunai",
+          "description": "An imported module, a section name, or a byte pattern in a binary."
+        },
+        {
+          "type": "string",
+          "const": "bayanat_mudmaja",
+          "description": "A version string or structure embedded in the game's own data."
+        },
+        {
+          "type": "string",
+          "const": "tarwisat_hawiya",
+          "description": "The header of an asset container."
+        }
+      ],
+      "description": "What kind of observation produced a piece of evidence."
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/halat_ruqaa.json",
+  "title": "HalatRuqaa",
+  "description": "Where a patch stands, from a contributor's draft to a published release.",
+  "oneOf": [
+    {
+      "type": "string",
+      "const": "musawwada",
+      "description": "A local draft, resumable, visible to nobody else."
+    },
+    {
+      "type": "string",
+      "const": "muqaddama",
+      "description": "Submitted and waiting in the owner's queue."
+    },
+    {
+      "type": "string",
+      "const": "qayd_muraja",
+      "description": "The owner has opened it."
+    },
+    {
+      "type": "string",
+      "const": "matlub_taadil",
+      "description": "Returned for revision, with a written summary and anchored comments."
+    },
+    {
+      "type": "string",
+      "const": "mawafaq_yunshar",
+      "description": "Approved; the publishing sequence is running."
+    },
+    {
+      "type": "string",
+      "const": "manshura",
+      "description": "Published and fetchable by every client."
+    },
+    {
+      "type": "string",
+      "const": "marfuda",
+      "description": "Rejected, with a written reason."
+    },
+    {
+      "type": "string",
+      "const": "mashuba",
+      "description": "Withdrawn by the contributor."
+    },
+    {
+      "type": "string",
+      "const": "masbuba",
+      "description": "Published and then revoked, and being uninstalled from clients that already have it."
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35222.181
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Taarib.Unity.Jisr", "Taarib.Unity.Jisr\Taarib.Unity.Jisr.csproj", "{45F43E44-C53B-5FC8-BF66-98F7AD789F95}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Taarib.Unity.Mushtarak", "Taarib.Unity.Mushtarak\Taarib.Unity.Mushtarak.csproj", "{98BC02DB-0EC3-52DB-8B8F-7C21E6411B76}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Taarib.Unity.Mono", "Taarib.Unity.Mono\Taarib.Unity.Mono.csproj", "{8C90DCC5-C25F-524D-9ED7-C2E56BCAC081}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Taarib.Unity.Il2cpp", "Taarib.Unity.Il2cpp\Taarib.Unity.Il2cpp.csproj", "{98F2EF99-7C4F-5226-999A-560A391E108B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A1955A2E4D8}") = "Solution Items", "Solution Items", "{CDE12BFD-BB82-53D6-AFC5-4559EC7929F7}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{45F43E44-C53B-5FC8-BF66-98F7AD789F95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45F43E44-C53B-5FC8-BF66-98F7AD789F95}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45F43E44-C53B-5FC8-BF66-98F7AD789F95}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45F43E44-C53B-5FC8-BF66-98F7AD789F95}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98BC02DB-0EC3-52DB-8B8F-7C21E6411B76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98BC02DB-0EC3-52DB-8B8F-7C21E6411B76}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98BC02DB-0EC3-52DB-8B8F-7C21E6411B76}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98BC02DB-0EC3-52DB-8B8F-7C21E6411B76}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C90DCC5-C25F-524D-9ED7-C2E56BCAC081}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C90DCC5-C25F-524D-9ED7-C2E56BCAC081}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C90DCC5-C25F-524D-9ED7-C2E56BCAC081}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C90DCC5-C25F-524D-9ED7-C2E56BCAC081}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98F2EF99-7C4F-5226-999A-560A391E108B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98F2EF99-7C4F-5226-999A-560A391E108B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98F2EF99-7C4F-5226-999A-560A391E108B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98F2EF99-7C4F-5226-999A-560A391E108B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A3C6A297-3D86-59CD-A12D-E97B66D7596C}
+	EndGlobalSection
+EndGlobal

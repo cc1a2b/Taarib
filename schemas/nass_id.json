@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/nass_id.json",
+  "title": "NassId",
+  "description": "A string's identity.",
+  "type": "string",
+  "format": "uuid"
+}

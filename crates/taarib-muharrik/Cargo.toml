@@ -1,0 +1,30 @@
+[package]
+name = "taarib-muharrik"
+description = "محرّك تعريب — engine identification and the capability probe: evidence, resolution, the capability report a player can read, and the persisted per-game record."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-makhzan = { workspace = true }
+# Phase 4 → Phase 5 in the dependency graph. The capability report has to
+# account for what the launcher already knows and nothing on disk says: a VAC
+# association, an anti-cheat service named in a manifest, a compatibility layer.
+# Those arrive as `SimatLuba`, which is discovery's vocabulary.
+taarib-kashf = { workspace = true }
+
+object = { workspace = true }
+memmap2 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

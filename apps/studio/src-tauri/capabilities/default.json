@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The permission set the main window runs under, audited against what the interface actually calls. The frontend imports exactly two things from @tauri-apps/api: invoke (hayat/jisr.ts) and listen (shashat/luba.tsx, shashat/warsha.tsx). listen is the only core module the interface drives, and the unlisten half is used, so core:event:allow-listen and core:event:allow-unlisten are named here even though core:default already implies them; naming them is the record of who consumes them. Every window control is left to the operating system's own titlebar (app.windows[0].decorations is true, dragDropEnabled is false), so no core:window grant is held: nothing in src/ calls setTitle, minimize, maximize, close, startDragging or getCurrentWindow. Progress events are emitted from Rust through tauri::Emitter, never from the webview, so no emit grant is held either. The build's version and name reach the interface through the maalumat_taarib command, not core:app. core:webview:allow-internal-toggle-devtools is retained because it cannot be withdrawn from here: it is a member of core:webview:default and therefore of core:default, and a Capability at tauri 2.11.5 has no debug-only or profile field to scope it with — only platforms, whose values are operating systems. The real gate is the tauri devtools cargo feature; see docs/tawzee/adhonat.md. Nothing here grants filesystem, shell or network access. Those go through Taarib's own commands, which are not governed by this file at all and are validated against taarib_usus::masarat before they touch the machine.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:webview:allow-internal-toggle-devtools"
+  ]
+}

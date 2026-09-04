@@ -1,0 +1,707 @@
+/* ==========================================================================
+   شبكة المكتبة — the library grid.
+
+   Three rules govern this file.
+
+   1. Every value is a token or an expression over tokens. There is no colour,
+      no size, no radius and no duration written literally below. The light
+      theme, the high-contrast theme and the three interface densities are all
+      implemented by re-pointing the token layer, and a literal here is a value
+      none of them can reach.
+
+   2. The card's size is never restated. `--ard-bitaqa`, `--irtifa-sura` and
+      `--irtifa-shareet-bitaqa` belong to `bitaqa.css`; this file reads them,
+      through the probe and through the skeleton, and never assigns them. The
+      three density classes are the card's, and the skeleton wears them so that
+      a placeholder is the same size as the thing it stands in for — to the
+      pixel, including the reserve.
+
+   3. Everything directional is logical. The grid flows from the leading edge
+      in both directions with no mirrored rule, because `direction` is a
+      document property that the row's own flex layout already honours.
+
+   This file assumes `.zir`, `.halat`, `.halat__unwan` and `.halat__nass` from
+   the library screen's stylesheet, which is loaded alongside it. Those four are
+   the product's shared button and message-panel primitives; redeclaring them
+   here would be a second button that drifts from the first.
+   ========================================================================== */
+
+.shabaka {
+  /* The grid's own spacing, named once and read by both the layout arithmetic
+     (through the probe) and the rules below, so the number the JavaScript
+     measures and the number the browser paints cannot disagree. */
+  --fajwat-shabaka: var(--misafa-16);
+  --hashiyat-shabaka: var(--misafa-24);
+  --irtifa-unwan-qism: calc(var(--irtifa-satr) + var(--misafa-8));
+
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  block-size: 100%;
+  min-block-size: 0;
+  /* Inert outside a flex container, and the whole layout inside one: the
+     library screen stacks this above the panels that report a failed action,
+     and the grid is the part that gives up height to them. */
+  flex: 1 1 0;
+  background-color: var(--sath-0);
+}
+
+/* --------------------------------------------------------------------------
+   Density, as a change of air and not only a change of scale.
+
+   The card had three sizes and the grid had one gap, so the only thing the
+   setting decided was how large the artwork was drawn. Sixteen pixels between
+   220px cards is a wide channel and sixteen between 466px cards is a seam:
+   compact looked airy and large looked crowded, which is the opposite of what
+   the two words promise. So the space moves with the card — tighter at the
+   small step, where the point is that more fits, and open at the large one,
+   where the point is that a wall of artwork has room to be looked at.
+
+   Read off the probe, which is the one element in the tree that always
+   carries the card's current density class. The probe then measures these
+   values back out of the cascade, so the arithmetic that places the columns
+   and the padding the browser paints cannot disagree about them.
+   -------------------------------------------------------------------------- */
+
+.shabaka:has(.shabaka__miqyas-bitaqa.bitaqa--mudmaj) {
+  --fajwat-shabaka: var(--misafa-12);
+  --hashiyat-shabaka: var(--misafa-16);
+}
+
+.shabaka:has(.shabaka__miqyas-bitaqa.bitaqa--kabir) {
+  --fajwat-shabaka: var(--misafa-24);
+  --hashiyat-shabaka: var(--misafa-40);
+}
+
+/* --------------------------------------------------------------------------
+   The probe.
+
+   Hidden, unclickable, outside the accessibility tree, and never removed. It
+   exists so that the column arithmetic reads the card's real width, the card's
+   real height and the grid's real spacing out of the cascade rather than from
+   numbers typed into a component. `visibility: hidden` rather than
+   `display: none`: a display:none box has no box to measure.
+   -------------------------------------------------------------------------- */
+
+.shabaka__miqyas {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.shabaka__miqyas-bitaqa {
+  inline-size: var(--ard-bitaqa);
+  /* The same sum `bitaqa.css` writes, for the same reason: stating 192 here
+     would be a fourth place that has to change when the card changes. */
+  block-size: calc(var(--irtifa-sura) + var(--irtifa-shareet-bitaqa));
+}
+
+.shabaka__miqyas-unwan {
+  block-size: var(--irtifa-unwan-qism);
+}
+
+/* One element carrying two different measurements — the gap as its width, the
+   grid's inset as its height — so the probe stays three boxes rather than
+   five. */
+.shabaka__miqyas-fajwa {
+  inline-size: var(--fajwat-shabaka);
+  block-size: var(--hashiyat-shabaka);
+}
+
+/* --------------------------------------------------------------------------
+   The scroll region.
+   -------------------------------------------------------------------------- */
+
+.shabaka__masrah {
+  position: relative;
+  min-block-size: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-block: var(--hashiyat-shabaka);
+
+  /* The window is what scrolls, not the page, and a grid that bounced at its
+     end would hand the gesture to the shell behind it. */
+  overscroll-behavior: contain;
+}
+
+/* --------------------------------------------------------------------------
+   The virtualized rows.
+
+   The container is given an explicit height in the component — the
+   virtualizer's total — and every row is absolutely positioned inside it at a
+   translated offset. `transform` rather than `inset-block-start`, because a
+   transform is composited and an offset is not: scrolling ten thousand rows by
+   changing `top` is ten thousand layout invalidations.
+   -------------------------------------------------------------------------- */
+
+.shabaka__sufuf {
+  position: relative;
+  inline-size: 100%;
+}
+
+.shabaka__saf {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  display: flex;
+  align-items: flex-start;
+
+  /* No `flex-direction` and no mirrored rule: a flex row already runs from the
+     leading edge, so the first card sits on the right in Arabic and on the left
+     in English by inheriting the document's direction. */
+  will-change: transform;
+}
+
+/* The cell is exactly the card and nothing else: no padding, no border, no
+   background. It exists so that the row has a real element to hang
+   `role="gridcell"` and `aria-colindex` on — `display: contents` would give the
+   right geometry and take the cell out of the accessibility tree with it. */
+.shabaka__khaliya {
+  flex: none;
+  display: flex;
+  min-inline-size: 0;
+}
+
+/* --------------------------------------------------------------------------
+   A launcher's heading.
+
+   A hairline under the label rather than a filled bar: a section heading in
+   this product declares itself the same way a panel does, by a rule and a step
+   of text colour, and never by a coloured strip.
+   -------------------------------------------------------------------------- */
+
+.shabaka__saf--unwan {
+  align-items: end;
+  padding-block-end: var(--misafa-8);
+}
+
+.shabaka__unwan-qism {
+  inline-size: 100%;
+  padding-block-end: var(--misafa-8);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --------------------------------------------------------------------------
+   The skeleton.
+
+   Shaped exactly like a real card, including the reserve, at whichever density
+   the grid is drawing. Deliberately still — no shimmer, no pulse. A shimmering
+   placeholder is an animation playing on a data update, which this product does
+   not do anywhere else and would not start doing on its landing screen.
+   -------------------------------------------------------------------------- */
+
+.shabaka__haykal {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+/* A grouped library puts a launcher heading on its own row before that
+   launcher's first row of cards. The skeleton reserves that row as a real
+   element — its height and inset are set from the component, from the same
+   measurement the live heading gets — so the first row of artwork arrives
+   where the placeholders were instead of a heading's height below them. What
+   these rules add is the heading's own hairline and a short bar where its text
+   will be, so the reserved row reads as a heading waiting for a name rather
+   than as a gap.
+
+   The three declarations below are `.shabaka__saf--unwan` and
+   `.shabaka__unwan-qism` again, deliberately: the placeholder heading has to
+   sit on the same baseline and rule to the same width as the heading that
+   replaces it, and the only way to be sure of that is to align the box model
+   rather than to approximate it. The rule lived on the row itself before, which
+   put it across the whole region while the live heading's stopped at the first
+   card's leading edge — a hairline that moved inward by the centring inset at
+   the moment the scan landed. */
+.shabaka__haykal-unwan {
+  display: flex;
+  align-items: end;
+  padding-block-end: var(--misafa-8);
+}
+
+.shabaka__haykal-unwan-qism {
+  inline-size: 100%;
+  padding-block-end: var(--misafa-8);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* In flow, not absolute: the row carries the centring inset as padding, and an
+   absolutely positioned bar measures from the padding box and would ignore it.
+   Its height is the live heading's line box, so the two occupy the same band. */
+.shabaka__haykal-unwan-qism::before {
+  content: '';
+  display: block;
+  inline-size: 7ch;
+  block-size: var(--irtifa-2);
+  border-radius: var(--nisf-tahakkum);
+  background: var(--sath-2);
+}
+
+/* One row of placeholders. Its geometry — height, gap, inset — is arithmetic
+   set from the component, not style, so nothing is declared here that could
+   drift from the number the virtualised rows are given. */
+.shabaka__haykal-saf {
+  flex: none;
+}
+
+.haykal-bitaqa {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  inline-size: var(--ard-bitaqa);
+  block-size: calc(var(--irtifa-sura) + var(--irtifa-shareet-bitaqa));
+  border-radius: var(--nisf-lawha);
+  background: var(--sath-1);
+  /* The same surface step and the same hairline a real card carries, so the
+     switch from placeholder to card is a change of content and not a change
+     of elevation. */
+  border: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.haykal-bitaqa__bir {
+  position: relative;
+  flex: none;
+  inline-size: var(--ard-bitaqa);
+  block-size: var(--irtifa-sura);
+  border-start-start-radius: var(--nisf-lawha);
+  border-start-end-radius: var(--nisf-lawha);
+  overflow: hidden;
+}
+
+/* The reserve, restated as the identical expression `bitaqa.css` uses: two ring
+   widths, the gap between them and the breathing space. Not because the rings
+   are drawn here — they are not — but because the artwork well has to start at
+   the same inset, or every card would shift by ten pixels the moment real
+   artwork replaced a placeholder. */
+.haykal-bitaqa__sura {
+  position: absolute;
+  inset: calc(
+    var(--samk-halqa) + var(--fajwat-halqa) + var(--samk-halqa) + var(--tanaffus-halqa)
+  );
+  background: var(--sath-2);
+}
+
+.haykal-bitaqa__shareet {
+  flex: none;
+  block-size: var(--irtifa-shareet-bitaqa);
+}
+
+/* --------------------------------------------------------------------------
+   Empty and error panels.
+   -------------------------------------------------------------------------- */
+
+/* An empty library is not an error, and a bordered box in the middle of an
+   otherwise empty screen announces it as one. Here the shared message panel
+   loses its surface, its hairline and its corner and becomes what the
+   direction asks an empty state to be: a heading, a sentence, and the two
+   things the user can do next — set at the top of the region on the grid's own
+   inset.
+
+   Its own inset, and not the cards': a row of cards carries a *centring* inset,
+   which is the grid's inset plus whatever width the columns could not use, and
+   at three columns on a 1280-wide window that is over a hundred pixels. Lining
+   an empty state up with columns that do not exist would push it away from the
+   header, the filter bar and every other thing on the screen, all of which sit
+   on this same inset. Where the cards would have been is not an alignment; it
+   is an accident of how many of them fit. */
+.shabaka__halat {
+  padding-block-start: var(--misafa-32);
+  padding-inline: var(--hashiyat-shabaka);
+}
+
+.shabaka__halat > .halat {
+  gap: var(--misafa-8);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--nisf-hadd);
+}
+
+.shabaka__halat > .halat > .halat__unwan {
+  font-size: var(--qiyas-5);
+  line-height: var(--irtifa-5);
+  font-weight: var(--wazn-bariz);
+}
+
+/* `.halat__afal` — one spelling, declared once, in `kutlat_khata.css`. This
+   file used to spell it `afaal` and redeclare it, so the grid's empty state got
+   a near-identical rule that happened to miss the `:empty` collapse and left an
+   empty flex row holding open space below the sentence. */
+
+/* --------------------------------------------------------------------------
+   The bulk action bar.
+
+   Anchored to the block end of the grid, over the content rather than beside
+   it, and the one place in this component allowed the product's single shadow:
+   it genuinely floats above the grid, which is what `--zill-tafu` is for.
+   -------------------------------------------------------------------------- */
+
+.shareet-jamai {
+  position: absolute;
+  inset-block-end: var(--misafa-20);
+  inset-inline: var(--hashiyat-shabaka);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--misafa-16);
+  margin-inline: auto;
+  max-inline-size: 72ch;
+  padding-block: var(--misafa-8);
+  padding-inline: var(--misafa-16);
+  background-color: var(--sath-3);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-hiwar);
+  box-shadow: var(--zill-tafu);
+}
+
+.shareet-jamai__adad {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.shareet-jamai__afaal {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+/* A smaller button, for a bar and for a list row. The same surface, the same
+   hairline and the same radius as `.zir`; only the height and the inline
+   padding step down. */
+.zir--daqiq {
+  block-size: calc(var(--irtifa-band) - var(--misafa-4));
+  padding-inline: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   The unavailable section.
+
+   At the very end of the grid, below the last row, in the same scroll region.
+   Separated by a rule and a step down in text colour rather than by a boxed
+   panel: it is the tail of the library, not a warning about it.
+   -------------------------------------------------------------------------- */
+
+.ghaiba {
+  margin-block-start: var(--misafa-56);
+  padding-inline: var(--hashiyat-shabaka);
+  padding-block: var(--misafa-8) var(--misafa-24);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+
+  /* The rejected rows reflow on the *section's* width, not the window's: the
+     grid is mounted beside a rail that can collapse and beside a detail pane
+     that can open, and neither of those is a media query. */
+  container-type: inline-size;
+  container-name: ghaiba;
+}
+
+.ghaiba__tarwisa {
+  display: flex;
+}
+
+.ghaiba__miftah {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  inline-size: 100%;
+  block-size: var(--irtifa-satr);
+  padding-inline: var(--misafa-4);
+  color: var(--nass-2);
+  cursor: pointer;
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.ghaiba__miftah:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.ghaiba__miftah:focus-visible {
+  outline-offset: calc(var(--samk-hadd) * -2);
+}
+
+/* The disclosure mark, drawn rather than iconised so it needs no second family
+   and no stroke weight of its own. It points along the leading edge and turns
+   to point down when the section opens, which is the one rotation in this
+   component. */
+.ghaiba__sahm {
+  inline-size: var(--misafa-6);
+  block-size: var(--misafa-6);
+  flex: none;
+  border-inline-end: var(--samk-ramz) solid currentColor;
+  border-block-end: var(--samk-ramz) solid currentColor;
+  transform: rotate(-45deg);
+  transform-origin: center;
+  transition: transform var(--zaman-lawha) var(--munhana);
+}
+
+.ghaiba__sahm[data-maftuh='true'] {
+  transform: rotate(45deg);
+}
+
+.ghaiba__unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+}
+
+.ghaiba__adad {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.ghaiba__jism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-20);
+  padding-block-start: var(--misafa-12);
+}
+
+.ghaiba__sharh {
+  max-inline-size: 64ch;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+.ghaiba__fia {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+}
+
+.ghaiba__fia-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+}
+
+.ghaiba__qaima {
+  display: flex;
+  flex-direction: column;
+}
+
+/* One rejected game. The name and its launcher lead, the reason takes the
+   remaining measure, and the way back into the launcher sits at the trailing
+   edge — so a column of rows reads as a column of sentences with one button
+   each rather than as a table.
+
+   No fill and no corner: a filled rounded row per game turned the tail of the
+   library into a stack of little panels, each of them as loud as a card. A
+   rule between one row and the next says the same thing and says it quietly,
+   and the fill is kept for the row the pointer is on. */
+.ghaiba__satr {
+  display: grid;
+  grid-template-columns: minmax(0, 28ch) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--misafa-16);
+  padding-block: var(--misafa-8);
+  padding-inline: var(--misafa-8);
+  transition: background-color var(--zaman-hala) var(--munhana);
+}
+
+.ghaiba__satr + .ghaiba__satr {
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.ghaiba__satr:hover {
+  background-color: var(--sath-1);
+  transition: none;
+}
+
+.ghaiba__tarif {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+  min-inline-size: 0;
+}
+
+.ghaiba__ism {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.ghaiba__satr:hover .ghaiba__ism {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.ghaiba__manassa {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.ghaiba__sabab {
+  min-inline-size: 0;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+/* --------------------------------------------------------------------------
+   Narrow windows.
+
+   The grid never drops below one column, and at one column the row's own
+   centring inset already handles the horizontal placement. What has to give is
+   the unavailable row, which cannot hold three columns in the width left over
+   after a sidebar on a small display.
+   -------------------------------------------------------------------------- */
+
+@container ghaiba (max-inline-size: 70ch) {
+  .ghaiba__satr {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: var(--misafa-6);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Available to a screen reader, absent from the layout.
+
+   Declared here rather than borrowed from the library screen: this component is
+   mounted on more than one screen, and a live region that only works on one of
+   them is a live region nobody can rely on.
+   -------------------------------------------------------------------------- */
+
+.shabaka__khafi {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip-path: inset(50%);
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion.
+
+   Nothing to declare here: the disclosure's rotation and the header's colour
+   change both take their durations from `--zaman-*` tokens, and the token
+   layer zeroes those under this preference. Motion's own transitions go
+   through `haraka`, which returns a finished transition rather than a slow
+   one.
+   -------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+   The games whose record did not finish.
+
+   Deliberately not a variant of `.ghaiba` above. That section is a disclosure
+   a user opens when they are looking for a game they cannot find; this one is
+   never collapsed, because it is not about a game being absent — the game is
+   installed and Taarib's own store failed on it. It reads as a fault the
+   product is owning, so it carries the warning hue on its leading edge and
+   states itself without being asked.
+   --------------------------------------------------------------------------- */
+
+.taadhur {
+  margin-block-start: var(--misafa-32);
+  padding-inline: var(--hashiyat-shabaka);
+  padding-block: var(--misafa-16) var(--misafa-24);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-6);
+}
+
+.taadhur__tarwisa {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+}
+
+.taadhur__sharh {
+  max-inline-size: 64ch;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+.taadhur__qaima {
+  display: flex;
+  flex-direction: column;
+  margin-block-start: var(--misafa-8);
+}
+
+/* The same three-column measure as a rejected row, so the two sections align
+   down the screen even though they are never open at the same time. The
+   trailing column is empty here: there is no launcher to open, because the
+   fault is on this side.
+
+   Unfilled, like a rejected row, and separated from its neighbour by a rule.
+   The warning hue stays on the leading edge, where it is the one mark that
+   distinguishes these rows from the ones above — a filled surface as well
+   would be the product raising its voice about its own bookkeeping. */
+.taadhur__satr {
+  display: grid;
+  grid-template-columns: minmax(0, 28ch) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--misafa-16);
+  padding-block: var(--misafa-8);
+  padding-inline: var(--misafa-8);
+  border-inline-start: var(--misafa-2) solid var(--tanbeeh);
+}
+
+.taadhur__satr + .taadhur__satr {
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.taadhur__tarif {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+  min-inline-size: 0;
+}
+
+.taadhur__ism {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taadhur__manassa {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.taadhur__sabab {
+  min-inline-size: 0;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}

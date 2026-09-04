@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
+     aria-labelledby="unwan">
+  <title id="unwan">تعريب</title>
+
+  <!--
+    العلامة الأحادية — the one-colour cut of taarib-alama.svg.
+
+    For a taskbar that tints, a stencil, a monochrome print, a knock-out on
+    any field: the ground takes `currentColor` and the run and the dots are
+    holes in it, so whatever sits behind the mark shows through as the stroke.
+    The hairline rim is absent on purpose; it exists to separate a near-black
+    tile from a dark desktop, and a tinted silhouette has no such problem.
+
+    Every number is the sibling's: tile rx 96, run width 88 on the same three
+    segments, dots r 40 at (296, 96) and (392, 96). Nothing is redrawn; the
+    stroke is only written out as the outline it already had.
+
+    ONE PATH, NOT A MASK
+    A stencil has to be a single fill so it can be handed to a renderer, a
+    cutter, or an icon theme as one shape. Round caps and joins on an 88-unit
+    stroke therefore become an explicit outline under `evenodd`, traced
+    clockwise: the right cap, the inner edge of the upper run, the inner edge
+    of the step, the outer round join, the underside of the lower run, the
+    left cap, the top of the lower run, the outer edge of the step, and the
+    first outer round join back to the start. Every arc is radius 44, half the
+    stroke; every straight edge sits 44 units off the centreline, which is why
+    the inner corners land at (292, 268) and (204, 308). A `<mask>` would say
+    the same thing in fewer bytes and render wrongly in the pipeline that
+    rasterises this family, which reads masks as alpha rather than luminance.
+  -->
+
+  <path fill="currentColor" fill-rule="evenodd" d="
+    M 96 0 H 416 A 96 96 0 0 1 512 96 V 416 A 96 96 0 0 1 416 512
+    H 96 A 96 96 0 0 1 0 416 V 96 A 96 96 0 0 1 96 0 Z
+    M 456 180 A 44 44 0 0 1 456 268 L 292 268 L 292 352
+    A 44 44 0 0 1 248 396 L 56 396 A 44 44 0 0 1 56 308
+    L 204 308 L 204 224 A 44 44 0 0 1 248 180 Z
+    M 352 96 a 40 40 0 1 0 80 0 a 40 40 0 1 0 -80 0 Z
+    M 256 96 a 40 40 0 1 0 80 0 a 40 40 0 1 0 -80 0 Z
+  "/>
+</svg>

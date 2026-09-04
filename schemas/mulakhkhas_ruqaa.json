@@ -1,0 +1,443 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/mulakhkhas_ruqaa.json",
+  "title": "MulakhkhasRuqaa",
+  "description": "The small record the registry index carries for one patch.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/RuqaaId",
+      "description": "The lineage."
+    },
+    "murajaa": {
+      "$ref": "#/$defs/RuqaaRevision",
+      "description": "The published revision."
+    },
+    "unwan": {
+      "type": "string",
+      "description": "The title the contributor gave it."
+    },
+    "musahim": {
+      "$ref": "#/$defs/MusahimId",
+      "description": "Who made it."
+    },
+    "ism_musahim": {
+      "type": "string",
+      "description": "Their display name, denormalized so a listing needs no second fetch."
+    },
+    "taghtiya": {
+      "$ref": "#/$defs/Taghtiya",
+      "description": "How much of the game it covers."
+    },
+    "adad_nusus": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "How many strings it carries."
+    },
+    "hajm": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0,
+      "description": "The package size in bytes."
+    },
+    "bina_manassa": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Launcher build identifiers this patch was compiled against."
+    },
+    "basmat": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Basma"
+      },
+      "description": "Content fingerprints it matches exactly."
+    },
+    "aila": {
+      "$ref": "#/$defs/AilatMuharrik",
+      "description": "The engine it targets."
+    },
+    "khalfiya": {
+      "$ref": "#/$defs/KhalfiyaBarmajiya",
+      "description": "The scripting backend it targets."
+    },
+    "tabaqa": {
+      "$ref": "#/$defs/Tabaqa",
+      "description": "The tier it installs at."
+    },
+    "tareeqa": {
+      "$ref": "#/$defs/TareeqaTarjama",
+      "description": "How it was translated."
+    },
+    "rukhsa": {
+      "$ref": "#/$defs/RukhsaRuqaa",
+      "description": "Its licence."
+    },
+    "taqyeem": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "format": "float",
+      "description": "Average rating, when it has any."
+    },
+    "adad_taqyeemat": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "How many ratings."
+    },
+    "waqt_nashr": {
+      "type": "string",
+      "description": "When this revision was published, RFC 3339."
+    },
+    "basmat_muhtawa": {
+      "$ref": "#/$defs/Basma",
+      "description": "The hash of the package itself, verified during download."
+    },
+    "rabt": {
+      "type": "string",
+      "description": "Where the package is, as a release asset."
+    },
+    "rabt_mira": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "A mirror, tried when the primary is unreachable."
+    }
+  },
+  "required": [
+    "id",
+    "murajaa",
+    "unwan",
+    "musahim",
+    "ism_musahim",
+    "taghtiya",
+    "adad_nusus",
+    "hajm",
+    "bina_manassa",
+    "basmat",
+    "aila",
+    "khalfiya",
+    "tabaqa",
+    "tareeqa",
+    "rukhsa",
+    "adad_taqyeemat",
+    "waqt_nashr",
+    "basmat_muhtawa",
+    "rabt"
+  ],
+  "$defs": {
+    "RuqaaId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "A patch lineage, stable across every revision of the same work."
+    },
+    "RuqaaRevision": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "A published revision of a patch, monotonic within its lineage."
+    },
+    "MusahimId": {
+      "type": "string",
+      "description": "A contributor's identity: the fingerprint of their public signing key.",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Taghtiya": {
+      "type": "object",
+      "properties": {
+        "majmu": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Every extracted string."
+        },
+        "mutarjam": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Strings with any translation at all."
+        },
+        "muakkad": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Strings that were reviewed and accepted."
+        },
+        "majmu_takrar": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "description": "Total occurrences of every string, as extraction and capture counted them."
+        },
+        "mutarjam_takrar": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "description": "Occurrences covered by a translation."
+        },
+        "majmu_awwal": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Strings seen in the opening session of play."
+        },
+        "mutarjam_awwal": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Of those, how many are translated."
+        }
+      },
+      "required": [
+        "majmu",
+        "mutarjam",
+        "muakkad",
+        "majmu_takrar",
+        "mutarjam_takrar",
+        "majmu_awwal",
+        "mutarjam_awwal"
+      ],
+      "description": "A coverage measurement."
+    },
+    "Basma": {
+      "type": "string",
+      "description": "A 256-bit content fingerprint.",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "AilatMuharrik": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "unity",
+          "description": "Unity, either scripting backend."
+        },
+        {
+          "type": "string",
+          "const": "unreal",
+          "description": "Unreal Engine 4 or 5."
+        },
+        {
+          "type": "string",
+          "const": "godot",
+          "description": "Godot 3 or 4."
+        },
+        {
+          "type": "string",
+          "const": "rpg_maker_mv",
+          "description": "RPG Maker MV."
+        },
+        {
+          "type": "string",
+          "const": "rpg_maker_mz",
+          "description": "RPG Maker MZ."
+        },
+        {
+          "type": "string",
+          "const": "rpg_maker_vx_ace",
+          "description": "RPG Maker VX Ace."
+        },
+        {
+          "type": "string",
+          "const": "renpy",
+          "description": "Ren'Py."
+        },
+        {
+          "type": "string",
+          "const": "game_maker",
+          "description": "GameMaker Studio."
+        },
+        {
+          "type": "string",
+          "const": "electron",
+          "description": "Electron, NW.js, or anything else drawing its interface in a browser."
+        },
+        {
+          "type": "string",
+          "const": "majhul",
+          "description": "Nothing Taarib recognises. A first-class answer, not a failure."
+        }
+      ],
+      "description": "The engine family a game is built on."
+    },
+    "KhalfiyaBarmajiya": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "mono",
+          "description": "Unity's Mono runtime, with managed assemblies on disk."
+        },
+        {
+          "type": "string",
+          "const": "il2cpp",
+          "description": "Unity's IL2CPP, with the managed code compiled to a native binary."
+        },
+        {
+          "type": "string",
+          "const": "unreal_native",
+          "description": "Unreal's compiled C++ and Blueprints."
+        },
+        {
+          "type": "string",
+          "const": "gd_script",
+          "description": "Godot's own scripting language."
+        },
+        {
+          "type": "string",
+          "const": "godot_c_sharp",
+          "description": "Godot with C#."
+        },
+        {
+          "type": "string",
+          "const": "godot_native",
+          "description": "A Godot project compiled into a custom engine build."
+        },
+        {
+          "type": "string",
+          "const": "java_script",
+          "description": "JavaScript, in NW.js, Electron, or a browser."
+        },
+        {
+          "type": "string",
+          "const": "python",
+          "description": "Python, as Ren'Py uses it."
+        },
+        {
+          "type": "string",
+          "const": "ruby",
+          "description": "Ruby, as RPG Maker VX Ace uses it."
+        },
+        {
+          "type": "string",
+          "const": "game_maker_vm",
+          "description": "GameMaker's own bytecode."
+        },
+        {
+          "type": "string",
+          "const": "majhula",
+          "description": "Nothing identifiable."
+        }
+      ],
+      "description": "How the game's own code is executed."
+    },
+    "Tabaqa": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "kamil",
+          "description": "Text is replaced inside the game and looks native."
+        },
+        {
+          "type": "string",
+          "const": "rasm_mubashir",
+          "description": "Taarib draws the text itself over the engine's own text objects."
+        },
+        {
+          "type": "string",
+          "const": "tarjama_fawqiya",
+          "description": "The game is not modified; Arabic is shown over it. A reading aid, and described as one everywhere it appears."
+        }
+      ],
+      "description": "Which injection tier applies to a game."
+    },
+    "TareeqaTarjama": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "bashariya_kamila",
+          "description": "Translated by a person, start to finish."
+        },
+        {
+          "type": "string",
+          "const": "aaliya_thum_bashariya",
+          "description": "Machine-translated, then reviewed and corrected by a person."
+        },
+        {
+          "type": "string",
+          "const": "aaliya_faqat",
+          "description": "Machine-translated with no human review."
+        }
+      ],
+      "description": "How a translation was actually produced."
+    },
+    "RukhsaRuqaa": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "cc0"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Public domain dedication."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "cc_by"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Attribution."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "cc_by_sa"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Attribution, share alike."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "milkiya_khassa"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "All rights reserved by the contributor; redistribution outside Taarib is not granted."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ism": {
+              "type": "string",
+              "description": "The licence identifier or name."
+            },
+            "naw": {
+              "type": "string",
+              "const": "ukhra"
+            }
+          },
+          "required": [
+            "naw",
+            "ism"
+          ],
+          "description": "Something else, named by the contributor."
+        }
+      ],
+      "description": "The licence a contributor publishes their translation under."
+    }
+  }
+}

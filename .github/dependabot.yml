@@ -1,0 +1,223 @@
+# Dependency updates.
+#
+# Three ecosystems live in this repository: the Rust workspace at the root, the
+# Studio's npm tree under `apps/studio`, and the actions used by the workflows
+# beside this file.
+#
+# Two things shape every block below.
+#
+# First, grouping. This workspace resolves several dependencies as *sets*, not
+# as independent crates: `harfrust`, `skrifa` and `read-fonts` have to agree or
+# a glyph id from the shaper stops meaning the same glyph in the rasterizer;
+# `rusqlite` and `r2d2_sqlite` have to agree or two `libsqlite3-sys` end up in
+# one graph with the same `links = "sqlite3"`; the `tauri*` crates have to move
+# together. A pull request that bumps one member of a set and not the others
+# cannot be merged, so those sets are grouped into single pull requests.
+#
+# Second, ignores. A handful of version numbers in `Cargo.toml` are pinned
+# *against* being newest, each with a comment there saying why. Dependabot
+# cannot read those comments, so it would reopen the same rejected bump every
+# week. Each ignore below repeats the reason so that the two files do not have
+# to be read together.
+#
+# Two mechanics worth knowing before editing this file. Groups are matched in
+# the order they are written and a dependency joins the first group it matches,
+# which is why every `patterns: ["*"]` catch-all is last. And there is no
+# `labels:` block anywhere here on purpose: Dependabot creates its own default
+# labels — `dependencies` plus one naming the ecosystem — when they are
+# missing, but a *custom* label that does not already exist in the repository is
+# silently dropped. This repository has not been published yet, so there is no
+# label to name; taking the defaults means the pull requests are labelled from
+# the first day rather than from whenever someone creates the labels by hand.
+
+version: 2
+
+updates:
+  # --------------------------------------------------------------------------
+  # The Rust workspace. Every third-party version lives in the root Cargo.toml.
+  # --------------------------------------------------------------------------
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Riyadh
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+      include: scope
+
+    # A release yanked within days of publication is common enough that taking
+    # nothing on its first week costs little and avoids churn.
+    cooldown:
+      default-days: 7
+      semver-major-days: 21
+
+    groups:
+      # Decision 3: one `read-fonts` for the whole graph. `harfrust` and
+      # `skrifa` both constrain it, so all three move or none do.
+      nass-shaping:
+        patterns:
+          - harfrust
+          - skrifa
+          - read-fonts
+
+      # `specta` is on a release-candidate line and `specta-typescript` and
+      # `tauri-specta` track it exactly; 0.0.9 of the former pins rc.22 and
+      # will not resolve beside rc.25.
+      specta:
+        patterns:
+          - specta
+          - specta-typescript
+          - tauri-specta
+
+      tauri:
+        patterns:
+          - tauri
+          - tauri-build
+          - tauri-plugin-*
+
+      # Two `libsqlite3-sys` in one graph is a duplicate `links = "sqlite3"`,
+      # which does not link at all.
+      sqlite:
+        patterns:
+          - rusqlite
+          - r2d2
+          - r2d2_sqlite
+
+      # `windows` and `windows-future` must stay on matching versions or the
+      # `IAsyncOperation` the OCR engine returns is a different type from the
+      # one that is awaited.
+      windows:
+        patterns:
+          - windows
+          - windows-*
+
+      # Everything else, as one pull request per week. Major bumps are excluded
+      # so they arrive on their own and can be read on their own.
+      taba-thanawi:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+    ignore:
+      # `naga` 30.0.1 does not compile: its GLSL and SPIR-V front ends cannot
+      # find `apply_default_interpolation`, because `interpolator.rs` writes an
+      # inherent impl for a type it re-exports from `naga-types`. 29.0.4 is the
+      # last release that builds. Revisit by hand, not by robot.
+      - dependency-name: naga
+        update-types:
+          - version-update:semver-major
+
+      # `ocrs` 0.12 requires `rten` ^0.24. Taking 0.25 puts two `rten` in the
+      # graph and `OcrEngine::new` then refuses the `Model` the other one
+      # loaded. This is the one dependency in this workspace where "use the
+      # latest" is the wrong instruction.
+      - dependency-name: rten
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
+
+      # `harfrust` pins `icu_properties` to exactly 2.2.0, and `icu_normalizer`
+      # and `icu_segmenter` are held at the same exact version because the 2.3
+      # line requires the 2.3 line of each. Any bump here stops the graph
+      # resolving until harfrust moves first.
+      - dependency-name: icu_properties
+      - dependency-name: icu_normalizer
+      - dependency-name: icu_segmenter
+
+      # `retour` is vendored and patched under `vendor/retour` through
+      # `[patch.crates-io]`; upstream still emits `extern "stdcall"` for 64-bit
+      # targets, which is E0570 on a current compiler. Bumping the requirement
+      # in Cargo.toml changes nothing and hides that the patch exists.
+      - dependency-name: retour
+
+  # --------------------------------------------------------------------------
+  # The Studio's frontend. pnpm, lockfileVersion 9.
+  # --------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /apps/studio
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Riyadh
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+      include: scope
+
+    cooldown:
+      default-days: 7
+      semver-major-days: 21
+
+    groups:
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+
+      # The JS half of the bridge has to match the Rust `tauri` crate line.
+      tauri:
+        patterns:
+          - "@tauri-apps/*"
+
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+
+      # The Vite plugin and the framework ship as a pair.
+      tailwind:
+        patterns:
+          - tailwindcss
+          - "@tailwindcss/*"
+
+      build-tooling:
+        patterns:
+          - vite
+          - "@vitejs/*"
+          - typescript
+
+      wajiha-thanawi:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  # --------------------------------------------------------------------------
+  # The actions used by the workflows. A retired action version is a workflow
+  # that fails on the day it is retired, with no warning beforehand; this is
+  # the warning.
+  # --------------------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Riyadh
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+      include: scope
+
+    groups:
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+    ignore:
+      # `dtolnay/rust-toolchain` is referenced by a branch named after the Rust
+      # version it installs, not by a release tag. Dependabot reads that as a
+      # version and would offer to "upgrade" the compiler; the compiler is
+      # pinned in `rust-toolchain.toml` and moves only when that file does.
+      - dependency-name: dtolnay/rust-toolchain

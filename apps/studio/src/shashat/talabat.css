@@ -1,0 +1,132 @@
+/* شاشة الطلبات — tokens only, logical properties only, one ranked list. */
+
+.talabat {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100%;
+  background-color: var(--sath-0);
+}
+
+.talabat__shareet-alawi {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.talabat__raji {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.talabat__raji:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.talabat__fasl {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+/* The measure is in rem rather than pixels so the column follows the density
+   setting; no width token exists for a content column. */
+.talabat__jism {
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: var(--misafa-24);
+  max-inline-size: 45rem;
+}
+
+.talabat__jari {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+}
+
+/* The three cells are laid out by the list rather than by the row, so every
+   count and every timestamp sits in one column across the whole board; the row
+   itself carries no box, which is what lets `max-content` measure all of them
+   together. Every row must therefore emit all three cells, even an empty one,
+   or the next row's title would flow into this row's last column. */
+.talabat__qaima {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content max-content;
+  align-items: baseline;
+}
+
+.talabat__saff {
+  display: contents;
+}
+
+.talabat__saff > * {
+  padding-block: var(--misafa-12);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.talabat__ism {
+  padding-inline-end: var(--misafa-20);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.talabat__ism:hover {
+  color: var(--tamyeez);
+  transition: none;
+}
+
+/* Lining tabular figures, so the counts form a real column instead of a ragged
+   one; the accent is spent on the titles, not on every number in the list. */
+.talabat__adad {
+  padding-inline-end: var(--misafa-20);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-1);
+  text-align: end;
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+
+/* Out of the baseline group: a row whose newest request has no timestamp emits
+   this cell empty, and an empty box synthesizes its baseline from its own
+   bottom edge, which would make that one row taller than the rest. */
+.talabat__waqt {
+  align-self: center;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  text-align: end;
+  white-space: nowrap;
+}
+
+.talabat__faragh {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-12);
+  max-inline-size: 52ch;
+  padding-block: var(--misafa-32);
+}
+
+.talabat__faragh-unwan {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.talabat__faragh-nass {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}

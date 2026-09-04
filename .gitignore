@@ -1,0 +1,212 @@
+# This file has never run against this tree. The workspace is not a git
+# repository, so nothing here has been exercised by a real `git status`.
+#
+# It has been exercised somewhere else: every rule below, and every negation,
+# was checked with `git check-ignore` in a throwaway repository holding a
+# skeleton of this tree — that the `mawarid` README survives the wildcard above
+# it, that `vendor/retour/Cargo.toml.orig` survives `*.orig`, that `app.png`
+# survives `/*.png`, that `.env.example` survives `.env.*`. That test proves the
+# patterns mean what they say. It does not prove they cover everything this
+# repository will actually produce.
+#
+# So: treat the first `git add -A` as the real test, and read what it staged
+# before you commit it.
+
+# Rust
+/target/
+# The old-baseline container build's collected artifacts
+# (apps/studio/src-tauri/linux/ibni.sh); the staging copy and its own
+# target directory live under ~/.cache/taarib-bina-linux, outside the tree.
+/dist-linux/
+**/*.rs.bk
+*.pdb
+# `llvm-tools` is a declared toolchain component, and a coverage run drops
+# these beside the binary rather than inside the target directory.
+*.profraw
+*.profdata
+# `/target/` is anchored because a cargo workspace has one target directory at
+# its root. Two cases sit outside it: `vendor/retour` is excluded from the
+# workspace, so building it on its own produces a target directory nothing
+# above catches, and the Tauri crate is sometimes built from its own directory.
+vendor/*/target/
+
+# Node / frontend
+node_modules/
+apps/studio/dist/
+apps/studio/.vite/
+*.tsbuildinfo
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Tauri
+apps/studio/src-tauri/target/
+apps/studio/src-tauri/gen/
+
+# C# / Unity plugins
+unity/**/bin/
+unity/**/obj/
+unity/**/*.user
+unity/.vs/
+
+# Script adapter builds
+adapters-script/*/dist/
+adapters-script/*/node_modules/
+
+# WebAssembly build output
+crates/taarib-wasm/pkg/
+
+# Packaging output
+packaging/out/
+*.AppImage
+*.snap
+
+# Local machine state that must never be committed: signing keys, user data,
+# registry caches, downloaded patches, extracted game strings.
+#
+# The key extensions are a wider net than anything this repository is expected
+# to produce. Custody of every private key is the OS keychain, so a file with
+# one of these names is by definition a mistake, and the cost of catching a
+# mistake that has not happened yet is one line each.
+*.key
+*.pem
+*.der
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.p8
+*.pk8
+*.ppk
+id_rsa
+id_ed25519
+id_ecdsa
+mafatih/
+sandooq/
+makhbaa/
+nusakh/
+sijillat/
+*.ruqaa
+taarib.db
+taarib.db-wal
+taarib.db-shm
+idadat.local.json
+
+# Taarib reads no `.env` file and no code here loads one. The rule exists so
+# that a habit picked up from another project cannot quietly deposit provider
+# credentials in a repository that has never held any.
+.env
+.env.*
+!.env.example
+
+# Fonts are vendored per assets/fonts/README.md; their archives are not, and
+# neither are the font binaries themselves: `assets/fonts/` holds the manifest
+# and the README, and packaging fetches the faces into `naskh/`, `kufi/`,
+# `sans/` and `latin/` at the versions `khutut.json` pins. The interface's own
+# eight Plex faces under `apps/studio/src/khutut/` are a separate, deliberately
+# committed copy and are not covered by this rule — see assets/NOTICES.md.
+#
+# Honest note: these six lines guard a directory nothing fills. `assets/fonts/`
+# holds `khutut.json` and `README.md` and has never held a face; the fetched
+# faces land in `apps/studio/src-tauri/mawarid/khutut/`, which the `mawarid/*`
+# rule at the foot of this file already excludes. Keeping them costs nothing
+# and catches the plausible mistake of downloading a face by hand into the
+# directory the manifest is in — but they are not, and never were, what stops
+# font binaries reaching the repository.
+assets/fonts/**/*.zip
+assets/fonts/**/*.tar.gz
+assets/fonts/**/*.ttf
+assets/fonts/**/*.otf
+assets/fonts/**/*.woff
+assets/fonts/**/*.woff2
+
+# Python tooling in scripts/ is run in place; its bytecode cache is not source.
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+
+# Screenshots taken while developing land in the repository root by default,
+# and three had accumulated here: two unreferenced, and one that carried a
+# developer's home directory — `C:\Users\<name>\AppData\Roaming\Taarib` — into
+# the tree as rendered pixels, where no text search would ever have found it.
+# Project artwork lives in assets/huwiya/ and apps/studio/src-tauri/ayqunat/.
+#
+# `app.png` is excepted because README.md embeds it. Before committing a
+# replacement, read the image: the footer status strip prints the data root,
+# so capture it under a profile whose name is not yours, or redact that strip.
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+/*.mp4
+!/app.png
+
+# Merge and patch droppings. `vendor/retour/Cargo.toml.orig` is a genuine
+# committed file — `cargo vendor` writes it, and it is what the patch described
+# in vendor/retour/TAARIB.md can be diffed against. The negation exists so that
+# catching a merge-conflict `.orig` does not silently drop the provenance of
+# the one vendored crate in the tree.
+*.orig
+!vendor/**/Cargo.toml.orig
+*.rej
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.code-workspace
+.zed/
+.fleet/
+.helix/
+.nvim.lua
+*.swp
+*.swo
+*~
+
+# Operating systems
+.DS_Store
+._*
+.AppleDouble
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.fuse_hidden*
+.directory
+
+# Owner-key material must never enter the repository; custody is the OS keychain.
+malik_seed.hex
+malik.pem
+malik.pub
+
+# `mirsa-isdar.txt` is deliberately NOT listed here, and that is a decision
+# someone should confirm rather than inherit.
+#
+# `isdar wallid --mirsa mirsa-isdar.txt` (docs/mustawda.md §7.1) writes exactly
+# one file: 64 hexadecimal characters, the *public* half of the release signing
+# key. The private half is generated into the platform credential store and
+# never touches the filesystem, and the tool refuses an anchor path whose name
+# reads as a private-key file — which is why the name carries no `.key` or
+# `.pem` suffix, and therefore why none of the key rules above catch it.
+#
+# For committing it: it is the anchor every release build is compiled against,
+# and a repository that does not record which anchor a tag was built with
+# cannot answer "was this release signed by the key we think it was" after the
+# fact. Against: a key-shaped file in a repository invites someone to assume
+# the next one is equally safe.
+#
+# If the decision goes the other way, add `mirsa-isdar.txt` below this comment.
+# Do not add it silently — a public anchor that quietly stops being published
+# is worse than one that never was, because the release notes still cite it.
+
+# The staged resource tree is build output. The directory itself is committed
+# (tauri-build requires the declared resource path to exist on every build);
+# what taarib-tajmee stages into it is not.
+apps/studio/src-tauri/mawarid/*
+!apps/studio/src-tauri/mawarid/README.md

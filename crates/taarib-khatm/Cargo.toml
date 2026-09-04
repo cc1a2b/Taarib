@@ -1,0 +1,35 @@
+[package]
+name = "taarib-khatm"
+description = "ختم تعريب — the seal: Ed25519 signing and verification, BLAKE3 content fingerprints, the revocation list, and key custody in the operating system's keychain."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[features]
+# Turned on by the release pipeline and by nothing else. It adds one const
+# assertion: this build's trust anchor is the release identity. Without it a
+# packaging run that forgot to inject `TAARIB_MIFTAH_ISDAR` produces a binary
+# that silently trusts the committed development key, whose private half is
+# unprotected by design — one procedural mistake turning the product's
+# strongest invariant into its weakest.
+isdar = []
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-ruqaa = { workspace = true }
+
+ed25519-dalek = { workspace = true }
+blake3 = { workspace = true }
+rand = { workspace = true }
+keyring = { workspace = true }
+hex = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

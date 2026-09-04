@@ -1,0 +1,38 @@
+[package]
+name = "taarib-mustalahat"
+description = "مصطلحات تعريب — the shared vocabulary: game, engine, build, patch, string, status and coverage identity, defined once for Rust, TypeScript and JSON Schema."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[features]
+default = []
+# Derive specta::Type across the vocabulary so Studio's TypeScript is generated
+# from these definitions rather than written twice.
+wajiha = ["dep:specta", "dep:specta-typescript", "taarib-usus/wajiha"]
+# Derive schemars::JsonSchema so schemas/ is generated from the same source.
+mukhattatat = ["dep:schemars", "taarib-usus/mukhattatat"]
+
+[dependencies]
+taarib-usus = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+specta = { workspace = true, optional = true }
+specta-typescript = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
+
+# Writes schemas/ from the derives above. Gated on the feature that adds those
+# derives, so a default build of the vocabulary neither compiles nor links it.
+[[bin]]
+name = "mukhattatat"
+path = "src/bin/mukhattatat.rs"
+required-features = ["mukhattatat"]

@@ -1,0 +1,80 @@
+{
+  "mukhattat": 1,
+  "wasf": "The BepInEx redistributables, pinned by content hash. Mono components take BepInEx 5, which is what Unity 5.0-2021.3 Mono games load; IL2CPP components take BepInEx 6 pre-release, which is the only line with an IL2CPP loader and is what the Taarib.Unity.Il2cpp assembly targets. Each entry is a zip unpacked verbatim into its component directory. Neither archive carries a licence file of its own; assets/NOTICES.md is what discharges that obligation, and dropping it from a bundle makes the bundle non-redistributable.",
+  "tahaqquq": "2026-09-05: every URL fetched and every sha256 re-verified against these bytes; nine of nine matched. v5.4.23.5 (2026-02-08) is the newest non-prerelease on the BepInEx releases feed, and v6.0.0-pre.2 (2024-08-27) is still the newest 6.x release there — the 6.x line has no stable tag, and its bleeding-edge builds are published off GitHub and are not releases to pin. Re-run this check before a release: a hash that has changed under one of these fixed URLs is a supply-chain signal, not an update, and must be escalated rather than repinned.",
+  "makhbaa": "target/tajmee/makhbaa",
+  "madakhil": [
+    {
+      "muarrif": "bepinex-mono-windows-x64",
+      "rabt": "https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.5/BepInEx_win_x64_5.4.23.5.zip",
+      "isdar": "v5.4.23.5",
+      "huzma": true,
+      "hajm": 639118,
+      "sha256": "82f9878551030f54657792c0740d9d51a09500eeae1fba21106b0c441e6732c4"
+    },
+    {
+      "muarrif": "bepinex-mono-windows-x86",
+      "rabt": "https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.5/BepInEx_win_x86_5.4.23.5.zip",
+      "isdar": "v5.4.23.5",
+      "huzma": true,
+      "hajm": 638544,
+      "sha256": "37651c79e40d6f909572a4f461ac25350bb3ef8fe7fbd29f1aa8791a33b84c82"
+    },
+    {
+      "muarrif": "bepinex-mono-linux-x64",
+      "rabt": "https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.5/BepInEx_linux_x64_5.4.23.5.zip",
+      "isdar": "v5.4.23.5",
+      "huzma": true,
+      "hajm": 643325,
+      "sha256": "e538560be65739f562519ab518a75f9c65b3f57f87457403ae7cde683c12dab7"
+    },
+    {
+      "muarrif": "bepinex-mono-linux-x86",
+      "rabt": "https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.5/BepInEx_linux_x86_5.4.23.5.zip",
+      "isdar": "v5.4.23.5",
+      "huzma": true,
+      "hajm": 643312,
+      "sha256": "b4a815b33635921faedeada0df00ba5436b4441d9e16bb13f4bc8c7ad4edde63"
+    },
+    {
+      "muarrif": "bepinex-mono-mac-x64",
+      "rabt": "https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.5/BepInEx_macos_universal_5.4.23.5.zip",
+      "isdar": "v5.4.23.5",
+      "huzma": true,
+      "hajm": 658168,
+      "sha256": "01c2ae782eb016dfd6c345a18dbd2dcafffb3d9d318449d6486689f426b4a323"
+    },
+    {
+      "muarrif": "bepinex-il2cpp-windows-x64",
+      "rabt": "https://github.com/BepInEx/BepInEx/releases/download/v6.0.0-pre.2/BepInEx-Unity.IL2CPP-win-x64-6.0.0-pre.2.zip",
+      "isdar": "v6.0.0-pre.2",
+      "huzma": true,
+      "hajm": 34146254,
+      "sha256": "616ec7eb06cf11b2a0000e8fcef04d1b12bb58e84a2e0bdac9523234fc193ceb"
+    },
+    {
+      "muarrif": "bepinex-il2cpp-windows-x86",
+      "rabt": "https://github.com/BepInEx/BepInEx/releases/download/v6.0.0-pre.2/BepInEx-Unity.IL2CPP-win-x86-6.0.0-pre.2.zip",
+      "isdar": "v6.0.0-pre.2",
+      "huzma": true,
+      "hajm": 31250185,
+      "sha256": "cfef3a1e946dac5db8b9de4de1a922f47584dd775da32863f36762fbaad80f19"
+    },
+    {
+      "muarrif": "bepinex-il2cpp-linux-x64",
+      "rabt": "https://github.com/BepInEx/BepInEx/releases/download/v6.0.0-pre.2/BepInEx-Unity.IL2CPP-linux-x64-6.0.0-pre.2.zip",
+      "isdar": "v6.0.0-pre.2",
+      "huzma": true,
+      "hajm": 32942185,
+      "sha256": "e63c34e49d080b19f14ece4af799d3d8c27c32cac9c81903af99dd9eea414a0e"
+    },
+    {
+      "muarrif": "bepinex-il2cpp-mac-x64",
+      "rabt": "https://github.com/BepInEx/BepInEx/releases/download/v6.0.0-pre.2/BepInEx-Unity.IL2CPP-macos-x64-6.0.0-pre.2.zip",
+      "isdar": "v6.0.0-pre.2",
+      "huzma": true,
+      "hajm": 32523182,
+      "sha256": "9f6a849e8a5912a575f460232649df42de7793489df1531e64bd7ab24dc4b893"
+    }
+  ]
+}

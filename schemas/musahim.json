@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/musahim.json",
+  "title": "Musahim",
+  "description": "A contributor.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/MusahimId",
+      "description": "Their key fingerprint."
+    },
+    "ism": {
+      "type": "string",
+      "description": "The name they chose to be known by."
+    },
+    "satr_itiraf": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The credit line that appears inside the patch and on its listing, exactly as the contributor wrote it."
+    },
+    "rabt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "A link they chose to publish — a profile, a site, nothing at all."
+    },
+    "sumaa": {
+      "$ref": "#/$defs/Sumaa",
+      "description": "Their standing."
+    },
+    "mundhu": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "When their first patch was published, RFC 3339."
+    },
+    "majmu_taghtiya": {
+      "$ref": "#/$defs/Taghtiya",
+      "description": "Total coverage across everything they have published, which is a fairer measure of contribution than a patch count."
+    }
+  },
+  "required": [
+    "id",
+    "ism",
+    "sumaa",
+    "majmu_taghtiya"
+  ],
+  "$defs": {
+    "MusahimId": {
+      "type": "string",
+      "description": "A contributor's identity: the fingerprint of their public signing key.",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Sumaa": {
+      "type": "object",
+      "properties": {
+        "ruqaa_manshura": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Patches published."
+        },
+        "qubila_bila_taadil": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Submissions accepted with no changes requested — the single most honest signal of a careful contributor."
+        },
+        "tulib_taadil": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Submissions that were returned for revision."
+        },
+        "marfuda": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Submissions rejected outright."
+        },
+        "masbuba": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Published patches that were later revoked."
+        },
+        "mutawassit_taqyeem": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float",
+          "description": "Average rating across their published patches, when anyone has rated."
+        },
+        "adad_taqyeemat": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How many ratings that average is built on."
+        }
+      },
+      "required": [
+        "ruqaa_manshura",
+        "qubila_bila_taadil",
+        "tulib_taadil",
+        "marfuda",
+        "masbuba",
+        "adad_taqyeemat"
+      ],
+      "description": "A contributor's record, as it appears on every listing they published."
+    },
+    "Taghtiya": {
+      "type": "object",
+      "properties": {
+        "majmu": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Every extracted string."
+        },
+        "mutarjam": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Strings with any translation at all."
+        },
+        "muakkad": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Strings that were reviewed and accepted."
+        },
+        "majmu_takrar": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "description": "Total occurrences of every string, as extraction and capture counted them."
+        },
+        "mutarjam_takrar": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "description": "Occurrences covered by a translation."
+        },
+        "majmu_awwal": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Strings seen in the opening session of play."
+        },
+        "mutarjam_awwal": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Of those, how many are translated."
+        }
+      },
+      "required": [
+        "majmu",
+        "mutarjam",
+        "muakkad",
+        "majmu_takrar",
+        "mutarjam_takrar",
+        "majmu_awwal",
+        "mutarjam_awwal"
+      ],
+      "description": "A coverage measurement."
+    }
+  }
+}

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
+     aria-labelledby="unwan">
+  <title id="unwan">رقعة تعريب</title>
+
+  <!--
+    الرقعة الأحادية — the one-colour cut of the document mark.
+
+    The page in one colour with the run and the two dots knocked out of it:
+    for a taskbar that tints, a stencil, or a knock-out on any field. The
+    colour is `currentColor`, so whatever draws this decides what it is, and
+    nothing is set on the root that would stop a tint from inheriting in.
+    There is no rim — the field the cut sits on gives it its edge — and the
+    accent is gone, which is the point of a one-colour cut.
+
+    It is one compound path under the even-odd rule rather than a mask,
+    because a mask is the one SVG feature the rasterisers disagree on (some
+    read its alpha, not its luminance) and a stencil should never depend on
+    the renderer. So the run is written here as the outline of its stroke:
+    the 64-wide line from `taarib-ruqaa.svg` walked round at half-width 32,
+    with a 32-radius arc at each cap and at each outer join, and a sharp
+    corner at each inner join. Every number is the sibling's, and is
+    documented there. Change them there first; this file only repeats them.
+
+      page      M 192 32 … Z                       as in the sibling
+      run       caps at (336, 240) and (176, 368)   outer joins at (240, 240)
+                                                    and (240, 368), r 32
+      dots      (306, 112) and (238, 112), r 28     as two-arc subpaths
+  -->
+
+  <path fill="currentColor" fill-rule="evenodd"
+        d="M 192 32 H 400 A 16 16 0 0 1 416 48 V 464 A 16 16 0 0 1 400 480
+           H 112 A 16 16 0 0 1 96 464 V 128 Z
+           M 336 208 A 32 32 0 0 1 336 272 H 272 V 368 A 32 32 0 0 1 240 400
+           H 176 A 32 32 0 0 1 176 336 H 208 V 240 A 32 32 0 0 1 240 208 Z
+           M 334 112 A 28 28 0 1 0 278 112 A 28 28 0 1 0 334 112 Z
+           M 266 112 A 28 28 0 1 0 210 112 A 28 28 0 1 0 266 112 Z"/>
+</svg>

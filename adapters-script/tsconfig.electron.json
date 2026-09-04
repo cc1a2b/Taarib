@@ -1,0 +1,27 @@
+{
+  "// row": "I1 of docs/tawzee.md §3 — the Electron and NW.js renderer runtime.",
+  "// why noEmit": [
+    "esbuild emits this one, because the output has to be loadable twice: as a",
+    "CommonJS module the preload requires, and as a bare <script src> in the",
+    "page world on the takeover rung. An IIFE with a global name plus a guarded",
+    "module.exports footer is both; tsc's UMD emit is neither, because with no",
+    "`export as namespace` it binds nothing global when `module` is absent.",
+    "So tsc is kept for what esbuild does not do at all — type-checking."
+  ],
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["ES2017", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": [],
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noEmit": true
+  },
+  "files": ["electron/taarib.ts"]
+}

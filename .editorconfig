@@ -1,0 +1,31 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+[*.{rs,cs,cpp,h,hpp}]
+indent_size = 4
+
+[*.{ts,tsx,js,jsx,json,jsonc,css,html,yml,yaml,toml}]
+indent_size = 2
+
+[*.{py,rb}]
+indent_size = 4
+
+# Visual Studio rewrites solution files tab-indented whatever anyone else does.
+[*.sln]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = 88
+
+[*.{ttf,otf,png,jpg,webp,ico,icns,wasm}]
+insert_final_newline = false
+trim_trailing_whitespace = false

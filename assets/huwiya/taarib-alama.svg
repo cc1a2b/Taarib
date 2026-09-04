@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
+     aria-labelledby="unwan">
+  <title id="unwan">تعريب</title>
+
+  <!--
+    العلامة — the mark.
+
+    THE IDEA
+    Latin sits on one flat baseline. Arabic does not: a word steps down as it
+    is written and returns, and the dots ride above the step. That descending
+    rhythm is the thing a reader recognises as Arabic from across a room,
+    before a single letter is legible — and it is exactly what a game drawing
+    disconnected Latin glyphs fails to produce. The mark is that rhythm and
+    nothing else: one stroke that steps, and the two dots that ride it.
+
+    It is deliberately not a letter. A ت dropped into a rounded square is a
+    logotype for a font, not a mark for a tool that rebuilds a game's text
+    pipeline. This draws the grammar instead of a glyph.
+
+    THE GEOMETRY — all values on a 512 grid, so it can be redrawn, not traced.
+
+      safe margin      56          nothing but the ground touches the edge
+      stroke           88          2.75px at 16px, the smallest weight that
+                                   holds at a taskbar size without blobbing
+      upper run        y 224       x 456 → 248
+      step             x 248       y 224 → 352, one stroke width plus a half
+      lower run        y 352       x 248 → 56
+      dot radius       40
+      dot centres      (392, 96) and (296, 96)
+      dot rise         128 above the upper run, the same as the step, so the
+                       vertical rhythm reads once rather than twice
+      corner           rx 96 on the ground, matched to the step so the
+                       silhouette and the stroke share one curvature
+
+    The step is the whole mark. Shorten it and this becomes a hyphen with
+    dots; lengthen it and the two runs stop reading as one line.
+
+    COLOUR
+    Ground near-black, stroke near-white, dots the single accent. The accent
+    carries no meaning and may be dropped: `taarib-alama-uhadi.svg` beside this
+    file is the one-colour cut, for a taskbar that tints, a stencil, or a
+    knock-out on any field. Both are drawn from these same numbers.
+  -->
+
+  <rect width="512" height="512" rx="96" fill="#0d0f10"/>
+
+  <!-- The hairline is the only thing separating the ground from a dark
+       desktop. It is inside the shape, not a stroke on it, so it survives
+       being scaled to 16px without doubling. -->
+  <rect x="1.5" y="1.5" width="509" height="509" rx="94.5"
+        fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="3"/>
+
+  <path d="M 456 224 L 248 224 L 248 352 L 56 352"
+        fill="none" stroke="#e8eaec" stroke-width="88"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="392" cy="96" r="40" fill="#2a9d8f"/>
+  <circle cx="296" cy="96" r="40" fill="#2a9d8f"/>
+</svg>

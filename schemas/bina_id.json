@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/bina_id.json",
+  "title": "BinaId",
+  "description": "Which build of a game is installed.",
+  "type": "object",
+  "properties": {
+    "manassa": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The launcher's own build identifier, where the launcher has one. Steam reports a numeric `buildid`; GOG reports a build hash; several launchers report nothing at all, which is exactly why the fingerprint exists."
+    },
+    "basma": {
+      "$ref": "#/$defs/Basma",
+      "description": "The fingerprint of the text-bearing files."
+    },
+    "adad_malaffat": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "How many files went into the fingerprint, so that a fingerprint computed over a partially downloaded installation is recognisable as one."
+    },
+    "waqt": {
+      "type": "string",
+      "description": "When the fingerprint was computed, RFC 3339."
+    }
+  },
+  "required": [
+    "basma",
+    "adad_malaffat",
+    "waqt"
+  ],
+  "$defs": {
+    "Basma": {
+      "type": "string",
+      "description": "A 256-bit content fingerprint.",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

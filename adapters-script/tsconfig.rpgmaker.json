@@ -1,0 +1,36 @@
+{
+  "// row": "I2 of docs/tawzee.md §3 — the RPG Maker MV/MZ plugin.",
+  "// why tsc": [
+    "esbuild cannot lower `const`/`let` to `var`: `--target=es5` fails with",
+    "'Transforming const to the configured target environment (\"es5\") is not",
+    "supported yet' on every declaration in the file. The source header commits",
+    "to ES5 because MV's oldest NW.js is Chromium 41, so the target is not",
+    "negotiable and the compiler is what changes.",
+    "TypeScript also preserves the leading /*: plugin block that RPG Maker's",
+    "Plugin Manager parses, which esbuild would drop as a non-legal comment."
+  ],
+  "// why this lib set": [
+    "ES5 plus Promise and nothing else, deliberately. The source header lists",
+    "the library functions it must not touch — Map, Set, Symbol, Object.assign,",
+    "Array.prototype.includes, String.prototype.repeat, TextDecoder, fetch — on",
+    "the grounds that a down-leveller rewrites syntax and polyfills nothing.",
+    "Naming the lib is what turns that comment into a compile error."
+  ],
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+    "target": "ES5",
+    "lib": ["ES5", "ES2015.Promise", "DOM"],
+    "module": "none",
+    "types": [],
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": false,
+    "removeComments": false,
+    "noEmitOnError": true,
+    "newLine": "lf",
+    "rootDir": "rpgmaker",
+    "outDir": "../target/adapters/rpgmaker"
+  },
+  "files": ["rpgmaker/taarib.ts"]
+}

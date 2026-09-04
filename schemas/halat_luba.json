@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/halat_luba.json",
+  "title": "HalatLuba",
+  "description": "A game's Arabization status, as the library grid badges it.",
+  "oneOf": [
+    {
+      "type": "string",
+      "const": "mutabbaqa",
+      "description": "A patch is installed and active."
+    },
+    {
+      "type": "string",
+      "const": "mutaha",
+      "description": "A patch exists for this build and can be installed now."
+    },
+    {
+      "type": "string",
+      "const": "madum_bila_ruqaa",
+      "description": "The engine is supported, but nobody has published a patch yet."
+    },
+    {
+      "type": "string",
+      "const": "mutaha_ghayr_mutabiqa",
+      "description": "A patch exists but does not match this build."
+    },
+    {
+      "type": "string",
+      "const": "tabaqa_faqat",
+      "description": "The engine is not one Taarib can patch; only the overlay applies."
+    },
+    {
+      "type": "string",
+      "const": "marfuda",
+      "description": "Taarib refuses to touch this game, because of anti-cheat."
+    }
+  ]
+}

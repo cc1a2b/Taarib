@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Taarib.Unity.Mushtarak — مشترك, the shared part.
+
+    Everything the Mono adapter and the IL2CPP adapter do identically, written
+    once so that identical rendering between the two backends is a structural
+    fact rather than a testing result:
+
+      - patch loading: memory-mapping the installed .ruqaa container and
+        reading its string table, layout hints and font records without
+        copying the whole file into managed memory;
+      - lawha — atlas residency: the pixel bytes, the R8 single-channel format,
+        the no-mipmap and no-compression decision, and the growth callback that
+        fires when jisr rasterizes a glyph the atlas does not hold yet;
+      - rasm — mesh construction: vertices, UVs, colours and triangle indices
+        built from a jisr layout straight into pinned destination arrays, with
+        no managed allocation on the per-frame path;
+      - nasq — the markup bridge: rich-text tags parsed into style spans that
+        survive reordering, so colour, weight, size and inline sprite runs land
+        on the right glyphs after the bidirectional algorithm has moved them;
+      - container reflow: the RectTransform geometry a string needs when the
+        Arabic is wider or taller than the original, computed as values, and
+        recorded so every adjustment can be undone when the patch is turned
+        off at runtime;
+      - iltiqat — capture mode: every string that reaches a takeover point,
+        with its component path, scene, screen position, size and rect, framed
+        for barid.
+
+    It names no Unity type, and that is deliberate. Under Mono a text component
+    is a type in the game's own UnityEngine assemblies; under IL2CPP the same
+    component reaches managed code as an Il2CppInterop-generated proxy with a
+    different assembly identity. An assembly bound to either could not load in
+    the other. So this project owns the decisions and the data, and each
+    adapter owns the calls that touch its runtime's Unity binding. Its only
+    compile-time dependency is Taarib.Unity.Jisr.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Taarib.Unity.Mushtarak</AssemblyName>
+    <RootNamespace>Taarib.Unity.Mushtarak</RootNamespace>
+    <Description>The takeover logic shared by the Mono and IL2CPP adapters: patch loading, atlas residency, mesh construction, nasq markup spans, container reflow, and iltiqat capture.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Taarib.Unity.Jisr\Taarib.Unity.Jisr.csproj" />
+  </ItemGroup>
+
+</Project>

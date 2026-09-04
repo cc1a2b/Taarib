@@ -1,0 +1,754 @@
+/* شاشة المراجعة — tokens only, logical properties only, queue beside evidence. */
+
+.muraja {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  block-size: 100%;
+  background-color: var(--sath-0);
+}
+
+/* --------------------------------------------------------------------------
+   The strip and the filter row.
+   -------------------------------------------------------------------------- */
+
+.muraja__shareet-alawi {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.muraja__raji {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.muraja__raji:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.muraja__fasl {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.muraja__ihsa {
+  margin-inline-start: auto;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* The inset a whole-screen state needs, because the screen it replaces is the
+   thing that normally supplies one. */
+.muraja__hala {
+  padding: var(--misafa-24);
+}
+
+.muraja__jari {
+  padding: var(--misafa-24);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+}
+
+/* No fill of its own: the strip above is the only chrome band, and a second one
+   directly under it reads as two headers rather than one header and a filter. */
+.muraja__tasfiya {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+  padding: var(--misafa-8) var(--misafa-24);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.muraja__haql {
+  min-block-size: var(--irtifa-band);
+  padding: var(--misafa-4) var(--misafa-8);
+  font-family: inherit;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  transition: border-color var(--zaman-hala) var(--munhana);
+}
+
+.muraja__haql:hover {
+  border-color: var(--hadd-qawi);
+  transition: none;
+}
+
+.muraja__haql::placeholder {
+  color: var(--nass-3);
+}
+
+.muraja__haql--bahth {
+  flex: 1 1 22ch;
+  max-inline-size: 34ch;
+}
+
+.muraja__haqli {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-4);
+}
+
+.muraja__jumla {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+  margin-inline-start: auto;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+}
+
+.muraja__khata-jumla {
+  flex-basis: 100%;
+}
+
+/* The queue's floor is in rem rather than pixels so it follows the density the
+   table inside it already does; the case takes the larger share of what is
+   left, because that is the half being read. */
+.muraja__amida {
+  display: grid;
+  grid-template-columns: minmax(24rem, 0.9fr) minmax(0, 1.1fr);
+  min-block-size: 0;
+}
+
+/* --------------------------------------------------------------------------
+   The queue.
+
+   It stays on the page's own ground and the case beside it steps up, because
+   the reviewer is choosing here and deciding there.
+   -------------------------------------------------------------------------- */
+
+.muraja__tabur {
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: 0 var(--misafa-24) var(--misafa-24);
+  border-inline-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* Separated rather than collapsed borders, with no spacing between the cells:
+   a collapsed border belongs to the table rather than to the cell, and a
+   sticky head painted with one leaves its rule behind as the rows scroll. */
+.muraja__jadwal-tabur {
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+}
+
+/* The head rides the scroll, so a queue longer than the pane never loses its
+   column names; it carries the pane's own ground because rows pass under it. */
+.muraja__jadwal-tabur th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  padding: var(--misafa-16) var(--misafa-8) var(--misafa-6);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  font-weight: var(--wazn-adi);
+  color: var(--nass-3);
+  background-color: var(--sath-0);
+  border-block-end: var(--samk-hadd) solid var(--hadd);
+}
+
+.muraja__jadwal-tabur td {
+  padding: var(--misafa-8);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* The leading edge is reserved on every row and on the head, so selecting a row
+   colours that edge instead of shifting the whole line sideways. */
+.muraja__jadwal-tabur th:first-child,
+.muraja__jadwal-tabur td:first-child {
+  border-inline-start: var(--misafa-2) solid transparent;
+}
+
+.muraja__saff {
+  cursor: pointer;
+}
+
+.muraja__saff:hover > td {
+  background-color: var(--sath-1);
+}
+
+.muraja__saff--mukhtar > td {
+  background-color: var(--sath-2);
+  color: var(--nass-1);
+}
+
+.muraja__saff--mukhtar > td:first-child {
+  border-inline-start-color: var(--tamyeez);
+}
+
+.muraja__khaliya-unwan {
+  color: var(--nass-1);
+  font-weight: var(--wazn-mutawassit);
+}
+
+.muraja__khaliya-raqm {
+  text-align: end;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.muraja__basma {
+  font-size: var(--qiyas-1);
+  color: var(--nass-3);
+}
+
+/* A mark and a word, not a bordered capsule: the capsule is the one shape that
+   reads as a component library's badge rather than as this product's. */
+.muraja__fuhus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--misafa-6);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  white-space: nowrap;
+}
+
+.muraja__fuhus::before {
+  content: '';
+  flex: none;
+  inline-size: var(--misafa-6);
+  block-size: var(--misafa-6);
+  border-radius: var(--nisf-hadd);
+  background-color: currentColor;
+}
+
+.muraja__fuhus--najahat {
+  color: var(--najah);
+}
+
+.muraja__fuhus--akhfaqat {
+  color: var(--khatar);
+}
+
+.muraja__fuhus--lam_tujra {
+  color: var(--nass-3);
+}
+
+.muraja__sijill-kull {
+  margin-block-start: var(--misafa-24);
+  padding-block-start: var(--misafa-16);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.muraja__sijill-kull summary {
+  cursor: pointer;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.muraja__sijill-kull summary:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.muraja__sijill-kull[open] summary {
+  margin-block-end: var(--misafa-12);
+  color: var(--nass-1);
+}
+
+/* --------------------------------------------------------------------------
+   The case.
+
+   One document with rules between its parts, rather than a stack of boxes: the
+   only framed thing in this pane is the decision at the end of it.
+   -------------------------------------------------------------------------- */
+
+.muraja__tafasil {
+  min-block-size: 0;
+  overflow-y: auto;
+  padding-inline: var(--misafa-24);
+  padding-block-end: var(--misafa-32);
+  background-color: var(--sath-1);
+}
+
+.muraja__qism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  padding-block: var(--misafa-20);
+}
+
+.muraja__qism + .muraja__qism {
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.muraja__qism--ras {
+  gap: var(--misafa-12);
+  padding-block-start: var(--misafa-24);
+}
+
+.muraja__unwan-qism {
+  font-size: var(--qiyas-5);
+  line-height: var(--irtifa-5);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  text-wrap: balance;
+}
+
+/* A label rather than a heading: the case title is the only line in this pane
+   that is allowed to be loud, and eight competing headings would take that. */
+.muraja__unwan-farii {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+}
+
+.muraja__ras-wasf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+}
+
+.muraja__ras-luba {
+  color: var(--nass-1);
+  font-weight: var(--wazn-mutawassit);
+}
+
+/* A drawn mark between facts instead of a dash: a dash is a neutral character
+   inside the run and reorders with the text around it; a box cannot. */
+.muraja__nuqta {
+  flex: none;
+  inline-size: var(--misafa-2);
+  block-size: var(--misafa-6);
+  background-color: var(--hadd-qawi);
+}
+
+.muraja__sharh {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.muraja__tasmiya {
+  display: block;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.muraja__sumaa {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* --------------------------------------------------------------------------
+   The pre-flight checklist.
+
+   A table: the state sits in its own column, sized once by the longest word and
+   shared by every row, so the reviewer scans one edge instead of reading each
+   line to find out how it went. The row itself carries no box — that is what
+   lets the list measure all three columns together — so every row must emit all
+   three cells, an empty action cell included.
+   -------------------------------------------------------------------------- */
+
+.muraja__fuhusat {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: baseline;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+}
+
+.muraja__fahs-satr {
+  display: contents;
+}
+
+.muraja__fahs-satr > * {
+  padding-block: var(--misafa-8);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.muraja__fahs-satr:last-child > * {
+  border-block-end: none;
+  padding-block-end: 0;
+}
+
+.muraja__fahs-hala {
+  padding-inline-end: var(--misafa-16);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  font-weight: var(--wazn-mutawassit);
+  white-space: nowrap;
+}
+
+.muraja__fahs-hala--najahat {
+  color: var(--najah);
+}
+
+.muraja__fahs-hala--akhfaqat {
+  color: var(--khatar);
+}
+
+/* A warning that fired, acknowledged or not. It is neither a pass nor a
+   failure and was being painted as one or the other until the backend's four
+   states reached this screen by name. */
+.muraja__fahs-hala--tanbeeh {
+  color: var(--tanbeeh);
+}
+
+.muraja__fahs-hala--lam_tujra {
+  color: var(--nass-3);
+}
+
+.muraja__fahs-nass {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+  padding-inline-end: var(--misafa-16);
+}
+
+.muraja__fahs-wasf {
+  color: var(--nass-1);
+}
+
+.muraja__fahs-tafsil {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+}
+
+/* Out of the baseline group on purpose: this cell is empty on most rows, and an
+   empty box has no baseline to align — it would synthesize one from its own
+   bottom edge and drag the row taller than the text in it. */
+.muraja__fahs-ijra {
+  display: flex;
+  align-self: center;
+  justify-content: end;
+}
+
+/* --------------------------------------------------------------------------
+   The side-by-side strings.
+   -------------------------------------------------------------------------- */
+
+.muraja__nusus {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+
+  /* The scrolling region's height, in rem rather than pixels so that it follows
+     the density the same way the rows inside it do; there is no token for the
+     height of a list viewport. */
+  --irtifa-qaimat-nusus: 17.5rem;
+}
+
+.muraja__nusus-qaima {
+  block-size: var(--irtifa-qaimat-nusus);
+  overflow-y: auto;
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.muraja__nusus-jism {
+  position: relative;
+  inline-size: 100%;
+}
+
+/* The row is taken out of flow and then translated by the virtualiser, so its
+   block offset has to be stated: without one it keeps its static position, and
+   the day anything in flow appears above it every row is displaced by that
+   element's height while the virtualiser still believes they start at zero. */
+.muraja__nusus-saff {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: var(--misafa-8);
+
+  /* A floor, not a fixed height. The virtualiser measures each row from the
+     DOM, so the box follows the density instead of freezing at one count of
+     pixels while the type inside it grows. */
+  min-block-size: var(--irtifa-satr);
+  padding: var(--misafa-6) var(--misafa-8);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+  will-change: transform;
+}
+
+.muraja__nusus-saff--qabil {
+  cursor: pointer;
+}
+
+.muraja__nusus-saff--qabil:hover {
+  background-color: var(--sath-1);
+}
+
+.muraja__nusus-saff--mukhtar {
+  background-color: var(--sath-2);
+  box-shadow: inset 0 0 0 var(--samk-hadd) var(--tamyeez);
+}
+
+.muraja__nass-masdar,
+.muraja__nass-hadaf {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.muraja__nass-masdar {
+  color: var(--nass-3);
+}
+
+.muraja__nass-hadaf {
+  color: var(--nass-1);
+}
+
+/* --------------------------------------------------------------------------
+   The overflow report, the comments, and the two logs.
+   -------------------------------------------------------------------------- */
+
+.muraja__tajawuz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-4);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.muraja__taaliqat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+}
+
+.muraja__taaliq {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+}
+
+.muraja__taaliq-ras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--misafa-8);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.muraja__taaliq-malik {
+  color: var(--tamyeez);
+}
+
+.muraja__taaliq-matn {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+}
+
+/* Time in its own column so the entries read as a log rather than as
+   sentences that happen to begin with a timestamp. */
+.muraja__sijill {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--misafa-12);
+  row-gap: var(--misafa-4);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+}
+
+.muraja__sijill--kamil {
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+}
+
+.muraja__sijill > li {
+  display: contents;
+}
+
+.muraja__sijill-waqt {
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.muraja__sijill-nass {
+  color: var(--nass-2);
+}
+
+.muraja__taaliq-talab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+.muraja__taaliq-talab .muraja__haql {
+  flex: 1 1 20ch;
+}
+
+.muraja__riqaqa {
+  min-inline-size: 0;
+  max-inline-size: 24ch;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: var(--misafa-4) var(--misafa-8);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+  cursor: pointer;
+  transition: border-color var(--zaman-hala) var(--munhana);
+}
+
+.muraja__riqaqa--faal {
+  color: var(--nass-1);
+  border-color: var(--tamyeez);
+  transition: none;
+}
+
+/* Sits inside a checklist row, so it steps down from the standard control
+   rather than competing with the decision buttons further down the pane. */
+.zir.muraja__rabt-nass {
+  block-size: auto;
+  min-block-size: calc(var(--irtifa-band) - var(--misafa-6));
+  padding-inline: var(--misafa-8);
+  font-size: var(--qiyas-1);
+  font-weight: var(--wazn-adi);
+  color: var(--nass-2);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   The decision.
+
+   The only framed block in the pane: everything above it is separated by a
+   rule, so the frame is what says where the decision gets made. Accept and
+   reject take the intent colour from the base layer's `.zir--tamyeez` and
+   `.zir--khatar`; what this file adds is a thicker leading edge and a rule that
+   pushes the irreversible pair to the far end, because two controls that differ
+   only in hue are one mis-click apart.
+   -------------------------------------------------------------------------- */
+
+/* The frame steps down from the pane rather than up, so the controls inside it
+   — which sit at the standard raised surface — stand off their own ground
+   instead of dissolving into it, refused ones included. */
+.muraja__qism--qarar {
+  gap: var(--misafa-12);
+  margin-block: var(--misafa-8) var(--misafa-24);
+  padding: var(--misafa-16);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-lawha);
+}
+
+/* The frame owns all four of its edges: without these two, the rule that
+   separates ordinary sections would repaint the top of the frame in the weaker
+   hairline, and leave a second rule floating below its bottom margin. */
+.muraja__qism + .muraja__qism--qarar {
+  border-block-start: var(--samk-hadd) solid var(--hadd);
+}
+
+.muraja__qism--qarar + .muraja__qism {
+  border-block-start: none;
+}
+
+.muraja__sabab {
+  min-block-size: var(--misafa-56);
+  resize: block;
+}
+
+.muraja__saff-afal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+.muraja__fasil-afal {
+  flex: none;
+  align-self: stretch;
+  inline-size: var(--samk-hadd);
+  margin-inline-start: auto;
+  background-color: var(--hadd);
+}
+
+/* Only while the control is live: a refused button takes the base layer's grey
+   on all four edges, and a red edge left on it would be a promise it cannot
+   keep. Longhand, so the other three edges stay the variant's. */
+.zir.muraja__qarar--iaatimad:not([aria-disabled='true']) {
+  border-inline-start-width: var(--misafa-2);
+  border-inline-start-color: var(--tamyeez);
+}
+
+.zir.muraja__qarar--rafd:not([aria-disabled='true']) {
+  border-inline-start-width: var(--misafa-2);
+  border-inline-start-color: var(--khatar);
+}
+
+.muraja__najah {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--najah);
+}
+
+/* --------------------------------------------------------------------------
+   Nothing to show: a heading, one sentence, and the one thing worth doing.
+   -------------------------------------------------------------------------- */
+
+.muraja__faragh {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-12);
+  max-inline-size: 52ch;
+  padding-block: var(--misafa-32);
+}
+
+.muraja__faragh-unwan {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.muraja__faragh-nass {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+.muraja__nass-hadi {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+}

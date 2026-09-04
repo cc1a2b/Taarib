@@ -1,0 +1,954 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/mudkhal_nass.json",
+  "title": "MudkhalNass",
+  "description": "One translatable string, and everything the product knows about it.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/NassId",
+      "description": "Its identity."
+    },
+    "masdar": {
+      "type": "string",
+      "description": "The clean source text, with markup and placeholders lifted into spans."
+    },
+    "hadaf": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The clean Arabic translation, when there is one."
+    },
+    "muraja": {
+      "$ref": "#/$defs/SijillMuraja",
+      "description": "Where it stands in the workflow, who moved it there, and when."
+    },
+    "siyaq": {
+      "$ref": "#/$defs/SiyaqNass",
+      "description": "Where it came from and where it appears."
+    },
+    "quyud": {
+      "$ref": "#/$defs/QuyudNass",
+      "description": "How much room it has."
+    },
+    "nasq_masdar": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/NitaqNasq"
+      },
+      "description": "Markup and placeholders over the source."
+    },
+    "nasq_hadaf": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/NitaqNasq"
+      },
+      "description": "Markup and placeholders over the translation."
+    },
+    "takrar": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "How many times this exact source text occurs in the game."
+    },
+    "majmua": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NassId"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The duplicate group, so one translation serves every identical source."
+    },
+    "alamat": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AlamJawda"
+      },
+      "description": "Everything currently wrong with it."
+    },
+    "tareeqa": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TareeqaTarjama"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "How the translation was produced."
+    },
+    "muzawwid": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Which provider produced it, when it was machine-translated."
+    },
+    "muharrir": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MusahimId"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Who last changed it."
+    },
+    "akhir_tabdeel": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "When it was last changed, RFC 3339."
+    },
+    "tasnif": {
+      "$ref": "#/$defs/TasnifNass",
+      "description": "What kind of string this is."
+    },
+    "thiqat_tasnif": {
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "How sure the extractor is of that classification, zero to a hundred."
+    },
+    "masdar_istikhraj": {
+      "$ref": "#/$defs/MasdarIstikhraj",
+      "description": "How this string reached the table."
+    },
+    "tarmiz": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The encoding it was stored in, as the container declared it."
+    }
+  },
+  "required": [
+    "id",
+    "masdar",
+    "muraja",
+    "siyaq",
+    "quyud",
+    "nasq_masdar",
+    "nasq_hadaf",
+    "takrar",
+    "alamat",
+    "tasnif",
+    "thiqat_tasnif",
+    "masdar_istikhraj"
+  ],
+  "$defs": {
+    "NassId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "A string's identity."
+    },
+    "SijillMuraja": {
+      "type": "object",
+      "properties": {
+        "hala": {
+          "$ref": "#/$defs/HalatMuraja"
+        },
+        "tareekh": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/IntiqalMuraja"
+          }
+        },
+        "mujammad": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "hala",
+        "tareekh",
+        "mujammad"
+      ],
+      "description": "A string's review state and the whole history behind it."
+    },
+    "HalatMuraja": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "lam_tutarjam",
+          "description": "No translation yet."
+        },
+        {
+          "type": "string",
+          "const": "tarjama_aaliya",
+          "description": "A machine produced it and no human has read it."
+        },
+        {
+          "type": "string",
+          "const": "musawwada",
+          "description": "A human wrote or edited it and has not marked it finished."
+        },
+        {
+          "type": "string",
+          "const": "lil_muraja",
+          "description": "Flagged as wanting a second pair of eyes."
+        },
+        {
+          "type": "string",
+          "const": "muakkada",
+          "description": "A human read it and accepted it."
+        },
+        {
+          "type": "string",
+          "const": "marfuda",
+          "description": "A human read it and rejected it."
+        }
+      ],
+      "description": "Where a translation stands."
+    },
+    "IntiqalMuraja": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "$ref": "#/$defs/HalatMuraja",
+          "description": "Where it was."
+        },
+        "ila": {
+          "$ref": "#/$defs/HalatMuraja",
+          "description": "Where it went."
+        },
+        "musahim": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MusahimId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Who moved it, or [`None`] when a machine did."
+        },
+        "lahza": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "description": "When, in seconds since the Unix epoch."
+        },
+        "sabab": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why, where a reason was given."
+        }
+      },
+      "required": [
+        "min",
+        "ila",
+        "lahza"
+      ],
+      "description": "One transition, kept forever."
+    },
+    "MusahimId": {
+      "type": "string",
+      "description": "A contributor's identity: the fingerprint of their public signing key.",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "SiyaqNass": {
+      "type": "object",
+      "properties": {
+        "hawiya": {
+          "type": "string",
+          "description": "The container it was extracted from, relative to the game's root."
+        },
+        "mawqi": {
+          "type": "string",
+          "description": "The location inside that container, precise enough to write back to: an object path, an event command index, a namespace and key, a line."
+        },
+        "haql": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The field or property name, where the container has one."
+        },
+        "mutakallim": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The speaker, for dialogue."
+        },
+        "jiwar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The lines around it, which is what makes machine translation of dialogue worth anything."
+        },
+        "mashhad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The scene or screen it was seen in during runtime capture."
+        },
+        "laqta": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "A screenshot crop showing where it appeared, content-addressed."
+        }
+      },
+      "required": [
+        "hawiya",
+        "mawqi",
+        "jiwar"
+      ],
+      "description": "Where a string comes from and where it appears."
+    },
+    "QuyudNass": {
+      "type": "object",
+      "properties": {
+        "aqsa_ahruf": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "description": "A hard character limit imposed by the engine or the data format."
+        },
+        "aqsa_ard": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float",
+          "description": "The width available in the interface, in the game's pixels."
+        },
+        "aqsa_irtifa": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float",
+          "description": "The height available, where the text may wrap."
+        },
+        "hajm_khatt": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float",
+          "description": "The size the game draws this string at."
+        },
+        "mustatil": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Mustatil"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The rectangle the original occupied on screen."
+        },
+        "satr_wahid": {
+          "type": "boolean",
+          "description": "Whether the engine refuses to wrap this string."
+        }
+      },
+      "required": [
+        "satr_wahid"
+      ],
+      "description": "How much room a string actually has."
+    },
+    "Mustatil": {
+      "type": "object",
+      "properties": {
+        "s": {
+          "type": "number",
+          "format": "float",
+          "description": "Left edge."
+        },
+        "a": {
+          "type": "number",
+          "format": "float",
+          "description": "Top edge."
+        },
+        "ard": {
+          "type": "number",
+          "format": "float",
+          "description": "Width."
+        },
+        "irtifa": {
+          "type": "number",
+          "format": "float",
+          "description": "Height."
+        }
+      },
+      "required": [
+        "s",
+        "a",
+        "ard",
+        "irtifa"
+      ],
+      "description": "A rectangle in the game's own pixels."
+    },
+    "NitaqNasq": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Identifies this span within its string, so a glyph can be traced back to the style it belongs to."
+        },
+        "bidaya": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Byte offset of the span's first byte in the clean text."
+        },
+        "tul": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Length of the span in bytes."
+        },
+        "naw": {
+          "$ref": "#/$defs/NawNasq",
+          "description": "What the span does."
+        }
+      },
+      "required": [
+        "id",
+        "bidaya",
+        "tul",
+        "naw"
+      ],
+      "description": "One markup span over the clean text."
+    },
+    "NawNasq": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "qeema": {
+              "type": "string",
+              "description": "The colour value, `#rrggbb`, `#rrggbbaa`, or a named colour."
+            },
+            "naw": {
+              "type": "string",
+              "const": "lawn"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A colour, as the engine wrote it."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "ghaliz"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Bold."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "maail"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Italic."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "taht_khat"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Underline."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "shatb"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Strikethrough."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "qeema": {
+              "type": "number",
+              "format": "float",
+              "description": "The size."
+            },
+            "naw": {
+              "type": "string",
+              "const": "hajm"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "An explicit size, in the engine's own units."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ism": {
+              "type": "string",
+              "description": "The family name."
+            },
+            "naw": {
+              "type": "string",
+              "const": "khatt"
+            }
+          },
+          "required": [
+            "naw",
+            "ism"
+          ],
+          "description": "A different font family, named by the engine."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "marja": {
+              "type": "string",
+              "description": "The engine's own reference to it."
+            },
+            "naw": {
+              "type": "string",
+              "const": "sura"
+            }
+          },
+          "required": [
+            "naw",
+            "marja"
+          ],
+          "description": "An inline sprite or icon, which occupies width and takes part in layout as a single atom but is drawn by the engine, not by Taarib."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "himl": {
+              "type": "string",
+              "description": "The payload."
+            },
+            "naw": {
+              "type": "string",
+              "const": "rabt"
+            }
+          },
+          "required": [
+            "naw",
+            "himl"
+          ],
+          "description": "A link payload the engine resolves on click."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "khaam": {
+              "type": "string",
+              "description": "The placeholder exactly as it appeared."
+            },
+            "naw": {
+              "type": "string",
+              "const": "mawdi"
+            }
+          },
+          "required": [
+            "naw",
+            "khaam"
+          ],
+          "description": "A format placeholder — `{0}`, `{name}`, `%s`, `%1$d`, `\\V[3]`, `$gold`. Its text is opaque, its width is measured, and any translation that loses it is rejected before it can ship."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "satr"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "A hard line break the original text asked for."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "qeema": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "description": "The duration."
+            },
+            "naw": {
+              "type": "string",
+              "const": "tawaqquf"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A typewriter pause, in the engine's own units."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "bila_tahleel"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "A region the engine is told not to interpret."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "qeema": {
+              "type": "string",
+              "description": "`right`, `left`, `center`, or `justify` as the engine spells it."
+            },
+            "naw": {
+              "type": "string",
+              "const": "muhadhaha"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "An alignment override."
+        }
+      ],
+      "description": "What a markup span does."
+    },
+    "AlamJawda": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "ard": {
+              "type": "number",
+              "format": "float",
+              "description": "Measured width of the translation, in the game's pixels."
+            },
+            "mutah": {
+              "type": "number",
+              "format": "float",
+              "description": "Width available."
+            },
+            "hajm": {
+              "type": "number",
+              "format": "float",
+              "description": "The size it was measured at."
+            },
+            "naw": {
+              "type": "string",
+              "const": "khatar_tajawuz"
+            }
+          },
+          "required": [
+            "naw",
+            "ard",
+            "mutah",
+            "hajm"
+          ],
+          "description": "The translation is wider than the space it has."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "adad": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "description": "How many Latin words remain."
+            },
+            "naw": {
+              "type": "string",
+              "const": "nass_latini_mutabaqqi"
+            }
+          },
+          "required": [
+            "naw",
+            "adad"
+          ],
+          "description": "Latin text survives inside an otherwise Arabic translation, which is usually an untranslated fragment rather than an intentional name."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mustalah": {
+              "type": "string",
+              "description": "The source term."
+            },
+            "mutawaqqa": {
+              "type": "string",
+              "description": "The canonical Arabic it should have used."
+            },
+            "naw": {
+              "type": "string",
+              "const": "mustalah_mukhtalif"
+            }
+          },
+          "required": [
+            "naw",
+            "mustalah",
+            "mutawaqqa"
+          ],
+          "description": "A glossary term was translated inconsistently."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mafqud": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The atoms that are missing or damaged."
+            },
+            "naw": {
+              "type": "string",
+              "const": "nasq_maksur"
+            }
+          },
+          "required": [
+            "naw",
+            "mafqud"
+          ],
+          "description": "A placeholder or markup span was lost, duplicated, or corrupted."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "qeema": {
+              "type": "number",
+              "format": "float",
+              "description": "Confidence, 0.0 to 1.0."
+            },
+            "naw": {
+              "type": "string",
+              "const": "thiqa_munkhafida"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "The provider reported low confidence in this translation."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "nisba": {
+              "type": "number",
+              "format": "float",
+              "description": "Target length divided by source length."
+            },
+            "naw": {
+              "type": "string",
+              "const": "nisba_shadha"
+            }
+          },
+          "required": [
+            "naw",
+            "nisba"
+          ],
+          "description": "The translation is suspiciously longer or shorter than its source."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "farigh"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "The target is empty while the source is not."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "akhar": {
+              "$ref": "#/$defs/NassId",
+              "description": "The other string."
+            },
+            "naw": {
+              "type": "string",
+              "const": "tarjama_mutanaqida"
+            }
+          },
+          "required": [
+            "naw",
+            "akhar"
+          ],
+          "description": "Two identical source strings were translated differently, which players notice immediately when both appear on the same screen."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "aaliya_bila_muraja"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "A machine produced this translation and no human has read it yet."
+        }
+      ],
+      "description": "Something wrong, or possibly wrong, with a translation."
+    },
+    "TareeqaTarjama": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "bashariya_kamila",
+          "description": "Translated by a person, start to finish."
+        },
+        {
+          "type": "string",
+          "const": "aaliya_thum_bashariya",
+          "description": "Machine-translated, then reviewed and corrected by a person."
+        },
+        {
+          "type": "string",
+          "const": "aaliya_faqat",
+          "description": "Machine-translated with no human review."
+        }
+      ],
+      "description": "How a translation was actually produced."
+    },
+    "TasnifNass": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "hiwar",
+          "description": "Spoken or narrated dialogue."
+        },
+        {
+          "type": "string",
+          "const": "ikhtiyar",
+          "description": "A choice the player picks between."
+        },
+        {
+          "type": "string",
+          "const": "ism",
+          "description": "The name of an item, skill, character or place."
+        },
+        {
+          "type": "string",
+          "const": "wasf",
+          "description": "Descriptive body text for one of those."
+        },
+        {
+          "type": "string",
+          "const": "qaima",
+          "description": "A menu label, a button, a tab."
+        },
+        {
+          "type": "string",
+          "const": "tafseer",
+          "description": "Hover text and help."
+        },
+        {
+          "type": "string",
+          "const": "nizam",
+          "description": "A system message: saved, loaded, connection lost."
+        },
+        {
+          "type": "string",
+          "const": "khata",
+          "description": "An error the player can see."
+        },
+        {
+          "type": "string",
+          "const": "nusub",
+          "description": "Credits, licences, legal text."
+        },
+        {
+          "type": "string",
+          "const": "dakhili",
+          "description": "**Not shown to a player.** An asset path, a node name, an enum label, a shader name, a debug line, an internal key."
+        },
+        {
+          "type": "string",
+          "const": "majhul",
+          "description": "The extractor could not tell."
+        }
+      ],
+      "description": "What kind of string this is, derived from where it was found."
+    },
+    "MasdarIstikhraj": {
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "sakin",
+          "description": "Read out of the game's files."
+        },
+        {
+          "type": "string",
+          "const": "multaqat",
+          "description": "Seen on screen while the game ran."
+        },
+        {
+          "type": "string",
+          "const": "kilahuma",
+          "description": "Both, and they agree."
+        },
+        {
+          "type": "string",
+          "const": "mutanaqid",
+          "description": "Both, and they **disagree** — the file says one thing and the screen showed another."
+        }
+      ],
+      "description": "How a string reached the table."
+    }
+  }
+}

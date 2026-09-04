@@ -1,0 +1,109 @@
+name: The Arabic is drawn wrong
+description: Letters unjoined, reversed order, clipped, overlapping, wrong glyph, missing diacritic.
+labels: ["rasm"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the report the project most wants to get right, and the one most often made
+        unusable by a well-meaning reporter. Two requests before you start.
+
+        **Paste the text as text, not as a picture, and do not repair it on the way.** If you
+        paste a string that some other tool has already converted to Arabic Presentation Forms
+        (`U+FB50`–`U+FDFF`, `U+FE70`–`U+FEFF`) it will look correct in the issue and tell us
+        nothing. Taarib never produces those codepoints — it shapes ordinary Unicode into
+        positioned glyphs, and `docs/taqdimiya.md` is the argument for why. A pasted string
+        that arrives pre-shaped hides the bug.
+
+        **Say where the two renderings disagree.** Every line in the workshop is drawn through
+        the same text engine the game will use, at the real size, inside the real bounds. So
+        "wrong in the workshop and wrong in the game" and "right in the workshop and wrong in
+        the game" are two completely different bugs.
+
+  - type: textarea
+    id: string
+    attributes:
+      label: The string, in logical order
+      description: >
+        Exactly as it exists in the workshop — the order you typed it, not the order it is
+        drawn in. Include the placeholders (`{0}`, `%s`, `[interact]`, `<b>`) if it has any;
+        they are atoms and they are frequently where the problem is.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong with it
+      options:
+        - Letters are not joining
+        - The order is reversed, or a number or Latin word sits in the wrong place
+        - A diacritic is misplaced, doubled, or missing
+        - The wrong glyph is drawn for a letter
+        - The text is clipped, overflows its box, or overlaps something
+        - Digits are the wrong kind (Arabic-Indic where Eastern Arabic-Indic was wanted)
+        - The text is missing entirely where other text renders
+        - Something else
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where it disagrees
+      options:
+        - Wrong in the workshop preview and wrong in the game
+        - Right in the workshop preview, wrong in the game
+        - Wrong in the workshop preview, and I have not checked the game
+        - Wrong somewhere in Taarib's own interface, not in a game
+    validations:
+      required: true
+
+  - type: input
+    id: game
+    attributes:
+      label: The game and its launcher
+      placeholder: Disco Elysium (GOG)
+
+  - type: input
+    id: engine
+    attributes:
+      label: The engine Taarib detected, and the tier
+      description: Both are on the game's card in the library. The tier is 1, 2 or 3.
+      placeholder: Unity, tier 1
+
+  - type: input
+    id: font
+    attributes:
+      label: The font
+      description: >
+        Which face is in use for the string. If it is a font you added yourself rather than
+        one Taarib ships, say so, and say where it came from — a face with no Arabic
+        `GSUB`/`GPOS` tables produces exactly the unjoined-letters symptom and is not a bug in
+        the shaper.
+
+  - type: textarea
+    id: policy
+    attributes:
+      label: The patch's diacritics and digit policy
+      description: >
+        Both are recorded per patch rather than imposed, so both are things a reporter can
+        have set differently from what they expected. Arabic-Indic `٤ ٥ ٦` and Eastern
+        Arabic-Indic `۴ ۵ ۶` are different codepoints, not two renderings of one set.
+
+  - type: textarea
+    id: shots
+    attributes:
+      label: Screenshots
+      description: >
+        The workshop preview and the game, side by side if you can. This is the one report
+        where a picture genuinely helps — but it is in addition to the pasted string, never
+        instead of it.
+
+  - type: input
+    id: version
+    attributes:
+      label: Taarib's version and platform
+      placeholder: 1.0.0, Windows 11
+    validations:
+      required: true

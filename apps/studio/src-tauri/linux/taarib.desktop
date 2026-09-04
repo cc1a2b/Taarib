@@ -1,0 +1,46 @@
+# مدخل سطح المكتب — the Arabic desktop entry.
+#
+# Installed as /usr/share/applications/Taarib.desktop, which is the path the
+# bundler generates its own English entry at. There is no key to suppress that
+# one, and adding a second entry beside it made things worse rather than
+# cosmetic: update-desktop-database sorted the two, the generated entry won, and
+# its Exec= carries no %U, so a double-clicked .ruqaa was launched without its
+# path. Both deb.files and appimage.files are copied over the data directory
+# *after* the entry is generated (tauri-bundler 2.11.1, debian.rs:81-83 and
+# appimage/linuxdeploy.rs:80-83), so naming the generated path replaces it and
+# the package ships exactly one entry — this one.
+#
+# The name is therefore productName's, not the reverse-DNS application id: the
+# bundler derives it from productName and the replacement only works while the
+# two agree. ibni.sh asserts that on every build.
+#
+# Icon=taarib-studio, not taarib: the bundler derives the application icon stem
+# from mainBinaryName and installs hicolor/*/apps/taarib-studio.png. An entry
+# naming any other stem resolves to no icon at all, silently — every launcher
+# just draws the generic placeholder and nothing reports the mismatch.
+#
+# MimeType= names a type; it does not define one. What a .ruqaa *is* lives in
+# application-vnd.taarib.ruqaa.xml beside this file, and the string is spelled
+# in three places — here, there, and tauri.conf.json's fileAssociations — all
+# three of which must match taarib_ruqaa::NAW_MUHTAWA.
+#
+# StartupWMClass=taarib-studio matches mainBinaryName. Without it a launched
+# window becomes a second, unnamed taskbar entry beside the launcher icon
+# instead of grouping under it.
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=تعريب
+Name[en]=Taarib
+GenericName=معرّب الألعاب
+GenericName[en]=Game Arabization Studio
+Comment=تعريب الألعاب: اكتشاف، ترجمة، معاينة، وتثبيت.
+Comment[en]=Find installed games, translate them into Arabic, preview the result, and install a signed patch.
+Exec=taarib-studio %U
+Icon=taarib-studio
+Terminal=false
+Categories=Utility;Game;
+MimeType=application/vnd.taarib.ruqaa;
+Keywords=arabic;عربي;تعريب;translation;localization;games;
+StartupNotify=true
+StartupWMClass=taarib-studio

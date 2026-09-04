@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  application/vnd.taarib.ruqaa — the shared-mime-info declaration.
+
+  Installed to /usr/share/mime/packages/ by bundle.linux.deb.files, where the
+  shared-mime-info package's dpkg trigger picks it up and runs
+  update-mime-database. Until that runs, a .ruqaa is "unknown data" to every
+  file manager on the system: the desktop entry's MimeType= line says which
+  application opens a type, and this file says what the type IS.
+
+  bundle.linux.appimage.files puts the same declaration at the same path inside
+  the AppDir. Nothing on the host reads it from a mounted image, so that copy
+  buys nothing on its own — it is there so that an integrated AppImage, and any
+  future format built from the same AppDir, carries a complete declaration
+  rather than a dangling MimeType= line. docs/tawzee/linux.md §3a is the
+  full picture.
+
+  The media type string is the one canonical value, declared in Rust as
+  taarib_ruqaa::NAW_MUHTAWA. It is spelled here, in tauri.conf.json's
+  fileAssociations, and in taarib.desktop's MimeType= — three copies of one
+  string, and any drift between them registers a type nothing opens.
+
+  DETECTION — magic before glob.
+
+  A glob only knows what a file is named. The container opens with a four-byte
+  magic (taarib_ruqaa::SIHR = "TRQ1", crates/taarib-ruqaa/src/tarwisa.rs), so
+  content detection is available and is strictly better: a patch renamed by a
+  browser download, a patch arriving over a pipe, and a .ruqaa that is really
+  a zip all resolve correctly.
+
+  The magic deliberately does NOT also match format_version (u16 LE at offset
+  4, currently 1). The version varies within one container format; the type
+  does not. Pinning it here would silently stop detecting a version 2 patch by
+  content and fall back to the extension, which is the failure this rule
+  exists to avoid. The generation digit already lives inside the magic itself.
+
+  Priority 70 rather than the default 50: four fixed bytes at offset zero is a
+  specific match, and it should win over anything sniffing the same prefix.
+
+  ICONS.
+
+  <icon> names the exact icon a file manager draws for this type; the name is
+  the media type with '/' and '+' replaced by '-', which is the freedesktop
+  convention, so the file installs as
+  hicolor/<size>/mimetypes/application-vnd.taarib.ruqaa.png. <generic-icon>
+  is the fallback for a theme that has no such file — package-x-generic, one
+  of the enumerated names the DTD permits, because a patch is a sealed
+  container rather than a text document.
+-->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.taarib.ruqaa">
+    <comment>Taarib translation patch</comment>
+    <comment xml:lang="ar">رقعة تعريب</comment>
+    <icon name="application-vnd.taarib.ruqaa"/>
+    <generic-icon name="package-x-generic"/>
+    <magic priority="70">
+      <match type="string" value="TRQ1" offset="0"/>
+    </magic>
+    <glob pattern="*.ruqaa"/>
+  </mime-type>
+</mime-info>

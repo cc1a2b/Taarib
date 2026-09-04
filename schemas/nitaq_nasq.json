@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/nitaq_nasq.json",
+  "title": "NitaqNasq",
+  "description": "One markup span over the clean text.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "Identifies this span within its string, so a glyph can be traced back to the style it belongs to."
+    },
+    "bidaya": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Byte offset of the span's first byte in the clean text."
+    },
+    "tul": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "Length of the span in bytes."
+    },
+    "naw": {
+      "$ref": "#/$defs/NawNasq",
+      "description": "What the span does."
+    }
+  },
+  "required": [
+    "id",
+    "bidaya",
+    "tul",
+    "naw"
+  ],
+  "$defs": {
+    "NawNasq": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "qeema": {
+              "type": "string",
+              "description": "The colour value, `#rrggbb`, `#rrggbbaa`, or a named colour."
+            },
+            "naw": {
+              "type": "string",
+              "const": "lawn"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A colour, as the engine wrote it."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "ghaliz"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Bold."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "maail"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Italic."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "taht_khat"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Underline."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "shatb"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "Strikethrough."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "qeema": {
+              "type": "number",
+              "format": "float",
+              "description": "The size."
+            },
+            "naw": {
+              "type": "string",
+              "const": "hajm"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "An explicit size, in the engine's own units."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ism": {
+              "type": "string",
+              "description": "The family name."
+            },
+            "naw": {
+              "type": "string",
+              "const": "khatt"
+            }
+          },
+          "required": [
+            "naw",
+            "ism"
+          ],
+          "description": "A different font family, named by the engine."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "marja": {
+              "type": "string",
+              "description": "The engine's own reference to it."
+            },
+            "naw": {
+              "type": "string",
+              "const": "sura"
+            }
+          },
+          "required": [
+            "naw",
+            "marja"
+          ],
+          "description": "An inline sprite or icon, which occupies width and takes part in layout as a single atom but is drawn by the engine, not by Taarib."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "himl": {
+              "type": "string",
+              "description": "The payload."
+            },
+            "naw": {
+              "type": "string",
+              "const": "rabt"
+            }
+          },
+          "required": [
+            "naw",
+            "himl"
+          ],
+          "description": "A link payload the engine resolves on click."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "khaam": {
+              "type": "string",
+              "description": "The placeholder exactly as it appeared."
+            },
+            "naw": {
+              "type": "string",
+              "const": "mawdi"
+            }
+          },
+          "required": [
+            "naw",
+            "khaam"
+          ],
+          "description": "A format placeholder — `{0}`, `{name}`, `%s`, `%1$d`, `\\V[3]`, `$gold`. Its text is opaque, its width is measured, and any translation that loses it is rejected before it can ship."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "satr"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "A hard line break the original text asked for."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "qeema": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "description": "The duration."
+            },
+            "naw": {
+              "type": "string",
+              "const": "tawaqquf"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "A typewriter pause, in the engine's own units."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "naw": {
+              "type": "string",
+              "const": "bila_tahleel"
+            }
+          },
+          "required": [
+            "naw"
+          ],
+          "description": "A region the engine is told not to interpret."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "qeema": {
+              "type": "string",
+              "description": "`right`, `left`, `center`, or `justify` as the engine spells it."
+            },
+            "naw": {
+              "type": "string",
+              "const": "muhadhaha"
+            }
+          },
+          "required": [
+            "naw",
+            "qeema"
+          ],
+          "description": "An alignment override."
+        }
+      ],
+      "description": "What a markup span does."
+    }
+  }
+}

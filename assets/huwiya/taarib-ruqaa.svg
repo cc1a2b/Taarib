@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
+     aria-labelledby="unwan">
+  <title id="unwan">رقعة تعريب</title>
+
+  <!--
+    الرقعة — the document mark: what a .ruqaa file is, seen in a file manager.
+
+    THE IDEA
+    The app mark cuts the rhythm of Arabic into a dark tile. A patch file is
+    that same rhythm written down on a page, so figure and ground swap: the
+    tile was near-black carrying a near-white stroke; the page is near-white
+    carrying the stroke in near-black. The two teal dots are the one thing that
+    does not change, because at 16px they are what says "same family" from
+    across a desktop — a light portrait shape and a dark square tile share
+    nothing else at that size, and should not.
+
+    The fold is at the top-LEFT. A left-to-right page is picked up by its
+    top-right corner, which is why every Latin document icon dog-ears that one;
+    a page written right-to-left is picked up by the other. That fold is the
+    only concession to "document" the mark makes. No seal, no signature, no
+    ruled lines: a signed-ness cue dies below 32px and takes the silhouette
+    with it, and the silhouette is the thing a file manager actually shows.
+
+    THE GEOMETRY — all values on a 512 grid, so it can be redrawn, not traced.
+
+      page             x 96 → 416, y 32 → 480, rx 16   320 × 448, near A4
+                       every edge sits on the 32-unit grid, so at 16px and at
+                       32px the silhouette lands on whole pixels. The tile had
+                       that for free; a page has to be placed for it
+      fold             96 × 96, one straight cut from (96, 128) to (192, 32)
+      stroke           64          2px at 16px; the tile's 88 on a page 320
+                                   wide is a bar, not a line
+      upper run        y 240       x 336 → 240
+      step             x 240       y 240 → 368, the tile's 128 unchanged
+      lower run        y 368       x 240 → 176
+      dot radius       28
+      dot centres      (306, 112) and (238, 112)
+      dot rise         128 above the upper run, the tile's, unchanged
+      ink margin       48 of page beyond each cap. At 16px the rasteriser
+                       thickens the stroke to 3px and its caps with it, and
+                       48 is what leaves one whole pixel of page outside them
+
+    The step and the dot rise keep the tile's numbers on purpose. The vertical
+    rhythm is the family resemblance; the page narrows only the runs. The dots'
+    midpoint, 272, sits between the page's centre and the upper run's: at 16px
+    the pair is pushed out to two 3px discs with a pixel between them, seven
+    pixels on a page ten wide, and 272 is where that pair clears the page's
+    edge on the right by exactly one pixel while still riding the run.
+
+    COLOUR
+    Page near-white, stroke near-black, dots the accent. The hairline is the
+    tile's, turned round: near-black at 12% inside the page's edge, because a
+    file manager's list is usually light and a near-white page on a white list
+    has no edge without one. The tile insets a rect by half its rim; a page
+    with a fold cannot be inset by one number, so the rim is drawn twice the
+    wanted width and clipped to the page, leaving its inner half — the wanted
+    width — wholly inside the silhouette. `taarib-ruqaa-uhadi.svg` beside this
+    file is the one-colour cut: the page in one colour with the stroke and the
+    dots knocked out of it, for a taskbar that tints or a stencil. Both are
+    drawn from these same numbers.
+  -->
+
+  <defs>
+    <path id="safha"
+          d="M 192 32 H 400 A 16 16 0 0 1 416 48 V 464 A 16 16 0 0 1 400 480
+             H 112 A 16 16 0 0 1 96 464 V 128 Z"/>
+    <clipPath id="dakhil">
+      <use href="#safha"/>
+    </clipPath>
+  </defs>
+
+  <use href="#safha" fill="#e8eaec"/>
+
+  <!-- Twice the visible width, clipped to the page: the half that survives
+       is the rim, inside the silhouette, so it scales to 16px without
+       doubling and never leaks outside the page's edge. -->
+  <use href="#safha" fill="none" stroke="#0d0f10" stroke-opacity="0.12"
+       stroke-width="6" clip-path="url(#dakhil)"/>
+
+  <path d="M 336 240 L 240 240 L 240 368 L 176 368"
+        fill="none" stroke="#0d0f10" stroke-width="64"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="306" cy="112" r="28" fill="#2a9d8f"/>
+  <circle cx="238" cy="112" r="28" fill="#2a9d8f"/>
+</svg>

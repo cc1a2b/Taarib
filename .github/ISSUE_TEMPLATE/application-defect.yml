@@ -1,0 +1,120 @@
+name: The application itself misbehaves
+description: A crash, an error code, a screen that will not load, a setting that does not stick.
+labels: ["tatbeeq"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For the application rather than a game. If the problem is that a game is not detected,
+        not patched, or still in its original language, use the game report instead — it asks
+        for different things.
+
+  - type: input
+    id: code
+    attributes:
+      label: The error code
+      description: >
+        Every refusal in Taarib carries a stable machine code rendered `TAARIB-E-1042`, and
+        the numeric part is allocated from a per-area block, so the code alone narrows the
+        search to one crate. If there is a code, this is the most valuable field on the form.
+        Write "none" if the failure was silent — a silent failure is itself worth reporting.
+      placeholder: TAARIB-E-2503
+    validations:
+      required: true
+
+  - type: input
+    id: screen
+    attributes:
+      label: The screen
+      description: >-
+        Library, workshop, review, requests, submission, settings, overlay, diagnostics,
+        automation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you did, what you expected, what happened
+      description: >
+        Enough that someone can walk the same path. If it involved a specific game or patch,
+        name it.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Taarib's version
+      description: The status strip at the foot of the library window.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux (say which distribution below)
+        - Steam Deck / SteamOS
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: anchor
+    attributes:
+      label: The build's trust anchor
+      description: >
+        The status strip shows a **Development build** marker when the anchor is `tatwir` — a
+        build compiled from source without `TAARIB_MIFTAH_ISDAR` set. A downloaded release
+        shows no marker; that is `isdar`.
+      options:
+        - "isdar — a downloaded release"
+        - "tatwir — the status strip says Development build"
+        - I do not know
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How it was installed
+      description: >
+        Portable mode has one known exception to its own rule — the contributor identity key
+        is still minted into the machine keychain — so it is worth knowing which you are in.
+      options:
+        - A downloaded installer or package
+        - Portable, from an archive
+        - Built from source
+        - Flatpak or AppImage
+
+  - type: textarea
+    id: bundle
+    attributes:
+      label: The diagnostics bundle
+      description: >
+        In Taarib: **Diagnostics → Build the bundle**. It collects the logs, the settings
+        tree, a statement of this machine and build, and every compatibility report written so
+        far, into one plain uncompressed folder you can open and read before you share it.
+        Nothing from the keychain goes anywhere near it.
+
+
+        Read it, then attach it or paste the part that matters. If you would rather not attach
+        the whole thing, the tail of the newest log is usually enough — the Diagnostics screen
+        shows it without building anything.
+
+  - type: checkboxes
+    id: acks
+    attributes:
+      label: Before you submit
+      options:
+        - label: >-
+            I have read what I am attaching. (The bundle contains file paths, which on Windows
+            include your user name.)
+          required: true
+        - label: This is not a security issue.
+          required: true

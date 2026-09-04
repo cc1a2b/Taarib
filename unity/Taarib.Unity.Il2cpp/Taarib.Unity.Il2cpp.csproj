@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Taarib.Unity.Il2cpp — the BepInEx 6 plugin for Unity games whose managed
+    code was compiled ahead of time into GameAssembly.dll, where there is no
+    Assembly-CSharp.dll to patch and no managed metadata to reflect over in the
+    usual way.
+
+    The rendering is not reimplemented here. This project shares
+    Taarib.Unity.Mushtarak and Taarib.Unity.Jisr unchanged with the Mono
+    adapter and adds only what IL2CPP forces:
+
+      - hall — the three-rung resolution ladder: Il2CppInterop's generated
+        assemblies first, then the IL2CPP runtime exports
+        (il2cpp_class_from_name, il2cpp_class_get_method_from_name) when the
+        interop layer cannot bind an exact overload, then binary signature
+        scanning when the metadata is encrypted, stripped or of an
+        unrecognised version. Every resolution records the rung that produced
+        it;
+      - basmat — the signature database read as versioned data keyed by engine
+        version range, text system version range, architecture and platform,
+        so a new game version is a data change and not a code change;
+      - khatf — native detour installation for the targets no managed hook can
+        reach: prologue instruction-length decoding, relative-jump rewriting,
+        allocation within reach on x86_64, ARM64 branch islands, and the hidden
+        trailing MethodInfo* argument IL2CPP passes;
+      - GC discipline: every IL2CPP object reference held across a frame is a
+        tracked handle, and strings crossing into native code are copied into
+        Taarib-owned buffers before an allocation could move them.
+
+    A target that resolves on no rung is reported by name, version and failing
+    rung, and the game keeps running in its original language.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>Taarib.Unity.Il2cpp</AssemblyName>
+    <RootNamespace>Taarib.Unity.Il2cpp</RootNamespace>
+    <Description>BepInEx 6 plugin taking over text rendering in Unity games on the IL2CPP scripting backend, over Il2CppInterop and a signature-driven resolver.</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Label="PluginInfo">
+    <BepInExPluginGuid>com.cc1a2b.taarib.unity.il2cpp</BepInExPluginGuid>
+    <BepInExPluginName>Taarib</BepInExPluginName>
+    <BepInExPluginVersion>$(Version)</BepInExPluginVersion>
+  </PropertyGroup>
+
+  <!--
+    net6.0 is the runtime BepInEx's IL2CPP host loads into the game; it is not
+    a choice this project gets to make, so the end-of-support notice is not a
+    warning anyone here can act on.
+  -->
+  <PropertyGroup Label="TargetFrameworkSupport">
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Taarib.Unity.Jisr\Taarib.Unity.Jisr.csproj" />
+    <ProjectReference Include="..\Taarib.Unity.Mushtarak\Taarib.Unity.Mushtarak.csproj" />
+  </ItemGroup>
+
+  <!--
+    be.780 rather than the newest build: be.781 and up declare a dependency on
+    Samboy063.Cpp2IL.Core 2022.1.0-development.1452, which is published on
+    neither nuget.org nor nuget.bepinex.dev. NuGet resolves a lower version and
+    raises NU1603, which TreatWarningsAsErrors makes a build failure. Raise this
+    pin once that package is on a feed.
+  -->
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.780" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

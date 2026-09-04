@@ -1,0 +1,25 @@
+[package]
+name = "taarib-haqn"
+description = "حقن تعريب — injection: per-platform process injection, DLL overrides and launch options inside Proton and Wine prefixes, and the trampoline hooking primitives the Rust adapters share."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+
+retour = { workspace = true }
+libc = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true }

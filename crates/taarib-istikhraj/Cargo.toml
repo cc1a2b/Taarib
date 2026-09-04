@@ -1,0 +1,64 @@
+[package]
+name = "taarib-istikhraj"
+description = "استخراج تعريب — text extraction from Unity, Unreal, Godot and every script engine, plus runtime capture, normalized into one string table."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[features]
+default = []
+# Derive specta::Type so Studio's TypeScript is generated from these
+# definitions rather than written twice. Without this the `cfg_attr` gates
+# throughout this crate are dead and its public types reach the frontend with
+# no generated definition at all.
+wajiha = ["dep:specta", "dep:specta-typescript", "taarib-usus/wajiha", "taarib-mustalahat/wajiha"]
+# Derive schemars::JsonSchema so schemas/ is generated from the same source.
+mukhattatat = ["dep:schemars", "taarib-usus/mukhattatat", "taarib-mustalahat/mukhattatat"]
+
+[dependencies]
+specta = { workspace = true, optional = true }
+specta-typescript = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
+taarib-usus = { workspace = true, features = ["kayanat"] }
+taarib-mustalahat = { workspace = true }
+# The one markup parser in this product. Extraction lifts every game's markup
+# and format placeholders into the same span model the layout engine uses, so a
+# translation can be checked for having kept them, and `dammij` builds its
+# substitution templates from those same spans. A second parser here would be a
+# second opinion about what `{0}` means, and the two would disagree the first
+# time either learned a new dialect.
+taarib-saff = { workspace = true }
+
+# The container readers, already written and verified in Phases 8, 9 and 10.
+# This crate maps their engine-shaped records into the normalized string table
+# and reimplements none of them: a second `.locres` reader or a second RPG Maker
+# event walker would be a second opinion about a format, and the two would
+# disagree on exactly the malformed file that made the disagreement matter.
+taarib-muhawwil-unreal = { workspace = true }
+taarib-muhawwil-godot = { workspace = true }
+taarib-muhawwil-nusus = { workspace = true }
+
+object = { workspace = true }
+memmap2 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+flate2 = { workspace = true }
+zstd = { workspace = true }
+lz4_flex = { workspace = true }
+quick-xml = { workspace = true }
+walkdir = { workspace = true }
+rustc-hash = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+# A capture session's header and footer carry an absolute RFC 3339 wall clock,
+# which is the only timestamp in the session file: per-event times come from the
+# adapter's own monotonic clock and are never formatted. `jiff` is already the
+# workspace's clock everywhere a timestamp is written.
+jiff = { workspace = true }

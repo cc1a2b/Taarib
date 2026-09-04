@@ -1,0 +1,21 @@
+[toolchain]
+# The floor is the highest MSRV in the resolved graph: sysinfo 0.39.6
+# requires 1.95. Edition 2024 needs 1.85, so this is the binding one.
+channel = "1.95.0"
+components = ["rustfmt", "clippy", "rust-src", "llvm-tools"]
+targets = [
+    # Windows — 64-bit hosts, 32-bit game processes, and Windows on ARM.
+    "x86_64-pc-windows-msvc",
+    "i686-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    # Linux — desktop, Steam Deck, 32-bit game processes, ARM handhelds.
+    "x86_64-unknown-linux-gnu",
+    "i686-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    # macOS — Intel and Apple Silicon, shipped as a universal binary.
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    # The RPG Maker and Electron adapters run the core as WebAssembly.
+    "wasm32-unknown-unknown",
+]
+profile = "minimal"

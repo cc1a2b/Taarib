@@ -1,0 +1,24 @@
+<Project>
+
+  <!--
+    Imported after each project has been evaluated, so a project cannot
+    re-enable any of this by accident.
+
+    Everything below keeps the build output to the assemblies Taarib actually
+    installs. The plugin folder is inside somebody's game: BepInEx already has
+    BepInEx.Core, 0Harmony and Il2CppInterop loaded, and the game already has
+    its own UnityEngine assemblies loaded. A second copy of any of them beside
+    the plugin is not redundancy, it is a second Harmony instance patching the
+    same method.
+  -->
+
+  <PropertyGroup>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
+    <CopyDebugSymbolFilesFromPackages>false</CopyDebugSymbolFilesFromPackages>
+    <CopyDocumentationFilesFromPackages>false</CopyDocumentationFilesFromPackages>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+</Project>

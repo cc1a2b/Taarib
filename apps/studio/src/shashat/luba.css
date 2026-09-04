@@ -1,0 +1,864 @@
+/* شاشة اللعبة — tokens only, logical properties only, elevation by luminance and hairline. */
+
+.luba {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100%;
+  background-color: var(--sath-0);
+
+  /* The per-game accent. `--tamyeez-luba` is written onto this element by the
+     screen itself, from the dominant colour of the cover it is showing and only
+     after that colour has been clamped into a legible band; a game with no
+     artwork, or artwork with no colour in it, leaves the property unset and the
+     fallback below is the whole of the graceful degradation. Declared here, and
+     never on `:root`, so the value cannot survive into the next game. */
+  --lawn-luba: var(--tamyeez-luba, var(--tamyeez));
+}
+
+/* --- the top strip --------------------------------------------------------- */
+
+.luba__shareet-alawi {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.luba__raji {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.luba__raji:hover {
+  color: var(--nass-1);
+  transition: none;
+}
+
+.luba__fasl {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+/* --- the scrolling body ---------------------------------------------------- */
+
+.luba__jism {
+  min-block-size: 0;
+  padding: var(--misafa-24);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-24);
+}
+
+/* --- the anchor ------------------------------------------------------------ */
+
+.luba__mirsa {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--misafa-20);
+  padding: var(--misafa-20);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--misafa-2) solid var(--lawn-luba);
+  border-radius: var(--nisf-lawha);
+}
+
+/* The cover keeps the card ratio; 120px is structural, like the 40ch column. */
+.luba__ghilaf {
+  flex: none;
+  inline-size: 120px;
+  aspect-ratio: 220 / 340;
+  object-fit: cover;
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.luba__ghilaf--faragh {
+  display: block;
+}
+
+.luba__mirsa-nass {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.luba__ism {
+  margin-block-end: var(--misafa-12);
+  font-size: var(--qiyas-6);
+  line-height: var(--irtifa-6);
+  font-weight: var(--wazn-bariz);
+  color: var(--nass-1);
+  text-wrap: balance;
+}
+
+/* --- the two columns ------------------------------------------------------- */
+
+.luba__amida,
+.luba__haykal-amida {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 40ch);
+  gap: var(--misafa-24);
+  align-items: start;
+}
+
+.luba__raisi,
+.luba__janib {
+  display: grid;
+  gap: var(--misafa-24);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+@media (max-width: 900px) {
+  .luba__amida,
+  .luba__haykal-amida {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- sections -------------------------------------------------------------- */
+
+.luba__qism {
+  padding: var(--misafa-20);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.luba__qism--khatar {
+  border-inline-start: var(--misafa-2) solid var(--khatar);
+}
+
+.luba__qism--iqrar {
+  border-inline-start: var(--misafa-2) solid var(--tanbeeh);
+}
+
+.luba__unwan-qism {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  margin-block-end: var(--misafa-16);
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.luba__unwan-qism::before {
+  content: '';
+  flex: none;
+  inline-size: var(--misafa-2);
+  block-size: var(--misafa-12);
+  background-color: var(--lawn-luba);
+}
+
+.luba__unwan-farii {
+  margin-block-start: var(--misafa-16);
+  margin-block-end: var(--misafa-6);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-3);
+}
+
+.luba__unwan-farii:first-child {
+  margin-block-start: 0;
+}
+
+/* --- fact rows ------------------------------------------------------------- */
+
+.luba__jadwal {
+  display: grid;
+  gap: var(--misafa-8);
+}
+
+.luba__saff {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--misafa-16);
+  align-items: baseline;
+}
+
+.luba__saff dt {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  white-space: nowrap;
+}
+
+.luba__saff dd {
+  min-inline-size: 0;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+}
+
+.luba__qat {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- chips ----------------------------------------------------------------- */
+
+.luba__riqaq {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-6);
+}
+
+.luba__riqaqa {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--misafa-8);
+  padding-block: var(--misafa-2);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* --- the capability report ------------------------------------------------- */
+
+.luba__imkaniyat {
+  margin-block-start: var(--misafa-16);
+  padding-block-start: var(--misafa-16);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.luba__jadwal + .luba__imkaniyat {
+  margin-block-start: var(--misafa-16);
+}
+
+.luba__sabab {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.luba__hudud {
+  display: grid;
+  gap: var(--misafa-6);
+}
+
+.luba__hudud li {
+  position: relative;
+  padding-inline-start: var(--misafa-16);
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+}
+
+.luba__hudud li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: var(--misafa-8);
+  inline-size: var(--misafa-6);
+  block-size: var(--misafa-6);
+  border-radius: 50%;
+  background-color: var(--tanbeeh);
+}
+
+.luba__marfuda {
+  margin-block-start: var(--misafa-12);
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--khatar);
+  text-wrap: pretty;
+}
+
+/* --- the runtime-readiness notice ------------------------------------------
+   Caution, not danger. The red rail on this screen means an anti-cheat refusal,
+   which is permanent and costs the user their account if ignored; an adapter
+   that is not finished yet costs them an evening and is fixed by an update. The
+   amber rail is the whole of the difference, and it is the same rail the
+   first-run statement carries — both are "read this before you act". */
+
+.luba__jahiziya {
+  display: grid;
+  gap: var(--misafa-6);
+  margin-block-start: var(--misafa-16);
+  padding: var(--misafa-12) var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tanbeeh);
+  border-radius: var(--nisf-lawha);
+}
+
+/* The panel's own heading already sits above it, so this one is a label rather
+   than a second heading: smaller than the sentence it introduces, and carrying
+   the hue so the block is identifiable before a word of it is read. */
+.luba__jahiziya-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--tanbeeh);
+}
+
+/* Which engine the verdict is about. Set as a caption rather than as a sentence
+   — it is the subject line of the block, and a reader who already knows their
+   game is Unity should be able to skip it in one glance. Monospaced digits are
+   not wanted: this is a product name with a version after it, not a figure. */
+.luba__jahiziya-muharrik {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Full-strength text: this is the one sentence on the screen a user must not
+   skim past, so it is not held at the supporting weight the rest of the panel
+   uses. */
+.luba__jahiziya-nass {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+/* What it means for the reader. One step quieter than the sentence above it,
+   because it is the consequence and not the finding — and a block where both
+   lines shout is a block where neither is read. */
+.luba__jahiziya-athar {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* The patches panel opens straight onto it, with nothing above to step off. */
+.luba__unwan-qism + .luba__jahiziya {
+  margin-block-start: 0;
+}
+
+/* The tier row states a permission; this states whether it is exercised. Inline
+   with the value rather than under it, because the two are one claim and a
+   reader who took only the first half would have taken a promise. */
+.luba__tabaqa-muallaqa {
+  margin-inline-start: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--tanbeeh);
+}
+
+/* --- plain sentences and the probe affordance ------------------------------ */
+
+.luba__nass-hadi {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.luba__fahs {
+  display: grid;
+  gap: var(--misafa-12);
+  justify-items: start;
+}
+
+.luba__fahs--dhayl {
+  margin-block-start: var(--misafa-16);
+  padding-block-start: var(--misafa-16);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* --- safety ---------------------------------------------------------------- */
+
+.luba__rafd {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.luba__rafd + .luba__nass-hadi {
+  margin-block-start: var(--misafa-12);
+}
+
+.luba__tahdheer {
+  color: var(--tanbeeh);
+}
+
+.luba__adilla {
+  display: grid;
+  gap: var(--misafa-12);
+  margin-block-start: var(--misafa-12);
+}
+
+.luba__daleel {
+  display: grid;
+  gap: var(--misafa-4);
+  padding: var(--misafa-12);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--misafa-2) solid var(--khatar);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.luba__daleel-nass {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+}
+
+.luba__daleel-masar {
+  color: var(--nass-3);
+}
+
+/* Engine-identification evidence reuses the card with the game accent: the
+   red bar means danger, and an engine observation is not one. */
+.luba__daleel--muharrik {
+  border-inline-start-color: var(--lawn-luba);
+}
+
+.luba__daleel-wazn {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the publisher's own Arabic --------------------------------------------
+
+   Good news, not a warning. This block carries no status hue and no leading
+   red or amber bar: the game is readable in Arabic already, which is the
+   outcome the whole product is for. The hierarchy is weight and colour — the
+   verdict in `--nass-1` at one step up, its confidence beside it in `--nass-3`,
+   the evidence beneath in the reading leading — rather than a box around each
+   part.
+
+   The evidence list is here because a verdict nobody can argue with is a
+   verdict nobody can correct. It is the same argument the engine-evidence list
+   above makes, and it is why this screen prints the sentence the detector
+   wrote rather than a summary of it. */
+
+.luba__lugha {
+  display: grid;
+  gap: var(--misafa-12);
+  margin-block-end: var(--misafa-16);
+}
+
+.luba__lugha-hukm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--misafa-8);
+}
+
+.luba__lugha-wasm {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.luba__lugha-dalail,
+.luba__lugha-majhul {
+  display: grid;
+  gap: var(--misafa-8);
+  max-inline-size: 72ch;
+}
+
+.luba__lugha-dalail > li {
+  display: grid;
+  gap: var(--misafa-2);
+  padding-inline-start: var(--misafa-12);
+  border-inline-start: var(--samk-hadd) solid var(--hadd);
+}
+
+.luba__lugha-naw {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.luba__lugha-wasf {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.luba__lugha-mawqi {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  overflow-wrap: anywhere;
+}
+
+/* What could not be seen, kept quieter than what was: it is the honest
+   remainder of the check and not a second verdict. */
+.luba__lugha-majhul > li {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+/* The consequence of turning the override on, shown only when it is on. Amber,
+   because this one *is* a warning: past this line the user is about to write
+   machine output over work a human was paid for. */
+.luba__athar {
+  max-inline-size: 56ch;
+  padding: var(--misafa-12);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tanbeeh);
+  border-radius: var(--nisf-tahakkum);
+  text-wrap: pretty;
+}
+
+/* --- status dots ----------------------------------------------------------- */
+
+.luba__nuqta {
+  display: inline-block;
+  flex: none;
+  inline-size: var(--misafa-8);
+  block-size: var(--misafa-8);
+  margin-inline-end: var(--misafa-6);
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.luba__nuqta--najah {
+  background-color: var(--najah);
+}
+
+.luba__nuqta--khatar {
+  background-color: var(--khatar);
+}
+
+/* --- actions --------------------------------------------------------------- */
+
+.luba__afal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+}
+
+.luba__saff-afal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-8);
+}
+
+/* The two button intents live unscoped in `qaida.css`, and `.zir--tamyeez`
+   there already reads `--lawn-luba`, which every button inside this screen
+   inherits. A copy here would only shadow the shared rule. */
+
+/* Busy is signalled without `disabled`, so keyboard focus is not dropped
+   mid-operation; the guard lives in the click handler. */
+.luba .zir[aria-disabled='true'] {
+  color: var(--nass-3);
+  border-color: var(--hadd-daif);
+  cursor: progress;
+}
+
+/* --- expanding blocks ------------------------------------------------------ */
+
+.luba__tawassu {
+  overflow: hidden;
+}
+
+.luba__tawassu-dakhil {
+  padding-block-start: var(--misafa-4);
+}
+
+/* --- the confirmation strip ------------------------------------------------ */
+
+.luba__taakid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--misafa-12);
+  padding: var(--misafa-12) var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-inline-start: var(--misafa-2) solid var(--khatar);
+  border-radius: var(--nisf-lawha);
+}
+
+.luba__taakid-nass {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.luba__taakid-azrar {
+  display: flex;
+  gap: var(--misafa-8);
+}
+
+/* --- the install panel ----------------------------------------------------- */
+
+.luba__ruqaa {
+  display: grid;
+  gap: var(--misafa-12);
+}
+
+.luba__lawhat-tathbeet {
+  display: grid;
+  gap: var(--misafa-12);
+  padding: var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-inline-start: var(--misafa-2) solid var(--lawn-luba);
+  border-radius: var(--nisf-lawha);
+}
+
+.luba__raas-lawha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--misafa-12);
+}
+
+.luba__ruqaa-unwan {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.luba__ruqaa-musahim {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.luba__ruqaa-tafsil {
+  display: grid;
+  gap: var(--misafa-6);
+}
+
+/* --- results --------------------------------------------------------------- */
+
+.luba__mintaqa {
+  display: grid;
+  gap: var(--misafa-12);
+}
+
+.luba__mintaqa:empty {
+  display: none;
+}
+
+.luba__jari {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+}
+
+.luba__natija {
+  display: grid;
+  gap: var(--misafa-8);
+  padding: var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.luba__unwan-natija {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.luba__natija-nass {
+  display: flex;
+  align-items: center;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.luba__natija-band {
+  display: grid;
+  gap: var(--misafa-6);
+}
+
+.luba__adad-natija {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-16);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.luba__mustabdala {
+  display: grid;
+  gap: var(--misafa-6);
+}
+
+/* --- detail lines ---------------------------------------------------------- */
+
+.luba__sutur {
+  display: grid;
+  gap: var(--misafa-4);
+  padding: var(--misafa-12);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* Each line decides its own direction: verification lines mix Arabic
+   sentences with LTR file paths. */
+.luba__satr-tahaqquq {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  unicode-bidi: plaintext;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.luba__satr-masar {
+  color: var(--nass-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- the skeleton ---------------------------------------------------------
+   A placeholder reserves the height of the thing that replaces it, and reserves
+   it by being built out of the same box rather than by stating a number: the
+   anchor is 40px of padding around a 120px cover at 220/340, which is 227px,
+   and a skeleton that said 56px made every game open with a 171px jolt. Still,
+   never shimmering — a shimmer is an animation on a data update. */
+
+.luba__haykal {
+  display: grid;
+  gap: var(--misafa-24);
+}
+
+/* The anchor's own box, so the height follows the cover's ratio instead of a
+   second figure that has to be kept in step with `.luba__mirsa` by hand. */
+.luba__haykal-mirsa {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--misafa-20);
+  padding: var(--misafa-20);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--misafa-2) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.luba__haykal-ghilaf {
+  display: block;
+  flex: none;
+  inline-size: 120px;
+  aspect-ratio: 220 / 340;
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.luba__haykal-mirsa-nass {
+  flex: 1;
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--misafa-12);
+  align-content: start;
+}
+
+.luba__haykal-unwan {
+  display: block;
+  inline-size: 52%;
+  block-size: var(--irtifa-6);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* The same gap the real columns carry, because the panels below the anchor are
+   what the eye tracks once the anchor stops moving. */
+.luba__haykal-amud {
+  display: grid;
+  gap: var(--misafa-24);
+  align-content: start;
+}
+
+.luba__haykal-qism {
+  display: grid;
+  gap: var(--misafa-12);
+  align-content: start;
+  padding: var(--misafa-20);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.luba__haykal-unwan-qism {
+  display: block;
+  inline-size: 34%;
+  block-size: var(--irtifa-4);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.luba__talabat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  align-items: flex-start;
+}
+
+/* --- the automatic route ---------------------------------------------------
+   Offered only where it is the answer: a game the registry has no patch for.
+   Set off from the request affordance under it by the game's own accent on the
+   leading edge — the same emphasis rule the panels above use — so the two are
+   read as two different offers rather than as one paragraph with two buttons.
+
+   It carries no status hue of its own. Withdrawing it is not an error and not a
+   danger; the button simply goes grey and the reason appears beneath it in the
+   amber the rest of this screen uses for "read this before you act". */
+
+.luba__tilqai {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--misafa-8);
+  align-self: stretch;
+  margin-block: var(--misafa-4);
+  padding: var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--samk-hadd-barz) solid var(--lawn-luba);
+  border-radius: var(--nisf-lawha);
+}
+
+/* Refused, not busy. The shared rule above answers `cursor: progress`, which is
+   right for a control that is mid-operation and wrong for one that is off
+   because this build cannot do the thing at all. */
+.luba__tilqai .zir[aria-disabled='true'] {
+  cursor: not-allowed;
+}

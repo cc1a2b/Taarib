@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/tareeqa_tarjama.json",
+  "title": "TareeqaTarjama",
+  "description": "How a translation was actually produced.",
+  "oneOf": [
+    {
+      "type": "string",
+      "const": "bashariya_kamila",
+      "description": "Translated by a person, start to finish."
+    },
+    {
+      "type": "string",
+      "const": "aaliya_thum_bashariya",
+      "description": "Machine-translated, then reviewed and corrected by a person."
+    },
+    {
+      "type": "string",
+      "const": "aaliya_faqat",
+      "description": "Machine-translated with no human review."
+    }
+  ]
+}

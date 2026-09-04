@@ -1,0 +1,35 @@
+[package]
+name = "taarib-warsha"
+description = "ورشة تعريب — the collaborative workspace: a portable project bundle, assignment and soft locking, three-way merge by string identity, per-string history, interchange formats and contribution statistics."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-tarjama = { workspace = true }
+taarib-makhzan = { workspace = true }
+# The project store this phase shares and merges; defining a second one here is
+# exactly what the phase refuses.
+taarib-istikhraj = { workspace = true }
+# Phase 14's importers, which every export must round-trip through.
+taarib-tarqee = { workspace = true }
+# Phase 18's comment model, reused rather than duplicated.
+taarib-taqdeem = { workspace = true }
+
+rusqlite = { workspace = true }
+quick-xml = { workspace = true }
+blake3 = { workspace = true }
+zstd = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

@@ -1,0 +1,453 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/taarib-usus",
+    "crates/taarib-mustalahat",
+    "crates/taarib-saff",
+    "crates/taarib-lawha",
+    "crates/taarib-jisr",
+    "crates/taarib-wasm",
+    "crates/taarib-khatm",
+    "crates/taarib-makhzan",
+    "crates/taarib-kashf",
+    "crates/taarib-muharrik",
+    "crates/taarib-haqn",
+    "crates/taarib-muhawwil-unreal",
+    "crates/taarib-muhawwil-godot",
+    "crates/taarib-muhawwil-nusus",
+    "crates/taarib-tabaqa",
+    "crates/taarib-istikhraj",
+    "crates/taarib-tarjama",
+    "crates/taarib-ruqaa",
+    "crates/taarib-tarqee",
+    "crates/taarib-tathbeet",
+    "crates/taarib-aman",
+    "crates/taarib-mustawda",
+    "crates/taarib-taqdeem",
+    "crates/taarib-warsha",
+    "crates/taarib-mudkhal",
+    "crates/taarib-tahdith",
+    "crates/taarib-tajmee",
+    "crates/taarib-tilqai",
+    "apps/studio/src-tauri",
+]
+
+# The vendored `retour` is a patched upstream crate, not Taarib's code. It sits
+# under the workspace root so `[patch.crates-io]` can reach it by path, which
+# would otherwise make it an implicit member and hold it to lints written for
+# code this project wrote. See vendor/retour/TAARIB.md.
+exclude = ["vendor/retour"]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MPL-2.0"
+authors = ["cc1a2b <cc1a2b@users.noreply.github.com>"]
+repository = "https://github.com/cc1a2b/taarib"
+homepage = "https://github.com/cc1a2b/taarib"
+keywords = ["arabic", "localization", "games", "shaping", "bidi"]
+categories = ["game-development", "internationalization", "text-processing"]
+# Taarib is one product built from twenty-seven crates, not a crate family
+# anyone installs individually. Nothing here goes to crates.io, and saying so
+# is what stops an accidental `cargo publish` and what lets cargo-deny treat
+# the intra-workspace path dependencies as the private edges they are.
+publish = false
+
+# ---------------------------------------------------------------------------
+# Every third-party version appears exactly once, here. A crate that writes a
+# version number in its own manifest is a bug.
+# ---------------------------------------------------------------------------
+[workspace.dependencies]
+
+# --- internal ---------------------------------------------------------------
+taarib-usus = { path = "crates/taarib-usus" }
+taarib-mustalahat = { path = "crates/taarib-mustalahat" }
+taarib-saff = { path = "crates/taarib-saff" }
+taarib-lawha = { path = "crates/taarib-lawha" }
+taarib-jisr = { path = "crates/taarib-jisr" }
+taarib-wasm = { path = "crates/taarib-wasm" }
+taarib-khatm = { path = "crates/taarib-khatm" }
+taarib-makhzan = { path = "crates/taarib-makhzan" }
+taarib-kashf = { path = "crates/taarib-kashf" }
+taarib-muharrik = { path = "crates/taarib-muharrik" }
+taarib-haqn = { path = "crates/taarib-haqn" }
+taarib-muhawwil-unreal = { path = "crates/taarib-muhawwil-unreal" }
+taarib-muhawwil-godot = { path = "crates/taarib-muhawwil-godot" }
+taarib-muhawwil-nusus = { path = "crates/taarib-muhawwil-nusus" }
+taarib-tabaqa = { path = "crates/taarib-tabaqa" }
+taarib-istikhraj = { path = "crates/taarib-istikhraj" }
+taarib-tarjama = { path = "crates/taarib-tarjama" }
+taarib-ruqaa = { path = "crates/taarib-ruqaa" }
+taarib-tarqee = { path = "crates/taarib-tarqee" }
+taarib-tathbeet = { path = "crates/taarib-tathbeet" }
+taarib-aman = { path = "crates/taarib-aman" }
+taarib-mustawda = { path = "crates/taarib-mustawda" }
+taarib-taqdeem = { path = "crates/taarib-taqdeem" }
+taarib-warsha = { path = "crates/taarib-warsha" }
+taarib-mudkhal = { path = "crates/taarib-mudkhal" }
+taarib-tahdith = { path = "crates/taarib-tahdith" }
+taarib-tajmee = { path = "crates/taarib-tajmee" }
+taarib-tilqai = { path = "crates/taarib-tilqai" }
+
+# --- text: shaping, rasterization, Unicode ----------------------------------
+# harfrust and skrifa both require read-fonts ^0.43.2, so Cargo resolves ONE
+# read-fonts for the whole graph. That unification is Decision 3: a glyph id
+# produced by the shaper cannot denote a different glyph in the rasterizer.
+# Never relax either requirement into a different major/minor line.
+harfrust = "0.13.2"
+skrifa = "0.46.2"
+read-fonts = "0.43.2"
+unicode-bidi = "0.3.18"
+# harfrust pins icu_properties to exactly 2.2.0; matching it keeps one copy of
+# the ICU property data in the binary instead of two.
+icu_properties = "=2.2.0"
+# Pinned exactly, not caret: both depend on `icu_collections` and
+# `icu_properties`, and 2.3 requires the 2.3 line of each while harfrust
+# holds icu_properties at exactly 2.2.0. A caret here floats to 2.3 and the
+# graph stops resolving.
+icu_normalizer = "=2.2.0"
+icu_segmenter = "=2.2.0"
+icu_locale_core = "2.0.0"
+
+# --- atlas / imaging --------------------------------------------------------
+etagere = "0.3.0"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
+# The portable recognizer for the overlay tier. Pure Rust with its own inference
+# runtime, so the fallback path needs no system OCR and no native toolchain on a
+# machine that has neither.
+ocrs = "0.12.2"
+
+# --- serialization / schema -------------------------------------------------
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+rmp-serde = "1.3.1"
+schemars = { version = "1.2.2", features = ["preserve_order", "uuid1"] }
+specta = { version = "2.0.0-rc.25", features = ["derive", "uuid", "serde_json"] }
+# Must track the `specta` line above: 0.0.9 pins specta rc.22 and will not
+# resolve beside rc.25.
+specta-typescript = "0.0.12"
+bytemuck = { version = "1.23", features = ["derive", "extern_crate_alloc"] }
+indexmap = { version = "2.11", features = ["serde"] }
+
+# --- foundations ------------------------------------------------------------
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt", "time"] }
+tracing-appender = "0.2"
+uuid = { version = "1.18", features = ["v4", "v5", "v7", "serde"] }
+jiff = { version = "0.2.35", features = ["serde"] }
+parking_lot = "0.12"
+arc-swap = "1.7"
+smallvec = { version = "1.15", features = ["union", "const_generics"] }
+tinyvec = { version = "1.9", features = ["alloc"] }
+rustc-hash = "2.1"
+rayon = "1.11"
+directories = "6.0"
+memmap2 = "0.9.11"
+walkdir = "2.5"
+tempfile = "3.23"
+semver = { version = "1.0", features = ["serde"] }
+url = { version = "2.5", features = ["serde"] }
+percent-encoding = "2.3"
+regex = "1.11"
+unicode-width = "0.2"
+
+# --- async / process --------------------------------------------------------
+tokio = { version = "1.47", features = ["rt-multi-thread", "macros", "fs", "io-util", "net", "process", "sync", "time", "signal"] }
+tokio-util = { version = "0.7", features = ["codec", "io"] }
+futures = "0.3"
+async-trait = "0.1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "http2", "gzip", "brotli"] }
+governor = "0.10.4"
+sysinfo = "0.39.6"
+notify = "8.2.0"
+notify-debouncer-full = "0.6"
+
+# --- crypto / integrity / compression ---------------------------------------
+blake3 = { version = "1.8", features = ["rayon", "mmap"] }
+sha2 = "0.10"
+# The one native dialog in the product: the uninstaller's confirmation, shown
+# when the Studio's own window cannot be — `xdg-desktop-portal` where there is
+# one, the platform's own dialog otherwise. No file-picker features: every path
+# the interface takes comes from a scan, never from a chooser.
+rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal", "pollster"] }
+ed25519-dalek = { version = "2.2", features = ["rand_core", "pkcs8", "serde"] }
+rand = "0.9"
+zstd = "0.13"
+flate2 = "1.1"
+# UnityFS block compression. Every bundle a game shipped this decade uses LZ4 or
+# LZ4HC for its blocks, and both decode with the same raw-block decoder. Pure
+# Rust with no build script, which matters because this workspace builds for
+# Windows, macOS and Linux and injects into foreign game processes on all three.
+# LZMA — the pre-2015 default — is deliberately NOT added: the only decoders for
+# Unity's `lzma_alone` framing are a C binding or a crate carrying its own range
+# coder, and `crates/taarib-istikhraj` refuses those bundles by name instead.
+lz4_flex = { version = "0.11.5", default-features = false, features = [
+    "std",
+    "safe-encode",
+    "safe-decode",
+    "checked-decode",
+] }
+aes = "0.8"
+cbc = "0.1"
+base64 = "0.22"
+hex = "0.4"
+# The platform secret stores, which is where every user-supplied credential
+# lives — never in a project, never in a config file, never in a log.
+#
+# `v1` is keyring 4's own name for the bundle that carries the Apple, Windows
+# and Linux stores, and it is what `default` resolves to. The three feature
+# names this line carried before — `apple-native`, `windows-native`,
+# `sync-secret-service` — are keyring **3.x** names and do not exist in 4.1.6,
+# so the manifest would have failed to resolve the first time anything actually
+# depended on the crate. Found while wiring Phase 13's credential storage.
+keyring = { version = "4.1.6", features = ["v1"] }
+
+# --- storage ----------------------------------------------------------------
+rusqlite = { version = "0.40.2", features = ["bundled", "backup", "blob", "functions", "limits", "serde_json", "uuid"] }
+r2d2 = "0.8"
+# Must match the `rusqlite` line above: 0.32 wants rusqlite ^0.38, and two
+# `libsqlite3-sys` in one graph is a duplicate `links = "sqlite3"`.
+r2d2_sqlite = "0.35"
+
+# --- binary / container parsing ---------------------------------------------
+object = { version = "0.40.0", default-features = false, features = ["read", "std", "pe", "elf", "macho"] }
+quick-xml = { version = "0.42.0", features = ["serialize"] }
+# RFC 4180 with the quirks real exports actually carry: quoted fields holding
+# embedded newlines and doubled quotes, a declared delimiter that is not always
+# a comma, and rows of unequal width. Hand-splitting on `,` reads the first
+# newline inside a quoted dialogue line as a record boundary and silently turns
+# one translated sentence into two half-rows, which is a corruption that looks
+# like a successful import. This crate is the reference reader for that grammar
+# and is used by `taarib-tarqee`'s importers.
+csv = "1.3"
+prost = "0.14.4"
+zip = { version = "8.6.0", default-features = false, features = ["deflate", "zstd", "bzip2"] }
+tar = "0.4"
+
+# --- registry / git ---------------------------------------------------------
+git2 = { version = "0.21.0", default-features = false, features = ["https", "vendored-libgit2", "vendored-openssl"] }
+
+# --- native ABI / injection / graphics --------------------------------------
+cbindgen = "0.29.4"
+libc = "0.2"
+# `RawDetour` only. The `static-detour` feature needs a nightly compiler
+# (`#![feature(..)]` in the crate root) and generates stdcall/fastcall
+# thunks that do not build for a 64-bit target at all; nothing in this
+# workspace ever used it.
+retour = "0.3.1"
+ash = "0.38"
+
+# The tensor runtime ocrs loads its detection and recognition models with.
+# Pinned to 0.24 because that is what ocrs 0.12 requires: rten 0.25 is released
+# and is a semver-incompatible 0.x bump, so taking the newer one would put two
+# rten versions in the graph and `OcrEngine::new` would refuse a `Model` built
+# by the other. This is the one place in this workspace where "use the latest"
+# is the wrong instruction, and it is pinned here rather than per crate so
+# nobody bumps it in isolation.
+rten = "0.24"
+
+# GLSL to SPIR-V, in Rust, for the Vulkan overlay's two shader stages.
+#
+# Vulkan is the one API in this product with no OS-provided shader compiler:
+# Direct3D resolves `D3DCompile` out of `d3dcompiler_47.dll` at runtime and
+# OpenGL compiles GLSL in the driver, but a Vulkan device takes SPIR-V words and
+# nothing in the loader will produce them. The alternatives were hand-assembling
+# SPIR-V, which is unreviewable, or making the caller supply it, which would
+# leave this crate unable to draw on its own. Neither is acceptable, so the
+# compiler is a dependency.
+#
+# `naga` over `shaderc` because `shaderc` builds a vendored C++ toolchain and
+# this workspace has no other reason to require one.
+# 30.0.1 does not compile: `src/front/interpolator.rs` writes
+# `impl crate::Binding` for a type it re-exports from `naga-types`, so
+# `apply_default_interpolation` is not found by its own GLSL and SPIR-V
+# front ends. 29.0.4 is the last release that builds.
+naga = { version = "29.0.4", features = ["glsl-in", "spv-out"] }
+
+# Vision and Core Graphics on macOS, for the platform-native recognizer.
+objc2 = "0.6.4"
+objc2-foundation = "0.3.2"
+objc2-vision = "0.3.2"
+wasm-bindgen = "0.2.127"
+js-sys = "0.3"
+web-sys = "0.3"
+console_error_panic_hook = "0.1"
+
+# The WinRT async types. `windows` takes this as a dependency and returns its
+# `IAsyncOperation` from `RecognizeAsync`, but re-exports only `windows-core`,
+# so a caller that has to wait on one names the crate itself. Pinned to the
+# exact version `windows` depends on: two copies in the graph would make the
+# operation the OCR engine returns a different type from the one waited on.
+[workspace.dependencies.windows-future]
+version = "=0.3.2"
+
+[workspace.dependencies.windows]
+version = "0.62.2"
+features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Direct3D12",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_OpenGL",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Console",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Registry",
+    "Win32_System_Services",
+    "Win32_System_SystemInformation",
+    "Win32_System_SystemServices",
+    "Win32_System_Threading",
+    "Win32_System_WinRT",
+    "Win32_System_WindowsProgramming",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+    "Graphics_Imaging",
+    "Media_Ocr",
+    "Storage_Streams",
+    "Globalization",
+]
+
+[workspace.dependencies.tauri]
+version = "2.11.5"
+# `devtools` is deliberately absent. Cargo features are not profile-scoped, so
+# enabling it here would compile the inspector — and make the capability's
+# `core:webview:allow-internal-toggle-devtools` grant live — in release builds
+# too, handing anyone who opens a shipped window the whole IPC surface. Tauri
+# already enables devtools under `debug_assertions`, which is exactly and only
+# where they are wanted.
+features = ["tray-icon", "image-png", "protocol-asset"]
+
+[workspace.dependencies.tauri-build]
+version = "2.4"
+
+# Registering `.ruqaa` as a file type means the operating system will launch
+# this executable again while it is already running. Without this, a second
+# process opens a second window over the same SQLite store; with it, the
+# second launch hands its arguments to the first and exits.
+[workspace.dependencies.tauri-plugin-single-instance]
+version = "2.4.4"
+
+[workspace.dependencies.tauri-specta]
+version = "2.0.0-rc.25"
+features = ["derive", "typescript"]
+
+# --- lints ------------------------------------------------------------------
+# Denied everywhere. A crate that needs an exception writes an #[allow] with a
+# comment naming the invariant that makes it safe, at the narrowest possible
+# scope. Blanket allows at crate level are not permitted.
+[workspace.lints.rust]
+missing_docs = "deny"
+missing_debug_implementations = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+unreachable_pub = "deny"
+unused_qualifications = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+indexing_slicing = "deny"
+integer_division = "deny"
+float_cmp = "deny"
+mem_forget = "deny"
+exit = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+undocumented_unsafe_blocks = "deny"
+missing_safety_doc = "deny"
+missing_panics_doc = "deny"
+missing_errors_doc = "deny"
+allow_attributes_without_reason = "deny"
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cast_sign_loss = "deny"
+cast_precision_loss = "warn"
+# Rejected from pedantic/nursery with reasons:
+module_name_repetitions = "allow"  # domain names repeat by design (SaffKhata, RuqaaId)
+similar_names = "allow"            # transliterated Arabic names are legitimately similar
+too_many_lines = "allow"           # binary format readers are long and linear on purpose
+multiple_crate_versions = "allow"  # resolved centrally in this file, not per crate
+option_if_let_else = "allow"       # rewrites hurt readability more than they help
+# The last one needs more than a line. Its fix is a `drop(guard)` placed from
+# the guard's own last use, which ignores whatever was re-borrowed out of it, so
+# on half the sites here the suggested code does not compile: on
+# `taarib_jisr::hayat::maa_siyaq` it drops the registry guard while the
+# `&mut Siyaq` taken from it is still live, and in `taarib-tabaqa`'s frame sink
+# it puts the `drop` inside a loop body. Where it does compile — two Studio
+# command handlers — it buys a manual `drop` before a tail expression and
+# nothing else. Tightening that is worth doing is written as an explicit inner
+# scope instead, the way `hayat::ihdhif_siyaq` lifts a context out under the
+# lock and tears it down after.
+significant_drop_tightening = "allow"
+
+# ---------------------------------------------------------------------------
+# Profiles
+# ---------------------------------------------------------------------------
+[profile.dev]
+opt-level = 1
+debug = true
+
+# Font parsing, shaping and rasterization are unusably slow at opt-level 0 even
+# in a debug session, so the text stack is always optimized.
+[profile.dev.package.harfrust]
+opt-level = 3
+[profile.dev.package.skrifa]
+opt-level = 3
+[profile.dev.package.read-fonts]
+opt-level = 3
+[profile.dev.package.zstd-sys]
+opt-level = 3
+[profile.dev.package.blake3]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"
+# unwind, not abort: every library in this workspace can end up loaded inside
+# somebody else's game process, where a panic must be caught at the ABI edge
+# and reported. `panic = "abort"` would terminate the player's game instead.
+panic = "unwind"
+
+[profile.dist]
+inherits = "release"
+strip = "symbols"
+debug = false
+
+# Injected libraries are built small: they live in a foreign process and every
+# page they touch is a page the game does not get.
+[profile.haqn]
+inherits = "release"
+opt-level = "s"
+panic = "unwind"
+
+# ---------------------------------------------------------------------------
+# `retour` as published does not compile for any 64-bit target on a current
+# compiler: it emits `extern "stdcall"`/`"fastcall"`/`"thiscall"` impls
+# unconditionally, and an unsupported ABI is now a hard error (E0570). The
+# vendored copy gates those three lines to `target_arch = "x86"` and changes
+# nothing else. See vendor/retour/TAARIB.md.
+# ---------------------------------------------------------------------------
+[patch.crates-io]
+retour = { path = "vendor/retour" }

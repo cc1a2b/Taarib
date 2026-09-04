@@ -1,0 +1,81 @@
+[package]
+name = "taarib-usus"
+description = "أسس تعريب — the foundations every other Taarib crate is built on: the error model, diagnostics, configuration, the on-disk layout, schema versioning, and the platform model."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[features]
+# The core — khata and mukhattat — has no filesystem, no clock, no threads, and
+# compiles to wasm32. taarib-saff depends on exactly this and nothing more.
+default = ["nizam"]
+
+# Everything that touches the machine: paths, settings, logging, platform.
+nizam = [
+    "dep:directories",
+    "dep:tracing-subscriber",
+    "dep:tracing-appender",
+    "dep:sysinfo",
+    "dep:jiff",
+    "dep:tempfile",
+]
+
+# The shared XML entity resolver, for the crates that read XML.
+kayanat = ["dep:quick-xml"]
+
+# Derives specta::Type so these types cross into the Studio frontend.
+wajiha = ["dep:specta", "dep:specta-typescript"]
+
+# Derives schemars::JsonSchema so these types generate the files in schemas/.
+mukhattatat = ["dep:schemars"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+arc-swap = { workspace = true }
+rustc-hash = { workspace = true }
+
+quick-xml = { workspace = true, optional = true }
+specta = { workspace = true, optional = true }
+specta-typescript = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
+
+# The six `nizam` crates, target-gated to match the module gates in `lib.rs`.
+#
+# `nizam` is this crate's default, and cargo unifies features across everything
+# one build touches: `taarib-wasm` reaches `taarib-usus` directly and again
+# through `taarib-saff` and `taarib-lawha`, and all three inherit the workspace
+# dependency, so any one of them turning the default on turns it on for the
+# wasm build too. A member cannot switch a workspace-inherited default off, and
+# doing it at the root would make the twenty crates that do want `nizam` each
+# opt back in — including four the packaging work is not allowed to touch.
+#
+# Gating here instead costs nothing anywhere else: on every target Taarib
+# actually ships a `nizam` artifact for, `cfg(not(target_family = "wasm"))`
+# holds and these are ordinary optional dependencies. On wasm32 they are absent,
+# which is what lets `tracing-appender` — whose `symlink_file` does not exist
+# there — stay out of a graph that never wanted it. Found when row H1 of
+# docs/tawzee.md §3 was built for the first time.
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+directories = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+tracing-appender = { workspace = true, optional = true }
+sysinfo = { workspace = true, optional = true }
+jiff = { workspace = true, optional = true }
+tempfile = { workspace = true, optional = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }

@@ -1,0 +1,55 @@
+[package]
+name = "taarib-tilqai"
+description = "تلقائي تعريب — the automatic arabization pipeline: one call takes an installed game from an engine probe to an installed, signed, reversible Arabic patch, reporting real progress, resuming where it stopped and cancelling without touching the game."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+# Stage 1: the probe, the resolution and the capability report.
+taarib-muharrik = { workspace = true }
+# Stage 2: static extraction, the refusal report, and the runtime-capture merge
+# that is where a type-tree-stripped game is routed.
+taarib-istikhraj = { workspace = true }
+# Stage 3: the provider trait, the placeholder guard and the batch runner whose
+# journal is what makes a paid translation resumable.
+taarib-tarjama = { workspace = true }
+# Stage 4: the font validator and the shaping chain the layouts are made
+# against. The layouts themselves are precomputed inside the compiler.
+taarib-saff = { workspace = true }
+# Stage 5: the compiler, the hard checks, the size discovery, the coverage and
+# overflow reports, and the build binding.
+taarib-tarqee = { workspace = true }
+# Reading the compiled package back and writing the signature block into it.
+taarib-ruqaa = { workspace = true }
+# Stage 6: the signing key and the Ed25519 verifier.
+taarib-khatm = { workspace = true }
+# Stage 7a: the install permit. This crate never mints one itself.
+taarib-aman = { workspace = true }
+# Stage 7b: the transactional install, its manifest, and the restore that makes
+# a cancel after the point of no return still reversible.
+taarib-tathbeet = { workspace = true }
+# `taarib-makhzan` is deliberately NOT a dependency. A run's checkpoint has to
+# be readable on a machine whose database has never been opened, has to travel
+# with the run directory when it is copied, and has to be enumerable — none of
+# which the store offers without a schema migration this crate does not own.
+# The journal lives in the run directory, exactly as
+# `taarib_tarjama::dufaat::SijillJawla` argues for. See `mashwar`.
+
+blake3 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+walkdir = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

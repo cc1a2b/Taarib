@@ -1,0 +1,150 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Taarib",
+  "mainBinaryName": "taarib-studio",
+  "version": "1.0.0",
+  "identifier": "com.cc1a2b.taarib",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "beforeBundleCommand": "node src-tauri/tadqiq_mawarid.mjs",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "تعريب",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1024,
+        "minHeight": 680,
+        "resizable": true,
+        "maximizable": true,
+        "minimizable": true,
+        "closable": true,
+        "center": true,
+        "decorations": true,
+        "theme": "Dark",
+        "visible": true,
+        "focus": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; media-src 'self' asset: http://asset.localhost; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'; worker-src 'self' blob:",
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420 http://localhost:1420; media-src 'self' asset: http://asset.localhost; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'; worker-src 'self' blob:",
+      "assetProtocol": {
+        "enable": true,
+        "scope": []
+      },
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "deb",
+      "appimage",
+      "nsis",
+      "app",
+      "dmg"
+    ],
+    "category": "Utility",
+    "shortDescription": "تعريب الألعاب: اكتشاف، ترجمة، معاينة، وتثبيت.",
+    "longDescription": "تعريب يفحص الألعاب المثبَّتة على الجهاز، ويتعرّف على محرّكاتها، ويستخرج نصوصها، ويترجمها إلى العربية بتشكيل واتجاه صحيحين، ثم يبني رقعة موقَّعة يمكن تثبيتها والتراجع عنها بأمان.",
+    "copyright": "Copyright (c) cc1a2b",
+    "license": "MPL-2.0",
+    "publisher": "cc1a2b",
+    "homepage": "https://github.com/cc1a2b/taarib",
+    "icon": [
+      "ayqunat/32x32.png",
+      "ayqunat/128x128.png",
+      "ayqunat/128x128@2x.png",
+      "ayqunat/icon.png",
+      "ayqunat/icon.icns",
+      "ayqunat/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "ruqaa"
+        ],
+        "name": "Taarib.Ruqaa",
+        "description": "رقعة تعريب — Taarib translation patch",
+        "mimeType": "application/vnd.taarib.ruqaa",
+        "role": "Editor",
+        "rank": "Owner",
+        "exportedType": {
+          "identifier": "com.cc1a2b.taarib.ruqaa",
+          "conformsTo": [
+            "public.data"
+          ]
+        }
+      }
+    ],
+    "resources": [
+      "mawarid"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "template": "nsis/qalab.nsi",
+        "installMode": "currentUser",
+        "languages": [
+          "Arabic",
+          "English"
+        ]
+      }
+    },
+    "linux": {
+      "appimage": {
+        "files": {
+          "usr/share/applications/Taarib.desktop": "linux/taarib.desktop",
+          "usr/share/mime/packages/application-vnd.taarib.ruqaa.xml": "linux/application-vnd.taarib.ruqaa.xml",
+          "usr/share/icons/hicolor/scalable/mimetypes/application-vnd.taarib.ruqaa.svg": "ayqunat/ruqaa/taarib-ruqaa.svg",
+          "usr/share/icons/hicolor/16x16/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/16x16.png",
+          "usr/share/icons/hicolor/24x24/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/24x24.png",
+          "usr/share/icons/hicolor/32x32/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/32x32.png",
+          "usr/share/icons/hicolor/48x48/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/48x48.png",
+          "usr/share/icons/hicolor/64x64/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/64x64.png",
+          "usr/share/icons/hicolor/128x128/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/128x128.png",
+          "usr/share/icons/hicolor/256x256/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/256x256.png"
+        }
+      },
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libgles2",
+          "shared-mime-info",
+          "desktop-file-utils",
+          "hicolor-icon-theme"
+        ],
+        "recommends": [
+          "gnome-keyring | libsecret-1-0"
+        ],
+        "files": {
+          "/usr/share/applications/Taarib.desktop": "linux/taarib.desktop",
+          "/usr/share/mime/packages/application-vnd.taarib.ruqaa.xml": "linux/application-vnd.taarib.ruqaa.xml",
+          "/usr/share/icons/hicolor/scalable/mimetypes/application-vnd.taarib.ruqaa.svg": "ayqunat/ruqaa/taarib-ruqaa.svg",
+          "/usr/share/icons/hicolor/16x16/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/16x16.png",
+          "/usr/share/icons/hicolor/24x24/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/24x24.png",
+          "/usr/share/icons/hicolor/32x32/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/32x32.png",
+          "/usr/share/icons/hicolor/48x48/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/48x48.png",
+          "/usr/share/icons/hicolor/64x64/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/64x64.png",
+          "/usr/share/icons/hicolor/128x128/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/128x128.png",
+          "/usr/share/icons/hicolor/256x256/mimetypes/application-vnd.taarib.ruqaa.png": "ayqunat/ruqaa/256x256.png"
+        }
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "entitlements": "macos/taarib.entitlements"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+[package]
+name = "taarib-muhawwil-godot"
+description = "محوّل تعريب لمحرّك غودو — the Godot adapter: the Godot 4 text-server path, the Godot 3 full takeover, and PCK read and write for both package formats."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[features]
+# The in-process bootstrap and its `taarib_bidaya` export, compiled only for
+# the cdylib a game loads. Off by default and enabled by no manifest: three
+# payloads export the same symbol, and `taarib-studio` links all three as
+# rlibs, so an always-on export is a duplicate-symbol link failure on the
+# desktop binary. The payload build passes `--features hamula` explicitly, and
+# `taarib-tajmee` refuses to stage a payload whose symbol is absent — so
+# forgetting the flag fails on the build machine rather than shipping a module
+# that loads and returns.
+hamula = []
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-jisr = { workspace = true }
+taarib-haqn = { workspace = true }
+# The bootstrap opens the installed patch beside itself.
+taarib-ruqaa = { workspace = true }
+
+# The takeover lives in a static the terminate entry empties;
+# clippy.toml disallows std::sync::Mutex.
+parking_lot = { workspace = true }
+# The glyph-identifier transport, `naql`, lives beside the atlas: GameMaker needs
+# the same capability and one adapter cannot depend on another. This crate
+# re-exports it at its original path.
+taarib-lawha = { workspace = true }
+# For the PCK header reader and the Godot 3-vs-4 generation split, which Phase 5
+# already established and which must not be written twice: two answers to "is
+# this Godot 3" would eventually disagree, and the whole strategy branches on it.
+taarib-muharrik = { workspace = true }
+
+retour = { workspace = true }
+# Godot encrypts a package with AES-256 in CBC mode. The framing lives in
+# pck::hawiya; these two are what turn its parsed frame into plaintext.
+aes = { workspace = true }
+cbc = { workspace = true }
+zstd = { workspace = true }
+flate2 = { workspace = true }
+memmap2 = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

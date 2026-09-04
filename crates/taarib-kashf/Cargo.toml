@@ -1,0 +1,64 @@
+[package]
+name = "taarib-kashf"
+description = "كشف تعريب — game discovery across every launcher on every platform, with Proton and Wine prefix resolution, artwork, and incremental refresh."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true, features = ["kayanat"] }
+taarib-mustalahat = { workspace = true }
+
+# Content-addressing for the artwork cache, and the stable identity of a
+# manually added game, which is the hash of its canonical executable path.
+blake3 = { workspace = true }
+# A Microsoft Store package family name is the package name plus a publisher id,
+# and that id is derived from the publisher's distinguished name with SHA-256.
+# Without it, an Xbox game on a secondary drive cannot be matched to a patch
+# published against its family name.
+sha2 = { workspace = true }
+# Reading a game's own executable for its icon: the PE section table, the
+# Mach-O load commands, and the ELF header that tells us honestly that an ELF
+# carries no icon at all. Parsing only — the resource tree inside `.rsrc` is
+# walked by hand in `ayquna`, because `object` exposes sections and not the
+# resource directory those icons live in.
+object = { workspace = true }
+# Launchers report times as unix seconds; the vocabulary records RFC 3339,
+# because a timestamp a human may read during a support conversation is
+# worth more than the eight bytes.
+jiff = { workspace = true }
+# The in-memory official-language cache is shared across a scan's threads, and
+# `clippy.toml` bans `std::sync::Mutex` workspace-wide: a poisoned lock in a
+# cache would mean either an `unwrap` at every read or a cache that silently
+# stops answering after any unrelated panic.
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+quick-xml = { workspace = true }
+prost = { workspace = true }
+rusqlite = { workspace = true }
+reqwest = { workspace = true }
+image = { workspace = true }
+walkdir = { workspace = true }
+notify = { workspace = true }
+notify-debouncer-full = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true }
+
+[dev-dependencies]
+# The Steam adapter is a filesystem reader: the only way to test that it finds
+# both a native and a Flatpak root, and that the `~/.steam/steam` symlink does
+# not double-count, is to build the two layouts on disk and point a home
+# directory at them.
+tempfile = { workspace = true }

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/tabaqa.json",
+  "title": "Tabaqa",
+  "description": "Which injection tier applies to a game.",
+  "oneOf": [
+    {
+      "type": "string",
+      "const": "kamil",
+      "description": "Text is replaced inside the game and looks native."
+    },
+    {
+      "type": "string",
+      "const": "rasm_mubashir",
+      "description": "Taarib draws the text itself over the engine's own text objects."
+    },
+    {
+      "type": "string",
+      "const": "tarjama_fawqiya",
+      "description": "The game is not modified; Arabic is shown over it. A reading aid, and described as one everywhere it appears."
+    }
+  ]
+}

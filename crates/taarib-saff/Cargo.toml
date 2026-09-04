@@ -1,0 +1,46 @@
+[package]
+name = "taarib-saff"
+description = "صف تعريب — the Arabic text engine: markup, direction, segmentation, shaping, measurement, kashida justification, diacritics and rasterization, standing entirely alone."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[features]
+default = []
+# Serializes the layout *decisions* — direction, language, justification mode,
+# diacritic and digit policy — so a patch can record exactly how it was laid out
+# and be re-laid-out identically years later. The layout *results* are never
+# serialized through serde: they go into the patch container as fixed-layout
+# records that C#, JavaScript, Python and Ruby read by struct overlay.
+hifz = ["dep:serde"]
+
+[dependencies]
+# khata and mukhattat only. The `nizam` feature pulls in directories, sysinfo,
+# tempfile and a logging sink — none of which exist on wasm32-unknown-unknown,
+# and none of which this crate is permitted to touch in the first place.
+# `default-features` cannot be overridden on a workspace-inherited
+# dependency unless the root sets it too, and taarib-usus has no default
+# features to switch off — the `wajiha`/`mukhattatat` features are opt-in.
+taarib-usus = { workspace = true }
+
+harfrust = { workspace = true }
+skrifa = { workspace = true }
+read-fonts = { workspace = true }
+unicode-bidi = { workspace = true }
+icu_properties = { workspace = true }
+icu_normalizer = { workspace = true }
+icu_segmenter = { workspace = true }
+icu_locale_core = { workspace = true }
+
+smallvec = { workspace = true }
+tinyvec = { workspace = true }
+rustc-hash = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, optional = true }

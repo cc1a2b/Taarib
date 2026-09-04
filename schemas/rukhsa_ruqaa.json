@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/rukhsa_ruqaa.json",
+  "title": "RukhsaRuqaa",
+  "description": "The licence a contributor publishes their translation under.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "naw": {
+          "type": "string",
+          "const": "cc0"
+        }
+      },
+      "required": [
+        "naw"
+      ],
+      "description": "Public domain dedication."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "naw": {
+          "type": "string",
+          "const": "cc_by"
+        }
+      },
+      "required": [
+        "naw"
+      ],
+      "description": "Attribution."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "naw": {
+          "type": "string",
+          "const": "cc_by_sa"
+        }
+      },
+      "required": [
+        "naw"
+      ],
+      "description": "Attribution, share alike."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "naw": {
+          "type": "string",
+          "const": "milkiya_khassa"
+        }
+      },
+      "required": [
+        "naw"
+      ],
+      "description": "All rights reserved by the contributor; redistribution outside Taarib is not granted."
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ism": {
+          "type": "string",
+          "description": "The licence identifier or name."
+        },
+        "naw": {
+          "type": "string",
+          "const": "ukhra"
+        }
+      },
+      "required": [
+        "naw",
+        "ism"
+      ],
+      "description": "Something else, named by the contributor."
+    }
+  ]
+}

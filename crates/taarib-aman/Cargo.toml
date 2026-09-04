@@ -1,0 +1,42 @@
+[package]
+name = "taarib-aman"
+description = "أمان تعريب — the safety layer: anti-cheat detection with outright refusal, multiplayer warnings, signature verification with no override, quarantined unpacking, and the revocation check."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-ruqaa = { workspace = true }
+taarib-kashf = { workspace = true }
+taarib-khatm = { workspace = true }
+
+object = { workspace = true }
+walkdir = { workspace = true }
+zstd = { workspace = true }
+sysinfo = { workspace = true }
+hex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+jiff = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true }
+
+[dev-dependencies]
+# The gate's hardest case is a Steam root that is not there, and the only
+# honest way to build one is on a real filesystem: a directory that exists
+# beside a path that does not, so that "the catalogue said nothing" and "the
+# catalogue could not be opened" are produced by the same code that will meet
+# them on a user's machine.
+tempfile = { workspace = true }

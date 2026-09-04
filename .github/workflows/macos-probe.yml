@@ -1,0 +1,107 @@
+# macOS is NOT a supported platform and this workflow is NOT a gate.
+#
+# It never runs on a push, a pull request or a schedule. It runs only when
+# somebody presses "Run workflow", and even then it is marked
+# `continue-on-error`, so it cannot turn a commit red and cannot be picked up
+# as a required status check.
+#
+# Why it exists at all: of the twenty-nine members of this workspace, seven
+# currently compile for Apple targets. The other twenty-two fail, and every one
+# of those failures is in a third-party C build script — not in code this
+# project wrote. That set is worth being able to re-measure on demand, because
+# the day it shrinks to zero is the day macOS becomes a real matrix leg in
+# `ci.yml`. Putting macOS in `ci.yml` today would mean a permanently red check,
+# and a check that is always red is a check nobody reads.
+#
+# `--keep-going` is what makes the run useful: without it cargo stops at the
+# first failing crate and the report is one line long instead of a list.
+
+name: macOS probe (not a gate)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # Same pin as ci.yml; see the comment there.
+  RUSTUP_TOOLCHAIN: "1.95.0"
+
+jobs:
+  istitla:
+    name: cargo check on Apple silicon — expected to fail
+    runs-on: macos-26
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/studio/pnpm-lock.yaml
+
+      # `taarib-studio` will not compile without `apps/studio/dist`; see the
+      # header of ci.yml. This job builds the interface itself rather than
+      # taking an artifact, because it is dispatched on its own and has no
+      # upstream job to take one from.
+      - name: Build the interface
+        working-directory: apps/studio
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec vite build
+
+      - uses: dtolnay/rust-toolchain@1.95.0
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          save-if: false
+
+      - name: cargo check --keep-going
+        run: |
+          set -o pipefail
+          cargo check --workspace --all-targets --keep-going \
+            --message-format=short 2>&1 | tee /tmp/fahs-apple.log
+
+      # Runs whether the check passed or failed — the failing set is the whole
+      # point of the run. The missing-log branch matters: if the interface build
+      # above failed, this step still runs, and reporting "none failed" from an
+      # absent log would be a lie in the direction that gets macOS promoted.
+      - name: Summarise which crates failed
+        if: always()
+        run: |
+          set -uo pipefail
+          {
+            echo "## macOS probe"
+            echo
+            echo "Toolchain ${RUSTUP_TOOLCHAIN} on $(uname -m), runner image macos-26."
+            echo
+            if [ ! -f /tmp/fahs-apple.log ]; then
+              echo "The check never ran — an earlier step failed. Nothing measured."
+            else
+              rafd=$(grep -oE 'could not compile [^ ]+' /tmp/fahs-apple.log \
+                | sed -E 's/could not compile //; s/[^A-Za-z0-9_.+-]//g' \
+                | sort -u)
+              echo "### Members that could not be compiled"
+              echo
+              if [ -z "$rafd" ]; then
+                echo "None. Every member compiled — macOS may be ready to become a"
+                echo "real matrix leg in ci.yml. Confirm by hand before promoting it."
+              else
+                echo "$rafd" | sed -E 's/^/- /'
+                echo
+                echo "$(echo "$rafd" | wc -l | tr -d ' ') failed."
+              fi
+            fi
+            echo
+            echo "This job is advisory. macOS is not a supported platform."
+          } >> "$GITHUB_STEP_SUMMARY"

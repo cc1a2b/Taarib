@@ -1,0 +1,26 @@
+[package]
+name = "taarib-tahdith"
+description = "تحديث تعريب — application self-update: a signed channel manifest verified by the same anchor as patches, resumable verified downloads, and a swap that leaves the previous version launchable if it is interrupted."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-khatm = { workspace = true }
+
+hex = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+sysinfo = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }

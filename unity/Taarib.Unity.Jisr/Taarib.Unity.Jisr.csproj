@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Taarib.Unity.Jisr — جسر, the bridge.
+
+    The managed side of the C ABI that crates/taarib-jisr exports and
+    crates/taarib-jisr/include/taarib.h describes. It contains:
+
+      - one DllImport declaration per taarib_* entry point, and nothing in this
+        solution declares a second one;
+      - a SafeHandle subclass per opaque handle (MaqbadSiyaq, MaqbadKhatt,
+        MaqbadSilsila, MaqbadLawha — the four kinds the ABI defines; a layout
+        is not a handle, it is written into the caller's own buffer), so a
+        handle that outlives its owner is a
+        managed error rather than a use-after-free in native code;
+      - the blittable request, glyph and status structs, laid out field for
+        field against the generated header;
+      - Span<T> buffer ownership for taarib_takhtit, which writes into a
+        caller-owned buffer and allocates nothing, and which reports the
+        capacity it needs instead of growing anything itself;
+      - the loader: it picks the shared library matching the process
+        architecture out of the installed patch directory, calls
+        taarib_abi_isdar, and refuses to continue on a major mismatch with a
+        sentence the user can read in the BepInEx log;
+      - translation of the int32 status codes into Khata values carrying the
+        stable machine code, so a failure in the game reads the same as the
+        same failure in Studio.
+
+    It references no Unity type, holds no state beyond the loaded library and
+    its handles, and makes no rendering decision.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Taarib.Unity.Jisr</AssemblyName>
+    <RootNamespace>Taarib.Unity.Jisr</RootNamespace>
+    <Description>P/Invoke surface over the Taarib C ABI: safe handles, blittable layout structs, span-based buffer reuse, and the architecture-aware loader.</Description>
+  </PropertyGroup>
+
+</Project>

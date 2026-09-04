@@ -1,0 +1,42 @@
+[package]
+name = "taarib-muhawwil-nusus"
+description = "محوّل تعريب لمحرّكات النصوص — the script-engine patchers: RPG Maker MV/MZ and VX Ace, Ren'Py, GameMaker and Electron, patched as data rather than injected into."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+taarib-saff = { workspace = true }
+taarib-lawha = { workspace = true }
+# The tier probe branches on the engine and version Phase 5 already established,
+# including the Ren'Py shaping threshold. Re-deriving any of that here would be a
+# second answer to a question that already has one.
+taarib-muharrik = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+# Fingerprints for the reversibility contract: a restore is verified against a
+# recorded hash rather than assumed.
+blake3 = { workspace = true }
+# Deflate, and only deflate. `Scripts.rvdata2` is zlib-wrapped inside its
+# Marshal string and `.rpa` members are raw deflate; nothing these five engines
+# ship is zstd, so zstd is deliberately absent rather than declared and unused.
+flate2 = { workspace = true }
+walkdir = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+# The round-trip proofs build a real container of each format in a real
+# directory, patch it through the guard the product uses, and read it back with
+# this crate's own reader. Nothing is mocked, so both of these are needed.
+tempfile = { workspace = true }
+serde_json = { workspace = true }

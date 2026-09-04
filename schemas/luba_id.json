@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/luba_id.json",
+  "title": "LubaId",
+  "description": "Taarib's own stable identity for a game.",
+  "type": "string",
+  "format": "uuid"
+}

@@ -1,0 +1,66 @@
+/* The page shown when a screen throws while rendering.
+
+   Styled in the base vocabulary rather than a screen's, because the screen it
+   replaces is the one that failed — anything scoped to that screen is exactly
+   what cannot be relied on here. */
+
+.hajiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+  align-items: start;
+  max-inline-size: 72ch;
+  margin: var(--misafa-40) auto;
+  padding: var(--misafa-24);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--khatar);
+  border-radius: var(--nisf-lawha);
+}
+
+.hajiz__unwan {
+  font-size: var(--qiyas-5);
+  line-height: var(--irtifa-5);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.hajiz__sharh {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* The message is the one piece a user can copy into a report, so it is
+   selectable, left-to-right, and monospaced — it is a machine's sentence, not
+   the product's. */
+.hajiz__tafsil {
+  inline-size: 100%;
+  padding: var(--misafa-12);
+  font-family: var(--khatt-uhadi);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+  direction: ltr;
+  text-align: start;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.hajiz__rujoo {
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-12);
+  font-size: var(--qiyas-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--tamyeez);
+  background-color: var(--sath-3);
+  border: var(--samk-hadd) solid var(--tamyeez);
+  border-radius: var(--nisf-tahakkum);
+  text-decoration: none;
+}

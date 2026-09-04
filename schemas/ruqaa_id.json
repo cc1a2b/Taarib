@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cc1a2b/taarib/main/schemas/ruqaa_id.json",
+  "title": "RuqaaId",
+  "description": "A patch lineage, stable across every revision of the same work.",
+  "type": "string",
+  "format": "uuid"
+}
