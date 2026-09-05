@@ -388,6 +388,39 @@
   border-inline-start: var(--samk-hadd-barz) solid var(--tanbeeh);
 }
 
+/* --- the multiplayer acknowledgement --------------------------------------
+   It takes the band's *slot* — directly under the anchor, above everything the
+   verdict says — because that is the only place a condition on the anchor's own
+   button can be read before the button is pressed. It does not take the band's
+   chrome: the acknowledgement carries its own frame, its own surface and its own
+   leading rule, and wrapping that in a second panel would draw two borders and
+   two leading rules around one question.
+
+   So this is a positioning wrapper. It exists at all because the block has a
+   silent status line beside it, announcing a refused press to a reader who
+   cannot see a panel appear. */
+.tilqai__iqrar-shabaka {
+  display: grid;
+  gap: var(--misafa-12);
+}
+
+/* A machine's own findings under the product's statement of them: the evidence
+   list an anti-cheat scan produced, or the path a catalogue read failed on.
+   Marked as quoted material by a rule rather than by a status hue — evidence in
+   red would read as the interface's opinion of it rather than as the fact the
+   opinion is about — and its newlines are kept, because the backend writes one
+   finding per line and collapsing them runs an evidence list into a paragraph. */
+.tilqai__daleel {
+  max-inline-size: 62ch;
+  padding-inline-start: var(--misafa-12);
+  border-inline-start: var(--samk-hadd) solid var(--hadd-qawi);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
 .tilqai__band-unwan {
   font-size: var(--qiyas-3);
   line-height: var(--irtifa-3);

@@ -271,7 +271,7 @@ impl Matjar for MatjarRiot {
         if !MANASSAT.contains(&siyaq.nizam) {
             return None;
         }
-        let jidhr = jidhr_tilqai(siyaq);
+        let jidhr = jidhr_tilqai(siyaq)?;
         // Existence only; nothing is parsed here, because this runs before
         // every scan to decide whether to scan at all.
         (jidhr.join(ISM_MUJALLAD_BAYANAT).is_dir() || jidhr.join(ISM_SIJILL_TATHBEET).is_file())
@@ -295,7 +295,9 @@ impl Matjar for MatjarRiot {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         }
 
-        let jidhr = jidhr_tilqai(siyaq);
+        let Some(jidhr) = jidhr_tilqai(siyaq) else {
+            return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+        };
         let mujallad = jidhr.join(ISM_MUJALLAD_BAYANAT);
         let sijill = sijill_tathbeet(&jidhr.join(ISM_SIJILL_TATHBEET));
         if !mujallad.is_dir() && sijill.is_none() {
@@ -399,7 +401,9 @@ impl Matjar for MatjarRiot {
         if !MANASSAT.contains(&siyaq.nizam) {
             return Vec::new();
         }
-        let jidhr = jidhr_tilqai(siyaq);
+        let Some(jidhr) = jidhr_tilqai(siyaq) else {
+            return Vec::new();
+        };
         // Both: the metadata directory gains and loses a subdirectory when a
         // product is installed or removed, and `RiotClientInstalls.json` in the
         // parent is rewritten by the client when it repairs itself.
@@ -415,26 +419,16 @@ impl Matjar for MatjarRiot {
 /// Machine-wide rather than per-user: Riot installs once for the whole machine,
 /// and reading a per-user path would find nothing on the account that did not
 /// run the installer.
-fn jidhr_tilqai(siyaq: &SiyaqFahs) -> PathBuf {
+/// [`None`] when the context carries no machine-wide data directory, which is
+/// every context that is not Windows — and Riot ships no client for one.
+fn jidhr_tilqai(siyaq: &SiyaqFahs) -> Option<PathBuf> {
     // The user's override wins outright, and is folded in here rather than
     // checked at each call site for the same reason it is in every other
     // adapter: a resolver callers have to remember to wrap is one they will not.
-    siyaq
-        .manassat
-        .riot
-        .clone()
-        .unwrap_or_else(|| bayanat_barnamij().join(MUJALLAD_MATJAR))
-}
-
-/// Windows' machine-wide application data directory.
-///
-/// The environment is the only source for it here: it is not derived from the
-/// user's home directory, and the shell API that would resolve the known folder
-/// is outside the `windows` feature set this workspace declares.
-fn bayanat_barnamij() -> PathBuf {
-    std::env::var_os("PROGRAMDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| PathBuf::from(r"C:\ProgramData"), PathBuf::from)
+    if let Some(tajawuz) = siyaq.manassat.riot.as_ref() {
+        return Some(tajawuz.clone());
+    }
+    Some(siyaq.bayanat_barnamij.as_ref()?.join(MUJALLAD_MATJAR))
 }
 
 // ---------------------------------------------------------------------------
@@ -1099,4 +1093,43 @@ fn muwahhad(masar: &Path, nizam: NizamTashghil) -> String {
 /// file edited on Windows can gain.
 fn bila_bom(nass: &str) -> &str {
     nass.strip_prefix('\u{feff}').unwrap_or(nass)
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn jidhr_riot_min_bayanat_al_barnamij_fi_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let bayanat = masrah.path().join("ProgramData");
+        let jidhr = bayanat.join(MUJALLAD_MATJAR);
+        fs::create_dir_all(jidhr.join(ISM_MUJALLAD_BAYANAT))?;
+
+        // `%PROGRAMDATA%` is untouched — since edition 2024 a test cannot set it
+        // — so the root can only have come off the context.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_barnamij = Some(bayanat);
+        assert_eq!(MatjarRiot::jadeed().mawqi(&siyaq), Some(jidhr));
+        Ok(())
+    }
+
+    #[test]
+    fn bila_bayanat_barnamij_la_shaya() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // The old resolver named `C:\ProgramData\Riot Games` on every machine,
+        // including the ones that have no `C:` at all.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        assert_eq!(MatjarRiot::jadeed().mawqi(&siyaq), None);
+        assert!(MatjarRiot::jadeed().judhur_muraqaba(&siyaq).is_empty());
+        Ok(())
+    }
 }

@@ -27,6 +27,7 @@ pub mod iqrar;
 pub mod kashf_himaya;
 pub mod kashf_shabaka;
 pub mod khata;
+pub mod matjar;
 pub mod qaimat_sahb;
 pub mod sandooq_fak;
 pub mod tahaqquq_tawqee;

@@ -22,6 +22,33 @@ const KHALFIYAT: [&str; 2] = ["mono", "il2cpp"];
 /// itself will look in once it is there.
 const DAKHIL_BEPINEX: &str = "BepInEx/plugins/Taarib";
 
+/// Where inside the Ren'Py component the Arabic face it ships lives.
+///
+/// Mirrors `taarib_tathbeet::tarkib::MUJALLAD_KHATT_RENPY`, which is private.
+/// `tarkib::renpy` copies this component's whole tree into the game's `game/`
+/// directory, so a face staged here arrives at `game/taarib/khutut/` with no
+/// deployment step of its own, and `tarkib::khatt_renpy` reads it back from
+/// exactly that path. The two spellings must not drift, or the bundle carries
+/// a font no install ever registers.
+const DAKHIL_KHATT_RENPY: &str = "taarib/khutut";
+
+/// The face the Ren'Py component ships and the licence that travels with it,
+/// as the lock entry that already fetches them and the name each lands under.
+///
+/// Noto Naskh Arabic because `tarkib::TARTIB_KHATT_RENPY` ranks it first: a
+/// visual novel's text is body copy read in paragraphs, and the Arabic
+/// tradition for body copy is Naskh. That list ranks rather than filters, so
+/// this is the default the bundle chooses and not a requirement it satisfies —
+/// a component staged with some other family would still register that one.
+///
+/// The licence is not optional. These bytes leave the machine a second time,
+/// inside somebody's game rather than beside the Studio, and the OFL binds
+/// every redistribution rather than the first.
+const KHATT_RENPY: [(&str, &str); 2] = [
+    ("NotoNaskhArabic/NotoNaskhArabic[wght].ttf", "NotoNaskhArabic[wght].ttf"),
+    ("NotoNaskhArabic/rukhsa", "OFL.txt"),
+];
+
 /// The staging inputs that are not built by cargo.
 #[derive(Debug, Clone)]
 pub(crate) struct MasadirTajmee {
@@ -54,8 +81,13 @@ pub(crate) fn jammi(
 ) -> NatijatTajmee<()> {
     saf_bepinex(hadaf, masadir, mustaqarr)?;
     saf_mudkhal(hadaf, masadir, mustaqarr)?;
-    saf_mulhaq(masadir, mustaqarr)?;
-    saf_khutut(masadir, mustaqarr)?;
+    // One lock read once, because row J1's faces have two destinations: the
+    // bundle's own font directory, which the Studio draws from, and the Ren'Py
+    // component, which carries one face a second time so that a visual novel
+    // has a face to be told about at all.
+    let khutut = Qufl::iqra(&masadir.jidhr.join("assets/aqfal/qufl_khutut.json"))?;
+    saf_mulhaq(masadir, &khutut, mustaqarr)?;
+    saf_khutut(masadir, &khutut, mustaqarr)?;
     // Row N1: the redistribution obligations of everything above, in one file
     // the bundle carries and the diagnostics screen can open.
     mustaqarr.insakh("N1", &masadir.jidhr.join("assets/NOTICES.md"), "NOTICES.md")?;
@@ -169,7 +201,11 @@ fn saf_mudkhal(
 }
 
 /// Rows H, I2, I3: the script-engine adapters and the wasm core they carry.
-fn saf_mulhaq(masadir: &MasadirTajmee, mustaqarr: &mut Mustaqarr) -> NatijatTajmee<()> {
+fn saf_mulhaq(
+    masadir: &MasadirTajmee,
+    khutut: &Qufl,
+    mustaqarr: &mut Mustaqarr,
+) -> NatijatTajmee<()> {
     // The wasm pair, built by wasm-bindgen with --out-name taarib_core; the
     // adapter loads exactly these two names and cannot be parameterised.
     let wasm = masadir.jidhr.join("target/wasm-bindgen/taarib_core.js");
@@ -210,13 +246,40 @@ fn saf_mulhaq(masadir: &MasadirTajmee, mustaqarr: &mut Mustaqarr) -> NatijatTajm
         "mukawwinat/mulhaq/renpy/taarib_renpy",
     )?;
 
+    // The face that component registers. Ren'Py resolves a font path against
+    // `game/`, and this component's whole tree is copied there, so the face has
+    // to travel inside the component rather than beside it — there is no other
+    // step that would put it in the game.
+    //
+    // Without it `tarkib::khatt_renpy` answers `None` and the install registers
+    // no font, which leaves the game drawing Arabic in whatever face it already
+    // ships: correct on the few visual novels whose GUI font covers Arabic,
+    // empty boxes on the rest.
+    //
+    // Row J1, because these are J1's bytes: the same lock entry, already
+    // fetched and hash-verified for the bundle's own font directory, staged to
+    // a second destination rather than downloaded again.
+    for (muarrif, ism) in KHATT_RENPY {
+        khutut.ifragh(
+            "J1",
+            muarrif,
+            &format!("mukawwinat/mulhaq/renpy/{DAKHIL_KHATT_RENPY}/{ism}"),
+            &masadir.jidhr,
+            masadir.jalb,
+            mustaqarr,
+        )?;
+    }
+
     Ok(())
 }
 
 /// Row J1: the bundled fonts and every license text that travels with them.
-fn saf_khutut(masadir: &MasadirTajmee, mustaqarr: &mut Mustaqarr) -> NatijatTajmee<()> {
-    let qufl = Qufl::iqra(&masadir.jidhr.join("assets/aqfal/qufl_khutut.json"))?;
-    qufl.ifragh_kul("J1", "khutut", &masadir.jidhr, masadir.jalb, mustaqarr)
+fn saf_khutut(
+    masadir: &MasadirTajmee,
+    khutut: &Qufl,
+    mustaqarr: &mut Mustaqarr,
+) -> NatijatTajmee<()> {
+    khutut.ifragh_kul("J1", "khutut", &masadir.jidhr, masadir.jalb, mustaqarr)
 }
 
 /// The three Unity assemblies one backend ships, each with its matrix row and

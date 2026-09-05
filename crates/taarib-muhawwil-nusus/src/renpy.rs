@@ -3008,6 +3008,9 @@ impl IdadRenPy {
 /// escaped by doubling. A generator that missed those would turn an Arabic
 /// sentence containing a bracket into a reference to a variable that does not
 /// exist, and Ren'Py would raise at the moment the player reached that line.
+///
+/// **For displayed text only.** A value the engine never draws — a file name,
+/// most of all — takes [`iqtibas_masar_rpy`] instead.
 #[must_use]
 pub fn iqtibas_rpy(nass: &str) -> String {
     let mut kharj = String::with_capacity(nass.len().saturating_add(2));
@@ -3020,6 +3023,37 @@ pub fn iqtibas_rpy(nass: &str) -> String {
             '\t' => kharj.push_str("\\t"),
             '[' => kharj.push_str("[["),
             '{' => kharj.push_str("{{"),
+            _ => kharj.push(harf),
+        }
+    }
+    kharj.push('"');
+    kharj
+}
+
+/// A file name as Ren'Py source spells it: a Python literal and nothing more.
+///
+/// The one difference from [`iqtibas_rpy`] is `[` and `{`, and it decides
+/// whether a font loads. Those two are doubled in text the engine *draws*,
+/// where `[name]` is an interpolation and `{b}` a tag. A `font` property and a
+/// name assigned inside an `init python` block are neither: they are Python
+/// string literals handed to Ren'Py's asset loader, which resolves them against
+/// `game/` verbatim. Doubling a bracket there asks the loader for a file whose
+/// name carries two of them, and it finds none.
+///
+/// This is not hypothetical. Every Noto face the product bundles is a variable
+/// font whose file name states its axis — `NotoNaskhArabic[wght].ttf` — so the
+/// difference between the two functions is the whole Arabic face loading or the
+/// game starting with the developer's Latin one still in place.
+#[must_use]
+pub fn iqtibas_masar_rpy(masar: &str) -> String {
+    let mut kharj = String::with_capacity(masar.len().saturating_add(2));
+    kharj.push('"');
+    for harf in masar.chars() {
+        match harf {
+            '"' => kharj.push_str("\\\""),
+            '\\' => kharj.push_str("\\\\"),
+            '\n' => kharj.push_str("\\n"),
+            '\t' => kharj.push_str("\\t"),
             _ => kharj.push(harf),
         }
     }
@@ -3133,7 +3167,7 @@ pub fn iktub_idad(
     nass.push('\n');
     let _ = writeln!(nass, "init 100 python:");
     if lahu_khatt {
-        let _ = writeln!(nass, "    _taarib_khatt = {}", iqtibas_rpy(&khatt));
+        let _ = writeln!(nass, "    _taarib_khatt = {}", iqtibas_masar_rpy(&khatt));
         let _ = writeln!(nass, "    taarib_renpy.sajjil_khatt(_taarib_khatt)");
     }
     if let Some(hajm) = idad.hajm {
@@ -3147,7 +3181,7 @@ pub fn iktub_idad(
     // language gets the original styles, untouched, with no restart.
     let _ = writeln!(nass, "translate {LUGHA} style default:");
     if lahu_khatt {
-        let _ = writeln!(nass, "    font {}", iqtibas_rpy(&khatt));
+        let _ = writeln!(nass, "    font {}", iqtibas_masar_rpy(&khatt));
     }
     if let Some(hajm) = idad.hajm {
         let _ = writeln!(nass, "    size {hajm}");
@@ -3159,7 +3193,7 @@ pub fn iktub_idad(
     for uslub in ["say_dialogue", "say_label", "input_text", "menu_choice_button_text"] {
         let _ = writeln!(nass, "translate {LUGHA} style {uslub}:");
         if lahu_khatt {
-            let _ = writeln!(nass, "    font {}", iqtibas_rpy(&khatt));
+            let _ = writeln!(nass, "    font {}", iqtibas_masar_rpy(&khatt));
         }
         let _ = writeln!(nass, "    text_align 1.0");
         let _ = writeln!(nass, "    layout \"subtitle\"");

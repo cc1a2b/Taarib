@@ -128,7 +128,9 @@ impl MatjarHeroic {
                 }
             },
             NizamTashghil::Windows => {
-                judhur.push(bayanat_mutajawwila(&siyaq.manzil).join("heroic"));
+                judhur.extend(
+                    siyaq.bayanat_mutajawwila.as_ref().map(|bayanat| bayanat.join("heroic")),
+                );
             },
             NizamTashghil::Mac => {
                 judhur
@@ -235,13 +237,6 @@ impl Matjar for MatjarHeroic {
 /// is an ordinary join rather than a containment check.
 fn dam(jidhr: &Path, ajzaa: &[&str]) -> PathBuf {
     ajzaa.iter().fold(jidhr.to_path_buf(), |masar, juz| masar.join(juz))
-}
-
-/// Windows' per-user roaming application data directory.
-fn bayanat_mutajawwila(manzil: &Path) -> PathBuf {
-    std::env::var_os("APPDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| manzil.join("AppData").join("Roaming"), PathBuf::from)
 }
 
 // ---------------------------------------------------------------------------
@@ -843,5 +838,46 @@ fn suwar_min_sijill(sijill: &Value) -> MasadirSuwar {
         ghilaf: rabt("art_square").or_else(|| rabt("art_cover")),
         batl: rabt("art_cover").or_else(|| rabt("art_background")),
         shiar: rabt("art_logo"),
+    }
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn jidhr_windows_min_al_bayanat_al_mutajawwila_fi_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let mutajawwila = masrah.path().join("Roaming");
+        fs::create_dir_all(mutajawwila.join("heroic").join(MUJALLAD_IDADAT))?;
+
+        // `%APPDATA%` is never set here — it cannot be, since edition 2024 — so
+        // the candidate can only have come from the context.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_mutajawwila = Some(mutajawwila.clone());
+        assert_eq!(
+            MatjarHeroic::jadeed().mawqi(&siyaq),
+            Some(mutajawwila.join("heroic")),
+            "the configuration root must come from the context"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn bila_bayanat_mutajawwila_la_murashah_ala_windows() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // The old resolver invented `<home>/AppData/Roaming/heroic` on a machine
+        // with no such layout; there is now simply nothing to probe.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        assert!(MatjarHeroic::judhur_muhtamala(&siyaq).is_empty());
+        Ok(())
     }
 }

@@ -15,7 +15,7 @@
 //! empty library and no explanation. Each becomes a [`TanbihFahs`] attached to
 //! the result, visible in Diagnostics, and the other games still arrive.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use taarib_mustalahat::ghiyab::SababGhiyab;
@@ -279,11 +279,14 @@ impl NatijatMatjar {
 /// test without mutating the process every other test is sharing.
 ///
 /// The rule is about *ambient* facts, and it is exactly that narrow. A variable
-/// that belongs to one launcher and is read by the one adapter that owns it —
-/// `LEGENDARY_CONFIG_PATH` is the only one left — is that launcher speaking
-/// about itself, exactly like a file in its own configuration directory. There
-/// is nobody for it to disagree with, and hoisting it here would put one
-/// launcher's vocabulary on the struct the other sixteen are handed.
+/// that belongs to one tool and is read by the one adapter that owns it is that
+/// tool speaking about itself, exactly like a file in its own configuration
+/// directory. There is nobody for it to disagree with, and hoisting it here
+/// would put one launcher's vocabulary on the struct the other sixteen are
+/// handed. Three are left on that ground, all of them in `legendary`:
+/// `LEGENDARY_CONFIG_PATH`, `LEGENDARY_WINE_PREFIX` and `WINEPREFIX` — the last
+/// being Wine's own name for the prefix, which only the adapter that resolves a
+/// prefix has any use for.
 #[derive(Debug, Clone)]
 pub struct SiyaqFahs {
     /// The operating system.
@@ -355,6 +358,32 @@ impl SiyaqFahs {
         tajawuz.cloned().or(muktashaf)
     }
 
+    /// Where a 32-bit installer lands, or [`None`] off Windows.
+    ///
+    /// [`Self::mujalladat_baramij`] is `%ProgramFiles(x86)%` then
+    /// `%ProgramFiles%`, deduplicated, so the first entry answers this on both
+    /// widths of Windows: a 64-bit machine has two entries and the 32-bit
+    /// directory leads, and a 32-bit machine reports one directory in both
+    /// variables and so keeps one entry, which is the directory every installer
+    /// lands in there. An adapter that reached for `.first()` itself would have
+    /// to restate that argument, and the one that restated it wrongly would be
+    /// wrong only on the machines nobody testing this owns.
+    #[must_use]
+    pub fn mujallad_baramij_x86(&self) -> Option<&Path> {
+        self.mujalladat_baramij.first().map(PathBuf::as_path)
+    }
+
+    /// Where a 64-bit installer lands, or [`None`] off Windows.
+    ///
+    /// The *last* entry, by the deduplication argument on
+    /// [`Self::mujallad_baramij_x86`]: two entries on a 64-bit Windows with the
+    /// native directory trailing, one entry on a 32-bit Windows which is then
+    /// both ends of the list.
+    #[must_use]
+    pub fn mujallad_baramij_asli(&self) -> Option<&Path> {
+        self.mujalladat_baramij.last().map(PathBuf::as_path)
+    }
+
     /// A context that knows a platform and a home directory and nothing else,
     /// for a test that then sets the one field it is about.
     ///
@@ -365,7 +394,7 @@ impl SiyaqFahs {
     /// proves resolution comes off the context and one that passes because this
     /// machine happened to agree with the hardcoded fallback it replaced.
     #[cfg(test)]
-    pub(crate) fn lil_ikhtibar(nizam: NizamTashghil, manzil: &std::path::Path) -> Self {
+    pub(crate) fn lil_ikhtibar(nizam: NizamTashghil, manzil: &Path) -> Self {
         Self {
             nizam,
             manassat: IdadatManassat::default(),

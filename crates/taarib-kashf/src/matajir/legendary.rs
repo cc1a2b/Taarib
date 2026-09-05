@@ -357,10 +357,13 @@ fn judhur_muhtamala(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
         murashahat.push(mutlaq);
     }
 
-    if siyaq.nizam == NizamTashghil::Linux
-        && let Some(xdg) = masar_min_beea("XDG_CONFIG_HOME")
-    {
-        murashahat.push(xdg.join(MUJALLAD_LEGENDARY));
+    // From the context rather than `$XDG_CONFIG_HOME` directly: the base
+    // directory is an ambient fact, and the context already applied the
+    // specification's absolute-only rule and its `~/.config` default. When the
+    // variable is unset this is exactly the candidate pushed below, which the
+    // deduplication at the end of this function then folds away.
+    if siyaq.nizam == NizamTashghil::Linux {
+        murashahat.push(siyaq.khazina_idadat.join(MUJALLAD_LEGENDARY));
     }
 
     // Hardcoded in legendary on every platform, including Windows: it does not
@@ -394,6 +397,13 @@ fn judhur_muhtamala(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
 }
 
 /// Reads one environment variable as an absolute path.
+///
+/// The three variables still read here — `LEGENDARY_CONFIG_PATH`,
+/// `LEGENDARY_WINE_PREFIX` and `WINEPREFIX` — are the only ones any adapter
+/// reads for itself, and they stay for the reason [`SiyaqFahs`] gives: each is
+/// one tool naming its own directory, so there is no second adapter for it to
+/// disagree with and nothing to hoist onto a context the other sixteen share.
+/// Every *ambient* directory this adapter needs now comes off that context.
 ///
 /// Relative values are ignored rather than resolved. A relative
 /// `LEGENDARY_CONFIG_PATH` would resolve against whatever directory this process
@@ -1076,4 +1086,52 @@ fn raqm_haql(qeema: &Value, miftah: &str) -> Option<u64> {
 /// A boolean field, or nothing.
 fn sawab_haql(qeema: &Value, miftah: &str) -> Option<bool> {
     qeema.get(miftah)?.as_bool()
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn khazinat_al_idadat_min_al_siyaq_la_min_al_beea() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let khazina = masrah.path().join("khazina");
+
+        // `$XDG_CONFIG_HOME` is an *ambient* directory and now arrives on the
+        // context; `LEGENDARY_CONFIG_PATH` is legendary naming its own and stays
+        // in this file, which is why nothing here tries to set either.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Linux, masrah.path());
+        siyaq.khazina_idadat = khazina.clone();
+
+        let judhur = judhur_muhtamala(&siyaq);
+        assert!(judhur.contains(&khazina.join(MUJALLAD_LEGENDARY)), "{judhur:?}");
+        // The hardcoded `~/.config/legendary` is still probed beside it:
+        // legendary uses that path on every platform whatever XDG says.
+        assert!(
+            judhur.contains(&masrah.path().join(".config").join(MUJALLAD_LEGENDARY)),
+            "{judhur:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn al_khazina_al_iftiradiya_tundamm_ila_masar_al_manzil() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // With the variable unset the context carries `~/.config`, which is
+        // exactly the hardcoded candidate — so the deduplication must fold the
+        // two into one probe rather than warning about one directory twice.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Linux, masrah.path());
+        let mutawaqqa = masrah.path().join(".config").join(MUJALLAD_LEGENDARY);
+        let judhur = judhur_muhtamala(&siyaq);
+        let marrat = judhur.iter().filter(|masar| **masar == mutawaqqa).count();
+        assert_eq!(marrat, 1, "{judhur:?}");
+        Ok(())
+    }
 }

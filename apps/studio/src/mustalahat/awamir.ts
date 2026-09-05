@@ -289,7 +289,10 @@ export const commands = {
 	 * 
 	 *  [`Khata`] naming whichever gate refused: an unreadable package, a build
 	 *  mismatch without acknowledgement, anti-cheat evidence, a revoked package,
-	 *  or the installer's own refusals — each in its own words. Also
+	 *  or the installer's own refusals — each in its own words. The safety layer's
+	 *  six refusals carry their own codes rather than one shared code, so a screen
+	 *  can tell the one the user answers ([`KhataTathbeetAmr::ShabakaBilaIqrar`],
+	 *  `TAARIB-E-9039`) from the ones nobody can. Also
 	 *  [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the game is a Steam
 	 *  game and Steam itself cannot be found, because the anti-cheat verdict would
 	 *  then be missing the half of its evidence that only Steam's catalogue holds.
@@ -915,12 +918,22 @@ export const commands = {
 	 *  up the newest run directory instead of opening a new one, which is what stops
 	 *  a resumed run from paying a second time for strings it already bought.
 	 * 
+	 *  `iqrar_shabaka` is the user's own answer to the multiplayer warning, obtained
+	 *  the way [`crate::tathbeet_awamir::thabbit_ruqaa`] obtains it: a key in the
+	 *  IPC payload, filled from a control the person ticked. Nothing in this process
+	 *  may assert it on their behalf — the risk it acknowledges is a permanent ban
+	 *  on their account — so an unticked box costs a refusal here and never a run.
+	 * 
 	 *  # Errors
 	 * 
 	 *  [`KhataTilqaiAmr::MashwarJari`] when a run for this game is already going,
-	 *  [`KhataTilqaiAmr::LughaRasmiya`] when the publisher already ships Arabic,
-	 *  `taarib_tilqai::KhataTilqai::MuharrikGhayrJahiz` when this build has no
-	 *  working in-game half for the detected engine and
+	 *  [`KhataTilqaiAmr::HimayaMuktashafa`] when the anti-cheat scan finds evidence
+	 *  on disk or in Steam's catalogue, [`KhataTilqaiAmr::FahsHimayaLamYajri`] when
+	 *  that scan could not read the catalogue it needs,
+	 *  [`KhataTilqaiAmr::ShabakaBilaIqrar`] when the game is multiplayer and
+	 *  `iqrar_shabaka` is false, [`KhataTilqaiAmr::LughaRasmiya`] when the publisher
+	 *  already ships Arabic, `taarib_tilqai::KhataTilqai::MuharrikGhayrJahiz` when
+	 *  this build has no working in-game half for the detected engine and
 	 *  `taarib_tilqai::KhataTilqai::TabaqaGhayrMadauma` when the safety layer
 	 *  refuses the game — both from the same gate the verdict reports,
 	 *  [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the game is a Steam
@@ -932,7 +945,7 @@ export const commands = {
 	 *  there is nothing to resume, and whatever the store, the keychain and the
 	 *  acknowledgement record raise.
 	 */
-	ibdaTilqai: (muarrif: string, istinaf: boolean) => typedError<LaqtatTilqaiHie, Khata>(__TAURI_INVOKE("ibda_tilqai", { muarrif, istinaf })),
+	ibdaTilqai: (muarrif: string, istinaf: boolean, iqrarShabaka: boolean) => typedError<LaqtatTilqaiHie, Khata>(__TAURI_INVOKE("ibda_tilqai", { muarrif, istinaf, iqrarShabaka })),
 	/**
 	 *  Asks the run for one game to stop, and answers with the snapshot as it stands.
 	 * 
@@ -1360,6 +1373,18 @@ export type HukmTilqaiHie = {
 	hudud_injilizi: string[],
 	/**  Roughly how many strings are involved, or `None` when only a run can say. */
 	nusus_taqribi: number | null,
+	/**
+	 *  Whether the run will require the multiplayer acknowledgement, so the
+	 *  interface asks for it *before* the button rather than after the money.
+	 * 
+	 *  Read off the launcher's own catalogue entry, which the library scan
+	 *  already stored — the only source of this fact a verdict may consult,
+	 *  because deciding it properly means walking the game directory and this
+	 *  command is answered on mount. [`ibda`] decides it again from the walk and
+	 *  refuses at the door when the two disagree, so a `false` here is "the
+	 *  launcher did not say so", never "you will not be asked".
+	 */
+	yalzam_iqrar_shabaka: boolean,
 	/**  What it has cost so far and what it may cost. */
 	takalif: TakalifHie,
 	/**  The cover's absolute path, when the artwork cache holds one. */
@@ -2316,9 +2341,27 @@ export type MudkhalRuqaaHie = {
 	mutabaqa: MutabaqaBina | null,
 	/**  The whole match verdict as one Arabic sentence, on the same terms. */
 	mutabaqa_arabi: string | null,
+	/**
+	 *  The same sentence in English.
+	 * 
+	 *  Both are sent because both are asked for: this verdict is the evidence
+	 *  line under the approximate-match acknowledgement, and an English session
+	 *  shown the Arabic one is being asked to accept a risk described in a
+	 *  language it did not choose. The two are produced from one
+	 *  [`taarib_mustawda::mutabaqa::MutabaqatRuqaa`], so they cannot come to
+	 *  describe different verdicts for the same row.
+	 */
+	mutabaqa_injilizi: string | null,
 	/**  Whether the client will install it at all. */
 	qabila_lil_tathbeet: boolean,
-	/**  Whether installing requires the user to acknowledge a risk first. */
+	/**
+	 *  Whether installing requires the user to acknowledge a risk first.
+	 * 
+	 *  About the **build match** and nothing else: it is true exactly when
+	 *  [`MutabaqaBina`] is `Nitaq`. It says nothing whatever about multiplayer,
+	 *  which is [`RuqaaLuba::yalzam_iqrar_shabaka`] and lives on the enclosing
+	 *  row because it is a fact about the game.
+	 */
 	yahtaj_iqrar: boolean,
 };
 
@@ -2731,6 +2774,22 @@ export type RuqaaLuba = {
 	adad_mutawafiq: number,
 	/**  No build fingerprint has been computed, so nothing was judged. */
 	bila_bina: boolean,
+	/**
+	 *  Whether installing anything into this game will want the multiplayer
+	 *  acknowledgement.
+	 * 
+	 *  On the row rather than on each patch, because it is a fact about the
+	 *  *game*: it is read off the launcher's own catalogue entry that the
+	 *  library scan stored, so every patch in [`Self::mudkhalat`] would carry
+	 *  the same value. Repeating it per patch would invite two rows of one
+	 *  listing to disagree about one game, and would read as a verdict the
+	 *  registry passed on the patch, which it is not.
+	 * 
+	 *  A hint, not the verdict. The install gate decides again by walking the
+	 *  game directory, so `false` here means the launcher did not say so — never
+	 *  that the question will not be asked.
+	 */
+	yalzam_iqrar_shabaka: boolean,
 	/**  The sources that were tried, in the order they were tried. */
 	masadir: string[],
 };

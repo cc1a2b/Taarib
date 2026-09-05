@@ -589,6 +589,30 @@ fn yushar_ila_himaya(simat: &[SimatLuba]) -> bool {
         .any(|sima| matches!(sima, SimatLuba::HimayaMuhtamala(_) | SimatLuba::MuammanaVac))
 }
 
+/// Whether the launcher's own catalogue already says this game is played with
+/// other people, so a screen can ask before the button rather than after.
+///
+/// Both hints count, not only the online one, because the gate this announces is
+/// [`taarib_aman::kashf_shabaka::mutaaddid`], and that answers on *any* evidence
+/// — a shared-screen title is refused by it exactly as an online one is. Warning
+/// on the narrower set would leave the wider refusal unannounced.
+///
+/// This is a hint, never a verdict: it reads the stored library scan, while the
+/// gate walks the game directory at install time. A `false` here means "the
+/// launcher did not say so", never "you will not be asked", and
+/// [`crate::tathbeet_awamir::thabbit_ruqaa`] still refuses at the door when the
+/// walk disagrees.
+///
+/// `tilqai_awamir` asks the same question of the same rows for the automatic
+/// path and currently carries its own copy of this predicate. The two must stay
+/// in step; this is the copy the manual path uses, and the one to keep when they
+/// are folded together.
+pub(crate) fn yalzam_iqrar_shabaka(simat: &[SimatLuba]) -> bool {
+    simat
+        .iter()
+        .any(|sima| matches!(sima, SimatLuba::JamaiOnline | SimatLuba::JamaiMahalli))
+}
+
 /// Rebuilds the probe's metadata hints from the rows the store holds.
 ///
 /// Only the six discriminators the schema defines are answered. A hint the
@@ -1729,5 +1753,38 @@ mod ikhtibarat {
         assert_eq!(hie.thughrat.len(), 2);
         assert!(hie.thughrat.iter().any(|satr| satr.contains("not a directory")));
         assert!(hie.thughrat.iter().any(|satr| satr == THUGHRAT_MATJAR_STEAM));
+    }
+
+    /// Both multiplayer hints raise the question, and nothing else does.
+    ///
+    /// The narrow reading — online only — is the tempting one and the wrong one:
+    /// the gate this announces, `taarib_aman::kashf_shabaka::mutaaddid`, refuses
+    /// a shared-screen title exactly as it refuses an online one, so warning on
+    /// the narrower set would leave the wider refusal unannounced.
+    #[test]
+    fn kilaa_simatay_aljamai_tastadaiyan_alsual() {
+        assert!(yalzam_iqrar_shabaka(&[SimatLuba::JamaiOnline]));
+        assert!(yalzam_iqrar_shabaka(&[SimatLuba::JamaiMahalli]));
+        assert!(yalzam_iqrar_shabaka(&[
+            SimatLuba::TabaqatTawafuq("verified".to_owned()),
+            SimatLuba::JamaiMahalli,
+        ]));
+    }
+
+    /// A game the launcher said nothing about asks nothing, and an anti-cheat
+    /// hint is not a multiplayer hint.
+    ///
+    /// The store carries the two independently and this predicate reads only
+    /// its own two rows: a game whose catalogue names EAC and nothing else is
+    /// refused by the anti-cheat gate, not asked a question it never earned.
+    #[test]
+    fn simat_ukhra_la_tastadai_sual_alshabaka() {
+        assert!(!yalzam_iqrar_shabaka(&[]));
+        assert!(!yalzam_iqrar_shabaka(&[SimatLuba::MuammanaVac]));
+        assert!(!yalzam_iqrar_shabaka(&[
+            SimatLuba::HimayaMuhtamala("EasyAntiCheat".to_owned()),
+            SimatLuba::LaysatLuba("tool".to_owned()),
+            SimatLuba::TabaqatTawafuq("platinum".to_owned()),
+        ]));
     }
 }

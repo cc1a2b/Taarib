@@ -589,7 +589,10 @@ mod ikhtibarat {
 
     #[test]
     fn siyaq_al_fahs_yahmil_khazain_xdg() -> Result<(), Box<dyn std::error::Error>> {
-        let manzil = PathBuf::from("/manzil");
+        // A drive letter on Windows, where a path with a root and no prefix —
+        // `\manzil` — is *not* absolute, so a `/manzil` fixture would fail the
+        // assertion below over the fixture rather than over the code.
+        let manzil = PathBuf::from(if cfg!(windows) { r"D:\manzil" } else { "/manzil" });
         let siyaq = siyaq_fahs(IdadatManassat::default(), manzil.clone())?;
 
         // Absolute in every case: either the variable was absolute, or the

@@ -229,6 +229,18 @@ export interface HukmTilqai {
   readonly hudud_injilizi: readonly string[];
   /** Roughly how many strings are involved, or null when only a run can tell. */
   readonly nusus_taqribi: number | null;
+  /**
+   * Whether the run will ask for the multiplayer acknowledgement.
+   *
+   * Read off the launcher's own catalogue entry, which the library scan already
+   * stored — the only source a verdict may consult, because deciding it properly
+   * means walking the game directory and this command is answered on mount. The
+   * run decides it again from that walk and refuses at the door when the two
+   * disagree, so `false` here is "the launcher did not say so", never "you will
+   * not be asked". The screen therefore treats a `TAARIB-E-9129` refusal as this
+   * field having been true all along.
+   */
+  readonly yalzam_iqrar_shabaka: boolean;
   readonly takalif: Takalif;
   /** The cover, as a source this document can load, or null. */
   readonly ghilaf: string | null;
@@ -281,8 +293,20 @@ export interface MinfathTilqai {
   readonly hukm: (muarrif: string) => Promise<HukmTilqai>;
   /** The unfinished run for this game, or null when there is none. */
   readonly laqta: (muarrif: string) => Promise<LaqtatTilqai | null>;
-  /** Starts a run, or resumes the unfinished one, and answers with a snapshot. */
-  readonly ibda: (muarrif: string, istinaf: boolean) => Promise<LaqtatTilqai>;
+  /**
+   * Starts a run, or resumes the unfinished one, and answers with a snapshot.
+   *
+   * `iqrarShabaka` is the user's own answer to the multiplayer warning and
+   * nothing else — not a default, not a value derived from the verdict. The run
+   * refuses with `TAARIB-E-9129` when it is false and the game turns out to be
+   * played with other people, before a single string is sent for translation and
+   * before anything is spent.
+   */
+  readonly ibda: (
+    muarrif: string,
+    istinaf: boolean,
+    iqrarShabaka: boolean,
+  ) => Promise<LaqtatTilqai>;
   /** Asks the run to stop, and answers with the snapshot that resulted. */
   readonly alghi: (muarrif: string) => Promise<LaqtatTilqai>;
   /** Every snapshot the backend publishes, until the returned function runs. */
@@ -586,6 +610,11 @@ export function fukkHukm(khaam: unknown): HukmTilqai | null {
     // language shows the list it has rather than an empty section.
     hudud_injilizi: hududInjilizi.length > 0 ? hududInjilizi : hududArabi,
     nusus_taqribi: adadAwLaShay(sijill['nusus_taqribi']),
+    // Strictly `=== true`, like `muthabbata` above: a build one version behind
+    // the backend sends no such key at all, and the safe reading of a missing
+    // acknowledgement flag is that the question was not asked — which leaves the
+    // answer false, which is what the run refuses on rather than proceeds on.
+    yalzam_iqrar_shabaka: sijill['yalzam_iqrar_shabaka'] === true,
     takalif: fukkTakalif(sijill['takalif']),
     ghilaf: nassAwLaShay(sijill['ghilaf']),
   };
@@ -646,8 +675,8 @@ export const minfathTilqai: MinfathTilqai = {
     return khaam === null || khaam === undefined ? null : fukkLaqta(khaam);
   },
 
-  ibda: async (muarrif, istinaf) => {
-    const khaam = await nadiKhaam(ASMA_AWAMIR.ibda, { muarrif, istinaf });
+  ibda: async (muarrif, istinaf, iqrarShabaka) => {
+    const khaam = await nadiKhaam(ASMA_AWAMIR.ibda, { muarrif, istinaf, iqrarShabaka });
     const mafkuk = fukkLaqta(khaam);
     if (mafkuk === null) {
       throw khataHamula(ASMA_AWAMIR.ibda);

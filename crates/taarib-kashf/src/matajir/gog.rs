@@ -167,7 +167,7 @@ impl Matjar for MatjarGog {
         if let Some(tajawuz) = siyaq.manassat.gog.as_ref() {
             return Some(tajawuz.clone());
         }
-        let jidhr = jidhr_tilqai(siyaq);
+        let jidhr = jidhr_tilqai(siyaq)?;
         // An existence check, not a parse: the database is not opened here.
         (jidhr.is_dir() || malaf_qaida(&jidhr).is_some()).then_some(jidhr)
     }
@@ -194,11 +194,16 @@ impl Matjar for MatjarGog {
                 }
                 .into());
             },
-            Some(tajawuz) => tajawuz.clone(),
+            Some(tajawuz) => Some(tajawuz.clone()),
             None => jidhr_tilqai(siyaq),
         };
 
-        let qaida = malaf_qaida(&jidhr);
+        // Carried as a pair so that the database and the root it was found
+        // under cannot drift apart: `alaab_galaxy` resolves install paths
+        // against that root, and reaching for the root separately would let a
+        // future edit hand it a different one.
+        let qaida =
+            jidhr.as_ref().and_then(|jidhr| malaf_qaida(jidhr).map(|masar| (jidhr, masar)));
         let mustaqilla = tathbitat_mustaqilla();
         if qaida.is_none() && mustaqilla.is_empty() {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
@@ -206,13 +211,13 @@ impl Matjar for MatjarGog {
 
         let mut natija = NatijatMatjar {
             matjar: MUARRIF,
-            jidhr_matjar: jidhr.is_dir().then(|| jidhr.clone()),
+            jidhr_matjar: jidhr.clone().filter(|masar| masar.is_dir()),
             ..NatijatMatjar::default()
         };
         let mut fahras: BTreeMap<u64, LubaMuktashafa> = BTreeMap::new();
         let mut mawaqi: BTreeSet<String> = BTreeSet::new();
 
-        if let Some(masar_qaida) = qaida.as_ref() {
+        if let Some((jidhr_qaida, masar_qaida)) = qaida.as_ref() {
             let ittisal = iftah_qaida(masar_qaida).map_err(|tafsil| {
                 KhataKashf::TarwisatFahrasTalifa {
                     matjar: MUARRIF,
@@ -221,7 +226,14 @@ impl Matjar for MatjarGog {
                     mawdi: None,
                 }
             })?;
-            alaab_galaxy(&ittisal, &jidhr, siyaq, &mut fahras, &mut mawaqi, &mut natija.tanbihat);
+            alaab_galaxy(
+                &ittisal,
+                jidhr_qaida,
+                siyaq,
+                &mut fahras,
+                &mut mawaqi,
+                &mut natija.tanbihat,
+            );
         }
 
         for tathbeet in mustaqilla {
@@ -238,13 +250,15 @@ impl Matjar for MatjarGog {
         if !MANASSAT.contains(&siyaq.nizam) {
             return Vec::new();
         }
-        let jidhr = siyaq.manassat.gog.clone().unwrap_or_else(|| jidhr_tilqai(siyaq));
+        let jidhr = siyaq.manassat.gog.clone().or_else(|| jidhr_tilqai(siyaq));
         // The storage directory, not the database file: Galaxy writes its
         // journal and its `-wal` alongside, and a write to either is the signal
         // that something was installed. Standalone installs write to the
         // registry, which no filesystem watch can see, so those still need a
         // rescan on demand — which is why the interface always offers one.
-        malaf_qaida(&jidhr)
+        jidhr
+            .as_deref()
+            .and_then(malaf_qaida)
             .and_then(|masar| masar.parent().map(Path::to_path_buf))
             .filter(|masar| masar.is_dir())
             .into_iter()
@@ -253,27 +267,23 @@ impl Matjar for MatjarGog {
 }
 
 /// Galaxy's data root, before any user override.
-fn jidhr_tilqai(siyaq: &SiyaqFahs) -> PathBuf {
-    match siyaq.nizam {
-        NizamTashghil::Windows => bayanat_barnamij().join("GOG.com").join("Galaxy"),
-        NizamTashghil::Mac | NizamTashghil::Linux => siyaq
-            .manzil
-            .join("Library")
-            .join("Application Support")
-            .join("GOG.com")
-            .join("Galaxy"),
-    }
-}
-
-/// Windows' machine-wide application data directory.
 ///
-/// The environment is the only source for it here: it is not derived from the
-/// user's home directory, and the shell API that would resolve the known folder
-/// is outside the `windows` feature set this workspace declares.
-fn bayanat_barnamij() -> PathBuf {
-    std::env::var_os("PROGRAMDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| PathBuf::from(r"C:\ProgramData"), PathBuf::from)
+/// [`None`] on a Windows context that carries no machine-wide data directory.
+/// The macOS layout is under the home directory and so always resolves.
+fn jidhr_tilqai(siyaq: &SiyaqFahs) -> Option<PathBuf> {
+    match siyaq.nizam {
+        NizamTashghil::Windows => {
+            Some(siyaq.bayanat_barnamij.as_ref()?.join("GOG.com").join("Galaxy"))
+        },
+        NizamTashghil::Mac | NizamTashghil::Linux => Some(
+            siyaq
+                .manzil
+                .join("Library")
+                .join("Application Support")
+                .join("GOG.com")
+                .join("Galaxy"),
+        ),
+    }
 }
 
 /// Locates the database under a launcher root, accepting the three shapes a
@@ -1335,5 +1345,62 @@ mod sijill {
             }
         }
         tathbitat
+    }
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn jidhr_galaxy_min_bayanat_al_barnamij_fi_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let bayanat = masrah.path().join("ProgramData");
+        let jidhr = bayanat.join("GOG.com").join("Galaxy");
+        fs::create_dir_all(jidhr.join("storage"))?;
+
+        // Nothing sets `%PROGRAMDATA%` — since edition 2024 it cannot be set
+        // from a test — so this passes only if the root really is read off the
+        // context.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_barnamij = Some(bayanat);
+        assert_eq!(MatjarGog::jadeed().mawqi(&siyaq), Some(jidhr));
+        Ok(())
+    }
+
+    #[test]
+    fn bila_bayanat_barnamij_la_jidhr() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // The old resolver answered `C:\ProgramData\GOG.com\Galaxy` whatever
+        // machine asked; a context with no machine-wide data folder now says so.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        assert_eq!(MatjarGog::jadeed().mawqi(&siyaq), None);
+        Ok(())
+    }
+
+    #[test]
+    fn jidhr_mac_yabqa_taht_al_manzil() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let jidhr = masrah
+            .path()
+            .join("Library")
+            .join("Application Support")
+            .join("GOG.com")
+            .join("Galaxy");
+        fs::create_dir_all(&jidhr)?;
+
+        // macOS keeps Galaxy under the home directory, so it resolves on a
+        // context that has no Windows folders at all.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Mac, masrah.path());
+        assert_eq!(MatjarGog::jadeed().mawqi(&siyaq), Some(jidhr));
+        Ok(())
     }
 }

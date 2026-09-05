@@ -163,7 +163,7 @@ impl Matjar for MatjarXbox {
         if let Some(tajawuz) = siyaq.manassat.xbox.as_ref() {
             return Some(tajawuz.clone());
         }
-        let jidhr = mujallad_windows_apps();
+        let jidhr = mujallad_windows_apps(siyaq)?;
         // `exists` rather than `is_dir`: WindowsApps denies the metadata query
         // that `is_dir` needs on some configurations while still answering
         // whether the name is there at all.
@@ -203,8 +203,9 @@ impl Matjar for MatjarXbox {
             .manassat
             .xbox
             .clone()
-            .unwrap_or_else(mujallad_windows_apps);
-        if jidhr_nizam.exists() {
+            .or_else(|| mujallad_windows_apps(siyaq))
+            .filter(|masar| masar.exists());
+        if let Some(jidhr_nizam) = jidhr_nizam {
             natija.jidhr_matjar = Some(jidhr_nizam.clone());
             mujalladat.push(jidhr_nizam);
         }
@@ -235,11 +236,13 @@ impl Matjar for MatjarXbox {
             return Vec::new();
         }
         let mut judhur = Vec::new();
-        let jidhr_nizam =
-            siyaq.manassat.xbox.clone().unwrap_or_else(mujallad_windows_apps);
-        if jidhr_nizam.exists() {
-            judhur.push(jidhr_nizam);
-        }
+        let jidhr_nizam = siyaq
+            .manassat
+            .xbox
+            .clone()
+            .or_else(|| mujallad_windows_apps(siyaq))
+            .filter(|masar| masar.exists());
+        judhur.extend(jidhr_nizam);
         // Warnings raised while locating the roots are discarded here on
         // purpose: this function answers "what should be watched", and a
         // diagnostic about a drive belongs to the scan that produced it, not to
@@ -252,14 +255,12 @@ impl Matjar for MatjarXbox {
 
 /// The system-drive package root.
 ///
-/// `%ProgramFiles%` is read from the environment because the folder is
-/// relocatable at Windows setup time and there is no other way to learn where
-/// it went; the documented default stands in when the variable is absent.
-fn mujallad_windows_apps() -> PathBuf {
-    std::env::var_os("ProgramFiles")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| PathBuf::from(r"C:\Program Files"), PathBuf::from)
-        .join("WindowsApps")
+/// The native program directory, not the 32-bit one: `WindowsApps` exists only
+/// under `%ProgramFiles%`, and a package is never installed beside a 32-bit
+/// application. [`None`] on a context that has no program directories at all,
+/// which is every context that is not Windows.
+fn mujallad_windows_apps(siyaq: &SiyaqFahs) -> Option<PathBuf> {
+    Some(siyaq.mujallad_baramij_asli()?.join("WindowsApps"))
 }
 
 /// A case-folded form of a package directory, used only to notice that two
@@ -1240,4 +1241,62 @@ fn hall_shiar(jidhr: &Path, nisbi: &str) -> Option<PathBuf> {
         .collect();
     murashahat.sort();
     murashahat.pop()
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn jidhr_al_ruzam_min_mujallad_al_baramij_al_asli() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let baramij86 = masrah.path().join("Program Files (x86)");
+        let baramij = masrah.path().join("Program Files");
+        let jidhr = baramij.join("WindowsApps");
+        fs::create_dir_all(&jidhr)?;
+        // Deliberately present under the 32-bit directory too, so that an
+        // adapter taking the head of the list would find *something* and the
+        // assertion below would still catch it.
+        fs::create_dir_all(baramij86.join("WindowsApps"))?;
+
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.mujalladat_baramij = vec![baramij86, baramij];
+        assert_eq!(mujallad_windows_apps(&siyaq), Some(jidhr.clone()));
+        assert_eq!(MatjarXbox::jadeed().mawqi(&siyaq), Some(jidhr));
+        Ok(())
+    }
+
+    #[test]
+    fn mujallad_wahid_yujib_an_al_sualayn() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let baramij = masrah.path().join("Program Files");
+
+        // A 32-bit Windows reports the same directory in both variables, so the
+        // context deduplicates to one entry — which is then both ends of the
+        // list, and the right answer to either question asked of it.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.mujalladat_baramij = vec![baramij.clone()];
+        assert_eq!(mujallad_windows_apps(&siyaq), Some(baramij.join("WindowsApps")));
+        assert_eq!(siyaq.mujallad_baramij_x86(), siyaq.mujallad_baramij_asli());
+        Ok(())
+    }
+
+    #[test]
+    fn bila_mujalladat_baramij_la_jidhr_nizam() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // The old resolver answered `C:\Program Files\WindowsApps` on every
+        // machine that asked, whatever drive its Windows was on.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        assert_eq!(mujallad_windows_apps(&siyaq), None);
+        assert_eq!(MatjarXbox::jadeed().mawqi(&siyaq), None);
+        Ok(())
+    }
 }

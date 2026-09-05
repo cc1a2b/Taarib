@@ -114,7 +114,8 @@ impl MatjarItch {
         let mut judhur = Vec::new();
         match siyaq.nizam {
             NizamTashghil::Windows => {
-                judhur.push(bayanat_mutajawwila(&siyaq.manzil).join("itch"));
+                judhur
+                    .extend(siyaq.bayanat_mutajawwila.as_ref().map(|bayanat| bayanat.join("itch")));
             },
             NizamTashghil::Mac => {
                 judhur.push(
@@ -233,17 +234,6 @@ impl Matjar for MatjarItch {
 /// The database file under an itch configuration root.
 fn qaida_fih(jidhr: &Path) -> PathBuf {
     MASAR_QAIDA.iter().fold(jidhr.to_path_buf(), |masar, juz| masar.join(juz))
-}
-
-/// Windows' per-user roaming application data directory.
-///
-/// The environment is consulted first because a domain profile can redirect it
-/// to a network share, and the layout under the home directory is the fallback
-/// for the ordinary case where it is not set.
-fn bayanat_mutajawwila(manzil: &Path) -> PathBuf {
-    std::env::var_os("APPDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| manzil.join("AppData").join("Roaming"), PathBuf::from)
 }
 
 // ---------------------------------------------------------------------------
@@ -704,4 +694,40 @@ fn hukm_butler(kahf: &Saf) -> Option<HukmButler> {
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned),
     })
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn jidhr_windows_min_al_bayanat_al_mutajawwila_fi_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let mutajawwila = masrah.path().join("Roaming");
+        let jidhr = mutajawwila.join("itch");
+        fs::create_dir_all(jidhr.join("db"))?;
+        fs::write(qaida_fih(&jidhr), [])?;
+
+        // `%APPDATA%` is untouched — since edition 2024 a test cannot set it —
+        // so this can only pass if the candidate came off the context.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_mutajawwila = Some(mutajawwila);
+        assert_eq!(MatjarItch::jadeed().mawqi(&siyaq), Some(jidhr));
+        Ok(())
+    }
+
+    #[test]
+    fn bila_bayanat_mutajawwila_la_murashah_ala_windows() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        assert!(MatjarItch::judhur_muhtamala(&siyaq).is_empty());
+        Ok(())
+    }
 }

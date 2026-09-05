@@ -223,7 +223,7 @@ impl Matjar for MatjarAmazon {
         if !MANASSAT.contains(&siyaq.nizam) {
             return None;
         }
-        let jidhr = jidhr_tilqai(siyaq);
+        let jidhr = jidhr_tilqai(siyaq)?;
         // An existence check, not a parse: no database is opened here, because
         // this runs before every scan to decide whether to scan at all.
         (jidhr.is_dir() || malaf_qaida(&jidhr).is_some()).then_some(jidhr)
@@ -243,7 +243,9 @@ impl Matjar for MatjarAmazon {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         }
 
-        let jidhr = jidhr_tilqai(siyaq);
+        let Some(jidhr) = jidhr_tilqai(siyaq) else {
+            return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+        };
         let Some(masar_qaida) = malaf_qaida(&jidhr) else {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         };
@@ -318,7 +320,9 @@ impl Matjar for MatjarAmazon {
         // The `Sql` directory rather than the file: SQLite writes its journal
         // and its `-wal` beside the database, and a write to either is the
         // signal that something was installed or removed.
-        malaf_qaida(&jidhr_tilqai(siyaq))
+        jidhr_tilqai(siyaq)
+            .as_deref()
+            .and_then(malaf_qaida)
             .and_then(|masar| masar.parent().map(Path::to_path_buf))
             .filter(|masar| masar.is_dir())
             .into_iter()
@@ -353,7 +357,7 @@ pub fn halat_matjar(siyaq: &SiyaqFahs) -> BTreeMap<String, SababGhiyab> {
     if !MANASSAT.contains(&siyaq.nizam) {
         return halat;
     }
-    let Some(masar_qaida) = malaf_qaida(&jidhr_tilqai(siyaq)) else {
+    let Some(masar_qaida) = jidhr_tilqai(siyaq).as_deref().and_then(malaf_qaida) else {
         return halat;
     };
     let Ok((ittisal, _)) = iftah_qaida(&masar_qaida) else {
@@ -385,27 +389,19 @@ pub fn halat_matjar(siyaq: &SiyaqFahs) -> BTreeMap<String, SababGhiyab> {
 }
 
 /// The client's data root, under the user's local application data.
-fn jidhr_tilqai(siyaq: &SiyaqFahs) -> PathBuf {
+///
+/// [`None`] when the context carries no local application data directory, which
+/// is every context that is not Windows. The old resolver answered there too, by
+/// assembling `~/AppData/Local` under a Linux home — a path that cannot exist,
+/// handed to a Windows-only adapter.
+fn jidhr_tilqai(siyaq: &SiyaqFahs) -> Option<PathBuf> {
     // The user's override wins outright. Folded in here rather than checked at
     // each of the four call sites, because a resolver that four callers have to
     // remember to wrap is a resolver three of them eventually will not.
-    siyaq
-        .manassat
-        .amazon
-        .clone()
-        .unwrap_or_else(|| bayanat_mahalliya(&siyaq.manzil).join(MUJALLAD_MATJAR))
-}
-
-/// Windows' per-user local application data directory.
-///
-/// The environment is consulted first because a roaming or domain profile can
-/// move it; the layout under the home directory is the fallback for the
-/// ordinary case where the variable is not set, which is how this resolves at
-/// all on the non-Windows builds that still compile this file.
-fn bayanat_mahalliya(manzil: &Path) -> PathBuf {
-    std::env::var_os("LOCALAPPDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| manzil.join("AppData").join("Local"), PathBuf::from)
+    if let Some(tajawuz) = siyaq.manassat.amazon.as_ref() {
+        return Some(tajawuz.clone());
+    }
+    Some(siyaq.bayanat_mahalliya.as_ref()?.join(MUJALLAD_MATJAR))
 }
 
 /// Locates the install catalogue under the client root.
@@ -1101,4 +1097,59 @@ fn waqt_maqbul(qeema: &str) -> Option<String> {
 /// client's installer writes in front of some `fuel.json` files.
 fn bila_bom(nass: &str) -> &str {
     nass.strip_prefix('\u{feff}').unwrap_or(nass)
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    /// A Windows-shaped context whose local application data directory is the
+    /// one the test built rather than this machine's.
+    ///
+    /// Nothing here sets an environment variable, and nothing can: since edition
+    /// 2024 `std::env::set_var` is `unsafe` and racy, so a test could not point
+    /// `%LOCALAPPDATA%` at a fixture without mutating the process every other
+    /// test shares. That is what the conversion bought — were the resolver still
+    /// reading the variable inline, this test would be reading the developer's
+    /// own machine and would pass or fail by accident.
+    fn siyaq(manzil: &Path, mahalliya: Option<&Path>) -> SiyaqFahs {
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, manzil);
+        siyaq.bayanat_mahalliya = mahalliya.map(Path::to_path_buf);
+        siyaq
+    }
+
+    #[test]
+    fn al_jidhr_min_al_bayanat_al_mahalliya_fi_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let mahalliya = masrah.path().join("Local");
+        fs::create_dir_all(mahalliya.join(MUJALLAD_MATJAR))?;
+
+        let siyaq = siyaq(masrah.path(), Some(&mahalliya));
+        assert_eq!(
+            MatjarAmazon::jadeed().mawqi(&siyaq),
+            Some(mahalliya.join(MUJALLAD_MATJAR)),
+            "the client root must come from the context"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn bila_bayanat_mahalliya_la_shaya() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // What a context that is not Windows looks like. The old resolver
+        // answered here too, by assembling `<home>/AppData/Local` under a Linux
+        // home — a path that cannot exist, handed to a Windows-only adapter.
+        let siyaq = siyaq(masrah.path(), None);
+        assert_eq!(MatjarAmazon::jadeed().mawqi(&siyaq), None);
+        assert!(halat_matjar(&siyaq).is_empty());
+        Ok(())
+    }
 }

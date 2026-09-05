@@ -190,7 +190,7 @@ interface TartibWusata {
   // One-button automatic arabization: the verdict, the run, and the stop.
   readonly hukm_tilqai: ['muarrif'];
   readonly laqtat_tilqai: ['muarrif'];
-  readonly ibda_tilqai: ['muarrif', 'istinaf'];
+  readonly ibda_tilqai: ['muarrif', 'istinaf', 'iqrarShabaka'];
   readonly alghi_tilqai: ['muarrif'];
 }
 

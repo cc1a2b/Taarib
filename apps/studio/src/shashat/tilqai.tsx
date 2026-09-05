@@ -12,6 +12,7 @@ import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t, wasm } from '@/lugha/lugha';
 import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
 import { jahiziyaMin, naqsJahiziya, tasil } from '@/maktaba/jahiziya';
+import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
 import { SatrRamz } from '@/mukawwinat/kutlat_khata';
 import type { Idadat, Lugha, NizamArqam, TafasilLuba } from '@/mustalahat/awamir';
 import { HARAKAT_LAWHA, haraka } from '@/nizam/haraka';
@@ -93,6 +94,48 @@ const AAMAL_MARAHIL: Readonly<Record<MarhalatTilqai, MiftahLugha>> = {
  * one of them and describe nothing at all.
  */
 const MUARRIF_JAHIZIYA = 'tilqai-sabab-jahiziya';
+
+/** The multiplayer acknowledgement, for the ids the component derives. */
+const MUARRIF_SHABAKA = 'tilqai-iqrar-shabaka';
+
+/** The anti-cheat refusal, which every withdrawn start button points at. */
+const MUARRIF_HIMAYA = 'tilqai-sabab-himaya';
+
+/* ---------------------------------------------------------------------------
+   The three refusals the run raises at the door.
+
+   All three are answered before a single string is sent for translation and
+   before anything is spent, and all three arrive as a rejected `ibda` rather
+   than inside a snapshot — the run does not exist yet when they fire. They are
+   matched on the permanent code because that is the one part of a failure that
+   does not move: the sentences are rewritten as the product's wording improves,
+   and a screen that branched on a substring of one would silently stop branching
+   the day somebody fixed a comma.
+
+   The three are not one thing with three labels:
+
+   - **9127** is anti-cheat found. There is no override anywhere in this product
+     for it, deliberately, because a VAC ban attaches to the account rather than
+     to the game and no release and no setting lifts it. It is drawn in the
+     refusal vocabulary with no control at all, because offering one would be a
+     lie about what the user can do.
+   - **9128** is Steam's catalogue unreadable. Not a clean result and not a
+     refusal about the game: VAC is declared only in that catalogue and leaves
+     nothing inside a game folder, so silence is silence. It has exactly one
+     remedy and it is a setting, so it gets the link to it.
+   - **9129** is the multiplayer acknowledgement missing. Alone among the three
+     it is a *question*, and the person is the only one who can answer it — so it
+     is the one that reveals the acknowledgement and lets them press again.
+   --------------------------------------------------------------------------- */
+const RAMZ_HIMAYA = 'TAARIB-E-9127';
+const RAMZ_FAHS_HIMAYA = 'TAARIB-E-9128';
+const RAMZ_SHABAKA = 'TAARIB-E-9129';
+
+const RUMUZ_BAB: ReadonlySet<string> = new Set([
+  RAMZ_HIMAYA,
+  RAMZ_FAHS_HIMAYA,
+  RAMZ_SHABAKA,
+]);
 
 const ASMA_HALAT: Readonly<Record<HalatMarhala, MiftahLugha>> = {
   muntazira: 'tilqai.hala.muntazira',
@@ -575,11 +618,105 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
   const yabda = wajh === 'hukm' || wajh === 'mulgha' || wajh === 'fashal';
   const naqs = khasais.naqs ?? null;
 
+  /* -------------------------------------------------------------------------
+     The multiplayer acknowledgement.
+
+     The verdict says whether the run will ask for it, read off the launcher's
+     own catalogue entry; the run decides it again from a full walk of the game
+     directory and refuses at the door when the two disagree. So a `false`
+     verdict is "the launcher did not say so", not "you will not be asked" — and
+     `TAARIB-E-9129` coming back from a press is the walk having said what the
+     catalogue did not. Both are treated as the same fact, which is why the
+     question can appear after a press as well as before one.
+
+     The answer starts false and is only ever the user's. Nothing here defaults
+     it, and it is cleared whenever the screen changes game: an acknowledgement
+     given about one game is not an acknowledgement about the next.
+     ----------------------------------------------------------------------- */
+  const [iqrarShabaka, setIqrarShabaka] = useState(false);
+
+  /*
+   * That the walk found this game multiplayer, remembered.
+   *
+   * Latched rather than read live off `khataAmal`, because the next press clears
+   * that error before the call goes out — and the walk behind the call is
+   * seconds. Read live, the question would vanish the instant it was answered
+   * and reappear when the answer came back: the panel the reader is looking at,
+   * disappearing under their hand. And the fact does not stop being true because
+   * an error object was cleared.
+   *
+   * Only this one needs the latch. The anti-cheat refusal below withdraws every
+   * control that could clear its error, so it cannot go stale.
+   */
+  const [kashafaShabaka, setKashafaShabaka] = useState(false);
+
+  useEffect(() => {
+    setIqrarShabaka(false);
+    setKashafaShabaka(false);
+  }, [muarrif]);
+
+  const ramzBab = khataAmal !== null && RUMUZ_BAB.has(khataAmal.ramz) ? khataAmal.ramz : null;
+  useEffect(() => {
+    if (ramzBab === RAMZ_SHABAKA) {
+      setKashafaShabaka(true);
+    }
+  }, [ramzBab]);
+
+  const yalzamShabaka = hukm?.yalzam_iqrar_shabaka === true || kashafaShabaka;
+  const mamnuShabaka = yalzamShabaka && !iqrarShabaka;
+
+  /*
+   * Anti-cheat withdraws the button outright, and only anti-cheat does.
+   *
+   * A game the walk found evidence on will refuse every press for as long as
+   * this build exists — the refusal carries `Khutwa::LaShay` precisely because a
+   * VAC ban is permanent and attaches to the account, not to the game — so
+   * leaving a live button over it offers something the product will never do.
+   *
+   * `TAARIB-E-9128` deliberately does **not** withdraw anything. It is not a
+   * verdict about the game: Steam's catalogue could not be read, the remedy is
+   * one setting, and somebody who goes and sets it has to be able to come back
+   * and press the same button.
+   */
+  const mamnuHimaya = ramzBab === RAMZ_HIMAYA;
+
+  // Which withdrawal a refused start button describes itself with, in the order
+  // the backend applies them: the safety layer's refusal outranks everything,
+  // then readiness, then the question. On a game this build cannot patch at all
+  // the multiplayer question is moot, and a risk decision demanded for a run
+  // that cannot happen is how a person learns to tick without reading.
+  const sababTawaqquf = mamnuHimaya
+    ? MUARRIF_HIMAYA
+    : mamnu
+      ? MUARRIF_JAHIZIYA
+      : mamnuShabaka
+        ? muarrifMatlub(MUARRIF_SHABAKA)
+        : undefined;
+
+  /** Whether any of the three gates is holding the start. */
+  const mamnuBadi = mamnu || mamnuHimaya || mamnuShabaka;
+
+  /**
+   * The one place a run is started from.
+   *
+   * Every affordance that starts work goes through this — the first press, the
+   * resume, both re-runs, and the command palette's own entry — so the gates are
+   * stated once and cannot be true of a button and false of a keystroke. The
+   * acknowledgement is read here rather than passed in, because what has to
+   * reach the backend is the answer as it stands at the moment of the press.
+   */
+  const ibdaMahmi = (istinaf: boolean): void => {
+    if (yantazir || mamnuBadi) {
+      return;
+    }
+    halat.ibda(istinaf, iqrarShabaka);
+  };
+
   // The palette registers once per id set, so its actions reach the current
   // closures through a ref rather than through the registration.
-  const afal = useRef({ ibda: halat.ibda, alghi: halat.alghi });
+  const afal = useRef({ ibda: ibdaMahmi, alghi: halat.alghi });
   useEffect(() => {
-    afal.current = { ibda: halat.ibda, alghi: halat.alghi };
+    afal.current = { ibda: ibdaMahmi, alghi: halat.alghi };
   });
 
   const awamir = useMemo<readonly AmrLawha[]>(() => {
@@ -618,12 +755,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
         <button
           type="button"
           className="zir zir--tamyeez"
-          aria-disabled={yantazir || mamnu}
-          aria-describedby={mamnu ? MUARRIF_JAHIZIYA : undefined}
+          aria-disabled={yantazir || mamnuBadi}
+          aria-describedby={sababTawaqquf}
           onClick={() => {
-            if (!yantazir && !mamnu) {
-              halat.ibda(false);
-            }
+            ibdaMahmi(false);
           }}
         >
           {t(yantazir ? 'tilqai.hukm.jari_ibda' : 'tilqai.hukm.ibda', lugha)}
@@ -671,12 +806,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
         <button
           type="button"
           className="zir zir--tamyeez"
-          aria-disabled={yantazir || mamnu}
-          aria-describedby={mamnu ? MUARRIF_JAHIZIYA : undefined}
+          aria-disabled={yantazir || mamnuBadi}
+          aria-describedby={sababTawaqquf}
           onClick={() => {
-            if (!yantazir && !mamnu) {
-              halat.ibda(wajh === 'fashal');
-            }
+            ibdaMahmi(wajh === 'fashal');
           }}
         >
           {t(wajh === 'fashal' ? 'tilqai.istinaf.zirr' : 'tilqai.mulgha.iaada', lugha)}
@@ -753,6 +886,58 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
               user must not touch. This is Taarib saying not yet, about itself,
               and an update lifts it.
             */}
+            {/*
+              The question, above the button it governs.
+
+              It sits here rather than down in the verdict column for the reason
+              the readiness notice below it does: the primary action is in the
+              anchor directly above, and an acknowledgement a person reaches
+              after scrolling past the button is an acknowledgement they meet
+              once they have already pressed it. The `matlub` line inside carries
+              the id every start button on this screen points at, so a refused
+              button is not merely grey — it says which of the two things is
+              holding it, in the reader's own language.
+
+              Hidden while readiness withdraws the run, because the backend
+              refuses in that order too: on a game this build cannot patch, the
+              multiplayer question has no run to be about, and a risk decision
+              demanded for nothing is how a person learns to tick without
+              reading.
+            */}
+            {yalzamShabaka && !mamnu && !mamnuHimaya && (yabda || mustanifa) ? (
+              <div className="tilqai__iqrar-shabaka">
+                {/* Revealing a panel is not an announcement. A press that was
+                    refused has to say so to a reader who cannot see the panel
+                    appear, and it has to say it in the run's own terms: nothing
+                    started, nothing was spent. */}
+                {ramzBab === RAMZ_SHABAKA ? (
+                  <p className="khafi" role="status">
+                    {t('tilqai.shabaka.marfud', lugha)}
+                  </p>
+                ) : null}
+                <IqrarKhatar
+                  muarrif={MUARRIF_SHABAKA}
+                  unwan={t('tilqai.shabaka.unwan', lugha)}
+                  tahdheer={t('tilqai.shabaka.tahdheer', lugha)}
+                  // What the walk actually found, in the backend's own words,
+                  // once a press has produced them. Before that the verdict has
+                  // only the launcher's catalogue entry to go on and says so by
+                  // saying nothing more than the general statement above.
+                  tafsil={
+                    ramzBab === RAMZ_SHABAKA && khataAmal !== null
+                      ? lugha === 'arabi'
+                        ? khataAmal.arabi
+                        : khataAmal.injilizi
+                      : null
+                  }
+                  nassIqrar={t('tilqai.shabaka.iqrar', lugha)}
+                  muqirr={iqrarShabaka}
+                  alaTabdil={setIqrarShabaka}
+                  matlub={t('tilqai.shabaka.matlub', lugha)}
+                />
+              </div>
+            ) : null}
+
             {mamnu && (yabda || mustanifa) ? (
               <section
                 className="tilqai__band tilqai__band--tanbeeh"
@@ -783,12 +968,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   <button
                     type="button"
                     className="zir zir--tamyeez"
-                    aria-disabled={yantazir || mamnu}
-                    aria-describedby={mamnu ? MUARRIF_JAHIZIYA : undefined}
+                    aria-disabled={yantazir || mamnuBadi}
+                    aria-describedby={sababTawaqquf}
                     onClick={() => {
-                      if (!yantazir && !mamnu) {
-                        halat.ibda(true);
-                      }
+                      ibdaMahmi(true);
                     }}
                   >
                     {t('tilqai.istinaf.zirr', lugha)}
@@ -796,12 +979,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   <button
                     type="button"
                     className="zir"
-                    aria-disabled={yantazir || mamnu}
-                    aria-describedby={mamnu ? MUARRIF_JAHIZIYA : undefined}
+                    aria-disabled={yantazir || mamnuBadi}
+                    aria-describedby={sababTawaqquf}
                     onClick={() => {
-                      if (!yantazir && !mamnu) {
-                        halat.ibda(false);
-                      }
+                      ibdaMahmi(false);
                     }}
                   >
                     {t('tilqai.istinaf.jadeed', lugha)}
@@ -831,13 +1012,71 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   </KutlatTilqai>
                 )}
 
-                {khataAmal === null ? null : (
+                {/* Every failure except the three the door raises. Those three
+                    have panels of their own below, because the generic block
+                    says "something failed" about two refusals that are not
+                    failures and one that is a question. */}
+                {khataAmal === null || ramzBab !== null ? null : (
                   <KutlatTilqai
                     unwan={t('tilqai.khata.amal', lugha)}
                     khata={khataAmal}
                     lugha={lugha}
                   />
                 )}
+
+                {/* Anti-cheat found. No control of any kind: this product has no
+                    override for it anywhere — `Khutwa::LaShay`, deliberately —
+                    because the ban that follows attaches to the account rather
+                    than to the game, and a button here would be an offer that
+                    does not exist. */}
+                {ramzBab === RAMZ_HIMAYA && khataAmal !== null ? (
+                  <section
+                    className="tilqai__qism tilqai__qism--khatar"
+                    role="alert"
+                    aria-labelledby="tilqai-unwan-himaya"
+                  >
+                    <SatrRamz ramz={khataAmal.ramz} fashal />
+                    <h2 id="tilqai-unwan-himaya" className="tilqai__unwan">
+                      {t('tilqai.himaya.unwan', lugha)}
+                    </h2>
+                    <p id={MUARRIF_HIMAYA} className="tilqai__nass">
+                      {t('tilqai.himaya.marfud', lugha)}
+                    </p>
+                    {/* The scan's own findings, which name the anti-cheat and
+                        the files it was seen in. The product's position is the
+                        paragraph above; this is what it is a position about. */}
+                    <p className="tilqai__daleel" dir="auto">
+                      {lugha === 'arabi' ? khataAmal.arabi : khataAmal.injilizi}
+                    </p>
+                  </section>
+                ) : null}
+
+                {/* The catalogue could not be read. Not a verdict about the
+                    game: VAC is declared only in Steam's own index and leaves
+                    nothing inside a game folder, so a check that never opened it
+                    produces exactly the empty evidence list a clean game
+                    produces. It has one remedy and it is a setting. */}
+                {ramzBab === RAMZ_FAHS_HIMAYA && khataAmal !== null ? (
+                  <section
+                    className="tilqai__qism tilqai__qism--khatar"
+                    role="alert"
+                    aria-labelledby="tilqai-unwan-fahs-himaya"
+                  >
+                    <SatrRamz ramz={khataAmal.ramz} fashal />
+                    <h2 id="tilqai-unwan-fahs-himaya" className="tilqai__unwan">
+                      {t('tilqai.himaya.unwan', lugha)}
+                    </h2>
+                    <p className="tilqai__nass">{t('tilqai.himaya.fahs_lam_yajri', lugha)}</p>
+                    <p className="tilqai__daleel" dir="auto">
+                      {lugha === 'arabi' ? khataAmal.arabi : khataAmal.injilizi}
+                    </p>
+                    <div className="tilqai__afal">
+                      <Link to="/idadat" className="zir">
+                        {t('tilqai.himaya.idadat', lugha)}
+                      </Link>
+                    </div>
+                  </section>
+                ) : null}
 
                 {wajh === 'marfud' && hukm !== null ? (
                   <section className="tilqai__qism tilqai__qism--khatar">

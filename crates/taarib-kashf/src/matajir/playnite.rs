@@ -270,10 +270,13 @@ impl MatjarPlaynite {
 
         match siyaq.nizam {
             NizamTashghil::Windows => {
-                judhur.push(JidhrPlaynite::muthabbat(
-                    bayanat_mutajawwila(&siyaq.manzil).join("Playnite"),
-                ));
-                for masar in judhur_mahmula_windows(&siyaq.manzil) {
+                judhur.extend(
+                    siyaq
+                        .bayanat_mutajawwila
+                        .as_ref()
+                        .map(|bayanat| JidhrPlaynite::muthabbat(bayanat.join("Playnite"))),
+                );
+                for masar in judhur_mahmula_windows(siyaq) {
                     judhur.push(JidhrPlaynite::mahmul(masar));
                 }
             },
@@ -461,20 +464,6 @@ pub fn huwa_jidhr_bayanat(jidhr: &Path) -> bool {
     maktaba.is_dir() && jidhr.join(MALAF_IDADAT).is_file()
 }
 
-/// Windows' per-user roaming application data directory.
-fn bayanat_mutajawwila(manzil: &Path) -> PathBuf {
-    std::env::var_os("APPDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| manzil.join("AppData").join("Roaming"), PathBuf::from)
-}
-
-/// Windows' per-user local application data directory.
-fn bayanat_mahalliya(manzil: &Path) -> PathBuf {
-    std::env::var_os("LOCALAPPDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| manzil.join("AppData").join("Local"), PathBuf::from)
-}
-
 /// Conventional portable locations on Windows.
 ///
 /// The installed build keeps its program in `%LOCALAPPDATA%\Playnite` and its
@@ -482,15 +471,21 @@ fn bayanat_mahalliya(manzil: &Path) -> PathBuf {
 /// the same place or beside their games. None of these is guaranteed and all of
 /// them cost one `is_dir` call, which is why probing them is worth more than the
 /// four lines it takes.
-fn judhur_mahmula_windows(manzil: &Path) -> Vec<PathBuf> {
-    let mahalli = bayanat_mahalliya(manzil);
-    vec![
-        mahalli.join("Playnite"),
+///
+/// The local application data candidate is dropped, rather than assembled under
+/// the home directory, on a context that has no such folder: the remaining
+/// four are all home-relative or absolute and stand on their own.
+fn judhur_mahmula_windows(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
+    let manzil = &siyaq.manzil;
+    let mut judhur = Vec::with_capacity(5);
+    judhur.extend(siyaq.bayanat_mahalliya.as_ref().map(|mahalli| mahalli.join("Playnite")));
+    judhur.extend([
         manzil.join("Playnite"),
         manzil.join("Games").join("Playnite"),
         PathBuf::from(r"C:\Playnite"),
         PathBuf::from(r"D:\Playnite"),
-    ]
+    ]);
+    judhur
 }
 
 /// Conventional portable locations on a Unix system.
@@ -1495,4 +1490,53 @@ fn sawab_haql(qeema: &Value, miftah: &str) -> Option<bool> {
 fn raqm_haql(qeema: &Value, miftah: &str) -> Option<u64> {
     let haql = qeema.get(miftah)?;
     haql.as_u64().or_else(|| haql.as_str()?.trim().parse().ok())
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    /// The data roots one candidate list names, in order.
+    fn masarat(judhur: &[JidhrPlaynite]) -> Vec<PathBuf> {
+        judhur.iter().map(|jidhr| jidhr.masar.clone()).collect()
+    }
+
+    #[test]
+    fn judhur_windows_min_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let mutajawwila = masrah.path().join("Roaming");
+        let mahalliya = masrah.path().join("Local");
+
+        // Neither `%APPDATA%` nor `%LOCALAPPDATA%` is set here, and since
+        // edition 2024 neither could be: both directories now arrive on the
+        // context, which is the only reason this pair is checkable at all.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_mutajawwila = Some(mutajawwila.clone());
+        siyaq.bayanat_mahalliya = Some(mahalliya.clone());
+
+        let judhur = masarat(&MatjarPlaynite::jadeed().judhur_muhtamala(&siyaq));
+        assert!(judhur.contains(&mutajawwila.join("Playnite")), "{judhur:?}");
+        assert!(judhur.contains(&mahalliya.join("Playnite")), "{judhur:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn bila_mujalladat_bayanat_tabqa_al_judhur_al_mahmula() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // A portable folder is found by paths that are home-relative or
+        // absolute, so only the two application-data candidates fall away on a
+        // context that has no such directories.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        let judhur = masarat(&MatjarPlaynite::jadeed().judhur_muhtamala(&siyaq));
+        assert_eq!(judhur.len(), 4, "{judhur:?}");
+        assert!(judhur.contains(&masrah.path().join("Playnite")), "{judhur:?}");
+        Ok(())
+    }
 }

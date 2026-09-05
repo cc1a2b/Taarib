@@ -16,6 +16,7 @@ import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t, wasm } from '@/lugha/lugha';
 import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
 import { jahiziyaMin, naqsJahiziya, tasil } from '@/maktaba/jahiziya';
+import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import type {
   BinaHie,
@@ -29,6 +30,7 @@ import type {
   Lugha,
   LughaRasmiyaHie,
   MatlabIzala,
+  MudkhalRuqaaHie,
   MuharrikHie,
   NatijatTathbeetHie,
   NizamArqam,
@@ -50,6 +52,20 @@ const MIFTAH_TAAKID: Readonly<Record<MatlabIzala, MiftahLugha>> = {
   sawt: 'luba.taakid.izalat_sawt',
   kul: 'luba.taakid.istiada',
 };
+
+/**
+ * The registry's verdict on a patch against this build, in the reader's language.
+ *
+ * Both sentences are computed in Rust from the same `MutabaqatRuqaa` and cross
+ * the wire together, so this only picks. It is a function rather than two
+ * inline ternaries because the two places that show this verdict — the row's
+ * summary line and the approximate-match acknowledgement — were picking
+ * differently: the summary rendered Arabic to everyone, and the prompt showed
+ * an English reader nothing at all, which is the worse half of the same bug.
+ */
+function wasfMutabaqa(mudkhal: MudkhalRuqaaHie, lugha: Lugha): string | null {
+  return lugha === 'arabi' ? mudkhal.mutabaqa_arabi : mudkhal.mutabaqa_injilizi;
+}
 
 function miftahNaw(naw: MatlabIzala): MiftahLugha {
   if (naw === 'nass') return 'luba.naw.nass';
@@ -951,6 +967,39 @@ function TilqaiMutah({ muarrif, lugha, jahiziya, naqs }: KhasaisTilqaiMutah): JS
   );
 }
 
+/**
+ * What one install was authorised with, and by whom.
+ *
+ * Two acknowledgements travel here, not one. `MudkhalRuqaaHie::yahtaj_iqrar` is
+ * the registry's verdict on the **build match** and nothing else — it is true
+ * exactly when `MutabaqaBina` is `Nitaq` — and this screen used to spend that
+ * single value on both `iqrarShabaka` and `iqrarTaqribi`. So the answer to "do
+ * you accept that an anti-cheat may notice this on a game you play with other
+ * people" was being read off a fact about build fingerprints, and it was read as
+ * *yes* precisely on the patches that were furthest from matching. The two are
+ * separate fields because they are separate decisions, and both of them now
+ * carry what the user actually said.
+ *
+ * `mifta` identifies the row rather than the lineage: a failed install has to be
+ * able to reopen the question on the row it was pressed on, and the registry may
+ * list two revisions of one lineage.
+ */
+interface TalabTathbeet {
+  /** The patch lineage, as `thabbit_ruqaa` wants it. */
+  readonly ruqaa: string;
+  /** The row that asked, as this screen identifies rows. */
+  readonly mifta: string;
+  /** The user's answer to the multiplayer risk. */
+  readonly iqrarShabaka: boolean;
+  /** The user's answer to the approximate build match. */
+  readonly iqrarTaqribi: boolean;
+}
+
+/** One patch row's identity, stable across a refetch that reorders the list. */
+function miftahMudkhal(mudkhal: MudkhalRuqaaHie): string {
+  return `${mudkhal.id}-${String(mudkhal.murajaa)}`;
+}
+
 interface KhasaisRuqaa {
   readonly muarrif: string;
   readonly lugha: Lugha;
@@ -1029,14 +1078,14 @@ function QismRuqaa({
     };
   }, []);
 
-  const tathbeet = useMutation<NatijatTathbeetHie, KhataJisr, { ruqaa: string; iqrar: boolean }>({
-    mutationFn: async ({ ruqaa: idRuqaa, iqrar }) => {
+  const tathbeet = useMutation<NatijatTathbeetHie, KhataJisr, TalabTathbeet>({
+    mutationFn: async ({ ruqaa: idRuqaa, iqrarShabaka, iqrarTaqribi }) => {
       const hasila = await nadi('nazzil_ruqaa', { muarrif, ruqaa: idRuqaa });
       return nadi('thabbit_ruqaa', {
         muarrif,
         masarMalaf: hasila.masar,
-        iqrarShabaka: iqrar,
-        iqrarTaqribi: iqrar,
+        iqrarShabaka,
+        iqrarTaqribi,
       });
     },
     onSettled: () => {
@@ -1046,6 +1095,116 @@ function QismRuqaa({
       void makhzan.invalidateQueries({ queryKey: mafatih.tafasil(muarrif) });
     },
   });
+
+  /* -------------------------------------------------------------------------
+     The question, and the two answers to it.
+
+     `sual` is the row whose acknowledgements are open, so at most one is asked
+     at a time and the panel is physically inside the patch it is about — a
+     dialog over a list would take the patch's own title, coverage and match
+     verdict off screen at the exact moment they are what the decision is being
+     made on.
+
+     Both answers start false on every opening. An answer given about one patch
+     is not an answer about the next one, and a tick remembered across rows is a
+     tick the user did not give here.
+     ----------------------------------------------------------------------- */
+  const [sual, setSual] = useState<string | null>(null);
+  const [iqrarTaqribi, setIqrarTaqribi] = useState(false);
+  const [iqrarShabaka, setIqrarShabaka] = useState(false);
+
+  /** Each row's install button, so cancelling returns focus where it started. */
+  const azrarTathbeet = useRef(new Map<string, HTMLButtonElement | null>());
+  const zirIlghaIqrarRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    setSual(null);
+    setIqrarTaqribi(false);
+    setIqrarShabaka(false);
+  }, [muarrif]);
+
+  // The safe control, exactly as the removal strip below does it: opening a
+  // panel that can write into a game directory and landing focus on the button
+  // that writes is an accident waiting for one keystroke.
+  useEffect(() => {
+    if (sual !== null) {
+      zirIlghaIqrarRef.current?.focus();
+    }
+  }, [sual]);
+
+  const alaIlghaSual = (): void => {
+    if (sual !== null) {
+      azrarTathbeet.current.get(sual)?.focus();
+    }
+    setSual(null);
+  };
+
+  /**
+   * The install button on a row.
+   *
+   * A patch the registry judged an exact or a fingerprint match asks nothing and
+   * installs with **both** acknowledgements withheld. That is not the old
+   * behaviour renamed: withholding a grant nobody gave is the correct value, and
+   * the backend refuses if the multiplayer one turns out to matter — which is a
+   * refusal the user can then answer, through {@link alaMurajaatIqrar}, rather
+   * than an authorisation this screen invented on their behalf.
+   */
+  const alaTalabTathbeet = (mudkhal: MudkhalRuqaaHie): void => {
+    if (tathbeet.isPending || muqfal) {
+      return;
+    }
+    const mifta = miftahMudkhal(mudkhal);
+    if (!mudkhal.yahtaj_iqrar && sual !== mifta) {
+      tathbeet.mutate({
+        ruqaa: String(mudkhal.id),
+        mifta,
+        iqrarShabaka: false,
+        iqrarTaqribi: false,
+      });
+      return;
+    }
+    // A second press on a row whose question is already open closes it, which is
+    // what `aria-expanded` on that button promises. Reopening it instead would
+    // silently clear two answers the reader had already given.
+    if (sual === mifta) {
+      alaIlghaSual();
+      return;
+    }
+    setIqrarTaqribi(false);
+    setIqrarShabaka(false);
+    setSual(mifta);
+  };
+
+  const alaTanfidhSual = (mudkhal: MudkhalRuqaaHie): void => {
+    if (tathbeet.isPending || muqfal || (mudkhal.yahtaj_iqrar && !iqrarTaqribi)) {
+      return;
+    }
+    tathbeet.mutate({
+      ruqaa: String(mudkhal.id),
+      mifta: miftahMudkhal(mudkhal),
+      iqrarShabaka,
+      iqrarTaqribi,
+    });
+    setSual(null);
+  };
+
+  /**
+   * Reopens the question after a refused install.
+   *
+   * The install pipeline flattens every safety refusal into one code, so this
+   * screen cannot tell "the game is multiplayer and you did not say yes" from
+   * any other refusal — and re-firing the same call with the same two answers,
+   * which is what the block's own retry would do, cannot change the outcome of a
+   * refusal that is a *question*. So the answer to a refused install is the
+   * question again, with the backend's own sentence sitting above it, and the
+   * previous ticks kept so the reader changes only what they mean to change.
+   */
+  const alaMurajaatIqrar = (): void => {
+    const akhira = tathbeet.variables;
+    if (akhira !== undefined && !tathbeet.isPending && !muqfal) {
+      setSual(akhira.mifta);
+    }
+  };
 
   const naqs = naqsJahiziya(taqreer, lugha);
   const hukmJahiziya = jahiziyaMin(taqreer.jahiziya);
@@ -1170,57 +1329,147 @@ function QismRuqaa({
             </div>
           ) : (
             <ul className="luba__ruqaa">
-              {ruqaa.data.mudkhalat.map((mudkhal) => (
-                <li
-                  key={`${mudkhal.id}-${String(mudkhal.murajaa)}`}
-                  className="luba__lawhat-tathbeet"
-                >
-                  <div className="luba__raas-lawha">
-                    <span className="luba__ruqaa-unwan">{mudkhal.unwan}</span>
-                    <span className="luba__ruqaa-musahim">{mudkhal.musahim}</span>
-                  </div>
-                  <dl className="luba__ruqaa-tafsil">
-                    <Saff unwan={t('luba.ruqaa.taghtiya', lugha)}>
-                      {munassiq.nisba(kasr(mudkhal.nisbat_taghtiya))}
-                    </Saff>
-                    <Saff unwan={t('luba.ruqaa.nusus', lugha)}>
-                      {munassiq.raqm(mudkhal.adad_nusus)}
-                    </Saff>
-                    <Saff unwan={t('luba.ruqaa.hajm', lugha)}>
-                      <span dir="auto">{mudkhal.hajm_maqru}</span>
-                    </Saff>
-                    <Saff unwan={t('luba.ruqaa.tareeqa', lugha)}>{mudkhal.tareeqa_arabi}</Saff>
-                    <Saff unwan={t('luba.muharrik.tabaqa', lugha)}>
-                      {t('luba.muharrik.tabaqa_qeema', lugha, {
-                        raqm: munassiq.raqm(mudkhal.tabaqa_raqm),
-                        ism: mudkhal.tabaqa_arabi,
-                      })}
-                    </Saff>
-                  </dl>
-                  {mahmiya ? null : (
-                    <div className="luba__saff-afal">
-                      <button
-                        type="button"
-                        className="zir zir--tamyeez"
-                        aria-disabled={tathbeet.isPending || muqfal}
-                        onClick={() => {
-                          if (!tathbeet.isPending && !muqfal) {
-                            tathbeet.mutate({
-                              ruqaa: String(mudkhal.id),
-                              iqrar: mudkhal.yahtaj_iqrar,
-                            });
-                          }
-                        }}
-                      >
-                        {t('luba.ruqaa.tathbeet', lugha)}
-                      </button>
-                      {mudkhal.mutabaqa_arabi === null ? null : (
-                        <span className="luba__nass-hadi">{mudkhal.mutabaqa_arabi}</span>
-                      )}
+              {ruqaa.data.mudkhalat.map((mudkhal) => {
+                const mifta = miftahMudkhal(mudkhal);
+                // Open for this row either because the patch matches only
+                // approximately, or because an install of it was refused and the
+                // reader asked to see the questions again.
+                const maftuh = sual === mifta;
+                const yasal = mudkhal.yahtaj_iqrar || maftuh;
+                return (
+                  <li key={mifta} className="luba__lawhat-tathbeet">
+                    <div className="luba__raas-lawha">
+                      <span className="luba__ruqaa-unwan">{mudkhal.unwan}</span>
+                      <span className="luba__ruqaa-musahim">{mudkhal.musahim}</span>
                     </div>
-                  )}
-                </li>
-              ))}
+                    <dl className="luba__ruqaa-tafsil">
+                      <Saff unwan={t('luba.ruqaa.taghtiya', lugha)}>
+                        {munassiq.nisba(kasr(mudkhal.nisbat_taghtiya))}
+                      </Saff>
+                      <Saff unwan={t('luba.ruqaa.nusus', lugha)}>
+                        {munassiq.raqm(mudkhal.adad_nusus)}
+                      </Saff>
+                      <Saff unwan={t('luba.ruqaa.hajm', lugha)}>
+                        <span dir="auto">{mudkhal.hajm_maqru}</span>
+                      </Saff>
+                      <Saff unwan={t('luba.ruqaa.tareeqa', lugha)}>{mudkhal.tareeqa_arabi}</Saff>
+                      <Saff unwan={t('luba.muharrik.tabaqa', lugha)}>
+                        {t('luba.muharrik.tabaqa_qeema', lugha, {
+                          raqm: munassiq.raqm(mudkhal.tabaqa_raqm),
+                          ism: mudkhal.tabaqa_arabi,
+                        })}
+                      </Saff>
+                    </dl>
+                    {mahmiya ? null : (
+                      <>
+                        <div className="luba__saff-afal">
+                          <button
+                            type="button"
+                            className="zir zir--tamyeez"
+                            ref={(uqda) => {
+                              azrarTathbeet.current.set(mifta, uqda);
+                            }}
+                            aria-disabled={tathbeet.isPending || muqfal}
+                            aria-expanded={yasal ? maftuh : undefined}
+                            onClick={() => {
+                              alaTalabTathbeet(mudkhal);
+                            }}
+                          >
+                            {t('luba.ruqaa.tathbeet', lugha)}
+                          </button>
+                          {wasfMutabaqa(mudkhal, lugha) === null ? null : (
+                            <span className="luba__nass-hadi">{wasfMutabaqa(mudkhal, lugha)}</span>
+                          )}
+                        </div>
+                        <AnimatePresence initial={false}>
+                          {maftuh ? (
+                            <motion.div
+                              key="iqrar"
+                              className="luba__tawassu"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={haraka(HARAKAT_LAWHA)}
+                            >
+                              <div
+                                className="luba__tawassu-dakhil luba__iqrarat"
+                                onKeyDown={(hadath: KeyboardEvent<HTMLDivElement>) => {
+                                  if (hadath.key === 'Escape') {
+                                    hadath.stopPropagation();
+                                    alaIlghaSual();
+                                  }
+                                }}
+                              >
+                                {/* Only for the patches it is true of. Shown beside
+                                    an exact match it would be a sentence about a
+                                    risk that is not there, which is the fastest way
+                                    to teach somebody that these boxes are furniture. */}
+                                {mudkhal.yahtaj_iqrar ? (
+                                  <IqrarKhatar
+                                    muarrif={`luba-taqribi-${mifta}`}
+                                    unwan={t('luba.khatar.taqribi.unwan', lugha)}
+                                    tahdheer={t('luba.khatar.taqribi.tahdheer', lugha)}
+                                    // The registry's own verdict on this patch
+                                    // against this build, in the reader's language.
+                                    tafsil={wasfMutabaqa(mudkhal, lugha)}
+                                    nassIqrar={t('luba.khatar.taqribi.iqrar', lugha)}
+                                    muqirr={iqrarTaqribi}
+                                    alaTabdil={setIqrarTaqribi}
+                                    matlub={t('luba.khatar.taqribi.matlub', lugha)}
+                                  />
+                                ) : null}
+                                {/* Never required, because nothing on this screen
+                                    knows whether this game is played with other
+                                    people — the patch listing carries no such
+                                    field. An untouched box is a "no" the backend
+                                    acts on, which is the correct value; what it
+                                    must never be is a yes nobody said. */}
+                                <IqrarKhatar
+                                  muarrif={`luba-shabaka-${mifta}`}
+                                  unwan={t('luba.khatar.shabaka.unwan', lugha)}
+                                  tahdheer={t('luba.khatar.shabaka.tahdheer', lugha)}
+                                  nassIqrar={t('luba.khatar.shabaka.iqrar', lugha)}
+                                  muqirr={iqrarShabaka}
+                                  alaTabdil={setIqrarShabaka}
+                                />
+                                <div className="luba__saff-afal">
+                                  <button
+                                    type="button"
+                                    className="zir zir--khatar"
+                                    aria-disabled={
+                                      tathbeet.isPending ||
+                                      muqfal ||
+                                      (mudkhal.yahtaj_iqrar && !iqrarTaqribi)
+                                    }
+                                    aria-describedby={
+                                      mudkhal.yahtaj_iqrar && !iqrarTaqribi
+                                        ? muarrifMatlub(`luba-taqribi-${mifta}`)
+                                        : undefined
+                                    }
+                                    onClick={() => {
+                                      alaTanfidhSual(mudkhal);
+                                    }}
+                                  >
+                                    {t('luba.khatar.tathbeet', lugha)}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="zir"
+                                    ref={zirIlghaIqrarRef}
+                                    onClick={alaIlghaSual}
+                                  >
+                                    {t('luba.khatar.ilgha', lugha)}
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ) : null}
+                        </AnimatePresence>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
           <div className="luba__mintaqa" aria-live="polite">
@@ -1233,13 +1482,20 @@ function QismRuqaa({
                 khata={tathbeet.error}
                 lugha={lugha}
                 muarrif={muarrif}
-                aada={() => {
-                  const akhira = tathbeet.variables;
-                  if (akhira !== undefined && !tathbeet.isPending && !muqfal) {
-                    tathbeet.mutate(akhira);
-                  }
-                }}
-              />
+              >
+                {/* Not `aada`. The install pipeline answers every refusal with
+                    one code, so the sentence above may be a question — "this
+                    game is multiplayer and you have not accepted that" — and a
+                    retry that sends the same two answers again is guaranteed to
+                    earn the same refusal. This reopens the acknowledgements on
+                    the row that was pressed instead, with the refusal still on
+                    screen above them. */}
+                {tathbeet.variables === undefined ? null : (
+                  <button type="button" className="zir" onClick={alaMurajaatIqrar}>
+                    {t('luba.khatar.muraja', lugha)}
+                  </button>
+                )}
+              </KutlatKhata>
             ) : null}
             {tathbeet.data === undefined ? null : (
               <div className="luba__natija">

@@ -61,6 +61,47 @@ const ALAMAT_BEPINEX: [&str; 3] = ["BepInEx", "doorstop_config.ini", "run_bepine
 /// files that are loaded by the engine itself and need no injected loader.
 const MUKAWWIN_MULHAQ: &str = "mulhaq";
 
+/// The Ren'Py adapter component, whose whole tree is copied into `game/`.
+const MUKAWWIN_RENPY: &str = "mulhaq/renpy";
+
+/// Where the Ren'Py component keeps the Arabic face it ships, *inside* the
+/// component.
+///
+/// A path within the component rather than a store of its own, and that is the
+/// point: [`renpy`] copies the component's whole tree into `game/`, so a face
+/// staged at `mulhaq/renpy/taarib/khutut/X.ttf` lands at
+/// `game/taarib/khutut/X.ttf` with no deployment step of its own, and the name
+/// the generated `.rpy` must use is exactly the tail — `taarib/khutut/X.ttf` —
+/// because that is what Ren'Py's loader resolves against `game/`.
+///
+/// `taarib/` already belongs to Taarib inside a Ren'Py game;
+/// `taarib_muhawwil_nusus::renpy::MALAF_BAYANAT` is `game/taarib/idad.json`.
+const MUJALLAD_KHATT_RENPY: &str = "taarib/khutut/";
+
+/// The file extensions a Ren'Py face may have.
+///
+/// Ren'Py's font stack reads both. Folded before the comparison, because a
+/// component store on a case-insensitive filesystem can hand back `X.TTF` for
+/// the entry it was given as `X.ttf`.
+const LAWAHIQ_KHATT: [&str; 2] = ["ttf", "otf"];
+
+/// The order a Ren'Py face is chosen in when the component ships more than one,
+/// most preferred first, matched against the file name's leading characters.
+///
+/// A visual novel is not a user interface. Its text is body copy — paragraphs
+/// of dialogue read continuously at Ren'Py's default `gui.text_size` of 22 —
+/// and the Arabic tradition for body copy is Naskh. So the screen-designed
+/// Naskh leads, the book Naskh follows it, and the two sans faces come after
+/// both, because a geometric sans set as a novel's dialogue reads as a menu.
+///
+/// The list ranks; it does not filter. A face the list does not name is still
+/// chosen when it is what the component ships, sorted by name after every face
+/// the list does name — a bundle that staged one Kufi face into the Ren'Py
+/// component meant to ship it, and answering "no font" to that would be this
+/// module overruling the build rather than reading it.
+const TARTIB_KHATT_RENPY: [&str; 4] =
+    ["NotoNaskhArabic", "Amiri", "IBMPlexSansArabic", "NotoSansArabic"];
+
 /// The largest loader registry Taarib will read in order to append its own
 /// registration.
 const SAQF_HAJM_TASJIL: u64 = 16 * 1024 * 1024;
@@ -1583,6 +1624,22 @@ pub struct KhuttatTarkib {
     /// The additive layer's files, in write order.
     pub mudkhalat: Vec<MudkhalTarkib>,
 
+    /// The Arabic face this plan deploys into a Ren'Py game, named the way the
+    /// generated `.rpy` must name it: relative to `game/`.
+    ///
+    /// [`None`] for every other engine, and for a Ren'Py component that ships
+    /// no face — in which case the generated settings register the direction
+    /// and the translation and leave the game's own font variables alone.
+    ///
+    /// It is in the plan because the *text* write needs it before this plan is
+    /// executed. `nusus::raqqi_nusus` runs before `nashr`, deliberately — see
+    /// [`crate::masar_tathbeet::thabbit`] — so the name has to be knowable from
+    /// the store ahead of the deployment that places it. [`khatt_renpy`] is
+    /// that answer, asked here as the plan is built and asked again by the text
+    /// write, over the same component listing and through the same selector.
+    /// The two therefore cannot disagree about which file this is.
+    pub khatt_renpy: Option<String>,
+
     /// Launch-time requirements, for `itlaq` to perform and record. Never
     /// performed by this module.
     pub talabat: Vec<TalabItlaq>,
@@ -1666,6 +1723,9 @@ impl KhuttatTarkib {
                 NawMudkhal::Tadeel => "modify",
             };
             sutur.push(format!("  {fil}: {}", mudkhal.nisbi));
+        }
+        if let Some(khatt) = self.khatt_renpy.as_deref() {
+            sutur.push(format!("  font: {khatt}, registered in the generated Ren'Py settings"));
         }
         for talab in &self.talabat {
             sutur.push(format!("  launch: {}", talab.wasf_injilizi()));
@@ -1757,6 +1817,7 @@ pub fn khutta(
         jidhr_muhammil: None,
         mujalladat: Vec::new(),
         mudkhalat: Vec::new(),
+        khatt_renpy: None,
         talabat: Vec::new(),
         manassa_taamil: None,
     };
@@ -2152,25 +2213,100 @@ fn rpg_maker(
 
 /// Ren'Py: pure addition into `game/`, which the engine compiles and runs at
 /// startup with no registration step of any kind.
+///
+/// The Arabic face travels with the rest of the component and is placed by this
+/// same loop; what the arm does about it is *name* it, so that the plan states
+/// which of the files it is about to add the generated settings will point every
+/// text style at.
 fn renpy(
     mawadi: &MawadiTarkib,
     jidhr_makhzan: &Path,
     mukhattat: &mut KhuttatTarkib,
 ) -> NatijatTathbeet<()> {
-    let mukawwin = format!("{MUKAWWIN_MULHAQ}/renpy");
-    for fi_makhzan in asmaa_mukawwin(jidhr_makhzan, &mukawwin)? {
+    let asmaa = asmaa_mukawwin(jidhr_makhzan, MUKAWWIN_RENPY)?;
+    // Chosen from the very names this arm is about to plan, rather than from a
+    // second walk of the store: the file the settings name and the file this
+    // deploys are then the same file by construction.
+    mukhattat.khatt_renpy = ikhtar_khatt_renpy(&asmaa).map(str::to_owned);
+    for fi_makhzan in asmaa {
         let nisbi = format!("game/{fi_makhzan}");
         mukhattat.mudkhalat.push(MudkhalTarkib {
             mawqi: mawadi.wajha(&nisbi)?,
             nisbi,
             naw: NawMudkhal::Idafa,
             masdar: MasdarMudkhal::MinMakhzan {
-                mukawwin: mukawwin.clone(),
+                mukawwin: MUKAWWIN_RENPY.to_owned(),
                 fi_makhzan,
             },
         });
     }
     Ok(())
+}
+
+/// The Arabic face a Ren'Py install will place, named relative to `game/`.
+///
+/// The answer [`KhuttatTarkib::khatt_renpy`] carries, asked separately because
+/// the *text* write needs it before the plan is executed:
+/// `nusus::raqqi_nusus` runs ahead of `nashr` so that RPG Maker's byte offsets
+/// into `js/plugins.js` are still the offsets its extraction measured, and at
+/// that moment nothing has been deployed. Nothing is invented to bridge that —
+/// the store is read, and the name returned is the name [`renpy`] will place,
+/// because both go through [`ikhtar_khatt_renpy`] over the same listing.
+///
+/// [`None`] means no font is registered at all, which is a game rendered with
+/// whatever face it already ships: correct Arabic on a build whose GUI font
+/// covers Arabic, empty boxes on one whose font does not. The generated
+/// settings say so in the install report rather than registering a name.
+///
+/// # Errors
+///
+/// Whatever [`asmaa_mukawwin`] raises other than an absent or short component.
+/// Those two are [`None`]: a build staged without the Ren'Py adapter, or one
+/// whose mirror never settled, is refused by name a moment later when
+/// [`khutta`] plans the same component, and a module whose subject is text
+/// should not be where that refusal first appears.
+pub fn khatt_renpy(jidhr_makhzan: &Path) -> NatijatTathbeet<Option<String>> {
+    match asmaa_mukawwin(jidhr_makhzan, MUKAWWIN_RENPY) {
+        Ok(asmaa) => Ok(ikhtar_khatt_renpy(&asmaa).map(str::to_owned)),
+        Err(KhataTathbeet::MukawwinMafqud { .. } | KhataTathbeet::MukawwinNaqis { .. }) => Ok(None),
+        Err(khata) => Err(khata),
+    }
+}
+
+/// Picks one face out of a Ren'Py component's file listing.
+///
+/// Candidates are the font files directly under [`MUJALLAD_KHATT_RENPY`] —
+/// directly, because a face is a file the component ships for this purpose and
+/// a `.ttf` that turned up somewhere else in the tree is not one. They are
+/// ranked by [`TARTIB_KHATT_RENPY`] and then by name, so the same store gives
+/// the same answer on every machine and in both of the two places that ask.
+fn ikhtar_khatt_renpy(asmaa: &[String]) -> Option<&str> {
+    let mut mufaddal: Option<(usize, &str)> = None;
+    for ism in asmaa {
+        let Some(dhayl) = ism.strip_prefix(MUJALLAD_KHATT_RENPY) else { continue };
+        if dhayl.contains('/') {
+            continue;
+        }
+        let lahiqa = Path::new(dhayl).extension().and_then(|lahiqa| lahiqa.to_str());
+        if !lahiqa.is_some_and(|lahiqa| {
+            LAWAHIQ_KHATT.iter().any(|maqbul| lahiqa.eq_ignore_ascii_case(maqbul))
+        }) {
+            continue;
+        }
+        // A face the preference list does not name still ranks, after every one
+        // it does; `len()` is one past the last named rank.
+        let rutba = TARTIB_KHATT_RENPY
+            .iter()
+            .position(|badiya| dhayl.starts_with(badiya))
+            .unwrap_or(TARTIB_KHATT_RENPY.len());
+        let afdal = mufaddal.is_none_or(|(hali, ism_hali)| {
+            rutba < hali || (rutba == hali && ism.as_str() < ism_hali)
+        });
+        if afdal {
+            mufaddal = Some((rutba, ism));
+        }
+    }
+    mufaddal.map(|(_, ism)| ism)
 }
 
 /// Godot 3: the `GDNative` description beside the pack, and the project override
@@ -2541,4 +2677,89 @@ pub fn nashr(
     let itar = rakkib_itar(luba, halat, mukawwinat, muthabbit)?;
     let mulhaqat = nashr_mulhaqat(&mukhattat, &luba.jidhr, mukawwinat, muthabbit)?;
     Ok((itar, mulhaqat))
+}
+
+#[cfg(test)]
+#[allow(
+    clippy::panic,
+    clippy::expect_used,
+    clippy::missing_panics_doc,
+    reason = "a test reports failure by panicking; the lints are written for library code, \
+              and honouring them here would mean a test that cannot fail"
+)]
+mod ikhtibarat {
+    use super::{MUJALLAD_KHATT_RENPY, ikhtar_khatt_renpy};
+
+    /// The component's listing, as `asmaa_mukawwin` hands it over.
+    fn asmaa(dhuyul: &[&str]) -> Vec<String> {
+        dhuyul.iter().map(|dhayl| (*dhayl).to_owned()).collect()
+    }
+
+    #[test]
+    fn la_khatt_illa_min_mujallad_alkhutut() {
+        // The Python package, its license, and a stray face somewhere else in
+        // the tree. None of the three is the component's Arabic face.
+        let listing = asmaa(&[
+            "taarib_renpy/__init__.py",
+            "taarib_renpy/jisr.py",
+            "taarib/khutut/OFL.txt",
+            "taarib/Amiri-Regular.ttf",
+            "taarib/khutut/khass/Amiri-Regular.ttf",
+        ]);
+        assert_eq!(
+            ikhtar_khatt_renpy(&listing),
+            None,
+            "a face outside the component's font directory, or nested below it, is not the \
+             face the component ships"
+        );
+    }
+
+    #[test]
+    fn yukhtaru_alnaskh_qabl_alsans() {
+        let listing = asmaa(&[
+            "taarib/khutut/Cairo[slnt,wght].ttf",
+            "taarib/khutut/IBMPlexSansArabic-Regular.ttf",
+            "taarib/khutut/NotoNaskhArabic[wght].ttf",
+            "taarib/khutut/OFL.txt",
+            "taarib_renpy/__init__.py",
+        ]);
+        assert_eq!(
+            ikhtar_khatt_renpy(&listing),
+            Some("taarib/khutut/NotoNaskhArabic[wght].ttf"),
+            "a visual novel's text is body copy, and the ranking says Naskh before sans"
+        );
+    }
+
+    #[test]
+    fn wajh_ghayr_musamma_yufaddal_ala_la_shay() {
+        // A bundle that staged one Kufi face into the Ren'Py component meant to
+        // ship it. Answering "no font" would be this module overruling the build.
+        let listing = asmaa(&["taarib/khutut/ReemKufi[wght].ttf", "taarib_renpy/__init__.py"]);
+        assert_eq!(
+            ikhtar_khatt_renpy(&listing),
+            Some("taarib/khutut/ReemKufi[wght].ttf"),
+            "the preference list ranks; it does not filter"
+        );
+    }
+
+    #[test]
+    fn alikhtiyar_thabit_bayn_alaalat() {
+        // Two faces of equal rank arrive in whatever order the filesystem
+        // walked them. The answer must not depend on that.
+        let sanad = asmaa(&["taarib/khutut/Zawaya.otf", "taarib/khutut/Alif.ttf"]);
+        let maqlub = asmaa(&["taarib/khutut/Alif.ttf", "taarib/khutut/Zawaya.otf"]);
+        assert_eq!(ikhtar_khatt_renpy(&sanad), Some("taarib/khutut/Alif.ttf"));
+        assert_eq!(ikhtar_khatt_renpy(&sanad), ikhtar_khatt_renpy(&maqlub));
+    }
+
+    #[test]
+    fn alism_almurjaa_huwa_almasar_dakhil_game() {
+        // What `iktub_idad` writes into the `.rpy` is this string verbatim, and
+        // what `renpy` deploys is `game/` joined to the same store-relative
+        // name. The two are the same value, which is the whole invariant.
+        let listing = asmaa(&["taarib/khutut/Amiri-Regular.ttf"]);
+        let ikhtiyar = ikhtar_khatt_renpy(&listing).expect("a face");
+        assert!(ikhtiyar.starts_with(MUJALLAD_KHATT_RENPY));
+        assert_eq!(listing.first().map(String::as_str), Some(ikhtiyar));
+    }
 }

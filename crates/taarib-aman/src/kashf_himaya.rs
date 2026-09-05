@@ -1,13 +1,14 @@
 //! كشف الحماية — anti-cheat detection by hard evidence: file, module, service, driver and store signature.
 
 use std::collections::BTreeSet;
-use std::io;
 use std::path::{Path, PathBuf};
 
 use object::read::Object as _;
 use serde::{Deserialize, Serialize};
-use taarib_kashf::matajir::vdf::{self, QeemaVdf};
+use taarib_kashf::matajir::vdf::QeemaVdf;
 use taarib_usus::manassa;
+
+use crate::matjar::QiraatMatjar;
 
 /// A known anti-cheat, as a closed set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -640,9 +641,9 @@ pub fn ifhas_himaya(
 
 /// The same scan, and what became of its store-catalogue half.
 ///
-/// One pass, not two: `appinfo.vdf` is a few hundred megabytes on a mature
-/// account, and a caller that wanted both answers by calling twice would pay
-/// for it twice.
+/// One pass, not two: a caller that wanted both answers by calling twice would
+/// read `appinfo.vdf` twice, and that file is measured in megabytes on a mature
+/// account.
 ///
 /// Never fails, for the same reason [`ifhas_himaya`] does not — the catalogue's
 /// fate is a value here rather than an error, so that a caller cannot receive
@@ -653,32 +654,34 @@ pub fn ifhas_himaya_bi_matjar(
     masdar_luba_appid: Option<u32>,
     jidhr_steam: Option<&Path>,
 ) -> (IjmaaHimaya, HalatMatjar) {
+    ifhas_himaya_bi_qiraa(jidhr_luba, &QiraatMatjar::iqra(masdar_luba_appid, jidhr_steam))
+}
+
+/// The same scan again, against a catalogue reading the caller already has.
+///
+/// [`crate::fahs::fahs`] runs this scan *and* [`crate::kashf_shabaka`]'s on the
+/// same game before it will authorise anything, and both want the same
+/// `appinfo.vdf`. This entry point is how that file gets read once instead of
+/// twice: [`QiraatMatjar::iqra`] opens it, and each probe is handed the half it
+/// is about.
+#[must_use]
+pub fn ifhas_himaya_bi_qiraa(
+    jidhr_luba: &Path,
+    matjar: &QiraatMatjar,
+) -> (IjmaaHimaya, HalatMatjar) {
     let mut musajjil = Musajjil::default();
 
     imsah_luba(jidhr_luba, &mut musajjil);
     ifhas_khidmat(jidhr_luba, &mut musajjil);
 
-    let halat_matjar = match (masdar_luba_appid, jidhr_steam) {
-        (None, _) => HalatMatjar::GhayrMatlub,
-        (Some(_), None) => HalatMatjar::JidhrMajhul,
-        (Some(appid), Some(jidhr_steam)) => match fahs_matjar(jidhr_steam, appid) {
-            Ok(adilla) => {
-                for daleel in adilla {
-                    musajjil.sajjil(daleel);
-                }
-                HalatMatjar::Maqru
-            }
-            Err(khata) => {
-                let masar = jidhr_steam.join("appcache").join("appinfo.vdf");
-                let sabab = format!("{:?}", khata.kind());
-                // Still a gap on the report as well: the surface that only
-                // displays this scan must keep showing the same fact the
-                // install path now refuses over.
-                musajjil.thughra(masar.clone(), sabab.clone());
-                HalatMatjar::Mutaadhdhir { masar, sabab }
-            }
-        },
-    };
+    for daleel in &matjar.himaya {
+        musajjil.sajjil(daleel.clone());
+    }
+    // Still a gap on the report as well: the surface that only displays this
+    // scan must keep showing the same fact the install path now refuses over.
+    if let HalatMatjar::Mutaadhdhir { masar, sabab } = &matjar.hala {
+        musajjil.thughra(masar.clone(), sabab.clone());
+    }
 
     let ijmaa = IjmaaHimaya {
         jidhr: jidhr_luba.to_path_buf(),
@@ -686,32 +689,7 @@ pub fn ifhas_himaya_bi_matjar(
         thughrat: musajjil.thughrat,
         mabtur: musajjil.mabtur,
     };
-    (ijmaa, halat_matjar)
-}
-
-/// Reads Steam's `appinfo.vdf` for the store signatures recorded against one app.
-///
-/// # Errors
-///
-/// The underlying [`std::io::Error`] when `appcache/appinfo.vdf` cannot be read,
-/// and an [`std::io::ErrorKind::Other`] carrying the reader's message when the
-/// catalogue's own framing is corrupt.
-pub fn fahs_matjar(jidhr_steam: &Path, appid: u32) -> Result<Vec<DaleelHimaya>, io::Error> {
-    let masar = jidhr_steam.join("appcache").join("appinfo.vdf");
-    let bayt = std::fs::read(&masar)?;
-
-    let mut adilla: Vec<DaleelHimaya> = Vec::new();
-    let natija = vdf::murur_appinfo(&masar, &bayt, &mut |madkhal| {
-        let Ok(madkhal) = madkhal else {
-            return;
-        };
-        if madkhal.app != appid {
-            return;
-        }
-        adilla.extend(adillat_appinfo(&madkhal.bayanat, &masar));
-    });
-    natija.map_err(|khata| io::Error::other(khata.injilizi))?;
-    Ok(adilla)
+    (ijmaa, matjar.hala.clone())
 }
 
 /// Accumulates evidence, dropping duplicates, capping the total, and recording gaps.
@@ -937,7 +915,7 @@ fn ifhas_khidmat(jidhr: &Path, musajjil: &mut Musajjil) {
 }
 
 /// Projects one app's `appinfo.vdf` tree into the store signatures it carries.
-fn adillat_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelHimaya> {
+pub(crate) fn adillat_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelHimaya> {
     let mut adilla: Vec<DaleelHimaya> = Vec::new();
 
     let fiat = bayanat.kain_bi_masar(&["appinfo", "common", "category"]).unwrap_or(&[]);

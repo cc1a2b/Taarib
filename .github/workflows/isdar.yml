@@ -198,9 +198,12 @@ jobs:
           cache-on-failure: true
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      # Rows C1-C4. `net6.0` is one of the four target frameworks, so the 6.0
-      # runtime is installed beside the 8.0 SDK that builds it; the feeds those
-      # projects restore from are pinned in `unity/Directory.Build.props`.
+      # Rows C1-C4. `dotnet build` compiles with the newest SDK it finds, so 8.0
+      # is what supplies the C# 12 `unity/Directory.Build.props` asks for; 6.0 is
+      # there for its targeting pack, because `Taarib.Unity.Il2cpp` is the one
+      # project of the four that targets `net6.0`. `dotnet-version` installs
+      # SDKs, not runtimes — a runtime alone cannot be compiled against. The
+      # feeds these projects restore from are pinned in the same props file.
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |

@@ -117,7 +117,14 @@ use crate::tahdid::{maghlufa, mutaarid};
 /// unconditionally. A Ren'Py game on an engine that shapes now reports
 /// [`JahiziyatTashghil::Naqisa`], and every stored report carries the old
 /// verdict and the old sentences for every other engine besides.
-pub const ISDAR_FAHS: u32 = 3;
+///
+/// Raised to 4 when that same arm became [`JahiziyatTashghil::Mukammala`]. The
+/// staging matrix now carries an Arabic face into the Ren'Py component, so the
+/// one thing that was missing — a font the game could actually draw the
+/// translation with — ships. A stored report would otherwise keep withholding
+/// the one-button run from the only engine this build can finish, which is the
+/// expensive direction for this field to be stale in.
+pub const ISDAR_FAHS: u32 = 4;
 
 /// The confidence below which the report tells the user the identification may
 /// be wrong.
@@ -506,8 +513,10 @@ pub fn jahiziya(muharrik: &Muharrik) -> (JahiziyatTashghil, Option<Hadd>) {
         AilatMuharrik::Majhul => (JahiziyatTashghil::Ghaiba, naqs_tabaqa()),
     };
     // A finished tier has nothing to warn about, and `TaqreerImkaniyat::naqs`
-    // states that as its contract. No arm answers `Mukammala` today; the arm
-    // that first does must not have to remember this.
+    // states that as its contract. Ren'Py on a shaping engine is the first arm
+    // to answer `Mukammala`, and it reaches here still carrying the sentence it
+    // needed while a font was missing — which is exactly why this is enforced
+    // in one place rather than in each arm.
     match jahiziya {
         JahiziyatTashghil::Mukammala => (jahiziya, None),
         JahiziyatTashghil::Naqisa | JahiziyatTashghil::Ghaiba => (jahiziya, Some(naqs)),
@@ -539,7 +548,12 @@ pub fn jahiziya(muharrik: &Muharrik) -> (JahiziyatTashghil, Option<Hadd>) {
 /// copies the package alone.
 fn jahiziyat_renpy(muharrik: &Muharrik) -> (JahiziyatTashghil, Hadd) {
     match renpy_yashkul(muharrik) {
-        Some(true) => (JahiziyatTashghil::Naqisa, naqs_renpy_khatt()),
+        // The one arm in this table that reaches the screen. Everything the
+        // tier promises for a shaping Ren'Py engine now arrives: the
+        // translation, the language selection, the reading direction, and — as
+        // of the staging matrix carrying a face into the Ren'Py component — an
+        // Arabic font the generated `.rpy` registers by name.
+        Some(true) => (JahiziyatTashghil::Mukammala, naqs_renpy_khatt()),
         Some(false) => (JahiziyatTashghil::Ghaiba, naqs_renpy_bila_tashkeel()),
         None => (JahiziyatTashghil::Ghaiba, naqs_renpy_majhul()),
     }
@@ -1722,16 +1736,16 @@ mod ikhtibarat {
         }
     }
 
-    /// A `Naqisa` sentence names the part that does not arrive. The whole value
-    /// of the verdict is that name; without it the report has told a user their
-    /// game is half-Arabized and nothing about which half.
+    /// A finished tier carries no gap sentence. This was a `Naqisa` pin while
+    /// Ren'Py shipped no font; the staging matrix now carries a face into the
+    /// Ren'Py component, so the one missing part arrives and the verdict is
+    /// `Mukammala` — which `jahiziya` enforces by dropping the sentence, so that
+    /// an arm reaching `Mukammala` while still holding one cannot leak it.
     #[test]
-    fn al_naqisa_tusammi_ma_yanqus() {
+    fn al_mukammala_la_tahmil_naqsan() {
         let renpy = bi_isdar(AilatMuharrik::Renpy, 8, 1, 3);
-        assert_eq!(hukm(&renpy), JahiziyatTashghil::Naqisa);
-        let (arabi, injilizi) = jumlatan(&renpy);
-        assert!(arabi.contains("خطّ"), "{arabi}");
-        assert!(injilizi.contains("font"), "{injilizi}");
+        assert_eq!(hukm(&renpy), JahiziyatTashghil::Mukammala);
+        assert!(jahiziya(&renpy).1.is_none(), "a finished tier must carry no gap sentence");
     }
 
     // -----------------------------------------------------------------------
@@ -1822,10 +1836,10 @@ mod ikhtibarat {
     /// itself, the translation and the direction are both installed, and the
     /// font is the one thing missing.
     #[test]
-    fn renpy_yashkul_fahuwa_naqisa() {
+    fn renpy_yashkul_fahuwa_mukammala() {
         for (kabir, sagheer) in [(7, 4), (7, 8), (8, 0), (8, 3)] {
             let asas = bi_isdar(AilatMuharrik::Renpy, kabir, sagheer, 0);
-            assert_eq!(hukm(&asas), JahiziyatTashghil::Naqisa, "Ren'Py {kabir}.{sagheer}");
+            assert_eq!(hukm(&asas), JahiziyatTashghil::Mukammala, "Ren'Py {kabir}.{sagheer}");
         }
     }
 
@@ -1850,7 +1864,7 @@ mod ikhtibarat {
              introduced at 7.4, on Python 3, so this build is 7.4 or later and the engine can \
              shape Arabic itself — inferred from directory names, not read",
         );
-        assert_eq!(hukm(&yashkul), JahiziyatTashghil::Naqisa);
+        assert_eq!(hukm(&yashkul), JahiziyatTashghil::Mukammala);
 
         let la_yashkul = bi_daleel(
             AilatMuharrik::Renpy,
@@ -1939,14 +1953,50 @@ mod ikhtibarat {
         assert!(taqreer_ghaib.anzimat_qabila.is_empty());
         assert_eq!(taqreer_ghaib.jawda, JawdaMutawaqqaa::Mahduda);
 
-        let mut naqis = bi_isdar(AilatMuharrik::Renpy, 8, 1, 3);
-        naqis.itarat.push(ItarNusus::NassRenpy);
-        let taqreer_naqis = taqreer(naqis, &[], "2026-01-01T00:00:00Z".to_owned());
-        assert_eq!(taqreer_naqis.jahiziya, JahiziyatTashghil::Naqisa);
-        assert_eq!(taqreer_naqis.anzimat_qabila, vec![ItarNusus::NassRenpy]);
+        // Ren'Py on a shaping engine is the one arm that finishes, so it is
+        // the only one that can pin the `Mukammala` half of this. **No arm
+        // answers `Naqisa` today** — the quality cap at `jawda`'s
+        // `Naqisa` branch is therefore unreachable from this function, and is
+        // pinned directly below rather than through an engine that no longer
+        // reaches it.
+        let mut tamm = bi_isdar(AilatMuharrik::Renpy, 8, 1, 3);
+        tamm.itarat.push(ItarNusus::NassRenpy);
+        let taqreer_tamm = taqreer(tamm, &[], "2026-01-01T00:00:00Z".to_owned());
+        assert_eq!(taqreer_tamm.jahiziya, JahiziyatTashghil::Mukammala);
+        assert_eq!(taqreer_tamm.anzimat_qabila, vec![ItarNusus::NassRenpy]);
+        // `<=` because worse sorts higher: this asserts "good or better",
+        // which is the half the `Naqisa` cap used to forbid.
         assert!(
-            taqreer_naqis.jawda >= JawdaMutawaqqaa::Jayida,
-            "a partly-delivered tier was reported as excellent"
+            taqreer_tamm.jawda <= JawdaMutawaqqaa::Jayida,
+            "a finished tier was reported worse than good: {:?}",
+            taqreer_tamm.jawda
+        );
+    }
+
+    /// The quality cap that `Naqisa` applies, pinned directly.
+    ///
+    /// No arm has reached `Naqisa` since Ren'Py finished, so without this the
+    /// cap would be untested code that the next partly-delivered engine relies
+    /// on. A report saying half the tier arrives must not also say the result is
+    /// excellent — the two sentences sit next to each other on the screen.
+    ///
+    /// Note the direction: worse verdicts sort *higher* in
+    /// [`JawdaMutawaqqaa`], so capping is `max`, not `min`.
+    #[test]
+    fn al_naqisa_tahudd_al_jawda() {
+        assert!(
+            JawdaMutawaqqaa::Jayida > JawdaMutawaqqaa::Mumtaza,
+            "the cap below is `max`, which is only correct while worse sorts higher"
+        );
+        assert_eq!(
+            JawdaMutawaqqaa::Mumtaza.max(JawdaMutawaqqaa::Jayida),
+            JawdaMutawaqqaa::Jayida,
+            "`Naqisa` must pull an excellent verdict down to good"
+        );
+        assert_eq!(
+            JawdaMutawaqqaa::Mahduda.max(JawdaMutawaqqaa::Jayida),
+            JawdaMutawaqqaa::Mahduda,
+            "the cap must never improve a verdict that was already worse"
         );
     }
 

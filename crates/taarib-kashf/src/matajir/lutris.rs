@@ -370,11 +370,14 @@ impl JudhurLutris {
             });
         }
 
+        // All three from the context: the XDG base directories are ambient, and
+        // the context has already applied the specification's absolute-only
+        // rule and its home-relative defaults to each of them.
         judhur.push(Self {
-            bayanat: khazina_bayanat(&siyaq.manzil).join(MUJALLAD_LUTRIS),
-            bayanat_am: khazina_bayanat(&siyaq.manzil),
-            idadat: khazina_idadat(&siyaq.manzil).join(MUJALLAD_LUTRIS),
-            makhbaa: khazina_makhbaa(&siyaq.manzil).join(MUJALLAD_LUTRIS),
+            bayanat: siyaq.khazina_bayanat.join(MUJALLAD_LUTRIS),
+            bayanat_am: siyaq.khazina_bayanat.clone(),
+            idadat: siyaq.khazina_idadat.join(MUJALLAD_LUTRIS),
+            makhbaa: siyaq.khazina_makhbaa.join(MUJALLAD_LUTRIS),
         });
 
         if siyaq.yashmal_hawiyat {
@@ -389,35 +392,6 @@ impl JudhurLutris {
 
         judhur
     }
-}
-
-/// `$XDG_DATA_HOME`, or the default the specification names.
-fn khazina_bayanat(manzil: &Path) -> PathBuf {
-    khazina_xdg("XDG_DATA_HOME").unwrap_or_else(|| manzil.join(".local").join("share"))
-}
-
-/// `$XDG_CONFIG_HOME`, or the default the specification names.
-fn khazina_idadat(manzil: &Path) -> PathBuf {
-    khazina_xdg("XDG_CONFIG_HOME").unwrap_or_else(|| manzil.join(".config"))
-}
-
-/// `$XDG_CACHE_HOME`, or the default the specification names.
-fn khazina_makhbaa(manzil: &Path) -> PathBuf {
-    khazina_xdg("XDG_CACHE_HOME").unwrap_or_else(|| manzil.join(".cache"))
-}
-
-/// Reads one XDG base-directory variable, honouring it only when it is absolute.
-///
-/// The specification is explicit that a relative value is invalid and must be
-/// ignored, and the reason is worth keeping: a relative `XDG_DATA_HOME` would
-/// resolve against whatever directory this process happens to have been started
-/// in, which on a desktop launch is the user's home and in a terminal is
-/// wherever they were standing. Silently accepting it would make discovery
-/// depend on the working directory.
-fn khazina_xdg(mutaghayyir: &str) -> Option<PathBuf> {
-    let qeema = std::env::var_os(mutaghayyir)?;
-    let masar = PathBuf::from(qeema);
-    masar.is_absolute().then_some(masar)
 }
 
 // ---------------------------------------------------------------------------
@@ -1979,4 +1953,51 @@ fn harf_min_hex(huruf: &mut std::str::CharIndices<'_>, adad: usize) -> Option<ch
         qeema = qeema.checked_mul(16)?.checked_add(raqam)?;
     }
     char::from_u32(qeema)
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn judhur_lutris_min_khazain_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let bayanat = masrah.path().join("khazinat-bayanat");
+        let idadat = masrah.path().join("khazinat-idadat");
+        let makhbaa = masrah.path().join("khazinat-makhbaa");
+        fs::create_dir_all(bayanat.join(MUJALLAD_LUTRIS))?;
+        fs::write(bayanat.join(MUJALLAD_LUTRIS).join(ISM_QAIDA), [])?;
+
+        // Three separate directories, none of them derivable from the home: a
+        // resolver that still read `$XDG_DATA_HOME` inline could not be pointed
+        // at any of them, because since edition 2024 setting one from a test is
+        // an `unsafe` mutation of the whole process.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Linux, masrah.path());
+        siyaq.khazina_bayanat = bayanat.clone();
+        siyaq.khazina_idadat = idadat.clone();
+        siyaq.khazina_makhbaa = makhbaa.clone();
+
+        assert_eq!(
+            MatjarLutris::jadeed().mawqi(&siyaq),
+            Some(bayanat.join(MUJALLAD_LUTRIS)),
+            "the data root must come from the context"
+        );
+
+        // All four, not just the one holding the catalogue: a scan that took the
+        // data root from the context and the config root from `~/.config` would
+        // find games and none of their executables.
+        let muhtamala = JudhurLutris::muhtamala(&siyaq);
+        let awwal = muhtamala.first().ok_or("no candidate installation was built")?;
+        assert_eq!(awwal.bayanat_am, bayanat);
+        assert_eq!(awwal.idadat, idadat.join(MUJALLAD_LUTRIS));
+        assert_eq!(awwal.makhbaa, makhbaa.join(MUJALLAD_LUTRIS));
+        Ok(())
+    }
 }

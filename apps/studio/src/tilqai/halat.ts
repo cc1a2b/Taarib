@@ -32,8 +32,15 @@ export interface HalatShasha {
   readonly khataAmal: KhataTilqai | null;
   /** Whether a start or a cancel is in flight and the buttons must refuse. */
   readonly yantazir: boolean;
-  /** Starts a run; `istinaf` resumes the unfinished one rather than replacing it. */
-  readonly ibda: (istinaf: boolean) => void;
+  /**
+   * Starts a run; `istinaf` resumes the unfinished one rather than replacing it.
+   *
+   * `iqrarShabaka` is the user's answer to the multiplayer warning, passed
+   * through untouched. It is a required parameter rather than an optional one on
+   * purpose: every caller has to have obtained an answer, and a default here
+   * would be this layer answering for them.
+   */
+  readonly ibda: (istinaf: boolean, iqrarShabaka: boolean) => void;
   readonly alghi: () => void;
   readonly aidHukm: () => void;
   readonly shaghghil: () => void;
@@ -158,13 +165,13 @@ export function useTilqai(
   }, [minfath, muarrif, sajjilLaqta]);
 
   const ibda = useCallback(
-    (istinaf: boolean) => {
+    (istinaf: boolean, iqrarShabaka: boolean) => {
       if (!hayy.current) {
         return;
       }
       haddidIntizar(true);
       haddidKhataAmal(null);
-      minfath.ibda(muarrif, istinaf).then(
+      minfath.ibda(muarrif, istinaf, iqrarShabaka).then(
         (jawab) => {
           if (!hayy.current) {
             return;

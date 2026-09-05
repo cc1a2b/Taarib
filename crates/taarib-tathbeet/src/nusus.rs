@@ -26,7 +26,12 @@
 //!    renderer runtime that no Rust code produces. It is staged into the
 //!    component store as `mulhaq/electron/taarib.js`, and this module is the
 //!    only thing that reads it, because the component store's layout is this
-//!    crate's business and not the engine crate's.
+//!    crate's business and not the engine crate's. The Ren'Py adapter needs a
+//!    font *name* for the same reason: the face is a component the installer
+//!    deploys, and only this crate knows where a component lives or what it is
+//!    called. [`crate::tarkib::khatt_renpy`] is the one answer to that, and it
+//!    is the same call [`crate::tarkib::khutta`] makes when it plans the
+//!    deployment that places the file.
 //!
 //! ## Why it runs where it runs
 //!
@@ -38,6 +43,13 @@
 //! whose length has moved. The engine crate documents the same ordering for the
 //! same reason, and honouring it here is what keeps the two halves of an RPG
 //! Maker install from tripping over each other.
+//!
+//! The ordering is also why the Ren'Py font arrives as a name and not as a
+//! file: at the moment this runs, nothing has been deployed and the face is
+//! still in the component store. The name is therefore read from the store,
+//! through the same function and the same selector the deployment uses a step
+//! later — so what the generated `.rpy` points at and what lands in `game/`
+//! cannot be two different files.
 //!
 //! ## What it does not do
 //!
@@ -53,6 +65,7 @@ use std::path::{Path, PathBuf};
 use taarib_muhawwil_nusus::khata::KhataNusus;
 use taarib_muhawwil_nusus::tarkeeb::{Mawarid, Mutarjim, TaqreerTarkeeb};
 use taarib_muhawwil_nusus::{Hafiz, tarkeeb};
+use taarib_mustalahat::muharrik::AilatMuharrik;
 use taarib_ruqaa::aqsam::NawQism;
 use taarib_ruqaa::qari::{self, JadwalNusus, MalafRuqaa};
 use taarib_usus::khata::Tafsir as _;
@@ -198,19 +211,23 @@ impl Hafiz for HafizMuthabbit<'_> {
 /// when the package carries no string table at all — a font-only patch is a real
 /// thing and is not a failure.
 ///
-/// `mukawwinat` is the component store root. It is optional because exactly one
-/// adapter needs anything from it and because an installer that cannot resolve
-/// the store should still patch the three engines that need nothing from it;
+/// `mukawwinat` is the component store root. It is optional because an
+/// installer that cannot resolve the store should still patch the engines that
+/// need nothing from it, and because the two that do read it fail differently:
 /// [`None`] makes the Electron adapter decline with a message naming the
 /// component, rather than writing a translation table into somebody's
-/// `app.asar` with no runtime to read it.
+/// `app.asar` with no runtime to read it, while for Ren'Py it means no font is
+/// registered — a translated, correctly-shaped game rendered in whatever face
+/// it already ships, which is the difference between a Ren'Py build whose GUI
+/// font covers Arabic and one whose font does not.
 ///
 /// # Errors
 ///
 /// [`KhataTathbeet::NususMarfuda`] when the package's string table cannot be
-/// read or the adapter refused; whatever the recorder raises when an original
-/// cannot be preserved or a replacement cannot be written, with its own code and
-/// path intact.
+/// read or the adapter refused; whatever [`crate::tarkib::khatt_renpy`] raises
+/// when the store cannot be walked at all; whatever the recorder raises when an
+/// original cannot be preserved or a replacement cannot be written, with its own
+/// code and path intact.
 pub fn raqqi_nusus(
     jidhr_luba: &Path,
     ruqaa: &MalafRuqaa,
@@ -220,10 +237,12 @@ pub fn raqqi_nusus(
     // Cheapest question first: most games are Unity, and identifying one costs
     // four metadata queries and opens nothing. Reading the package's string
     // table before knowing whether anything will use it would decompress a
-    // section for every install of every engine.
-    if tarkeeb::ayn_hadaf(jidhr_luba).is_none() {
+    // section for every install of every engine. The family is kept rather than
+    // the target because the two are one to one in `ayn_hadaf` and the family
+    // is the half this crate can name without depending on the probe.
+    let Some((_, aila)) = tarkeeb::ayn_hadaf(jidhr_luba) else {
         return Ok(None);
-    }
+    };
 
     let mafateeh = ruqaa.ruqaa().map_err(|khata| marfud(jidhr_luba, &khata.to_string()))?;
     if !mafateeh.yahwi(NawQism::Nusus) {
@@ -244,14 +263,16 @@ pub fn raqqi_nusus(
         Some(natija) => Some(natija?),
         None => None,
     };
-    let mawarid = Mawarid {
-        tashghil_ghilaf: tashghil.as_deref(),
-        // The font is placed by the component store's own deployment step and
-        // named by it. Until that name reaches this call it is not invented
-        // here: registering a font this module cannot prove is on disk would
-        // point every Ren'Py text style at a file that is not there.
-        khatt_renpy: None,
+    // The face is placed by the component store's own deployment step and named
+    // by it, so the name is asked of that step rather than invented here — and
+    // asked only for the one engine whose deployment places one, because the
+    // other three components hold no face and reading them would be a walk of
+    // the store for an answer that is always `None`.
+    let khatt = match (aila, mukawwinat) {
+        (AilatMuharrik::Renpy, Some(makhzan)) => crate::tarkib::khatt_renpy(makhzan)?,
+        _ => None,
     };
+    let mawarid = Mawarid { tashghil_ghilaf: tashghil.as_deref(), khatt_renpy: khatt.as_deref() };
 
     let mutarjim = MutarjimRuqaa::jadeed(jadwal);
     let mut hafiz = HafizMuthabbit::jadeed(muthabbit);

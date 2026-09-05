@@ -512,6 +512,29 @@ function MurashshihHala({
   );
 }
 
+/**
+ * What one bulk install did: what it installed, and what it deliberately did not.
+ *
+ * The second number exists because this path used to install everything by
+ * answering the risk questions itself. It read `MudkhalRuqaaHie::yahtaj_iqrar`,
+ * which is the registry's verdict on the **build match** and nothing else, and
+ * sent that one value as the user's answer to that question *and* to the
+ * multiplayer one — so a patch that matched only approximately silently carried
+ * an acknowledgement of an anti-cheat risk nobody had been shown.
+ *
+ * A game selected in a grid is not a place either question can be asked. There
+ * is no room to say which patch, against which build, at what risk, and a prompt
+ * per game across a selection of forty is a prompt nobody reads. So the games
+ * that need an answer are left for the screen that can ask for one properly, and
+ * how many were left is reported rather than quietly folded into the total.
+ */
+interface HasilatJamai {
+  /** Games a patch was actually written into. */
+  readonly muthabbat: number;
+  /** Games whose only installable patch needs an answer this screen cannot take. */
+  readonly matruk: number;
+}
+
 export function Maktaba(): JSX.Element {
   const makhzanIstifsar = useQueryClient();
   const intiqal = useNavigate();
@@ -683,30 +706,40 @@ export function Maktaba(): JSX.Element {
   });
 
   const [jamaiHala, setJamaiHala] = useState<string | null>(null);
-  const jamai = useMutation<number, KhataJisr, readonly string[]>({
+
+  const jamai = useMutation<HasilatJamai, KhataJisr, readonly string[]>({
     mutationFn: async (muarrifat) => {
-      let adad = 0;
+      let muthabbat = 0;
+      let matruk = 0;
       for (const muarrif of muarrifat) {
-        setJamaiHala(t('maktaba.jamai.jari', lugha, { adad: munassiq.raqm(adad + 1) }));
+        setJamaiHala(t('maktaba.jamai.jari', lugha, { adad: munassiq.raqm(muthabbat + 1) }));
         // Sequential on purpose: two installs writing one store would race.
         // eslint-disable-next-line no-await-in-loop
         const ruqaa = await nadi('ruqaa_luba', { muarrif });
-        const awwal = ruqaa.mudkhalat.find((mudkhal) => mudkhal.qabila_lil_tathbeet);
+        const mutah = ruqaa.mudkhalat.filter((mudkhal) => mudkhal.qabila_lil_tathbeet);
+        const awwal = mutah.find((mudkhal) => !mudkhal.yahtaj_iqrar);
         if (awwal === undefined) {
+          if (mutah.length > 0) {
+            matruk += 1;
+          }
           continue;
         }
         // eslint-disable-next-line no-await-in-loop
         const hasila = await nadi('nazzil_ruqaa', { muarrif, ruqaa: String(awwal.id) });
+        // Both withheld, and withheld is the correct value rather than a
+        // cautious one: neither question has been put to anybody here, so there
+        // is no answer to send. The install gate refuses if either turns out to
+        // matter, which is the game's own screen's cue to ask.
         // eslint-disable-next-line no-await-in-loop
         await nadi('thabbit_ruqaa', {
           muarrif,
           masarMalaf: hasila.masar,
-          iqrarShabaka: awwal.yahtaj_iqrar,
-          iqrarTaqribi: awwal.yahtaj_iqrar,
+          iqrarShabaka: false,
+          iqrarTaqribi: false,
         });
-        adad += 1;
+        muthabbat += 1;
       }
-      return adad;
+      return { muthabbat, matruk };
     },
     onSettled: () => {
       setJamaiHala(null);
@@ -1193,7 +1226,17 @@ export function Maktaba(): JSX.Element {
             {jamaiHala !== null ? <p className="maktaba__jamai">{jamaiHala}</p> : null}
             {jamai.data !== undefined ? (
               <p className="maktaba__jamai" role="status">
-                {jam('maktaba.jamai.tamma', lugha, jamai.data, munassiq)}
+                {jam('maktaba.jamai.tamma', lugha, jamai.data.muthabbat, munassiq)}
+              </p>
+            ) : null}
+            {/* Said out loud, because a selection of ten that installs eight is
+                otherwise indistinguishable from one that installed all of them
+                and found two already patched. */}
+            {jamai.data !== undefined && jamai.data.matruk > 0 ? (
+              <p className="maktaba__jamai">
+                {t('maktaba.jamai.matruk', lugha, {
+                  adad: munassiq.raqm(jamai.data.matruk),
+                })}
               </p>
             ) : null}
           </div>

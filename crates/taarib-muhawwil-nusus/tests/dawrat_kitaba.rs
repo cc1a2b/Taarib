@@ -285,6 +285,78 @@ fn renpy_yaktub_arabiyan_wa_yuidu_qiraatah() {
     );
 }
 
+/// The Arabic face, as the installer names it: a path relative to `game/`.
+///
+/// Bracketed on purpose. Every Noto face the product bundles is a variable font
+/// whose file name states its axis, and Ren'Py's own text escaping doubles `[`
+/// — so a generator that quoted this the way it quotes dialogue would ask the
+/// loader for `NotoNaskhArabic[[wght].ttf` and get no font at all.
+const KHATT_RENPY: &str = "taarib/khutut/NotoNaskhArabic[wght].ttf";
+
+#[test]
+fn renpy_yusajjil_alkhatt_alladhi_sayujad_fi_alluba() {
+    let saha = Saha::jadida();
+    ibni_renpy(&saha);
+    // The face where `taarib_tathbeet::tarkib::renpy` deploys it. This crate
+    // never places it — it is handed the name and must produce a settings file
+    // that points at exactly that path — so the fixture stands in for the
+    // deployment step, which `taarib-tathbeet`'s own round trip proves.
+    saha.iktub(&format!("game/{KHATT_RENPY}"), b"\x00\x01\x00\x00");
+
+    let mut jadwal = BTreeMap::new();
+    let _ = jadwal.insert("Hello, traveller.".to_owned(), MARHABAN.to_owned());
+
+    let mawarid = Mawarid { tashghil_ghilaf: None, khatt_renpy: Some(KHATT_RENPY) };
+    let taqreer = rakkib(&saha, &jadwal, &mawarid);
+    assert_eq!(taqreer.aila.ism(), "Ren'Py");
+    assert!(
+        taqreer.mulahazat.iter().all(|satr| !satr.contains("no Arabic font was supplied")),
+        "a patch that supplied a face must not be reported as one that did not: {:?}",
+        taqreer.mulahazat
+    );
+
+    let idad = saha.iqra_nass("game/tl/arabic/taarib_idad.rpy");
+    let bayanat = saha.iqra_nass("game/taarib/idad.json");
+
+    // The registration, and the four styles that do not go through it.
+    assert!(
+        idad.contains(&format!("_taarib_khatt = \"{KHATT_RENPY}\"")),
+        "the face is bound under the name it was given:\n{idad}"
+    );
+    assert!(
+        idad.contains("taarib_renpy.sajjil_khatt(_taarib_khatt)"),
+        "and handed to the in-engine package:\n{idad}"
+    );
+    assert_eq!(
+        idad.matches(&format!("font \"{KHATT_RENPY}\"")).count(),
+        5,
+        "the default style and the four named ones each name the face:\n{idad}"
+    );
+    assert!(
+        !idad.contains("[["),
+        "a font path is a file name, not displayed text: doubling the bracket asks the loader \
+         for a file that does not exist:\n{idad}"
+    );
+    assert!(
+        bayanat.contains(&format!("\"khatt\": \"{KHATT_RENPY}\"")),
+        "and the in-engine package reads the same name out of its settings:\n{bayanat}"
+    );
+
+    // The whole point: the name in the generated file resolves to a file that
+    // is really there. A path that does not is a game with no font at all,
+    // which is worse than the game's own.
+    let mutlaq = saha.luba.join("game").join(KHATT_RENPY);
+    assert!(
+        mutlaq.is_file(),
+        "the settings must name a face that exists at {}",
+        mutlaq.display()
+    );
+
+    // The direction half is installed either way, and still is.
+    assert!(idad.contains("sajjil_ittijah()"));
+    assert!(idad.contains("text_align 1.0"));
+}
+
 // ---------------------------------------------------------------------------
 // RPG Maker MV
 // ---------------------------------------------------------------------------

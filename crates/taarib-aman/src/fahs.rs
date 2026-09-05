@@ -10,8 +10,9 @@ use taarib_ruqaa::qari::MalafRuqaa;
 
 use crate::idhn::IdhnTathbeet;
 use crate::iqrar::{SijillIqrar, yahtaj_iqrar};
-use crate::kashf_himaya::{HalatMatjar, IjmaaHimaya, ifhas_himaya_bi_matjar, mahmiya};
-use crate::kashf_shabaka::{IjmaaShabaka, ifhas_shabaka, mutaaddid};
+use crate::kashf_himaya::{HalatMatjar, IjmaaHimaya, ifhas_himaya_bi_qiraa, mahmiya};
+use crate::kashf_shabaka::{IjmaaShabaka, ifhas_shabaka_bi_qiraa, mutaaddid};
+use crate::matjar::QiraatMatjar;
 use crate::qaimat_sahb::QaimatSahb;
 use crate::tahaqquq_tawqee::{SababTawqee, tahaqquq};
 
@@ -182,8 +183,12 @@ pub fn fahs(talab: &TalabFahs<'_>) -> NatijatFahs {
         return NatijatFahs::Marfud(Box::new(Rafd::IqrarNaqis));
     }
 
-    let (himaya, halat_matjar) =
-        ifhas_himaya_bi_matjar(talab.jidhr_luba, talab.appid, talab.jidhr_steam);
+    // One read of `appcache/appinfo.vdf`, not two. Both checks below want the
+    // same file — VAC is declared in it and so are the multiplayer categories —
+    // and it is measured in megabytes on a mature account.
+    let matjar = QiraatMatjar::iqra(talab.appid, talab.jidhr_steam);
+
+    let (himaya, halat_matjar) = ifhas_himaya_bi_qiraa(talab.jidhr_luba, &matjar);
     if mahmiya(&himaya) {
         return NatijatFahs::Marfud(Box::new(Rafd::Himaya(Box::new(himaya))));
     }
@@ -200,7 +205,7 @@ pub fn fahs(talab: &TalabFahs<'_>) -> NatijatFahs {
         return NatijatFahs::Marfud(Box::new(Rafd::Mulgha { sabab }));
     }
 
-    let shabaka = ifhas_shabaka(talab.jidhr_luba, talab.appid, talab.jidhr_steam);
+    let shabaka = ifhas_shabaka_bi_qiraa(talab.jidhr_luba, &matjar);
     if mutaaddid(&shabaka) && !talab.iqrar_shabaka {
         return NatijatFahs::Marfud(Box::new(Rafd::ShabakaBilaIqrar(Box::new(shabaka))));
     }

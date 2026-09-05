@@ -33,7 +33,10 @@ use taarib_usus::khata_min;
 use taarib_usus::masarat::Masarat;
 use tauri::Emitter as _;
 
-use crate::luba_awamir::{BinaHie, bina_hie, huwiya, ijlib_luba, jidhr_nusakh, muthabbat};
+use crate::luba_awamir::{
+    BinaHie, bina_hie, huwiya, ijlib_luba, jidhr_nusakh, muthabbat, simat_luba,
+    yalzam_iqrar_shabaka,
+};
 
 /// The window event every download progress report is delivered on.
 pub const ISM_HADATH_TANZEEL: &str = "taarib://taqaddum-tanzeel";
@@ -118,9 +121,23 @@ pub struct MudkhalRuqaaHie {
     pub mutabaqa: Option<MutabaqaBina>,
     /// The whole match verdict as one Arabic sentence, on the same terms.
     pub mutabaqa_arabi: Option<String>,
+    /// The same sentence in English.
+    ///
+    /// Both are sent because both are asked for: this verdict is the evidence
+    /// line under the approximate-match acknowledgement, and an English session
+    /// shown the Arabic one is being asked to accept a risk described in a
+    /// language it did not choose. The two are produced from one
+    /// [`taarib_mustawda::mutabaqa::MutabaqatRuqaa`], so they cannot come to
+    /// describe different verdicts for the same row.
+    pub mutabaqa_injilizi: Option<String>,
     /// Whether the client will install it at all.
     pub qabila_lil_tathbeet: bool,
     /// Whether installing requires the user to acknowledge a risk first.
+    ///
+    /// About the **build match** and nothing else: it is true exactly when
+    /// [`MutabaqaBina`] is `Nitaq`. It says nothing whatever about multiplayer,
+    /// which is [`RuqaaLuba::yalzam_iqrar_shabaka`] and lives on the enclosing
+    /// row because it is a fact about the game.
     pub yahtaj_iqrar: bool,
 }
 
@@ -137,6 +154,20 @@ pub struct RuqaaLuba {
     pub adad_mutawafiq: u32,
     /// No build fingerprint has been computed, so nothing was judged.
     pub bila_bina: bool,
+    /// Whether installing anything into this game will want the multiplayer
+    /// acknowledgement.
+    ///
+    /// On the row rather than on each patch, because it is a fact about the
+    /// *game*: it is read off the launcher's own catalogue entry that the
+    /// library scan stored, so every patch in [`Self::mudkhalat`] would carry
+    /// the same value. Repeating it per patch would invite two rows of one
+    /// listing to disagree about one game, and would read as a verdict the
+    /// registry passed on the patch, which it is not.
+    ///
+    /// A hint, not the verdict. The install gate decides again by walking the
+    /// game directory, so `false` here means the launcher did not say so — never
+    /// that the question will not be asked.
+    pub yalzam_iqrar_shabaka: bool,
     /// The sources that were tried, in the order they were tried.
     pub masadir: Vec<String>,
 }
@@ -336,9 +367,17 @@ pub async fn ruqaa_luba(
     let hali = idadat.hali();
     let makhbaa = masarat.makhbaa();
 
-    let luba = {
+    // One trip off the runtime for both reads: the metadata hints come out of
+    // the same store, on the same connection, and the multiplayer question is
+    // decided from them before the panel is drawn rather than after a refusal.
+    let (luba, simat) = {
         let makhzan = Makhzan::clone(&makhzan);
-        bil_hajb(move || ijlib_luba(&makhzan, id)).await?
+        bil_hajb(move || {
+            let luba = ijlib_luba(&makhzan, id)?;
+            let simat = simat_luba(&makhzan, id)?;
+            Ok((luba, simat))
+        })
+        .await?
     };
 
     let silsila = silsilat_masadir(&hali)?;
@@ -378,6 +417,7 @@ pub async fn ruqaa_luba(
         bila_bina: luba.bina.is_none(),
         mudkhalat,
         adad_mutawafiq,
+        yalzam_iqrar_shabaka: yalzam_iqrar_shabaka(&simat),
         masadir,
     })
 }
@@ -747,6 +787,21 @@ fn rattib_murashshahat(
 
     let mutabiq = MutabiqBina::jadeed(bina);
     let ahkam = mutabiq.ruqaa_kul(&mulakhkhasat);
+    // Keyed by the pair the interface itself uses to identify a row, because the
+    // registry may list two revisions of one lineage and the ranking below
+    // reorders them. Both sentences are taken from here rather than one from
+    // here and one from `MudkhalTarteeb::sabab`, so a row cannot end up with an
+    // Arabic verdict and an English one that disagree.
+    let awsaf: BTreeMap<(RuqaaId, RuqaaRevision), WasfMutabaqa> = ahkam
+        .iter()
+        .map(|hukm| {
+            (
+                (hukm.id, hukm.murajaa),
+                WasfMutabaqa { arabi: hukm.wasf_arabi(), injilizi: hukm.wasf_injilizi() },
+            )
+        })
+        .collect();
+
     let mudkhalat: Vec<MudkhalTarteeb> = mulakhkhasat
         .into_iter()
         .zip(ahkam.iter())
@@ -762,18 +817,32 @@ fn rattib_murashshahat(
             mudkhal_hie(
                 &mudkhal.ruqaa,
                 Some(mudkhal.mutabaqa),
-                mudkhal.sabab.clone(),
+                awsaf.get(&(mudkhal.ruqaa.id, mudkhal.ruqaa.murajaa)),
                 khiyarat,
             )
         })
         .collect()
 }
 
+/// One match verdict as one sentence, in both languages.
+///
+/// A pair rather than two loose `Option<String>` arguments: they are produced
+/// together from one verdict and consumed together, and two adjacent optional
+/// strings at a call site are two strings that can be passed the wrong way
+/// round without the compiler noticing.
+#[derive(Debug, Clone)]
+struct WasfMutabaqa {
+    /// The Arabic sentence.
+    arabi: String,
+    /// The same sentence in English.
+    injilizi: String,
+}
+
 /// One listing as the patches panel writes it.
 fn mudkhal_hie(
     mulakhkhas: &MulakhkhasRuqaa,
     mutabaqa: Option<MutabaqaBina>,
-    mutabaqa_arabi: Option<String>,
+    wasf: Option<&WasfMutabaqa>,
     khiyarat: KhiyaratTarteeb,
 ) -> MudkhalRuqaaHie {
     MudkhalRuqaaHie {
@@ -794,7 +863,8 @@ fn mudkhal_hie(
         waqt_nashr: mulakhkhas.waqt_nashr.clone(),
         basmat_muhtawa: mulakhkhas.basmat_muhtawa.to_string(),
         mutabaqa,
-        mutabaqa_arabi,
+        mutabaqa_arabi: wasf.map(|wasf| wasf.arabi.clone()),
+        mutabaqa_injilizi: wasf.map(|wasf| wasf.injilizi.clone()),
         qabila_lil_tathbeet: mutabaqa.is_some_and(MutabaqaBina::qabila_lil_tathbeet),
         yahtaj_iqrar: mutabaqa.is_some_and(MutabaqaBina::yahtaj_iqrar),
     }
@@ -1020,6 +1090,89 @@ pub enum KhataTathbeetAmr {
         /// The game's name, as its launcher gives it.
         ism: String,
     },
+
+    /// The first-run statement has not been acknowledged.
+    ///
+    /// The safety layer asks this first, before it looks at the game at all, so
+    /// it is the one refusal here that is about the product rather than about
+    /// this game or this package.
+    #[error("the Taarib statement has not been acknowledged")]
+    IqrarNaqis,
+
+    /// The game runs anti-cheat, and nothing in this product lifts that.
+    ///
+    /// The manual path's `9037` against the automatic path's `9127`: the same
+    /// verdict, read out of the same scan, refusing the same thing. Both carry
+    /// the evidence rather than only the conclusion, because a permanent ban on
+    /// somebody's account is not a thing to assert without showing why.
+    #[error("{ism} runs anti-cheat ({anwa})")]
+    HimayaMuktashafa {
+        /// The game.
+        ism: String,
+        /// The anti-cheats named, joined, for the log and the context table.
+        anwa: String,
+        /// The evidence, one line each, in Arabic.
+        dalail_arabi: String,
+        /// The same lines in English.
+        dalail_injilizi: String,
+    },
+
+    /// The anti-cheat check was owed Steam's catalogue and could not read it.
+    ///
+    /// Not a pass. VAC is declared only in the catalogue and leaves nothing in
+    /// the game folder, so a scan that never opened it produces exactly the
+    /// empty evidence list a clean game produces.
+    #[error("{ism}: the anti-cheat check could not read Steam's catalogue ({sabab})")]
+    FahsHimayaLamYajri {
+        /// The game.
+        ism: String,
+        /// The catalogue that was tried, when a Steam root was known at all.
+        mawdi: Option<String>,
+        /// Why, as the short label the scan's own gap list carries.
+        sabab: String,
+    },
+
+    /// The game is multiplayer and the acknowledgement was not given.
+    ///
+    /// One of the two refusals here the user can answer and then press again,
+    /// and the only one they answer on this screen — which is precisely why it
+    /// needs a code of its own. Flattened into [`Self::TathbeetFashil`] it was
+    /// indistinguishable from a corrupt package or a revoked key, so the
+    /// interface had to offer "review the acknowledgements" after every failure
+    /// or after none.
+    #[error("{ism} is multiplayer and the modification risk was not acknowledged")]
+    ShabakaBilaIqrar {
+        /// The game.
+        ism: String,
+        /// What the scan found, as the acknowledgement text quotes it, in Arabic.
+        wasf_arabi: String,
+        /// The same, in English.
+        wasf_injilizi: String,
+    },
+
+    /// The package's signature was rejected.
+    ///
+    /// Separated from the generic failure because pressing again cannot change
+    /// it: an unsigned, mis-signed or tampered package is refused identically
+    /// every time, so an interface that offers a retry here is offering nothing.
+    #[error("{injilizi}")]
+    TawqeeMarfud {
+        /// The signature verdict, in Arabic.
+        arabi: String,
+        /// The same verdict in English.
+        injilizi: String,
+    },
+
+    /// The package, its lineage or its signing key is on the revocation list.
+    ///
+    /// Its own code for the same reason as [`Self::TawqeeMarfud`], and because a
+    /// revocation is a fact about the registry rather than about this machine:
+    /// nothing the user changes here lifts it.
+    #[error("this package or its key was revoked: {sabab}")]
+    RuqaaMulgha {
+        /// Why it was revoked, as the list words it.
+        sabab: String,
+    },
 }
 
 impl Tafsir for KhataTathbeetAmr {
@@ -1038,10 +1191,29 @@ impl Tafsir for KhataTathbeetAmr {
                     Self::BinaMajhula { .. } => 28,
                     Self::TathbeetFashil { .. } => 29,
                     Self::LughaRasmiyaMawjuda { .. } => 30,
+                    Self::IqrarNaqis => 34,
+                    Self::TawqeeMarfud { .. } => 35,
+                    Self::RuqaaMulgha { .. } => 36,
+                    // The last digit is the automatic path's, deliberately: the
+                    // two install routes refuse for the same three reasons out
+                    // of the same scan, and `9037`/`9038`/`9039` against
+                    // `9127`/`9128`/`9129` says so at a glance in a log, a
+                    // diagnostics bundle and a support thread. 31 to 33 stay
+                    // free so the alignment costs no headroom.
+                    Self::HimayaMuktashafa { .. } => 37,
+                    Self::FahsHimayaLamYajri { .. } => 38,
+                    Self::ShabakaBilaIqrar { .. } => 39,
                 },
         )
     }
 
+    #[expect(
+        clippy::match_same_arms,
+        reason = "a severity is shared by refusals that have nothing else in common — a \
+                  stalled background task and an anti-cheat detection are both `Tanbeeh` for \
+                  unrelated reasons, and merging them would attach one comment to two facts \
+                  and let a change to either move the other"
+    )]
     fn khutura(&self) -> Khutura {
         match self {
             // Nothing was written in any of these; the operation simply did not
@@ -1055,8 +1227,20 @@ impl Tafsir for KhataTathbeetAmr {
             | Self::FuruqGhayrMaduma { .. }
             | Self::HuzmaTalifa { .. }
             | Self::BinaMajhula { .. }
-            | Self::TathbeetFashil { .. } => Khutura::Khatar,
+            | Self::TathbeetFashil { .. }
+            | Self::TawqeeMarfud { .. }
+            | Self::RuqaaMulgha { .. } => Khutura::Khatar,
             Self::MuhimmaMutawaqqifa { .. } => Khutura::Tanbeeh,
+            // Two questions waiting for their answers rather than two things
+            // that went wrong, on the same reading `KhataTilqaiAmr` gives the
+            // multiplayer refusal. Reporting either as a fault would teach a
+            // reader to expect a broken product where there is a consent
+            // prompt.
+            Self::IqrarNaqis | Self::ShabakaBilaIqrar { .. } => Khutura::Maluma,
+            // The account is what is at stake in both, so neither is routine:
+            // one names anti-cheat evidence, the other names a check that could
+            // not be completed and must not be read as a pass.
+            Self::HimayaMuktashafa { .. } | Self::FahsHimayaLamYajri { .. } => Khutura::Tanbeeh,
         }
     }
 
@@ -1103,6 +1287,40 @@ impl Tafsir for KhataTathbeetAmr {
                  بترجمة آلية عملًا ترجمه محترفون وروجع وجُرِّب داخل اللعبة. إن كانت العربية \
                  الرسمية رديئة فعلًا، فعّل استبدال العربية الرسمية في الإعدادات."
             ),
+            Self::IqrarNaqis => {
+                "لم يُقرَّ بيان تعريب بعد، ولا يُكتب شيء في أيّ لعبة قبل الإقرار به. البيان \
+                 يظهر عند أوّل تشغيل؛ اقرأه ووافق عليه ثم أعد المحاولة."
+                    .to_owned()
+            }
+            Self::HimayaMuktashafa { anwa, dalail_arabi, .. } => format!(
+                "تعمل هذه اللعبة بنظام مكافحة غش ({anwa})، ولا يُثبَّت فيها تعريب: تعديل \
+                 ملفاتها قد يكلّفك حظرًا دائمًا لحسابك، والحظر يلحق بالحساب لا باللعبة. \
+                 لم يُكتب شيء. الدليل:\n{dalail_arabi}"
+            ),
+            Self::FahsHimayaLamYajri { mawdi, sabab, .. } => {
+                let mawdi = mawdi.as_ref().map_or_else(
+                    || "لم يُعرف موضع تثبيت ستيم على هذا الجهاز".to_owned(),
+                    |mawdi| format!("تعذّرت قراءة {mawdi} ({sabab})"),
+                );
+                format!(
+                    "لم يُستكمل فحص مكافحة الغش، فلم يُثبَّت شيء. حماية VAC لا تُعلَن إلا في \
+                     فهرس متجر ستيم ولا تترك أثرًا في مجلّد اللعبة، فسكوت الفحص هنا ليس \
+                     براءة. {mawdi}. حدِّد مجلد ستيم في الإعدادات ← المنصّات ثم أعد المحاولة."
+                )
+            }
+            Self::ShabakaBilaIqrar { wasf_arabi, .. } => format!(
+                "هذه لعبة متعدّدة اللاعبين، ويلزم إقرارك بمخاطر التعديل قبل التثبيت. تعديل \
+                 لعبة تُلعب مع آخرين قد يُفقدك حسابك أو يمنعك من الخوادم، والقرار قرارك وحدك. \
+                 لم يُكتب شيء.\n{wasf_arabi}"
+            ),
+            Self::TawqeeMarfud { arabi, .. } => format!(
+                "{arabi} لم يُكتب شيء، وإعادة المحاولة بالملفّ نفسه ستُرفض بالنتيجة نفسها؛ \
+                 أعد تنزيل الرقعة من المستودع."
+            ),
+            Self::RuqaaMulgha { sabab } => format!(
+                "أُبطلت هذه الحزمة أو مفتاح توقيعها في قائمة الإبطال: {sabab}. الإبطال قرار \
+                 من المستودع لا يُلغى من هذا الجهاز؛ اختر رقعة أخرى لهذه اللعبة."
+            ),
         }
     }
 
@@ -1146,9 +1364,54 @@ impl Tafsir for KhataTathbeetAmr {
                  and play-tested work with machine output. If that official Arabic really is \
                  poor, turn on replacing official Arabic in settings."
             ),
+            Self::IqrarNaqis => {
+                "The Taarib statement has not been acknowledged, and nothing is written into any \
+                 game until it is. It is shown on first run; read it, accept it, and try again."
+                    .to_owned()
+            }
+            Self::HimayaMuktashafa { anwa, dalail_injilizi, .. } => format!(
+                "This game runs anti-cheat ({anwa}), and Taarib does not install into such a \
+                 title: modifying its files can cost you a permanent ban, and the ban attaches \
+                 to your account rather than to the game. Nothing was written. Evidence:\n\
+                 {dalail_injilizi}"
+            ),
+            Self::FahsHimayaLamYajri { mawdi, sabab, .. } => {
+                let mawdi = mawdi.as_ref().map_or_else(
+                    || "no Steam installation could be located on this machine".to_owned(),
+                    |mawdi| format!("{mawdi} could not be read ({sabab})"),
+                );
+                format!(
+                    "The anti-cheat check did not finish, so nothing was installed. VAC is \
+                     declared only in Steam's catalogue and leaves nothing in the game folder, \
+                     so silence here is not a clean result. {mawdi}. Set Steam's folder in \
+                     Settings, under Launchers, and try again."
+                )
+            }
+            Self::ShabakaBilaIqrar { wasf_injilizi, .. } => format!(
+                "This is a multiplayer game, and the modification risk has to be acknowledged \
+                 before anything is installed. Modifying a game played with other people can \
+                 cost you your account or your access to its servers, and that decision is \
+                 yours alone. Nothing was written.\n{wasf_injilizi}"
+            ),
+            Self::TawqeeMarfud { injilizi, .. } => format!(
+                "{injilizi} Nothing was written, and pressing again with the same file earns \
+                 the same refusal; download the patch again from the registry."
+            ),
+            Self::RuqaaMulgha { sabab } => format!(
+                "This package or its signing key is on the revocation list: {sabab}. A \
+                 revocation is the registry's decision and cannot be lifted from this machine; \
+                 choose another patch for this game."
+            ),
         }
     }
 
+    #[expect(
+        clippy::match_same_arms,
+        reason = "`LaShay` is reached by two different arguments — nothing to do because the \
+                  sentence is complete, and no button because offering one would answer a \
+                  consent question for the user — and the comments below are the reason each \
+                  arm is where it is"
+    )]
     fn khutwa(&self) -> Khutwa {
         match self {
             Self::MuarrifRuqaaGhayrSalih { .. } | Self::RuqaaGhayrMawjuda { .. } => {
@@ -1159,9 +1422,31 @@ impl Tafsir for KhataTathbeetAmr {
             Self::MuhimmaMutawaqqifa { .. } | Self::HuzmaTalifa { .. } => Khutwa::AadaMuhawala,
             Self::TanfidhiMajhul { .. } | Self::BinaMajhula { .. } => Khutwa::AadaFahsMuharrik,
             Self::FuruqGhayrMaduma { .. } => Khutwa::TahdithTaarib,
-            Self::TathbeetFashil { .. } => Khutwa::FathTashkhis,
+            // The package is in hand and refused; the diagnostics bundle is
+            // what a report of any of the three carries, and none of them is
+            // fixed by pressing the button again.
+            Self::TathbeetFashil { .. }
+            | Self::TawqeeMarfud { .. }
+            | Self::RuqaaMulgha { .. } => Khutwa::FathTashkhis,
             // The remedy is a setting, and it is the only one this refusal has.
             Self::LughaRasmiyaMawjuda { .. } => Khutwa::FathIdadat { qism: QismIdadat::Lugha },
+            // The manual Steam path is the one way out, and it is the same one
+            // `KhataLuba::JidhrSteamMajhul` sends the reader to.
+            Self::FahsHimayaLamYajri { .. } => {
+                Khutwa::FathIdadat { qism: QismIdadat::Manassat }
+            }
+            // Three refusals with no button, for three different reasons and one
+            // shared rule: none of them may be clicked past *here*. Anti-cheat is
+            // lifted by nothing at all — no override for it exists anywhere in
+            // this product, and this would be the first one. The other two are
+            // lifted by an acknowledgement the person gives, and an action
+            // offering to give it would be giving it for them; the interface
+            // reopens the question off the code instead, which is what the code
+            // is for. Each sentence names its own way out, or says plainly that
+            // there is none.
+            Self::HimayaMuktashafa { .. }
+            | Self::IqrarNaqis
+            | Self::ShabakaBilaIqrar { .. } => Khutwa::LaShay,
         }
     }
 
@@ -1180,18 +1465,41 @@ impl Tafsir for KhataTathbeetAmr {
             | Self::BinaMajhula { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
             }
-            Self::GhayrMuttasil => {}
+            // Neither carries a fact worth a column: one is a mode the user set
+            // and the other is a statement they have not read yet.
+            Self::GhayrMuttasil | Self::IqrarNaqis => {}
             Self::MuhimmaMutawaqqifa { tafsil } | Self::HuzmaTalifa { tafsil } => {
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
             }
             Self::FuruqGhayrMaduma { adad } => {
                 let _ = siyaq.insert("adad".to_owned(), QeemaSiyaq::Hajm(*adad));
             }
-            Self::TathbeetFashil { injilizi, .. } => {
+            Self::TathbeetFashil { injilizi, .. } | Self::TawqeeMarfud { injilizi, .. } => {
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(injilizi.clone()));
             }
             Self::LughaRasmiyaMawjuda { ism } => {
                 let _ = siyaq.insert("luba".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+            }
+            Self::RuqaaMulgha { sabab } => {
+                let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
+            }
+            // The same keys the automatic path writes for the same three facts,
+            // so one log filter reads both routes.
+            Self::HimayaMuktashafa { ism, anwa, .. } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("himaya".to_owned(), QeemaSiyaq::Nass(anwa.clone()));
+            }
+            Self::FahsHimayaLamYajri { ism, mawdi, sabab } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
+                if let Some(mawdi) = mawdi {
+                    let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(mawdi.clone()));
+                }
+            }
+            Self::ShabakaBilaIqrar { ism, wasf_injilizi, .. } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ =
+                    siyaq.insert("shabaka".to_owned(), QeemaSiyaq::Nass(wasf_injilizi.clone()));
             }
         }
         siyaq
@@ -1241,11 +1549,89 @@ pub struct NatijatTathbeetHie {
     pub tahaqquq_salim: bool,
 }
 
-fn khata_naqra(fashal: &taarib_mustawda::tathbeet_bilnaqra::FashalTathbeet) -> Khata {
-    Khata::min_tafsir(&KhataTathbeetAmr::TathbeetFashil {
-        arabi: fashal.arabi(),
-        injilizi: fashal.injilizi(),
-    })
+/// One one-click install failure, as the interface's error type.
+///
+/// The safety layer's refusals are unpacked into their own codes; everything
+/// else keeps the single [`KhataTathbeetAmr::TathbeetFashil`] it always had,
+/// because the quarantine and installer errors underneath it already carry their
+/// own sentences and there is nothing here to discriminate between.
+fn khata_naqra(
+    fashal: &taarib_mustawda::tathbeet_bilnaqra::FashalTathbeet,
+    ism: &str,
+) -> Khata {
+    use taarib_mustawda::tathbeet_bilnaqra::FashalTathbeet;
+
+    match fashal {
+        FashalTathbeet::Aman(rafd) => Khata::min_tafsir(&khata_rafd(rafd, ism)),
+        FashalTathbeet::Mustawda(_) | FashalTathbeet::Tathbeet(_) => {
+            Khata::min_tafsir(&KhataTathbeetAmr::TathbeetFashil {
+                arabi: fashal.arabi(),
+                injilizi: fashal.injilizi(),
+            })
+        }
+    }
+}
+
+/// One safety refusal, as the refusal it actually is.
+///
+/// Every arm of [`taarib_aman::fahs::Rafd`] gets its own code rather than the
+/// one `TAARIB-E-9029` they all used to collapse into. The reason is not tidiness:
+/// a code is the only thing on the wire a screen can branch on — `siyaq` is
+/// rendered, never matched, everywhere in this product — and the six refusals
+/// have four different remedies between them. Without the split the manual
+/// install path could not tell "you have not accepted the multiplayer risk",
+/// which one tick and one press fixes, from a revoked signing key, which nothing
+/// on this machine fixes; so it offered the same generic affordance for both.
+///
+/// The match is exhaustive on purpose. A seventh refusal added to the safety
+/// layer must be answered here rather than falling silently into a bucket that
+/// tells the user nothing.
+///
+/// None of this lifts anything. Every arm still refuses, the sentences still
+/// name the evidence, and anti-cheat still ends at [`Khutwa::LaShay`] with no
+/// override anywhere.
+fn khata_rafd(rafd: &taarib_aman::fahs::Rafd, ism: &str) -> KhataTathbeetAmr {
+    use taarib_aman::fahs::Rafd;
+    use taarib_aman::kashf_himaya::DaleelHimaya;
+
+    match rafd {
+        Rafd::IqrarNaqis => KhataTathbeetAmr::IqrarNaqis,
+        Rafd::Himaya(ijmaa) => KhataTathbeetAmr::HimayaMuktashafa {
+            ism: ism.to_owned(),
+            anwa: asma_himaya(ijmaa),
+            dalail_arabi: sutur(ijmaa.adilla.iter().map(DaleelHimaya::arabi)),
+            dalail_injilizi: sutur(ijmaa.adilla.iter().map(DaleelHimaya::injilizi)),
+        },
+        Rafd::FahsMatjarLamYajri { masar, sabab } => KhataTathbeetAmr::FahsHimayaLamYajri {
+            ism: ism.to_owned(),
+            mawdi: masar.as_ref().map(|masar| masar.display().to_string()),
+            sabab: sabab.clone(),
+        },
+        Rafd::Tawqee(sabab) => {
+            KhataTathbeetAmr::TawqeeMarfud { arabi: sabab.arabi(), injilizi: sabab.injilizi() }
+        }
+        Rafd::Mulgha { sabab } => KhataTathbeetAmr::RuqaaMulgha { sabab: sabab.clone() },
+        Rafd::ShabakaBilaIqrar(ijmaa) => KhataTathbeetAmr::ShabakaBilaIqrar {
+            ism: ism.to_owned(),
+            wasf_arabi: ijmaa.wasf_iqrar(),
+            wasf_injilizi: ijmaa.wasf_injilizi(),
+        },
+    }
+}
+
+/// The anti-cheats a scan named, joined for the log and the context table.
+fn asma_himaya(ijmaa: &taarib_aman::kashf_himaya::IjmaaHimaya) -> String {
+    ijmaa
+        .anwa()
+        .into_iter()
+        .map(taarib_aman::kashf_himaya::NawHimaya::injilizi)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// Evidence lines, one to a line, as the refusal sentences interpolate them.
+fn sutur(satrat: impl Iterator<Item = String>) -> String {
+    satrat.map(|satr| format!("- {satr}")).collect::<Vec<_>>().join("\n")
 }
 
 /// Installs a downloaded or imported package into a game, end to end.
@@ -1259,7 +1645,10 @@ fn khata_naqra(fashal: &taarib_mustawda::tathbeet_bilnaqra::FashalTathbeet) -> K
 ///
 /// [`Khata`] naming whichever gate refused: an unreadable package, a build
 /// mismatch without acknowledgement, anti-cheat evidence, a revoked package,
-/// or the installer's own refusals — each in its own words. Also
+/// or the installer's own refusals — each in its own words. The safety layer's
+/// six refusals carry their own codes rather than one shared code, so a screen
+/// can tell the one the user answers ([`KhataTathbeetAmr::ShabakaBilaIqrar`],
+/// `TAARIB-E-9039`) from the ones nobody can. Also
 /// [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the game is a Steam
 /// game and Steam itself cannot be found, because the anti-cheat verdict would
 /// then be missing the half of its evidence that only Steam's catalogue holds.
@@ -1425,7 +1814,7 @@ pub fn thabbit_ruqaa(
             let _ = nafidha.emit(ISM_HADATH_TATHBEET, marhala.arabi());
         },
     )
-    .map_err(|fashal| khata_naqra(&fashal))?;
+    .map_err(|fashal| khata_naqra(&fashal, &luba.ism))?;
 
     Ok(NatijatTathbeetHie {
         tawafuq_arabi: wasf_tawafuq(natija.tawafuq).to_owned(),
@@ -1456,5 +1845,300 @@ const fn wasf_tawafuq(qarar: taarib_tathbeet::masar_tathbeet::QararTawafuq) -> &
         Q::Tamma => "متوافقة تمامًا مع نسختك",
         Q::BiBasma => "متوافقة — التحديث الأخير لم يغيّر النصوص",
         Q::BiIqrar => "متوافقة تقريبًا، ثُبِّتت بعد إقرارك",
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::collections::BTreeSet;
+
+    use taarib_aman::fahs::Rafd;
+    use taarib_aman::kashf_himaya::{
+        DaleelHimaya, IjmaaHimaya, NawDaleel as NawDaleelHimaya, NawHimaya, Thiqa,
+    };
+    use taarib_aman::kashf_shabaka::{DalalatShabaka, DaleelShabaka, IjmaaShabaka, NawDaleel};
+    use taarib_aman::tahaqquq_tawqee::SababTawqee;
+    use taarib_mustalahat::bina::{Basma, BinaId};
+    use taarib_mustalahat::luba::{MasdarLuba, SuwarLuba};
+    use taarib_mustalahat::muharrik::{AilatMuharrik, KhalfiyaBarmajiya, Tabaqa};
+    use taarib_mustalahat::musahim::MusahimId;
+    use taarib_mustalahat::ruqaa::{RukhsaRuqaa, TareeqaTarjama};
+    use taarib_usus::manassa::BeeatTawafuq;
+
+    use super::*;
+
+    /// Anything a test here can fail on: a refusal from the code under test, or
+    /// a fixture that would not build. `unwrap` and `expect` are denied
+    /// workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn std::error::Error>>;
+
+    /// A contributor identity, which is 64 lowercase hexadecimal characters and
+    /// nothing else.
+    const MUSAHIM: &str =
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    /// The game every refusal below is about.
+    const ISM: &str = "Luba Ikhtibar";
+
+    /// Whether a sentence carries any Arabic script at all.
+    ///
+    /// The assertion the English field exists for: a reader who chose English is
+    /// shown a sentence with no Arabic in it, rather than the Arabic one under
+    /// an English heading.
+    fn fiha_arabi(nass: &str) -> bool {
+        nass.chars().any(|harf| {
+            matches!(harf, '\u{0600}'..='\u{06ff}' | '\u{0750}'..='\u{077f}')
+        })
+    }
+
+    /// A registry listing bound to whichever builds the caller names.
+    fn mulakhkhas(
+        manassat: Vec<String>,
+        basmat: Vec<Basma>,
+        waqt_nashr: &str,
+    ) -> Result<MulakhkhasRuqaa, Box<dyn std::error::Error>> {
+        Ok(MulakhkhasRuqaa {
+            id: RuqaaId::min_uuid(uuid::Uuid::new_v4()),
+            murajaa: RuqaaRevision::AWWAL,
+            unwan: "رقعة اختبار".to_owned(),
+            musahim: MusahimId::jadeed(MUSAHIM)?,
+            ism_musahim: "مساهم اختبار".to_owned(),
+            taghtiya: Taghtiya::default(),
+            adad_nusus: 100,
+            hajm: 1024,
+            bina_manassa: manassat,
+            basmat,
+            aila: AilatMuharrik::Unity,
+            khalfiya: KhalfiyaBarmajiya::Mono,
+            tabaqa: Tabaqa::Kamil,
+            tareeqa: TareeqaTarjama::AaliyaFaqat,
+            rukhsa: RukhsaRuqaa::Cc0,
+            taqyeem: None,
+            adad_taqyeemat: 0,
+            waqt_nashr: waqt_nashr.to_owned(),
+            basmat_muhtawa: Basma::min_bayt([7u8; 32]),
+            rabt: "https://example.invalid/ruqaa".to_owned(),
+            rabt_mira: None,
+        })
+    }
+
+    /// A library row whose build is on record, so the listings get judged.
+    fn luba_bi_bina(manassa: Option<&str>, basma: Basma) -> Luba {
+        let masdar = MasdarLuba::Steam(480);
+        Luba {
+            id: LubaId::min_masdar(&masdar, ISM),
+            masadir: vec![masdar],
+            ism: ISM.to_owned(),
+            jidhr: PathBuf::from("/luba-ikhtibar"),
+            tanfidhi: None,
+            hajm: 0,
+            akhir_laab: None,
+            akhir_tahdith: None,
+            bina: Some(BinaId {
+                manassa: manassa.map(ToOwned::to_owned),
+                basma,
+                adad_malaffat: 1_000,
+                waqt: "2026-01-01T00:00:00Z".to_owned(),
+            }),
+            suwar: SuwarLuba::default(),
+            beea: BeeatTawafuq::Asli,
+            mawjuda: true,
+            mukhfiya: false,
+        }
+    }
+
+    /// A multiplayer scan that found one piece of catalogue evidence.
+    fn ijmaa_shabaka() -> IjmaaShabaka {
+        IjmaaShabaka {
+            jidhr: PathBuf::from("/luba-ikhtibar"),
+            dalail: vec![DaleelShabaka {
+                naw: NawDaleel::BayanMatjar,
+                dalala: DalalatShabaka::MutaaddidOnline,
+                ayn: "category/1".to_owned(),
+                masar: None,
+            }],
+            thughrat: Vec::new(),
+            mabtur: false,
+        }
+    }
+
+    /// An anti-cheat scan that found one certain marker on disk.
+    fn ijmaa_himaya() -> IjmaaHimaya {
+        IjmaaHimaya {
+            jidhr: PathBuf::from("/luba-ikhtibar"),
+            adilla: vec![DaleelHimaya {
+                naw: NawHimaya::EasyAntiCheat,
+                sinf: NawDaleelHimaya::MalafMawjud,
+                ayn: "EasyAntiCheat/easyanticheat.sys".to_owned(),
+                masar: None,
+                thiqa: Thiqa::Muakkada,
+            }],
+            thughrat: Vec::new(),
+            mabtur: false,
+        }
+    }
+
+    /// The match verdict reaches the interface in both languages, on the right
+    /// row.
+    #[test]
+    fn wasf_almutabaqa_yasil_bil_lughatayn_ala_saffihi() -> NatijatIkhtibar {
+        let basma = Basma::min_bayt([3u8; 32]);
+        let luba = luba_bi_bina(Some("12345"), basma);
+
+        // Worst first on purpose. The ranking puts the fingerprint match above
+        // the approximate one, so a lookup that trusted the input order would
+        // hand each row the other row's sentence — which is the only way this
+        // change can be wrong, and the reason the sentences are keyed by the
+        // lineage-and-revision pair rather than by position.
+        let taqribi =
+            mulakhkhas(vec!["12345".to_owned()], Vec::new(), "2026-01-02T00:00:00Z")?;
+        let mutabiq = mulakhkhas(Vec::new(), vec![basma], "2026-01-01T00:00:00Z")?;
+        let (id_taqribi, id_mutabiq) = (taqribi.id, mutabiq.id);
+
+        let mudkhalat = rattib_murashshahat(&luba, vec![taqribi, mutabiq]);
+        assert_eq!(mudkhalat.len(), 2);
+
+        let awwal = mudkhalat.first().ok_or("the ranking dropped a listing")?;
+        let thani = mudkhalat.get(1).ok_or("the ranking dropped a listing")?;
+        assert_eq!(awwal.id, id_mutabiq, "the fingerprint match ranks first");
+        assert_eq!(thani.id, id_taqribi);
+        assert_eq!(awwal.mutabaqa, Some(MutabaqaBina::Basma));
+        assert_eq!(thani.mutabaqa, Some(MutabaqaBina::Nitaq));
+        assert!(!awwal.yahtaj_iqrar, "an exact-enough match asks nothing");
+        assert!(thani.yahtaj_iqrar, "an approximate match asks for an acknowledgement");
+
+        for mudkhal in &mudkhalat {
+            let tabaqa = mudkhal.mutabaqa.ok_or("a judged listing lost its tier")?;
+            let arabi = mudkhal.mutabaqa_arabi.as_deref().ok_or("no Arabic verdict")?;
+            let injilizi =
+                mudkhal.mutabaqa_injilizi.as_deref().ok_or("no English verdict")?;
+            assert!(arabi.contains(tabaqa.wasf_arabi()), "{arabi}");
+            assert!(injilizi.contains(tabaqa.wasf_injilizi()), "{injilizi}");
+            assert!(
+                !fiha_arabi(injilizi),
+                "an English verdict must hold no Arabic: {injilizi}"
+            );
+        }
+        Ok(())
+    }
+
+    /// With no build on record nothing is judged, in either language.
+    #[test]
+    fn bila_bina_la_hukm_bi_ayy_lugha() -> NatijatIkhtibar {
+        let mut luba = luba_bi_bina(Some("12345"), Basma::min_bayt([3u8; 32]));
+        luba.bina = None;
+        let listing =
+            mulakhkhas(vec!["12345".to_owned()], Vec::new(), "2026-01-01T00:00:00Z")?;
+
+        let mudkhalat = rattib_murashshahat(&luba, vec![listing]);
+
+        let wahid = mudkhalat.first().ok_or("the listing was dropped")?;
+        assert_eq!(wahid.mutabaqa, None);
+        assert_eq!(wahid.mutabaqa_arabi, None);
+        // Symmetric with the Arabic one deliberately: a verdict invented from an
+        // absence is no better in English than it is in Arabic.
+        assert_eq!(wahid.mutabaqa_injilizi, None);
+        Ok(())
+    }
+
+    /// Every safety refusal is told apart from every other by its code alone.
+    #[test]
+    fn kull_rafd_yahmil_ramzan_yakhussuhu() {
+        let rufud = [
+            Rafd::IqrarNaqis,
+            Rafd::Himaya(Box::new(ijmaa_himaya())),
+            Rafd::FahsMatjarLamYajri { masar: None, sabab: "NotFound".to_owned() },
+            Rafd::Tawqee(SababTawqee::GhayrMuwaqqaa),
+            Rafd::Mulgha { sabab: "the signing key was withdrawn".to_owned() },
+            Rafd::ShabakaBilaIqrar(Box::new(ijmaa_shabaka())),
+        ];
+
+        let rumuz: Vec<u16> =
+            rufud.iter().map(|rafd| khata_rafd(rafd, ISM).ramz().raqm()).collect();
+        let mufrada: BTreeSet<u16> = rumuz.iter().copied().collect();
+
+        assert_eq!(mufrada.len(), rumuz.len(), "two refusals share one code: {rumuz:?}");
+        // The bucket they all used to collapse into. Nothing that came out of
+        // the safety layer may still be wearing it.
+        assert!(
+            !rumuz.contains(&(arqam::STUDIO + 29)),
+            "a safety refusal is still answering with the generic install code"
+        );
+    }
+
+    /// The refusal the user can answer says so with a code, not with a sentence
+    /// somebody has to match on.
+    #[test]
+    fn rafd_alshabaka_lahu_ramz_yumakkin_min_iadat_alsual() {
+        let rafd = Rafd::ShabakaBilaIqrar(Box::new(ijmaa_shabaka()));
+        let khata = Khata::min_tafsir(&khata_rafd(&rafd, ISM));
+
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 39);
+        assert_eq!(khata.khutura, Khutura::Maluma);
+        // Not a button: the acknowledgement is the person's to give, and an
+        // action offering to give it would be giving it for them. The interface
+        // reopens its own question off the code above.
+        assert_eq!(khata.khutwa, Khutwa::LaShay);
+        assert!(fiha_arabi(&khata.arabi));
+        assert!(!fiha_arabi(&khata.injilizi), "{}", khata.injilizi);
+        // The evidence the acknowledgement quotes, so the question can be put
+        // again with what it is about beside it.
+        assert!(khata.injilizi.contains("multiplayer"));
+        assert_eq!(khata.siyaq.get("ism"), Some(&QeemaSiyaq::Nass(ISM.to_owned())));
+    }
+
+    /// Naming the anti-cheat refusal did not give it a way out.
+    #[test]
+    fn rafd_alhimaya_yabqa_bila_makhraj() {
+        let rafd = Rafd::Himaya(Box::new(ijmaa_himaya()));
+        let khata = Khata::min_tafsir(&khata_rafd(&rafd, ISM));
+
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 37);
+        // No override for anti-cheat exists anywhere in this product, and
+        // giving the refusal a code of its own must not have invented the first.
+        assert_eq!(khata.khutwa, Khutwa::LaShay);
+        assert_eq!(khata.khutura, Khutura::Tanbeeh);
+        // The evidence, not only the conclusion.
+        assert!(khata.injilizi.contains(NawHimaya::EasyAntiCheat.injilizi()));
+        assert!(khata.arabi.contains("easyanticheat.sys"));
+    }
+
+    /// The unread-catalogue refusal keeps the one remedy it has.
+    #[test]
+    fn rafd_fahs_almatjar_yadullu_ala_idadat_almanassat() {
+        let rafd = Rafd::FahsMatjarLamYajri {
+            masar: Some(PathBuf::from("/steam/appcache/appinfo.vdf")),
+            sabab: "NotFound".to_owned(),
+        };
+        let khata = Khata::min_tafsir(&khata_rafd(&rafd, ISM));
+
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 38);
+        assert_eq!(khata.khutwa, Khutwa::FathIdadat { qism: QismIdadat::Manassat });
+        // The path is the mistake on this machine, so the refusal names it.
+        assert!(khata.injilizi.contains("appinfo.vdf"), "{}", khata.injilizi);
+        assert_eq!(
+            khata.siyaq.get("masar"),
+            Some(&QeemaSiyaq::Nass("/steam/appcache/appinfo.vdf".to_owned()))
+        );
+    }
+
+    /// A refusal from outside the safety layer still answers with the generic
+    /// install code, which is the whole of what it can say.
+    #[test]
+    fn fashal_ghayr_amni_yabqa_ala_alramz_alaam() {
+        let fashal = taarib_mustawda::tathbeet_bilnaqra::FashalTathbeet::Tathbeet(
+            KhataTathbeet::LubaTashtaghil {
+                amaliya: "luba.exe".to_owned(),
+                tanfidhi: PathBuf::from("/luba-ikhtibar/luba.exe"),
+            },
+        );
+
+        let khata = khata_naqra(&fashal, ISM);
+
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 29);
     }
 }

@@ -7,8 +7,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use taarib_aman::iqrar::{self, SijillIqrar};
+use taarib_aman::kashf_himaya::{
+    DaleelHimaya, HalatMatjar, IjmaaHimaya, NawHimaya, ifhas_himaya_bi_qiraa, mahmiya,
+};
+use taarib_aman::kashf_shabaka::{ifhas_shabaka_bi_qiraa, mutaaddid};
+use taarib_aman::matjar::QiraatMatjar;
 use taarib_aman::qaimat_sahb::QaimatSahb;
 use taarib_istikhraj::rafd::TaqreerRafd;
+use taarib_kashf::fahs::SimatLuba;
 use taarib_khatm::MiftahKhass;
 use taarib_makhzan::wasl::Makhzan;
 use taarib_mustalahat::luba::{Luba, LubaId, MasdarLuba};
@@ -23,7 +29,7 @@ use taarib_tilqai::{
     MiqbadIlgha, MudkhalatAman, MukhbirTaqaddum, NatijatMashwar, QaydMarhala, SijillMashwar,
     TalabTilqai, Taqaddum, WasfTilqai, arrib, ijrud, naqs_jahiziya, tahaqquq_jahiziya,
 };
-use taarib_usus::idadat::{Idadat, MakhzanIdadat};
+use taarib_usus::idadat::{Idadat, MakhzanIdadat, NawMuzawwid};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
@@ -232,6 +238,16 @@ pub struct HukmTilqaiHie {
     pub hudud_injilizi: Vec<String>,
     /// Roughly how many strings are involved, or `None` when only a run can say.
     pub nusus_taqribi: Option<u32>,
+    /// Whether the run will require the multiplayer acknowledgement, so the
+    /// interface asks for it *before* the button rather than after the money.
+    ///
+    /// Read off the launcher's own catalogue entry, which the library scan
+    /// already stored — the only source of this fact a verdict may consult,
+    /// because deciding it properly means walking the game directory and this
+    /// command is answered on mount. [`ibda`] decides it again from the walk and
+    /// refuses at the door when the two disagree, so a `false` here is "the
+    /// launcher did not say so", never "you will not be asked".
+    pub yalzam_iqrar_shabaka: bool,
     /// What it has cost so far and what it may cost.
     pub takalif: TakalifHie,
     /// The cover's absolute path, when the artwork cache holds one.
@@ -412,6 +428,29 @@ pub(crate) fn hukm(
         .and_then(|tarif| tarif.mizaniya)
         .filter(|mablagh| mablagh.is_finite() && *mablagh > 0.0)
         .unwrap_or(0.0);
+    // The same condition `jahhiz` refuses on, reported here rather than only
+    // there. The screen's own cost sentence reads "the run stops at the ceiling
+    // and never crosses it" and is handed `saqf` — which is zero for exactly
+    // this configuration, so without this line the verdict promises a ceiling
+    // that does not exist and the button then refuses with a code the reader had
+    // no warning of. `nano_min_dolar` rejects the same values this filter drops,
+    // so the two commands cannot disagree about which budgets count.
+    if tarif
+        .as_ref()
+        .is_ok_and(|tarif| yatqada_ajran(tarif.naw) && saqf <= 0.0)
+    {
+        let ism = tarif.as_ref().map_or_else(|_| String::new(), |tarif| tarif.muarrif.clone());
+        hudud_arabi.push(format!(
+            "المزوّد «{ism}» يتقاضى أجرًا على الترجمة ولم يُضبط له سقف إنفاق، والتعريب \
+             التلقائي لا يبدأ بدون سقف. اضبط «الميزانية» لهذا المزوّد في الإعدادات ← \
+             المزوّدون، وهي لكلّ جولة لا لكلّ شهر."
+        ));
+        hudud_injilizi.push(format!(
+            "{ism} charges for translation and has no spend ceiling set, and an automatic run \
+             will not start without one. Set this provider's budget in Settings, Providers; it \
+             is per run, not per month."
+        ));
+    }
 
     let hukm = HukmTilqaiHie {
         muarrif: id.to_string(),
@@ -425,6 +464,7 @@ pub(crate) fn hukm(
         hudud_arabi,
         hudud_injilizi,
         nusus_taqribi,
+        yalzam_iqrar_shabaka: yalzam_iqrar_shabaka(&simat),
         takalif: TakalifHie {
             munfaq: dolar(munfaq),
             saqf,
@@ -436,17 +476,50 @@ pub(crate) fn hukm(
     // inside it, so the tier, the reasons and the cover are exactly what the
     // rest of the product shows for this game and only the offer changes.
     //
-    // Readiness first, because the official-language one is written to defer to
-    // a refusal that is already standing and would otherwise be the one that
-    // defers. Between the two, the publisher's own Arabic is the sentence a user
-    // should end up reading: it is a permanent reason not to run and this is a
-    // temporary one.
-    let hukm = tabbiq_jahiziya(hukm, &taqreer);
-    Ok(tabbiq_lugha_rasmiya(
+    // Three refusals can hold at once and they are applied in the order a user
+    // needs to hear them, which is the order [`ibda`] raises them in — the two
+    // commands answering the same game with two different reasons is the defect
+    // this ordering exists to prevent:
+    //
+    // 1. the safety layer's, already in `masar_hukm` above, because an
+    //    anti-cheat association puts an account at stake and no release lifts
+    //    it;
+    // 2. the publisher's own Arabic, because it is permanent too and it is the
+    //    one a user can act on — by deciding the shipped Arabic really is
+    //    unusable and saying so in Settings;
+    // 3. readiness last, because it is the only one of the three an update
+    //    lifts, and telling somebody to give up on a game Taarib will patch
+    //    next release is the wrong sentence to leave them with.
+    //
+    // Both helpers defer to a refusal that is already standing and add their own
+    // fact to the limits instead, so nothing is hidden by being outranked.
+    let hukm = tabbiq_lugha_rasmiya(
         hukm,
         crate::luba_awamir::hukm_mukhazzan(id).as_ref(),
         hali.istibdal_lugha_rasmiya,
-    ))
+    );
+    let mut hukm = tabbiq_jahiziya(hukm, &taqreer);
+    // A question about a run that is not offered is a control on a screen with
+    // no button, and an acknowledgement box beside a refusal reads as an
+    // invitation for the same reason `nusus_taqribi` is dropped above.
+    if hukm.masar == MasarTilqaiHie::Marfud {
+        hukm.yalzam_iqrar_shabaka = false;
+    }
+    Ok(hukm)
+}
+
+/// Whether the launcher's own catalogue already says this game is played with
+/// other people, so the verdict can ask before the button rather than after.
+///
+/// Both hints count, not only the online one, because the gate this warns about
+/// is `taarib_aman::kashf_shabaka::mutaaddid`, and that answers on *any*
+/// evidence — a shared-screen title is refused by it exactly as an online one
+/// is. Warning on the narrower set would leave the wider refusal unannounced,
+/// which is the defect being fixed rather than a smaller version of it.
+fn yalzam_iqrar_shabaka(simat: &[SimatLuba]) -> bool {
+    simat
+        .iter()
+        .any(|sima| matches!(sima, SimatLuba::JamaiOnline | SimatLuba::JamaiMahalli))
 }
 
 /// Takes the offer away from a game whose engine this build cannot patch yet.
@@ -459,14 +532,23 @@ pub(crate) fn hukm(
 ///
 /// Shaped on [`tabbiq_lugha_rasmiya`] so the interface has one refusal to draw
 /// rather than two: the route becomes [`MasarTilqaiHie::Marfud`], the reason
-/// becomes the refusal, and the button is simply not offered. The one thing
-/// this does not do is override a game the safety layer already refused —
-/// `naqs_jahiziya` answers [`None`] for those, because an anti-cheat association
-/// is the more serious of the two and is not undone by an update.
+/// becomes the refusal, and the button is simply not offered.
+///
+/// It overrides neither of the two refusals that outrank it. An anti-cheat
+/// association is handled by the capability report itself — `naqs_jahiziya`
+/// answers [`None`] for a refused report — and a publisher's own Arabic is
+/// handled here, by the standing-refusal check below. Both are permanent facts
+/// about the game; this one is a temporary fact about Taarib, and overwriting a
+/// permanent reason with a temporary one would tell a user to wait for a release
+/// that will not change their answer. The gap is still stated: the report's own
+/// `naqs` sentence is already in the limits list either way.
 fn tabbiq_jahiziya(mut hukm: HukmTilqaiHie, taqreer: &TaqreerImkaniyat) -> HukmTilqaiHie {
     let Some(sabab) = naqs_jahiziya(taqreer) else {
         return hukm;
     };
+    if hukm.masar == MasarTilqaiHie::Marfud {
+        return hukm;
+    }
     hukm.masar = MasarTilqaiHie::Marfud;
     hukm.sabab_arabi = sabab.arabi;
     hukm.sabab_injilizi = sabab.injilizi;
@@ -573,6 +655,19 @@ fn mahmiya_bil_lugha(
     crate::luba_awamir::hukm_mukhazzan(id)
         .map(|rasmiya| rasmiya.hala())
         .filter(|hala| hala.yatakallam_arabi())
+}
+
+/// Whether a provider of this kind charges for translation.
+///
+/// The verdict may not answer this the way `jahhiz` does — by building the
+/// provider and reading `qudrat().taklifa` — because building one opens the
+/// keychain, and a screen may not unlock a credential on mount. It is decided
+/// from the kind instead, and the two agree because `bin_muzawwid` is what makes
+/// them agree: [`NawMuzawwid::Mahalli`] is the one arm it builds through
+/// `MuzawwidMuwafiqOpenAI::mahalli`, which forces a free meter whatever the
+/// configuration claimed, and every other arm it builds is metered.
+const fn yatqada_ajran(naw: NawMuzawwid) -> bool {
+    !matches!(naw, NawMuzawwid::Mahalli)
 }
 
 /// Which of the three routes a game takes.
@@ -899,12 +994,22 @@ fn asbab_rafd(mujallad: &Path) -> Vec<SatrRafdHie> {
 /// up the newest run directory instead of opening a new one, which is what stops
 /// a resumed run from paying a second time for strings it already bought.
 ///
+/// `iqrar_shabaka` is the user's own answer to the multiplayer warning, obtained
+/// the way [`crate::tathbeet_awamir::thabbit_ruqaa`] obtains it: a key in the
+/// IPC payload, filled from a control the person ticked. Nothing in this process
+/// may assert it on their behalf — the risk it acknowledges is a permanent ban
+/// on their account — so an unticked box costs a refusal here and never a run.
+///
 /// # Errors
 ///
 /// [`KhataTilqaiAmr::MashwarJari`] when a run for this game is already going,
-/// [`KhataTilqaiAmr::LughaRasmiya`] when the publisher already ships Arabic,
-/// `taarib_tilqai::KhataTilqai::MuharrikGhayrJahiz` when this build has no
-/// working in-game half for the detected engine and
+/// [`KhataTilqaiAmr::HimayaMuktashafa`] when the anti-cheat scan finds evidence
+/// on disk or in Steam's catalogue, [`KhataTilqaiAmr::FahsHimayaLamYajri`] when
+/// that scan could not read the catalogue it needs,
+/// [`KhataTilqaiAmr::ShabakaBilaIqrar`] when the game is multiplayer and
+/// `iqrar_shabaka` is false, [`KhataTilqaiAmr::LughaRasmiya`] when the publisher
+/// already ships Arabic, `taarib_tilqai::KhataTilqai::MuharrikGhayrJahiz` when
+/// this build has no working in-game half for the detected engine and
 /// `taarib_tilqai::KhataTilqai::TabaqaGhayrMadauma` when the safety layer
 /// refuses the game — both from the same gate the verdict reports,
 /// [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the game is a Steam
@@ -917,10 +1022,18 @@ fn asbab_rafd(mujallad: &Path) -> Vec<SatrRafdHie> {
 /// acknowledgement record raise.
 #[tauri::command]
 #[specta::specta]
+#[expect(
+    clippy::fn_params_excessive_bools,
+    reason = "the resume flag and the acknowledgement are separate keys in the IPC payload, \
+              shaped on `thabbit_ruqaa`, which the interface already fills the same way; \
+              folding them into one struct would change that contract and make the automatic \
+              path's payload differ from the one-click path's for no gain"
+)]
 pub fn ibda_tilqai(
     nafidha: tauri::Window,
     muarrif: String,
     istinaf: bool,
+    iqrar_shabaka: bool,
     masarat: tauri::State<'_, Masarat>,
     makhzan: tauri::State<'_, Makhzan>,
     idadat: tauri::State<'_, Arc<MakhzanIdadat>>,
@@ -932,6 +1045,7 @@ pub fn ibda_tilqai(
         }),
         muarrif,
         istinaf,
+        iqrar_shabaka,
         &masarat,
         &makhzan,
         &idadat,
@@ -952,27 +1066,22 @@ pub(crate) type MudheeLaqta = Arc<dyn Fn(&LaqtatTilqaiHie) + Send + Sync>;
 /// # Errors
 ///
 /// As [`ibda_tilqai`].
+#[expect(
+    clippy::fn_params_excessive_bools,
+    reason = "the two mirror `ibda_tilqai`'s payload exactly, which is the point of this \
+              function: it is the same call with the IPC boundary taken off"
+)]
 pub(crate) fn ibda(
     mudhee: MudheeLaqta,
     muarrif: String,
     istinaf: bool,
+    iqrar_shabaka: bool,
     masarat: &Masarat,
     makhzan: &Makhzan,
     idadat: &Arc<MakhzanIdadat>,
     mashawir: &MashawirTilqai,
 ) -> Natija<LaqtatTilqaiHie> {
     let id = huwiya(muarrif)?;
-    // The same exclusion the verdict applies, enforced where the money is
-    // actually spent. A gate that only the read path honours is not a gate: the
-    // command is reachable on its own, and this is the call that writes into
-    // somebody's game.
-    if let Some(hala) = mahmiya_bil_lugha(id, &idadat.hali()) {
-        return Err(Khata::from(KhataTilqaiAmr::LughaRasmiya {
-            ism: id.to_string(),
-            hala_arabi: hala.ism_arabi().to_owned(),
-            hala_injilizi: hala.ism_injilizi().to_owned(),
-        }));
-    }
     if mashawir
         .wahid(id)
         .is_some_and(|hay| hay.hala.lock().laqta.wad == WadTilqaiHie::Jariya)
@@ -982,30 +1091,79 @@ pub(crate) fn ibda(
         }));
     }
 
-    // The same gate `hukm` reports, enforced where the run actually starts, and
-    // for the same reason the exclusion above is enforced here: a verdict is
-    // advice. This command is reachable on its own, a click can race the verdict
-    // it was drawn from, and a build finishing between the two changes the
-    // answer. It sits after the two checks that need no I/O and before `jahhiz`,
-    // so an unpatchable engine is refused without a provider being built, a font
-    // being copied or a signing key being unlocked — and the report itself is the
-    // one the whole product already reads, cached in the store.
-    //
-    // It is `tahaqquq_jahiziya` rather than `naqs_jahiziya` because a start
-    // command has to refuse an anti-cheat-refused game too, and that refusal has
-    // a sentence of its own which is not this one's to overwrite.
+    // The same three refusals `hukm` reports, enforced where the run actually
+    // starts and in the order `hukm` applies them, because a verdict is advice:
+    // this command is reachable on its own, a click can race the verdict it was
+    // drawn from, and a build finishing between the two changes the answer. All
+    // three sit before `jahhiz`, so a refused game costs no provider build, no
+    // font copy and no unlocked signing key — and the report itself is the one
+    // the whole product already reads, cached in the store.
     let luba = ijlib_luba(makhzan, id)?;
     let simat = simat_luba(makhzan, id)?;
-    tahaqquq_jahiziya(&taqreer_luba(makhzan, &luba, &simat, false)?)?;
+    let taqreer = taqreer_luba(makhzan, &luba, &simat, false)?;
+    // First, and on its own, because the safety layer's refusal outranks both of
+    // the others and is the one no release and no setting lifts.
+    // `tahaqquq_jahiziya` answers that refusal before it answers the readiness
+    // one, so calling it under `marfuda` takes exactly the first of the two.
+    if taqreer.marfuda {
+        tahaqquq_jahiziya(&taqreer)?;
+    }
+    let hali = idadat.hali();
+    // Then the publisher's own Arabic. Permanent like the one above and, unlike
+    // the one below, something the reader can act on today — which is why it
+    // must not be buried under a refusal that an update lifts.
+    if let Some(hala) = mahmiya_bil_lugha(id, &hali) {
+        return Err(Khata::from(KhataTilqaiAmr::LughaRasmiya {
+            ism: id.to_string(),
+            hala_arabi: hala.ism_arabi().to_owned(),
+            hala_injilizi: hala.ism_injilizi().to_owned(),
+        }));
+    }
+    // Readiness last of the three: it is the only one a release changes.
+    tahaqquq_jahiziya(&taqreer)?;
 
-    let mudkhalat = jahhiz(masarat, makhzan, idadat, id, istinaf)?;
+    // And then the two refusals no verdict can hold, brought forward from the
+    // end of the run to here.
+    //
+    // Both used to fire in stage 7 of 7 — after extraction, after every paid
+    // batch, after the atlas, the compile and the seal — over facts that were
+    // already true and already readable before the first string was sent. The
+    // multiplayer one could not even be satisfied: this layer hard-coded the
+    // acknowledgement to `false`, so every multiplayer game was guaranteed to
+    // spend the whole budget and then refuse. Neither refusal is softened here;
+    // both are simply asked at the door, which costs a fraction of a second
+    // against a run that costs real money.
+    //
+    // They come after the three above rather than before them because `hukm` is
+    // a promise the screen made and these two are facts it could not have known:
+    // the verdict does no I/O beyond the store, and deciding either of these
+    // properly means walking the game folder and opening Steam's catalogue. A
+    // game the verdict already refused must be refused for the verdict's own
+    // reason, or the button and the screen name two different blockers for the
+    // same game. What is added here is strictly a fourth and fifth refusal for
+    // games the verdict offered — never a different answer to a question the
+    // verdict answered.
+    //
+    // Resolved here rather than inside `jahhiz` so the scan can be handed the
+    // root, and passed down afterwards so Steam is located once per press.
+    let jidhr_steam = crate::luba_awamir::jidhr_steam_lil_fahs(masarat, &hali, &luba)?;
+    // One catalogue read for both halves of the scan, exactly as
+    // `taarib_aman::fahs` reads it once for both: `appinfo.vdf` is megabytes on
+    // a mature account, and each half would otherwise materialise every app
+    // entry in it all over again.
+    let matjar = QiraatMatjar::iqra(appid_steam(&luba), jidhr_steam.as_deref());
+    hima_al_bab(&luba, &matjar)?;
+    // The multiplayer question last, for the reason `taarib_aman::fahs` puts it
+    // last: it is the only refusal in the set with an answer the person can
+    // give, and giving it is a tick rather than a wait or a lost account.
+    shabakat_al_bab(&luba, &matjar, iqrar_shabaka)?;
+
+    let mudkhalat = jahhiz(masarat, makhzan, idadat, id, istinaf, jidhr_steam, iqrar_shabaka)?;
     // A resumed run starts from what the journal already knows rather than from
     // five blank rows: the stages it will skip are finished, and a list that
     // showed them as waiting would tell the user their four thousand translated
     // strings are about to be done again.
-    let sabiqa = istinaf
-        .then(|| laqta_min_qurs(masarat, &idadat.hali(), id))
-        .flatten();
+    let sabiqa = istinaf.then(|| laqta_min_qurs(masarat, &hali, id)).flatten();
     let laqta = LaqtatTilqaiHie {
         muarrif: id.to_string(),
         tashghila: mudkhalat.tashghila.to_string(),
@@ -1058,6 +1216,109 @@ pub(crate) fn ibda(
     // reaches the screen on the event rather than through a handle nobody holds.
     drop(tauri::async_runtime::spawn(shaghghil(mudhee, hay, mudkhalat)));
     Ok(laqta)
+}
+
+/// The anti-cheat half of the install gate, asked before the run instead of
+/// after it.
+///
+/// This is the same question `taarib_aman::fahs` puts at stage 7 of 7, and it is
+/// the same two answers: hard evidence refuses by naming it, and a catalogue
+/// that could not be read refuses because VAC is declared there and nowhere
+/// else, so silence from an unread catalogue is byte-identical to silence from a
+/// clean game. Asking it there and only there meant a genuinely protected title
+/// paid for its entire translation first — extraction, every batch, the atlas,
+/// the compile and the seal — and met the refusal with the money already gone.
+/// The scan costs a fraction of a second — between a sixth and three quarters of
+/// one on the installed games it was measured against, the spread being the size
+/// of the folder it walks. The run it precedes costs real money and cannot be
+/// refunded, and a permanent ban cannot be undone at all.
+///
+/// It is asked here rather than in [`hukm`] because it walks the game directory
+/// and reads Steam's catalogue, and the verdict is answered on mount and does no
+/// I/O beyond the store. The stored capability report is the launcher's own
+/// declaration and is checked before this one; this is the half that finds an
+/// Easy Anti-Cheat or `BattlEye` payload a launcher never mentioned.
+///
+/// # Errors
+///
+/// [`KhataTilqaiAmr::HimayaMuktashafa`] for evidence, and
+/// [`KhataTilqaiAmr::FahsHimayaLamYajri`] for a catalogue the scan was owed and
+/// could not read.
+fn hima_al_bab(luba: &Luba, matjar: &QiraatMatjar) -> Natija<()> {
+    let (himaya, hala) = ifhas_himaya_bi_qiraa(&luba.jidhr, matjar);
+    if mahmiya(&himaya) {
+        return Err(Khata::from(KhataTilqaiAmr::HimayaMuktashafa {
+            ism: luba.ism.clone(),
+            anwa: asma_himaya(&himaya),
+            dalail_arabi: sutur(himaya.adilla.iter().map(DaleelHimaya::arabi)),
+            dalail_injilizi: sutur(himaya.adilla.iter().map(DaleelHimaya::injilizi)),
+        }));
+    }
+    match hala {
+        HalatMatjar::GhayrMatlub | HalatMatjar::Maqru => Ok(()),
+        // Unreachable for a Steam game, which `jidhr_steam_lil_fahs` already
+        // refused above, and impossible for one that is not — but the evidence
+        // list this arm carries is indistinguishable from a clean game's, so it
+        // is answered rather than assumed away.
+        HalatMatjar::JidhrMajhul => Err(Khata::from(KhataTilqaiAmr::FahsHimayaLamYajri {
+            ism: luba.ism.clone(),
+            mawdi: None,
+            sabab: "no Steam root was given for a Steam game".to_owned(),
+        })),
+        HalatMatjar::Mutaadhdhir { masar, sabab } => {
+            Err(Khata::from(KhataTilqaiAmr::FahsHimayaLamYajri {
+                ism: luba.ism.clone(),
+                mawdi: Some(masar.display().to_string()),
+                sabab,
+            }))
+        },
+    }
+}
+
+/// The multiplayer half of the same gate, asked before the run instead of after.
+///
+/// The acknowledgement is never asserted here. `iqrar_shabaka` arrives from the
+/// IPC payload, filled by a control the person ticked, exactly as the one-click
+/// install obtains it — and a command layer that set it for them would be
+/// agreeing, on their behalf, that they accept a permanent ban on their account.
+/// What changes is only *when* the unticked box is discovered: at the door,
+/// where the answer costs a press, rather than after a paid translation.
+///
+/// # Errors
+///
+/// [`KhataTilqaiAmr::ShabakaBilaIqrar`], carrying the evidence the scan found so
+/// the interface can show what is being acknowledged.
+fn shabakat_al_bab(luba: &Luba, matjar: &QiraatMatjar, iqrar_shabaka: bool) -> Natija<()> {
+    if iqrar_shabaka {
+        return Ok(());
+    }
+    let shabaka = ifhas_shabaka_bi_qiraa(&luba.jidhr, matjar);
+    if !mutaaddid(&shabaka) {
+        return Ok(());
+    }
+    Err(Khata::from(KhataTilqaiAmr::ShabakaBilaIqrar {
+        ism: luba.ism.clone(),
+        wasf_arabi: shabaka.wasf_iqrar(),
+        wasf_injilizi: shabaka.wasf_injilizi(),
+    }))
+}
+
+/// The anti-cheats a scan named, joined for the log and the context table.
+fn asma_himaya(himaya: &IjmaaHimaya) -> String {
+    himaya
+        .anwa()
+        .into_iter()
+        .map(NawHimaya::injilizi)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// One evidence line per row, as the refusal sentences quote them.
+fn sutur(mutakarrir: impl Iterator<Item = String>) -> String {
+    mutakarrir
+        .map(|satr| format!("- {satr}"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Asks the run for one game to stop, and answers with the snapshot as it stands.
@@ -1136,12 +1397,16 @@ struct MudkhalatMashwar {
     qaima: QaimatSahb,
     /// The first-run acknowledgement, when one was given.
     iqrar: Option<SijillIqrar>,
+    /// The user's own answer to the multiplayer warning, carried to the install
+    /// gate at the end of the run so that gate asks the person, not this layer.
+    iqrar_shabaka: bool,
     /// The Steam application id, when this is a Steam game.
     appid: Option<u32>,
-    /// Steam's install root, resolved the way the library scan resolves it —
-    /// registry, then the known install directories, with the settings override
-    /// winning when there is one. [`None`] only for a game that is not on Steam;
-    /// a Steam game with no resolvable root never gets this far.
+    /// Steam's install root, resolved by [`ibda`] the way the library scan
+    /// resolves it — registry, then the known install directories, with the
+    /// settings override winning when there is one. [`None`] only for a game
+    /// that is not on Steam; a Steam game with no resolvable root never gets
+    /// this far.
     jidhr_steam: Option<PathBuf>,
     /// How the run behaves.
     khiyarat: KhiyaratTilqai,
@@ -1152,12 +1417,25 @@ struct MudkhalatMashwar {
 }
 
 /// Assembles everything one run needs, refusing by name when a piece is missing.
+///
+/// `jidhr_steam` and `iqrar_shabaka` are handed in rather than found here.
+/// [`ibda`] needs both before this is called — the root to run the anti-cheat
+/// and multiplayer scan at the door, the acknowledgement to answer that scan —
+/// and locating Steam twice per press, once to refuse on and once to record,
+/// would be two chances for the two to disagree about where Steam is.
+#[expect(
+    clippy::fn_params_excessive_bools,
+    reason = "both are carried through from `ibda`'s own payload unchanged; a struct here \
+              would exist only to satisfy the lint and would have to be unpacked again"
+)]
 fn jahhiz(
     masarat: &Masarat,
     makhzan: &Makhzan,
     idadat: &Arc<MakhzanIdadat>,
     id: LubaId,
     istinaf: bool,
+    jidhr_steam: Option<PathBuf>,
+    iqrar_shabaka: bool,
 ) -> Natija<MudkhalatMashwar> {
     let luba = ijlib_luba(makhzan, id)?;
     let masdar = luba.masadir.first().cloned().ok_or_else(|| {
@@ -1166,12 +1444,6 @@ fn jahhiz(
         })
     })?;
     let hali = idadat.hali();
-    // Before a provider is chosen and before a single string is priced. The run
-    // ends at the same install gate the one-click path ends at, that gate reads
-    // VAC out of Steam's catalogue and out of nothing else, and a run that spent
-    // the user's money translating a game it was never going to be allowed to
-    // touch is a worse answer than a refusal at the door.
-    let jidhr_steam = crate::luba_awamir::jidhr_steam_lil_fahs(masarat, &hali, &luba)?;
     let tarif = muzawwid_muntakhab(&hali)?;
     let lahza = lahza_alaan();
     let saqf_nano = tarif.mizaniya.and_then(|mablagh| nano_min_dolar(mablagh).ok());
@@ -1268,6 +1540,7 @@ fn jahhiz(
         },
         qaima,
         iqrar,
+        iqrar_shabaka,
         appid: appid_steam(&luba),
         jidhr_steam,
         khiyarat,
@@ -1384,11 +1657,15 @@ async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mudkhalat: Mudkhal
             iqrar: mudkhalat.iqrar.as_ref(),
             appid: mudkhalat.appid,
             jidhr_steam: mudkhalat.jidhr_steam.as_deref(),
-            // Never asserted here. The multiplayer acknowledgement is a sentence
-            // a person agrees to on the install screen, and a command layer that
-            // set it would be agreeing on their behalf; the gate refuses the
-            // install instead, by name, and the refusal says what to do.
-            iqrar_shabaka: false,
+            // Still never asserted here: this is the person's own answer, taken
+            // from `ibda_tilqai`'s payload the way the one-click install takes
+            // it, and carried down unchanged. Hard-coding `false` used to make
+            // the end-of-run gate refuse *every* multiplayer game after the
+            // whole translation was bought — a refusal nothing could satisfy,
+            // reached only by spending. `shabakat_al_bab` now asks the same
+            // question of the same scan before the run, so an unticked box costs
+            // a press and a ticked one reaches this gate honestly.
+            iqrar_shabaka: mudkhalat.iqrar_shabaka,
         },
         khiyarat: mudkhalat.khiyarat.clone(),
         mukhbir: &mukhbir,
@@ -1675,6 +1952,63 @@ pub enum KhataTilqaiAmr {
         /// The elected provider.
         muzawwid: String,
     },
+
+    /// The anti-cheat scan found evidence, at the door rather than at the end.
+    ///
+    /// The identical refusal already existed as `taarib_aman::fahs::Rafd::Himaya`
+    /// at stage 7 of 7, which is after extraction, after every paid batch, after
+    /// the atlas, the compile and the seal. Nothing about the answer needed any
+    /// of that: the evidence is on disk and in Steam's catalogue before the run
+    /// begins. This is the same verdict, read at the same source, delivered
+    /// while the user still has their money.
+    #[error("{ism} runs anti-cheat ({anwa})")]
+    HimayaMuktashafa {
+        /// The game.
+        ism: String,
+        /// The anti-cheats named, joined, for the log and the context table.
+        anwa: String,
+        /// The evidence, one line each, in Arabic.
+        dalail_arabi: String,
+        /// The same lines in English.
+        dalail_injilizi: String,
+    },
+
+    /// The anti-cheat scan was owed Steam's catalogue and could not read it.
+    ///
+    /// VAC leaves nothing whatever inside a game folder — it is declared in
+    /// `appinfo.vdf` and nowhere else — so a scan that never opened the
+    /// catalogue produces exactly the empty evidence list a genuinely clean game
+    /// produces. Rounding "the check did not run" down to "the check passed"
+    /// would let a VAC-secured title through, and a VAC ban is permanent and
+    /// applies to the account rather than to the game.
+    #[error("{ism}: the anti-cheat check could not read Steam's catalogue ({sabab})")]
+    FahsHimayaLamYajri {
+        /// The game.
+        ism: String,
+        /// The catalogue that was tried, when a Steam root was known at all.
+        mawdi: Option<String>,
+        /// Why, as the short label the scan's own gap list carries.
+        sabab: String,
+    },
+
+    /// The game is multiplayer and the acknowledgement was not given.
+    ///
+    /// The one refusal here the user can lift, and the one that used to be
+    /// unliftable: the command layer hard-coded the acknowledgement to `false`,
+    /// so every multiplayer game — which is most of what people play together,
+    /// including the title this build is developed against — was refused by the
+    /// install gate at the end of a run whose translation had already been paid
+    /// for, with no way to answer the question that refused it. It is asked
+    /// before the run now, and the answer is the person's.
+    #[error("{ism} is multiplayer and the modification risk was not acknowledged")]
+    ShabakaBilaIqrar {
+        /// The game.
+        ism: String,
+        /// What the scan found, as the acknowledgement text quotes it, in Arabic.
+        wasf_arabi: String,
+        /// The same, in English.
+        wasf_injilizi: String,
+    },
 }
 
 impl Tafsir for KhataTilqaiAmr {
@@ -1689,6 +2023,9 @@ impl Tafsir for KhataTilqaiAmr {
                     Self::LubaBilaMasdar { .. } => 124,
                     Self::LughaRasmiya { .. } => 125,
                     Self::BilaSaqfInfaq { .. } => 126,
+                    Self::HimayaMuktashafa { .. } => 127,
+                    Self::FahsHimayaLamYajri { .. } => 128,
+                    Self::ShabakaBilaIqrar { .. } => 129,
                 },
         )
     }
@@ -1703,10 +2040,16 @@ impl Tafsir for KhataTilqaiAmr {
             // Not a fault either, and deliberately not a warning: the product
             // is declining to write machine output over a publisher's own
             // Arabic, which is the correct outcome rather than a degraded one.
-            Self::LughaRasmiya { .. } => Khutura::Maluma,
+            // The multiplayer one is the same shape — a question waiting for its
+            // answer, not something that went wrong.
+            Self::LughaRasmiya { .. } | Self::ShabakaBilaIqrar { .. } => Khutura::Maluma,
             Self::LaKhattArabi | Self::LubaBilaMasdar { .. } | Self::BilaSaqfInfaq { .. } => {
                 Khutura::Tanbeeh
             },
+            // The account is what is at stake in both, so neither is reported as
+            // routine: one names anti-cheat evidence, the other names a check
+            // that could not be completed and must not be read as a pass.
+            Self::HimayaMuktashafa { .. } | Self::FahsHimayaLamYajri { .. } => Khutura::Tanbeeh,
         }
     }
 
@@ -1740,6 +2083,27 @@ impl Tafsir for KhataTilqaiAmr {
                  بدون سقف لا يتوقّف التعريب التلقائي عند حدّ — يمضي حتى تنتهي نصوص اللعبة \
                  مهما بلغت التكلفة. اضبط «الميزانية» لهذا المزوّد في الإعدادات ← المزوّدون، \
                  وهي لكلّ جولة لا لكلّ شهر."
+            ),
+            Self::HimayaMuktashafa { anwa, dalail_arabi, .. } => format!(
+                "تعمل هذه اللعبة بنظام مكافحة غش ({anwa})، ولا يُعرَّب عنوان كهذا: تعديل \
+                 ملفاته قد يكلّفك حظرًا دائمًا لحسابك، والحظر يلحق بالحساب لا باللعبة. \
+                 توقّف الأمر قبل أن يُنفَق شيء وقبل أن يُكتب شيء. الدليل:\n{dalail_arabi}"
+            ),
+            Self::FahsHimayaLamYajri { mawdi, sabab, .. } => {
+                let mawdi = mawdi.as_ref().map_or_else(
+                    || "لم يُعرف موضع تثبيت ستيم على هذا الجهاز".to_owned(),
+                    |mawdi| format!("تعذّرت قراءة {mawdi} ({sabab})"),
+                );
+                format!(
+                    "لم يُستكمل فحص مكافحة الغش، فلم تبدأ الجولة. حماية VAC لا تُعلَن إلا في \
+                     فهرس متجر ستيم ولا تترك أثرًا في مجلّد اللعبة، فسكوت الفحص هنا ليس \
+                     براءة. {mawdi}. حدِّد مجلد ستيم في الإعدادات ← المنصّات ثم أعد المحاولة."
+                )
+            },
+            Self::ShabakaBilaIqrar { wasf_arabi, .. } => format!(
+                "هذه لعبة متعدّدة اللاعبين، ويلزم إقرارك بمخاطر التعديل قبل أن تبدأ الجولة. \
+                 تعديل لعبة تُلعب مع آخرين قد يُفقدك حسابك أو يمنعك من الخوادم، والقرار \
+                 قرارك وحدك. لم يُنفَق شيء بعد.\n{wasf_arabi}"
             ),
         }
     }
@@ -1777,6 +2141,30 @@ impl Tafsir for KhataTilqaiAmr {
                  out, whatever that costs. Set this provider's budget in Settings, Providers; \
                  it is per run, not per month."
             ),
+            Self::HimayaMuktashafa { anwa, dalail_injilizi, .. } => format!(
+                "This game runs anti-cheat ({anwa}), and Taarib does not Arabize such a title: \
+                 modifying its files can cost you a permanent ban, and the ban attaches to your \
+                 account rather than to the game. Nothing was spent and nothing was written. \
+                 Evidence:\n{dalail_injilizi}"
+            ),
+            Self::FahsHimayaLamYajri { mawdi, sabab, .. } => {
+                let mawdi = mawdi.as_ref().map_or_else(
+                    || "no Steam installation could be located on this machine".to_owned(),
+                    |mawdi| format!("{mawdi} could not be read ({sabab})"),
+                );
+                format!(
+                    "The anti-cheat check did not finish, so the run did not start. VAC is \
+                     declared only in Steam's catalogue and leaves nothing in the game folder, \
+                     so silence here is not a clean result. {mawdi}. Set Steam's folder in \
+                     Settings, under Launchers, and try again."
+                )
+            },
+            Self::ShabakaBilaIqrar { wasf_injilizi, .. } => format!(
+                "This is a multiplayer game, and the modification risk has to be acknowledged \
+                 before the run starts. Modifying a game played with other people can cost you \
+                 your account or your access to its servers, and that decision is yours alone. \
+                 Nothing has been spent.\n{wasf_injilizi}"
+            ),
         }
     }
 
@@ -1789,14 +2177,28 @@ impl Tafsir for KhataTilqaiAmr {
                 qism: QismIdadat::Khutut,
             },
             Self::LubaBilaMasdar { .. } => Khutwa::AadaFahsMaktaba,
-            // Deliberately no action. The one route out is a setting whose whole
-            // point is that it is chosen deliberately rather than clicked past
-            // on the screen that just refused, and the sentence names it.
-            Self::LughaRasmiya { .. } => Khutwa::LaShay,
+            // Three refusals with no button, for three different reasons and
+            // one shared rule: none of them may be clicked past. The
+            // publisher's Arabic is lifted only by a setting whose whole point
+            // is that it is chosen deliberately, elsewhere, rather than on the
+            // screen that just refused. The multiplayer one is lifted by an
+            // acknowledgement the person gives, and an action offering to give
+            // it would be giving it for them. Anti-cheat is lifted by nothing
+            // at all: no override for it exists anywhere in this product, and
+            // this would be the first one. Each sentence names its own way out,
+            // or says plainly that there is none.
+            Self::LughaRasmiya { .. }
+            | Self::HimayaMuktashafa { .. }
+            | Self::ShabakaBilaIqrar { .. } => Khutwa::LaShay,
             // The one refusal here with a mechanical remedy: the ceiling is a
             // field on a screen, so send the reader straight to it.
             Self::BilaSaqfInfaq { .. } => Khutwa::FathIdadat {
                 qism: QismIdadat::Muzawwidun,
+            },
+            // The manual Steam path is the one way out, and it is the same one
+            // `KhataLuba::JidhrSteamMajhul` sends the reader to.
+            Self::FahsHimayaLamYajri { .. } => Khutwa::FathIdadat {
+                qism: QismIdadat::Manassat,
             },
         }
     }
@@ -1818,6 +2220,21 @@ impl Tafsir for KhataTilqaiAmr {
             Self::BilaSaqfInfaq { muzawwid } => {
                 let _ = siyaq.insert("muzawwid".to_owned(), QeemaSiyaq::Nass(muzawwid.clone()));
             },
+            Self::HimayaMuktashafa { ism, anwa, .. } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("himaya".to_owned(), QeemaSiyaq::Nass(anwa.clone()));
+            },
+            Self::FahsHimayaLamYajri { ism, mawdi, sabab } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
+                if let Some(mawdi) = mawdi {
+                    let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(mawdi.clone()));
+                }
+            },
+            Self::ShabakaBilaIqrar { ism, wasf_injilizi, .. } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("shabaka".to_owned(), QeemaSiyaq::Nass(wasf_injilizi.clone()));
+            },
             Self::LaKhattArabi => {},
         }
         siyaq
@@ -1832,11 +2249,17 @@ khata_min!(KhataTilqaiAmr);
 
 #[cfg(test)]
 mod ikhtibarat {
-    use taarib_makhzan::sijillat::{IdkhalLuba, SijillAlaab, SijillMuharrik};
+    use taarib_makhzan::sijillat::{IdkhalLuba, SijillAlaab, SijillMuharrik, SimaMukhzana};
     use taarib_mustalahat::muharrik::{JahiziyatTashghil, KhalfiyaBarmajiya, Muharrik};
     use taarib_usus::manassa::Mimariya;
 
     use super::*;
+
+    /// What every test here answers with, so a fixture that could not be built
+    /// — a directory, a file, a store — propagates with `?` beside the
+    /// product's own [`Khata`] instead of being unwrapped. `unwrap` and
+    /// `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
     /// The readiness refusal's code, as `taarib_tilqai::khata` allocates it.
     const RAMZ_GHAYR_JAHIZ: u16 = arqam::TILQAI + 13;
@@ -1854,6 +2277,44 @@ mod ikhtibarat {
     /// is a run the gate let past, which is the only way to prove the open
     /// direction without a provider, a keychain and somebody's money.
     const RAMZ_LA_MUZAWWID: u16 = arqam::STUDIO + 42;
+
+    /// The safety layer's own refusal code, as `taarib_tilqai::khata` allocates
+    /// it. The most serious of the three and the one no release lifts.
+    const RAMZ_TABAQA: u16 = arqam::TILQAI + 2;
+
+    /// The missing-ceiling refusal's code, which `hukm` now warns about ahead of
+    /// the press that would raise it.
+    const RAMZ_BILA_SAQF: u16 = arqam::STUDIO + 126;
+
+    /// The door's own anti-cheat refusal, raised from the disk-and-catalogue
+    /// scan rather than from the launcher hint the stored report carries.
+    const RAMZ_HIMAYA_BAB: u16 = arqam::STUDIO + 127;
+
+    /// The door's refusal when Steam's catalogue was owed and unreadable.
+    const RAMZ_FAHS_LAM_YAJRI: u16 = arqam::STUDIO + 128;
+
+    /// The door's multiplayer refusal, which the acknowledgement lifts.
+    const RAMZ_SHABAKA: u16 = arqam::STUDIO + 129;
+
+    /// A Steam application identifier no real catalogue can hold.
+    ///
+    /// The door now opens `appinfo.vdf` for every Steam game, and these tests
+    /// run on developer machines with a real Steam and a real, enormous
+    /// catalogue. A live application id would make what the scan finds depend on
+    /// what Valve happens to publish about that title today; this one is beyond
+    /// anything Steam has issued, so a real catalogue answers exactly what the
+    /// fabricated empty one answers — read, and silent about this app.
+    const TATBEEQ_WAHMI: u32 = 4_000_000_000;
+
+    /// A clause only a refused report's own sentences carry, in both the tier's
+    /// reason — which is what `hukm` shows — and the first limit, which is what
+    /// `taarib_tilqai::tahaqquq_jahiziya` shows. Asserting on the clause the two
+    /// share is what makes an agreement test about agreement rather than about
+    /// one wording.
+    const ATHAR_HIMAYA: &str = "protected by an anti-cheat system (VAC)";
+
+    /// A clause only `tabbiq_lugha_rasmiya`'s own refusal writes.
+    const ATHAR_LUGHA: &str = "replaces paid human work";
 
     /// A scratch data root that removes itself, so an assertion that fails does
     /// not leave a database behind in the machine's temporary directory.
@@ -1886,19 +2347,47 @@ mod ikhtibarat {
     /// writes one, so both commands read it back through their own
     /// `taqreer_luba` rather than through anything this helper hands them —
     /// which is what makes these tests about the gate and not about a mock.
-    fn masrah(jahiziya: JahiziyatTashghil) -> Natija<Masrah> {
+    fn masrah(jahiziya: JahiziyatTashghil) -> NatijatIkhtibar<Masrah> {
+        masrah_bi(jahiziya, &[], &[])
+    }
+
+    /// A game folder, some launcher hints, and a stored report, all at once.
+    ///
+    /// `simat` reaches both halves of the record a real scan writes: the game
+    /// row, which is what `hukm` reads for its acknowledgement question, and
+    /// `imkaniyat::taqreer`, which is the only thing that sets `marfuda`. So a
+    /// refused fixture is refused for the report's own reason, in the report's
+    /// own sentences, rather than in ones this file invented. Nothing here
+    /// claims a real game runs anti-cheat or is multiplayer; the hints and the
+    /// planted files are the fixture's.
+    ///
+    /// `milaffat` are named empty files placed in the game folder, which is what
+    /// the door's scan actually walks. The folder is created even when the list
+    /// is empty, so the clean case proves a directory that was walked and found
+    /// bare rather than one the scan could not open.
+    fn masrah_bi(
+        jahiziya: JahiziyatTashghil,
+        simat: &[SimatLuba],
+        milaffat: &[&str],
+    ) -> NatijatIkhtibar<Masrah> {
         let jidhr = std::env::temp_dir().join(format!("taarib-tilqai-{}", uuid::Uuid::new_v4()));
         let haris = JidhrMuaqqat(jidhr.clone());
         let masarat = Masarat::min_judhur(jidhr.join("bayanat"), jidhr.join("idadat"));
         // Creates the data root on the way: the store makes its own parent.
         let makhzan = Makhzan::min_masar(&masarat.qaida_bayanat())?;
 
-        let masdar = MasdarLuba::Steam(480);
+        let jidhr_luba = jidhr.join("luba");
+        std::fs::create_dir_all(&jidhr_luba)?;
+        for ism in milaffat {
+            std::fs::write(jidhr_luba.join(ism), b"fixture")?;
+        }
+
+        let masdar = MasdarLuba::Steam(TATBEEQ_WAHMI);
         let luba = Luba {
             id: LubaId::min_masdar(&masdar, "Luba Ikhtibar"),
             masadir: vec![masdar],
             ism: "Luba Ikhtibar".to_owned(),
-            jidhr: jidhr.join("luba"),
+            jidhr: jidhr_luba,
             tanfidhi: None,
             hajm: 0,
             akhir_laab: None,
@@ -1910,12 +2399,13 @@ mod ikhtibarat {
             mukhfiya: false,
         };
         let id = luba.id;
+        let mukhzana: Vec<SimaMukhzana> = simat.iter().filter_map(sima_mukhzana).collect();
         makhzan.bi_muamala(|muamala| {
             SijillAlaab::jadeed(muamala).sajjil(&IdkhalLuba {
                 luba: &luba,
                 muktamila: true,
                 khiyarat_tashghil: None,
-                simat: &[],
+                simat: &mukhzana,
                 fahs: 1,
             })
         })?;
@@ -1931,19 +2421,24 @@ mod ikhtibarat {
             dalail: Vec::new(),
         };
         let mut taqreer =
-            taarib_muharrik::imkaniyat::taqreer(muharrik, &[], "2026-01-01T00:00:00Z".to_owned());
+            taarib_muharrik::imkaniyat::taqreer(muharrik, simat, "2026-01-01T00:00:00Z".to_owned());
         // Forced rather than probed, because every arm of the real readiness
-        // table answers `ghaiba` in this build and the open direction would
-        // otherwise be untestable. Everything downstream of the field — the
-        // gate, the sentence, both commands — is the production path.
+        // table answers `ghaiba` in this build for Unity and the open direction
+        // would otherwise be untestable. Everything downstream of the field —
+        // the gate, the sentence, both commands — is the production path.
         //
         // One artefact of forcing it: `sabab_*` was already written with the
         // `ghaiba` preamble in front, so a `mukammala` fixture carries a reason
         // no real report would. Nothing here asserts on that string; the
         // refusal's own clause is what these tests look for.
-        taqreer.jahiziya = jahiziya;
-        if jahiziya == JahiziyatTashghil::Mukammala {
-            taqreer.naqs = None;
+        //
+        // A refused report carries no readiness sentence by contract, so forcing
+        // the field on one would produce a report `imkaniyat` cannot write.
+        if !taqreer.marfuda {
+            taqreer.jahiziya = jahiziya;
+            if jahiziya == JahiziyatTashghil::Mukammala {
+                taqreer.naqs = None;
+            }
         }
         makhzan.bi_muamala(|muamala| SijillMuharrik::jadeed(muamala).sajjil(id, &taqreer, None))?;
 
@@ -1960,6 +2455,25 @@ mod ikhtibarat {
         })
     }
 
+    /// One launcher hint in the shape the store keeps it in.
+    ///
+    /// The store holds hints as rows, and `luba_awamir::simat_min_makhzan` reads
+    /// them back into `SimatLuba`. Writing them the long way round means `hukm`
+    /// re-derives the fixture's hints through the production reader rather than
+    /// being handed a list this file made up. Only the hints these tests use are
+    /// spelled out; the rest answer [`None`] rather than a wrong row.
+    fn sima_mukhzana(sima: &SimatLuba) -> Option<SimaMukhzana> {
+        use taarib_makhzan::sijillat::sima;
+
+        let naw = match sima {
+            SimatLuba::JamaiMahalli => sima::JAMAI_MAHALLI,
+            SimatLuba::JamaiOnline => sima::JAMAI_ONLINE,
+            SimatLuba::MuammanaVac => sima::MUAMMANA_VAC,
+            _ => return None,
+        };
+        Some(SimaMukhzana::jadeeda("steam", naw, ""))
+    }
+
     /// A snapshot sink that drops everything, for a run that never starts.
     fn mudhee_samit() -> MudheeLaqta {
         Arc::new(|_laqta: &LaqtatTilqaiHie| {})
@@ -1968,7 +2482,7 @@ mod ikhtibarat {
     /// The verdict refuses an engine with no working in-game half, and names
     /// both the engine and what is missing, in both languages.
     #[test]
-    fn hukm_yarfud_muharrikan_ghayr_jahiz() -> Natija<()> {
+    fn hukm_yarfud_muharrikan_ghayr_jahiz() -> NatijatIkhtibar {
         let masrah = masrah(JahiziyatTashghil::Ghaiba)?;
         let hukm = hukm(
             masrah.id.to_string(),
@@ -2005,7 +2519,7 @@ mod ikhtibarat {
 
     /// The verdict offers the run for an engine whose in-game half is finished.
     #[test]
-    fn hukm_yaarid_muharrikan_jahizan() -> Natija<()> {
+    fn hukm_yaarid_muharrikan_jahizan() -> NatijatIkhtibar {
         let masrah = masrah(JahiziyatTashghil::Mukammala)?;
         let hukm = hukm(
             masrah.id.to_string(),
@@ -2027,11 +2541,12 @@ mod ikhtibarat {
     /// verdict is advice; this is the call that would spend money and write
     /// into somebody's game, and it enforces on its own.
     #[test]
-    fn ibda_yarfud_muharrikan_ghayr_jahiz() -> Natija<()> {
+    fn ibda_yarfud_muharrikan_ghayr_jahiz() -> NatijatIkhtibar {
         let masrah = masrah(JahiziyatTashghil::Ghaiba)?;
         let ramz = ibda(
             mudhee_samit(),
             masrah.id.to_string(),
+            false,
             false,
             &masrah.masarat,
             &masrah.makhzan,
@@ -2050,35 +2565,66 @@ mod ikhtibarat {
     const RAMZ_JIDHR_STEAM: u16 = arqam::STUDIO + 13;
 
     /// A settings store over the fixture's value with the Steam override set to
-    /// a directory that really is one.
+    /// a directory that really is one, holding a catalogue that really reads.
     ///
     /// A second store rather than a write through the first: the run only reads
     /// settings, and staging them on disk would be testing the settings writer.
     /// The override is what makes the Steam-root gate answer the same on a
     /// machine with Steam and on one without, which is the only way the tests
     /// past that gate stay about what they were written to be about.
-    fn idadat_bi_steam(masrah: &Masrah) -> std::io::Result<Arc<MakhzanIdadat>> {
-        let tajawuz = masrah
+    fn idadat_bi_steam(masrah: &Masrah) -> NatijatIkhtibar<Arc<MakhzanIdadat>> {
+        let tajawuz = jidhr_steam_wahmi(masrah);
+        std::fs::create_dir_all(tajawuz.join("steamapps"))?;
+        ansha_fahras(&tajawuz)?;
+        Ok(idadat_bi_tajawuz(masrah, tajawuz))
+    }
+
+    /// Where the fabricated Steam lives for one fixture.
+    fn jidhr_steam_wahmi(masrah: &Masrah) -> PathBuf {
+        masrah
             .masarat
             .jidhr_bayanat()
             .parent()
-            .map_or_else(|| PathBuf::from("steam"), |jidhr| jidhr.join("steam"));
-        std::fs::create_dir_all(tajawuz.join("steamapps"))?;
+            .map_or_else(|| PathBuf::from("steam"), |jidhr| jidhr.join("steam"))
+    }
+
+    /// The same settings value with one Steam override written into it.
+    fn idadat_bi_tajawuz(masrah: &Masrah, tajawuz: PathBuf) -> Arc<MakhzanIdadat> {
         let mut qeema = (*masrah.idadat.hali()).clone();
         qeema.manassat.steam = Some(tajawuz);
-        Ok(Arc::new(MakhzanIdadat::min_qeema(masrah.masarat.malaf_idadat(), qeema)))
+        Arc::new(MakhzanIdadat::min_qeema(masrah.masarat.malaf_idadat(), qeema))
+    }
+
+    /// A catalogue that is valid, readable, and names no applications.
+    ///
+    /// Twelve bytes: the `0x07564427` magic, the universe, and the zero
+    /// application id that ends the entry list — which is exactly how a real
+    /// `appinfo.vdf` opens and closes. The door's anti-cheat scan refuses a
+    /// Steam game whose catalogue it could not read, and it is right to: VAC is
+    /// declared there and nowhere else. So "we looked and Steam said nothing"
+    /// has to be a file the tests can actually produce, or every test past that
+    /// gate would be passing for the wrong reason.
+    fn ansha_fahras(jidhr_steam: &Path) -> std::io::Result<()> {
+        let appcache = jidhr_steam.join("appcache");
+        std::fs::create_dir_all(&appcache)?;
+        let mut bayt: Vec<u8> = Vec::with_capacity(12);
+        bayt.extend(0x0756_4427_u32.to_le_bytes());
+        bayt.extend(1_u32.to_le_bytes());
+        bayt.extend(0_u32.to_le_bytes());
+        std::fs::write(appcache.join("appinfo.vdf"), bayt)
     }
 
     /// The start command lets a ready engine through the gate. It still stops,
     /// on the provider this machine does not have — and stopping *there* is the
     /// proof, because that check sits after the gate rather than before it.
     #[test]
-    fn ibda_yamurr_muharrikan_jahizan() -> Result<(), Box<dyn std::error::Error>> {
+    fn ibda_yamurr_muharrikan_jahizan() -> NatijatIkhtibar {
         let masrah = masrah(JahiziyatTashghil::Mukammala)?;
         let idadat = idadat_bi_steam(&masrah)?;
         let ramz = ibda(
             mudhee_samit(),
             masrah.id.to_string(),
+            false,
             false,
             &masrah.masarat,
             &masrah.makhzan,
@@ -2105,7 +2651,7 @@ mod ikhtibarat {
     /// the resolver, and is never a silent pass — on a machine with Steam and on
     /// one without alike.
     #[test]
-    fn ibda_yahull_jidhr_steam_bila_tajawuz() -> Natija<()> {
+    fn ibda_yahull_jidhr_steam_bila_tajawuz() -> NatijatIkhtibar {
         let masrah = masrah(JahiziyatTashghil::Mukammala)?;
         assert!(
             masrah.idadat.hali().manassat.steam.is_none(),
@@ -2122,6 +2668,7 @@ mod ikhtibarat {
             mudhee_samit(),
             masrah.id.to_string(),
             false,
+            false,
             &masrah.masarat,
             &masrah.makhzan,
             &masrah.idadat,
@@ -2131,6 +2678,516 @@ mod ikhtibarat {
         .map(|khata| khata.ramz);
 
         assert_eq!(ramz, Some(Ramz::jadeed(mutawaqqa)));
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // The door: the two refusals that used to arrive after the money
+    // -----------------------------------------------------------------------
+
+    /// A file name whose stem is a networking marker `kashf_shabaka` knows.
+    ///
+    /// Mirror is a Unity networking library, and a file called this in a game
+    /// folder is exactly the evidence the scan looks for. It is a fixture, not a
+    /// claim about any installed title.
+    const MALAF_SHABAKA: &str = "Mirror.dll";
+
+    /// The same for the anti-cheat scan: an Easy Anti-Cheat payload's own name.
+    const MALAF_HIMAYA: &str = "EasyAntiCheat.dll";
+
+    /// The verdict asks for the multiplayer acknowledgement before the button,
+    /// off the launcher hint the library scan already stored.
+    ///
+    /// This is the half that makes the acknowledgement obtainable at all. The
+    /// run's own gate needs a `yes` or a `no`; the interface can only ask for
+    /// one if the verdict tells it to, and the verdict may not walk a game
+    /// folder to find out. The launcher's own catalogue entry is the one source
+    /// that is already in the store.
+    #[test]
+    fn hukm_yasal_an_iqrar_al_shabaka_qabl_al_zirr() -> NatijatIkhtibar {
+        let jamai = masrah_bi(
+            JahiziyatTashghil::Mukammala,
+            &[SimatLuba::JamaiOnline],
+            &[],
+        )?;
+        let hukm_jamai = hukm(
+            jamai.id.to_string(),
+            &jamai.masarat,
+            &jamai.makhzan,
+            &jamai.idadat,
+        )?;
+        assert_eq!(hukm_jamai.masar, MasarTilqaiHie::Tilqai);
+        assert!(hukm_jamai.yalzam_iqrar_shabaka);
+
+        // A shared-screen title counts too, because the gate it warns about
+        // answers on any evidence at all rather than on the online kind.
+        let mahalli = masrah_bi(
+            JahiziyatTashghil::Mukammala,
+            &[SimatLuba::JamaiMahalli],
+            &[],
+        )?;
+        let hukm_mahalli = hukm(
+            mahalli.id.to_string(),
+            &mahalli.masarat,
+            &mahalli.makhzan,
+            &mahalli.idadat,
+        )?;
+        assert!(hukm_mahalli.yalzam_iqrar_shabaka);
+
+        let wahid = masrah(JahiziyatTashghil::Mukammala)?;
+        let hukm_wahid = hukm(
+            wahid.id.to_string(),
+            &wahid.masarat,
+            &wahid.makhzan,
+            &wahid.idadat,
+        )?;
+        assert!(!hukm_wahid.yalzam_iqrar_shabaka);
+        Ok(())
+    }
+
+    /// A refused game is not asked to acknowledge anything: there is no run to
+    /// acknowledge, and a tick box on a screen with no button is the same
+    /// mistake as printing a string count beside a refusal.
+    #[test]
+    fn hukm_la_yasal_an_iqrar_ala_luba_marfuda() -> NatijatIkhtibar {
+        let masrah = masrah_bi(JahiziyatTashghil::Ghaiba, &[SimatLuba::JamaiOnline], &[])?;
+        let hukm = hukm(
+            masrah.id.to_string(),
+            &masrah.masarat,
+            &masrah.makhzan,
+            &masrah.idadat,
+        )?;
+
+        assert_eq!(hukm.masar, MasarTilqaiHie::Marfud);
+        assert!(!hukm.yalzam_iqrar_shabaka);
+        Ok(())
+    }
+
+    /// The multiplayer refusal arrives at the door, before a provider exists.
+    ///
+    /// This is the defect in one test. The acknowledgement was hard-coded to
+    /// `false` in the run's own safety inputs, so the install gate — stage 7 of
+    /// 7 — refused every multiplayer game with a sentence nothing could satisfy,
+    /// and refused it only after extraction, the whole paid translation, the
+    /// atlas, the compile and the seal had all been done. Stopping on
+    /// `RAMZ_SHABAKA` rather than on `RAMZ_LA_MUZAWWID` is the proof: the
+    /// provider is the very next thing `jahhiz` asks for, so a run that has not
+    /// reached it has not priced a single string.
+    #[test]
+    fn ibda_yarfud_al_shabaka_ala_al_bab() -> NatijatIkhtibar {
+        let masrah = masrah_bi(
+            JahiziyatTashghil::Mukammala,
+            &[],
+            &[MALAF_SHABAKA],
+        )?;
+        let idadat = idadat_bi_steam(&masrah)?;
+        let khata = ibda(
+            mudhee_samit(),
+            masrah.id.to_string(),
+            false,
+            false,
+            &masrah.masarat,
+            &masrah.makhzan,
+            &idadat,
+            &MashawirTilqai::default(),
+        )
+        .err()
+        .ok_or("a multiplayer game with no acknowledgement must not start")?;
+
+        assert_eq!(khata.ramz, Ramz::jadeed(RAMZ_SHABAKA));
+        assert_ne!(khata.ramz, Ramz::jadeed(RAMZ_LA_MUZAWWID));
+        // The refusal carries the scan's own evidence, so the interface can show
+        // what is being acknowledged rather than asking for a blank yes.
+        assert!(khata.injilizi.contains("Mirror"), "{}", khata.injilizi);
+        assert!(khata.injilizi.contains("Nothing has been spent"), "{}", khata.injilizi);
+        assert!(!khata.arabi.is_empty());
+        Ok(())
+    }
+
+    /// The same game starts once the person has acknowledged it, and stops on
+    /// the provider this machine does not have — which is the gate immediately
+    /// after the door, and therefore the proof the door opened.
+    #[test]
+    fn al_iqrar_yaftah_bawwabat_al_shabaka() -> NatijatIkhtibar {
+        let masrah = masrah_bi(
+            JahiziyatTashghil::Mukammala,
+            &[],
+            &[MALAF_SHABAKA],
+        )?;
+        let idadat = idadat_bi_steam(&masrah)?;
+        let ramz = ibda(
+            mudhee_samit(),
+            masrah.id.to_string(),
+            false,
+            true,
+            &masrah.masarat,
+            &masrah.makhzan,
+            &idadat,
+            &MashawirTilqai::default(),
+        )
+        .err()
+        .map(|khata| khata.ramz);
+
+        assert_eq!(ramz, Some(Ramz::jadeed(RAMZ_LA_MUZAWWID)));
+        Ok(())
+    }
+
+    /// The anti-cheat scan refuses at the door too, and the acknowledgement does
+    /// not touch it.
+    ///
+    /// Passing `true` for the multiplayer question is deliberate: there is no
+    /// acknowledgement for anti-cheat anywhere in this product, and a test that
+    /// left the box unticked could not tell the two refusals apart. A VAC or EAC
+    /// ban is permanent and attaches to the account, so this refusal has no
+    /// override and must not acquire one by accident.
+    #[test]
+    fn ibda_yarfud_al_himaya_ala_al_bab() -> NatijatIkhtibar {
+        let masrah = masrah_bi(
+            JahiziyatTashghil::Mukammala,
+            &[],
+            &[MALAF_HIMAYA],
+        )?;
+        let idadat = idadat_bi_steam(&masrah)?;
+        let khata = ibda(
+            mudhee_samit(),
+            masrah.id.to_string(),
+            false,
+            true,
+            &masrah.masarat,
+            &masrah.makhzan,
+            &idadat,
+            &MashawirTilqai::default(),
+        )
+        .err()
+        .ok_or("an anti-cheat payload on disk must not start a run")?;
+
+        assert_eq!(khata.ramz, Ramz::jadeed(RAMZ_HIMAYA_BAB));
+        assert_ne!(khata.ramz, Ramz::jadeed(RAMZ_LA_MUZAWWID));
+        assert!(khata.injilizi.contains("Easy Anti-Cheat"), "{}", khata.injilizi);
+        assert!(khata.injilizi.contains("Nothing was spent"), "{}", khata.injilizi);
+        assert!(!khata.arabi.is_empty());
+        Ok(())
+    }
+
+    /// A Steam game whose catalogue cannot be read is refused at the door,
+    /// rather than translated and then refused at the end.
+    ///
+    /// The override points at a real directory with no `appcache/appinfo.vdf` in
+    /// it, which is what a wrong Steam path looks like by the time it reaches
+    /// this layer. VAC is declared in that file and leaves nothing whatever in a
+    /// game folder, so the empty evidence list this produces is byte-identical
+    /// to a genuinely clean game's — and reading it as a pass is how a
+    /// VAC-secured title would get through.
+    #[test]
+    fn ibda_yarfud_fahrasan_la_yuqra() -> NatijatIkhtibar {
+        let masrah = masrah(JahiziyatTashghil::Mukammala)?;
+        let tajawuz = jidhr_steam_wahmi(&masrah);
+        std::fs::create_dir_all(tajawuz.join("steamapps"))?;
+        let idadat = idadat_bi_tajawuz(&masrah, tajawuz);
+        let khata = ibda(
+            mudhee_samit(),
+            masrah.id.to_string(),
+            false,
+            true,
+            &masrah.masarat,
+            &masrah.makhzan,
+            &idadat,
+            &MashawirTilqai::default(),
+        )
+        .err()
+        .ok_or("an unreadable catalogue is not a passed check")?;
+
+        assert_eq!(khata.ramz, Ramz::jadeed(RAMZ_FAHS_LAM_YAJRI));
+        assert_ne!(khata.ramz, Ramz::jadeed(RAMZ_LA_MUZAWWID));
+        // The refusal names the path, because on this machine the path is the
+        // mistake, and it says what to set.
+        assert!(khata.injilizi.contains("appinfo.vdf"), "{}", khata.injilizi);
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // The three refusals, and the order both commands take them in
+    // -----------------------------------------------------------------------
+
+    /// A verdict as `hukm` hands it to the two exclusions, with nothing
+    /// excluded yet: the route the tier alone implies, and no refusal sentence.
+    fn hukm_maftuh() -> HukmTilqaiHie {
+        HukmTilqaiHie {
+            muarrif: "ikhtibar".to_owned(),
+            ism: "Luba Ikhtibar".to_owned(),
+            masar: MasarTilqaiHie::Tilqai,
+            tabaqa_raqm: 1,
+            tabaqa_arabi: "كامل".to_owned(),
+            tabaqa_injilizi: "full".to_owned(),
+            sabab_arabi: "سبب الطبقة".to_owned(),
+            sabab_injilizi: "the tier's own reason".to_owned(),
+            hudud_arabi: Vec::new(),
+            hudud_injilizi: Vec::new(),
+            nusus_taqribi: Some(4_000),
+            yalzam_iqrar_shabaka: false,
+            takalif: TakalifHie {
+                munfaq: 0.0,
+                saqf: 0.0,
+                umla: UMLA.to_owned(),
+            },
+            ghilaf: None,
+        }
+    }
+
+    /// A stored official-Arabic verdict that says the publisher ships all of it.
+    fn rasmiya_kamila() -> taarib_mustalahat::luba::HukmLughaRasmiya {
+        taarib_mustalahat::luba::HukmLughaRasmiya {
+            wajiha: taarib_mustalahat::luba::TughtiyaLugha::Muakkada,
+            nusus: taarib_mustalahat::luba::TughtiyaLugha::Muakkada,
+            thiqa: 95,
+            dalail: Vec::new(),
+            majhul: Vec::new(),
+            lughat_muallana: vec!["Arabic".to_owned()],
+            isdar_fahs: 1,
+            waqt: "2026-01-01T00:00:00Z".to_owned(),
+        }
+    }
+
+    /// A capability report for a Unity game with the readiness verdict forced,
+    /// and the safety layer's refusal reached through its own trait.
+    fn taqreer_bi(jahiziya: JahiziyatTashghil, marfuda: bool) -> TaqreerImkaniyat {
+        let muharrik = Muharrik {
+            aila: AilatMuharrik::Unity,
+            isdar: None,
+            khalfiya: KhalfiyaBarmajiya::Mono,
+            itarat: Vec::new(),
+            rusum: Vec::new(),
+            mimariya: Mimariya::X8664,
+            thiqa: 95,
+            dalail: Vec::new(),
+        };
+        let simat: Vec<SimatLuba> = if marfuda {
+            vec![SimatLuba::MuammanaVac]
+        } else {
+            Vec::new()
+        };
+        let mut taqreer =
+            taarib_muharrik::imkaniyat::taqreer(muharrik, &simat, "2026-01-01T00:00:00Z".to_owned());
+        if !marfuda {
+            taqreer.jahiziya = jahiziya;
+        }
+        taqreer
+    }
+
+    /// Both exclusions, applied in the order `hukm` applies them.
+    fn tabbiq_al_ithnayn(
+        hukm: HukmTilqaiHie,
+        taqreer: &TaqreerImkaniyat,
+        rasmiya: Option<&taarib_mustalahat::luba::HukmLughaRasmiya>,
+        istibdal: bool,
+    ) -> HukmTilqaiHie {
+        tabbiq_jahiziya(tabbiq_lugha_rasmiya(hukm, rasmiya, istibdal), taqreer)
+    }
+
+    /// When both hold, the sentence a user reads is the publisher's Arabic and
+    /// not the readiness gap.
+    ///
+    /// Both are true of the same game today — every arm of the readiness table
+    /// answers `ghaiba` in this build — so this is not a corner case, it is
+    /// every game with official Arabic. The one that survives has to be the one
+    /// the reader can act on: `ibda` raises `LughaRasmiya` for this game, and a
+    /// verdict naming a different reason than the button does is the disagreement
+    /// this ordering exists to prevent.
+    #[test]
+    fn al_lugha_al_rasmiya_taghlib_al_jahiziya() {
+        let taqreer = taqreer_bi(JahiziyatTashghil::Ghaiba, false);
+        let rasmiya = rasmiya_kamila();
+        let hukm = tabbiq_al_ithnayn(hukm_maftuh(), &taqreer, Some(&rasmiya), false);
+
+        assert_eq!(hukm.masar, MasarTilqaiHie::Marfud);
+        assert!(hukm.sabab_injilizi.contains(ATHAR_LUGHA), "{}", hukm.sabab_injilizi);
+        assert!(!hukm.sabab_injilizi.contains(ATHAR_RAFD), "{}", hukm.sabab_injilizi);
+        // Outranked is not hidden: the report's own account of the gap is what
+        // the limits list carries, and `hukm` appends it before either
+        // exclusion runs.
+        assert!(hukm.nusus_taqribi.is_none());
+    }
+
+    /// The safety layer's refusal outranks the publisher's Arabic, which is the
+    /// order that was already right and must stay right after the swap.
+    #[test]
+    fn al_marfuda_taghlib_al_lugha_al_rasmiya() {
+        let taqreer = taqreer_bi(JahiziyatTashghil::Ghaiba, true);
+        let rasmiya = rasmiya_kamila();
+        let mut hukm = hukm_maftuh();
+        hukm.masar = masar_hukm(&taqreer);
+        hukm.sabab_injilizi.clone_from(&taqreer.sabab_injilizi);
+        hukm.sabab_arabi.clone_from(&taqreer.sabab_arabi);
+        let hukm = tabbiq_al_ithnayn(hukm, &taqreer, Some(&rasmiya), false);
+
+        assert_eq!(hukm.masar, MasarTilqaiHie::Marfud);
+        assert!(hukm.sabab_injilizi.contains(ATHAR_HIMAYA), "{}", hukm.sabab_injilizi);
+        assert!(!hukm.sabab_injilizi.contains(ATHAR_LUGHA), "{}", hukm.sabab_injilizi);
+        // The other two facts are still stated, as limits.
+        assert!(
+            hukm.hudud_injilizi
+                .iter()
+                .any(|hadd| hadd.contains("already ships Arabic")),
+            "{:?}",
+            hukm.hudud_injilizi
+        );
+    }
+
+    /// A game with nothing against it but an unready engine still reads the
+    /// readiness sentence: the swap must not have made that refusal unreachable.
+    #[test]
+    fn al_jahiziya_tabqa_hiya_al_sabab_wahdaha() {
+        let taqreer = taqreer_bi(JahiziyatTashghil::Ghaiba, false);
+        let hukm = tabbiq_al_ithnayn(hukm_maftuh(), &taqreer, None, false);
+
+        assert_eq!(hukm.masar, MasarTilqaiHie::Marfud);
+        assert!(hukm.sabab_injilizi.contains(ATHAR_RAFD), "{}", hukm.sabab_injilizi);
+    }
+
+    /// The start command takes the safety layer's refusal first, and the
+    /// verdict reports the same one.
+    #[test]
+    fn hukm_wa_ibda_yattafiqan_ala_al_marfuda() -> NatijatIkhtibar {
+        let masrah = masrah_bi(JahiziyatTashghil::Ghaiba, &[SimatLuba::MuammanaVac], &[])?;
+        let hukm = hukm(
+            masrah.id.to_string(),
+            &masrah.masarat,
+            &masrah.makhzan,
+            &masrah.idadat,
+        )?;
+        assert_eq!(hukm.masar, MasarTilqaiHie::Marfud);
+        assert!(hukm.sabab_injilizi.contains(ATHAR_HIMAYA), "{}", hukm.sabab_injilizi);
+        assert!(!hukm.sabab_injilizi.contains(ATHAR_RAFD), "{}", hukm.sabab_injilizi);
+
+        let ramz = ibda(
+            mudhee_samit(),
+            masrah.id.to_string(),
+            false,
+            false,
+            &masrah.masarat,
+            &masrah.makhzan,
+            &masrah.idadat,
+            &MashawirTilqai::default(),
+        )
+        .err()
+        .map(|khata| khata.ramz);
+        assert_eq!(ramz, Some(Ramz::jadeed(RAMZ_TABAQA)));
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // The spend ceiling, as the verdict reports it
+    // -----------------------------------------------------------------------
+
+    /// A settings value electing one enabled provider.
+    fn idadat_bi_muzawwid(
+        masrah: &Masrah,
+        naw: NawMuzawwid,
+        mizaniya: Option<f64>,
+    ) -> Arc<MakhzanIdadat> {
+        let mut qeema = (*masrah.idadat.hali()).clone();
+        qeema.muzawwidun.qaima = vec![taarib_usus::idadat::IdadatMuzawwid {
+            muarrif: "muzawwid-ikhtibar".to_owned(),
+            naw,
+            namudhaj: "namudhaj".to_owned(),
+            asas: None,
+            hisab_miftah: None,
+            mufaal: true,
+            hadd_talabat: 60,
+            mizaniya,
+        }];
+        qeema.muzawwidun.iftiradi = Some("muzawwid-ikhtibar".to_owned());
+        Arc::new(MakhzanIdadat::min_qeema(masrah.masarat.malaf_idadat(), qeema))
+    }
+
+    /// A clause only the missing-ceiling limit and the refusal itself carry.
+    const ATHAR_SAQF: &str = "charges for translation and has no spend ceiling set";
+
+    /// The verdict warns about the ceiling the start command will refuse over.
+    ///
+    /// The screen's cost sentence is "the run stops at the ceiling and never
+    /// crosses it", and it is handed `saqf` — which is zero for exactly this
+    /// configuration. Without the limit the verdict promises a ceiling that does
+    /// not exist and the button then refuses with a code the reader had no
+    /// warning of, which is a button offered that then refuses.
+    #[test]
+    fn hukm_yunabbih_ila_ghiyab_saqf_al_infaq() -> NatijatIkhtibar {
+        let masrah = masrah(JahiziyatTashghil::Mukammala)?;
+        let idadat = idadat_bi_muzawwid(&masrah, NawMuzawwid::Anthropic, None);
+        let hukm = hukm(
+            masrah.id.to_string(),
+            &masrah.masarat,
+            &masrah.makhzan,
+            &idadat,
+        )?;
+
+        assert!(
+            hukm.hudud_injilizi.iter().any(|hadd| hadd.contains(ATHAR_SAQF)),
+            "{:?}",
+            hukm.hudud_injilizi
+        );
+        assert!(
+            hukm.hudud_arabi.iter().any(|hadd| hadd.contains("سقف إنفاق")),
+            "{:?}",
+            hukm.hudud_arabi
+        );
+        // The warning is about the refusal `jahhiz` raises, so the two have to
+        // be about the same configuration; this is the code it raises.
+        assert_eq!(
+            Khata::from(KhataTilqaiAmr::BilaSaqfInfaq {
+                muzawwid: "muzawwid-ikhtibar".to_owned()
+            })
+            .ramz,
+            Ramz::jadeed(RAMZ_BILA_SAQF)
+        );
+        assert!(hukm.takalif.saqf.abs() < f64::EPSILON, "{}", hukm.takalif.saqf);
+        Ok(())
+    }
+
+    /// A ceiling that is set is not warned about, and is the number shown.
+    #[test]
+    fn hukm_la_yunabbih_ala_saqf_mawdu() -> NatijatIkhtibar {
+        let masrah = masrah(JahiziyatTashghil::Mukammala)?;
+        let idadat = idadat_bi_muzawwid(&masrah, NawMuzawwid::Anthropic, Some(5.0));
+        let hukm = hukm(
+            masrah.id.to_string(),
+            &masrah.masarat,
+            &masrah.makhzan,
+            &idadat,
+        )?;
+
+        assert!(
+            !hukm.hudud_injilizi.iter().any(|hadd| hadd.contains(ATHAR_SAQF)),
+            "{:?}",
+            hukm.hudud_injilizi
+        );
+        assert!((hukm.takalif.saqf - 5.0).abs() < f64::EPSILON, "{}", hukm.takalif.saqf);
+        Ok(())
+    }
+
+    /// A free provider is not warned about either, and that is the half that
+    /// matters: a gate nobody can pass is indistinguishable from a broken
+    /// product, and the loopback path is the one that completes a whole run for
+    /// nothing. `jahhiz` exempts it for the same reason — there is no ceiling to
+    /// set when there is nothing to spend.
+    #[test]
+    fn hukm_la_yunabbih_ala_al_mahalli() -> NatijatIkhtibar {
+        let masrah = masrah(JahiziyatTashghil::Mukammala)?;
+        let idadat = idadat_bi_muzawwid(&masrah, NawMuzawwid::Mahalli, None);
+        let hukm = hukm(
+            masrah.id.to_string(),
+            &masrah.masarat,
+            &masrah.makhzan,
+            &idadat,
+        )?;
+
+        assert!(
+            !hukm.hudud_injilizi.iter().any(|hadd| hadd.contains(ATHAR_SAQF)),
+            "{:?}",
+            hukm.hudud_injilizi
+        );
+        assert!(yatqada_ajran(NawMuzawwid::Anthropic));
+        assert!(!yatqada_ajran(NawMuzawwid::Mahalli));
         Ok(())
     }
 }

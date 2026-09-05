@@ -298,7 +298,7 @@ fn judhur_muhtamala(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
     if let Some(masar) = siyaq.manassat.bottles.as_ref() {
         judhur.push(masar.clone());
     }
-    judhur.push(khazina_bayanat(&siyaq.manzil).join(MUJALLAD_BOTTLES));
+    judhur.push(siyaq.khazina_bayanat.join(MUJALLAD_BOTTLES));
     if siyaq.yashmal_hawiyat {
         judhur.push(
             siyaq
@@ -311,18 +311,6 @@ fn judhur_muhtamala(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
         );
     }
     judhur
-}
-
-/// `$XDG_DATA_HOME`, or the default the specification names.
-///
-/// The variable is honoured only when it is absolute, because the specification
-/// says a relative value is invalid and because accepting one would make
-/// discovery depend on the directory this process happened to start in.
-fn khazina_bayanat(manzil: &Path) -> PathBuf {
-    std::env::var_os("XDG_DATA_HOME")
-        .map(PathBuf::from)
-        .filter(|masar| masar.is_absolute())
-        .unwrap_or_else(|| manzil.join(".local").join("share"))
 }
 
 // ---------------------------------------------------------------------------
@@ -856,4 +844,52 @@ fn suwar_barnamaj(barnamaj: &QeemaYaml) -> MasadirSuwar {
         (masar.is_absolute() && masar.is_file()).then_some(MasdarSura::Malaf(masar))
     });
     MasadirSuwar { ghilaf: None, batl: None, shiar }
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn al_jidhr_min_khazinat_al_bayanat_fi_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let khazina = masrah.path().join("khazina");
+        fs::create_dir_all(khazina.join(MUJALLAD_BOTTLES).join(MUJALLAD_QANANI))?;
+
+        // `lil_ikhtibar` seeds `khazina_bayanat` with the specification's default
+        // *under the fixture's home*, so an adapter that ignored the field would
+        // look under `<home>/.local/share` and find nothing here. Nothing sets
+        // `$XDG_DATA_HOME`: since edition 2024 that is an `unsafe`, racy mutation
+        // of the process every other test shares, which is exactly why the
+        // resolver had to move onto the context to become testable at all.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Linux, masrah.path());
+        siyaq.khazina_bayanat = khazina.clone();
+
+        assert_eq!(
+            MatjarBottles::jadeed().mawqi(&siyaq),
+            Some(khazina.join(MUJALLAD_BOTTLES)),
+            "the data root must come from the context"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn al_khazina_al_iftiradiya_taht_al_manzil() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let iftiradi = masrah.path().join(".local").join("share").join(MUJALLAD_BOTTLES);
+        fs::create_dir_all(iftiradi.join(MUJALLAD_QANANI))?;
+
+        // The unset case: the context carries the home-relative default, and the
+        // adapter is none the wiser about which of the two it was handed.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Linux, masrah.path());
+        assert_eq!(MatjarBottles::jadeed().mawqi(&siyaq), Some(iftiradi));
+        Ok(())
+    }
 }

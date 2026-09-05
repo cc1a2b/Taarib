@@ -194,7 +194,7 @@ impl Matjar for MatjarUbisoft {
         // One registry value and one existence check. Nothing is parsed here.
         jidhr_musajjal()
             .filter(|masar| masar.is_dir())
-            .or_else(|| jidhr_taqleedi().filter(|masar| masar.is_dir()))
+            .or_else(|| jidhr_taqleedi(siyaq))
     }
 
     /// # Errors
@@ -225,7 +225,7 @@ impl Matjar for MatjarUbisoft {
             .ubisoft
             .clone()
             .or_else(jidhr_musajjal)
-            .or_else(jidhr_taqleedi)
+            .or_else(|| jidhr_taqleedi(siyaq))
             .filter(|masar| masar.is_dir());
         if tathbitat.is_empty() && jidhr.is_none() {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
@@ -332,7 +332,7 @@ impl Matjar for MatjarUbisoft {
             return Vec::new();
         }
         let Some(jidhr) =
-            siyaq.manassat.ubisoft.clone().or_else(jidhr_musajjal).or_else(jidhr_taqleedi)
+            siyaq.manassat.ubisoft.clone().or_else(jidhr_musajjal).or_else(|| jidhr_taqleedi(siyaq))
         else {
             return Vec::new();
         };
@@ -368,10 +368,13 @@ fn jidhr_musajjal() -> Option<PathBuf> {
 }
 
 /// The launcher's conventional directory, used only when it is really there.
-fn jidhr_taqleedi() -> Option<PathBuf> {
-    let barnamij86 = std::env::var_os("ProgramFiles(x86)")
-        .map_or_else(|| PathBuf::from(r"C:\Program Files (x86)"), PathBuf::from);
-    let masar = barnamij86.join("Ubisoft").join("Ubisoft Game Launcher");
+///
+/// Ubisoft Connect still ships a 32-bit installer, so the program directory a
+/// 32-bit installer lands in is the one to look in — which the context resolves
+/// for both widths of Windows, rather than the `C:\Program Files (x86)` literal
+/// this used to fall back to on a machine whose Windows is not on `C:`.
+fn jidhr_taqleedi(siyaq: &SiyaqFahs) -> Option<PathBuf> {
+    let masar = siyaq.mujallad_baramij_x86()?.join("Ubisoft").join("Ubisoft Game Launcher");
     masar.is_dir().then_some(masar)
 }
 
@@ -925,5 +928,47 @@ mod sijill {
             }
         }
         tathbitat
+    }
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn al_jidhr_al_taqleedi_min_mujalladat_al_baramij() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let baramij86 = masrah.path().join("Program Files (x86)");
+        let jidhr = baramij86.join("Ubisoft").join("Ubisoft Game Launcher");
+        fs::create_dir_all(&jidhr)?;
+
+        // Both directories in the order the context builds them, x86 leading.
+        // The old resolver fell back to a `C:\Program Files (x86)` literal,
+        // which is not there on a machine whose Windows is on another drive —
+        // and could not be pointed anywhere else, because since edition 2024
+        // `%ProgramFiles(x86)%` cannot be set from a test.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.mujalladat_baramij = vec![baramij86, masrah.path().join("Program Files")];
+        assert_eq!(jidhr_taqleedi(&siyaq), Some(jidhr));
+        Ok(())
+    }
+
+    #[test]
+    fn bila_mujalladat_baramij_la_jidhr_taqleedi() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // Not a Windows context, so there is no conventional directory to name.
+        // The registry lookup beside this one is already empty off Windows, so
+        // the adapter reports nothing rather than a path that cannot exist.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        assert_eq!(jidhr_taqleedi(&siyaq), None);
+        Ok(())
     }
 }

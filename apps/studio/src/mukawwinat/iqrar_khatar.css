@@ -1,0 +1,146 @@
+/* ==========================================================================
+   إقرار الخطر — the acknowledgement block.
+
+   It has to read as a decision, not as a notice. Every other panel in this
+   product is something the interface is telling you; this one is the only place
+   the interface is waiting on you, and if it looks like the panels around it
+   people will scroll past it and then wonder why the button is grey.
+
+   Three things do that work, and none of them is a colour shout:
+
+   - the block sits one surface above whatever holds it and carries the danger
+     hue on its leading edge, the same emphasis grammar the refusal panels use,
+     so it is recognisably in the safety family rather than a new species;
+   - the tick is not a bare control on a line of text — it is a field, with its
+     own inset surface and its own border, sized so the whole strip is the hit
+     target. A 16px square beside a paragraph is a thing you miss; a full-width
+     row is a thing you press;
+   - the field changes state visibly when it is answered. Untouched it is a
+     neutral raised surface. Answered it takes the danger hue on its border and
+     a tenth of it as a wash, which says "you have taken this on" rather than
+     "well done" — accepting a risk is not a success and must not be painted as
+     one, so this is deliberately not the product's green.
+
+   The wash is mixed against `--sath-3` rather than `transparent` because this
+   field is drawn over `--sath-2` and, on a light palette, an alpha wash over a
+   near-white surface is a different colour from the same wash over the dark
+   one. Mixing against the surface it actually sits on keeps the ten per cent
+   meaning ten per cent in all four palettes.
+   ========================================================================== */
+
+.iqrar {
+  display: grid;
+  gap: var(--misafa-12);
+  /* Slightly wider than the 56ch the product's plain sentences use: this block
+     carries a heading, two paragraphs and a labelled control, and at 56ch the
+     tick's own sentence wraps to three lines and stops reading as one clause. */
+  max-inline-size: 62ch;
+  padding: var(--misafa-20);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-inline-start: var(--samk-hadd-barz) solid var(--khatar);
+  border-radius: var(--nisf-lawha);
+}
+
+.iqrar__unwan {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+/* The glyph takes the hue the heading does not: a red heading on a red-edged
+   panel is two statements of the same thing, and the second one costs the
+   heading its legibility on the high-contrast light palette. */
+.iqrar__ramz {
+  flex: none;
+  color: var(--khatar);
+}
+
+.iqrar__nass {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* The fact about *this* game or *this* patch, set off from the general
+   statement above it by a rule rather than by a colour — it is evidence, and
+   evidence in a status hue reads as the product's opinion of it. */
+.iqrar__tafsil {
+  padding-inline-start: var(--misafa-12);
+  border-inline-start: var(--samk-hadd) solid var(--hadd-qawi);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  /* The backend writes a refusal as a sentence, a newline, then the evidence
+     the scan found. Collapsing that break runs the evidence onto the end of the
+     sentence as though it were a clause of it. */
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+.iqrar__khiyar {
+  display: flex;
+  align-items: start;
+  gap: var(--misafa-12);
+  min-block-size: var(--irtifa-satr);
+  padding: var(--misafa-12) var(--misafa-16);
+  background-color: var(--sath-3);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  cursor: pointer;
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    border-color var(--zaman-hala) var(--munhana);
+}
+
+.iqrar__khiyar:hover {
+  border-color: var(--hadd-qawi);
+  transition: none;
+}
+
+.iqrar__khiyar--muqirra {
+  background-color: color-mix(in srgb, var(--khatar) 10%, var(--sath-3));
+  border-color: var(--khatar);
+}
+
+/* Nudged down by one spacing step so the square's optical centre lands on the
+   first line's x-height rather than on its ascender line; `align-items: start`
+   is what keeps a two-line label from dragging the square to the middle of the
+   block. */
+.iqrar__murabba {
+  flex: none;
+  inline-size: var(--hajm-ramz-satri);
+  block-size: var(--hajm-ramz-satri);
+  margin-block-start: var(--misafa-2);
+}
+
+.iqrar__khiyar-nass {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+/* Amber, not red. The block is already red because of what is at stake; this
+   line is the product saying the control below is off and why, which is the
+   one job amber has everywhere else in this interface. */
+.iqrar__matlub {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--tanbeeh);
+  text-wrap: pretty;
+}
+
+.iqrar__afal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-4);
+}

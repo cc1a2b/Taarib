@@ -74,6 +74,10 @@ QARGO_HAMULA="${TAARIB_CARGO_HAMULA:-$QARGO}"
 # The bundler. Overridable for the same reason: a WSL host bundling for Windows
 # runs `cargo-tauri.exe`, a name `command -v cargo-tauri` does not resolve.
 TAURI="${TAARIB_TAURI:-cargo-tauri}"
+# The SDK that builds rows C1-C4, overridable for that reason once more: a WSL
+# host has no .NET of its own and drives the Windows SDK across /mnt, where the
+# bare name `dotnet` resolves to nothing at all.
+DOTNET="${TAARIB_DOTNET:-dotnet}"
 TAKHATTI="${TAARIB_TAKHATTI:-}"
 
 cd "$JIDHR"
@@ -137,8 +141,8 @@ isdar_wasm_bindgen() {
 
 if ! tuhmal unity; then
   marhala "unity — rows C1-C4"
-  lazim dotnet "the four BepInEx-side assemblies are built with it"
-  dotnet build unity/Taarib.Unity.sln -c Release --nologo
+  lazim "$DOTNET" "the four BepInEx-side assemblies are built with it"
+  "$DOTNET" build unity/Taarib.Unity.sln -c Release --nologo
 fi
 
 if ! tuhmal hamula; then
@@ -151,14 +155,22 @@ if ! tuhmal hamula; then
   # The feature itself is not optional. `tajmee` refuses to stage an F/G payload
   # that exports no `taarib_bidaya`, because such a payload is a well-formed
   # library a game loads and that then does nothing.
-  while read -r muthallath; do
+  #
+  # The triple list is read on descriptor 3, not on stdin. A build in the body
+  # inherits descriptor 0, and a `cargo.exe` driven from WSL drains it: the loop
+  # then sees end-of-file after the first triple and every later one is skipped
+  # in silence. That is worse than it sounds, because the skip is invisible —
+  # a `target/` that already held yesterday's `i686` payloads staged them again
+  # and the bundle looked complete. `tajmee` names the absence on a clean tree,
+  # so the release fails rather than ships, but it fails for the wrong reason.
+  while read -r muthallath <&3; do
     printf -- '-- %s\n' "$muthallath"
     "$QARGO_HAMULA" build --release --target "$muthallath" \
       -p taarib-jisr -p taarib-mudkhal -p taarib-tabaqa \
       -p taarib-muhawwil-unreal -p taarib-muhawwil-godot \
       --features taarib-tabaqa/hamula,taarib-muhawwil-unreal/hamula,taarib-muhawwil-godot/hamula \
       --target-dir "$ahdaf"
-  done < <(muthallathat_hamula)
+  done 3< <(muthallathat_hamula)
 fi
 
 if ! tuhmal wasm; then
@@ -226,6 +238,32 @@ fi
 if ! tuhmal huzma; then
   marhala "huzma — rows A1, A3, and the installer"
   lazim "$TAURI" "install it with: cargo install tauri-cli --version ^2 --locked"
+
+  # What the bundler ships is whatever `mawarid/` holds when it walks it, which
+  # is not necessarily what this run staged: `TAARIB_TAKHATTI=tajmee` skips the
+  # staging outright, and a tree an earlier run left for another triple carries
+  # that triple's payloads under names this one will never look for.
+  # `tadqiq_mawarid.mjs` catches neither — it gates the fonts, and the fonts are
+  # the one part of the tree that is byte-identical on every target.
+  bayan="apps/studio/src-tauri/mawarid/bayan_mukawwinat.json"
+  if [ ! -f "$bayan" ]; then
+    printf 'isdar: %s is absent.\n' "$bayan" >&2
+    printf '       Its absence is the marker for a partial staging, and an\n' >&2
+    printf '       installer built over one refuses every component by name.\n' >&2
+    printf '       Run the tajmee stage before huzma.\n' >&2
+    exit 1
+  fi
+  # `awk` on the first `"hadaf"` line rather than a JSON parser: the manifest is
+  # pretty-printed, so the value is on the key's own line, and the only other
+  # keys in the file are `mukhattat`, `isdar`, `masar`, `hajm` and `sha256`.
+  mustaqirr="$(awk -F'"' '/^[[:space:]]*"hadaf"[[:space:]]*:/ { print $4; exit }' "$bayan")"
+  if [ "$mustaqirr" != "$hadaf" ]; then
+    printf 'isdar: mawarid/ is staged for %s, and this bundle is %s.\n' \
+      "$mustaqirr" "$hadaf" >&2
+    printf '       Re-run the tajmee stage for %s.\n' "$hadaf" >&2
+    exit 1
+  fi
+
   # `beforeBuildCommand` is emptied because the `wajiha` stage above already
   # built the frontend. Letting tauri run it again is not merely wasteful: it
   # rewrites `apps/studio/dist` *while* `tauri::generate_context!` is walking

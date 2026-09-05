@@ -640,6 +640,21 @@
   gap: var(--misafa-12);
 }
 
+/* The acknowledgements, opened inside the patch they are about.
+
+   Inside, and not over: the decision is being taken against this patch's
+   coverage, its tier and its match verdict, and those sit two lines above in the
+   same row. A modal would take all three off screen at the moment they are the
+   whole basis for the answer, and would leave the reader unable to tell which of
+   several offered patches they had just authorised.
+
+   The gap is one step wider than the row's own, so two acknowledgement blocks
+   read as two questions rather than as one long panel with two ticks in it. */
+.luba__iqrarat {
+  display: grid;
+  gap: var(--misafa-16);
+}
+
 .luba__ruqaa-unwan {
   font-size: var(--qiyas-3);
   line-height: var(--irtifa-3);

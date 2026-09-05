@@ -8,9 +8,10 @@ use std::path::{Path, PathBuf};
 use object::FileKind;
 use object::read::Object as _;
 use serde::{Deserialize, Serialize};
-use taarib_kashf::matajir::vdf::{self, QeemaVdf};
+use taarib_kashf::matajir::vdf::QeemaVdf;
 
-use crate::khata::{KhataAman, NatijatAman};
+use crate::kashf_himaya::HalatMatjar;
+use crate::matjar::QiraatMatjar;
 
 use DalalatShabaka::{KhadimMukhassas, Mmo, MutaaddidMahalli, MutaaddidOnline, ShabakiAam};
 use MahalShabaka::{MalafJidhr, MalafJuzi, Wahda};
@@ -363,27 +364,29 @@ pub fn ifhas_shabaka(
     appid: Option<u32>,
     jidhr_steam: Option<&Path>,
 ) -> IjmaaShabaka {
+    ifhas_shabaka_bi_qiraa(jidhr_luba, &QiraatMatjar::iqra(appid, jidhr_steam))
+}
+
+/// The same scan against a catalogue reading the caller already has.
+///
+/// [`crate::fahs::fahs`] runs this scan *and* [`crate::kashf_himaya`]'s on the
+/// same game before it will authorise anything, and both want the same
+/// `appinfo.vdf`. This entry point is how that file gets read once instead of
+/// twice; see [`crate::matjar`] for what the second read cost.
+#[must_use]
+pub fn ifhas_shabaka_bi_qiraa(jidhr_luba: &Path, matjar: &QiraatMatjar) -> IjmaaShabaka {
     let mut musajjil = Musajjil::default();
 
     imsah_luba(jidhr_luba, &mut musajjil);
 
-    if let (Some(appid), Some(jidhr_steam)) = (appid, jidhr_steam) {
-        match fahs_matjar(jidhr_steam, appid) {
-            Ok(dalail) => {
-                for daleel in dalail {
-                    musajjil.sajjil(daleel);
-                }
-            }
-            Err(khata) => {
-                let masar = khata
-                    .masar()
-                    .map_or_else(
-                        || jidhr_steam.join("appcache").join("appinfo.vdf"),
-                        Path::to_path_buf,
-                    );
-                musajjil.thughra(masar, khata.to_string());
-            }
-        }
+    for daleel in &matjar.shabaka {
+        musajjil.sajjil(daleel.clone());
+    }
+    // A catalogue that could not be opened is a gap on this report too, worded
+    // the way every other gap in this file is: the short failure label beside
+    // the path it happened to.
+    if let HalatMatjar::Mutaadhdhir { masar, sabab } = &matjar.hala {
+        musajjil.thughra(masar.clone(), sabab.clone());
     }
 
     IjmaaShabaka {
@@ -392,40 +395,6 @@ pub fn ifhas_shabaka(
         thughrat: musajjil.thughrat,
         mabtur: musajjil.mabtur,
     }
-}
-
-/// Reads Steam's `appinfo.vdf` for the multiplayer categories and metadata
-/// recorded against one app.
-///
-/// # Errors
-///
-/// [`KhataAman::KhataMalaf`] when `appcache/appinfo.vdf` cannot be read, and the
-/// same variant carrying the reader's message when the catalogue's own framing
-/// will not parse.
-pub fn fahs_matjar(jidhr_steam: &Path, appid: u32) -> NatijatAman<Vec<DaleelShabaka>> {
-    let masar = jidhr_steam.join("appcache").join("appinfo.vdf");
-    let bayt = std::fs::read(&masar).map_err(|sabab| KhataAman::KhataMalaf {
-        masar: masar.clone(),
-        amal: "reading Steam's app metadata cache for multiplayer categories",
-        sabab,
-    })?;
-
-    let mut dalail: Vec<DaleelShabaka> = Vec::new();
-    let natija = vdf::murur_appinfo(&masar, &bayt, &mut |madkhal| {
-        let Ok(madkhal) = madkhal else {
-            return;
-        };
-        if madkhal.app != appid {
-            return;
-        }
-        dalail.extend(dalail_appinfo(&madkhal.bayanat, &masar));
-    });
-    natija.map_err(|khata| KhataAman::KhataMalaf {
-        masar: masar.clone(),
-        amal: "parsing Steam's app metadata cache",
-        sabab: io::Error::other(khata.injilizi),
-    })?;
-    Ok(dalail)
 }
 
 /// Accumulates evidence, dropping duplicates, capping the total, and recording gaps.
@@ -630,7 +599,7 @@ fn ifhas_mustawradat(jidhr: &Path, masar: &Path, musajjil: &mut Musajjil) {
 }
 
 /// Projects one app's `appinfo.vdf` tree into the multiplayer evidence it carries.
-fn dalail_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelShabaka> {
+pub(crate) fn dalail_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelShabaka> {
     let mut dalail: Vec<DaleelShabaka> = Vec::new();
 
     let fiat = bayanat.kain_bi_masar(&["appinfo", "common", "category"]).unwrap_or(&[]);
