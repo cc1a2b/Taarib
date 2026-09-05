@@ -145,11 +145,12 @@ impl Matjar for MatjarEa {
         }
         // Existence only. The EA app's directory is preferred because it is the
         // client that is still shipping; an Origin-only machine reports Origin.
-        let ea = bayanat_barnamij().join("EA Desktop");
+        let bayanat = siyaq.bayanat_barnamij.as_ref()?;
+        let ea = bayanat.join("EA Desktop");
         if ea.is_dir() {
             return Some(ea);
         }
-        let origin = bayanat_barnamij().join("Origin");
+        let origin = bayanat.join("Origin");
         origin.is_dir().then_some(origin)
     }
 
@@ -254,22 +255,13 @@ fn judhur_matjar(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
     if let Some(tajawuz) = siyaq.manassat.ea.as_ref() {
         return vec![tajawuz.clone()];
     }
-    let bayanat = bayanat_barnamij();
+    let Some(bayanat) = siyaq.bayanat_barnamij.as_ref() else {
+        return Vec::new();
+    };
     [bayanat.join("EA Desktop"), bayanat.join("Origin")]
         .into_iter()
         .filter(|masar| masar.is_dir())
         .collect()
-}
-
-/// Windows' machine-wide application data directory.
-///
-/// The environment is the only source for it here: it is not derived from the
-/// user's home directory, and the shell API that would resolve the known folder
-/// is outside the `windows` feature set this workspace declares.
-fn bayanat_barnamij() -> PathBuf {
-    std::env::var_os("PROGRAMDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| PathBuf::from(r"C:\ProgramData"), PathBuf::from)
 }
 
 /// Directories that hold game installations rather than client data.
@@ -289,11 +281,10 @@ fn judhur_tathbeet(siyaq: &SiyaqFahs, judhur: &[PathBuf]) -> Vec<PathBuf> {
         }
     }
 
-    let barnamij = std::env::var_os("ProgramFiles")
-        .map_or_else(|| PathBuf::from(r"C:\Program Files"), PathBuf::from);
-    let barnamij86 = std::env::var_os("ProgramFiles(x86)")
-        .map_or_else(|| PathBuf::from(r"C:\Program Files (x86)"), PathBuf::from);
-    for jidhr in [&barnamij, &barnamij86] {
+    // Both program directories, from the context: the two clients have shipped
+    // 32-bit and 64-bit installers over their lives, so a machine can have one
+    // set of games under each.
+    for jidhr in &siyaq.mujalladat_baramij {
         mawadi.push(jidhr.join("EA Games"));
         mawadi.push(jidhr.join("Origin Games"));
     }
@@ -864,4 +855,81 @@ fn muwahhad(masar: &Path, nizam: NizamTashghil) -> String {
 /// manifests and which upsets an XML reader that was told the encoding.
 fn bila_bom(nass: &str) -> &str {
     nass.strip_prefix('\u{feff}').unwrap_or(nass)
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    /// A Windows-shaped context whose machine directories are the ones the test
+    /// built rather than this machine's.
+    ///
+    /// `nizam` is a value rather than a compile-time fact, which is what lets
+    /// a Windows-only adapter be exercised from a Linux host — and the whole
+    /// point of the conversion is checkable only because of it: nothing here
+    /// sets an environment variable, so if the adapter still read
+    /// `%PROGRAMDATA%` inline these tests would be reading the developer's own
+    /// machine instead of the fixture, and would fail on it.
+    fn siyaq(manzil: &Path, bayanat: Option<&Path>, baramij: &[PathBuf]) -> SiyaqFahs {
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, manzil);
+        siyaq.bayanat_barnamij = bayanat.map(Path::to_path_buf);
+        siyaq.mujalladat_baramij = baramij.to_vec();
+        siyaq
+    }
+
+    #[test]
+    fn al_mawqi_min_bayanat_al_barnamij_fi_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let bayanat = masrah.path().join("ProgramData");
+        fs::create_dir_all(bayanat.join("EA Desktop"))?;
+        fs::create_dir_all(bayanat.join("Origin"))?;
+
+        // The EA app wins over Origin because it is the client still shipping.
+        let siyaq = siyaq(masrah.path(), Some(&bayanat), &[]);
+        assert_eq!(
+            MatjarEa::jadeed().mawqi(&siyaq),
+            Some(bayanat.join("EA Desktop")),
+            "the data root must come from the context"
+        );
+        assert_eq!(judhur_matjar(&siyaq).len(), 2, "both client roots are real here");
+        Ok(())
+    }
+
+    #[test]
+    fn bila_bayanat_barnamij_la_shaya() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // What a Linux or macOS context looks like: no machine-wide data
+        // folder at all. The old resolver returned `C:\ProgramData` here, which
+        // is a path that cannot exist on the machine asking.
+        let siyaq = siyaq(masrah.path(), None, &[]);
+        assert_eq!(MatjarEa::jadeed().mawqi(&siyaq), None);
+        assert!(judhur_matjar(&siyaq).is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn judhur_al_tathbeet_min_mujalladat_al_baramij() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let baramij =
+            [masrah.path().join("Program Files (x86)"), masrah.path().join("Program Files")];
+        fs::create_dir_all(baramij[0].join("Origin Games"))?;
+        fs::create_dir_all(baramij[1].join("EA Games"))?;
+
+        // Both program directories are searched, and neither is a `C:` literal:
+        // on a machine whose Windows is not on `C:` the old code looked in a
+        // folder that was not there.
+        let judhur = judhur_tathbeet(&siyaq(masrah.path(), None, &baramij), &[]);
+        assert!(judhur.contains(&baramij[0].join("Origin Games")), "{judhur:?}");
+        assert!(judhur.contains(&baramij[1].join("EA Games")), "{judhur:?}");
+        assert_eq!(judhur.len(), 2, "only the directories that exist: {judhur:?}");
+        Ok(())
+    }
 }

@@ -115,6 +115,25 @@ pub(crate) fn jahhiz(masarat: &Masarat) -> Vec<TahdheerBidaya> {
     tahdheerat
 }
 
+/// Prepares a patch root the user redirected, after their settings have been read.
+///
+/// [`jahhiz`] cannot do this: it runs before the settings file is opened, because it is what
+/// creates the directory that file lives in. So the redirected root — `takhzin.jidhr_ruqaa`,
+/// a setting the Studio has always offered and nothing on this side ever honoured — is the
+/// one location that becomes known too late for the sweep above.
+///
+/// Returns the same warning shape for the same reason: a redirect at an unwritable path must
+/// degrade and be named, not abort a launch that is otherwise fine.
+#[must_use]
+pub(crate) fn jahhiz_ruqaa(masarat: &Masarat) -> Option<TahdheerBidaya> {
+    let masar = masarat.ruqaa();
+    fs::create_dir_all(&masar).err().map(|sabab| TahdheerBidaya {
+        ramz: "ruqaa",
+        masar,
+        sabab: sabab.to_string(),
+    })
+}
+
 /// Writes each startup warning to the log, exactly once, as an Arabic sentence carrying the
 /// path, with `ramz`, `masar` and `sabab` attached as machine-readable fields. An empty
 /// slice logs nothing.

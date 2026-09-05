@@ -71,6 +71,9 @@ QARGO="${TAARIB_CARGO:-cargo}"
 # `*-pc-windows-msvc` payloads are built by the Windows cargo across /mnt while
 # the studio and the wasm core are built by the Linux one.
 QARGO_HAMULA="${TAARIB_CARGO_HAMULA:-$QARGO}"
+# The bundler. Overridable for the same reason: a WSL host bundling for Windows
+# runs `cargo-tauri.exe`, a name `command -v cargo-tauri` does not resolve.
+TAURI="${TAARIB_TAURI:-cargo-tauri}"
 TAKHATTI="${TAARIB_TAKHATTI:-}"
 
 cd "$JIDHR"
@@ -222,7 +225,7 @@ fi
 
 if ! tuhmal huzma; then
   marhala "huzma — rows A1, A3, and the installer"
-  lazim cargo-tauri "install it with: cargo install tauri-cli --version ^2 --locked"
+  lazim "$TAURI" "install it with: cargo install tauri-cli --version ^2 --locked"
   # `beforeBuildCommand` is emptied because the `wajiha` stage above already
   # built the frontend. Letting tauri run it again is not merely wasteful: it
   # rewrites `apps/studio/dist` *while* `tauri::generate_context!` is walking
@@ -234,15 +237,25 @@ if ! tuhmal huzma; then
   # POSIX shell fine, but on Windows the callee re-parses the command line and
   # the quotes do not survive it. A path has no quotes in it.
   #
+  # Written at a fixed place under `target/` rather than under `--ahdaf`, and
+  # named to the bundler *relatively*, because those are the two things that
+  # hold on every host: a bundler invoked across the WSL boundary cannot open
+  # `/mnt/e/...`, and `--ahdaf` may be somewhere else entirely. This file is not
+  # a cargo output, so it lives beside the other two things `masfufa.rs`
+  # resolves from the workspace root — `target/adapters` and
+  # `target/wasm-bindgen` — for the same reason.
+  #
   # `beforeBundleCommand` is deliberately left alone: `tadqiq_mawarid.mjs` is the
   # gate that refuses to turn an unstaged `mawarid/` into an installer.
-  mkdir -p "$ahdaf"
-  printf '{"build":{"beforeBuildCommand":""}}' > "$ahdaf/isdar-tajawuz.json"
-  tajawuz="$(cd "$ahdaf" && pwd)/isdar-tajawuz.json"
-  ( cd apps/studio && cargo-tauri build --target "$hadaf" --config "$tajawuz" )
+  mkdir -p target
+  printf '{"build":{"beforeBuildCommand":""}}' > target/isdar-tajawuz.json
+  ( cd apps/studio \
+      && "$TAURI" build --target "$hadaf" --config ../../target/isdar-tajawuz.json )
 fi
 
 marhala "تمّ"
 printf 'isdar: %s\n' "$hadaf"
 printf '  manifest: apps/studio/src-tauri/mawarid/bayan_mukawwinat.json\n'
-printf '  bundle:   %s/release/bundle/\n' "$ahdaf"
+# `--target` is passed to the bundler, so the artifacts land one directory
+# deeper than an untargeted build would put them.
+printf '  bundle:   %s/%s/release/bundle/\n' "$ahdaf" "$hadaf"

@@ -273,8 +273,21 @@ pub struct HasilatIzala {
 /// Whether the game's own executable is running right now.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct HalatTashghil {
-    /// Whether a matching process was found.
+    /// Whether the game must be treated as running.
+    ///
+    /// Read together with [`Self::majhul`]: `true` with `majhul` set is a
+    /// precaution, not an observation.
     pub tashtaghil: bool,
+    /// Whether this answer is a guess because the process table could not be
+    /// read.
+    ///
+    /// A sandboxed build — Flatpak, Snap, a container — sees its own process
+    /// table rather than the host's, so every game looks stopped. Reporting
+    /// that as an observation is the mistake that let a patch be written into
+    /// an open game; reporting it as an error instead loses the ability to say
+    /// which game and why. This field is how the screen distinguishes "it is
+    /// not running" from "nobody here can tell".
+    pub majhul: bool,
     /// The process, as the system names it.
     pub amaliya: Option<String>,
     /// The executable it was matched against.
@@ -592,21 +605,39 @@ pub fn hal_tashtaghil(
     let luba = ijlib_luba(&makhzan, id)?;
 
     let Some(tanfidhi) = luba.tanfidhi.as_deref().and_then(Path::to_str) else {
-        // No executable was ever resolved, so there is no process to look for
-        // and claiming the game is stopped would be claiming more than is known.
-        return Ok(HalatTashghil { tashtaghil: false, amaliya: None, tanfidhi: None });
+        // No executable was ever resolved, so there is no process to look for.
+        // Not running as far as anything here can see, and `majhul` says that
+        // the second half of that sentence is doing the work.
+        return Ok(HalatTashghil {
+            tashtaghil: false,
+            majhul: true,
+            amaliya: None,
+            tanfidhi: None,
+        });
     };
 
     match la_tashtaghil(tanfidhi) {
         Ok(()) => Ok(HalatTashghil {
             tashtaghil: false,
+            majhul: false,
             amaliya: None,
             tanfidhi: Some(tanfidhi.to_owned()),
         }),
         Err(KhataTathbeet::LubaTashtaghil { amaliya, tanfidhi: masar }) => Ok(HalatTashghil {
             tashtaghil: true,
+            majhul: false,
             amaliya: Some(amaliya),
             tanfidhi: Some(masar.to_string_lossy().into_owned()),
+        }),
+        // The sandbox verdict, which is an answer rather than a failure. It
+        // stays on the safe side — the install path refuses this case outright
+        // — but it is reported so the screen can say why instead of showing a
+        // bare error for a question it could simply not answer.
+        Err(KhataTathbeet::HalatLubaMajhula { .. }) => Ok(HalatTashghil {
+            tashtaghil: true,
+            majhul: true,
+            amaliya: None,
+            tanfidhi: Some(tanfidhi.to_owned()),
         }),
         Err(sabab) => Err(Khata::from(sabab)),
     }

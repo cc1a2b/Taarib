@@ -2,9 +2,14 @@
 
 Everything here has been read out of this tree. Where a step has not been
 automated, this file says so rather than describing a script that does not
-exist: there is **no CI configuration, no build script, and no `.ps1`/`.sh`
-wrapper anywhere in the repository**. The build is a sequence of commands, and
-this is that sequence.
+exist.
+
+Two things now exist that this file was written without: `scripts/isdar.sh`,
+which runs the whole release sequence in dependency order, and
+`.github/workflows/`, which runs the gates on Linux and Windows and the release
+sequence on dispatch. The sections below are still the sequence, and they are
+still worth reading — the script's refusals only make sense if you know what
+each step produces — but for an actual release build, run the script.
 
 ---
 
@@ -42,7 +47,7 @@ get a resolution that the lockfile did not describe.
 
 ## 2. The Rust workspace
 
-Twenty-eight members: the twenty-seven `crates/taarib-*` plus
+Twenty-nine members: the twenty-eight `crates/taarib-*` plus
 `apps/studio/src-tauri`. `vendor/retour` is excluded from the workspace and
 patched in over crates.io.
 
@@ -78,11 +83,18 @@ adjustable per crate.
 ### Verification
 
 ```bash
-cargo fmt --all -- --check
 cargo clippy --workspace --all-targets
 cargo test --workspace
 cargo deny check
 ```
+
+`cargo fmt --all -- --check` is deliberately **not** in that list. The tree is
+several thousand hunks from what stable rustfmt would produce — most of it
+rustfmt wanting to explode compact struct literals, method chains and
+`let … else` bodies that are written on one line here — so running it as a gate
+would fail on a clean checkout and teach everybody to ignore it. CI carries it
+as a non-blocking job for the same reason. It becomes a gate on the day a
+tree-wide format lands, and not before.
 
 `deny.toml` is doing real work, not licence bookkeeping. Two copies of
 `read-fonts` in the graph is a build failure, and a native HarfBuzz or
@@ -212,7 +224,12 @@ on the build machine instead of on a user whose install reported success.
 
 `crates/taarib-tajmee` gathers every already-built artifact into
 `apps/studio/src-tauri/mawarid/`, hashes each one, and writes
-`bayan_mukawwinat.json` last. **It builds nothing.** Everything below runs first,
+`bayan_mukawwinat.json` last. **It builds nothing**, and the consequence of that
+was not theoretical: a bundle assembled by hand shipped with the manifest
+absent, and every framework component then refused by name — the product
+started, scanned, found games, and could not patch one. `scripts/isdar.sh` runs
+the builds in dependency order and then this tool, which is why it exists.
+Everything below runs first,
 and the tool's whole contribution is that a missing artifact is named here, on a
 build machine, rather than discovered by a user whose install silently did
 nothing.
@@ -410,7 +427,14 @@ afternoons:
 - **No cross-compilation configuration.** `ROADMAP.md` §22 names `cargo-xwin`
   and `cross` as the intended technology; no such configuration file exists yet.
   Section 6 above is what is done instead.
-- **No release script.** The sequence in sections 4, 5 and 6 is run by hand.
+- ~~**No release script.**~~ `scripts/isdar.sh --hadaf <target-triple> [--jalb]`
+  now runs the sequence of sections 4, 5 and 6 in dependency order — `dotnet`
+  for the four Unity assemblies, `cargo` for the game-side cdylibs per platform,
+  `wasm-bindgen` for the wasm pair, `node adapters-script/ibni.mjs` for the two
+  script adapters, then `taarib-tajmee` — and `.github/workflows/isdar.yml` is
+  the same sequence on a runner. Run one of those rather than the sections by
+  hand. The sections remain, because knowing what each step produces is what
+  lets you read the staging tool's refusals.
 - **No macOS signing or notarization.** `signingIdentity` is deliberately unset
   in `tauri.conf.json` until an account exists. See `docs/tawzee/macos.md` §3
   for what that means for users, and for the `xattr -dr com.apple.quarantine`

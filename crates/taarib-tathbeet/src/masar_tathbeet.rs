@@ -187,15 +187,16 @@ fn hukm_tashghil(hala: HalatTashghil, ism: &str, tanfidhi: &str) -> NatijatTathb
         // matched and the message is worth a second pass. A process that exited
         // in between leaves the executable Taarib was asked about, which is
         // still true and still names the right thing to close.
-        HalatTashghil::Tashtaghil => {
-            let amaliya = manassa::amaliyat_bism(ism).into_iter().next();
-            Err(KhataTathbeet::LubaTashtaghil {
-                amaliya: amaliya.as_ref().map_or_else(|| ism.to_owned(), |a| a.ism.clone()),
-                tanfidhi: amaliya
-                    .and_then(|a| a.masar)
-                    .unwrap_or_else(|| PathBuf::from(tanfidhi)),
-            })
-        }
+        HalatTashghil::Tashtaghil => Err(match manassa::amaliyat_bism(ism).into_iter().next() {
+            Some(amaliya) => KhataTathbeet::LubaTashtaghil {
+                amaliya: amaliya.ism,
+                tanfidhi: amaliya.masar.unwrap_or_else(|| PathBuf::from(tanfidhi)),
+            },
+            None => KhataTathbeet::LubaTashtaghil {
+                amaliya: ism.to_owned(),
+                tanfidhi: PathBuf::from(tanfidhi),
+            },
+        }),
         HalatTashghil::GhayrMaaruf { sunduq } => {
             Err(KhataTathbeet::HalatLubaMajhula { sunduq, tanfidhi: PathBuf::from(tanfidhi) })
         }

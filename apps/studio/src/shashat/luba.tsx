@@ -961,6 +961,8 @@ interface KhasaisRuqaa {
   /** Actions are locked while the game runs or the first-run statement is unacknowledged. */
   readonly muqfal: boolean;
   readonly yashtaghil: boolean;
+  /** Whether {@link yashtaghil} is a precaution rather than an observation. */
+  readonly tashghilMajhul: boolean;
   readonly amaliya: string | null;
   readonly yahtajIqrar: boolean;
   /**
@@ -988,6 +990,7 @@ function QismRuqaa({
   mahmiya,
   muqfal,
   yashtaghil,
+  tashghilMajhul,
   amaliya,
   yahtajIqrar,
   hukmLugha,
@@ -1101,7 +1104,9 @@ function QismRuqaa({
           )}
           {yashtaghil ? (
             <p className="luba__nass-hadi luba__tahdheer">
-              {t('luba.tashghil.tahdheer', lugha, { amaliya: amaliya ?? '' })}
+              {tashghilMajhul
+                ? t('luba.tashghil.majhul', lugha)
+                : t('luba.tashghil.tahdheer', lugha, { amaliya: amaliya ?? '' })}
             </p>
           ) : yahtajIqrar ? (
             <p className="luba__nass-hadi luba__tahdheer">{t('luba.iqrar.qabl', lugha)}</p>
@@ -1346,6 +1351,12 @@ export function Luba(): JSX.Element {
   // that may have them open. The one safe reading of "we could not tell" is
   // the one that refuses.
   const yashtaghil = tashghil.data?.tashtaghil !== false;
+  // Distinguished only for the sentence. A sandboxed build sees its own process
+  // table rather than the host's, so it cannot observe a running game at all —
+  // and telling somebody "close the game" when nothing was seen running sends
+  // them to close a window that may not be open. The refusal is the same either
+  // way; only the explanation differs.
+  const tashghilMajhul = tashghil.data?.majhul === true || tashghil.isError;
   const yahtajIqrar = iqrar.data?.yahtaj !== false;
   const muqfal = yashtaghil || yahtajIqrar;
 
@@ -1675,6 +1686,7 @@ export function Luba(): JSX.Element {
                   mahmiya={mahmiya}
                   muqfal={muqfal}
                   yashtaghil={yashtaghil}
+                  tashghilMajhul={tashghilMajhul}
                   amaliya={tashghil.data?.amaliya ?? null}
                   yahtajIqrar={yahtajIqrar}
                   hukmLugha={lughaRasmiya.data ?? null}
@@ -1714,9 +1726,11 @@ export function Luba(): JSX.Element {
 
                         {yashtaghil ? (
                           <p className="luba__nass-hadi luba__tahdheer">
-                            {t('luba.tashghil.tahdheer', lugha, {
-                              amaliya: tashghil.data?.amaliya ?? '',
-                            })}
+                            {tashghilMajhul
+                              ? t('luba.tashghil.majhul', lugha)
+                              : t('luba.tashghil.tahdheer', lugha, {
+                                  amaliya: tashghil.data?.amaliya ?? '',
+                                })}
                           </p>
                         ) : yahtajIqrar ? (
                           <p className="luba__nass-hadi luba__tahdheer">

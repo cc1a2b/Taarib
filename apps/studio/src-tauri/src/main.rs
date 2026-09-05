@@ -785,13 +785,21 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
     // Collect-and-continue rather than fail-fast: a first run with one
     // unwritable corner must still reach the window, where the diagnostics
     // screen can say which corner.
-    let tahdheerat_bidaya = bidaya::jahhiz(&masarat);
+    let mut tahdheerat_bidaya = bidaya::jahhiz(&masarat);
 
     // Never fails, for the reason [`iftah_idadat`] gives: settings this process
     // cannot read cost the user their preferences for one launch, not the
     // launch itself.
     let (makhzan, taadhur_idadat) = iftah_idadat(&masarat);
     let idadat = makhzan.hali();
+
+    // Only now, because the setting that redirects it lives in the file the
+    // sweep above had to create the directory for. Settings → Storage has
+    // always let people move where patches are kept, and until this line
+    // nothing on this side read the value: they set it, and Taarib went on
+    // writing to the default root.
+    let masarat = masarat.maa_jidhr_ruqaa(idadat.takhzin.jidhr_ruqaa.as_deref());
+    tahdheerat_bidaya.extend(bidaya::jahhiz_ruqaa(&masarat));
 
     let haris = sijill::hayyi(&masarat, idadat.tashkhis.mustawa)?;
     // After the subscriber exists, so nothing is emitted into a dropped sink,

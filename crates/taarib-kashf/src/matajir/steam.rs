@@ -2080,8 +2080,6 @@ mod ikhtibarat {
     use std::error::Error;
     use std::fs;
 
-    use taarib_usus::idadat::IdadatManassat;
-
     use super::*;
 
     /// Every test returns this so that a setup failure propagates with `?`.
@@ -2108,13 +2106,9 @@ mod ikhtibarat {
     }
 
     fn siyaq(manzil: &Path) -> SiyaqFahs {
-        SiyaqFahs {
-            nizam: NizamTashghil::Linux,
-            manassat: IdadatManassat::default(),
-            manzil: manzil.to_path_buf(),
-            mujalladat_baramij: Vec::new(),
-            yashmal_hawiyat: true,
-        }
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Linux, manzil);
+        siyaq.yashmal_hawiyat = true;
+        siyaq
     }
 
     fn jidhr_hawiya(manzil: &Path) -> PathBuf {
@@ -2218,13 +2212,9 @@ mod ikhtibarat {
     /// values falls through from. That is the only state in which these
     /// candidates are ever read.
     fn siyaq_windows(manzil: &Path, baramij: &[PathBuf]) -> SiyaqFahs {
-        SiyaqFahs {
-            nizam: NizamTashghil::Windows,
-            manassat: IdadatManassat::default(),
-            manzil: manzil.to_path_buf(),
-            mujalladat_baramij: baramij.to_vec(),
-            yashmal_hawiyat: false,
-        }
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, manzil);
+        siyaq.mujalladat_baramij = baramij.to_vec();
+        siyaq
     }
 
     #[test]
@@ -2268,7 +2258,7 @@ mod ikhtibarat {
         let baramij = qurs.path().join("Program Files (x86)");
         ansha_jidhr(&baramij.join("Steam"), 220, "Half-Life 2")?;
 
-        let judhur = hall_judhur(&siyaq_windows(qurs.path(), &[baramij.clone()]))?;
+        let judhur = hall_judhur(&siyaq_windows(qurs.path(), std::slice::from_ref(&baramij)))?;
         assert!(
             judhur.contains(&baramij.join("Steam")),
             "the root under the context's program directory must be found: {judhur:?}"

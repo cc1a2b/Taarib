@@ -355,8 +355,10 @@ The full architecture, crate by crate, is [`docs/mimar.md`](docs/mimar.md).
 
 ## Coverage
 
-**Operating systems.** Windows 10 1809+, Linux (including Steam Deck), macOS
-12+, on x86-64, ARM64, and 32-bit x86 for game processes that need it. Games
+**Operating systems.** Windows 10 1809+ and Linux, including the Steam Deck, on
+x86-64, ARM64, and 32-bit x86 for game processes that need it. **macOS is not
+supported** — the bundle targets are configured and the workspace does not build
+for Apple; see the platform table below for what that actually costs. Games
 running under Proton or Wine are understood as such: Taarib resolves the prefix,
 maps `Z:\` and the drive letters to real paths, installs the Windows-side
 framework into the Windows-side game directory, and sets launch options through
@@ -562,7 +564,7 @@ player flow to end in Arabic on screen.
 taarib/
   ROADMAP.md          the build contract: 24 phases, every constraint, every decision
   docs/               architecture, the ABI, the packaging contract, per-platform notes
-  crates/             27 Rust crates
+  crates/             28 Rust crates
     taarib-usus/          foundations: errors, diagnostics, config, paths, platform
     taarib-mustalahat/    the shared vocabulary, source of TypeScript and JSON Schema
     taarib-saff/          the Arabic text engine
@@ -577,6 +579,7 @@ taarib/
     taarib-haqn/          injection and hooks  taarib-mudkhal/   the in-game loader
     taarib-muhawwil-*/    Unreal, Godot and script-engine adapters
     taarib-tabaqa/        the universal overlay
+    taarib-tilqai/        the one-button pipeline: probe, extract, translate, build, install
     taarib-khatm/         signing              taarib-makhzan/   the local store
     taarib-warsha/        collaborative workspace
     taarib-tahdith/       the application's own updates

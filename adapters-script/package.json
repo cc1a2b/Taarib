@@ -3,11 +3,27 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "أدوات بناء ملحقات تعريب — the compiler for the two TypeScript adapters (rows I1 and I2 of docs/tawzee.md §3).",
+  "description": "أدوات بناء ملحقات تعريب — the compilers for the two TypeScript adapters (rows I1 and I2 of docs/tawzee.md §3).",
   "license": "MPL-2.0",
+  "// esbuild": [
+    "0.28.2 emits row I1. It cannot emit row I2: `--target=es5` fails with",
+    "'Transforming const to the configured target environment (\"es5\") is not",
+    "supported yet', because lowering const/let to var is not implemented.",
+    "pnpm 10 blocks esbuild's postinstall and says so on every install. Harmless:",
+    "that script only verifies the platform binary its optional dependency",
+    "already installed, and `ibni.mjs` proves the binary works by running it."
+  ],
+  "// typescript": [
+    "6.0.3, not the 7.0.2 the studio uses, and this is the one place in the",
+    "repository that holds an older major on purpose. TypeScript 7 removed the",
+    "ES5 target outright — `tsc` answers TS5108 'Option target=ES5 has been",
+    "removed' — and row I2 has to be ES5 for RPG Maker MV's NW.js 0.12,",
+    "Chromium 41. 6.0 still emits it behind `ignoreDeprecations: 6.0`. When that",
+    "floor is raised, this pin goes with it and not before."
+  ],
   "scripts": {
     "bina": "node ibni.mjs",
-    "tadqiq": "tsc -p tsconfig.json"
+    "tadqiq": "tsc -p tsconfig.rpgmaker.json --noEmit && tsc -p tsconfig.electron.json"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

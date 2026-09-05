@@ -53,9 +53,15 @@ set is what lets an offline mirror carry them as ordinary files.
   "tasalsul": 1,                       // monotonic; a client never accepts a lower one
   "waqt": "2026-09-04T00:00:00Z",      // RFC 3339
   "sharaih": { "0": "<64 hex>", … },   // shard index -> BLAKE3 of that shard's bytes
-  "rabt_qaimat_sahb": "sahb/qaima.json"
+  "rabt_qaimat_sahb": "sahb/qaima.json",
+  "tajawuzat": [ … ]                   // optional; omitted entirely when empty
 }
 ```
+
+Both this object and `tajawuzat`'s entries carry `#[serde(deny_unknown_fields)]`
+(`crates/taarib-mustawda/src/fahras.rs:40`, `:56`), so a field this build does not
+know is `BayanTalif` and not a forward-compatible extension. Add nothing here that
+`BayanMustawda` does not declare.
 
 `rabt_qaimat_sahb` is **repository-relative and nothing else**. An absolute
 address there would be a manifest aiming the fetch at a host of its choosing,
@@ -86,6 +92,52 @@ the manifest plus one shard per distinct bucket its library touches — 17 games
 in the verification below fell in 17 distinct buckets — and an unchanged
 manifest costs zero requests, because a cached shard whose hash still matches is
 read from `makhbaa/mustawda/sharaih/` and never requested.
+
+### `tajawuzat` — patches published over their own coverage gate
+
+Optional, and absent from the document rather than written as `[]` when there are
+none (`fahras.rs:74`). A manifest cast before the field existed still parses, and an
+ordinary catalogue's bytes are unchanged by it, which is why adding it did not move
+`ISDAR_BAYAN` off 1.
+
+An entry is written when an operator publishes a patch its own coverage gate
+refused. That is a legitimate thing to do — publishing your own unfinished work is
+allowed — and doing it *quietly* is not, because a listing that says nothing looks
+exactly like one the gate passed. So the override travels with the catalogue and is
+read by every client on every index refresh, instead of living in a terminal nobody
+kept.
+
+```jsonc
+{
+  "ruqaa": "<patch lineage uuid>",     // RuqaaId
+  "murajaa": 3,                        // RuqaaRevision — the exact revision published
+  "asbab": [ "…", "…" ],               // every BLOCKING cause the gate named, verbatim
+  "sabab": "the sentence the operator had to write"
+}
+```
+
+`asbab` holds the gate's own sentences, rendered by
+`taarib_tarqee::taghtiya_ruqaa::SababAdamAlnashr` rather than paraphrased, so the
+record cannot understate what was overridden. Advisory causes are left out: they did
+not refuse the package, and listing them would pad the record with things nobody
+overrode.
+
+`sabk` writes it. `--tajawuz <why>` follows a `--huzma`
+(`crates/taarib-mustawda/src/bin/sabk.rs:627`), the gate is consulted at
+`bawwabat_taghtiya` (`:238`), and the entry is built at `:282` and collected into the
+manifest at `:405`. Two refusals guard it in both directions: a package whose gate
+already permits it is told it needs no override (`:247`), and a package whose gate
+refuses it will not publish without one (`:275`).
+
+`BayanMustawda::tajawuz(ruqaa, murajaa)` (`fahras.rs:97`) is the lookup, keyed on the
+revision as well as the lineage — an override is granted for the package that was in
+front of the operator, and a later revision of the same patch has to earn its own.
+
+**Nothing reads it yet.** That accessor has no caller outside its own crate: no
+client surface shows the override, so today the field is a durable record in the
+catalogue and not something a user sees. Publishing an override is therefore honest
+in the artifact and invisible in the application, which is half of what it was added
+for.
 
 ## 3. `sharaih/{raqm:02x}.json` — a shard
 

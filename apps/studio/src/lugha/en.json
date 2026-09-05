@@ -924,5 +924,6 @@
   "idadat.taareeb.sharh": "Which of your games Taarib offers patches for, and which it leaves alone.",
   "idadat.taareeb.istibdal": "List patches for games whose publisher already ships Arabic",
   "idadat.taareeb.athar": "These games stay in your library marked with the Arabic they already have either way; this only decides whether patches are listed for them.",
-  "idadat.taareeb.mufaal": "Patches are now listed for these games. Installing one over an officially translated game replaces paid, reviewed human translation with a machine's output. The registry refuses a submission for such a game whatever this is set to."
+  "idadat.taareeb.mufaal": "Patches are now listed for these games. Installing one over an officially translated game replaces paid, reviewed human translation with a machine's output. The registry refuses a submission for such a game whatever this is set to.",
+  "luba.tashghil.majhul": "Taarib cannot see the processes running on this machine, so it cannot confirm the game is closed. Nothing is installed or removed while that is unknown. If you are running Taarib inside a sandbox — Flatpak, Snap, a container — use the AppImage instead."
 }

@@ -25,6 +25,12 @@
 //! then the platform defaults above. Under the marker, both roots live inside
 //! one `bayanat` directory next to the executable, and the machine itself
 //! keeps nothing.
+//!
+//! One directory in the layout moves on its own: `ruqaa/`, through
+//! [`Masarat::maa_jidhr_ruqaa`], for a patch library that has outgrown a small
+//! system drive. Everything else is derived from the two roots and always will
+//! be — a second movable directory is a second way for the layout to be half
+//! somewhere else.
 
 use std::collections::BTreeMap;
 use std::fs;

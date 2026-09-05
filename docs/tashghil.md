@@ -31,7 +31,7 @@ delivery format is correct — nothing about whether a player ever reaches it.
 
 Until recently "nothing renders" was true everywhere and one sentence covered the
 whole table. It no longer is, and the difference matters more to a user than
-anything else on this page, because two of these rows end with a game that is
+anything else on this page, because three of these rows can end with a game that is
 **worse than it was**.
 
 1. **Nothing reaches the game.** The install may place Taarib's own files beside
@@ -67,7 +67,7 @@ outcome above.
 | engine | tier | jahiziya | out | what actually runs | where the chain stops |
 | --- | --- | --- | --- | --- | --- |
 | Unity / Mono | 1 | `Ghaiba` | 1 | the component is deployed and the chainloader will not load it | `MulhaqTaarib.Awake` — `unity/Taarib.Unity.Mono/Taarib.cs:275` |
-| Unity / IL2CPP | 1 | `Ghaiba` | 1 | the assembly matches its loader and has no native library under it | `Jisr`'s `DllImport`s — `unity/Taarib.Unity.Jisr/Jisr.cs:64` |
+| Unity / IL2CPP | 1 | `Ghaiba` | 1 | the assembly matches its loader; nothing has been observed running | `Jisr`'s `DllImport`s — `unity/Taarib.Unity.Jisr/Jisr.cs:64` |
 | Unreal | 1 | `Ghaiba` | 1 | the loader, and one console variable written into `Engine.ini` | `KatibPak::uktub_fi_luba` — `crates/taarib-muhawwil-unreal/src/mawarid/pak.rs:2989` |
 | Godot 4 | 1 | `Ghaiba` | 1 | nothing; the engine is never told to load the extension | `tahyia_mustawa` — `crates/taarib-muhawwil-godot/src/imtidad.rs:2054` |
 | Godot 3 | 2 | `Ghaiba` | 1 | the loader, the GDNative binding, and the patch is mapped | `sallim` — `crates/taarib-muhawwil-godot/src/bidaya.rs:1151` |
@@ -76,7 +76,7 @@ outcome above.
 | Ren'Py ≥ 7.4 | 1 | **`Naqisa`** | 3\* | the whole tier except an Arabic font | `Mawarid::khatt_renpy` — `crates/taarib-tathbeet/src/nusus.rs:253` |
 | Ren'Py < 7.4 | 1 | `Ghaiba` | 3 | the translation installs; the engine blits one character at a time | `saf_mulhaq` — `crates/taarib-tajmee/src/masfufa.rs:206` |
 | GameMaker | 1 | `Ghaiba` | 3 | the string pool is rewritten and no glyph pages are made | `rakkib_gamemaker` — `crates/taarib-muhawwil-nusus/src/tarkeeb.rs:713` |
-| Electron | 1 | `Ghaiba` | 2 | the adapter refuses this package by name and stops the install | `rakkib_ghilaf` — `crates/taarib-muhawwil-nusus/src/tarkeeb.rs:782` |
+| Electron | 1 | `Ghaiba` | 2 | the adapter refuses this package by name and stops the install | `rakkib_ghilaf` — `crates/taarib-muhawwil-nusus/src/tarkeeb.rs:783` |
 | overlay (tier 3, every unrecognised engine) | 3 | `Ghaiba` | 1 | the present hook, the game's own device, a complete render pipeline, and a draw batch nothing feeds | `Tabaqa::iltaqit` — `crates/taarib-tabaqa/src/wajiha.rs:891` |
 
 \* Ren'Py ≥ 7.4 is outcome 3 only when the game's own font has no Arabic letters.
@@ -119,24 +119,28 @@ The rest of this file is each row in full.
 
 The C# is not the problem. `unity/` is about 48,000 lines with no
 `NotImplementedException`, no `TODO`, and no stubbed method. The Mono adapter
-takes four HarmonyX prefixes over `TextMeshProUGUI.GenerateTextMesh` and its
-siblings (`unity/Taarib.Unity.Mono/Anzimat/TextMeshPro.cs:1911`, `:1914`),
-installs them at `:2585`, and hands the finished mesh back to the renderer at
-`:2474`. The IL2CPP adapter resolves its targets through a three-rung ladder —
+registers four HarmonyX prefixes — `GenerateTextMesh` and `UpdateMaterial` on each
+of the screen-space and world-space components
+(`unity/Taarib.Unity.Mono/Anzimat/TextMeshPro.cs:1909`–`:1920`) — installs them at
+`:2585`, and hands the finished mesh back to the renderer at `:2474`. Only the two
+`GenerateTextMesh` prefixes are load-bearing: if neither takes, the whole system is
+disposed and reports so (`:1922`). The IL2CPP adapter resolves its targets through a
+three-rung ladder —
 Il2CppInterop metadata, the `il2cpp_*` runtime API, then a byte-signature scan
 over the executable — and falls back to hand-written x64 and ARM trampolines
 (`unity/Taarib.Unity.Il2cpp/Khatf/Mihmaz.cs:167`) when HarmonyX cannot take a
 target.
 
-It compiles now. `unity/**/bin/Release/**` holds `Taarib.Unity.Jisr.dll`,
-`Taarib.Unity.Mushtarak.dll`, `Taarib.Unity.Mono.dll` and
-`Taarib.Unity.Il2cpp.dll`, built 2026-09-05. That is a **local build output and
-not repository content** — `.gitignore:48` excludes `unity/**/bin/` — and nothing
-in the repository produces it: the only occurrences of `dotnet build` are the two
-READMEs, `docs/bina.md:242`, and the instruction block `taarib-tajmee` prints,
-which opens `This tool builds nothing. Run these first:`
-(`crates/taarib-tajmee/src/main.rs:153`). There is no CI step; `.github/workflows/`
-holds `ci.yml` and `macos-probe.yml`, and neither invokes `dotnet`.
+It compiles now, and the repository builds it. `unity/**/bin/Release/**` holds
+`Taarib.Unity.Jisr.dll`, `Taarib.Unity.Mushtarak.dll`, `Taarib.Unity.Mono.dll` and
+`Taarib.Unity.Il2cpp.dll`, built 2026-09-05 — a local output rather than repository
+content, since `.gitignore:48` excludes `unity/**/bin/`. What produces them is
+`scripts/isdar.sh:138` (`dotnet build unity/Taarib.Unity.sln -c Release`), which
+`.github/workflows/isdar.yml:249` runs on a runner — on `workflow_dispatch`, not on
+every push — and which `taarib-tajmee --help` names as the one command that builds
+the bundle in order (`crates/taarib-tajmee/src/main.rs:153` onward). Both landed on
+2026-09-05; this row's paragraph used to say no such step existed anywhere, and that
+is no longer true.
 
 The staging path that used to be wrong is fixed. `tajmiaat`
 (`crates/taarib-tajmee/src/masfufa.rs:231`) now resolves the target-framework
@@ -153,18 +157,20 @@ false for whichever it did not describe.
   `assets/aqfal/qufl_bepinex.json` pins **v5.4.23.5** for this backend. Under
   BepInEx 5 the base types live in assemblies the plugin does not name, so the
   chainloader cannot bind it and `Awake` (`Taarib.cs:275`) is never entered.
-* **IL2CPP matches its loader and has nothing underneath it.**
+* **IL2CPP matches its loader, and its stated gap has just been overtaken.**
   `Taarib.Unity.Il2cpp.csproj:70` references `BepInEx.Unity.IL2CPP` 6.0.0-be.780
-  and the lock ships **v6.0.0-pre.2** for this backend — the same generation. What
-  is absent is a rung lower: all twenty-nine of `Taarib.Unity.Jisr`'s `DllImport`s
-  bind the bare name `taarib_jisr` (`unity/Taarib.Unity.Jisr/Jisr.cs:64` onward,
-  the only file in `Taarib.Unity.*` that declares one), which is matrix rows B1–B3
-  out of the `taarib-jisr` cdylib. `saf_bepinex` stages it from
-  `<target dir>/<triple>/release/` (`masfufa.rs:102`–`:109`), and no per-target
-  build of that cdylib is produced by anything in the repository — the cross-target
-  `cargo build --release --target …` line is in the same "run these first" block.
-  A managed assembly with no native library beneath it loads and then fails at its
-  first call.
+  and the lock ships **v6.0.0-pre.2** for this backend — the same generation. The
+  rung below it is the native library: all twenty-nine of `Taarib.Unity.Jisr`'s
+  `DllImport`s bind the bare name `taarib_jisr`
+  (`unity/Taarib.Unity.Jisr/Jisr.cs:64` onward, the only file in `Taarib.Unity.*`
+  that declares one), which is matrix rows B1–B3 out of the `taarib-jisr` cdylib,
+  and `saf_bepinex` stages it from `<target dir>/<triple>/release/`
+  (`masfufa.rs:102`–`:109`). Until 2026-09-05 nothing produced that per-target
+  build; `scripts/isdar.sh` now does, for every triple in `hamulat_alalaab`. So
+  the reason `imkaniyat::naqs_unity`'s IL2CPP arm (`imkaniyat.rs:621`) gives — "the
+  native library it calls into is not in this package" — is a statement about a
+  tree that has moved. The verdict is still `Ghaiba` because nothing has been
+  observed running on this backend, not because the library is still missing.
 * **World-space `TextMesh` would translate nothing even on a working install.**
   `NizamMujassam.Fahras`
   (`unity/Taarib.Unity.Mono/Anzimat/NassMujassam.cs:281`) is the scan that finds
@@ -205,8 +211,13 @@ Everything that would produce Arabic is declined by name:
 * `KatibPak::uktub_fi_luba` (`src/mawarid/pak.rs:2989`), which would author the
   additive patch pak, is called only from `tests/hala_ahruf.rs:132` and `:158`.
   `taarib-istikhraj/src/unreal.rs` uses the `mawarid` readers and writes nothing.
-* The Slate shaping switch itself is behind `--features hamula`, which no manifest
-  in the workspace enables.
+* The Slate shaping switch itself is behind `--features hamula`
+  (`crates/taarib-muhawwil-unreal/Cargo.toml:21`), which no manifest in the workspace
+  turns on by default. Only the release build passes it — `scripts/isdar.sh` and
+  `.github/workflows/isdar.yml:105` — so a payload built by a plain
+  `cargo build --release` exports no `taarib_bidaya` at all and writes no
+  `Engine.ini`. That is the one Unreal effect this row credits, and it exists only in
+  a bundle built the documented way.
 
 ## Godot 4
 
@@ -248,7 +259,7 @@ layout policy.*
 Both seams are open. `thabbit_tawseel` (`:805`) and `thabbit_istila` (`:780`) have
 zero callers, so `awsil` (`:1089`) takes its refusal branch at `:1095` before a
 `.translation` resource is written, and `sallim` takes the `Mumtania` branch at
-`:1191` before a detour is installed. `istila.rs` is complete — three detours,
+`:1197` before a detour is installed. `istila.rs` is complete — three detours,
 glyph emission through `VisualServer::canvas_item_add_texture_rect_region`, and a
 guard at `istila.rs:2570` that refuses a half-supplied configuration — and it
 refuses to guess an address, which is correct: a detour installed on the wrong
@@ -275,20 +286,22 @@ substitutes at draw time (`rpgmaker::tahaqquq_hurub`, `rpgmaker.rs:2226`), and c
 `rpgmaker::rakkib` (`rpgmaker.rs:2258`) at `tarkeeb.rs:457`.
 
 **The install does not survive it.** `mulhaqat_muharrik` routes this family to
-`rpg_maker` (`tarkib.rs:2099`) unconditionally, which asks `asmaa_mukawwin` for the
-contents of `mulhaq/rpgmaker/{mv,mz}` and raises `MukawwinMafqud` (`tarkib.rs:1003`)
-when the component store does not hold it. The deployment step runs *after* the
-splice (`masar_tathbeet.rs:135` then `:141`), so the splice happens and is then
+`rpg_maker` (`tarkib.rs:2099`) unconditionally, which asks `asmaa_mukawwin`
+(`tarkib.rs:1956`) for the contents of `mulhaq/rpgmaker/{mv,mz}` and gets
+`MukawwinMafqud` at `:1966` when the store does not hold it. Deployment runs *after*
+the splice (`masar_tathbeet.rs:135`, then `:141`), so the splice happens and is then
 rolled back with the failed install. That is outcome 2: nothing is left in the game.
 
 Whether the store holds it depends on a step outside cargo. `taarib-tajmee` stages
 row I2 from `target/adapters/rpgmaker/taarib.js` (`masfufa.rs:180`, `:183`). Until
 2026-09-05 nothing in the repository produced that file. `adapters-script/ibni.mjs`
-now does — it drives `tsc` for I2 and `esbuild` for I1, and `package.json` exposes it
-as `pnpm bina` — and no CI workflow invokes it, so a bundle staged without that step
-still has no RPG Maker support. `imkaniyat::jahiziya` has not moved for this family
-and its arm's stated reason (`imkaniyat.rs:739`) is the one now in motion; see
-"Keeping this file true".
+now does — `tsc` for I2, because the plugin has to be ES5 and `esbuild` cannot lower
+`const`/`let` to `var`; `esbuild` for I1 — and `scripts/isdar.sh:199` runs it as one
+step of the release build. So `imkaniyat::naqs_rpg_maker` (`imkaniyat.rs:739`) says
+the module "is not built into this package", and that is now a statement about a
+tree that has moved. A bundle staged by hand without `isdar.sh` still refuses, which
+is the failure this row describes; a bundle built the documented way no longer
+reaches it, and the verdict has not been re-established against that.
 
 Two further defects sit behind that one and are not what stops it. The registration
 is written with `"parameters":{}` (`tarkib.rs:70`) because `IdadatMulhaq::barametr`
@@ -418,10 +431,13 @@ nothing left behind.
 `tashghil_ghilaf` comes from `iqra_tashghil` (`nusus.rs:280`) reading
 `mulhaq/electron/taarib.js` out of the component store, which `taarib-tajmee` stages
 from `target/adapters/electron/taarib.js` (`masfufa.rs:195`, `:196`). As with RPG
-Maker, `adapters-script/ibni.mjs` now compiles it and no CI step runs that compiler.
+Maker, `adapters-script/ibni.mjs` now compiles it and `scripts/isdar.sh:199` runs
+that compiler, so `imkaniyat::naqs_electron` (`imkaniyat.rs:898`) states a gap the
+tree has closed on the production side. What has not been established is that the
+compiled runtime does anything in a real game.
 
-There is a third break inside the adapter itself, and it survives a perfect install.
-Its canvas rung resolves the text engine through `globalThis.taaribNawat`
+There is a reason to doubt it, and it is a break inside the adapter that survives a
+perfect install. Its canvas rung resolves the text engine through `globalThis.taaribNawat`
 (`adapters-script/electron/taarib.ts:1326`), and that name is read once in the whole
 repository and written nowhere — unlike the RPG Maker adapter, this one never loads
 the WebAssembly core. The takeover rung therefore takes the failure branch at
@@ -512,12 +528,30 @@ inside, and the two files must agree. When a seam closes:
    from 2 when Ren'Py stopped answering `Ghaiba` unconditionally;
 3. update the row here and in `docs/bidaya.md` §6.
 
-Two rows are in motion as this is written, and a reader should treat them as the
-least settled things on the page: `adapters-script/ibni.mjs` landed on 2026-09-05 and
-compiles the Electron and RPG Maker adapters, which is the component both of those
-rows refuse for, and the Unity assemblies were built locally the same day. Neither is
-reached by CI and neither has moved a `jahiziya` arm. When they do, the arms at
-`imkaniyat.rs:739` and `:898` are the ones to change, and `ISDAR_FAHS` goes to 4.
+**Three rows are in motion as this is written**, and a reader should treat them as
+the least settled things on this page. On 2026-09-05 the repository gained a build
+pipeline it did not have — `adapters-script/ibni.mjs`, `scripts/isdar.sh`, and
+`.github/workflows/isdar.yml` — which produces the four Unity assemblies, the
+game-side cdylibs for every payload triple, the wasm pair, and both TypeScript
+adapters. That closes the *production* half of the reason three arms give:
+
+| arm | stated reason | status |
+| --- | --- | --- |
+| `naqs_unity` IL2CPP (`imkaniyat.rs:621`) | no per-target `taarib_jisr` is produced | `isdar.sh` builds it per triple |
+| `naqs_rpg_maker` (`imkaniyat.rs:739`) | the plugin is not built into this package | `isdar.sh:199` builds it |
+| `naqs_electron` (`imkaniyat.rs:898`) | the renderer runtime is not built | `isdar.sh:199` builds it |
+
+None of the three verdicts has moved, and none should move on the strength of a
+build step alone. `jahiziya` answers whether **a player sees legible Arabic**, and
+producing an artifact is not evidence about a screen. What these three now need is
+the thing this whole document says it does not have for any row: a game, an install,
+and somebody looking at it. Until then the arms are right and their sentences are
+stale, which is the least bad of the available states and is why it is written down
+here rather than quietly corrected in the code.
+
+The three sentences should be reworded when somebody re-reads those adapters against
+the new tree; `ISDAR_FAHS` goes to 4 in the same commit, because a reworded sentence
+is a different report for a game whose files did not change.
 
 A row that says a chain stops somewhere it no longer stops is worse than no row: it
 is a claim with a file and a line number attached, which is exactly the shape of a

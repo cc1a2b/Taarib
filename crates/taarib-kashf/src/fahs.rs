@@ -269,9 +269,21 @@ impl NatijatMatjar {
 
 /// Everything an adapter is given.
 ///
-/// Passed by reference to every adapter so that none of them reads the
-/// environment, resolves a home directory, or decides what platform it is on —
-/// all of which would be ten chances to disagree.
+/// Passed by reference to every adapter so that none of them resolves an
+/// *ambient* fact for itself: the platform, the user's home directory, Windows'
+/// program and data directories, the XDG base directories. Seventeen adapters
+/// consult those, so seventeen private resolvers would be seventeen chances to
+/// disagree — and the one that disagreed would be the one nobody could test,
+/// because since edition 2024 `std::env::set_var` is `unsafe` and racy, so a
+/// resolver that reads the environment inline cannot be pointed anywhere by a
+/// test without mutating the process every other test is sharing.
+///
+/// The rule is about *ambient* facts, and it is exactly that narrow. A variable
+/// that belongs to one launcher and is read by the one adapter that owns it —
+/// `LEGENDARY_CONFIG_PATH` is the only one left — is that launcher speaking
+/// about itself, exactly like a file in its own configuration directory. There
+/// is nobody for it to disagree with, and hoisting it here would put one
+/// launcher's vocabulary on the struct the other sixteen are handed.
 #[derive(Debug, Clone)]
 pub struct SiyaqFahs {
     /// The operating system.
@@ -289,6 +301,43 @@ pub struct SiyaqFahs {
     /// that wrote `C:\Program Files` instead would be right on every machine
     /// whose Windows is on `C:` and quietly wrong on the rest.
     pub mujalladat_baramij: Vec<PathBuf>,
+    /// Windows' machine-wide application data directory, `%PROGRAMDATA%`.
+    ///
+    /// Five launchers keep their catalogue under it — the EA app, Origin,
+    /// Battle.net's Agent, Epic and GOG Galaxy — because one machine has one
+    /// copy of each however many people log in. [`None`] on Linux and macOS,
+    /// which have no such folder; the `C:\ProgramData` default stands in only
+    /// on a Windows machine whose variable is unset, which happens in stripped
+    /// service environments.
+    pub bayanat_barnamij: Option<PathBuf>,
+    /// Windows' per-user roaming application data directory, `%APPDATA%`.
+    ///
+    /// [`None`] off Windows. Read from the environment rather than assembled
+    /// under [`Self::manzil`] because a domain profile can redirect it to a
+    /// network share, and the home-relative layout is the fallback for the
+    /// ordinary case where it is not set.
+    pub bayanat_mutajawwila: Option<PathBuf>,
+    /// Windows' per-user local application data directory, `%LOCALAPPDATA%`.
+    ///
+    /// [`None`] off Windows, and redirectable for the same reason
+    /// [`Self::bayanat_mutajawwila`] is.
+    pub bayanat_mahalliya: Option<PathBuf>,
+    /// `$XDG_DATA_HOME`, or the home-relative default the specification names.
+    ///
+    /// Unlike the Windows folders above this always has a value: the XDG
+    /// specification defines the fallback for every machine, so there is no
+    /// state to represent with [`None`]. Which platform consults it is the
+    /// adapters' business — Bottles and Lutris do, and nothing on Windows does.
+    ///
+    /// A relative value is ignored rather than resolved, here and for the two
+    /// below, because the specification says a relative value is invalid and
+    /// because accepting one would make discovery depend on the directory this
+    /// process happened to start in.
+    pub khazina_bayanat: PathBuf,
+    /// `$XDG_CONFIG_HOME`, or the home-relative default.
+    pub khazina_idadat: PathBuf,
+    /// `$XDG_CACHE_HOME`, or the home-relative default.
+    pub khazina_makhbaa: PathBuf,
     /// Whether to look inside Flatpak and Snap layouts as well as native ones.
     /// On by default on Linux, where a large share of Steam installations are
     /// Flatpak and a scanner that only knows the native path finds nothing.
@@ -304,6 +353,32 @@ impl SiyaqFahs {
         muktashaf: Option<PathBuf>,
     ) -> Option<PathBuf> {
         tajawuz.cloned().or(muktashaf)
+    }
+
+    /// A context that knows a platform and a home directory and nothing else,
+    /// for a test that then sets the one field it is about.
+    ///
+    /// Every Windows directory is [`None`] and every XDG directory is the
+    /// specification's default *under the given home*, so a test that forgets
+    /// to set the field it is exercising gets an empty answer rather than the
+    /// developer's own machine — which is the difference between a test that
+    /// proves resolution comes off the context and one that passes because this
+    /// machine happened to agree with the hardcoded fallback it replaced.
+    #[cfg(test)]
+    pub(crate) fn lil_ikhtibar(nizam: NizamTashghil, manzil: &std::path::Path) -> Self {
+        Self {
+            nizam,
+            manassat: IdadatManassat::default(),
+            manzil: manzil.to_path_buf(),
+            mujalladat_baramij: Vec::new(),
+            bayanat_barnamij: None,
+            bayanat_mutajawwila: None,
+            bayanat_mahalliya: None,
+            khazina_bayanat: manzil.join(".local").join("share"),
+            khazina_idadat: manzil.join(".config"),
+            khazina_makhbaa: manzil.join(".cache"),
+            yashmal_hawiyat: false,
+        }
     }
 }
 

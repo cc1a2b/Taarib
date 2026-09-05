@@ -143,7 +143,7 @@ impl Matjar for MatjarEpic {
         if let Some(tajawuz) = siyaq.manassat.epic.as_ref() {
             return Some(tajawuz.clone());
         }
-        let jidhr = jidhr_tilqai(siyaq.nizam);
+        let jidhr = jidhr_tilqai(siyaq)?;
         jidhr.is_dir().then_some(jidhr)
     }
 
@@ -170,7 +170,12 @@ impl Matjar for MatjarEpic {
                 .into());
             },
             Some(tajawuz) => tajawuz.clone(),
-            None => jidhr_tilqai(siyaq.nizam),
+            // No data root to look in is the same answer as an empty one: the
+            // launcher is not here.
+            None => match jidhr_tilqai(siyaq) {
+                Some(jidhr) => jidhr,
+                None => return Ok(NatijatMatjar::ghayr_mutah(MUARRIF)),
+            },
         };
 
         let Some(mujallad) = mujallad_bayanat(&jidhr) else {
@@ -275,7 +280,9 @@ impl Matjar for MatjarEpic {
         if !MANASSAT.contains(&siyaq.nizam) {
             return Vec::new();
         }
-        let jidhr = siyaq.manassat.epic.clone().unwrap_or_else(|| jidhr_tilqai(siyaq.nizam));
+        let Some(jidhr) = siyaq.manassat.epic.clone().or_else(|| jidhr_tilqai(siyaq)) else {
+            return Vec::new();
+        };
         let mut judhur = Vec::new();
         if let Some(mujallad) = mujallad_bayanat(&jidhr) {
             judhur.push(mujallad);
@@ -290,24 +297,18 @@ impl Matjar for MatjarEpic {
 }
 
 /// The launcher's machine-wide data root, before any user override.
-fn jidhr_tilqai(nizam: NizamTashghil) -> PathBuf {
-    match nizam {
-        NizamTashghil::Windows => bayanat_barnamij().join("Epic"),
-        NizamTashghil::Mac | NizamTashghil::Linux => PathBuf::from(JIDHR_MAC),
-    }
-}
-
-/// Windows' machine-wide application data directory.
 ///
-/// The environment is the only source for it here: it is not derived from the
-/// user's home directory, and the shell API that would resolve the known folder
-/// is outside the `windows` feature set this workspace declares. The documented
-/// default stands in when the variable is absent, which happens only in
-/// stripped service environments.
-fn bayanat_barnamij() -> PathBuf {
-    std::env::var_os("PROGRAMDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| PathBuf::from(r"C:\ProgramData"), PathBuf::from)
+/// [`None`] only on a Windows context that names no `%PROGRAMDATA%`, which is a
+/// machine with nowhere for the launcher's data to be. The macOS path is a
+/// fixed absolute one and is returned on Linux too, where it is what a copied
+/// or prefix-mounted layout looks like.
+fn jidhr_tilqai(siyaq: &SiyaqFahs) -> Option<PathBuf> {
+    match siyaq.nizam {
+        NizamTashghil::Windows => {
+            siyaq.bayanat_barnamij.as_ref().map(|bayanat| bayanat.join("Epic"))
+        },
+        NizamTashghil::Mac | NizamTashghil::Linux => Some(PathBuf::from(JIDHR_MAC)),
+    }
 }
 
 /// Resolves the manifest directory under a launcher root.
@@ -635,4 +636,59 @@ fn muwahhad(masar: &Path, nizam: NizamTashghil) -> String {
 /// otherwise ordinary UTF-8 JSON and which no JSON parser accepts.
 fn bila_bom(nass: &str) -> &str {
     nass.strip_prefix('\u{feff}').unwrap_or(nass)
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn jidhr_windows_min_bayanat_al_barnamij_fi_al_siyaq() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let bayanat = masrah.path().join("ProgramData");
+        fs::create_dir_all(bayanat.join("Epic").join("EpicGamesLauncher").join("Data"))?;
+
+        // No variable is set anywhere in this test. The launcher root is found
+        // because the context named the machine's data folder, which is what
+        // makes a Windows-only path testable from a Linux host at all.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_barnamij = Some(bayanat.clone());
+        assert_eq!(jidhr_tilqai(&siyaq), Some(bayanat.join("Epic")));
+        assert_eq!(MatjarEpic::jadeed().mawqi(&siyaq), Some(bayanat.join("Epic")));
+        Ok(())
+    }
+
+    #[test]
+    fn bila_bayanat_barnamij_la_yuqrar_annahu_ghayr_muthabbat() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+
+        assert_eq!(jidhr_tilqai(&siyaq), None);
+        assert_eq!(MatjarEpic::jadeed().mawqi(&siyaq), None);
+
+        // An absent root is "not installed", never a failure: nine other
+        // launchers' games are still coming.
+        let natija = MatjarEpic::jadeed().ifhas(&siyaq)?;
+        assert!(natija.jidhr_matjar.is_none());
+        assert!(natija.alaab.is_empty());
+        assert!(MatjarEpic::jadeed().judhur_muraqaba(&siyaq).is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn jidhr_mac_thabit_la_yamurru_bi_al_beea() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Mac, masrah.path());
+
+        // macOS keeps the launcher's data at one absolute path that no variable
+        // relocates, so it is unaffected by the Windows field being absent.
+        assert_eq!(jidhr_tilqai(&siyaq), Some(PathBuf::from(JIDHR_MAC)));
+        Ok(())
+    }
 }

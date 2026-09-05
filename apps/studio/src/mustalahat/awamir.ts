@@ -1223,8 +1223,25 @@ export type HalatSawt =
 
 /**  Whether the game's own executable is running right now. */
 export type HalatTashghil = {
-	/**  Whether a matching process was found. */
+	/**
+	 *  Whether the game must be treated as running.
+	 * 
+	 *  Read together with [`Self::majhul`]: `true` with `majhul` set is a
+	 *  precaution, not an observation.
+	 */
 	tashtaghil: boolean,
+	/**
+	 *  Whether this answer is a guess because the process table could not be
+	 *  read.
+	 * 
+	 *  A sandboxed build — Flatpak, Snap, a container — sees its own process
+	 *  table rather than the host's, so every game looks stopped. Reporting
+	 *  that as an observation is the mistake that let a patch be written into
+	 *  an open game; reporting it as an error instead loses the ability to say
+	 *  which game and why. This field is how the screen distinguishes "it is
+	 *  not running" from "nobody here can tell".
+	 */
+	majhul: boolean,
 	/**  The process, as the system names it. */
 	amaliya: string | null,
 	/**  The executable it was matched against. */
@@ -1637,15 +1654,7 @@ export type IdadatTahdith = {
 
 /**  Where patches and caches live. */
 export type IdadatTakhzin = {
-	/**
-	 *  Patch storage, when the user moved it off the system drive.
-	 * 
-	 *  Read by [`crate::masarat::Masarat::maa_jidhr_ruqaa`], which is where a
-	 *  launch applies it: the settings file is located *through* a layout, so
-	 *  the layout is resolved first and re-rooted with this once the settings
-	 *  are open — before the directories are created, so the chosen root is the
-	 *  one that gets made.
-	 */
+	/**  Patch storage, when the user moved it off the system drive. */
 	jidhr_ruqaa: string | null,
 	/**  How large the registry and artwork cache may grow, in megabytes. */
 	hadd_makhbaa_mb: number,

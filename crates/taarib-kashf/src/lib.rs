@@ -263,7 +263,10 @@ impl Kashif {
 ///
 /// Resolves the home directory once, here, so that seventeen adapters cannot
 /// arrive at seventeen different answers about where the user's files are, and
-/// on Windows the machine-wide program directories for the same reason.
+/// for the same reason every other ambient directory a launcher hides its
+/// catalogue in: Windows' program folders and its three data folders, and the
+/// XDG base directories. This function is the only place in the crate that asks
+/// the environment where those are.
 ///
 /// # Errors
 ///
@@ -279,12 +282,79 @@ impl Kashif {
 pub fn siyaq_fahs(manassat: IdadatManassat, manzil: PathBuf) -> Natija<SiyaqFahs> {
     let nizam = NizamTashghil::hali();
     Ok(SiyaqFahs {
+        mujalladat_baramij: mujalladat_baramij(nizam),
+        bayanat_barnamij: mujallad_windows(nizam, "PROGRAMDATA", || {
+            PathBuf::from(r"C:\ProgramData")
+        }),
+        bayanat_mutajawwila: mujallad_windows(nizam, "APPDATA", || {
+            manzil.join("AppData").join("Roaming")
+        }),
+        bayanat_mahalliya: mujallad_windows(nizam, "LOCALAPPDATA", || {
+            manzil.join("AppData").join("Local")
+        }),
+        khazina_bayanat: khazina_xdg("XDG_DATA_HOME")
+            .unwrap_or_else(|| manzil.join(".local").join("share")),
+        khazina_idadat: khazina_xdg("XDG_CONFIG_HOME").unwrap_or_else(|| manzil.join(".config")),
+        khazina_makhbaa: khazina_xdg("XDG_CACHE_HOME").unwrap_or_else(|| manzil.join(".cache")),
         nizam,
         manassat,
         manzil,
-        mujalladat_baramij: mujalladat_baramij(nizam),
         yashmal_hawiyat: cfg!(target_os = "linux"),
     })
+}
+
+/// One of Windows' named directories, or [`None`] where the platform has none.
+///
+/// The fallback is a value the caller supplies rather than a literal here,
+/// because the documented default differs in kind: `%PROGRAMDATA%` falls back to
+/// an absolute machine path, and the two per-user folders fall back to a layout
+/// under the home directory this scan already resolved. It is consulted only on
+/// a Windows machine whose variable is unset — a stripped service environment,
+/// not an ordinary desktop — and never off Windows, where returning
+/// `C:\ProgramData` would put a path that cannot exist into a context whose
+/// whole job is describing the machine it is running on.
+fn mujallad_windows(
+    nizam: NizamTashghil,
+    mutaghayyir: &str,
+    ihtiyati: impl FnOnce() -> PathBuf,
+) -> Option<PathBuf> {
+    if !matches!(nizam, NizamTashghil::Windows) {
+        return None;
+    }
+    Some(mujallad_aw_ihtiyati(std::env::var_os(mutaghayyir), ihtiyati))
+}
+
+/// The rule the environment feeds: a value that is set and not empty wins, and
+/// anything else falls back.
+///
+/// Separated from the read because the read is the untestable half — since
+/// edition 2024 `std::env::set_var` is `unsafe` and racy, so a test cannot point
+/// this at a value without mutating the process every other test shares. The
+/// rule, given the value, is an ordinary function with an ordinary test.
+fn mujallad_aw_ihtiyati(
+    qeema: Option<std::ffi::OsString>,
+    ihtiyati: impl FnOnce() -> PathBuf,
+) -> PathBuf {
+    qeema.filter(|qeema| !qeema.is_empty()).map_or_else(ihtiyati, PathBuf::from)
+}
+
+/// One XDG base directory, honoured only when it is absolute.
+fn khazina_xdg(mutaghayyir: &str) -> Option<PathBuf> {
+    khazina_mutlaqa(std::env::var_os(mutaghayyir))
+}
+
+/// The absolute-only rule the XDG base directories are read under.
+///
+/// The specification is explicit that a relative value is invalid and must be
+/// ignored, and the reason is worth keeping: a relative `XDG_DATA_HOME` would
+/// resolve against whatever directory this process happens to have been started
+/// in, which on a desktop launch is the user's home and in a terminal is
+/// wherever they were standing. Silently accepting it would make discovery
+/// depend on the working directory. Split from the read for the reason
+/// [`mujallad_aw_ihtiyati`] is.
+fn khazina_mutlaqa(qeema: Option<std::ffi::OsString>) -> Option<PathBuf> {
+    let masar = PathBuf::from(qeema?);
+    masar.is_absolute().then_some(masar)
 }
 
 /// Windows' machine-wide program directories, most specific first.
@@ -304,9 +374,8 @@ fn mujalladat_baramij(nizam: NizamTashghil) -> Vec<PathBuf> {
     for (mutaghayyir, ihtiyati) in
         [("ProgramFiles(x86)", r"C:\Program Files (x86)"), ("ProgramFiles", r"C:\Program Files")]
     {
-        let mujallad = std::env::var_os(mutaghayyir)
-            .filter(|qeema| !qeema.is_empty())
-            .map_or_else(|| PathBuf::from(ihtiyati), PathBuf::from);
+        let mujallad =
+            mujallad_aw_ihtiyati(std::env::var_os(mutaghayyir), || PathBuf::from(ihtiyati));
         if !mujalladat.contains(&mujallad) {
             mujalladat.push(mujallad);
         }
@@ -472,6 +541,67 @@ mod ikhtibarat {
         // The point of the field: the adapters are handed the answer rather
         // than each reaching for the environment and disagreeing.
         assert_eq!(siyaq.mujalladat_baramij, mujalladat_baramij(NizamTashghil::hali()));
+        Ok(())
+    }
+
+    #[test]
+    fn mujalladat_windows_ghaiba_kharij_windows() {
+        for nizam in [NizamTashghil::Linux, NizamTashghil::Mac] {
+            assert_eq!(
+                mujallad_windows(nizam, "PROGRAMDATA", || PathBuf::from("/la-yuqra")),
+                None,
+                "neither system has a %PROGRAMDATA%, and a context that claimed one \
+                 would be describing a machine that is not there"
+            );
+        }
+    }
+
+    #[test]
+    fn qeemat_al_beea_tafuz_wa_al_farigha_tasqut() {
+        let ihtiyati = || PathBuf::from(r"C:\ProgramData");
+
+        // Set and not empty: the machine's own answer, whatever it is.
+        assert_eq!(
+            mujallad_aw_ihtiyati(Some(std::ffi::OsString::from(r"D:\Bayanat")), ihtiyati),
+            PathBuf::from(r"D:\Bayanat")
+        );
+        // Unset and empty are the same case: a variable a stripped service
+        // environment cleared is not a directory named the empty string.
+        assert_eq!(mujallad_aw_ihtiyati(None, ihtiyati), ihtiyati());
+        assert_eq!(mujallad_aw_ihtiyati(Some(std::ffi::OsString::new()), ihtiyati), ihtiyati());
+    }
+
+    #[test]
+    fn khazina_xdg_tarfud_al_masar_al_nisbi() {
+        assert_eq!(
+            khazina_mutlaqa(Some(std::ffi::OsString::from("bayanat"))),
+            None,
+            "a relative XDG value is invalid and is ignored, never resolved"
+        );
+        assert_eq!(khazina_mutlaqa(None), None);
+
+        let mutlaq = if cfg!(windows) { r"D:\bayanat" } else { "/bayanat" };
+        assert_eq!(
+            khazina_mutlaqa(Some(std::ffi::OsString::from(mutlaq))),
+            Some(PathBuf::from(mutlaq))
+        );
+    }
+
+    #[test]
+    fn siyaq_al_fahs_yahmil_khazain_xdg() -> Result<(), Box<dyn std::error::Error>> {
+        let manzil = PathBuf::from("/manzil");
+        let siyaq = siyaq_fahs(IdadatManassat::default(), manzil.clone())?;
+
+        // Absolute in every case: either the variable was absolute, or the
+        // home-relative default the specification names took over. An adapter
+        // that joined onto a relative value would be scanning whatever
+        // directory the process was started in.
+        for khazina in [&siyaq.khazina_bayanat, &siyaq.khazina_idadat, &siyaq.khazina_makhbaa] {
+            assert!(khazina.is_absolute(), "{}", khazina.display());
+        }
+        if khazina_xdg("XDG_DATA_HOME").is_none() {
+            assert_eq!(siyaq.khazina_bayanat, manzil.join(".local").join("share"));
+        }
         Ok(())
     }
 }

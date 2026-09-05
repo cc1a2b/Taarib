@@ -149,7 +149,11 @@ impl MatjarBattleNet {
     /// The Agent directory that holds `product.db`, per platform.
     fn judhur_muhtamala(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
         match siyaq.nizam {
-            NizamTashghil::Windows => vec![bayanat_barnamij().join(JIDHR_WINDOWS)],
+            NizamTashghil::Windows => siyaq
+                .bayanat_barnamij
+                .iter()
+                .map(|bayanat| bayanat.join(JIDHR_WINDOWS))
+                .collect(),
             NizamTashghil::Mac => vec![PathBuf::from(JIDHR_MAC)],
             NizamTashghil::Linux => Vec::new(),
         }
@@ -296,18 +300,6 @@ impl Matjar for MatjarBattleNet {
 /// The catalogue file under a client root.
 fn fahras_fih(jidhr: &Path) -> PathBuf {
     jidhr.join("Agent").join("product.db")
-}
-
-/// Windows' machine-wide application data directory.
-///
-/// Battle.net installs its Agent under it rather than under the user's profile,
-/// because one machine has one Agent regardless of how many people log in. The
-/// documented default stands in when the variable is absent, which happens only
-/// in stripped service environments.
-fn bayanat_barnamij() -> PathBuf {
-    std::env::var_os("PROGRAMDATA")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| PathBuf::from(r"C:\ProgramData"), PathBuf::from)
 }
 
 // ---------------------------------------------------------------------------
@@ -777,4 +769,52 @@ fn luba_min_sijill(
         muktamila: bina.as_ref().is_some_and(|maalumat| maalumat.nashit),
         simat,
     })
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+    use std::fs;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    #[test]
+    fn jidhr_al_agent_min_al_siyaq_la_min_al_beea() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let bayanat = masrah.path().join("ProgramData");
+        let agent = bayanat.join(JIDHR_WINDOWS).join("Agent");
+        fs::create_dir_all(&agent)?;
+        fs::write(agent.join("product.db"), b"")?;
+
+        // Nothing here sets `%PROGRAMDATA%`. The Agent is found only because
+        // the context named the folder, which is the whole point of the field:
+        // an adapter that read the variable itself could not be pointed at a
+        // fixture without mutating the process every other test shares.
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_barnamij = Some(bayanat.clone());
+        assert_eq!(
+            MatjarBattleNet::jadeed().mawqi(&siyaq),
+            Some(bayanat.join(JIDHR_WINDOWS))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn bila_bayanat_barnamij_la_murashah() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+
+        // A Windows context that names no `%PROGRAMDATA%` has nowhere to look,
+        // which is a shorter and truer answer than `C:\ProgramData`.
+        let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        assert!(MatjarBattleNet::judhur_muhtamala(&siyaq).is_empty());
+
+        // macOS keeps the Agent at a fixed absolute path and consults no
+        // variable at all, so it is unaffected by the field being absent.
+        let mac = SiyaqFahs::lil_ikhtibar(NizamTashghil::Mac, masrah.path());
+        assert_eq!(MatjarBattleNet::judhur_muhtamala(&mac), vec![PathBuf::from(JIDHR_MAC)]);
+        Ok(())
+    }
 }

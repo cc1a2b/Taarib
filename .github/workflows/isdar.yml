@@ -125,7 +125,17 @@ jobs:
     needs: hamula-windows
     # `needs` on a job that may be skipped makes this one skip too unless the
     # dependency's outcome is checked explicitly.
-    if: ${{ always() && (needs.hamula-windows.result == 'success' || needs.hamula-windows.result == 'skipped') }}
+    #
+    # `!cancelled()` rather than `always()`: `always()` is true even when the
+    # run has been cancelled, so cancelling would still start this job — and
+    # this one holds a 150-minute timeout, installs three toolchains and can
+    # fetch the whole component set. A cancel that starts an hour of work is not
+    # a cancel. The success-or-skipped test still has to be spelled out, because
+    # neither expression on its own tolerates a skipped dependency.
+    if: >-
+      ${{ !cancelled()
+          && (needs.hamula-windows.result == 'success'
+              || needs.hamula-windows.result == 'skipped') }}
     runs-on: >-
       ${{ fromJSON('{
         "x86_64-pc-windows-msvc": "windows-2025",
@@ -159,14 +169,14 @@ jobs:
             build-essential \
             file
 
-      # wasm32 always, because row H1 is in every bundle. The two Windows game
-      # triples only on a Windows runner — elsewhere they arrive as an artifact.
+      # wasm32 always, because row H1 is in every bundle. `i686-pc-windows-msvc`
+      # only on a Windows runner: elsewhere those payloads arrive as an artifact
+      # and installing a standard library nothing will link is minutes wasted.
+      # Naming a target twice is harmless, which is what lets the non-Windows
+      # legs share one expression with the Windows one.
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
-          targets: >-
-            ${{ inputs.hadaf }}, wasm32-unknown-unknown${{
-              endsWith(inputs.hadaf, '-pc-windows-msvc')
-                && ', i686-pc-windows-msvc' || '' }}
+          targets: ${{ inputs.hadaf }}, wasm32-unknown-unknown, ${{ endsWith(inputs.hadaf, '-pc-windows-msvc') && 'i686-pc-windows-msvc' || inputs.hadaf }}
 
       - name: Verify the toolchain pin
         run: |
