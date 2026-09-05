@@ -525,6 +525,7 @@ const fn ism_aila(aila: taarib_mustalahat::muharrik::AilatMuharrik) -> &'static 
         A::Renpy => "renpy",
         A::GameMaker => "gamemaker",
         A::Electron => "electron",
+        A::Bio4 => "bio4",
         A::Majhul => "unknown",
     }
 }

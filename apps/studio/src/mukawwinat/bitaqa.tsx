@@ -4,8 +4,11 @@ import { memo, useCallback, useState } from 'react';
 
 import type { MiftahLugha } from '@/lugha/lugha';
 import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
+import type { Tabaqa } from '@/maktaba/tabaqat';
 
 import type {
+  AilatMuharrik,
+  HalatLuba,
   HalatLughaRasmiya,
   LawhaBadila,
   LawnBariz,
@@ -13,6 +16,7 @@ import type {
   SatrUnwan,
 } from '@/mustalahat/awamir';
 import { t } from '@/lugha/lugha';
+import { WASF_TABAQA, WASM_TABAQA } from '@/maktaba/tabaqat';
 import { HARAKAT_HALA, haraka } from '@/nizam/haraka';
 
 import './bitaqa.css';
@@ -87,6 +91,31 @@ import './bitaqa.css';
  * cost the card no space, and neither is allowed near the tabs — the band's
  * trailing edge means patch state, and anything put beside the tabs is read as
  * one.
+ *
+ * ## The product plate, and why it is on its own line
+ *
+ * The three tiers are three different products, not three grades of one, and
+ * the card is where a person decides whether to open a game at all. So the
+ * bottom-leading corner of the artwork carries one plate naming **where the
+ * Arabic ends up** — inside the game's own text, drawn over it, or drawn over
+ * the picture and gone when Taarib closes — and, for the two games that get no
+ * product at all, saying that instead.
+ *
+ * It is on the artwork's other edge rather than in the top strip because it is
+ * the one mark that is on *every* card: every game has a tier. A third item in
+ * a strip already holding two would have made the compact card's 200px well a
+ * three-way ellipsis contest, and the plate that is always present is the one
+ * that can least afford to be cut. On its own line it has the whole well.
+ *
+ * It is also the quietest plate on the card. The label is `--nass-2` and the
+ * ground is the same `--sath-0` as the top marks; the only colour is a rule on
+ * the leading edge. The words carry which of the three products it is — they
+ * are three unrelated phrases rather than three grades of one — and the rule
+ * carries the fact that changes what happens to the reader's disk: teal means
+ * Taarib goes inside the game and its files change, no accent means the game is
+ * never touched, and red means there is no product at all. A grid of a hundred
+ * cards therefore reads as a grid of covers with a caption apiece, not as a wall
+ * of badges.
  *
  * ## The calm state
  *
@@ -177,6 +206,45 @@ export interface KhasaisBitaqa {
    * verdict, because a card that guessed would be the same lie in a new place.
    */
   readonly jahiziya?: JahiziyaTashghil | null;
+  /**
+   * Which of the three products this game gets.
+   *
+   * The tier the cached probe decided, straight off `SijillMaktaba.tabaqa` —
+   * the discriminant and not the tier number, because the number is a rank and
+   * a rank says three is a worse two. It is not: the three are text replaced
+   * inside the engine, text Taarib draws itself, and text drawn over the
+   * picture, and only the first of those is still text when it arrives.
+   *
+   * Optional and nullable on the same terms as {@link jahiziya}: a consumer
+   * that has not been given a tier draws a card with no plate rather than a
+   * plate naming a product nobody promised.
+   */
+  readonly tabaqa?: Tabaqa | null;
+  /**
+   * The engine family the probe identified, used for one question only:
+   * whether it identified anything.
+   *
+   * A game whose engine is not recognised still has a route — the overlay is
+   * the floor and applies to everything — but "overlaid on screen" without the
+   * reason reads as a choice Taarib made, and half this library probes as
+   * `majhul`. Naming the miss is what makes the product on the plate something
+   * a person can verify on the game screen rather than something they have to
+   * take on faith.
+   *
+   * Never read as a capability. What Taarib can do to an engine is
+   * {@link tabaqa} and {@link jahiziya}, both decided in Rust; this card asks
+   * this field one yes-or-no question and nothing else.
+   */
+  readonly muharrik?: AilatMuharrik | null;
+  /**
+   * The row's own Arabization status, read for the refusal alone.
+   *
+   * `marfuda` is the one state in which there is no product to name: an
+   * anti-cheat was found, Taarib will not modify a file and will not draw over
+   * the picture either, and no setting anywhere lifts it. A plate that named a
+   * tier for such a game would be describing something that will never run.
+   */
+  readonly hala?: HalatLuba | null;
   /** Whether this card is in the current selection. */
   readonly mukhtara: boolean;
   /** The grid's current density. */
@@ -295,6 +363,86 @@ function WasmJahiziya(khasais: {
       {t(wasm.wasm, khasais.lugha)}
     </span>
   );
+}
+
+/**
+ * One product plate: the words on it, the clause it is announced with, and the
+ * accent its leading rule takes.
+ *
+ * `naw` is the CSS modifier and deliberately not the tier's own name: two of
+ * the five plates — the unidentified engine and the refusal — are not tiers at
+ * all, and a modifier list that pretended otherwise would put a stylesheet in
+ * the position of asserting a taxonomy.
+ */
+interface WasmMuntaj {
+  readonly wasm: MiftahLugha;
+  readonly wasf: MiftahLugha;
+  readonly naw: 'kamil' | 'rasm' | 'tabaqa' | 'majhul' | 'marfuda';
+}
+
+/** The three products, keyed on the wire's own discriminant. */
+const MUNTAJ_TABAQA: Readonly<Record<Tabaqa, WasmMuntaj>> = {
+  kamil: { wasm: WASM_TABAQA.kamil, wasf: WASF_TABAQA.kamil, naw: 'kamil' },
+  rasm_mubashir: {
+    wasm: WASM_TABAQA.rasm_mubashir,
+    wasf: WASF_TABAQA.rasm_mubashir,
+    naw: 'rasm',
+  },
+  tarjama_fawqiya: {
+    wasm: WASM_TABAQA.tarjama_fawqiya,
+    wasf: WASF_TABAQA.tarjama_fawqiya,
+    naw: 'tabaqa',
+  },
+};
+
+/**
+ * The overlay, when it is the floor rather than a choice.
+ *
+ * Same product as `tarjama_fawqiya` and a different sentence, because for this
+ * game the interesting fact is *why*: nothing recognised the engine, so no
+ * route that goes inside the game was ever available to weigh.
+ */
+const MUNTAJ_MAJHUL: WasmMuntaj = {
+  wasm: 'bitaqa.muntaj.majhul',
+  wasf: 'bitaqa.muntaj.majhul_wasf',
+  naw: 'majhul',
+};
+
+/** No product at all, and the only plate on the card that is drawn in red. */
+const MUNTAJ_MARFUDA: WasmMuntaj = {
+  wasm: 'bitaqa.muntaj.marfuda',
+  wasf: 'bitaqa.muntaj.marfuda_wasf',
+  naw: 'marfuda',
+};
+
+/**
+ * Which plate this game gets, or none.
+ *
+ * The refusal is tested first and without reference to the tier, because it is
+ * the answer to a different question: the report still names a tier for a
+ * protected game, and drawing it would be describing what Taarib is entitled to
+ * do to a game it has already said it will not touch.
+ *
+ * Everything below that is a lookup on the wire's own discriminant. Nothing
+ * here derives a tier — not from the engine, not from the tier number, not from
+ * the readiness verdict — so a card either states a product the backend
+ * decided or states none.
+ */
+function muntajBitaqa(
+  tabaqa: Tabaqa | null | undefined,
+  muharrik: AilatMuharrik | null | undefined,
+  hala: HalatLuba | null | undefined,
+): WasmMuntaj | null {
+  if (hala === 'marfuda') {
+    return MUNTAJ_MARFUDA;
+  }
+  if (tabaqa === undefined || tabaqa === null) {
+    return null;
+  }
+  if (tabaqa === 'tarjama_fawqiya' && muharrik === 'majhul') {
+    return MUNTAJ_MAJHUL;
+  }
+  return MUNTAJ_TABAQA[tabaqa];
 }
 
 /** Whether a state paints at full weight. */
@@ -545,6 +693,9 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
     sawt,
     lugha_rasmiya,
     jahiziya,
+    tabaqa,
+    muharrik,
+    hala,
     mukhtara,
     kathafa,
     lugha,
@@ -632,14 +783,28 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
   if (yarsim(sawt)) {
     halat.push(t(murakkaba(sawt) ? 'bitaqa.sawt.mutabbaqa' : 'bitaqa.sawt.mutaha', lugha));
   }
+  // What the game actually gets, before the qualification on it. A whole
+  // clause for the same reason the readiness one is: read out as the noun
+  // phrase on the plate, "overlaid on screen" after two patch states is heard
+  // as a third patch state.
+  const muntaj = muntajBitaqa(tabaqa, muharrik, hala);
+  if (muntaj !== null) {
+    halat.push(t(muntaj.wasf, lugha));
+  }
   // Last, and in its long form. It qualifies everything said before it — a
   // patch can be available for a game and still change nothing on screen — so
   // it has to be the phrase the listener finishes on, and it has to be a whole
   // clause: "not running yet" after two patch states would be heard as a third
   // patch state, which is the confusion the mark is placed away from the tabs
   // to avoid in the first place.
+  //
+  // Not announced for a refused game. The refusal is already the last thing
+  // said, it is permanent, and "does not run yet in this build" after it would
+  // offer a wait that is not coming.
   const wasmJahiziya =
-    jahiziya === undefined || jahiziya === null ? undefined : WASM_JAHIZIYA[jahiziya];
+    jahiziya === undefined || jahiziya === null || hala === 'marfuda'
+      ? undefined
+      : WASM_JAHIZIYA[jahiziya];
   if (wasmJahiziya !== undefined) {
     halat.push(t(wasmJahiziya.wasf, lugha));
   }
@@ -663,7 +828,7 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
   // element: Motion's `style` is a different type that models every property
   // as animatable, and a custom property cast through it would be a cast
   // fighting a type rather than describing a value.
-  const tabaqa =
+  const lawnBir =
     lawn_ghilaf === undefined || lawn_ghilaf === null
       ? BILA_LAWN
       : ({ '--lawn-ghilaf': sittasi(lawn_ghilaf) } as CSSProperties);
@@ -693,7 +858,7 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
       onKeyDown={alaMiftah}
       onContextMenu={alaQaima}
     >
-      <div className="bitaqa__bir" style={tabaqa}>
+      <div className="bitaqa__bir" style={lawnBir}>
         {/* The reserve. Always present, in every state, at every density. */}
         <span className={tabaqatHalqa('bitaqa__halqa-sawt', sawt)} aria-hidden="true" />
         <span className={tabaqatHalqa('bitaqa__halqa-nass', nass)} aria-hidden="true" />
@@ -762,13 +927,34 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
         */}
         {miftahLugha === undefined && wasmJahiziya === undefined ? null : (
           <div className="bitaqa__wusum" aria-hidden="true">
-            {jahiziya === undefined || jahiziya === null ? null : (
+            {wasmJahiziya === undefined || jahiziya === undefined || jahiziya === null ? null : (
               <WasmJahiziya hala={jahiziya} lugha={lugha} />
             )}
             {lugha_rasmiya === undefined || lugha_rasmiya === null ? null : (
               <WasmLugha hala={lugha_rasmiya} lugha={lugha} />
             )}
           </div>
+        )}
+
+        {/*
+          What this game gets, on the artwork's other edge. One element and no
+          wrapper: it is the only plate that is on every card in the grid, and a
+          container per card to hold one child is ten thousand nodes that exist
+          to hold one thing. Absolutely positioned inside the reserve like
+          everything else on the picture, so no state it takes changes a box the
+          grid can measure.
+
+          Announced through the card's accessible name, in its long form, and
+          hidden here — the plate's three words are the short form of a clause
+          the listener has already been read.
+        */}
+        {muntaj === null ? null : (
+          <span
+            className={`bitaqa__wasm-muntaj bitaqa__wasm-muntaj--${muntaj.naw}`}
+            aria-hidden="true"
+          >
+            {t(muntaj.wasm, lugha)}
+          </span>
         )}
       </div>
 

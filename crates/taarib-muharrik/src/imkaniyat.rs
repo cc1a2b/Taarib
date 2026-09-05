@@ -124,7 +124,17 @@ use crate::tahdid::{maghlufa, mutaarid};
 /// translation with — ships. A stored report would otherwise keep withholding
 /// the one-button run from the only engine this build can finish, which is the
 /// expensive direction for this field to be stale in.
-pub const ISDAR_FAHS: u32 = 4;
+///
+/// Raised to 5 when [`AilatMuharrik::Bio4`] and its detector were added. Every
+/// game on Capcom's `BIO4` codebase was previously reported as an unrecognised
+/// engine at tier 3, and every one of those reports is stale in the direction
+/// that matters: the engine is now named, the tier moves from the overlay to
+/// full Arabization, and the reason sentence and the limitations change with it.
+/// This is deliberate and it is not free — raising this number re-probes every
+/// stored scan on every machine, for every engine, not only for the new one —
+/// and it is the price of a detector reaching games that were already examined
+/// rather than only games examined after the update.
+pub const ISDAR_FAHS: u32 = 5;
 
 /// The confidence below which the report tells the user the identification may
 /// be wrong.
@@ -355,6 +365,21 @@ pub fn tabaqa_min_muharrik(muharrik: &Muharrik) -> (Tabaqa, String, String) {
              runtime module, so the Arabic reads as though it were original."
                 .to_owned(),
         ),
+        AilatMuharrik::Bio4 => (
+            Tabaqa::Kamil,
+            "نصوص هذه اللعبة في ملفات قاموس داخل اللعبة نفسها، وخطوطها صفحات حروف مرسومة \
+             مخزَّنة معها. المحرّك نفسه لا يعرف تشكيل العربية إطلاقًا، لكن ذلك لا يمنع \
+             التعريب الكامل: يُشكّل تعريب النص ويرتّبه قبل كتابته، ويولّد صفحات الحروف \
+             العربية ويضعها مكان الأصلية، فيقرأ المحرّك عربية جاهزة دون أن يعرف أنها عربية."
+                .to_owned(),
+            "This game keeps its text in dictionary files inside the game and its fonts as \
+             drawn glyph pages stored beside them. The engine itself has no Arabic shaping \
+             whatsoever, and that does not stop full Arabization: Taarib shapes and reorders \
+             the text before it is written, generates the Arabic glyph pages and puts them \
+             where the original ones were, so the engine reads finished Arabic without \
+             knowing it is Arabic."
+                .to_owned(),
+        ),
         AilatMuharrik::Majhul => (
             Tabaqa::TarjamaFawqiya,
             "لم يتعرّف تعريب على محرّك هذه اللعبة. هذه اللعبة تستخدم نظام نصوص غير معروف؛ \
@@ -510,6 +535,7 @@ pub fn jahiziya(muharrik: &Muharrik) -> (JahiziyatTashghil, Option<Hadd>) {
         AilatMuharrik::Renpy => jahiziyat_renpy(muharrik),
         AilatMuharrik::GameMaker => (JahiziyatTashghil::Ghaiba, naqs_gamemaker()),
         AilatMuharrik::Electron => (JahiziyatTashghil::Ghaiba, naqs_electron()),
+        AilatMuharrik::Bio4 => (JahiziyatTashghil::Ghaiba, naqs_bio4()),
         AilatMuharrik::Majhul => (JahiziyatTashghil::Ghaiba, naqs_tabaqa()),
     };
     // A finished tier has nothing to warn about, and `TaqreerImkaniyat::naqs`
@@ -897,6 +923,46 @@ fn naqs_gamemaker() -> Hadd {
     )
 }
 
+/// Capcom BIO4: both ends of the chain exist and the link between them does not.
+///
+/// The two ends are real and are worth naming, because "nothing exists" would be
+/// wrong in both directions. `taarib-istikhraj`'s `qamus` module reads all eight
+/// of the game's dictionaries and rebuilds them byte for byte, so the text comes
+/// out and could go back in. `taarib-muhawwil-bio4` reads the `.fnt` metrics, the
+/// embedded TPL, the cell grid and the `ImagePack` atlas, and can build a font
+/// into them, so the letters could be drawn.
+///
+/// What is missing sits exactly between the two, and that crate states it about
+/// itself: **there is no character table anywhere in these files.** Which code
+/// point selects which cell in the atlas is decided by something no file on disk
+/// shows, so a dictionary rewritten with Arabic would send the engine looking up
+/// cells by a rule nobody has, and it would blit the wrong pictures or none.
+/// Nothing in `taarib-muhawwil-nusus` routes this family either — `rakkib_luba`
+/// has no arm for it — and `mulhaqat_muharrik` deploys nothing, so no install
+/// currently touches one of these games at all.
+///
+/// That is why the verdict is the one that withholds the one-button run rather
+/// than the one that offers it. A run that ended here would either change
+/// nothing or fill the menus with the wrong glyphs, and neither is a thing to
+/// promise.
+fn naqs_bio4() -> Hadd {
+    hadd(
+        "يرسم محرّك هذه اللعبة نصوصه من صفحات حروف جاهزة مرسومة داخل ملفاتها، ولا يوجد في تلك \
+         الملفات أي جدول يربط الحرف بصورته: يعرف تعريب كيف يقرأ نصوص اللعبة ويعيد كتابتها، \
+         ويعرف كيف يبني صفحات الحروف العربية، ولا يعرف بعدُ بأي رمز يطلب المحرّك كل صورة. \
+         فلو رُكِّبت الترجمة الآن لظهرت صورًا خاطئة أو فراغًا مكان النص، ولذلك لا يُعرَض \
+         التعريب على هذه اللعبة أصلًا ولا يُكتب في ملفاتها شيء. ستبقى كما هي حتى يصل التحديث \
+         الذي يحلّ هذا الربط.",
+        "This game's engine draws its text from prebuilt glyph pages painted inside its own \
+         files, and nothing in those files maps a character to its picture. Taarib can read the \
+         game's text and write it back, and it can build the Arabic glyph pages — what it does \
+         not yet know is which code the engine asks for each picture by. An installed \
+         translation would therefore come out as the wrong pictures or as blank space, which is \
+         why Arabization is not offered for this game at all and nothing is written into its \
+         files. It stays as it is until the update that solves that mapping arrives.",
+    )
+}
+
 /// Electron: the adapter is wired in and refuses this package by name.
 ///
 /// The one arm whose gap the adapter itself already states.
@@ -969,7 +1035,14 @@ pub fn hudud(muharrik: &Muharrik, tabaqa: Tabaqa) -> Vec<Hadd> {
     match tabaqa {
         Tabaqa::TarjamaFawqiya => hudud_tabaqa(muharrik, &mut hudud),
         Tabaqa::Kamil | Tabaqa::RasmMubashir => {
-            if muharrik.itarat.is_empty() {
+            // Capcom BIO4 is excluded because its text systems are not empty —
+            // they are unnameable. [`ItarNusus`] has no value for a dictionary
+            // file plus a baked glyph atlas, so the list is empty for a reason
+            // that has nothing to do with the game, and this sentence would tell
+            // the player their text will be captured off the screen when the
+            // family's own arm of [`hudud_aila`] has already said where it
+            // actually lives.
+            if muharrik.itarat.is_empty() && muharrik.aila != AilatMuharrik::Bio4 {
                 hudud.push(hadd_bila_nusus());
             }
             if shuhida(muharrik, alamat::TASHFEER) {
@@ -1089,6 +1162,19 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
             if ladayh(muharrik, ItarNusus::Canvas) {
                 hudud.push(hadd_canvas());
             }
+        }
+        AilatMuharrik::Bio4 => {
+            hudud.push(hadd(
+                "خطوط هذه اللعبة صفحات حروف مرسومة مسبقًا داخل ملفاتها، وسيولّد تعريب صفحات \
+                 عربية بديلة. الحروف التي لا يغطيها الخط الذي تختاره لن تُرسم إطلاقًا، \
+                 فاختر خطًا عربيًا كاملًا. وعدد الخانات في كل صفحة محدود بما في اللعبة، فقد \
+                 لا تتّسع كل الأشكال العربية في شاشة واحدة.",
+                "This game's fonts are glyph pages painted in advance inside its own files, \
+                 and Taarib generates Arabic pages to replace them. Characters the font you \
+                 choose does not cover will not be drawn at all, so choose a complete Arabic \
+                 font. The number of cells in a page is fixed by what the game shipped, so \
+                 not every Arabic letter shape may fit on a given screen.",
+            ));
         }
         AilatMuharrik::Majhul => {}
     }
@@ -1461,7 +1547,6 @@ fn jawda_min_itarat(muharrik: &Muharrik) -> JawdaMutawaqqaa {
                 JawdaMutawaqqaa::Jayida
             }
         }
-        AilatMuharrik::GameMaker => JawdaMutawaqqaa::Jayida,
         AilatMuharrik::Electron => {
             if ladayh(muharrik, ItarNusus::Dom) {
                 JawdaMutawaqqaa::Mumtaza
@@ -1469,6 +1554,15 @@ fn jawda_min_itarat(muharrik: &Muharrik) -> JawdaMutawaqqaa {
                 JawdaMutawaqqaa::Maqbula
             }
         }
+        // The two engines that draw text from glyph pages baked into their own
+        // data rather than from a font, and the only two whose answer does not
+        // depend on which text systems were found. Neither can be excellent and
+        // both can be good: the letters are pictures placed in a grid in
+        // advance, so a shaped Arabic word is assembled from what fits, and a
+        // shape that does not fit is a shape the player does not see. Capcom
+        // BIO4 has no [`ItarNusus`] value at all, so there is nothing to switch
+        // on for it even in principle.
+        AilatMuharrik::GameMaker | AilatMuharrik::Bio4 => JawdaMutawaqqaa::Jayida,
         AilatMuharrik::Majhul => JawdaMutawaqqaa::Mahduda,
     }
 }
@@ -1619,7 +1713,7 @@ mod ikhtibarat {
     /// Listed rather than iterated because the enum has no iterator, and written
     /// out in full so that adding a family breaks the exhaustiveness assertion
     /// below rather than quietly leaving the new one untested.
-    const KUL_AILAT: [AilatMuharrik; 10] = [
+    const KUL_AILAT: [AilatMuharrik; 11] = [
         AilatMuharrik::Unity,
         AilatMuharrik::Unreal,
         AilatMuharrik::Godot,
@@ -1629,6 +1723,7 @@ mod ikhtibarat {
         AilatMuharrik::Renpy,
         AilatMuharrik::GameMaker,
         AilatMuharrik::Electron,
+        AilatMuharrik::Bio4,
         AilatMuharrik::Majhul,
     ];
 

@@ -423,6 +423,14 @@ fn sinkhrin_mujallad(_masar: &Path) -> NatijatTahdith<()> {
 /// Removes a file or a directory, whichever is there.
 fn izal(masar: &Path) -> std::io::Result<()> {
     match std::fs::metadata(masar) {
+        // Recursive because a macOS `.app` is a directory. Every `masar` that
+        // reaches here is derived from `std::env::current_exe()` — the running
+        // executable, or its `.jadeed`/`.sabiq` siblings — so it names the
+        // application itself and can never be a data root or a game directory.
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the target is the running executable or its own swap sibling, never a root"
+        )]
         Ok(bayan) if bayan.is_dir() => std::fs::remove_dir_all(masar),
         Ok(_) => std::fs::remove_file(masar),
         Err(khata) if khata.kind() == std::io::ErrorKind::NotFound => Ok(()),

@@ -958,8 +958,27 @@ Section Uninstall
     SetShellVarContext current
     RmDir /r "$APPDATA\${BUNDLEID}"
     RmDir /r "$LOCALAPPDATA\${BUNDLEID}"
-    ; Taarib: masarat.rs puts the data root at %APPDATA%\Taarib, not under the bundle id.
-    RmDir /r "$APPDATA\Taarib"
+    ; Taarib: masarat.rs puts the data root at %APPDATA%\Taarib, not under the
+    ; bundle id — so the line above misses the user's actual data and this one
+    ; is needed. It is the only recursive delete in the entire product aimed at
+    ; a data root, which makes it worth narrowing as far as it will go.
+    ;
+    ; The name alone is not evidence: `$APPDATA\Taarib` is a directory this
+    ; installer never created (the application makes it on first run) and a
+    ; plausible name for something else. So the delete is gated on the two files
+    ; `masarat.rs` guarantees a real data root has — the database and the
+    ; settings file. In the case this line exists for, both are present and the
+    ; behaviour is unchanged; in every other case it becomes a no-op.
+    ;
+    ; Known and deliberate gap: this hardcodes the default Windows root, so a
+    ; user who redirected the layout with TAARIB_BAYANAT, or who runs a portable
+    ; install carrying `taarib.mahmul`, keeps their data here. Reading the
+    ; override out of the environment of whoever launched the uninstaller would
+    ; be a worse bargain than leaving a directory behind.
+    ${If} ${FileExists} "$APPDATA\Taarib\taarib.db"
+    ${OrIf} ${FileExists} "$APPDATA\Taarib\idadat.json"
+      RmDir /r "$APPDATA\Taarib"
+    ${EndIf}
   ${EndIf}
 
   !ifmacrodef NSIS_HOOK_POSTUNINSTALL

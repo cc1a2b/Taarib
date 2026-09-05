@@ -5797,8 +5797,19 @@ dependencies = [
  "taarib-makhzan",
  "taarib-mustalahat",
  "taarib-usus",
+ "tempfile",
  "thiserror 2.0.20",
  "tracing",
+]
+
+[[package]]
+name = "taarib-muhawwil-bio4"
+version = "1.0.0"
+dependencies = [
+ "taarib-lawha",
+ "taarib-saff",
+ "taarib-usus",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
@@ -6000,8 +6011,10 @@ dependencies = [
  "taarib-mustalahat",
  "taarib-ruqaa",
  "taarib-saff",
+ "taarib-tarjama",
  "taarib-usus",
  "thiserror 2.0.20",
+ "tokio",
  "windows 0.62.2",
  "windows-future 0.3.2",
 ]
@@ -6188,12 +6201,14 @@ dependencies = [
  "serde",
  "serde_json",
  "taarib-istikhraj",
+ "taarib-khatm",
  "taarib-makhzan",
  "taarib-mustalahat",
  "taarib-taqdeem",
  "taarib-tarjama",
  "taarib-tarqee",
  "taarib-usus",
+ "tempfile",
  "thiserror 2.0.20",
  "tracing",
  "zstd",

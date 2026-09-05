@@ -54,7 +54,6 @@ use taarib_haqn::mawqi::{mujallad_nafsi, qaidat_wahda, ramz_wahda};
 use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_usus::masarat::Masarat;
 
-use crate::gl::KhattafGl;
 use crate::khataf::{AaddadDukhul, AslMahfuz, HirasatDukhul};
 use crate::sidq::{BasmatIfsah, Iqrar, mahfuz_salih};
 use crate::wajiha::{Khattaf, Tabaqa, WajihatRusum};
@@ -62,7 +61,7 @@ use crate::wajiha::{Khattaf, Tabaqa, WajihatRusum};
 #[cfg(windows)]
 use taarib_haqn::jadwal::{KhatfJadwal, jadwal_min_wajiha};
 #[cfg(windows)]
-use windows::Win32::Foundation::HMODULE;
+use windows::Win32::Foundation::{HMODULE, HWND, RECT};
 #[cfg(windows)]
 use windows::Win32::Graphics::Direct3D::{
     D3D_DRIVER_TYPE_HARDWARE, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_11_0,
@@ -88,15 +87,29 @@ use windows::Win32::Graphics::Dxgi::{
     IDXGIFactory, IDXGISwapChain, IDXGISwapChain1, IDXGISwapChain3,
 };
 #[cfg(windows)]
+use windows::Win32::Graphics::Direct3D9::{
+    D3D_SDK_VERSION, D3DADAPTER_DEFAULT, D3DCREATE_FPU_PRESERVE, D3DCREATE_MULTITHREADED,
+    D3DCREATE_NOWINDOWCHANGES, D3DCREATE_SOFTWARE_VERTEXPROCESSING, D3DDEVTYPE_HAL,
+    D3DFMT_UNKNOWN, D3DPRESENT_PARAMETERS, D3DSWAPEFFECT_DISCARD, Direct3DCreate9,
+    IDirect3DDevice9, IDirect3DDevice9Ex,
+};
+#[cfg(windows)]
 use windows::core::{BOOL, HRESULT, Interface};
 
 #[cfg(windows)]
 use crate::d3d11::KhattafD3D11;
 #[cfg(windows)]
+use crate::d3d8::{KhattafD3D8, TarkeebD3D8};
+#[cfg(windows)]
+use crate::d3d10::KhattafD3D10;
+#[cfg(windows)]
+use crate::d3d9::KhattafD3D9;
+#[cfg(windows)]
 use crate::d3d12::KhattafD3D12;
 #[cfg(windows)]
 use crate::khataf::{
-    KHANAT_PRESENT, KHANAT_PRESENT1, KHANAT_RESIZE, KHANAT_TANFEEDH, NafidhaMuaqqata,
+    KHANAT_ISTIAADA, KHANAT_ISTIAADA_MUMTADDA, KHANAT_PRESENT, KHANAT_PRESENT1, KHANAT_RESIZE,
+    KHANAT_TANFEEDH, KHANAT_TAQDEEM9, KHANAT_TAQDEEM_MUMTADD, NafidhaMuaqqata,
     nafidha_muaqqata,
 };
 
@@ -144,6 +157,23 @@ const MUJALLAD_TAARIB: &str = "taarib";
 const WAHDAT: &[(WajihatRusum, &str)] = &[
     (WajihatRusum::Direct3D12, "d3d12.dll"),
     (WajihatRusum::Direct3D11, "d3d11.dll"),
+    // Between the eleventh generation and the ninth, because a Direct3D 10 game
+    // presents through the same DXGI swap chain an eleventh-generation one
+    // does and is separated from it only by the device that swap chain hands
+    // back — which `crate::d3d10` asks for on the first frame.
+    (WajihatRusum::Direct3D10, "d3d10.dll"),
+    // Below both DXGI generations, because `d3d9.dll` is what a translation
+    // layer maps into a process that is really presenting through something
+    // else, and because a few newer games ship a Direct3D 9 fallback renderer
+    // they never select. Reached only when neither newer generation is loaded,
+    // which is exactly when it is the real renderer.
+    (WajihatRusum::Direct3D9, "d3d9.dll"),
+    // Last of the Direct3D generations. A `d3d8.dll` beside a game is very
+    // often a community replacement translating to Direct3D 9 or Vulkan, which
+    // loads `d3d9.dll` as well — so this entry is reached only when no newer
+    // generation answered, and `crate::d3d8` reports the wrapper as a caveat
+    // rather than as a different API.
+    (WajihatRusum::Direct3D8, "d3d8.dll"),
     (WajihatRusum::OpenGl, "opengl32.dll"),
 ];
 
@@ -446,7 +476,13 @@ fn ism_luba(mujallad: &Path) -> String {
 fn rakkib(mabni: &mut Tarkib) -> Result<(), Radd> {
     match mabni.wajiha {
         #[cfg(windows)]
-        WajihatRusum::Direct3D11 | WajihatRusum::Direct3D12 => rakkib_dxgi(mabni),
+        WajihatRusum::Direct3D11 | WajihatRusum::Direct3D12 | WajihatRusum::Direct3D10 => {
+            rakkib_dxgi(mabni)
+        },
+        #[cfg(windows)]
+        WajihatRusum::Direct3D9 => rakkib_d3d9(mabni),
+        #[cfg(windows)]
+        WajihatRusum::Direct3D8 => rakkib_d3d8(mabni),
         WajihatRusum::OpenGl => rakkib_gl(mabni),
         wajiha => Err(Radd::fashal(format!(
             "{wajiha} has no bootstrap on this platform, which the module search should have \
@@ -497,15 +533,22 @@ fn rakkib_gl(mabni: &mut Tarkib) -> Result<(), Radd> {
 /// not to the instance.
 #[cfg(windows)]
 fn rakkib_dxgi(mabni: &mut Tarkib) -> Result<(), Radd> {
-    let ithnaashar = matches!(mabni.wajiha, WajihatRusum::Direct3D12);
     let nafidha = nafidha_muaqqata().map_err(|khata| {
         Radd::rafd(format!(
             "no hidden window could be created to read the swap chain's method table: {khata}"
         ))
     })?;
 
-    let (silsila, saff) =
-        if ithnaashar { silsila_d3d12(&nafidha)? } else { (silsila_d3d11(&nafidha)?, None) };
+    // The dummy is made through the generation the game is using rather than
+    // through whichever one is convenient. A DXGI swap chain's method table is
+    // DXGI's and is almost certainly the same object class either way — but
+    // "almost certainly" is not a thing to hook a stranger's game on, and
+    // creating it through the right runtime costs one more small function.
+    let (silsila, saff) = match mabni.wajiha {
+        WajihatRusum::Direct3D12 => silsila_d3d12(&nafidha)?,
+        WajihatRusum::Direct3D10 => (silsila_d3d10(&nafidha)?, None),
+        _ => (silsila_d3d11(&nafidha)?, None),
+    };
 
     // Built as a local: every `?` below drops it, and the `Drop` on
     // `KhatfJadwal` puts back every slot replaced before the failure.
@@ -602,6 +645,296 @@ fn rakkib_dxgi(mabni: &mut Tarkib) -> Result<(), Radd> {
     }
 
     Ok(())
+}
+
+/// Replaces the Direct3D 9 device's presentation and reset slots.
+///
+/// The same technique as [`rakkib_dxgi`] and the same reason: there is no API
+/// that hands over the vtable of the device a game is using, so a throwaway one
+/// is created against the hidden window, its pointers are read, and it is
+/// destroyed. A vtable belongs to the class and not to the instance, so those
+/// pointers are the game's.
+///
+/// Four slots rather than two, and the pairing is what matters. `Present` is
+/// where the overlay draws; `Reset` is where the game recovers a **lost
+/// device**, and it fails while the overlay holds a state block — so hooking
+/// `Present` without `Reset` would make the first alt-tab out of exclusive
+/// fullscreen break the game rather than the overlay. `PresentEx` and `ResetEx`
+/// are the same two methods on an extended device, hooked in addition rather
+/// than instead: a 9Ex device exposes both pairs and a game may call either.
+#[cfg(windows)]
+fn silsila_d3d10(nafidha: &NafidhaMuaqqata) -> Result<IDXGISwapChain, Radd> {
+    use windows::Win32::Graphics::Direct3D10::{
+        D3D10_DRIVER_TYPE_HARDWARE, D3D10_SDK_VERSION, D3D10CreateDeviceAndSwapChain, ID3D10Device,
+    };
+
+    let wasf = wasf_silsila(nafidha, DXGI_SWAP_EFFECT_DISCARD, 1);
+    let mut silsila: Option<IDXGISwapChain> = None;
+    let mut jihaz: Option<ID3D10Device> = None;
+
+    // SAFETY: every pointer argument addresses a local that outlives the call;
+    // the description names the hidden window this function was handed, which
+    // is alive for the whole call; and the flag word is zero, which asks for no
+    // debug layer — that is not installed on a player's machine.
+    unsafe {
+        D3D10CreateDeviceAndSwapChain(
+            None,
+            D3D10_DRIVER_TYPE_HARDWARE,
+            HMODULE::default(),
+            0,
+            D3D10_SDK_VERSION,
+            Some(&raw const wasf),
+            Some(&raw mut silsila),
+            Some(&raw mut jihaz),
+        )
+    }
+    .map_err(|khata| {
+        Radd::rafd(format!(
+            "a throwaway D3D10 swap chain could not be created to read its method table: {khata}"
+        ))
+    })?;
+
+    silsila.ok_or_else(|| {
+        Radd::fashal("D3D10 reported success and produced no swap chain".to_owned())
+    })
+}
+
+/// Replaces `Present` and `Reset` in a Direct3D 8 device's method table.
+///
+/// The capability report is written to the log **before** the throwaway device
+/// is made, so a machine where nothing can be hooked says why in the file the
+/// player can read rather than only refusing.
+///
+/// `crate::d3d8::TarkeebD3D8::rakkib` verifies the ninety-six-slot table
+/// against that device before it writes a single slot, which is the one thing
+/// this path does that none of the others needs: nothing binds Direct3D 8, so
+/// the table is hand-transcribed and is checked rather than trusted.
+#[cfg(windows)]
+fn rakkib_d3d8(mabni: &mut Tarkib) -> Result<(), Radd> {
+    for satr in crate::d3d8::qudra().sutur() {
+        sajjil(&mabni.mujallad, &format!("capability: {satr}"));
+    }
+
+    let muaqqat = crate::d3d8::jihaz_muaqqat().map_err(|khata| {
+        Radd::rafd(format!(
+            "no throwaway Direct3D 8 device could be created to read its method table: {khata}"
+        ))
+    })?;
+
+    // SAFETY: `muaqqat` holds a live `IDirect3DDevice8` it created and owns for
+    // the whole of this call, so its method table — which belongs to the class
+    // and not to the instance, and is therefore the game's own — is live.
+    // `nida_taqdeem_8` and `nida_tasfir_8` are `fn` items in this module and
+    // outlive any installation.
+    let tarkeeb = unsafe {
+        TarkeebD3D8::rakkib(muaqqat.jihaz(), nida_taqdeem_8, nida_tasfir_8)
+    }
+    .map_err(|khata| Radd::fashal(format!("IDirect3DDevice8: {khata}")))?;
+
+    mabni.thabit8 = Some(HirasatD3D8(tarkeeb));
+    Ok(())
+}
+
+/// What `crate::d3d8`'s `Present` thunk calls when a frame reaches it.
+#[cfg(windows)]
+fn nida_taqdeem_8(jihaz: *mut c_void) {
+    shaghghil_min_itar(MasdarKhalfiya::D3D8(jihaz));
+}
+
+/// What `crate::d3d8`'s `Reset` thunk calls before the game's own reset.
+///
+/// A `D3DSBT_ALL` state block does not survive a device reset, and the only
+/// moment it can be released is before the call reaches the runtime — which is
+/// the same shape as the DXGI `ResizeBuffers` hook above and reaches the
+/// backend through the same trait method.
+#[cfg(windows)]
+fn nida_tasfir_8() {
+    let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+        // `try_lock`: this runs on a render thread, and blocking it behind a
+        // start attempt on another thread would be a visible stall in the game.
+        if let Some(mut hirasa) = TARKIB.try_lock()
+            && let Some(tabaqa) = hirasa.as_mut().and_then(|mabni| mabni.tabaqa.as_mut())
+        {
+            let _ = tabaqa.qabl_taghyeer_hajm();
+        }
+    }));
+}
+
+#[cfg(windows)]
+fn rakkib_d3d9(mabni: &mut Tarkib) -> Result<(), Radd> {
+    let nafidha = nafidha_muaqqata().map_err(|khata| {
+        Radd::rafd(format!(
+            "no hidden window could be created to read the Direct3D 9 device's method table: \
+             {khata}"
+        ))
+    })?;
+
+    let jihaz = jihaz_d3d9(&nafidha)?;
+
+    // Built as a local: every `?` below drops it, and the `Drop` on
+    // `KhatfJadwal` puts back every slot replaced before the failure.
+    let mut jadwal = KhatfJadwal::jadeed("IDirect3DDevice9".to_owned());
+
+    // SAFETY: `jihaz` is a live COM interface this function just created, so its
+    // first machine word is its vtable pointer.
+    let lawh = unsafe { jadwal_min_wajiha(jihaz.as_raw()) };
+
+    // SAFETY: `lawh` is the vtable of an `IDirect3DDevice9` instance, which has
+    // more than `KHANAT_TAQDEEM9` entries; `thunk_taqdeem9` is a `'static`
+    // function carrying `Present`'s exact signature and calling convention, and
+    // it calls the original through `ASL_TAQDEEM9`, which is stored immediately
+    // below and before any game thread can reach the slot.
+    let asl = unsafe {
+        jadwal.ikhtif(
+            lawh,
+            KHANAT_TAQDEEM9,
+            thunk_taqdeem9 as *const () as *mut c_void,
+            "IDirect3DDevice9::Present",
+        )
+    }
+    .map_err(|khata| Radd::fashal(format!("IDirect3DDevice9::Present: {khata}")))?;
+    ASL_TAQDEEM9.ihfaz(asl);
+
+    // SAFETY: as above, for `Reset` at `KHANAT_ISTIAADA` and `thunk_istiaada9`,
+    // which carries that method's signature and calls the original through
+    // `ASL_ISTIAADA9`.
+    let asl = unsafe {
+        jadwal.ikhtif(
+            lawh,
+            KHANAT_ISTIAADA,
+            thunk_istiaada9 as *const () as *mut c_void,
+            "IDirect3DDevice9::Reset",
+        )
+    }
+    .map_err(|khata| Radd::fashal(format!("IDirect3DDevice9::Reset: {khata}")))?;
+    ASL_ISTIAADA9.ihfaz(asl);
+
+    // The extended pair only when the object really implements
+    // `IDirect3DDevice9Ex`. Those slot indices are derived from that interface's
+    // layout, so writing them on a device that does not implement it would be
+    // writing seventeen entries past the end of the table.
+    match jihaz.cast::<IDirect3DDevice9Ex>() {
+        Ok(mumtadd) => {
+            // SAFETY: `mumtadd` is the same object under an interface whose
+            // table has more than `KHANAT_ISTIAADA_MUMTADDA` entries — proved by
+            // the `QueryInterface` that produced it — and both thunks carry
+            // their methods' exact signatures.
+            let lawh_mumtadd = unsafe { jadwal_min_wajiha(mumtadd.as_raw()) };
+            // SAFETY: as above, for `PresentEx`.
+            let asl = unsafe {
+                jadwal.ikhtif(
+                    lawh_mumtadd,
+                    KHANAT_TAQDEEM_MUMTADD,
+                    thunk_taqdeem_mumtadd as *const () as *mut c_void,
+                    "IDirect3DDevice9Ex::PresentEx",
+                )
+            }
+            .map_err(|khata| Radd::fashal(format!("IDirect3DDevice9Ex::PresentEx: {khata}")))?;
+            ASL_TAQDEEM_MUMTADD.ihfaz(asl);
+
+            // SAFETY: as above, for `ResetEx`.
+            let asl = unsafe {
+                jadwal.ikhtif(
+                    lawh_mumtadd,
+                    KHANAT_ISTIAADA_MUMTADDA,
+                    thunk_istiaada_mumtadda as *const () as *mut c_void,
+                    "IDirect3DDevice9Ex::ResetEx",
+                )
+            }
+            .map_err(|khata| Radd::fashal(format!("IDirect3DDevice9Ex::ResetEx: {khata}")))?;
+            ASL_ISTIAADA_MUMTADDA.ihfaz(asl);
+        },
+        Err(khata) => {
+            // Not fatal, and the common case: a game built against the original
+            // Direct3D 9 runtime has no extended interface and is caught by the
+            // two slots already hooked.
+            sajjil(
+                &mabni.mujallad,
+                &format!(
+                    "note: this Direct3D 9 is not extended, so only Present and Reset are \
+                     hooked ({khata})"
+                ),
+            );
+        },
+    }
+
+    mabni.jadwal = Some(HirasatJadwal(jadwal));
+    Ok(())
+}
+
+/// A throwaway Direct3D 9 device, for its method table alone.
+///
+/// Three of the four behaviour flags are defensive rather than functional, and
+/// each of them is a way this function could otherwise damage the game it is
+/// running inside.
+///
+/// `D3DCREATE_FPU_PRESERVE` is the sharp one. Creating a Direct3D 9 device
+/// without it switches the process's x87 control word to single precision, for
+/// the whole process and for every thread — so a game doing its own physics in
+/// double precision would start producing different numbers because Taarib
+/// created a device it immediately threw away. It is the single most damaging
+/// side effect anything in this crate can have on a game, and it is one flag.
+///
+/// `D3DCREATE_NOWINDOWCHANGES` stops the runtime from moving or resizing the
+/// window it is given, which here is the hidden one and would be harmless — but
+/// the flag costs nothing and the failure it prevents is invisible.
+///
+/// `D3DCREATE_SOFTWARE_VERTEXPROCESSING` because this device never draws, and
+/// asking for hardware vertex processing is asking a driver for a resource on a
+/// card the game is already using.
+#[cfg(windows)]
+fn jihaz_d3d9(nafidha: &NafidhaMuaqqata) -> Result<IDirect3DDevice9, Radd> {
+    // SAFETY: `Direct3DCreate9` takes the SDK version and nothing else, and
+    // answers `None` rather than failing when the runtime is not present.
+    let Some(tisaa) = (unsafe { Direct3DCreate9(D3D_SDK_VERSION) }) else {
+        return Err(Radd::rafd(
+            "Direct3DCreate9 produced no interface, so this process has no usable Direct3D 9 \
+             runtime to read a method table from"
+                .to_owned(),
+        ));
+    };
+
+    let mut muallimat = D3DPRESENT_PARAMETERS {
+        BackBufferWidth: 8,
+        BackBufferHeight: 8,
+        // Unknown is permitted windowed and asks the runtime for the desktop's
+        // own format, which is the one format guaranteed to be creatable.
+        BackBufferFormat: D3DFMT_UNKNOWN,
+        BackBufferCount: 1,
+        SwapEffect: D3DSWAPEFFECT_DISCARD,
+        hDeviceWindow: nafidha.maqbad(),
+        Windowed: BOOL::from(true),
+        ..Default::default()
+    };
+
+    let mut jihaz: Option<IDirect3DDevice9> = None;
+    let aalam = (D3DCREATE_SOFTWARE_VERTEXPROCESSING
+        | D3DCREATE_FPU_PRESERVE
+        | D3DCREATE_NOWINDOWCHANGES
+        | D3DCREATE_MULTITHREADED)
+        .cast_unsigned();
+    // SAFETY: `tisaa` is the live interface from above, the presentation
+    // parameters are a fully initialised local naming the hidden window this
+    // function was handed, and the out-parameter addresses a local `None`.
+    unsafe {
+        tisaa.CreateDevice(
+            D3DADAPTER_DEFAULT,
+            D3DDEVTYPE_HAL,
+            nafidha.maqbad(),
+            aalam,
+            &raw mut muallimat,
+            &raw mut jihaz,
+        )
+    }
+    .map_err(|khata| {
+        Radd::rafd(format!(
+            "a throwaway Direct3D 9 device could not be created to read its method table: {khata}"
+        ))
+    })?;
+
+    jihaz.ok_or_else(|| {
+        Radd::fashal("Direct3D 9 reported success and produced no device".to_owned())
+    })
 }
 
 /// The throwaway swap chain description both dummies are built from.
@@ -744,6 +1077,20 @@ enum MasdarKhalfiya {
     /// The `this` pointer of the swap chain the game is presenting.
     #[cfg(windows)]
     Dxgi(*mut c_void),
+    /// The `this` pointer of the Direct3D 9 device the game is presenting on.
+    ///
+    /// A device rather than a swap chain, because Direct3D 9 predates DXGI: the
+    /// implicit swap chain is reached *through* the device and there is no
+    /// separate object for a hook to sit on.
+    #[cfg(windows)]
+    D3D9(*mut c_void),
+    /// The `this` pointer of the Direct3D 8 device the game is presenting on.
+    ///
+    /// A device for the same reason Direct3D 9's is one, and one generation
+    /// earlier: `Present` is method fifteen of `IDirect3DDevice8` and there is
+    /// no swap chain interface between the game and the screen at all.
+    #[cfg(windows)]
+    D3D8(*mut c_void),
     /// An OpenGL context, current on the thread that is swapping buffers.
     Gl,
 }
@@ -827,13 +1174,15 @@ fn jarrib_tashghil(masdar: MasdarKhalfiya) -> Nateeja {
 
     let natija = match masdar {
         #[cfg(windows)]
-        MasdarKhalfiya::Dxgi(silsila) => {
-            if matches!(mabni.wajiha, WajihatRusum::Direct3D12) {
-                khattaf_d3d12(silsila)
-            } else {
-                khattaf_d3d11(silsila)
-            }
+        MasdarKhalfiya::Dxgi(silsila) => match mabni.wajiha {
+            WajihatRusum::Direct3D12 => khattaf_d3d12(silsila),
+            WajihatRusum::Direct3D10 => khattaf_d3d10(&mujallad, silsila),
+            _ => khattaf_d3d11(silsila),
         },
+        #[cfg(windows)]
+        MasdarKhalfiya::D3D9(jihaz) => khattaf_d3d9(&mujallad, jihaz),
+        #[cfg(windows)]
+        MasdarKhalfiya::D3D8(jihaz) => khattaf_d3d8(&mujallad, jihaz),
         MasdarKhalfiya::Gl => khattaf_gl(),
     };
 
@@ -913,11 +1262,98 @@ fn khattaf_d3d12(silsila: *mut c_void) -> Result<Option<Box<dyn Khattaf>>, Radd>
     Ok(Some(Box::new(khattaf)))
 }
 
-/// The OpenGL backend, over the context that is current on this thread.
-fn khattaf_gl() -> Result<Option<Box<dyn Khattaf>>, Radd> {
-    let khattaf = KhattafGl::jadeed()
-        .map_err(|khata| Radd::fashal(format!("the OpenGL backend could not be built: {khata}")))?;
+/// The Direct3D 9 backend, over the device the game just presented on.
+///
+/// The capability report is produced here rather than at the first draw and is
+/// written into the payload's log before anything else happens, because half of
+/// what it says — whether the device can be lost, whether the backbuffer can be
+/// read for recognition — is knowable only from a live device and is exactly
+/// what a player would otherwise experience as an overlay that draws nothing.
+#[cfg(windows)]
+fn khattaf_d3d9(mujallad: &Path, jihaz: *mut c_void) -> Result<Option<Box<dyn Khattaf>>, Radd> {
+    // SAFETY: `jihaz` is the `this` of an `IDirect3DDevice9` method call in
+    // progress, so it points at a live device the game owns for at least the
+    // duration of that call, and the borrow taken here does not outlive it.
+    let Some(wajiha) = (unsafe { IDirect3DDevice9::from_raw_borrowed(&jihaz) }) else {
+        return Err(Radd::fashal("the present hook was reached with a null device"));
+    };
+    let khattaf = KhattafD3D9::min_jihaz(wajiha)
+        .map_err(|khata| Radd::fashal(format!("the D3D9 backend could not be built: {khata}")))?;
+
+    match khattaf.qudra() {
+        Ok(taqrir) => {
+            for satr in taqrir.sutur() {
+                sajjil(mujallad, &format!("capability: {satr}"));
+            }
+        },
+        // A device that will not describe itself right now is a device that will
+        // describe itself on a later frame. The overlay still starts; the report
+        // is what is missing, and saying so is better than refusing over it.
+        Err(khata) => sajjil(
+            mujallad,
+            &format!("capability: the Direct3D 9 device would not describe itself yet: {khata}"),
+        ),
+    }
+
     Ok(Some(Box::new(khattaf)))
+}
+
+/// The Direct3D 10 backend, over the swap chain the game just presented.
+///
+/// Declines rather than fails when the swap chain's device is not a Direct3D 10
+/// one, which is what an eleventh- or twelfth-generation game looks like from
+/// here — and is why the refusal is logged as a capability line rather than as
+/// a fault. The module search cannot tell the two apart; the device can.
+#[cfg(windows)]
+fn khattaf_d3d10(
+    mujallad: &Path,
+    silsila: *mut c_void,
+) -> Result<Option<Box<dyn Khattaf>>, Radd> {
+    // SAFETY: `silsila` is the `this` of an `IDXGISwapChain` method call in
+    // progress, so it points at a live instance the game owns for at least the
+    // duration of that call, and the borrow taken here does not outlive it.
+    let Some(wajiha) = (unsafe { IDXGISwapChain::from_raw_borrowed(&silsila) }) else {
+        return Err(Radd::fashal("the present hook was reached with a null swap chain"));
+    };
+    for satr in crate::d3d10::qudra().sutur() {
+        sajjil(mujallad, &format!("capability: {satr}"));
+    }
+    let khattaf = KhattafD3D10::min_silsila(wajiha)
+        .map_err(|khata| Radd::fashal(format!("the D3D10 backend could not be built: {khata}")))?;
+    Ok(Some(Box::new(khattaf)))
+}
+
+/// The Direct3D 8 backend, over the device the game just presented on.
+///
+/// The backend's own trace lines go into the log the moment it exists, because
+/// two of them are facts a player needs and nothing else reports: whether the
+/// device is a *pure* one, on which no state may be read back, and whether the
+/// `d3d8.dll` answering is Microsoft's or a community replacement.
+#[cfg(windows)]
+fn khattaf_d3d8(mujallad: &Path, jihaz: *mut c_void) -> Result<Option<Box<dyn Khattaf>>, Radd> {
+    // SAFETY: `jihaz` is the `this` of an `IDirect3DDevice8` method call in
+    // progress, so it points at a live device the game owns for at least the
+    // duration of that call. `min_jihaz` takes a reference of its own before it
+    // keeps the pointer past that call.
+    let khattaf = unsafe { KhattafD3D8::min_jihaz(jihaz) }
+        .map_err(|khata| Radd::fashal(format!("the D3D8 backend could not be built: {khata}")))?;
+    for satr in khattaf.athar() {
+        sajjil(mujallad, &format!("capability: {satr}"));
+    }
+    Ok(Some(Box::new(khattaf)))
+}
+
+/// The OpenGL backend for whichever kind of context this game has.
+///
+/// Two backends answer for OpenGL and the module list cannot separate them:
+/// every OpenGL process loads the same module whether its context is a 4.6 core
+/// profile or a 1.1 compatibility one. `crate::gl_thabit::ikhtar` asks the
+/// context instead, prefers the modern backend on 3.0 and later, and falls back
+/// to the fixed-function one when that refuses or when the context is older.
+fn khattaf_gl() -> Result<Option<Box<dyn Khattaf>>, Radd> {
+    let khattaf = crate::gl_thabit::ikhtar()
+        .map_err(|khata| Radd::fashal(format!("the OpenGL backend could not be built: {khata}")))?;
+    Ok(Some(khattaf))
 }
 
 // ---------------------------------------------------------------------------
@@ -1080,6 +1516,166 @@ unsafe extern "system" fn thunk_tanfeedh(
     unsafe { asl(saff, adad, qawaim) };
 }
 
+/// `IDirect3DDevice9::Present`, as a callable pointer.
+///
+/// Five parameters, and every one of them is passed through untouched. The two
+/// rectangles and the region are the game's own partial-presentation request;
+/// the window override is how a game presents into a window other than the one
+/// the device was created against. This module reads none of them.
+#[cfg(windows)]
+type DallatTaqdeem9 = unsafe extern "system" fn(
+    *mut c_void,
+    *const RECT,
+    *const RECT,
+    HWND,
+    *const c_void,
+) -> HRESULT;
+
+/// `IDirect3DDevice9Ex::PresentEx`, as a callable pointer.
+///
+/// `Present`'s five parameters plus a flags word.
+#[cfg(windows)]
+type DallatTaqdeemMumtadd = unsafe extern "system" fn(
+    *mut c_void,
+    *const RECT,
+    *const RECT,
+    HWND,
+    *const c_void,
+    u32,
+) -> HRESULT;
+
+/// `IDirect3DDevice9::Reset`, as a callable pointer.
+#[cfg(windows)]
+type DallatIstiaada9 = unsafe extern "system" fn(*mut c_void, *mut c_void) -> HRESULT;
+
+/// `IDirect3DDevice9Ex::ResetEx`, as a callable pointer.
+#[cfg(windows)]
+type DallatIstiaadaMumtadda =
+    unsafe extern "system" fn(*mut c_void, *mut c_void, *mut c_void) -> HRESULT;
+
+/// `IDirect3DDevice9::Present`, which is where the overlay first becomes
+/// possible on this API.
+#[cfg(windows)]
+unsafe extern "system" fn thunk_taqdeem9(
+    jihaz: *mut c_void,
+    masdar: *const RECT,
+    hadaf: *const RECT,
+    nafidha: HWND,
+    mintaqa: *const c_void,
+) -> HRESULT {
+    let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
+    shaghghil_min_itar(MasdarKhalfiya::D3D9(jihaz));
+
+    let asl = ASL_TAQDEEM9.iqra();
+    if asl.is_null() {
+        return HRESULT(0);
+    }
+    // SAFETY: `asl` is the non-null pointer this module read out of the slot it
+    // replaced, so it is `Present`'s own entry point with this exact signature
+    // and calling convention, and the module owning it is still mapped because
+    // the game is inside a call to it.
+    let asl = unsafe { core::mem::transmute::<*mut c_void, DallatTaqdeem9>(asl) };
+    // SAFETY: the arguments are the ones the game passed, unmodified.
+    unsafe { asl(jihaz, masdar, hadaf, nafidha, mintaqa) }
+}
+
+/// `IDirect3DDevice9Ex::PresentEx`.
+#[cfg(windows)]
+unsafe extern "system" fn thunk_taqdeem_mumtadd(
+    jihaz: *mut c_void,
+    masdar: *const RECT,
+    hadaf: *const RECT,
+    nafidha: HWND,
+    mintaqa: *const c_void,
+    aalam: u32,
+) -> HRESULT {
+    let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
+    shaghghil_min_itar(MasdarKhalfiya::D3D9(jihaz));
+
+    let asl = ASL_TAQDEEM_MUMTADD.iqra();
+    if asl.is_null() {
+        return HRESULT(0);
+    }
+    // SAFETY: as `thunk_taqdeem9`, for `PresentEx`'s signature.
+    let asl = unsafe { core::mem::transmute::<*mut c_void, DallatTaqdeemMumtadd>(asl) };
+    // SAFETY: the arguments are the ones the game passed, unmodified.
+    unsafe { asl(jihaz, masdar, hadaf, nafidha, mintaqa, aalam) }
+}
+
+/// `IDirect3DDevice9::Reset`, hooked so a lost device can be recovered.
+///
+/// This is the D3D9 counterpart of [`thunk_taghyeer`] and it matters more.
+/// `Reset` is refused with `D3DERR_INVALIDCALL` while anybody holds a
+/// `D3DPOOL_DEFAULT` resource, an explicit render target **or a state block** —
+/// and the overlay holds a state block for the whole session, because that is
+/// how it saves and restores the game's own device state. Without this hook the
+/// first alt-tab out of exclusive fullscreen would leave the game unable to
+/// recover its device, which is a game that never comes back rather than an
+/// overlay that stops drawing.
+#[cfg(windows)]
+unsafe extern "system" fn thunk_istiaada9(
+    jihaz: *mut c_void,
+    muallimat: *mut c_void,
+) -> HRESULT {
+    let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
+    atliq_qabl_istiaada();
+
+    let asl = ASL_ISTIAADA9.iqra();
+    if asl.is_null() {
+        return HRESULT(0);
+    }
+    // SAFETY: as `thunk_taqdeem9`, for `Reset`'s signature.
+    let asl = unsafe { core::mem::transmute::<*mut c_void, DallatIstiaada9>(asl) };
+    // SAFETY: the arguments are the ones the game passed, unmodified, including
+    // its own presentation parameters, which this module never reads.
+    unsafe { asl(jihaz, muallimat) }
+}
+
+/// `IDirect3DDevice9Ex::ResetEx`.
+///
+/// An extended device is not lost by an alt-tab, but `ResetEx` still destroys
+/// every `D3DPOOL_DEFAULT` resource and is still refused while a state block
+/// exists — so the release this performs is the same one.
+#[cfg(windows)]
+unsafe extern "system" fn thunk_istiaada_mumtadda(
+    jihaz: *mut c_void,
+    muallimat: *mut c_void,
+    namat: *mut c_void,
+) -> HRESULT {
+    let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
+    atliq_qabl_istiaada();
+
+    let asl = ASL_ISTIAADA_MUMTADDA.iqra();
+    if asl.is_null() {
+        return HRESULT(0);
+    }
+    // SAFETY: as `thunk_taqdeem9`, for `ResetEx`'s signature.
+    let asl = unsafe { core::mem::transmute::<*mut c_void, DallatIstiaadaMumtadda>(asl) };
+    // SAFETY: the arguments are the ones the game passed, unmodified.
+    unsafe { asl(jihaz, muallimat, namat) }
+}
+
+/// Tells the live overlay to let go of everything a `Reset` would refuse over.
+///
+/// Written once and called from both reset thunks, because the two differ only
+/// in the signature they forward and getting the release into one of them and
+/// not the other would be a bug that only appears on extended devices.
+///
+/// `try_lock`: this runs on the game's render thread, and blocking it behind a
+/// start attempt on another thread would be a stall the player feels. A lock
+/// that is held means a start attempt is in progress, which means no overlay
+/// exists yet, which means there is nothing to release.
+#[cfg(windows)]
+fn atliq_qabl_istiaada() {
+    let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+        if let Some(mut hirasa) = TARKIB.try_lock()
+            && let Some(tabaqa) = hirasa.as_mut().and_then(|mabni| mabni.tabaqa.as_mut())
+        {
+            let _ = tabaqa.qabl_taghyeer_hajm();
+        }
+    }));
+}
+
 /// `wglSwapBuffers`, the moment an OpenGL context is guaranteed current.
 #[cfg(windows)]
 unsafe extern "system" fn thunk_tabdil(siyaq: *mut c_void) -> BOOL {
@@ -1137,6 +1733,28 @@ struct HirasatJadwal(KhatfJadwal);
 #[cfg(windows)]
 unsafe impl Send for HirasatJadwal {}
 
+/// A Direct3D 8 installation that may cross to the render thread.
+#[cfg(windows)]
+#[derive(Debug)]
+struct HirasatD3D8(TarkeebD3D8);
+
+#[cfg(windows)]
+#[expect(
+    clippy::non_send_fields_in_send_ty,
+    reason = "the field the lint names holds the addresses of two method-table slots, which is \
+              exactly what the claim below is about: they are not `Send` on their own and this \
+              wrapper asserts that moving them is sound because they are only ever read and \
+              written under the page guard. A thread-safe type would assert something different \
+              and would not make the underlying hook any more shareable"
+)]
+// SAFETY: as `HirasatJadwal`. The record holds the addresses of the two slots
+// it replaced and never dereferences them outside the verified volatile
+// read-and-write `taarib_haqn::hirasa` performs with the page guard held, so
+// moving it to the render thread conveys no capability the method table does
+// not already give every thread in the process. This module guarantees the
+// rest: the value lives in one static behind a mutex and is never aliased.
+unsafe impl Send for HirasatD3D8 {}
+
 /// Everything this bootstrap installed, in one value.
 ///
 /// One value because `docs/bidaya.md` requires that anything installed before a
@@ -1157,6 +1775,13 @@ struct Tarkib {
     /// The command queue's replaced slot, on D3D12.
     #[cfg(windows)]
     saff: Option<HirasatJadwal>,
+    /// The Direct3D 8 device's two replaced slots.
+    ///
+    /// Its own type rather than a `HirasatJadwal` because `crate::d3d8` owns
+    /// both the installation and the verification that precedes it, and because
+    /// unhooking it also clears the callbacks this module handed over.
+    #[cfg(windows)]
+    thabit8: Option<HirasatD3D8>,
     /// The OpenGL buffer-swap detour.
     masar: Option<Masar>,
     /// The acknowledgement, until the one overlay it enables consumes it.
@@ -1176,6 +1801,8 @@ impl Tarkib {
             jadwal: None,
             #[cfg(windows)]
             saff: None,
+            #[cfg(windows)]
+            thabit8: None,
             masar: None,
             iqrar: Some(iqrar),
             tabaqa: None,
@@ -1192,6 +1819,10 @@ impl Tarkib {
     fn fukk(&mut self) {
         if let Some(tabaqa) = self.tabaqa.as_mut() {
             let _ = tabaqa.aghliq();
+        }
+        #[cfg(windows)]
+        if let Some(thabit8) = self.thabit8.as_mut() {
+            let _ = thabit8.0.fukk();
         }
         #[cfg(windows)]
         if let Some(saff) = self.saff.as_mut() {
@@ -1388,6 +2019,22 @@ static ASL_TAGHYEER: AslMahfuz = AslMahfuz::jadeed();
 /// The captured `ID3D12CommandQueue::ExecuteCommandLists`.
 #[cfg(windows)]
 static ASL_TANFEEDH: AslMahfuz = AslMahfuz::jadeed();
+
+/// The captured `IDirect3DDevice9::Present`.
+#[cfg(windows)]
+static ASL_TAQDEEM9: AslMahfuz = AslMahfuz::jadeed();
+
+/// The captured `IDirect3DDevice9::Reset`.
+#[cfg(windows)]
+static ASL_ISTIAADA9: AslMahfuz = AslMahfuz::jadeed();
+
+/// The captured `IDirect3DDevice9Ex::PresentEx`.
+#[cfg(windows)]
+static ASL_TAQDEEM_MUMTADD: AslMahfuz = AslMahfuz::jadeed();
+
+/// The captured `IDirect3DDevice9Ex::ResetEx`.
+#[cfg(windows)]
+static ASL_ISTIAADA_MUMTADDA: AslMahfuz = AslMahfuz::jadeed();
 
 /// The trampoline that reaches the platform's real buffer swap.
 static ASL_TABDIL: AslMahfuz = AslMahfuz::jadeed();

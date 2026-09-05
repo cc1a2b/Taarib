@@ -132,7 +132,10 @@ pub fn istakhrij(jidhr: &Path, aila: AilatMuharrik) -> (JadwalNusus, TaqreerRafd
         AilatMuharrik::Renpy => min_renpy(&mut jadwal, &mut taqreer, jidhr),
         AilatMuharrik::GameMaker => min_gamemaker(&mut jadwal, &mut taqreer, jidhr),
         AilatMuharrik::Electron => min_electron(&mut jadwal, &mut taqreer, jidhr),
-        AilatMuharrik::Unity | AilatMuharrik::Unreal | AilatMuharrik::Godot => {
+        AilatMuharrik::Unity
+        | AilatMuharrik::Unreal
+        | AilatMuharrik::Godot
+        | AilatMuharrik::Bio4 => {
             taqreer.sajjil(
                 jidhr.display().to_string(),
                 None,

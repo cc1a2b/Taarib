@@ -516,7 +516,8 @@ const fn rutba(aila: AilatMuharrik) -> u8 {
         AilatMuharrik::Renpy => 6,
         AilatMuharrik::GameMaker => 7,
         AilatMuharrik::Electron => 8,
-        AilatMuharrik::Majhul => 9,
+        AilatMuharrik::Bio4 => 9,
+        AilatMuharrik::Majhul => 10,
     }
 }
 
@@ -785,6 +786,14 @@ const fn khalfiya_tunasib(aila: AilatMuharrik, khalfiya: KhalfiyaBarmajiya) -> b
         AilatMuharrik::RpgMakerVxAce => matches!(khalfiya, KhalfiyaBarmajiya::Ruby),
         AilatMuharrik::Renpy => matches!(khalfiya, KhalfiyaBarmajiya::Python),
         AilatMuharrik::GameMaker => matches!(khalfiya, KhalfiyaBarmajiya::GameMakerVm),
+        // Nothing, and that is the honest answer rather than an oversight. This
+        // engine's game code is compiled C++ with no scripting runtime under it
+        // at all, and [`KhalfiyaBarmajiya`] has no value for that: `UnrealNative`
+        // names Unreal's C++ specifically and would be a false statement here.
+        // So no neutral detector's reading is accepted for it, which is also
+        // what stops a stray `mono-2.0-bdwgc` in a neighbouring library from
+        // giving a 2005 Capcom binary a Mono backend.
+        AilatMuharrik::Bio4 => false,
         AilatMuharrik::Majhul => true,
     }
 }
@@ -799,7 +808,16 @@ const fn khalfiya_bunyawiya(aila: AilatMuharrik) -> Option<KhalfiyaBarmajiya> {
         AilatMuharrik::RpgMakerVxAce => Some(KhalfiyaBarmajiya::Ruby),
         AilatMuharrik::Renpy => Some(KhalfiyaBarmajiya::Python),
         AilatMuharrik::GameMaker => Some(KhalfiyaBarmajiya::GameMakerVm),
-        AilatMuharrik::Unity | AilatMuharrik::Godot | AilatMuharrik::Majhul => None,
+        // `Bio4` is here for the same reason as the two beside it and a
+        // different one. Unity and Godot are excluded because their fork in the
+        // road decides which payload is installed; this one is excluded because
+        // there is no value to name — see [`khalfiya_tunasib`] — so it resolves
+        // to `Majhula`, which is what "compiled C++, no scripting runtime" has
+        // to look like in a vocabulary that has no word for it yet.
+        AilatMuharrik::Unity
+        | AilatMuharrik::Godot
+        | AilatMuharrik::Bio4
+        | AilatMuharrik::Majhul => None,
     }
 }
 

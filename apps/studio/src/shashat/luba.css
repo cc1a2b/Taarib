@@ -248,6 +248,146 @@
   text-wrap: pretty;
 }
 
+/* --- what this game actually gets ------------------------------------------
+   The finding, above the evidence. This block answers the question the reader
+   opened the screen with — which of the three products applies — and the engine
+   table below it is what that answer was derived from.
+
+   It is a plate rather than loose paragraphs because the section holds three
+   other things that are also paragraphs: the readiness notice, the limits and
+   the refusal. A statement with no boundary would have read as the first of
+   them rather than as the section's own answer. The accent rail on its leading
+   edge is `--tamyeez`, the product's own colour and the only place on the
+   screen it is used as a rail — the amber rail means "read this before you
+   act" and the red one means an anti-cheat refusal, and this is neither: it is
+   the finding.
+   -------------------------------------------------------------------------- */
+
+.luba__muntaj {
+  display: grid;
+  gap: var(--misafa-8);
+  padding: var(--misafa-12) var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tamyeez);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* A refused game has no product, so the rail says what the rest of this screen
+   says about a refusal: permanent, and about an account rather than an
+   evening. */
+.luba__muntaj--marfud {
+  border-inline-start-color: var(--khatar);
+}
+
+/* The finding, and the heaviest line in the panel — but one step under the
+   section's own title, which is `--qiyas-4` and sits sixteen pixels above it.
+   Two lines at the same size that close together compete, and the one that
+   should win is the section, because the product line can be two clauses long.
+   Weight rather than size is what carries it instead.
+
+   Flex only for the qualification beside it: `row-gap` and no column gap,
+   because `.luba__tabaqa-muallaqa` brings its own leading margin and the two
+   together would space it twice. */
+.luba__muntaj-unwan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  row-gap: var(--misafa-4);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-bariz);
+  color: var(--nass-1);
+}
+
+.luba__muntaj--marfud .luba__muntaj-unwan {
+  color: var(--khatar);
+}
+
+/* What the product does. The reading measure and colour the section's other
+   prose uses, so the plate reads as part of the page rather than as a callout
+   shouting at it. */
+.luba__muntaj-sharh,
+.luba__muntaj-kulfa {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* What it costs. One step of separation from the sentence above it and nothing
+   more — no amber, no icon, no box. Every one of these paragraphs names a
+   capability the player is about to lose, and a product that decorated that as
+   a warning would be a product that had decided the loss was somebody else's
+   problem. It is stated in the same voice as the rest, which is what makes it
+   read as part of the description rather than as a disclaimer. */
+.luba__muntaj-kulfa {
+  padding-block-start: var(--misafa-8);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* The tier number, demoted to a footnote and kept.
+   The capability report, the registry and the patch listing all label a tier
+   with this number, so a reader comparing this screen against one of those
+   needs it to still be here — it is simply no longer the first thing said. */
+.luba__muntaj-raqm {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+/* --- the cost, beside the button that spends it ----------------------------
+   The same limits the compatibility panel lists, one press away from the
+   install control rather than in another panel. A disclosure and not an open
+   list: the panel above already carries it open, and the same five paragraphs
+   printed twice on one screen is how a page teaches somebody to skip both.
+
+   Closed, quiet and not amber. It is not a warning — every game has limits and
+   most of them are ordinary facts about what text is — and dressing the list as
+   a caution would put a yellow rail on every game in the library. The marker is
+   the disclosure's own; only the summary carries any weight. */
+
+.luba__kulfa {
+  margin-block-start: var(--misafa-12);
+  padding: var(--misafa-8) var(--misafa-12);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.luba__kulfa-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+  cursor: pointer;
+}
+
+.luba__kulfa-unwan:focus-visible {
+  outline: var(--samk-hadd-barz) solid var(--tamyeez-qawi);
+  outline-offset: var(--misafa-2);
+  border-radius: var(--nisf-hadd);
+}
+
+/* Open, the summary becomes a heading over what it revealed rather than a row
+   floating on top of it. */
+.luba__kulfa[open] .luba__kulfa-unwan {
+  margin-block-end: var(--misafa-8);
+  color: var(--nass-1);
+}
+
+/* The tier's own price sits above the per-game list and is ruled off from it,
+   because the two answer different questions: this one is true of every game on
+   the tier and the list below is true of this one. */
+.luba__kulfa-tabaqa {
+  margin-block-end: var(--misafa-8);
+  padding-block-start: 0;
+  padding-block-end: var(--misafa-8);
+  border-block-start: none;
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
 .luba__hudud {
   display: grid;
   gap: var(--misafa-6);

@@ -25,6 +25,11 @@
     reason = "a test reports failure by panicking and asserts on values it has just \
               constructed; refusing to panic here would mean a test that cannot fail"
 )]
+#![expect(
+    clippy::disallowed_methods,
+    reason = "scratch teardown under `std::env::temp_dir()`, never a data root or a game \
+              directory; the product's own recursive deletes go through `HadafHadhf`"
+)]
 
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -381,6 +381,106 @@ impl Masarat {
         }
         Ok(())
     }
+
+    /// Proves that a directory inside Taarib's own layout may be deleted
+    /// recursively, yielding the only value [`hadhf_mujallad`] accepts.
+    ///
+    /// The target must sit *strictly below* the data root or patch storage, and
+    /// must not be — or contain — the data root, the settings root, the user's
+    /// home directory, or patch storage. On Windows and macOS the settings root
+    /// **is** the data root, so `%APPDATA%\Taarib` is refused twice over.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataMasarat::JidhrMahmi`] when the target is one of those roots,
+    /// contains one, lies outside the layout entirely, or reaches its place
+    /// through a `..` component.
+    pub fn hadaf_hadhf(&self, masar: &Path) -> Natija<HadafHadhf> {
+        let ruqaa = self.ruqaa();
+        ithbat_hadaf(
+            &[&self.bayanat, &ruqaa],
+            &[&self.bayanat, &self.idadat, &self.manzil, &ruqaa],
+            masar,
+        )
+    }
+}
+
+/// A directory that has been proved safe to delete recursively.
+///
+/// [`hadhf_mujallad`] takes one of these and nothing else, so a recursive
+/// deletion cannot be *written* without first passing through a constructor
+/// that has already refused every root worth protecting. There are two:
+/// [`Masarat::hadaf_hadhf`] for somewhere inside Taarib's own layout, and
+/// [`hadaf_hadhf_fi_luba`] for somewhere inside a game installation.
+///
+/// Neither can yield a value equal to a data root, a settings root, a home
+/// directory, patch storage, or a game directory — each requires the target to
+/// sit strictly below the root that permits it, and separately refuses any path
+/// that *is* such a root or an ancestor of one.
+///
+/// This is deliberately a property of the type rather than a check repeated at
+/// each call site. A data root was destroyed by a deletion whose target was
+/// correct at every call site that existed when it was written; the guard has to
+/// be the thing a new call site cannot avoid, not the thing it must remember.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HadafHadhf(PathBuf);
+
+impl HadafHadhf {
+    /// The proved path.
+    #[must_use]
+    pub fn masar(&self) -> &Path {
+        &self.0
+    }
+}
+
+/// Proves that a directory inside a game installation may be deleted
+/// recursively.
+///
+/// The game directory itself is never a valid target: uninstalling Taarib's
+/// work from a game removes the files Taarib added, one at a time, and no
+/// operation in the product is entitled to remove somebody's game.
+///
+/// # Errors
+///
+/// [`KhataMasarat::JidhrMahmi`] when the target is the game directory itself,
+/// lies outside it, or reaches its place through a `..` component.
+pub fn hadaf_hadhf_fi_luba(jidhr_luba: &Path, masar: &Path) -> Natija<HadafHadhf> {
+    ithbat_hadaf(&[jidhr_luba], &[jidhr_luba], masar)
+}
+
+/// The shared proof: strictly below one of `judhur`, and neither equal to nor an
+/// ancestor of anything in `mahmiyat`.
+///
+/// The two conditions are separate on purpose. "Strictly below a permitted root"
+/// alone would still allow deleting a game directory nested inside the data root
+/// — and "not a protected root" alone would allow deleting anything anywhere.
+fn ithbat_hadaf(judhur: &[&Path], mahmiyat: &[&Path], masar: &Path) -> Natija<HadafHadhf> {
+    let rafd = |jidhr: &Path| -> Natija<HadafHadhf> {
+        Err(Khata::min_tafsir(&KhataMasarat::JidhrMahmi {
+            masar: masar.to_path_buf(),
+            jidhr: jidhr.to_path_buf(),
+        }))
+    };
+
+    // A `..` anywhere makes `starts_with` meaningless: `<root>/x/..` is the
+    // root, and `starts_with` would happily confirm it is below itself.
+    if masar.components().any(|juz| matches!(juz, Component::ParentDir)) {
+        return rafd(masar);
+    }
+
+    for mahmi in mahmiyat {
+        // Either the target *is* a protected root, or deleting it would take
+        // one with it.
+        if masar == *mahmi || mahmi.starts_with(masar) {
+            return rafd(mahmi);
+        }
+    }
+
+    if judhur.iter().any(|jidhr| masar != *jidhr && masar.starts_with(jidhr)) {
+        Ok(HadafHadhf(masar.to_path_buf()))
+    } else {
+        rafd(judhur.first().copied().unwrap_or(masar))
+    }
 }
 
 /// The directory the portable marker sits in, when this run carries one.
@@ -691,15 +791,25 @@ pub fn hadhf(masar: &Path) -> Natija<()> {
 /// Deletes a directory and everything under it, treating "already gone" as
 /// success.
 ///
+/// Takes a [`HadafHadhf`] rather than a path, which is the whole point: the
+/// only recursive deletion in the product cannot be aimed at a data root, a
+/// settings root, a home directory, patch storage or a game directory, because
+/// no constructor of its argument will produce one.
+///
 /// # Errors
 ///
 /// Fails when the directory exists and cannot be removed.
-pub fn hadhf_mujallad(masar: &Path) -> Natija<()> {
-    match fs::remove_dir_all(masar) {
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the one recursive deletion in the product, and the only one whose argument has \
+              already been proved not to be a root"
+)]
+pub fn hadhf_mujallad(hadaf: &HadafHadhf) -> Natija<()> {
+    match fs::remove_dir_all(hadaf.masar()) {
         Ok(()) => Ok(()),
         Err(q) if q.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(q) => Err(Khata::min_tafsir(&KhataMasarat::TaadhurHadhf {
-            masar: masar.to_path_buf(),
+            masar: hadaf.masar().to_path_buf(),
             sabab: q,
         })),
     }
@@ -807,6 +917,15 @@ pub enum KhataMasarat {
         basma: String,
     },
 
+    /// A recursive deletion was aimed at a directory that must never be one.
+    #[error("refused to delete {masar}: protected root {jidhr}")]
+    JidhrMahmi {
+        /// The path the deletion was aimed at.
+        masar: PathBuf,
+        /// The protected root it is, contains, or fails to sit below.
+        jidhr: PathBuf,
+    },
+
     /// A file that must be UTF-8 is not.
     #[error("invalid UTF-8 in {masar} at byte {mawqi}")]
     TarmizGhayrSalih {
@@ -834,15 +953,17 @@ impl Tafsir for KhataMasarat {
                     Self::RabtRamzi { .. } => 9,
                     Self::BasmaGhayrSaliha { .. } => 10,
                     Self::TarmizGhayrSalih { .. } => 11,
+                    Self::JidhrMahmi { .. } => 12,
                 },
         )
     }
 
     fn khutura(&self) -> Khutura {
         match self {
-            Self::MasarKharij { .. } | Self::IsmMahjooz { .. } | Self::RabtRamzi { .. } => {
-                Khutura::Fadih
-            }
+            Self::MasarKharij { .. }
+            | Self::IsmMahjooz { .. }
+            | Self::RabtRamzi { .. }
+            | Self::JidhrMahmi { .. } => Khutura::Fadih,
             _ => Khutura::Khatar,
         }
     }
@@ -889,6 +1010,12 @@ impl Tafsir for KhataMasarat {
                 "الملف {} ليس بترميز UTF-8، ويحتاج قارئًا خاصًا بترميزه.",
                 masar.display()
             ),
+            Self::JidhrMahmi { masar, jidhr } => format!(
+                "رُفض حذف {} لأنه مجلد محمي أو يحتوي على {}. \
+                 لا يحذف تعريب مجلد بياناته ولا مجلد لعبة.",
+                masar.display(),
+                jidhr.display()
+            ),
         }
     }
 
@@ -928,6 +1055,12 @@ impl Tafsir for KhataMasarat {
                 "{} is not UTF-8 and needs a reader for its own encoding.",
                 masar.display()
             ),
+            Self::JidhrMahmi { masar, jidhr } => format!(
+                "Refused to delete {} because it is, or contains, the protected folder {}. \
+                 Taarib never deletes its own data folder or a game folder.",
+                masar.display(),
+                jidhr.display()
+            ),
         }
     }
 
@@ -943,9 +1076,10 @@ impl Tafsir for KhataMasarat {
                 khutwa_io(sabab, MasarMatlub::MujalladRuqaa)
             }
             Self::TaadhurQira { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladLuba),
-            Self::MasarKharij { .. } | Self::IsmMahjooz { .. } | Self::RabtRamzi { .. } => {
-                Khutwa::IblaghLilMalik
-            }
+            Self::MasarKharij { .. }
+            | Self::IsmMahjooz { .. }
+            | Self::RabtRamzi { .. }
+            | Self::JidhrMahmi { .. } => Khutwa::IblaghLilMalik,
             Self::MasarTaweel { .. } => Khutwa::IkhtiyarMasar {
                 matlub: MasarMatlub::MujalladRuqaa,
             },
@@ -990,6 +1124,10 @@ impl Tafsir for KhataMasarat {
             Self::TarmizGhayrSalih { masar, mawqi } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("mawqi".to_owned(), QeemaSiyaq::Hajm(*mawqi as u64));
+            }
+            Self::JidhrMahmi { masar, jidhr } => {
+                let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
+                let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
             }
         }
         siyaq
@@ -1042,5 +1180,104 @@ mod ikhtibarat {
         for la_shay in [None, Some(Path::new(""))] {
             assert_eq!(layout().maa_jidhr_ruqaa(la_shay).ruqaa(), asas.ruqaa());
         }
+    }
+
+    // The rest of this module is the guard that replaces a destroyed data root.
+    // `hadhf_mujallad` takes a `HadafHadhf` and nothing else, so these tests are
+    // exhaustive over what a recursive deletion can ever be aimed at.
+
+    #[test]
+    fn jidhr_albayanat_la_yumkin_hallahu_hadafan_lilhadhf() {
+        let asas = layout();
+        // The data root itself, in every spelling that reaches the same place.
+        for muhawala in [
+            asas.jidhr_bayanat().to_path_buf(),
+            asas.jidhr_bayanat().join("."),
+            asas.jidhr_bayanat().join("nusakh").join(".."),
+        ] {
+            assert!(
+                asas.hadaf_hadhf(&muhawala).is_err(),
+                "the data root was accepted as a deletion target as {}",
+                muhawala.display()
+            );
+        }
+    }
+
+    #[test]
+    fn judhur_altakhtit_alukhra_mahmiya_kadhalik() {
+        let asas = layout();
+        // Settings root, home directory, patch storage, and every ancestor of
+        // the data root — deleting any of those takes the data root with it.
+        for mahmi in [
+            asas.jidhr_idadat().to_path_buf(),
+            asas.manzil().to_path_buf(),
+            asas.ruqaa(),
+            PathBuf::from("/tmp/taarib-test"),
+            PathBuf::from("/tmp"),
+            PathBuf::from("/"),
+        ] {
+            assert!(
+                asas.hadaf_hadhf(&mahmi).is_err(),
+                "{} was accepted as a deletion target",
+                mahmi.display()
+            );
+        }
+    }
+
+    #[test]
+    fn ma_dakhil_aljidhr_maqbul() {
+        // The guard must not refuse the sweep it exists to permit: quarantine is
+        // cleared recursively on every launch and is one level below the root.
+        let asas = layout();
+        for masmuh in [asas.hajr(), asas.nusakh().join("luba-ma"), asas.sandooq().join("musawwada")]
+        {
+            assert_eq!(
+                asas.hadaf_hadhf(&masmuh).map(|hadaf| hadaf.masar().to_path_buf()).ok().as_deref(),
+                Some(masmuh.as_path()),
+                "{} should be deletable",
+                masmuh.display()
+            );
+        }
+    }
+
+    #[test]
+    fn jidhr_alluba_la_yumkin_hallahu_hadafan_lilhadhf() {
+        // The worse version of the same defect: a cleanup that resolved to a
+        // game directory would delete somebody's game.
+        let luba = Path::new("/mnt/f/SteamLibrary/steamapps/common/Luba");
+        for muhawala in [
+            luba.to_path_buf(),
+            luba.join("."),
+            luba.join("Data").join(".."),
+            PathBuf::from("/mnt/f/SteamLibrary/steamapps/common"),
+            PathBuf::from("/mnt/f/SteamLibrary"),
+            // Outside the game entirely — a sibling game is not this one's to delete.
+            PathBuf::from("/mnt/f/SteamLibrary/steamapps/common/Ukhra"),
+        ] {
+            assert!(
+                super::hadaf_hadhf_fi_luba(luba, &muhawala).is_err(),
+                "{} was accepted as a deletion target inside a game",
+                muhawala.display()
+            );
+        }
+
+        // What Taarib actually created inside the game still is deletable.
+        let mudaf = luba.join("BepInEx").join("plugins").join("Taarib");
+        assert_eq!(
+            super::hadaf_hadhf_fi_luba(luba, &mudaf).map(|h| h.masar().to_path_buf()).ok(),
+            Some(mudaf)
+        );
+    }
+
+    #[test]
+    fn aljidhr_almanqul_lilruqaa_mahmi_fi_makanihi_aljadeed() {
+        // Patch storage keeps its protection after it moves: the setting names
+        // somewhere the user put their library, not somewhere to be cleared.
+        let manqul = layout().maa_jidhr_ruqaa(Some(Path::new("/mnt/store/taarib-ruqaa")));
+        assert!(manqul.hadaf_hadhf(Path::new("/mnt/store/taarib-ruqaa")).is_err());
+        // A shard below it is still an ordinary target.
+        assert!(manqul.hadaf_hadhf(Path::new("/mnt/store/taarib-ruqaa/ab")).is_ok());
+        // And the old in-root location is now merely inside the data root.
+        assert!(manqul.hadaf_hadhf(&manqul.jidhr_bayanat().join("ruqaa")).is_ok());
     }
 }

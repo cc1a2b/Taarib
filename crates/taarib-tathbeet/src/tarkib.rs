@@ -16,6 +16,7 @@ use crate::bayan::{MahallIdad, Muthabbit, basma_bayt};
 use crate::itlaq::{ASMAA_STEAM, ISM_STEAM, halat_manassa, manassa_mughlaqa};
 use crate::khata::{KhataTathbeet, NatijatTathbeet, min_khata_io, tul_u64};
 use crate::mawdi::{MUJALLAD_TAARIB, WajhatLuba, WajhatNizam};
+use crate::wukala::{self, WakeelQaim};
 
 /// The largest framework component this build will deploy, in bytes.
 pub const AQSA_HAJM_MUKAWWIN: u64 = 536_870_912;
@@ -510,7 +511,14 @@ pub fn hajat_itar(
             HajatItar::LaHaja(SababLaHaja::DakhilAlRuqaa)
         }
 
-        AilatMuharrik::Majhul => {
+        // Capcom's BIO4 has no plugin system, no scripting backend and no
+        // third-party framework anywhere — nobody publishes a loader for one
+        // 2005 engine — so the module that gets inside is Taarib's own, exactly
+        // as for a game whose engine was never identified. Which slot that
+        // takes is the question re4_tweaks makes real: `version.dll` here, and
+        // `wakeel_qaim` refuses rather than fights for it if another mod already
+        // holds it.
+        AilatMuharrik::Bio4 | AilatMuharrik::Majhul => {
             HajatItar::Matlub(Box::new(MukawwinItar::mudkhal(hadaf, mimariya, fi_beea)))
         }
     }
@@ -747,6 +755,15 @@ pub struct TarkibMunaffadh {
     /// Every setting recorded so the framework is loaded, and the value the
     /// launcher integration must write.
     pub idadat: Vec<IdadMunaffadh>,
+
+    /// Loader slots beside the game that another mod already held when this
+    /// deployment ran, Taarib's own excluded — it refuses rather than sharing.
+    ///
+    /// Nothing here is Taarib's and nothing here is in the manifest, so an
+    /// uninstall cannot reach any of it. It is recorded because the install
+    /// report is the record of what the game looked like at the moment it was
+    /// modified, and "there was already a mod in it" is part of that.
+    pub huqn_mujawir: Vec<WakeelQaim>,
 }
 
 /// A framework that was already there when the installation ran.
@@ -824,6 +841,12 @@ impl NatijatTarkib {
                         "  setting: {} -> {}",
                         idad.mahall.wasf(),
                         idad.qeema_maktuba
+                    ));
+                }
+                for wakeel in &munaffadh.huqn_mujawir {
+                    sutur.push(format!(
+                        "  alongside: {} was already there and Taarib did not touch it",
+                        wakeel.wasf_injilizi()
                     ));
                 }
                 sutur
@@ -1299,11 +1322,27 @@ struct WajhatMalaf {
 
 /// The first name at the deployment root that proves a framework of this kind
 /// is already installed.
+///
+/// The component's own loader file name is deliberately **not** one of the
+/// names asked about, even though [`MukawwinItar::alamat`] carries it. A file at
+/// that path is proof that this framework is installed only when the
+/// framework's other markers are beside it — a `BepInEx/` directory next to a
+/// `winhttp.dll` is BepInEx; a `winhttp.dll` on its own is some other mod
+/// holding the same slot. Answering the second case with "already installed,
+/// deploy nothing" produces an install that reports success, writes no loader,
+/// and leaves Taarib's payload sitting beside a proxy that will never open it.
+/// That case is [`wakeel_qaim`]'s, and it is a refusal.
+///
+/// Taarib's own component has no other marker at all, so this always answers
+/// [`None`] for it and the slot question is the only question.
 fn itar_qaim(
     mawadi: &MawadiTarkib,
-    alamat: &[String],
+    mukawwin: &MukawwinItar,
 ) -> Result<Option<MawqiTarkib>, KhataTathbeet> {
-    for alama in alamat {
+    for alama in &mukawwin.alamat {
+        if alama == &mukawwin.ism_muhammil {
+            continue;
+        }
         let nisbi = mawadi.bijanib(alama);
         let mawqi = mawadi.wajha(&nisbi)?;
         if mawqi.mutlaq(mawadi.jidhr_luba())?.exists() {
@@ -1311,6 +1350,71 @@ fn itar_qaim(
         }
     }
     Ok(None)
+}
+
+/// What `min_khata_io` is told this crate was doing when a loader-slot survey
+/// fails.
+const AMAL_MASAH: &str = "surveying the loader slots beside the game's executable";
+
+/// Every loader slot in use in the directory a framework's loader lands in.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::KhataMalaf`] and its siblings when the directory cannot be
+/// read. A directory that is not there is not a failure — see
+/// [`wukala::masah`].
+fn masah_huqn(mujallad: &Path) -> NatijatTathbeet<Vec<WakeelQaim>> {
+    wukala::masah(mujallad).map_err(|sabab| min_khata_io(mujallad, AMAL_MASAH, sabab))
+}
+
+/// Refuses when the module name Taarib's own loader is published as is already
+/// held by a file Taarib did not put there.
+///
+/// The slot is exclusive. Windows resolves a module name to one file, and the
+/// one it resolves to is whichever is beside the executable — so a second
+/// `version.dll` written over the first does not chain onto it, it erases it.
+/// The mod that was there stops loading, its own configuration and its own
+/// files stay in the game directory pointing at nothing, and no message anywhere
+/// says what happened. `taarib-haqn` already refuses to restore a hook slot
+/// another overlay has taken, for the same reason and with the same conclusion:
+/// whoever took the slot last is the only one who can give it back.
+///
+/// The survey it returns on success is not a by-product. A game with another
+/// mod's `dinput8.dll` in it is a game whose behaviour is not the publisher's
+/// any more, and the person agreeing to an install is entitled to know that
+/// before they agree rather than after.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::WakeelMashghul`] when the loader's own path is occupied, and
+/// whatever reading the directory raises.
+fn wakeel_qaim(
+    mawadi: &MawadiTarkib,
+    mukawwin: &MukawwinItar,
+) -> NatijatTathbeet<Vec<WakeelQaim>> {
+    let jidhr = mawadi.jidhr_muhammil()?.mutlaq(mawadi.jidhr_luba())?;
+    let qaima = masah_huqn(&jidhr)?;
+
+    let nisbi = mawadi.bijanib(&mukawwin.ism_muhammil);
+    let masar = mawadi.wajha(&nisbi)?.mutlaq(mawadi.jidhr_luba())?;
+    // `is_file` rather than `exists`: a directory carrying the loader's name is
+    // not something any loader can map, and refusing an install over one would
+    // be refusing over a collision that cannot happen.
+    if !masar.is_file() {
+        return Ok(qaima);
+    }
+
+    let hajm = std::fs::metadata(&masar).map_or(0, |bayan| bayan.len());
+    Err(KhataTathbeet::WakeelMashghul {
+        wakeel: mukawwin.ism_muhammil.clone(),
+        masar,
+        hajm,
+        jiran: qaima
+            .iter()
+            .filter(|wakeel| !wakeel.ism.eq_ignore_ascii_case(&mukawwin.ism_muhammil))
+            .map(WakeelQaim::wasf_injilizi)
+            .collect(),
+    })
 }
 
 /// Installs the framework this game's engine needs, on this platform.
@@ -1357,7 +1461,13 @@ pub fn rakkib_itar(
     )?;
     tahaqquq_manassa(luba, halat, &idadat)?;
 
-    if let Some(alama) = itar_qaim(&mawadi, &mukawwin.alamat)? {
+    // Two questions in this order, and the order is the whole point. "Is this
+    // same framework already here" is coexistence and deploys nothing; "is
+    // Taarib's own loader slot held by something else" is a collision and
+    // refuses. Asking them the other way round would answer a foreign proxy
+    // with "already installed", which is how an install comes to report success
+    // having written a payload that nothing will ever load.
+    if let Some(alama) = itar_qaim(&mawadi, &mukawwin)? {
         sajjil_idadat(muthabbit, &idadat)?;
         return Ok(NatijatTarkib::Mawjud(Box::new(TarkibQaim {
             mukawwin: mukawwin.ism.clone(),
@@ -1365,6 +1475,7 @@ pub fn rakkib_itar(
             idadat,
         })));
     }
+    let huqn = wakeel_qaim(&mawadi, &mukawwin)?;
 
     let hamula = hamil_mukawwin(jidhr_makhzan, &mukawwin.ism)?;
     let nisbi_muhammil = mawadi.bijanib(&mukawwin.ism_muhammil);
@@ -1436,6 +1547,7 @@ pub fn rakkib_itar(
         malaffat,
         hajm,
         idadat,
+        huqn_mujawir: huqn,
     })))
 }
 
@@ -1644,6 +1756,28 @@ pub struct KhuttatTarkib {
     /// performed by this module.
     pub talabat: Vec<TalabItlaq>,
 
+    /// Loader slots beside the game that a third-party mod already holds, read
+    /// before anything is written.
+    ///
+    /// This is the field a confirmation screen has to show. A game with
+    /// `re4_tweaks` or `ReShade` or an ASI loader already in it is not the game the
+    /// publisher shipped, and somebody agreeing to "install Arabic into this
+    /// game" is agreeing to a different thing than they think if nobody tells
+    /// them what else is in there. Taarib does not remove any of it and an
+    /// uninstall cannot reach it — see [`TarkibMunaffadh::huqn_mujawir`] — but
+    /// the disclosure belongs *before* the install, not in the report after it.
+    ///
+    /// Empty is the normal answer. When Taarib's own slot is among these the
+    /// install refuses outright with [`KhataTathbeet::WakeelMashghul`] rather
+    /// than listing it here, so a plan that carries entries is always a plan
+    /// that can still go ahead.
+    ///
+    /// The directory surveyed is the one the framework's loader would land in,
+    /// which is beside the game's executable. For a tier-3 game — no framework,
+    /// the overlay attaches from outside — it is the game's root, because there
+    /// is no loader directory to speak of.
+    pub huqn_qaim: Vec<WakeelQaim>,
+
     /// What is known about the launcher that owns this game's launch options,
     /// when the plan needs a launch-time change and that knowledge is worth
     /// putting in front of the user.
@@ -1729,6 +1863,13 @@ impl KhuttatTarkib {
         }
         for talab in &self.talabat {
             sutur.push(format!("  launch: {}", talab.wasf_injilizi()));
+        }
+        for wakeel in &self.huqn_qaim {
+            sutur.push(format!(
+                "  note: this game already has a mod in it — {} — which Taarib leaves exactly \
+                 as it is and an uninstall never removes",
+                wakeel.wasf_injilizi()
+            ));
         }
         if let Some(malhuza) = self.manassa_taamil.as_ref() {
             let ism = &malhuza.ism;
@@ -1819,6 +1960,7 @@ pub fn khutta(
         mudkhalat: Vec::new(),
         khatt_renpy: None,
         talabat: Vec::new(),
+        huqn_qaim: Vec::new(),
         manassa_taamil: None,
     };
 
@@ -1831,6 +1973,12 @@ pub fn khutta(
             sabab: "no text system inside this game is reachable, so Arabic is drawn over it \
                     from outside",
         });
+        // Surveyed even though nothing is deployed into this game. Tier 3 draws
+        // over the game from a second process that hooks its presentation, so a
+        // graphics proxy already sitting in the directory is exactly the thing
+        // the person agreeing has to know about — it is the one already drawing
+        // over the same frames.
+        mukhattat.huqn_qaim = masah_huqn(jidhr_luba)?;
         mukhattat.manassa_taamil = manassa_qayida();
         return Ok(mukhattat);
     }
@@ -1842,10 +1990,12 @@ pub fn khutta(
         qurs.as_ref().map(|(beea, qurs)| (beea.as_path(), qurs.as_path())),
     );
 
+    let jidhr_muhammil = mawadi.jidhr_muhammil()?;
+    mukhattat.huqn_qaim = masah_huqn(&jidhr_muhammil.mutlaq(mawadi.jidhr_luba())?)?;
+
     mukhattat.hajat = hajat_maa_tabaqa(muharrik, taqreer.tabaqa, nizam, beea);
     if let HajatItar::Matlub(mukawwin) = &mukhattat.hajat {
         tahaqquq_mukawwin(mukawwinat, mukawwin)?;
-        let jidhr_muhammil = mawadi.jidhr_muhammil()?;
         if let Some(talab) = talab_tahmil(mukawwin, &mawadi) {
             mukhattat.talabat.push(talab);
         }
@@ -2146,11 +2296,15 @@ fn mulhaqat_muharrik(
                 Ok(())
             }
         }
+        // Nothing additive: each of these is reached from inside its process by
+        // the module the framework step placed, and BIO4 — which loads no
+        // plugin of any kind — is the clearest case of it.
         AilatMuharrik::Unity
         | AilatMuharrik::Unreal
         | AilatMuharrik::RpgMakerVxAce
         | AilatMuharrik::GameMaker
         | AilatMuharrik::Electron
+        | AilatMuharrik::Bio4
         | AilatMuharrik::Majhul => Ok(()),
     }
 }

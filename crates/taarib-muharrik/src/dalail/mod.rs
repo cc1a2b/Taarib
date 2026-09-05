@@ -10,7 +10,7 @@
 //! | directory shape | [`binya`] | the layouts an engine's own runtime has to find, so it has to ship them |
 //! | binary signatures | [`thunai`] | imported modules, section names, and version tags in the executable's constant data |
 //! | embedded metadata | [`unity`], [`nusus`] | the engine's own declaration of its version, inside its own files |
-//! | container headers | [`unreal`], [`godot`] | the framing of the archives an engine ships its content in |
+//! | container headers | [`unreal`], [`godot`], [`bio4`] | the framing of the archives an engine ships its content in |
 //!
 //! Several modules straddle two sources — [`unity`] reads both a container
 //! header and a metadata blob — and that is fine. The point of the four is that
@@ -32,6 +32,7 @@
 //! directory shape, and it is.
 
 pub mod binya;
+pub mod bio4;
 pub mod godot;
 pub mod nusus;
 pub mod thunai;
@@ -41,6 +42,7 @@ pub mod unreal;
 use crate::fahs::Fahis;
 
 pub use crate::dalail::binya::FahisBinya;
+pub use crate::dalail::bio4::FahisBio4;
 pub use crate::dalail::godot::FahisGodot;
 pub use crate::dalail::nusus::{FahisNusus, HadafNusus};
 pub use crate::dalail::thunai::FahisThunai;
@@ -67,6 +69,10 @@ pub fn kul() -> Vec<Box<dyn Fahis>> {
         Box::new(FahisUnity),
         Box::new(FahisUnreal::jadeed()),
         Box::new(FahisGodot::jadeed()),
+        // Last of the engine detectors, and it costs one listing of the game
+        // root for every game that is not one of its own: it reads nothing else
+        // until that listing has already said the layout is there.
+        Box::new(FahisBio4::jadeed()),
     ];
     // Five detectors rather than one, because a single result carries a single
     // engine family and an RPG Maker project inside NW.js is genuinely two.

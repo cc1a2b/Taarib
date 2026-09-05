@@ -20,6 +20,7 @@
 //! | `siyaq` | game-appropriate prompting: name, genre, speaker, surrounding lines, interface context, the character or pixel constraint, the applicable glossary entries, the declared tone, and the placeholder atoms that must survive |
 //! | `hima` | placeholder and markup protection in three enforced steps — extract to opaque atoms, present them in a form the model will not translate, and validate every returned string |
 //! | `dhakira` | translation memory: source-target pairs with fuzzy matching, scoring and provenance, per project and across projects |
+//! | `mulahazat` | the overlay's own accumulation: readings recorded per game, a session map in front of the memory, and the counter that says how many translations were actually paid for |
 //! | `masrad` | the glossary: canonical Arabic for names, places, items, abilities and systems, with part of speech, gender, plural, a do-not-translate flag, and notes |
 //! | `dufaat` | batching: bounded concurrency per provider, token-bucket rate limiting, cost accumulated against a budget with a hard stop, checkpointed resume, and per-string retry with backoff |
 //! | `alamat` | quality flags, computed after every change, each one actionable and each one linking to the strings that caused it |
@@ -78,6 +79,7 @@ pub mod dufaat;
 pub mod hima;
 pub mod khata;
 pub mod masrad;
+pub mod mulahazat;
 pub mod muraja_dakhiliya;
 pub mod muzawwidun;
 pub mod siyaq;

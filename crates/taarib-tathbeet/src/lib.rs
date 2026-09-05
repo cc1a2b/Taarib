@@ -27,6 +27,7 @@ pub mod nusus;
 pub mod tahaqquq;
 pub mod taraju;
 pub mod tarkib;
+pub mod wukala;
 
 pub use bayan::{
     AwqatMalaf, BayanTathbeet, HarisTathbeet, MahallIdad, Muthabbit, NawTaghyeer, NawTathbeet,
@@ -65,3 +66,6 @@ pub use tarkib::{
     NatijatTarkib, SababLaHaja, TalabItlaq, TaqreerMulhaqat, hajat_itar, khutta, nashr,
     nashr_mulhaqat, rakkib_itar,
 };
+// Renamed on the way out: `masah` is unambiguous inside `wukala` and much less
+// so beside `khutta` and `nashr` at the crate root.
+pub use wukala::{WUKALA_NIZAM, WakeelQaim, masah as masah_wukala, wakeel_nizam};

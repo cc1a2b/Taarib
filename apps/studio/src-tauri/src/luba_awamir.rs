@@ -24,7 +24,8 @@ use taarib_mustalahat::bina::BinaId;
 use taarib_mustalahat::luba::{LawnBariz, Luba, LubaId, MasdarLuba};
 use taarib_muhawwil_unreal::mawarid::{Mawrid as _, iostore, locmeta, locres, pak};
 use taarib_mustalahat::muharrik::{
-    Daleel, KhalfiyaBarmajiya, NawDaleel, TaqreerImkaniyat, WajihaRusum,
+    AilatMuharrik, Daleel, KhalfiyaBarmajiya, NawDaleel, Tabaqa, TaqreerImkaniyat,
+    WajihaRusum,
 };
 use taarib_muharrik::fahs::SiyaqFahs;
 use taarib_muharrik::{ISDAR_FAHS, Mifhas};
@@ -45,6 +46,17 @@ const MUJALLAD_SUWAR: &str = "suwar";
 pub struct MuharrikHie {
     /// The engine family, under its own name.
     pub aila: String,
+    /// The same family as the discriminant, so the interface can tell a named
+    /// engine from an unidentified one.
+    ///
+    /// [`Self::aila`] cannot answer that question: `AilatMuharrik::ism` renders
+    /// [`AilatMuharrik::Majhul`] as the Arabic literal `غير معروف`, so an
+    /// English session reads Arabic for the one answer most of this library
+    /// gives, and no caller can key behaviour off the miss without matching on a
+    /// display string. Sent beside the rendered name rather than instead of it
+    /// because the header still draws a name for every other family, and the
+    /// interface narrows this to a union it may match exhaustively.
+    pub aila_ramz: AilatMuharrik,
     /// The version string exactly as it was found in the game.
     pub isdar: Option<String>,
     /// How the game's code runs.
@@ -58,10 +70,35 @@ pub struct MuharrikHie {
 /// What Taarib can do to this game, rendered.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct TaqreerHie {
+    /// Which of the three products this game gets, as the discriminant.
+    ///
+    /// The tier is a product decision — text replaced inside the engine, files
+    /// patched directly, or a translation drawn over the top — and the interface
+    /// says which of the three a game gets rather than printing a number. It
+    /// cannot derive that from [`Self::tabaqa_raqm`] without keeping a second
+    /// copy of this taxonomy in TypeScript, and a second copy mislabels rather
+    /// than fails when the taxonomy moves.
+    pub tabaqa: Tabaqa,
     /// The tier number, 1 to 3.
     pub tabaqa_raqm: u8,
     /// The tier's name in Arabic.
     pub tabaqa_arabi: String,
+    /// The same name in English.
+    ///
+    /// [`crate::tilqai_awamir::HukmTilqaiHie`] has sent both names since it was
+    /// written, and this record was the odd one out: an English session read the
+    /// tier number, the reason and the systems in English and then hit
+    /// `طبقة ترجمة` where the tier's name should be.
+    pub tabaqa_injilizi: String,
+    /// The paragraph that explains what the tier actually does, in Arabic.
+    ///
+    /// Sent so the interface stops carrying its own wording. The tier's meaning
+    /// is decided by [`Tabaqa`] and nowhere else, and a locale file that
+    /// paraphrases it is a second definition that drifts silently the first time
+    /// the tier's behaviour changes.
+    pub sharh_arabi: String,
+    /// The same paragraph in English.
+    pub sharh_injilizi: String,
     /// Why that tier and not a better one, in Arabic.
     pub sabab_arabi: String,
     /// The same reason in English.
@@ -646,6 +683,7 @@ fn muharrik_hie(taqreer: &TaqreerImkaniyat) -> MuharrikHie {
     let muharrik = &taqreer.muharrik;
     MuharrikHie {
         aila: muharrik.aila.ism().to_owned(),
+        aila_ramz: muharrik.aila,
         isdar: muharrik.isdar.as_ref().map(ToString::to_string),
         khalfiya: wasf_khalfiya(muharrik.khalfiya).to_owned(),
         rusum: muharrik.rusum.iter().map(|q| wasf_rusum(*q).to_owned()).collect(),
@@ -653,11 +691,43 @@ fn muharrik_hie(taqreer: &TaqreerImkaniyat) -> MuharrikHie {
     }
 }
 
+/// The tier's own explanation in English, twin of [`Tabaqa::sharh_arabi`].
+///
+/// It belongs in `taarib-mustalahat` beside the Arabic one and is written here
+/// only because that crate is being edited by another agent this wave. It is a
+/// *first* copy rather than a second — no English wording for the tiers existed
+/// anywhere before this — so moving it later is one paste and a deleted
+/// function, not a reconciliation. The `match` is exhaustive on purpose: a
+/// fourth tier must fail this build rather than fall through to a sentence
+/// written for a different product.
+const fn sharh_injilizi(tabaqa: Tabaqa) -> &'static str {
+    match tabaqa {
+        Tabaqa::Kamil => {
+            "The game's own text is replaced from the inside. Menus, dialogue and \
+             interface appear in Arabic as though the game had been built that way."
+        }
+        Tabaqa::RasmMubashir => {
+            "Taarib draws the text itself over the game's own text objects. The result \
+             looks native in most cases, and the effects the game applies to its text \
+             are reproduced by Taarib rather than lost."
+        }
+        Tabaqa::TarjamaFawqiya => {
+            "The game is not modified at all. Taarib reads what is on screen and shows \
+             Arabic over it. This is a reading aid, not a translation installed inside \
+             the game."
+        }
+    }
+}
+
 /// The capability report as the tier card writes it.
 fn taqreer_hie(taqreer: &TaqreerImkaniyat) -> TaqreerHie {
     TaqreerHie {
+        tabaqa: taqreer.tabaqa,
         tabaqa_raqm: taqreer.tabaqa.raqm(),
         tabaqa_arabi: taqreer.tabaqa.ism_arabi().to_owned(),
+        tabaqa_injilizi: taqreer.tabaqa.ism_injilizi().to_owned(),
+        sharh_arabi: taqreer.tabaqa.sharh_arabi().to_owned(),
+        sharh_injilizi: sharh_injilizi(taqreer.tabaqa).to_owned(),
         sabab_arabi: taqreer.sabab_arabi.clone(),
         sabab_injilizi: taqreer.sabab_injilizi.clone(),
         anzimat: taqreer.anzimat_qabila.iter().map(|q| q.wasf_arabi().to_owned()).collect(),
@@ -1559,8 +1629,9 @@ khata_min!(KhataLuba);
 mod ikhtibarat {
     use taarib_aman::kashf_himaya::ThughraFahs;
     use taarib_mustalahat::luba::SuwarLuba;
+    use taarib_mustalahat::muharrik::Muharrik;
     use taarib_usus::idadat::IdadatManassat;
-    use taarib_usus::manassa::BeeatTawafuq;
+    use taarib_usus::manassa::{BeeatTawafuq, Mimariya};
 
     use super::*;
 
@@ -1581,6 +1652,10 @@ mod ikhtibarat {
     impl Drop for JidhrMuaqqat {
         fn drop(&mut self) {
             // Best effort: a test that already failed must not fail twice.
+            #[expect(
+                clippy::disallowed_methods,
+                reason = "a scratch directory under `std::env::temp_dir()` removing itself, never a data root or a game directory"
+            )]
             let _ = std::fs::remove_dir_all(&self.0);
         }
     }
@@ -1786,5 +1861,112 @@ mod ikhtibarat {
             SimatLuba::LaysatLuba("tool".to_owned()),
             SimatLuba::TabaqatTawafuq("platinum".to_owned()),
         ]));
+    }
+
+    /// Whether a sentence carries any Arabic script at all.
+    ///
+    /// The assertion the English fields exist for: a reader who chose English is
+    /// shown a sentence with no Arabic in it, rather than the Arabic one under
+    /// an English heading.
+    fn fiha_arabi(nass: &str) -> bool {
+        nass.chars().any(|harf| {
+            matches!(harf, '\u{0600}'..='\u{06ff}' | '\u{0750}'..='\u{077f}')
+        })
+    }
+
+    /// One identified engine, with nothing invented beyond the family.
+    fn muharrik_ikhtibar(aila: AilatMuharrik, khalfiya: KhalfiyaBarmajiya) -> Muharrik {
+        Muharrik {
+            aila,
+            isdar: None,
+            khalfiya,
+            itarat: Vec::new(),
+            rusum: Vec::new(),
+            mimariya: Mimariya::X8664,
+            thiqa: 90,
+            dalail: Vec::new(),
+        }
+    }
+
+    /// A real capability report, written by the same function the probe calls.
+    fn taqreer_ikhtibar(aila: AilatMuharrik, khalfiya: KhalfiyaBarmajiya) -> TaqreerImkaniyat {
+        taarib_muharrik::imkaniyat::taqreer(
+            muharrik_ikhtibar(aila, khalfiya),
+            &[],
+            "2026-01-01T00:00:00Z".to_owned(),
+        )
+    }
+
+    /// The tier reaches the card as the discriminant and in both languages, and
+    /// the English half holds no Arabic.
+    ///
+    /// The defect this closes: the record carried the tier's Arabic name and a
+    /// number, so an English session read `طبقة ترجمة` where the name of the
+    /// product belongs. `HukmTilqaiHie` had sent both names all along, which is
+    /// what made this record the odd one out rather than a consistent choice.
+    #[test]
+    fn bitaqat_altabaqa_tasil_bil_lughatayn() {
+        for aila in [AilatMuharrik::Unity, AilatMuharrik::Renpy, AilatMuharrik::Majhul] {
+            let asli = taqreer_ikhtibar(aila, KhalfiyaBarmajiya::Majhula);
+            let hie = taqreer_hie(&asli);
+
+            assert_eq!(hie.tabaqa, asli.tabaqa, "{aila:?}");
+            assert_eq!(hie.tabaqa_raqm, asli.tabaqa.raqm(), "{aila:?}");
+            assert_eq!(hie.tabaqa_arabi, asli.tabaqa.ism_arabi(), "{aila:?}");
+            assert_eq!(hie.tabaqa_injilizi, asli.tabaqa.ism_injilizi(), "{aila:?}");
+            assert!(
+                !fiha_arabi(&hie.tabaqa_injilizi),
+                "an English tier name must hold no Arabic: {}",
+                hie.tabaqa_injilizi
+            );
+        }
+    }
+
+    /// The tier's own paragraph crosses in both languages, worded by the
+    /// backend rather than paraphrased in a locale file.
+    #[test]
+    fn sharh_altabaqa_yasil_bil_lughatayn() {
+        for tabaqa in [Tabaqa::Kamil, Tabaqa::RasmMubashir, Tabaqa::TarjamaFawqiya] {
+            let injilizi = sharh_injilizi(tabaqa);
+            assert!(!injilizi.is_empty(), "{tabaqa:?}");
+            assert!(!fiha_arabi(injilizi), "an English explanation holds no Arabic: {injilizi}");
+            assert!(fiha_arabi(tabaqa.sharh_arabi()), "{tabaqa:?}");
+        }
+
+        // And on a report, so the wiring is proved and not only the table.
+        let asli = taqreer_ikhtibar(AilatMuharrik::Unity, KhalfiyaBarmajiya::Mono);
+        let hie = taqreer_hie(&asli);
+
+        assert_eq!(hie.sharh_arabi, asli.tabaqa.sharh_arabi());
+        assert_eq!(hie.sharh_injilizi, sharh_injilizi(asli.tabaqa));
+    }
+
+    /// The engine family crosses as the discriminant, so an unidentified engine
+    /// is a value the interface can match rather than an Arabic literal.
+    ///
+    /// `aila` is checked here too, and deliberately: it is what proves the
+    /// rendered name is Arabic for `Majhul`, which is the whole reason the
+    /// discriminant had to be sent beside it. Most of a real library lands on
+    /// that arm.
+    #[test]
+    fn ailat_almuharrik_tasil_ka_ramz_la_ka_nass() {
+        let maruf = muharrik_hie(&taqreer_ikhtibar(
+            AilatMuharrik::Unity,
+            KhalfiyaBarmajiya::Il2cpp,
+        ));
+        assert_eq!(maruf.aila_ramz, AilatMuharrik::Unity);
+        assert_eq!(maruf.aila, "Unity");
+
+        let majhul = muharrik_hie(&taqreer_ikhtibar(
+            AilatMuharrik::Majhul,
+            KhalfiyaBarmajiya::Majhula,
+        ));
+        assert_eq!(majhul.aila_ramz, AilatMuharrik::Majhul);
+        assert!(
+            fiha_arabi(&majhul.aila),
+            "the rendered name for an unidentified engine is Arabic, which is why the \
+             discriminant is sent: {}",
+            majhul.aila
+        );
     }
 }

@@ -489,6 +489,35 @@ pub enum KhataTathbeet {
         mawjud: u64,
     },
 
+    /// The loader slot Taarib's own module is published as is already held by a
+    /// file Taarib did not put there.
+    ///
+    /// A Windows game loads a module by name from beside its own executable
+    /// before it looks in `System32`, which is what makes a proxy DLL work at
+    /// all — and what makes the slot exclusive. Writing Taarib's `version.dll`
+    /// over another mod's does not chain the two: the first mod is gone, its own
+    /// files are left behind pointing at a loader that no longer exists, and
+    /// nothing anywhere says so. So the install refuses and names the file.
+    ///
+    /// This is the install-time half of the rule `taarib-haqn` already applies
+    /// inside a running process — never unhook someone else, because whoever
+    /// took the slot last is the only one who can give it back.
+    #[error("{wakeel} beside the game is already another mod's loader ({}, {hajm} byte(s)); \
+             Taarib will not write over it", masar.display())]
+    WakeelMashghul {
+        /// The module name Taarib's loader is published as, `version.dll` on
+        /// Windows.
+        wakeel: String,
+        /// The file holding the slot.
+        masar: PathBuf,
+        /// Its size in bytes, which is what separates a real system module
+        /// somebody copied in from a mod loader standing in for one.
+        hajm: u64,
+        /// The other loader slots in use beside it, so the report names the mod
+        /// rather than only the collision.
+        jiran: Vec<String>,
+    },
+
     /// The safety authorisation is for a different game or package.
     #[error("the safety authorisation does not cover this game and package")]
     IdhnGhayrMutabiq,
@@ -571,7 +600,8 @@ impl KhataTathbeet {
             | Self::RuqaaMarfuda { masar, .. }
             | Self::NususMarfuda { masar, .. }
             | Self::MukawwinMafqud { masar, .. }
-            | Self::MukawwinNaqis { masar, .. } => Some(masar),
+            | Self::MukawwinNaqis { masar, .. }
+            | Self::WakeelMashghul { masar, .. } => Some(masar),
             Self::LubaTashtaghil { tanfidhi, .. }
             | Self::HalatLubaMajhula { tanfidhi, .. } => Some(tanfidhi),
             Self::BeeaMafquda { jidhr, .. } => Some(jidhr),
@@ -639,6 +669,7 @@ impl Tafsir for KhataTathbeet {
                     Self::MukawwinMafqud { .. } => 20,
                     Self::BeeaMafquda { .. } => 21,
                     Self::MukawwinNaqis { .. } => 22,
+                    Self::WakeelMashghul { .. } => 23,
                     // Inside the band reserved for `itlaq`.
                     Self::MunassaTaamal { .. } => 60,
                     Self::HalatManassaMajhula { .. } => 61,
@@ -790,6 +821,20 @@ impl Tafsir for KhataTathbeet {
                 "أحد مكوّنات الإطار ({mukawwin}) في المخزن بحجم غير الحجم المُعلَن. النسخ إلى \
                  المخزن لم يكتمل؛ أعد تثبيت تعريب."
             ),
+            Self::WakeelMashghul { wakeel, masar, jiran, .. } => {
+                let mawdi = masar.display();
+                let maa = if jiran.is_empty() {
+                    String::new()
+                } else {
+                    format!(" وبجانبه أيضًا: {}.", jiran.join("، "))
+                };
+                format!(
+                    "يوجد في مجلّد اللعبة ملف باسم {wakeel} ({mawdi})، وهو الاسم نفسه الذي \
+                     يحمّل به تعريب نفسه. تحمّل ويندوز ملفًا واحدًا بهذا الاسم لا اثنين، \
+                     والكتابة فوقه تُلغي التعديل الموجود في صمت.{maa} لم يُكتب شيء. أزل \
+                     التعديل الآخر أو غيّر اسم ملفه إن أردت تثبيت تعريب في هذه اللعبة."
+                )
+            }
             Self::IdhnGhayrMutabiq => {
                 "إذن الأمان المقدَّم يخصّ لعبة أو حزمة أخرى، ورُفض التثبيت به.".to_owned()
             }
@@ -952,6 +997,21 @@ impl Tafsir for KhataTathbeet {
                  the manifest declares {muallan}. The copy into the store did not finish; \
                  reinstall Taarib."
             ),
+            Self::WakeelMashghul { wakeel, masar, hajm, jiran } => {
+                let maa = if jiran.is_empty() {
+                    String::new()
+                } else {
+                    format!(" Also in use beside it: {}.", jiran.join(", "))
+                };
+                format!(
+                    "The game directory already holds a {wakeel} ({}, {hajm} byte(s)), which \
+                     is the same name Taarib's own loader is published as. Windows loads one \
+                     file of that name, not two, so writing over it would remove the mod that \
+                     is there without saying so.{maa} Nothing was written. Remove or rename \
+                     that mod's loader if you want Taarib in this game.",
+                    masar.display()
+                )
+            }
             Self::IdhnGhayrMutabiq => {
                 "The safety authorisation covers a different game or package, so the install \
                  was refused. This is a defect in the caller, not something you did."
@@ -1009,6 +1069,19 @@ impl Tafsir for KhataTathbeet {
             // action to offer, so none is offered and the message carries the
             // one remedy there is — a build that is not inside a sandbox.
             Self::HalatLubaMajhula { .. } | Self::HalatManassaMajhula { .. } => Khutwa::LaShay,
+
+            // The same answer as the two above and not the same reason, which
+            // is why it is a second arm: there *is* an action here, and it is
+            // not one this product may offer as a button — removing somebody
+            // else's mod from somebody else's game. The message names the file
+            // and says what to do with it, and the decision stays with the
+            // person who installed that mod.
+            #[expect(
+                clippy::match_same_arms,
+                reason = "one action, two unrelated reasons for it; merging them would put a \
+                          sandbox and a mod collision behind one comment that fits neither"
+            )]
+            Self::WakeelMashghul { .. } => Khutwa::LaShay,
 
             Self::SalahiyaMarfuda { .. } | Self::SalahiyatGhayrMustaada { .. } => {
                 Khutwa::ManhSalahiya
@@ -1206,6 +1279,12 @@ impl Tafsir for KhataTathbeet {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("muallan", QeemaSiyaq::Nass(muallan.to_string()));
                 daa("mawjud", QeemaSiyaq::Nass(mawjud.to_string()));
+            }
+            Self::WakeelMashghul { wakeel, masar, hajm, jiran } => {
+                daa("wakeel", QeemaSiyaq::Nass(wakeel.clone()));
+                daa("masar", QeemaSiyaq::Masar(masar.clone()));
+                daa("hajm", QeemaSiyaq::Hajm(*hajm));
+                daa("jiran", QeemaSiyaq::Qaima(jiran.clone()));
             }
             Self::BeeaMafquda { jidhr, sabab } => {
                 daa("jidhr", QeemaSiyaq::Masar(jidhr.clone()));

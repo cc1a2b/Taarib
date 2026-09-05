@@ -6,7 +6,7 @@ use std::fmt::Write as _;
 use taarib_mustalahat::musahim::MusahimId;
 use taarib_mustalahat::nass::MudkhalNass;
 use taarib_tarjama::dhakira::{
-    AslQayd, Dhakira, QaydDhakira, QaydId, QaydJadid, miftah_muwahhad,
+    AslQayd, Dhakira, NawAsl, QaydDhakira, QaydId, QaydJadid, miftah_muwahhad,
 };
 use taarib_tarjama::khata::KhataTarjama;
 use taarib_tarjama::masrad::{
@@ -320,13 +320,24 @@ pub struct TaqreerDamjDhakira {
 /// Merges one memory into another by re-recording every pair.
 ///
 /// Pages through `masdar` with [`Dhakira::safha`] and re-enters each record
-/// through [`Dhakira::sajjil`], whose upsert holds the human-review ratchet
-/// — `max(existing, incoming)`, 0 → 1 only — so this function carries the
-/// origin bit faithfully and the database enforces that no merge order can
-/// demote or manufacture a human review. The mapping back to the write-side
-/// origin is exact: a human-reviewed record travels as [`AslQayd::Bashari`]
-/// with its contributor, a machine-only record as [`AslQayd::AaliFaqat`]
-/// with its provider and confidence, and there is no third path.
+/// through [`Dhakira::sajjil`], whose upsert holds the provenance ratchet —
+/// `max(existing, incoming)` on both the review bit and the origin rank — so
+/// this function carries the origin faithfully and the database enforces that
+/// no merge order can demote or manufacture a human review. The mapping back
+/// to the write-side origin is exact and total over [`NawAsl`]: a
+/// human-reviewed record travels as [`AslQayd::Bashari`] with its
+/// contributor, a machine-only record as [`AslQayd::AaliFaqat`] with its
+/// provider and confidence, an overlay reading as [`AslQayd::Mulahaza`] with
+/// its recognizer and its measured-or-not confidence, and there is no fourth
+/// path.
+///
+/// One counter does not survive a merge and cannot: `mushahadat`. The upsert
+/// *adds* the incoming sighting count, so re-recording a record that already
+/// carries ten sightings into a memory that carries them too would claim
+/// twenty independent readings where there may have been ten. This function
+/// therefore re-enters each reading as **one** sighting, which understates
+/// corroboration rather than inflating it — the direction to be wrong in for
+/// a number that decides which of two readings a player is shown.
 ///
 /// # Errors
 ///
@@ -367,7 +378,7 @@ pub fn idmij_dhakira(
 }
 
 /// A stored record dressed for re-recording, origin mapped faithfully.
-fn qayd_lil_tasjil(qayd: &QaydDhakira) -> QaydJadid {
+pub(crate) fn qayd_lil_tasjil(qayd: &QaydDhakira) -> QaydJadid {
     QaydJadid {
         masdar: qayd.masdar.clone(),
         hadaf: qayd.hadaf.clone(),
@@ -382,17 +393,24 @@ fn qayd_lil_tasjil(qayd: &QaydDhakira) -> QaydJadid {
     }
 }
 
-/// The origin mapping: the stored bit decides the variant, nothing else does.
+/// The origin mapping: the stored kind decides the variant, nothing else does.
 ///
-/// `muraja_bashariya` true → [`AslQayd::Bashari`] with the recorded
-/// contributor; false → [`AslQayd::AaliFaqat`] with the recorded provider
-/// and confidence. A machine-only record can never travel as `Bashari`,
-/// because that would record a human review nobody performed.
-fn asl_amin(qayd: &QaydDhakira) -> AslQayd {
-    if qayd.asl.muraja_bashariya {
-        AslQayd::Bashari { musahim: qayd.asl.musahim.clone() }
-    } else {
-        AslQayd::AaliFaqat { muzawwid: qayd.asl.muzawwid.clone(), thiqa: qayd.thiqa }
+/// A `match` over [`NawAsl`] rather than a branch on the review bit, so that
+/// the day a fourth kind exists this function fails to compile instead of
+/// quietly filing it as a machine translation. A machine-only or observed
+/// record can never travel as `Bashari`, because that would record a human
+/// review nobody performed.
+pub(crate) fn asl_amin(qayd: &QaydDhakira) -> AslQayd {
+    match qayd.asl.naw {
+        NawAsl::Bashari => AslQayd::Bashari { musahim: qayd.asl.musahim.clone() },
+        NawAsl::Aali => {
+            AslQayd::AaliFaqat { muzawwid: qayd.asl.muzawwid.clone(), thiqa: qayd.thiqa }
+        }
+        NawAsl::Mulahaza => AslQayd::Mulahaza {
+            qari: qayd.asl.qari.clone(),
+            muzawwid: qayd.asl.muzawwid.clone(),
+            thiqa: qayd.asl.thiqa_qira,
+        },
     }
 }
 

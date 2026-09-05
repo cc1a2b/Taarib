@@ -38,7 +38,7 @@ pub fn masar_nafsi() -> Option<PathBuf> {
         GetModuleHandleExW(
             GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
                 | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            PCWSTR(masar_nafsi as *const () as *const u16),
+            PCWSTR((masar_nafsi as *const ()).cast::<u16>()),
             &raw mut miqbad,
         )
     };
@@ -49,10 +49,15 @@ pub fn masar_nafsi() -> Option<PathBuf> {
     let mut hajiz = [0u16; MAX_PATH as usize];
     // SAFETY: `hajiz` is a live buffer of exactly the length passed.
     let tul = unsafe { GetModuleFileNameW(Some(miqbad), &mut hajiz) } as usize;
+    // Zero is the API's failure return and a length equal to the buffer means
+    // the name was truncated; neither is a path. The guard answers both, and
+    // `get` is only how the bound is expressed — `indexing_slicing` is denied
+    // workspace-wide and has no flow analysis to see that the guard already
+    // holds.
     if tul == 0 || tul >= hajiz.len() {
         return None;
     }
-    Some(PathBuf::from(std::ffi::OsString::from_wide(&hajiz[..tul])))
+    Some(PathBuf::from(std::ffi::OsString::from_wide(hajiz.get(..tul)?)))
 }
 
 /// The full path of the calling module.

@@ -98,6 +98,73 @@ pub const AQSA_SAA: usize = 50_000;
 /// dropped: a truncated line still tells a player which region produced it.
 pub const AQSA_TUL_SATR: usize = 2_000;
 
+/// What a recognizer said about a reading, or that it said nothing.
+///
+/// Two states, not a number with a sentinel. Of the three engines this crate
+/// ships to, only macOS Vision reports a per-line confidence; the Windows
+/// Runtime recognizer and the portable one report none, and
+/// [`crate::qira::SatrMaqru`] carries [`crate::qira::THIQA_GHAYR_MAQISA`] — a
+/// constant — in their place, with a `maqisa` flag beside it saying so.
+///
+/// That flag has to survive into the history, and this type is what carries it.
+/// A history entry holding a bare `u8` cannot distinguish the stand-in constant
+/// from a real measurement, and anything reading the file afterwards — the panel
+/// deciding whether to show a confidence band, the shared translation memory
+/// deciding whether an accumulation may be shared — is then reasoning about a
+/// number nobody measured as though somebody had.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ThiqatSatr {
+    /// The engine reported this number itself, zero to a hundred.
+    Maqisa(u8),
+
+    /// The engine reports no confidence at all.
+    ///
+    /// Not "zero confidence" and not "low confidence" — no measurement exists.
+    Ghayr,
+}
+
+impl ThiqatSatr {
+    /// A measured confidence, clamped into the range engines report in.
+    #[must_use]
+    pub const fn maqisa_bi(mia: u8) -> Self {
+        Self::Maqisa(if mia > 100 { 100 } else { mia })
+    }
+
+    /// A confidence from a recognized line, honouring its own `maqisa` flag.
+    #[must_use]
+    pub const fn min_maqru(mia: u8, maqisa: bool) -> Self {
+        if maqisa { Self::maqisa_bi(mia) } else { Self::Ghayr }
+    }
+
+    /// Whether this is a measurement.
+    #[must_use]
+    pub const fn maqisa(self) -> bool {
+        matches!(self, Self::Maqisa(_))
+    }
+
+    /// The number, or zero when there is none.
+    ///
+    /// Zero rather than an [`Option`] because the stored field is a `u8` and the
+    /// flag beside it is what says whether to read it. A caller that wants the
+    /// honest answer asks [`ThiqatSatr::mia_in_wujidat`].
+    #[must_use]
+    pub const fn mia(self) -> u8 {
+        match self {
+            Self::Maqisa(mia) => mia,
+            Self::Ghayr => 0,
+        }
+    }
+
+    /// The number, when there is one.
+    #[must_use]
+    pub const fn mia_in_wujidat(self) -> Option<u8> {
+        match self {
+            Self::Maqisa(mia) => Some(mia),
+            Self::Ghayr => None,
+        }
+    }
+}
+
 /// Where a translation came from.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
@@ -118,6 +185,21 @@ pub enum MasdarTarjama {
     /// difference would make the good translations look as uncertain as the
     /// machine ones.
     Mashru,
+
+    /// Read off a screen by somebody, and machine-translated from that reading.
+    ///
+    /// The weakest of the three, and the only one whose **source text** may be
+    /// wrong: a machine translation of an extracted string at least translated
+    /// the string the game actually ships, while this one translated whatever a
+    /// recognizer thought it saw. It arrives from the shared translation memory
+    /// — possibly from another player's session on another machine — and the
+    /// history says so rather than presenting it as this session's own work.
+    ///
+    /// Collapsing it into [`MasdarTarjama::Aaliya`] would tell a player
+    /// scrolling back that Taarib translated the line here, when what actually
+    /// happened is that somebody else's overlay read a similar screen and this
+    /// one reused the answer. That is a different claim and a weaker one.
+    Mulahaza,
 }
 
 impl MasdarTarjama {
@@ -127,6 +209,7 @@ impl MasdarTarjama {
         match self {
             Self::Aaliya => "machine",
             Self::Mashru => "project",
+            Self::Mulahaza => "screen reading",
         }
     }
 
@@ -136,6 +219,7 @@ impl MasdarTarjama {
         match self {
             Self::Aaliya => "ترجمة آلية",
             Self::Mashru => "من مشروع تعريب",
+            Self::Mulahaza => "قراءة شاشة سابقة",
         }
     }
 
@@ -143,6 +227,16 @@ impl MasdarTarjama {
     #[must_use]
     pub const fn basharia(self) -> bool {
         matches!(self, Self::Mashru)
+    }
+
+    /// Whether the source text this was translated from came off a screen.
+    ///
+    /// True for [`MasdarTarjama::Mulahaza`] alone. It is the question a player
+    /// deciding how far to trust a line should be able to ask, because it is
+    /// the only case where the *English* may already have been wrong.
+    #[must_use]
+    pub const fn min_shasha(self) -> bool {
+        matches!(self, Self::Mulahaza)
     }
 }
 
@@ -220,7 +314,34 @@ pub struct MadkhalQira {
     pub arabi: Option<String>,
 
     /// The recognizer's confidence, zero to a hundred.
+    ///
+    /// Only meaningful when [`MadkhalQira::maqisa`] is true. Read it without
+    /// that field and this is a number for every entry, including the ones
+    /// where no engine ever produced one.
     pub thiqa: u8,
+
+    /// Whether [`MadkhalQira::thiqa`] is a measurement.
+    ///
+    /// Only one of the three recognizers this crate ships to reports a
+    /// per-line confidence at all; for the other two,
+    /// [`crate::qira::SatrMaqru::thiqa`] carries
+    /// [`crate::qira::THIQA_GHAYR_MAQISA`], which is a constant and not an
+    /// observation. Without this bit a reader of a history file cannot tell the
+    /// two apart, and the substituted constant leaks downstream as though an
+    /// engine had said it.
+    ///
+    /// That is not a cosmetic distinction. The shared translation memory
+    /// refuses to store a confidence it was not given — unmeasured is a state,
+    /// not a low number — and withholds an unmeasured accumulation from being
+    /// shared unless a person acknowledges it. A harvest from this file that
+    /// could not tell the constant from a measurement would either have to call
+    /// every entry unmeasured, losing the macOS readings that *are* measured,
+    /// or call every entry measured, defeating the guard entirely.
+    ///
+    /// [`serde(default)`] is `false`, which is the correct reading of a file
+    /// written before this field existed: such a file genuinely cannot tell.
+    #[serde(default)]
+    pub maqisa: bool,
 
     /// Which side produced [`MadkhalQira::arabi`], once something did.
     pub masdar: Option<MasdarTarjama>,
@@ -245,7 +366,7 @@ impl MadkhalQira {
         mintaqa: MuarrifMintaqa,
         ism_mintaqa: impl Into<String>,
         asl: &str,
-        thiqa: u8,
+        thiqa: ThiqatSatr,
     ) -> Self {
         let (asl, maqtu) = iqtata(asl);
         Self {
@@ -256,7 +377,8 @@ impl MadkhalQira {
             ism_mintaqa: ism_mintaqa.into(),
             asl,
             arabi: None,
-            thiqa: thiqa.min(100),
+            thiqa: thiqa.mia(),
+            maqisa: thiqa.maqisa(),
             masdar: None,
             takrar: 1,
             maqtu,
@@ -302,14 +424,25 @@ impl MadkhalQira {
                 .is_some_and(|arabi| arabi.to_lowercase().contains(&matlub))
     }
 
+    /// The recognizer's confidence, or the fact that it reported none.
+    #[must_use]
+    pub const fn thiqa(&self) -> ThiqatSatr {
+        ThiqatSatr::min_maqru(self.thiqa, self.maqisa)
+    }
+
     /// How the panel describes the recognizer's confidence.
     ///
-    /// Three bands rather than a number, because a number invites a precision
-    /// the recognizer does not have. The bands are named after what a player
-    /// should do with the line, not after how the model feels about it.
+    /// Four bands rather than three, and the fourth is the one that matters:
+    /// an engine that reports no confidence at all is not a low-confidence
+    /// reading, and showing "قراءة ضعيفة" for every line on Windows would be
+    /// telling a player their whole session was read badly when nothing
+    /// measured it either way. Three bands rather than a number for the rest,
+    /// because a number invites a precision the recognizer does not have.
     #[must_use]
     pub const fn unwan_thiqa(&self) -> &'static str {
-        if self.thiqa >= 85 {
+        if !self.maqisa {
+            "لم يُقِس المحرّك ثقته"
+        } else if self.thiqa >= 85 {
             "قراءة واضحة"
         } else if self.thiqa >= 60 {
             "قراءة محتملة الخطأ"
@@ -615,7 +748,7 @@ impl SijillQira {
         mintaqa: MuarrifMintaqa,
         ism_mintaqa: &str,
         asl: &str,
-        thiqa: u8,
+        thiqa: ThiqatSatr,
     ) -> NatijatIdraj {
         let (nass, maqtu) = iqtata(asl);
         if nass.is_empty() {
@@ -634,8 +767,16 @@ impl SijillQira {
             madkhal.lahza_akhira = lahza.max(madkhal.lahza_akhira);
             // The recognizer can be more certain on a later frame — a fade-in
             // finishing, a background settling — and keeping the best reading's
-            // confidence is more useful than keeping the first's.
-            madkhal.thiqa = madkhal.thiqa.max(thiqa.min(100));
+            // confidence is more useful than keeping the first's. A measured
+            // reading replaces an unmeasured one outright rather than
+            // competing with it numerically: the stand-in constant is not a
+            // number a later real measurement should have to beat.
+            if thiqa.maqisa() && !madkhal.maqisa {
+                madkhal.thiqa = thiqa.mia();
+                madkhal.maqisa = true;
+            } else if thiqa.maqisa() == madkhal.maqisa {
+                madkhal.thiqa = madkhal.thiqa.max(thiqa.mia());
+            }
             let muarrif = madkhal.muarrif;
             self.muallaqa = self.muallaqa.saturating_add(1);
             return NatijatIdraj::Mukarrara(muarrif);
@@ -651,7 +792,8 @@ impl SijillQira {
             ism_mintaqa: ism_mintaqa.to_owned(),
             asl: nass,
             arabi: None,
-            thiqa: thiqa.min(100),
+            thiqa: thiqa.mia(),
+            maqisa: thiqa.maqisa(),
             masdar: None,
             takrar: 1,
             maqtu,
@@ -840,6 +982,12 @@ impl SijillQira {
             match serde_json::from_str::<MadkhalQira>(nass) {
                 Ok(mut madkhal) => {
                     madkhal.thiqa = madkhal.thiqa.min(100);
+                    // A stored entry that claims no measurement carries no
+                    // number either. Leaving one behind would let a harvest
+                    // read a confidence out of an entry that says it has none.
+                    if !madkhal.maqisa {
+                        madkhal.thiqa = 0;
+                    }
                     madkhal.takrar = madkhal.takrar.max(1);
                     madkhal.lahza_akhira = madkhal.lahza_akhira.max(madkhal.lahza);
                     sijill.talee = sijill.talee.max(madkhal.muarrif.raqm().saturating_add(1));
@@ -912,7 +1060,7 @@ impl SijillQira {
         mintaqa: MuarrifMintaqa,
         ism_mintaqa: &str,
         asl: &str,
-        thiqa: u8,
+        thiqa: ThiqatSatr,
     ) -> Result<NatijatIdraj, KhataTabaqa> {
         let natija = self.sajjil(lahza, mintaqa, ism_mintaqa, asl, thiqa);
         if let NatijatIdraj::Judida(muarrif) = natija {
@@ -1085,7 +1233,7 @@ impl SijillMushtarak {
         mintaqa: MuarrifMintaqa,
         ism_mintaqa: &str,
         asl: &str,
-        thiqa: u8,
+        thiqa: ThiqatSatr,
     ) -> NatijatIdraj {
         self.0.write().sajjil(lahza, mintaqa, ism_mintaqa, asl, thiqa)
     }
@@ -1101,7 +1249,7 @@ impl SijillMushtarak {
         mintaqa: MuarrifMintaqa,
         ism_mintaqa: &str,
         asl: &str,
-        thiqa: u8,
+        thiqa: ThiqatSatr,
     ) -> Result<NatijatIdraj, KhataTabaqa> {
         self.0.write().qayyid(lahza, mintaqa, ism_mintaqa, asl, thiqa)
     }

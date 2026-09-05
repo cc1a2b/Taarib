@@ -186,6 +186,11 @@ impl BeeatSandooq {
     /// # Errors
     ///
     /// [`KhataTaqdeem::SandooqFashil`] when the tree cannot be removed.
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "`self.jidhr` is `<sandbox root>/<generated draft id>`, two components below the \
+                  data root and never constructible as the root itself"
+    )]
     pub fn imsah(self) -> NatijatTaqdeem<()> {
         std::fs::remove_dir_all(&self.jidhr).map_err(|sabab| KhataTaqdeem::SandooqFashil {
             sabab: format!("{} could not be removed: {sabab}", self.jidhr.display()),

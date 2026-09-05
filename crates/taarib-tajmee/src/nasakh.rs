@@ -270,6 +270,14 @@ fn farrigh(jidhr: &Path) -> NatijatTajmee<()> {
             amal: "reading the previous staging tree",
             sabab,
         })?;
+        // `masar` is one direct child of the staging tree, taken from `read_dir`
+        // on a path this build tool was given as `--kharij`. It is never derived
+        // from a data root: `taarib-tajmee` is a build-machine tool and has no
+        // `Masarat` to ask.
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "a direct child of the build tool's own staging tree, which is a CLI argument"
+        )]
         let natija = if naw.is_dir() {
             std::fs::remove_dir_all(&masar)
         } else {

@@ -31,6 +31,17 @@ impl HirasatKitaba {
     ///
     /// [`KhataHaqn::HimayaGhayrQabila`] when the platform refuses, which on
     /// Windows is usually an anti-tamper product and is worth saying so.
+    // Neither arm of this function dereferences the pointer. `VirtualProtect`
+    // and `mprotect` are both total over any address value: an unmapped range
+    // is reported as an error return, not a fault, which is exactly what the
+    // refusal above is built on. The Unix arm does not trip the lint only
+    // because it launders the address through `usize` to page-align it, so
+    // silencing the Windows arm is levelling the two rather than excusing one.
+    #[expect(
+        clippy::not_unsafe_ptr_arg_deref,
+        reason = "the address is handed to the kernel, never read through; an unmapped range \
+                  comes back as HimayaGhayrQabila rather than as a fault"
+    )]
     #[cfg(windows)]
     pub fn iftah(oinwan: *mut c_void, tul: usize) -> NatijatHaqn<Self> {
         use windows::Win32::System::Memory::{

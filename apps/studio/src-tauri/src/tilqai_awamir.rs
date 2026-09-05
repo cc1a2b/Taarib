@@ -2324,6 +2324,10 @@ mod ikhtibarat {
         fn drop(&mut self) {
             // Best effort. A test that has already failed must not fail twice,
             // and there is nothing useful to do with an error here.
+            #[expect(
+                clippy::disallowed_methods,
+                reason = "a scratch directory under `std::env::temp_dir()` removing itself, never a data root or a game directory"
+            )]
             let _ = std::fs::remove_dir_all(&self.0);
         }
     }

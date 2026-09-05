@@ -66,6 +66,26 @@ pub enum KhataWarsha {
         sabab: String,
     },
 
+    /// A memory share was to be written with warnings nobody acknowledged.
+    #[error("{} warning(s) about the shared readings are unacknowledged: {}",
+        asma.len(), asma.join("; "))]
+    TahdheeratMuallaqa {
+        /// The unacknowledged warnings, in their own words.
+        asma: Vec<String>,
+    },
+
+    /// A sharing permit was spent on an entry set it was not granted for.
+    #[error("the sharing permit was granted for a different set of readings")]
+    IdhnGhayrMutabiq,
+
+    /// A memory share would have carried nothing.
+    #[error("there are no shareable readings for this game and nothing was written")]
+    MusharakaFarigha,
+
+    /// A share's signature does not verify against the expected key.
+    #[error("the share is not signed by the key it was checked against")]
+    TawqeeGhayrSalih,
+
     /// The underlying project, memory or glossary refused.
     #[error("{sabab}")]
     Mawrid {
@@ -87,14 +107,23 @@ impl Tafsir for KhataWarsha {
                     Self::QararBilaNizaa => 5,
                     Self::TabadulGhayrMutabiq { .. } => 6,
                     Self::Mawrid { .. } => 7,
+                    Self::TahdheeratMuallaqa { .. } => 8,
+                    Self::IdhnGhayrMutabiq => 9,
+                    Self::MusharakaFarigha => 10,
+                    Self::TawqeeGhayrSalih => 11,
                 },
         )
     }
 
     fn khutura(&self) -> Khutura {
         match self {
-            Self::TabadulGhayrMutabiq { .. } => Khutura::Fadih,
-            Self::NizaatMuallaqa { .. } => Khutura::Tanbeeh,
+            // A permit spent on the wrong payload means something showed a
+            // user one thing and was about to write another; that is the
+            // consent gate failing, not a user mistake.
+            Self::TabadulGhayrMutabiq { .. } | Self::IdhnGhayrMutabiq => Khutura::Fadih,
+            Self::NizaatMuallaqa { .. }
+            | Self::TahdheeratMuallaqa { .. }
+            | Self::MusharakaFarigha => Khutura::Tanbeeh,
             _ => Khutura::Khatar,
         }
     }
@@ -118,6 +147,18 @@ impl Tafsir for KhataWarsha {
             Self::TabadulGhayrMutabiq { .. } => {
                 "لم يرجع ملف التبادل كما صُدِّر، ولم يُسلَّم.".to_owned()
             }
+            Self::TahdheeratMuallaqa { asma } => {
+                format!("بقي {} تنبيهًا لم تُقرّ به، ولم تُشارك الذاكرة.", asma.len())
+            }
+            Self::IdhnGhayrMutabiq => {
+                "الإذن مُنح لمجموعة أسطر غير التي كانت ستُكتب، ولم تُشارك.".to_owned()
+            }
+            Self::MusharakaFarigha => {
+                "لا توجد أسطر قابلة للمشاركة لهذه اللعبة، فلم يُكتب ملف.".to_owned()
+            }
+            Self::TawqeeGhayrSalih => {
+                "توقيع ملف الذاكرة لا يطابق المفتاح المتوقّع، ورُفض.".to_owned()
+            }
             Self::Mawrid { sabab } => sabab.clone(),
         }
     }
@@ -130,11 +171,16 @@ impl Tafsir for KhataWarsha {
         match self {
             Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladManassa),
             Self::IsdarMajhul { .. } => Khutwa::TahdithTaarib,
-            Self::NizaatMuallaqa { .. } => Khutwa::FathNusus,
-            Self::TabadulGhayrMutabiq { .. } | Self::QararBilaNizaa => Khutwa::IblaghLilMalik,
-            Self::HuzmaTalifa { .. } | Self::MashruMukhtalif | Self::Mawrid { .. } => {
-                Khutwa::FathTashkhis
-            }
+            Self::NizaatMuallaqa { .. }
+            | Self::TahdheeratMuallaqa { .. }
+            | Self::MusharakaFarigha => Khutwa::FathNusus,
+            Self::TabadulGhayrMutabiq { .. }
+            | Self::QararBilaNizaa
+            | Self::IdhnGhayrMutabiq => Khutwa::IblaghLilMalik,
+            Self::HuzmaTalifa { .. }
+            | Self::MashruMukhtalif
+            | Self::TawqeeGhayrSalih
+            | Self::Mawrid { .. } => Khutwa::FathTashkhis,
         }
     }
 
@@ -151,7 +197,15 @@ impl Tafsir for KhataWarsha {
             let _ = siyaq.insert(miftah.to_owned(), qeema);
         };
         match self {
-            Self::KhataMalaf { .. } | Self::MashruMukhtalif | Self::QararBilaNizaa => {}
+            Self::KhataMalaf { .. }
+            | Self::MashruMukhtalif
+            | Self::QararBilaNizaa
+            | Self::IdhnGhayrMutabiq
+            | Self::MusharakaFarigha
+            | Self::TawqeeGhayrSalih => {}
+            Self::TahdheeratMuallaqa { asma } => {
+                daa("tahdheerat", QeemaSiyaq::Nass(asma.join("; ")));
+            }
             Self::HuzmaTalifa { sabab } | Self::Mawrid { sabab } => {
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             }

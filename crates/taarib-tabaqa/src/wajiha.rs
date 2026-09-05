@@ -1,12 +1,20 @@
 //! الواجهة — the shape every graphics backend has, and the contract it signs.
 //!
-//! Four APIs, four genuinely different implementations, one interface. This
+//! Five APIs, five genuinely different implementations, one interface. This
 //! module is that interface and nothing else: it contains no Direct3D, no
 //! OpenGL, no Vulkan, and it compiles on every platform including the ones where
-//! none of the four exists. That is deliberate. The overlay's lifecycle, its
+//! none of the five exists. That is deliberate. The overlay's lifecycle, its
 //! frame budget accounting, its surface-change handling and its disable-on-fault
-//! rule are the same on all four, and a backend that reimplemented any of them
+//! rule are the same on all five, and a backend that reimplemented any of them
 //! would be a backend that could get them subtly wrong on one API only.
+//!
+//! The fifth is [`crate::d3d9`], and it is the one that pressed hardest on this
+//! interface without changing it. Its device can be *lost*, which arrives here
+//! as the [`KhataTabaqa::SathTaghayyar`] every other backend already produces
+//! for a resize; its state block has to be released before the game's own
+//! `Reset`, which is the [`Khattaf::atliq_sath`] DXGI already needed for
+//! `ResizeBuffers`. Both facts were already expressible, which is the test a
+//! shared interface passes or fails.
 //!
 //! ## The frame contract
 //!
@@ -31,7 +39,7 @@
 //! [`Khattaf`] draws. It does not install itself, and it does not know how it
 //! was reached — the hook is [`crate::khataf`]'s, and passing an already-hooked
 //! context in means a backend can be exercised against a device created for the
-//! purpose without a game being involved. It also means the four backends
+//! purpose without a game being involved. It also means the five backends
 //! contain no unsafe hooking code between them; all of that lives in one module
 //! where it can be read as a unit.
 //!
@@ -53,6 +61,13 @@ use crate::sidq::Iqrar;
 /// Which graphics API a backend speaks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum WajihatRusum {
+    /// Direct3D 9, hooked at `IDirect3DDevice9::Present` and `Reset`.
+    ///
+    /// `Reset` is hooked for a reason DXGI has no equivalent of: a D3D9 device
+    /// can be *lost*, `Reset` is how the game recovers it, and `Reset` fails
+    /// while the overlay holds a state block or any `D3DPOOL_DEFAULT` resource.
+    /// See [`crate::d3d9`].
+    Direct3D9,
     /// Direct3D 11, hooked at `IDXGISwapChain::Present` and `Present1`.
     Direct3D11,
     /// Direct3D 12, hooked at `IDXGISwapChain3::Present1` with the command
@@ -62,6 +77,29 @@ pub enum WajihatRusum {
     OpenGl,
     /// Vulkan, reached as a layer rather than a hook.
     Vulkan,
+    /// Direct3D 8, hooked at `IDirect3DDevice8::Present` and `Reset`.
+    ///
+    /// Not a smaller Direct3D 9. Presentation is a method of the device, there
+    /// is no swap chain interface to reach it through, and the state the
+    /// overlay disturbs is saved with a state block rather than read back —
+    /// because a device created `D3DCREATE_PUREDEVICE` refuses to report its
+    /// own state at all. See [`crate::d3d8`].
+    Direct3D8,
+    /// Direct3D 10, hooked at `IDXGISwapChain::Present` like Direct3D 11.
+    ///
+    /// The same hook, a different device: DXGI owns the swap chain on both
+    /// generations, so the hook that catches an eleventh-generation game
+    /// catches a tenth-generation one unchanged and only the device the swap
+    /// chain hands back differs. See [`crate::d3d10`].
+    Direct3D10,
+    /// Fixed-function OpenGL, hooked at the same buffer swap as [`Self::OpenGl`].
+    ///
+    /// A separate API rather than a mode of the modern backend. A pre-shader
+    /// context has no `glCreateShader`, no vertex array object and no buffer
+    /// object; it has a matrix stack, a texture environment and an attribute
+    /// stack, and none of those appears in the modern backend's save list. See
+    /// [`crate::gl_thabit`].
+    OpenGlThabit,
 }
 
 impl WajihatRusum {
@@ -69,10 +107,14 @@ impl WajihatRusum {
     #[must_use]
     pub const fn ism(self) -> &'static str {
         match self {
+            Self::Direct3D9 => "Direct3D 9",
             Self::Direct3D11 => "Direct3D 11",
             Self::Direct3D12 => "Direct3D 12",
             Self::OpenGl => "OpenGL",
             Self::Vulkan => "Vulkan",
+            Self::Direct3D8 => "Direct3D 8",
+            Self::Direct3D10 => "Direct3D 10",
+            Self::OpenGlThabit => "OpenGL (fixed function)",
         }
     }
 
@@ -98,10 +140,29 @@ impl WajihatRusum {
     #[must_use]
     pub const fn maktabat(self) -> &'static [&'static str] {
         match self {
+            // No DXGI. A D3D9 process that also loads `dxgi.dll` is loading it
+            // for something else — the desktop duplication API, or a launcher —
+            // and naming it here would make every D3D11 game look like a D3D9
+            // one to a probe that stopped at the first match.
+            Self::Direct3D9 => &["d3d9.dll"],
             Self::Direct3D11 => &["d3d11.dll", "dxgi.dll"],
             Self::Direct3D12 => &["d3d12.dll", "dxgi.dll"],
             Self::OpenGl => &["opengl32.dll", "libGL.so.1", "libEGL.so.1"],
             Self::Vulkan => &["vulkan-1.dll", "libvulkan.so.1"],
+            // No DXGI either, and for the opposite reason to D3D9's: Direct3D 8
+            // predates it entirely, so a process carrying both `d3d8.dll` and
+            // `dxgi.dll` is a modern process that loaded a wrapper, not a
+            // Direct3D 8 game.
+            Self::Direct3D8 => &["d3d8.dll"],
+            // `d3d10_1.dll` as well as `d3d10.dll`: a Direct3D 10.1 game links
+            // only the newer one, and its device answers a `QueryInterface` for
+            // `ID3D10Device` because `ID3D10Device1` derives from it.
+            Self::Direct3D10 => &["d3d10.dll", "d3d10_1.dll", "dxgi.dll"],
+            // The same modules as the modern backend, because they are the same
+            // modules. What separates the two is what the *context* offers, and
+            // that is a question no module list can answer — see
+            // [`crate::gl_thabit::ikhtar`], which asks the context instead.
+            Self::OpenGlThabit => &["opengl32.dll", "libGL.so.1"],
         }
     }
 
@@ -110,11 +171,35 @@ impl WajihatRusum {
     /// Vulkan first because it is the only one with a documented extension
     /// point, then D3D12 and D3D11 — a game linking both DXGI generations is
     /// almost always a D3D12 game with a D3D11 compatibility path it does not
-    /// present through — then OpenGL last, because `opengl32.dll` is loaded by a
-    /// great many Windows processes that never draw with it.
+    /// present through — then D3D9, then OpenGL last, because `opengl32.dll` is
+    /// loaded by a great many Windows processes that never draw with it.
+    ///
+    /// D3D9 sits below the two newer Direct3D generations rather than above
+    /// them because `d3d9.dll` is what a translation layer such as DXVK or
+    /// d9vk maps into a process that is really presenting through something
+    /// else, and because a handful of newer games ship a D3D9 fallback renderer
+    /// they never select. Below D3D12 and D3D11 it is reached only when neither
+    /// of those is present, which is exactly when it is the real renderer.
+    /// The three older APIs sit below the generation each of them precedes, and
+    /// fixed-function OpenGL sits last of all. That ordering is not seniority:
+    /// `opengl32.dll` is loaded by a great many Windows processes that never
+    /// draw with it, and it is loaded by *every* OpenGL process whether the
+    /// context is a modern core profile or a compatibility one — so the module
+    /// list cannot separate the two GL backends and the probe reaches the
+    /// modern one first. [`crate::gl_thabit::ikhtar`] is what actually decides,
+    /// by asking the context which entry points it has.
     #[must_use]
-    pub const fn jamee() -> [Self; 4] {
-        [Self::Vulkan, Self::Direct3D12, Self::Direct3D11, Self::OpenGl]
+    pub const fn jamee() -> [Self; 8] {
+        [
+            Self::Vulkan,
+            Self::Direct3D12,
+            Self::Direct3D11,
+            Self::Direct3D10,
+            Self::Direct3D9,
+            Self::Direct3D8,
+            Self::OpenGl,
+            Self::OpenGlThabit,
+        ]
     }
 }
 
@@ -308,7 +393,7 @@ impl MustatilNisbi {
 /// `u32` to `f32` loses precision above 2^24, which is 16.7 million — four
 /// orders of magnitude past any surface dimension that will ever exist. The
 /// conversion is written once, here, with that stated, so the lint's warning is
-/// answered in one place rather than suppressed in four.
+/// answered in one place rather than suppressed in five.
 const fn madaa_f32(qeema: u32) -> f32 {
     #[expect(
         clippy::cast_precision_loss,
@@ -469,7 +554,7 @@ pub struct QitaRasm {
 
 /// A backend that draws the overlay through one graphics API.
 ///
-/// Implemented four times. Every implementation is `unsafe` internally and none
+/// Implemented five times. Every implementation is `unsafe` internally and none
 /// of that reaches this trait: the methods here take already-validated
 /// parameters and return values, and the unsafety of talking to a device lives
 /// behind them with its invariants written at each block.
@@ -555,15 +640,27 @@ pub trait Khattaf: Send + fmt::Debug {
 
     /// Releases only what is sized against the current surface, immediately.
     ///
-    /// Called from inside `IDXGISwapChain::ResizeBuffers`, **before** it reaches
-    /// the runtime, and defaulted to doing nothing because only DXGI needs it.
-    /// The reason it exists at all is specific and not guessable: `ResizeBuffers`
-    /// returns `DXGI_ERROR_INVALID_CALL` while *anybody* holds a reference to a
-    /// backbuffer, and both Direct3D backends hold one for the whole session —
-    /// D3D11 in its render target view, D3D12 in every frame's resource slot. A
-    /// game that resizes with the overlay installed would get a refusal from a
-    /// call that has never once refused it, and would have no way to attribute
-    /// that to Taarib.
+    /// Called from inside `IDXGISwapChain::ResizeBuffers` and from inside
+    /// `IDirect3DDevice9::Reset`, **before** either reaches the runtime, and
+    /// defaulted to doing nothing because only Direct3D needs it. The reason it
+    /// exists at all is specific and not guessable, and the two generations
+    /// arrive at it from different directions.
+    ///
+    /// On DXGI, `ResizeBuffers` returns `DXGI_ERROR_INVALID_CALL` while
+    /// *anybody* holds a reference to a backbuffer, and both newer Direct3D
+    /// backends hold one for the whole session — D3D11 in its render target
+    /// view, D3D12 in every frame's resource slot.
+    ///
+    /// On Direct3D 9, `Reset` is refused while anybody holds a
+    /// `D3DPOOL_DEFAULT` resource, an explicit render target, an additional
+    /// swap chain **or a state block** — and the state block is exactly the
+    /// object [`crate::d3d9`] keeps between frames to save and restore the
+    /// game's own device state with. It is the one D3D9 overlays get wrong,
+    /// because nothing about a state block looks like a resource.
+    ///
+    /// In both cases a game that resized or reset with the overlay installed
+    /// would get a refusal from a call that has never once refused it, and
+    /// would have no way to attribute that to Taarib.
     ///
     /// OpenGL has no backbuffer object to hold and Vulkan replaces the whole
     /// swapchain rather than resizing one, so both leave this alone. The default
@@ -643,7 +740,7 @@ impl HalatTabaqa {
 /// The overlay: one backend, its budget, its state, and the disclosure that let
 /// it start.
 ///
-/// Owns the lifecycle rules that are identical across all four APIs, so that a
+/// Owns the lifecycle rules that are identical across all five APIs, so that a
 /// backend is only ever asked to draw and never asked to decide whether it
 /// should.
 #[derive(Debug)]
@@ -776,7 +873,7 @@ impl Tabaqa {
         }
     }
 
-    /// Draws one frame, applying every rule that is the same on all four APIs.
+    /// Draws one frame, applying every rule that is the same on all five APIs.
     ///
     /// In order: is the overlay on, does the budget allow it, has the surface
     /// changed, is there anything to draw, and was the batch built for the

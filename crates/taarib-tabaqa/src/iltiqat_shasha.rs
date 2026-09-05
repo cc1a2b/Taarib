@@ -707,6 +707,108 @@ impl SuratRamadiya {
         let majmu: u64 = self.bayt.iter().map(|&q| u64::from(q)).sum();
         hajm_f64(majmu) / adad_f64(self.bayt.len())
     }
+
+    /// This image as a capture a recognizer will accept.
+    ///
+    /// The gap this closes is not a convenience. [`MuhassinSura::hassin`]
+    /// produces one of these and every engine behind [`crate::qira::Qari`]
+    /// takes a [`SuraMultaqata`], so without a conversion the two halves of the
+    /// pipeline cannot be joined: a caller that preprocesses a region has no
+    /// way to hand the result to a reader, and a caller that reads a region is
+    /// reading the raw backbuffer with none of the preprocessing applied. The
+    /// second is what happens by default, silently, because both calls compile.
+    ///
+    /// The grey value goes into all three colour channels rather than into one.
+    /// `ImageSource::from_bytes` derives its stride from the buffer length, so
+    /// a single-channel buffer of this geometry is also a *valid* RGB buffer of
+    /// a third the width — it does not error, it reads as a sheared image with
+    /// no text in it.
+    ///
+    /// The rectangle the result reports is its own frame, at the origin, not a
+    /// position on the surface: preprocessing may have upscaled, so this
+    /// image's coordinates are no longer the surface's. [`SuraMuhassana`] is
+    /// what carries the trip back, and it is what
+    /// [`MuhassinSura::hassin_lil_qari`] returns for exactly that reason.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataTabaqa::HajmMufrit`] when four bytes per pixel would not fit this
+    /// target's address space, refused before the allocation.
+    pub fn ila_multaqata(&self) -> Result<SuraMultaqata, KhataTabaqa> {
+        let tul = tul_u64(self.bayt.len()).saturating_mul(4);
+        let Some(sia) = hajm_usize(tul) else {
+            return Err(KhataTabaqa::HajmMufrit {
+                haql: "grayscale-to-RGBA buffer",
+                qeema: tul,
+                saqf: tul_u64(usize::MAX),
+            });
+        };
+        let mut bayt = Vec::with_capacity(sia);
+        for &qeema in &self.bayt {
+            bayt.extend_from_slice(&[qeema, qeema, qeema, 255]);
+        }
+        SuraMultaqata::jadeeda(
+            bayt,
+            self.ard,
+            self.irtifa,
+            SighatSath::Rgba8,
+            MustatilBiksel { yasar: 0, aala: 0, ard: self.ard, irtifa: self.irtifa },
+        )
+    }
+}
+
+/// A preprocessed region, ready to read, and the way back to the surface.
+///
+/// Preprocessing changes an image's size — [`MuhassinSura::kabbir`] upscales a
+/// short region by an integer factor — so a rectangle a recognizer reports
+/// inside the preprocessed image is not a rectangle on the game's surface. Two
+/// numbers are needed to make the trip and neither of them survives in a bare
+/// [`SuraMultaqata`]: the factor, and the region the capture came from. Both
+/// are here, so the overlay draws Arabic where the English was rather than at
+/// two or three times the offset.
+#[derive(Debug, Clone)]
+pub struct SuraMuhassana {
+    sura: SuraMultaqata,
+    mintaqa: MustatilBiksel,
+    mudaaf: u32,
+}
+
+impl SuraMuhassana {
+    /// The preprocessed image, in the form a recognizer takes.
+    #[must_use]
+    pub const fn sura(&self) -> &SuraMultaqata {
+        &self.sura
+    }
+
+    /// Where the original capture sat on the surface.
+    #[must_use]
+    pub const fn mintaqa(&self) -> MustatilBiksel {
+        self.mintaqa
+    }
+
+    /// The integer factor preprocessing upscaled by; one when it did not.
+    #[must_use]
+    pub const fn mudaaf(&self) -> u32 {
+        self.mudaaf
+    }
+
+    /// A rectangle in the preprocessed image, moved back onto the surface.
+    ///
+    /// Divides by the upscale factor before offsetting, in that order. The
+    /// other order gives a box that is correct only when the region starts at
+    /// the origin, which is true of exactly one region on any screen and is why
+    /// the mistake survives a first test.
+    #[must_use]
+    pub fn ila_sath(&self, mahalli: MustatilBiksel) -> MustatilBiksel {
+        let mudaaf = if self.mudaaf == 0 { 1 } else { self.mudaaf };
+        let asghar = |qeema: u32| -> u32 { qeema.checked_div(mudaaf).unwrap_or(qeema) };
+        MustatilBiksel {
+            yasar: self.mintaqa.yasar.saturating_add(asghar(mahalli.yasar)),
+            aala: self.mintaqa.aala.saturating_add(asghar(mahalli.aala)),
+            ard: asghar(mahalli.ard),
+            irtifa: asghar(mahalli.irtifa),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -755,10 +857,46 @@ pub struct IdadatTahsin {
     /// rescues text over a busy, moving background, which is the one case where
     /// the neural detectors do fail.
     pub yubaddil_thunai: bool,
-    /// The height below which the region is upscaled, in pixels.
+    /// The height below which the **text** is upscaled, in pixels.
+    ///
+    /// The text's height, measured by [`KutalNass`], not the region's. Those
+    /// are different numbers, and comparing against the second one made this
+    /// setting inert: over a 360-case corpus with 11-pixel text inside regions
+    /// 27 to 29 pixels tall, the upscale it governs fired zero times.
     pub irtifa_adna: u32,
     /// The largest integer upscale factor.
     pub aqsa_takbir: u32,
+    /// Whether the recognizer is handed grayscale rather than colour.
+    ///
+    /// Off, and that default is the one decision in this struct that was made
+    /// from a measurement rather than from an argument. Over a 360-case corpus
+    /// — six conditions, three faces, twenty lines, composited over text-free
+    /// crops of real game frames — collapsing to grayscale before the portable
+    /// recognizer moved exact-match accuracy like this:
+    ///
+    /// | condition | colour | grayscale chain |
+    /// | --- | --- | --- |
+    /// | clean | 91.7% | 93.3% |
+    /// | outlined | 73.3% | 78.3% |
+    /// | shadowed | 91.7% | 91.7% |
+    /// | low-contrast | 90.0% | 93.3% |
+    /// | over-texture | 63.3% | 51.7% |
+    /// | small | 86.7% | 83.3% |
+    /// | all | 82.8% | 81.9% |
+    ///
+    /// The grayscale chain wins on flat panels and loses badly on text over
+    /// game art — eleven and a half points, and character error rate more than
+    /// doubles, from 4.07% to 9.46%. Text over game art is the case tier 3
+    /// exists for: the tiers that can patch a game are used when the game can
+    /// be patched, and what is left for the overlay is arbitrary art behind
+    /// arbitrary text. So colour is the default and the chain is an option a
+    /// user can turn on for a game whose UI is flat panels.
+    ///
+    /// Turning it on also turns on the contrast stretch and the inversion,
+    /// which have no meaning on a colour buffer. The measurement image is built
+    /// either way — the upscale factor and the change-detection hash both come
+    /// from it — and this only decides which of the two reaches the reader.
+    pub yuhawwil_ila_ramadi: bool,
 }
 
 impl Default for IdadatTahsin {
@@ -773,11 +911,12 @@ impl Default for IdadatTahsin {
             mada_sauvola: 128.0,
             yubaddil_thunai: false,
             // Twenty pixels is where recognition accuracy falls off a cliff on
-            // both engines; twenty-four is that with a margin, because the
-            // region's height is not the text's height and a region always has
-            // some padding in it.
-            irtifa_adna: 24,
+            // both engines. No margin is added on top: this is compared against
+            // the text's own measured height now, so a margin would only make
+            // the step fire on text that does not need it.
+            irtifa_adna: 20,
             aqsa_takbir: 3,
+            yuhawwil_ila_ramadi: false,
         }
     }
 }
@@ -1120,13 +1259,43 @@ impl MuhassinSura {
         SuratRamadiya { bayt: mukhraj, ard: surah.ard, irtifa: surah.irtifa }
     }
 
+    /// The height of the text in a region, not the height of the region.
+    ///
+    /// The median of the line bands [`KutalNass`] finds, or [`None`] when it
+    /// finds none. Measured rather than assumed, and the difference between
+    /// those two is the whole reason this function exists.
+    ///
+    /// [`MuhassinSura::kabbir`] used to compare the *region's* height against
+    /// [`IdadatTahsin::irtifa_adna`], with a comment conceding that the region's
+    /// height is not the text's and a floor set higher "with a margin" to
+    /// compensate. Measurement showed what that costs: over a 360-case corpus,
+    /// with 11-pixel text inside regions 27 to 29 pixels tall, the upscale
+    /// *never fired once* — the step meant to rescue small text was dead on
+    /// exactly the corpus it exists for, and the results with it and without it
+    /// were byte-identical. A margin cannot fix a quantity that is measuring the
+    /// wrong thing.
+    ///
+    /// The median rather than the mean, for the reason every median in this
+    /// crate is one: a single band that merged two lines, or caught a UI rule
+    /// under the text, would drag a mean far enough to suppress the upscale.
+    fn irtifa_nass(surah: &SuratRamadiya) -> Option<u32> {
+        let kutal = KutalNass::iktashif(surah, &IdadatKutal::default());
+        let mut irtifaat: Vec<u32> =
+            kutal.sutur().iter().map(|satr| satr.itar.irtifa).filter(|q| *q > 0).collect();
+        if irtifaat.is_empty() {
+            return None;
+        }
+        irtifaat.sort_unstable();
+        irtifaat.get(irtifaat.len().checked_div(2).unwrap_or(0)).copied()
+    }
+
     /// The integer factor this region should be upscaled by.
     ///
-    /// One when the region is already tall enough, otherwise the smallest
-    /// integer that reaches the stated minimum, capped. Integer rather than
-    /// arbitrary because a non-integer scale puts stroke edges at fractional
-    /// positions that differ from row to row, and the resulting ragged stems
-    /// cost more accuracy than the extra pixels buy.
+    /// One when the text is already tall enough, otherwise the smallest integer
+    /// that reaches the stated minimum, capped. Integer rather than arbitrary
+    /// because a non-integer scale puts stroke edges at fractional positions
+    /// that differ from row to row, and the resulting ragged stems cost more
+    /// accuracy than the extra pixels buy.
     fn muamil_takbir(&self, irtifa: u32) -> u32 {
         if irtifa == 0 || irtifa >= self.iadadat.irtifa_adna {
             return 1;
@@ -1161,11 +1330,16 @@ impl MuhassinSura {
     /// [`KhataTabaqa::HajmMufrit`] when the upscaled result would exceed this
     /// build's pixel ceiling, refused before the allocation.
     pub fn kabbir(&mut self, surah: &SuratRamadiya) -> Result<SuratRamadiya, KhataTabaqa> {
-        let mudaaf = self.muamil_takbir(surah.irtifa);
+        // The text's height, and the region's only when no text was found —
+        // at which point there is nothing to upscale for and the fallback is
+        // the conservative one.
+        let (irtifa_qiyas, masdar) = Self::irtifa_nass(surah)
+            .map_or((surah.irtifa, "the region"), |q| (q, "the text"));
+        let mudaaf = self.muamil_takbir(irtifa_qiyas);
         if mudaaf <= 1 {
             self.athar.push(format!(
-                "upscale: none, the region is {}px tall and the floor is {}px",
-                surah.irtifa, self.iadadat.irtifa_adna
+                "upscale: none, {masdar} is {irtifa_qiyas}px tall and the floor is {}px",
+                self.iadadat.irtifa_adna
             ));
             return Ok(surah.clone());
         }
@@ -1221,8 +1395,8 @@ impl MuhassinSura {
         }
 
         self.athar.push(format!(
-            "upscale: {mudaaf}× bilinear, {}×{} to {ard_jadeed}×{irtifa_jadeed}, because the \
-             region is under the {}px floor",
+            "upscale: {mudaaf}× bilinear, {}×{} to {ard_jadeed}×{irtifa_jadeed}, because \
+             {masdar} is {irtifa_qiyas}px and the floor is {}px",
             surah.ard, surah.irtifa, self.iadadat.irtifa_adna
         ));
         SuratRamadiya::jadeeda(mukhraj, ard_jadeed, irtifa_jadeed)
@@ -1266,6 +1440,176 @@ impl MuhassinSura {
             );
         }
         self.kabbir(&ramadi)
+    }
+
+    /// The region as the recognizer should receive it.
+    ///
+    /// This is the call the capture loop makes, and [`MuhassinSura::hassin`] is
+    /// the one to make when the grayscale itself is what is wanted — the
+    /// change-detection hash, the text-block profile, a diagnostic image.
+    /// Splitting them this way is the point: `hassin` alone produces something
+    /// no recognizer can be handed, and every caller that only ever called
+    /// `hassin` was preprocessing into a value it then had to throw away.
+    ///
+    /// Two shapes, chosen by [`IdadatTahsin::yuhawwil_ila_ramadi`], and the
+    /// table on that field is the argument for which is the default.
+    ///
+    /// **Colour, the default.** The grayscale is still built and still stretched
+    /// and inverted, because [`KutalNass`]'s projection profile needs dark ink
+    /// on a light ground to find a line and the line is what gives the text's
+    /// height. That image is then measured from and dropped, and what the
+    /// recognizer receives is the capture's own colour, upscaled by the factor
+    /// the measurement asked for.
+    ///
+    /// **Grayscale.** The full chain of [`MuhassinSura::hassin`], converted
+    /// back. Better on flat panels, eleven and a half points worse on text over
+    /// game art.
+    ///
+    /// In both shapes the upscale factor rides along in [`SuraMuhassana`],
+    /// because a box the recognizer reports is in the upscaled image's
+    /// coordinates and the overlay draws in the surface's.
+    ///
+    /// # Errors
+    ///
+    /// Whatever [`SuraMultaqata::ila_rgb`], [`MuhassinSura::hassin`],
+    /// [`MuhassinSura::ila_ramadi`] and [`SuratRamadiya::ila_multaqata`] refuse,
+    /// plus [`KhataTabaqa::HajmMufrit`] when the upscaled colour buffer would
+    /// exceed this build's pixel ceiling.
+    pub fn hassin_lil_qari(
+        &mut self,
+        sura: &SuraMultaqata,
+    ) -> Result<SuraMuhassana, KhataTabaqa> {
+        if self.iadadat.yuhawwil_ila_ramadi {
+            let irtifa_asli = sura.irtifa().max(1);
+            let ramadi = self.hassin(sura)?;
+            let mudaaf = ramadi.irtifa().checked_div(irtifa_asli).unwrap_or(1).max(1);
+            return Ok(SuraMuhassana {
+                sura: ramadi.ila_multaqata()?,
+                mintaqa: sura.mintaqa(),
+                mudaaf,
+            });
+        }
+
+        self.imsah_athar();
+        let rgb = sura.ila_rgb()?;
+        // The grayscale is still built, and still stretched and inverted,
+        // because the projection profile that measures the text's height needs
+        // dark ink on a light ground to find a line at all. It is measured from
+        // and then dropped; what the recognizer receives is the colour.
+        let mut qiyas = self.ila_ramadi(&rgb, sura.ard(), sura.irtifa())?;
+        let _ = self.sawi_tabayun(&mut qiyas);
+        let _ = self.aksi_idha_lazim(&mut qiyas);
+        let (irtifa_qiyas, masdar) = Self::irtifa_nass(&qiyas)
+            .map_or_else(|| (qiyas.irtifa(), "the region"), |q| (q, "the text"));
+        let mudaaf = self.muamil_takbir(irtifa_qiyas);
+
+        let (mukabbar, ard, irtifa) =
+            Self::kabbir_rgb(&rgb, sura.ard(), sura.irtifa(), mudaaf)?;
+        self.athar.push(format!(
+            "to the recognizer: colour, {ard}×{irtifa}, upscaled {mudaaf}× because {masdar} \
+             is {irtifa_qiyas}px and the floor is {}px. The grayscale was built to measure \
+             that and discarded: over the measured corpus, collapsing colour before this \
+             engine cost 11.6 points of exact-match on text over game art.",
+            self.iadadat.irtifa_adna
+        ));
+
+        let sia = mukabbar.len().saturating_mul(4).checked_div(3).unwrap_or(0);
+        let mut bayt = Vec::with_capacity(sia);
+        for biksel in mukabbar.chunks_exact(3) {
+            bayt.extend_from_slice(&[
+                biksel.first().copied().unwrap_or(0),
+                biksel.get(1).copied().unwrap_or(0),
+                biksel.get(2).copied().unwrap_or(0),
+                255,
+            ]);
+        }
+        Ok(SuraMuhassana {
+            sura: SuraMultaqata::jadeeda(
+                bayt,
+                ard,
+                irtifa,
+                SighatSath::Rgba8,
+                MustatilBiksel { yasar: 0, aala: 0, ard, irtifa },
+            )?,
+            mintaqa: sura.mintaqa(),
+            mudaaf,
+        })
+    }
+
+    /// Upscales a tightly packed RGB8 buffer by an integer factor, bilinearly.
+    ///
+    /// The same half-pixel convention [`MuhassinSura::kabbir`] uses, and for the
+    /// same reason: without it the image shifts up and left by a fraction of a
+    /// source pixel, applied to text that is being upscaled precisely because it
+    /// has no pixels to spare. Written separately rather than by running the
+    /// grayscale version three times because three passes over one buffer is
+    /// three times the cache traffic on a thread that shares a machine with a
+    /// game.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataTabaqa::HajmMufrit`] when the result would exceed this build's
+    /// pixel ceiling or this target's address space.
+    fn kabbir_rgb(
+        rgb: &[u8],
+        ard: u32,
+        irtifa: u32,
+        mudaaf: u32,
+    ) -> Result<(Vec<u8>, u32, u32), KhataTabaqa> {
+        if mudaaf <= 1 {
+            return Ok((rgb.to_vec(), ard, irtifa));
+        }
+        let ard_jadeed = ard.saturating_mul(mudaaf);
+        let irtifa_jadeed = irtifa.saturating_mul(mudaaf);
+        let bikselat = u64::from(ard_jadeed).saturating_mul(u64::from(irtifa_jadeed));
+        if bikselat > SAQF_BIKSELAT {
+            return Err(KhataTabaqa::HajmMufrit {
+                haql: "upscaled colour region pixels",
+                qeema: bikselat,
+                saqf: SAQF_BIKSELAT,
+            });
+        }
+        let Some(sia) = hajm_usize(bikselat.saturating_mul(3)) else {
+            return Err(KhataTabaqa::HajmMufrit {
+                haql: "upscaled colour region pixels",
+                qeema: bikselat,
+                saqf: tul_u64(usize::MAX),
+            });
+        };
+
+        let mut mukhraj = Vec::with_capacity(sia);
+        let miqyas = qeema_f32(mudaaf);
+        let ain = |x: u32, y: u32, qanat: usize| -> f32 {
+            let mawdi = mawdi_usize(y)
+                .saturating_mul(mawdi_usize(ard))
+                .saturating_add(mawdi_usize(x))
+                .saturating_mul(3)
+                .saturating_add(qanat);
+            f32::from(rgb.get(mawdi).copied().unwrap_or(0))
+        };
+
+        for y in 0..irtifa_jadeed {
+            let masdar_y = (qeema_f32(y) + 0.5) / miqyas - 0.5;
+            let qaa_y = masdar_y.floor();
+            let nisbat_y = (masdar_y - qaa_y).clamp(0.0, 1.0);
+            let y0 = mawdi_mahdud(qaa_y, irtifa);
+            let y1 = mawdi_mahdud(qaa_y + 1.0, irtifa);
+            for x in 0..ard_jadeed {
+                let masdar_x = (qeema_f32(x) + 0.5) / miqyas - 0.5;
+                let qaa_x = masdar_x.floor();
+                let nisbat_x = (masdar_x - qaa_x).clamp(0.0, 1.0);
+                let x0 = mawdi_mahdud(qaa_x, ard);
+                let x1 = mawdi_mahdud(qaa_x + 1.0, ard);
+                for qanat in 0..3 {
+                    let aala = (ain(x1, y0, qanat) - ain(x0, y0, qanat))
+                        .mul_add(nisbat_x, ain(x0, y0, qanat));
+                    let asfal = (ain(x1, y1, qanat) - ain(x0, y1, qanat))
+                        .mul_add(nisbat_x, ain(x0, y1, qanat));
+                    mukhraj.push(bayt_min_f32((asfal - aala).mul_add(nisbat_y, aala)));
+                }
+            }
+        }
+        Ok((mukhraj, ard_jadeed, irtifa_jadeed))
     }
 }
 

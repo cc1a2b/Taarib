@@ -14,6 +14,7 @@ allow-print-in-tests = false
 # Names that are domain terms, not abbreviations to be flagged.
 doc-valid-idents = [
     "BepInEx",
+    "GameCube",
     "GameMaker",
     "HarfRust",
     "IL2CPP",
@@ -35,6 +36,13 @@ disallowed-methods = [
     { path = "std::env::var_os", reason = "configuration is resolved by taarib_usus::idadat, not read ad hoc" },
     { path = "std::env::vars", reason = "configuration is resolved by taarib_usus::idadat, not read ad hoc" },
     { path = "std::process::exit", reason = "return a Khata; the process exits in one place" },
+    # A data root was destroyed by a recursive delete that was correct at every
+    # call site that existed when it was written. The guard is therefore not a
+    # check to remember but a type to go through: `masarat::hadhf_mujallad`
+    # takes a `HadafHadhf`, which no constructor will produce for a data root, a
+    # settings root, a home directory, patch storage or a game directory. A
+    # deletion that genuinely cannot use it must say so in an `expect` reason.
+    { path = "std::fs::remove_dir_all", reason = "recursive deletion goes through taarib_usus::masarat::hadhf_mujallad, whose target has been proved not to be a root" },
 ]
 
 disallowed-types = [

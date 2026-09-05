@@ -981,6 +981,29 @@ export type AilatMuharrik =
 "game_maker" | 
 /**  Electron, NW.js, or anything else drawing its interface in a browser. */
 "electron" | 
+/**
+ *  Capcom's `BIO4` codebase — the GameCube-era in-house engine written for
+ *  Resident Evil 4 in 2005 and carried into its later ports.
+ * 
+ *  Named after the string Capcom's own binary carries: the Windows version
+ *  resource of `bio4.exe` gives `InternalName` as `BIO4`, which is the
+ *  project name the engine was built under and the name of the data
+ *  directory it reads. Capcom never published a name or a version for it, so
+ *  there is no marketing name to use instead and no version number to
+ *  report.
+ * 
+ *  **It is not MT Framework, and the belief that it is is widespread and
+ *  wrong.** MT Framework was written for the seventh generation, ships its
+ *  assets as `.tex` inside `ARC\0` archives, and Capcom's own MT Framework
+ *  titles carry that string. `bio4.exe` contains no occurrence of
+ *  `MT Framework` or `MTFramework`; its textures are `.tpl`, the GameCube
+ *  texture format, magic `0x12345678`; its compression container is `RDLX`;
+ *  and the eight files under it that do end in `.arc` open with
+ *  `0x55AA382D`, which is Nintendo's U8 archive and not MT Framework's.
+ *  [`crate::muharrik`]'s detector in `taarib-muharrik` records each of those
+ *  so that a reader who expects MT Framework can see why it is not.
+ */
+"bio4" | 
 /**  Nothing Taarib recognises. A first-class answer, not a failure. */
 "majhul";
 
@@ -2320,6 +2343,16 @@ export type MudkhalRuqaaHie = {
 	hajm: number,
 	/**  The same size as the interface writes it. */
 	hajm_maqru: string,
+	/**
+	 *  Which of the three products it installs, as the discriminant.
+	 * 
+	 *  Each row carries its own install button, so each row has to name what
+	 *  pressing it produces — and it has to do that in the reader's language.
+	 *  [`Self::tabaqa_raqm`] is a number and [`Self::tabaqa_arabi`] is Arabic;
+	 *  neither lets an English session say which product this patch is without
+	 *  a second copy of the tier taxonomy in TypeScript.
+	 */
+	tabaqa: Tabaqa,
 	/**  The tier it installs at, 1 to 3. */
 	tabaqa_raqm: number,
 	/**  The tier's name in Arabic. */
@@ -2399,6 +2432,19 @@ export type MudkhalTaburHie = {
 export type MuharrikHie = {
 	/**  The engine family, under its own name. */
 	aila: string,
+	/**
+	 *  The same family as the discriminant, so the interface can tell a named
+	 *  engine from an unidentified one.
+	 * 
+	 *  [`Self::aila`] cannot answer that question: `AilatMuharrik::ism` renders
+	 *  [`AilatMuharrik::Majhul`] as the Arabic literal `غير معروف`, so an
+	 *  English session reads Arabic for the one answer most of this library
+	 *  gives, and no caller can key behaviour off the miss without matching on a
+	 *  display string. Sent beside the rendered name rather than instead of it
+	 *  because the header still draws a name for every other family, and the
+	 *  interface narrows this to a union it may match exhaustively.
+	 */
+	aila_ramz: AilatMuharrik,
 	/**  The version string exactly as it was found in the game. */
 	isdar: string | null,
 	/**  How the game's code runs. */
@@ -3076,6 +3122,26 @@ export type SijillGhaib = {
 export type SijillMaktaba = {
 	/**  Taarib's identity for the game. */
 	muarrif: string,
+	/**
+	 *  Whether the probe has ever examined this game, so the three fields below
+	 *  are answers rather than defaults.
+	 * 
+	 *  [`Self::muharrik`] and [`Self::tabaqa`] both fall back to a pessimistic
+	 *  value when no report is stored, and each fallback is indistinguishable
+	 *  from a real answer: `Majhul` is what the probe records for a game it
+	 *  examined and did not recognise, and it is also what this row carries for
+	 *  a game nothing has examined. `TarjamaFawqiya` is a verdict when probed
+	 *  and a floor when not. Without this field the card cannot tell "we looked
+	 *  and found nothing" from "nothing has been looked at" — the distinction
+	 *  [`Self::lugha_rasmiya`] documents below, and a sharper one here, because
+	 *  `Majhul` is the answer for most of a real library.
+	 * 
+	 *  True for a report an older probe version wrote, which is deliberate: a
+	 *  stale report is still served rather than withheld, so it is still an
+	 *  examination and still what the interface is showing. The re-probe sweep
+	 *  replaces it in the background and this row is rebuilt from the new one.
+	 */
+	mafhusa: boolean,
 	/**  The identified engine family, from the cached probe; unknown until probed. */
 	muharrik: AilatMuharrik,
 	/**  The injection tier, from the cached probe; the overlay floor until probed. */
@@ -3454,10 +3520,41 @@ export type TaqaddumTanzeel = {
 
 /**  What Taarib can do to this game, rendered. */
 export type TaqreerHie = {
+	/**
+	 *  Which of the three products this game gets, as the discriminant.
+	 * 
+	 *  The tier is a product decision — text replaced inside the engine, files
+	 *  patched directly, or a translation drawn over the top — and the interface
+	 *  says which of the three a game gets rather than printing a number. It
+	 *  cannot derive that from [`Self::tabaqa_raqm`] without keeping a second
+	 *  copy of this taxonomy in TypeScript, and a second copy mislabels rather
+	 *  than fails when the taxonomy moves.
+	 */
+	tabaqa: Tabaqa,
 	/**  The tier number, 1 to 3. */
 	tabaqa_raqm: number,
 	/**  The tier's name in Arabic. */
 	tabaqa_arabi: string,
+	/**
+	 *  The same name in English.
+	 * 
+	 *  [`crate::tilqai_awamir::HukmTilqaiHie`] has sent both names since it was
+	 *  written, and this record was the odd one out: an English session read the
+	 *  tier number, the reason and the systems in English and then hit
+	 *  `طبقة ترجمة` where the tier's name should be.
+	 */
+	tabaqa_injilizi: string,
+	/**
+	 *  The paragraph that explains what the tier actually does, in Arabic.
+	 * 
+	 *  Sent so the interface stops carrying its own wording. The tier's meaning
+	 *  is decided by [`Tabaqa`] and nowhere else, and a locale file that
+	 *  paraphrases it is a second definition that drifts silently the first time
+	 *  the tier's behaviour changes.
+	 */
+	sharh_arabi: string,
+	/**  The same paragraph in English. */
+	sharh_injilizi: string,
 	/**  Why that tier and not a better one, in Arabic. */
 	sabab_arabi: string,
 	/**  The same reason in English. */

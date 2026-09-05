@@ -21,6 +21,7 @@
 //! | `unreal` | `.locres` in every version, `.locmeta`, and `StringTable` assets, from loose files and from `.pak` and IoStore containers, with namespace and key structure preserved exactly |
 //! | `godot` | `.translation` resources plain and optimized, `.po` files, and scene and resource text properties from `.scn` and `.tres` inside a `.pck` |
 //! | `nusus` | RPG Maker JSON event command lists with their codes kept as context, VX Ace `Marshal` object graphs, Ren'Py `.rpy` parsing and `.rpa` archives, GameMaker `STRG` cross-linked to its code references, and asar contents including JSON, JS literals and HTML text nodes |
+//! | `qamus` | Capcom's `DICT` dictionary — the header, the bucket array, the self-relative pointers and the CRC-32 the game hashes its keys with — read, written back byte for byte, and rebuilt |
 //! | `iltiqat` | runtime capture over `barid`: every string an adapter drew, with scene, component path, screen rectangle, font size and a screenshot crop |
 //! | `jadwal` | the normalized string table that all of the above produce |
 //!
@@ -81,6 +82,7 @@ pub mod jadwal;
 pub mod khata;
 pub mod mashru;
 pub mod nusus;
+pub mod qamus;
 pub mod rafd;
 pub mod tasnif;
 pub mod tawjih;
@@ -89,5 +91,6 @@ pub mod unreal;
 
 pub use crate::jadwal::{FarqJadwal, JadwalNusus, MawqiNass, MudkhalMustakhraj};
 pub use crate::khata::KhataIstikhraj;
+pub use crate::qamus::{MudkhalQamus, Qamus, basmat_miftah};
 pub use crate::rafd::{SababRafd, TaqreerRafd};
 pub use crate::tawjih::{Mustakhrij, istakhrij};

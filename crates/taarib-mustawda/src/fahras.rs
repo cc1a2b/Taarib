@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use taarib_mustalahat::bina::Basma;
 use taarib_mustalahat::luba::LubaId;
+use taarib_mustalahat::musahim::MusahimId;
 use taarib_mustalahat::ruqaa::{MulakhkhasRuqaa, RuqaaId, RuqaaRevision};
 use taarib_mustalahat::sawt::MulakhkhasSawt;
 
@@ -129,7 +130,86 @@ impl BayanMustawda {
     }
 }
 
-/// One shard's contents: every patch and voice pack for the games in it.
+/// One published memory share, as the index lists it.
+///
+/// A memory share is `taarib_warsha::mushtaraka`'s artifact: a signed,
+/// per-game file of overlay readings — lines one player's overlay recognized
+/// and had translated — which is **not** a patch and installs nothing. It is
+/// listed here rather than distributed some other way because the sharded
+/// index, the manifest hash chain and the revocation list already exist and
+/// already do exactly what this needs; a second distribution path would be a
+/// second thing to keep signed, mirrored and revocable.
+///
+/// It is a distinct type from [`MulakhkhasRuqaa`] rather than a flag on it,
+/// and that distinction is the point. A patch is reviewed work somebody
+/// submitted; a share is accumulated machine output that nobody reviewed. A
+/// listing that could not tell them apart would put them in the same ranking,
+/// and the fields here are the ones that decide whether a share is worth
+/// taking: how many readings, how many of them a recognizer actually
+/// measured, and the lowest measurement in the file.
+///
+/// The counts are **claims by the sharer**, carried so a client can rank and
+/// filter before downloading. They are re-derived from the file itself on
+/// import — `taarib_warsha::mushtaraka::istawrid` checks the body against the
+/// signed header — so a listing that overstates its own quality wastes a
+/// download and changes nothing else.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MulakhkhasDhakira {
+    /// Who shared it, as a signing-key fingerprint.
+    pub musahim: MusahimId,
+    /// Their signing key's public half, lowercase hex.
+    ///
+    /// Present so a client can verify the file it downloads without a second
+    /// round trip. It is the key the *index* names, and the index is hashed
+    /// into the signed manifest — so substituting a key means substituting a
+    /// shard hash, which the manifest refuses.
+    pub miftah: String,
+    /// When it was published, RFC 3339.
+    pub waqt: String,
+    /// How many readings it carries.
+    pub adad: u64,
+    /// How many of those carry a confidence a recognizer actually measured.
+    pub adad_maqis: u64,
+    /// The lowest measured confidence in it, absent when nothing was measured.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adna_thiqa: Option<u8>,
+    /// BLAKE3 of the whole share file, lowercase hex.
+    pub basma: Basma,
+    /// The file's size in bytes, for the download budget.
+    pub hajm: u64,
+    /// Where the file is fetched from, relative to the release area.
+    pub rabt: String,
+    /// A second source for the same bytes, when the catalogue has one.
+    ///
+    /// Same shape as a patch listing's mirror, so
+    /// [`crate::tanzeel::TalabTanzeel::min_dhakira`] gets the failover the
+    /// other two artifact kinds already have rather than a narrower download.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rabt_mira: Option<String>,
+}
+
+impl MulakhkhasDhakira {
+    /// How many readings carry no measurement at all.
+    #[must_use]
+    pub const fn adad_ghayr_maqis(&self) -> u64 {
+        self.adad.saturating_sub(self.adad_maqis)
+    }
+
+    /// Whether every reading in it was measured by a recognizer.
+    ///
+    /// Rarely true, and saying so is the honest framing: only macOS Vision
+    /// reports a per-line confidence, so a share from a Windows or Linux
+    /// player answers `false` and a client should present it as unmeasured
+    /// rather than as low quality — they are different things.
+    #[must_use]
+    pub const fn kulluha_maqisa(&self) -> bool {
+        self.adad > 0 && self.adad_maqis == self.adad
+    }
+}
+
+/// One shard's contents: every patch, voice pack and memory share for the
+/// games in it.
 ///
 /// `Default` is the empty shard, and it exists so that callers outside this
 /// crate never have to write an exhaustive struct literal: a literal naming
@@ -144,6 +224,15 @@ pub struct MuhtawaShareeha {
     /// Voice packs, keyed the same way.
     #[serde(default)]
     pub aswat: BTreeMap<LubaId, Vec<MulakhkhasSawt>>,
+    /// Memory shares, keyed the same way.
+    ///
+    /// `skip_serializing_if` as well as `default`, so a catalogue with no
+    /// shares casts byte-identical shards to one cast before this field
+    /// existed — the same care [`TajawuzNashr`] takes, and for the same
+    /// reason: a shard whose bytes changed is a shard hash that changed, and
+    /// that is a manifest revision every client fetches.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub dhakirat: BTreeMap<LubaId, Vec<MulakhkhasDhakira>>,
 }
 
 /// A shard whose bytes hashed to what the manifest declared.
@@ -219,5 +308,117 @@ impl ShareehaMuwaththaqa {
     #[must_use]
     pub fn aswat(&self, luba: LubaId) -> &[MulakhkhasSawt] {
         self.muhtawa.aswat.get(&luba).map_or(&[], Vec::as_slice)
+    }
+
+    /// Every memory share published for one game.
+    #[must_use]
+    pub fn dhakirat(&self, luba: LubaId) -> &[MulakhkhasDhakira] {
+        self.muhtawa.dhakirat.get(&luba).map_or(&[], Vec::as_slice)
+    }
+}
+
+#[cfg(test)]
+mod fuhus {
+    #![allow(
+        clippy::panic,
+        clippy::unwrap_used,
+        clippy::expect_used,
+        reason = "a test reports failure by panicking; the lints are written for library \
+                  code, and honouring them here would mean a test that cannot fail"
+    )]
+
+    use super::{MuhtawaShareeha, MulakhkhasDhakira};
+    use taarib_mustalahat::bina::Basma;
+    use taarib_mustalahat::luba::{LubaId, MasdarLuba};
+    use taarib_mustalahat::musahim::MusahimId;
+
+    /// A catalogue with no memory shares casts exactly the bytes it cast
+    /// before the field existed.
+    ///
+    /// This is the compatibility claim `dhakirat`'s `skip_serializing_if`
+    /// makes, and it is worth a test because getting it wrong changes every
+    /// shard's hash, which changes the manifest, which every client on every
+    /// machine then refetches.
+    #[test]
+    fn shareeha_bila_dhakirat_tabqa_kama_kanat() {
+        let farigha = MuhtawaShareeha::default();
+        let bayt = match serde_json::to_vec(&farigha) {
+            Ok(bayt) => bayt,
+            Err(khata) => panic!("an empty shard would not serialize: {khata}"),
+        };
+        assert_eq!(String::from_utf8_lossy(&bayt), r#"{"ruqaa":{},"aswat":{}}"#);
+    }
+
+    /// A shard cast before this field existed still parses, `deny_unknown_fields`
+    /// notwithstanding — the absent key is the default.
+    #[test]
+    fn shareeha_qadeema_tuqra() {
+        let bayt = br#"{"ruqaa":{},"aswat":{}}"#;
+        let muhtawa: MuhtawaShareeha = match serde_json::from_slice(bayt) {
+            Ok(muhtawa) => muhtawa,
+            Err(khata) => panic!("an older shard no longer parses: {khata}"),
+        };
+        assert!(muhtawa.dhakirat.is_empty());
+    }
+
+    /// A listed share round-trips whole, keyed by the game it came from.
+    #[test]
+    fn shareeha_bi_dhakira_tadur() {
+        let luba = LubaId::min_masdar(&MasdarLuba::Steam(1_245_620), "ELDEN RING");
+        let musahim = match MusahimId::jadeed("e".repeat(64)) {
+            Ok(id) => id,
+            Err(khata) => panic!("bad fixture identity: {khata}"),
+        };
+        let mulakhkhas = MulakhkhasDhakira {
+            musahim,
+            miftah: "f".repeat(64),
+            waqt: "2026-09-05T10:00:00Z".to_owned(),
+            adad: 812,
+            adad_maqis: 812,
+            adna_thiqa: Some(63),
+            basma: Basma::min_bayt([7; 32]),
+            hajm: 41_920,
+            rabt: "dhakirat/elden-ring-1.dhakira".to_owned(),
+            rabt_mira: None,
+        };
+        let mut muhtawa = MuhtawaShareeha::default();
+        let _ = muhtawa.dhakirat.insert(luba, vec![mulakhkhas.clone()]);
+
+        let bayt = match serde_json::to_vec(&muhtawa) {
+            Ok(bayt) => bayt,
+            Err(khata) => panic!("the shard would not serialize: {khata}"),
+        };
+        let raji: MuhtawaShareeha = match serde_json::from_slice(&bayt) {
+            Ok(raji) => raji,
+            Err(khata) => panic!("the shard would not parse back: {khata}"),
+        };
+        assert_eq!(raji.dhakirat.get(&luba), Some(&vec![mulakhkhas]));
+        assert!(raji.ruqaa.is_empty());
+    }
+
+    /// The measured count is a fact about the file, not a quality score, and
+    /// an all-unmeasured share says so rather than reading as a bad one.
+    #[test]
+    fn kulluha_maqisa_taqul_alhaqiqa() {
+        let asas = |adad: u64, maqis: u64| MulakhkhasDhakira {
+            musahim: match MusahimId::jadeed("a".repeat(64)) {
+                Ok(id) => id,
+                Err(khata) => panic!("bad fixture identity: {khata}"),
+            },
+            miftah: "b".repeat(64),
+            waqt: "2026-09-05T10:00:00Z".to_owned(),
+            adad,
+            adad_maqis: maqis,
+            adna_thiqa: None,
+            basma: Basma::min_bayt([0; 32]),
+            hajm: 1,
+            rabt: "x".to_owned(),
+            rabt_mira: None,
+        };
+        assert!(asas(10, 10).kulluha_maqisa());
+        assert!(!asas(10, 0).kulluha_maqisa());
+        assert_eq!(asas(10, 0).adad_ghayr_maqis(), 10);
+        // An empty share is not "all measured".
+        assert!(!asas(0, 0).kulluha_maqisa());
     }
 }

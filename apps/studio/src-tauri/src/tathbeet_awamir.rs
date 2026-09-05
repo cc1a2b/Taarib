@@ -9,6 +9,7 @@ use taarib_makhzan::sijillat::{SijillMuharrik, SijillRuqaa, SijillTathbeet};
 use taarib_makhzan::wasl::{Makhzan, alaan};
 use taarib_mustalahat::bina::MutabaqaBina;
 use taarib_mustalahat::luba::{Luba, LubaId};
+use taarib_mustalahat::muharrik::Tabaqa;
 use taarib_mustalahat::ruqaa::{MulakhkhasRuqaa, RuqaaId, RuqaaRevision};
 use taarib_mustalahat::taghtiya::Taghtiya;
 use taarib_mustawda::masadir::{MasdarMustawda, SilsilatMasadir};
@@ -102,6 +103,14 @@ pub struct MudkhalRuqaaHie {
     pub hajm: u64,
     /// The same size as the interface writes it.
     pub hajm_maqru: String,
+    /// Which of the three products it installs, as the discriminant.
+    ///
+    /// Each row carries its own install button, so each row has to name what
+    /// pressing it produces — and it has to do that in the reader's language.
+    /// [`Self::tabaqa_raqm`] is a number and [`Self::tabaqa_arabi`] is Arabic;
+    /// neither lets an English session say which product this patch is without
+    /// a second copy of the tier taxonomy in TypeScript.
+    pub tabaqa: Tabaqa,
     /// The tier it installs at, 1 to 3.
     pub tabaqa_raqm: u8,
     /// The tier's name in Arabic.
@@ -855,6 +864,7 @@ fn mudkhal_hie(
         adad_nusus: mulakhkhas.adad_nusus,
         hajm: mulakhkhas.hajm,
         hajm_maqru: tanzeel::hajm_maqru(mulakhkhas.hajm),
+        tabaqa: mulakhkhas.tabaqa,
         tabaqa_raqm: mulakhkhas.tabaqa.raqm(),
         tabaqa_arabi: mulakhkhas.tabaqa.ism_arabi().to_owned(),
         tareeqa_arabi: mulakhkhas.tareeqa.wasf_arabi().to_owned(),
@@ -2023,6 +2033,29 @@ mod ikhtibarat {
                 "an English verdict must hold no Arabic: {injilizi}"
             );
         }
+        Ok(())
+    }
+
+    /// Every listing names the product it installs as the discriminant, not
+    /// only as a number and an Arabic string.
+    ///
+    /// Each row draws its own install button, so each row has to say what
+    /// pressing it produces — and an English session cannot read that off
+    /// `tabaqa_arabi`. The number is checked against the same value so the two
+    /// can never come to describe different tiers for one row.
+    #[test]
+    fn kull_mudkhal_yusammi_tabaqatahu_ka_ramz() -> NatijatIkhtibar {
+        let basma = Basma::min_bayt([3u8; 32]);
+        let luba = luba_bi_bina(Some("12345"), basma);
+        let listing = mulakhkhas(vec!["12345".to_owned()], Vec::new(), "2026-01-01T00:00:00Z")?;
+        let mutawaqqa = listing.tabaqa;
+
+        let mudkhalat = rattib_murashshahat(&luba, vec![listing]);
+
+        let wahid = mudkhalat.first().ok_or("the listing was dropped")?;
+        assert_eq!(wahid.tabaqa, mutawaqqa);
+        assert_eq!(wahid.tabaqa_raqm, mutawaqqa.raqm());
+        assert_eq!(wahid.tabaqa_arabi, mutawaqqa.ism_arabi());
         Ok(())
     }
 

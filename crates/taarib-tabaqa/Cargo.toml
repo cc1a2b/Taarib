@@ -1,6 +1,6 @@
 [package]
 name = "taarib-tabaqa"
-description = "طبقة تعريب — the universal graphics overlay: presentation hooks for D3D11, D3D12, OpenGL and Vulkan, frame capture, on-screen recognition, and Arabic drawn over the game."
+description = "طبقة تعريب — the universal graphics overlay: presentation hooks for D3D9, D3D11, D3D12, OpenGL and Vulkan, frame capture, on-screen recognition, and Arabic drawn over the game."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -19,6 +19,17 @@ publish = false
 # forgetting the flag fails on the build machine rather than shipping a module
 # that loads and returns.
 hamula = []
+
+# The adapter from `crate::mutarjim`'s provider seam onto the workspace's own
+# translation pipeline. **Off by default, and it must stay off for the payload.**
+# `taarib-tarjama` pulls in a Tokio runtime, `reqwest` with rustls, a bundled
+# SQLite and a keyring; every one of those is correct in Studio and none of them
+# belongs in a `cdylib` loaded into somebody else's game, next to a
+# `[profile.haqn]` whose whole purpose is that injected libraries are built
+# small. A caller that already has a runtime — Studio, a proof harness — turns
+# this on and gets a real provider; the payload takes the same seam as a trait
+# object and links none of it.
+tarjama = ["dep:taarib-tarjama", "dep:tokio"]
 
 [lints]
 workspace = true
@@ -78,8 +89,31 @@ serde_json = { workspace = true }
 parking_lot = { workspace = true }
 thiserror = { workspace = true }
 
+# Both optional and both behind `tarjama`; see that feature's note. The overlay's
+# default build contains no HTTP client, no async runtime and no database, which
+# is checked by the fact that this is the only place either name appears.
+taarib-tarjama = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+
 [target.'cfg(windows)'.dependencies]
-windows = { workspace = true }
+# `Win32_Graphics_Direct3D9` is added here rather than in the workspace table
+# because this crate is the only one that speaks D3D9, and a feature added to
+# the shared table would recompile the `windows` crate for every binary in the
+# workspace to bind an API none of them calls. Cargo unions the two lists, so
+# this is additive and the workspace's own entry stays authoritative for
+# everything else.
+#
+# `Win32_Graphics_Direct3D10` is here for the same reason and one more. Nothing
+# binds Direct3D 8 at all, so `src/d3d8.rs` declares all ninety-six of its
+# method-table slots by hand and verifies them against a device at runtime,
+# because there is no other way to reach that API. Direct3D 10 *is* bound, and
+# hand-transcribing a ninety-eight-slot `ID3D10Device` when a generated, correct
+# binding exists would trade a real hazard — a call to the wrong method inside
+# somebody's game — for a shorter manifest.
+windows = { workspace = true, features = [
+    "Win32_Graphics_Direct3D9",
+    "Win32_Graphics_Direct3D10",
+] }
 # Only for waiting on the OCR engine's `IAsyncOperation`; see `qira.rs`.
 windows-future = { workspace = true }
 
@@ -96,3 +130,12 @@ windows-future = { workspace = true }
 objc2 = { workspace = true }
 objc2-foundation = { workspace = true }
 objc2-vision = { workspace = true }
+
+# The end-to-end proof that the overlay's context reaches a real provider. It
+# drives `taarib-tarjama`'s OpenAI-compatible local arm against a loopback stub,
+# so it needs the `tarjama` feature and is not built without it — which is what
+# keeps `cargo test --workspace` free of a TLS stack and a database.
+[[test]]
+name = "siyaq_mahalli"
+path = "tests/siyaq_mahalli.rs"
+required-features = ["tarjama"]

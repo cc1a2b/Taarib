@@ -33,6 +33,11 @@
     reason = "a test reports failure by panicking; the lint is written for library code, and \
               refusing to panic here would mean a test that cannot fail"
 )]
+#![expect(
+    clippy::disallowed_methods,
+    reason = "scratch teardown under `std::env::temp_dir()`, never a data root or a game \
+              directory; the product's own recursive deletes go through `HadafHadhf`"
+)]
 
 use std::path::{Path, PathBuf};
 

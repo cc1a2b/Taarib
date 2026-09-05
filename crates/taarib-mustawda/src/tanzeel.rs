@@ -19,6 +19,7 @@ use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt as _, AsyncSeekExt as _, AsyncWriteExt as _};
 use tokio::sync::mpsc::UnboundedSender;
 
+use crate::fahras::MulakhkhasDhakira;
 use crate::khata::{KhataMustawda, NatijatMustawda};
 
 /// The sidecar schema this build writes and reads.
@@ -299,6 +300,27 @@ impl TalabTanzeel {
             rawabit(&mulakhkhas.rabt, mulakhkhas.rabt_mira.as_deref()),
             mulakhkhas.hajm,
             mulakhkhas.basmat_muhtawa,
+            hadaf,
+        )
+    }
+
+    /// The request one memory-share listing describes.
+    ///
+    /// A share is not a patch — nothing installs, and nothing here mints a
+    /// permit — but it is a hashed file fetched from the release area, and
+    /// that is the whole of what this module does. Resume, mirror failover,
+    /// free-space checking and the final hash comparison all apply unchanged,
+    /// which is the argument for listing shares in the index at all rather
+    /// than building a second way to move bytes.
+    #[must_use]
+    pub fn min_dhakira(
+        mulakhkhas: &MulakhkhasDhakira,
+        hadaf: impl Into<PathBuf>,
+    ) -> Self {
+        Self::jadeed(
+            rawabit(&mulakhkhas.rabt, mulakhkhas.rabt_mira.as_deref()),
+            mulakhkhas.hajm,
+            mulakhkhas.basma,
             hadaf,
         )
     }

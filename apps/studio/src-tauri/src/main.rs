@@ -92,6 +92,9 @@ use taarib_mustalahat::ghiyab::{SababGhiyab, ShahidTanfidhi};
 use taarib_mustalahat::lawha_badila::{LawhaBadila, SimatLawha};
 use taarib_makhzan::sijillat::{SijillAlaab, SijillMuharrik};
 use taarib_mustalahat::luba::{LawnBariz, Luba, Manassa, MasdarLuba};
+use taarib_mustalahat::muharrik::{
+    AilatMuharrik, JahiziyatTashghil, Tabaqa, TaqreerImkaniyat,
+};
 use taarib_usus::idadat::{Idadat, MakhzanIdadat};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, Ramz, Tafsir, arqam,
@@ -223,16 +226,34 @@ fn maalumat_taarib(masarat: tauri::State<'_, Masarat>) -> Result<MaalumatTaarib,
 struct SijillMaktaba {
     /// Taarib's identity for the game.
     muarrif: String,
+    /// Whether the probe has ever examined this game, so the three fields below
+    /// are answers rather than defaults.
+    ///
+    /// [`Self::muharrik`] and [`Self::tabaqa`] both fall back to a pessimistic
+    /// value when no report is stored, and each fallback is indistinguishable
+    /// from a real answer: `Majhul` is what the probe records for a game it
+    /// examined and did not recognise, and it is also what this row carries for
+    /// a game nothing has examined. `TarjamaFawqiya` is a verdict when probed
+    /// and a floor when not. Without this field the card cannot tell "we looked
+    /// and found nothing" from "nothing has been looked at" — the distinction
+    /// [`Self::lugha_rasmiya`] documents below, and a sharper one here, because
+    /// `Majhul` is the answer for most of a real library.
+    ///
+    /// True for a report an older probe version wrote, which is deliberate: a
+    /// stale report is still served rather than withheld, so it is still an
+    /// examination and still what the interface is showing. The re-probe sweep
+    /// replaces it in the background and this row is rebuilt from the new one.
+    mafhusa: bool,
     /// The identified engine family, from the cached probe; unknown until probed.
-    muharrik: taarib_mustalahat::muharrik::AilatMuharrik,
+    muharrik: AilatMuharrik,
     /// The injection tier, from the cached probe; the overlay floor until probed.
-    tabaqa: taarib_mustalahat::muharrik::Tabaqa,
+    tabaqa: Tabaqa,
     /// Whether this build can actually drive that tier on that engine.
     ///
     /// The tier says what the engine allows; this says whether Taarib has
     /// finished the code that uses it. A card must be able to say "installs
     /// but changes nothing on screen", and only this field carries that.
-    jahiziya: taarib_mustalahat::muharrik::JahiziyatTashghil,
+    jahiziya: JahiziyatTashghil,
     /// The Arabization status the card badges, computed from real local facts.
     hala: taarib_mustalahat::luba::HalatLuba,
     /// Whether the publisher already ships Arabic, from the shallow pass.
@@ -294,6 +315,54 @@ struct SijillMaktaba {
     lawn: Option<LawnBariz>,
     /// The generated plate, present whenever `ghilaf` is `None`.
     lawha: Option<LawhaBadila>,
+}
+
+/// What a library row takes from a game's stored probe report.
+///
+/// Named rather than a tuple because [`Self::mafhusa`] is the only thing that
+/// tells the other four apart from the values that stand in for them when no
+/// report exists — and because five values, two of them `bool`, is a tuple that
+/// can be destructured in the wrong order without the compiler noticing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct KhulasatFahs {
+    /// Whether a report was found at all.
+    mafhusa: bool,
+    /// The engine family the probe identified.
+    aila: AilatMuharrik,
+    /// The tier the report awards.
+    tabaqa: Tabaqa,
+    /// Whether the safety layer refuses the game outright.
+    marfuda: bool,
+    /// Whether this build can drive that tier on that engine.
+    jahiziya: JahiziyatTashghil,
+}
+
+impl KhulasatFahs {
+    /// Reads a stored report, or states what stands in for a missing one.
+    ///
+    /// The stand-ins are the pessimistic values on purpose: an unexamined game
+    /// is described as unrecognised, overlay-only and unimplemented rather than
+    /// promised anything. `mafhusa` is what keeps that pessimism from reading as
+    /// a verdict — every one of those four is also a real answer the probe
+    /// gives, so without the flag the row cannot say which it is holding.
+    fn min_taqreer(taqreer: Option<&TaqreerImkaniyat>) -> Self {
+        taqreer.map_or(
+            Self {
+                mafhusa: false,
+                aila: AilatMuharrik::Majhul,
+                tabaqa: Tabaqa::TarjamaFawqiya,
+                marfuda: false,
+                jahiziya: JahiziyatTashghil::Ghaiba,
+            },
+            |taqreer| Self {
+                mafhusa: true,
+                aila: taqreer.muharrik.aila,
+                tabaqa: taqreer.tabaqa,
+                marfuda: taqreer.marfuda,
+                jahiziya: taqreer.jahiziya,
+            },
+        )
+    }
 }
 
 /// A game a launcher lists that is not in the library, and why.
@@ -389,7 +458,6 @@ fn maktaba(
 ) -> Result<HasilatMaktaba, Khata> {
     use taarib_makhzan::sijillat::{IdkhalLuba, SijillFahs, SijillRuqaa, SimaMukhzana, sima};
     use taarib_mustalahat::luba::{HalatLuba, LubaId};
-    use taarib_mustalahat::muharrik::Tabaqa;
     use taarib_mustalahat::sawt::HalatSawt;
     use taarib_tathbeet::bayan::NawTathbeet;
 
@@ -553,15 +621,8 @@ fn maktaba(
 
             let taqreer = qaida
                 .bil_qira(|ittisal| SijillMuharrik::jadeed(ittisal).wahid(id))?;
-            let (aila, tabaqa, marfuda, jahiziya) = taqreer.as_ref().map_or(
-                (
-                    taarib_mustalahat::muharrik::AilatMuharrik::Majhul,
-                    Tabaqa::TarjamaFawqiya,
-                    false,
-                    taarib_mustalahat::muharrik::JahiziyatTashghil::Ghaiba,
-                ),
-                |t| (t.muharrik.aila, t.tabaqa, t.marfuda, t.jahiziya),
-            );
+            let KhulasatFahs { mafhusa, aila, tabaqa, marfuda, jahiziya } =
+                KhulasatFahs::min_taqreer(taqreer.as_ref());
 
             let nusakh = luba_awamir::jidhr_nusakh(&masarat, &qaida, id)?;
             let nass_muthabbat = luba_awamir::muthabbat(&sajl.jidhr, &nusakh, NawTathbeet::Nass);
@@ -622,6 +683,7 @@ fn maktaba(
 
             Ok(SijillMaktaba {
                 muarrif: id.to_string(),
+                mafhusa,
                 muharrik: aila,
                 tabaqa,
                 jahiziya,
@@ -962,7 +1024,10 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
         })?;
 
     let mujallad_sijillat = masarat.sijillat();
-    let jidhr_hajr = masarat.hajr();
+    // Proved here, once, rather than inside the sweep: the quarantine directory
+    // is one component below the data root, and this is what makes it
+    // impossible for the sweep to be handed the root itself.
+    let jidhr_hajr = masarat.hadaf_hadhf(&masarat.hajr())?;
     // The setup closure needs the paths, and `masarat` itself is moved into
     // managed state before it runs.
     let masarat_zamin = masarat.clone();
@@ -1843,9 +1908,19 @@ khata_min!(KhataStudio);
 
 #[cfg(test)]
 mod ikhtibarat {
-    use super::{LAHIQAT_RUQAA, masar_ruqaa};
+    use taarib_mustalahat::muharrik::{KhalfiyaBarmajiya, Muharrik};
+
+    use super::{
+        AilatMuharrik, JahiziyatTashghil, KhulasatFahs, LAHIQAT_RUQAA, Mimariya, Tabaqa,
+        masar_ruqaa,
+    };
 
     /// A directory of this test's own, so two tests never see each other's files.
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "a scratch directory under `std::env::temp_dir()`, never a data root or a game \
+                  directory"
+    )]
     fn mujallad(ism: &str) -> std::path::PathBuf {
         let masar = std::env::temp_dir().join(format!("taarib_fath_{ism}"));
         let _ = std::fs::remove_dir_all(&masar);
@@ -1913,5 +1988,49 @@ mod ikhtibarat {
         let mutanakkir = mujallad.join("mutanakkir.ruqaa");
         let _ = std::fs::create_dir_all(&mutanakkir);
         assert_eq!(masar_ruqaa([tanfidhi, mutanakkir]), None);
+    }
+
+    /// A game nothing has examined is told apart from one the probe examined
+    /// and did not recognise, though both carry the same four values.
+    ///
+    /// This is the whole reason `mafhusa` exists: `Majhul` and
+    /// `TarjamaFawqiya` are real answers as well as stand-ins, so the row is
+    /// byte-identical in the two cases apart from this flag, and "we looked and
+    /// found nothing" is a different sentence from "nothing has been looked at".
+    #[test]
+    fn khulasat_alfahs_tumayyiz_ghayr_almafhus_min_ghayr_almaruf() {
+        let ghayr_mafhusa = KhulasatFahs::min_taqreer(None);
+        assert!(!ghayr_mafhusa.mafhusa);
+        assert_eq!(ghayr_mafhusa.aila, AilatMuharrik::Majhul);
+        assert_eq!(ghayr_mafhusa.tabaqa, Tabaqa::TarjamaFawqiya);
+        assert!(!ghayr_mafhusa.marfuda);
+        assert_eq!(ghayr_mafhusa.jahiziya, JahiziyatTashghil::Ghaiba);
+
+        // A real report, from the same function the probe writes with, for a
+        // game whose engine Taarib does not recognise.
+        let asli = taarib_muharrik::imkaniyat::taqreer(
+            Muharrik {
+                aila: AilatMuharrik::Majhul,
+                isdar: None,
+                khalfiya: KhalfiyaBarmajiya::Majhula,
+                itarat: Vec::new(),
+                rusum: Vec::new(),
+                mimariya: Mimariya::X8664,
+                thiqa: 20,
+                dalail: Vec::new(),
+            },
+            &[],
+            "2026-01-01T00:00:00Z".to_owned(),
+        );
+        let mafhusa = KhulasatFahs::min_taqreer(Some(&asli));
+
+        assert!(mafhusa.mafhusa);
+        assert_eq!(mafhusa.aila, ghayr_mafhusa.aila);
+        assert_eq!(mafhusa.tabaqa, ghayr_mafhusa.tabaqa);
+        assert_eq!(
+            KhulasatFahs { mafhusa: false, ..mafhusa },
+            ghayr_mafhusa,
+            "the two differ in nothing but the flag, which is why the flag is sent"
+        );
     }
 }

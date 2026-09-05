@@ -28,3 +28,10 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+
+[dev-dependencies]
+# The BIO4 detector is the one detector in this crate that has to be given a
+# directory rather than a byte slice: its answer degrades from a container magic
+# to a directory shape, and the degradation is the part worth pinning. The
+# fixtures are real header bytes laid out in a real tree.
+tempfile = { workspace = true }

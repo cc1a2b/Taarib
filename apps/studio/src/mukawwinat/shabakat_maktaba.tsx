@@ -1717,6 +1717,15 @@ export function ShabakatMaktaba(khasais: KhasaisShabakatMaktaba): JSX.Element {
                         sawt={sijill.sawt}
                         lugha_rasmiya={sijill.lugha_rasmiya}
                         jahiziya={sijill.jahiziya}
+                        // Which of the three products this game gets, and the
+                        // two facts that qualify it. All three straight off the
+                        // row: the tier, the engine family and the Arabization
+                        // status are each a decision the Rust side already made
+                        // from the cached probe, and the card states them
+                        // rather than deriving anything from them.
+                        tabaqa={sijill.tabaqa}
+                        muharrik={sijill.muharrik}
+                        hala={sijill.hala}
                         mukhtara={halat.mukhtara.has(sijill.muarrif)}
                         kathafa={kathafa}
                         lugha={lugha}

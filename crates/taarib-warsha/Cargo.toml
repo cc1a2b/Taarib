@@ -24,6 +24,11 @@ taarib-istikhraj = { workspace = true }
 taarib-tarqee = { workspace = true }
 # Phase 18's comment model, reused rather than duplicated.
 taarib-taqdeem = { workspace = true }
+# Ed25519 for the memory share's header. Named directly rather than reached
+# through `taarib-taqdeem`, which does not re-export it: a share is signed by
+# a contributor's own key and never by the owner's, so it uses the signing
+# primitives without touching the publishing authority that crate guards.
+taarib-khatm = { workspace = true }
 
 rusqlite = { workspace = true }
 quick-xml = { workspace = true }
@@ -33,3 +38,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+
+[dev-dependencies]
+# The sharing proof opens two real memory files in two real directories and
+# moves a real signed file between them; nothing about it is mocked, and the
+# translator it drives is a local stub that counts its own calls.
+tempfile = { workspace = true }

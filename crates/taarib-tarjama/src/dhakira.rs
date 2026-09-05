@@ -63,6 +63,26 @@
 //!   of projects, which is the exact failure this module exists to prevent:
 //!   a machine sentence acquiring a human reputation by travelling.
 //!
+//! ## The third kind
+//!
+//! A pair can also arrive from the overlay, which reads a line off a picture
+//! and machine-translates the reading. That is neither of the two things
+//! above, and calling it either would be a lie in one direction or the other:
+//! it is not human work, and it is not a machine translation of the game's
+//! own string — its *source text* is a guess. [`NawAsl`] is the third kind,
+//! stored as a rank rather than a tag so the index can order by it, and
+//! [`ThiqatQira`] is what the recognizer said about the guess, including the
+//! common case where the recognizer says nothing at all and no number is
+//! invented for it.
+//!
+//! The rank ratchets exactly as the review bit does, in both directions of
+//! the same inequality: an observation of a reviewed pair leaves the rank at
+//! human, and no number of observations ever raises one. Every ordering in
+//! this module puts the rank first, so an observation cannot outrank reviewed
+//! text however confident or however often seen — which is the property that
+//! makes accumulating observations, and later sharing them, safe to do at
+//! all.
+//!
 //! ## Why scoring is not just similarity
 //!
 //! A candidate is ranked by similarity **plus** agreement bonuses for sharing
@@ -504,11 +524,187 @@ pub fn thulathiyat_miftah(miftah: &str) -> Vec<String> {
 // المصدر — provenance
 // ---------------------------------------------------------------------------
 
+/// What a recognizer said about how sure it was — or that it said nothing.
+///
+/// Two variants and no third, because there are two situations and the
+/// difference between them is the whole point.
+/// `taarib_tabaqa::qira`'s header states it for the reading side: neither
+/// Windows Runtime OCR nor the bundled portable engine reports a confidence,
+/// and the number those engines' lines carry is that crate's fixed stand-in
+/// (`THIQA_GHAYR_MAQISA`, eighty), not a measurement. Only macOS Vision
+/// reports a real per-line number.
+///
+/// So the memory does not store a number for an engine that measured none. A
+/// `u8` field with an eighty in it is indistinguishable, three hops later,
+/// from a genuine eighty — and an eighty that came from a constant will be
+/// compared against thresholds, ranked against real measurements, and shown
+/// to a player as if somebody had measured something. [`ThiqatQira::Ghayr`]
+/// carries no number at all, so there is nothing to mistake.
+///
+/// [`ThiqatQira::yajtaz`] is where that refusal becomes a rule rather than a
+/// note: an unmeasured reading clears **no** floor, however low.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "wajiha", derive(specta::Type))]
+#[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
+#[serde(tag = "naw", rename_all = "snake_case")]
+pub enum ThiqatQira {
+    /// The recognizer reported this number itself.
+    Maqisa {
+        /// Zero to a hundred, as the engine reported it.
+        mia: u8,
+    },
+    /// The recognizer reports no confidence, and none was invented for it.
+    Ghayr,
+}
+
+impl ThiqatQira {
+    /// A measured reading, clamped to the range the engines report in.
+    #[must_use]
+    pub const fn maqisa(mia: u8) -> Self {
+        Self::Maqisa { mia: if mia > 100 { 100 } else { mia } }
+    }
+
+    /// The number, when there is one.
+    ///
+    /// [`None`] is not "zero confidence"; it is "no measurement exists".
+    #[must_use]
+    pub const fn mia(self) -> Option<u8> {
+        match self {
+            Self::Maqisa { mia } => Some(mia),
+            Self::Ghayr => None,
+        }
+    }
+
+    /// Whether a recognizer measured this at all.
+    #[must_use]
+    pub const fn qisat(self) -> bool {
+        matches!(self, Self::Maqisa { .. })
+    }
+
+    /// Whether this reading clears a confidence floor.
+    ///
+    /// An unmeasured reading clears nothing, and that is deliberate rather
+    /// than conservative: a floor is a statement about a measurement, and
+    /// applying it to a reading that has none would be answering a question
+    /// nobody can answer. A caller who wants unmeasured readings anyway asks
+    /// for them explicitly — see `taarib_warsha`'s sharing permit, where
+    /// including them is a warning the user acknowledges by name.
+    #[must_use]
+    pub const fn yajtaz(self, atabaa: u8) -> bool {
+        match self {
+            Self::Maqisa { mia } => mia >= atabaa,
+            Self::Ghayr => false,
+        }
+    }
+
+    /// The label a suggestion card shows, in Arabic.
+    #[must_use]
+    pub const fn wasf_arabi(self) -> &'static str {
+        match self {
+            Self::Maqisa { mia } if mia >= 85 => "قراءة واضحة",
+            Self::Maqisa { mia } if mia >= 60 => "قراءة محتملة الخطأ",
+            Self::Maqisa { .. } => "قراءة ضعيفة",
+            Self::Ghayr => "ثقة القراءة غير مقيسة",
+        }
+    }
+
+    /// The same label in English.
+    #[must_use]
+    pub const fn wasf_injilizi(self) -> &'static str {
+        match self {
+            Self::Maqisa { mia } if mia >= 85 => "Clear reading",
+            Self::Maqisa { mia } if mia >= 60 => "Reading may be wrong",
+            Self::Maqisa { .. } => "Weak reading",
+            Self::Ghayr => "Reading confidence unmeasured",
+        }
+    }
+}
+
+/// The three kinds of thing the memory can hold, ordered by how much a
+/// person had to do with them.
+///
+/// The product's own provenance field ([`TareeqaTarjama`]) already separates
+/// `BashariyaKamila` from `AaliyaFaqat`. An overlay observation is neither: a
+/// machine *read* it off a picture and then a machine *translated* the
+/// reading, so it carries two error sources where a machine translation of an
+/// extracted string carries one. Folding it into `AaliFaqat` would lose the
+/// only fact that distinguishes it, which is exactly the fact a reviewer
+/// needs. Hence a third kind, at every layer: this enum, the `daraja_asl`
+/// column, the ranking, and the shared artifact's wire format.
+///
+/// [`NawAsl::daraja`] is the stored ordering key, and it is what makes
+/// "an observation never displaces reviewed text" a property of an index
+/// rather than of a comparison somebody has to remember to write.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "wajiha", derive(specta::Type))]
+#[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum NawAsl {
+    /// An overlay observation: recognized off a screen, then machine-translated.
+    Mulahaza,
+    /// A machine translation of a string somebody extracted from the game.
+    Aali,
+    /// A human wrote, edited or reviewed it.
+    Bashari,
+}
+
+impl NawAsl {
+    /// The stored rank: higher is more trustworthy, and the ranking is total.
+    ///
+    /// Written as `i64` because it is bound straight into the column and
+    /// compared by the index; a `u8` here would be a cast at every call site.
+    #[must_use]
+    pub const fn daraja(self) -> i64 {
+        match self {
+            Self::Mulahaza => 0,
+            Self::Aali => 1,
+            Self::Bashari => 2,
+        }
+    }
+
+    /// The kind a stored rank denotes, or [`None`] for a value no build wrote.
+    #[must_use]
+    pub const fn min_daraja(daraja: i64) -> Option<Self> {
+        match daraja {
+            0 => Some(Self::Mulahaza),
+            1 => Some(Self::Aali),
+            2 => Some(Self::Bashari),
+            _ => None,
+        }
+    }
+
+    /// Whether a human had read the text at origin.
+    #[must_use]
+    pub const fn bashari(self) -> bool {
+        matches!(self, Self::Bashari)
+    }
+
+    /// The label a suggestion card shows, in Arabic.
+    #[must_use]
+    pub const fn wasf_arabi(self) -> &'static str {
+        match self {
+            Self::Mulahaza => "قراءة من طبقة اللعب",
+            Self::Aali => "ترجمة آلية دون مراجعة",
+            Self::Bashari => "راجعها إنسان",
+        }
+    }
+
+    /// The same label in English.
+    #[must_use]
+    pub const fn wasf_injilizi(self) -> &'static str {
+        match self {
+            Self::Mulahaza => "Read off the screen while playing",
+            Self::Aali => "Machine only, unreviewed",
+            Self::Bashari => "Human-reviewed",
+        }
+    }
+}
+
 /// Where a translation stood, review-wise, at the moment it entered the
 /// memory.
 ///
-/// The write-side twin of [`MasdarDhakira`]. It has exactly two variants and
-/// no rejected one, which is the same trick [`crate::muraja_dakhiliya`] plays
+/// The write-side twin of [`MasdarDhakira`]. It has three variants and no
+/// rejected one, which is the same trick [`crate::muraja_dakhiliya`] plays
 /// with its attestation: the state "a rejected translation, stored for
 /// reuse" is not expressible, so no future bulk-import can store one by
 /// forgetting to check.
@@ -530,6 +726,23 @@ pub enum AslQayd {
         /// The provider's own confidence, 0.0 to 1.0, when it reported one.
         thiqa: Option<f32>,
     },
+    /// The overlay read this line off a screen and a machine translated the
+    /// reading.
+    ///
+    /// The weakest thing the memory holds, and the only one whose *source
+    /// text* may be wrong: a machine translation of an extracted string at
+    /// least translated the string the game actually ships. Kept distinct
+    /// from [`AslQayd::AaliFaqat`] everywhere for that reason — see
+    /// [`NawAsl`].
+    Mulahaza {
+        /// Which recognizer read it, as `taarib_tabaqa::qira` names itself.
+        qari: Option<String>,
+        /// The provider that translated the reading.
+        muzawwid: Option<String>,
+        /// What the recognizer said about the reading — or that it said
+        /// nothing.
+        thiqa: ThiqatQira,
+    },
 }
 
 impl AslQayd {
@@ -540,6 +753,11 @@ impl AslQayd {
     /// read and rejected must not be offered to the next project as if the
     /// rejection had not happened. Every drafted, flagged, approved, or
     /// machine state maps to the honest variant.
+    ///
+    /// There is deliberately no review state that produces
+    /// [`AslQayd::Mulahaza`]: an observation does not come from a project's
+    /// review record at all, it comes from a screen, and the only way to
+    /// construct one is to say so.
     #[must_use]
     pub fn min_halat(
         halat: HalatMuraja,
@@ -561,6 +779,92 @@ impl AslQayd {
     pub const fn bashari(&self) -> bool {
         matches!(self, Self::Bashari { .. })
     }
+
+    /// Which of the three kinds this origin is.
+    #[must_use]
+    pub const fn naw(&self) -> NawAsl {
+        match self {
+            Self::Bashari { .. } => NawAsl::Bashari,
+            Self::AaliFaqat { .. } => NawAsl::Aali,
+            Self::Mulahaza { .. } => NawAsl::Mulahaza,
+        }
+    }
+
+    /// The reading confidence, which only an observation has.
+    ///
+    /// [`ThiqatQira::Ghayr`] for the other two kinds, and that is the honest
+    /// answer rather than a placeholder: nobody read a picture to produce
+    /// them, so there is no reading to have been confident about.
+    #[must_use]
+    pub const fn thiqat_qira(&self) -> ThiqatQira {
+        match self {
+            Self::Mulahaza { thiqa, .. } => *thiqa,
+            Self::Bashari { .. } | Self::AaliFaqat { .. } => ThiqatQira::Ghayr,
+        }
+    }
+}
+
+/// One origin flattened into the columns the upsert binds.
+///
+/// A struct rather than a tuple returned from a `match`, because the tuple
+/// grew to nine positional values the day the third kind arrived and a
+/// transposed pair of `Option<String>`s in it would compile, store a provider
+/// name in the recognizer column, and be invisible until somebody read a
+/// suggestion card and wondered why their OCR engine had translated
+/// something.
+#[derive(Debug)]
+struct BayanatAsl {
+    muraja_bashariya: i64,
+    daraja_asl: i64,
+    musahim: Option<String>,
+    muzawwid: Option<String>,
+    thiqa: Option<f64>,
+    qari: Option<String>,
+    thiqa_qira: Option<i64>,
+    thiqa_maqisa: i64,
+    mushahadat: i64,
+}
+
+impl BayanatAsl {
+    /// The one place the three kinds become columns.
+    ///
+    /// Total over [`AslQayd`], so a fourth kind would fail to compile here
+    /// rather than silently store as a machine translation.
+    fn min_asl(asl: &AslQayd) -> Self {
+        let naw = asl.naw();
+        let mut bayanat = Self {
+            muraja_bashariya: i64::from(naw.bashari()),
+            daraja_asl: naw.daraja(),
+            musahim: None,
+            muzawwid: None,
+            thiqa: None,
+            qari: None,
+            thiqa_qira: None,
+            thiqa_maqisa: 0,
+            // Only an observation is a sighting; re-recording a reviewed pair
+            // must not inflate the corroboration count of a reading.
+            mushahadat: 0,
+        };
+        match asl {
+            AslQayd::Bashari { musahim } => {
+                bayanat.musahim = musahim.as_ref().map(|m| m.nass().to_owned());
+            }
+            AslQayd::AaliFaqat { muzawwid, thiqa } => {
+                bayanat.muzawwid.clone_from(muzawwid);
+                bayanat.thiqa = thiqa.map(f64::from);
+            }
+            AslQayd::Mulahaza { qari, muzawwid, thiqa } => {
+                bayanat.qari.clone_from(qari);
+                bayanat.muzawwid.clone_from(muzawwid);
+                bayanat.mushahadat = 1;
+                if let Some(mia) = thiqa.mia() {
+                    bayanat.thiqa_qira = Some(i64::from(mia));
+                    bayanat.thiqa_maqisa = 1;
+                }
+            }
+        }
+        bayanat
+    }
 }
 
 /// Where a stored pair came from, read back with every lookup.
@@ -580,6 +884,13 @@ pub struct MasdarDhakira {
     /// The game's display name, kept denormalized so a suggestion can name
     /// its origin after the game has left the library.
     pub ism_luba: Option<String>,
+    /// Which of the three kinds the pair is, at its best point so far.
+    ///
+    /// Ratchets upward only, exactly as [`MasdarDhakira::muraja_bashariya`]
+    /// does and for the same reason: an observation arriving after a review
+    /// must not demote the row, and no number of observations can promote
+    /// one.
+    pub naw: NawAsl,
     /// Whether a human had read the pair when it was stored — or has
     /// genuinely reviewed it in any project since. Reuse never sets this;
     /// see [`Dhakira::sajjil`].
@@ -588,6 +899,22 @@ pub struct MasdarDhakira {
     pub musahim: Option<MusahimId>,
     /// The machine provider, where one produced the pair.
     pub muzawwid: Option<String>,
+    /// The recognizer that read the line, where the pair was ever observed.
+    ///
+    /// Kept even after the pair is reviewed, because "this sentence started
+    /// life as a screen reading" stays true and stays worth knowing.
+    pub qari: Option<String>,
+    /// The best reading confidence recorded for the pair, or
+    /// [`ThiqatQira::Ghayr`] when it was never observed or never measured.
+    pub thiqa_qira: ThiqatQira,
+    /// How many times the pair has been *observed* — read off a screen and
+    /// translated to this same Arabic.
+    ///
+    /// Corroboration, not reuse: [`QaydDhakira::marrat`] counts a translator
+    /// taking the pair, this counts independent sightings of it. It breaks
+    /// ties between equally confident observations, on the reasoning that a
+    /// misread line tends not to be misread the same way twice.
+    pub mushahadat: u32,
     /// When the pair entered the memory, RFC 3339, from the database's own
     /// clock so two rows in one transaction cannot disagree.
     pub waqt: String,
@@ -837,6 +1164,14 @@ impl TatbiqDhakira {
     /// application asserting it would be the exact forgery the provenance
     /// rule exists to prevent, laundered through an enum instead of a bulk
     /// action.
+    ///
+    /// An overlay observation lands as [`TareeqaTarjama::AaliyaFaqat`],
+    /// which is the closest of the three and still an overstatement — that
+    /// variant says a machine translated the game's own string, and an
+    /// observation's source text was itself read off a picture. The enum has
+    /// no fourth variant and this crate does not own it, so the distinction
+    /// is carried where this crate *can* carry it: [`TatbiqDhakira::naw`],
+    /// which the interface shows beside the method rather than instead of it.
     #[must_use]
     pub const fn tareeqa(&self) -> TareeqaTarjama {
         if self.qayd.asl.muraja_bashariya {
@@ -844,6 +1179,15 @@ impl TatbiqDhakira {
         } else {
             TareeqaTarjama::AaliyaFaqat
         }
+    }
+
+    /// Which of the three kinds the applied pair is.
+    ///
+    /// The fact [`TatbiqDhakira::tareeqa`] cannot express, kept next to it so
+    /// a caller reading one is looking at the other.
+    #[must_use]
+    pub const fn naw(&self) -> NawAsl {
+        self.qayd.asl.naw
     }
 }
 
@@ -1029,18 +1373,73 @@ CREATE INDEX thulathi_bil_miftah ON thulathi (miftah);";
 /// Migration 1, named.
 const AL_ASAS: HijraDhakira = HijraDhakira { raqm: 1, ism: "al-asas", jumal: HIJRA_1 };
 
+/// Migration 2 — the third provenance kind, and what a reading knows.
+///
+/// Migration 1 encoded provenance as one bit, `muraja_bashariya`, which can
+/// say "a human read it" and "a machine wrote it" and has no room for the
+/// third thing an overlay produces. `daraja_asl` is that room: 2 human, 1
+/// machine, 0 observation, and it is a rank rather than a tag so the index
+/// can order by it directly.
+///
+/// The reading columns are the honest ones. `thiqa_qira` is **nullable and
+/// stays null for an engine that measures nothing** — a stand-in written here
+/// would be indistinguishable from a measurement one query later — and
+/// `thiqa_maqisa` is the bit that says which. `qari` names the engine.
+/// `mushahadat` counts independent sightings, which is the tie-break between
+/// two equally confident readings.
+///
+/// Existing rows migrate to 2 or 1 by their existing bit, so nothing already
+/// stored becomes an observation. That is the only defensible direction: a
+/// build that guessed the other way would relabel every machine translation
+/// in every existing memory as a screen reading.
+///
+/// The index is dropped and rebuilt because its whole job is to hand the
+/// exact-match stage its rows already in the order the supersession rule
+/// wants — see [`Dhakira::ibhath`]. Leaving the old one would mean sorting
+/// in Rust on every lookup and having the rule live in two places.
+const HIJRA_2: &str = "\
+ALTER TABLE qayd ADD COLUMN daraja_asl INTEGER NOT NULL DEFAULT 1
+    CHECK (daraja_asl IN (0, 1, 2));
+
+ALTER TABLE qayd ADD COLUMN qari TEXT;
+
+ALTER TABLE qayd ADD COLUMN thiqa_qira INTEGER
+    CHECK (thiqa_qira IS NULL OR (thiqa_qira >= 0 AND thiqa_qira <= 100));
+
+ALTER TABLE qayd ADD COLUMN thiqa_maqisa INTEGER NOT NULL DEFAULT 0
+    CHECK (thiqa_maqisa IN (0, 1));
+
+ALTER TABLE qayd ADD COLUMN mushahadat INTEGER NOT NULL DEFAULT 0
+    CHECK (mushahadat >= 0);
+
+UPDATE qayd SET daraja_asl = 2 WHERE muraja_bashariya = 1;
+
+DROP INDEX qayd_bil_miftah;
+
+CREATE INDEX qayd_bil_miftah ON qayd (
+    miftah,
+    daraja_asl DESC,
+    thiqa_maqisa DESC,
+    thiqa_qira DESC,
+    mushahadat DESC,
+    marrat DESC);";
+
+/// Migration 2, named.
+const AL_MULAHAZA: HijraDhakira =
+    HijraDhakira { raqm: 2, ism: "al-mulahaza", jumal: HIJRA_2 };
+
 /// Every migration this build defines, ascending.
 ///
 /// Append only: editing a shipped entry changes its checksum and every
 /// existing memory file will refuse to open, which is the intended failure and
 /// far better than two schemas sharing a number.
-pub const HIJRAT_DHAKIRA: &[HijraDhakira] = &[AL_ASAS];
+pub const HIJRAT_DHAKIRA: &[HijraDhakira] = &[AL_ASAS, AL_MULAHAZA];
 
 /// The highest memory-schema version this build understands.
 ///
 /// A file declaring more is refused, never opened — the user is running an
 /// older Taarib against a newer memory, and the honest answer is to say so.
-pub const ISDAR_DHAKIRA: u32 = AL_ASAS.raqm;
+pub const ISDAR_DHAKIRA: u32 = AL_MULAHAZA.raqm;
 
 /// FNV-1a over the bytes of a migration, sixteen hex characters — the same
 /// function, constants and rendering as `taarib-makhzan`'s, restated here
@@ -1364,7 +1763,7 @@ impl Dhakira {
     ///
     /// ## The provenance ratchet
     ///
-    /// The upsert writes `muraja_bashariya` as
+    /// The upsert writes `muraja_bashariya` and `daraja_asl` as
     /// `max(existing, incoming)` — a genuinely human confirmation upgrades
     /// the pair wherever it happens, and a machine re-encountering the pair
     /// in its fifth project cannot demote or launder anything. Combined with
@@ -1372,6 +1771,33 @@ impl Dhakira {
     /// path in this module by which reuse manufactures a human review, which
     /// is this module's restatement of the rule in
     /// [`crate::muraja_dakhiliya`].
+    ///
+    /// The rank ratchet is the same guarantee one level wider, and it runs in
+    /// both directions of the same inequality: an overlay observation of a
+    /// pair a human has reviewed leaves `daraja_asl` at 2, and no number of
+    /// observations ever raises one above 0. So a screen reading cannot
+    /// acquire the reputation of reviewed text by being seen a thousand
+    /// times, which is the failure that makes sharing observations dangerous
+    /// at all.
+    ///
+    /// ## The supersession rule for a reading
+    ///
+    /// When the same pair is observed again, the row keeps the **better**
+    /// reading rather than the latest one:
+    ///
+    /// * a measured reading always replaces an unmeasured one, and an
+    ///   unmeasured one never replaces a measured one, whatever their
+    ///   nominal numbers — `thiqa_maqisa` is a `max`, so the measured bit
+    ///   only ever goes up;
+    /// * between two measured readings the higher confidence wins;
+    /// * `mushahadat` accumulates either way, so corroboration is recorded
+    ///   even by a sighting that did not improve the confidence.
+    ///
+    /// Recency is deliberately **not** in that list. "Latest wins" would let
+    /// one bad late read overwrite a good early one, which is precisely the
+    /// direction this whole module is trying not to fail in; recency only
+    /// breaks ties, and it does so at the ordering stage
+    /// ([`Dhakira::ibhath`]) through the row id rather than here.
     ///
     /// ## What is silently not stored, and why silently
     ///
@@ -1405,14 +1831,7 @@ impl Dhakira {
         let nasq_masdar = serde_json::to_string(&qayd.nasq_masdar).map_err(&khata_huquul)?;
         let nasq_hadaf = serde_json::to_string(&qayd.nasq_hadaf).map_err(&khata_huquul)?;
 
-        let (muraja_bashariya, musahim, muzawwid, thiqa) = match &qayd.asl {
-            AslQayd::Bashari { musahim } => {
-                (1_i64, musahim.as_ref().map(|m| m.nass().to_owned()), None, None)
-            }
-            AslQayd::AaliFaqat { muzawwid, thiqa } => {
-                (0_i64, None, muzawwid.clone(), thiqa.map(f64::from))
-            }
-        };
+        let bayanat = BayanatAsl::min_asl(&qayd.asl);
 
         let masar_khata = self.masar.clone();
         let khata = move |amal: &'static str, jadwal: &'static str, q: rusqlite::Error| {
@@ -1461,28 +1880,7 @@ impl Dhakira {
 
         let _ = muamala
             .prepare_cached(
-                "INSERT INTO qayd (
-                     miftah, masdar, hadaf, hadaf_muwahhad, tasnif,
-                     mashru, luba, ism_luba, siyaq,
-                     muraja_bashariya, musahim, muzawwid, thiqa,
-                     nasq_masdar, nasq_hadaf, marrat, waqt)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-                         0, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-                 ON CONFLICT (lugha_hadaf, miftah, hadaf_muwahhad) DO UPDATE SET
-                     masdar           = excluded.masdar,
-                     hadaf            = excluded.hadaf,
-                     tasnif           = excluded.tasnif,
-                     mashru           = coalesce(excluded.mashru, qayd.mashru),
-                     luba             = coalesce(excluded.luba, qayd.luba),
-                     ism_luba         = coalesce(excluded.ism_luba, qayd.ism_luba),
-                     siyaq            = coalesce(excluded.siyaq, qayd.siyaq),
-                     -- The ratchet: 0 -> 1 only, never back. See sajjil's doc.
-                     muraja_bashariya = max(qayd.muraja_bashariya, excluded.muraja_bashariya),
-                     musahim          = coalesce(excluded.musahim, qayd.musahim),
-                     muzawwid         = coalesce(excluded.muzawwid, qayd.muzawwid),
-                     thiqa            = coalesce(excluded.thiqa, qayd.thiqa),
-                     nasq_masdar      = excluded.nasq_masdar,
-                     nasq_hadaf       = excluded.nasq_hadaf",
+                JUMLA_TASJIL,
             )
             .map_err(|q| khata("prepare upsert", "qayd", q))?
             .execute(params![
@@ -1495,12 +1893,17 @@ impl Dhakira {
                 qayd.luba,
                 qayd.ism_luba,
                 qayd.siyaq,
-                muraja_bashariya,
-                musahim,
-                muzawwid,
-                thiqa,
+                bayanat.muraja_bashariya,
+                bayanat.musahim,
+                bayanat.muzawwid,
+                bayanat.thiqa,
                 nasq_masdar,
                 nasq_hadaf,
+                bayanat.daraja_asl,
+                bayanat.qari,
+                bayanat.thiqa_qira,
+                bayanat.thiqa_maqisa,
+                bayanat.mushahadat,
             ])
             .map_err(|q| khata("upsert", "qayd", q))?;
 
@@ -1535,9 +1938,10 @@ impl Dhakira {
         }
 
         // Stage 1: the exact key. The first row is the application — the
-        // statement already ordered human-reviewed origins first, then most
-        // reused — and any further rows (other games' renderings of the same
-        // source) become perfect-similarity suggestions.
+        // statement already ordered the rows by the supersession rule, so the
+        // best-supported reading of the key is the one that comes back — and
+        // any further rows (other games' renderings of the same source)
+        // become perfect-similarity suggestions.
         let mut tamma = self.sufuf_miftah_nassi(&miftah)?.into_iter();
         let tatbiq = tamma.next().map(|qayd| TatbiqDhakira { qayd });
         let mut iqtirahat: Vec<IqtirahDhakira> =
@@ -1561,6 +1965,32 @@ impl Dhakira {
         iqtirahat.truncate(usize::try_from(talab.hadd).unwrap_or(usize::MAX));
 
         Ok(HasadDhakira { tatbiq, iqtirahat })
+    }
+
+    /// The exact match alone, without building the near neighbourhood.
+    ///
+    /// [`Dhakira::ibhath`]'s stages 2 and 3 — the trigram probe and the edit
+    /// distances — exist to produce suggestions a human reads and decides on.
+    /// A caller that will never show a suggestion, because it has no human in
+    /// front of it, pays for all of that and discards it. The overlay is that
+    /// caller: it runs inside somebody's game, once per recognized line, and
+    /// a fuzzy match is not something it is allowed to apply. So it asks this
+    /// instead, which is one indexed equality.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataTarjama::DhakiraMughlaqa`] when the statement fails or a stored
+    /// row does not decode.
+    pub fn tatbiq_tamm(&self, masdar: &str) -> Result<Option<TatbiqDhakira>, KhataTarjama> {
+        let miftah = miftah_muwahhad(masdar);
+        if miftah.is_empty() {
+            return Ok(None);
+        }
+        Ok(self
+            .sufuf_miftah_nassi(&miftah)?
+            .into_iter()
+            .next()
+            .map(|qayd| TatbiqDhakira { qayd }))
     }
 
     /// Records that a stored pair was actually taken — applied exactly or
@@ -1624,6 +2054,66 @@ impl Dhakira {
             .query_map(params![min, i64::from(hadd)], KhaamQayd::min_saf)
             .map_err(|q| self.khata_jumla("query", "qayd", &q))?;
         self.ijma_sufuf(sufuf)
+    }
+
+    /// One page of the pairs of a single game and a single origin kind.
+    ///
+    /// The read half of a **share**, as [`Dhakira::safha`] is the read half
+    /// of a merge, and narrower than it on purpose. A share is per game
+    /// because a memory's usefulness to the next player is a per-game fact,
+    /// and per kind because the only kind that may be shared this way is
+    /// [`NawAsl::Mulahaza`] — see `taarib_warsha`'s sharing module for why a
+    /// reviewed translation leaves the machine through the submission path or
+    /// not at all.
+    ///
+    /// `luba` is matched against the stored identifier exactly, not folded: a
+    /// game identity is a UUID rendering, and folding one would be folding a
+    /// key that has no linguistic content to fold.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataTarjama::DhakiraMughlaqa`] when the statement fails or a row
+    /// does not decode.
+    pub fn safha_luba(
+        &self,
+        luba: &str,
+        naw: NawAsl,
+        baad: Option<QaydId>,
+        hadd: u32,
+    ) -> Result<Vec<QaydDhakira>, KhataTarjama> {
+        let mut jumla = self
+            .ittisal
+            .prepare_cached(JUMLA_SAFHA_LUBA)
+            .map_err(|q| self.khata_jumla("prepare", "qayd", &q))?;
+        let min = baad.map_or(0, QaydId::raqm);
+        let sufuf = jumla
+            .query_map(
+                params![min, i64::from(hadd), luba, naw.daraja()],
+                KhaamQayd::min_saf,
+            )
+            .map_err(|q| self.khata_jumla("query", "qayd", &q))?;
+        self.ijma_sufuf(sufuf)
+    }
+
+    /// How many pairs one game holds of one origin kind.
+    ///
+    /// The count a sharing screen shows before anything is written, so the
+    /// user is told the size of what would leave the machine rather than
+    /// discovering it from a file listing afterwards.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataTarjama::DhakiraMughlaqa`] when the query cannot run.
+    pub fn adad_luba(&self, luba: &str, naw: NawAsl) -> Result<u64, KhataTarjama> {
+        let adad: i64 = self
+            .ittisal
+            .query_row(
+                "SELECT count(*) FROM qayd WHERE luba = ?1 AND daraja_asl = ?2",
+                params![luba, naw.daraja()],
+                |saf| saf.get(0),
+            )
+            .map_err(|q| self.khata_jumla("count", "qayd", &q))?;
+        Ok(u64::try_from(adad).unwrap_or(0))
     }
 
     /// The rows of one key, looked up by the key's text — the exact stage.
@@ -1773,47 +2263,137 @@ fn ila_iqtirah(
     IqtirahDhakira { qayd, tashabuh, nafs_tasnif, nafs_luba, nuqat }
 }
 
+/// The write statement: one pair in, or one re-confirmation folded into the
+/// row that is already there.
+///
+/// Lifted out of [`Dhakira::sajjil`] once it grew past forty lines, so the
+/// ratchets and the supersession rule read as one block of SQL instead of as
+/// a wall inside a function that is also doing transaction handling.
+const JUMLA_TASJIL: &str = "\
+INSERT INTO qayd (
+    miftah, masdar, hadaf, hadaf_muwahhad, tasnif,
+    mashru, luba, ism_luba, siyaq,
+    muraja_bashariya, musahim, muzawwid, thiqa,
+    nasq_masdar, nasq_hadaf,
+    daraja_asl, qari, thiqa_qira, thiqa_maqisa, mushahadat,
+    marrat, waqt)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
+        ?16, ?17, ?18, ?19, ?20,
+        0, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+ON CONFLICT (lugha_hadaf, miftah, hadaf_muwahhad) DO UPDATE SET
+    masdar           = excluded.masdar,
+    hadaf            = excluded.hadaf,
+    tasnif           = excluded.tasnif,
+    mashru           = coalesce(excluded.mashru, qayd.mashru),
+    luba             = coalesce(excluded.luba, qayd.luba),
+    ism_luba         = coalesce(excluded.ism_luba, qayd.ism_luba),
+    siyaq            = coalesce(excluded.siyaq, qayd.siyaq),
+    -- The ratchet: 0 -> 1 only, never back. See sajjil's doc.
+    muraja_bashariya = max(qayd.muraja_bashariya, excluded.muraja_bashariya),
+    -- The same ratchet one level wider: observation -> machine -> human, and
+    -- never the other way. An observation of reviewed text leaves this at 2.
+    daraja_asl       = max(qayd.daraja_asl, excluded.daraja_asl),
+    musahim          = coalesce(excluded.musahim, qayd.musahim),
+    muzawwid         = coalesce(excluded.muzawwid, qayd.muzawwid),
+    thiqa            = coalesce(excluded.thiqa, qayd.thiqa),
+    qari             = coalesce(excluded.qari, qayd.qari),
+    -- Supersession, in two lines. `thiqa_maqisa` only rises, so a reading
+    -- that measured nothing can never replace one that did; and among two
+    -- measured readings the better number wins. `max` of two non-null
+    -- integers is exactly that, and the only branch that needs writing is
+    -- the one where the incoming reading is the first measured one.
+    thiqa_maqisa     = max(qayd.thiqa_maqisa, excluded.thiqa_maqisa),
+    thiqa_qira       = CASE
+                         WHEN excluded.thiqa_maqisa = 0 THEN qayd.thiqa_qira
+                         WHEN qayd.thiqa_maqisa = 0 THEN excluded.thiqa_qira
+                         ELSE max(qayd.thiqa_qira, excluded.thiqa_qira)
+                       END,
+    -- Corroboration accumulates even when the sighting did not improve the
+    -- confidence: seeing the same reading twice is itself evidence.
+    mushahadat       = qayd.mushahadat + excluded.mushahadat,
+    nasq_masdar      = excluded.nasq_masdar,
+    nasq_hadaf       = excluded.nasq_hadaf";
+
 /// Assembles a pair query around the one column list, at compile time.
 ///
-/// A macro over `concat!` rather than two hand-copied statements, because
-/// the decoder ([`KhaamQayd::min_saf`]) reads columns by position: the day
-/// the exact statement and the fuzzy statement listed columns in different
-/// orders, every field of one of them would decode into its neighbour and
-/// no error would fire. `concat!` keeps the result a `&'static str`, which
-/// keeps this module inside the storage crate's rule that statement text is
-/// never assembled at runtime.
-macro_rules! jumla_sufuf {
-    ($shart:literal) => {
+/// A macro over `concat!` rather than hand-copied statements, because the
+/// decoder ([`KhaamQayd::min_saf`]) reads columns by position: the day two
+/// statements listed columns in different orders, every field of one of them
+/// would decode into its neighbour and no error would fire. That drift had
+/// already started — the merge page carried its own copy of the list — and
+/// adding five columns to one copy and not the other is how it ends.
+/// `concat!` keeps the result a `&'static str`, which keeps this module
+/// inside the storage crate's rule that statement text is never assembled at
+/// runtime. The literals are repeated inside the arms because `concat!`
+/// takes literals and will not expand a helper macro in their place.
+///
+/// ## The `tafdeel` arm is the supersession rule
+///
+/// Read top to bottom, its `ORDER BY` is the whole policy:
+///
+/// 1. `daraja_asl` — reviewed text outranks machine text outranks a screen
+///    reading, always. No confidence and no amount of corroboration moves an
+///    observation above a reviewed translation, because the ranking is
+///    lexicographic and this is the first key.
+/// 2. `thiqa_maqisa` — a measured reading outranks an unmeasured one, even
+///    when the unmeasured one's nominal number would be higher. An
+///    unmeasured reading has no number; see [`ThiqatQira`].
+/// 3. `thiqa_qira` — between measured readings, the more confident one.
+/// 4. `mushahadat` — between equally confident readings, the one seen more
+///    often. A misread line tends not to be misread the same way twice.
+/// 5. `marrat` — between those, the one translators have actually taken more.
+/// 6. `q.id` — ascending, so the order is total and *stable*.
+///
+/// Recency is deliberately absent, including at the last step. "Newest wins"
+/// is the rule that lets one bad late reading replace a good early one, and
+/// between two readings equal on every measurable ground the better property
+/// is that the answer does not change under the player: what they saw
+/// yesterday is what they see today unless something actually improved. The
+/// improvement path is the upsert in [`JUMLA_TASJIL`], not this ordering.
+///
+/// The `tarteeb_saf` arm orders by row id instead, because paging a whole
+/// memory needs a cursor the preference order cannot give.
+macro_rules! jumla_qayd {
+    (tafdeel $shart:literal) => {
         concat!(
             "SELECT q.id, q.masdar, q.hadaf, q.tasnif, q.siyaq, ",
             "q.nasq_masdar, q.nasq_hadaf, q.thiqa, q.marrat, ",
             "q.akhir_istikhdam, q.mashru, q.luba, q.ism_luba, ",
-            "q.muraja_bashariya, q.musahim, q.muzawwid, q.waqt ",
+            "q.muraja_bashariya, q.musahim, q.muzawwid, q.waqt, ",
+            "q.daraja_asl, q.qari, q.thiqa_qira, q.thiqa_maqisa, q.mushahadat ",
             "FROM qayd q ",
             $shart,
-            " ORDER BY q.muraja_bashariya DESC, q.marrat DESC, q.id LIMIT ?2"
+            " ORDER BY q.daraja_asl DESC, q.thiqa_maqisa DESC, q.thiqa_qira DESC, ",
+            "q.mushahadat DESC, q.marrat DESC, q.id LIMIT ?2"
+        )
+    };
+    (tarteeb_saf $shart:literal) => {
+        concat!(
+            "SELECT q.id, q.masdar, q.hadaf, q.tasnif, q.siyaq, ",
+            "q.nasq_masdar, q.nasq_hadaf, q.thiqa, q.marrat, ",
+            "q.akhir_istikhdam, q.mashru, q.luba, q.ism_luba, ",
+            "q.muraja_bashariya, q.musahim, q.muzawwid, q.waqt, ",
+            "q.daraja_asl, q.qari, q.thiqa_qira, q.thiqa_maqisa, q.mushahadat ",
+            "FROM qayd q ",
+            $shart,
+            " ORDER BY q.id LIMIT ?2"
         )
     };
 }
 
 /// The merge page: every pair after a cursor, in stable row order.
-const JUMLA_SAFHA: &str = concat!(
-    "SELECT q.id, q.masdar, q.hadaf, q.tasnif, q.siyaq, ",
-    "q.nasq_masdar, q.nasq_hadaf, q.thiqa, q.marrat, ",
-    "q.akhir_istikhdam, q.mashru, q.luba, q.ism_luba, ",
-    "q.muraja_bashariya, q.musahim, q.muzawwid, q.waqt ",
-    "FROM qayd q WHERE q.id > ?1 ORDER BY q.id LIMIT ?2"
-);
+const JUMLA_SAFHA: &str = jumla_qayd!(tarteeb_saf "WHERE q.id > ?1");
 
-/// Exact stage: pairs by key text. Ordered human-reviewed first, then most
-/// reused — the same preference the storage crate's ledger documents, for
-/// the same reason: ordering by a status column's text would put a draft
-/// above an approved translation.
+/// The export page: one game's pairs of one origin kind, in stable row order.
+const JUMLA_SAFHA_LUBA: &str =
+    jumla_qayd!(tarteeb_saf "WHERE q.id > ?1 AND q.luba = ?3 AND q.daraja_asl = ?4");
+
+/// Exact stage: pairs by key text, in preference order.
 const JUMLA_SUFUF_NASSI: &str =
-    jumla_sufuf!("JOIN miftah_bahth m ON m.id = q.miftah WHERE m.miftah = ?1");
+    jumla_qayd!(tafdeel "JOIN miftah_bahth m ON m.id = q.miftah WHERE m.miftah = ?1");
 
 /// Fuzzy stage: pairs by key id, same columns, same ordering.
-const JUMLA_SUFUF_RAQAMI: &str = jumla_sufuf!("WHERE q.miftah = ?1");
+const JUMLA_SUFUF_RAQAMI: &str = jumla_qayd!(tafdeel "WHERE q.miftah = ?1");
 
 /// The length band a candidate key must sit in to possibly clear
 /// [`ADNA_TASHABUH`] against a query of `tul` characters.
@@ -1867,10 +2447,15 @@ struct KhaamQayd {
     musahim: Option<String>,
     muzawwid: Option<String>,
     waqt: String,
+    daraja_asl: i64,
+    qari: Option<String>,
+    thiqa_qira: Option<i64>,
+    thiqa_maqisa: i64,
+    mushahadat: i64,
 }
 
 impl KhaamQayd {
-    /// Reads the columns in [`AMIDA_QAYD`] order.
+    /// Reads the columns in [`jumla_qayd`]'s order.
     fn min_saf(saf: &rusqlite::Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
             id: saf.get(0)?,
@@ -1890,6 +2475,11 @@ impl KhaamQayd {
             musahim: saf.get(14)?,
             muzawwid: saf.get(15)?,
             waqt: saf.get(16)?,
+            daraja_asl: saf.get(17)?,
+            qari: saf.get(18)?,
+            thiqa_qira: saf.get(19)?,
+            thiqa_maqisa: saf.get(20)?,
+            mushahadat: saf.get(21)?,
         })
     }
 
@@ -1903,6 +2493,33 @@ impl KhaamQayd {
 
         let Some(tasnif) = tasnif_min_ramz(&self.tasnif) else {
             return Err(khata_saf("tasnif", &self.tasnif));
+        };
+
+        // A rank no build ever wrote is a hand-edited or corrupted row, and
+        // guessing a kind for it would be inventing provenance. Refused by
+        // name, exactly as an unknown classification is.
+        let Some(naw) = NawAsl::min_daraja(self.daraja_asl) else {
+            return Err(khata_saf("daraja_asl", &self.daraja_asl.to_string()));
+        };
+        if naw.bashari() != (self.muraja_bashariya != 0) {
+            return Err(khata_saf(
+                "daraja_asl",
+                &format!("{} beside muraja_bashariya {}", self.daraja_asl, self.muraja_bashariya),
+            ));
+        }
+
+        // The measured bit decides whether there is a number at all, so a row
+        // that claims a measurement and stores none — or stores one it does
+        // not claim — is a row whose confidence cannot be read honestly.
+        let thiqa_qira = match (self.thiqa_maqisa, self.thiqa_qira) {
+            (0, None) => ThiqatQira::Ghayr,
+            (1, Some(mia)) => ThiqatQira::maqisa(u8::try_from(mia).unwrap_or(u8::MAX)),
+            (maqisa, mia) => {
+                return Err(khata_saf(
+                    "thiqa_qira",
+                    &format!("{mia:?} beside thiqa_maqisa {maqisa}"),
+                ));
+            }
         };
 
         let musahim = match self.musahim {
@@ -1940,9 +2557,13 @@ impl KhaamQayd {
                 mashru: self.mashru,
                 luba: self.luba,
                 ism_luba: self.ism_luba,
+                naw,
                 muraja_bashariya: self.muraja_bashariya != 0,
                 musahim,
                 muzawwid: self.muzawwid,
+                qari: self.qari,
+                thiqa_qira,
+                mushahadat: u32::try_from(self.mushahadat).unwrap_or(u32::MAX),
                 waqt: self.waqt,
             },
         })

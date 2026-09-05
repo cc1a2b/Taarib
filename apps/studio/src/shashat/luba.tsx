@@ -16,6 +16,8 @@ import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t, wasm } from '@/lugha/lugha';
 import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
 import { jahiziyaMin, naqsJahiziya, tasil } from '@/maktaba/jahiziya';
+import type { Tabaqa } from '@/maktaba/tabaqat';
+import { ISM_TABAQA, KULFAT_TABAQA, SHARH_TABAQA, tabaqaTaqreer } from '@/maktaba/tabaqat';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import type {
@@ -417,8 +419,13 @@ function Saff({ unwan, children }: KhasaisSaff): JSX.Element {
 function Riqaqat({ qaima }: { readonly qaima: readonly string[] }): JSX.Element {
   return (
     <ul className="luba__riqaq">
+      {/* `dir="auto"` because these are the backend's own words and it writes
+          some of them in Arabic whatever the session's language is — an engine
+          it did not recognise is `غير معروف`, a graphics API it could not
+          determine is `غير محدَّدة`. Laid out left to right inside an English
+          panel, such a chip puts its first word last. */}
       {qaima.map((band) => (
-        <li key={band} className="luba__riqaqa">
+        <li key={band} className="luba__riqaqa" dir="auto">
           {band}
         </li>
       ))}
@@ -522,6 +529,100 @@ function TanbeehJahiziya({ unwan, muharrik, nass, athar, lugha }: KhasaisJahiziy
   );
 }
 
+/* ---------------------------------------------------------------------------
+   ما الذي تحصل عليه — which of the three products this game gets.
+
+   The compatibility panel used to open with a table of engine internals and
+   state the product as row five of it: "Tier 3 — طبقة ترجمة". Two things are
+   wrong with that and neither is cosmetic.
+
+   A tier number is a rank, and a rank invites the reading that three is a worse
+   two — the same thing, slightly degraded. It is not. Tier 1 replaces the game's
+   text inside its engine and the result is the game's own text; tier 2 has
+   Taarib draw the words itself where the engine's words were; tier 3 does not
+   touch the game at all and paints Arabic over the picture, which disappears
+   when Taarib is closed and was never inside the game to begin with. Three
+   products, three sets of consequences, and nobody can infer any of it from a
+   digit.
+
+   And the Arabic name was printed verbatim in both languages, so an English
+   reader got `طبقة ترجمة` — the one row on the screen that says which product
+   they are about to install.
+
+   So the panel now opens with the product, says what it does and what it costs,
+   carries the report's own reason for landing there, and demotes the number to
+   a footnote. The number stays because it is what the capability report, the
+   registry and the patch listing all label a tier with, and a reader comparing
+   this screen against one of those needs it to still be here.
+
+   WHAT IS NOT DECIDED HERE. Which tier a game is on is decided in Rust and read
+   off the wire. `TaqreerHie` does not carry the discriminant yet — it renders
+   the tier as a number and an Arabic name and drops the enum — so
+   `tabaqaTaqreer` answers `null` in this build and the heading falls back to
+   the report's own tier name. The number is deliberately NOT inverted into a
+   tier to fill the gap: that would be a second copy of `Tabaqa::raqm` in
+   TypeScript, and a copy of a taxonomy mislabels rather than fails the day the
+   taxonomy moves. See `maktaba/tabaqat` for the field this needs.
+   --------------------------------------------------------------------------- */
+
+interface KhasaisMuntaj {
+  /** The product, off the wire, or null while the report does not carry it. */
+  readonly tabaqa: Tabaqa | null;
+  readonly taqreer: TaqreerHie;
+  /** Whether the product actually runs in this build, for the qualification. */
+  readonly jahiziya: JahiziyaTashghil | null;
+  readonly lugha: Lugha;
+  readonly munassiq: Munassiqat;
+}
+
+function QismMuntaj({ tabaqa, taqreer, jahiziya, lugha, munassiq }: KhasaisMuntaj): JSX.Element {
+  const marfud = taqreer.marfuda;
+  // Read off the verdict rather than off the sentence under it: an older report
+  // carries the verdict without the sentence, and the product would then be
+  // stated flat for a game nothing will change.
+  const muallaq = jahiziya !== null && jahiziya !== 'mukammala';
+  const sabab = lugha === 'arabi' ? taqreer.sabab_arabi : taqreer.sabab_injilizi;
+
+  return (
+    <div className={marfud ? 'luba__muntaj luba__muntaj--marfud' : 'luba__muntaj'}>
+      <p className="luba__muntaj-unwan">
+        {marfud ? (
+          t('luba.muntaj.marfuda', lugha)
+        ) : tabaqa === null ? (
+          // The report's own tier name, which it writes in Arabic in both
+          // languages. Inline `dir="auto"` rather than on the paragraph: it
+          // gets the bidi right without flipping a whole heading to the trailing
+          // edge of an otherwise left-to-right panel.
+          <span dir="auto">{taqreer.tabaqa_arabi}</span>
+        ) : (
+          t(ISM_TABAQA[tabaqa], lugha)
+        )}
+        {/* The qualification belongs on the claim rather than three lines under
+            it. A refused game does not get one: the refusal is permanent, and
+            "does not run yet in this build" beside it would offer a wait that is
+            not coming. */}
+        {marfud || !muallaq ? null : (
+          <span className="luba__tabaqa-muallaqa">{t('luba.jahiziya.ghayr_faal', lugha)}</span>
+        )}
+      </p>
+      {marfud || tabaqa === null ? null : (
+        <>
+          <p className="luba__muntaj-sharh">{t(SHARH_TABAQA[tabaqa], lugha)}</p>
+          {/* What the product costs, as opposed to what this game's engine
+              costs. The per-game limits are the report's own list further down;
+              this is the price of the tier itself and is true of every game on
+              it, which is why the report has no reason to repeat it per game. */}
+          <p className="luba__muntaj-kulfa">{t(KULFAT_TABAQA[tabaqa], lugha)}</p>
+        </>
+      )}
+      <p className="luba__sabab">{sabab}</p>
+      <p className="luba__muntaj-raqm">
+        {t('luba.muntaj.tabaqa_raqm', lugha, { raqm: munassiq.raqm(taqreer.tabaqa_raqm) })}
+      </p>
+    </div>
+  );
+}
+
 const TULAT_SATR = ['tawil', 'mutawassit', 'qasir'] as const;
 
 /**
@@ -586,37 +687,18 @@ function QismMuharrik({
       <h2 id="luba-unwan-tawafuq" className="luba__unwan-qism">
         {t('luba.tawafuq.unwan', lugha)}
       </h2>
-      <dl className="luba__jadwal">
-        <Saff unwan={t('luba.muharrik.aila', lugha)}>{muharrik.aila}</Saff>
-        {muharrik.isdar === null ? null : (
-          <Saff unwan={t('luba.muharrik.isdar', lugha)}>
-            <span className="mono-ltr">{muharrik.isdar}</span>
-          </Saff>
-        )}
-        <Saff unwan={t('luba.muharrik.khalfiya', lugha)}>{muharrik.khalfiya}</Saff>
-        {muharrik.rusum.length > 0 ? (
-          <Saff unwan={t('luba.muharrik.rusum', lugha)}>
-            <Riqaqat qaima={muharrik.rusum} />
-          </Saff>
-        ) : null}
-        <Saff unwan={t('luba.muharrik.tabaqa', lugha)}>
-          {t('luba.muharrik.tabaqa_qeema', lugha, {
-            raqm: munassiq.raqm(taqreer.tabaqa_raqm),
-            ism: taqreer.tabaqa_arabi,
-          })}
-          {/* The qualification belongs on the claim, not three lines under it:
-              a tier names what Taarib may do, and this row is where a reader
-              decides it is what Taarib will do. Read off the verdict and not
-              off the sentence beneath it: an older report can carry the verdict
-              without the sentence, and the tier would then be stated flat. */}
-          {hukmJahiziya === null || hukmJahiziya === 'mukammala' ? null : (
-            <span className="luba__tabaqa-muallaqa">
-              {t('luba.jahiziya.ghayr_faal', lugha)}
-            </span>
-          )}
-        </Saff>
-        <Saff unwan={t('luba.muharrik.thiqa', lugha)}>{munassiq.nisba(muharrik.thiqa)}</Saff>
-      </dl>
+      {/* The product first, before the engine's internals. What this game gets
+          is the question the reader opened the screen with; the scripting
+          backend and the graphics API are the evidence for the answer, and
+          evidence goes under a finding rather than in front of it. */}
+      <h3 className="luba__unwan-farii">{t('luba.muntaj.unwan', lugha)}</h3>
+      <QismMuntaj
+        tabaqa={tabaqaTaqreer(taqreer)}
+        taqreer={taqreer}
+        jahiziya={hukmJahiziya}
+        lugha={lugha}
+        munassiq={munassiq}
+      />
       {hukmJahiziya === null || hukmJahiziya === 'mukammala' ? null : (
         <TanbeehJahiziya
           unwan={t(
@@ -629,11 +711,33 @@ function QismMuharrik({
           lugha={lugha}
         />
       )}
+      <h3 className="luba__unwan-farii">{t('luba.muharrik.unwan', lugha)}</h3>
+      <dl className="luba__jadwal">
+        {/* `dir="auto"` on the two cells the backend answers in Arabic
+            regardless of the session's language: an engine nothing recognised
+            is `غير معروف` and a scripting backend it could not name is
+            `غير معروفة`. That is the single most important row on this screen
+            for half this library — the games that probe as unknown — and laid
+            out left to right it reads back to front. */}
+        <Saff unwan={t('luba.muharrik.aila', lugha)}>
+          <span dir="auto">{muharrik.aila}</span>
+        </Saff>
+        {muharrik.isdar === null ? null : (
+          <Saff unwan={t('luba.muharrik.isdar', lugha)}>
+            <span className="mono-ltr">{muharrik.isdar}</span>
+          </Saff>
+        )}
+        <Saff unwan={t('luba.muharrik.khalfiya', lugha)}>
+          <span dir="auto">{muharrik.khalfiya}</span>
+        </Saff>
+        {muharrik.rusum.length > 0 ? (
+          <Saff unwan={t('luba.muharrik.rusum', lugha)}>
+            <Riqaqat qaima={muharrik.rusum} />
+          </Saff>
+        ) : null}
+        <Saff unwan={t('luba.muharrik.thiqa', lugha)}>{munassiq.nisba(muharrik.thiqa)}</Saff>
+      </dl>
       <div className="luba__imkaniyat">
-        <h3 className="luba__unwan-farii">{t('luba.imkaniyat.sabab', lugha)}</h3>
-        <p className="luba__sabab">
-          {lugha === 'arabi' ? taqreer.sabab_arabi : taqreer.sabab_injilizi}
-        </p>
         {taqreer.anzimat.length > 0 ? (
           <>
             <h3 className="luba__unwan-farii">{t('luba.imkaniyat.anzima', lugha)}</h3>
@@ -644,8 +748,15 @@ function QismMuharrik({
           <>
             <h3 className="luba__unwan-farii">{t('luba.imkaniyat.hudud', lugha)}</h3>
             <ul className="luba__hudud">
+              {/* The backend writes a limit in one language and not always in
+                  both, and `hududQira` falls back to the Arabic rather than to
+                  silence — a limit named in one language still stands. So the
+                  list has to be able to typeset a right-to-left sentence inside
+                  a left-to-right panel. */}
               {hudud.map((hadd, martaba) => (
-                <li key={`${String(martaba)}:${hadd}`}>{hadd}</li>
+                <li key={`${String(martaba)}:${hadd}`} dir="auto">
+                  {hadd}
+                </li>
               ))}
             </ul>
           </>
@@ -1208,6 +1319,17 @@ function QismRuqaa({
 
   const naqs = naqsJahiziya(taqreer, lugha);
   const hukmJahiziya = jahiziyaMin(taqreer.jahiziya);
+  // What installing costs, at the point where it is spent. Two lists, and the
+  // difference between them is what makes both worth showing: `hududTathbeet`
+  // is what will not work in *this* game, in the report's own words, and
+  // `kulfatTabaqa` is the price of the tier itself — true of every game on it,
+  // which is why the per-game report has no reason to repeat it. The second is
+  // `null` until `TaqreerHie` carries the tier discriminant; see
+  // `maktaba/tabaqat`.
+  const hududTathbeet = hududQira(taqreer, lugha);
+  const tabaqatTathbeet = tabaqaTaqreer(taqreer);
+  const kulfatTabaqa =
+    tabaqatTathbeet === null ? null : t(KULFAT_TABAQA[tabaqatTathbeet], lugha);
 
   return (
     <section className="luba__qism" aria-labelledby="luba-unwan-ruqaa">
@@ -1260,6 +1382,36 @@ function QismRuqaa({
               athar={t(ATHAR_JAHIZIYA[hukmJahiziya], lugha)}
               lugha={lugha}
             />
+          )}
+          {/*
+            What this costs, beside the button that spends it.
+
+            The compatibility panel already carries the full list, and this is
+            deliberately not a second copy of it on the page: it is the same
+            list, one press away from the control it applies to. A limit that
+            lives only in the panel above is a limit read after the decision or
+            not at all, and every sentence in here is the backend's own — the
+            report writes them per game, in both languages, and the interface
+            has no business paraphrasing what will not work.
+
+            Closed by default and never for a refused game: `mahmiya` means the
+            install controls are not drawn at all, and a disclosure about what a
+            patch will not translate is noise beside a refusal to install one.
+          */}
+          {mahmiya || hududTathbeet.length === 0 ? null : (
+            <details className="luba__kulfa">
+              <summary className="luba__kulfa-unwan">{t('luba.hudud.tafsil', lugha)}</summary>
+              {kulfatTabaqa === null ? null : (
+                <p className="luba__muntaj-kulfa luba__kulfa-tabaqa">{kulfatTabaqa}</p>
+              )}
+              <ul className="luba__hudud">
+                {hududTathbeet.map((hadd, martaba) => (
+                  <li key={`${String(martaba)}:${hadd}`} dir="auto">
+                    {hadd}
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
           {yashtaghil ? (
             <p className="luba__nass-hadi luba__tahdheer">

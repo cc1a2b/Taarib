@@ -13,9 +13,9 @@
 //!
 //! ## Every engine answers, including the ones that cannot be extracted
 //!
-//! [`Mustakhrij::li_aila`] returns a value for all ten families. Six extract;
-//! four do not, and each of those four says why in words the user reads.
-//! Returning [`None`] for an unsupported engine would push the explanation to
+//! [`Mustakhrij::li_aila`] returns a value for all eleven families. Ten
+//! extract; the unidentified one does not, and it says why in words the user
+//! reads. Returning [`None`] for an unsupported engine would push the explanation to
 //! the caller, and a caller with no explanation writes "extraction failed",
 //! which is both unhelpful and false — nothing failed, the engine is one this
 //! build has no reader for and the overlay is the answer.
@@ -25,7 +25,7 @@
 //! Runtime capture applies to *every* engine, as a supplement where extraction
 //! works and as the whole answer where it does not. It is therefore not a
 //! variant here; [`Mustakhrij::yastafeed_min_iltiqat`] says whether it is worth
-//! offering, which is true for all ten and stated rather than assumed.
+//! offering, which is true for all eleven and stated rather than assumed.
 
 use std::path::Path;
 
@@ -47,6 +47,8 @@ pub enum Mustakhrij {
     /// One of the four script engines, which share an entry point because they
     /// share a crate and differ only in which reader it dispatches to.
     Nusus,
+    /// Capcom's `BIO4`: the `DICT` dictionaries under the game's data directory.
+    Qamus,
     /// No static extractor exists for this engine.
     LaShay {
         /// Why, in Arabic.
@@ -75,6 +77,7 @@ impl Mustakhrij {
             | AilatMuharrik::Renpy
             | AilatMuharrik::GameMaker
             | AilatMuharrik::Electron => Self::Nusus,
+            AilatMuharrik::Bio4 => Self::Qamus,
             AilatMuharrik::Majhul => Self::LaShay {
                 sabab_arabi: "لم يُتعرَّف على محرّك هذه اللعبة، ولا يمكن اختيار طريقة استخراج \
                               بدون معرفته. يمكن التقاط النصوص أثناء اللعب بدلًا من ذلك.",
@@ -101,7 +104,12 @@ impl Mustakhrij {
     #[must_use]
     pub const fn yastafeed_min_iltiqat(self) -> bool {
         match self {
-            Self::Unity | Self::Unreal | Self::Godot | Self::Nusus | Self::LaShay { .. } => true,
+            Self::Unity
+            | Self::Unreal
+            | Self::Godot
+            | Self::Nusus
+            | Self::Qamus
+            | Self::LaShay { .. } => true,
         }
     }
 
@@ -113,6 +121,7 @@ impl Mustakhrij {
             Self::Unreal => "unreal",
             Self::Godot => "godot",
             Self::Nusus => "nusus",
+            Self::Qamus => "qamus",
             Self::LaShay { .. } => "none",
         }
     }
@@ -149,6 +158,7 @@ pub fn istakhrij(
         Mustakhrij::Unreal => Ok(crate::unreal::istakhrij(jidhr)),
         Mustakhrij::Godot => Ok(crate::godot::istakhrij(jidhr)),
         Mustakhrij::Nusus => Ok(crate::nusus::istakhrij(jidhr, aila)),
+        Mustakhrij::Qamus => Ok(crate::qamus::istakhrij(jidhr)),
         Mustakhrij::LaShay { .. } => Err(KhataIstikhraj::MuharrikGhayrMadum {
             aila: format!("{aila:?}"),
         }),

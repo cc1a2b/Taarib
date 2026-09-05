@@ -64,9 +64,15 @@ use taarib_usus::khata_min;
 pub enum KhataTabaqa {
     /// The graphics API this build was asked to hook is not one it implements.
     ///
-    /// Distinct from "the hook failed": this is Metal on a Windows build, or a
-    /// D3D9 game, and the answer is a different tier or a different platform
-    /// rather than a retry.
+    /// Distinct from "the hook failed": this is Metal on a Windows build, and
+    /// the answer is a different tier or a different platform rather than a
+    /// retry.
+    ///
+    /// It used to name Direct3D 9 as the other example. That is no longer true
+    /// — [`crate::d3d9`] is a backend now — and the sentence is corrected here
+    /// rather than left, because a documented refusal that has stopped being a
+    /// refusal is the kind of stale comment somebody later treats as a
+    /// requirement.
     #[error("{api} is not a graphics API this build can hook")]
     ApiGhayrMadum {
         /// The API as it was identified.

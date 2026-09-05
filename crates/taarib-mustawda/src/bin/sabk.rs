@@ -368,7 +368,7 @@ pub fn ijri(
         let raqm = shareeha(madkhal.luba);
         mahtawayat
             .entry(raqm)
-            .or_insert_with(|| MuhtawaShareeha { ruqaa: BTreeMap::new(), aswat: BTreeMap::new() })
+            .or_default()
             .ruqaa
             .entry(madkhal.luba)
             .or_default()
@@ -378,14 +378,14 @@ pub fn ijri(
         let raqm = shareeha(luba);
         mahtawayat
             .entry(raqm)
-            .or_insert_with(|| MuhtawaShareeha { ruqaa: BTreeMap::new(), aswat: BTreeMap::new() })
+            .or_default()
             .aswat
             .insert(luba, qaima);
     }
 
     let mut basmat: BTreeMap<u16, Basma> = BTreeMap::new();
     for raqm in 0..taarib_mustawda::fahras::ADAD_SHARAIH {
-        let farigha = MuhtawaShareeha { ruqaa: BTreeMap::new(), aswat: BTreeMap::new() };
+        let farigha = MuhtawaShareeha::default();
         let muhtawa = mahtawayat.get(&raqm).unwrap_or(&farigha);
         let bayt = serde_json::to_vec(muhtawa).map_err(|khata| khata.to_string())?;
         let nisbi = masar_shareeha(raqm).map_err(|khata| khata.to_string())?;

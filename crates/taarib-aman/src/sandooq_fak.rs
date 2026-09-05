@@ -496,10 +496,15 @@ pub fn fak_ila_hajr(masdar: &Path, jidhr_hajr: &Path) -> NatijatAman<MuhtawaHajr
 
 /// Removes a quarantine directory and everything in it, treating "gone" as success.
 ///
+/// Takes a proved [`masarat::HadafHadhf`] rather than a path. Quarantine is the
+/// one directory the product empties recursively, on every launch, and the proof
+/// is what keeps that sweep from ever resolving to the data root above it —
+/// build it with [`masarat::Masarat::hadaf_hadhf`].
+///
 /// # Errors
 ///
 /// [`KhataAman::FakFashil`] when the directory exists and cannot be removed.
-pub fn tanzif_hajr(jidhr_hajr: &Path) -> NatijatAman<()> {
+pub fn tanzif_hajr(jidhr_hajr: &masarat::HadafHadhf) -> NatijatAman<()> {
     masarat::hadhf_mujallad(jidhr_hajr).map_err(|khata| KhataAman::FakFashil {
         sabab: format!("the quarantine directory could not be cleared: {khata}"),
     })

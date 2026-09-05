@@ -1966,3 +1966,464 @@ pub fn fajwa_muqtaraha(sutur: &[SatrMaqru]) -> u32 {
     let wasit = irtifaat.get(mawdi).copied().unwrap_or(20);
     wasit.saturating_mul(3).checked_div(2).unwrap_or(20).max(4)
 }
+
+// ---------------------------------------------------------------------------
+// Refusal
+// ---------------------------------------------------------------------------
+
+/// A count as `f64`, with the precision loss stated once.
+///
+/// Every value that reaches this is a character count or a token count over one
+/// region's worth of text, which is orders of magnitude below 2^53.
+const fn adad_f64(qeema: usize) -> f64 {
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "character and token counts over one region are far below 2^53, where the \
+                  conversion is exact"
+    )]
+    {
+        qeema as f64
+    }
+}
+
+/// The punctuation that appears in game text.
+///
+/// Not "safe ASCII". A list of what a dialogue box, a menu label and a HUD
+/// readout genuinely contain, so that everything outside it counts as a
+/// character the recognizer invented.
+const RUMUZ_MAQBULA: &str = ".,:;'\"-()[]{}/\\%&+*=<>#@$_|~`^…—–°′″×÷";
+
+/// The only single-letter words English has.
+///
+/// Two of them, which is what makes a line full of stray single letters a
+/// measurable signal rather than a guess. A key name — the `F` in "Press F" —
+/// is a third case, and it is why this is counted rather than vetoed.
+const KALIMAT_HARF: [char; 4] = ['a', 'A', 'i', 'I'];
+
+/// How far a read may be from looking like text before it is refused.
+///
+/// Every number here was set against a measured corpus rather than chosen —
+/// see the harness in the phase-29 measurement notes. They are exposed because
+/// the right value differs between a game whose HUD is mostly numbers and one
+/// whose dialogue is prose, and because a threshold nobody can move is a
+/// threshold that will be wrong for somebody.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HududQubul {
+    /// The largest fraction of characters that may be ones this crate does not
+    /// believe are text.
+    pub nisbat_ramz: f64,
+    /// The largest fraction of whitespace-separated tokens that may be
+    /// malformed in the sense of [`kalima_mushawwaha`].
+    pub nisbat_tashawwuh: f64,
+    /// The fewest characters a read may carry and still be worth translating.
+    ///
+    /// One character is never a sentence and is very often a detector firing on
+    /// a UI decoration. Two is the floor rather than one because `OK` and `XI`
+    /// are real.
+    pub adna_huruf: usize,
+    /// How many glyphs the recognizer may report it could not identify.
+    ///
+    /// Zero. The marker is not noise and it is not a threshold judgement: it is
+    /// the engine stating that it failed on that glyph, and the letters it put
+    /// either side of a failure are not measurements either. One is enough to
+    /// refuse the region.
+    pub aqsa_majhula: usize,
+    /// For [`hukm_tawafuq`]: the largest normalized edit distance between two
+    /// independent reads of one region before neither is trusted.
+    pub aqsa_khilaf: f64,
+}
+
+impl Default for HududQubul {
+    fn default() -> Self {
+        Self {
+            nisbat_ramz: 0.12,
+            nisbat_tashawwuh: 0.34,
+            adna_huruf: 2,
+            aqsa_majhula: 0,
+            aqsa_khilaf: 0.25,
+        }
+    }
+}
+
+/// Whether a read is fit to be translated and drawn, and why not when it is not.
+///
+/// The reason is a sentence rather than a code because it is shown to the
+/// player in the control panel next to the region that produced it. "This
+/// region was read as `N 4 2 ? i m i? iAW` and refused: 8 of its 12 tokens are
+/// malformed" is something a user can act on — they can move the region, or
+/// turn the region off. "Low confidence" is not.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HukmQira {
+    /// Translate it.
+    Maqbul,
+    /// Do not. A confidently wrong subtitle is worse than no subtitle.
+    Marfud {
+        /// What was wrong, in one sentence.
+        sabab: String,
+    },
+}
+
+impl HukmQira {
+    /// Whether the read may be used.
+    #[must_use]
+    pub const fn maqbul(&self) -> bool {
+        matches!(self, Self::Maqbul)
+    }
+
+    /// The refusal's reason, or [`None`] when there was none.
+    #[must_use]
+    pub fn sabab(&self) -> Option<&str> {
+        match self {
+            Self::Maqbul => None,
+            Self::Marfud { sabab } => Some(sabab),
+        }
+    }
+}
+
+/// Whether one whitespace-separated token has a shape ordinary text does not.
+///
+/// Four clauses, and none of them is a dictionary — a dictionary would refuse
+/// proper nouns, invented place names and every game's own vocabulary, which is
+/// most of what an overlay has to read. These are shape rules, and each one
+/// exists because the measured corpus produced it:
+///
+/// **A case change inside a word.** `iAW`, `REBSDTo`. Prose has `McCoy` and
+/// `iPhone`, so this is counted rather than vetoed: one such token in a line is
+/// ordinary, half of them is not.
+///
+/// **Letters and digits in one token.** `Me2`, `O1O00TC`. Real text does this
+/// in weapon names and version numbers, so again it is counted.
+///
+/// **A stray single character.** `e`, `d`, `B`, `R`, `M` — five of the eleven
+/// tokens in one measured read. English has two single-letter words and a game
+/// has key names, so `a`, `A`, `i`, `I`, any digit and any lone punctuation
+/// mark are exempt and everything else is counted. `Press F to pick up the
+/// lantern` puts one such token in seven and stays well under the ceiling;
+/// `e d B R M BEUA8G ?R THENE` puts five in eight and does not.
+///
+/// **All punctuation, more than one character.** `?!`, `»«`. A detector fired
+/// on a border or a gradient.
+///
+/// There is no vowel-frequency clause, and its absence is deliberate: it was
+/// written, measured against the corpus, and removed, because the only rule
+/// that caught `GUPKNS` also caught `Blacksmith` and `strengths`. A clause with
+/// no measured case behind it is a guess wearing a threshold.
+#[must_use]
+pub fn kalima_mushawwaha(kalima: &str) -> bool {
+    let huruf: Vec<char> = kalima.chars().collect();
+    if huruf.is_empty() {
+        return false;
+    }
+
+    if huruf.len() == 1 {
+        let wahid = huruf.first().copied().unwrap_or(' ');
+        // A lone letter that is not a word and not a key name. Digits and
+        // punctuation are ordinary on their own — `3`, `-`, `/` all appear in
+        // real HUD text.
+        return wahid.is_alphabetic() && !KALIMAT_HARF.contains(&wahid);
+    }
+
+    let mut sabiq_saghir = false;
+    let mut fiha_harf = false;
+    let mut fiha_raqm = false;
+    let mut fiha_ghayr = false;
+    let mut taghyeer_halat = false;
+
+    for &harf in &huruf {
+        if harf.is_alphabetic() {
+            fiha_harf = true;
+            if harf.is_uppercase() && sabiq_saghir {
+                taghyeer_halat = true;
+            }
+            sabiq_saghir = harf.is_lowercase();
+        } else {
+            if harf.is_numeric() {
+                fiha_raqm = true;
+            } else {
+                fiha_ghayr = true;
+            }
+            // A hyphen does not carry case across itself: `well-Known` is
+            // ordinary text and a rule that fired on it would refuse dialogue.
+            sabiq_saghir = false;
+        }
+    }
+
+    if !fiha_harf && !fiha_raqm && fiha_ghayr {
+        return true;
+    }
+    taghyeer_halat || (fiha_harf && fiha_raqm)
+}
+
+/// How many unread-glyph markers one token carries.
+///
+/// The portable engine emits `?` for a glyph it could not identify, which puts
+/// the same character in two roles. The rule that separates them is positional
+/// and it is exact: a `?` followed only by more punctuation is the punctuation
+/// mark — `Save your progress?`, `What?!`, `Ready?` — and a `?` with letters
+/// after it is the engine saying, in the only way it can, that it did not read
+/// that glyph. `FW?REDLANTERN` is the second, and it came from a wordmark whose
+/// real text is `THE RED LANTERN`.
+fn alamat_majhula(kalima: &str) -> usize {
+    let huruf: Vec<char> = kalima.chars().collect();
+    let mut adad = 0_usize;
+    for (mawdi, &harf) in huruf.iter().enumerate() {
+        if harf != '?' {
+            continue;
+        }
+        let baqi_rumuz = huruf
+            .get(mawdi.saturating_add(1)..)
+            .is_none_or(|baqi| baqi.iter().all(|&b| !b.is_alphanumeric()));
+        if !baqi_rumuz {
+            adad = adad.saturating_add(1);
+        }
+    }
+    adad
+}
+
+/// Whether one character is one this crate believes the screen contained.
+fn harf_maqbul(harf: char) -> bool {
+    harf.is_alphanumeric() || harf == ' ' || harf == '?' || harf == '!'
+        || RUMUZ_MAQBULA.contains(harf)
+}
+
+/// The shape statistics a refusal is decided on.
+///
+/// Returned together because the control panel shows all of them, and because a
+/// caller tuning [`HududQubul`] for one game needs to see the numbers the
+/// thresholds are being compared against rather than only the verdict.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IhsaBunya {
+    /// Fraction of characters outside the set game text uses.
+    pub nisbat_ramz: f64,
+    /// Fraction of tokens malformed per [`kalima_mushawwaha`].
+    pub nisbat_tashawwuh: f64,
+    /// How many characters were read in total.
+    pub adad_huruf: usize,
+    /// How many glyphs the engine reported it could not identify.
+    pub alamat_majhula: usize,
+}
+
+/// Measures a read's shape without judging it.
+#[must_use]
+pub fn ihsa_bunya(nass: &str) -> IhsaBunya {
+    let kalimat: Vec<&str> = nass.split_whitespace().collect();
+    let mut ramz = 0_usize;
+    let mut kull = 0_usize;
+    let mut majhula = 0_usize;
+    for kalima in &kalimat {
+        for harf in kalima.chars() {
+            kull = kull.saturating_add(1);
+            if !harf_maqbul(harf) {
+                ramz = ramz.saturating_add(1);
+            }
+        }
+        majhula = majhula.saturating_add(alamat_majhula(kalima));
+    }
+    let mushawwaha = kalimat.iter().filter(|kalima| kalima_mushawwaha(kalima)).count();
+
+    IhsaBunya {
+        nisbat_ramz: if kull == 0 { 0.0 } else { adad_f64(ramz) / adad_f64(kull) },
+        nisbat_tashawwuh: if kalimat.is_empty() {
+            0.0
+        } else {
+            adad_f64(mushawwaha) / adad_f64(kalimat.len())
+        },
+        adad_huruf: kull,
+        alamat_majhula: majhula,
+    }
+}
+
+/// The cheap gate: refuse a read whose shape is not the shape of text.
+///
+/// One pass over the string the engine already produced, so it costs nothing
+/// next to recognition and can run on every region every time. It catches the
+/// failure that matters most — a detector firing on a texture, a gradient or a
+/// logo, and a recognizer dutifully returning letters for it — and it catches
+/// it without a dictionary, a language model, or a confidence the engine does
+/// not have.
+///
+/// It does not catch a *plausible* wrong read. `MARVEL FARERDIANS` for
+/// `MARVEL GUARDIANS OF THE GALAXY` passes this gate, and [`hukm_tawafuq`] is
+/// what is left for that case.
+#[must_use]
+pub fn hukm_bunya(sutur: &[SatrMaqru], hudud: &HududQubul) -> HukmQira {
+    let nass = SatrMaqru::fiqra(sutur);
+    let IhsaBunya { nisbat_ramz, nisbat_tashawwuh, adad_huruf: adad, alamat_majhula } =
+        ihsa_bunya(&nass);
+
+    if adad < hudud.adna_huruf {
+        return HukmQira::Marfud {
+            sabab: format!(
+                "the region was read as {adad} character(s), which is below the {} this build \
+                 will translate",
+                hudud.adna_huruf
+            ),
+        };
+    }
+    if alamat_majhula > hudud.aqsa_majhula {
+        return HukmQira::Marfud {
+            sabab: format!(
+                "the recognizer marked {alamat_majhula} glyph(s) as ones it could not identify, \
+                 above the {} this build tolerates — it is reporting its own failure and the \
+                 letters around them are guesses",
+                hudud.aqsa_majhula
+            ),
+        };
+    }
+    if nisbat_ramz > hudud.nisbat_ramz {
+        return HukmQira::Marfud {
+            sabab: format!(
+                "{:.0}% of what was read is characters this build does not believe were on the \
+                 screen, above the {:.0}% ceiling — the recognizer was guessing at glyphs",
+                nisbat_ramz * 100.0,
+                hudud.nisbat_ramz * 100.0
+            ),
+        };
+    }
+    if nisbat_tashawwuh > hudud.nisbat_tashawwuh {
+        return HukmQira::Marfud {
+            sabab: format!(
+                "{:.0}% of the words read have a shape ordinary text does not — a case change \
+                 inside a word, letters mixed with digits, or a long run with no vowel — above \
+                 the {:.0}% ceiling",
+                nisbat_tashawwuh * 100.0,
+                hudud.nisbat_tashawwuh * 100.0
+            ),
+        };
+    }
+    HukmQira::Maqbul
+}
+
+/// Levenshtein distance in characters.
+///
+/// Two rows rather than a full matrix: the strings compared here are one
+/// region's worth of text, but this runs per region per pass and the full
+/// matrix would be an allocation proportional to the product of two lengths for
+/// a number that only needs the previous row.
+fn masafat_tahrir(awwal: &str, thani: &str) -> usize {
+    let a: Vec<char> = awwal.chars().collect();
+    let b: Vec<char> = thani.chars().collect();
+    if a.is_empty() {
+        return b.len();
+    }
+    if b.is_empty() {
+        return a.len();
+    }
+    let mut sabiq: Vec<usize> = (0..=b.len()).collect();
+    let mut hali = vec![0_usize; b.len().saturating_add(1)];
+    for (i, ha) in a.iter().enumerate() {
+        if let Some(khana) = hali.first_mut() {
+            *khana = i.saturating_add(1);
+        }
+        for (j, hb) in b.iter().enumerate() {
+            let takleefa = usize::from(ha != hb);
+            let qutri = sabiq.get(j).copied().unwrap_or(0).saturating_add(takleefa);
+            let fawq = sabiq.get(j.saturating_add(1)).copied().unwrap_or(0).saturating_add(1);
+            let yasar = hali.get(j).copied().unwrap_or(0).saturating_add(1);
+            if let Some(khana) = hali.get_mut(j.saturating_add(1)) {
+                *khana = qutri.min(fawq).min(yasar);
+            }
+        }
+        core::mem::swap(&mut sabiq, &mut hali);
+    }
+    sabiq.last().copied().unwrap_or(0)
+}
+
+/// How far apart two reads of one region are, zero to one.
+///
+/// Normalized by the longer of the two, so a read that is a truncation of the
+/// other scores by how much was lost rather than by how long the survivor is.
+#[must_use]
+pub fn khilaf_qiraatayn(awwal: &[SatrMaqru], thani: &[SatrMaqru]) -> f64 {
+    let a = SatrMaqru::fiqra(awwal);
+    let b = SatrMaqru::fiqra(thani);
+    let tul = a.chars().count().max(b.chars().count());
+    if tul == 0 {
+        return 0.0;
+    }
+    adad_f64(masafat_tahrir(&a, &b)) / adad_f64(tul)
+}
+
+/// The expensive gate: refuse a region two independent reads disagree about.
+///
+/// The two reads are the same engine over the same region through two different
+/// preprocessing paths — the raw capture, and
+/// [`crate::iltiqat_shasha::MuhassinSura::hassin_lil_qari`]'s output. That is a
+/// corroboration test rather than a heuristic about English, and it is the only
+/// thing in this crate that catches a *plausible* wrong read: when a region is
+/// genuinely legible both paths converge on the same string, and when it is not
+/// they diverge, because what each is reading is its own preprocessing
+/// artefacts rather than the text.
+///
+/// It costs a second recognition pass, which is the most expensive thing this
+/// crate does. It is therefore not the default: it is what a caller turns on
+/// for a region the structural gate keeps passing and the player keeps
+/// reporting as wrong, and what a caller runs once when a region is first drawn
+/// to decide whether that region is worth reading at all.
+#[must_use]
+pub fn hukm_tawafuq(
+    awwal: &[SatrMaqru],
+    thani: &[SatrMaqru],
+    hudud: &HududQubul,
+) -> HukmQira {
+    let khilaf = khilaf_qiraatayn(awwal, thani);
+    if khilaf > hudud.aqsa_khilaf {
+        return HukmQira::Marfud {
+            sabab: format!(
+                "two preprocessing paths read this region differently — {:.0}% of the \
+                 characters disagree, above the {:.0}% ceiling — so neither read is what is on \
+                 the screen",
+                khilaf * 100.0,
+                hudud.aqsa_khilaf * 100.0
+            ),
+        };
+    }
+    HukmQira::Maqbul
+}
+
+/// What can honestly be said about one region's read.
+///
+/// The distinction this type exists for is the one the module header opens
+/// with: [`ThiqatMintaqa::thiqa`] is [`None`] when the engine reports no
+/// confidence, and it is [`None`] rather than [`THIQA_GHAYR_MAQISA`] because a
+/// caller that receives a number will compare it against a threshold and a
+/// caller that receives [`None`] cannot. The stand-in constant stays on
+/// [`SatrMaqru`] for the engines that have to put *something* there; nothing
+/// that reports upward should carry it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ThiqatMintaqa {
+    /// The engine's own lowest per-line confidence, or [`None`] when it
+    /// measures none. Never this crate's stand-in.
+    pub thiqa: Option<u8>,
+    /// Whether the read may be translated.
+    pub hukm: HukmQira,
+}
+
+impl ThiqatMintaqa {
+    /// Judges a set of lines with the structural gate.
+    #[must_use]
+    pub fn min_sutur(sutur: &[SatrMaqru], hudud: &HududQubul) -> Self {
+        let maqisa = !sutur.is_empty() && sutur.iter().all(|satr| satr.maqisa);
+        Self {
+            thiqa: if maqisa { SatrMaqru::adna_thiqa(sutur) } else { None },
+            hukm: hukm_bunya(sutur, hudud),
+        }
+    }
+
+    /// The sentence the control panel shows.
+    ///
+    /// Says "unmeasured" where the engine supplies no confidence, in those
+    /// words, rather than printing the stand-in and letting a reader assume the
+    /// number came from somewhere.
+    #[must_use]
+    pub fn wasf(&self) -> String {
+        let thiqa = self.thiqa.map_or_else(
+            || "confidence: unmeasured — this engine reports none".to_owned(),
+            |q| format!("confidence: {q}%, the engine's own"),
+        );
+        match &self.hukm {
+            HukmQira::Maqbul => format!("{thiqa}; accepted"),
+            HukmQira::Marfud { sabab } => format!("{thiqa}; refused — {sabab}"),
+        }
+    }
+}

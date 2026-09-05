@@ -344,7 +344,8 @@
    sit on somebody else's artwork, where the darkest step is the only one that
    keeps a label legible over an arbitrary picture. */
 .bitaqa__wasm-lugha,
-.bitaqa__wasm-jahiziya {
+.bitaqa__wasm-jahiziya,
+.bitaqa__wasm-muntaj {
   display: inline-flex;
   align-items: center;
   /* Shrinkable, so two marks on a compact card cut themselves short rather
@@ -390,6 +391,104 @@
 .bitaqa__wasm-jahiziya {
   color: var(--nass-2);
   border-inline-end: var(--samk-hadd-barz) solid var(--tanbeeh);
+}
+
+/* --------------------------------------------------------------------------
+   The product plate: what Taarib will DO to this game.
+
+   The bottom-leading corner of the artwork, on its own line, because this is
+   the one plate that appears on every card — every game has a tier — and the
+   mark that is always present is the mark that can least afford to be the third
+   item in a strip already holding two. On the compact card that strip is 200px
+   wide and already ellipsises `عربية كاملة` against `لا يعمل بعد`; a third
+   competitor would have cut all three. Here it has the whole well.
+
+   Its own element, absolutely positioned, with no wrapper: one child does not
+   need a flex container, and in a ten-thousand-card grid a container per card
+   is ten thousand nodes that hold one thing. `inset-inline-start` puts it on
+   the leading edge in both reading directions, and the `max-inline-size` is the
+   well less the same inset on both sides, so an over-long label ellipsises
+   inside the picture instead of running under the ring.
+
+   THE COLOUR GRAMMAR. Which of the three products a game gets is carried by the
+   WORDS — they are three unrelated phrases, not three grades of one — and the
+   rule carries the one distinction that changes what happens to the reader's
+   disk:
+
+     teal        Taarib goes inside the game. Its files change, a backup is
+                 taken, and a store update can undo it. True of the first two
+                 tiers alike, which is why they share the accent: replacing the
+                 text in the engine and drawing the text in the engine's place
+                 are both installations.
+     no accent   Taarib never touches the game. Nothing is written, nothing is
+                 backed up, and nothing survives Taarib closing.
+     red         There is no product at all: an anti-cheat was found and nothing
+                 will run.
+
+   Three steps and not five, because a fourth tone would have to be a fade of
+   the teal, and `--tamyeez-khafit` is a 16% mix — a rule nobody can tell from
+   no rule at all across four palettes. A distinction that only survives on one
+   background is not a distinction.
+
+   Everything else about the plate is identical in all five states — the same
+   ground, the same hairline, the same `--nass-2` label at `--qiyas-1`. That is
+   deliberate and it is what makes a hundred of them survivable: the plate is
+   quieter than the readiness mark above it, the accent is an edge rather than a
+   fill, and a grid full of covers still reads as covers.
+   -------------------------------------------------------------------------- */
+
+.bitaqa__wasm-muntaj {
+  position: absolute;
+  /* Block, against the `inline-flex` the shared rule above sets. This is the
+     longest label on the card — an unidentified engine names the miss and the
+     product it leaves — so it is the one plate that actually has to ellipsise
+     at the compact size, where it has 186px to say it in. `text-overflow` acts
+     on a block container's inline content; the same declaration on a flex
+     container has an anonymous flex item to act on instead and clips mid-glyph
+     rather than cutting to an ellipsis. */
+  display: block;
+  /* The same step inside the artwork the top strip takes, measured from the
+     other edge, so the two plates are inset by the same amount and the picture
+     between them is centred. */
+  inset-block-end: calc(var(--ihtiyat-halqa) + var(--misafa-6));
+  inset-inline-start: calc(var(--ihtiyat-halqa) + var(--misafa-6));
+  max-inline-size: calc(100% - 2 * (var(--ihtiyat-halqa) + var(--misafa-6)));
+  color: var(--nass-2);
+  /* The rule the grammar above is written on. `--hadd-qawi` is the plate's own
+     hairline restated, which is what "no accent" has to be: a plate whose
+     leading edge simply had no border would be three pixels narrower than the
+     other four and the column of them would not line up. */
+  border-inline-start: var(--samk-hadd-barz) solid var(--hadd-qawi);
+  /* The card is one hit target; this is paint. */
+  pointer-events: none;
+}
+
+/* The two tiers that install. Text replaced inside the engine, and text Taarib
+   draws where the engine's text was: different products, same consequence for
+   the files on disk, so the same accent. */
+.bitaqa__wasm-muntaj--kamil,
+.bitaqa__wasm-muntaj--rasm {
+  border-inline-start-color: var(--tamyeez);
+}
+
+/* The overlay, and the overlay reached because nothing recognised the engine.
+   No accent at all, which is the point: the teal means Taarib went inside the
+   game, and for these two it never does. They share the neutral rule because
+   they are the same product — the plates differ in what they say, not in what
+   they promise. Declared rather than left to the base rule so the grammar is
+   legible in this file rather than by absence. */
+.bitaqa__wasm-muntaj--tabaqa,
+.bitaqa__wasm-muntaj--majhul {
+  border-inline-start-color: var(--hadd-qawi);
+}
+
+/* No product. Red, and the label steps up to `--nass-1` — the one plate on the
+   card allowed either, because it is the one fact here that costs an account
+   rather than an evening, and it is rare enough that a grid does not fill with
+   it. */
+.bitaqa__wasm-muntaj--marfuda {
+  color: var(--nass-1);
+  border-inline-start-color: var(--khatar);
 }
 
 /* --------------------------------------------------------------------------

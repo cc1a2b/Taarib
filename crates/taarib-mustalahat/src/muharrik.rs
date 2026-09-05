@@ -34,6 +34,27 @@ pub enum AilatMuharrik {
     GameMaker,
     /// Electron, NW.js, or anything else drawing its interface in a browser.
     Electron,
+    /// Capcom's `BIO4` codebase — the GameCube-era in-house engine written for
+    /// Resident Evil 4 in 2005 and carried into its later ports.
+    ///
+    /// Named after the string Capcom's own binary carries: the Windows version
+    /// resource of `bio4.exe` gives `InternalName` as `BIO4`, which is the
+    /// project name the engine was built under and the name of the data
+    /// directory it reads. Capcom never published a name or a version for it, so
+    /// there is no marketing name to use instead and no version number to
+    /// report.
+    ///
+    /// **It is not MT Framework, and the belief that it is is widespread and
+    /// wrong.** MT Framework was written for the seventh generation, ships its
+    /// assets as `.tex` inside `ARC\0` archives, and Capcom's own MT Framework
+    /// titles carry that string. `bio4.exe` contains no occurrence of
+    /// `MT Framework` or `MTFramework`; its textures are `.tpl`, the GameCube
+    /// texture format, magic `0x12345678`; its compression container is `RDLX`;
+    /// and the eight files under it that do end in `.arc` open with
+    /// `0x55AA382D`, which is Nintendo's U8 archive and not MT Framework's.
+    /// [`crate::muharrik`]'s detector in `taarib-muharrik` records each of those
+    /// so that a reader who expects MT Framework can see why it is not.
+    Bio4,
     /// Nothing Taarib recognises. A first-class answer, not a failure.
     Majhul,
 }
@@ -52,6 +73,10 @@ impl AilatMuharrik {
             Self::Renpy => "Ren'Py",
             Self::GameMaker => "GameMaker Studio",
             Self::Electron => "Electron",
+            // The engine has no published name. This is the one Capcom itself
+            // wrote into the binary, with the company in front of it so that a
+            // reader who has never met the string knows whose engine it is.
+            Self::Bio4 => "Capcom BIO4",
             Self::Majhul => "غير معروف",
         }
     }

@@ -1,0 +1,24 @@
+[package]
+name = "taarib-muhawwil-bio4"
+description = "محوّل تعريب لمحرّك بيو٤ — the BIO4 adapter: Resident Evil 4's `.fnt` font container and its embedded GameCube TPL, the fixed-cell glyph grid, the ImagePack texture payload, and the cell transport that carries shaped Arabic through an engine with no shaper."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+# The glyph set comes from shaping real strings, and the images come from the
+# one rasterizer this product has. Neither is re-implemented here: this crate
+# places what `lawha` packed into the fixed cells BIO4 addresses, which is a
+# grid no shelf allocator can express.
+taarib-saff = { workspace = true }
+taarib-lawha = { workspace = true }
+
+thiserror = { workspace = true }

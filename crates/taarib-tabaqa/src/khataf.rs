@@ -2,7 +2,7 @@
 //! off again.
 //!
 //! Every unsafe operation this crate performs against a live process is in this
-//! module. The four backends draw; none of them installs itself, reads a method
+//! module. The five backends draw; none of them installs itself, reads a method
 //! table, or changes page protection. Keeping it that way is not tidiness: it
 //! means the question "what does the overlay do to somebody's game?" has one
 //! file as its answer, and a reviewer can read that file in one sitting.
@@ -15,7 +15,7 @@
 //! nothing resembles a debugger attaching. [`hal_yumkin`] reports it first for
 //! that reason.
 //!
-//! **A vtable write** is how the other three are reached, and it is worth being
+//! **A vtable write** is how the other four are reached, and it is worth being
 //! precise about what that means rather than calling it hooking and moving on.
 //! A COM interface's first machine word points at an array of function
 //! pointers, shared by every instance of that class in the process. Replacing
@@ -112,6 +112,78 @@ pub const KHANAT_RESIZE: usize = KHANAT_PRESENT + 1 + 4;
 /// its own command list without one. Capturing the first queue the game submits
 /// on is the documented technique and the only one available.
 pub const KHANAT_TANFEEDH: usize = 3 + 4 + 1;
+
+/// The vtable slot of `IDirect3DDevice9::Reset`.
+///
+/// `IUnknown` contributes three, and `IDirect3DDevice9` declares its own methods
+/// in one flat list with no intermediate interfaces at all — which is what makes
+/// these three numbers larger and more fragile than the DXGI ones, and why each
+/// is written as a count of the methods before it rather than as a literal.
+///
+/// Before `Reset`: `TestCooperativeLevel`, `GetAvailableTextureMem`,
+/// `EvictManagedResources`, `GetDirect3D`, `GetDeviceCaps`, `GetDisplayMode`,
+/// `GetCreationParameters`, `SetCursorProperties`, `SetCursorPosition`,
+/// `ShowCursor`, `CreateAdditionalSwapChain`, `GetSwapChain`,
+/// `GetNumberOfSwapChains` — thirteen.
+///
+/// Hooked alongside `Present`, and not optionally. A D3D9 device is *lost* on an
+/// alt-tab out of exclusive fullscreen, and `Reset` is how the game gets it
+/// back — but `Reset` is refused while anybody holds a `D3DPOOL_DEFAULT`
+/// resource or a state block, and the overlay holds a state block for the whole
+/// session. Discovering the reset afterwards is too late: the game has already
+/// had a call fail that has never failed it before. See [`crate::d3d9`].
+pub const KHANAT_ISTIAADA: usize = 3 + 13;
+
+/// The vtable slot of `IDirect3DDevice9::Present`.
+///
+/// One past [`KHANAT_ISTIAADA`], because `Present` immediately follows `Reset`
+/// in the interface.
+///
+/// This is the hook point rather than `EndScene`, which is the other candidate
+/// and is not equivalent: `EndScene` fires once per completed scene against
+/// whatever surface is bound, so a game with a shadow pass calls it several
+/// times a frame and an overlay on it draws into a shadow map. `Present` fires
+/// once per frame with the finished picture in the backbuffer. [`crate::d3d9`]'s
+/// header sets out the whole comparison.
+pub const KHANAT_TAQDEEM9: usize = KHANAT_ISTIAADA + 1;
+
+/// The vtable slot of `IDirect3DDevice9Ex::ResetEx`.
+///
+/// `IDirect3DDevice9` ends at `CreateQuery`, which is one hundred and eighteen
+/// counting from zero, so `IDirect3DDevice9Ex` begins at one hundred and
+/// nineteen. Before `ResetEx` it declares `SetConvolutionMonoKernel`,
+/// `ComposeRects`, `PresentEx`, `GetGPUThreadPriority`, `SetGPUThreadPriority`,
+/// `WaitForVBlank`, `CheckResourceResidency`, `SetMaximumFrameLatency`,
+/// `GetMaximumFrameLatency`, `CheckDeviceState`, `CreateRenderTargetEx`,
+/// `CreateOffscreenPlainSurfaceEx` and `CreateDepthStencilSurfaceEx` —
+/// thirteen.
+///
+/// Only ever written on a device that really implements `IDirect3DDevice9Ex`.
+/// A 9Ex device is not lost by an alt-tab, but `ResetEx` still destroys every
+/// `D3DPOOL_DEFAULT` resource and still refuses while a state block exists, so
+/// the release the hook performs is the same one.
+pub const KHANAT_ISTIAADA_MUMTADDA: usize = 119 + 13;
+
+/// The vtable slot of `IDirect3DDevice9Ex::PresentEx`.
+///
+/// Two past the start of `IDirect3DDevice9Ex`'s own methods:
+/// `SetConvolutionMonoKernel`, then `ComposeRects`, then `PresentEx`.
+///
+/// Hooked in addition to `Present` rather than instead of it. A 9Ex device
+/// exposes both and a game may call either — the two are separate entry points
+/// with separate slots, and a game that presents through `PresentEx` while only
+/// `Present` is hooked gets no overlay and no explanation.
+pub const KHANAT_TAQDEEM_MUMTADD: usize = 119 + 2;
+
+// The 9Ex slots are stated twice — once as a derivation in prose and once as
+// arithmetic — and the two must agree, because the prose is what a reviewer
+// checks against the headers and the arithmetic is what the process executes.
+const _: () = {
+    assert!(KHANAT_TAQDEEM9 == 17, "IDirect3DDevice9::Present is slot 17");
+    assert!(KHANAT_ISTIAADA == 16, "IDirect3DDevice9::Reset is slot 16");
+    assert!(KHANAT_TAQDEEM_MUMTADD == 121, "IDirect3DDevice9Ex::PresentEx is slot 121");
+    assert!(KHANAT_ISTIAADA_MUMTADDA == 132, "IDirect3DDevice9Ex::ResetEx is slot 132");
+};
 
 /// One replaced vtable entry, and everything needed to put it back.
 #[derive(Debug)]

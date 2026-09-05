@@ -21,8 +21,10 @@
 //! | --- | --- |
 //! | `khata` | every refusal this crate can produce, and which of the three responses it maps to: skip the frame, disable the overlay, or refuse to hook |
 //! | `sidq` | the tier-3 disclosure as a value the overlay cannot start without, rather than a dialog a caller is trusted to have shown |
-//! | `wajiha` | the shape every backend has: the frame contract, the per-frame budget, the surface description, and the lifecycle rules that are identical on all four APIs |
+//! | `wajiha` | the shape every backend has: the frame contract, the per-frame budget, the surface description, and the lifecycle rules that are identical on all five APIs |
 //! | `khataf` | every unsafe operation this crate performs against a live process: vtable reads and writes, page protection, module presence, and unhooking that verifies itself |
+//! | `istitlaa` | what a game's own files say before anything is installed into them: which graphics modules its executable imports, and which proxy slots a third party has already taken — including the one Taarib itself would take, which it refuses to take twice |
+//! | `d3d9` | the Direct3D 9 backend: a `D3DSBT_ALL` state block around a fixed-function draw, `Reset` handled so a lost device does not take the game with it, and the sRGB transfer function moved onto the processor because there is no shader to put it in |
 //! | `d3d11` | the Direct3D 11 backend: full pipeline state save and restore around each draw, staging read-back for capture |
 //! | `d3d12` | the Direct3D 12 backend: per-frame allocators, fence-synchronised resource lifetimes, the command queue captured because a swap chain cannot yield one |
 //! | `gl` | the OpenGL backend and its hand-written 3.3-core loader, with the complete global-state save and restore that OpenGL alone demands |
@@ -34,8 +36,23 @@
 //! | `manatiq` | regions — drawn with a mouse in an in-game editing mode, persisted per game in normalized coordinates, plus automatic detection of stable text blocks and per-region rules for when to translate |
 //! | `sijill_qira` | the reading history panel, so a player who missed a line can read it again without reloading a save |
 //! | `lawhat_tahakkum` | the in-game control panel: toggle, translate now, edit regions, history, opacity, font size, pause — rendered by Taarib's own renderer, depending on no UI library being present in the game |
+//! | `tatabbu` | a line of dialogue's identity across frames, and the moment its text stops moving — so a subtitle on screen for two hundred frames is one string and one translation rather than two hundred |
+//! | `watira` | the refresh governor: when the per-frame budget is exceeded the overlay gives up how often it reads the screen, never the frames it draws, and says so |
+//! | `mutarjim` | the two seams to a translation provider and to the shared translation memory, taken as trait objects so no HTTP stack or database is linked into a game's process |
+//! | `qissa` | the session: capture on the frame, recognize and translate off it, draw the most recent completed result |
 //!
-//! ## Four APIs, four honest implementations
+//! ## Five APIs, five honest implementations
+//!
+//! **Direct3D 9** — a vtable hook on `IDirect3DDevice9::Present` and `Reset`,
+//! plus `PresentEx` and `ResetEx` when the game made a 9Ex device. This is the
+//! backend for roughly 2002 to 2012, which is the densest era of story-driven PC
+//! games and was until now the one row of the coverage matrix the universal
+//! overlay could not reach either. It is not a translation of the D3D11 backend:
+//! D3D9 predates the fully programmable pipeline, so the draw is fixed-function
+//! texture stages rather than a shader, the save is the API's own state block
+//! rather than an enumerated list — because a `D3DCREATE_PUREDEVICE` game
+//! answers no `Get` call and an enumerated list would silently read nothing —
+//! and the device can be *lost* on an alt-tab, which nothing newer does.
 //!
 //! **Direct3D 11** — a vtable hook on `IDXGISwapChain::Present` and `Present1`,
 //! with `ResizeBuffers` handled so resolution changes and fullscreen
@@ -58,6 +75,20 @@
 //! documented extension point and using it is both more correct and more
 //! removable.
 //!
+//! ## A game the overlay cannot draw over says so before it is installed
+//!
+//! Every one of the five can fail to attach, and the tier's whole posture is
+//! that a failure is a capability report rather than a crash. [`qudra`] is the
+//! vocabulary that report is written in, and it has two producers.
+//!
+//! [`istitlaa`] produces one from a game's files rather than from a process, so
+//! "this game imports `d3d9.dll` and something else already owns the proxy slot
+//! Taarib would take" is an answer the installer gives before it writes
+//! anything, not a line in a log the player finds after the overlay silently did
+//! nothing. Each backend produces the other half from the live device — see
+//! [`d3d9::KhattafD3D9::qudra`], where whether the game made a losable device
+//! and whether its backbuffer can be read at all are first knowable.
+//!
 //! ## There is no second text path
 //!
 //! Every glyph the overlay draws comes from `saff` through `jisr`, out of
@@ -69,6 +100,12 @@
 //!
 //! - The overlay never changes game state and never writes into the game's
 //!   memory outside its own hook trampolines.
+//! - Taarib never takes a proxy slot another product has taken, and never
+//!   restores a function pointer it did not install. The first is [`istitlaa`],
+//!   answered before installation; the second is [`khataf::Khataf::fukk`],
+//!   which reads a slot back and leaves it alone when it holds somebody else's
+//!   hook. Games of the Direct3D 9 era attract third-party proxies, so both
+//!   rules are enforced rather than assumed.
 //! - Every hook is removable at runtime and the module unloads cleanly.
 //! - Frame time cost is measured and displayed in the control panel. A fallback
 //!   that silently halves someone's frame rate is not honest.
@@ -87,7 +124,7 @@
 //!
 //! ## Where the unsafe lives
 //!
-//! In `khataf`, and — for the four backends — in the calls each makes into its
+//! In `khataf`, and — for the five backends — in the calls each makes into its
 //! own graphics API. `khataf` owns everything done *to the process*: reading a
 //! method table, changing page protection, writing a function pointer,
 //! restoring it. The backends own only what is done *through a device the game
@@ -98,22 +135,46 @@
 #[cfg(feature = "hamula")]
 pub mod bidaya;
 pub mod iltiqat_shasha;
+pub mod istitlaa;
 pub mod khata;
 pub mod khataf;
 pub mod lawhat_tahakkum;
 pub mod manatiq;
+pub mod mutarjim;
 pub mod qira;
+pub mod qissa;
+pub mod qudra;
 pub mod rasm_tabaqa;
 pub mod sidq;
 pub mod sijill_qira;
 pub mod talqeem;
+pub mod tatabbu;
 pub mod wajiha;
+pub mod watira;
+
+/// The provider seam wired onto `taarib-tarjama`. See this crate's `tarjama`
+/// feature: it is off for the payload, which links no HTTP stack.
+#[cfg(feature = "tarjama")]
+pub mod wasil_tarjama;
 
 /// The OpenGL backend, on every platform that has one.
 pub mod gl;
 
+/// The fixed-function OpenGL backend, on every platform that has one.
+///
+/// A second backend rather than a branch in the first: a pre-shader context has
+/// none of the fifty-five entry points `gl` resolves, and it has a matrix
+/// stack, a texture environment and an attribute stack that `gl` has never
+/// heard of. [`gl_thabit::ikhtar`] is what decides between them, by asking the
+/// context rather than the module list.
+pub mod gl_thabit;
+
 /// The Vulkan layer and backend, on every platform that has one.
 pub mod vulkan;
+
+/// The Direct3D 9 backend.
+#[cfg(windows)]
+pub mod d3d9;
 
 /// The Direct3D 11 backend.
 #[cfg(windows)]
@@ -123,11 +184,40 @@ pub mod d3d11;
 #[cfg(windows)]
 pub mod d3d12;
 
+/// The Direct3D 8 backend, and the ninety-six-slot method table it verifies
+/// before it trusts.
+///
+/// Not gated to Windows, unlike the three Direct3D backends above it, and the
+/// reason is worth stating: nothing binds Direct3D 8, so every interface in
+/// that module is declared in it, and the only Windows-specific code left is
+/// the pair of functions that open `d3d8.dll` and make a throwaway device. The
+/// rest — the method table, the vertex packing, the colour conversion, the
+/// state sequencing and the hook bookkeeping — compiles anywhere, which is what
+/// lets the hook install, the unhook refusal and the table verification be
+/// exercised against a stub table on a machine with no Direct3D at all.
+pub mod d3d8;
+
+/// The Direct3D 10 backend, which installs no hook of its own.
+///
+/// DXGI owns the swap chain on both the tenth and the eleventh generation, so
+/// `d3d11`'s `IDXGISwapChain::Present` hook catches a Direct3D 10 game
+/// unchanged; only the device the swap chain hands back differs. This module is
+/// the backend built from that device and nothing else.
+#[cfg(windows)]
+pub mod d3d10;
+
 pub use crate::khata::KhataTabaqa;
 pub use crate::sidq::{
     BasmatIfsah, ISM_MALAF_IQRAR, Iqrar, NASS_IFSAH_ARABI, NASS_IFSAH_INJILIZI,
 };
+pub use crate::mutarjim::{
+    DhakiraJalsa, DhakiraJalsaMushtaraka, DhakiraTabaqa, MutarjimTabaqa, QaydTabaqa, RaddSatr,
+    TalabSatr,
+};
+pub use crate::qissa::{KhaytQissa, KhiyaratQissa, LaqtaTarjama, Munassiq, Qissa};
 pub use crate::talqeem::{IhsaatTalqeem, KhiyaratTalqeem, Mulaqqim, SatrMulaqqam};
+pub use crate::tatabbu::{HalatSatr, MuarrifSatr, Mutatabbi, QiraaMulahaza, SiyasatIstiqrar};
+pub use crate::watira::{MunazzimWatira, TaghyeerWatira};
 pub use crate::wajiha::{
     HalatTabaqa, Khattaf, LawhatRasm, MeezaniyatItar, MustatilBiksel, MustatilNisbi, QitaRasm,
     SighatSath, Tabaqa, WajihatRusum, WasfSath,

@@ -1110,6 +1110,13 @@ pub fn nazzif_nusakh(
     // This way an interruption leaves a manifest whose backups are gone, which
     // reads correctly as "nothing left to restore" — which is true.
     if mujallad.exists() {
+        // `<backup root>/<kind>/asl`, two components below a backup root that
+        // was itself built by `masarat::dakhil`, which refuses a result equal to
+        // its root. The data root is three levels up and unreachable from here.
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "two components below a validated per-game backup root, never a root itself"
+        )]
         fs::remove_dir_all(&mujallad).map_err(|sabab| {
             min_khata_io(&mujallad, "removing the preserved originals", sabab)
         })?;

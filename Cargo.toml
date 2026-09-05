@@ -15,6 +15,7 @@ members = [
     "crates/taarib-muhawwil-unreal",
     "crates/taarib-muhawwil-godot",
     "crates/taarib-muhawwil-nusus",
+    "crates/taarib-muhawwil-bio4",
     "crates/taarib-tabaqa",
     "crates/taarib-istikhraj",
     "crates/taarib-tarjama",
@@ -75,6 +76,7 @@ taarib-haqn = { path = "crates/taarib-haqn" }
 taarib-muhawwil-unreal = { path = "crates/taarib-muhawwil-unreal" }
 taarib-muhawwil-godot = { path = "crates/taarib-muhawwil-godot" }
 taarib-muhawwil-nusus = { path = "crates/taarib-muhawwil-nusus" }
+taarib-muhawwil-bio4 = { path = "crates/taarib-muhawwil-bio4" }
 taarib-tabaqa = { path = "crates/taarib-tabaqa" }
 taarib-istikhraj = { path = "crates/taarib-istikhraj" }
 taarib-tarjama = { path = "crates/taarib-tarjama" }

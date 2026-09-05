@@ -36,7 +36,8 @@ pub mod tarteeb;
 pub mod tathbeet_bilnaqra;
 
 pub use fahras::{
-    ADAD_SHARAIH, BayanMustawda, MuhtawaShareeha, ShareehaMuwaththaqa, TajawuzNashr, shareeha,
+    ADAD_SHARAIH, BayanMustawda, MuhtawaShareeha, MulakhkhasDhakira, ShareehaMuwaththaqa,
+    TajawuzNashr, shareeha,
 };
 pub use jalb::{
     FahrasMajlub, jalb_bayan, jalb_fahras, jalb_qaimat_sahb, jalb_shareeha, jalb_sharaih,
