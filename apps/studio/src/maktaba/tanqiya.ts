@@ -91,9 +91,21 @@ export interface SijillLuba {
    * the Steam section and has to say so.
    */
   readonly ism_manassa: string;
-  /** The identified engine family. */
+  /**
+   * Whether the probe has ever examined this game.
+   *
+   * The qualifier on the three fields under it. {@link muharrik},
+   * {@link tabaqa} and {@link jahiziya} are all non-null for every row in the
+   * library, including the rows nothing has ever looked at: those carry a
+   * pessimistic default — `majhul`, the overlay tier — which is byte-identical
+   * to what a game the probe examined and did not recognise carries. Without
+   * this the two are the same record, and the card tells a user a queue
+   * position is a verdict.
+   */
+  readonly mafhusa: boolean;
+  /** The identified engine family, when {@link mafhusa}; `majhul` until then. */
   readonly muharrik: AilatMuharrik;
-  /** The injection tier Taarib can reach on this game. */
+  /** The injection tier Taarib can reach, when {@link mafhusa}; the floor until then. */
   readonly tabaqa: Tabaqa;
   /** The Arabization status the card badges. */
   readonly hala: HalatLuba;

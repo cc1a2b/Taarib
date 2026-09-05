@@ -17,7 +17,13 @@ import { jam, munassiqat, t, wasm } from '@/lugha/lugha';
 import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
 import { jahiziyaMin, naqsJahiziya, tasil } from '@/maktaba/jahiziya';
 import type { Tabaqa } from '@/maktaba/tabaqat';
-import { ISM_TABAQA, KULFAT_TABAQA, SHARH_TABAQA, tabaqaTaqreer } from '@/maktaba/tabaqat';
+import {
+  ISM_TABAQA,
+  KULFAT_TABAQA,
+  WASM_TABAQA,
+  tabaqaMudkhal,
+  tabaqaTaqreer,
+} from '@/maktaba/tabaqat';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import type {
@@ -67,6 +73,30 @@ const MIFTAH_TAAKID: Readonly<Record<MatlabIzala, MiftahLugha>> = {
  */
 function wasfMutabaqa(mudkhal: MudkhalRuqaaHie, lugha: Lugha): string | null {
   return lugha === 'arabi' ? mudkhal.mutabaqa_arabi : mudkhal.mutabaqa_injilizi;
+}
+
+/**
+ * Which of the three products one patch in the listing installs, and its tier
+ * number, as one cell.
+ *
+ * Every row in the listing carries its own install button, so every row has to
+ * name what pressing it produces — and the listing renders its tier name in
+ * Arabic alone, so this cell read `طبقة ترجمة` to an English session at the
+ * exact moment it was deciding whether to install. `MudkhalRuqaaHie.tabaqa` is
+ * the same fact as a discriminant, so the product is named from the string set
+ * and the row falls back to the listing's own name only for a tier this build
+ * cannot name.
+ *
+ * The number stays beside it. The registry, the capability report and the
+ * review console all label a tier with it, and a reader comparing this row
+ * against one of those needs it to still be here.
+ */
+function tabaqatMudkhal(mudkhal: MudkhalRuqaaHie, lugha: Lugha, munassiq: Munassiqat): string {
+  const tabaqa = tabaqaMudkhal(mudkhal);
+  return t('luba.muharrik.tabaqa_qeema', lugha, {
+    raqm: munassiq.raqm(mudkhal.tabaqa_raqm),
+    ism: tabaqa === null ? mudkhal.tabaqa_arabi : t(WASM_TABAQA[tabaqa], lugha),
+  });
 }
 
 function miftahNaw(naw: MatlabIzala): MiftahLugha {
@@ -420,10 +450,9 @@ function Riqaqat({ qaima }: { readonly qaima: readonly string[] }): JSX.Element 
   return (
     <ul className="luba__riqaq">
       {/* `dir="auto"` because these are the backend's own words and it writes
-          some of them in Arabic whatever the session's language is — an engine
-          it did not recognise is `غير معروف`, a graphics API it could not
-          determine is `غير محدَّدة`. Laid out left to right inside an English
-          panel, such a chip puts its first word last. */}
+          some of them in Arabic whatever the session's language is — a graphics
+          API it could not determine is `غير محدَّدة`. Laid out left to right
+          inside an English panel, such a chip puts its first word last. */}
       {qaima.map((band) => (
         <li key={band} className="luba__riqaqa" dir="auto">
           {band}
@@ -448,8 +477,33 @@ function Riqaqat({ qaima }: { readonly qaima: readonly string[] }): JSX.Element 
    on another.
    --------------------------------------------------------------------------- */
 
-/** The engine, as the readiness notice names it: family, and version if known. */
-function ismMuharrik(muharrik: MuharrikHie): string {
+/**
+ * The engine family, in the reader's language.
+ *
+ * `aila` is `AilatMuharrik::ism` and that function answers the unidentified
+ * engine with the Arabic literal `غير معروف` whatever the session's language
+ * is — so this row, which is the most consequential one on the screen for the
+ * large part of a real library that probes as unknown, was the row an English
+ * reader could not read. `aila_ramz` is the same fact as a discriminant, so the
+ * miss is named from the string set and every family Taarib does recognise
+ * keeps its own name, which is not a translatable thing.
+ */
+function ailaMuharrik(muharrik: MuharrikHie, lugha: Lugha): string {
+  return muharrik.aila_ramz === 'majhul' ? t('luba.muharrik.majhul', lugha) : muharrik.aila;
+}
+
+/**
+ * The engine, as the readiness notice names it: family, and version if known.
+ *
+ * `null` when nothing was identified, and the notice then names no engine at
+ * all. "Engine detected: not identified" is a sentence that contradicts itself,
+ * and the readiness verdict it introduces is about this build of Taarib rather
+ * than about the engine, so it stands perfectly well without the line.
+ */
+function ismMuharrik(muharrik: MuharrikHie): string | null {
+  if (muharrik.aila_ramz === 'majhul') {
+    return null;
+  }
   return muharrik.isdar === null ? muharrik.aila : `${muharrik.aila} ${muharrik.isdar}`;
 }
 
@@ -467,6 +521,41 @@ function hududQira(taqreer: TaqreerHie, lugha: Lugha): readonly string[] {
     return taqreer.hudud;
   }
   return taqreer.hudud_injilizi.length > 0 ? taqreer.hudud_injilizi : taqreer.hudud;
+}
+
+/**
+ * The tier's own name as the report renders it, in the reader's language.
+ *
+ * Only reached for a tier this build cannot name — a backend one version ahead
+ * of it — and it exists so that case degrades to the backend's own words rather
+ * than to a blank heading. It fixes a live bug on the way: the report used to
+ * send its tier name in Arabic alone, so the single line on this screen that
+ * says which of the three products a game gets read `طبقة ترجمة` to an English
+ * session that had just read the tier number, the reason and the systems in
+ * English. Falls back to the Arabic rather than to silence, on the same terms
+ * as {@link hududQira}: a tier named in one language is still named.
+ */
+function ismTabaqaTaqreer(taqreer: TaqreerHie, lugha: Lugha): string {
+  if (lugha === 'arabi') {
+    return taqreer.tabaqa_arabi;
+  }
+  return taqreer.tabaqa_injilizi.length > 0 ? taqreer.tabaqa_injilizi : taqreer.tabaqa_arabi;
+}
+
+/**
+ * What the tier does, as the backend writes it, in the reader's language.
+ *
+ * `Tabaqa` decides what a tier means and now says so on the wire, so this
+ * screen prints that sentence instead of one the interface kept for itself.
+ * The three locale paragraphs it replaces were deleted rather than left in
+ * place: two copies of the same explanation drift, and the copy that drifts is
+ * the one that is not recompiled when the tier's behaviour changes.
+ */
+function sharhTabaqa(taqreer: TaqreerHie, lugha: Lugha): string {
+  if (lugha === 'arabi') {
+    return taqreer.sharh_arabi;
+  }
+  return taqreer.sharh_injilizi.length > 0 ? taqreer.sharh_injilizi : taqreer.sharh_arabi;
 }
 
 /**
@@ -556,17 +645,22 @@ function TanbeehJahiziya({ unwan, muharrik, nass, athar, lugha }: KhasaisJahiziy
    this screen against one of those needs it to still be here.
 
    WHAT IS NOT DECIDED HERE. Which tier a game is on is decided in Rust and read
-   off the wire. `TaqreerHie` does not carry the discriminant yet — it renders
-   the tier as a number and an Arabic name and drops the enum — so
-   `tabaqaTaqreer` answers `null` in this build and the heading falls back to
-   the report's own tier name. The number is deliberately NOT inverted into a
-   tier to fill the gap: that would be a second copy of `Tabaqa::raqm` in
-   TypeScript, and a copy of a taxonomy mislabels rather than fails the day the
-   taxonomy moves. See `maktaba/tabaqat` for the field this needs.
+   off the wire: `TaqreerHie.tabaqa` is the discriminant, `sharh_arabi` and
+   `sharh_injilizi` are the tier's own explanation of itself, and both are
+   printed rather than paraphrased. The tier number is deliberately NOT inverted
+   into a tier for the one case the discriminant does not cover — a backend one
+   version ahead of this build — because that would be a second copy of
+   `Tabaqa::raqm` in TypeScript, and a copy of a taxonomy mislabels rather than
+   fails the day the taxonomy moves. That case falls back to the report's own
+   rendered tier name, now sent in both languages.
+
+   The one paragraph that is still the interface's own is what the tier COSTS.
+   It has no field, it is true of every game on a tier, and it is in
+   `maktaba/tabaqat` with the rest of the vocabulary.
    --------------------------------------------------------------------------- */
 
 interface KhasaisMuntaj {
-  /** The product, off the wire, or null while the report does not carry it. */
+  /** The product, off the wire; null only for a tier this build cannot name. */
   readonly tabaqa: Tabaqa | null;
   readonly taqreer: TaqreerHie;
   /** Whether the product actually runs in this build, for the qualification. */
@@ -589,11 +683,12 @@ function QismMuntaj({ tabaqa, taqreer, jahiziya, lugha, munassiq }: KhasaisMunta
         {marfud ? (
           t('luba.muntaj.marfuda', lugha)
         ) : tabaqa === null ? (
-          // The report's own tier name, which it writes in Arabic in both
-          // languages. Inline `dir="auto"` rather than on the paragraph: it
+          // A tier this build has no name for, stated in the report's own
+          // words. Inline `dir="auto"` rather than on the paragraph: the report
+          // sends both languages now, but a build that fell back to the Arabic
           // gets the bidi right without flipping a whole heading to the trailing
           // edge of an otherwise left-to-right panel.
-          <span dir="auto">{taqreer.tabaqa_arabi}</span>
+          <span dir="auto">{ismTabaqaTaqreer(taqreer, lugha)}</span>
         ) : (
           t(ISM_TABAQA[tabaqa], lugha)
         )}
@@ -605,14 +700,27 @@ function QismMuntaj({ tabaqa, taqreer, jahiziya, lugha, munassiq }: KhasaisMunta
           <span className="luba__tabaqa-muallaqa">{t('luba.jahiziya.ghayr_faal', lugha)}</span>
         )}
       </p>
-      {marfud || tabaqa === null ? null : (
+      {marfud ? null : (
         <>
-          <p className="luba__muntaj-sharh">{t(SHARH_TABAQA[tabaqa], lugha)}</p>
+          {/* `Tabaqa`'s own explanation of itself, printed and not paraphrased.
+              Not conditional on the discriminant, because the sentence and the
+              verdict come from the same place: a tier this build cannot name
+              still says what it does. `dir="auto"` for the one case that puts
+              Arabic in an English panel — a report whose English half is empty,
+              which falls back rather than going silent. */}
+          <p className="luba__muntaj-sharh" dir="auto">
+            {sharhTabaqa(taqreer, lugha)}
+          </p>
           {/* What the product costs, as opposed to what this game's engine
               costs. The per-game limits are the report's own list further down;
               this is the price of the tier itself and is true of every game on
-              it, which is why the report has no reason to repeat it per game. */}
-          <p className="luba__muntaj-kulfa">{t(KULFAT_TABAQA[tabaqa], lugha)}</p>
+              it, which is why the report has no reason to repeat it per game.
+              The one paragraph here still keyed on the discriminant: it has no
+              field, so an unnameable tier gets no cost line rather than the
+              wrong one. */}
+          {tabaqa === null ? null : (
+            <p className="luba__muntaj-kulfa">{t(KULFAT_TABAQA[tabaqa], lugha)}</p>
+          )}
         </>
       )}
       <p className="luba__sabab">{sabab}</p>
@@ -713,14 +821,20 @@ function QismMuharrik({
       )}
       <h3 className="luba__unwan-farii">{t('luba.muharrik.unwan', lugha)}</h3>
       <dl className="luba__jadwal">
-        {/* `dir="auto"` on the two cells the backend answers in Arabic
-            regardless of the session's language: an engine nothing recognised
-            is `غير معروف` and a scripting backend it could not name is
-            `غير معروفة`. That is the single most important row on this screen
-            for half this library — the games that probe as unknown — and laid
-            out left to right it reads back to front. */}
+        {/* The engine family, off `aila_ramz` rather than off the rendered
+            name. `AilatMuharrik::ism` answers the unidentified engine with the
+            Arabic literal `غير معروف` in both languages, and that is the single
+            most important row on this screen for the large part of a real
+            library that probes as unknown — so it is the row that has to be
+            readable. The rendered name survives for every family Taarib does
+            recognise, because "Unity" is not a translatable thing.
+
+            `dir="auto"` stays for the scripting backend below, which the
+            backend still answers in Arabic — `غير معروفة` — whatever the
+            session's language, and which laid out left to right reads back to
+            front. */}
         <Saff unwan={t('luba.muharrik.aila', lugha)}>
-          <span dir="auto">{muharrik.aila}</span>
+          <span dir="auto">{ailaMuharrik(muharrik, lugha)}</span>
         </Saff>
         {muharrik.isdar === null ? null : (
           <Saff unwan={t('luba.muharrik.isdar', lugha)}>
@@ -1505,11 +1619,10 @@ function QismRuqaa({
                         <span dir="auto">{mudkhal.hajm_maqru}</span>
                       </Saff>
                       <Saff unwan={t('luba.ruqaa.tareeqa', lugha)}>{mudkhal.tareeqa_arabi}</Saff>
+                      {/* What pressing this row's own install button produces,
+                          in the reader's language; see `tabaqatMudkhal`. */}
                       <Saff unwan={t('luba.muharrik.tabaqa', lugha)}>
-                        {t('luba.muharrik.tabaqa_qeema', lugha, {
-                          raqm: munassiq.raqm(mudkhal.tabaqa_raqm),
-                          ism: mudkhal.tabaqa_arabi,
-                        })}
+                        <span dir="auto">{tabaqatMudkhal(mudkhal, lugha, munassiq)}</span>
                       </Saff>
                     </dl>
                     {mahmiya ? null : (

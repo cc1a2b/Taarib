@@ -285,6 +285,12 @@ function sijillLuba(saf: SijillMaktaba): SijillLuba {
     // Steam games — and how ticking "Steam" in the filters empties a section
     // that is visibly full of Steam.
     ism_manassa: ASMA_MANASSAT[saf.manassa],
+    // Whether the three fields below it are answers or defaults. The scan fills
+    // a row for a game whose report was never written exactly as it fills one
+    // for a game examined and not recognised — same engine, same tier, same
+    // readiness — so this is the only thing that separates "we looked and found
+    // nothing", which is final, from "nothing has been looked at", which is not.
+    mafhusa: saf.mafhusa,
     muharrik: saf.muharrik,
     tabaqa: saf.tabaqa,
     hala: saf.hala,

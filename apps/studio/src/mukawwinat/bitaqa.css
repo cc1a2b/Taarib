@@ -421,16 +421,19 @@
                  text in the engine and drawing the text in the engine's place
                  are both installations.
      no accent   Taarib never touches the game. Nothing is written, nothing is
-                 backed up, and nothing survives Taarib closing.
+                 backed up, and nothing survives Taarib closing. The card that
+                 has not been examined is here too: it promises nothing, and
+                 teal — the one tone that would say a route inside the game was
+                 found — is the one tone it must not carry.
      red         There is no product at all: an anti-cheat was found and nothing
                  will run.
 
-   Three steps and not five, because a fourth tone would have to be a fade of
+   Three steps and not six, because a fourth tone would have to be a fade of
    the teal, and `--tamyeez-khafit` is a 16% mix — a rule nobody can tell from
    no rule at all across four palettes. A distinction that only survives on one
    background is not a distinction.
 
-   Everything else about the plate is identical in all five states — the same
+   Everything else about the plate is identical in all six states — the same
    ground, the same hairline, the same `--nass-2` label at `--qiyas-1`. That is
    deliberate and it is what makes a hundred of them survivable: the plate is
    quieter than the readiness mark above it, the accent is an edge rather than a
@@ -457,7 +460,7 @@
   /* The rule the grammar above is written on. `--hadd-qawi` is the plate's own
      hairline restated, which is what "no accent" has to be: a plate whose
      leading edge simply had no border would be three pixels narrower than the
-     other four and the column of them would not line up. */
+     other five and the column of them would not line up. */
   border-inline-start: var(--samk-hadd-barz) solid var(--hadd-qawi);
   /* The card is one hit target; this is paint. */
   pointer-events: none;
@@ -471,14 +474,18 @@
   border-inline-start-color: var(--tamyeez);
 }
 
-/* The overlay, and the overlay reached because nothing recognised the engine.
-   No accent at all, which is the point: the teal means Taarib went inside the
-   game, and for these two it never does. They share the neutral rule because
-   they are the same product — the plates differ in what they say, not in what
-   they promise. Declared rather than left to the base rule so the grammar is
-   legible in this file rather than by absence. */
+/* The overlay, the overlay reached because nothing recognised the engine, and
+   the card nothing has examined. No accent at all, which is the point: the teal
+   means Taarib went inside the game, and for none of these three does it. The
+   first two share the neutral rule because they are the same product — the
+   plates differ in what they say, not in what they promise. The third has it
+   for a different reason and lands in the same place: it promises nothing at
+   all, and the one accent that would be wrong on it is the one that says a
+   route inside the game was found. Declared rather than left to the base rule
+   so the grammar is legible in this file rather than by absence. */
 .bitaqa__wasm-muntaj--tabaqa,
-.bitaqa__wasm-muntaj--majhul {
+.bitaqa__wasm-muntaj--majhul,
+.bitaqa__wasm-muntaj--ghayr-mafhusa {
   border-inline-start-color: var(--hadd-qawi);
 }
 

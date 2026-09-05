@@ -207,6 +207,25 @@ export interface KhasaisBitaqa {
    */
   readonly jahiziya?: JahiziyaTashghil | null;
   /**
+   * Whether the probe has ever examined this game.
+   *
+   * The three fields below it — {@link tabaqa}, {@link muharrik} and
+   * {@link jahiziya} — each carry a pessimistic default when no report is
+   * stored, and every one of those defaults is byte-identical to a real answer:
+   * an examined game nothing recognised is `majhul` on the overlay tier, and so
+   * is a game nothing has looked at. Without this the card cannot tell the two
+   * apart, and it says the same sentence to both — which is true of both and
+   * final for only one. "We looked and found nothing" is a verdict; "nothing
+   * has been looked at" is a queue position.
+   *
+   * Optional and nullable on the same terms as the fields it qualifies, with
+   * one difference in what absence means: a consumer that does not pass it gets
+   * the tier plate it always got, because the card cannot distinguish "this
+   * consumer has no such field" from "this game was never probed" and must not
+   * blank a plate on the strength of a guess.
+   */
+  readonly mafhusa?: boolean | null;
+  /**
    * Which of the three products this game gets.
    *
    * The tier the cached probe decided, straight off `SijillMaktaba.tabaqa` —
@@ -377,7 +396,7 @@ function WasmJahiziya(khasais: {
 interface WasmMuntaj {
   readonly wasm: MiftahLugha;
   readonly wasf: MiftahLugha;
-  readonly naw: 'kamil' | 'rasm' | 'tabaqa' | 'majhul' | 'marfuda';
+  readonly naw: 'kamil' | 'rasm' | 'tabaqa' | 'majhul' | 'ghayr-mafhusa' | 'marfuda';
 }
 
 /** The three products, keyed on the wire's own discriminant. */
@@ -408,6 +427,23 @@ const MUNTAJ_MAJHUL: WasmMuntaj = {
   naw: 'majhul',
 };
 
+/**
+ * No answer yet, because nothing has been asked.
+ *
+ * The plate this one displaces said "Engine not identified — overlaid on
+ * screen", which was true and was final, and a game the probe has never opened
+ * has earned neither half of that. The tier behind it is a floor rather than a
+ * verdict and the engine behind it is a default rather than a miss, so the
+ * plate names the only thing that is actually known: the examination has not
+ * happened. A sweep will change it without the user doing anything, which is
+ * the other half of why it must not read as a conclusion.
+ */
+const MUNTAJ_GHAYR_MAFHUSA: WasmMuntaj = {
+  wasm: 'bitaqa.muntaj.ghayr_mafhusa',
+  wasf: 'bitaqa.muntaj.ghayr_mafhusa_wasf',
+  naw: 'ghayr-mafhusa',
+};
+
 /** No product at all, and the only plate on the card that is drawn in red. */
 const MUNTAJ_MARFUDA: WasmMuntaj = {
   wasm: 'bitaqa.muntaj.marfuda',
@@ -421,7 +457,14 @@ const MUNTAJ_MARFUDA: WasmMuntaj = {
  * The refusal is tested first and without reference to the tier, because it is
  * the answer to a different question: the report still names a tier for a
  * protected game, and drawing it would be describing what Taarib is entitled to
- * do to a game it has already said it will not touch.
+ * do to a game it has already said it will not touch. It also outranks the
+ * examination: a refusal is decided from the protection scan and stands whether
+ * or not the engine was ever identified.
+ *
+ * The examination is next, and it gates everything under it for the reason
+ * {@link KhasaisBitaqa.mafhusa} gives — a tier and an engine that were never
+ * probed are defaults wearing the clothes of answers, and every plate below
+ * this line would state one as the other.
  *
  * Everything below that is a lookup on the wire's own discriminant. Nothing
  * here derives a tier — not from the engine, not from the tier number, not from
@@ -429,12 +472,16 @@ const MUNTAJ_MARFUDA: WasmMuntaj = {
  * decided or states none.
  */
 function muntajBitaqa(
+  mafhusa: boolean | null | undefined,
   tabaqa: Tabaqa | null | undefined,
   muharrik: AilatMuharrik | null | undefined,
   hala: HalatLuba | null | undefined,
 ): WasmMuntaj | null {
   if (hala === 'marfuda') {
     return MUNTAJ_MARFUDA;
+  }
+  if (mafhusa === false) {
+    return MUNTAJ_GHAYR_MAFHUSA;
   }
   if (tabaqa === undefined || tabaqa === null) {
     return null;
@@ -693,6 +740,7 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
     sawt,
     lugha_rasmiya,
     jahiziya,
+    mafhusa,
     tabaqa,
     muharrik,
     hala,
@@ -787,7 +835,7 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
   // clause for the same reason the readiness one is: read out as the noun
   // phrase on the plate, "overlaid on screen" after two patch states is heard
   // as a third patch state.
-  const muntaj = muntajBitaqa(tabaqa, muharrik, hala);
+  const muntaj = muntajBitaqa(mafhusa, tabaqa, muharrik, hala);
   if (muntaj !== null) {
     halat.push(t(muntaj.wasf, lugha));
   }
@@ -801,8 +849,14 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
   // Not announced for a refused game. The refusal is already the last thing
   // said, it is permanent, and "does not run yet in this build" after it would
   // offer a wait that is not coming.
+  //
+  // Nor for a game nothing has examined. The readiness verdict is derived from
+  // an engine, and an unprobed row's engine is a default rather than an
+  // identification — so the mark would be reporting on an adapter chosen for a
+  // game whose engine nobody has looked for. The plate already says the whole
+  // of what is known about such a card.
   const wasmJahiziya =
-    jahiziya === undefined || jahiziya === null || hala === 'marfuda'
+    jahiziya === undefined || jahiziya === null || hala === 'marfuda' || mafhusa === false
       ? undefined
       : WASM_JAHIZIYA[jahiziya];
   if (wasmJahiziya !== undefined) {

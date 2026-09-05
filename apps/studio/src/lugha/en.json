@@ -959,15 +959,15 @@
   "luba.muharrik.unwan": "What the probe identified",
   "luba.muntaj.unwan": "What you get",
   "luba.muntaj.kamil": "Full Arabization — the text is replaced inside the engine",
-  "luba.muntaj.kamil_sharh": "The game's own text is replaced from the inside, through the engine's own mechanism. Menus, dialogue and the interface appear in Arabic as though the game were made in it, and the text stays real text inside the game.",
   "luba.muntaj.kamil_kulfa": "The game's files change. Taarib keeps a copy of every file it touches and puts each one back on removal. If the store updates the game it may replace an arabized file with its original, and the patch is then installed again.",
   "luba.muntaj.rasm": "Arabization by direct drawing — Taarib draws the text itself",
-  "luba.muntaj.rasm_sharh": "This game's engine cannot shape Arabic, so Taarib takes over the layout and the drawing in its place, on the engine's own text objects. The result looks native in most cases, and effects the engine applies to its own text are reproduced by Taarib's renderer.",
   "luba.muntaj.rasm_kulfa": "Drawn text has stopped being text inside the game: it is not selectable, searchable or copyable, and no screen reader can read it. Reproduced effects may differ slightly from the original.",
   "luba.muntaj.tabaqa": "Translation overlay — Arabic is shown over the game",
-  "luba.muntaj.tabaqa_sharh": "The game is not modified at all. Taarib reads what is on screen and shows Arabic over it. This is a reading aid, not a translation installed inside the game.",
   "luba.muntaj.tabaqa_kulfa": "What you see is not text in the game: it is not selectable, searchable or copyable, it is not saved into the game, and it disappears the moment Taarib is closed. Only what is actually drawn on screen is ever translated, so a menu you never opened was never translated, and the Arabic can lag the original by a moment or misread stylised fonts and text that is small or moving.",
   "luba.muntaj.marfuda": "There is no route for this game: Taarib refuses to touch it and will draw nothing over it.",
   "luba.muntaj.tabaqa_raqm": "Tier {raqm} in the capability report",
-  "luba.hudud.tafsil": "What will not work in this game specifically"
+  "luba.hudud.tafsil": "What will not work in this game specifically",
+  "luba.muharrik.majhul": "The probe did not identify the engine",
+  "bitaqa.muntaj.ghayr_mafhusa": "Not examined yet",
+  "bitaqa.muntaj.ghayr_mafhusa_wasf": "Taarib has not examined this game yet, so its engine and how much of it can be arabized are both unknown"
 }

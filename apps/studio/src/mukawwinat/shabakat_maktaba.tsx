@@ -1717,6 +1717,14 @@ export function ShabakatMaktaba(khasais: KhasaisShabakatMaktaba): JSX.Element {
                         sawt={sijill.sawt}
                         lugha_rasmiya={sijill.lugha_rasmiya}
                         jahiziya={sijill.jahiziya}
+                        // Whether any of the three below is an answer at all.
+                        // The row carries a tier, an engine and a readiness
+                        // verdict for a game nothing has ever opened, and each
+                        // of those is a pessimistic default indistinguishable
+                        // from a real finding; this is the field that separates
+                        // them, and without it the card states a default as a
+                        // conclusion.
+                        mafhusa={sijill.mafhusa}
                         // Which of the three products this game gets, and the
                         // two facts that qualify it. All three straight off the
                         // row: the tier, the engine family and the Arabization

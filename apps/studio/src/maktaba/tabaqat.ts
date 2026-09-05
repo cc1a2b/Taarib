@@ -1,6 +1,11 @@
 import type { MiftahLugha } from '@/lugha/lugha';
 
-import type { SijillMaktaba, Tabaqa as TabaqaSilkiya, TaqreerHie } from '@/mustalahat/awamir';
+import type {
+  MudkhalRuqaaHie,
+  SijillMaktaba,
+  Tabaqa as TabaqaSilkiya,
+  TaqreerHie,
+} from '@/mustalahat/awamir';
 
 /**
  * الطبقات — which of the three products a game gets, said in words.
@@ -36,6 +41,12 @@ import type { SijillMaktaba, Tabaqa as TabaqaSilkiya, TaqreerHie } from '@/musta
  * stale silently, and it goes stale in the direction that promises more than
  * the product delivers.
  *
+ * Nor does it hold the tier's **explanation**. What a tier does to a game is a
+ * fact about `Tabaqa`, the backend sends it as prose in both languages, and the
+ * three paragraphs that used to live here as locale keys were deleted the day it
+ * arrived. What is left are the names — a heading, a plate, and the sentence
+ * about what the tier *costs*, which is the interface's own and has no field.
+ *
  * In particular, **the tier number is never inverted into a tier**. `Tabaqa` is
  * an enum in Rust and `Tabaqa::raqm` renders it as 1, 2 or 3; rebuilding the
  * reverse map here would be a second definition of the taxonomy, and the day a
@@ -70,9 +81,10 @@ export type Tabaqa = TabaqaSilkiya;
  * for a different product, and a row from a stored scan that predates the field
  * must not be given a tier it never carried.
  *
- * Takes `unknown` rather than the generated union because what reaches it is
- * not always one — see {@link tabaqaTaqreer}, which reads a field the capability
- * report does not carry yet.
+ * Takes `unknown` rather than the generated union because the union is what
+ * this build was compiled against, not what a running backend sends: every
+ * caller below passes a field the bindings type as `Tabaqa`, and the whole
+ * value of the check is the case where that is untrue.
  */
 export function tabaqaMin(khaam: unknown): Tabaqa | null {
   return khaam === 'kamil' || khaam === 'rasm_mubashir' || khaam === 'tarjama_fawqiya'
@@ -96,48 +108,50 @@ export function tabaqaSaf(saf: Pick<SijillMaktaba, 'tabaqa'>): Tabaqa | null {
 }
 
 /**
- * The two fields of the capability report the game screen reads for the tier,
- * plus the discriminant it needs and does not yet get.
+ * The tier the capability report names.
  *
- * `tabaqa` is optional and `unknown` because **`TaqreerHie` does not carry it**.
- * The report renders the tier as a number and an Arabic name and drops the enum
- * on the way out of `luba_awamir::taqreer_hie`, so the game screen can print
- * "Tier 3 — طبقة ترجمة" and cannot say which of the three products that is in
- * the reader's own language. `SijillMaktaba` carries the discriminant; this does
- * not, and the two are built from the same `TaqreerImkaniyat` three functions
- * apart.
+ * The report carries the discriminant beside the number and the two rendered
+ * names, so the game screen states which of the three products a game gets
+ * rather than printing `tabaqa_raqm` and hoping the reader knows what a three
+ * is. It still goes through {@link tabaqaMin} for the one case the type cannot
+ * describe: a backend one version ahead naming a fourth tier, which must fall
+ * through to the report's own rendered name rather than be labelled with a
+ * description written for a different product.
  *
- * The shape is written for the field rather than around its absence, so that
- * adding `pub tabaqa: Tabaqa` to `TaqreerHie` is the whole of the change: this
- * module starts answering, and every surface that reads it starts speaking,
- * with no TypeScript edit at all. Until then {@link tabaqaTaqreer} answers
- * `null` and each surface falls back to what the report does carry.
+ * It is deliberately not derived from `tabaqa_raqm`. Inverting the tier number
+ * here would be a second copy of `Tabaqa::raqm`, and a copy of a taxonomy is a
+ * copy that mislabels rather than fails the day the taxonomy moves.
  */
-export type TaqreerTabaqa = Pick<TaqreerHie, 'tabaqa_raqm' | 'tabaqa_arabi'> & {
-  readonly tabaqa?: unknown;
-};
-
-/**
- * The tier the capability report names, when it names one.
- *
- * `null` in this build for every game — see {@link TaqreerTabaqa}. It is not a
- * guess and it is deliberately not derived from `tabaqa_raqm`: inverting the
- * tier number here would be a second copy of `Tabaqa::raqm`, and a copy of a
- * taxonomy is a copy that mislabels rather than fails the day the taxonomy
- * moves.
- */
-export function tabaqaTaqreer(taqreer: TaqreerTabaqa): Tabaqa | null {
+export function tabaqaTaqreer(taqreer: Pick<TaqreerHie, 'tabaqa'>): Tabaqa | null {
   return tabaqaMin(taqreer.tabaqa);
 }
 
 /**
- * The short form, for the plate on a library card.
+ * The tier one patch in the registry listing installs.
+ *
+ * Every row in that listing carries its own install button, so every row has to
+ * say what pressing it produces — and the listing's only rendered name is
+ * Arabic, which put `طبقة ترجمة` in front of an English reader at the exact
+ * point they were deciding whether to press. Narrowed on the same terms as
+ * {@link tabaqaTaqreer}.
+ */
+export function tabaqaMudkhal(mudkhal: Pick<MudkhalRuqaaHie, 'tabaqa'>): Tabaqa | null {
+  return tabaqaMin(mudkhal.tabaqa);
+}
+
+/**
+ * The short form: the plate on a library card, and the value in a patch row.
  *
  * Every game has a tier, so this plate is on every card in the grid — which is
  * the constraint the wording is written against. Each is a noun phrase naming
  * *where the Arabic ends up*, because that is the one difference between the
  * three that a person can act on at a glance: inside the game's own text, drawn
  * over it, or drawn over the picture.
+ *
+ * The patch listing reads it for the same reason the grid does and not because
+ * the two surfaces happen to be adjacent: a row in that listing is a cell in a
+ * definition list beside a coverage figure and a file size, so it has a plate's
+ * worth of room and not a paragraph's, and the noun phrase is what fits.
  */
 export const WASM_TABAQA: Readonly<Record<Tabaqa, MiftahLugha>> = {
   kamil: 'bitaqa.muntaj.kamil',
@@ -160,12 +174,14 @@ export const WASF_TABAQA: Readonly<Record<Tabaqa, MiftahLugha>> = {
 };
 
 /**
- * The tier's name, in full, for the game screen.
+ * The tier's name, in full, for the heading of the game screen's product panel.
  *
- * Separate from {@link WASM_TABAQA} because the card's plate is measured in
- * pixels and this one is not: the game screen has a column to state the product
- * in, and abbreviating there to fit a constraint that only the grid has would be
- * abbreviating for nobody.
+ * Separate from {@link WASM_TABAQA} on room rather than on surface: this is the
+ * one place in the product that has a whole heading to state the product in, and
+ * abbreviating there to fit a constraint the grid has and it does not would be
+ * abbreviating for nobody. The same screen's patch rows take the short form,
+ * because a cell in a definition list is measured in pixels exactly as a plate
+ * on a card is.
  */
 export const ISM_TABAQA: Readonly<Record<Tabaqa, MiftahLugha>> = {
   kamil: 'luba.muntaj.kamil',
@@ -173,21 +189,20 @@ export const ISM_TABAQA: Readonly<Record<Tabaqa, MiftahLugha>> = {
   tarjama_fawqiya: 'luba.muntaj.tabaqa',
 };
 
-/**
- * What the tier does, as one paragraph, on the game screen.
+/*
+ * WHAT THE TIER DOES IS NOT A TABLE HERE, AND USED TO BE.
  *
- * These are the interface's own wording and not the backend's, which is a
- * deliberate and temporary state: `Tabaqa::sharh_arabi` in
- * `taarib-mustalahat::muharrik` already says this in Arabic and is the sentence
- * these should become, verbatim, the moment it reaches the wire beside the
- * discriminant. Until it does, a screen that said nothing would be a screen
- * that still states the product as a digit.
+ * `SHARH_TABAQA` pointed at three hand-written paragraphs per language, written
+ * only because the explanation was not on the wire. It is now:
+ * `TaqreerHie.sharh_arabi` and `sharh_injilizi` carry `Tabaqa`'s own words, and
+ * the game screen prints them verbatim. The locale keys those three pointed at
+ * were deleted with the table — two copies of one sentence drift, and the copy
+ * that drifts is always the one nobody recompiles.
+ *
+ * The paragraph is therefore no longer conditional on the discriminant. A tier
+ * this build cannot name still explains itself, because the sentence and the
+ * verdict now come from the same place.
  */
-export const SHARH_TABAQA: Readonly<Record<Tabaqa, MiftahLugha>> = {
-  kamil: 'luba.muntaj.kamil_sharh',
-  rasm_mubashir: 'luba.muntaj.rasm_sharh',
-  tarjama_fawqiya: 'luba.muntaj.tabaqa_sharh',
-};
 
 /**
  * What the tier costs, as one paragraph, on the game screen.
