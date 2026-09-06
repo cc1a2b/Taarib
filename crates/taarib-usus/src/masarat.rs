@@ -409,9 +409,11 @@ impl Masarat {
 ///
 /// [`hadhf_mujallad`] takes one of these and nothing else, so a recursive
 /// deletion cannot be *written* without first passing through a constructor
-/// that has already refused every root worth protecting. There are two:
-/// [`Masarat::hadaf_hadhf`] for somewhere inside Taarib's own layout, and
-/// [`hadaf_hadhf_fi_luba`] for somewhere inside a game installation.
+/// that has already refused every root worth protecting. There are three:
+/// [`Masarat::hadaf_hadhf`] for somewhere inside Taarib's own layout,
+/// [`hadaf_hadhf_fi_luba`] for somewhere inside a game installation, and
+/// [`hadaf_hadhf_fi_nusakh`] for somewhere inside one installation's preserved
+/// originals.
 ///
 /// Neither can yield a value equal to a data root, a settings root, a home
 /// directory, patch storage, or a game directory — each requires the target to
@@ -446,6 +448,38 @@ impl HadafHadhf {
 /// lies outside it, or reaches its place through a `..` component.
 pub fn hadaf_hadhf_fi_luba(jidhr_luba: &Path, masar: &Path) -> Natija<HadafHadhf> {
     ithbat_hadaf(&[jidhr_luba], &[jidhr_luba], masar)
+}
+
+/// Proves that one installation's preserved originals may be deleted
+/// recursively.
+///
+/// The backup root is `<data root>/nusakh/<identity>` on every path the product
+/// takes, but it arrives here as a value rather than being derived from
+/// [`Masarat`], because the caller is handed the directory an uninstall was
+/// *given* — a user who copied their games and their `nusakh/` tree to a second
+/// machine has no database to re-derive it from, and an uninstall that refused
+/// them would be an uninstall that cannot run where it is needed most.
+///
+/// What it proves is therefore stated in terms of the two roots the caller
+/// already holds, and is exactly the property that protects the user: the target
+/// sits strictly below the backup root, and is neither that root nor an ancestor
+/// of it. That refuses the data root, the settings root and the home directory
+/// by construction, because every one of those *contains* the backup root and so
+/// fails the ancestor test. The game directory is protected separately, so a
+/// backup root that was somehow aimed at a game install cannot take the game
+/// with it.
+///
+/// # Errors
+///
+/// [`KhataMasarat::JidhrMahmi`] when the target is the backup root or the game
+/// directory, contains either, lies outside the backup root, or reaches its
+/// place through a `..` component.
+pub fn hadaf_hadhf_fi_nusakh(
+    jidhr_nusakh: &Path,
+    jidhr_luba: &Path,
+    masar: &Path,
+) -> Natija<HadafHadhf> {
+    ithbat_hadaf(&[jidhr_nusakh], &[jidhr_nusakh, jidhr_luba], masar)
 }
 
 /// The shared proof: strictly below one of `judhur`, and neither equal to nor an
@@ -1267,6 +1301,54 @@ mod ikhtibarat {
             super::hadaf_hadhf_fi_luba(luba, &mudaf).map(|h| h.masar().to_path_buf()).ok(),
             Some(mudaf)
         );
+    }
+
+    #[test]
+    fn jidhr_alnusakh_wa_jidhr_alluba_mahmiyan_maan() {
+        // An uninstall discards `<backup root>/<kind>/asl` and nothing else. It
+        // is handed the two roots by its caller — the backup directory a
+        // manifest named, and the game — so the guard has to hold for whatever
+        // it is handed, including a machine whose `nusakh/` tree was copied off
+        // a dead install and whose game has moved.
+        let asas = layout();
+        let nusakh = asas.nusakh().join("luba-ma");
+        let luba = Path::new("/mnt/f/SteamLibrary/steamapps/common/Luba");
+
+        for muhawala in [
+            // The backup root itself, and every ancestor of it: the `nusakh`
+            // directory, the data root, the home directory, the filesystem.
+            nusakh.clone(),
+            nusakh.join("."),
+            nusakh.join("nass").join(".."),
+            asas.nusakh(),
+            asas.jidhr_bayanat().to_path_buf(),
+            asas.manzil().to_path_buf(),
+            PathBuf::from("/"),
+            // The game, which no operation in the product may remove.
+            luba.to_path_buf(),
+            luba.join("Data").join(".."),
+            // Somewhere else entirely.
+            PathBuf::from("/etc"),
+        ] {
+            assert!(
+                super::hadaf_hadhf_fi_nusakh(&nusakh, luba, &muhawala).is_err(),
+                "{} was accepted as a deletion target under a backup root",
+                muhawala.display()
+            );
+        }
+
+        // What the uninstall is actually for.
+        for naw in ["nass", "sawt"] {
+            let asl = nusakh.join(naw).join("asl");
+            assert_eq!(
+                super::hadaf_hadhf_fi_nusakh(&nusakh, luba, &asl)
+                    .map(|hadaf| hadaf.masar().to_path_buf())
+                    .ok(),
+                Some(asl.clone()),
+                "{} should be deletable",
+                asl.display()
+            );
+        }
     }
 
     #[test]

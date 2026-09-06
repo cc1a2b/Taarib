@@ -58,6 +58,14 @@ export const mafatih = {
   maktaba: ['maktaba'] as const,
   /** One game's engine, capability report and build. */
   tafasil: (muarrif: string) => ['tafasil', muarrif] as const,
+  /**
+   * One game held whole: the core's five answers and the chain behind each.
+   *
+   * One key for every surface that asks, so arriving at the automatic-run
+   * screen from the game screen costs nothing — and, more to the point, so the
+   * two cannot be looking at two different answers about one game.
+   */
+  aql: (muarrif: string) => ['aql', muarrif] as const,
   /** Every patch the registry offers for one game. */
   ruqaa: (muarrif: string) => ['ruqaa', muarrif] as const,
   /** Whether one game's executable is running. */

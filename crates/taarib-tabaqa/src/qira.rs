@@ -32,6 +32,62 @@
 //! dictionary hits and calling it confidence — would produce a number that
 //! reads like a measurement, gets used like a measurement, and is not one.
 //!
+//! ## What this will not read, and what it will
+//!
+//! The tier surface has to warn a user *before* they install, so the list below
+//! is written to be quotable. Every line is a measurement over real game frames
+//! and real shipped art unless it says otherwise, and the two lines that are not
+//! measurements say so.
+//!
+//! **Stylised and decorative letterforms do not work, and no setting fixes
+//! them.** Over 47 real specimens — 46 Steam `logo.png` wordmarks and a stadium
+//! LED board — 4 read exactly, 8.5%, at a character error rate of 41.5%. Nearly
+//! two thirds got at least one word right, which is worse than failing
+//! outright: a partly-right line is what a player mistakes for a translation.
+//! This is not a size or a contrast problem and it is important not to describe
+//! it as one. Forty of those wordmarks measure a median 110 pixels of glyph
+//! height at a median ink-to-ground gap of 142 of 255; the ELDEN RING HUD text
+//! that reads *exactly* is 15 to 43 pixels tall with a gap of 24 to 67. Four
+//! times the size and twice the contrast, and it fails. The letterform is the
+//! whole of it.
+//!
+//! **Low contrast is not a failing category, and claiming it is would be
+//! false.** EA SPORTS FC 26's dimmed pause menu — ink-to-ground gap 93 to 97 —
+//! read 5 of 6 regions exactly. ELDEN RING's HUD, at a gap of 24 to 36, read 4
+//! of 4 exactly, including `503425` in small serif numerals over a moving
+//! battlefield. The one low-contrast miss in the corpus is an item name caught
+//! fading out of frame: `Order's Blade` read as `Order's Binde`.
+//!
+//! **Very small text stops working at around twenty pixels of glyph height**,
+//! which is the same number [`crate::iltiqat_shasha::IdadatTahsin::irtifa_adna`]
+//! upscales below and is why that field exists. The evidence is thin and worth
+//! stating as thin: one region at 20 pixels failed — a stadium jumbotron,
+//! `90:00 5 - 3` read as `00100 6-3` — and every non-stylised region at 21
+//! pixels and above read exactly.
+//!
+//! **Text over a moving scene is fine; a moving scene beside the text is
+//! where the danger is.** All four ELDEN RING regions come from one mid-combat
+//! frame with heavy motion blur and all four read exactly. What the motion does
+//! is manufacture text where there is none: the single worst false read in the
+//! corpus, `H AW TEN PEESL IHTT`, is a region of motion-blurred fire.
+//!
+//! **Dense repeating texture is the leading cause of invented words** — grass,
+//! foliage, a stadium crowd, tiered seating, a city seen from the air. Of 228
+//! textless regions cut from theHunter: Call of the Wild, 16 came back as words
+//! the structural gate accepted; over the wide subtitle-shaped regions of those
+//! frames, 9 of 48. Region shape matters and in the direction that hurts: wide
+//! bands produced false reads at 9.8%, small HUD-sized regions at 1.2%.
+//!
+//! **Text a character at a time, and text that moves between frames, is not
+//! measured.** Every region behind every number here is a single captured
+//! frame.
+//!
+//! **Non-Latin scripts are not measured either, and the claim that they fail is
+//! inference from [`LUGHAT_MAHMUL`] and the shipped model's alphabet rather than
+//! from a reading.** The one asset that looked like a basis turned out not to be
+//! one: `BIO4/option/jpn_scaj_000.dds` is named for Japanese, carries the
+//! English words `SCREEN SETTINGS` and nothing else, and this engine reads it.
+//!
 //! ## Lines, not words
 //!
 //! Every engine here splits a sentence across boxes, and every engine does it
@@ -53,7 +109,7 @@ use std::sync::OnceLock;
 #[cfg(any(windows, target_os = "macos"))]
 use parking_lot::Mutex;
 
-use crate::iltiqat_shasha::SuraMultaqata;
+use crate::iltiqat_shasha::{IdadatTahsin, MuhassinSura, SuraMuhassana, SuraMultaqata};
 use crate::khata::KhataTabaqa;
 use crate::wajiha::MustatilBiksel;
 
@@ -410,6 +466,14 @@ pub trait Qari: Send + fmt::Debug {
     /// which is the ordinary result for a dialogue box between lines and is why
     /// that variant is [`taarib_usus::khata::Khutura::Maluma`] rather than a
     /// warning — a warning here would be a warning sixty times a second.
+    ///
+    /// How ordinary is measured rather than assumed, and the measurement
+    /// overturned the belief it replaced. Two no-text control images had been
+    /// enough to conclude that this engine "never returns nothing"; over 768
+    /// region crops of real game frames that carry no readable text it returns
+    /// nothing on **633 of them, 82.4%**. Refusal is therefore mostly free, and
+    /// the gates in this module exist for the other 17.6% — which is still 135
+    /// regions of sky, grass and crowd that came back as words.
     ///
     /// [`KhataTabaqa::QariGhayrMutah`] when the engine has become unavailable
     /// since it was selected, and [`KhataTabaqa::IltiqatFashil`] when the image
@@ -1934,6 +1998,146 @@ impl IkhtiyarQari {
         }
         Ok(mudmaja)
     }
+
+    /// Preprocesses, reads, merges, and puts the boxes back in the capture's
+    /// coordinates.
+    ///
+    /// The half of [`IkhtiyarQari::iqra_mufattasha`] that does not judge, split
+    /// out because it runs twice per region and the two calls must not differ.
+    /// A region the engine found nothing in comes back as an empty vector rather
+    /// than an error: "nothing was there" is a *result* here, and it is the one
+    /// the gate below turns into a refusal.
+    fn iqra_muhassana(
+        &mut self,
+        muhassana: &SuraMuhassana,
+    ) -> Result<Vec<SatrMaqru>, KhataTabaqa> {
+        let sutur = match self.qari.iqra(muhassana.sura()) {
+            Ok(sutur) => sutur,
+            Err(KhataTabaqa::LaNassMaqru { .. }) => return Ok(Vec::new()),
+            Err(khata) => return Err(khata),
+        };
+        let fajwa = fajwa_muqtaraha(&sutur);
+        Ok(SatrMaqru::mudmaj(sutur, fajwa)
+            .into_iter()
+            .map(|mut satr| {
+                satr.mawdi = muhassana.ila_iltiqat(satr.mawdi);
+                satr
+            })
+            .collect())
+    }
+
+    /// Reads one region and decides whether what came back may be translated.
+    ///
+    /// The whole filter, in one call, and the reason this exists is that until
+    /// it did the refusal layer was a set of exposed decisions rather than
+    /// something that ran: [`hukm_bunya`] and [`hukm_tawafuq`] were public, and
+    /// no caller in the workspace joined preprocessing to recognition to them.
+    /// Wiring it here rather than in each backend also puts the two-pass
+    /// cascade, the coordinate mapping and the choice of corroborating path in
+    /// one place, and all three are things that compile just as well when they
+    /// are wrong.
+    ///
+    /// ## The cascade
+    ///
+    /// 1. Preprocess with `iadadat` and read. The boxes come back in the
+    ///    capture's coordinates, the upscale factor already divided out.
+    /// 2. [`hukm_bunya`] — one pass over the string, no extra recognition. If it
+    ///    refuses, return; over a measured corpus of 768 regions carrying no
+    ///    readable text this ends it for 739 of them.
+    /// 3. Otherwise preprocess again with
+    ///    [`crate::iltiqat_shasha::IdadatTahsin::yuhawwil_ila_ramadi`]
+    ///    **flipped**, read again, and put the two reads to [`hukm_tawafuq`].
+    ///
+    /// Flipped rather than fixed to grayscale, because a caller who has already
+    /// chosen the grayscale chain for their game — a visual novel with flat
+    /// dialogue panels, where it wins — must still be corroborated against
+    /// something that is not itself, and for them that something is colour.
+    ///
+    /// The second pass is where the cost is, and it is paid on about a tenth of
+    /// regions: it runs only on the ones step 2 accepted, and never on a region
+    /// already refused.
+    ///
+    /// ## What it is worth, measured
+    ///
+    /// Over 768 real region crops that carry no readable text — sky, walls,
+    /// grass, crowd, motion blur, a dimmed pause backdrop, shipped textures —
+    /// step 2 alone refused 96.2% and let 29 reads through as text. Adding step
+    /// 3 refused all 768 and let none through. Across the 20 regions in that
+    /// corpus whose text the engine read exactly right, both configurations
+    /// accepted every one.
+    ///
+    /// Nothing was refused for the wrong reason and nothing was tuned to get
+    /// there: the thresholds on [`HududQubul`] are untouched. Zero out of 768 is
+    /// a ceiling on that corpus rather than a proof — it bounds the rate below
+    /// roughly one region in 250 — and it says nothing about a region type the
+    /// corpus does not contain.
+    ///
+    /// # Errors
+    ///
+    /// Whatever [`crate::iltiqat_shasha::MuhassinSura::hassin_lil_qari`] and
+    /// [`Qari::iqra`] refuse. A region with nothing readable in it is **not** an
+    /// error here — it is [`HukmQira::Marfud`], which is the answer the caller
+    /// asked for. A failure on the corroborating path is propagated rather than
+    /// quietly downgraded to the one-pass verdict: a caller that believes both
+    /// gates ran when only one did is exactly the caller this call exists to
+    /// prevent.
+    pub fn iqra_mufattasha(
+        &mut self,
+        sura: &SuraMultaqata,
+        iadadat: &IdadatTahsin,
+        hudud: &HududQubul,
+    ) -> Result<QiraMufattasha, KhataTabaqa> {
+        let mut muhassin = MuhassinSura::jadeed(*iadadat);
+        let muhassana = muhassin.hassin_lil_qari(sura)?;
+        let sutur = self.iqra_muhassana(&muhassana)?;
+
+        let hukm = hukm_bunya(&sutur, hudud);
+        if !hukm.maqbul() {
+            return Ok(QiraMufattasha { sutur, hukm, tawafuq_jara: false });
+        }
+
+        let mut iadadat_thani = *iadadat;
+        iadadat_thani.yuhawwil_ila_ramadi = !iadadat.yuhawwil_ila_ramadi;
+        let mut muhassin_thani = MuhassinSura::jadeed(iadadat_thani);
+        let muhassana_thani = muhassin_thani.hassin_lil_qari(sura)?;
+        let thani = self.iqra_muhassana(&muhassana_thani)?;
+
+        let hukm = hukm_tawafuq(&sutur, &thani, hudud);
+        Ok(QiraMufattasha { sutur, hukm, tawafuq_jara: true })
+    }
+}
+
+/// One region, read and judged.
+///
+/// Carries the lines even when they were refused, because the control panel
+/// shows a user what their region was read as next to why it was not used, and
+/// "this region was read as `AW 7 PR WA` and refused" is the sentence that tells
+/// them to move the region. A type that dropped the text on refusal would leave
+/// the panel with nothing to show.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QiraMufattasha {
+    /// What the engine read, merged, in the **capture's** coordinates.
+    pub sutur: Vec<SatrMaqru>,
+    /// Whether it may be translated and drawn, and why not when it may not.
+    pub hukm: HukmQira,
+    /// Whether the corroborating second pass ran.
+    ///
+    /// `false` means the structural gate refused first and the expensive pass
+    /// was skipped — not that corroboration passed. Reported because a caller
+    /// counting recognition passes, or asking why one region cost twice what its
+    /// neighbour did, has no other way to know.
+    pub tawafuq_jara: bool,
+}
+
+impl QiraMufattasha {
+    /// The lines as one block of text, or [`None`] when the read was refused.
+    ///
+    /// The accessor the translation pipeline should use, because it cannot
+    /// return the text without the verdict having been consulted.
+    #[must_use]
+    pub fn nass_maqbul(&self) -> Option<String> {
+        self.hukm.maqbul().then(|| SatrMaqru::fiqra(&self.sutur))
+    }
 }
 
 /// A merge gap derived from the lines' own heights.
@@ -2007,6 +2211,25 @@ const KALIMAT_HARF: [char; 4] = ['a', 'A', 'i', 'I'];
 /// the right value differs between a game whose HUD is mostly numbers and one
 /// whose dialogue is prose, and because a threshold nobody can move is a
 /// threshold that will be wrong for somebody.
+///
+/// ## They were swept again against 768 blank regions, and left alone
+///
+/// The four values below decide [`hukm_bunya`] between them, so a sweep over
+/// them replays the real verdict rather than a model of it. Over the corpus in
+/// [`IkhtiyarQari::iqra_mufattasha`]'s header, raising [`Self::adna_huruf`] from
+/// 2 to 4 would have cut what got past the structural gate from 29 regions to
+/// 13 — 3.8% to 1.7% — and lowering [`Self::nisbat_tashawwuh`] from 0.34 to
+/// 0.25 would have cut it to 11, in both cases without refusing a single one of
+/// the 20 regions the engine read exactly right.
+///
+/// Neither change was made, and the reason is a hole in the corpus rather than
+/// a preference. The shortest correct read in it is four characters, so it
+/// contains no evidence at all about `OK`, `XI`, `HP`, `No`, `On` or `Map` —
+/// the two- and three-character words a game HUD is full of. A sweep that looks
+/// free only because the corpus cannot see the cost is not a measurement of the
+/// threshold, it is a measurement of the corpus. The gain those two changes
+/// offer is in any case already taken, and taken without a threshold move: the
+/// corroborating pass refuses all 29.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct HududQubul {
     /// The largest fraction of characters that may be ones this crate does not
@@ -2284,8 +2507,8 @@ pub fn hukm_bunya(sutur: &[SatrMaqru], hudud: &HududQubul) -> HukmQira {
         return HukmQira::Marfud {
             sabab: format!(
                 "{:.0}% of the words read have a shape ordinary text does not — a case change \
-                 inside a word, letters mixed with digits, or a long run with no vowel — above \
-                 the {:.0}% ceiling",
+                 inside a word, letters mixed with digits, a stray single letter, or nothing \
+                 but punctuation — above the {:.0}% ceiling",
                 nisbat_tashawwuh * 100.0,
                 hudud.nisbat_tashawwuh * 100.0
             ),
@@ -2346,20 +2569,38 @@ pub fn khilaf_qiraatayn(awwal: &[SatrMaqru], thani: &[SatrMaqru]) -> f64 {
 
 /// The expensive gate: refuse a region two independent reads disagree about.
 ///
-/// The two reads are the same engine over the same region through two different
-/// preprocessing paths — the raw capture, and
-/// [`crate::iltiqat_shasha::MuhassinSura::hassin_lil_qari`]'s output. That is a
-/// corroboration test rather than a heuristic about English, and it is the only
-/// thing in this crate that catches a *plausible* wrong read: when a region is
-/// genuinely legible both paths converge on the same string, and when it is not
-/// they diverge, because what each is reading is its own preprocessing
+/// The two reads are the same engine over the same region through two
+/// preprocessing paths that must **differ in the pixels they hand the engine**.
+/// That is a corroboration test rather than a heuristic about English, and it is
+/// the only thing in this crate that catches a *plausible* wrong read: when a
+/// region is genuinely legible both paths converge on the same string, and when
+/// it is not they diverge, because what each is reading is its own preprocessing
 /// artefacts rather than the text.
 ///
+/// ## Which two paths, and why not the obvious two
+///
+/// The pair to use is
+/// [`crate::iltiqat_shasha::MuhassinSura::hassin_lil_qari`] with
+/// [`crate::iltiqat_shasha::IdadatTahsin::yuhawwil_ila_ramadi`] **set both
+/// ways** — colour against the grayscale chain. [`IkhtiyarQari::iqra_mufattasha`]
+/// runs exactly that pair and is the call to make.
+///
+/// The pair that reads as obvious — the raw capture against `hassin_lil_qari`'s
+/// output — is worse than useless, and the reason is measured rather than
+/// argued. In its colour shape `hassin_lil_qari` hands the recognizer the
+/// capture's own colour, upscaled, and the upscale fires only on text below the
+/// height floor; on everything else the two "paths" are the same pixels. Over
+/// 837 real region crops the raw read and the default read were **character-for-
+/// character identical on 830 of them, 99.2%**, so the gate could not refuse
+/// anything it was given. Colour against grayscale returned different text on
+/// 378 of the same 837, and over 768 regions that carry no readable text it cut
+/// what got past the structural gate from 29 to 0.
+///
 /// It costs a second recognition pass, which is the most expensive thing this
-/// crate does. It is therefore not the default: it is what a caller turns on
-/// for a region the structural gate keeps passing and the player keeps
-/// reporting as wrong, and what a caller runs once when a region is first drawn
-/// to decide whether that region is worth reading at all.
+/// crate does. That cost is bounded by running it second: over those 837
+/// regions the structural gate accepted 86, so the second pass runs on about a
+/// tenth of the regions a capture loop hands this crate, and never on one that
+/// has already been refused.
 #[must_use]
 pub fn hukm_tawafuq(
     awwal: &[SatrMaqru],

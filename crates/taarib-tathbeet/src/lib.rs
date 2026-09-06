@@ -15,6 +15,14 @@
 //!   `ibda` flushes the manifest before returning. A path outside the game
 //!   root is unrepresentable: package content becomes a [`mawdi::WajhatLuba`]
 //!   or it is refused.
+//! - **The plan is an input, never a recomputation.** [`tarkib::khutta`] is the
+//!   one place the tier, the safety refusal and the loader directory are
+//!   decided, and every write on the install path receives its answer:
+//!   [`tarkib::nashr_bi_khutta`] executes a [`tarkib::KhuttatTarkib`], and the
+//!   script-engine write takes a [`nusus::IdhnNusus`] carrying a
+//!   [`tarkib::QararTabaqa`] that only a report the safety layer did not refuse
+//!   can mint. A plan cannot be built outside `tarkib`, so a writer cannot
+//!   disagree with one.
 
 pub mod bayan;
 pub mod bayan_makhzan;
@@ -45,7 +53,7 @@ pub use masar_tathbeet::{
 };
 pub use mawdi::{MUJALLAD_TAARIB, NawWajhatNizam, WajhatLuba, WajhatNizam};
 pub use nusus::{
-    HafizMuthabbit, MutarjimRuqaa, makhzan_mukawwinat, raqqi_nusus,
+    HafizMuthabbit, IdhnNusus, MutarjimRuqaa, Nashir, makhzan_mukawwinat, raqqi_nusus,
 };
 pub use najat_tahdith::{
     DaleelTaghayyur, DaleelTatbaq, IhsaHijra, JadwalNusus, MasdarBina, MasirRuqaa,
@@ -57,14 +65,14 @@ pub use tahaqquq::{
     tahaqquq_nusakh,
 };
 pub use taraju::{
-    KhuttatIstiada, MawqiTathbeet, NatijatLuba, RadIdad, RadLaShay, SiyasatIstiada,
-    TaqreerIstiada, TaqreerKul, TaqreerMaktaba, ihsa_al_maktaba, istiada_al_maktaba,
-    istiada_kul, istiada_nass, istiada_sawt, nazzif_nusakh,
+    BaqiyaMujallad, KhuttatIstiada, MawqiTathbeet, NatijatLuba, RadIdad, RadLaShay,
+    SiyasatIstiada, TaqreerIstiada, TaqreerKul, TaqreerMaktaba, ihsa_al_maktaba,
+    istiada_al_maktaba, istiada_kul, istiada_nass, istiada_sawt, nazzif_nusakh,
 };
 pub use tarkib::{
     HajatItar, HalatIdadat, KhuttatTarkib, LubaMuhallala, MalhuzatManassa, MukawwinItar,
-    NatijatTarkib, SababLaHaja, TalabItlaq, TaqreerMulhaqat, hajat_itar, khutta, nashr,
-    nashr_mulhaqat, rakkib_itar,
+    NatijatTarkib, QararTabaqa, SababLaHaja, TalabItlaq, TaqreerMulhaqat, hajat_itar, khutta,
+    nashr, nashr_bi_khutta, nashr_mulhaqat, rakkib_itar,
 };
 // Renamed on the way out: `masah` is unambiguous inside `wukala` and much less
 // so beside `khutta` and `nashr` at the crate root.

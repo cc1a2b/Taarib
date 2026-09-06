@@ -14,6 +14,8 @@ import { HADATH_MARHALAT_TATHBEET, HADATH_TAQADDUM_TANZEEL, KhataJisr, nadi } fr
 import { mafatih } from '@/hayat/istifsar';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t, wasm } from '@/lugha/lugha';
+import type { HalatHimaya } from '@/maktaba/aql';
+import { halatHimayaMin, nassLugha } from '@/maktaba/aql';
 import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
 import { jahiziyaMin, naqsJahiziya, tasil } from '@/maktaba/jahiziya';
 import type { Tabaqa } from '@/maktaba/tabaqat';
@@ -27,6 +29,7 @@ import {
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import type {
+  AqlLubaHie,
   BinaHie,
   DaleelHie,
   HalatIqrar,
@@ -43,6 +46,7 @@ import type {
   NatijatTathbeetHie,
   NizamArqam,
   RuqaaLuba,
+  ShahidHie,
   TafasilLuba,
   TaqreerHie,
   TaqreerTahaqquqHie,
@@ -1011,6 +1015,230 @@ function QismHimaya({ muarrif, himaya, lugha, yajri, alaFahs, khata }: KhasaisHi
           aada={alaFahs}
         />
       ) : null}
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   لماذا تقول هذه اللعبة ذلك — the evidence chain, behind a disclosure.
+
+   Every answer `taarib-aql` gives comes back as a verdict together with the
+   producers behind it: which module said what, and where it saw it. That is
+   what makes "why does this game say that" answerable — a verdict that cannot
+   name its inputs is a cache, and a wrong verdict that can is traceable to a
+   wrong *input* rather than to a guess somebody has to go and find.
+
+   It is here rather than nowhere because a chain nobody can reach is a chain
+   that stops being maintained. It is behind a disclosure rather than open
+   because `aql_luba` walks the game directory — the anti-cheat scan, the
+   multiplayer scan and the proxy survey all read files — and this screen
+   deliberately does not pay for that on every open, which is the same reason
+   the protection panel above has its own button.
+
+   Nothing in here is phrased by the interface. Every sentence is a producer's
+   own, in both languages, and the observations are kept in whatever language
+   their producer wrote them: translating an observation would put a line in the
+   trail that nothing ever said.
+   --------------------------------------------------------------------------- */
+
+/** The three answers the anti-cheat question actually has, named. */
+const ISM_HALAT_HIMAYA: Readonly<Record<HalatHimaya, MiftahLugha>> = {
+  mahmiya: 'luba.aql.himaya_mahmiya',
+  lam_yajri: 'luba.aql.himaya_lam_yajri',
+  la_tawqee: 'luba.aql.himaya_la_tawqee',
+};
+
+interface KhasaisShawahid {
+  readonly shawahid: readonly ShahidHie[];
+  readonly lugha: Lugha;
+}
+
+/**
+ * One answer's chain.
+ *
+ * An empty chain is drawn as an empty chain rather than omitted. `Musnad` says
+ * why: "nobody looked" is a legitimate answer and the one state a reader must
+ * never be shown as a finding, so a verdict standing on nothing says so.
+ */
+function Shawahid({ shawahid, lugha }: KhasaisShawahid): JSX.Element {
+  if (shawahid.length === 0) {
+    return <p className="luba__nass-hadi">{t('luba.aql.la_shawahid', lugha)}</p>;
+  }
+  return (
+    <ul className="luba__shawahid">
+      {shawahid.map((shahid, fihris) => (
+        <li key={`${shahid.masdar}-${String(fihris)}`} className="luba__shahid">
+          <p className="mono-ltr luba__shahid-muntij">{shahid.muntij}</p>
+          <p className="luba__shahid-wasf" dir="auto">
+            {shahid.wasf}
+          </p>
+          {shahid.mawqi === null ? null : (
+            <p className="mono-ltr luba__daleel-masar luba__qat" title={shahid.mawqi}>
+              {shahid.mawqi}
+            </p>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+interface KhasaisAqlQism {
+  readonly muarrif: string;
+  readonly lugha: Lugha;
+}
+
+function QismAql({ muarrif, lugha }: KhasaisAqlQism): JSX.Element {
+  const [zahir, setZahir] = useState(false);
+  useEffect(() => {
+    setZahir(false);
+  }, [muarrif]);
+
+  // The same key the automatic-run screen asks under, so arriving there from
+  // here costs nothing and — the point — the two cannot hold two different
+  // answers about one game.
+  const aql = useQuery<AqlLubaHie, KhataJisr>({
+    queryKey: mafatih.aql(muarrif),
+    queryFn: () => nadi('aql_luba', { muarrif }),
+    enabled: zahir,
+  });
+  const bayanat = aql.data;
+  const halaHimaya = bayanat === undefined ? null : halatHimayaMin(bayanat.hala_himaya);
+
+  return (
+    <section className="luba__qism" aria-labelledby="luba-unwan-aql">
+      <h2 id="luba-unwan-aql" className="luba__unwan-qism">
+        {t('luba.aql.unwan', lugha)}
+      </h2>
+      <p className="luba__nass-hadi">{t('luba.aql.sharh', lugha)}</p>
+      <div className="luba__saff-afal">
+        <button
+          type="button"
+          className="zir"
+          aria-expanded={zahir}
+          aria-controls="luba-aql"
+          onClick={() => {
+            setZahir((hali) => !hali);
+          }}
+        >
+          {t(zahir ? 'luba.aql.ikhfa' : 'luba.aql.zirr', lugha)}
+        </button>
+      </div>
+      {!zahir ? null : aql.isPending ? (
+        <p className="luba__jari">{t('luba.aql.jari', lugha)}</p>
+      ) : aql.error !== null ? (
+        <KutlatKhata
+          unwan={t('luba.aql.taadhur', lugha)}
+          khata={aql.error}
+          lugha={lugha}
+          muarrif={muarrif}
+          aada={() => {
+            void aql.refetch();
+          }}
+        />
+      ) : bayanat === undefined ? null : (
+        <div id="luba-aql" className="luba__aql">
+          <h3 className="luba__unwan-farii">{t('luba.aql.muntaj', lugha)}</h3>
+          <p className="luba__aql-jumla" dir="auto">
+            {nassLugha({ arabi: bayanat.ism_arabi, injilizi: bayanat.ism_injilizi }, lugha)}
+          </p>
+          <p className="luba__sabab" dir="auto">
+            {nassLugha({ arabi: bayanat.sabab_arabi, injilizi: bayanat.sabab_injilizi }, lugha)}
+          </p>
+          <Shawahid shawahid={bayanat.shawahid_muntaj} lugha={lugha} />
+
+          <h3 className="luba__unwan-farii">{t('luba.aql.mawani', lugha)}</h3>
+          {bayanat.mawani.length === 0 ? (
+            <p className="luba__nass-hadi">{t('luba.aql.la_mawani', lugha)}</p>
+          ) : (
+            // An ordered list, because the order is the answer: this is the one
+            // ranking in the product and every surface reads it rather than
+            // making one.
+            <ol className="luba__aql-qaima">
+              {bayanat.mawani.map((mani) => (
+                <li key={mani.naw} className="luba__aql-madkhal">
+                  <p className="luba__aql-jumla" dir="auto">
+                    {nassLugha(mani, lugha)}
+                  </p>
+                  <p className="luba__aql-wusum">
+                    <span className="luba__riqaqa">
+                      {t(
+                        mani.nitaq === 'kul' ? 'luba.aql.nitaq_kul' : 'luba.aql.nitaq_tashghil',
+                        lugha,
+                      )}
+                    </span>
+                    <span className="luba__riqaqa">
+                      {t(mani.nihai ? 'luba.aql.nihai' : 'luba.aql.ghayr_nihai', lugha)}
+                    </span>
+                  </p>
+                  <Shawahid shawahid={mani.shawahid} lugha={lugha} />
+                </li>
+              ))}
+            </ol>
+          )}
+
+          <h3 className="luba__unwan-farii">{t('luba.aql.makhatir', lugha)}</h3>
+          {bayanat.makhatir.length === 0 ? (
+            <p className="luba__nass-hadi">{t('luba.aql.la_makhatir', lugha)}</p>
+          ) : (
+            <ol className="luba__aql-qaima">
+              {bayanat.makhatir.map((khatar) => (
+                <li key={khatar.naw} className="luba__aql-madkhal">
+                  <p className="luba__aql-jumla" dir="auto">
+                    {nassLugha(khatar, lugha)}
+                  </p>
+                  <p className="luba__aql-wusum">
+                    <span className="luba__riqaqa">
+                      {t(khatar.muqarr ? 'luba.aql.muqarr' : 'luba.aql.muallaq', lugha)}
+                    </span>
+                  </p>
+                  <Shawahid shawahid={khatar.shawahid} lugha={lugha} />
+                </li>
+              ))}
+            </ol>
+          )}
+
+          <h3 className="luba__unwan-farii">{t('luba.aql.hudud', lugha)}</h3>
+          {bayanat.hudud.length === 0 ? (
+            <p className="luba__nass-hadi">{t('luba.aql.la_hudud', lugha)}</p>
+          ) : (
+            <ul className="luba__aql-qaima">
+              {bayanat.hudud.map((hadd, martaba) => (
+                <li key={`${String(martaba)}:${hadd.arabi}`} className="luba__aql-madkhal">
+                  <p className="luba__aql-jumla" dir="auto">
+                    {nassLugha(hadd, lugha)}
+                  </p>
+                  <Shawahid shawahid={hadd.shawahid} lugha={lugha} />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h3 className="luba__unwan-farii">{t('luba.aql.himaya', lugha)}</h3>
+          {/* Named from the verdict rather than from the evidence list, because
+              an empty list is what a clean game and an unread catalogue both
+              produce and the difference is the whole point of the third answer.
+              A verdict this build cannot name falls through to its chain, which
+              still says what was looked at. */}
+          {halaHimaya === null ? null : (
+            <p className="luba__nass-hadi">{t(ISM_HALAT_HIMAYA[halaHimaya], lugha)}</p>
+          )}
+          <Shawahid shawahid={bayanat.shawahid_himaya} lugha={lugha} />
+          {bayanat.ikhtilaf_himaya === null ? null : (
+            <div className="luba__aql-ikhtilaf">
+              <p className="luba__nass-hadi luba__tahdheer">{t('luba.aql.ikhtilaf', lugha)}</p>
+              <dl className="luba__jadwal">
+                <Saff unwan={t('luba.aql.min_kashf', lugha)}>
+                  <Riqaqat qaima={bayanat.ikhtilaf_himaya.min_kashf} />
+                </Saff>
+                <Saff unwan={t('luba.aql.min_iktishaf', lugha)}>
+                  <Riqaqat qaima={bayanat.ikhtilaf_himaya.min_iktishaf} />
+                </Saff>
+              </dl>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -2147,6 +2375,12 @@ export function Luba(): JSX.Element {
                   alaFahs={alaFahsHimaya}
                   khata={himaya.error}
                 />
+
+                {/* Under the protection panel on purpose: it is the panel whose
+                    verdict a reader is most likely to want the workings of, and
+                    the chain restates that verdict beside the four others rather
+                    than in a place they have to go looking for. */}
+                <QismAql muarrif={muarrif} lugha={lugha} />
 
                 {iqrar.error !== null ? (
                   <KutlatKhata

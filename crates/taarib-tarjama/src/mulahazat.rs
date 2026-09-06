@@ -96,12 +96,15 @@ pub const SAA_JALSA: usize = 4_096;
 /// screens. The conversion is a field mapping and it belongs at the overlay's
 /// edge.
 ///
-/// The mapping from `taarib_tabaqa::sijill_qira::MadkhalQira` is exact except
-/// in one place, and that place is the whole point of [`ThiqatQira`]: the
-/// history entry carries `thiqa` but **not** `taarib_tabaqa::qira::SatrMaqru`'s
-/// `maqisa`, so a caller reading a history file cannot tell a measurement
-/// from the stand-in and must pass [`ThiqatQira::Ghayr`]. A caller holding
-/// the `SatrMaqru` itself has the bit and passes the truth.
+/// The mapping from `taarib_tabaqa::sijill_qira::MadkhalQira` is exact, and the
+/// field that makes it exact is the whole point of [`ThiqatQira`]: the history
+/// entry carries `thiqa` **and** `maqisa`, so a caller harvesting a history
+/// file can tell a real measurement from `taarib_tabaqa::qira`'s stand-in
+/// constant and passes [`ThiqatQira::Ghayr`] only where no engine reported a
+/// number. A caller whose source lacks that bit — anything that has only a
+/// `thiqa` — has no way to tell and must pass [`ThiqatQira::Ghayr`] for all of
+/// it, because the alternative is laundering a constant into a store that
+/// refuses to hold one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MulahazaTabaqa {
     /// What the recognizer read, verbatim.

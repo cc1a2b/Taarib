@@ -10,11 +10,12 @@ import { mafatih } from '@/hayat/istifsar';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t, wasm } from '@/lugha/lugha';
+import { khatarMin, maniAwwal, nassLugha } from '@/maktaba/aql';
 import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
 import { jahiziyaMin, naqsJahiziya, tasil } from '@/maktaba/jahiziya';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
 import { SatrRamz } from '@/mukawwinat/kutlat_khata';
-import type { Idadat, Lugha, NizamArqam, TafasilLuba } from '@/mustalahat/awamir';
+import type { AqlLubaHie, Idadat, Lugha, NizamArqam, TafasilLuba } from '@/mustalahat/awamir';
 import { HARAKAT_LAWHA, haraka } from '@/nizam/haraka';
 import type {
   HalatMarhala,
@@ -98,44 +99,49 @@ const MUARRIF_JAHIZIYA = 'tilqai-sabab-jahiziya';
 /** The multiplayer acknowledgement, for the ids the component derives. */
 const MUARRIF_SHABAKA = 'tilqai-iqrar-shabaka';
 
-/** The anti-cheat refusal, which every withdrawn start button points at. */
-const MUARRIF_HIMAYA = 'tilqai-sabab-himaya';
+/**
+ * The standing blocker, which every withdrawn start button points at.
+ *
+ * One id rather than one per kind, because at most one blocker panel draws:
+ * they are all keyed on the first entry of `mawani`, and the core has already
+ * decided which that is.
+ */
+const MUARRIF_MANI = 'tilqai-sabab-mani';
 
 /* ---------------------------------------------------------------------------
-   The three refusals the run raises at the door.
+   What stops a run, and where the screen learns it.
 
-   All three are answered before a single string is sent for translation and
-   before anything is spent, and all three arrive as a rejected `ibda` rather
-   than inside a snapshot — the run does not exist yet when they fire. They are
-   matched on the permanent code because that is the one part of a failure that
-   does not move: the sentences are rewritten as the product's wording improves,
-   and a screen that branched on a substring of one would silently stop branching
-   the day somebody fixed a comma.
+   **The blockers come from the core.** `aql_luba` holds every producer's answer
+   about one game and returns them in one order — `NawMani::rutba` — so this
+   screen reads `mawani[0]` and draws that. It applied a priority of its own
+   until now: anti-cheat, then readiness, then the multiplayer question, spelled
+   out here in a ternary. The game screen applied a different one, and the two
+   named different refusals for the same game whenever more than one held. There
+   is one order now and it is not in this file.
 
-   The three are not one thing with three labels:
+   Two of the core's own fields decide what the panel does, and neither is
+   restated here:
 
-   - **9127** is anti-cheat found. There is no override anywhere in this product
-     for it, deliberately, because a VAC ban attaches to the account rather than
-     to the game and no release and no setting lifts it. It is drawn in the
-     refusal vocabulary with no control at all, because offering one would be a
-     lie about what the user can do.
-   - **9128** is Steam's catalogue unreadable. Not a clean result and not a
-     refusal about the game: VAC is declared only in that catalogue and leaves
-     nothing inside a game folder, so silence is silence. It has exactly one
-     remedy and it is a setting, so it gets the link to it.
-   - **9129** is the multiplayer acknowledgement missing. Alone among the three
-     it is a *question*, and the person is the only one who can answer it — so it
-     is the one that reveals the acknowledgement and lets them press again.
+   - `nitaq` says whether a blocker stops everything or only the automatic run.
+   - `nihai` says whether it is a fact nothing will change. A blocker that stops
+     everything **and** is final withdraws the button, because offering a press
+     that will never be accepted is a lie about what the reader can do. One that
+     is not final is stated and leaves the button, because the person can go and
+     change what it names — set Steam's folder, finish the download, let the
+     probe run — and has to be able to come back and press the same button.
+
+   **The codes are what is left.** `ibda` still refuses at its own door, from a
+   full walk rather than from a cached answer, and those refusals arrive as a
+   rejected call rather than inside a snapshot. Two of the three the door raises
+   are now stated before the press instead, so only the one that is a *question*
+   is still matched here: **9129**, the multiplayer acknowledgement. The person
+   is the only one who can answer it, so it reveals the acknowledgement and lets
+   them press again. Matching is on the permanent code because that is the one
+   part of a failure that does not move.
    --------------------------------------------------------------------------- */
-const RAMZ_HIMAYA = 'TAARIB-E-9127';
-const RAMZ_FAHS_HIMAYA = 'TAARIB-E-9128';
 const RAMZ_SHABAKA = 'TAARIB-E-9129';
 
-const RUMUZ_BAB: ReadonlySet<string> = new Set([
-  RAMZ_HIMAYA,
-  RAMZ_FAHS_HIMAYA,
-  RAMZ_SHABAKA,
-]);
+const RUMUZ_BAB: ReadonlySet<string> = new Set([RAMZ_SHABAKA]);
 
 const ASMA_HALAT: Readonly<Record<HalatMarhala, MiftahLugha>> = {
   muntazira: 'tilqai.hala.muntazira',
@@ -532,6 +538,19 @@ export interface KhasaisShasha {
   readonly jahiziya?: JahiziyaTashghil | null;
   /** What is unfinished, in the reader's language, when anything is. */
   readonly naqs?: string | null;
+  /**
+   * Everything the core knows about this game, or null while it is being
+   * fetched and when it could not answer.
+   *
+   * The blockers, the risks and the promise all come from here, already in the
+   * one order, so this screen names the same refusal the game screen names. It
+   * is `null` rather than absent for the two cases that behave the same way:
+   * the answer has not arrived, or the command failed. Neither withdraws
+   * anything on its own — a refusal on an answer nobody has is a refusal of a
+   * game the backend may well accept — and `ibda` still refuses at its own door
+   * in both.
+   */
+  readonly aql?: AqlLubaHie | null;
 }
 
 /**
@@ -619,15 +638,26 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
   const naqs = khasais.naqs ?? null;
 
   /* -------------------------------------------------------------------------
+     The core's answer, which is what the refusals below are drawn from.
+
+     `mani` is the single most serious blocker, already chosen by the one
+     ordering; `khatarShabaka` is the multiplayer question with the scan's own
+     wording and whether it has been answered. Neither is re-ranked here.
+     ----------------------------------------------------------------------- */
+  const aql = khasais.aql ?? null;
+  const mani = aql === null ? null : maniAwwal(aql);
+  const khatarShabaka = aql === null ? null : khatarMin(aql, 'laab_jamai');
+
+  /* -------------------------------------------------------------------------
      The multiplayer acknowledgement.
 
-     The verdict says whether the run will ask for it, read off the launcher's
-     own catalogue entry; the run decides it again from a full walk of the game
-     directory and refuses at the door when the two disagree. So a `false`
-     verdict is "the launcher did not say so", not "you will not be asked" — and
-     `TAARIB-E-9129` coming back from a press is the walk having said what the
-     catalogue did not. Both are treated as the same fact, which is why the
-     question can appear after a press as well as before one.
+     Three sources say the same thing and they are treated as one fact. The
+     verdict reads the launcher's own catalogue entry, which is a hint; the core
+     runs `kashf_shabaka` over the game's own files, which is the same walk the
+     run makes; and `TAARIB-E-9129` coming back from a press is that walk having
+     spoken after the fact. Any of them means the question is asked, which is why
+     it can appear before a press as well as after one — and, now that the core
+     answers before the button, usually before.
 
      The answer starts false and is only ever the user's. Nothing here defaults
      it, and it is cleared whenever the screen changes game: an acknowledgement
@@ -645,8 +675,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
    * disappearing under their hand. And the fact does not stop being true because
    * an error object was cleared.
    *
-   * Only this one needs the latch. The anti-cheat refusal below withdraws every
-   * control that could clear its error, so it cannot go stale.
+   * Only this one needs a latch, and only for the press that gets as far as the
+   * door. A final blocker withdraws every control that could clear its error, so
+   * it cannot go stale; and the core's own answer is not read off `khataAmal` at
+   * all, so it does not move when an error object is cleared.
    */
   const [kashafaShabaka, setKashafaShabaka] = useState(false);
 
@@ -662,31 +694,46 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
     }
   }, [ramzBab]);
 
-  const yalzamShabaka = hukm?.yalzam_iqrar_shabaka === true || kashafaShabaka;
+  const yalzamShabaka =
+    khatarShabaka !== null || hukm?.yalzam_iqrar_shabaka === true || kashafaShabaka;
+  // The core reports this risk as outstanding for every game it fires on, and
+  // that is correct rather than a gap being papered over: nothing persists this
+  // answer, because an acknowledgement is about one run of one game and one
+  // carried over from another would be an answer nobody gave. The tick is the
+  // answer and it lives here, in this screen's own state, for the length of the
+  // decision it belongs to.
   const mamnuShabaka = yalzamShabaka && !iqrarShabaka;
 
   /*
-   * Anti-cheat withdraws the button outright, and only anti-cheat does.
+   * Whether the standing blocker withdraws the button, from the core's own two
+   * fields rather than from a list of codes kept here.
    *
-   * A game the walk found evidence on will refuse every press for as long as
-   * this build exists — the refusal carries `Khutwa::LaShay` precisely because a
-   * VAC ban is permanent and attaches to the account, not to the game — so
-   * leaving a live button over it offers something the product will never do.
-   *
-   * `TAARIB-E-9128` deliberately does **not** withdraw anything. It is not a
-   * verdict about the game: Steam's catalogue could not be read, the remedy is
-   * one setting, and somebody who goes and sets it has to be able to come back
-   * and press the same button.
+   * `nitaq === 'kul'` is a blocker that stops everything; `nihai` is a blocker
+   * nothing will change. Both together mean the press will never be accepted, so
+   * offering it is a lie about what the reader can do — anti-cheat, a publisher's
+   * own Arabic, an entry that is not a game. A blocker that stops everything and
+   * is *not* final is stated and leaves the button, because the reader can go and
+   * change what it names and has to be able to come back and press the same
+   * button: an unread Steam catalogue, a download still running, a game nobody
+   * has probed yet.
    */
-  const mamnuHimaya = ramzBab === RAMZ_HIMAYA;
+  const maniQati = mani !== null && mani.nitaq === 'kul' && mani.nihai;
 
-  // Which withdrawal a refused start button describes itself with, in the order
-  // the backend applies them: the safety layer's refusal outranks everything,
-  // then readiness, then the question. On a game this build cannot patch at all
-  // the multiplayer question is moot, and a risk decision demanded for a run
-  // that cannot happen is how a person learns to tick without reading.
-  const sababTawaqquf = mamnuHimaya
-    ? MUARRIF_HIMAYA
+  /*
+   * Which withdrawal a refused start button describes itself with.
+   *
+   * The order is the core's: a blocker outranks a risk by construction, because
+   * a blocker is what no answer opens and a risk is a question the person can
+   * answer, and `mawani` is already sorted among themselves. The one thing that
+   * is decided here is readiness, which is a `tashghil`-scope blocker about this
+   * screen's own run and has always had its own panel.
+   *
+   * On a game nothing can be done to, the multiplayer question is moot, and a
+   * risk decision demanded for a run that cannot happen is how a person learns
+   * to tick without reading.
+   */
+  const sababTawaqquf = maniQati
+    ? MUARRIF_MANI
     : mamnu
       ? MUARRIF_JAHIZIYA
       : mamnuShabaka
@@ -694,7 +741,7 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
         : undefined;
 
   /** Whether any of the three gates is holding the start. */
-  const mamnuBadi = mamnu || mamnuHimaya || mamnuShabaka;
+  const mamnuBadi = mamnu || maniQati || mamnuShabaka;
 
   /**
    * The one place a run is started from.
@@ -904,7 +951,7 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
               demanded for nothing is how a person learns to tick without
               reading.
             */}
-            {yalzamShabaka && !mamnu && !mamnuHimaya && (yabda || mustanifa) ? (
+            {yalzamShabaka && !mamnu && !maniQati && (yabda || mustanifa) ? (
               <div className="tilqai__iqrar-shabaka">
                 {/* Revealing a panel is not an announcement. A press that was
                     refused has to say so to a reader who cannot see the panel
@@ -919,16 +966,19 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   muarrif={MUARRIF_SHABAKA}
                   unwan={t('tilqai.shabaka.unwan', lugha)}
                   tahdheer={t('tilqai.shabaka.tahdheer', lugha)}
-                  // What the walk actually found, in the backend's own words,
-                  // once a press has produced them. Before that the verdict has
-                  // only the launcher's catalogue entry to go on and says so by
-                  // saying nothing more than the general statement above.
+                  // What the walk actually found, in the scan's own words. The
+                  // core runs that walk before the button, so this is now here
+                  // to be read while the decision is being taken rather than
+                  // only after a press was refused — and the refused press is
+                  // still the fallback for a game the core could not answer for.
                   tafsil={
-                    ramzBab === RAMZ_SHABAKA && khataAmal !== null
-                      ? lugha === 'arabi'
-                        ? khataAmal.arabi
-                        : khataAmal.injilizi
-                      : null
+                    khatarShabaka !== null
+                      ? nassLugha(khatarShabaka, lugha)
+                      : ramzBab === RAMZ_SHABAKA && khataAmal !== null
+                        ? lugha === 'arabi'
+                          ? khataAmal.arabi
+                          : khataAmal.injilizi
+                        : null
                   }
                   nassIqrar={t('tilqai.shabaka.iqrar', lugha)}
                   muqirr={iqrarShabaka}
@@ -946,8 +996,16 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                 <h2 id="tilqai-unwan-jahiziya" className="tilqai__band-unwan">
                   {t('tilqai.jahiziya.unwan', lugha)}
                 </h2>
-                <p id={MUARRIF_JAHIZIYA} className="tilqai__nass">
-                  {naqs === null ? t('tilqai.jahiziya.sharh', lugha) : naqs}
+                {/* The capability report's own gap sentence, whichever way it
+                    arrived: the core carries it on the `jahiziya_ghaiba` blocker
+                    and the report carries it directly, and both are the same
+                    `naqs`. The locale fallback under them covers a report stored
+                    by a build that could not name its own gap — the one case
+                    neither source has a sentence for. */}
+                <p id={MUARRIF_JAHIZIYA} className="tilqai__nass" dir="auto">
+                  {mani !== null && mani.naw === 'jahiziya_ghaiba'
+                    ? nassLugha(mani, lugha)
+                    : (naqs ?? t('tilqai.jahiziya.sharh', lugha))}
                 </p>
                 <p className="tilqai__nass">{t('tilqai.jahiziya.khutwa', lugha)}</p>
                 <div className="tilqai__afal">
@@ -1012,10 +1070,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   </KutlatTilqai>
                 )}
 
-                {/* Every failure except the three the door raises. Those three
-                    have panels of their own below, because the generic block
-                    says "something failed" about two refusals that are not
-                    failures and one that is a question. */}
+                {/* Every failure except the one the door raises that is a
+                    question. That one has a panel of its own above, because the
+                    generic block says "something failed" about a decision the
+                    person has not been asked for yet. */}
                 {khataAmal === null || ramzBab !== null ? null : (
                   <KutlatTilqai
                     unwan={t('tilqai.khata.amal', lugha)}
@@ -1024,61 +1082,80 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   />
                 )}
 
-                {/* Anti-cheat found. No control of any kind: this product has no
-                    override for it anywhere — `Khutwa::LaShay`, deliberately —
-                    because the ban that follows attaches to the account rather
-                    than to the game, and a button here would be an offer that
-                    does not exist. */}
-                {ramzBab === RAMZ_HIMAYA && khataAmal !== null ? (
-                  <section
-                    className="tilqai__qism tilqai__qism--khatar"
-                    role="alert"
-                    aria-labelledby="tilqai-unwan-himaya"
-                  >
-                    <SatrRamz ramz={khataAmal.ramz} fashal />
-                    <h2 id="tilqai-unwan-himaya" className="tilqai__unwan">
-                      {t('tilqai.himaya.unwan', lugha)}
-                    </h2>
-                    <p id={MUARRIF_HIMAYA} className="tilqai__nass">
-                      {t('tilqai.himaya.marfud', lugha)}
-                    </p>
-                    {/* The scan's own findings, which name the anti-cheat and
-                        the files it was seen in. The product's position is the
-                        paragraph above; this is what it is a position about. */}
-                    <p className="tilqai__daleel" dir="auto">
-                      {lugha === 'arabi' ? khataAmal.arabi : khataAmal.injilizi}
-                    </p>
-                  </section>
-                ) : null}
+                {/* The standing blocker, in the producer's own words.
+                    `mawani[0]` and nothing else: the sentence is the safety
+                    layer's for anti-cheat, the store adapter's for a catalogue
+                    that would not open, discovery's for an entry that is not a
+                    game, and the probe's own for a game nobody has looked at.
+                    None of them is written here or in the string set.
 
-                {/* The catalogue could not be read. Not a verdict about the
-                    game: VAC is declared only in Steam's own index and leaves
-                    nothing inside a game folder, so a check that never opened it
-                    produces exactly the empty evidence list a clean game
-                    produces. It has one remedy and it is a setting. */}
-                {ramzBab === RAMZ_FAHS_HIMAYA && khataAmal !== null ? (
+                    Two of the core's fields shape the panel and neither is a
+                    second opinion about the game. `nihai` decides the colour and
+                    whether a button is offered at all — a final refusal gets the
+                    refusal vocabulary and no control, because the product has no
+                    override for anti-cheat or for a publisher's own Arabic
+                    anywhere. A blocker that is not final is amber and keeps the
+                    button, because the reader can go and change what it names.
+                    `naw` decides only which one action to offer beside it.
+
+                    Hidden while the run is actually moving, which is the gate
+                    the verdict's own refusal panel below has always had: a
+                    blocker that appeared after a run started — an anti-cheat
+                    signature that landed in an update — is worth showing the
+                    moment the run stops, and is noise across a progress list. */}
+                {mani !== null && mani.nitaq === 'kul' && !yajri ? (
                   <section
-                    className="tilqai__qism tilqai__qism--khatar"
-                    role="alert"
-                    aria-labelledby="tilqai-unwan-fahs-himaya"
+                    className={
+                      mani.nihai
+                        ? 'tilqai__qism tilqai__qism--khatar'
+                        : 'tilqai__qism tilqai__qism--tanbeeh'
+                    }
+                    role={mani.nihai ? 'alert' : undefined}
+                    aria-labelledby="tilqai-unwan-mani"
                   >
-                    <SatrRamz ramz={khataAmal.ramz} fashal />
-                    <h2 id="tilqai-unwan-fahs-himaya" className="tilqai__unwan">
-                      {t('tilqai.himaya.unwan', lugha)}
+                    <h2 id="tilqai-unwan-mani" className="tilqai__unwan">
+                      {t(
+                        mani.naw === 'himaya' || mani.naw === 'fahs_himaya_lam_yajri'
+                          ? 'tilqai.himaya.unwan'
+                          : 'tilqai.marfud.unwan',
+                        lugha,
+                      )}
                     </h2>
-                    <p className="tilqai__nass">{t('tilqai.himaya.fahs_lam_yajri', lugha)}</p>
-                    <p className="tilqai__daleel" dir="auto">
-                      {lugha === 'arabi' ? khataAmal.arabi : khataAmal.injilizi}
+                    {/* `tilqai__daleel` rather than `tilqai__nass`: the safety
+                        layer writes its refusal as a statement followed by the
+                        evidence it rests on, one finding per line, and that
+                        class is the one on this screen that keeps the breaks. */}
+                    <p id={MUARRIF_MANI} className="tilqai__daleel" dir="auto">
+                      {nassLugha(mani, lugha)}
                     </p>
+                    {/* Only under a final refusal. That sentence says the run
+                        does not start on a game the safety layer refuses and
+                        that the workshop is still open, which is the right thing
+                        to leave somebody with when nothing will change — and the
+                        wrong thing when something will: every blocker that is not
+                        final ends with its own next step, in the producer's own
+                        words, and the button beside it goes there. */}
+                    {mani.nihai ? (
+                      <p className="tilqai__nass">{t('tilqai.marfud.khutwa', lugha)}</p>
+                    ) : null}
                     <div className="tilqai__afal">
-                      <Link to="/idadat" className="zir">
-                        {t('tilqai.himaya.idadat', lugha)}
-                      </Link>
+                      {mani.naw === 'fahs_himaya_lam_yajri' ? (
+                        <Link to="/idadat" className="zir">
+                          {t('tilqai.himaya.idadat', lugha)}
+                        </Link>
+                      ) : (
+                        <Link to="/warsha/$muarrif" params={{ muarrif }} className="zir">
+                          {t('tilqai.jawda.warsha', lugha)}
+                        </Link>
+                      )}
                     </div>
                   </section>
                 ) : null}
 
-                {wajh === 'marfud' && hukm !== null ? (
+                {/* The verdict's own refusal, for a game the core could not
+                    answer for. It keeps the sentence `hukm_tilqai` computed,
+                    which is the same producer text by another route. */}
+                {mani === null && wajh === 'marfud' && hukm !== null ? (
                   <section className="tilqai__qism tilqai__qism--khatar">
                     <h2 className="tilqai__unwan">{t('tilqai.marfud.unwan', lugha)}</h2>
                     <p className="tilqai__nass">
@@ -1350,6 +1427,14 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
  * as the game screen's, so arriving here from that screen costs nothing, and
  * having one source for it is what stops this screen from disagreeing with the
  * one the user pressed the button on.
+ *
+ * The core's answer is fetched here for the same reason and one more. This is
+ * the screen with a button that spends money and writes into somebody's game,
+ * so the anti-cheat walk, the multiplayer walk and the proxy survey are paid for
+ * *before* the button rather than at the door after a press — which is the
+ * difference between a refusal a reader meets while deciding and one they meet
+ * after pressing. It is under the same key the game screen uses, so the two
+ * cannot be looking at two different answers about one game.
  */
 export function Tilqai(): JSX.Element {
   const { muarrif } = wajihat.useParams();
@@ -1360,6 +1445,10 @@ export function Tilqai(): JSX.Element {
   const tafsil = useQuery<TafasilLuba, KhataJisr>({
     queryKey: mafatih.tafasil(muarrif),
     queryFn: () => nadi('tafasil_luba', { muarrif }),
+  });
+  const aql = useQuery<AqlLubaHie, KhataJisr>({
+    queryKey: mafatih.aql(muarrif),
+    queryFn: () => nadi('aql_luba', { muarrif }),
   });
 
   const lugha: Lugha = idadat.data?.lugha ?? 'arabi';
@@ -1375,6 +1464,9 @@ export function Tilqai(): JSX.Element {
       // this build may well support.
       jahiziya={taqreer === undefined ? null : jahiziyaMin(taqreer.jahiziya)}
       naqs={taqreer === undefined ? null : naqsJahiziya(taqreer, lugha)}
+      // The same rule, for the same reason: a scan that has not answered yet and
+      // a scan that failed both leave the verdict's own refusal in charge.
+      aql={aql.data ?? null}
     />
   );
 }

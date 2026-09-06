@@ -116,13 +116,153 @@ pub const SLOTAT_WAKEEL: &[&str] = &[
     "dinput.dll",
     "dinput8.dll",
     "dsound.dll",
-    "xinput1_3.dll",
-    "xinput1_4.dll",
+    // `xinput1_3.dll` and `xinput1_4.dll` used to be here and are now in
+    // [`SLOTAT_MUSHTARAKA`]. They failed this list's own membership rule: the
+    // DirectX end-user redistributable installs both beside a game, so a file
+    // with either name is Microsoft's far more often than it is a mod, and a
+    // name that proves nothing does not belong on a list whose whole premise is
+    // that the name is the proof.
     "winmm.dll",
     "winhttp.dll",
     "wininet.dll",
     "dbghelp.dll",
     SLOT_TAARIB,
+];
+
+/// The proxy names that are a graphics module.
+///
+/// The separation matters because the two kinds of occupied slot ask different
+/// questions. A `dinput8.dll` belonging to a mod loader means a third party is
+/// live in the process, which is a disclosure. A `dxgi.dll` belonging to
+/// ReShade means a third party is **on the presentation path**, which is the
+/// question of whether the overlay draws at all.
+const SLOTAT_RUSUM: &[&str] = &[
+    "d3d8.dll",
+    "d3d9.dll",
+    "d3d10.dll",
+    "d3d11.dll",
+    "d3d12.dll",
+    "ddraw.dll",
+    "dxgi.dll",
+    "opengl32.dll",
+];
+
+/// Names a game may legitimately ship, which are reported only once identified.
+///
+/// `xinput1_3.dll` is Microsoft's DirectX redistributable in most games and
+/// Ultimate ASI Loader in a few, and a survey that called every copy of it a
+/// third-party hook would be a survey nobody reads. `taarib_tathbeet::wukala`
+/// draws the same line over a longer list and for the same reason.
+const SLOTAT_MUSHTARAKA: &[&str] = &["xinput1_3.dll", "xinput1_4.dll"];
+
+/// How a product that already owns a graphics slot reaches presentation.
+///
+/// This is the field the overlay's own prospects turn on, and the three answers
+/// are genuinely different outcomes rather than shades of one risk.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TariqatJar {
+    /// It hands the game an object of its own.
+    ///
+    /// ReShade's proxy returns its own `IDXGISwapChain` and ENBSeries its own
+    /// `IDirect3DDevice9`. The game's pointer is that C++ class, so its method
+    /// table is the product's and not the system's — and the documented way to
+    /// find a method table, which is to make a device of your own and read the
+    /// pointers out of it, reads the *system* table. Hooking it succeeds,
+    /// verifies, and is never called. Nothing crashes and nothing is drawn.
+    Ghilaf,
+    /// It patches the system function where it lives.
+    ///
+    /// The method table still holds the system entry point and the patch sits
+    /// behind it, so an overlay that hooks the table runs in front of the patch
+    /// and both draw. This is the order that composes.
+    Ruqaa,
+    /// It replaces the implementation outright.
+    ///
+    /// DXVK's `d3d9.dll` *is* Direct3D 9 in that process: there is no original
+    /// behind it and nothing is hooked. `Direct3DCreate9` resolves to DXVK for
+    /// the overlay exactly as it did for the game, so the method table the
+    /// overlay reads is the one the game's device uses. One implementation, one
+    /// table, and the hook composes.
+    Istibdal,
+    /// It is not on the presentation path at all.
+    LaShay,
+}
+
+/// One product's signature, as far as the drawing question needs it.
+struct TawqiRusum {
+    ism: &'static str,
+    ism_arabi: &'static str,
+    slotat: &'static [&'static str],
+    basmat: &'static [&'static [u8]],
+    tariqa: TariqatJar,
+}
+
+/// The products that take a graphics slot, and how each reaches presentation.
+///
+/// Deliberately a second, narrower table than the one in
+/// `taarib_tathbeet::wukala`, and the duplication is the lesser evil. This
+/// crate is loaded into game processes; depending on the installer to borrow a
+/// lookup table would drag discovery, signing and backup machinery into
+/// somebody's address space. The two answer different questions — that one asks
+/// which mod is installed, this one asks whether the overlay will draw — and
+/// this one is limited to the products that can make the answer *no*.
+static TAWAQI_RUSUM: &[TawqiRusum] = &[
+    TawqiRusum {
+        ism: "ReShade",
+        ism_arabi: "ReShade",
+        slotat: &["d3d9.dll", "d3d10.dll", "d3d11.dll", "d3d12.dll", "ddraw.dll", "dxgi.dll",
+                  "opengl32.dll"],
+        basmat: &[b"ReShade", b"reshade-shaders"],
+        tariqa: TariqatJar::Ghilaf,
+    },
+    TawqiRusum {
+        ism: "ENBSeries",
+        ism_arabi: "ENBSeries",
+        slotat: &["d3d8.dll", "d3d9.dll", "d3d11.dll", "d3d12.dll", "ddraw.dll", "dxgi.dll"],
+        basmat: &[b"ENBSeries", b"enbseries.ini", b"Boris Vorontsov"],
+        tariqa: TariqatJar::Ghilaf,
+    },
+    TawqiRusum {
+        ism: "Special K",
+        ism_arabi: "Special K",
+        slotat: &["d3d8.dll", "d3d9.dll", "d3d11.dll", "ddraw.dll", "dxgi.dll", "opengl32.dll"],
+        basmat: &[b"SpecialK", b"Special K", b"Kaldaien"],
+        // Both, depending on how it was installed, so the worse of the two is
+        // what the verdict is written against.
+        tariqa: TariqatJar::Ghilaf,
+    },
+    TawqiRusum {
+        ism: "DXVK",
+        ism_arabi: "DXVK",
+        slotat: &["d3d8.dll", "d3d9.dll", "d3d10.dll", "d3d11.dll", "dxgi.dll"],
+        basmat: &[b"DxvkInstance", b"zlib/libpng license"],
+        tariqa: TariqatJar::Istibdal,
+    },
+    TawqiRusum {
+        ism: "d3d8to9",
+        ism_arabi: "d3d8to9",
+        slotat: &["d3d8.dll"],
+        basmat: &[b"d3d8to9"],
+        tariqa: TariqatJar::Istibdal,
+    },
+    TawqiRusum {
+        ism: "an ASI plugin loader",
+        ism_arabi: "مُحمِّل إضافات ASI",
+        slotat: &[
+            "d3d8.dll", "d3d9.dll", "d3d11.dll", "ddraw.dll", "dinput8.dll", "dsound.dll",
+            "dxgi.dll", "winmm.dll", "wininet.dll", "xinput1_3.dll", "xinput1_4.dll",
+            SLOT_TAARIB,
+        ],
+        basmat: &[b"Ultimate ASI Loader", b"ThirteenAG", b"asiloader", b"Alexander Blade"],
+        tariqa: TariqatJar::LaShay,
+    },
+    TawqiRusum {
+        ism: "BepInEx (Unity Doorstop)",
+        ism_arabi: "‏BepInEx (عبر Doorstop)",
+        slotat: &["dxgi.dll", "winhttp.dll", SLOT_TAARIB],
+        basmat: &[b"doorstop", b"NeighTools"],
+        tariqa: TariqatJar::LaShay,
+    },
 ];
 
 /// One occupied proxy slot in a game's directory.
@@ -140,6 +280,21 @@ pub struct SlotMashghul {
     pub hajm: u64,
     /// Whether this is Taarib's own loader rather than a third party's.
     pub taarib: bool,
+    /// The product holding it, when marks inside the module name one.
+    ///
+    /// [`None`] is "nothing in that module identified it", reported as exactly
+    /// that. A packed module says nothing, an unreleased build says nothing,
+    /// and inventing a name for either would be worse than the gap.
+    pub muntaj: Option<&'static str>,
+    /// The same, in Arabic.
+    pub muntaj_arabi: Option<&'static str>,
+    /// How that product reaches presentation, if it is on that path.
+    ///
+    /// An unidentified module in a graphics slot answers [`TariqatJar::Ghilaf`]
+    /// — the pessimistic answer, because a `d3d9.dll` that is not the system's
+    /// is a wrapper far more often than it is anything else, and being told the
+    /// overlay may not draw and then having it draw is the harmless direction.
+    pub tariqa: TariqatJar,
 }
 
 /// What a game's files say, before anything is installed into them.
@@ -346,18 +501,83 @@ fn sabab_slot(slot: &SlotMashghul) -> SababQudra {
             ),
         );
     }
+    if slot.tariqa == TariqatJar::Ghilaf {
+        return sabab_ghilaf(slot);
+    }
+    let man = slot.muntaj.map_or_else(String::new, |ism| format!(", which is {ism},"));
+    let man_arabi = slot.muntaj_arabi.map_or_else(String::new, |ism| format!("، وهو {ism}،"));
     SababQudra::kamila(
         format!(
-            "الاسم {} يشغله منتج آخر ({} بايت)، ولا يستخدمه تعريب ولا يمسّه. يعني ذلك أن خطّافًا \
-             من طرف ثالث يعمل داخل اللعبة، وقد تجد الطبقة دالة العرض مستبدلة قبلها.",
+            "الاسم {} يشغله منتج آخر ({} بايت){man_arabi} ولا يستخدمه تعريب ولا يمسّه. يعني ذلك \
+             أن خطّافًا من طرف ثالث يعمل داخل اللعبة، وقد تجد الطبقة دالة العرض مستبدلة قبلها.",
             slot.ism, slot.hajm
         ),
         format!(
-            "the {} slot is taken by another product ({} bytes at {}). Taarib does not use this \
-             slot and leaves it alone. It does mean a third-party hook is live in this process, \
-             so the overlay may find the presentation method already replaced — which is chained \
-             onto rather than refused, and which is why Taarib never restores a function pointer \
-             it did not install.",
+            "the {} slot is taken by another product ({} bytes at {}){man} Taarib does not use \
+             this slot and leaves it alone. It does mean a third-party hook is live in this \
+             process, so the overlay may find the presentation method already replaced — which \
+             is chained onto rather than refused, and which is why Taarib never restores a \
+             function pointer it did not install.",
+            slot.ism,
+            slot.hajm,
+            slot.masar.display()
+        ),
+    )
+}
+
+/// The finding a wrapper on the presentation path produces.
+///
+/// This is the one collision that is not a crash and not a refusal, and it is
+/// the reason the whole survey exists in this crate rather than only in the
+/// installer.
+///
+/// The overlay finds a method table the documented way: create a device and a
+/// swap chain of its own against a hidden window, read the pointers out, and
+/// destroy them. Those pointers belong to the *class*, so they are the same
+/// ones the game's own swap chain uses — which is true right up until something
+/// hands the game an object of a different class. ReShade's proxy returns its
+/// own `IDXGISwapChain`; ENBSeries returns its own `IDirect3DDevice9`. The
+/// overlay's hook is then installed in a table nothing calls: it succeeds, it
+/// verifies, the game runs, and nothing is drawn.
+///
+/// The order is what decides it, and the order is not the overlay's to choose.
+/// A product in a proxy slot is loaded by the Windows loader before the game's
+/// first instruction; the overlay attaches afterwards. So Taarib is always the
+/// later hook here, and the later hook is the one that loses when the earlier
+/// one wraps. This is also why it is [`HukmQudra::Naqisa`] and not
+/// [`HukmQudra::Mustaheela`]: for a *patching* product — Special K's global
+/// injector, `re4_tweaks` — the later hook is the outer one and both draw. Only
+/// wrapping breaks it, and which of the two a given build does is not knowable
+/// from the file.
+///
+/// What it is emphatically **not** is a reason to unhook anything. The rule in
+/// [`crate::khataf::Khataf::fukk`] holds unchanged: Taarib never restores a
+/// function pointer it did not install. An overlay that responded to "my hook
+/// is not being called" by writing over somebody else's would be the failure
+/// this product is built not to have.
+fn sabab_ghilaf(slot: &SlotMashghul) -> SababQudra {
+    let man = slot.muntaj.unwrap_or("an unidentified product");
+    let man_arabi = slot.muntaj_arabi.unwrap_or("منتج غير معروف");
+    SababQudra::naqisa(
+        format!(
+            "الاسم {} يشغله {man_arabi} ({} بايت)، وهو على مسار العرض نفسه. تُحمَّل هذه \
+             المنتجات قبل أول تعليمة في اللعبة، فتعريب دائمًا الخطّاف المتأخّر — وإن كان \
+             المنتج يغلّف جهاز اللعبة بكائن من صنعه، فجدول الدوال الذي تقرؤه الطبقة ليس \
+             الجدول الذي تناديه اللعبة، فيُركَّب الخطّاف ولا يُستدعى: لا تعطّل ولا رسم. \
+             وإن كان يرقّع الدالة في مكانها فكلاهما يرسم. ولا يُعرف أيّهما من الملف. لا \
+             يفكّ تعريب خطّاف غيره في الحالتين.",
+            slot.ism, slot.hajm
+        ),
+        format!(
+            "the {} slot is taken by {man} ({} bytes at {}), which is on the presentation path \
+             the overlay uses. A product in a proxy slot is loaded before the game's first \
+             instruction, so Taarib is always the later hook here. If that product wraps the \
+             game's device in an object of its own — ReShade and ENBSeries both do — then the \
+             method table the overlay reads is not the one the game calls, and the hook installs, \
+             verifies, and is never called: no crash, no Arabic. If it patches the function in \
+             place instead, both draw. Which of the two a given build does is not knowable from \
+             the file, so the overlay is offered and this is said first. Taarib does not unhook \
+             the other product in either case.",
             slot.ism,
             slot.hajm,
             slot.masar.display()
@@ -373,7 +593,7 @@ fn sabab_slot(slot: &SlotMashghul) -> SababQudra {
 /// happens first and does report its own failure.
 fn slotat_mashghula(mujallad: &Path) -> Vec<SlotMashghul> {
     let mut mashghula = Vec::new();
-    for ism in SLOTAT_WAKEEL {
+    for ism in SLOTAT_WAKEEL.iter().chain(SLOTAT_MUSHTARAKA.iter()) {
         let masar = mujallad.join(ism);
         let Ok(bayan) = std::fs::metadata(&masar) else {
             continue;
@@ -381,14 +601,87 @@ fn slotat_mashghula(mujallad: &Path) -> Vec<SlotMashghul> {
         if !bayan.is_file() {
             continue;
         }
+        let bayt = iqra_mahdud(&masar).unwrap_or_default();
+        let taarib = fihi(&bayt, BASMAT_MUDKHAL);
+        let tawqi = if taarib { None } else { tawqi_min_bayt(ism, &bayt) };
+        // A name a game may legitimately ship is Microsoft's own file until
+        // something inside it says otherwise, and reporting it unidentified
+        // would be the survey crying wolf over a redistributable.
+        if tawqi.is_none() && SLOTAT_MUSHTARAKA.contains(ism) {
+            continue;
+        }
+        let rusum = SLOTAT_RUSUM.contains(ism);
         mashghula.push(SlotMashghul {
             ism: (*ism).to_owned(),
             masar: masar.clone(),
             hajm: bayan.len(),
-            taarib: huwa_mudkhal(&masar),
+            taarib,
+            muntaj: tawqi.map(|tawqi| tawqi.ism),
+            muntaj_arabi: tawqi.map(|tawqi| tawqi.ism_arabi),
+            tariqa: match (tawqi, taarib, rusum) {
+                (Some(tawqi), _, _) => tawqi.tariqa,
+                // Taarib's own loader is not a wrapper, and a slot that is not
+                // a graphics module is not on the presentation path at all.
+                (None, true, _) | (None, false, false) => TariqatJar::LaShay,
+                (None, false, true) => TariqatJar::Ghilaf,
+            },
         });
     }
     mashghula
+}
+
+/// The product a module's own bytes name, if any.
+///
+/// Marks are matched in ASCII and in the UTF-16 a Windows version resource
+/// stores its strings in — which is where the string that identifies ReShade or
+/// Special K actually lives — and case-insensitively, because Alexander Blade's
+/// ASI loader spells itself `asiloader` where the ecosystem writes `ASI Loader`.
+///
+/// The slot is a guard rather than a hint. A `re4_tweaks` proxy contains the
+/// string `DXVK` because it reports whether DXVK is in use, and DXVK is never
+/// installed as `dinput8`.
+fn tawqi_min_bayt(ism: &str, bayt: &[u8]) -> Option<&'static TawqiRusum> {
+    let mut wajid: Option<&'static TawqiRusum> = None;
+    for tawqi in TAWAQI_RUSUM {
+        if !tawqi.slotat.iter().any(|slot| slot.eq_ignore_ascii_case(ism)) {
+            continue;
+        }
+        if !tawqi.basmat.iter().any(|basma| fihi(bayt, basma)) {
+            continue;
+        }
+        // Two products' marks in one module and nothing to separate them —
+        // Special K ships ReShade integration and carries its name — so the
+        // module is left unnamed rather than assigned to whichever came first
+        // in a table.
+        if wajid.is_some() {
+            return None;
+        }
+        wajid = Some(tawqi);
+    }
+    wajid
+}
+
+/// Whether a mark appears in a buffer, as ASCII or as UTF-16, ignoring case.
+fn fihi(kawm: &[u8], basma: &[u8]) -> bool {
+    if basma.is_empty() {
+        return false;
+    }
+    if kawm.len() >= basma.len()
+        && kawm.windows(basma.len()).any(|nafidha| nafidha.eq_ignore_ascii_case(basma))
+    {
+        return true;
+    }
+    let tul = basma.len().saturating_mul(2);
+    if kawm.len() < tul {
+        return false;
+    }
+    kawm.windows(tul).any(|nafidha| {
+        basma.iter().enumerate().all(|(fahras, harf)| {
+            let mawdi = fahras.saturating_mul(2);
+            nafidha.get(mawdi).is_some_and(|bayt| bayt.eq_ignore_ascii_case(harf))
+                && nafidha.get(mawdi.saturating_add(1)) == Some(&0)
+        })
+    })
 }
 
 /// Whether a file on disk is Taarib's own loader.
@@ -396,12 +689,10 @@ fn slotat_mashghula(mujallad: &Path) -> Vec<SlotMashghul> {
 /// A file too large to read under the cap answers `false`, which is the safe
 /// direction: treating an unknown module as a third party's means declining to
 /// overwrite it.
-fn huwa_mudkhal(masar: &Path) -> bool {
-    let Ok(bayt) = iqra_mahdud(masar) else {
-        return false;
-    };
-    bayt.windows(BASMAT_MUDKHAL.len()).any(|nafidha| nafidha == BASMAT_MUDKHAL)
-}
+// `huwa_mudkhal` used to live here and read the file a second time to answer
+// the same question. `slotat_mashghula` now reads each module once and asks
+// every question of the one buffer, which matters because that buffer can be
+// eleven megabytes and there are seventeen names to try.
 
 /// Reads a file, refusing one larger than [`AQSA_MALAF`].
 ///

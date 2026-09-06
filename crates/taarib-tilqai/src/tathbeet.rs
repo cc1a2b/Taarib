@@ -19,14 +19,17 @@ use std::path::{Path, PathBuf};
 use taarib_aman::{NatijatFahs, TalabFahs, fahs};
 use taarib_khatm::MudaqqiqEd25519;
 use taarib_mustalahat::bina::BinaId;
+use taarib_mustalahat::muharrik::TaqreerImkaniyat;
 use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
 use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_tarqee::irtibat::IrtibatBina;
 use taarib_tathbeet::NatijatTathbeet;
-use taarib_tathbeet::bayan::{Muthabbit, NawTathbeet, TarifLuba, Tathbeet};
+use taarib_tathbeet::bayan::{NawTathbeet, TarifLuba, Tathbeet};
 use taarib_tathbeet::masar_tathbeet::{TalabTathbeet, WadaMuhtawa, thabbit};
 use taarib_tathbeet::mawdi::WajhatLuba;
+use taarib_tathbeet::nusus::{self, IdhnNusus, Nashir};
 use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass};
+use taarib_tathbeet::tarkib::QararTabaqa;
 
 use crate::khata::{KhataTilqai, NatijatTilqai, khata_malaf, marfuda};
 use crate::talab::TalabTilqai;
@@ -105,14 +108,26 @@ fn haql<T: serde::de::DeserializeOwned>(jeyson: &serde_json::Value, ism: &str) -
 /// began. A cancellation arriving after that point is not returned here: the
 /// install completes and [`irjaa`] reverses it, which is the difference between
 /// a game that is whole and a game that is half-patched.
+///
+/// [`KhataTilqai::MarhalaMarfuda`] also when the capability report says the
+/// safety layer refuses this game: the report is the only thing that knows that,
+/// and this pipeline writes into the game's own text.
 pub fn ijri(
     talab: &TalabTilqai<'_>,
+    imkaniyat: &TaqreerImkaniyat,
     masar_huzma: &Path,
     jidhr_nusakh: &Path,
     muraqib: &Muraqib<'_>,
 ) -> NatijatTilqai<IhsaTathbeet> {
     const KHUTUWAT: u64 = 5;
     talab.miqbad.tahaqquq(MarhalaTilqai::Tathbeet)?;
+
+    // The tier decision, taken once, from the report stage 2 already produced.
+    // This pipeline deploys nothing, so it has no plan — but the script-engine
+    // write it *does* perform still needs to know the tier and the refusal, and
+    // neither is a thing a game directory can be asked about.
+    let qarar = QararTabaqa::min_taqreer(imkaniyat)
+        .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?;
 
     std::fs::create_dir_all(jidhr_nusakh)
         .map_err(|sabab| khata_malaf(jidhr_nusakh, "created", sabab))?;
@@ -203,12 +218,21 @@ pub fn ijri(
         &MudaqqiqEd25519,
         jidhr_nusakh,
         format!("taarib-tilqai — automatic run {}", talab.id),
-        // Nothing is deployed here. Deciding what framework and adapter build a
-        // tier belongs to is `taarib_tathbeet::tarkib`'s job against a component
-        // store, and a component store is something the caller either has or
-        // does not; inventing one would be inventing a binary to put in
+        // No framework is deployed here. Deciding what framework and adapter
+        // build a tier belongs to is `taarib_tathbeet::tarkib`'s job against a
+        // component store, and a component store is something the caller either
+        // has or does not; inventing one would be inventing a binary to put in
         // somebody's game.
-        |_: &mut dyn Muthabbit| -> NatijatTathbeet<()> { Ok(()) },
+        //
+        // The script-engine write is still this step's, and it is now asked for
+        // explicitly rather than happening on its own beside it: an RPG Maker or
+        // Ren'Py game is patched by replacing its own shipped text, which is the
+        // write the tier governs. No Ren'Py face is registered, because no
+        // deployment step here places one and a settings file naming a font that
+        // was never deployed is a game rendered in boxes.
+        |nashir: &mut Nashir<'_>| -> NatijatTathbeet<()> {
+            nashir.raqqi(IdhnNusus::min_qarar(qarar), nusus::makhzan_mukawwinat().as_deref())
+        },
     )
     .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?;
 

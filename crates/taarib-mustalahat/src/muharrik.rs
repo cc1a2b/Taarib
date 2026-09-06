@@ -218,16 +218,55 @@ impl ItarNusus {
 
 /// A graphics API the game was seen to use, which decides how the overlay
 /// attaches when it is needed.
+///
+/// ## Why this is not the overlay's own list
+///
+/// `taarib-tabaqa` has a second enumeration, `WajihatRusum`, naming the
+/// backends that build ships. The two look like duplicates and are not, and
+/// merging them would break each of them in a different direction:
+///
+/// * This one answers *what was observed*, so it has to be able to name an API
+///   no backend draws — [`Self::Metal`] today, and whatever a probe reads next
+///   — and it has to be able to answer [`Self::Majhula`]. A dispatch enum with
+///   a "not determined" variant would let a live backend report that it does
+///   not know which API it is speaking.
+/// * That one answers *which backend is drawing*, exactly one at a time, always
+///   implemented. It separates fixed-function OpenGL from the modern profile,
+///   which is a distinction no import table can make — `opengl32.dll` is both —
+///   so a probe that carried the split would be a probe forced to guess.
+/// * This one is a wire type: `serde`, `specta` and `schemars` derive from it,
+///   stored reports carry it, and Studio's TypeScript is generated from it. The
+///   overlay's enum derives none of that on purpose, so a rename inside the
+///   overlay is not a break in a persisted report.
+///
+/// The invariant that *does* bind them runs one way: **every backend that build
+/// ships must be nameable here.** It was violated — three backends existed with
+/// no value here and no import signature, so a game whose only graphics import
+/// was `d3d9.dll` reported nothing at all — and
+/// `crates/taarib-muharrik/tests/mufradat_rusum.rs` now fails when it is
+/// violated again. See [`Self::lahu_khattaf`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "wajiha", derive(specta::Type))]
 #[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum WajihaRusum {
+    /// Direct3D 8.
+    D3d8,
+    /// Direct3D 9.
+    D3d9,
+    /// Direct3D 10, including 10.1.
+    D3d10,
     /// Direct3D 11.
     D3d11,
     /// Direct3D 12.
     D3d12,
-    /// OpenGL.
+    /// OpenGL, in either the modern or the fixed-function profile.
+    ///
+    /// One value for both, because the two are one import: every OpenGL process
+    /// links `opengl32.dll` whatever profile its context asks for. Which of the
+    /// two backends can draw is decided inside the game by asking the live
+    /// context which entry points it has, and a probe reading files cannot
+    /// reach that question.
     OpenGl,
     /// Vulkan.
     Vulkan,
@@ -235,6 +274,78 @@ pub enum WajihaRusum {
     Metal,
     /// Not determined.
     Majhula,
+}
+
+impl WajihaRusum {
+    /// Every API this vocabulary can name, including [`Self::Majhula`].
+    ///
+    /// Ordered oldest to newest within each family, which is the order the
+    /// report lists them in. `Majhula` is last because it is the absence of an
+    /// answer rather than one of the answers.
+    pub const JAMEE: [Self; 9] = [
+        Self::D3d8,
+        Self::D3d9,
+        Self::D3d10,
+        Self::D3d11,
+        Self::D3d12,
+        Self::OpenGl,
+        Self::Vulkan,
+        Self::Metal,
+        Self::Majhula,
+    ];
+
+    /// The API's name as the interface writes it, under the name its own vendor
+    /// uses.
+    ///
+    /// Arabic only for [`Self::Majhula`], which names no vendor and is the one
+    /// value that is a statement rather than a product name — the same rule
+    /// [`AilatMuharrik::ism`] follows for an unrecognised engine.
+    #[must_use]
+    pub const fn ism(self) -> &'static str {
+        match self {
+            Self::D3d8 => "Direct3D 8",
+            Self::D3d9 => "Direct3D 9",
+            Self::D3d10 => "Direct3D 10",
+            Self::D3d11 => "Direct3D 11",
+            Self::D3d12 => "Direct3D 12",
+            Self::OpenGl => "OpenGL",
+            Self::Vulkan => "Vulkan",
+            Self::Metal => "Metal",
+            Self::Majhula => "غير محدَّدة",
+        }
+    }
+
+    /// Whether this build ships an overlay backend that can draw through this
+    /// API.
+    ///
+    /// A fact about the build, like [`JahiziyatTashghil`], and it moves when
+    /// Taarib is updated rather than when the game is. It is what separates
+    /// "the overlay cannot attach to this game" from "the overlay has nowhere
+    /// to attach *yet*", and only the first is a permanent answer.
+    ///
+    /// [`Self::Metal`] is the whole reason this is a method and not the
+    /// enumeration itself: the probe reads `Metal.framework` out of a macOS
+    /// binary correctly, and no backend draws it. Removing the value would
+    /// force the probe to report an API it plainly read as undetermined, which
+    /// is the defect this type was just fixed for, inverted.
+    ///
+    /// [`Self::Majhula`] is false because it names no API to have a backend
+    /// for. A caller reading this to decide whether to offer the overlay gets
+    /// the right answer for it by accident and for the right reason: nothing
+    /// can attach to an API that was never determined.
+    #[must_use]
+    pub const fn lahu_khattaf(self) -> bool {
+        match self {
+            Self::D3d8
+            | Self::D3d9
+            | Self::D3d10
+            | Self::D3d11
+            | Self::D3d12
+            | Self::OpenGl
+            | Self::Vulkan => true,
+            Self::Metal | Self::Majhula => false,
+        }
+    }
 }
 
 /// What kind of observation produced a piece of evidence.

@@ -25,7 +25,6 @@ use taarib_mustalahat::luba::{LawnBariz, Luba, LubaId, MasdarLuba};
 use taarib_muhawwil_unreal::mawarid::{Mawrid as _, iostore, locmeta, locres, pak};
 use taarib_mustalahat::muharrik::{
     AilatMuharrik, Daleel, KhalfiyaBarmajiya, NawDaleel, Tabaqa, TaqreerImkaniyat,
-    WajihaRusum,
 };
 use taarib_muharrik::fahs::SiyaqFahs;
 use taarib_muharrik::{ISDAR_FAHS, Mifhas};
@@ -686,7 +685,7 @@ fn muharrik_hie(taqreer: &TaqreerImkaniyat) -> MuharrikHie {
         aila_ramz: muharrik.aila,
         isdar: muharrik.isdar.as_ref().map(ToString::to_string),
         khalfiya: wasf_khalfiya(muharrik.khalfiya).to_owned(),
-        rusum: muharrik.rusum.iter().map(|q| wasf_rusum(*q).to_owned()).collect(),
+        rusum: muharrik.rusum.iter().map(|q| q.ism().to_owned()).collect(),
         thiqa: muharrik.thiqa,
     }
 }
@@ -800,18 +799,6 @@ const fn wasf_khalfiya(khalfiya: KhalfiyaBarmajiya) -> &'static str {
         KhalfiyaBarmajiya::Ruby => "روبي",
         KhalfiyaBarmajiya::GameMakerVm => "بايت‌كود GameMaker",
         KhalfiyaBarmajiya::Majhula => "غير معروفة",
-    }
-}
-
-/// A graphics API, under the name its own vendor uses.
-const fn wasf_rusum(wajiha: WajihaRusum) -> &'static str {
-    match wajiha {
-        WajihaRusum::D3d11 => "Direct3D 11",
-        WajihaRusum::D3d12 => "Direct3D 12",
-        WajihaRusum::OpenGl => "OpenGL",
-        WajihaRusum::Vulkan => "Vulkan",
-        WajihaRusum::Metal => "Metal",
-        WajihaRusum::Majhula => "غير محدَّدة",
     }
 }
 

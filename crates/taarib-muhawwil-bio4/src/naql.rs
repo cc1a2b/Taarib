@@ -58,6 +58,28 @@
 //! `(font, size, base glyph id, mark)` order. Nothing depends on the order
 //! strings were registered in, on a hash seed, or on hash-map iteration — there
 //! is no hash map in this file.
+//!
+//! ## What a cell has to be asked for by, and where this does not yet agree
+//!
+//! [`crate::kharita`] now holds the other half of this: the game selects a cell by
+//! looking a code point up in a table inside `bio4.exe`, and a cell's number is
+//! that code point's *index* in the table. So the sequence this module produces is
+//! written into `BIO4/text/*.dct` as the code points whose indices those cells are
+//! — `kharita::ramz_khana` is that conversion.
+//!
+//! Two things follow, and the second is a gap this module still has:
+//!
+//! 1. The budget passed to [`NaqlBio4::jadeed`] is bounded by the *table*, not
+//!    only by the atlas. A Latin build addresses 260 cells however large the
+//!    texture is, unless the executable is patched.
+//! 2. **Allocation is contiguous and the table is not.** Five Latin indices — 32,
+//!    183, 185, 187 and 189 — repeat a code point an earlier index already claimed
+//!    and can therefore never be asked for. This module hands out `1, 2, 3, …` and
+//!    would put a glyph in one of them. `kharita::khanat_hayya` is the sequence
+//!    that skips them, and making the pool walk that instead of `AWWAL_KHANA..` is
+//!    the change the dictionary writer will need. It is not made here, because
+//!    renumbering cells for a writer that does not exist yet would be choosing the
+//!    numbering twice.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;

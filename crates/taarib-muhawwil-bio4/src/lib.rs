@@ -1,10 +1,11 @@
 //! # محوّل تعريب لمحرّك بيو٤ — the BIO4 adapter
 //!
 //! *Resident Evil 4* (2005) draws its text from a baked glyph atlas. There is no
-//! font file to replace, no shaper to hook, and no character-to-glyph mapping
-//! this crate can see: what exists is a `.fnt` per screen holding a horizontal
-//! box per cell, a texture holding those cells in a fixed grid, and a game that
-//! walks a string one code point at a time and blits one cell per code point.
+//! font file to replace and no shaper to hook: what exists is a `.fnt` per screen
+//! holding a horizontal box per cell, a texture holding those cells in a fixed
+//! grid, and a game that walks a string one code point at a time and blits one
+//! cell per code point. Which cell each code point selects is decided by a table
+//! inside `bio4.exe` — see [`kharita`], which reproduces it.
 //!
 //! An engine of that shape cannot join Arabic letters, because joining is not
 //! something you can express in "one image per character". So the Arabic is
@@ -41,11 +42,15 @@
 //! GameCube-format path in [`sura`] and the PC path in [`hizma`] are therefore
 //! two real paths, not one with a wrapper.
 //!
-//! **There is no character table anywhere in these files.** Which code point
-//! selects which cell is decided by something this crate cannot see, and that is
-//! the honest limit on what it can promise: it produces a grid, the metrics that
-//! describe it and the texture that fills it, and the mapping from a transported
-//! sequence to a cell index has to come from whoever rewrites `BIO4/text/*.dct`.
+//! **There is no character table anywhere in these files** — it is in the
+//! executable. `bio4.exe` holds one flat array of `u32` code points per language,
+//! and a code point's *index* in that array is its cell. The routine that builds a
+//! `std::map` out of it is at `0x006A_7F50`, the Latin array is at `0x00C0_CE18`
+//! and holds 260 entries, and [`kharita`] reproduces that array, both directions
+//! of the lookup, and the file offsets of the two immediates a patch would edit to
+//! point the game at a longer one. Every code point in all eight shipped
+//! dictionaries resolves through it. So the missing rung is no longer missing, and
+//! [`naql`]'s cell numbering is the thing that now has to agree with it.
 //!
 //! ## Modules
 //!
@@ -57,10 +62,12 @@
 //! | `sura` | `GX_TF_C4` texels and a `GX_TL_RGB5A3` palette, encoded and decoded |
 //! | `hizma` | the `ImagePack` container and the `DDS`/`DXT5` payload the PC build samples |
 //! | `naql` | the cell transport: shaped glyph ids to cell indices, with no path from a character |
+//! | `kharita` | the character table `bio4.exe` carries: code point to cell, and back |
 //! | `bina` | shape, rasterize through `taarib-lawha`, place into cells, emit metrics and texels |
 
 pub mod bina;
 pub mod hizma;
+pub mod kharita;
 pub mod khata;
 pub mod khatt;
 pub mod naql;
@@ -70,6 +77,7 @@ pub mod tibl;
 
 pub use crate::bina::{KhiyaratBina, KhattMabni, TaqreerBina};
 pub use crate::hizma::{DDS_SIHR, Hizma, HuwiyatHizma};
+pub use crate::kharita::{JADAWIL, JadwalKharita, RUMUZ_LATINI};
 pub use crate::khata::KhataBio4;
 pub use crate::khatt::{KhattBio4, MadkhalKhana};
 pub use crate::naql::{

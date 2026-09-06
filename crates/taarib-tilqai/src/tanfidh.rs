@@ -358,7 +358,8 @@ async fn ijri(
     }
 
     let bidaya = Instant::now();
-    let mut ihsa = hajiz(|| tathbeet::ijri(talab, &masarat.huzma, &nusakh, muraqib))?;
+    let mut ihsa =
+        hajiz(|| tathbeet::ijri(talab, &imkaniyat, &masarat.huzma, &nusakh, muraqib))?;
     sajjil(
         &mut sijill,
         taqreer,

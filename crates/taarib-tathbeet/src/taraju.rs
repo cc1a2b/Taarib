@@ -100,6 +100,31 @@
 //! Directories Taarib created come off last, deepest first, and only when empty
 //! and only when recorded. Somebody else's files in `BepInEx/plugins/` are
 //! somebody else's.
+//!
+//! ## The residue, and why the record outlives it
+//!
+//! A directory Taarib created is not a directory only Taarib writes to. The
+//! framework Taarib deploys writes its own log, cache and configuration into the
+//! game the first time the game runs — *after* the manifest is sealed, so no
+//! record names them — and the same directory is where a player puts their own
+//! mods. Two real Unity games came back from a successful uninstall with eight
+//! and six entries standing that they did not have before.
+//!
+//! Nothing in the bytes tells a framework's log apart from a player's mod, so the
+//! default is not to guess: the directory is left, every unrecorded entry inside
+//! it is **named** in [`TaqreerIstiada::baqaya`], and — the part that matters —
+//! the manifest line for that directory is **not** marked done. A line marked
+//! done is a line [`nazzif_nusakh`] consumes, and consuming it deletes the only
+//! document on the machine saying those files arrived with Taarib. The residue
+//! must never outlive the record of it, so the record is kept until the residue
+//! is gone, and [`nazzif_nusakh`] says so by name rather than refusing blankly.
+//!
+//! [`SiyasatIstiada::Kanasa`] is the other answer, for a user who has read that
+//! list and wants their game back byte-for-byte. It is the only operation here
+//! that can destroy something the user made, so it is opt-in, it is never
+//! reached without [`khutta`] having been able to show exactly what would go, and
+//! the deletion itself goes through [`taarib_usus::masarat::HadafHadhf`] rather
+//! than around it.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -111,7 +136,7 @@ use taarib_usus::masarat;
 
 use crate::bayan::{
     BayanTathbeet, NawTaghyeer, NawTathbeet, SalahiyatMalaf, SijillIdad, SijillTaghyeer,
-    Tathbeet, basma_bayt, basma_malaf, dakhil_aw_khata,
+    Tathbeet, basma_bayt, basma_malaf, dakhil_aw_khata, nisbi_min,
 };
 use crate::khata::{KhataTathbeet, NatijatTathbeet, min_khata_io};
 
@@ -137,6 +162,36 @@ pub enum SiyasatIstiada {
     /// and would rather be stopped than told afterwards that four files were
     /// left as the store had rewritten them.
     Sarima,
+
+    /// Also remove whatever is left inside a directory Taarib created, and the
+    /// directory with it.
+    ///
+    /// The only policy that returns a game running a vendored framework to
+    /// byte-identity, and the only one in this module that can destroy something
+    /// the user made. `BepInEx` writes its log, its cache and its configuration
+    /// into the game the first time the game runs, after the manifest is sealed
+    /// — and `BepInEx/plugins/` is also where a player drops their own mods.
+    /// Both sit in a directory Taarib created and nothing in the bytes tells
+    /// them apart.
+    ///
+    /// So it is never a default and must never be reached without the user
+    /// having seen the list. [`khutta`] enumerates exactly what a sweep would
+    /// take *before* anything is removed, which is what makes choosing this an
+    /// informed answer rather than a hopeful one.
+    ///
+    /// What bounds it is not the caller's care. The target must be a path the
+    /// manifest records as [`NawTaghyeer::MujalladMudaf`], which
+    /// [`crate::bayan::Tathbeet::sajjil_mujallad`] writes only for a directory
+    /// that did not exist when the install began — so nothing inside it
+    /// predates Taarib — and the deletion is then proved by
+    /// [`masarat::hadaf_hadhf_fi_luba`], which refuses the game root, anything
+    /// outside it, and any path reaching its place through `..`.
+    ///
+    /// It does not change what happens to a *file* the store replaced; that
+    /// stays [`SiyasatIstiada::Muhafiza`]'s answer, because a sweep is a
+    /// statement about directories Taarib created and says nothing about a file
+    /// the launcher rewrote.
+    Kanasa,
 }
 
 impl SiyasatIstiada {
@@ -146,7 +201,78 @@ impl SiyasatIstiada {
         match self {
             Self::Muhafiza => "leave replaced files alone",
             Self::Sarima => "refuse on a replaced file",
+            Self::Kanasa => "sweep directories Taarib created",
         }
+    }
+
+    /// Whether this policy may remove a file no manifest line names.
+    #[must_use]
+    pub const fn taknus(self) -> bool {
+        matches!(self, Self::Kanasa)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Residue
+// ---------------------------------------------------------------------------
+
+/// The most names one directory's residue contributes to a report.
+///
+/// Unbounded in principle — a player can drop a thousand-file mod pack into
+/// `BepInEx/plugins/` — and a report that prints all of them is a report nobody
+/// reads. [`BaqiyaMujallad::adad`] beside the names is always the true total, so
+/// the cap shortens the list and never the count.
+const HADD_ASMAA_BAQAYA: usize = 64;
+
+/// What is still inside a directory Taarib created and that Taarib did not put
+/// there.
+///
+/// This type exists because a counter was not enough. The uninstall used to say
+/// «1 director(ies) left in place» and move on, which tells a user that
+/// something is left but not what, not where, and not whether it is their own
+/// work or a log the framework wrote itself. Both answers are in that directory
+/// and only the user can tell them apart, so both are named.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BaqiyaMujallad {
+    /// The directory, as the manifest names it: relative to the game root, with
+    /// forward slashes.
+    pub mujallad: String,
+
+    /// Up to [`HADD_ASMAA_BAQAYA`] of the unrecorded entries inside it, relative
+    /// to the game root and sorted. A directory carries a trailing `/`, because
+    /// `BepInEx/cache` and `BepInEx/cache/` are a file and a directory and the
+    /// user is being asked to decide about them.
+    pub madakhil: Vec<String>,
+
+    /// How many unrecorded entries there are in total, which may exceed the
+    /// length of [`BaqiyaMujallad::madakhil`].
+    pub adad: usize,
+}
+
+impl BaqiyaMujallad {
+    /// The residue as report lines, `amal` naming what became of it.
+    ///
+    /// A count of zero is not a formatting edge case but a distinct state: the
+    /// directory would not go because a directory *below* it would not go, and
+    /// that one carries the names.
+    #[must_use]
+    pub fn sutur(&self, amal: &str) -> Vec<String> {
+        if self.adad == 0 {
+            return vec![format!(
+                "  {}: kept because a directory inside it was kept",
+                self.mujallad
+            )];
+        }
+        let mut sutur = vec![format!(
+            "  {}: {} entr(ies) Taarib did not put there, {amal}",
+            self.mujallad, self.adad
+        )];
+        sutur.extend(self.madakhil.iter().map(|ism| format!("    {ism}")));
+        let mazid = self.adad.saturating_sub(self.madakhil.len());
+        if mazid > 0 {
+            sutur.push(format!("    and {mazid} more"));
+        }
+        sutur
     }
 }
 
@@ -252,6 +378,23 @@ pub struct TaqreerIstiada {
     /// Named rather than counted, because "four files were left alone" is not
     /// something a user can check and "these four files were left alone" is.
     pub mustabdala: Vec<String>,
+
+    /// What was found inside the directories that were left standing, named.
+    ///
+    /// Non-empty exactly when [`TaqreerIstiada::mujalladat_matruka`] is
+    /// non-zero, and the reason it exists is that this is the state in which the
+    /// game is **not** byte-identical to what it was before the install. A
+    /// caller that shows the count without these names has told the user that
+    /// something is left and withheld the only part they can act on.
+    pub baqaya: Vec<BaqiyaMujallad>,
+
+    /// What [`SiyasatIstiada::Kanasa`] removed, named the same way.
+    ///
+    /// Kept apart from [`TaqreerIstiada::baqaya`] because "these files are still
+    /// in your game" and "these files were deleted from your game" are opposite
+    /// sentences, and a single list would have to be read against the policy to
+    /// know which one it is saying.
+    pub maknusa: Vec<BaqiyaMujallad>,
 }
 
 impl TaqreerIstiada {
@@ -268,6 +411,8 @@ impl TaqreerIstiada {
             mujalladat_matruka: 0,
             idadat_mustaada: 0,
             mustabdala: Vec::new(),
+            baqaya: Vec::new(),
+            maknusa: Vec::new(),
         }
     }
 
@@ -317,9 +462,17 @@ impl TaqreerIstiada {
         if self.mujalladat_matruka > 0 {
             sutur.push(format!(
                 "  {} director(ies) left in place because they still hold files Taarib did \
-                 not put there",
+                 not put there, and this installation's record is kept until they are gone",
                 self.mujalladat_matruka
             ));
+        }
+        // Named, not counted. The count says the game is not what it was; only
+        // the names say what a user would have to remove to make it so.
+        for baqiya in &self.baqaya {
+            sutur.extend(baqiya.sutur("left in place"));
+        }
+        for baqiya in &self.maknusa {
+            sutur.extend(baqiya.sutur("removed with the directory"));
         }
         for masar in &self.mustabdala {
             sutur.push(format!(
@@ -655,7 +808,7 @@ fn nafidh(
         .collect();
     mujalladat.sort_by(|awwal, thani| thani.cmp(awwal));
     for masar in mujalladat {
-        azil_mujallad(tathbeet, &masar, taqreer)?;
+        azil_mujallad(tathbeet, &masar, siyasa, taqreer)?;
     }
 
     Ok(())
@@ -871,10 +1024,16 @@ fn rudd_idad(
     tathbeet.allim_idad_tammat(muarrif)
 }
 
-/// Removes one created directory, but only if nothing is left in it.
+/// Removes one created directory, and decides what to say when it will not go.
+///
+/// The three outcomes are not three shades of success. Removed is done. Swept is
+/// done, and destroyed something. Left standing is **not** done — the line stays
+/// outstanding on purpose, which is the whole of this module's answer to a
+/// residue that used to outlive every record of itself.
 fn azil_mujallad(
     tathbeet: &mut Tathbeet,
     masar: &str,
+    siyasa: SiyasatIstiada,
     taqreer: &mut TaqreerIstiada,
 ) -> Result<(), KhataTathbeet> {
     let Some(naw) = tathbeet.bayan().sijill(masar).map(|sijill| sijill.naw) else {
@@ -898,16 +1057,28 @@ fn azil_mujallad(
         Ok(()) => {
             taqreer.mujalladat_muzala = taqreer.mujalladat_muzala.saturating_add(1);
         }
-        Err(sabab)
-            if matches!(
-                sabab.kind(),
-                std::io::ErrorKind::DirectoryNotEmpty | std::io::ErrorKind::NotFound
-            ) =>
-        {
-            // Somebody else's files are in here. Not a failure of the
-            // uninstall, and deleting it anyway would destroy work Taarib did
-            // not create.
-            taqreer.mujalladat_matruka = taqreer.mujalladat_matruka.saturating_add(1);
+        // Something else removed it between the check above and this call. The
+        // outcome asked for is the outcome reached, and it is emphatically not
+        // the left-behind case — booking a race as residue would hold a record
+        // open for a directory that is not on the disk.
+        Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
+            taqreer.mujalladat_muzala = taqreer.mujalladat_muzala.saturating_add(1);
+        }
+        Err(sabab) if sabab.kind() == std::io::ErrorKind::DirectoryNotEmpty => {
+            let baqiya = ihsa_baqaya(tathbeet.bayan(), tathbeet.jidhr_luba(), masar, &mutlaq);
+            if !siyasa.taknus() {
+                // Named and left. The line is deliberately *not* marked done:
+                // `nazzif_nusakh` consumes a manifest whose lines are all done,
+                // and consuming this one would delete the only document saying
+                // these files arrived with Taarib. A second uninstall run, after
+                // the user has emptied the directory, finishes the line.
+                taqreer.mujalladat_matruka = taqreer.mujalladat_matruka.saturating_add(1);
+                taqreer.baqaya.push(baqiya);
+                return Ok(());
+            }
+            iknis_mujallad(tathbeet.jidhr_luba(), &mutlaq)?;
+            taqreer.mujalladat_muzala = taqreer.mujalladat_muzala.saturating_add(1);
+            taqreer.maknusa.push(baqiya);
         }
         Err(sabab) => {
             return Err(min_khata_io(&mutlaq, "removing a directory Taarib created", sabab));
@@ -915,6 +1086,80 @@ fn azil_mujallad(
     }
 
     tathbeet.allim_tammat(masar)
+}
+
+/// Removes a Taarib-created directory and everything in it, through the
+/// workspace's one proof.
+///
+/// Two independent things make this safe, and only one of them is an argument.
+///
+/// The argument: the target is not merely "somewhere inside the game" but a path
+/// the manifest records as [`NawTaghyeer::MujalladMudaf`], and
+/// [`crate::bayan::Tathbeet::sajjil_mujallad`] writes that record *only* for a
+/// directory that did not exist when the install began. Nothing inside it
+/// predates Taarib.
+///
+/// The structure: [`masarat::hadaf_hadhf_fi_luba`] is the only way to obtain the
+/// value [`masarat::hadhf_mujallad`] accepts, and it refuses the game root
+/// itself, anything outside the game root, and any path reaching its place
+/// through a `..` component. That is the half a future call site cannot forget,
+/// which is why the deletion goes through it rather than around it with a
+/// `remove_dir_all` and a written excuse.
+fn iknis_mujallad(jidhr_luba: &Path, mutlaq: &Path) -> Result<(), KhataTathbeet> {
+    let hadaf = masarat::hadaf_hadhf_fi_luba(jidhr_luba, mutlaq).map_err(|khata| {
+        KhataTathbeet::MasarKharij {
+            masar: mutlaq.to_path_buf(),
+            jidhr: jidhr_luba.to_path_buf(),
+            sabab: khata.injilizi,
+        }
+    })?;
+    masarat::hadhf_mujallad(&hadaf).map_err(|khata| KhataTathbeet::KhataMalaf {
+        masar: mutlaq.to_path_buf(),
+        amal: "sweeping a directory Taarib created",
+        sabab: std::io::Error::other(khata.injilizi),
+    })
+}
+
+/// Every entry inside one Taarib-created directory that no manifest line names.
+///
+/// Walks rather than lists one level, because the residue nests: a real
+/// `BepInEx/` came back holding `cache/`, `config/` and `patchers/` with the
+/// files two levels down. Recorded paths are pruned rather than skipped, so a
+/// recorded subdirectory's contents are attributed to *its* entry and counted
+/// once — otherwise a nested leftover would appear under every ancestor.
+///
+/// Filtering by manifest key rather than by what is on disk is what makes this
+/// correct in both callers: [`khutta`] runs it before anything is deleted, with
+/// every recorded file still present, and [`azil_mujallad`] runs it after.
+fn ihsa_baqaya(
+    bayan: &BayanTathbeet,
+    jidhr_luba: &Path,
+    masar: &str,
+    mutlaq: &Path,
+) -> BaqiyaMujallad {
+    let musajjal = |madkhal: &walkdir::DirEntry| -> bool {
+        nisbi_min(jidhr_luba, madkhal.path())
+            .is_none_or(|nisbi| nisbi == masar || !bayan.sijillat.contains_key(&nisbi))
+    };
+
+    let mut madakhil = Vec::new();
+    let mut adad = 0_usize;
+    let mashy = walkdir::WalkDir::new(mutlaq).sort_by_file_name().into_iter();
+    for madkhal in mashy.filter_entry(musajjal).filter_map(Result::ok) {
+        let Some(nisbi) = nisbi_min(jidhr_luba, madkhal.path()) else { continue };
+        if nisbi == masar {
+            continue;
+        }
+        adad = adad.saturating_add(1);
+        if madakhil.len() < HADD_ASMAA_BAQAYA {
+            madakhil.push(if madkhal.file_type().is_dir() {
+                format!("{nisbi}/")
+            } else {
+                nisbi
+            });
+        }
+    }
+    BaqiyaMujallad { mujallad: masar.to_owned(), madakhil, adad }
 }
 
 // ---------------------------------------------------------------------------
@@ -951,6 +1196,7 @@ pub fn khutta(
         mujalladat: 0,
         mustabdala: Vec::new(),
         mafquda: Vec::new(),
+        baqaya: Vec::new(),
         hajm_nusakh: bayan.hajm_nusakh(),
         mutabaqqi: bayan.mutabaqqi(),
     };
@@ -963,6 +1209,15 @@ pub fn khutta(
         match sijill.naw {
             NawTaghyeer::MujalladMudaf => {
                 khutta.mujalladat = khutta.mujalladat.saturating_add(1);
+                // Computed here, before a byte moves, because this is the list
+                // a person has to read in order for `SiyasatIstiada::Kanasa` to
+                // be a decision rather than a hope.
+                if mutlaq.is_dir() {
+                    let baqiya = ihsa_baqaya(bayan, jidhr_luba, masar, &mutlaq);
+                    if baqiya.adad > 0 {
+                        khutta.baqaya.push(baqiya);
+                    }
+                }
             }
             NawTaghyeer::Idafa => {
                 khutta.li_hadhf = khutta.li_hadhf.saturating_add(1);
@@ -1006,6 +1261,13 @@ pub struct KhuttatIstiada {
     pub mustabdala: Vec<String>,
     /// Recorded paths that are not on disk at all.
     pub mafquda: Vec<String>,
+    /// What is inside the created directories that no manifest line names, and
+    /// that a plain uninstall will therefore leave behind.
+    ///
+    /// The confirmation screen's input for the one choice this module offers
+    /// that can destroy something: [`SiyasatIstiada::Kanasa`] removes exactly
+    /// these, so exactly these have to be on screen first.
+    pub baqaya: Vec<BaqiyaMujallad>,
     /// How many bytes the backups occupy, which uninstalling frees.
     pub hajm_nusakh: u64,
     /// How many records are still outstanding, including from an earlier run
@@ -1015,9 +1277,14 @@ pub struct KhuttatIstiada {
 
 impl KhuttatIstiada {
     /// Whether removing this would leave the game byte-for-byte as it shipped.
+    ///
+    /// [`KhuttatIstiada::baqaya`] counts against it: a directory that will be
+    /// left standing with a framework's log in it is a game that does not come
+    /// back to what it was, and saying otherwise on the confirmation screen is
+    /// the promise this whole module exists to keep.
     #[must_use]
     pub const fn nazif(&self) -> bool {
-        self.mustabdala.is_empty() && self.mafquda.is_empty()
+        self.mustabdala.is_empty() && self.mafquda.is_empty() && self.baqaya.is_empty()
     }
 
     /// The plan as lines for the confirmation screen and the log.
@@ -1043,6 +1310,9 @@ impl KhuttatIstiada {
         }
         for masar in &self.mafquda {
             sutur.push(format!("  {masar}: recorded and not on disk"));
+        }
+        for baqiya in &self.baqaya {
+            sutur.extend(baqiya.sutur("would be left in place unless the sweep is chosen"));
         }
         if self.mutabaqqi > self.li_istiada.saturating_add(self.li_hadhf) {
             sutur.push(format!(
@@ -1091,11 +1361,7 @@ pub fn nazzif_nusakh(
     if mutabaqqi > 0 {
         return Err(KhataTathbeet::BayanTalif {
             masar: tathbeet.masar_bayan().to_path_buf(),
-            sabab: format!(
-                "{mutabaqqi} record(s) are still not restored, so the preserved originals \
-                 are still the only copy of them. Finish the uninstall first: {}",
-                bayan.qaimat_mutabaqqi().join(", ")
-            ),
+            sabab: sabab_rafd_tanzif(bayan, jidhr_luba, mutabaqqi),
         });
     }
 
@@ -1110,21 +1376,70 @@ pub fn nazzif_nusakh(
     // This way an interruption leaves a manifest whose backups are gone, which
     // reads correctly as "nothing left to restore" — which is true.
     if mujallad.exists() {
-        // `<backup root>/<kind>/asl`, two components below a backup root that
-        // was itself built by `masarat::dakhil`, which refuses a result equal to
-        // its root. The data root is three levels up and unreachable from here.
-        #[expect(
-            clippy::disallowed_methods,
-            reason = "two components below a validated per-game backup root, never a root itself"
-        )]
-        fs::remove_dir_all(&mujallad).map_err(|sabab| {
-            min_khata_io(&mujallad, "removing the preserved originals", sabab)
+        // `<backup root>/<kind>/asl`. Proved rather than argued: the target goes
+        // through the one constructor that refuses a root, so no rearrangement
+        // of the two paths this function is handed can aim a recursive delete at
+        // a data root, a settings root, a home directory or the game itself.
+        let hadaf = masarat::hadaf_hadhf_fi_nusakh(jidhr_nusakh, jidhr_luba, &mujallad)
+            .map_err(|khata| KhataTathbeet::MasarKharij {
+                masar: mujallad.clone(),
+                jidhr: jidhr_nusakh.to_path_buf(),
+                sabab: khata.injilizi,
+            })?;
+        masarat::hadhf_mujallad(&hadaf).map_err(|khata| KhataTathbeet::KhataMalaf {
+            masar: mujallad.clone(),
+            amal: "removing the preserved originals",
+            sabab: std::io::Error::other(khata.injilizi),
         })?;
     }
     fs::remove_file(&masar_bayan)
         .map_err(|sabab| min_khata_io(&masar_bayan, "removing the manifest", sabab))?;
 
     Ok(hajm)
+}
+
+/// Why the manifest and the preserved originals are being kept, in the words the
+/// state actually deserves.
+///
+/// Two different situations arrive at one refusal and they are not the same
+/// sentence. An unfinished restore is a job to resume, and the originals are
+/// still the only copy of somebody's files. A directory left standing is not
+/// that at all: the restore ran to the end and every original is already back —
+/// what is outstanding is the *record* tying files still sitting in the game to
+/// the installation that caused them. Deleting that record is the step that
+/// turns a leftover into an orphan nothing on the machine can attribute, so the
+/// message says which of the two this is and names the directories.
+fn sabab_rafd_tanzif(bayan: &BayanTathbeet, jidhr_luba: &Path, mutabaqqi: usize) -> String {
+    let matruka: Vec<&str> = bayan
+        .sijillat
+        .values()
+        .filter(|sijill| {
+            !sijill.istiada_tammat
+                && matches!(sijill.naw, NawTaghyeer::MujalladMudaf)
+                && dakhil_aw_khata(jidhr_luba, &sijill.masar)
+                    .is_ok_and(|mutlaq| mutlaq.is_dir())
+        })
+        .map(|sijill| sijill.masar.as_str())
+        .collect();
+
+    if matruka.is_empty() {
+        return format!(
+            "{mutabaqqi} record(s) are still not restored, so the preserved originals \
+             are still the only copy of them. Finish the uninstall first: {}",
+            bayan.qaimat_mutabaqqi().join(", ")
+        );
+    }
+
+    format!(
+        "{} director(ies) Taarib created are still in the game because they hold files \
+         Taarib did not write: {}. The manifest and the preserved originals are kept so \
+         those files stay attributable to this installation — discarding them now would \
+         leave the directories standing with nothing on this machine saying where they \
+         came from. Empty them and uninstall again, or uninstall again with the sweep \
+         policy, which removes them and says what it removed.",
+        matruka.len(),
+        matruka.join(", ")
+    )
 }
 
 /// Every game under a `nusakh/` root that still has an installation recorded.

@@ -35,6 +35,34 @@
 //! would otherwise carry a row that replaces a menu label with nothing, which
 //! looks to a player like a patch that deleted the interface.
 //!
+//! ## One source string, one translation — decided here, not refused
+//!
+//! The container is keyed by the *clean* source text, so it holds exactly one
+//! translation per source string and `taarib_ruqaa::katib::Katib::nass` refuses
+//! a second that disagrees. That refusal is right for a writer and was wrong as
+//! the product's answer, because a project reaches it with disagreements
+//! routinely and through no fault of anybody's:
+//!
+//! - a project's rows are per container and per path, so a menu label like
+//!   `Back` is dozens of separate rows;
+//! - the extractor's duplicate group ([`taarib_mustalahat::nass::MudkhalNass`]'s
+//!   `majmua`) is keyed on the **raw** text, so `Back` and `<b>Back</b>` are two
+//!   groups that collapse onto one container row once markup is lifted out;
+//! - and nothing in translation is group-aware — every row goes to a provider on
+//!   its own, and a provider asked the same question twice may answer it twice.
+//!
+//! So a real 3 718-string table died on a translation that was 32 bytes where
+//! the row already held one of 31. Refusing the whole compile taught the
+//! contributor nothing they could act on and produced no patch.
+//!
+//! [`wahhid_tarajim`] resolves it instead, before anything downstream can see
+//! the disagreement. Every entry sharing a clean source is given the same
+//! translation *and the same target spans*, so the row the writer stores, the
+//! layouts precomputation produces and the certificate's count all describe one
+//! text. What was set aside is reported rather than dropped silently:
+//! [`HuzmaMabniya::tawhid`] names every source string that disagreed, what
+//! shipped and what did not.
+//!
 //! ## The compiler reads back what it wrote
 //!
 //! The last thing this function does is open its own output through
@@ -49,11 +77,13 @@
 //! care in the writer prevents, because the writer's own count is the number
 //! that would be wrong.
 
-use std::cmp::Ordering;
+use std::borrow::Cow;
+use std::cmp::{Ordering, Reverse};
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
 
 use taarib_lawha::khareeta::NamatSafha;
+use taarib_mustalahat::muraja::HalatMuraja;
 use taarib_mustalahat::nass::{MudkhalNass, NassId};
 use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
 use taarib_ruqaa::aqsam::NawQism;
@@ -68,7 +98,7 @@ use taarib_saff::khatt::SilsilatKhutut;
 
 use crate::bawwaba::{KhattMujammaa, MuhtawaMasmuh, ShahadatBawwaba};
 use crate::bayan::{BayanHuzma, MUKHATTAT_BAYAN, MuharrikHuzma, SijillFuhus};
-use crate::fuhusat::{IjtiyazFuhus, WasfHuzma};
+use crate::fuhusat::{AQSA_AMTHILA, IjtiyazFuhus, WasfHuzma};
 use crate::irtibat::IrtibatBina;
 use crate::khata::KhataTarqee;
 use crate::taghtiya_ruqaa::TaqrirTaghtiya;
@@ -110,6 +140,45 @@ pub struct MudkhalatTajmee<'a> {
     pub mustawa: Option<i32>,
 }
 
+/// One source string whose entries did not agree on a translation, and what the
+/// package shipped for it.
+///
+/// Kept as evidence rather than a warning string, because the contributor's next
+/// action is to open the losing rows in the workshop and decide whether the
+/// choice this compile made is the one they want — and a sentence in a log
+/// cannot be opened.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TawhidTarjama {
+    /// The clean source text, as the container keys it.
+    pub masdar: String,
+    /// The translation the package holds.
+    pub mukhtara: String,
+    /// How many entries already carried it.
+    pub muwafiqa: usize,
+    /// The translations that were set aside, each with how many entries carried
+    /// it, ordered by the text so two runs report them identically.
+    pub matruka: Vec<(String, usize)>,
+}
+
+impl TawhidTarjama {
+    /// The line a compile report shows for this string.
+    #[must_use]
+    pub fn wasf(&self) -> String {
+        let matruka: Vec<String> = self
+            .matruka
+            .iter()
+            .map(|(nass, adad)| format!("{nass:?} ({adad})"))
+            .collect();
+        format!(
+            "{:?}: shipped {:?} ({} entries); set aside {}",
+            self.masdar,
+            self.mukhtara,
+            self.muwafiqa,
+            matruka.join(", ")
+        )
+    }
+}
+
 /// A finished package, and what it says about itself.
 ///
 /// The manifest is returned alongside the bytes rather than left to be parsed
@@ -122,6 +191,14 @@ pub struct HuzmaMabniya {
     pub bayt: BaytMuhadhah,
     /// What it declares.
     pub bayan: BayanHuzma,
+    /// Every source string whose entries disagreed on a translation, and what
+    /// shipped for it. Empty on a project that does not repeat itself.
+    ///
+    /// Deliberately outside [`BayanHuzma`]: this describes the *project* the
+    /// package was built from, not the package, and a player who installs the
+    /// patch has nothing to do with it. The contributor is shown it once, on
+    /// the build that made the choice.
+    pub tawhid: Vec<TawhidTarjama>,
 }
 
 impl HuzmaMabniya {
@@ -180,11 +257,15 @@ impl HuzmaMabniya {
 /// glyph set is whatever shaping turned out to produce. The manifest is last,
 /// because it reports on all of it.
 ///
+/// Two entries that disagree about how one source string is translated are
+/// resolved by [`wahhid_tarajim`] before the writer sees either of them, and
+/// reported on [`HuzmaMabniya::tawhid`]. They are not an error.
+///
 /// # Errors
 ///
 /// [`KhataTarqee::KitabatHuzmaFashila`] for anything the container writer
-/// refuses — a source string with two different translations, a table past what
-/// a `u32` index can name, a section past the reader's ceiling.
+/// refuses — a table past what a `u32` index can name, a section past the
+/// reader's ceiling.
 ///
 /// [`KhataTarqee::BayanNaqis`] when the manifest will not serialize, which in
 /// practice means a non-finite float reached a report field.
@@ -215,9 +296,24 @@ pub fn ijmaa(
         katib = katib.bi_iltiqat();
     }
 
-    let huwiyat = adif_nusus(&mut katib, mudkhalat)?;
+    // Before anything: one translation per source string. Every stage below
+    // reads this slice and not the caller's, so no stage has to know that the
+    // project disagreed with itself.
+    let (nusus, tawhid) = wahhid_tarajim(mudkhalat.nusus);
+    if !tawhid.is_empty() {
+        let amthila: Vec<String> =
+            tawhid.iter().take(AQSA_AMTHILA).map(TawhidTarjama::wasf).collect();
+        tracing::warn!(
+            adad = tawhid.len(),
+            ?amthila,
+            "source strings whose entries disagreed on a translation were unified; the \
+             container holds one row per source string and cannot carry both"
+        );
+    }
+
+    let huwiyat = adif_nusus(&mut katib, &nusus, mudkhalat.khiyarat)?;
     let musbaq = crate::takhtit::sabbiq(
-        mudkhalat.nusus,
+        &nusus,
         &huwiyat,
         mudkhalat.maqasat,
         silsila,
@@ -227,7 +323,7 @@ pub fn ijmaa(
 
     let iqama = musbaq.iqama().clone();
     let taqreer = musbaq.taqreer().clone();
-    let muhtawa = ijma_muhtawa(mudkhalat.nusus, &huwiyat, musbaq);
+    let muhtawa = ijma_muhtawa(&nusus, &huwiyat, musbaq);
     let bawwaba = ShahadatBawwaba::min_muhtawa(&muhtawa);
     uktub_muhtawa(&mut katib, muhtawa);
 
@@ -256,7 +352,135 @@ pub fn ijmaa(
 
     let bayt = katib.ikhtim().map_err(|khata| khata_katib(&khata))?;
     tahaqquq_dawra(&bayt, &bayan)?;
-    Ok(HuzmaMabniya { bayt, bayan })
+    Ok(HuzmaMabniya { bayt, bayan, tawhid })
+}
+
+/// Gives every entry sharing a clean source text the same translation and the
+/// same target spans.
+///
+/// ## Why the whole entry is rewritten and not just the writer's argument
+///
+/// Three stages downstream read a translation, and all three key it by the same
+/// handle: the container row, the precomputed layouts, and the certificate's
+/// content list. Resolving the disagreement only where the row is written would
+/// leave precomputation laying out text that is not in the package — a layout
+/// stored under the winning string's handle whose glyphs spell the losing one.
+/// The spans travel with the text for the same reason: a span table is a set of
+/// byte offsets into a *particular* string, and offsets from one translation
+/// applied to another cut it in the wrong places or run off its end.
+///
+/// ## Which translation wins
+///
+/// In order, and every step of it decided by the data rather than by the order
+/// the caller happened to hand the entries over:
+///
+/// 1. **A translation a human approved beats one nobody did.** Somebody looked
+///    at this string and said yes; a provider's second answer did not.
+/// 2. **Then the reading the most entries already carry.** If eleven menus say
+///    one thing and one says another, the player sees the eleven.
+/// 3. **Then the lowest identity among the entries carrying it.** The same
+///    stable tiebreak the extractor uses to pick a duplicate group's leader —
+///    arbitrary, and the part that matters, unchanged when the same build is
+///    extracted again.
+///
+/// Returns the caller's own slice untouched when the project agrees with
+/// itself, which is the common case and the one that must not pay for this.
+fn wahhid_tarajim(nusus: &[MudkhalNass]) -> (Cow<'_, [MudkhalNass]>, Vec<TawhidTarjama>) {
+    let mut murashahat: BTreeMap<&str, BTreeMap<&str, MurashahTarjama<'_>>> = BTreeMap::new();
+    for mudkhal in nusus {
+        // The same two skips `adif_nusus` applies. An entry that contributes no
+        // row cannot contribute a vote on what that row says either.
+        let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+        if hadaf.trim().is_empty() {
+            continue;
+        }
+        let khana = murashahat
+            .entry(mudkhal.masdar.as_str())
+            .or_default()
+            .entry(hadaf)
+            .or_insert(MurashahTarjama {
+                sahib: mudkhal,
+                adad: 0,
+                muakkada: false,
+                awwal: mudkhal.id,
+            });
+        khana.adad = khana.adad.saturating_add(1);
+        khana.muakkada |= mudkhal.muraja.hala() == HalatMuraja::Muakkada;
+        if mudkhal.id < khana.awwal {
+            khana.awwal = mudkhal.id;
+            khana.sahib = mudkhal;
+        }
+    }
+
+    let mut fayizun: BTreeMap<&str, &MudkhalNass> = BTreeMap::new();
+    let mut tawhid: Vec<TawhidTarjama> = Vec::new();
+    for (masdar, khiyarat) in murashahat {
+        // One candidate is agreement, not a disagreement, and the writer folds
+        // it on its own.
+        if khiyarat.len() < 2 {
+            continue;
+        }
+        let Some((fayiz, sifat)) = khiyarat.iter().max_by_key(|(_, sifa)| sifa.rutba()) else {
+            continue;
+        };
+        let matruka: Vec<(String, usize)> = khiyarat
+            .iter()
+            .filter(|(nass, _)| *nass != fayiz)
+            .map(|(nass, sifa)| ((*nass).to_owned(), sifa.adad))
+            .collect();
+        tawhid.push(TawhidTarjama {
+            masdar: masdar.to_owned(),
+            mukhtara: (*fayiz).to_owned(),
+            muwafiqa: sifat.adad,
+            matruka,
+        });
+        let _ = fayizun.insert(masdar, sifat.sahib);
+    }
+
+    if fayizun.is_empty() {
+        return (Cow::Borrowed(nusus), tawhid);
+    }
+
+    let mut muwahhada = nusus.to_vec();
+    for mudkhal in &mut muwahhada {
+        // An untranslated or blank entry never voted and must not acquire a
+        // translation here: the package deliberately carries no row for it, and
+        // giving it one would be this function inventing coverage.
+        let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+        if hadaf.trim().is_empty() {
+            continue;
+        }
+        let Some(fayiz) = fayizun.get(mudkhal.masdar.as_str()) else { continue };
+        if fayiz.hadaf.as_deref() == Some(hadaf) {
+            continue;
+        }
+        mudkhal.hadaf.clone_from(&fayiz.hadaf);
+        mudkhal.nasq_hadaf.clone_from(&fayiz.nasq_hadaf);
+    }
+    (Cow::Owned(muwahhada), tawhid)
+}
+
+/// One candidate translation of a source string, and the evidence for it.
+#[derive(Debug)]
+struct MurashahTarjama<'a> {
+    /// The lowest-identity entry carrying it, which is where the text and the
+    /// target spans are taken from if it wins.
+    sahib: &'a MudkhalNass,
+    /// How many entries carry it.
+    adad: usize,
+    /// Whether a human review approved any of them.
+    muakkada: bool,
+    /// The lowest identity among them.
+    awwal: NassId,
+}
+
+impl MurashahTarjama<'_> {
+    /// The candidate's rank, greatest wins. Total, because `awwal` is the lowest
+    /// of a set of distinct entry identities and two candidates never share an
+    /// entry — so no two candidates can tie on it.
+    const fn rutba(&self) -> (bool, usize, Reverse<NassId>) {
+        (self.muakkada, self.adad, Reverse(self.awwal))
+    }
 }
 
 /// Adds every translated string, its style spans and its constraint.
@@ -267,7 +491,8 @@ pub fn ijmaa(
 /// assembler never wrote.
 fn adif_nusus(
     katib: &mut Katib,
-    mudkhalat: &MudkhalatTajmee<'_>,
+    nusus: &[MudkhalNass],
+    khiyarat: &KhiyaratTasbeeq,
 ) -> Result<BTreeMap<NassId, HuwiyatNass>, KhataTarqee> {
     let mut huwiyat: BTreeMap<NassId, HuwiyatNass> = BTreeMap::new();
     // One entry per handle, not per project entry. `Katib::nass` folds two
@@ -280,7 +505,7 @@ fn adif_nusus(
     let mut nitaqat_mudmaja: BTreeMap<HuwiyatNass, Vec<SijillNitaq>> = BTreeMap::new();
     let mut quyud_mudmaja: BTreeMap<HuwiyatNass, SijillQayd> = BTreeMap::new();
 
-    for mudkhal in mudkhalat.nusus {
+    for mudkhal in nusus {
         let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
         if hadaf.trim().is_empty() {
             continue;
@@ -289,13 +514,14 @@ fn adif_nusus(
         let huwiya = katib.nass(&mudkhal.masdar, hadaf).map_err(|khata| khata_katib(&khata))?;
         let _ = huwiyat.insert(mudkhal.id, huwiya);
 
-        // Spans are a function of the translated text alone, so a second entry
-        // on this handle derives the same ones by construction: the first
-        // writing is kept and the rest are the same spans said again.
+        // Spans are a function of the translated text alone, and every entry on
+        // this handle carries the same translated text — `wahhid_tarajim` moved
+        // the spans across with it. So the first writing is kept and the rest
+        // are the same spans said again.
         let _ = nitaqat_mudmaja.entry(huwiya).or_insert_with(|| tahweel::nitaqat_hadaf(mudkhal));
 
         if tahweel::qayd_mufid(&mudkhal.quyud, mudkhal.tasnif) {
-            let qayd = tahweel::qayd(&mudkhal.quyud, mudkhal.tasnif, &mudkhalat.khiyarat.takhtit);
+            let qayd = tahweel::qayd(&mudkhal.quyud, mudkhal.tasnif, &khiyarat.takhtit);
             match quyud_mudmaja.entry(huwiya) {
                 Entry::Vacant(khali) => {
                     let _ = khali.insert(qayd);

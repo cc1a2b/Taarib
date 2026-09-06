@@ -10,7 +10,17 @@
 //! developer's English.
 //!
 //! This module is the missing caller, and it is deliberately thin. It knows
-//! three things the engine crate does not:
+//! four things the engine crate does not:
+//!
+//! 0. **Whether this game may be written to at all.** [`IdhnNusus`] is the
+//!    answer, and it is an argument rather than something worked out here. The
+//!    write used to run unconditionally, from
+//!    [`crate::masar_tathbeet::thabbit`], re-deriving the engine from the
+//!    filesystem — so a tier-3 game, whose report had just told the player
+//!    «the game is not modified at all», had its own shipped text replaced,
+//!    and so did a game the safety layer had refused outright. Neither of those
+//!    facts is visible in a game directory, which is exactly why they have to
+//!    arrive as a value.
 //!
 //! 1. **Where the Arabic is.** A `.ruqaa` keys its string table on the first
 //!    eight bytes of BLAKE3 over the *source* text, and stores only the
@@ -29,35 +39,42 @@
 //!    crate's business and not the engine crate's. The Ren'Py adapter needs a
 //!    font *name* for the same reason: the face is a component the installer
 //!    deploys, and only this crate knows where a component lives or what it is
-//!    called. [`crate::tarkib::khatt_renpy`] is the one answer to that, and it
-//!    is the same call [`crate::tarkib::khutta`] makes when it plans the
-//!    deployment that places the file.
+//!    called. That name arrives in the permit, chosen by
+//!    [`crate::tarkib::khutta`] out of the very listing the deployment will
+//!    place — so the file the generated `.rpy` names and the file that lands in
+//!    `game/` cannot be two different files, by construction rather than by two
+//!    functions agreeing.
 //!
 //! ## Why it runs where it runs
 //!
-//! [`crate::masar_tathbeet::thabbit`] calls it after the manifest is durable and
-//! **before** the framework deployment step. That ordering is not incidental.
-//! RPG Maker's extraction records carry byte offsets into `js/plugins.js`, and
-//! deploying the adapter appends Taarib's registration to that file; splicing
-//! against offsets measured before the append would be splicing against a file
-//! whose length has moved. The engine crate documents the same ordering for the
-//! same reason, and honouring it here is what keeps the two halves of an RPG
-//! Maker install from tripping over each other.
+//! [`crate::tarkib::nashr_bi_khutta`] calls it first, before the framework
+//! deployment step and before the additive layer. That ordering is not
+//! incidental. RPG Maker's extraction records carry byte offsets into
+//! `js/plugins.js`, and deploying the adapter appends Taarib's registration to
+//! that file; splicing against offsets measured before the append would be
+//! splicing against a file whose length has moved. The engine crate documents
+//! the same ordering for the same reason, and honouring it here is what keeps
+//! the two halves of an RPG Maker install from tripping over each other.
+//!
+//! It runs from *inside* the deployment step rather than beside it because that
+//! is the step holding the plan. A write that ran beside it, as this one used
+//! to, is a write with no plan to consult — and every question this module must
+//! not answer for itself lives in that plan.
 //!
 //! The ordering is also why the Ren'Py font arrives as a name and not as a
 //! file: at the moment this runs, nothing has been deployed and the face is
-//! still in the component store. The name is therefore read from the store,
-//! through the same function and the same selector the deployment uses a step
-//! later — so what the generated `.rpy` points at and what lands in `game/`
-//! cannot be two different files.
+//! still in the component store. The name comes from the plan, which chose it
+//! from the very listing the deployment will place a step later — so what the
+//! generated `.rpy` points at and what lands in `game/` cannot be two different
+//! files.
 //!
 //! ## What it does not do
 //!
-//! It does not decide whether a game may be patched — the authorisation is
-//! already spent by the time it runs — and it does not deploy the runtime
-//! adapters, which is `tarkib`'s table. A game on none of the four engines gets
-//! [`None`] and no writes, which is the answer for every Unity, Unreal and Godot
-//! game the installer will ever see.
+//! It does not *decide* whether a game may be patched — it is handed the
+//! decision — and it does not deploy the runtime adapters, which is `tarkib`'s
+//! table. A game on none of the four engines gets [`None`] and no writes, which
+//! is the answer for every Unity, Unreal and Godot game the installer will ever
+//! see.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -73,6 +90,7 @@ use taarib_usus::masarat::Masarat;
 
 use crate::bayan::Muthabbit;
 use crate::khata::{KhataTathbeet, NatijatTathbeet};
+use crate::tarkib::{KhuttatTarkib, QararTabaqa};
 
 /// The component store path of the compiled Electron renderer runtime.
 ///
@@ -90,6 +108,129 @@ pub const MUKAWWIN_TASHGHIL_GHILAF: &str = "mulhaq/electron/taarib.js";
 /// has put something else into should be a refusal rather than an exhausted
 /// machine.
 pub const AQSA_TASHGHIL: u64 = 8 * 1024 * 1024;
+
+/// What authorises one script-engine write, and configures it.
+///
+/// Two forms, and the difference between them is whether the caller holds a
+/// deployment plan. An installer that deploys does — and hands the plan, so the
+/// tier and the Ren'Py face are the plan's answers rather than second opinions.
+/// An installer that deploys nothing, such as `taarib-tilqai`'s automatic
+/// pipeline, has no component store to plan against and holds only the
+/// decision; it registers no face, because a name registered for a file no step
+/// will place is a game pointed at a font that is not there.
+///
+/// Both forms carry a [`QararTabaqa`], and that is the point: there is no third
+/// form, and no way to reach [`raqqi_nusus`] without one.
+#[derive(Debug, Clone, Copy)]
+pub struct IdhnNusus<'a> {
+    qarar: QararTabaqa,
+    khatt_renpy: Option<&'a str>,
+}
+
+impl<'a> IdhnNusus<'a> {
+    /// The permit a deployment plan carries.
+    #[must_use]
+    pub fn min_khutta(mukhattat: &'a KhuttatTarkib) -> Self {
+        Self { qarar: mukhattat.qarar(), khatt_renpy: mukhattat.khatt_renpy.as_deref() }
+    }
+
+    /// The permit an install that deploys nothing carries.
+    #[must_use]
+    pub const fn min_qarar(qarar: QararTabaqa) -> Self {
+        Self { qarar, khatt_renpy: None }
+    }
+
+    /// The decision itself.
+    #[must_use]
+    pub const fn qarar(&self) -> QararTabaqa {
+        self.qarar
+    }
+}
+
+/// The handle one deployment step writes through.
+///
+/// It holds the recorder every write already went through and the package whose
+/// translations the script-engine write places — so that write happens *inside*
+/// the step that holds the plan, under the plan's tier, instead of
+/// unconditionally beside it.
+///
+/// [`crate::masar_tathbeet::thabbit`] builds one, hands it to the deployment
+/// step, and reads back what the script-engine write did. A step that never
+/// calls [`Nashir::raqqi`] has declared no tier decision, and `thabbit` then
+/// places no package content either: an install that never established what it
+/// is allowed to do to a game writes nothing into it.
+pub struct Nashir<'a> {
+    muthabbit: &'a mut dyn Muthabbit,
+    ruqaa: &'a MalafRuqaa,
+    jidhr_luba: &'a Path,
+    qarar: Option<QararTabaqa>,
+    nusus: Option<TaqreerTarkeeb>,
+}
+
+// Written out rather than derived: a recorder and a mapped package are not
+// values anybody wants printed, and what a reader of a log line needs is which
+// game this is about and whether the text write has run.
+impl std::fmt::Debug for Nashir<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Nashir")
+            .field("jidhr_luba", &self.jidhr_luba)
+            .field("qarar", &self.qarar)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<'a> Nashir<'a> {
+    /// Wraps a recorder and a package for the duration of one deployment.
+    pub fn jadeed(
+        muthabbit: &'a mut dyn Muthabbit,
+        ruqaa: &'a MalafRuqaa,
+        jidhr_luba: &'a Path,
+    ) -> Self {
+        Self { muthabbit, ruqaa, jidhr_luba, qarar: None, nusus: None }
+    }
+
+    /// The recorder, for the deployment's own writes.
+    pub fn muthabbit(&mut self) -> &mut dyn Muthabbit {
+        self.muthabbit
+    }
+
+    /// Writes the package's translations into the game's own engine data, under
+    /// the permit it is given.
+    ///
+    /// Runs at most once. A second call is a no-op rather than a second pass:
+    /// the first already placed everything the package carries, and re-running
+    /// an RPG Maker splice against a file whose length has moved is the failure
+    /// this module's ordering exists to avoid.
+    ///
+    /// # Errors
+    ///
+    /// Whatever [`raqqi_nusus`] raises.
+    pub fn raqqi(
+        &mut self,
+        idhn: IdhnNusus<'_>,
+        mukawwinat: Option<&Path>,
+    ) -> NatijatTathbeet<()> {
+        if self.qarar.is_some() {
+            return Ok(());
+        }
+        self.qarar = Some(idhn.qarar());
+        self.nusus =
+            raqqi_nusus(idhn, self.jidhr_luba, self.ruqaa, mukawwinat, self.muthabbit)?;
+        Ok(())
+    }
+
+    /// The decision the deployment step declared, when it declared one.
+    #[must_use]
+    pub const fn qarar(&self) -> Option<QararTabaqa> {
+        self.qarar
+    }
+
+    /// What the script-engine write did, consuming the handle.
+    #[must_use]
+    pub fn nusus(self) -> Option<TaqreerTarkeeb> {
+        self.nusus
+    }
+}
 
 /// The string table of one package, as a source-string lookup.
 ///
@@ -205,11 +346,17 @@ impl Hafiz for HafizMuthabbit<'_> {
     }
 }
 
-/// Writes a package's translations into a game's own engine data.
+/// Writes a package's translations into a game's own engine data, under a
+/// permit.
 ///
-/// Returns [`None`] when the game is not on one of the four script engines, or
-/// when the package carries no string table at all — a font-only patch is a real
-/// thing and is not a failure.
+/// Returns [`None`] when the permit forbids modifying this game at all, when the
+/// game is not on one of the four script engines, or when the package carries no
+/// string table — a font-only patch is a real thing and is not a failure.
+///
+/// The permit is checked before the engine is identified, and deliberately: the
+/// engine is read off the game's own directory, and a tier and a safety refusal
+/// are not things a directory can be asked about. Checking the other way round
+/// is what this defect *was*.
 ///
 /// `mukawwinat` is the component store root. It is optional because an
 /// installer that cannot resolve the store should still patch the engines that
@@ -224,17 +371,25 @@ impl Hafiz for HafizMuthabbit<'_> {
 /// # Errors
 ///
 /// [`KhataTathbeet::NususMarfuda`] when the package's string table cannot be
-/// read or the adapter refused; whatever [`crate::tarkib::khatt_renpy`] raises
-/// when the store cannot be walked at all; whatever the recorder raises when an
-/// original cannot be preserved or a replacement cannot be written, with its own
-/// code and path intact.
+/// read or the adapter refused; whatever the recorder raises when an original
+/// cannot be preserved or a replacement cannot be written, with its own code and
+/// path intact.
 pub fn raqqi_nusus(
+    idhn: IdhnNusus<'_>,
     jidhr_luba: &Path,
     ruqaa: &MalafRuqaa,
     mukawwinat: Option<&Path>,
     muthabbit: &mut dyn Muthabbit,
 ) -> NatijatTathbeet<Option<TaqreerTarkeeb>> {
-    // Cheapest question first: most games are Unity, and identifying one costs
+    // Before the engine, before the package, before anything is opened. A tier-3
+    // game is one whose own text is never replaced — the Arabic is drawn over it
+    // from a second process — and this module writes nothing but replacements of
+    // a game's own text.
+    if !idhn.qarar().tughayyar_al_luba() {
+        return Ok(None);
+    }
+
+    // Cheapest question next: most games are Unity, and identifying one costs
     // four metadata queries and opens nothing. Reading the package's string
     // table before knowing whether anything will use it would decompress a
     // section for every install of every engine. The family is kept rather than
@@ -264,15 +419,15 @@ pub fn raqqi_nusus(
         None => None,
     };
     // The face is placed by the component store's own deployment step and named
-    // by it, so the name is asked of that step rather than invented here — and
-    // asked only for the one engine whose deployment places one, because the
-    // other three components hold no face and reading them would be a walk of
-    // the store for an answer that is always `None`.
-    let khatt = match (aila, mukawwinat) {
-        (AilatMuharrik::Renpy, Some(makhzan)) => crate::tarkib::khatt_renpy(makhzan)?,
+    // by the plan that step executes, so the name arrives in the permit rather
+    // than being read out of the store a second time here. The engine is still
+    // checked, because a permit built for a Ren'Py game is the only one that
+    // carries a face and an adapter for another engine must not be handed one.
+    let khatt = match aila {
+        AilatMuharrik::Renpy => idhn.khatt_renpy,
         _ => None,
     };
-    let mawarid = Mawarid { tashghil_ghilaf: tashghil.as_deref(), khatt_renpy: khatt.as_deref() };
+    let mawarid = Mawarid { tashghil_ghilaf: tashghil.as_deref(), khatt_renpy: khatt };
 
     let mutarjim = MutarjimRuqaa::jadeed(jadwal);
     let mut hafiz = HafizMuthabbit::jadeed(muthabbit);

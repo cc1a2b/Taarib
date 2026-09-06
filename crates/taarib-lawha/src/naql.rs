@@ -737,18 +737,101 @@ impl LawhaJahiza {
         Self { mawadi: BTreeMap::new(), safahat: Vec::new() }
     }
 
+    /// The bridge from a compiled atlas.
+    ///
+    /// Pages are declared in index order, so a page index in a [`MawdiShakl`]
+    /// still names the same page after the copy — the transport carries the
+    /// index rather than looking a page up by anything else, so a reordering
+    /// here would silently move every glyph to another sheet.
+    ///
+    /// ## Why the key narrows, and why that can fail
+    ///
+    /// A compiled atlas is keyed by [`MiftahShakl`], which carries a subpixel
+    /// bucket and a rasterization mode on top of the font, size and glyph id.
+    /// [`MiftahKhana`] carries none of that, because the engines at the end of
+    /// this ladder describe a glyph with a character code and a rectangle and
+    /// have nowhere to put either — see this module's header.
+    ///
+    /// So two entries of a compiled atlas can narrow onto one transport key,
+    /// and when they do they are two different images for what the game will
+    /// draw as one glyph. That is refused rather than resolved. Keeping either
+    /// one would position a glyph for a subpixel phase the engine will not
+    /// reproduce, and the visible result — text that is subtly wrong on some
+    /// letters and correct on the rest — is the hardest kind of defect to trace
+    /// back to a compile that reported success.
+    ///
+    /// In practice a patch destined for this ladder is rasterized at bucket
+    /// zero in one mode, so the refusal fires on a compiler that stopped doing
+    /// that, which is exactly when somebody should hear about it.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataLawha::NaqlMarfud`] when a page a glyph refers to was never
+    /// registered with its dimensions, when the pages will not copy across in
+    /// order, or when two glyph images narrow onto one transport key.
+    ///
+    /// Whatever [`LawhaJahiza::dif_safha`] refuses about a page's dimensions.
+    pub fn min_lawha(lawha: &crate::Lawha) -> Result<Self, KhataLawha> {
+        let mut jahiza = Self::jadeed();
+        for fahras in 0..lawha.khareeta.adad_safahat() {
+            let raqm = u16::try_from(fahras).map_err(|_| KhataLawha::NaqlMarfud {
+                sabab: "the atlas holds more pages than a page index can name".to_owned(),
+            })?;
+            let Some((ard, irtifa)) = lawha.khareeta.abaad_safha(raqm) else {
+                return Err(KhataLawha::NaqlMarfud {
+                    sabab: format!(
+                        "page {raqm} of the atlas has no recorded size, so no texture \
+                         coordinate can be derived from it"
+                    ),
+                });
+            };
+            let mudraj = jahiza.dif_safha(ard, irtifa)?;
+            if mudraj != raqm {
+                return Err(KhataLawha::NaqlMarfud {
+                    sabab: format!(
+                        "page {raqm} of the atlas became page {mudraj} of the transport, which \
+                         would move every glyph on it to another sheet"
+                    ),
+                });
+            }
+        }
+
+        // Sorted, so a narrowing collision is reported against the same pair on
+        // every run rather than against whichever of the two a hash map yielded
+        // first.
+        for (miftah, mawdi) in lawha.khareeta.murattaba() {
+            let khana = MiftahKhana::min_miftah_shakl(miftah);
+            if jahiza.safahat.get(usize::from(mawdi.safha)).is_none() {
+                return Err(KhataLawha::NaqlMarfud {
+                    sabab: format!("{khana} sits on page {}, which the atlas does not have",
+                        mawdi.safha),
+                });
+            }
+            if let Some(sabiq) = jahiza.dif_shakl(khana, mawdi) {
+                return Err(KhataLawha::NaqlMarfud {
+                    sabab: format!(
+                        "{khana} has two images in the atlas — one at page {} ({},{}) and one at \
+                         page {} ({},{}) — which differ only in a subpixel bucket or a \
+                         rasterization mode, and the transport can express neither",
+                        sabiq.safha, sabiq.s, sabiq.a, mawdi.safha, mawdi.s, mawdi.a
+                    ),
+                });
+            }
+        }
+        Ok(jahiza)
+    }
+
     /// Declares one page's dimensions and returns its index.
     ///
     /// The only way a [`LawhaJahiza`] acquires a page, and therefore the only
     /// way anything can satisfy [`MasdarLawha::qiyas_safha`] — which
     /// [`Naql::akmil`] calls for every glyph it transports and which
     /// `taarib_muhawwil_nusus`'s GameMaker font rebuilder calls before it emits
-    /// a glyph table. It has no caller in this workspace because the half that
-    /// would call it does not exist yet: nothing turns a compiled
-    /// [`crate::Lawha`] into a [`LawhaJahiza`], so every consumer of the
-    /// transport is still reached through a hand-assembled one. That is a
-    /// missing bridge, not a dead function — deleting this would leave
-    /// [`LawhaJahiza`] unable to hold a page and the trait unimplementable.
+    /// a glyph table. [`LawhaJahiza::min_lawha`] is the bridge that calls it
+    /// with a compiled atlas's own pages; it stays public because an adapter
+    /// assembling a transport from something that is not a [`crate::Lawha`] —
+    /// a runtime atlas, a table read back out of a patch — has no other way to
+    /// declare a page.
     ///
     /// Each page is declared with its own dimensions, and a caller bridging a
     /// compiled atlas must read them per page rather than assume one size:

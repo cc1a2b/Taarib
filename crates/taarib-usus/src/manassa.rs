@@ -396,6 +396,15 @@ pub fn halat_tashghil(ism: &str) -> HalatTashghil {
 /// that cannot see the process table must refuse rather than wave the operation
 /// through — on a Steam Deck under a sandbox, "Steam is not running" would be
 /// wrong every single time. Outside a sandbox the answer is unchanged.
+///
+/// **No caller in the product today, and kept anyway.** Both guards that ask the
+/// question — `taarib_tathbeet`'s install-path check and its launch check — need
+/// the third answer *by name*, because they tell the user the difference between
+/// "close the game" and "Taarib cannot see whether the game is running". This is
+/// what a guard that does not need that distinction should reach for, and it
+/// exists so that the easiest correct thing to write is not
+/// `halat_tashghil(ism) == HalatTashghil::Tashtaghil`, which is the same
+/// question with the sandbox answered the unsafe way.
 #[must_use]
 pub fn tashtaghil(ism: &str) -> bool {
     halat_tashghil(ism).yamnaa()
@@ -491,6 +500,15 @@ pub fn masaha_mutaha(masar: &Path) -> Natija<u64> {
             // `f_bavail` is a 32-bit `fsblkcnt_t` beside a 64-bit `f_frsize`,
             // and 32-bit Linux is the other way round. `u64::from` widens
             // whichever is narrow and is a no-op where both are already 64-bit.
+            //
+            // `allow` rather than `expect`, because on the targets where the
+            // conversion is not a no-op there is nothing to fulfil and an
+            // `expect` would warn there instead.
+            #[allow(
+                clippy::useless_conversion,
+                reason = "a no-op only on the targets where both fields are already 64-bit; \
+                          see the comment above"
+            )]
             Ok(u64::from(ihsaa.f_bavail).saturating_mul(u64::from(ihsaa.f_frsize)))
         } else {
             Err(Khata::min_tafsir(&KhataManassa::TaadhurQiyasMasaha {

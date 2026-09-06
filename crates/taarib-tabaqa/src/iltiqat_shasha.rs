@@ -800,11 +800,33 @@ impl SuraMuhassana {
     /// the mistake survives a first test.
     #[must_use]
     pub fn ila_sath(&self, mahalli: MustatilBiksel) -> MustatilBiksel {
+        let musaghghar = self.ila_iltiqat(mahalli);
+        MustatilBiksel {
+            yasar: self.mintaqa.yasar.saturating_add(musaghghar.yasar),
+            aala: self.mintaqa.aala.saturating_add(musaghghar.aala),
+            ..musaghghar
+        }
+    }
+
+    /// A rectangle in the preprocessed image, moved back into the **capture's**
+    /// coordinates — the factor divided out, the region's origin not added.
+    ///
+    /// Two destinations exist and they are one offset apart, which is exactly
+    /// the kind of difference that compiles either way.
+    /// [`SuraMuhassana::ila_sath`] is for drawing, because the overlay draws on
+    /// the surface. This one is for [`crate::qira::SatrMaqru::mawdi`], which
+    /// that field's own documentation defines as the captured image's
+    /// coordinates so that a recognizer never has to know where the capture came
+    /// from. A recognizer handed the preprocessed image reports boxes in a third
+    /// space — the upscaled one — and without this the boxes are silently two or
+    /// three times too large and too far right.
+    #[must_use]
+    pub fn ila_iltiqat(&self, mahalli: MustatilBiksel) -> MustatilBiksel {
         let mudaaf = if self.mudaaf == 0 { 1 } else { self.mudaaf };
         let asghar = |qeema: u32| -> u32 { qeema.checked_div(mudaaf).unwrap_or(qeema) };
         MustatilBiksel {
-            yasar: self.mintaqa.yasar.saturating_add(asghar(mahalli.yasar)),
-            aala: self.mintaqa.aala.saturating_add(asghar(mahalli.aala)),
+            yasar: asghar(mahalli.yasar),
+            aala: asghar(mahalli.aala),
             ard: asghar(mahalli.ard),
             irtifa: asghar(mahalli.irtifa),
         }
@@ -896,6 +918,16 @@ pub struct IdadatTahsin {
     /// which have no meaning on a colour buffer. The measurement image is built
     /// either way — the upscale factor and the change-detection hash both come
     /// from it — and this only decides which of the two reaches the reader.
+    ///
+    /// It has a second job that is not a quality knob, and a caller who removes
+    /// this field for being a mere preference would break it:
+    /// [`crate::qira::IkhtiyarQari::iqra_mufattasha`] reads each region twice
+    /// with this flag set **both** ways, and [`crate::qira::hukm_tawafuq`]
+    /// refuses the region when the two reads disagree. Colour and the grayscale
+    /// chain are the only two paths in this crate that hand the recognizer
+    /// genuinely different pixels — over 837 real region crops they returned
+    /// different text on 379 — and that difference is what makes corroboration
+    /// able to refuse anything at all.
     pub yuhawwil_ila_ramadi: bool,
 }
 

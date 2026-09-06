@@ -134,7 +134,18 @@ use crate::tahdid::{maghlufa, mutaarid};
 /// stored scan on every machine, for every engine, not only for the new one —
 /// and it is the price of a detector reaching games that were already examined
 /// rather than only games examined after the update.
-pub const ISDAR_FAHS: u32 = 5;
+///
+/// Raised to 6 when [`taarib_mustalahat::muharrik::WajihaRusum`] gained
+/// Direct3D 8, 9 and 10 and the binary
+/// detector gained the imports that establish them. Three backends had been
+/// built with no vocabulary to name them, so every stored report for a game
+/// whose renderer is one of those three carries an empty graphics list —
+/// Resident Evil 4 among them, with `d3d9.dll` in its own import table — and at
+/// tier 3 that empty list is what makes the report say the API "was not
+/// determined". Stored reports for the Unreal titles are stale too, in the
+/// smaller direction: they name every API those games import except the
+/// Direct3D 9 one.
+pub const ISDAR_FAHS: u32 = 6;
 
 /// The confidence below which the report tells the user the identification may
 /// be wrong.
@@ -923,43 +934,47 @@ fn naqs_gamemaker() -> Hadd {
     )
 }
 
-/// Capcom BIO4: both ends of the chain exist and the link between them does not.
+/// Capcom BIO4: the link is found, and nothing yet walks across it.
 ///
-/// The two ends are real and are worth naming, because "nothing exists" would be
-/// wrong in both directions. `taarib-istikhraj`'s `qamus` module reads all eight
-/// of the game's dictionaries and rebuilds them byte for byte, so the text comes
-/// out and could go back in. `taarib-muhawwil-bio4` reads the `.fnt` metrics, the
-/// embedded TPL, the cell grid and the `ImagePack` atlas, and can build a font
-/// into them, so the letters could be drawn.
+/// The three pieces are real and are worth naming, because "nothing exists" would
+/// now be wrong three times over. `taarib-istikhraj`'s `qamus` module reads all
+/// eight of the game's dictionaries and rebuilds them byte for byte, so the text
+/// comes out and could go back in. `taarib-muhawwil-bio4` reads the `.fnt`
+/// metrics, the embedded TPL, the cell grid and the `ImagePack` atlas, and can
+/// build a font into them, so the letters could be drawn. And that crate's
+/// `kharita` module now holds the piece that used to be missing: which code point
+/// selects which cell is a flat array inside `bio4.exe`, one per language, whose
+/// index *is* the cell — 260 entries at `0x00C0_CE18` for the Latin builds, read
+/// out of the routine at `0x006A_7F50` and confirmed against every code point in
+/// all eight shipped dictionaries.
 ///
-/// What is missing sits exactly between the two, and that crate states it about
-/// itself: **there is no character table anywhere in these files.** Which code
-/// point selects which cell in the atlas is decided by something no file on disk
-/// shows, so a dictionary rewritten with Arabic would send the engine looking up
-/// cells by a rule nobody has, and it would blit the wrong pictures or none.
-/// Nothing in `taarib-muhawwil-nusus` routes this family either — `rakkib_luba`
-/// has no arm for it — and `mulhaqat_muharrik` deploys nothing, so no install
+/// So the reason this verdict withholds the run has changed, and the sentence has
+/// to change with it. What is missing is no longer knowledge, it is plumbing:
+/// nothing in `taarib-muhawwil-nusus` routes this family — `tarkeeb::rakkib_luba`
+/// has no arm for it — `taarib-tathbeet`'s `tarkib` groups BIO4 with the engines
+/// that get no additive step, and `taarib-muhawwil-bio4`'s `naql` still hands out
+/// cells `1, 2, 3, …` where five Latin indices can never be asked for. No install
 /// currently touches one of these games at all.
 ///
-/// That is why the verdict is the one that withholds the one-button run rather
-/// than the one that offers it. A run that ended here would either change
-/// nothing or fill the menus with the wrong glyphs, and neither is a thing to
-/// promise.
+/// That is why the verdict is still the one that withholds the one-button run. A
+/// run that ended here would change nothing, and offering it would be promising a
+/// pipeline that is not built yet — which is a different and smaller thing than
+/// not knowing how the engine works.
 fn naqs_bio4() -> Hadd {
     hadd(
-        "يرسم محرّك هذه اللعبة نصوصه من صفحات حروف جاهزة مرسومة داخل ملفاتها، ولا يوجد في تلك \
-         الملفات أي جدول يربط الحرف بصورته: يعرف تعريب كيف يقرأ نصوص اللعبة ويعيد كتابتها، \
-         ويعرف كيف يبني صفحات الحروف العربية، ولا يعرف بعدُ بأي رمز يطلب المحرّك كل صورة. \
-         فلو رُكِّبت الترجمة الآن لظهرت صورًا خاطئة أو فراغًا مكان النص، ولذلك لا يُعرَض \
-         التعريب على هذه اللعبة أصلًا ولا يُكتب في ملفاتها شيء. ستبقى كما هي حتى يصل التحديث \
-         الذي يحلّ هذا الربط.",
+        "يرسم محرّك هذه اللعبة نصوصه من صفحات حروف جاهزة مرسومة داخل ملفاتها، ويطلب كل صورة \
+         برقمٍ في جدولٍ داخل ملف اللعبة التنفيذي نفسه. صار هذا الجدول معروفًا عند تعريب، \
+         ويعرف تعريب كيف يقرأ نصوص اللعبة ويعيد كتابتها، ويعرف كيف يبني صفحات الحروف \
+         العربية — لكن ما يربط هذه الثلاثة ببعضها لم يُبنَ بعد، فلا يمرّ التركيب على هذه \
+         اللعبة أصلًا. فلن يُكتب في ملفاتها شيء ولن يتغيّر منها شيء، حتى يصل التحديث الذي \
+         يبني هذا الربط.",
         "This game's engine draws its text from prebuilt glyph pages painted inside its own \
-         files, and nothing in those files maps a character to its picture. Taarib can read the \
-         game's text and write it back, and it can build the Arabic glyph pages — what it does \
-         not yet know is which code the engine asks for each picture by. An installed \
-         translation would therefore come out as the wrong pictures or as blank space, which is \
-         why Arabization is not offered for this game at all and nothing is written into its \
-         files. It stays as it is until the update that solves that mapping arrives.",
+         files, and asks for each picture by a number in a table inside the game's own \
+         executable. Taarib now knows that table, it can read the game's text and write it \
+         back, and it can build the Arabic glyph pages — what does not exist yet is the piece \
+         that joins those three together, so no installation reaches this game at all. Nothing \
+         is written into its files and nothing about it changes, until the update that builds \
+         that piece arrives.",
     )
 }
 

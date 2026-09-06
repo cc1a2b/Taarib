@@ -179,6 +179,26 @@ export const commands = {
 	 */
 	ikhfaLuba: (muarrif: string, mukhfiya: boolean) => typedError<boolean, Khata>(__TAURI_INVOKE("ikhfa_luba", { muarrif, mukhfiya })),
 	/**
+	 *  Everything the core knows about one game, and every answer it gives.
+	 * 
+	 *  **This one walks the game directory.** The two hard scans behind
+	 *  `hala_himaya` and the multiplayer risk read the game's files and its store
+	 *  catalogue, and the proxy survey reads the loader directory beside them; on a
+	 *  large installation that is seconds. It is deliberate: `MasahAman::faragh`
+	 *  would hand the core a scan that never ran, and the core would answer
+	 *  `la_tawqee` with nothing behind it — an absence presented as a finding, which
+	 *  is the exact failure this crate exists to prevent. Every surface that asks
+	 *  for it therefore asks on purpose, not on mount.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataAqlAmr::LubaBilaMasdar`] when the game's record carries no launcher
+	 *  identity, and whatever the identity parse, the store, the probe or the Steam
+	 *  lookup raise. Neither scan itself fails: a place that cannot be read becomes
+	 *  a gap in the chain rather than an error out of here.
+	 */
+	aqlLuba: (muarrif: string) => typedError<AqlLubaHie, Khata>(__TAURI_INVOKE("aql_luba", { muarrif })),
+	/**
 	 *  Every patch the registry offers for one game, best match first.
 	 * 
 	 *  Only the shard the game's identity falls in is fetched, and a shard the
@@ -779,6 +799,67 @@ export const commands = {
 	 */
 	aqirrIfsah: () => typedError<IfsahHie, Khata>(__TAURI_INVOKE("aqirr_ifsah")),
 	/**
+	 *  Gathers what this game would share, harvesting the reading history first.
+	 * 
+	 *  The answer holds every entry that would leave, its fingerprint, and every warning the payload
+	 *  raises. Nothing is written by this call except the observations the harvest folds in;
+	 *  signing happens in [`saddir_musharaka`], against this exact set.
+	 * 
+	 *  # Errors
+	 * 
+	 *  Whatever the game lookup, the reading history, the memory or the gather raise.
+	 */
+	jahhizMusharaka: (muarrif: string, khiyarat: KhiyaratMusharakaHie) => typedError<MusawwadaMusharakaHie, Khata>(__TAURI_INVOKE("jahhiz_musharaka", { muarrif, khiyarat })),
+	/**
+	 *  Signs the gathered draft and writes it, once every warning it raised is acknowledged.
+	 * 
+	 *  `basma` is the fingerprint the screen displayed. It is checked against the draft this session
+	 *  is holding before a permit is minted, so an interface showing a stale preview cannot consent
+	 *  on behalf of a payload the user never saw; the crate then checks the same fingerprint again
+	 *  against the bytes it is actually writing.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataMusharakaAmr::MusawwadaGhayrMujahhaza`] when nothing was gathered for this game,
+	 *  [`KhataMusharakaAmr::BasmaMukhtalifa`] when the screen showed a different entry set,
+	 *  [`KhataMusharakaAmr::TahdheerMajhul`] for an acknowledgement key this build does not define,
+	 *  `taarib_warsha::khata::KhataWarsha::TahdheeratMuallaqa` naming every warning still
+	 *  unacknowledged, and whatever the keychain, the signer or the write raise.
+	 */
+	saddirMusharaka: (muarrif: string, basma: string, iqrarat: string[]) => typedError<TasdirMusharakaHie, Khata>(__TAURI_INVOKE("saddir_musharaka", { muarrif, basma, iqrarat })),
+	/**
+	 *  Verifies somebody else's share against the key its recipient was given, and reports what it
+	 *  holds without merging any of it.
+	 * 
+	 *  The key is the caller's on purpose. A file that carries its own key and vouches for itself
+	 *  proves only that somebody had a key, so the person importing has to say whose share they
+	 *  think this is — from a listing, a revocation list, or a fingerprint they were sent.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataMusharakaAmr::MiftahGhayrSalih`] when the pasted key is not 64 hex characters,
+	 *  [`KhataMusharakaAmr::MalafKabir`] for a file too large to decompress within this build's
+	 *  ceiling, [`KhataMusharakaAmr::MalafTalif`] when the file will not read, and whatever the
+	 *  crate's verification raises — a corrupt header, a schema this build does not read, a body
+	 *  that disagrees with its signed hash, or a signature that does not verify against this key.
+	 */
+	afhasMusharaka: (masar: string, miftah: string) => typedError<HuzmaMusharakaHie, Khata>(__TAURI_INVOKE("afhas_musharaka", { masar, miftah })),
+	/**
+	 *  Merges the verified share into this machine's memory.
+	 * 
+	 *  `khiyarat` is this machine's own floor and is applied again on the way in; the sharer's is
+	 *  only what their header states. The bundle is released after a merge that succeeded, because
+	 *  merging one file twice would corroborate an import with itself — the same reason the crate
+	 *  records one sighting per entry however many the file claims.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataMusharakaAmr::HuzmaGhayrMafhusa`] when nothing has been verified in this session,
+	 *  [`KhataMusharakaAmr::BasmaMukhtalifa`] when the screen showed a different share, and whatever
+	 *  the memory raises.
+	 */
+	idmijMusharaka: (basma: string, khiyarat: KhiyaratMusharakaHie) => typedError<TaqreerIstiradHie, Khata>(__TAURI_INVOKE("idmij_musharaka", { basma, khiyarat })),
+	/**
 	 *  Whether a newer version is offered for this build on its channel.
 	 * 
 	 *  Answers `None` when this build is current, which is the ordinary case and
@@ -1029,6 +1110,89 @@ export type AlamatMashruHie = {
 	tadarubat: TadarubHie[],
 };
 
+/**
+ *  Everything the core answers about one game, in one record.
+ * 
+ *  The discriminants cross the wire, not a tier number: `muntaj`, each blocker's
+ *  `naw` and each risk's `naw` are the core's own stable machine names, which
+ *  are byte-identical to the `snake_case` `serde` spelling of the same variants —
+ *  asserted by [`ikhtibarat::al_asma_hiya_asma_serde`]. A surface therefore
+ *  branches on what a thing *is* rather than on a rank or an error code.
+ */
+export type AqlLubaHie = {
+	/**  Taarib's identity for the game. */
+	muarrif: string,
+	/**  The name its launcher gives it, verbatim. */
+	ism: string,
+	/**
+	 *  Which of the products this game gets: `istibdal`, `rasm_mubashir`,
+	 *  `tabaqa_fawqiya`, `la_shay` or `majhul`.
+	 */
+	muntaj: string,
+	/**
+	 *  The tier number behind that product, when it is a product at all.
+	 * 
+	 *  Absent for `la_shay` and `majhul`, because a number printed beside
+	 *  "nothing" is a number that contradicts the word next to it.
+	 */
+	tabaqa_raqm: number | null,
+	/**  The product's name in Arabic. */
+	ism_arabi: string,
+	/**  The same in English. */
+	ism_injilizi: string,
+	/**  Why this product and not a better one, in Arabic. */
+	sabab_arabi: string,
+	/**  The same reason in English. */
+	sabab_injilizi: string,
+	/**
+	 *  Whether this build delivers what the product promises: `mukammala`,
+	 *  `naqisa` or `ghaiba`.
+	 */
+	jahiziya: string,
+	/**  What is unfinished, named, in Arabic, when anything is. */
+	naqs_arabi: string | null,
+	/**  The same in English. */
+	naqs_injilizi: string | null,
+	/**  What produced the product answer. */
+	shawahid_muntaj: ShahidHie[],
+	/**
+	 *  Everything standing between this game and Taarib, most serious first.
+	 * 
+	 *  Already sorted by the core's one ordering. A surface with room for one
+	 *  sentence takes the first entry; it does not re-rank.
+	 */
+	mawani: ManiHie[],
+	/**
+	 *  Every risk that has to be accepted before anything is written, in the
+	 *  order they are asked.
+	 */
+	makhatir: KhatarHie[],
+	/**  Everything that will not work for this game, named specifically. */
+	hudud: HaddHie[],
+	/**
+	 *  What the anti-cheat question was actually answered with: `mahmiya`,
+	 *  `lam_yajri` or `la_tawqee`.
+	 * 
+	 *  The negative answer is not "clean". It states that this build's signature
+	 *  list was looked for and matched nothing, which is a smaller claim, and
+	 *  its chain carries every place the scan could not reach.
+	 */
+	hala_himaya: string,
+	/**  What produced that answer. */
+	shawahid_himaya: ShahidHie[],
+	/**  The two anti-cheat sources disagreeing, when they do. */
+	ikhtilaf_himaya: IkhtilafHimayaHie | null,
+	/**  Whether anything stops Taarib touching this game at all. */
+	marfuda: boolean,
+	/**
+	 *  Whether a patch may be installed right now: nothing blocks it outright
+	 *  and every risk has been answered.
+	 */
+	jahiz_lil_tathbeet: boolean,
+	/**  The above, and an adapter that reaches the screen. */
+	jahiz_lil_tashghil: boolean,
+};
+
 /**  The installed build, rendered. */
 export type BinaHie = {
 	/**  The launcher's own build identifier, where the launcher has one. */
@@ -1133,6 +1297,16 @@ export type GhilafHie = {
 	 *  out of a canvas.
 	 */
 	lawn: LawnBariz | null,
+};
+
+/**  One named limit, with what said so. */
+export type HaddHie = {
+	/**  The limit, in Arabic. */
+	arabi: string,
+	/**  The same in English. */
+	injilizi: string,
+	/**  Every input it rests on. */
+	shawahid: ShahidHie[],
 };
 
 /**  Where the first-run acknowledgement stands. */
@@ -1284,6 +1458,19 @@ export type HalatTashghil = {
 	tanfidhi: string | null,
 };
 
+/**  What one harvest of the reading history did. */
+export type HasadHie = {
+	/**  History entries the watermark had not already dealt with. */
+	zurat: number,
+	/**  Entries folded into the memory as observations. */
+	sujjilat: number,
+	/**
+	 *  Entries skipped: no Arabic yet, not this machine's own machine translation, or a reading
+	 *  the memory refuses to store at all.
+	 */
+	matruka: number,
+};
+
 /**  Both installations' outcomes, gathered independently. */
 export type HasilatIzala = {
 	/**  Whether every installation that was present came off. */
@@ -1412,6 +1599,36 @@ export type HukmTilqaiHie = {
 	takalif: TakalifHie,
 	/**  The cover's absolute path, when the artwork cache holds one. */
 	ghilaf: string | null,
+};
+
+/**  What somebody else's share says about itself, once it has verified. */
+export type HuzmaMusharakaHie = {
+	/**  The game the readings came from. */
+	muarrif: string,
+	/**  Its display name, as the sharer's machine had it. */
+	ism_luba: string,
+	/**  Who shared it, shortened. */
+	musahim: string,
+	/**  When, RFC 3339, as the sharer's machine stated it. */
+	waqt: string,
+	/**  How many readings it carries. */
+	adad: number,
+	/**  How many carry a measured confidence. */
+	adad_maqis: number,
+	/**  How many carry none. */
+	adad_ghayr_maqis: number,
+	/**  The lowest measured confidence anywhere in it, when anything was measured. */
+	adna_thiqa: number | null,
+	/**  The floor the sharer's own export applied. */
+	atabaa: number,
+	/**  The fingerprint of its entry set, echoed back on merge. */
+	basma: string,
+	/**  The summary sentence the crate writes, in Arabic. */
+	unwan: string,
+	/**  The same in English. */
+	wasf: string,
+	/**  Every entry it carries, so the importer sees what lands in their memory. */
+	sutur: SatrMusharakaHie[],
 };
 
 /**
@@ -1733,6 +1950,20 @@ export type IfsahHie = {
 	waqt: string | null,
 };
 
+/**
+ *  The two anti-cheat sources naming different things about one game.
+ * 
+ *  Surfaced rather than averaged. The launcher's catalogue hint and the scan of
+ *  the game's own files are independent and either can be wrong; the refusal
+ *  stands on both, and which of them was wrong has to stay visible.
+ */
+export type IkhtilafHimayaHie = {
+	/**  What the scan of the game's files and the store catalogue named. */
+	min_kashf: string[],
+	/**  What the launcher's own metadata named. */
+	min_iktishaf: string[],
+};
+
 /**  One recorded state transition of a submission. */
 export type IntiqalHie = {
 	/**  The state it left. */
@@ -1899,6 +2130,22 @@ export type KhataTilqaiHie = {
 	injilizi: string,
 };
 
+/**  One standing risk, and whether it has been answered. */
+export type KhatarHie = {
+	/**  Which risk, as the discriminant's own machine name. */
+	naw: string,
+	/**  Where it sits in the order it is asked in. */
+	rutba: number,
+	/**  What the user is being asked to accept, in Arabic. */
+	arabi: string,
+	/**  The same in English. */
+	injilizi: string,
+	/**  Whether the answer is already on record. */
+	muqarr: boolean,
+	/**  Every input it rests on. */
+	shawahid: ShahidHie[],
+};
+
 /**  One usable font in Taarib's own font directory. */
 export type KhattHie = {
 	/**  The file name the font is stored under. */
@@ -1910,6 +2157,20 @@ export type KhattHie = {
 	arabi: boolean,
 	/**  The file's size in bytes. */
 	hajm: number,
+};
+
+/**
+ *  How an export or an import is scoped.
+ * 
+ *  One type for both directions because the two are the same two decisions made by two different
+ *  people: `mushtaraka::idmij` applies the importer's floor again on the way in, and the fact
+ *  that the sharer already applied theirs is not a reason to skip it.
+ */
+export type KhiyaratMusharakaHie = {
+	/**  The floor a measured reading must clear, zero to a hundred. */
+	atabaa: number,
+	/**  Whether readings no recognizer measured are included at all. */
+	ghayr_maqisa: boolean,
 };
 
 /**  How badly a failure hurts, which decides how loudly the interface says it. */
@@ -2202,6 +2463,24 @@ export type ManatiqHie = {
 	fasila_iftiradiya_milli: number,
 	/**  Every region, in the order the scheduler visits them. */
 	manatiq: MintaqaHie[],
+};
+
+/**  One standing blocker, already in the one order. */
+export type ManiHie = {
+	/**  Which blocker, as the discriminant's own machine name. */
+	naw: string,
+	/**  Where it sits in the one order; lower is more serious. */
+	rutba: number,
+	/**  How far it reaches: `kul` stops everything, `tashghil` only the run. */
+	nitaq: string,
+	/**  Whether it is a fact about the game that nothing will change. */
+	nihai: boolean,
+	/**  The producer's own sentence, in Arabic. */
+	arabi: string,
+	/**  The same in English. */
+	injilizi: string,
+	/**  Every input it rests on. */
+	shawahid: ShahidHie[],
 };
 
 /**
@@ -2529,6 +2808,39 @@ export type MusawwadaHie = {
 	ansha: string,
 	/**  Every state transition so far. */
 	tareekh: IntiqalHie[],
+};
+
+/**  What an export would contain, gathered and not yet signed. */
+export type MusawwadaMusharakaHie = {
+	/**  The game's identity. */
+	muarrif: string,
+	/**  Its display name, as the header will carry it. */
+	ism_luba: string,
+	/**  How many readings this game has accumulated in total, before the scope is applied. */
+	majmu: number,
+	/**  How many the scope keeps — the number that would actually leave. */
+	adad: number,
+	/**  How many of those carry a confidence a recognizer really measured. */
+	adad_maqis: number,
+	/**  How many carry none. */
+	adad_ghayr_maqis: number,
+	/**  The scope this draft was gathered under. */
+	khiyarat: KhiyaratMusharakaHie,
+	/**  The fingerprint of this exact entry set, echoed back on export. */
+	basma: string,
+	/**  Every warning this payload raises, all of which must be acknowledged. */
+	tahdheerat: TahdheerMusharakaHie[],
+	/**
+	 *  Every entry that would leave, in the order it would be written.
+	 * 
+	 *  Whole, never sampled, and never capped. A permit is minted against the fingerprint of
+	 *  the set the user was shown, so showing them a hundred rows of a two-thousand-row payload
+	 *  would make the consent a formality — the guarantee this loop is built on is that nothing
+	 *  leaves the machine without the user having seen it.
+	 */
+	sutur: SatrMusharakaHie[],
+	/**  What the harvest that ran first did. */
+	hasad: HasadHie,
 };
 
 /**  One glossary hit for the selected string. */
@@ -3036,6 +3348,33 @@ export type SatrMuayanaHie = {
 	ard: number | null,
 };
 
+/**
+ *  One reading, as the sharing screen lists it.
+ * 
+ *  Every field is something the user is entitled to read before they decide, and the list is
+ *  sent whole rather than sampled — see [`MusawwadaMusharakaHie::sutur`].
+ */
+export type SatrMusharakaHie = {
+	/**  What the recognizer read off the screen, verbatim. */
+	asl: string,
+	/**  The Arabic it was given. */
+	arabi: string,
+	/**  The overlay region it came from, when one was named. */
+	mintaqa: string | null,
+	/**  Which recognizer read it, when the source said. */
+	qari: string | null,
+	/**
+	 *  What the recognizer said about the reading, or that it said nothing.
+	 * 
+	 *  The memory's own type rather than an `Option<u8>` flattened for the wire. An unmeasured
+	 *  reading has no number, and a field that could hold one is a field a screen will
+	 *  eventually print a zero into.
+	 */
+	thiqa: ThiqatQira,
+	/**  How many independent sightings were recorded for it. */
+	mushahadat: number,
+};
+
 /**  One group of things extraction refused, and why. */
 export type SatrRafdHie = {
 	/**  What was refused, named the way the extractor named it. */
@@ -3070,6 +3409,26 @@ export type SatrUnwan = {
 	nass: string,
 	/**  Whether this line ends in an ellipsis because the title was absurd. */
 	maqsus: boolean,
+};
+
+/**
+ *  One held input behind one answer.
+ * 
+ *  Diagnostic rather than user-facing, and the core says why: the sentences a
+ *  player reads travel in both languages on the blocker, the risk and the
+ *  promise, and these carry each producer's own words in whatever language that
+ *  producer wrote them. Translating an observation would put a sentence in the
+ *  trail no producer ever wrote.
+ */
+export type ShahidHie = {
+	/**  Which held input it came from, as a stable machine name. */
+	masdar: string,
+	/**  The producing module, as a maintainer reading a bundle would look for it. */
+	muntij: string,
+	/**  What that input said. */
+	wasf: string,
+	/**  Where it was seen, when the input names a place. */
+	mawqi: string | null,
 };
 
 /**
@@ -3420,6 +3779,23 @@ export type Taghtiya = {
 	mutarjam_awwal: number,
 };
 
+/**
+ *  One warning the user must acknowledge by name before anything leaves.
+ * 
+ *  The wording travels from the crate rather than being restated in the interface's string set,
+ *  so a screen cannot soften it: the loudest one says these lines came off the user's screen and
+ *  may carry their character's name, other players' names, or anything else that was on it, and
+ *  that sentence is the crate's own bytes both here and in the log.
+ */
+export type TahdheerMusharakaHie = {
+	/**  The stable key the acknowledgement is sent back under. */
+	ramz: string,
+	/**  The warning, in Arabic, verbatim from the crate. */
+	arabi: string,
+	/**  The same warning in English, verbatim from the crate. */
+	injilizi: string,
+};
+
 /**  What the interface draws when an update is offered. */
 export type TahdithHie = {
 	/**  The version being offered. */
@@ -3591,6 +3967,18 @@ export type TaqreerHie = {
 	naqs_injilizi: string | null,
 };
 
+/**  What a merge did. */
+export type TaqreerIstiradHie = {
+	/**  Entries read out of the share. */
+	zurat: number,
+	/**  Entries recorded — inserted, or folded into a row that was already there. */
+	sujjilat: number,
+	/**  Entries this machine's own floor rejected. */
+	marfuda: number,
+	/**  Entries that fold to a key nothing could ever look up. */
+	talifa: number,
+};
+
 /**  What one installation's removal did. */
 export type TaqreerIzalaHie = {
 	/**  Which installation was removed. */
@@ -3669,6 +4057,26 @@ export type TaqreerTahaqquqHie = {
 	zaida: string[],
 };
 
+/**  A signed share, written. */
+export type TasdirMusharakaHie = {
+	/**  The file, absolute. */
+	masar: string,
+	/**  Its size in bytes. */
+	hajm: number,
+	/**  How many readings it carries. */
+	adad: number,
+	/**  The fingerprint of the entry set it was signed over. */
+	basma: string,
+	/**
+	 *  The signing key's public half, lowercase hex.
+	 * 
+	 *  What a recipient has to be given out of band: `mushtaraka::istawrid` verifies against the
+	 *  key its caller names, never the one the file carries, so a share is worthless to somebody
+	 *  who was not told whose it is.
+	 */
+	miftah: string,
+};
+
 /**  What building a maintainer bundle produced. */
 export type TashkhisHie = {
 	/**  The bundle directory. */
@@ -3678,6 +4086,35 @@ export type TashkhisHie = {
 	/**  Their total size in bytes. */
 	hajm: number,
 };
+
+/**
+ *  What a recognizer said about how sure it was — or that it said nothing.
+ * 
+ *  Two variants and no third, because there are two situations and the
+ *  difference between them is the whole point.
+ *  `taarib_tabaqa::qira`'s header states it for the reading side: neither
+ *  Windows Runtime OCR nor the bundled portable engine reports a confidence,
+ *  and the number those engines' lines carry is that crate's fixed stand-in
+ *  (`THIQA_GHAYR_MAQISA`, eighty), not a measurement. Only macOS Vision
+ *  reports a real per-line number.
+ * 
+ *  So the memory does not store a number for an engine that measured none. A
+ *  `u8` field with an eighty in it is indistinguishable, three hops later,
+ *  from a genuine eighty — and an eighty that came from a constant will be
+ *  compared against thresholds, ranked against real measurements, and shown
+ *  to a player as if somebody had measured something. [`ThiqatQira::Ghayr`]
+ *  carries no number at all, so there is nothing to mistake.
+ * 
+ *  [`ThiqatQira::yajtaz`] is where that refusal becomes a rule rather than a
+ *  note: an unmeasured reading clears **no** floor, however low.
+ */
+export type ThiqatQira = 
+/**  The recognizer reported this number itself. */
+{ naw: "maqisa"; 
+/**  Zero to a hundred, as the engine reported it. */
+mia: number } | 
+/**  The recognizer reports no confidence, and none was invented for it. */
+{ naw: "ghayr" };
 
 /**  Where the run as a whole stands. */
 export type WadTilqaiHie = 

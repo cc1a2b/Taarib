@@ -12,6 +12,20 @@
 //! cell i   at (x, y) = ((i mod columns) * pitch, (i div columns) * pitch)
 //! ```
 //!
+//! ## It is also the law the executable runs
+//!
+//! The rule above was derived from the files. It has since been read out of the
+//! game: the quad emitter at `0x0071_7660` in `bio4.exe` computes
+//! `columns = width / cell width`, then `x = (cell % columns) * cell width` and
+//! `y = (cell / columns) * cell height`, taking the width from the `u16` at offset
+//! 2 of the embedded TPL image header. Two details the files could not have shown:
+//! the pitch is **not** read from the metrics table but passed in when the font is
+//! loaded — `0x1C`, `0x14` or `0x40` depending on the family — and the horizontal
+//! and vertical pitches are separate fields that happen to be equal in every
+//! shipped load. `metrics[0].yasar` agrees with the loaded pitch in all
+//! thirty-two, which is why taking it from there is sound and why it is checked
+//! rather than trusted. See [`crate::kharita`].
+//!
 //! Every one of the thirty-two `.fnt` files in `BIO4/Font` satisfies it exactly,
 //! including `system_zh-cn.fnt`, which is the only one that distinguishes it from
 //! the simpler rule that ignores the trailing run: `system` has 160 entries at a

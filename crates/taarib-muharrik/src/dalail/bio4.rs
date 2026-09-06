@@ -107,8 +107,11 @@
 //! file and not to open it.
 //!
 //! The strings are **not** uniformly UTF-8, so no encoding is asserted and none
-//! is checked: the five Latin-script dictionaries decode cleanly and
-//! `JAPANESE_WIN32.dct` and both Chinese files do not.
+//! is checked. Measured per string rather than over the whole file: the five
+//! Latin-script dictionaries and `JAPANESE_WIN32.dct` decode cleanly in all 403
+//! of their entries, and the two Chinese files do not — 7 strings in
+//! `CHINESE_S_WIN32.dct` and 30 in `CHINESE_T_WIN32.dct` are Big5, which is what
+//! `taarib-istikhraj`'s `qamus` module reports and refuses to guess at.
 //!
 //! ### `.udas` and `.snd` — a second container. 7 files, in both byte orders.
 //!
@@ -148,6 +151,25 @@
 //! Direct3D 9 value, so a game on this engine reports **no** graphics API at
 //! all. That is a gap in the vocabulary rather than a gap in the reading, and
 //! closing it is a change to `taarib-mustalahat` that this work did not make.
+//!
+//! ## The character table is in the executable, not in the data
+//!
+//! Worth writing down here because this is the module a reader reaches for when
+//! asking what is known about `BIO4`, and because it was for a long time the one
+//! open question: **which code point selects which glyph cell is decided by a
+//! table inside `bio4.exe`.** One flat array of `u32` code points per language,
+//! whose index *is* the cell — 260 entries at `0x00C0_CE18` for the five Latin
+//! scripts, and three larger pairs for Japanese and the two Chinese builds. The
+//! routine that builds a `std::map` out of it is at `0x006A_7F50`; the `.dct`
+//! string reaches it through a UTF-8 decoder at `0x006A_85A0` that also expands
+//! `^917550^` into U+E002E. Every code point in all eight shipped dictionaries
+//! resolves through those tables.
+//!
+//! `taarib-muhawwil-bio4`'s `kharita` module owns this, reproduces the Latin array
+//! and records the file offsets of the two immediates that would point the game at
+//! a longer one. This module does not read the executable for it: a detector's job
+//! is to recognise the engine, and disassembling a nine-megabyte image to confirm
+//! something already written down would be a scan nobody asked for.
 //!
 //! ## What a miss means
 //!

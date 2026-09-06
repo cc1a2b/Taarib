@@ -168,7 +168,10 @@ pub struct ShaklMintaqa {
 }
 
 /// The directory the overlay tier's per-game files live under.
-fn mujallad_tabaqa(masarat: &Masarat) -> PathBuf {
+///
+/// Shared with the sharing surface, which harvests the same per-game reading history this screen
+/// draws; two spellings of one path is how a harvest reads a file nothing wrote.
+pub(crate) fn mujallad_tabaqa(masarat: &Masarat) -> PathBuf {
     masarat.jidhr_bayanat().join("tabaqa")
 }
 
@@ -291,7 +294,7 @@ fn madkhal_hie(madkhal: &MadkhalQira) -> MadkhalQiraHie {
 }
 
 /// Parses a history file's entry lines, skipping the header and any torn line.
-fn hallil_sutur(bayt: &[u8]) -> Vec<MadkhalQira> {
+pub(crate) fn hallil_sutur(bayt: &[u8]) -> Vec<MadkhalQira> {
     let mut sutur = bayt
         .split(|wahid| *wahid == b'\n')
         .filter(|satr| satr.iter().any(|wahid| !wahid.is_ascii_whitespace()));

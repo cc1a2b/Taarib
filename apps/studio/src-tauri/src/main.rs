@@ -69,7 +69,9 @@ pub mod tathbeet_awamir;
 mod bidaya;
 mod istiada_cli;
 mod mukawwinat_tahmil;
+pub mod aql_awamir;
 pub mod idadat_awamir;
+pub mod musharaka_awamir;
 pub mod suwar_awamir;
 pub mod tabaqa_awamir;
 pub mod taqdeem_awamir;
@@ -927,6 +929,7 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             luba_awamir::lugha_rasmiya,
             luba_awamir::fahs_himaya,
             luba_awamir::ikhfa_luba,
+            aql_awamir::aql_luba,
             tathbeet_awamir::ruqaa_luba,
             tathbeet_awamir::nazzil_ruqaa,
             tathbeet_awamir::tahaqquq_ruqaa,
@@ -980,6 +983,10 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             tabaqa_awamir::imsah_sijill_qira,
             tabaqa_awamir::nass_ifsah,
             tabaqa_awamir::aqirr_ifsah,
+            musharaka_awamir::jahhiz_musharaka,
+            musharaka_awamir::saddir_musharaka,
+            musharaka_awamir::afhas_musharaka,
+            musharaka_awamir::idmij_musharaka,
             tahdith_awamir::tahaqquq_tahdith,
             tahdith_awamir::nazzil_tahdith,
             tashkhis_awamir::sijillat_akhira,
@@ -1068,6 +1075,11 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
         .manage(taqdeem_awamir::JihazMuallaq::default())
         .manage(taqdeem_awamir::QuflTaqdeem::default())
         .manage(warsha_awamir::AqfalMashariya::default())
+        // The gathered share draft and the verified bundle, held for the length of one consent
+        // decision. Not on disk, and deliberately: a permit is about the entry set a person was
+        // shown a moment ago, and a draft that outlived the window it was read in would let an
+        // acknowledgement be spent on a payload nobody has looked at since.
+        .manage(musharaka_awamir::HalatMusharaka::default())
         // The automatic runs this process started: their cancel handles and the
         // snapshot each one last published. Held here rather than in the store
         // because a cancel handle is a live object, and because a run that is

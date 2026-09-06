@@ -124,7 +124,7 @@ pub use crate::irtibat::{
     BasmatKhatt, HukmIrtibat, IrtibatBina, MukhattatBasma, NitaqBina, SababMutabaqa,
 };
 pub use crate::khata::{KhataTarqee, SababMasar};
-pub use crate::mujammi::{HuzmaMabniya, MudkhalatTajmee, ijmaa};
+pub use crate::mujammi::{HuzmaMabniya, MudkhalatTajmee, TawhidTarjama, ijmaa};
 pub use crate::tahdid_maqasat::{HajmMuqannan, IktishafMaqasat, TaqreerMaqasat};
 pub use crate::tahweel::SiyasatHuzma;
 pub use crate::takhtit::{KhiyaratTasbeeq, MizaniyatIqama, SiyasatNamu, TakhtitMusbaq, sabbiq};

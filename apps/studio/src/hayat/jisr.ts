@@ -103,6 +103,11 @@ interface TartibWusata {
   readonly lugha_rasmiya: ['muarrif'];
   readonly fahs_himaya: ['muarrif'];
   readonly ikhfa_luba: ['muarrif', 'mukhfiya'];
+  // One game held whole: which product it gets, what is promised, what the
+  // limits are, what risks need consent, and what blocks it outright — each
+  // answer carrying the producers behind it. It walks the game directory, so a
+  // screen asks for it on purpose rather than on mount.
+  readonly aql_luba: ['muarrif'];
 
   // Patches: offered, downloaded, verified, installed, removed.
   readonly ruqaa_luba: ['muarrif'];
@@ -192,6 +197,17 @@ interface TartibWusata {
   readonly laqtat_tilqai: ['muarrif'];
   readonly ibda_tilqai: ['muarrif', 'istinaf', 'iqrarShabaka'];
   readonly alghi_tilqai: ['muarrif'];
+
+  // Sharing what the overlay read off a screen. `jahhiz` gathers a draft and
+  // hands back every entry it would send — never a sample, because a preview of
+  // a hundred rows out of two thousand makes consent a formality — and mints a
+  // fingerprint over exactly that set. `saddir` refuses unless the fingerprint
+  // echoed back is the draft still being held and every warning is acknowledged
+  // by name.
+  readonly jahhiz_musharaka: ['muarrif', 'khiyarat'];
+  readonly saddir_musharaka: ['muarrif', 'basma', 'iqrarat'];
+  readonly afhas_musharaka: ['masar', 'miftah'];
+  readonly idmij_musharaka: ['basma', 'khiyarat'];
 }
 
 /** A command name the backend actually registered. */

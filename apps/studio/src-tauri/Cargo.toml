@@ -37,6 +37,11 @@ taarib-mustawda = { workspace = true }
 taarib-tathbeet = { workspace = true }
 # The anti-cheat scan and the first-run acknowledgement.
 taarib-aman = { workspace = true }
+# العقل — one game held whole. Every producer's answer about a game composed
+# into one vantage point, so the game screen and the automatic-run screen cannot
+# name different refusals for the same game. The Studio composes nothing here:
+# it assembles the inputs, asks, and projects the answers with their chains.
+taarib-aql = { workspace = true }
 # The compiled owner key the one-click install verifies against, and the
 # Ed25519 verifier it hands the pipeline.
 taarib-khatm = { workspace = true }

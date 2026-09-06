@@ -502,14 +502,29 @@ pub enum KhataTathbeet {
     /// This is the install-time half of the rule `taarib-haqn` already applies
     /// inside a running process — never unhook someone else, because whoever
     /// took the slot last is the only one who can give it back.
-    #[error("{wakeel} beside the game is already another mod's loader ({}, {hajm} byte(s)); \
-             Taarib will not write over it", masar.display())]
+    #[error("{wakeel} beside the game is already another mod's loader ({}, {hajm} byte(s), \
+             {}); Taarib will not write over it", masar.display(), huwiya.wasf_injilizi())]
     WakeelMashghul {
         /// The module name Taarib's loader is published as, `version.dll` on
         /// Windows.
         wakeel: String,
         /// The file holding the slot.
         masar: PathBuf,
+        /// Which product that file belongs to, as
+        /// `wukala::HuwiyatWakeel::wasf_injilizi` renders it — a named mod with
+        /// the evidence that named it, an ambiguity between two, or an
+        /// unidentified proxy said to be exactly that.
+        ///
+        /// "Something owns `version.dll`" is a refusal a user can do nothing
+        /// with. "ReShade owns it, and here is what proved that" is one they can
+        /// act on, and the difference is the whole reason this field exists
+        /// rather than the size alone standing in for an identity.
+        ///
+        /// Structured rather than a rendered sentence, because this error is
+        /// shown in two languages and a pre-rendered English clause dropped
+        /// into the Arabic message would be the one line on that screen that is
+        /// not Arabic.
+        huwiya: crate::wukala::HuwiyatWakeel,
         /// Its size in bytes, which is what separates a real system module
         /// somebody copied in from a mod loader standing in for one.
         hajm: u64,
@@ -821,18 +836,25 @@ impl Tafsir for KhataTathbeet {
                 "أحد مكوّنات الإطار ({mukawwin}) في المخزن بحجم غير الحجم المُعلَن. النسخ إلى \
                  المخزن لم يكتمل؛ أعد تثبيت تعريب."
             ),
-            Self::WakeelMashghul { wakeel, masar, jiran, .. } => {
+            Self::WakeelMashghul { wakeel, masar, jiran, huwiya, .. } => {
                 let mawdi = masar.display();
                 let maa = if jiran.is_empty() {
                     String::new()
                 } else {
                     format!(" وبجانبه أيضًا: {}.", jiran.join("، "))
                 };
+                let man = huwiya.wasf_arabi();
+                let bab = huwiya.aila().and_then(|aila| aila.tasalsul_arabi()).map_or_else(
+                    String::new,
+                    |bab| format!(" {bab}"),
+                );
                 format!(
-                    "يوجد في مجلّد اللعبة ملف باسم {wakeel} ({mawdi})، وهو الاسم نفسه الذي \
-                     يحمّل به تعريب نفسه. تحمّل ويندوز ملفًا واحدًا بهذا الاسم لا اثنين، \
-                     والكتابة فوقه تُلغي التعديل الموجود في صمت.{maa} لم يُكتب شيء. أزل \
-                     التعديل الآخر أو غيّر اسم ملفه إن أردت تثبيت تعريب في هذه اللعبة."
+                    "يوجد في مجلّد اللعبة ملف باسم {wakeel} ({mawdi})، وهو {man}، والاسم \
+                     نفسه الذي يحمّل به تعريب نفسه. تحمّل ويندوز ملفًا واحدًا بهذا الاسم لا \
+                     اثنين، والكتابة فوقه تُلغي التعديل الموجود في صمت.{maa} لم يُكتب شيء. \
+                     ولا ينتقل تعريب إلى اسم آخر: الاسم الفارغ فارغ لأن اللعبة لا تطلبه، \
+                     ووكيل باسم لا يُطلب تثبيتٌ ينجح ولا يفعل شيئًا.{bab} أزل التعديل الآخر \
+                     أو غيّر اسم ملفه إن أردت تثبيت تعريب في هذه اللعبة."
                 )
             }
             Self::IdhnGhayrMutabiq => {
@@ -997,19 +1019,27 @@ impl Tafsir for KhataTathbeet {
                  the manifest declares {muallan}. The copy into the store did not finish; \
                  reinstall Taarib."
             ),
-            Self::WakeelMashghul { wakeel, masar, hajm, jiran } => {
+            Self::WakeelMashghul { wakeel, masar, hajm, jiran, huwiya } => {
                 let maa = if jiran.is_empty() {
                     String::new()
                 } else {
                     format!(" Also in use beside it: {}.", jiran.join(", "))
                 };
+                let bab = huwiya.aila().and_then(crate::wukala::AilatWakeel::tasalsul).map_or_else(
+                    String::new,
+                    |bab| format!(" That product does have a way in: {bab}."),
+                );
                 format!(
-                    "The game directory already holds a {wakeel} ({}, {hajm} byte(s)), which \
-                     is the same name Taarib's own loader is published as. Windows loads one \
-                     file of that name, not two, so writing over it would remove the mod that \
-                     is there without saying so.{maa} Nothing was written. Remove or rename \
+                    "The game directory already holds a {wakeel} ({}, {hajm} byte(s)) — {} — \
+                     which is the same name Taarib's own loader is published as. Windows loads \
+                     one file of that name, not two, so writing over it would remove the mod \
+                     that is there without saying so.{maa} Nothing was written. Taarib does not \
+                     move to a different name either: a name that is free here is free because \
+                     nothing in this game asks for it, and a loader under a name nothing asks \
+                     for is an install that succeeds and does nothing.{bab} Remove or rename \
                      that mod's loader if you want Taarib in this game.",
-                    masar.display()
+                    masar.display(),
+                    huwiya.wasf_injilizi()
                 )
             }
             Self::IdhnGhayrMutabiq => {
@@ -1280,11 +1310,12 @@ impl Tafsir for KhataTathbeet {
                 daa("muallan", QeemaSiyaq::Nass(muallan.to_string()));
                 daa("mawjud", QeemaSiyaq::Nass(mawjud.to_string()));
             }
-            Self::WakeelMashghul { wakeel, masar, hajm, jiran } => {
+            Self::WakeelMashghul { wakeel, masar, hajm, jiran, huwiya } => {
                 daa("wakeel", QeemaSiyaq::Nass(wakeel.clone()));
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("hajm", QeemaSiyaq::Hajm(*hajm));
                 daa("jiran", QeemaSiyaq::Qaima(jiran.clone()));
+                daa("huwiya", QeemaSiyaq::Nass(huwiya.wasf_injilizi()));
             }
             Self::BeeaMafquda { jidhr, sabab } => {
                 daa("jidhr", QeemaSiyaq::Masar(jidhr.clone()));

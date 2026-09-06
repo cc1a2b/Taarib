@@ -5653,6 +5653,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "taarib-aql"
+version = "1.0.0"
+dependencies = [
+ "serde",
+ "taarib-aman",
+ "taarib-kashf",
+ "taarib-muharrik",
+ "taarib-mustalahat",
+ "taarib-mustawda",
+ "taarib-tathbeet",
+ "taarib-usus",
+ "tempfile",
+]
+
+[[package]]
 name = "taarib-haqn"
 version = "1.0.0"
 dependencies = [
@@ -5796,6 +5811,7 @@ dependencies = [
  "taarib-kashf",
  "taarib-makhzan",
  "taarib-mustalahat",
+ "taarib-tabaqa",
  "taarib-usus",
  "tempfile",
  "thiserror 2.0.20",
@@ -5960,6 +5976,7 @@ dependencies = [
  "specta",
  "specta-typescript",
  "taarib-aman",
+ "taarib-aql",
  "taarib-istikhraj",
  "taarib-kashf",
  "taarib-khatm",

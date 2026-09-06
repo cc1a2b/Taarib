@@ -13,8 +13,9 @@ use taarib_usus::manassa::{self, HalatTashghil};
 use crate::bayan::{Muthabbit, NawTathbeet, TarifLuba, Tathbeet};
 use crate::khata::{KhataTathbeet, NatijatTathbeet};
 use crate::mawdi::WajhatLuba;
-use crate::nusus;
+use crate::nusus::Nashir;
 use crate::tahaqquq::{NatijatTahaqquq, tahaqquq_kamil};
+use crate::tarkib::QararTabaqa;
 
 /// One patch-content placement: a validated in-game destination and its bytes.
 #[derive(Debug)]
@@ -77,20 +78,43 @@ pub struct NatijatTathbeetKamil {
     ///
     /// [`None`] for every other game, which is most of them: a Unity or Unreal
     /// install reads its translations out of the placed package at run time and
-    /// has nothing written into its own files.
+    /// has nothing written into its own files. Also [`None`] at tier 3, where
+    /// the game's own text is never replaced at all.
     pub nusus: Option<TaqreerTarkeeb>,
+    /// Whether the patch content was deliberately **not** placed inside the
+    /// game.
+    ///
+    /// True at tier 3, whose product surface says the game is not modified at
+    /// all — a `taarib/` directory and a package inside it is a modification of
+    /// the game's directory, and nothing at that tier reads the package from
+    /// there: the payload that does is the one tier 3 never deploys. Also true
+    /// when the deployment step declared no tier decision, because an install
+    /// that never established what it is allowed to do to a game has no warrant
+    /// to put anything in it.
+    pub muhtawa_matruk: bool,
 }
 
 /// Runs the full install pipeline for one game and one package.
 ///
-/// `nashr` deploys the framework and adapter through the same recording guard
-/// every write uses; it runs after the manifest is durable and before content
-/// is placed. Passing it as a step keeps the per-engine deployment table in
-/// `tarkib` and the write ordering here.
+/// `nashr` is the deployment step. It is handed a [`Nashir`] — the recording
+/// guard every write already went through, plus the package — and it owns
+/// **every** write into the game's own files: the script-engine write through
+/// [`Nashir::raqqi`], and the framework and adapter through the recorder.
+/// Passing it as a step keeps the per-engine table in `tarkib` and the write
+/// ordering here.
 ///
-/// The manifest is durable before `nashr` or any placement runs, because
-/// [`Tathbeet::ibda`] flushes it and [`Tathbeet`] is the only writer either
-/// step is given. A failure after the first write leaves that manifest on
+/// That the script-engine write belongs to the deployment step is the
+/// correction this signature carries. It used to run here instead —
+/// unconditionally, before the step, re-deriving the engine from the game's own
+/// directory — with no plan to consult and therefore no tier and no safety
+/// refusal to honour. A tier-3 game, whose report had just told the player the
+/// game would not be modified at all, had its `data/*.json`, its
+/// `game/tl/arabic/*.rpy`, its `data.win` or its `app.asar` rewritten. The step
+/// that holds the plan is the only place that write can correctly happen.
+///
+/// The manifest is durable before the deployment step or any placement runs,
+/// because [`Tathbeet::ibda`] flushes it and [`Tathbeet`] is the only writer
+/// either step is given. A failure after the first write leaves that manifest on
 /// disk; the caller rolls back rather than leaving a partial install.
 ///
 /// # Errors
@@ -113,7 +137,7 @@ pub fn thabbit<F>(
     nashr: F,
 ) -> NatijatTathbeet<NatijatTathbeetKamil>
 where
-    F: FnOnce(&mut dyn Muthabbit) -> NatijatTathbeet<()>,
+    F: FnOnce(&mut Nashir<'_>) -> NatijatTathbeet<()>,
 {
     let basmat = basmat_ruqaa(&talab.luba.jidhr, ruqaa)?;
     if !idhn.yushmal(talab.luba.luba, basmat) {
@@ -125,24 +149,28 @@ where
     let tawafuq = qarrir_tawafuq(talab)?;
 
     let mut tathbeet = Tathbeet::ibda(jidhr_nusakh, NawTathbeet::Nass, talab.luba, huwiya)?;
-    // Before `nashr`, and RPG Maker is why: its extraction records carry byte
-    // offsets into `js/plugins.js`, and deploying the adapter appends Taarib's
-    // registration to that file. Splicing against offsets measured before the
-    // append would be splicing against a file whose length has moved — the
-    // adapter would notice and refuse, which is the safe failure and still a
-    // wasted install. `taarib_muhawwil_nusus::rpgmaker::rakkib_mulhaq` documents
-    // the same ordering for the same reason.
-    let nusus = nusus::raqqi_nusus(
-        &talab.luba.jidhr,
-        ruqaa,
-        nusus::makhzan_mukawwinat().as_deref(),
-        &mut tathbeet,
-    )?;
-    nashr(&mut tathbeet)?;
-    let adad_muhtawa = ida_muhtawa(&mut tathbeet, &talab.muhtawa)?;
+    let (qarar, nusus) = {
+        let mut nashir = Nashir::jadeed(&mut tathbeet, ruqaa, &talab.luba.jidhr);
+        nashr(&mut nashir)?;
+        (nashir.qarar(), nashir.nusus())
+    };
+
+    // The tier decides this too. Package content is Taarib's own file in a
+    // directory Taarib creates, and at tier 3 there is no payload in the game to
+    // read it — the tier deploys none — so placing it would be a directory added
+    // to a game the product promised not to modify, for nothing.
+    let yuktab = qarar.is_some_and(QararTabaqa::tughayyar_al_luba);
+    let adad_muhtawa =
+        if yuktab { ida_muhtawa(&mut tathbeet, &talab.muhtawa)? } else { 0 };
 
     let taqreer = tahaqquq_kamil(&talab.luba.jidhr, jidhr_nusakh, NawTathbeet::Nass)?;
-    Ok(NatijatTathbeetKamil { tawafuq, adad_muhtawa, tahaqquq: taqreer.natija(), nusus })
+    Ok(NatijatTathbeetKamil {
+        tawafuq,
+        adad_muhtawa,
+        tahaqquq: taqreer.natija(),
+        nusus,
+        muhtawa_matruk: !yuktab && !talab.muhtawa.is_empty(),
+    })
 }
 
 fn basmat_ruqaa(jidhr: &Path, ruqaa: &MalafRuqaa) -> NatijatTathbeet<Basma> {

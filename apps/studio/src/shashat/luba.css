@@ -579,6 +579,84 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* --- the evidence chain -----------------------------------------------------
+
+   Two levels and no third. A verdict is a sentence in the reading colour; the
+   producers behind it are a smaller, indented list under it. Nothing here gets
+   a status hue: the panel is the workings, and colouring a blocker red twice —
+   once where the product refuses and again where it shows why — turns the
+   explanation into a second alarm about the same fact.
+
+   `pre-line` on the sentence is load-bearing. The safety layer writes its
+   refusal as a statement followed by one finding per line, and collapsing those
+   into a paragraph loses which file each one names. */
+
+.luba__aql {
+  display: grid;
+  gap: var(--misafa-4);
+  margin-block-start: var(--misafa-12);
+}
+
+.luba__aql-qaima {
+  display: grid;
+  gap: var(--misafa-12);
+}
+
+.luba__aql-madkhal {
+  display: grid;
+  gap: var(--misafa-6);
+  padding-inline-start: var(--misafa-12);
+  border-inline-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.luba__aql-jumla {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+.luba__aql-wusum {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-6);
+}
+
+.luba__aql-ikhtilaf {
+  display: grid;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-12);
+}
+
+.luba__shawahid {
+  display: grid;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-6);
+}
+
+.luba__shahid {
+  display: grid;
+  gap: var(--misafa-2);
+}
+
+/* The producing module, not a heading: it is what a maintainer greps for in a
+   diagnostics bundle, so it is set in the monospace face and stepped back. */
+.luba__shahid-muntij {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.luba__shahid-wasf {
+  max-inline-size: 62ch;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
 /* --- the publisher's own Arabic --------------------------------------------
 
    Good news, not a warning. This block carries no status hue and no leading

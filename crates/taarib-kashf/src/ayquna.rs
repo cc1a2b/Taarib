@@ -427,6 +427,13 @@ fn yabda_bi(bayt: &[u8], sihr: &[u8]) -> bool {
 /// see `HADD_AYQUNAT_MURJAA`. Descending is the order
 /// [`crate::silsila::Silsila::hall`] relies on within a rung.
 ///
+/// `judhur` is [`crate::fahs::SiyaqFahs::judhur_bayanat`], the XDG data
+/// hierarchy to search. Only the ELF path consults it — a Linux executable's
+/// icon usually lives in a `.desktop` entry and an icon theme rather than in the
+/// binary — and passing an empty slice restricts that path to the directory the
+/// executable sits in, which is what a caller scanning a Windows or macOS
+/// machine wants.
+///
 /// # Errors
 ///
 /// [`KhataKashf::SuraGhayrSaliha`] when the file cannot be opened or read, when
@@ -436,7 +443,7 @@ fn yabda_bi(bayt: &[u8], sihr: &[u8]) -> bool {
 /// diagnostics trail has to be able to say *why* a rung produced nothing, and
 /// "the executable has no `.rsrc` section" and "the icon group referenced three
 /// images that are not in the file" are different answers to that question.
-pub fn ayqunat(masar: &Path) -> Result<Vec<AyqunaMustakhraja>, KhataKashf> {
+pub fn ayqunat(masar: &Path, judhur: &[PathBuf]) -> Result<Vec<AyqunaMustakhraja>, KhataKashf> {
     let wasf = masar.display().to_string();
 
     if masar.is_dir() {
@@ -477,7 +484,7 @@ pub fn ayqunat(masar: &Path) -> Result<Vec<AyqunaMustakhraja>, KhataKashf> {
         // here to the real header.
         ayqunat_pe(malaf, &wasf)
     } else if yabda_bi(&sihr, b"\x7FELF") {
-        ayqunat_elf(masar, malaf, &wasf)
+        ayqunat_elf(masar, malaf, &wasf, judhur)
     } else if sihr_mach(&sihr) {
         ayqunat_mach(masar, malaf, &wasf)
     } else if yabda_bi(&sihr, &SIHR_ICNS) {
@@ -2374,6 +2381,7 @@ fn ayqunat_elf(
     masar: &Path,
     malaf: File,
     wasf: &str,
+    judhur: &[PathBuf],
 ) -> Result<Vec<AyqunaMustakhraja>, KhataKashf> {
     let makhzan = ReadCache::new(malaf);
     let naw = FileKind::parse(&makhzan)
@@ -2387,7 +2395,7 @@ fn ayqunat_elf(
 
     murashahat.extend(murashahat_mujawira(masar, &mut asbab));
 
-    for desktop in masarat_desktop(masar) {
+    for desktop in masarat_desktop(masar, judhur) {
         let Ok(nass) = std::fs::read_to_string(&desktop) else {
             continue;
         };
@@ -2398,7 +2406,7 @@ fn ayqunat_elf(
         let Some(ism) = ayquna_min_desktop(&nass) else {
             continue;
         };
-        let (min_sima, asbab_sima) = hall_ayqunat_sima(&ism);
+        let (min_sima, asbab_sima) = hall_ayqunat_sima(&ism, judhur);
         asbab.extend(asbab_sima);
         let min_ayn = desktop.display().to_string();
         for (masar_sima, wasf_sima) in min_sima {
@@ -2484,7 +2492,12 @@ fn murashahat_mujawira(masar: &Path, asbab: &mut Vec<String>) -> Vec<(PathBuf, S
 /// for an `Exec=` that mentions this binary — that is a read of several hundred
 /// files to answer a question two `stat` calls already answer for the games
 /// that have an entry at all.
-fn masarat_desktop(masar: &Path) -> Vec<PathBuf> {
+///
+/// `judhur` is [`crate::fahs::SiyaqFahs::judhur_bayanat`]. This module used to
+/// resolve the XDG data hierarchy itself, which made it a second answer to a
+/// question the scan context already owns — and a different one, because it
+/// accepted a relative `$XDG_DATA_HOME` that the context refuses.
+fn masarat_desktop(masar: &Path, judhur: &[PathBuf]) -> Vec<PathBuf> {
     let mut masarat: Vec<PathBuf> = Vec::new();
 
     if let Some(mujallad) = masar.parent()
@@ -2509,7 +2522,7 @@ fn masarat_desktop(masar: &Path) -> Vec<PathBuf> {
     }
 
     if let Some(jidhr) = masar.file_stem().and_then(|jidhr| jidhr.to_str()) {
-        for asas in judhur_bayanat() {
+        for asas in judhur {
             let murashah = asas.join("applications").join(format!("{jidhr}.desktop"));
             if murashah.is_file() {
                 masarat.push(murashah);
@@ -2520,41 +2533,6 @@ fn masarat_desktop(masar: &Path) -> Vec<PathBuf> {
     masarat.sort();
     masarat.dedup();
     masarat
-}
-
-/// The XDG data roots, in the order the specification gives them.
-///
-/// `$XDG_DATA_HOME` (or `~/.local/share`) first, then every entry of
-/// `$XDG_DATA_DIRS`, defaulting to `/usr/local/share:/usr/share` exactly as the
-/// specification says. Deriving the icon and application directories from these
-/// rather than hard-coding `/usr/share/icons` is what makes a Flatpak or a Nix
-/// profile work, and both are ordinary ways to have a Linux game installed.
-fn judhur_bayanat() -> Vec<PathBuf> {
-    let mut judhur: Vec<PathBuf> = Vec::new();
-
-    match std::env::var_os("XDG_DATA_HOME").filter(|qeema| !qeema.is_empty()) {
-        Some(qeema) => judhur.push(PathBuf::from(qeema)),
-        None => {
-            if let Some(manzil) = std::env::var_os("HOME").filter(|qeema| !qeema.is_empty()) {
-                judhur.push(PathBuf::from(manzil).join(".local").join("share"));
-            }
-        }
-    }
-
-    let baqi = std::env::var_os("XDG_DATA_DIRS")
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(
-            || "/usr/local/share:/usr/share".to_owned(),
-            |qeema| qeema.to_string_lossy().into_owned(),
-        );
-    for juz in baqi.split(':').take(8) {
-        if !juz.is_empty() {
-            judhur.push(PathBuf::from(juz));
-        }
-    }
-
-    judhur.dedup();
-    judhur
 }
 
 /// The `Icon=` value of a `.desktop` file's `[Desktop Entry]` group.
@@ -2578,7 +2556,7 @@ pub fn ayquna_min_desktop(nass: &str) -> Option<String> {
 ///
 /// Returns the candidates it found and the refusals worth reporting, which is
 /// how an SVG-only icon becomes a named line in the trail rather than silence.
-fn hall_ayqunat_sima(ism: &str) -> (Vec<(PathBuf, String)>, Vec<String>) {
+fn hall_ayqunat_sima(ism: &str, judhur: &[PathBuf]) -> (Vec<(PathBuf, String)>, Vec<String>) {
     let mut murashahat: Vec<(PathBuf, String)> = Vec::new();
     let mut asbab: Vec<String> = Vec::new();
 
@@ -2599,7 +2577,7 @@ fn hall_ayqunat_sima(ism: &str) -> (Vec<(PathBuf, String)>, Vec<String>) {
     }
 
     let mut fahs = 0_usize;
-    for asas in judhur_bayanat() {
+    for asas in judhur {
         let simat = asas.join("icons").join(SIMA_ASASIYA);
         for qiyas in MUJALLADAT_MAQAYIS {
             let mujallad = simat.join(qiyas).join(QISM_SIMA);

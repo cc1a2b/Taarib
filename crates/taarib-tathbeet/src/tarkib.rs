@@ -16,6 +16,7 @@ use crate::bayan::{MahallIdad, Muthabbit, basma_bayt};
 use crate::itlaq::{ASMAA_STEAM, ISM_STEAM, halat_manassa, manassa_mughlaqa};
 use crate::khata::{KhataTathbeet, NatijatTathbeet, min_khata_io, tul_u64};
 use crate::mawdi::{MUJALLAD_TAARIB, WajhatLuba, WajhatNizam};
+use crate::nusus::{IdhnNusus, Nashir};
 use crate::wukala::{self, WakeelQaim};
 
 /// The largest framework component this build will deploy, in bytes.
@@ -460,6 +461,13 @@ pub enum HajatItar {
 }
 
 /// The per-engine, per-OS framework table.
+///
+/// **The engine's answer, not the product's.** It cannot see the tier, so it
+/// says a GameMaker game needs no loader when at tier 2 it does, and it says an
+/// unrecognised engine gets Taarib's own loader when at tier 3 nothing at all
+/// may be deployed. [`khutta`] is the answer to act on; this is the table it
+/// consults. Nothing on the install path calls it directly any more, and a new
+/// caller that does is re-introducing the defect [`rakkib_itar`] was fixed for.
 #[must_use]
 pub fn hajat_itar(
     muharrik: &Muharrik,
@@ -946,7 +954,12 @@ fn tahaqquq_beea_ajzaa(
 
 /// The destination table for one game: every framework path, expressed the way
 /// the platform the game runs on expresses it.
-#[derive(Debug, Clone)]
+///
+/// Resolved once, by [`khutta`], and carried inside the plan from there on. Two
+/// tables built from two different readings of the same game is how a loader
+/// came to be written into one directory while the plan beside it named
+/// another — see [`KhuttatTarkib::mawadi`].
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct MawadiTarkib {
     jidhr_luba: PathBuf,
     mujallad_muhammil: String,
@@ -955,16 +968,13 @@ struct MawadiTarkib {
 }
 
 impl MawadiTarkib {
-    /// Resolves the destinations for a game, given the prefix if there is one.
-    fn jadeeda(
-        luba: &LubaMuhallala,
-        qurs: Option<(&Path, &Path)>,
-    ) -> Result<Self, KhataTathbeet> {
-        Ok(Self::min_ajzaa(&luba.jidhr, luba.mujallad_tanfidhi()?, qurs))
-    }
-
-    /// The same table from the parts the planner has, which is a game root and
-    /// the directory the framework's loader belongs in.
+    /// Resolves the destinations from a game root, the directory the framework's
+    /// loader belongs in, and the prefix if there is one.
+    ///
+    /// The one constructor, called from [`khutta`] and nowhere else. It used to
+    /// have a sibling that read the loader directory off the executable, and
+    /// having two was the defect: the plan resolved its destinations through one
+    /// and the writer through the other.
     fn min_ajzaa(
         jidhr_luba: &Path,
         mujallad_muhammil: String,
@@ -1405,10 +1415,18 @@ fn wakeel_qaim(
     }
 
     let hajm = std::fs::metadata(&masar).map_or(0, |bayan| bayan.len());
+    // The survey has already identified everything it found, so the occupant is
+    // looked up rather than re-examined. It is absent from the survey only when
+    // the loader is not a proxy slot at all — the Linux and macOS builds, whose
+    // loader is a shared object with no system name to stand in for — and an
+    // unidentified answer is the right one for a file that was never a proxy.
+    let huwiya = wukala::shaghil_slot(&qaima, &mukawwin.ism_muhammil)
+        .map_or(wukala::HuwiyatWakeel::Majhul { mahzum: false }, |qaim| qaim.huwiya.clone());
     Err(KhataTathbeet::WakeelMashghul {
         wakeel: mukawwin.ism_muhammil.clone(),
         masar,
         hajm,
+        huwiya,
         jiran: qaima
             .iter()
             .filter(|wakeel| !wakeel.ism.eq_ignore_ascii_case(&mukawwin.ism_muhammil))
@@ -1417,7 +1435,14 @@ fn wakeel_qaim(
     })
 }
 
-/// Installs the framework this game's engine needs, on this platform.
+/// Installs the framework **the plan decided on**, on this platform.
+///
+/// It takes the plan rather than the game because the two questions the plan
+/// answers — whether a framework is deployed at all, and where its loader lands
+/// — are questions the engine alone cannot answer. This function used to ask
+/// [`hajat_itar`] instead, which reads the engine and has no tier to consult, so
+/// a tier-3 game whose plan said "no framework needed" had `version.dll` and its
+/// payloads written into it anyway.
 ///
 /// # Errors
 ///
@@ -1435,22 +1460,39 @@ fn wakeel_qaim(
 /// for a component above [`AQSA_HAJM_MUKAWWIN`], and whatever the recorder
 /// raises for a file it cannot preserve, add or record.
 pub fn rakkib_itar(
+    mukhattat: &KhuttatTarkib,
     luba: &LubaMuhallala,
     halat: &HalatIdadat,
     jidhr_makhzan: &Path,
     muthabbit: &mut dyn Muthabbit,
 ) -> Result<NatijatTarkib, KhataTathbeet> {
-    let mukawwin = match hajat_itar(&luba.muharrik, luba.nizam, &luba.beea) {
-        HajatItar::LaHaja(sabab) => return Ok(NatijatTarkib::LaHaja(sabab)),
-        HajatItar::Matlub(mukawwin) => mukawwin,
-    };
+    match &mukhattat.hajat {
+        HajatItar::LaHaja(sabab) => Ok(NatijatTarkib::LaHaja(*sabab)),
+        HajatItar::Matlub(mukawwin) => {
+            rakkib_mukawwin(luba, halat, jidhr_makhzan, mukawwin, &mukhattat.mawadi, muthabbit)
+        }
+    }
+}
 
-    let qurs = tahaqquq_beea(luba)?;
-    let mawadi = MawadiTarkib::jadeeda(
-        luba,
-        qurs.as_ref().map(|(beea, qurs)| (beea.as_path(), qurs.as_path())),
-    )?;
-
+/// Deploys one already-chosen component, into the destinations the plan already
+/// resolved.
+///
+/// Neither half of that sentence is decoration. "Which framework" is the plan's
+/// answer because [`hajat_itar`] reads the engine alone while [`khutta`] reads
+/// the engine *and* the tier — tier 3 deploys nothing whatever the engine is,
+/// and a GameMaker game needs the loader at tier 2 and not at tier 1. "Where"
+/// is the plan's answer for the same kind of reason: the loader directory used
+/// to be resolved here from the executable and there from the engine, and the
+/// launch requirement the plan recorded then named a path this writer had not
+/// written to.
+fn rakkib_mukawwin(
+    luba: &LubaMuhallala,
+    halat: &HalatIdadat,
+    jidhr_makhzan: &Path,
+    mukawwin: &MukawwinItar,
+    mawadi: &MawadiTarkib,
+    muthabbit: &mut dyn Muthabbit,
+) -> Result<NatijatTarkib, KhataTathbeet> {
     let mawqi_muhammil = mawadi.jidhr_muhammil()?;
     let jidhr_mutlaq = mawqi_muhammil.mutlaq(mawadi.jidhr_luba())?;
     let idadat = idadat_tahmil(
@@ -1467,7 +1509,7 @@ pub fn rakkib_itar(
     // refuses. Asking them the other way round would answer a foreign proxy
     // with "already installed", which is how an install comes to report success
     // having written a payload that nothing will ever load.
-    if let Some(alama) = itar_qaim(&mawadi, &mukawwin)? {
+    if let Some(alama) = itar_qaim(mawadi, mukawwin)? {
         sajjil_idadat(muthabbit, &idadat)?;
         return Ok(NatijatTarkib::Mawjud(Box::new(TarkibQaim {
             mukawwin: mukawwin.ism.clone(),
@@ -1475,7 +1517,7 @@ pub fn rakkib_itar(
             idadat,
         })));
     }
-    let huqn = wakeel_qaim(&mawadi, &mukawwin)?;
+    let huqn = wakeel_qaim(mawadi, mukawwin)?;
 
     let hamula = hamil_mukawwin(jidhr_makhzan, &mukawwin.ism)?;
     let nisbi_muhammil = mawadi.bijanib(&mukawwin.ism_muhammil);
@@ -1713,7 +1755,60 @@ pub struct MudkhalTarkib {
     pub masdar: MasdarMudkhal,
 }
 
+/// The tier decision one installation writes under.
+///
+/// Minted only from a capability report the safety layer did not refuse, so
+/// *holding one* and *this game may be written to at all* are the same
+/// statement. Every write on the install path takes one — from a
+/// [`KhuttatTarkib`] where there is a plan, and on its own where there is not
+/// — because the alternative is what every instance of this defect was: a
+/// writer re-deriving the answer from the game's own directory, which cannot
+/// see a tier and cannot see a refusal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct QararTabaqa {
+    tabaqa: Tabaqa,
+}
+
+impl QararTabaqa {
+    /// The decision a capability report carries, when it carries one.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataTathbeet::IdhnGhayrMutabiq`] when the report says the safety
+    /// layer refuses this game. This is the single place that reading is done,
+    /// so a caller cannot obtain a decision for a refused game and therefore
+    /// cannot write into one.
+    pub const fn min_taqreer(taqreer: &TaqreerImkaniyat) -> NatijatTathbeet<Self> {
+        if taqreer.marfuda {
+            return Err(KhataTathbeet::IdhnGhayrMutabiq);
+        }
+        Ok(Self { tabaqa: taqreer.tabaqa })
+    }
+
+    /// The tier itself, for a report or a confirmation screen.
+    #[must_use]
+    pub const fn tabaqa(self) -> Tabaqa {
+        self.tabaqa
+    }
+
+    /// Whether the game's own files may be changed at all.
+    ///
+    /// False at tier 3 and nowhere else. The overlay tier's product surface
+    /// says «the game is not modified at all», and this is the one predicate
+    /// that sentence is worth.
+    #[must_use]
+    pub const fn tughayyar_al_luba(self) -> bool {
+        !matches!(self.tabaqa, Tabaqa::TarjamaFawqiya)
+    }
+}
+
 /// The whole deployment plan for one game, decided before anything is written.
+///
+/// It carries one private field — the destination table it resolved — and that
+/// is what makes it a plan rather than a description: no caller outside this
+/// module can build one, so the only way to hold a `KhuttatTarkib` is to have
+/// had [`khutta`] decide it, the tier, the safety refusal and the loader
+/// directory included.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KhuttatTarkib {
     /// The engine family the plan was built for.
@@ -1788,6 +1883,16 @@ pub struct KhuttatTarkib {
     /// because it could not look reads exactly like a plan with nothing to
     /// warn about.
     pub manassa_taamil: Option<MalhuzatManassa>,
+
+    /// The destination table this plan resolved, handed to the writers rather
+    /// than resolved a second time by them.
+    ///
+    /// Private, and that is deliberate twice over. It is what stops a plan
+    /// being fabricated outside this module, and it is what stops the framework
+    /// writer answering "which directory does the loader go in" from a
+    /// different function than the plan did — the divergence that let a
+    /// recorded `LD_PRELOAD` name a path no loader had been written to.
+    mawadi: MawadiTarkib,
 }
 
 /// What the plan learned about the launcher that owns a game's launch options.
@@ -1801,6 +1906,16 @@ pub struct MalhuzatManassa {
 }
 
 impl KhuttatTarkib {
+    /// The decision this plan was built under.
+    ///
+    /// The plan is the long form of it; this is the short form every write that
+    /// is not a deployment takes. They cannot disagree, because a plan exists
+    /// only where [`khutta`] already refused a report the safety layer refused.
+    #[must_use]
+    pub const fn qarar(&self) -> QararTabaqa {
+        QararTabaqa { tabaqa: self.tabaqa }
+    }
+
     /// Whether the plan writes nothing at all into the game.
     #[must_use]
     pub const fn faragha(&self) -> bool {
@@ -1864,6 +1979,23 @@ impl KhuttatTarkib {
         for talab in &self.talabat {
             sutur.push(format!("  launch: {}", talab.wasf_injilizi()));
         }
+        // Measured on Steam, not reasoned about: a verify compares the tree
+        // against the depot manifest, so it restores every file Taarib modified
+        // and leaves every file Taarib added — the added ones are not in the
+        // manifest to be judged against. The halves come apart rather than the
+        // install being undone, which is the state nobody predicts: the loader
+        // and the payload are still in place, the translated data is not, and
+        // the game launches into its original language with Taarib loaded. Said
+        // here because a confirmation screen that lists "modify" lines without
+        // it describes the write and hides what routinely reverses it.
+        if self.adad_tadeelat() > 0 {
+            sutur.push(
+                "  note: verifying this game's files through its launcher restores the \
+                 originals, so the modifications above are undone while the added files \
+                 stay; run the install again after a verify"
+                    .to_owned(),
+            );
+        }
         for wakeel in &self.huqn_qaim {
             sutur.push(format!(
                 "  note: this game already has a mod in it — {} — which Taarib leaves exactly \
@@ -1920,11 +2052,25 @@ impl TaqreerMulhaqat {
 
 /// Builds the whole deployment plan for one game, without writing anything.
 ///
+/// This is the product's answer to "what will be done to this game", and after
+/// this change it is also the only answer any writer on the install path is
+/// given: [`nashr_bi_khutta`] executes exactly this value, and the script-engine
+/// write is authorised by [`KhuttatTarkib::qarar`] rather than by a second
+/// reading of the game's directory.
+///
+/// The game arrives as a whole [`LubaMuhallala`] rather than as its parts, and
+/// that is the fix for one of those second readings: the loader directory is
+/// resolved here, from the executable's own location, and travels inside the
+/// plan. Before it did, the planner assumed the game root while the writer read
+/// the executable's directory, and the two disagreed for every game whose
+/// executable is not at the root.
+///
 /// # Errors
 ///
 /// - [`KhataTathbeet::IdhnGhayrMutabiq`] when the capability report says the
 ///   safety layer refuses this game. Honouring the flag here is what stops the
-///   planning stage from being a way around the `aman` gate.
+///   planning stage from being a way around the `aman` gate, and
+///   [`QararTabaqa::min_taqreer`] is the single place it is read.
 /// - [`KhataTathbeet::BeeaMafquda`] when the game runs behind a compatibility
 ///   prefix that has never been built, because a Windows framework deployed
 ///   against one is never loaded and never says so.
@@ -1941,19 +2087,16 @@ impl TaqreerMulhaqat {
 ///   needs.
 pub fn khutta(
     taqreer: &TaqreerImkaniyat,
-    muharrik: &Muharrik,
-    nizam: NizamTashghil,
-    beea: &BeeatTawafuq,
+    luba: &LubaMuhallala,
     mukawwinat: &Path,
-    jidhr_luba: &Path,
 ) -> NatijatTathbeet<KhuttatTarkib> {
-    if taqreer.marfuda {
-        return Err(KhataTathbeet::IdhnGhayrMutabiq);
-    }
+    let qarar = QararTabaqa::min_taqreer(taqreer)?;
+    let muharrik = &luba.muharrik;
+    let jidhr_luba = luba.jidhr.as_path();
 
     let mut mukhattat = KhuttatTarkib {
         aila: muharrik.aila,
-        tabaqa: taqreer.tabaqa,
+        tabaqa: qarar.tabaqa(),
         hajat: HajatItar::LaHaja(SababLaHaja::BayanatWaMulhaq),
         jidhr_muhammil: None,
         mujalladat: Vec::new(),
@@ -1962,12 +2105,16 @@ pub fn khutta(
         talabat: Vec::new(),
         huqn_qaim: Vec::new(),
         manassa_taamil: None,
+        // The tier-3 table, replaced below for every other tier. Its loader
+        // directory is the game root, which is the directory tier 3 surveys and
+        // the only one it ever names.
+        mawadi: MawadiTarkib::min_ajzaa(jidhr_luba, String::new(), None),
     };
 
     // Tier 3 is engine-independent by definition: whatever the family, the
     // game is not modified. Answering it before the per-engine arms means no
     // arm below can deploy a file into a game the tier says is untouchable.
-    if matches!(taqreer.tabaqa, Tabaqa::TarjamaFawqiya) {
+    if !qarar.tughayyar_al_luba() {
         mukhattat.hajat = HajatItar::LaHaja(SababLaHaja::TabaqaFawqiya);
         mukhattat.talabat.push(TalabItlaq::TashgheelLawha {
             sabab: "no text system inside this game is reachable, so Arabic is drawn over it \
@@ -1983,17 +2130,17 @@ pub fn khutta(
         return Ok(mukhattat);
     }
 
-    let qurs = tahaqquq_beea_ajzaa(nizam, beea, jidhr_luba)?;
+    let qurs = tahaqquq_beea(luba)?;
     let mawadi = MawadiTarkib::min_ajzaa(
         jidhr_luba,
-        mujallad_muhammil(muharrik, nizam, beea, jidhr_luba)?,
+        mujallad_muhammil(luba)?,
         qurs.as_ref().map(|(beea, qurs)| (beea.as_path(), qurs.as_path())),
     );
 
     let jidhr_muhammil = mawadi.jidhr_muhammil()?;
     mukhattat.huqn_qaim = masah_huqn(&jidhr_muhammil.mutlaq(mawadi.jidhr_luba())?)?;
 
-    mukhattat.hajat = hajat_maa_tabaqa(muharrik, taqreer.tabaqa, nizam, beea);
+    mukhattat.hajat = hajat_maa_tabaqa(muharrik, qarar.tabaqa(), luba.nizam, &luba.beea);
     if let HajatItar::Matlub(mukawwin) = &mukhattat.hajat {
         tahaqquq_mukawwin(mukawwinat, mukawwin)?;
         if let Some(talab) = talab_tahmil(mukawwin, &mawadi) {
@@ -2006,6 +2153,7 @@ pub fn khutta(
     if !mukhattat.talabat.is_empty() {
         mukhattat.manassa_taamil = manassa_qayida();
     }
+    mukhattat.mawadi = mawadi;
     Ok(mukhattat)
 }
 
@@ -2034,16 +2182,28 @@ fn hajat_maa_tabaqa(
 }
 
 /// The directory a framework's loader belongs in, relative to the game root.
-fn mujallad_muhammil(
-    muharrik: &Muharrik,
-    nizam: NizamTashghil,
-    beea: &BeeatTawafuq,
-    jidhr_luba: &Path,
-) -> NatijatTathbeet<String> {
-    if matches!(muharrik.aila, AilatMuharrik::Unreal) {
-        return thunaiyat_unreal(hadaf_hamula(nizam, beea), muharrik.mimariya, jidhr_luba);
+///
+/// The executable's own directory, because that is the only directory an
+/// operating system resolves a proxy module out of and the only one
+/// `taarib-mudkhal` looks in for a payload. Unreal is the exception and not a
+/// contradiction: a packaged Unreal title is routinely started through a stub at
+/// the game root while the module it loads belongs beside the shipping binary in
+/// `<Project>/Binaries/<platform>/`, so that directory is located rather than
+/// inferred from the stub.
+///
+/// This is the answer the plan carries and the framework writer uses. It used to
+/// be answered twice — here as "the game root, unless Unreal", and again inside
+/// the writer as `LubaMuhallala::mujallad_tanfidhi` — and the two disagreed for
+/// every game whose executable sits in a subdirectory.
+fn mujallad_muhammil(luba: &LubaMuhallala) -> NatijatTathbeet<String> {
+    if matches!(luba.muharrik.aila, AilatMuharrik::Unreal) {
+        return thunaiyat_unreal(
+            hadaf_hamula(luba.nizam, &luba.beea),
+            luba.muharrik.mimariya,
+            &luba.jidhr,
+        );
     }
-    Ok(String::new())
+    luba.mujallad_tanfidhi()
 }
 
 /// Locates a packaged Unreal build's `Binaries/<platform>/` directory.
@@ -2812,25 +2972,61 @@ fn damj_override_cfg(masar: &Path, hali: &str) -> NatijatTathbeet<Option<String>
     Ok(Some(nateeja))
 }
 
-/// Deploys the framework and the additive layer in one step, through the
-/// recorder, after validating the plan.
+/// Executes one plan: the script-engine write, the framework, and the additive
+/// layer, in that order and through the recorder.
+///
+/// The order is the RPG Maker order and is not negotiable. That engine's
+/// extraction records carry byte offsets into `js/plugins.js`, and the additive
+/// layer appends Taarib's registration to that same file; splicing against
+/// offsets measured before the append would be splicing against a file whose
+/// length has moved. `taarib_muhawwil_nusus::rpgmaker::rakkib_mulhaq` documents
+/// the same ordering for the same reason.
+///
+/// Every one of the three writes is authorised by the `mukhattat` argument.
+/// That is the whole point of this function existing beside [`nashr`]: the
+/// script-engine write used to run outside any plan, unconditionally, from
+/// [`crate::masar_tathbeet::thabbit`] — so a tier-3 game, whose report had just
+/// told the player it would not be modified at all, had its `data/*.json`, its
+/// `game/tl/arabic/*.rpy`, its `data.win` or its `app.asar` rewritten anyway.
 ///
 /// # Errors
 ///
-/// Whatever [`khutta`], [`rakkib_itar`] or [`nashr_mulhaqat`] raise: a missing
-/// component or prefix is refused by `khutta` before either writer runs.
+/// Whatever the script-engine write, the framework writer or [`nashr_mulhaqat`]
+/// raise. A missing component or an unbuilt prefix is refused by [`khutta`]
+/// before any of the three runs.
+pub fn nashr_bi_khutta(
+    mukhattat: &KhuttatTarkib,
+    luba: &LubaMuhallala,
+    halat: &HalatIdadat,
+    mukawwinat: &Path,
+    nashir: &mut Nashir<'_>,
+) -> NatijatTathbeet<(NatijatTarkib, TaqreerMulhaqat)> {
+    nashir.raqqi(IdhnNusus::min_khutta(mukhattat), Some(mukawwinat))?;
+    let itar = rakkib_itar(mukhattat, luba, halat, mukawwinat, nashir.muthabbit())?;
+    let mulhaqat =
+        nashr_mulhaqat(mukhattat, &luba.jidhr, mukawwinat, nashir.muthabbit())?;
+    Ok((itar, mulhaqat))
+}
+
+/// Plans and then executes, for a caller that holds a capability report rather
+/// than a plan.
+///
+/// The plan is built **once**, here, before the first byte, and every writer
+/// below receives it. Nothing downstream re-derives the tier, the safety
+/// refusal or the loader directory from the game's own directory.
+///
+/// # Errors
+///
+/// Whatever [`khutta`] and [`nashr_bi_khutta`] raise.
 pub fn nashr(
     luba: &LubaMuhallala,
     halat: &HalatIdadat,
     taqreer: &TaqreerImkaniyat,
     mukawwinat: &Path,
-    muthabbit: &mut dyn Muthabbit,
+    nashir: &mut Nashir<'_>,
 ) -> NatijatTathbeet<(NatijatTarkib, TaqreerMulhaqat)> {
-    let mukhattat =
-        khutta(taqreer, &luba.muharrik, luba.nizam, &luba.beea, mukawwinat, &luba.jidhr)?;
-    let itar = rakkib_itar(luba, halat, mukawwinat, muthabbit)?;
-    let mulhaqat = nashr_mulhaqat(&mukhattat, &luba.jidhr, mukawwinat, muthabbit)?;
-    Ok((itar, mulhaqat))
+    let mukhattat = khutta(taqreer, luba, mukawwinat)?;
+    nashr_bi_khutta(&mukhattat, luba, halat, mukawwinat, nashir)
 }
 
 #[cfg(test)]
@@ -2842,11 +3038,87 @@ pub fn nashr(
               and honouring them here would mean a test that cannot fail"
 )]
 mod ikhtibarat {
-    use super::{MUJALLAD_KHATT_RENPY, ikhtar_khatt_renpy};
+    use taarib_mustalahat::muharrik::{AilatMuharrik, Tabaqa};
+
+    use super::{
+        HajatItar, KhuttatTarkib, MUJALLAD_KHATT_RENPY, MasdarMudkhal, MawadiTarkib, MawqiTarkib,
+        MudkhalTarkib, NawMudkhal, Path, SababLaHaja, WajhatLuba, ikhtar_khatt_renpy,
+    };
 
     /// The component's listing, as `asmaa_mukawwin` hands it over.
     fn asmaa(dhuyul: &[&str]) -> Vec<String> {
         dhuyul.iter().map(|dhayl| (*dhayl).to_owned()).collect()
+    }
+
+    /// One planned file of either kind, at a destination inside the game.
+    fn mudkhal(nisbi: &str, naw: NawMudkhal) -> MudkhalTarkib {
+        MudkhalTarkib {
+            mawqi: MawqiTarkib::DakhilLuba(WajhatLuba::jadeed(nisbi).expect("a valid destination")),
+            nisbi: nisbi.to_owned(),
+            naw,
+            masdar: MasdarMudkhal::NassMuwallad { nass: String::new(), wasf: "a test entry" },
+        }
+    }
+
+    /// A plan carrying exactly the given entries and nothing else to report.
+    fn khutta_bi(mudkhalat: Vec<MudkhalTarkib>) -> KhuttatTarkib {
+        KhuttatTarkib {
+            aila: AilatMuharrik::Unity,
+            tabaqa: Tabaqa::Kamil,
+            hajat: HajatItar::LaHaja(SababLaHaja::BayanatWaMulhaq),
+            jidhr_muhammil: None,
+            mujalladat: Vec::new(),
+            mudkhalat,
+            khatt_renpy: None,
+            talabat: Vec::new(),
+            huqn_qaim: Vec::new(),
+            manassa_taamil: None,
+            // These tests read the plan's report, never its destinations, so the
+            // table is the trivial one: a game root with the loader at it.
+            mawadi: MawadiTarkib::min_ajzaa(Path::new("/luba"), String::new(), None),
+        }
+    }
+
+    /// The sentence a person has to read before agreeing to a plan that edits
+    /// files the store can put back.
+    fn fihi_malhuzat_tahaqquq(khutta: &KhuttatTarkib) -> bool {
+        khutta.taqreer().iter().any(|satr| satr.contains("verifying this game's files"))
+    }
+
+    #[test]
+    fn tadeel_yastadi_malhuzat_altahaqquq() {
+        // Measured against Steam: a verify restored the modified file byte for
+        // byte and left the added ones untouched. A plan that edits a file the
+        // store ships has to say so before the edit, not after the verify.
+        let khutta = khutta_bi(vec![
+            mudkhal("taarib/tarjama.ruqaa", NawMudkhal::Idafa),
+            mudkhal("Data/messages.dat", NawMudkhal::Tadeel),
+        ]);
+        assert!(
+            fihi_malhuzat_tahaqquq(&khutta),
+            "a plan with a modification must warn that a verify reverses it"
+        );
+    }
+
+    #[test]
+    fn la_malhuza_hina_la_tadeel() {
+        // Nothing the store knows about is touched, so a verify has nothing of
+        // Taarib's to undo. Saying it anyway would train people past the notice
+        // in the one case where it matters.
+        let khutta = khutta_bi(vec![
+            mudkhal("taarib/tarjama.ruqaa", NawMudkhal::Idafa),
+            mudkhal("BepInEx/plugins/taarib.dll", NawMudkhal::Idafa),
+        ]);
+        assert_eq!(khutta.adad_tadeelat(), 0);
+        assert!(
+            !fihi_malhuzat_tahaqquq(&khutta),
+            "an additive-only plan has nothing a verify would take away"
+        );
+    }
+
+    #[test]
+    fn khutta_farigha_la_tuhadhdhir() {
+        assert!(!fihi_malhuzat_tahaqquq(&khutta_bi(Vec::new())));
     }
 
     #[test]

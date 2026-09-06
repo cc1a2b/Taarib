@@ -1,4 +1,23 @@
 //! كشف الحماية — anti-cheat detection by hard evidence: file, module, service, driver and store signature.
+//!
+//! # What a partial match means here
+//!
+//! [`Thiqa`] grades the *marker*, not the verdict. The gate above this module
+//! refuses on any evidence at all — [`mahmiya`] is `!adilla.is_empty()` — so a
+//! [`Thiqa::Rajiha`] marker refuses exactly as hard as a [`Thiqa::Muakkada`]
+//! one, and there is no override for either. The grade is what the user is
+//! shown so that a refusal can be argued with; it is not a threshold, and no
+//! caller may treat it as one.
+//!
+//! That makes the bar for adding a marker the same as the bar for refusing an
+//! install: a name is only written into [`ALAMAT`] when meeting it inside one
+//! game's own directory is, on its own, reason enough to refuse. A name too
+//! short or too widely shared to carry that is not softened into a weaker tier —
+//! it is left out, because a false positive here blocks a legitimate install
+//! with no way around it and a false negative permits an account-permanent ban.
+//! `Rajiha` marks the handful whose *name* is shared with something outside
+//! games — `NGService.exe`, `faceit` — and which are decisive only because this
+//! scan is rooted at a single game folder and never leaves it.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -20,6 +39,8 @@ pub enum NawHimaya {
     EasyAntiCheatEos,
     /// `BattlEye`.
     BattlEye,
+    /// EA Javelin, the kernel-mode anti-cheat EA ships with its own titles.
+    EaJavelin,
     /// Denuvo Anti-Cheat, distinct from the Denuvo anti-tamper DRM.
     Denuvo,
     /// Riot Vanguard.
@@ -28,6 +49,14 @@ pub enum NawHimaya {
     GameGuard,
     /// XIGNCODE3.
     Xigncode3,
+    /// Tencent's Anti-Cheat Expert, the `ACE` of Delta Force and Wuthering Waves.
+    AntiCheatExpert,
+    /// `NetEase`'s `NEAC` Protect.
+    NeacProtect,
+    /// Nexon Game Security, which the games it protects call `NGS` or `BlackCipher`.
+    NexonGameSecurity,
+    /// `HoYoverse`/miHoYo's own kernel protection.
+    MihoyoProtect,
     /// `PunkBuster`.
     PunkBuster,
     /// FACEIT Anti-Cheat.
@@ -38,6 +67,16 @@ pub enum NawHimaya {
     Ricochet,
     /// Valve Anti-Cheat.
     Vac,
+    /// An anti-cheat the store declares without naming which one it is.
+    ///
+    /// Steam publishes the result of its own compatibility testing per app, and
+    /// two of the verdicts it can record are "this game's anti-cheat is not
+    /// configured for our runtime" and "this game uses an anti-cheat we do not
+    /// support". Both are Valve asserting that a client-side anti-cheat exists;
+    /// neither says whose. That is less than the other kinds carry and it is
+    /// still a store telling us an account is exposed, so it is recorded as its
+    /// own kind rather than guessed into one of the named ones.
+    GhayrMusamma,
 }
 
 impl NawHimaya {
@@ -48,15 +87,21 @@ impl NawHimaya {
             Self::EasyAntiCheat => "إيزي أنتي-تشيت",
             Self::EasyAntiCheatEos => "إيزي أنتي-تشيت (عبر خدمات إيبك أونلاين)",
             Self::BattlEye => "باتل آي",
+            Self::EaJavelin => "جافلين لمكافحة الغش من EA",
             Self::Denuvo => "دينوفو لمكافحة الغش",
             Self::Vanguard => "ريوت فانغارد",
             Self::GameGuard => "جيم غارد من nProtect",
             Self::Xigncode3 => "زين كود ٣",
+            Self::AntiCheatExpert => "خبير مكافحة الغش (ACE) من تنسنت",
+            Self::NeacProtect => "نياك بروتكت من نت إيز",
+            Self::NexonGameSecurity => "حماية ألعاب نكسون (NGS)",
+            Self::MihoyoProtect => "حماية ميهويو",
             Self::PunkBuster => "بانك باستر",
             Self::FaceitAc => "مضاد الغش من فيسإت",
             Self::Esea => "مضاد الغش من ESEA",
             Self::Ricochet => "ريكوشيه من أكتيفجن",
             Self::Vac => "مكافحة الغش من فالف (VAC)",
+            Self::GhayrMusamma => "نظام مكافحة غش يُعلنه المتجر دون تسميته",
         }
     }
 
@@ -67,15 +112,21 @@ impl NawHimaya {
             Self::EasyAntiCheat => "Easy Anti-Cheat",
             Self::EasyAntiCheatEos => "Easy Anti-Cheat (EOS)",
             Self::BattlEye => "BattlEye",
+            Self::EaJavelin => "EA Javelin Anticheat",
             Self::Denuvo => "Denuvo Anti-Cheat",
             Self::Vanguard => "Riot Vanguard",
             Self::GameGuard => "nProtect GameGuard",
             Self::Xigncode3 => "XIGNCODE3",
+            Self::AntiCheatExpert => "Anti-Cheat Expert (Tencent ACE)",
+            Self::NeacProtect => "NEAC Protect (NetEase)",
+            Self::NexonGameSecurity => "Nexon Game Security",
+            Self::MihoyoProtect => "miHoYo Protect",
             Self::PunkBuster => "PunkBuster",
             Self::FaceitAc => "FACEIT Anti-Cheat",
             Self::Esea => "ESEA Anti-Cheat",
             Self::Ricochet => "Activision Ricochet",
             Self::Vac => "Valve Anti-Cheat (VAC)",
+            Self::GhayrMusamma => "an anti-cheat the store declares but does not name",
         }
     }
 }
@@ -283,13 +334,31 @@ const FIAT_VAC: u32 = 8;
 const IMTIDADAT_MUSTAWRAD: [&str; 4] = ["exe", "dll", "so", "dylib"];
 
 /// Anti-cheat keywords as the store catalogue spells them.
-const KALIMAT_MATJAR: [(&str, NawHimaya); 5] = [
+///
+/// `eaanticheat` is here because a Javelin-protected app names the anti-cheat
+/// launcher as its `config/launch` executable rather than the game — Steam's own
+/// catalogue on this machine spells it `EAAntiCheat.GameServiceLauncher.exe`
+/// across every one of Battlefield 6's seventeen launch entries — so the
+/// catalogue names Javelin for a game that is not even installed yet.
+const KALIMAT_MATJAR: [(&str, NawHimaya); 7] = [
     ("start_protected_game", NawHimaya::EasyAntiCheat),
     ("easyanticheat_eos", NawHimaya::EasyAntiCheatEos),
     ("easyanticheat", NawHimaya::EasyAntiCheat),
     ("easy anti-cheat", NawHimaya::EasyAntiCheat),
     ("battleye", NawHimaya::BattlEye),
+    ("eaanticheat", NawHimaya::EaJavelin),
+    ("eajavelin", NawHimaya::EaJavelin),
 ];
+
+/// The three sibling maps Steam writes its own compatibility test results into.
+const FUHUS_TAWAFUQ: [&str; 3] = ["tests", "steam_machine_tests", "steamos_tests"];
+
+/// The fragment both of Valve's anti-cheat test-result tokens carry, folded.
+///
+/// The two are `#SteamDeckVerified_TestResult_UnsupportedAntiCheatConfiguration`
+/// and `#SteamDeckVerified_TestResult_UnsupportedAntiCheat_Other`, each with a
+/// `#SteamMachine_` and a `#SteamOS_` twin. Every one of them contains this.
+const RAMZ_HIMAYA_TAWAFUQ: &str = "unsupportedanticheat";
 
 /// Where a marker is looked for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -432,6 +501,47 @@ const ALAMAT: &[Alama] = &[
         mahal: MahalAlama::Mushaghghil,
         thiqa: Thiqa::Muakkada,
     },
+    // `eaanticheat` is not a substring of `easyanticheat` — the second has no
+    // `eaa` — so these two families never collide and neither needs an `illa`.
+    // The token covers everything EA drops in a protected game's root:
+    // `EAAntiCheat.GameServiceLauncher.exe`/`.dll` and their `_b` rollback
+    // copies, `EAAntiCheat.Installer.exe`, `EAAntiCheat.cfg` (a signed,
+    // resource-only PE, not text), `EAAntiCheat.splash.png`, and the
+    // `__Installer/EAAntiCheat/` directory.
+    Alama {
+        naw: NawHimaya::EaJavelin,
+        ibra: "eaanticheat",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::EaJavelin,
+        ibra: "eaanticheat",
+        illa: None,
+        mahal: MahalAlama::Wahda,
+        thiqa: Thiqa::Muakkada,
+    },
+    // The launcher is the process the store starts *instead of* the game, so it
+    // runs from the game's own directory and the containment test can attribute
+    // it. `EAAntiCheat.GameService.exe`, the persistent service, installs to
+    // `Program Files\EA\AC` and is deliberately not claimed here: it is outside
+    // every game root and would be attributed to whichever game was scanned.
+    Alama {
+        naw: NawHimaya::EaJavelin,
+        ibra: "eaanticheat.gameservicelauncher",
+        illa: None,
+        mahal: MahalAlama::Khidma,
+        thiqa: Thiqa::Muakkada,
+    },
+    // Steam installs Javelin through a per-game install script the game ships.
+    Alama {
+        naw: NawHimaya::EaJavelin,
+        ibra: "eajavelin",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Muakkada,
+    },
     // A bare denuvo name is DRM, not anti-cheat; only a driver or -anti-cheat name counts.
     Alama {
         naw: NawHimaya::Denuvo,
@@ -534,6 +644,117 @@ const ALAMAT: &[Alama] = &[
     Alama {
         naw: NawHimaya::Xigncode3,
         ibra: "xhunter1",
+        illa: None,
+        mahal: MahalAlama::Mushaghghil,
+        thiqa: Thiqa::Muakkada,
+    },
+    // ACE puts an `AntiCheatExpert` directory inside the game's own
+    // `Binaries/Win64`, holding its setup binary, and installs `ACE-BASE.sys`
+    // and `ACE-GAME.sys` as drivers — the base driver being the one with a
+    // published privilege-escalation advisory, which is how the name is
+    // independently attested rather than only observed.
+    Alama {
+        naw: NawHimaya::AntiCheatExpert,
+        ibra: "anticheatexpert",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::AntiCheatExpert,
+        ibra: "ace-base",
+        illa: None,
+        mahal: MahalAlama::Mushaghghil,
+        thiqa: Thiqa::Muakkada,
+    },
+    // A crashed load leaves `ace-game-0.sys` behind, so the stem is matched
+    // by containment rather than equality.
+    Alama {
+        naw: NawHimaya::AntiCheatExpert,
+        ibra: "ace-game",
+        illa: None,
+        mahal: MahalAlama::Mushaghghil,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::NeacProtect,
+        ibra: "neacsafe",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::NeacProtect,
+        ibra: "neacsafe",
+        illa: None,
+        mahal: MahalAlama::Mushaghghil,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::NeacProtect,
+        ibra: "neacclient",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::NeacProtect,
+        ibra: "neacinterface",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::NexonGameSecurity,
+        ibra: "blackcipher",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Muakkada,
+    },
+    // `NGService.exe` is a name an antivirus vendor also uses, so on its own it
+    // is only strong — but this scan is rooted at one game's own directory, and
+    // nothing else puts that name there. The service test is bounded the same
+    // way: a process outside the game root is never attributed to the game.
+    Alama {
+        naw: NawHimaya::NexonGameSecurity,
+        ibra: "ngservice",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Rajiha,
+    },
+    Alama {
+        naw: NawHimaya::NexonGameSecurity,
+        ibra: "ngservice",
+        illa: None,
+        mahal: MahalAlama::Khidma,
+        thiqa: Thiqa::Rajiha,
+    },
+    // Both of these sit beside the game executable, and the `.sys` one ships
+    // with mixed case (`mhyprot3.Sys`), which the folded comparison absorbs.
+    Alama {
+        naw: NawHimaya::MihoyoProtect,
+        ibra: "mhyprot",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::MihoyoProtect,
+        ibra: "mhyprot",
+        illa: None,
+        mahal: MahalAlama::Mushaghghil,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::MihoyoProtect,
+        ibra: "hoyokprotect",
+        illa: None,
+        mahal: MahalAlama::MalafJuzi,
+        thiqa: Thiqa::Muakkada,
+    },
+    Alama {
+        naw: NawHimaya::MihoyoProtect,
+        ibra: "hoyokprotect",
         illa: None,
         mahal: MahalAlama::Mushaghghil,
         thiqa: Thiqa::Muakkada,
@@ -977,6 +1198,47 @@ pub(crate) fn adillat_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelHim
         }
     }
 
+    adilla.extend(adillat_tawafuq(bayanat, masar));
+    adilla
+}
+
+/// The unnamed-anti-cheat evidence Valve's own compatibility testing records.
+///
+/// Steam stores each app's test verdicts under `common/steam_deck_compatibility`
+/// as three sibling maps of `{ display, token }`, and two of the tokens it can
+/// write say, in Valve's words, that the game's anti-cheat is unsupported or
+/// misconfigured for its runtime. This is the only marker in the build that
+/// names no product, and it is [`Thiqa::Rajiha`] for exactly that reason: it
+/// establishes that a client-side anti-cheat exists, not which one.
+///
+/// It is worth reading because it answers for games whose anti-cheat this build
+/// has no file signature for at all, and because it answers before the game is
+/// installed. On the catalogue this was written against — 688 apps — fourteen
+/// carry a token, and every one of the fourteen is a game with a real,
+/// account-banning anti-cheat: `BattlEye` (GTA V, Rainbow Six Siege, PUBG,
+/// Destiny 2), Easy Anti-Cheat (Vermintide 2, The First Descendant), EA's
+/// (Apex, Battlefield 1/V/2042), Ricochet (Call of Duty). No false positive.
+fn adillat_tawafuq(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelHimaya> {
+    let mut adilla: Vec<DaleelHimaya> = Vec::new();
+    for fahs in FUHUS_TAWAFUQ {
+        let masar_fahs = ["appinfo", "common", "steam_deck_compatibility", fahs];
+        for (miftah, natija) in bayanat.kain_bi_masar(&masar_fahs).unwrap_or(&[]) {
+            let Some(ramz) = natija.nass_bi_masar(&["token"]) else {
+                continue;
+            };
+            if ramz.to_ascii_lowercase().contains(RAMZ_HIMAYA_TAWAFUQ) {
+                adilla.push(tawqee(
+                    NawHimaya::GhayrMusamma,
+                    format!(
+                        "appinfo.vdf: common/steam_deck_compatibility/{fahs}/{miftah}/token \
+                         = {ramz}"
+                    ),
+                    masar,
+                    Thiqa::Rajiha,
+                ));
+            }
+        }
+    }
     adilla
 }
 
@@ -1027,5 +1289,324 @@ fn dakhil(jidhr: Option<&Path>, masar: &Path) -> bool {
     match std::fs::canonicalize(masar) {
         Ok(kanuni) => kanuni.starts_with(jidhr),
         Err(_) => masar.starts_with(jidhr),
+    }
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::collections::BTreeMap;
+    use std::error::Error;
+    use std::fs;
+
+    use taarib_kashf::matajir::vdf;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    /// Builds a game folder holding exactly these relative paths, and scans it.
+    ///
+    /// The directory a path implies is created too, which is how the folder
+    /// markers — `__Installer/EAAntiCheat`, `Binaries/Win64/AntiCheatExpert` —
+    /// come into existence without being listed twice.
+    fn ifhas_asma(asma: &[&str]) -> Result<(tempfile::TempDir, IjmaaHimaya), Box<dyn Error>> {
+        let masrah = tempfile::tempdir()?;
+        let jidhr = masrah.path().join("luba");
+        fs::create_dir_all(&jidhr)?;
+        for ism in asma {
+            let masar = jidhr.join(ism);
+            if let Some(walid) = masar.parent() {
+                fs::create_dir_all(walid)?;
+            }
+            fs::write(&masar, b"")?;
+        }
+        let ijmaa = ifhas_himaya(&jidhr, None, None);
+        Ok((masrah, ijmaa))
+    }
+
+    /// The kinds a set of file names produces, in the report's own order.
+    fn anwa_asma(asma: &[&str]) -> Result<Vec<NawHimaya>, Box<dyn Error>> {
+        let (_masrah, ijmaa) = ifhas_asma(asma)?;
+        Ok(ijmaa.anwa())
+    }
+
+    /// Reads a text VDF fixture into the shape `adillat_appinfo` is handed.
+    fn shajarat_appinfo(nass: &str) -> Result<QeemaVdf, Box<dyn Error>> {
+        vdf::iqra_nassi(nass).map_err(Into::into)
+    }
+
+    /// `EA SPORTS FC 26`'s root, as it is on the machine this was written on.
+    ///
+    /// Every name here was read off `F:\SteamLibrary\steamapps\common\FC 26`.
+    /// The `_b` pair are EA's own rollback copies, and `EAAntiCheat.cfg` is a
+    /// signed resource-only PE rather than text — neither changes the answer,
+    /// and both are here so that the fixture is the real directory and not a
+    /// tidied version of it.
+    const JIDHR_FC26: [&str; 9] = [
+        "EAAntiCheat.cfg",
+        "EAAntiCheat.GameServiceLauncher.dll",
+        "EAAntiCheat.GameServiceLauncher.dll_b",
+        "EAAntiCheat.GameServiceLauncher.exe",
+        "EAAntiCheat.Installer.exe",
+        "EAAntiCheat.splash.png",
+        "EAJavelinInstaller_installscript.vdf",
+        "__Installer/EAAntiCheat/EAAntiCheat.Installer.exe",
+        "FC26.exe",
+    ];
+
+    #[test]
+    fn jidhr_fc26_yusammi_javelin_wa_yurfad() -> NatijatIkhtibar {
+        let (_masrah, ijmaa) = ifhas_asma(&JIDHR_FC26)?;
+        assert!(mahmiya(&ijmaa), "a Javelin-protected root must not read as clean");
+        assert_eq!(ijmaa.anwa(), vec![NawHimaya::EaJavelin]);
+        assert!(ijmaa.thughrat.is_empty(), "nothing in the fixture was out of reach");
+
+        // The refusal has to be able to point at something, so the evidence
+        // names the launcher itself rather than only the folder it sits in.
+        let ayunn: Vec<&str> = ijmaa.adilla.iter().map(|daleel| daleel.ayn.as_str()).collect();
+        assert!(
+            ayunn.iter().any(|ayn| ayn.contains("EAAntiCheat.GameServiceLauncher.exe")),
+            "{ayunn:?}"
+        );
+        assert!(ayunn.iter().any(|ayn| ayn.contains("EAJavelinInstaller")), "{ayunn:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn javelin_wa_easyanticheat_la_yatadakhalan() -> NatijatIkhtibar {
+        // `eaanticheat` is not a substring of `easyanticheat`, and this is the
+        // test that says so: neither family may claim the other's game.
+        assert_eq!(anwa_asma(&["EAAntiCheat.cfg"])?, vec![NawHimaya::EaJavelin]);
+        assert_eq!(
+            anwa_asma(&["EasyAntiCheat/EasyAntiCheat_x64.dll"])?,
+            vec![NawHimaya::EasyAntiCheat]
+        );
+        assert_eq!(
+            anwa_asma(&["EasyAntiCheat_EOS/easyanticheat_eos_setup.exe"])?,
+            vec![NawHimaya::EasyAntiCheatEos]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn ace_yuraf_bi_mujallad_al_luba_wa_bi_mushaghghil() -> NatijatIkhtibar {
+        let (_masrah, ijmaa) = ifhas_asma(&[
+            "Client/Binaries/Win64/AntiCheatExpert/ACE-Setup64.exe",
+            "Client/Binaries/Win64/ACE-BASE.sys",
+            "Client/Binaries/Win64/ace-game-0.sys",
+        ])?;
+        assert_eq!(ijmaa.anwa(), vec![NawHimaya::AntiCheatExpert]);
+        let asnaf: BTreeSet<NawDaleel> = ijmaa.adilla.iter().map(|daleel| daleel.sinf).collect();
+        assert!(
+            asnaf.contains(&NawDaleel::MushaghghilNawat),
+            "a kernel driver must be reported as one: {asnaf:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn neac_yuraf_bi_thalathat_asma() -> NatijatIkhtibar {
+        assert_eq!(anwa_asma(&["NeacSafe64.sys"])?, vec![NawHimaya::NeacProtect]);
+        assert_eq!(anwa_asma(&["NeacClient.exe"])?, vec![NawHimaya::NeacProtect]);
+        assert_eq!(anwa_asma(&["NeacInterface.dll"])?, vec![NawHimaya::NeacProtect]);
+        Ok(())
+    }
+
+    #[test]
+    fn ngs_yuraf_bi_blackcipher_wa_bi_ngservice() -> NatijatIkhtibar {
+        let (_masrah, ijmaa) = ifhas_asma(&[
+            "M1/Binaries/Win64/BlackCipher/BlackCipher64.aes",
+            "M1/Binaries/Win64/NGService.exe",
+        ])?;
+        assert_eq!(ijmaa.anwa(), vec![NawHimaya::NexonGameSecurity]);
+
+        // `NGService.exe` is a name shared with an antivirus component, so it
+        // is graded `Rajiha`; `BlackCipher` is nobody else's, so it is not.
+        // Both refuse — the grade is what the user is shown, not a threshold.
+        let mut darajat: BTreeMap<&str, Thiqa> = BTreeMap::new();
+        for daleel in &ijmaa.adilla {
+            if daleel.ayn.contains("NGService") {
+                let _ = darajat.insert("ngservice", daleel.thiqa);
+            } else if daleel.ayn.contains("BlackCipher64") {
+                let _ = darajat.insert("blackcipher", daleel.thiqa);
+            }
+        }
+        assert_eq!(darajat.get("ngservice"), Some(&Thiqa::Rajiha), "{darajat:?}");
+        assert_eq!(darajat.get("blackcipher"), Some(&Thiqa::Muakkada), "{darajat:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn mihoyo_yuraf_wa_yatahammal_ikhtilaf_halat_al_ahruf() -> NatijatIkhtibar {
+        // Shipped as `mhyprot3.Sys`, with that capital S. A case-sensitive
+        // extension test would miss the driver and keep only the file.
+        let (_masrah, ijmaa) = ifhas_asma(&["mhyprot3.Sys", "HoYoKProtect.sys"])?;
+        assert_eq!(ijmaa.anwa(), vec![NawHimaya::MihoyoProtect]);
+        let mushaghghilat = ijmaa
+            .adilla
+            .iter()
+            .filter(|daleel| daleel.sinf == NawDaleel::MushaghghilNawat)
+            .count();
+        assert_eq!(mushaghghilat, 2, "both files are kernel drivers: {:?}", ijmaa.adilla);
+        Ok(())
+    }
+
+    #[test]
+    fn luba_bila_himaya_la_tuntij_dalilan() -> NatijatIkhtibar {
+        // The shapes the unprotected games in the library this was written
+        // against actually have: a Unity runtime, an Unreal tree, an Agility
+        // SDK redistributable, and two mod loaders somebody already installed.
+        let (_masrah, ijmaa) = ifhas_asma(&[
+            "UnityPlayer.dll",
+            "GameAssembly.dll",
+            "luba_Data/sharedassets0.assets",
+            "Engine/Binaries/ThirdParty/DbgHelp/dbghelp.dll",
+            "luba/Binaries/Win64/luba-Win64-Shipping.exe",
+            "luba/Content/Paks/luba-WindowsNoEditor.pak",
+            "D3D12-REDIST/D3D12Core.dll",
+            "amd_fidelityfx_dx12.dll",
+            "dinput8.dll",
+            "ScriptHookV.dll",
+            "version.dll",
+            "steam_api64.dll",
+        ])?;
+        assert!(!mahmiya(&ijmaa), "a clean game must stay clean: {:?}", ijmaa.adilla);
+        Ok(())
+    }
+
+    #[test]
+    fn ramz_tawafuq_al_matjar_yusajjal_himaya_ghayr_musamma() -> NatijatIkhtibar {
+        // Steam's own test verdict, in the three sibling maps it writes it to.
+        let shajara = shajarat_appinfo(
+            r##"
+            "appinfo"
+            {
+                "common"
+                {
+                    "steam_deck_compatibility"
+                    {
+                        "tests"
+                        {
+                            "0"
+                            {
+                                "display" "2"
+                                "token" "#SteamDeckVerified_TestResult_UnsupportedAntiCheatConfiguration"
+                            }
+                        }
+                        "steamos_tests"
+                        {
+                            "0"
+                            {
+                                "display" "2"
+                                "token" "#SteamOS_TestResult_UnsupportedAntiCheat_Other"
+                            }
+                        }
+                    }
+                }
+            }
+            "##,
+        )?;
+        let adilla = adillat_appinfo(&shajara, Path::new("appinfo.vdf"));
+        assert_eq!(adilla.len(), 2, "{adilla:?}");
+        for daleel in &adilla {
+            assert_eq!(daleel.naw, NawHimaya::GhayrMusamma);
+            assert_eq!(daleel.sinf, NawDaleel::TawqeeMatjar);
+            // The store asserts an anti-cheat without naming which, and the
+            // grade says exactly that much and no more.
+            assert_eq!(daleel.thiqa, Thiqa::Rajiha);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn ramz_tawafuq_akhar_la_yaddai_shayan() -> NatijatIkhtibar {
+        // The same subtree carries verdicts about launchers, frame rates and
+        // text size. None of them is a claim about an anti-cheat.
+        let shajara = shajarat_appinfo(
+            r##"
+            "appinfo"
+            {
+                "common"
+                {
+                    "steam_deck_compatibility"
+                    {
+                        "tests"
+                        {
+                            "0"
+                            {
+                                "display" "1"
+                                "token" "#SteamDeckVerified_TestResult_ExternalControllersNotSupported"
+                            }
+                        }
+                    }
+                }
+            }
+            "##,
+        )?;
+        assert!(adillat_appinfo(&shajara, Path::new("appinfo.vdf")).is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn tanfidhi_al_itlaq_fi_al_fahras_yusammi_javelin() -> NatijatIkhtibar {
+        // What Steam's catalogue holds for a Javelin-protected app: the launch
+        // entry starts the anti-cheat, not the game. Read off this machine's
+        // own `appinfo.vdf`, where Battlefield 6 spells it this way seventeen
+        // times — which answers for a game that is not installed at all.
+        let shajara = shajarat_appinfo(
+            r#"
+            "appinfo"
+            {
+                "config"
+                {
+                    "launch"
+                    {
+                        "0"
+                        {
+                            "executable" "EAAntiCheat.GameServiceLauncher.exe"
+                            "arguments" "-Steam"
+                        }
+                    }
+                }
+            }
+            "#,
+        )?;
+        let adilla = adillat_appinfo(&shajara, Path::new("appinfo.vdf"));
+        assert_eq!(adilla.iter().map(|daleel| daleel.naw).collect::<Vec<_>>(), vec![
+            NawHimaya::EaJavelin
+        ]);
+        Ok(())
+    }
+
+    #[test]
+    fn la_naw_yuraf_bi_khidma_wahdaha() {
+        // The structural property the whole design rests on: a sandboxed
+        // process table hides running services, so any kind detectable *only*
+        // by a service would become undetectable inside a container. Every kind
+        // that carries a service marker must also carry one on disk.
+        let mut khidmi: BTreeSet<NawHimaya> = BTreeSet::new();
+        let mut qursi: BTreeSet<NawHimaya> = BTreeSet::new();
+        for alama in ALAMAT {
+            match alama.mahal {
+                MahalAlama::Khidma => {
+                    let _ = khidmi.insert(alama.naw);
+                }
+                MahalAlama::MalafJuzi | MahalAlama::MalafKamil | MahalAlama::Mushaghghil => {
+                    let _ = qursi.insert(alama.naw);
+                }
+                // An import table is read off a file on disk, but it is the
+                // game's file and not the anti-cheat's, so it is not counted
+                // as an on-disk marker for this property.
+                MahalAlama::Wahda => {}
+            }
+        }
+        let wahidatan: Vec<NawHimaya> =
+            khidmi.difference(&qursi).copied().collect();
+        assert!(
+            wahidatan.is_empty(),
+            "service-only kinds are undetectable in a sandbox: {wahidatan:?}"
+        );
     }
 }

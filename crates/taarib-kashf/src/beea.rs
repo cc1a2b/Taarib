@@ -1415,7 +1415,12 @@ pub fn beea_steam(jidhr_steam: &Path, app: u32) -> Option<PathBuf> {
 ///
 /// `$WINEPREFIX` is read from the environment because that is the only place it
 /// exists — it is Wine's own interface, not Taarib configuration, and a user who
-/// exported it has told the system where their prefix is.
+/// exported it has told the system where their prefix is. It is one of the reads
+/// [`crate::fahs::SiyaqFahs`] names as deliberately left out of the scan
+/// context: this function *is* the prefix resolver, so there is nobody for it to
+/// disagree with, and putting Wine's vocabulary on the struct every launcher
+/// adapter is handed would invite sixteen adapters that have no prefix to
+/// consult it.
 ///
 /// Results are canonicalized and deduplicated, so the same prefix reached
 /// through two paths — `~/.wine` and a `wineprefixes` entry symlinked to it —
@@ -1569,6 +1574,13 @@ fn mustakhdim_fi(asas: &Path) -> Option<PathBuf> {
     // Wine's own profile is named after the login. `var_os`, not `var`: a
     // login name is not required to be UTF-8, and this is the operating
     // system's answer rather than Taarib configuration.
+    //
+    // Deliberately not hoisted onto `SiyaqFahs` with the ambient directories —
+    // see that type's own list of what stays out and why. A login name is not a
+    // location; it is compared against the directory names inside somebody's
+    // prefix to guess which profile is theirs, and a prefix may well have been
+    // created by another account, in which case the guess is meant to miss and
+    // fall through to the sorted candidates below.
     let ism_hali = std::env::var_os("USER")
         .or_else(|| std::env::var_os("USERNAME"))
         .and_then(|qeema| qeema.into_string().ok())

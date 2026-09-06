@@ -9,11 +9,12 @@ use taarib_aman::sandooq_fak::fak_ila_hajr;
 use taarib_khatm::{MirsatThiqa, MudaqqiqEd25519};
 use taarib_mustalahat::luba::LubaId;
 use taarib_ruqaa::qari::MalafRuqaa;
-use taarib_tathbeet::bayan::{Muthabbit, TarifLuba};
+use taarib_tathbeet::bayan::TarifLuba;
 use taarib_tathbeet::khata::KhataTathbeet;
 use taarib_tathbeet::masar_tathbeet::{
     NatijatTathbeetKamil, TalabTathbeet, WadaMuhtawa, thabbit,
 };
+use taarib_tathbeet::nusus::Nashir;
 
 use crate::khata::KhataMustawda;
 
@@ -159,8 +160,11 @@ impl std::fmt::Debug for TalabNaqra<'_> {
 /// An imported file and a downloaded one take this same path: `malaf_munazzal`
 /// pointing at a file on disk is the offline install, gated identically.
 ///
-/// `nashr` deploys the framework through the recorder, exactly as
-/// [`thabbit`] requires.
+/// `nashr` is the deployment step, exactly as [`thabbit`] requires: it is handed
+/// a [`Nashir`] and owns every write into the game's own files — the framework
+/// and adapter through the recorder, and the script-engine write through
+/// [`Nashir::raqqi`], under the plan it built. A step that calls
+/// `taarib_tathbeet::tarkib::nashr` gets both without doing anything else.
 ///
 /// # Errors
 ///
@@ -173,7 +177,7 @@ pub fn thabbit_bilnaqra<F, P>(
     mut taqaddum: P,
 ) -> Result<NatijatTathbeetKamil, FashalTathbeet>
 where
-    F: FnOnce(&mut dyn Muthabbit) -> Result<(), KhataTathbeet>,
+    F: FnOnce(&mut Nashir<'_>) -> Result<(), KhataTathbeet>,
     P: FnMut(MarhalatTathbeet),
 {
     taqaddum(MarhalatTathbeet::Hajr);

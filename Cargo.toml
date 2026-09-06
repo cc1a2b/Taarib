@@ -30,6 +30,7 @@ members = [
     "crates/taarib-tahdith",
     "crates/taarib-tajmee",
     "crates/taarib-tilqai",
+    "crates/taarib-aql",
     "apps/studio/src-tauri",
 ]
 
@@ -91,6 +92,7 @@ taarib-mudkhal = { path = "crates/taarib-mudkhal" }
 taarib-tahdith = { path = "crates/taarib-tahdith" }
 taarib-tajmee = { path = "crates/taarib-tajmee" }
 taarib-tilqai = { path = "crates/taarib-tilqai" }
+taarib-aql = { path = "crates/taarib-aql" }
 
 # --- text: shaping, rasterization, Unicode ----------------------------------
 # harfrust and skrifa both require read-fonts ^0.43.2, so Cargo resolves ONE

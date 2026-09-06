@@ -217,7 +217,19 @@ export interface HukmTilqai {
   readonly muarrif: string;
   readonly ism: string;
   readonly masar: MasarTilqai;
-  /** 1 to 3, matching `Tabaqa` in the generated bindings. */
+  /**
+   * 1 to 3, matching `Tabaqa` in the generated bindings.
+   *
+   * Read through rather than clamped. It used to be held inside 1..3 here, so
+   * that an unknown number could not be printed beside a tier name that
+   * contradicted it — but a clamp answers the wrong question: it turns "this
+   * build cannot read that tier" into "tier 1", which is a claim about the
+   * product rather than a refusal to make one. The question it was guarding is
+   * now answered where it belongs. `aql_luba` sends `muntaj` — the product
+   * discriminant itself — and `tabaqa_raqm` as an *optional* number that is
+   * absent for the two answers that are not tiers at all, so a screen reading
+   * the core never has a number without a product to put beside it.
+   */
   readonly tabaqa_raqm: number;
   readonly tabaqa_arabi: string;
   readonly tabaqa_injilizi: string;
@@ -598,9 +610,11 @@ export function fukkHukm(khaam: unknown): HukmTilqai | null {
     muarrif,
     ism: nass(sijill['ism'], muarrif),
     masar,
-    // Clamped into the three tiers the product actually has, so an unknown
-    // number cannot be printed next to a tier name that contradicts it.
-    tabaqa_raqm: Math.min(3, Math.max(1, adad(sijill['tabaqa_raqm'], 1))),
+    // The backend's own number, unclamped. See the field's own note: the tier a
+    // game is on is decided in Rust and the product it entitles is now sent as a
+    // discriminant beside it, so narrowing a number here would be this file
+    // holding an opinion about a taxonomy it does not own.
+    tabaqa_raqm: adad(sijill['tabaqa_raqm'], 1),
     tabaqa_arabi: tabaqaArabi,
     tabaqa_injilizi: nass(sijill['tabaqa_injilizi'], tabaqaArabi),
     sabab_arabi: sababArabi,

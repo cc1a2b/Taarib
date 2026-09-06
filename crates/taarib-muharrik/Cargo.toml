@@ -35,3 +35,14 @@ tracing = { workspace = true }
 # to a directory shape, and the degradation is the part worth pinning. The
 # fixtures are real header bytes laid out in a real tree.
 tempfile = { workspace = true }
+# Tests only, and it is the overlay depending on this crate's vocabulary that is
+# the real direction — Phase 5 identifies a game, Phase 14 draws over it, and a
+# probe that linked the overlay would be a probe that could load a renderer.
+#
+# `tests/mufradat_rusum.rs` needs both enumerations in one compilation unit to
+# hold the rule that binds them: every graphics backend the overlay ships must
+# have a value here and an import signature that produces it. Three backends
+# were built without either, and the games that use them reported no graphics
+# API at all. Asserting it from a list copied into this crate would be asserting
+# against the copy.
+taarib-tabaqa = { workspace = true }

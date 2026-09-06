@@ -711,7 +711,15 @@ struct DalalatMaktaba {
 ///
 /// Ordered by what it establishes rather than alphabetically: engine runtimes,
 /// then scripting runtimes, then graphics, then the text libraries an engine
-/// links when it already shapes text for itself.
+/// links when it already shapes text for itself. The Direct3D entries run
+/// oldest generation to newest inside that block, which is the order they are
+/// read in and the order the report lists them in.
+///
+/// Every graphics entry names one API and only ever the API the module *is*.
+/// Nothing here infers a renderer from a redistributable a game ships beside
+/// itself — that is [`crate::dalail::binya`]'s evidence, at its own weight, and
+/// the difference between the two is the difference between a fact and an
+/// inference. See [`rusum_maarufa`] for the invariant this list has to satisfy.
 const DALALAT: &[DalalatMaktaba] = &[
     DalalatMaktaba {
         ibra: "unityplayer",
@@ -811,6 +819,63 @@ const DALALAT: &[DalalatMaktaba] = &[
         rusum: None,
         wasf: "a Python 2 runtime, which for a game means an older Ren'Py release",
         wazn: 65,
+    },
+    DalalatMaktaba {
+        ibra: "d3d8.dll",
+        juzi: false,
+        aila: None,
+        khalfiya: None,
+        rusum: Some(WajihaRusum::D3d8),
+        wasf: "Direct3D 8, so the overlay tier attaches at the device's own Present",
+        wazn: 60,
+    },
+    DalalatMaktaba {
+        ibra: "d3d9.dll",
+        juzi: false,
+        aila: None,
+        khalfiya: None,
+        rusum: Some(WajihaRusum::D3d9),
+        wasf: "Direct3D 9, so the overlay tier attaches at the device's own Present and Reset",
+        wazn: 60,
+    },
+    // The D3DX9 utility library, versioned `d3dx9_24` through `d3dx9_43`, which
+    // is why this one is a substring. It is corroboration rather than proof: it
+    // is a helper a D3D9 renderer links and not the API itself, and a tool that
+    // never draws can link it too. It earns its place because it survives where
+    // `d3d9.dll` does not — a game reaching Direct3D 9 through a wrapper shipped
+    // beside it imports the wrapper's name and still imports this.
+    DalalatMaktaba {
+        ibra: "d3dx9_",
+        juzi: true,
+        aila: None,
+        khalfiya: None,
+        rusum: Some(WajihaRusum::D3d9),
+        wasf: "the D3DX9 utility library, which only a Direct3D 9 renderer links",
+        wazn: 45,
+    },
+    DalalatMaktaba {
+        ibra: "d3d10.dll",
+        juzi: false,
+        aila: None,
+        khalfiya: None,
+        rusum: Some(WajihaRusum::D3d10),
+        wasf: "Direct3D 10, so the overlay tier attaches through a DXGI swap chain",
+        wazn: 60,
+    },
+    // Matched exactly rather than as a prefix of the entry above, so that a
+    // Direct3D 10.1 game — which links only this one — is read, and so that
+    // `d3d10.dll` cannot claim it twice. Both resolve to the same value: a 10.1
+    // device answers a `QueryInterface` for `ID3D10Device`, so one backend
+    // draws through either.
+    DalalatMaktaba {
+        ibra: "d3d10_1.dll",
+        juzi: false,
+        aila: None,
+        khalfiya: None,
+        rusum: Some(WajihaRusum::D3d10),
+        wasf: "Direct3D 10.1, which the overlay tier reaches through the same DXGI swap chain \
+               as Direct3D 10",
+        wazn: 60,
     },
     DalalatMaktaba {
         ibra: "d3d11.dll",
@@ -931,6 +996,31 @@ const DALALAT: &[DalalatMaktaba] = &[
         wazn: 45,
     },
 ];
+
+/// Every graphics API some import in [`DALALAT`] can establish.
+///
+/// Exists so that the one rule binding this crate's vocabulary to the overlay's
+/// backends is checkable rather than remembered. A backend can be built, and a
+/// value for it can be added to [`WajihaRusum`], and the game that uses it will
+/// still report nothing unless some import names it here — which is exactly the
+/// state Direct3D 8, 9 and 10 were in: three backends drawing, three values
+/// missing, and a Direct3D 9 game reporting an empty graphics list with
+/// `d3d9.dll` sitting in its import table.
+///
+/// `crates/taarib-muharrik/tests/mufradat_rusum.rs` asserts against this, so
+/// the ninth backend cannot be added quietly.
+#[must_use]
+pub fn rusum_maarufa() -> Vec<WajihaRusum> {
+    let mut rusum: Vec<WajihaRusum> = Vec::new();
+    for dalala in DALALAT {
+        if let Some(wajiha) = dalala.rusum
+            && !rusum.contains(&wajiha)
+        {
+            rusum.push(wajiha);
+        }
+    }
+    rusum
+}
 
 /// Reads the import table and records what each recognised module means.
 ///

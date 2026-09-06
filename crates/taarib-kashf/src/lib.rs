@@ -281,6 +281,8 @@ impl Kashif {
 )]
 pub fn siyaq_fahs(manassat: IdadatManassat, manzil: PathBuf) -> Natija<SiyaqFahs> {
     let nizam = NizamTashghil::hali();
+    let khazina_bayanat = khazina_xdg("XDG_DATA_HOME")
+        .unwrap_or_else(|| manzil.join(".local").join("share"));
     Ok(SiyaqFahs {
         mujalladat_baramij: mujalladat_baramij(nizam),
         bayanat_barnamij: mujallad_windows(nizam, "PROGRAMDATA", || {
@@ -292,8 +294,8 @@ pub fn siyaq_fahs(manassat: IdadatManassat, manzil: PathBuf) -> Natija<SiyaqFahs
         bayanat_mahalliya: mujallad_windows(nizam, "LOCALAPPDATA", || {
             manzil.join("AppData").join("Local")
         }),
-        khazina_bayanat: khazina_xdg("XDG_DATA_HOME")
-            .unwrap_or_else(|| manzil.join(".local").join("share")),
+        judhur_bayanat: judhur_bayanat(nizam, &khazina_bayanat, std::env::var_os("XDG_DATA_DIRS")),
+        khazina_bayanat,
         khazina_idadat: khazina_xdg("XDG_CONFIG_HOME").unwrap_or_else(|| manzil.join(".config")),
         khazina_makhbaa: khazina_xdg("XDG_CACHE_HOME").unwrap_or_else(|| manzil.join(".cache")),
         nizam,
@@ -342,6 +344,59 @@ fn mujallad_aw_ihtiyati(
 fn khazina_xdg(mutaghayyir: &str) -> Option<PathBuf> {
     khazina_mutlaqa(std::env::var_os(mutaghayyir))
 }
+
+/// How many entries of `$XDG_DATA_DIRS` are honoured.
+///
+/// The specification puts no limit on the list, and every entry costs a `stat`
+/// per icon size per extension in the theme walk. Eight is more than any real
+/// desktop sets — a Nix profile with Flatpak's two exports is five — and the
+/// cap is what stops a hostile or broken value turning icon extraction into a
+/// filesystem sweep.
+const HADD_JUDHUR_BAYANAT: usize = 8;
+
+/// The XDG data hierarchy to search, in the order the specification gives it.
+///
+/// Split from the read for the reason [`mujallad_aw_ihtiyati`] is: the read is
+/// the untestable half, and the rule — home directory first, then the search
+/// list, absolute entries only, deduplicated, capped — is an ordinary function
+/// with an ordinary test.
+///
+/// Empty off Linux. The specification is a freedesktop one; a Windows machine
+/// with `XDG_DATA_DIRS` set has a shell that has never heard of it, and letting
+/// a value leak into the context there would put paths that cannot exist in
+/// front of the adapters.
+fn judhur_bayanat(
+    nizam: NizamTashghil,
+    khazina_bayanat: &Path,
+    qeema: Option<std::ffi::OsString>,
+) -> Vec<PathBuf> {
+    if !matches!(nizam, NizamTashghil::Linux) {
+        return Vec::new();
+    }
+
+    let mut judhur: Vec<PathBuf> = vec![khazina_bayanat.to_path_buf()];
+    let khaam = qeema
+        .filter(|qeema| !qeema.is_empty())
+        .map_or_else(|| DHUR_BAYANAT_IFTIRADI.to_owned(), |qeema| {
+            qeema.to_string_lossy().into_owned()
+        });
+    for juz in khaam.split(':') {
+        if judhur.len() >= HADD_JUDHUR_BAYANAT {
+            break;
+        }
+        let masar = PathBuf::from(juz);
+        // The same absolute-only rule the single base directories are read
+        // under, and for the same reason: a relative entry would resolve
+        // against whatever directory this process happened to start in.
+        if !juz.is_empty() && masar.is_absolute() && !judhur.contains(&masar) {
+            judhur.push(masar);
+        }
+    }
+    judhur
+}
+
+/// What `$XDG_DATA_DIRS` means when it is unset, quoted from the specification.
+const DHUR_BAYANAT_IFTIRADI: &str = "/usr/local/share:/usr/share";
 
 /// The absolute-only rule the XDG base directories are read under.
 ///
@@ -585,6 +640,43 @@ mod ikhtibarat {
             khazina_mutlaqa(Some(std::ffi::OsString::from(mutlaq))),
             Some(PathBuf::from(mutlaq))
         );
+    }
+
+    #[test]
+    fn judhur_al_bayanat_tatbaa_al_muwasafa() {
+        let manzil = PathBuf::from("/manzil/.local/share");
+        let bi = |qeema: Option<&str>| {
+            judhur_bayanat(
+                NizamTashghil::Linux,
+                &manzil,
+                qeema.map(std::ffi::OsString::from),
+            )
+        };
+
+        // Unset and empty both mean the specification's own default, and the
+        // user's own directory always leads.
+        let iftiradi =
+            vec![manzil.clone(), PathBuf::from("/usr/local/share"), PathBuf::from("/usr/share")];
+        assert_eq!(bi(None), iftiradi);
+        assert_eq!(bi(Some("")), iftiradi);
+
+        // Relative entries are invalid per the specification and are dropped
+        // rather than resolved; a repeat of the leading directory is dropped
+        // too, because scanning it twice is two answers to one question.
+        assert_eq!(
+            bi(Some("share:/opt/x::/manzil/.local/share:/usr/share")),
+            vec![manzil.clone(), PathBuf::from("/opt/x"), PathBuf::from("/usr/share")]
+        );
+
+        // The cap holds however long the value is.
+        let tawil = (0..40).map(|raqm| format!("/d{raqm}")).collect::<Vec<_>>().join(":");
+        assert_eq!(bi(Some(&tawil)).len(), HADD_JUDHUR_BAYANAT);
+
+        // Off Linux the freedesktop hierarchy does not exist, and a value that
+        // leaked in from a shell would be paths that cannot be there.
+        for nizam in [NizamTashghil::Windows, NizamTashghil::Mac] {
+            assert!(judhur_bayanat(nizam, &manzil, Some("/usr/share".into())).is_empty());
+        }
     }
 
     #[test]

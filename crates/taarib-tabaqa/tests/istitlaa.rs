@@ -320,3 +320,122 @@ fn slot_taarib_nafsuh_laysa_taarudan() {
     assert!(taqrir.ghurabaa().is_empty(), "Taarib's own loader is not a third party");
     let _ = fs::remove_dir_all(&jidhr);
 }
+
+/// A module carrying a product's marks the way a real one does.
+///
+/// The marks go in as UTF-16, which is where a real one keeps them: a Windows
+/// version resource stores `CompanyName` and `ProductName` in UTF-16, and that
+/// is the encoding the strings identifying ReShade and DXVK actually live in.
+fn wahda(basmat: &[&str]) -> Vec<u8> {
+    let mut jism = vec![0x00_u8; 256];
+    for basma in basmat {
+        jism.extend(basma.encode_utf16().flat_map(|wahda| wahda.to_le_bytes()));
+        jism.push(0);
+    }
+    jism.extend_from_slice(&[0x90; 256]);
+    jism
+}
+
+/// A wrapper on the presentation path narrows the verdict and says why.
+///
+/// This is the collision that is neither a crash nor a refusal. ReShade hands
+/// the game its own `IDXGISwapChain`, so the method table the overlay reads
+/// from a swap chain of its own is not the one the game calls — the hook
+/// installs, verifies, and is never invoked. Nothing breaks and nothing is
+/// drawn, which is the one failure a user cannot diagnose alone, so it has to
+/// be said before an install rather than discovered after one.
+#[test]
+fn ghilaf_alard_yunqis_wala_yamnaa_wa_yusamma() {
+    let jidhr = mujallad("ghilaf-ard");
+    let masar = uktub(&jidhr, "luba.exe", &banni_pe(true, &["d3d11.dll", "dxgi.dll"]));
+    let _ = uktub(&jidhr, "dxgi.dll", &wahda(&["crosire", "ReShade", "reshade-shaders"]));
+
+    let taqrir = match istatli(&masar) {
+        Ok(taqrir) => taqrir,
+        Err(khata) => panic!("the executable would not be surveyed: {khata}"),
+    };
+    let Some(slot) = taqrir.ghurabaa().first().copied() else {
+        panic!("the presentation hook was not reported");
+    };
+    assert_eq!(slot.muntaj, Some("ReShade"), "the product is named, not merely the slot");
+    assert!(taqrir.slot_mutah(), "ReShade does not hold the name Taarib uses");
+    assert!(taqrir.yumkin(), "a presentation hook narrows the overlay, it does not stop it");
+    assert_eq!(taqrir.hukm(), HukmQudra::Naqisa, "and the verdict says so");
+    let injilizi: String =
+        taqrir.asbab.iter().map(|sabab| sabab.injilizi.clone()).collect::<Vec<_>>().join("\n");
+    assert!(injilizi.contains("ReShade"), "the reason names it: {injilizi}");
+    assert!(
+        injilizi.contains("never called: no crash, no Arabic"),
+        "and states the failure mode exactly: {injilizi}"
+    );
+    assert!(
+        injilizi.contains("does not unhook the other product"),
+        "and keeps the unhook rule in view: {injilizi}"
+    );
+    let _ = fs::remove_dir_all(&jidhr);
+}
+
+/// A translation layer in a graphics slot is not a hook and does not narrow.
+///
+/// DXVK's `d3d9.dll` *is* Direct3D 9 in that process. `Direct3DCreate9`
+/// resolves to it for the overlay exactly as it did for the game, so the method
+/// table the overlay reads is the one the game's device uses. One
+/// implementation, one table, and the hook composes.
+#[test]
+fn tabaqat_tarjama_la_tunqis() {
+    let jidhr = mujallad("dxvk");
+    let masar = uktub(&jidhr, "luba.exe", &banni_pe(true, &["d3d9.dll"]));
+    let _ = uktub(&jidhr, "d3d9.dll", &wahda(&["DXVK", "DxvkInstance", "zlib/libpng license"]));
+
+    let taqrir = match istatli(&masar) {
+        Ok(taqrir) => taqrir,
+        Err(khata) => panic!("the executable would not be surveyed: {khata}"),
+    };
+    let Some(slot) = taqrir.ghurabaa().first().copied() else {
+        panic!("the translation layer was not reported");
+    };
+    assert_eq!(slot.muntaj, Some("DXVK"));
+    assert_eq!(
+        taqrir.hukm(),
+        HukmQudra::Kamila,
+        "a replaced implementation is one method table, not two hooks"
+    );
+    let _ = fs::remove_dir_all(&jidhr);
+}
+
+/// Microsoft's own redistributable is not reported as somebody's mod.
+///
+/// `xinput1_3.dll` beside a game is the DirectX end-user redistributable far
+/// more often than it is Ultimate ASI Loader, and identification is the only
+/// thing that separates the two. Unidentified, it stays unmentioned; carrying a
+/// loader's marks, it is reported.
+#[test]
+fn ism_mushtarak_la_yublagh_illa_muaarrafan() {
+    let jidhr = mujallad("mushtarak");
+    let masar = uktub(&jidhr, "luba.exe", &banni_pe(true, &["d3d11.dll"]));
+    let _ = uktub(&jidhr, "xinput1_3.dll", &wahda(&["Microsoft Corporation"]));
+
+    let taqrir = match istatli(&masar) {
+        Ok(taqrir) => taqrir,
+        Err(khata) => panic!("the executable would not be surveyed: {khata}"),
+    };
+    assert!(
+        taqrir.mashghula.is_empty(),
+        "Microsoft's redistributable is not a mod: {:?}",
+        taqrir.mashghula
+    );
+
+    let _ = uktub(&jidhr, "xinput1_4.dll", &wahda(&["Alexander Blade", "asiloader"]));
+    let taqrir = match istatli(&masar) {
+        Ok(taqrir) => taqrir,
+        Err(khata) => panic!("the executable would not be surveyed: {khata}"),
+    };
+    let asmaa: Vec<&str> = taqrir.mashghula.iter().map(|slot| slot.ism.as_str()).collect();
+    assert_eq!(asmaa, vec!["xinput1_4.dll"], "identified, the same class of name is reported");
+    let Some(slot) = taqrir.ghurabaa().first().copied() else {
+        panic!("the loader was not reported");
+    };
+    assert_eq!(slot.muntaj, Some("an ASI plugin loader"));
+    assert_eq!(taqrir.hukm(), HukmQudra::Kamila, "a plugin loader is not on the drawing path");
+    let _ = fs::remove_dir_all(&jidhr);
+}

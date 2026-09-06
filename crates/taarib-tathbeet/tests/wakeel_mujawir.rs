@@ -43,12 +43,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use taarib_mustalahat::luba::{LubaId, MasdarLuba};
-use taarib_mustalahat::muharrik::{AilatMuharrik, KhalfiyaBarmajiya, Muharrik};
+use taarib_mustalahat::muharrik::{
+    AilatMuharrik, JahiziyatTashghil, JawdaMutawaqqaa, KhalfiyaBarmajiya, Muharrik, Tabaqa,
+    TaqreerImkaniyat,
+};
 use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
 use taarib_tathbeet::bayan::{NawTathbeet, TarifLuba, Tathbeet};
 use taarib_tathbeet::khata::KhataTathbeet;
 use taarib_tathbeet::tarkib::{
-    HalatIdadat, LubaMuhallala, NatijatTarkib, rakkib_itar,
+    HalatIdadat, KhuttatTarkib, LubaMuhallala, NatijatTarkib, khutta, rakkib_itar,
 };
 use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass};
 use taarib_tathbeet::wukala;
@@ -91,6 +94,31 @@ fn iktub(masar: &Path, hajm: usize) {
         .map(|mawdi| badhra.wrapping_add(u8::try_from(mawdi % 251).unwrap_or(0)))
         .collect();
     fs::write(masar, jism).expect("a fixture file");
+}
+
+/// Writes a fixture module carrying a product's mark the way a real one does.
+///
+/// The mark goes in as UTF-16, which is not decoration: a Windows version
+/// resource stores `CompanyName` and `ProductName` as UTF-16, and that is where
+/// the survey actually finds the string that names Ultimate ASI Loader or
+/// `re4_tweaks` in a real installation. A fixture that embedded plain ASCII
+/// would pass while leaving the encoding that matters unproven.
+fn iktub_bi_basma(masar: &Path, basma: &str) {
+    iktub(masar, AQSA_JISM);
+    let mut jism = fs::read(masar).expect("the fixture just written");
+    let utf16: Vec<u8> =
+        basma.encode_utf16().flat_map(u16::to_le_bytes).collect();
+    // Centred so the mark is nowhere near either end, which is where a reader
+    // that only sniffed a prefix or a suffix would find it by accident.
+    #[expect(
+        clippy::integer_division,
+        reason = "a byte offset into a fixture is a whole number of bytes; there is no \
+                  precision to lose and a float here would have to be truncated back"
+    )]
+    let bidaya = AQSA_JISM.saturating_sub(utf16.len()) / 2;
+    jism.splice(bidaya..bidaya + utf16.len(), utf16);
+    jism.truncate(AQSA_JISM);
+    fs::write(masar, jism).expect("the fixture with its mark");
 }
 
 /// Builds `Bin32/` as it is on the machine this was written against.
@@ -154,6 +182,39 @@ fn luba_muhallala(jidhr: &Path) -> LubaMuhallala {
     }
 }
 
+/// A capability report for this game at tier 1, as `khutta` reads one.
+///
+/// Written out rather than produced by the probe: this crate does not depend on
+/// `taarib-muharrik`, and the fields the plan consults — `marfuda`, `tabaqa` and
+/// the engine — are stated plainly rather than arriving through a crate boundary
+/// opened for a test. Tier 1 is what a BIO4 game gets, and it is the tier under
+/// which a loader is deployed at all.
+fn imkaniyat(muhallala: &LubaMuhallala) -> TaqreerImkaniyat {
+    TaqreerImkaniyat {
+        muharrik: muhallala.muharrik.clone(),
+        tabaqa: Tabaqa::Kamil,
+        sabab_arabi: "محرّك بيو٤ لا يملك نظام إضافات".to_owned(),
+        sabab_injilizi: "Capcom's BIO4 has no plugin system".to_owned(),
+        jahiziya: JahiziyatTashghil::Ghaiba,
+        naqs: None,
+        anzimat_qabila: Vec::new(),
+        jawda: JawdaMutawaqqaa::Maqbula,
+        hudud: Vec::new(),
+        marfuda: false,
+        isdar_fahs: 0,
+        waqt: "2026-09-06T00:00:00Z".to_owned(),
+    }
+}
+
+/// The plan the framework writer executes.
+///
+/// Built here rather than assumed, because `rakkib_itar` takes a plan now: the
+/// component, and the directory its loader lands in, are the plan's answers and
+/// no longer the writer's own.
+fn khutta_li(muhallala: &LubaMuhallala, makhzan: &Path) -> KhuttatTarkib {
+    khutta(&imkaniyat(muhallala), muhallala, makhzan).expect("a deployment plan")
+}
+
 /// Every file under `jidhr`, keyed by its path relative to it, with its bytes.
 fn basmat_shajara(jidhr: &Path) -> BTreeMap<String, Vec<u8>> {
     let mut jadwal = BTreeMap::new();
@@ -209,8 +270,10 @@ fn taarib_yathbut_bijanib_re4_tweaks_wa_yusammih() {
 
     let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
         .expect("an installation session");
+    let muhallala = luba_muhallala(&luba);
     let natija = rakkib_itar(
-        &luba_muhallala(&luba),
+        &khutta_li(&muhallala, &makhzan),
+        &muhallala,
         &HalatIdadat::default(),
         &makhzan,
         &mut tathbeet,
@@ -257,15 +320,21 @@ fn wakeel_mashghul_yarfud_bil_ism_wala_yaktub_shayan() {
     ibni_bin32(&luba);
     ibni_makhzan(&makhzan);
     // A third mod, in the one slot Taarib needs. Ultimate ASI Loader publishes
-    // itself under this name among others, so this is not a hypothetical.
-    iktub(&luba.join("version.dll"), 80_384);
+    // itself under this name among others, so this is not a hypothetical — and
+    // it is given the shape a real one has: its own name inside the module, an
+    // `.asi` plugin beside it, and the `scripts/` directory it loads from.
+    iktub_bi_basma(&luba.join("version.dll"), "Ultimate ASI Loader");
+    iktub(&luba.join("Menyoo.asi"), 4_202_496);
+    fs::create_dir_all(luba.join("scripts")).expect("the loader's plugin directory");
 
     let qabl = basmat_shajara(&luba);
 
     let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
         .expect("an installation session");
+    let muhallala = luba_muhallala(&luba);
     let khata = rakkib_itar(
-        &luba_muhallala(&luba),
+        &khutta_li(&muhallala, &makhzan),
+        &muhallala,
         &HalatIdadat::default(),
         &makhzan,
         &mut tathbeet,
@@ -273,10 +342,23 @@ fn wakeel_mashghul_yarfud_bil_ism_wala_yaktub_shayan() {
     .expect_err("two loaders cannot share one slot, so the install refuses");
 
     match &khata {
-        KhataTathbeet::WakeelMashghul { wakeel, masar, hajm, jiran } => {
+        KhataTathbeet::WakeelMashghul { wakeel, masar, hajm, jiran, huwiya } => {
             assert_eq!(wakeel, "version.dll");
             assert_eq!(masar, &luba.join("version.dll"));
             assert_eq!(*hajm, u64::try_from(AQSA_JISM).expect("a small constant"));
+            // The refusal names the product, not merely the collision. This is
+            // the difference between a message a user can act on and one they
+            // can only stare at.
+            assert_eq!(
+                huwiya.aila(),
+                Some(wukala::AilatWakeel::MuhammilAsi),
+                "the mod holding Taarib's slot is named: {huwiya:?}"
+            );
+            let kayf = huwiya.wasf_injilizi();
+            assert!(
+                kayf.contains("Ultimate ASI Loader") && kayf.contains("Menyoo.asi"),
+                "and the evidence that named it travels with it: {kayf}"
+            );
             // The refusal names the rest of what is in the game, because "your
             // slot is taken" without "and here is the mod that took it" is a
             // message the reader cannot act on.
@@ -291,7 +373,24 @@ fn wakeel_mashghul_yarfud_bil_ism_wala_yaktub_shayan() {
     let injilizi = taarib_usus::khata::Tafsir::injilizi(&khata);
     assert!(injilizi.contains("version.dll"));
     assert!(injilizi.contains("Nothing was written."));
-    assert!(taarib_usus::khata::Tafsir::arabi(&khata).contains("لم يُكتب شيء"));
+    assert!(
+        injilizi.contains("an ASI plugin loader"),
+        "the reader is told which mod is in the way: {injilizi}"
+    );
+    // Taarib never fights for a slot and never sneaks into another one, and the
+    // message has to say the second part — otherwise "it refused" reads as a
+    // limitation rather than as the deliberate refusal it is.
+    assert!(
+        injilizi.contains("succeeds and does nothing"),
+        "the refusal argues why relocating to a free name is not the answer: {injilizi}"
+    );
+    assert!(
+        injilizi.contains("loads every `.asi` beside it"),
+        "and names the door this particular product leaves open: {injilizi}"
+    );
+    let arabi = taarib_usus::khata::Tafsir::arabi(&khata);
+    assert!(arabi.contains("لم يُكتب شيء"));
+    assert!(arabi.contains("مُحمِّل إضافات ASI"), "the identity is Arabic in Arabic: {arabi}");
 
     assert_eq!(
         basmat_shajara(&luba),
@@ -318,8 +417,10 @@ fn ilgha_altathbeet_la_yamiss_milk_almod_alakhar() {
     {
         let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
             .expect("an installation session");
+        let muhallala = luba_muhallala(&luba);
         let natija = rakkib_itar(
-            &luba_muhallala(&luba),
+            &khutta_li(&muhallala, &makhzan),
+            &muhallala,
             &HalatIdadat::default(),
             &makhzan,
             &mut tathbeet,
@@ -432,8 +533,13 @@ fn ala_mujallad_haqiqi_in_wujid() {
 
     let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
         .expect("an installation session");
-    let natija =
-        rakkib_itar(&muhallala, &HalatIdadat::default(), &makhzan, &mut tathbeet);
+    let natija = rakkib_itar(
+        &khutta_li(&muhallala, &makhzan),
+        &muhallala,
+        &HalatIdadat::default(),
+        &makhzan,
+        &mut tathbeet,
+    );
 
     match natija {
         Ok(NatijatTarkib::Nushira(munaffadh)) => {
@@ -458,4 +564,56 @@ fn ala_mujallad_haqiqi_in_wujid() {
             assert_eq!(basmat_shajara(&luba), qabl, "a refusal writes nothing");
         }
     }
+}
+
+/// Names a directory to run the *survey* over, without installing anything.
+///
+/// Separate from [`MUTAGHAYYIR_HAQIQI`] because the two prove different things.
+/// That one copies a whole game and runs an install and an uninstall over it,
+/// which needs an executable. This one only asks "does the identifier name the
+/// mods in this directory", which needs nothing but the modules themselves —
+/// so it can be pointed at the loader files of a game far too large to copy.
+const MUTAGHAYYIR_MASAH: &str = "TAARIB_MUJALLAD_MASAH_HAQIQI";
+
+/// The identifier, run over the real bytes of real mods.
+///
+/// Every other test in this file authors its fixtures. This one does not: it is
+/// pointed at modules that a person actually installed, and it is the only
+/// thing here that can catch a mark chosen from a changelog rather than from a
+/// binary. Skipped loudly when no directory is offered.
+#[test]
+fn yusammi_alwukala_alhaqiqiyeen_in_wujidu() {
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the ban is on configuration being read ad hoc; this is a test asking whether \
+                  a directory of real mod binaries was offered to it, and nothing in the \
+                  product reads it"
+    )]
+    let mawjud = std::env::var(MUTAGHAYYIR_MASAH);
+    let Ok(jidhr) = mawjud else {
+        eprintln!(
+            "skipped: set {MUTAGHAYYIR_MASAH} to a directory of real mod loaders to run the \
+             identifier over their actual bytes"
+        );
+        return;
+    };
+    let jidhr = PathBuf::from(jidhr);
+    assert!(jidhr.is_dir(), "{MUTAGHAYYIR_MASAH} must name a directory: {}", jidhr.display());
+
+    let mut wujida = 0_usize;
+    for madkhal in fs::read_dir(&jidhr).expect("listing the directory") {
+        let mujallad = madkhal.expect("a directory entry").path();
+        if !mujallad.is_dir() {
+            continue;
+        }
+        for qaim in wukala::masah(&mujallad).expect("the survey") {
+            eprintln!("{}: {}", mujallad.display(), qaim.wasf_injilizi());
+            wujida = wujida.saturating_add(1);
+            assert!(
+                !matches!(qaim.huwiya, wukala::HuwiyatWakeel::Multabis { .. }),
+                "a real installation must not come back ambiguous: {qaim:?}"
+            );
+        }
+    }
+    assert!(wujida > 0, "the directory offered held no loader slots at all");
 }

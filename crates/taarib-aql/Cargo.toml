@@ -1,0 +1,41 @@
+[package]
+name = "taarib-aql"
+description = "عقل تعريب — one game held whole: every producer's answer composed into a single vantage point, so that two surfaces cannot disagree about the same game."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+taarib-usus = { workspace = true }
+taarib-mustalahat = { workspace = true }
+# Discovery's vocabulary: the launcher record, its hints, and the official
+# Arabic verdict.
+taarib-kashf = { workspace = true }
+# The capability report and the stored probe record — engine, tier, readiness,
+# limits, and whether this game was ever examined at all.
+taarib-muharrik = { workspace = true }
+# The two hard scans and their refusal sentences. This crate constructs a
+# `Rafd` in order to *quote* it rather than writing a second copy of a refusal
+# the safety layer already words.
+taarib-aman = { workspace = true }
+# The proxy/mod survey and the component store's manifest. Read-only: nothing
+# here plans, writes or deploys.
+taarib-tathbeet = { workspace = true }
+# The registry's build-matching verdict, projected once. Held so that the
+# projection lives in one place rather than being re-derived per surface.
+taarib-mustawda = { workspace = true }
+
+serde = { workspace = true }
+
+[dev-dependencies]
+# The component-store and proxy-survey inputs are read off a real filesystem,
+# because both are "what is actually there" questions and a fake would be
+# answering a different one.
+tempfile = { workspace = true }

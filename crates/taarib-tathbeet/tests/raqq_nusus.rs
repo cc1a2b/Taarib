@@ -16,9 +16,11 @@
 //! store: the Arabic face. It is the harder proof, because the ordering is the
 //! difficulty. `raqqi_nusus` runs before any deployment — RPG Maker's byte
 //! offsets require it — so the settings file names a font that is not on disk
-//! yet, and only the deployment a step later puts it there. The test runs the
-//! two in that same order and then asks the one question that matters: does the
-//! path the generated `.rpy` names resolve to a file?
+//! yet, and only the deployment a step later puts it there. The name therefore
+//! comes out of the **plan**, which chose it from the very listing the
+//! deployment will place; the test builds the plan first, exactly as
+//! `tarkib::nashr_bi_khutta` does, and then asks the one question that matters:
+//! does the path the generated `.rpy` names resolve to a file?
 //!
 //! **The Ren'Py game here is authored, not a real one.** No Ren'Py game is
 //! installed on the machine this was written on. The tree below is built from
@@ -48,6 +50,8 @@ use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
 use taarib_ruqaa::katib::Katib;
 use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_tathbeet::bayan::{NawTathbeet, TarifLuba, Tathbeet};
+use taarib_tathbeet::nusus::IdhnNusus;
+use taarib_tathbeet::tarkib::{LubaMuhallala, QararTabaqa};
 use taarib_tathbeet::{nusus, tarkib};
 use taarib_usus::manassa::{BeeatTawafuq, Mimariya, NizamTashghil};
 
@@ -128,8 +132,13 @@ fn raqq_nusus_yasil_min_alruqaa_ila_almalaf() {
         .expect("an installation session");
 
     // The component store is deliberately absent: three of the four adapters
-    // need nothing from it, and Ren'Py is one of them.
-    let taqreer = nusus::raqqi_nusus(&luba, &ruqaa, None, &mut tathbeet)
+    // need nothing from it, and Ren'Py is one of them. The permit is the
+    // decision-only form for the same reason — nothing here deploys, so nothing
+    // here names a face.
+    let idhn = IdhnNusus::min_qarar(
+        QararTabaqa::min_taqreer(&imkaniyat()).expect("a report the safety layer did not refuse"),
+    );
+    let taqreer = nusus::raqqi_nusus(idhn, &luba, &ruqaa, None, &mut tathbeet)
         .expect("the script-engine write")
         .expect("an adapter that applies to this directory");
 
@@ -197,6 +206,22 @@ fn ibni_makhzan(jidhr: &Path) {
     iktub("taarib/khutut/OFL.txt", b"Copyright (c) The Noto Project Authors\n");
 }
 
+/// The Ren'Py game as the installer resolved it.
+///
+/// Ren'Py deploys no framework, so the loader directory this carries is never
+/// used — but `khutta` takes the whole resolved game now, because that is where
+/// the loader directory has to come from for the engines that do.
+fn luba_muhallala(jidhr: &Path) -> LubaMuhallala {
+    LubaMuhallala {
+        jidhr: jidhr.to_path_buf(),
+        masar_tanfidhi: jidhr.join("Riverside.sh"),
+        muharrik: imkaniyat().muharrik,
+        beea: BeeatTawafuq::Asli,
+        nizam: NizamTashghil::Linux,
+        masdar: MasdarLuba::Steam(480),
+    }
+}
+
 /// A capability report for a Ren'Py game, as `khutta` reads one.
 ///
 /// Written out rather than produced by the probe: this crate does not depend on
@@ -244,22 +269,35 @@ fn khatt_renpy_yusajjal_qabl_nashrih_wa_yujad_baadah() {
     ibni_ruqaa(&masar_ruqaa);
     let ruqaa = MalafRuqaa::iftah(&masar_ruqaa).expect("the package opens and validates");
 
-    // What the deployment will place, asked before anything is written. This is
-    // the value `raqqi_nusus` registers and the value the plan carries, and the
-    // rest of this test is the claim that those are the same file.
-    let khatt = tarkib::khatt_renpy(&makhzan)
-        .expect("the store lists")
-        .expect("the component ships a face");
+    // The plan, before anything is written and before the text write that reads
+    // it. Its `khatt_renpy` is the value the settings will register and the
+    // value the deployment will place, and the rest of this test is the claim
+    // that those are the same file — now by construction, because there is one
+    // answer rather than two functions agreeing.
+    let mukhattat = tarkib::khutta(&imkaniyat(), &luba_muhallala(&luba), &makhzan)
+        .expect("a deployment plan");
+    let khatt = mukhattat.khatt_renpy.clone().expect("the component ships a face");
     assert_eq!(khatt, KHATT_FI_ALLUBA, "the name is the path inside `game/`, verbatim");
+    assert_eq!(
+        tarkib::khatt_renpy(&makhzan).expect("the store lists").as_deref(),
+        Some(khatt.as_str()),
+        "and the store, asked directly, still gives the same answer the plan took"
+    );
 
     let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
         .expect("an installation session");
 
-    // Step one, exactly where `masar_tathbeet::thabbit` runs it: the text
-    // write, before any deployment.
-    let taqreer = nusus::raqqi_nusus(&luba, &ruqaa, Some(&makhzan), &mut tathbeet)
-        .expect("the script-engine write")
-        .expect("an adapter that applies to this directory");
+    // Step one, exactly where `tarkib::nashr_bi_khutta` runs it: the text write,
+    // under the plan's permit, before any deployment.
+    let taqreer = nusus::raqqi_nusus(
+        IdhnNusus::min_khutta(&mukhattat),
+        &luba,
+        &ruqaa,
+        Some(&makhzan),
+        &mut tathbeet,
+    )
+    .expect("the script-engine write")
+    .expect("an adapter that applies to this directory");
     assert_eq!(taqreer.aila.ism(), "Ren'Py");
     assert!(
         taqreer.mulahazat.iter().all(|satr| !satr.contains("no Arabic font was supplied")),
@@ -271,7 +309,7 @@ fn khatt_renpy_yusajjal_qabl_nashrih_wa_yujad_baadah() {
         .expect("the generated settings");
     assert!(
         idad.contains(&format!("_taarib_khatt = \"{KHATT_FI_ALLUBA}\"")),
-        "the face is registered under the name the store gave:\n{idad}"
+        "the face is registered under the name the plan gave:\n{idad}"
     );
     assert!(
         !idad.contains("[["),
@@ -281,24 +319,10 @@ fn khatt_renpy_yusajjal_qabl_nashrih_wa_yujad_baadah() {
     // problem, stated as an assertion rather than as a comment.
     assert!(
         !luba.join("game").join(&khatt).exists(),
-        "nothing has been deployed yet, which is why the name had to come from the store"
+        "nothing has been deployed yet, which is why the name had to come from the plan"
     );
 
-    // Step two: the deployment, through the same recorder.
-    let mukhattat = tarkib::khutta(
-        &imkaniyat(),
-        &imkaniyat().muharrik,
-        NizamTashghil::Linux,
-        &BeeatTawafuq::Asli,
-        &makhzan,
-        &luba,
-    )
-    .expect("a deployment plan");
-    assert_eq!(
-        mukhattat.khatt_renpy.as_deref(),
-        Some(khatt.as_str()),
-        "the plan names the same face the settings were written against"
-    );
+    // Step two: the deployment of that same plan, through the same recorder.
     assert!(
         mukhattat.mudkhalat.iter().any(|mudkhal| mudkhal.nisbi == format!("game/{khatt}")),
         "and plans to add it: {:?}",

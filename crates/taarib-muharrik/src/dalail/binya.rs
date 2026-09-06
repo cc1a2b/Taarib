@@ -1560,6 +1560,28 @@ const WAZN_VULKAN_MUJAWIR: u8 = 35;
 /// a graphics API would put a wrong line in the capability report. The
 /// authoritative answer comes from the executable's import table, which is the
 /// binary detector's evidence.
+///
+/// **The older Direct3D generations are excluded here for a stronger reason
+/// than the newer ones, and now that the vocabulary can name them the exclusion
+/// has to be stated rather than assumed.** A `d3d8.dll` or a `d3d9.dll` shipped
+/// inside a game directory is, more often than not, `dgVoodoo`, DXVK or a
+/// `ReShade` wrapper — a file whose whole purpose is that the game does *not*
+/// reach the system's Direct3D — so reading it as "this game renders with
+/// Direct3D 9" would be reporting the opposite of what the file means. There is
+/// no shipped
+/// redistributable for those generations that carries the weight
+/// `d3d12core.dll` does, because the Agility SDK has no equivalent before
+/// Direct3D 12: `d3d12core.dll` is a *runtime a game pins for itself*, and only
+/// a Direct3D 12 renderer has any reason to ship one.
+///
+/// That is why the two observations below stay at
+/// [`NawDaleel::BinyatMujallad`] and at weights well under the import table's
+/// 60: they are inferences from what a game ships, and the report has to be
+/// able to tell them apart from a module the loader will resolve before the
+/// process runs. Grand Theft Auto V Enhanced and Avatar are the reason it
+/// matters — neither executable imports a graphics module at all, so the
+/// Direct3D 12 in their reports rests entirely on this weaker reading and must
+/// not be presented as though it were read out of an import table.
 fn rusum(mashhad: &Mashhad, hasad: &mut Hasad) {
     if let Some(madkhal) = mashhad.bism_ayn("d3d12core.dll") {
         hasad.hasila.daa_rusum(WajihaRusum::D3d12);

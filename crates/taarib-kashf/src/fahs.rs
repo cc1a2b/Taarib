@@ -283,10 +283,18 @@ impl NatijatMatjar {
 /// tool speaking about itself, exactly like a file in its own configuration
 /// directory. There is nobody for it to disagree with, and hoisting it here
 /// would put one launcher's vocabulary on the struct the other sixteen are
-/// handed. Three are left on that ground, all of them in `legendary`:
-/// `LEGENDARY_CONFIG_PATH`, `LEGENDARY_WINE_PREFIX` and `WINEPREFIX` — the last
-/// being Wine's own name for the prefix, which only the adapter that resolves a
-/// prefix has any use for.
+/// handed. Four reads are left on that ground:
+///
+/// - `LEGENDARY_CONFIG_PATH` and `LEGENDARY_WINE_PREFIX`, in `legendary`;
+/// - `WINEPREFIX`, Wine's own name for the prefix, read in the two places that
+///   resolve a prefix — `legendary` and [`crate::beea::iktashif_beeat`], which
+///   *is* the prefix resolver rather than an adapter;
+/// - `USER`/`USERNAME` in `crate::beea`, which is not a location at all. It is
+///   compared against the directory names inside somebody's Wine prefix to
+///   guess which profile is theirs, and a prefix can perfectly well have been
+///   created by another account. Modelling it here would put a per-process
+///   identity on a struct that answers "where are things", and would invite an
+///   adapter to treat it as one.
 #[derive(Debug, Clone)]
 pub struct SiyaqFahs {
     /// The operating system.
@@ -337,6 +345,25 @@ pub struct SiyaqFahs {
     /// because accepting one would make discovery depend on the directory this
     /// process happened to start in.
     pub khazina_bayanat: PathBuf,
+    /// The whole XDG data hierarchy to *search*, in specification order:
+    /// [`Self::khazina_bayanat`] first, then every entry of `$XDG_DATA_DIRS`,
+    /// defaulting to `/usr/local/share:/usr/share`.
+    ///
+    /// Separate from [`Self::khazina_bayanat`] because the two answer different
+    /// questions and only one of them is a single directory. "Where does this
+    /// user's data go" has exactly one answer; "where might a `.desktop` file or
+    /// an icon theme have been installed" is a list, and on a machine with
+    /// Flatpak, Nix or a distribution that stages `/usr/local` it is a list
+    /// whose later entries are where the answer actually is.
+    ///
+    /// Resolved here rather than at the point of use for the reason every other
+    /// field is: the icon resolver used to read `XDG_DATA_HOME` and `HOME` for
+    /// itself, which made it a second answer to a question this struct already
+    /// owns — and it accepted a relative value, which the specification says is
+    /// invalid and which [`crate::siyaq_fahs`] refuses.
+    ///
+    /// Empty off Linux, where nothing consults it.
+    pub judhur_bayanat: Vec<PathBuf>,
     /// `$XDG_CONFIG_HOME`, or the home-relative default.
     pub khazina_idadat: PathBuf,
     /// `$XDG_CACHE_HOME`, or the home-relative default.
@@ -404,6 +431,7 @@ impl SiyaqFahs {
             bayanat_mutajawwila: None,
             bayanat_mahalliya: None,
             khazina_bayanat: manzil.join(".local").join("share"),
+            judhur_bayanat: vec![manzil.join(".local").join("share")],
             khazina_idadat: manzil.join(".config"),
             khazina_makhbaa: manzil.join(".cache"),
             yashmal_hawiyat: false,

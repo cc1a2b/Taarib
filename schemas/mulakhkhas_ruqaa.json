@@ -258,6 +258,11 @@
         },
         {
           "type": "string",
+          "const": "bio4",
+          "description": "Capcom's `BIO4` codebase — the GameCube-era in-house engine written for Resident Evil 4 in 2005 and carried into its later ports."
+        },
+        {
+          "type": "string",
           "const": "majhul",
           "description": "Nothing Taarib recognises. A first-class answer, not a failure."
         }
