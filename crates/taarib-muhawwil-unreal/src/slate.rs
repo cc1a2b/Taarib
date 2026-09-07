@@ -261,7 +261,10 @@ impl Muttajih2D {
     /// every call site.
     #[must_use]
     pub const fn mufrad(self) -> Muttajih2F {
-        Muttajih2F { s: dayyiq(self.s), a: dayyiq(self.a) }
+        Muttajih2F {
+            s: dayyiq(self.s),
+            a: dayyiq(self.a),
+        }
     }
 }
 
@@ -357,7 +360,10 @@ impl MarjaMushtarak {
     /// initialised to before the call writes into it.
     #[must_use]
     pub const fn khali() -> Self {
-        Self { kaain: core::ptr::null_mut(), mutahakkim: core::ptr::null_mut() }
+        Self {
+            kaain: core::ptr::null_mut(),
+            mutahakkim: core::ptr::null_mut(),
+        }
     }
 
     /// Whether the call produced an object.
@@ -559,10 +565,8 @@ pub type DallaQiyasMudaaf = unsafe extern "C" fn(hadha: *mut c_void) -> Muttajih
 /// So the hidden pointer is a declared parameter. Both ABIs also specify that
 /// the function returns the same pointer in the return register, which the
 /// declaration mirrors and which the caller ignores.
-pub type DallaMarjaMushtarak = unsafe extern "C" fn(
-    makhraj: *mut MarjaMushtarak,
-    hadha: *mut c_void,
-) -> *mut MarjaMushtarak;
+pub type DallaMarjaMushtarak =
+    unsafe extern "C" fn(makhraj: *mut MarjaMushtarak, hadha: *mut c_void) -> *mut MarjaMushtarak;
 
 /// Calls a virtual measurement function and returns its result at the width the
 /// engine uses.
@@ -576,11 +580,7 @@ pub type DallaMarjaMushtarak = unsafe extern "C" fn(
 /// slot index checked against the engine version, and from the call happening on
 /// the game thread.
 #[must_use]
-pub unsafe fn nadi_qiyas(
-    dalla: Unwan,
-    hadha: *mut c_void,
-    diqqa: DiqqatMuttajih,
-) -> Qiyas2 {
+pub unsafe fn nadi_qiyas(dalla: Unwan, hadha: *mut c_void, diqqa: DiqqatMuttajih) -> Qiyas2 {
     match diqqa {
         DiqqatMuttajih::Mufrada => {
             // SAFETY: the caller guarantees `dalla` is a `this`-only member
@@ -591,13 +591,13 @@ pub unsafe fn nadi_qiyas(
             // SAFETY: `hadha` is a live object of `dalla`'s class, per the
             // caller's contract.
             Qiyas2::Mufrad(unsafe { dalla(hadha) })
-        }
+        },
         DiqqatMuttajih::Mudaafa => {
             // SAFETY: as above, for the double-precision signature.
             let dalla: DallaQiyasMudaaf = unsafe { core::mem::transmute(dalla.muashir()) };
             // SAFETY: as above.
             Qiyas2::Mudaaf(unsafe { dalla(hadha) })
-        }
+        },
     }
 }
 
@@ -833,10 +833,18 @@ impl WaslSlate {
         let diqqa = isdar.diqqa()?;
         for hadaf in AHDAF {
             if let Some((tatbeeq, masdar, ramz)) = unwan_hadaf(hadaf) {
-                return Ok(Self { isdar, diqqa, masdar, ramz, tatbeeq });
+                return Ok(Self {
+                    isdar,
+                    diqqa,
+                    masdar,
+                    ramz,
+                    tatbeeq,
+                });
             }
         }
-        Err(KhataUnreal::SlateGhayrMawjud { sabab: taqreer_ikhfaq() })
+        Err(KhataUnreal::SlateGhayrMawjud {
+            sabab: taqreer_ikhfaq(),
+        })
     }
 
     /// The engine version this binding was built for.
@@ -1128,4 +1136,3 @@ mod manassa {
         }
     }
 }
-

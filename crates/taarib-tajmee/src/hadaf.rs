@@ -49,7 +49,9 @@ pub(crate) fn min_muthallath(muthallath: &str) -> NatijatTajmee<Hadaf> {
     AHDAF
         .into_iter()
         .find(|hadaf| hadaf.muthallath == muthallath)
-        .ok_or_else(|| KhataTajmee::HadafMajhul { hadaf: muthallath.to_owned() })
+        .ok_or_else(|| KhataTajmee::HadafMajhul {
+            hadaf: muthallath.to_owned(),
+        })
 }
 
 /// The game-side payload targets every bundle carries.

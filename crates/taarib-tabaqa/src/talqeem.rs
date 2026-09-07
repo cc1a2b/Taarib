@@ -106,7 +106,11 @@ impl SatrMulaqqam {
     /// mistake this signature exists to make impossible to write by accident.
     #[must_use]
     pub fn min_maqru(maqru: &SatrMaqru, mawdi: MustatilBiksel, arabi: impl Into<String>) -> Self {
-        Self { nass: arabi.into(), mawdi, thiqa: maqru.thiqa }
+        Self {
+            nass: arabi.into(),
+            mawdi,
+            thiqa: maqru.thiqa,
+        }
     }
 
     /// Whether this line would draw anything.
@@ -507,7 +511,11 @@ impl Mulaqqim {
         // itself and have no plate of their own — the panel already drew one
         // underneath them.
         if lawh_lil_dawr(unsur.dawr) {
-            bani.adhif_wahid(QitaRasm { mawdi: sunduq, khareeta: None, lawn: unsur.lawn });
+            bani.adhif_wahid(QitaRasm {
+                mawdi: sunduq,
+                khareeta: None,
+                lawn: unsur.lawn,
+            });
         }
 
         let Some(nass) = unsur.nass.as_deref() else {
@@ -524,8 +532,15 @@ impl Mulaqqim {
         let ard_mutah = (madaa(sunduq.ard) - hashiya * 2.0).max(1.0);
         let hajm = self.hajm_li(sunduq.irtifa);
         let khutut = &self.khutut;
-        let takhtit =
-            khattit(&mut self.saff, khutut, &self.takhtit, nass, hajm, Some(ard_mutah), None)?;
+        let takhtit = khattit(
+            &mut self.saff,
+            khutut,
+            &self.takhtit,
+            nass,
+            hajm,
+            Some(ard_mutah),
+            None,
+        )?;
         if takhtit.khali() {
             return Ok(());
         }

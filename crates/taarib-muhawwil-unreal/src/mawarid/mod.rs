@@ -239,7 +239,10 @@ impl NassMukhazzan {
         } else {
             TarmizNass::Utf16
         };
-        Self { nass: nass.to_owned(), tarmiz }
+        Self {
+            nass: nass.to_owned(),
+            tarmiz,
+        }
     }
 
     /// The text.
@@ -280,9 +283,9 @@ impl NassMukhazzan {
         let jism = match self.tarmiz {
             TarmizNass::Khali => 0u64,
             TarmizNass::Ansi => tul_u64(self.nass.chars().count()).checked_add(1)?,
-            TarmizNass::Utf16 => {
-                tul_u64(self.nass.encode_utf16().count()).checked_add(1)?.checked_mul(2)?
-            }
+            TarmizNass::Utf16 => tul_u64(self.nass.encode_utf16().count())
+                .checked_add(1)?
+                .checked_mul(2)?,
         };
         jism.checked_add(4)
     }
@@ -295,11 +298,11 @@ impl NassMukhazzan {
             TarmizNass::Ansi => {
                 let adad = self.nass.chars().count().checked_add(1)?;
                 i32::try_from(adad).ok()
-            }
+            },
             TarmizNass::Utf16 => {
                 let adad = self.nass.encode_utf16().count().checked_add(1)?;
                 i32::try_from(adad).ok().and_then(i32::checked_neg)
-            }
+            },
         }
     }
 }
@@ -323,7 +326,12 @@ impl<'a> Qari<'a> {
     /// A cursor at the start of `bayt`, refusing in the name of format `ism`.
     #[must_use]
     pub const fn jadeed(ism: &'static str, bayt: &'a [u8]) -> Self {
-        Self { ism, bayt, mawqi: 0, fahras: 0 }
+        Self {
+            ism,
+            bayt,
+            mawqi: 0,
+            fahras: 0,
+        }
     }
 
     /// The format this cursor refuses in the name of.
@@ -369,9 +377,14 @@ impl<'a> Qari<'a> {
     /// read — the distinction matters to whoever reads the message.
     pub fn iqfiz(&mut self, haql: &'static str, izaha: u64) -> Result<(), KhataUnreal> {
         let tul = self.bayt.len();
-        let mawqi = hajm_usize(izaha).filter(|mawqi| *mawqi <= tul).ok_or_else(|| {
-            KhataUnreal::MawridTalif { ism: self.ism, haql, qeema: izaha, hadd: tul_u64(tul) }
-        })?;
+        let mawqi = hajm_usize(izaha)
+            .filter(|mawqi| *mawqi <= tul)
+            .ok_or_else(|| KhataUnreal::MawridTalif {
+                ism: self.ism,
+                haql,
+                qeema: izaha,
+                hadd: tul_u64(tul),
+            })?;
         self.mawqi = mawqi;
         Ok(())
     }
@@ -385,9 +398,13 @@ impl<'a> Qari<'a> {
         let bayt = self.bayt;
         let matlub = tul_u64(self.mawqi).saturating_add(adad);
         let mada = hajm_usize(adad).ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
-        let nihaya =
-            self.mawqi.checked_add(mada).ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
-        let khana = bayt.get(self.mawqi..nihaya).ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
+        let nihaya = self
+            .mawqi
+            .checked_add(mada)
+            .ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
+        let khana = bayt
+            .get(self.mawqi..nihaya)
+            .ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
         self.mawqi = nihaya;
         Ok(khana)
     }
@@ -402,7 +419,9 @@ impl<'a> Qari<'a> {
         haql: &'static str,
     ) -> Result<[u8; N], KhataUnreal> {
         let khana = self.iqra_bayt(haql, tul_u64(N))?;
-        khana.try_into().map_err(|_| qaseer(haql, self.bayt.len(), tul_u64(N)))
+        khana
+            .try_into()
+            .map_err(|_| qaseer(haql, self.bayt.len(), tul_u64(N)))
     }
 
     /// Takes one byte.
@@ -460,7 +479,10 @@ impl<'a> Qari<'a> {
         self.fahras = self.fahras.saturating_add(1);
         let tul = self.iqra_i32(haql)?;
         if tul == 0 {
-            return Ok(NassMukhazzan { nass: String::new(), tarmiz: TarmizNass::Khali });
+            return Ok(NassMukhazzan {
+                nass: String::new(),
+                tarmiz: TarmizNass::Khali,
+            });
         }
         if tul > 0 {
             let adad = u64::try_from(tul).unwrap_or(0);
@@ -469,7 +491,10 @@ impl<'a> Qari<'a> {
             let (akhir, jism) = khaam.split_last().unwrap_or((&0, &[]));
             self.tahaqquq_khatima(haql, u64::from(*akhir))?;
             let nass = jism.iter().map(|wahda| char::from(*wahda)).collect();
-            return Ok(NassMukhazzan { nass, tarmiz: TarmizNass::Ansi });
+            return Ok(NassMukhazzan {
+                nass,
+                tarmiz: TarmizNass::Ansi,
+            });
         }
         let adad = tul
             .checked_neg()
@@ -488,7 +513,10 @@ impl<'a> Qari<'a> {
         let (akhir, jism) = wahdat.split_last().unwrap_or((&0, &[]));
         self.tahaqquq_khatima(haql, u64::from(*akhir))?;
         let nass = min_utf16(jism, fahras)?;
-        Ok(NassMukhazzan { nass, tarmiz: TarmizNass::Utf16 })
+        Ok(NassMukhazzan {
+            nass,
+            tarmiz: TarmizNass::Utf16,
+        })
     }
 
     /// Refuses a string whose last unit is not the NUL the format includes in
@@ -499,7 +527,12 @@ impl<'a> Qari<'a> {
     /// nothing to say so.
     const fn tahaqquq_khatima(&self, haql: &'static str, akhir: u64) -> Result<(), KhataUnreal> {
         if akhir != 0 {
-            return Err(KhataUnreal::MawridTalif { ism: self.ism, haql, qeema: akhir, hadd: 1 });
+            return Err(KhataUnreal::MawridTalif {
+                ism: self.ism,
+                haql,
+                qeema: akhir,
+                hadd: 1,
+            });
         }
         Ok(())
     }
@@ -528,7 +561,9 @@ impl Katib {
     /// ask the allocator for a gigabyte before the first byte is written.
     #[must_use]
     pub fn bi_siaa(siaa: usize) -> Self {
-        Self { bayt: Vec::with_capacity(siaa.min(AQSA_HAJZ)) }
+        Self {
+            bayt: Vec::with_capacity(siaa.min(AQSA_HAJZ)),
+        }
     }
 
     /// How many bytes have been written.
@@ -629,27 +664,26 @@ impl Katib {
         // half-written behind a length field that now lies.
         let mut wahdat = Vec::new();
         match nass.tarmiz {
-            TarmizNass::Khali => {}
+            TarmizNass::Khali => {},
             TarmizNass::Ansi => {
                 for harf in nass.nass.chars() {
-                    let wahda = u8::try_from(u32::from(harf)).map_err(|_| {
-                        KhataUnreal::MawridTalif {
+                    let wahda =
+                        u8::try_from(u32::from(harf)).map_err(|_| KhataUnreal::MawridTalif {
                             ism,
                             haql,
                             qeema: u64::from(u32::from(harf)),
                             hadd: 0x100,
-                        }
-                    })?;
+                        })?;
                     wahdat.push(wahda);
                 }
                 wahdat.push(0);
-            }
+            },
             TarmizNass::Utf16 => {
                 for wahda in nass.nass.encode_utf16() {
                     wahdat.extend_from_slice(&wahda.to_le_bytes());
                 }
                 wahdat.extend_from_slice(&0u16.to_le_bytes());
-            }
+            },
         }
         self.uktub_i32(tul);
         self.bayt.extend_from_slice(&wahdat);
@@ -681,7 +715,11 @@ pub fn tahaqquq_adad(
     baqi: u64,
 ) -> Result<usize, KhataUnreal> {
     if adad > saqf {
-        return Err(KhataUnreal::HajmMufrit { haql, qeema: adad, saqf });
+        return Err(KhataUnreal::HajmMufrit {
+            haql,
+            qeema: adad,
+            saqf,
+        });
     }
     let matlub = adad.checked_mul(aqall).ok_or(KhataUnreal::HajmMufrit {
         haql,
@@ -689,9 +727,18 @@ pub fn tahaqquq_adad(
         saqf,
     })?;
     if matlub > baqi {
-        return Err(KhataUnreal::MawridTalif { ism, haql, qeema: adad, hadd: baqi });
+        return Err(KhataUnreal::MawridTalif {
+            ism,
+            haql,
+            qeema: adad,
+            hadd: baqi,
+        });
     }
-    hajm_usize(adad).ok_or(KhataUnreal::HajmMufrit { haql, qeema: adad, saqf })
+    hajm_usize(adad).ok_or(KhataUnreal::HajmMufrit {
+        haql,
+        qeema: adad,
+        saqf,
+    })
 }
 
 /// A signed count as a `u64`, refusing a negative one.
@@ -724,8 +771,10 @@ pub fn adad_musir(ism: &'static str, haql: &'static str, adad: i32) -> Result<u6
 /// and [`KhataUnreal::HajmMufrit`] when the file is larger than [`AQSA_MALAF`] —
 /// checked against the directory entry's size, before the read.
 pub fn iqra_malaf(masar: &Path) -> Result<Vec<u8>, KhataUnreal> {
-    let bayanat = std::fs::metadata(masar)
-        .map_err(|sabab| KhataUnreal::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+    let bayanat = std::fs::metadata(masar).map_err(|sabab| KhataUnreal::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })?;
     if bayanat.len() > AQSA_MALAF {
         return Err(KhataUnreal::HajmMufrit {
             haql: "the file's own length",
@@ -733,8 +782,10 @@ pub fn iqra_malaf(masar: &Path) -> Result<Vec<u8>, KhataUnreal> {
             saqf: AQSA_MALAF,
         });
     }
-    std::fs::read(masar)
-        .map_err(|sabab| KhataUnreal::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    std::fs::read(masar).map_err(|sabab| KhataUnreal::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 /// Fills a path into a refusal raised by a reader that had no path to name.
@@ -747,9 +798,10 @@ pub fn iqra_malaf(masar: &Path) -> Result<Vec<u8>, KhataUnreal> {
 #[must_use]
 pub fn sammi_masar(khata: KhataUnreal, masar: &Path) -> KhataUnreal {
     match khata {
-        KhataUnreal::SihrGhayrMutabaq { ism, .. } => {
-            KhataUnreal::SihrGhayrMutabaq { malaf: masar.to_path_buf(), ism }
-        }
+        KhataUnreal::SihrGhayrMutabaq { ism, .. } => KhataUnreal::SihrGhayrMutabaq {
+            malaf: masar.to_path_buf(),
+            ism,
+        },
         akhar => akhar,
     }
 }
@@ -764,8 +816,10 @@ pub fn sammi_masar(khata: KhataUnreal, masar: &Path) -> KhataUnreal {
 ///
 /// [`KhataUnreal::KhataMalaf`] naming the path.
 pub fn uktub_malaf(masar: &Path, bayt: &[u8]) -> Result<(), KhataUnreal> {
-    std::fs::write(masar, bayt)
-        .map_err(|sabab| KhataUnreal::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    std::fs::write(masar, bayt).map_err(|sabab| KhataUnreal::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 /// Decodes UTF-16 code units, naming the first unit that is not valid.
@@ -793,10 +847,7 @@ fn min_utf16(wahdat: &[u16], fahras: u32) -> Result<String, KhataUnreal> {
         } else if (0xDC00..0xE000).contains(&wahda) {
             return Err(ghayr_salih(fahras, mawqi));
         } else {
-            nass.push(
-                char::from_u32(u32::from(wahda))
-                    .ok_or_else(|| ghayr_salih(fahras, mawqi))?,
-            );
+            nass.push(char::from_u32(u32::from(wahda)).ok_or_else(|| ghayr_salih(fahras, mawqi))?);
             mawqi = mawqi.saturating_add(1);
         }
     }
@@ -804,13 +855,13 @@ fn min_utf16(wahdat: &[u16], fahras: u32) -> Result<String, KhataUnreal> {
 }
 
 /// The refusal for an offset that is not inside what has already been written.
-fn talif_izaha(
-    ism: &'static str,
-    haql: &'static str,
-    izaha: usize,
-    hadd: u64,
-) -> KhataUnreal {
-    KhataUnreal::MawridTalif { ism, haql, qeema: tul_u64(izaha), hadd }
+fn talif_izaha(ism: &'static str, haql: &'static str, izaha: usize, hadd: u64) -> KhataUnreal {
+    KhataUnreal::MawridTalif {
+        ism,
+        haql,
+        qeema: tul_u64(izaha),
+        hadd,
+    }
 }
 
 /// The invalid-UTF-16 refusal, naming the record and the code unit.
@@ -823,14 +874,22 @@ fn ghayr_salih(fahras: u32, mawqi: usize) -> KhataUnreal {
 
 /// The short-file refusal, in one spelling for the whole module.
 fn qaseer(haql: &'static str, tul: usize, matlub: u64) -> KhataUnreal {
-    KhataUnreal::MalafQaseer { haql, tul: tul_u64(tul), matlub }
+    KhataUnreal::MalafQaseer {
+        haql,
+        tul: tul_u64(tul),
+        matlub,
+    }
 }
 
 /// Refuses a declared string length above the ceiling, before the units are
 /// taken and therefore before anything is reserved for them.
 const fn tahaqquq_tul_nass(haql: &'static str, adad: u64) -> Result<(), KhataUnreal> {
     if adad > AQSA_TUL_NASS {
-        return Err(KhataUnreal::HajmMufrit { haql, qeema: adad, saqf: AQSA_TUL_NASS });
+        return Err(KhataUnreal::HajmMufrit {
+            haql,
+            qeema: adad,
+            saqf: AQSA_TUL_NASS,
+        });
     }
     Ok(())
 }

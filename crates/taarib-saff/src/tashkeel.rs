@@ -172,7 +172,10 @@ fn ihdhif_alamat(nass: &str) -> Cow<'_, str> {
     // Find the first mark before allocating anything. Scanning twice over text
     // that has no marks is cheaper than allocating once over text that does
     // not need it, and the second scan never happens for the common case.
-    let Some(awwal) = nass.char_indices().find(|(_, harf)| alama(*harf)).map(|(mawqi, _)| mawqi)
+    let Some(awwal) = nass
+        .char_indices()
+        .find(|(_, harf)| alama(*harf))
+        .map(|(mawqi, _)| mawqi)
     else {
         return Cow::Borrowed(nass);
     };
@@ -274,7 +277,10 @@ pub fn aadil_alamat(maqta: &mut MaqtaMashkul) -> Natija<()> {
 ///
 /// As [`aadil_alamat`].
 pub fn aadil_alamat_mufassal(maqta: &mut MaqtaMashkul) -> Natija<TaqreerAlamat> {
-    let mut taqreer = TaqreerAlamat { khatt: maqta.asl.khatt, ..TaqreerAlamat::default() };
+    let mut taqreer = TaqreerAlamat {
+        khatt: maqta.asl.khatt,
+        ..TaqreerAlamat::default()
+    };
     let tul = maqta.asl.tul();
     let kitaba = maqta.asl.kitaba.0;
 
@@ -284,7 +290,11 @@ pub fn aadil_alamat_mufassal(maqta: &mut MaqtaMashkul) -> Natija<TaqreerAlamat> 
             || !harf.taqaddum_s.is_finite()
             || !harf.taqaddum_a.is_finite()
         {
-            return Err(KhataSaff::TashkeelFashil { tul, script: kitaba }.into());
+            return Err(KhataSaff::TashkeelFashil {
+                tul,
+                script: kitaba,
+            }
+            .into());
         }
         if !harf.alama {
             continue;
@@ -412,22 +422,26 @@ fn rattib_wa_uddd(huruf: &mut [HarfMashkul]) -> u32 {
     let tul = huruf.len();
 
     while bidaya < tul {
-        let Some(awwal) = huruf.get(bidaya) else { break };
+        let Some(awwal) = huruf.get(bidaya) else {
+            break;
+        };
         if !awwal.alama {
             bidaya = bidaya.saturating_add(1);
             continue;
         }
         let anqud = awwal.anqud;
         let mut nihaya = bidaya.saturating_add(1);
-        while huruf.get(nihaya).is_some_and(|harf| harf.alama && harf.anqud == anqud) {
+        while huruf
+            .get(nihaya)
+            .is_some_and(|harf| harf.alama && harf.anqud == anqud)
+        {
             nihaya = nihaya.saturating_add(1);
         }
 
         if nihaya.saturating_sub(bidaya) > 1
             && let Some(shariha) = huruf.get_mut(bidaya..nihaya)
         {
-            if !shariha
-                .is_sorted_by(|sabiq, lahiq| rutbat_alama(sabiq, lahiq) != Ordering::Greater)
+            if !shariha.is_sorted_by(|sabiq, lahiq| rutbat_alama(sabiq, lahiq) != Ordering::Greater)
             {
                 muaad = muaad.saturating_add(1);
             }

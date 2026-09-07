@@ -263,12 +263,7 @@ pub trait Musaddir: Send + Sync {
     ///
     /// As [`Musaddir::sajjil_farai`], plus [`KhataUnreal::KhattMarfud`] when the
     /// style name is not one this game's style set defines.
-    fn atbiq_murakkab(
-        &self,
-        uslub: &str,
-        asasi: &str,
-        farai: &[&str],
-    ) -> Result<(), KhataUnreal> {
+    fn atbiq_murakkab(&self, uslub: &str, asasi: &str, farai: &[&str]) -> Result<(), KhataUnreal> {
         let _ = (uslub, asasi, farai);
         Err(KhataUnreal::SlateGhayrMawjud {
             sabab: "this Slate binding does not reach the font system".to_owned(),
@@ -352,7 +347,11 @@ impl SijillTashghil {
         if muakkada && self.nafidha.is_none() {
             self.nafidha = Some(rutba);
         }
-        self.rutab.push(NatijatRutba { rutba, muakkada, mulahaza: mulahaza.into() });
+        self.rutab.push(NatijatRutba {
+            rutba,
+            muakkada,
+            mulahaza: mulahaza.into(),
+        });
     }
 
     /// Whether any rung was confirmed.
@@ -377,7 +376,12 @@ impl SijillTashghil {
             .iter()
             .map(|natija| {
                 let rutba = natija.rutba;
-                format!("rung {} ({}): {}", rutba.raqm(), rutba.ism(), natija.mulahaza)
+                format!(
+                    "rung {} ({}): {}",
+                    rutba.raqm(),
+                    rutba.ism(),
+                    natija.mulahaza
+                )
             })
             .collect::<Vec<_>>()
             .join("; ")
@@ -401,7 +405,10 @@ impl MadkhalIni {
     /// Builds an entry.
     #[must_use]
     pub fn jadeed(miftah: impl Into<String>, qeema: impl Into<String>) -> Self {
-        Self { miftah: miftah.into(), qeema: qeema.into() }
+        Self {
+            miftah: miftah.into(),
+            qeema: qeema.into(),
+        }
     }
 
     /// The line as it is written.
@@ -460,8 +467,11 @@ impl MalafIni {
             Ok(bayt) => bayt,
             Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => Vec::new(),
             Err(sabab) => {
-                return Err(KhataUnreal::KhataMalaf { masar: masar.to_path_buf(), sabab });
-            }
+                return Err(KhataUnreal::KhataMalaf {
+                    masar: masar.to_path_buf(),
+                    sabab,
+                });
+            },
         };
 
         let tul = tul_u64(bayt.len());
@@ -483,7 +493,11 @@ impl MalafIni {
         }
 
         let bom = bayt.first_chunk::<3>() == Some(&[0xEF, 0xBB, 0xBF]);
-        let jism = if bom { bayt.get(3..).unwrap_or(&[]) } else { bayt.as_slice() };
+        let jism = if bom {
+            bayt.get(3..).unwrap_or(&[])
+        } else {
+            bayt.as_slice()
+        };
         let nass = core::str::from_utf8(jism).map_err(|khata| KhataUnreal::IdadatMarfuda {
             masar: masar.to_path_buf(),
             sabab: format!("not valid UTF-8 at byte {}", khata.valid_up_to()),
@@ -491,8 +505,10 @@ impl MalafIni {
 
         let crlf = nass.contains("\r\n");
         let nihaya = nass.ends_with('\n');
-        let mut satur: Vec<String> =
-            nass.split('\n').map(|satr| satr.trim_end_matches('\r').to_owned()).collect();
+        let mut satur: Vec<String> = nass
+            .split('\n')
+            .map(|satr| satr.trim_end_matches('\r').to_owned())
+            .collect();
         if nihaya {
             let _ = satur.pop();
         }
@@ -500,7 +516,12 @@ impl MalafIni {
             satur.clear();
         }
 
-        Ok(Self { satur, bom, crlf, nihaya })
+        Ok(Self {
+            satur,
+            bom,
+            crlf,
+            nihaya,
+        })
     }
 
     /// The lines, as they stand.
@@ -589,16 +610,19 @@ impl MalafIni {
         let mahfuza = self.kutla_qaima(qism, madakhil);
         self.tarajua_qism(Some(qism));
 
-        let (bidayat_qism, nihayat_qism) =
-            self.hudud(qism).unwrap_or_else(|| self.adif_qism(qism));
+        let (bidayat_qism, nihayat_qism) = self.hudud(qism).unwrap_or_else(|| self.adif_qism(qism));
 
         // Displace only scalar keys, and only inside this section. An existing
         // `+Key=` line is one value of a list and commenting it out would drop
         // it; a scalar left in place would win over Taarib's line, because
         // Unreal's config reader answers a lookup with the first match.
         for fahras in bidayat_qism..nihayat_qism {
-            let Some(satr) = self.satur.get(fahras) else { continue };
-            let Some(miftah) = miftah_satr(satr) else { continue };
+            let Some(satr) = self.satur.get(fahras) else {
+                continue;
+            };
+            let Some(miftah) = miftah_satr(satr) else {
+                continue;
+            };
             let mudakhal = madakhil
                 .iter()
                 .any(|madkhal| !madkhal.jamii() && madkhal.miftah.eq_ignore_ascii_case(miftah));
@@ -676,7 +700,9 @@ impl MalafIni {
     /// second run of either still replaces its own lines rather than
     /// accumulating them.
     fn kutla_qaima(&self, qism: &str, madakhil: &[MadkhalIni]) -> Vec<String> {
-        let Some((bidaya, nihaya)) = self.hudud(qism) else { return Vec::new() };
+        let Some((bidaya, nihaya)) = self.hudud(qism) else {
+            return Vec::new();
+        };
         let mut mahfuza = Vec::new();
         let mut dakhil = false;
         for satr in self.satur.get(bidaya..nihaya).unwrap_or(&[]) {
@@ -692,9 +718,12 @@ impl MalafIni {
             if !dakhil {
                 continue;
             }
-            let Some(miftah) = miftah_satr(satr) else { continue };
-            let mutalab =
-                madakhil.iter().any(|madkhal| madkhal.miftah.eq_ignore_ascii_case(miftah));
+            let Some(miftah) = miftah_satr(satr) else {
+                continue;
+            };
+            let mutalab = madakhil
+                .iter()
+                .any(|madkhal| madkhal.miftah.eq_ignore_ascii_case(miftah));
             if !mutalab {
                 mahfuza.push(mahdhuf.to_owned());
             }
@@ -709,11 +738,10 @@ impl MalafIni {
     /// `[SystemSettings]` to a file that spells it `[systemsettings]`, and the
     /// engine would read the first one.
     fn hudud(&self, qism: &str) -> Option<(usize, usize)> {
-        let bidaya = self
-            .satur
-            .iter()
-            .position(|satr| ism_qism(satr).is_some_and(|ism| ism.eq_ignore_ascii_case(qism)))?
-            + 1;
+        let bidaya =
+            self.satur.iter().position(|satr| {
+                ism_qism(satr).is_some_and(|ism| ism.eq_ignore_ascii_case(qism))
+            })? + 1;
         let nihaya = self
             .satur
             .iter()
@@ -725,7 +753,11 @@ impl MalafIni {
 
     /// Appends a section header at the end and returns its empty body range.
     fn adif_qism(&mut self, qism: &str) -> (usize, usize) {
-        if self.satur.last().is_some_and(|satr| !satr.trim().is_empty()) {
+        if self
+            .satur
+            .last()
+            .is_some_and(|satr| !satr.trim().is_empty())
+        {
             self.satur.push(String::new());
         }
         self.satur.push(format!("[{qism}]"));
@@ -738,7 +770,9 @@ impl MalafIni {
 /// The section a line opens, if it opens one.
 fn ism_qism(satr: &str) -> Option<&str> {
     let mahdhuf = satr.trim();
-    mahdhuf.strip_prefix('[').and_then(|baqi| baqi.strip_suffix(']'))
+    mahdhuf
+        .strip_prefix('[')
+        .and_then(|baqi| baqi.strip_suffix(']'))
 }
 
 /// The left-hand side of an assignment, ignoring comments and headers.
@@ -803,7 +837,11 @@ impl Tashghil {
     /// turning detection on costs nothing on a game whose text is Latin.
     #[must_use]
     pub fn jadeed(ini: impl Into<PathBuf>) -> Self {
-        Self { ini: ini.into(), shakl: true, ittijah: true }
+        Self {
+            ini: ini.into(),
+            shakl: true,
+            ittijah: true,
+        }
     }
 
     /// Turns the shaping correction off, for a patch that only needs detection.
@@ -980,11 +1018,11 @@ impl Tashghil {
                     format!("written into [{QISM_NIZAM}]; applies at the next launch"),
                 );
                 true
-            }
+            },
             Err(khata) => {
                 sijill.sajjil(Rutba::Idadat, false, khata.to_string());
                 false
-            }
+            },
         };
 
         let khiyarat = self.rutbat_satr();
@@ -1002,7 +1040,9 @@ impl Tashghil {
             if idadat_najahat {
                 return Ok(sijill);
             }
-            return Err(KhataUnreal::TashghilFashil { sabab: sijill.sabab() });
+            return Err(KhataUnreal::TashghilFashil {
+                sabab: sijill.sabab(),
+            });
         };
 
         // Verify before injecting. A game whose ini already took needs nothing
@@ -1017,11 +1057,11 @@ impl Tashghil {
                     "the process already reports full shaping; nothing was injected".to_owned(),
                 );
                 return Ok(sijill);
-            }
-            Ok(false) => {}
+            },
+            Ok(false) => {},
             Err(khata) => {
                 tracing::debug!(sabab = %khata, "the shaping state could not be read back");
-            }
+            },
         }
 
         match self.rutbat_haqn(musaddir) {
@@ -1036,14 +1076,16 @@ impl Tashghil {
                         "set in the live process but the read-back did not confirm it".to_owned()
                     },
                 );
-            }
+            },
             Err(khata) => sijill.sajjil(Rutba::Haqn, false, khata.to_string()),
         }
 
         if sijill.muakkad() || idadat_najahat {
             Ok(sijill)
         } else {
-            Err(KhataUnreal::TashghilFashil { sabab: sijill.sabab() })
+            Err(KhataUnreal::TashghilFashil {
+                sabab: sijill.sabab(),
+            })
         }
     }
 
@@ -1086,7 +1128,10 @@ impl Tawkeed {
     /// A console-variable assertion.
     #[must_use]
     pub fn mutaghayyir(miftah: impl Into<String>, qeema: impl Into<String>) -> Self {
-        Self::Mutaghayyir { miftah: miftah.into(), qeema: qeema.into() }
+        Self::Mutaghayyir {
+            miftah: miftah.into(),
+            qeema: qeema.into(),
+        }
     }
 
     /// A culture assertion.
@@ -1113,7 +1158,7 @@ impl Tawkeed {
         match self {
             Self::Mutaghayyir { miftah, qeema } => {
                 Ok(musaddir.iqra(miftah)?.trim() == qeema.as_str())
-            }
+            },
             Self::Thaqafa { wasm } => {
                 // `ar-SA` satisfies an assertion of `ar`: Unreal's fallback
                 // chain reaches the patch's resources from either, and a game
@@ -1121,9 +1166,8 @@ impl Tawkeed {
                 // asked. Re-asserting on that would fight the engine.
                 let hali = musaddir.thaqafa_haliya()?;
                 let asas = format!("{}-", wasm.to_ascii_lowercase());
-                Ok(hali.eq_ignore_ascii_case(wasm)
-                    || hali.to_ascii_lowercase().starts_with(&asas))
-            }
+                Ok(hali.eq_ignore_ascii_case(wasm) || hali.to_ascii_lowercase().starts_with(&asas))
+            },
         }
     }
 
@@ -1234,24 +1278,22 @@ impl HarisTashghil {
         let mut uid = false;
         for tawkeed in &self.tawkeedat {
             match tawkeed.muhaqqaq(musaddir) {
-                Ok(true) => {}
-                Ok(false) => {
-                    match tawkeed.akkid(musaddir) {
-                        Ok(()) => {
-                            uid = true;
-                            tracing::warn!(
-                                tawkeed = tawkeed.ism(),
-                                nabda = self.masruf,
-                                "the game reset a Taarib setting; it has been re-asserted"
-                            );
-                        }
-                        Err(khata) => tracing::warn!(
+                Ok(true) => {},
+                Ok(false) => match tawkeed.akkid(musaddir) {
+                    Ok(()) => {
+                        uid = true;
+                        tracing::warn!(
                             tawkeed = tawkeed.ism(),
-                            sabab = %khata,
-                            "the game reset a Taarib setting and it could not be re-asserted"
-                        ),
-                    }
-                }
+                            nabda = self.masruf,
+                            "the game reset a Taarib setting; it has been re-asserted"
+                        );
+                    },
+                    Err(khata) => tracing::warn!(
+                        tawkeed = tawkeed.ism(),
+                        sabab = %khata,
+                        "the game reset a Taarib setting and it could not be re-asserted"
+                    ),
+                },
                 Err(khata) => tracing::debug!(
                     tawkeed = tawkeed.ism(),
                     sabab = %khata,
@@ -1281,7 +1323,7 @@ impl HarisTashghil {
             match self.nabd(musaddir) {
                 NabdHaris::Intaha => break,
                 NabdHaris::Uid => marrat = marrat.saturating_add(1),
-                NabdHaris::Salim => {}
+                NabdHaris::Salim => {},
             }
         }
         tracing::info!(

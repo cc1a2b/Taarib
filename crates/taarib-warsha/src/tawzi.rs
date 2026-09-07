@@ -88,7 +88,9 @@ impl Tawzi {
 
     /// Every assignment, in identity order.
     pub fn kull(&self) -> impl Iterator<Item = (NassId, &MusahimId)> {
-        self.takleefat.iter().map(|(nass, musahim)| (*nass, musahim))
+        self.takleefat
+            .iter()
+            .map(|(nass, musahim)| (*nass, musahim))
     }
 
     /// The listed strings that carry no assignment, in the order given.
@@ -138,17 +140,17 @@ pub fn damj_tawzi(ana: &Tawzi, hum: &Tawzi) -> (Tawzi, Vec<IkhtilafTawzi>) {
         match hum.takleefat.get(nass) {
             Some(mukallaf_hum) if mukallaf_hum == mukallaf_ana => {
                 let _ = madmuj.takleefat.insert(*nass, mukallaf_ana.clone());
-            }
+            },
             Some(mukallaf_hum) => {
                 ikhtilafat.push(IkhtilafTawzi {
                     nass: *nass,
                     ana: mukallaf_ana.clone(),
                     hum: mukallaf_hum.clone(),
                 });
-            }
+            },
             None => {
                 let _ = madmuj.takleefat.insert(*nass, mukallaf_ana.clone());
-            }
+            },
         }
     }
     for (nass, mukallaf_hum) in &hum.takleefat {
@@ -178,7 +180,12 @@ impl Qufl {
     /// A lock claimed at a caller-supplied instant.
     #[must_use]
     pub const fn jadeed(nass: NassId, hamil: MusahimId, waqt: String, lahza: u64) -> Self {
-        Self { nass, hamil, waqt, lahza }
+        Self {
+            nass,
+            hamil,
+            waqt,
+            lahza,
+        }
     }
 
     /// Whether the lock has outlived [`MUDDAT_QUFL`] at the given instant.
@@ -288,13 +295,18 @@ impl AqfalMashru {
     /// The unexpired locks on one string at the given instant.
     #[must_use]
     pub fn faal(&self, nass: NassId, alaan: u64) -> Vec<&Qufl> {
-        self.ala(nass).iter().filter(|qufl| !qufl.muntahi(alaan)).collect()
+        self.ala(nass)
+            .iter()
+            .filter(|qufl| !qufl.muntahi(alaan))
+            .collect()
     }
 
     /// Whether anyone other than `hamil` holds an unexpired lock on a string.
     #[must_use]
     pub fn mahjuz_ala(&self, nass: NassId, hamil: &MusahimId, alaan: u64) -> bool {
-        self.faal(nass, alaan).iter().any(|qufl| qufl.hamil != *hamil)
+        self.faal(nass, alaan)
+            .iter()
+            .any(|qufl| qufl.hamil != *hamil)
     }
 
     /// Every lock one contributor holds, in string-identity order.

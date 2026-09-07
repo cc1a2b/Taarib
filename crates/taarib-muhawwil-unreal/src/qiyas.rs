@@ -302,11 +302,11 @@ impl HadafKhatf {
                 "no separate in-world measurement entry point was supplied, which is the \
                  usual case: UTextRenderComponent and Slate-in-3D go through the shared \
                  measure hook and are already corrected by it"
-            }
+            },
             _ => {
                 "no address was supplied for this engine version, so this one correction \
                  does not run and the others do"
-            }
+            },
         }
     }
 }
@@ -337,11 +337,7 @@ pub const fn sahih_ittijah(muallan: u8, asas_yameen: bool) -> u8 {
 /// unchanged, and so is any value outside the enumeration — a number Slate
 /// never produced is a number this module has no business reinterpreting.
 #[must_use]
-pub const fn sahih_muhadhaha(
-    muallan: u8,
-    asas_yameen: bool,
-    siyasa: SiyasatMuhadhaha,
-) -> u8 {
+pub const fn sahih_muhadhaha(muallan: u8, asas_yameen: bool, siyasa: SiyasatMuhadhaha) -> u8 {
     if !asas_yameen {
         return muallan;
     }
@@ -369,7 +365,11 @@ pub fn sahih_ard(slate: f32, taarib: f32, tafawut: f32) -> f32 {
     if !taarib.is_finite() {
         return slate;
     }
-    if taarib > slate + tafawut.max(0.0) { taarib } else { slate }
+    if taarib > slate + tafawut.max(0.0) {
+        taarib
+    } else {
+        slate
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -512,9 +512,7 @@ unsafe extern "C" fn khatf_laff_mufrad(
     // detour replaced, and `nass` is read only for the `[bidaya, nihaya)` range
     // Slate itself is about to read. The contract is restated on
     // `qis_wa_sahhih_mufrad`.
-    unsafe {
-        qis_wa_sahhih_mufrad(&ASL_LAFF_MUFRAD, hadha, nass, bidaya, nihaya, khatt, miqyas)
-    }
+    unsafe { qis_wa_sahhih_mufrad(&ASL_LAFF_MUFRAD, hadha, nass, bidaya, nihaya, khatt, miqyas) }
 }
 
 /// The double-precision measurement detour for menu text.
@@ -527,9 +525,7 @@ unsafe extern "C" fn khatf_laff_mudaaf(
     miqyas: f32,
 ) -> Muttajih2D {
     // SAFETY: as `khatf_laff_mufrad`.
-    unsafe {
-        qis_wa_sahhih_mudaaf(&ASL_LAFF_MUDAAF, hadha, nass, bidaya, nihaya, khatt, miqyas)
-    }
+    unsafe { qis_wa_sahhih_mudaaf(&ASL_LAFF_MUDAAF, hadha, nass, bidaya, nihaya, khatt, miqyas) }
 }
 
 /// The single-precision measurement detour for in-world text.
@@ -545,7 +541,15 @@ unsafe extern "C" fn khatf_mujassam_mufrad(
     // correction is identical; only the trampoline slot differs, because the
     // two entry points are two addresses.
     unsafe {
-        qis_wa_sahhih_mufrad(&ASL_MUJASSAM_MUFRAD, hadha, nass, bidaya, nihaya, khatt, miqyas)
+        qis_wa_sahhih_mufrad(
+            &ASL_MUJASSAM_MUFRAD,
+            hadha,
+            nass,
+            bidaya,
+            nihaya,
+            khatt,
+            miqyas,
+        )
     }
 }
 
@@ -560,7 +564,15 @@ unsafe extern "C" fn khatf_mujassam_mudaaf(
 ) -> Muttajih2D {
     // SAFETY: as `khatf_laff_mudaaf`.
     unsafe {
-        qis_wa_sahhih_mudaaf(&ASL_MUJASSAM_MUDAAF, hadha, nass, bidaya, nihaya, khatt, miqyas)
+        qis_wa_sahhih_mudaaf(
+            &ASL_MUJASSAM_MUDAAF,
+            hadha,
+            nass,
+            bidaya,
+            nihaya,
+            khatt,
+            miqyas,
+        )
     }
 }
 
@@ -602,7 +614,10 @@ unsafe fn qis_wa_sahhih_mufrad(
     let Some(taarib) = qis_bi_jisr(&hala, &nass, miqyas) else {
         return asli;
     };
-    Muttajih2F { s: sahih_ard(asli.s, taarib, hala.tafawut_laff), a: asli.a }
+    Muttajih2F {
+        s: sahih_ard(asli.s, taarib, hala.tafawut_laff),
+        a: asli.a,
+    }
 }
 
 /// The double-precision counterpart of [`qis_wa_sahhih_mufrad`].
@@ -853,13 +868,18 @@ impl KhatfQiyas {
         // whose address is valid for the life of the loaded library. `retour`
         // decodes the prologue rather than assuming it, so an unrelocatable
         // prologue is the error below and not a corrupted instruction boundary.
-        let detour = unsafe { RawDetour::new(unwan.muashir().cast(), khatf.cast()) }
-            .map_err(|khata| KhataUnreal::KhatfFashil {
-                hadaf: hadaf.ism(),
-                tafsil: khata.to_string(),
+        let detour =
+            unsafe { RawDetour::new(unwan.muashir().cast(), khatf.cast()) }.map_err(|khata| {
+                KhataUnreal::KhatfFashil {
+                    hadaf: hadaf.ism(),
+                    tafsil: khata.to_string(),
+                }
             })?;
 
-        asl.store(core::ptr::from_ref(detour.trampoline()).expose_provenance(), Ordering::Release);
+        asl.store(
+            core::ptr::from_ref(detour.trampoline()).expose_provenance(),
+            Ordering::Release,
+        );
 
         // SAFETY: the detour was constructed for this exact target and its
         // trampoline is published, so a call arriving the instant this returns
@@ -867,10 +887,19 @@ impl KhatfQiyas {
         // prologue `retour` measured.
         unsafe { detour.enable() }.map_err(|khata| {
             asl.store(0, Ordering::Release);
-            KhataUnreal::KhatfFashil { hadaf: hadaf.ism(), tafsil: khata.to_string() }
+            KhataUnreal::KhatfFashil {
+                hadaf: hadaf.ism(),
+                tafsil: khata.to_string(),
+            }
         })?;
 
-        Ok(Self { hadaf, unwan, laqta, khatf: detour, mufaal: true })
+        Ok(Self {
+            hadaf,
+            unwan,
+            laqta,
+            khatf: detour,
+            mufaal: true,
+        })
     }
 
     /// Removes the detour and checks that the target's bytes came back.
@@ -930,11 +959,7 @@ const unsafe fn iqra_laqta(unwan: Unwan) -> [u8; TUL_LAQTA] {
     // one is a stack local of this frame and the other is a foreign module's
     // executable section.
     unsafe {
-        core::ptr::copy_nonoverlapping(
-            unwan.muashir().cast::<u8>(),
-            laqta.as_mut_ptr(),
-            TUL_LAQTA,
-        );
+        core::ptr::copy_nonoverlapping(unwan.muashir().cast::<u8>(), laqta.as_mut_ptr(), TUL_LAQTA);
     }
     laqta
 }
@@ -1021,7 +1046,12 @@ impl TasheehQiyas {
         let dalla_mujassam_mufrad: DallaQiyasMufrad = khatf_mujassam_mufrad;
         let dalla_mujassam_mudaaf: DallaQiyasMudaaf = khatf_mujassam_mudaaf;
 
-        daa(HadafKhatf::Ittijah, ahdaf.ittijah, dalla_ittijah as *const c_void, &ASL_ITTIJAH);
+        daa(
+            HadafKhatf::Ittijah,
+            ahdaf.ittijah,
+            dalla_ittijah as *const c_void,
+            &ASL_ITTIJAH,
+        );
         daa(
             HadafKhatf::Muhadhaha,
             ahdaf.muhadhaha,
@@ -1042,7 +1072,7 @@ impl TasheehQiyas {
                     dalla_mujassam_mufrad as *const c_void,
                     &ASL_MUJASSAM_MUFRAD,
                 );
-            }
+            },
             DiqqatMuttajih::Mudaafa => {
                 daa(
                     HadafKhatf::Laff,
@@ -1056,7 +1086,7 @@ impl TasheehQiyas {
                     dalla_mujassam_mudaaf as *const c_void,
                     &ASL_MUJASSAM_MUDAAF,
                 );
-            }
+            },
         }
 
         for tanbeeh in &tanbeehat {
@@ -1070,7 +1100,11 @@ impl TasheehQiyas {
             );
         }
 
-        Self { khutuf, tanbeehat, diqqa }
+        Self {
+            khutuf,
+            tanbeehat,
+            diqqa,
+        }
     }
 
     /// How many corrections are installed.
@@ -1126,7 +1160,7 @@ impl TasheehQiyas {
                 Err(khata) => {
                     tracing::warn!(khata = %khata, "a Slate correction did not come out cleanly");
                     tanbeehat.push(khata);
-                }
+                },
             }
         }
         tanbeehat

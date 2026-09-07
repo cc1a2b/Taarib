@@ -66,7 +66,11 @@ impl Mustaqarr {
             sabab,
         })?;
         farrigh(jidhr)?;
-        Ok(Self { jidhr: jidhr.to_path_buf(), milaffat: Vec::new(), naqis: Vec::new() })
+        Ok(Self {
+            jidhr: jidhr.to_path_buf(),
+            milaffat: Vec::new(),
+            naqis: Vec::new(),
+        })
     }
 
     /// Records a refusal and keeps going.
@@ -211,7 +215,8 @@ impl Mustaqarr {
     ///
     /// [`KhataTajmee::KhataMalaf`] when the manifest cannot be written.
     pub(crate) fn akhtim(mut self, isdar: &str, hadaf: &str) -> NatijatTajmee<BayanMukawwinat> {
-        self.milaffat.sort_by(|awwal, thani| awwal.masar.cmp(&thani.masar));
+        self.milaffat
+            .sort_by(|awwal, thani| awwal.masar.cmp(&thani.masar));
         let bayan = BayanMukawwinat {
             mukhattat: 1,
             isdar: isdar.to_owned(),
@@ -219,7 +224,9 @@ impl Mustaqarr {
             milaffat: self.milaffat,
         };
         let nass = serde_json::to_string_pretty(&bayan).unwrap_or_default();
-        let masar = self.jidhr.join(taarib_tathbeet::bayan_makhzan::ISM_MALAF_BAYAN);
+        let masar = self
+            .jidhr
+            .join(taarib_tathbeet::bayan_makhzan::ISM_MALAF_BAYAN);
         std::fs::write(&masar, nass).map_err(|sabab| KhataTajmee::KhataMalaf {
             masar,
             amal: "writing the staging manifest",
@@ -265,11 +272,13 @@ fn farrigh(jidhr: &Path) -> NatijatTajmee<()> {
             continue;
         }
         let masar = madkhal.path();
-        let naw = madkhal.file_type().map_err(|sabab| KhataTajmee::KhataMalaf {
-            masar: masar.clone(),
-            amal: "reading the previous staging tree",
-            sabab,
-        })?;
+        let naw = madkhal
+            .file_type()
+            .map_err(|sabab| KhataTajmee::KhataMalaf {
+                masar: masar.clone(),
+                amal: "reading the previous staging tree",
+                sabab,
+            })?;
         // `masar` is one direct child of the staging tree, taken from `read_dir`
         // on a path this build tool was given as `--kharij`. It is never derived
         // from a data root: `taarib-tajmee` is a build-machine tool and has no
@@ -323,8 +332,9 @@ fn walk(jidhr: &Path) -> NatijatTajmee<Vec<PathBuf>> {
 /// Lowercase hex of a digest.
 pub(crate) fn hex_min_bayt(bayt: &[u8]) -> String {
     use std::fmt::Write as _;
-    bayt.iter().fold(String::with_capacity(bayt.len() * 2), |mut nass, bayta| {
-        let _ = write!(nass, "{bayta:02x}");
-        nass
-    })
+    bayt.iter()
+        .fold(String::with_capacity(bayt.len() * 2), |mut nass, bayta| {
+            let _ = write!(nass, "{bayta:02x}");
+            nass
+        })
 }

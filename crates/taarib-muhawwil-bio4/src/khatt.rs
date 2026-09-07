@@ -128,7 +128,11 @@ impl KhattBio4 {
     pub fn min_bayt(bayt: &[u8]) -> Result<Self, KhataBio4> {
         let tul = tul_u64(bayt.len());
         if tul > AQSA_MALAF {
-            return Err(KhataBio4::HajmMufrit { haql: ".fnt", qeema: tul, saqf: AQSA_MALAF });
+            return Err(KhataBio4::HajmMufrit {
+                haql: ".fnt",
+                qeema: tul,
+                saqf: AQSA_MALAF,
+            });
         }
         let mawdi_tibl = iqra_kalima(bayt, 0, ".fnt TPL offset")?;
         let mawdi_qiyasat = iqra_kalima(bayt, 4, ".fnt metrics offset")?;
@@ -160,12 +164,14 @@ impl KhattBio4 {
         let bidaya_qiyasat = usize::try_from(mawdi_qiyasat).unwrap_or(usize::MAX);
 
         let muqaddima = bayt.get(8..bidaya_tibl).unwrap_or(&[]).to_vec();
-        let kutla = bayt.get(bidaya_tibl..bidaya_qiyasat).ok_or_else(|| KhataBio4::MalafQaseer {
-            haql: ".fnt TPL block",
-            mawqi: u64::from(mawdi_tibl),
-            tul,
-            matlub: u64::from(mawdi_qiyasat),
-        })?;
+        let kutla =
+            bayt.get(bidaya_tibl..bidaya_qiyasat)
+                .ok_or_else(|| KhataBio4::MalafQaseer {
+                    haql: ".fnt TPL block",
+                    mawqi: u64::from(mawdi_tibl),
+                    tul,
+                    matlub: u64::from(mawdi_qiyasat),
+                })?;
         let tibl = Tibl::min_bayt(kutla, TarteebBayt::Saghir)?;
 
         let khaam = bayt.get(bidaya_qiyasat..).unwrap_or(&[]);
@@ -192,7 +198,13 @@ impl KhattBio4 {
             })
             .collect();
 
-        Ok(Self { mawdi_tibl, mawdi_qiyasat, muqaddima, tibl, madakhil })
+        Ok(Self {
+            mawdi_tibl,
+            mawdi_qiyasat,
+            muqaddima,
+            tibl,
+            madakhil,
+        })
     }
 
     /// Serialises the `.fnt` back to bytes.
@@ -236,7 +248,9 @@ impl KhattBio4 {
     /// structurally valid file — and every consumer here refuses.
     #[must_use]
     pub fn hajm_khana(&self) -> Option<u32> {
-        self.madakhil.first().map(|madkhal| u32::from(madkhal.yasar))
+        self.madakhil
+            .first()
+            .map(|madkhal| u32::from(madkhal.yasar))
     }
 
     /// The grid this font describes, checked against the TPL's own dimensions.
@@ -248,11 +262,14 @@ impl KhattBio4 {
     /// height check that is the whole point of deriving the grid rather than
     /// trusting it.
     pub fn shabaka(&self) -> Result<Shabaka, KhataBio4> {
-        let sura = self.tibl.sura_wahida().ok_or_else(|| KhataBio4::BunyaGhayrMutawaqqaa {
-            haql: "TPL image count",
-            qeema: tul_u64(self.tibl.suwar.len()),
-            sabab: "a BIO4 font declares exactly one image",
-        })?;
+        let sura = self
+            .tibl
+            .sura_wahida()
+            .ok_or_else(|| KhataBio4::BunyaGhayrMutawaqqaa {
+                haql: "TPL image count",
+                qeema: tul_u64(self.tibl.suwar.len()),
+                sabab: "a BIO4 font declares exactly one image",
+            })?;
         let zawj: Vec<(u32, u32)> = self.madakhil.iter().map(|m| m.zawj()).collect();
         Shabaka::min_madakhil(&zawj, u32::from(sura.ard), u32::from(sura.irtifa))
     }
@@ -314,7 +331,10 @@ impl KhattBio4 {
         let tibl = Tibl {
             tarteeb: TarteebBayt::Saghir,
             mawdi_jadwal: 0x0C,
-            wasf: vec![WasfTibl { mawdi_sura: 0x20, mawdi_lawha: 0x14 }],
+            wasf: vec![WasfTibl {
+                mawdi_sura: 0x20,
+                mawdi_lawha: 0x14,
+            }],
             lawhat: vec![(
                 0x14,
                 TarwisLawha {
@@ -361,12 +381,14 @@ impl KhattBio4 {
 fn iqra_kalima(bayt: &[u8], mawqi: u32, haql: &'static str) -> Result<u32, KhataBio4> {
     let bidaya = usize::try_from(mawqi).unwrap_or(usize::MAX);
     let nihaya = bidaya.saturating_add(4);
-    let qita = bayt.get(bidaya..nihaya).ok_or_else(|| KhataBio4::MalafQaseer {
-        haql,
-        mawqi: u64::from(mawqi),
-        tul: tul_u64(bayt.len()),
-        matlub: u64::from(mawqi).saturating_add(4),
-    })?;
+    let qita = bayt
+        .get(bidaya..nihaya)
+        .ok_or_else(|| KhataBio4::MalafQaseer {
+            haql,
+            mawqi: u64::from(mawqi),
+            tul: tul_u64(bayt.len()),
+            matlub: u64::from(mawqi).saturating_add(4),
+        })?;
     let mut kalima = [0u8; 4];
     kalima.copy_from_slice(qita);
     Ok(u32::from_le_bytes(kalima))

@@ -330,39 +330,38 @@ impl Tafsir for KhataTarjama {
             ),
             Self::RamzMaqlub { .. } => {
                 "عاد أحد نطاقات التنسيق مقلوبًا، وتُركت العبارة بلا ترجمة.".to_owned()
-            }
+            },
             Self::RamzTalif { .. } => {
                 "عاد أحد العناصر المحفوظة تالفًا، وتُركت العبارة بلا ترجمة.".to_owned()
-            }
+            },
             Self::RumuzKathira { .. } => {
                 "تحتوي هذه العبارة على وسوم أكثر مما يمكن حمايته بأمان، ولم تُرسل للترجمة."
                     .to_owned()
-            }
+            },
             Self::NitaqKharij { .. } => {
-                "لا يتطابق أحد نطاقات التنسيق مع نص العبارة، ويبدو أن الاستخراج غير سليم."
-                    .to_owned()
-            }
+                "لا يتطابق أحد نطاقات التنسيق مع نص العبارة، ويبدو أن الاستخراج غير سليم.".to_owned()
+            },
             Self::MudkhalMarfud { muzawwid, .. } => {
                 format!("رفضت خدمة ({muzawwid}) هذه العبارة.")
-            }
-            Self::RaddGhayrMufassal { muzawwid, .. } => format!(
-                "أعادت خدمة ({muzawwid}) ردًّا ليس بالصيغة المطلوبة، ولم يُقرأ."
-            ),
+            },
+            Self::RaddGhayrMufassal { muzawwid, .. } => {
+                format!("أعادت خدمة ({muzawwid}) ردًّا ليس بالصيغة المطلوبة، ولم يُقرأ.")
+            },
             Self::MuzawwidGhayrMutah { muzawwid, .. } => {
                 format!("تعذّر الوصول إلى خدمة ({muzawwid}).")
-            }
+            },
             Self::BilaItimad { muzawwid } => format!(
                 "لم تُدخل بعدُ مفتاح خدمة ({muzawwid}). لا يتصل تعريب بأي خدمة مدفوعة قبل \
                  إدخالك المفتاح وتأكيدك."
             ),
             Self::HaddMuadal { muzawwid, .. } => {
                 format!("تجاوزت الطلبات حدّ خدمة ({muzawwid})، ولم تنفع إعادة المحاولة.")
-            }
+            },
             Self::SaqfTakalif { .. } => {
                 "بلغت الجولة سقف التكلفة الذي حدّدته وتوقّفت عنده. ما تُرجم محفوظ، ويمكن \
                  المتابعة برفع السقف."
                     .to_owned()
-            }
+            },
             Self::MasradTalif { .. } => "تعذّرت قراءة ملف المسرد.".to_owned(),
             Self::DhakiraMughlaqa { .. } => "تعذّر فتح ذاكرة الترجمة.".to_owned(),
             Self::KhataMalaf { .. } => "تعذّرت الكتابة في ملفات المشروع.".to_owned(),
@@ -399,7 +398,7 @@ impl Tafsir for KhataTarjama {
             Self::MasradTalif { masar, .. } | Self::DhakiraMughlaqa { masar, .. } => {
                 let _ = masar;
                 Khutwa::IblaghLilMusahim
-            }
+            },
             Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladManassa),
         }
     }
@@ -423,51 +422,51 @@ impl Tafsir for KhataTarjama {
             Self::RamzMafqud { ramz, radd } | Self::RamzDakhil { ramz, radd } => {
                 daa("ramz", QeemaSiyaq::Nass(ramz.clone()));
                 daa("radd", QeemaSiyaq::Nass(radd.clone()));
-            }
+            },
             Self::RamzMukarrar { ramz, adad } => {
                 daa("ramz", QeemaSiyaq::Nass(ramz.clone()));
                 daa("adad", QeemaSiyaq::Hajm(tul_u64(*adad)));
-            }
+            },
             Self::RamzMaqlub { fahras } => daa("fahras", QeemaSiyaq::Hajm(tul_u64(*fahras))),
             Self::RamzTalif { juz, sabab } => {
                 daa("juz", QeemaSiyaq::Nass(juz.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::RumuzKathira { adad, saqf } => {
                 daa("adad", QeemaSiyaq::Hajm(tul_u64(*adad)));
                 daa("saqf", QeemaSiyaq::Hajm(tul_u64(*saqf)));
-            }
+            },
             Self::NitaqKharij { bidaya, tul, madaa } => {
                 daa("bidaya", QeemaSiyaq::Hajm(u64::from(*bidaya)));
                 daa("tul", QeemaSiyaq::Hajm(u64::from(*tul)));
                 daa("madaa", QeemaSiyaq::Hajm(u64::from(*madaa)));
-            }
+            },
             Self::MudkhalMarfud { muzawwid, sabab }
             | Self::MuzawwidGhayrMutah { muzawwid, sabab } => {
                 daa("muzawwid", QeemaSiyaq::Nass(muzawwid.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::RaddGhayrMufassal { muzawwid, radd } => {
                 daa("muzawwid", QeemaSiyaq::Nass(muzawwid.clone()));
                 daa("radd", QeemaSiyaq::Nass(radd.clone()));
-            }
+            },
             Self::BilaItimad { muzawwid } => daa("muzawwid", QeemaSiyaq::Nass(muzawwid.clone())),
             Self::HaddMuadal { muzawwid, thawani } => {
                 daa("muzawwid", QeemaSiyaq::Nass(muzawwid.clone()));
                 if let Some(thawani) = thawani {
                     daa("thawani", QeemaSiyaq::Hajm(*thawani));
                 }
-            }
+            },
             Self::SaqfTakalif { munfaq, saqf } => {
                 daa("munfaq", QeemaSiyaq::Hajm(*munfaq));
                 daa("saqf", QeemaSiyaq::Hajm(*saqf));
-            }
+            },
             Self::MasradTalif { masar, sabab } | Self::DhakiraMughlaqa { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             // Handled above.
-            Self::KhataMalaf { .. } => {}
+            Self::KhataMalaf { .. } => {},
         }
         siyaq
     }

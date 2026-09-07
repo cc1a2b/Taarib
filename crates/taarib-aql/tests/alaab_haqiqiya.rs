@@ -531,7 +531,9 @@ fn al_mash_alladhi_lam_yajri_yurfad() -> NatijatIkhtibar {
         "it stops a hand-installed patch too, not only the automatic run"
     );
     assert!(
-        mani.qeema.injilizi.contains("no anti-cheat scan has been run"),
+        mani.qeema
+            .injilizi
+            .contains("no anti-cheat scan has been run"),
         "the sentence names the real cause: {}",
         mani.qeema.injilizi
     );
@@ -570,7 +572,6 @@ fn sababa_lam_yajri_la_yatakarraran() {
         .filter(|mani| mani.qeema.naw == NawMani::FahsHimayaLamYajri)
         .count();
     assert_eq!(adad, 1, "one cause reaches the screen, not both");
-
 }
 
 /// No provider configured blocks the automatic run and nothing else.
@@ -644,7 +645,6 @@ fn muzawwid_ghayr_masul_anhu_laysa_maniyan() {
             .any(|mani| mani.qeema.naw == NawMani::LaMuzawwid),
         "and an unasked question produces no blocker"
     );
-
 }
 
 /// A multiplayer scan that could not finish asks for consent anyway.
@@ -789,7 +789,10 @@ fn mudkhal_laysa_luba_la_yanal_taqreeran() -> NatijatIkhtibar {
     );
 
     // Told what the launcher knows, the producer refuses on its own.
-    let mubulligh = taqreer_min(muharrik(AilatMuharrik::Majhul, 15, Vec::new()), &huwiya.simat);
+    let mubulligh = taqreer_min(
+        muharrik(AilatMuharrik::Majhul, 15, Vec::new()),
+        &huwiya.simat,
+    );
     assert!(
         mubulligh.marfuda,
         "a persisted report must not describe a tier over a folder of installers"

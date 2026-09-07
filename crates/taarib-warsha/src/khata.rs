@@ -153,34 +153,24 @@ impl Tafsir for KhataWarsha {
             Self::HuzmaTalifa { .. } => "ملف المشاركة غير مقروء بهذه النسخة.".to_owned(),
             Self::IsdarMajhul { .. } => {
                 "كُتب ملف المشاركة بنسخة أحدث من تعريب؛ حدِّث البرنامج.".to_owned()
-            }
-            Self::MashruMukhtalif => {
-                "الملفّان يخصّان مشروعين مختلفين، ولم يُدمجا.".to_owned()
-            }
+            },
+            Self::MashruMukhtalif => "الملفّان يخصّان مشروعين مختلفين، ولم يُدمجا.".to_owned(),
             Self::NizaatMuallaqa { adad } => {
                 format!("بقي {adad} تعارضًا بلا حسم، ولم يُختم الدمج قبل حسمها كلّها.")
-            }
-            Self::QararBilaNizaa => {
-                "أشار قرار حسم إلى عبارة ليست في تعارض.".to_owned()
-            }
-            Self::TabadulGhayrMutabiq { .. } => {
-                "لم يرجع ملف التبادل كما صُدِّر، ولم يُسلَّم.".to_owned()
-            }
+            },
+            Self::QararBilaNizaa => "أشار قرار حسم إلى عبارة ليست في تعارض.".to_owned(),
+            Self::TabadulGhayrMutabiq { .. } => "لم يرجع ملف التبادل كما صُدِّر، ولم يُسلَّم.".to_owned(),
             Self::TahdheeratMuallaqa { asma } => {
                 format!("بقي {} تنبيهًا لم تُقرّ به، ولم تُشارك الذاكرة.", asma.len())
-            }
+            },
             Self::IdhnGhayrMutabiq => {
                 "الإذن مُنح لمجموعة أسطر غير التي كانت ستُكتب، ولم تُشارك.".to_owned()
-            }
+            },
             Self::MusharakaFarigha => {
                 "لا توجد أسطر قابلة للمشاركة لهذه اللعبة، فلم يُكتب ملف.".to_owned()
-            }
-            Self::TawqeeGhayrSalih => {
-                "توقيع ملف الذاكرة لا يطابق المفتاح المتوقّع، ورُفض.".to_owned()
-            }
-            Self::LaTalaf => {
-                "كل أسطر ملف النصوص تُقرأ؛ لا شيء يُبقى جانبًا ولم يُكتب شيء.".to_owned()
-            }
+            },
+            Self::TawqeeGhayrSalih => "توقيع ملف الذاكرة لا يطابق المفتاح المتوقّع، ورُفض.".to_owned(),
+            Self::LaTalaf => "كل أسطر ملف النصوص تُقرأ؛ لا شيء يُبقى جانبًا ولم يُكتب شيء.".to_owned(),
             Self::InqadhGhayrMuthbat { masar } => format!(
                 "النسخة المحفوظة في {} لا تطابق الأصل بايتًا ببايت، فتُرك ملف النصوص كما هو.",
                 masar.display()
@@ -200,9 +190,9 @@ impl Tafsir for KhataWarsha {
             Self::NizaatMuallaqa { .. }
             | Self::TahdheeratMuallaqa { .. }
             | Self::MusharakaFarigha => Khutwa::FathNusus,
-            Self::TabadulGhayrMutabiq { .. }
-            | Self::QararBilaNizaa
-            | Self::IdhnGhayrMutabiq => Khutwa::IblaghLilMalik,
+            Self::TabadulGhayrMutabiq { .. } | Self::QararBilaNizaa | Self::IdhnGhayrMutabiq => {
+                Khutwa::IblaghLilMalik
+            },
             Self::LaTalaf => Khutwa::LaShay,
             Self::HuzmaTalifa { .. }
             | Self::MashruMukhtalif
@@ -231,27 +221,30 @@ impl Tafsir for KhataWarsha {
             | Self::IdhnGhayrMutabiq
             | Self::MusharakaFarigha
             | Self::TawqeeGhayrSalih
-            | Self::LaTalaf => {}
+            | Self::LaTalaf => {},
             Self::InqadhGhayrMuthbat { masar } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
             Self::TahdheeratMuallaqa { asma } => {
                 daa("tahdheerat", QeemaSiyaq::Nass(asma.join("; ")));
-            }
+            },
             Self::HuzmaTalifa { sabab } | Self::Mawrid { sabab } => {
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::IsdarMajhul { wujid, madum } => {
                 daa("wujid", QeemaSiyaq::Raqm(i64::from(*wujid)));
                 daa("madum", QeemaSiyaq::Raqm(i64::from(*madum)));
-            }
+            },
             Self::NizaatMuallaqa { adad } => {
-                daa("adad", QeemaSiyaq::Hajm(u64::try_from(*adad).unwrap_or(u64::MAX)));
-            }
+                daa(
+                    "adad",
+                    QeemaSiyaq::Hajm(u64::try_from(*adad).unwrap_or(u64::MAX)),
+                );
+            },
             Self::TabadulGhayrMutabiq { sigha, sabab } => {
                 daa("sigha", QeemaSiyaq::Nass((*sigha).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
         }
         siyaq
     }

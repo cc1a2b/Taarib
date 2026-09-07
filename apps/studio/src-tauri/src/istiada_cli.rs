@@ -192,8 +192,10 @@ fn ijma_mawaqi(
     let alaab = qaida.bil_qira(|ittisal| {
         let sijill = SijillAlaab::jadeed(ittisal);
         let mut kull = sijill.qaima(&TalabMaktaba::default())?;
-        let makhfiya =
-            sijill.qaima(&TalabMaktaba { mukhfiya: true, ..TalabMaktaba::default() })?;
+        let makhfiya = sijill.qaima(&TalabMaktaba {
+            mukhfiya: true,
+            ..TalabMaktaba::default()
+        })?;
         kull.extend(makhfiya);
         Ok(kull)
     })?;
@@ -208,8 +210,9 @@ fn ijma_mawaqi(
                 continue;
             },
         };
-        let yahmil =
-            NawTathbeet::KULL.into_iter().any(|naw| muthabbat(&luba.jidhr, &nusakh, naw));
+        let yahmil = NawTathbeet::KULL
+            .into_iter()
+            .any(|naw| muthabbat(&luba.jidhr, &nusakh, naw));
         if yahmil {
             mawaqi.push(MawqiTathbeet {
                 ism: luba.ism,
@@ -234,7 +237,9 @@ fn ijma_mawaqi(
 fn istaid_al_kul(mawaqi: &[MawqiTathbeet], musajjil: &mut Musajjil) -> TaqreerMaktaba {
     let majmu = mawaqi.len();
     let mut radd = RadLaShay;
-    let mut kulli = TaqreerMaktaba { alaab: Vec::with_capacity(majmu) };
+    let mut kulli = TaqreerMaktaba {
+        alaab: Vec::with_capacity(majmu),
+    };
 
     for (fihris, mawqi) in mawaqi.iter().enumerate() {
         musajjil.sattir(&format!(
@@ -354,7 +359,11 @@ fn jawab_min_mudkhal(musajjil: &mut Musajjil) -> bool {
         || jawab.eq_ignore_ascii_case("yes")
         || jawab == "نعم"
         || jawab == "ن";
-    musajjil.sattir(if naam { "الجواب: نعم — تبدأ الاستعادة الآن." } else { "الجواب: لا." });
+    musajjil.sattir(if naam {
+        "الجواب: نعم — تبدأ الاستعادة الآن."
+    } else {
+        "الجواب: لا."
+    });
     naam
 }
 
@@ -364,7 +373,11 @@ fn jawab_min_mudkhal(musajjil: &mut Musajjil) -> bool {
 /// A dialog that cannot be shown is not a failure of the flow: by the time
 /// this runs, the report has been printed and written twice.
 fn aarid_taqreer(sutur: &[String], najahat: bool) {
-    let mustawa = if najahat { MessageLevel::Info } else { MessageLevel::Warning };
+    let mustawa = if najahat {
+        MessageLevel::Info
+    } else {
+        MessageLevel::Warning
+    };
     let _ = MessageDialog::new()
         .set_level(mustawa)
         .set_title("تعريب — تقرير الاستعادة")
@@ -448,7 +461,11 @@ impl Musajjil {
     /// Opens the flow's log file, appending so an earlier interrupted run's
     /// record survives beside this one. Failure costs the file, not the flow.
     fn iftah_malaf(&mut self, masar: &Path) {
-        match std::fs::OpenOptions::new().create(true).append(true).open(masar) {
+        match std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(masar)
+        {
             Ok(malaf) => self.malaf = Some(malaf),
             Err(sabab) => self.sattir(&format!(
                 "تعذّر فتح ملف السجل {}؛ سيستمر العرض على سطر الأوامر وحده. ({sabab})",
@@ -464,14 +481,19 @@ impl Musajjil {
             let _ = writeln!(kharj, "{satr}");
             let _ = kharj.flush();
         }
-        let fashal =
-            self.malaf.as_mut().is_some_and(|malaf| writeln!(malaf, "{satr}").is_err());
+        let fashal = self
+            .malaf
+            .as_mut()
+            .is_some_and(|malaf| writeln!(malaf, "{satr}").is_err());
         if fashal {
             // Said once, then stdout carries on alone: repeating the warning
             // on every remaining line would bury the report it apologises for.
             self.malaf = None;
             let mut kharj = std::io::stdout().lock();
-            let _ = writeln!(kharj, "تعذّرت الكتابة إلى ملف السجل؛ سيستمر العرض على سطر الأوامر وحده.");
+            let _ = writeln!(
+                kharj,
+                "تعذّرت الكتابة إلى ملف السجل؛ سيستمر العرض على سطر الأوامر وحده."
+            );
         }
     }
 

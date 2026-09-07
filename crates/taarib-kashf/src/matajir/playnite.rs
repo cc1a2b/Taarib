@@ -121,8 +121,11 @@ const MUARRIF: &str = "playnite";
 /// Windows natively, Linux through Wine, and macOS only for a root the user
 /// nominates — there is no Playnite build for macOS and therefore no path worth
 /// probing there, but a data folder copied onto one still reads.
-const MANASSAT: [NizamTashghil; 3] =
-    [NizamTashghil::Windows, NizamTashghil::Linux, NizamTashghil::Mac];
+const MANASSAT: [NizamTashghil; 3] = [
+    NizamTashghil::Windows,
+    NizamTashghil::Linux,
+    NizamTashghil::Mac,
+];
 
 /// The directory holding the `LiteDB` files and the media tree.
 const MUJALLAD_MAKTABA: &str = "library";
@@ -314,17 +317,32 @@ struct JidhrPlaynite {
 impl JidhrPlaynite {
     /// A root the user nominated.
     const fn mudaf(masar: PathBuf) -> Self {
-        Self { masar, mahmul: false, mudaf: true, beea: None }
+        Self {
+            masar,
+            mahmul: false,
+            mudaf: true,
+            beea: None,
+        }
     }
 
     /// The installed-mode data directory.
     const fn muthabbat(masar: PathBuf) -> Self {
-        Self { masar, mahmul: false, mudaf: false, beea: None }
+        Self {
+            masar,
+            mahmul: false,
+            mudaf: false,
+            beea: None,
+        }
     }
 
     /// A conventional portable location.
     const fn mahmul(masar: PathBuf) -> Self {
-        Self { masar, mahmul: true, mudaf: false, beea: None }
+        Self {
+            masar,
+            mahmul: true,
+            mudaf: false,
+            beea: None,
+        }
     }
 }
 
@@ -368,8 +386,10 @@ impl Matjar for MatjarPlaynite {
         let bidaya = Instant::now();
 
         let murashahat = self.judhur_muhtamala(siyaq);
-        let Some(jidhr) =
-            murashahat.iter().find(|murashah| huwa_jidhr_bayanat(&murashah.masar)).cloned()
+        let Some(jidhr) = murashahat
+            .iter()
+            .find(|murashah| huwa_jidhr_bayanat(&murashah.masar))
+            .cloned()
         else {
             if let Some(mafqud) = murashahat.iter().find(|murashah| murashah.mudaf) {
                 return Err(KhataKashf::JidhrMuhaddadMafqud {
@@ -412,7 +432,9 @@ impl Matjar for MatjarPlaynite {
             tanbih_qaida(&maktaba, &jidhr, natija.alaab.len(), ghayr_muthabbata),
         ));
 
-        natija.alaab.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
+        natija
+            .alaab
+            .sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
         natija.muddat = bidaya.elapsed();
         Ok(natija)
     }
@@ -477,7 +499,12 @@ pub fn huwa_jidhr_bayanat(jidhr: &Path) -> bool {
 fn judhur_mahmula_windows(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
     let manzil = &siyaq.manzil;
     let mut judhur = Vec::with_capacity(5);
-    judhur.extend(siyaq.bayanat_mahalliya.as_ref().map(|mahalli| mahalli.join("Playnite")));
+    judhur.extend(
+        siyaq
+            .bayanat_mahalliya
+            .as_ref()
+            .map(|mahalli| mahalli.join("Playnite")),
+    );
     judhur.extend([
         manzil.join("Playnite"),
         manzil.join("Games").join("Playnite"),
@@ -722,9 +749,16 @@ fn tanbih_qaida(
         format!("{} is a LiteDB database", maktaba.qawaid.join(", "))
     };
 
-    let namat = if jidhr.mahmul { "portable" } else { "installed" };
+    let namat = if jidhr.mahmul {
+        "portable"
+    } else {
+        "installed"
+    };
     let beea = jidhr.beea.as_ref().map_or_else(String::new, |beea| {
-        format!(" It was found inside the Wine prefix at {}.", beea.display())
+        format!(
+            " It was found inside the Wine prefix at {}.",
+            beea.display()
+        )
     });
 
     let wasait = if maktaba.suwar.is_empty() {
@@ -790,8 +824,11 @@ fn suwar_maktaba(jidhr_maktaba: &Path) -> (BTreeMap<String, MasadirSuwar>, usize
         return (suwar, 0, false);
     };
 
-    let mut mujalladat: Vec<PathBuf> =
-        qaima.flatten().map(|madkhal| madkhal.path()).filter(|masar| masar.is_dir()).collect();
+    let mut mujalladat: Vec<PathBuf> = qaima
+        .flatten()
+        .map(|madkhal| madkhal.path())
+        .filter(|masar| masar.is_dir())
+        .collect();
     mujalladat.sort();
 
     let mabtur = mujalladat.len() > AQSA_MUJALLADAT_WASAIT;
@@ -801,7 +838,9 @@ fn suwar_maktaba(jidhr_maktaba: &Path) -> (BTreeMap<String, MasadirSuwar>, usize
             break;
         }
         adad = adad.saturating_add(1);
-        let Some(muarrif) = mujallad.file_name().map(|ism| ism.to_string_lossy().to_lowercase())
+        let Some(muarrif) = mujallad
+            .file_name()
+            .map(|ism| ism.to_string_lossy().to_lowercase())
         else {
             continue;
         };
@@ -889,7 +928,9 @@ enum SanfSura {
 
 /// Whether a path is an image small enough to be artwork.
 fn huwa_malaf_sura(masar: &Path) -> bool {
-    let Some(imtidad) = masar.extension().map(|imtidad| imtidad.to_string_lossy().to_lowercase())
+    let Some(imtidad) = masar
+        .extension()
+        .map(|imtidad| imtidad.to_string_lossy().to_lowercase())
     else {
         return false;
     };
@@ -924,7 +965,10 @@ fn sanf_bil_ism(masar: &Path) -> Option<SanfSura> {
 /// than a decode. The comparisons are integer cross-multiplications rather than
 /// a ratio, because a ratio would be a float and floats do not compare.
 fn sanf_bil_shakl(masar: &Path) -> Option<SanfSura> {
-    let qari = image::ImageReader::open(masar).ok()?.with_guessed_format().ok()?;
+    let qari = image::ImageReader::open(masar)
+        .ok()?
+        .with_guessed_format()
+        .ok()?;
     let (ard, irtifa) = qari.into_dimensions().ok()?;
     if ard == 0 || irtifa == 0 {
         return None;
@@ -1046,8 +1090,11 @@ fn sijillat_min_imtidadat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<S
         return Vec::new();
     };
 
-    let mut mujalladat: Vec<PathBuf> =
-        qaima.flatten().map(|madkhal| madkhal.path()).filter(|masar| masar.is_dir()).collect();
+    let mut mujalladat: Vec<PathBuf> = qaima
+        .flatten()
+        .map(|madkhal| madkhal.path())
+        .filter(|masar| masar.is_dir())
+        .collect();
     mujalladat.sort();
     mujalladat.truncate(AQSA_MUJALLADAT_IMTIDAD);
 
@@ -1060,7 +1107,9 @@ fn sijillat_min_imtidadat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<S
             .flatten()
             .map(|madkhal| madkhal.path())
             .filter(|masar| {
-                masar.extension().is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("json"))
+                masar
+                    .extension()
+                    .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("json"))
             })
             .collect();
         malaffat.sort();
@@ -1069,7 +1118,10 @@ fn sijillat_min_imtidadat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<S
         for masar in malaffat {
             // A plugin's own settings file is never a game list, and skipping it
             // by name saves parsing the one file every extension has.
-            if masar.file_name().is_some_and(|ism| ism.eq_ignore_ascii_case(MALAF_IDADAT)) {
+            if masar
+                .file_name()
+                .is_some_and(|ism| ism.eq_ignore_ascii_case(MALAF_IDADAT))
+            {
                 continue;
             }
             let Some(qeema) = iqra_json(&masar) else {
@@ -1266,7 +1318,12 @@ fn luba_min_sijill(
     maktaba: &MaktabatPlaynite,
     nizam: NizamTashghil,
 ) -> Result<LubaMuktashafa, String> {
-    let Some(kham) = sijill.jidhr.as_deref().map(str::trim).filter(|nass| !nass.is_empty()) else {
+    let Some(kham) = sijill
+        .jidhr
+        .as_deref()
+        .map(str::trim)
+        .filter(|nass| !nass.is_empty())
+    else {
         return Err(
             "this Playnite entry records no install directory, so there is nothing to probe. \
              Entries with no directory are usually ones whose launcher was uninstalled."
@@ -1285,7 +1342,10 @@ fn luba_min_sijill(
 
     let masdar = MasdarLuba::Playnite(Box::new(MasdarPlaynite {
         muarrif: sijill.muarrif.clone(),
-        asl: masdar_asli(sijill.ism_masdar.as_deref(), sijill.muarrif_matjar.as_deref()),
+        asl: masdar_asli(
+            sijill.ism_masdar.as_deref(),
+            sijill.muarrif_matjar.as_deref(),
+        ),
     }));
 
     let mut simat: Vec<SimatLuba> = Vec::new();
@@ -1357,7 +1417,9 @@ fn beeat_sijill(jidhr: &JidhrPlaynite, simat: &mut Vec<SimatLuba>) -> BeeatTawaf
     let Some(beea) = jidhr.beea.clone() else {
         return BeeatTawafuq::Asli;
     };
-    let isdar = crate::beea::hal_beea(&beea).ok().and_then(|maalumat| maalumat.isdar_wine);
+    let isdar = crate::beea::hal_beea(&beea)
+        .ok()
+        .and_then(|maalumat| maalumat.isdar_wine);
     simat.push(SimatLuba::TabaqatTawafuq(
         isdar.clone().unwrap_or_else(|| "Wine".to_owned()),
     ));
@@ -1377,7 +1439,9 @@ fn tanfidhi_dakhil(jidhr: &Path, nisbi: &str) -> Option<PathBuf> {
     }
     let murashah = Path::new(&munaqqa);
     let kamil = if murashah.is_absolute() {
-        murashah.starts_with(jidhr).then(|| murashah.to_path_buf())?
+        murashah
+            .starts_with(jidhr)
+            .then(|| murashah.to_path_buf())?
     } else {
         taarib_usus::masarat::dakhil(jidhr, &munaqqa).ok()?
     };
@@ -1399,7 +1463,9 @@ fn tanfidhi_wahid(jidhr_luba: &Path) -> Option<PathBuf> {
         .map(|madkhal| madkhal.path())
         .filter(|masar| {
             masar.is_file()
-                && masar.extension().is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("exe"))
+                && masar
+                    .extension()
+                    .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("exe"))
         })
         .collect();
     murashahat.sort();
@@ -1478,11 +1544,12 @@ fn nass_haql(qeema: &Value, miftah: &str) -> Option<String> {
 /// would silently drop every game in such a file as uninstalled.
 fn sawab_haql(qeema: &Value, miftah: &str) -> Option<bool> {
     let haql = qeema.get(miftah)?;
-    haql.as_bool().or_else(|| match haql.as_str()?.trim().to_lowercase().as_str() {
-        "true" | "yes" | "1" => Some(true),
-        "false" | "no" | "0" => Some(false),
-        _ => None,
-    })
+    haql.as_bool()
+        .or_else(|| match haql.as_str()?.trim().to_lowercase().as_str() {
+            "true" | "yes" | "1" => Some(true),
+            "false" | "no" | "0" => Some(false),
+            _ => None,
+        })
 }
 
 /// A whole-number field, however the writer encoded it.
@@ -1535,7 +1602,10 @@ mod ikhtibarat {
         let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
         let judhur = masarat(&MatjarPlaynite::jadeed().judhur_muhtamala(&siyaq));
         assert_eq!(judhur.len(), 4, "{judhur:?}");
-        assert!(judhur.contains(&masrah.path().join("Playnite")), "{judhur:?}");
+        assert!(
+            judhur.contains(&masrah.path().join("Playnite")),
+            "{judhur:?}"
+        );
         Ok(())
     }
 }

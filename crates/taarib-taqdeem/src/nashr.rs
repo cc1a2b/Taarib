@@ -5,8 +5,8 @@ use taarib_mustalahat::bina::Basma;
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::musahim::MusahimId;
 use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
-use taarib_ruqaa::tawqee::{DawrMiftah, KutlatTawqee, Khwarizmiya};
 use taarib_ruqaa::muhadhah::BaytMuhadhah;
+use taarib_ruqaa::tawqee::{DawrMiftah, Khwarizmiya, KutlatTawqee};
 
 use crate::hawiya::SalahiyatMalik;
 use crate::khata::{KhataTaqdeem, NatijatTaqdeem};
@@ -16,7 +16,9 @@ use crate::khata::{KhataTaqdeem, NatijatTaqdeem};
 /// An interruption resumes from the recorded step; a failure rolls the staging
 /// promotion back, so a binary with no metadata and metadata pointing at
 /// nothing are both unreachable states.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum MarhalatNashr {
     /// The package has been signed with the owner's key.
@@ -173,14 +175,20 @@ pub fn waqqi(
         murajaa,
         luba,
         basma: Basma::min_bayt(basma),
-        itimad: ItimadManshur { murajii, waqt, miftah: hex_32(&miftah) },
+        itimad: ItimadManshur {
+            murajii,
+            waqt,
+            miftah: hex_32(&miftah),
+        },
         bayt: bayt_huzma.ila_shuaa(),
     })
 }
 
 /// The container's content hash, read back from the built header.
 fn huzma_basma(bayt: &BaytMuhadhah) -> Option<[u8; 32]> {
-    taarib_ruqaa::qari::Ruqaa::iftah(bayt.bayt()).ok().map(|ruqaa| ruqaa.tarwisa().basma)
+    taarib_ruqaa::qari::Ruqaa::iftah(bayt.bayt())
+        .ok()
+        .map(|ruqaa| ruqaa.tarwisa().basma)
 }
 
 fn hex_32(bayt: &[u8; 32]) -> String {
@@ -208,7 +216,11 @@ impl TaqaddumNashr {
     /// A run that has not started.
     #[must_use]
     pub const fn jadeed(ruqaa: RuqaaId, murajaa: RuqaaRevision) -> Self {
-        Self { ruqaa, murajaa, akhir: None }
+        Self {
+            ruqaa,
+            murajaa,
+            akhir: None,
+        }
     }
 
     /// Whether a step still has to run.

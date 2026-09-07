@@ -60,12 +60,30 @@ struct Ayina {
 
 /// The samples, in the order they are printed and drawn.
 const AYINAT: &[Ayina] = &[
-    Ayina { wasf: "a full sentence", nass: "مرحبًا بالعالم من محرك تعريب" },
-    Ayina { wasf: "four forms of beh", nass: "بببب" },
-    Ayina { wasf: "lam-alef ligature", nass: "لا" },
-    Ayina { wasf: "non-joining alef and dal", nass: "أدب" },
-    Ayina { wasf: "diacritics stacked on bases", nass: "مُحَمَّدٌ" },
-    Ayina { wasf: "Arabic with an embedded Latin run", nass: "لعبة Half-Life 2 الشهيرة" },
+    Ayina {
+        wasf: "a full sentence",
+        nass: "مرحبًا بالعالم من محرك تعريب",
+    },
+    Ayina {
+        wasf: "four forms of beh",
+        nass: "بببب",
+    },
+    Ayina {
+        wasf: "lam-alef ligature",
+        nass: "لا",
+    },
+    Ayina {
+        wasf: "non-joining alef and dal",
+        nass: "أدب",
+    },
+    Ayina {
+        wasf: "diacritics stacked on bases",
+        nass: "مُحَمَّدٌ",
+    },
+    Ayina {
+        wasf: "Arabic with an embedded Latin run",
+        nass: "لعبة Half-Life 2 الشهيرة",
+    },
 ];
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -81,7 +99,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Ok(khatt) => {
             println!("Decision 6 validation: passed");
             Arc::new(khatt)
-        }
+        },
         Err(khata) => {
             println!("Decision 6 validation: REJECTED — {khata}");
             println!(
@@ -89,7 +107,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                  changes nothing about how the font shapes"
             );
             Arc::new(MawridKhatt::jadeed_latini(bayt, 0)?)
-        }
+        },
     };
     println!("family: {} {}", khatt.aila(), khatt.namat());
     println!("variable: {}", khatt.mutaghayyir());
@@ -124,7 +142,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // draws it, once the way this engine draws it.
     let muqarana = AYINAT.first().map_or("", |ayina| ayina.nass);
     let mut rusum: Vec<Rasma> = vec![
-        Rasma::tawdeeh(&khattit("what a game with no Arabic shaper draws:", HAJM_TAWDEEH)?),
+        Rasma::tawdeeh(&khattit(
+            "what a game with no Arabic shaper draws:",
+            HAJM_TAWDEEH,
+        )?),
         Rasma::sadija(&khatt, &rassam, muqarana)?,
         Rasma::tawdeeh(&khattit(
             "what taarib-saff draws — same font, same string, same bytes:",
@@ -260,12 +281,20 @@ impl Lawh {
     /// A white canvas.
     fn jadeed(ard: u32, irtifa: u32) -> Self {
         let hajm = (ard as usize) * (irtifa as usize) * 3;
-        Self { ard, irtifa, bayt: vec![0xFF; hajm] }
+        Self {
+            ard,
+            irtifa,
+            bayt: vec![0xFF; hajm],
+        }
     }
 
     /// Blends one pixel toward a colour by a coverage in `0..=255`.
     fn nuqta(&mut self, s: i64, a: i64, lawn: [u8; 3], taghtiya: u8) {
-        if taghtiya == 0 || s < 0 || a < 0 || s >= i64::from(self.ard) || a >= i64::from(self.irtifa)
+        if taghtiya == 0
+            || s < 0
+            || a < 0
+            || s >= i64::from(self.ard)
+            || a >= i64::from(self.irtifa)
         {
             return;
         }
@@ -277,7 +306,9 @@ impl Lawh {
             };
             let khalf = f32::from(*khana);
             let amam = f32::from(lawn.get(qanat).copied().unwrap_or(0));
-            *khana = (khalf.mul_add(1.0 - alfa, amam * alfa)).round().clamp(0.0, 255.0) as u8;
+            *khana = (khalf.mul_add(1.0 - alfa, amam * alfa))
+                .round()
+                .clamp(0.0, 255.0) as u8;
         }
     }
 
@@ -316,8 +347,10 @@ struct Rasma {
 impl Rasma {
     /// A row from a finished layout: what the engine produced, unaltered.
     fn min_takhtit(takhtit: &TakhtitNass) -> Self {
-        let (suud, hubut) =
-            takhtit.sutur.first().map_or((0.0, 0.0), |satr| (satr.suud, satr.hubut));
+        let (suud, hubut) = takhtit
+            .sutur
+            .first()
+            .map_or((0.0, 0.0), |satr| (satr.suud, satr.hubut));
         let mut huruf = Vec::with_capacity(takhtit.huruf.len());
         for satr in &takhtit.sutur {
             for harf in takhtit.huruf_satr(satr) {
@@ -337,7 +370,11 @@ impl Rasma {
 
     /// A caption, left-aligned and grey.
     fn tawdeeh(takhtit: &TakhtitNass) -> Self {
-        Self { yameen: false, khafeef: true, ..Self::min_takhtit(takhtit) }
+        Self {
+            yameen: false,
+            khafeef: true,
+            ..Self::min_takhtit(takhtit)
+        }
     }
 
     /// A row drawn the way a game with no Arabic support draws it.
@@ -428,7 +465,15 @@ fn irsim_kul(rassam: &Rassam, rusum: &[Rasma]) -> Result<PathBuf, Box<dyn Error>
             } else {
                 [0x11, 0x11, 0x11]
             };
-            irsim_harf(rassam, &mut lawh, *muarrif, rasma.hajm, s + izaha_s, a + asas, lawn)?;
+            irsim_harf(
+                rassam,
+                &mut lawh,
+                *muarrif,
+                rasma.hajm,
+                s + izaha_s,
+                a + asas,
+                lawn,
+            )?;
         }
 
         alaa += rasma.irtifa() + FARQ as f32;
@@ -555,7 +600,11 @@ fn crc32(bayanat: &[u8]) -> u32 {
     for bayt in bayanat {
         qeema ^= u32::from(*bayt);
         for _ in 0..8 {
-            qeema = if qeema & 1 == 0 { qeema >> 1 } else { (qeema >> 1) ^ 0xEDB8_8320 };
+            qeema = if qeema & 1 == 0 {
+                qeema >> 1
+            } else {
+                (qeema >> 1) ^ 0xEDB8_8320
+            };
         }
     }
     !qeema

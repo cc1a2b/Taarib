@@ -83,16 +83,16 @@ impl Masar {
                 "The engine shapes Arabic correctly on its own. Taarib supplies the font and \
                  the translation and changes nothing else, so the text behaves exactly like \
                  the game's own."
-            }
+            },
             Self::Istila => {
                 "This version of the engine cannot shape Arabic, so Taarib draws the text \
                  itself. The result is correct and behaves normally on screen."
-            }
+            },
             Self::Naql => {
                 "This game's build can be neither extended nor intercepted, so Arabic is \
                  delivered as a replacement glyph table. The text will look correct and will \
                  NOT be searchable, selectable or copyable inside the game."
-            }
+            },
         }
     }
 
@@ -161,7 +161,11 @@ impl Bina {
             .map_or_else(|| self.jeel.ism().to_owned(), |isdar| isdar.khaam.clone());
         format!(
             "{isdar}, {} package{}{}",
-            if self.mudmaja() { "embedded" } else { "external" },
+            if self.mudmaja() {
+                "embedded"
+            } else {
+                "external"
+            },
             match self.mushaffara {
                 Some(true) => ", encrypted",
                 Some(false) => "",
@@ -202,7 +206,11 @@ pub fn afhas(jidhr: &Path, tanfidhi: Option<&Path>) -> Result<Bina, KhataGodot> 
     athar.push(format!(
         "package at {} ({}), format version {}, engine {}.{}.{}",
         hazma.display(),
-        if tarwisa.mudmaja { "embedded" } else { "external" },
+        if tarwisa.mudmaja {
+            "embedded"
+        } else {
+            "external"
+        },
         tarwisa.sigha,
         tarwisa.kabir,
         tarwisa.sagheer,
@@ -234,5 +242,13 @@ pub fn afhas(jidhr: &Path, tanfidhi: Option<&Path>) -> Result<Bina, KhataGodot> 
     }
 
     let isdar = tarwisa.isdar();
-    Ok(Bina { jidhr: jidhr.to_path_buf(), hazma, tarwisa, jeel, isdar, mushaffara, athar })
+    Ok(Bina {
+        jidhr: jidhr.to_path_buf(),
+        hazma,
+        tarwisa,
+        jeel,
+        isdar,
+        mushaffara,
+        athar,
+    })
 }

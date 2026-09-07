@@ -135,8 +135,8 @@ use taarib_usus::khata::Tafsir as _;
 use taarib_usus::masarat;
 
 use crate::bayan::{
-    BayanTathbeet, NawTaghyeer, NawTathbeet, SalahiyatMalaf, SijillIdad, SijillTaghyeer,
-    Tathbeet, basma_bayt, basma_malaf, dakhil_aw_khata, nisbi_min,
+    BayanTathbeet, NawTaghyeer, NawTathbeet, SalahiyatMalaf, SijillIdad, SijillTaghyeer, Tathbeet,
+    basma_bayt, basma_malaf, dakhil_aw_khata, nisbi_min,
 };
 use crate::itlaq::RadItlaq;
 use crate::khata::{KhataTathbeet, NatijatTathbeet, min_khata_io};
@@ -282,8 +282,10 @@ impl BaqiyaMujallad {
         if self.adad == 0 {
             return vec![format!("  {}: بقي لأنّ مجلّدًا داخله بقي", self.mujallad)];
         }
-        let mut sutur =
-            vec![format!("  {}: فيه {} مدخلًا لم يضعها تعريب، {amal}", self.mujallad, self.adad)];
+        let mut sutur = vec![format!(
+            "  {}: فيه {} مدخلًا لم يضعها تعريب، {amal}",
+            self.mujallad, self.adad
+        )];
         sutur.extend(self.madakhil.iter().map(|ism| format!("    {ism}")));
         let mazid = self.adad.saturating_sub(self.madakhil.len());
         if mazid > 0 {
@@ -552,15 +554,16 @@ impl TaqreerKul {
     #[must_use]
     pub fn taqreer(&self) -> Vec<String> {
         let mut sutur = Vec::new();
-        for (naw, natija) in
-            [(NawTathbeet::Nass, &self.nass), (NawTathbeet::Sawt, &self.sawt)]
-        {
+        for (naw, natija) in [
+            (NawTathbeet::Nass, &self.nass),
+            (NawTathbeet::Sawt, &self.sawt),
+        ] {
             match natija {
                 None => sutur.push(format!("  no {} installation", naw.ism())),
                 Some(Ok(taqreer)) => sutur.extend(taqreer.taqreer()),
                 Some(Err(khata)) => {
                     sutur.push(format!("  {} FAILED: {}", naw.ism(), khata.injilizi()));
-                }
+                },
             }
         }
         sutur
@@ -866,7 +869,9 @@ fn istiada_wahid(
     siyasa: SiyasatIstiada,
     taqreer: &mut TaqreerIstiada,
 ) -> Result<(), KhataTathbeet> {
-    let Some(sijill) = tathbeet.bayan().sijill(masar).cloned() else { return Ok(()) };
+    let Some(sijill) = tathbeet.bayan().sijill(masar).cloned() else {
+        return Ok(());
+    };
     if sijill.istiada_tammat {
         return Ok(());
     }
@@ -875,7 +880,7 @@ fn istiada_wahid(
     match sijill.naw {
         NawTaghyeer::Tadeel => {
             istiada_muaddal(tathbeet, &sijill, &mutlaq, siyasa, taqreer)?;
-        }
+        },
         NawTaghyeer::Idafa => {
             // Deleted whatever its contents are now. See this module's header:
             // an addition exists only because Taarib created it, and leaving a
@@ -888,7 +893,7 @@ fn istiada_wahid(
                 })?;
             }
             taqreer.mahdhufa = taqreer.mahdhufa.saturating_add(1);
-        }
+        },
         NawTaghyeer::MujalladMudaf => return Ok(()),
     }
 
@@ -935,7 +940,7 @@ fn istiada_muaddal(
             // restore.
             taqreer.kanat_asliya = taqreer.kanat_asliya.saturating_add(1);
             return Ok(());
-        }
+        },
         HalatQablIstiada::Mustabdal(mahsuba) => {
             if matches!(siyasa, SiyasatIstiada::Sarima) {
                 return Err(KhataTathbeet::MalafMustabdal {
@@ -948,8 +953,8 @@ fn istiada_muaddal(
             }
             taqreer.mustabdala.push(sijill.masar.clone());
             return Ok(());
-        }
-        HalatQablIstiada::Maktub | HalatQablIstiada::Mafqud => {}
+        },
+        HalatQablIstiada::Maktub | HalatQablIstiada::Mafqud => {},
     }
 
     // A read-only target is cleared before the rename, not after: Windows
@@ -1053,7 +1058,9 @@ fn rudd_idad(
     radd: &mut dyn RadIdad,
     taqreer: &mut TaqreerIstiada,
 ) -> Result<(), KhataTathbeet> {
-    let Some(idad) = tathbeet.bayan().idadat.get(muarrif).cloned() else { return Ok(()) };
+    let Some(idad) = tathbeet.bayan().idadat.get(muarrif).cloned() else {
+        return Ok(());
+    };
     if idad.istiada_tammat {
         return Ok(());
     }
@@ -1098,14 +1105,14 @@ fn azil_mujallad(
     match fs::remove_dir(&mutlaq) {
         Ok(()) => {
             taqreer.mujalladat_muzala = taqreer.mujalladat_muzala.saturating_add(1);
-        }
+        },
         // Something else removed it between the check above and this call. The
         // outcome asked for is the outcome reached, and it is emphatically not
         // the left-behind case — booking a race as residue would hold a record
         // open for a directory that is not on the disk.
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
             taqreer.mujalladat_muzala = taqreer.mujalladat_muzala.saturating_add(1);
-        }
+        },
         Err(sabab) if sabab.kind() == std::io::ErrorKind::DirectoryNotEmpty => {
             let baqiya = ihsa_baqaya(tathbeet.bayan(), tathbeet.jidhr_luba(), masar, &mutlaq);
             if !siyasa.taknus() {
@@ -1121,10 +1128,14 @@ fn azil_mujallad(
             iknis_mujallad(tathbeet.jidhr_luba(), &mutlaq)?;
             taqreer.mujalladat_muzala = taqreer.mujalladat_muzala.saturating_add(1);
             taqreer.maknusa.push(baqiya);
-        }
+        },
         Err(sabab) => {
-            return Err(min_khata_io(&mutlaq, "removing a directory Taarib created", sabab));
-        }
+            return Err(min_khata_io(
+                &mutlaq,
+                "removing a directory Taarib created",
+                sabab,
+            ));
+        },
     }
 
     tathbeet.allim_tammat(masar)
@@ -1186,9 +1197,13 @@ fn ihsa_baqaya(
 
     let mut madakhil = Vec::new();
     let mut adad = 0_usize;
-    let mashy = walkdir::WalkDir::new(mutlaq).sort_by_file_name().into_iter();
+    let mashy = walkdir::WalkDir::new(mutlaq)
+        .sort_by_file_name()
+        .into_iter();
     for madkhal in mashy.filter_entry(musajjal).filter_map(Result::ok) {
-        let Some(nisbi) = nisbi_min(jidhr_luba, madkhal.path()) else { continue };
+        let Some(nisbi) = nisbi_min(jidhr_luba, madkhal.path()) else {
+            continue;
+        };
         if nisbi == masar {
             continue;
         }
@@ -1201,7 +1216,11 @@ fn ihsa_baqaya(
             });
         }
     }
-    BaqiyaMujallad { mujallad: masar.to_owned(), madakhil, adad }
+    BaqiyaMujallad {
+        mujallad: masar.to_owned(),
+        madakhil,
+        adad,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1260,22 +1279,24 @@ pub fn khutta(
                         khutta.baqaya.push(baqiya);
                     }
                 }
-            }
+            },
             NawTaghyeer::Idafa => {
                 khutta.li_hadhf = khutta.li_hadhf.saturating_add(1);
                 if !mutlaq.exists() {
                     khutta.mafquda.push(masar.clone());
                 }
-            }
+            },
             NawTaghyeer::Tadeel => {
                 khutta.li_istiada = khutta.li_istiada.saturating_add(1);
-                let Some(muallana) = sijill.basma_asliya else { continue };
+                let Some(muallana) = sijill.basma_asliya else {
+                    continue;
+                };
                 match hala_qabl(sijill, &mutlaq, muallana)? {
                     HalatQablIstiada::Mustabdal(_) => khutta.mustabdala.push(masar.clone()),
                     HalatQablIstiada::Mafqud => khutta.mafquda.push(masar.clone()),
-                    HalatQablIstiada::Maktub | HalatQablIstiada::Asli => {}
+                    HalatQablIstiada::Maktub | HalatQablIstiada::Asli => {},
                 }
-            }
+            },
         }
     }
 
@@ -1332,19 +1353,17 @@ impl KhuttatIstiada {
     /// The plan as lines for the confirmation screen and the log.
     #[must_use]
     pub fn taqreer(&self) -> Vec<String> {
-        let mut sutur = vec![
-            format!(
-                "{} [{}] installed {}: {} file(s) to restore, {} to delete, {} \
+        let mut sutur = vec![format!(
+            "{} [{}] installed {}: {} file(s) to restore, {} to delete, {} \
                  director(ies), {} byte(s) of backups to free",
-                self.luba,
-                self.naw.ism(),
-                self.waqt_tathbeet,
-                self.li_istiada,
-                self.li_hadhf,
-                self.mujalladat,
-                self.hajm_nusakh
-            ),
-        ];
+            self.luba,
+            self.naw.ism(),
+            self.waqt_tathbeet,
+            self.li_istiada,
+            self.li_hadhf,
+            self.mujalladat,
+            self.hajm_nusakh
+        )];
         for masar in &self.mustabdala {
             sutur.push(format!(
                 "  {masar}: replaced by the store since installation; it would be left alone"
@@ -1387,7 +1406,9 @@ impl KhuttatIstiada {
             self.hajm_nusakh
         )];
         for masar in &self.mustabdala {
-            sutur.push(format!("  {masar}: استبدله المتجر بعد التثبيت، فيُترك كما هو"));
+            sutur.push(format!(
+                "  {masar}: استبدله المتجر بعد التثبيت، فيُترك كما هو"
+            ));
         }
         for masar in &self.mafquda {
             sutur.push(format!("  {masar}: مسجَّل وليس على القرص"));
@@ -1396,7 +1417,10 @@ impl KhuttatIstiada {
             sutur.extend(baqiya.sutur_arabiya("ويبقى مكانه ما لم تختر الكنس"));
         }
         if self.mutabaqqi > self.li_istiada.saturating_add(self.li_hadhf) {
-            sutur.push(format!("  {} سجلًّا متبقّيًا في الجملة، منها الإعدادات", self.mutabaqqi));
+            sutur.push(format!(
+                "  {} سجلًّا متبقّيًا في الجملة، منها الإعدادات",
+                self.mutabaqqi
+            ));
         }
         sutur
     }
@@ -1458,12 +1482,13 @@ pub fn nazzif_nusakh(
         // through the one constructor that refuses a root, so no rearrangement
         // of the two paths this function is handed can aim a recursive delete at
         // a data root, a settings root, a home directory or the game itself.
-        let hadaf = masarat::hadaf_hadhf_fi_nusakh(jidhr_nusakh, jidhr_luba, &mujallad)
-            .map_err(|khata| KhataTathbeet::MasarKharij {
+        let hadaf = masarat::hadaf_hadhf_fi_nusakh(jidhr_nusakh, jidhr_luba, &mujallad).map_err(
+            |khata| KhataTathbeet::MasarKharij {
                 masar: mujallad.clone(),
                 jidhr: jidhr_nusakh.to_path_buf(),
                 sabab: khata.injilizi,
-            })?;
+            },
+        )?;
         masarat::hadhf_mujallad(&hadaf).map_err(|khata| KhataTathbeet::KhataMalaf {
             masar: mujallad.clone(),
             amal: "removing the preserved originals",
@@ -1494,8 +1519,7 @@ fn sabab_rafd_tanzif(bayan: &BayanTathbeet, jidhr_luba: &Path, mutabaqqi: usize)
         .filter(|sijill| {
             !sijill.istiada_tammat
                 && matches!(sijill.naw, NawTaghyeer::MujalladMudaf)
-                && dakhil_aw_khata(jidhr_luba, &sijill.masar)
-                    .is_ok_and(|mutlaq| mutlaq.is_dir())
+                && dakhil_aw_khata(jidhr_luba, &sijill.masar).is_ok_and(|mutlaq| mutlaq.is_dir())
         })
         .map(|sijill| sijill.masar.as_str())
         .collect();
@@ -1551,16 +1575,17 @@ pub fn ihsa_al_maktaba(jidhr_nusakh: &Path) -> NatijatTathbeet<Vec<MawqiTathbeet
                 continue;
             }
             let masar_bayan = mujallad.join(naw.ism_bayan());
-            let Ok(bayan) =
-                taarib_usus::mukhattat::iqra_malaf::<BayanTathbeet>(&masar_bayan)
+            let Ok(bayan) = taarib_usus::mukhattat::iqra_malaf::<BayanTathbeet>(&masar_bayan)
             else {
                 continue;
             };
-            let _ = mawaqi.entry(mujallad.clone()).or_insert_with(|| MawqiTathbeet {
-                ism: bayan.ism_luba.clone(),
-                jidhr_luba: bayan.jidhr_luba_asli.clone(),
-                jidhr_nusakh: mujallad.clone(),
-            });
+            let _ = mawaqi
+                .entry(mujallad.clone())
+                .or_insert_with(|| MawqiTathbeet {
+                    ism: bayan.ism_luba.clone(),
+                    jidhr_luba: bayan.jidhr_luba_asli.clone(),
+                    jidhr_nusakh: mujallad.clone(),
+                });
         }
     }
 

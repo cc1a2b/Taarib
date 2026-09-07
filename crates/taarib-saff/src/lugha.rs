@@ -79,8 +79,9 @@ const HURUF_URDU: [char; 10] = [
 /// `yeh`, which sit at their own codepoints precisely because they are drawn
 /// differently. Urdu uses all six too, which is why [`HURUF_URDU`] is asked
 /// first.
-const HURUF_FARISI: [char; 6] =
-    ['\u{067E}', '\u{0686}', '\u{0698}', '\u{06A9}', '\u{06AF}', '\u{06CC}'];
+const HURUF_FARISI: [char; 6] = [
+    '\u{067E}', '\u{0686}', '\u{0698}', '\u{06A9}', '\u{06AF}', '\u{06CC}',
+];
 
 /// The `reh` group: `reh`, `zain`, `rreh`, `jeh`.
 ///
@@ -93,15 +94,17 @@ const HURUF_REH: [char; 4] = ['\u{0631}', '\u{0632}', '\u{0691}', '\u{0698}'];
 const HURUF_DAL: [char; 3] = ['\u{062F}', '\u{0630}', '\u{0688}'];
 
 /// The `waw` group, including the Persian and Uyghur rounded vowels.
-const HURUF_WAW: [char; 6] =
-    ['\u{0648}', '\u{0624}', '\u{06C6}', '\u{06C7}', '\u{06C8}', '\u{06CB}'];
+const HURUF_WAW: [char; 6] = [
+    '\u{0648}', '\u{0624}', '\u{06C6}', '\u{06C7}', '\u{06C8}', '\u{06CB}',
+];
 
 /// The `alef` forms, including `alef wasla`.
 const HURUF_ALEF: [char; 5] = ['\u{0627}', '\u{0622}', '\u{0623}', '\u{0625}', '\u{0671}'];
 
 /// The `kaf` group, including the Persian `keheh` and `gaf`.
-const HURUF_KAF: [char; 6] =
-    ['\u{0643}', '\u{06A9}', '\u{06AA}', '\u{06AB}', '\u{06AD}', '\u{06AF}'];
+const HURUF_KAF: [char; 6] = [
+    '\u{0643}', '\u{06A9}', '\u{06AA}', '\u{06AB}', '\u{06AD}', '\u{06AF}',
+];
 
 /// `lam` and the Kurdish `lam with small v`.
 const HURUF_LAM: [char; 2] = ['\u{0644}', '\u{06B5}'];
@@ -113,8 +116,9 @@ const HURUF_TEH_MARBUTA: [char; 2] = ['\u{0629}', '\u{06C3}'];
 const HURUF_HEH: [char; 4] = ['\u{0647}', '\u{06BE}', '\u{06C1}', '\u{06D5}'];
 
 /// The `yeh` group, including `alef maqsura`, `farsi yeh` and `yeh barree`.
-const HURUF_YEH: [char; 6] =
-    ['\u{064A}', '\u{0649}', '\u{0626}', '\u{06CC}', '\u{06D2}', '\u{06D3}'];
+const HURUF_YEH: [char; 6] = [
+    '\u{064A}', '\u{0649}', '\u{0626}', '\u{06CC}', '\u{06D2}', '\u{06D3}',
+];
 
 /// How a character joins to its neighbours.
 ///
@@ -287,7 +291,11 @@ pub fn iktashif_lugha(nass: &str) -> LughaNass {
     }
 
     if arabi {
-        if farisi { LughaNass::Farisi } else { LughaNass::Arabi }
+        if farisi {
+            LughaNass::Farisi
+        } else {
+            LughaNass::Arabi
+        }
     } else if latini {
         LughaNass::Latini
     } else {
@@ -396,7 +404,10 @@ pub fn hall_ashkal_taqdimiya(nass: &str) -> Cow<'_, str> {
 /// and the meaning of the text rather than just its vocalisation.
 #[must_use]
 pub fn ihdhif_tashkeel(nass: &str) -> Cow<'_, str> {
-    let Some(awwal) = nass.char_indices().find(|(_, harf)| alama(*harf)).map(|(mawqi, _)| mawqi)
+    let Some(awwal) = nass
+        .char_indices()
+        .find(|(_, harf)| alama(*harf))
+        .map(|(mawqi, _)| mawqi)
     else {
         return Cow::Borrowed(nass);
     };

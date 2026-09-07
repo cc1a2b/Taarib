@@ -170,7 +170,9 @@ impl MasdarLuba {
             Self::Heroic(asl) | Self::Legendary(asl) => asl.ism_arabi(),
             Self::Lutris(asl) => asl.asl.as_ref().map_or("لوتريس", |q| q.ism_arabi()),
             Self::Bottles(_) => "بوتلز",
-            Self::Playnite(asl) => asl.asl.as_ref().map_or("بلاي‌نايت", |q| q.ism_arabi()),
+            Self::Playnite(asl) => {
+                asl.asl.as_ref().map_or("بلاي‌نايت", |q| q.ism_arabi())
+            },
             Self::Yadawi(_) => "مضافة يدويًا",
         }
     }
@@ -247,13 +249,15 @@ impl MasdarLuba {
             Self::Rockstar(q) => format!("rockstar:{q}"),
             Self::Riot(q) => format!("riot:{q}"),
             Self::Heroic(asl) | Self::Legendary(asl) => asl.muarrif(),
-            Self::Lutris(asl) => {
-                asl.asl.as_ref().map_or_else(|| format!("lutris:{}", asl.silaa), Self::muarrif)
-            }
+            Self::Lutris(asl) => asl
+                .asl
+                .as_ref()
+                .map_or_else(|| format!("lutris:{}", asl.silaa), Self::muarrif),
             Self::Bottles(q) => format!("bottles:{q}"),
-            Self::Playnite(asl) => {
-                asl.asl.as_ref().map_or_else(|| format!("playnite:{}", asl.muarrif), Self::muarrif)
-            }
+            Self::Playnite(asl) => asl
+                .asl
+                .as_ref()
+                .map_or_else(|| format!("playnite:{}", asl.muarrif), Self::muarrif),
             Self::Yadawi(q) => format!("yadawi:{q}"),
         }
     }
@@ -340,9 +344,16 @@ impl LawnBariz {
     pub fn idaa(self) -> f32 {
         let khat = |q: u8| {
             let n = f32::from(q) / 255.0;
-            if n <= 0.039_28 { n / 12.92 } else { ((n + 0.055) / 1.055).powf(2.4) }
+            if n <= 0.039_28 {
+                n / 12.92
+            } else {
+                ((n + 0.055) / 1.055).powf(2.4)
+            }
         };
-        0.0722f32.mul_add(khat(self.azraq), 0.2126f32.mul_add(khat(self.ahmar), 0.7152 * khat(self.akhdar)))
+        0.0722f32.mul_add(
+            khat(self.azraq),
+            0.2126f32.mul_add(khat(self.ahmar), 0.7152 * khat(self.akhdar)),
+        )
     }
 }
 

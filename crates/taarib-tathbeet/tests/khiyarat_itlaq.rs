@@ -155,7 +155,13 @@ impl Masrah {
             masarat.push(masar);
         }
 
-        Self { _dalil: dalil, steam, luba, nusakh, hisabat: masarat }
+        Self {
+            _dalil: dalil,
+            steam,
+            luba,
+            nusakh,
+            hisabat: masarat,
+        }
     }
 
     fn tarif(&self) -> TarifLuba {
@@ -182,7 +188,10 @@ impl Masrah {
     /// This game's launch options in one account, as the file now holds them.
     fn khiyarat(&self, hisab: usize) -> Option<String> {
         KhiyaratSteam::jadeeda(
-            self.hisabat.get(hisab).expect("an account this fixture has").clone(),
+            self.hisabat
+                .get(hisab)
+                .expect("an account this fixture has")
+                .clone(),
             APP,
         )
         .qeema_haliya()
@@ -196,9 +205,8 @@ impl Masrah {
     /// what is performed here is what a real deployment states, not a shape
     /// invented for the test.
     fn thabbit(&self) -> Result<usize, KhataTathbeet> {
-        let mut tathbeet =
-            Tathbeet::ibda(&self.nusakh, NawTathbeet::Nass, &self.tarif(), "dawra")
-                .expect("an installation session");
+        let mut tathbeet = Tathbeet::ibda(&self.nusakh, NawTathbeet::Nass, &self.tarif(), "dawra")
+            .expect("an installation session");
         tathbeet
             .sajjil_idad(
                 MahallIdad::KhiyaratTashghil {
@@ -211,15 +219,24 @@ impl Masrah {
             .expect("the deployment records what the field must hold");
 
         let talabat = talabat_steam(tathbeet.bayan());
-        assert_eq!(talabat.len(), 1, "one requirement was recorded, so one must be found");
+        assert_eq!(
+            talabat.len(),
+            1,
+            "one requirement was recorded, so one must be found"
+        );
         naffidh_talabat_steam(&mut tathbeet, &talabat, Some(self.steam.as_path()))
     }
 
     /// The uninstall, through the entry point every production caller uses —
     /// including the restorer they all pass, which knows nothing about Steam.
     fn azil(&self) -> Result<usize, KhataTathbeet> {
-        istiada_nass(&self.luba, &self.nusakh, SiyasatIstiada::Muhafiza, &mut RadLaShay)
-            .map(|taqreer| taqreer.idadat_mustaada)
+        istiada_nass(
+            &self.luba,
+            &self.nusakh,
+            SiyasatIstiada::Muhafiza,
+            &mut RadLaShay,
+        )
+        .map(|taqreer| taqreer.idadat_mustaada)
     }
 }
 
@@ -248,7 +265,11 @@ fn thabbit_aw_athbit_al_rafd(masrah: &Masrah) -> bool {
         return false;
     }
     let adad = natija.expect("the install applies the requirement");
-    assert_eq!(adad, masrah.hisabat.len(), "every account file is written, not just the first");
+    assert_eq!(
+        adad,
+        masrah.hisabat.len(),
+        "every account file is written, not just the first"
+    );
     true
 }
 
@@ -266,13 +287,26 @@ fn dawra_kamila(mawjuda: Option<&str>, muzhara: Option<&str>) {
 
     // The install put Taarib's assignment in and left the user's text alone.
     let baad = masrah.khiyarat(0).expect("the field now holds something");
-    assert!(baad.contains(TAJAWUZ_TAARIB), "the loader override is in the field: {baad}");
-    assert_eq!(baad.matches(MUTAGHAYYIR_TAJAWUZ).count(), 1, "and exactly once: {baad}");
+    assert!(
+        baad.contains(TAJAWUZ_TAARIB),
+        "the loader override is in the field: {baad}"
+    );
+    assert_eq!(
+        baad.matches(MUTAGHAYYIR_TAJAWUZ).count(),
+        1,
+        "and exactly once: {baad}"
+    );
     if let Some(muzhara) = muzhara {
-        assert!(baad.contains(muzhara), "the user's own text is still there: {baad}");
+        assert!(
+            baad.contains(muzhara),
+            "the user's own text is still there: {baad}"
+        );
     }
     assert_eq!(
-        masrah.wathaiq().first().map(|nass| nass.contains("-novid -console")),
+        masrah
+            .wathaiq()
+            .first()
+            .map(|nass| nass.contains("-novid -console")),
         Some(true),
         "and the other game in the same file was not touched"
     );
@@ -297,7 +331,10 @@ fn alam_bi_muamil_muqtabas_yanju_min_al_dawra() {
     // A quoted argument with spaces is one word to the launcher and three to
     // anything that splits on whitespace. The escaping is `KeyValues`', which is
     // what the file really carries.
-    dawra_kamila(Some("-name \\\"The Player One\\\" -dx11"), Some("The Player One"));
+    dawra_kamila(
+        Some("-name \\\"The Player One\\\" -dx11"),
+        Some("The Player One"),
+    );
 }
 
 #[test]
@@ -326,7 +363,10 @@ fn haql_ghayr_mawjud_yanju_min_al_dawra() {
         return;
     }
     assert!(
-        masrah.wathaiq().first().is_some_and(|nass| nass.contains("\"LaunchOptions\"")),
+        masrah
+            .wathaiq()
+            .first()
+            .is_some_and(|nass| nass.contains("\"LaunchOptions\"")),
         "the key was inserted"
     );
     assert_eq!(masrah.azil().expect("the uninstall completes"), 2);
@@ -354,13 +394,21 @@ fn tadeel_yadawi_baad_al_tathbeet_yuwqif_al_izala_wa_yusammi_al_sabab() {
     let masar = masrah.hisabat.first().expect("one account").clone();
     let nass = fs::read_to_string(&masar).expect("the account configuration");
     let muharrar = nass.replace("-dx11\"", "-dx11 -windowed\"");
-    assert_ne!(muharrar, nass, "the fixture edit has to actually change the field");
+    assert_ne!(
+        muharrar, nass,
+        "the fixture edit has to actually change the field"
+    );
     fs::write(&masar, &muharrar).expect("the hand edit");
 
-    let khata = masrah.azil().expect_err("an uninstall may not overwrite a field it did not write");
+    let khata = masrah
+        .azil()
+        .expect_err("an uninstall may not overwrite a field it did not write");
     let sabab = khata.injilizi();
     assert!(sabab.contains("edited after the install"), "{sabab}");
-    assert!(sabab.contains("localconfig.vdf"), "the refusal names which file: {sabab}");
+    assert!(
+        sabab.contains("localconfig.vdf"),
+        "the refusal names which file: {sabab}"
+    );
     assert!(sabab.contains(APP), "and which game: {sabab}");
     assert!(!khata.arabi().is_empty(), "and it says so in Arabic too");
 
@@ -382,16 +430,27 @@ fn haql_massahahu_al_mustakhdim_la_yubath_min_jadeed() {
     }
     let masar = masrah.hisabat.first().expect("one account").clone();
     let nass = fs::read_to_string(&masar).expect("the account configuration");
-    let bidaya = nass.find("\"LaunchOptions\"\t\t\"WINEDLLOVERRIDES").expect("Taarib's own line");
-    let nihaya = nass.get(bidaya..).and_then(|baqi| baqi.find('\n')).expect("the end of it");
+    let bidaya = nass
+        .find("\"LaunchOptions\"\t\t\"WINEDLLOVERRIDES")
+        .expect("Taarib's own line");
+    let nihaya = nass
+        .get(bidaya..)
+        .and_then(|baqi| baqi.find('\n'))
+        .expect("the end of it");
     let mamsuh = format!(
         "{}\"LaunchOptions\"\t\t\"\"{}",
         nass.get(..bidaya).unwrap_or_default(),
-        nass.get(bidaya.saturating_add(nihaya)..).unwrap_or_default()
+        nass.get(bidaya.saturating_add(nihaya)..)
+            .unwrap_or_default()
     );
     fs::write(&masar, &mamsuh).expect("the hand edit");
 
-    assert_eq!(masrah.azil().expect("the uninstall completes over a cleared field"), 2);
+    assert_eq!(
+        masrah
+            .azil()
+            .expect("the uninstall completes over a cleared field"),
+        2
+    );
     assert_eq!(
         fs::read_to_string(&masar).expect("the account configuration"),
         mamsuh,
@@ -420,12 +479,19 @@ fn al_tathbeet_yarfud_wa_steam_yaamal() {
                 khata,
                 KhataTathbeet::MunassaTaamal { .. } | KhataTathbeet::HalatManassaMajhula { .. }
             ));
-            assert_eq!(masrah.wathaiq(), qabl, "and nothing was written before refusing");
-        }
+            assert_eq!(
+                masrah.wathaiq(),
+                qabl,
+                "and nothing was written before refusing"
+            );
+        },
         Ok(adad) => {
-            assert!(!steam_maftuh(), "a launcher that was seen running must not have been edited");
+            assert!(
+                !steam_maftuh(),
+                "a launcher that was seen running must not have been edited"
+            );
             assert_eq!(adad, 1);
-        }
+        },
     }
 }
 
@@ -448,10 +514,22 @@ fn hisaban_ala_jihaz_wahid_yunalan_al_ithnayn_wa_yustaadan() {
 
     let awwal = masrah.khiyarat(0).expect("the first account's field");
     let thani = masrah.khiyarat(1).expect("the second account's field");
-    assert!(awwal.contains(TAJAWUZ_TAARIB), "the first account is written: {awwal}");
-    assert!(thani.contains(TAJAWUZ_TAARIB), "and so is the second: {thani}");
-    assert!(awwal.contains("-dx11"), "the first account keeps its own flag: {awwal}");
-    assert!(!thani.contains("-dx11"), "and the second never acquires it: {thani}");
+    assert!(
+        awwal.contains(TAJAWUZ_TAARIB),
+        "the first account is written: {awwal}"
+    );
+    assert!(
+        thani.contains(TAJAWUZ_TAARIB),
+        "and so is the second: {thani}"
+    );
+    assert!(
+        awwal.contains("-dx11"),
+        "the first account keeps its own flag: {awwal}"
+    );
+    assert!(
+        !thani.contains("-dx11"),
+        "and the second never acquires it: {thani}"
+    );
 
     // Two per-account records plus the requirement they were written from.
     assert_eq!(masrah.azil().expect("the uninstall completes"), 3);
@@ -476,7 +554,11 @@ fn al_izala_tabni_kuttabaha_min_al_bayan_wahdahu() {
         .expect("the manifest the install left");
     let sijillat: Vec<_> = tathbeet.bayan().idadat().cloned().collect();
     let radd = RadItlaq::min_sijillat(&sijillat);
-    assert_eq!(radd.adad(), 2, "one writer per account, built from the manifest alone");
+    assert_eq!(
+        radd.adad(),
+        2,
+        "one writer per account, built from the manifest alone"
+    );
 
     for sijill in &sijillat {
         assert!(
@@ -502,7 +584,9 @@ fn jidhr_steam_bila_hisabat_yuwqif_al_tathbeet() {
     let masrah = Masrah::jadeed(&[]);
     fs::create_dir_all(masrah.steam.join("userdata")).expect("an empty userdata directory");
 
-    let khata = masrah.thabbit().expect_err("a root with no account file must stop the install");
+    let khata = masrah
+        .thabbit()
+        .expect_err("a root with no account file must stop the install");
     if steam_maftuh() {
         // On this machine the guard fires first, which is also correct.
         assert!(matches!(
@@ -511,8 +595,17 @@ fn jidhr_steam_bila_hisabat_yuwqif_al_tathbeet() {
         ));
         return;
     }
-    assert!(matches!(khata, KhataTathbeet::IdadGhayrMunaffadh { .. }), "{khata:?}");
-    assert!(khata.injilizi().contains("nowhere to put the launch options"), "{}", khata.injilizi());
+    assert!(
+        matches!(khata, KhataTathbeet::IdadGhayrMunaffadh { .. }),
+        "{khata:?}"
+    );
+    assert!(
+        khata
+            .injilizi()
+            .contains("nowhere to put the launch options"),
+        "{}",
+        khata.injilizi()
+    );
 }
 
 #[test]
@@ -528,16 +621,21 @@ fn talab_bila_sijillat_hisabat_la_yudda_mustaadan() {
     assert!(!RadItlaq::min_sijillat(&[]).yamlik(&mahall));
 
     let masrah = Masrah::jadeed(&[Some("-dx11")]);
-    let mut tathbeet =
-        Tathbeet::ibda(&masrah.nusakh, NawTathbeet::Nass, &masrah.tarif(), "dawra")
-            .expect("an installation session");
+    let mut tathbeet = Tathbeet::ibda(&masrah.nusakh, NawTathbeet::Nass, &masrah.tarif(), "dawra")
+        .expect("an installation session");
     tathbeet
         .sajjil_idad(mahall, None, Some(matlub()))
         .expect("a requirement recorded and deliberately not performed");
     drop(tathbeet);
 
-    let khata = masrah.azil().expect_err("an unperformed requirement is not a restored setting");
-    assert!(khata.injilizi().contains("no way to write settings back"), "{}", khata.injilizi());
+    let khata = masrah
+        .azil()
+        .expect_err("an unperformed requirement is not a restored setting");
+    assert!(
+        khata.injilizi().contains("no way to write settings back"),
+        "{}",
+        khata.injilizi()
+    );
     assert_eq!(
         masrah.khiyarat(0).as_deref(),
         Some("-dx11"),

@@ -162,12 +162,18 @@ pub struct MaalumatBeea {
 /// looks.
 pub fn hal_beea(jidhr: &Path) -> Natija<MaalumatBeea> {
     if !hiya_beea(jidhr) {
-        return Err(Khata::min_tafsir(&KhataKashf::BeeaMafquda { masar: jidhr.to_path_buf() }));
+        return Err(Khata::min_tafsir(&KhataKashf::BeeaMafquda {
+            masar: jidhr.to_path_buf(),
+        }));
     }
     let jidhr = jidhr.to_path_buf();
     let aqrass = khareetat_aqrass(&jidhr);
     let isdar_wine = isdar_beea(&jidhr);
-    Ok(MaalumatBeea { jidhr, aqrass, isdar_wine })
+    Ok(MaalumatBeea {
+        jidhr,
+        aqrass,
+        isdar_wine,
+    })
 }
 
 /// Whether a directory is a populated Wine prefix.
@@ -185,7 +191,10 @@ impl MaalumatBeea {
     #[must_use]
     pub fn qurs(&self, harf: char) -> Option<&Path> {
         let matlub = harf.to_ascii_lowercase();
-        self.aqrass.iter().find(|(h, _)| *h == matlub).map(|(_, masar)| masar.as_path())
+        self.aqrass
+            .iter()
+            .find(|(h, _)| *h == matlub)
+            .map(|(_, masar)| masar.as_path())
     }
 
     /// The real directory `C:\` resolves to.
@@ -195,7 +204,8 @@ impl MaalumatBeea {
     /// the conventional layout is the only evidence left.
     #[must_use]
     pub fn drive_c(&self) -> PathBuf {
-        self.qurs('c').map_or_else(|| self.jidhr.join(ISM_QURS_C), Path::to_path_buf)
+        self.qurs('c')
+            .map_or_else(|| self.jidhr.join(ISM_QURS_C), Path::to_path_buf)
     }
 
     /// The prefix's `user.reg` — `HKEY_CURRENT_USER`.
@@ -371,14 +381,16 @@ fn harf_qurs(ism: &str) -> Option<char> {
 fn hall_rabt(rabt: &Path, mujallad: &Path) -> Option<PathBuf> {
     match fs::read_link(rabt) {
         Ok(hadaf) => {
-            let mutlaq = if hadaf.is_absolute() { hadaf } else { mujallad.join(hadaf) };
+            let mutlaq = if hadaf.is_absolute() {
+                hadaf
+            } else {
+                mujallad.join(hadaf)
+            };
             Some(fs::canonicalize(&mutlaq).unwrap_or_else(|_| sawi(&mutlaq)))
-        }
+        },
         // Not a link at all: a prefix restored onto a filesystem with no symlink
         // support keeps `c:` as a real directory, and it is still the drive.
-        Err(_) if rabt.is_dir() => {
-            Some(fs::canonicalize(rabt).unwrap_or_else(|_| sawi(rabt)))
-        }
+        Err(_) if rabt.is_dir() => Some(fs::canonicalize(rabt).unwrap_or_else(|_| sawi(rabt))),
         Err(_) => None,
     }
 }
@@ -395,8 +407,8 @@ fn sawi(masar: &Path) -> PathBuf {
         match juz {
             Component::ParentDir => {
                 let _ = mabni.pop();
-            }
-            Component::CurDir => {}
+            },
+            Component::CurDir => {},
             akhar => mabni.push(akhar.as_os_str()),
         }
     }
@@ -440,8 +452,14 @@ pub fn naw_beea(jidhr: &Path) -> BeeatTawafuq {
         return BeeatTawafuq::Asli;
     }
     isdar_proton(jidhr).map_or_else(
-        || BeeatTawafuq::Wine { isdar: isdar_beea(jidhr), beea: jidhr.to_path_buf() },
-        |isdar| BeeatTawafuq::Proton { isdar, beea: jidhr.to_path_buf() },
+        || BeeatTawafuq::Wine {
+            isdar: isdar_beea(jidhr),
+            beea: jidhr.to_path_buf(),
+        },
+        |isdar| BeeatTawafuq::Proton {
+            isdar,
+            beea: jidhr.to_path_buf(),
+        },
     )
 }
 
@@ -571,7 +589,10 @@ fn isdar_beea(jidhr: &Path) -> Option<String> {
 /// The first non-empty line of a small file, trimmed.
 fn satr_awwal(masar: &Path) -> Option<String> {
     let nass = iqra_alama(masar)?;
-    nass.lines().map(str::trim).find(|satr| !satr.is_empty()).map(str::to_owned)
+    nass.lines()
+        .map(str::trim)
+        .find(|satr| !satr.is_empty())
+        .map(str::to_owned)
 }
 
 /// The remainder of the first line of a small file that begins with `bidaya`,
@@ -586,7 +607,11 @@ fn satr_bi_bidaya(masar: &Path, bidaya: &str) -> Option<String> {
     for satr in nass.lines() {
         let munaqqa = satr.trim();
         if munaqqa.to_ascii_lowercase().starts_with(&matlub) {
-            let baqi = munaqqa.get(bidaya.len()..)?.trim().trim_matches(['"', '\'']).trim();
+            let baqi = munaqqa
+                .get(bidaya.len()..)?
+                .trim()
+                .trim_matches(['"', '\''])
+                .trim();
             if !baqi.is_empty() {
                 return Some(baqi.to_owned());
             }
@@ -704,7 +729,10 @@ impl MaalumatBeea {
         let mut umq = 0usize;
         let mut mafqud = false;
 
-        for juz in baqi.split(['\\', '/']).filter(|juz| !juz.is_empty() && *juz != ".") {
+        for juz in baqi
+            .split(['\\', '/'])
+            .filter(|juz| !juz.is_empty() && *juz != ".")
+        {
             if juz == ".." {
                 if umq == 0 {
                     // Walking above the drive root would leave the prefix
@@ -1025,7 +1053,11 @@ fn hallil_sijill(masar: &Path, nass: &str) -> SijillBeea {
         adkhil_miftah(&mut mafatih, &ism, qeem);
     }
 
-    SijillBeea { masar: masar.to_path_buf(), mafatih, mimariya }
+    SijillBeea {
+        masar: masar.to_path_buf(),
+        mafatih,
+        mimariya,
+    }
 }
 
 /// Files a key's values, merging when the same key appears twice — which it does
@@ -1045,7 +1077,10 @@ fn adkhil_miftah(
 /// `Software\\Wine` and a caller spells it `Software\Wine`, and the registry
 /// itself considers key names case-insensitive.
 fn tabi_miftah(ism: &str) -> String {
-    ism.trim().replace("\\\\", "\\").trim_matches('\\').to_lowercase()
+    ism.trim()
+        .replace("\\\\", "\\")
+        .trim_matches('\\')
+        .to_lowercase()
 }
 
 /// Reads the key path out of a section header.
@@ -1067,8 +1102,8 @@ fn ism_miftah(satr: &str) -> Option<String> {
             ']' => {
                 nihaya = Some(mawqi);
                 break;
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
     Some(fukk_harab(dakhil.get(..nihaya?)?))
@@ -1096,8 +1131,8 @@ fn qassim_qeema(satr: &str) -> Option<(String, &str)> {
                 // The quote is one byte, so the next boundary is `mawqi + 1`.
                 let baqi = dakhil.get(mawqi.saturating_add(1)..)?.strip_prefix('=')?;
                 return Some((ism, baqi));
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
     None
@@ -1123,7 +1158,9 @@ fn hallil_qeema(kham: &str) -> String {
         && let Some((_, nass)) = baqi.split_once("):")
     {
         let munaqqa = nass.trim();
-        return munaqqa.strip_prefix('"').map_or_else(|| munaqqa.to_owned(), fukk_nass_muqtabas);
+        return munaqqa
+            .strip_prefix('"')
+            .map_or_else(|| munaqqa.to_owned(), fukk_nass_muqtabas);
     }
 
     if let Some(baqi) = kham.strip_prefix("hex(")
@@ -1158,7 +1195,7 @@ fn fukk_nass_muqtabas(dakhil: &str) -> String {
         match harf {
             '\\' => harab = true,
             '"' => return dakhil.get(..mawqi).map_or_else(String::new, fukk_harab),
-            _ => {}
+            _ => {},
         }
     }
     fukk_harab(dakhil)
@@ -1202,7 +1239,7 @@ fn fukk_harab(kham: &str) -> String {
                 } else {
                     natija.push(char::from_u32(qeema).unwrap_or('\u{fffd}'));
                 }
-            }
+            },
             Some(akhar) => natija.push(akhar),
             None => natija.push('\\'),
         }
@@ -1217,7 +1254,11 @@ fn bayt_min_hex(bayanat: &str) -> Vec<u8> {
         .split(',')
         .filter_map(|juz| {
             let munaqqa = juz.trim().trim_end_matches('\\').trim();
-            if munaqqa.is_empty() { None } else { u8::from_str_radix(munaqqa, 16).ok() }
+            if munaqqa.is_empty() {
+                None
+            } else {
+                u8::from_str_radix(munaqqa, 16).ok()
+            }
         })
         .collect()
 }
@@ -1235,9 +1276,13 @@ fn hex_nass(bayt: &[u8]) -> String {
 fn raqm_min_bayt(bayt: &[u8], kabir: bool) -> String {
     match bayt.get(..4).and_then(|juz| <[u8; 4]>::try_from(juz).ok()) {
         Some(arbaa) => {
-            let qeema = if kabir { u32::from_be_bytes(arbaa) } else { u32::from_le_bytes(arbaa) };
+            let qeema = if kabir {
+                u32::from_be_bytes(arbaa)
+            } else {
+                u32::from_le_bytes(arbaa)
+            };
             qeema.to_string()
-        }
+        },
         None => hex_nass(bayt),
     }
 }
@@ -1253,7 +1298,9 @@ fn nass_min_utf16(bayt: &[u8]) -> String {
         .filter_map(|juz| <[u8; 2]>::try_from(juz).ok())
         .map(u16::from_le_bytes)
         .collect();
-    String::from_utf16_lossy(&wahdat).trim_end_matches('\0').replace('\0', "\n")
+    String::from_utf16_lossy(&wahdat)
+        .trim_end_matches('\0')
+        .replace('\0', "\n")
 }
 
 /// Decodes file bytes to text, honouring a byte order mark.
@@ -1272,7 +1319,7 @@ fn nass_min_bayt(bayt: &[u8]) -> String {
                 .map(u16::from_le_bytes)
                 .collect();
             String::from_utf16_lossy(&wahdat)
-        }
+        },
         Some([0xFE, 0xFF]) => {
             let wahdat: Vec<u16> = bayt
                 .get(2..)
@@ -1282,7 +1329,7 @@ fn nass_min_bayt(bayt: &[u8]) -> String {
                 .map(u16::from_be_bytes)
                 .collect();
             String::from_utf16_lossy(&wahdat)
-        }
+        },
         _ => String::from_utf8_lossy(bayt.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bayt))
             .into_owned(),
     }
@@ -1449,19 +1496,35 @@ pub fn iktashif_beeat(manzil: &Path) -> Vec<PathBuf> {
     let walidun = [
         // Bare Wine and winetricks' convention for extra prefixes.
         manzil.join(".local").join("share").join("wineprefixes"),
-        flatpak.join("org.winehq.Wine").join("data").join("wineprefixes"),
+        flatpak
+            .join("org.winehq.Wine")
+            .join("data")
+            .join("wineprefixes"),
         manzil.join(".PlayOnLinux").join("wineprefix"),
         // Lutris: prefixes default under ~/Games, and the runner tree is
         // scanned too because a user who pointed Lutris there gets prefixes
         // there.
         manzil.join("Games"),
-        manzil.join(".local").join("share").join("lutris").join("runners").join("wine"),
+        manzil
+            .join(".local")
+            .join("share")
+            .join("lutris")
+            .join("runners")
+            .join("wine"),
         lutris.join("Games"),
         lutris.join("lutris").join("runners").join("wine"),
         // Bottles: one directory per bottle, each of which is itself a prefix
         // with the bottle configuration sitting inside it.
-        manzil.join(".local").join("share").join("bottles").join("bottles"),
-        flatpak.join("com.usebottles.bottles").join("data").join("bottles").join("bottles"),
+        manzil
+            .join(".local")
+            .join("share")
+            .join("bottles")
+            .join("bottles"),
+        flatpak
+            .join("com.usebottles.bottles")
+            .join("data")
+            .join("bottles")
+            .join("bottles"),
         // Heroic: a Prefixes tree, in any of the several places Heroic has kept
         // it, plus the Flatpak layout of each.
         manzil.join("Games").join("Heroic").join("Prefixes"),
@@ -1554,9 +1617,12 @@ impl MaalumatBeea {
     #[must_use]
     pub fn mujallad_mustakhdim(&self) -> Option<PathBuf> {
         let qurs_c = self.drive_c();
-        [qurs_c.join("users"), qurs_c.join("windows").join("profiles")]
-            .iter()
-            .find_map(|asas| mustakhdim_fi(asas))
+        [
+            qurs_c.join("users"),
+            qurs_c.join("windows").join("profiles"),
+        ]
+        .iter()
+        .find_map(|asas| mustakhdim_fi(asas))
     }
 }
 
@@ -1586,7 +1652,13 @@ fn mustakhdim_fi(asas: &Path) -> Option<PathBuf> {
         .and_then(|qeema| qeema.into_string().ok())
         .map(|qeema| qeema.to_lowercase());
 
-    let asma_nizam = ["public", "all users", "default", "default user", "defaultuser0"];
+    let asma_nizam = [
+        "public",
+        "all users",
+        "default",
+        "default user",
+        "defaultuser0",
+    ];
     let mut murashahun: Vec<PathBuf> = Vec::new();
 
     for madkhal in fs::read_dir(asas).ok()?.take(HADD_MUDKHALAT).flatten() {

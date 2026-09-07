@@ -286,7 +286,12 @@ pub struct IsdarGodot {
 
 impl Default for IsdarGodot {
     fn default() -> Self {
-        Self { kabir: 0, sagheer: 0, tasheeh: 0, nass: core::ptr::null() }
+        Self {
+            kabir: 0,
+            sagheer: 0,
+            tasheeh: 0,
+            nass: core::ptr::null(),
+        }
     }
 }
 
@@ -359,7 +364,10 @@ pub const unsafe fn nawa_wasila(khaam: *const c_void) -> NawWasila {
     // instruction alignment, which on x86-64 is one byte.
     let ras = unsafe { khaam.cast::<RasWasilaQadima>().read_unaligned() };
     if ras.kabir == 4 && ras.sagheer == 0 {
-        NawWasila::Qadima { sagheer: ras.sagheer, tasheeh: ras.tasheeh }
+        NawWasila::Qadima {
+            sagheer: ras.sagheer,
+            tasheeh: ras.tasheeh,
+        }
     } else {
         NawWasila::Jadida
     }
@@ -424,8 +432,7 @@ type DallaJalbTahweel = unsafe extern "C" fn(naw: NawQeema) -> Option<DallaTahwe
 
 /// `void (*GDExtensionVariantFromTypeConstructorFunc)(GDExtensionUninitializedVariantPtr,
 /// GDExtensionTypePtr)`.
-pub type DallaTahweel =
-    unsafe extern "C" fn(makhraj: MaqbadMutaghayyir, masdar: MaqbadNaw);
+pub type DallaTahweel = unsafe extern "C" fn(makhraj: MaqbadMutaghayyir, masdar: MaqbadNaw);
 
 /// `void variant_stringify(GDExtensionConstVariantPtr, GDExtensionStringPtr)`.
 type DallaSard = unsafe extern "C" fn(dhat: *const c_void, makhraj: MaqbadNaw);
@@ -648,10 +655,7 @@ impl Wasila {
                     jalb,
                     ISM_NASS_JADEED,
                 )?),
-                core::mem::transmute::<DallaWasila, DallaNassIla>(dalla_bism(
-                    jalb,
-                    ISM_NASS_ILA,
-                )?),
+                core::mem::transmute::<DallaWasila, DallaNassIla>(dalla_bism(jalb, ISM_NASS_ILA)?),
                 core::mem::transmute::<DallaWasila, DallaIsmJadeed>(dalla_bism(
                     jalb,
                     ISM_ISM_JADEED,
@@ -1106,10 +1110,7 @@ impl Wasila {
     /// # Errors
     ///
     /// Whatever [`Wasila::nass_rust`] refuses.
-    pub fn sard_mutaghayyir(
-        &self,
-        mutaghayyir: &MutaghayyirGodot,
-    ) -> Result<String, KhataGodot> {
+    pub fn sard_mutaghayyir(&self, mutaghayyir: &MutaghayyirGodot) -> Result<String, KhataGodot> {
         let mut hashwa = Hashwa::khali();
         // SAFETY: `mutaghayyir` owns a live `Variant`, and `hashwa` is a live
         // buffer larger than the `String` the engine writes into it.
@@ -1151,8 +1152,7 @@ impl Wasila {
         // `Option` models.
         let Some(bina) = (unsafe { (self.jalb_bina)(NAW_MASFUFAT_BAYT, BANI_IFTIRADI) }) else {
             return Err(KhataGodot::KhattMarfud {
-                sabab: "this Godot build has no default constructor for PackedByteArray"
-                    .to_owned(),
+                sabab: "this Godot build has no default constructor for PackedByteArray".to_owned(),
             });
         };
         let mut hashwa = Hashwa::khali();
@@ -1330,7 +1330,11 @@ impl WaslGodot {
     /// Wraps a resolved interface and the caller's hash table.
     #[must_use]
     pub const fn jadeed(wasila: Wasila, turuq: JadwalTuruq) -> Self {
-        Self { wasila, turuq, khatt: OnceLock::new() }
+        Self {
+            wasila,
+            turuq,
+            khatt: OnceLock::new(),
+        }
     }
 
     /// The resolved interface, for a caller that needs to build values itself.
@@ -1389,11 +1393,7 @@ impl WaslGodot {
         // the engine returns null for a class, method or hash it does not
         // recognise rather than binding something else.
         let tareeqa = unsafe {
-            (self.wasila.rabt_tareeqa)(
-                sanf_godot.maqbad_thabit(),
-                ism_godot.maqbad_thabit(),
-                basma,
-            )
+            (self.wasila.rabt_tareeqa)(sanf_godot.maqbad_thabit(), ism_godot.maqbad_thabit(), basma)
         };
         if tareeqa.is_null() {
             return Err(KhataGodot::ImtidadMarfud {
@@ -1449,21 +1449,27 @@ impl WaslGodot {
                 ),
             });
         }
-        Ok(core::ptr::with_exposed_provenance_mut::<c_void>(khatt.kaain))
+        Ok(core::ptr::with_exposed_provenance_mut::<c_void>(
+            khatt.kaain,
+        ))
     }
 
     /// The engine's default `Theme`.
     fn sima_qaida(&self) -> Result<MaqbadKaain, KhataGodot> {
         let qaida = self.mufrad(SANF_QAIDAT_SIMA)?;
-        let tareeqa =
-            self.tareeqa(SANF_QAIDAT_SIMA, TAREEQA_SIMA_QAIDA, self.turuq.sima_qaida)?;
+        let tareeqa = self.tareeqa(SANF_QAIDAT_SIMA, TAREEQA_SIMA_QAIDA, self.turuq.sima_qaida)?;
         let mut sima: MaqbadKaain = core::ptr::null_mut();
         // SAFETY: `qaida` is the live `ThemeDB` singleton and `tareeqa` binds
         // its no-argument `get_default_theme`. A `Ref<Theme>` return is encoded
         // into the return slot as one object pointer, so a live `MaqbadKaain`
         // is exactly the buffer it needs.
         unsafe {
-            self.nadi(tareeqa, qaida, &[], core::ptr::from_mut(&mut sima).cast::<c_void>());
+            self.nadi(
+                tareeqa,
+                qaida,
+                &[],
+                core::ptr::from_mut(&mut sima).cast::<c_void>(),
+            );
         }
         if sima.is_null() {
             return Err(KhataGodot::KhattMarfud {
@@ -1501,7 +1507,7 @@ impl WaslGodot {
             QeemaIdad::Nass(nass) => {
                 let mut nass_godot = self.wasila.nass(nass)?;
                 Ok(self.wasila.mutaghayyir_nass(&mut nass_godot))
-            }
+            },
             QeemaIdad::Raqm(raqm) => Ok(self.wasila.mutaghayyir_raqm(*raqm)),
             // Refused rather than approximated. Writing a `PackedStringArray`
             // live would need a second element accessor and a `String`
@@ -1557,10 +1563,7 @@ impl Musajjil for WaslGodot {
         unsafe { self.nadi(tareeqa, idadat, &muamalat, hashwa.maqbad()) };
         // Wrapped immediately so the returned `Variant` is released even if the
         // conversion below fails.
-        let makhraj = MutaghayyirGodot(QeemaGodot::jadeeda(
-            hashwa,
-            self.wasila.hadm_mutaghayyir,
-        ));
+        let makhraj = MutaghayyirGodot(QeemaGodot::jadeeda(hashwa, self.wasila.hadm_mutaghayyir));
         self.wasila.sard_mutaghayyir(&makhraj)
     }
 
@@ -1596,19 +1599,16 @@ impl Musajjil for WaslGodot {
             Err(khata) => {
                 self.ahdim(kaain);
                 return Err(khata);
-            }
+            },
         };
-        let tareeqa = match self.tareeqa(
-            SANF_KHATT,
-            TAREEQA_KHATT_BAYANAT,
-            self.turuq.khatt_bayanat,
-        ) {
-            Ok(tareeqa) => tareeqa,
-            Err(khata) => {
-                self.ahdim(kaain);
-                return Err(khata);
-            }
-        };
+        let tareeqa =
+            match self.tareeqa(SANF_KHATT, TAREEQA_KHATT_BAYANAT, self.turuq.khatt_bayanat) {
+                Ok(tareeqa) => tareeqa,
+                Err(khata) => {
+                    self.ahdim(kaain);
+                    return Err(khata);
+                },
+            };
 
         let muamalat = [masfufa.maqbad_thabit()];
         // SAFETY: `kaain` is a live `FontFile` this call constructed; `tareeqa`
@@ -1618,8 +1618,10 @@ impl Musajjil for WaslGodot {
         // array into the resource, so `masfufa` may be dropped afterwards.
         unsafe { self.nadi(tareeqa, kaain, &muamalat, core::ptr::null_mut()) };
 
-        let musajjal =
-            KhattMusajjal { kaain: kaain.cast_const().expose_provenance(), ism: ism.to_owned() };
+        let musajjal = KhattMusajjal {
+            kaain: kaain.cast_const().expose_provenance(),
+            ism: ism.to_owned(),
+        };
         if self.khatt.set(musajjal).is_err() {
             // Another thread won the race. Godot calls the initialisation
             // callbacks from the main thread, so this cannot happen in the
@@ -1633,8 +1635,7 @@ impl Musajjil for WaslGodot {
     fn asnid_khatt_iftiradi(&self, ism: &str) -> Result<(), KhataGodot> {
         let khatt = self.khatt_musajjal(ism)?;
         let sima = self.sima_qaida()?;
-        let tareeqa =
-            self.tareeqa(SANF_SIMA, TAREEQA_SIMA_IFTIRADI, self.turuq.sima_iftiradi)?;
+        let tareeqa = self.tareeqa(SANF_SIMA, TAREEQA_SIMA_IFTIRADI, self.turuq.sima_iftiradi)?;
         let muamalat = [core::ptr::from_ref(&khatt).cast::<c_void>()];
         // SAFETY: `sima` is the live default `Theme`; `tareeqa` binds its
         // `set_default_font`, whose one argument is a `Ref<Font>`; and a
@@ -1753,7 +1754,12 @@ impl Musajjil for WaslGodot {
         // binds its no-argument `get_primary_interface`, whose `Ref<TextServer>`
         // return is encoded into the slot as one object pointer.
         unsafe {
-            self.nadi(asasi, mudir, &[], core::ptr::from_mut(&mut khadim).cast::<c_void>());
+            self.nadi(
+                asasi,
+                mudir,
+                &[],
+                core::ptr::from_mut(&mut khadim).cast::<c_void>(),
+            );
         }
         if khadim.is_null() {
             return Err(KhataGodot::ImtidadMarfud {
@@ -1956,8 +1962,7 @@ pub unsafe extern "C" fn taarib_imtidad(
 
         if wasila.is_null() {
             return urfud(
-                "Godot passed a null interface pointer, which no released engine does"
-                    .to_owned(),
+                "Godot passed a null interface pointer, which no released engine does".to_owned(),
             );
         }
 
@@ -1982,8 +1987,7 @@ pub unsafe extern "C" fn taarib_imtidad(
         // `GDExtensionInterfaceFunctionPtr (*)(const char *)`. Transmuting a
         // code address to a function pointer of the matching signature is the
         // only way to call it.
-        let jalb =
-            unsafe { core::mem::transmute::<*const c_void, DallaJalbUnwan>(wasila) };
+        let jalb = unsafe { core::mem::transmute::<*const c_void, DallaJalbUnwan>(wasila) };
 
         // SAFETY: `jalb` is the engine's own `get_proc_address`, established
         // immediately above, which is the whole of `Wasila::ijlib`'s contract.
@@ -2004,7 +2008,10 @@ pub unsafe extern "C" fn taarib_imtidad(
         }
         if mawsula.kabir() != 4 {
             return urfud(
-                KhataGodot::MuharrikGhayrMadum { wujid: mawsula.isdar() }.to_string(),
+                KhataGodot::MuharrikGhayrMadum {
+                    wujid: mawsula.isdar(),
+                }
+                .to_string(),
             );
         }
 
@@ -2086,7 +2093,7 @@ unsafe extern "C" fn tahyia_mustawa(bayanat: *mut c_void, mustawa: u32) {
                     "the Taarib GDExtension applied the patch at the scene level"
                 );
                 let _ = NATIJA.set(hasila);
-            }
+            },
             Err(khata) => tracing::warn!(
                 sabab = %khata,
                 "the Taarib GDExtension reached the scene level and applied nothing; the game \

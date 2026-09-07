@@ -455,7 +455,11 @@ impl Tibl {
     pub fn min_bayt(bayt: &[u8], tarteeb: TarteebBayt) -> Result<Self, KhataBio4> {
         let tul = tul_u64(bayt.len());
         if tul > AQSA_KUTLA {
-            return Err(KhataBio4::HajmMufrit { haql: "TPL block", qeema: tul, saqf: AQSA_KUTLA });
+            return Err(KhataBio4::HajmMufrit {
+                haql: "TPL block",
+                qeema: tul,
+                saqf: AQSA_KUTLA,
+            });
         }
 
         let sihr = tarteeb.kalima(iqra4(bayt, 0, "TPL magic")?);
@@ -501,10 +505,20 @@ impl Tibl {
         for entry in &wasf {
             if entry.mawdi_lawha != 0 {
                 let tarwis = iqra_tarwis_lawha(bayt, entry.mawdi_lawha)?;
-                daa_farid(&mut lawhat, entry.mawdi_lawha, tarwis, "TPL palette header offset")?;
+                daa_farid(
+                    &mut lawhat,
+                    entry.mawdi_lawha,
+                    tarwis,
+                    "TPL palette header offset",
+                )?;
             }
             let tarwis = iqra_tarwis_sura(bayt, entry.mawdi_sura)?;
-            daa_farid(&mut suwar, entry.mawdi_sura, tarwis, "TPL image header offset")?;
+            daa_farid(
+                &mut suwar,
+                entry.mawdi_sura,
+                tarwis,
+                "TPL image header offset",
+            )?;
         }
 
         // The trailer starts wherever the last header ends. Taking the maximum
@@ -520,13 +534,23 @@ impl Tibl {
             mawdi_dhayl = mawdi_dhayl.max(mawdi.saturating_add(TUL_TARWIS_SURA));
         }
 
-        let bidaya = usize::try_from(mawdi_dhayl).unwrap_or(usize::MAX).min(bayt.len());
+        let bidaya = usize::try_from(mawdi_dhayl)
+            .unwrap_or(usize::MAX)
+            .min(bayt.len());
         let dhayl = bayt.get(bidaya..).unwrap_or(&[]).to_vec();
 
         lawhat.sort_unstable_by_key(|(mawdi, _)| *mawdi);
         suwar.sort_unstable_by_key(|(mawdi, _)| *mawdi);
 
-        Ok(Self { tarteeb, mawdi_jadwal, wasf, lawhat, suwar, dhayl, mawdi_dhayl })
+        Ok(Self {
+            tarteeb,
+            mawdi_jadwal,
+            wasf,
+            lawhat,
+            suwar,
+            dhayl,
+            mawdi_dhayl,
+        })
     }
 
     /// Serialises the block back to bytes.
@@ -548,7 +572,11 @@ impl Tibl {
         let mut tul = u64::from(self.mawdi_dhayl).saturating_add(tul_u64(self.dhayl.len()));
         tul = tul.max(u64::from(TUL_TARWIS_KUTLA));
         if tul > AQSA_KUTLA {
-            return Err(KhataBio4::HajmMufrit { haql: "TPL block", qeema: tul, saqf: AQSA_KUTLA });
+            return Err(KhataBio4::HajmMufrit {
+                haql: "TPL block",
+                qeema: tul,
+                saqf: AQSA_KUTLA,
+            });
         }
         let hajm = usize::try_from(tul).unwrap_or(usize::MAX);
         let mut kharij = vec![0u8; hajm];
@@ -558,29 +586,79 @@ impl Tibl {
         iktub(&mut kharij, 8, &self.mawdi_jadwal.to_le_bytes())?;
 
         for (fahras, entry) in self.wasf.iter().enumerate() {
-            let khatwa = u32::try_from(fahras).unwrap_or(u32::MAX).saturating_mul(TUL_WASF);
+            let khatwa = u32::try_from(fahras)
+                .unwrap_or(u32::MAX)
+                .saturating_mul(TUL_WASF);
             let asas = self.mawdi_jadwal.saturating_add(khatwa);
             iktub(&mut kharij, asas, &entry.mawdi_sura.to_le_bytes())?;
-            iktub(&mut kharij, asas.saturating_add(4), &entry.mawdi_lawha.to_le_bytes())?;
+            iktub(
+                &mut kharij,
+                asas.saturating_add(4),
+                &entry.mawdi_lawha.to_le_bytes(),
+            )?;
         }
 
         for (mawdi, tarwis) in &self.lawhat {
             iktub(&mut kharij, *mawdi, &tarwis.adad.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(2), &[tarwis.mufakkak, tarwis.hashw])?;
-            iktub(&mut kharij, mawdi.saturating_add(4), &tarwis.sigha.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(8), &tarwis.mawdi.to_le_bytes())?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(2),
+                &[tarwis.mufakkak, tarwis.hashw],
+            )?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(4),
+                &tarwis.sigha.to_le_bytes(),
+            )?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(8),
+                &tarwis.mawdi.to_le_bytes(),
+            )?;
         }
 
         for (mawdi, tarwis) in &self.suwar {
             iktub(&mut kharij, *mawdi, &tarwis.irtifa.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(2), &tarwis.ard.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(4), &tarwis.sigha.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(8), &tarwis.mawdi.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(12), &tarwis.laff_s.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(16), &tarwis.laff_a.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(20), &tarwis.murashah_asghar.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(24), &tarwis.murashah_akbar.to_le_bytes())?;
-            iktub(&mut kharij, mawdi.saturating_add(28), &tarwis.inhiyaz_mustawa.to_le_bytes())?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(2),
+                &tarwis.ard.to_le_bytes(),
+            )?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(4),
+                &tarwis.sigha.to_le_bytes(),
+            )?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(8),
+                &tarwis.mawdi.to_le_bytes(),
+            )?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(12),
+                &tarwis.laff_s.to_le_bytes(),
+            )?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(16),
+                &tarwis.laff_a.to_le_bytes(),
+            )?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(20),
+                &tarwis.murashah_asghar.to_le_bytes(),
+            )?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(24),
+                &tarwis.murashah_akbar.to_le_bytes(),
+            )?;
+            iktub(
+                &mut kharij,
+                mawdi.saturating_add(28),
+                &tarwis.inhiyaz_mustawa.to_le_bytes(),
+            )?;
             iktub(
                 &mut kharij,
                 mawdi.saturating_add(32),
@@ -693,29 +771,28 @@ impl Tibl {
 fn iqra4(bayt: &[u8], mawqi: u32, haql: &'static str) -> Result<[u8; 4], KhataBio4> {
     let bidaya = usize::try_from(mawqi).unwrap_or(usize::MAX);
     let nihaya = bidaya.saturating_add(4);
-    let qita = bayt.get(bidaya..nihaya).ok_or_else(|| KhataBio4::MalafQaseer {
-        haql,
-        mawqi: u64::from(mawqi),
-        tul: tul_u64(bayt.len()),
-        matlub: u64::from(mawqi).saturating_add(4),
-    })?;
+    let qita = bayt
+        .get(bidaya..nihaya)
+        .ok_or_else(|| KhataBio4::MalafQaseer {
+            haql,
+            mawqi: u64::from(mawqi),
+            tul: tul_u64(bayt.len()),
+            matlub: u64::from(mawqi).saturating_add(4),
+        })?;
     let mut kalima = [0u8; 4];
     kalima.copy_from_slice(qita);
     Ok(kalima)
 }
 
 /// Four bytes at `asas + izaha`, refusing an offset that overflows.
-fn iqra4_min(
-    bayt: &[u8],
-    asas: u32,
-    izaha: u32,
-    haql: &'static str,
-) -> Result<[u8; 4], KhataBio4> {
-    let mawqi = asas.checked_add(izaha).ok_or_else(|| KhataBio4::BunyaGhayrMutawaqqaa {
-        haql,
-        qeema: u64::from(asas),
-        sabab: "runs past the address space of a block",
-    })?;
+fn iqra4_min(bayt: &[u8], asas: u32, izaha: u32, haql: &'static str) -> Result<[u8; 4], KhataBio4> {
+    let mawqi = asas
+        .checked_add(izaha)
+        .ok_or_else(|| KhataBio4::BunyaGhayrMutawaqqaa {
+            haql,
+            qeema: u64::from(asas),
+            sabab: "runs past the address space of a block",
+        })?;
     iqra4(bayt, mawqi, haql)
 }
 
@@ -723,12 +800,14 @@ fn iqra4_min(
 fn iqra2(bayt: &[u8], mawqi: u32, haql: &'static str) -> Result<u16, KhataBio4> {
     let bidaya = usize::try_from(mawqi).unwrap_or(usize::MAX);
     let nihaya = bidaya.saturating_add(2);
-    let qita = bayt.get(bidaya..nihaya).ok_or_else(|| KhataBio4::MalafQaseer {
-        haql,
-        mawqi: u64::from(mawqi),
-        tul: tul_u64(bayt.len()),
-        matlub: u64::from(mawqi).saturating_add(2),
-    })?;
+    let qita = bayt
+        .get(bidaya..nihaya)
+        .ok_or_else(|| KhataBio4::MalafQaseer {
+            haql,
+            mawqi: u64::from(mawqi),
+            tul: tul_u64(bayt.len()),
+            matlub: u64::from(mawqi).saturating_add(2),
+        })?;
     let mut kalima = [0u8; 2];
     kalima.copy_from_slice(qita);
     Ok(u16::from_le_bytes(kalima))
@@ -737,12 +816,14 @@ fn iqra2(bayt: &[u8], mawqi: u32, haql: &'static str) -> Result<u16, KhataBio4> 
 /// One byte at `mawqi`.
 fn iqra1(bayt: &[u8], mawqi: u32, haql: &'static str) -> Result<u8, KhataBio4> {
     let fahras = usize::try_from(mawqi).unwrap_or(usize::MAX);
-    bayt.get(fahras).copied().ok_or_else(|| KhataBio4::MalafQaseer {
-        haql,
-        mawqi: u64::from(mawqi),
-        tul: tul_u64(bayt.len()),
-        matlub: u64::from(mawqi).saturating_add(1),
-    })
+    bayt.get(fahras)
+        .copied()
+        .ok_or_else(|| KhataBio4::MalafQaseer {
+            haql,
+            mawqi: u64::from(mawqi),
+            tul: tul_u64(bayt.len()),
+            matlub: u64::from(mawqi).saturating_add(1),
+        })
 }
 
 /// Reads a palette header at `mawdi`.
@@ -824,11 +905,13 @@ fn daa_farid<T: PartialEq>(
 fn iktub(hadaf: &mut [u8], mawdi: u32, qeema: &[u8]) -> Result<(), KhataBio4> {
     let bidaya = usize::try_from(mawdi).unwrap_or(usize::MAX);
     let nihaya = bidaya.saturating_add(qeema.len());
-    let makan = hadaf.get_mut(bidaya..nihaya).ok_or_else(|| KhataBio4::BunyaGhayrMutawaqqaa {
-        haql: "TPL field offset",
-        qeema: u64::from(mawdi),
-        sabab: "falls outside the block the offsets describe",
-    })?;
+    let makan = hadaf
+        .get_mut(bidaya..nihaya)
+        .ok_or_else(|| KhataBio4::BunyaGhayrMutawaqqaa {
+            haql: "TPL field offset",
+            qeema: u64::from(mawdi),
+            sabab: "falls outside the block the offsets describe",
+        })?;
     makan.copy_from_slice(qeema);
     Ok(())
 }

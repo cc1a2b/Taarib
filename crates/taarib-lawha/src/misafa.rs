@@ -173,7 +173,10 @@ impl KhiyaratMisafa {
     /// derived from that range by [`intishar_munasib`].
     #[must_use]
     pub fn li_mada(adna_hajm: f32, aqsa_hajm: f32) -> Self {
-        Self { intishar: intishar_munasib(adna_hajm, aqsa_hajm), ..Self::default() }
+        Self {
+            intishar: intishar_munasib(adna_hajm, aqsa_hajm),
+            ..Self::default()
+        }
     }
 
     /// The pixel size the source coverage is rasterized at.
@@ -234,7 +237,9 @@ pub fn intishar_munasib(adna_hajm: f32, aqsa_hajm: f32) -> f32 {
     let lil_saghir = (khalyia / adna) * TASAMUH_HAFFA;
     let lil_kabir = KHATWA_QUSWA * 255.0 * khalyia / (2.0 * aqsa);
 
-    lil_saghir.min(lil_kabir).clamp(INTISHAR_ADNA, INTISHAR_AQSA)
+    lil_saghir
+        .min(lil_kabir)
+        .clamp(INTISHAR_ADNA, INTISHAR_AQSA)
 }
 
 /// Generates one glyph's distance field, at the cell the options declare.
@@ -264,19 +269,19 @@ pub fn intishar_munasib(adna_hajm: f32, aqsa_hajm: f32) -> f32 {
 /// [`crate::namu::LawhaHayya`] — is the one that wraps them in
 /// [`KhataLawha::RasmFashil`], because it is the first layer that knows the
 /// whole key.
-pub fn masafa_shakl(
-    rassam: &Rassam,
-    muarrif: u32,
-    khiyarat: KhiyaratMisafa,
-) -> Natija<SurahHarf> {
+pub fn masafa_shakl(rassam: &Rassam, muarrif: u32, khiyarat: KhiyaratMisafa) -> Natija<SurahHarf> {
     tahaqquq(khiyarat)?;
 
-    let namat_hadaf = NamatRasm::Masafa { intishar: khiyarat.intishar };
+    let namat_hadaf = NamatRasm::Masafa {
+        intishar: khiyarat.intishar,
+    };
     // `Masafa`, never `Taghtiya`: it is the mode that routes *linear* coverage
     // into the distance transform. Asking for coverage here and transforming it
     // afterwards would feed the transform an sRGB-encoded bitmap and dilate
     // every letter in the patch.
-    let namat_masdar = NamatRasm::Masafa { intishar: khiyarat.intishar_masdar() };
+    let namat_masdar = NamatRasm::Masafa {
+        intishar: khiyarat.intishar_masdar(),
+    };
     let surah = rassam.irsim(muarrif, khiyarat.hajm_masdar(), namat_masdar, 0.0, &[])?;
 
     let daqqa = khiyarat.daqqat_masdar;
@@ -288,7 +293,10 @@ pub fn masafa_shakl(
         return Ok(SurahHarf::farigha(surah.taqaddum / daqqa, namat_hadaf));
     }
     if (daqqa - 1.0).abs() <= TASAMUH_KASR {
-        return Ok(SurahHarf { namat: namat_hadaf, ..surah });
+        return Ok(SurahHarf {
+            namat: namat_hadaf,
+            ..surah
+        });
     }
 
     let ard = ila_bud(f32::from(ila_bud_u32(surah.ard)) / daqqa);
@@ -322,7 +330,11 @@ fn tahaqquq(khiyarat: KhiyaratMisafa) -> Natija<()> {
     if salih {
         Ok(())
     } else {
-        Err(KhataLawha::DaqqaGhayrSaliha { daqqa, hajm_khalyia: khalyia }.into())
+        Err(KhataLawha::DaqqaGhayrSaliha {
+            daqqa,
+            hajm_khalyia: khalyia,
+        }
+        .into())
     }
 }
 
@@ -374,7 +386,10 @@ fn saghghir(masdar: &[u8], ard_m: u32, irtifa_m: u32, ard_h: u16, irtifa_h: u16)
                         continue;
                     }
                     let wazn = wazn_a * wazn_s;
-                    let qeema = masdar.get(bidaya.saturating_add(amud_m)).copied().unwrap_or(0);
+                    let qeema = masdar
+                        .get(bidaya.saturating_add(amud_m))
+                        .copied()
+                        .unwrap_or(0);
                     jam += wazn * f32::from(qeema);
                     wazn_kulli += wazn;
                 }
@@ -403,7 +418,11 @@ fn tadakhul(min: f32, ila: f32, fahras: usize) -> f32 {
 
 /// Repairs a size into something the spread formula can divide by.
 fn hajm_salih(hajm: f32) -> f32 {
-    if hajm.is_finite() && hajm > 0.0 { hajm } else { f32::from(HAJM_KHALYIA_IFTIRADI) }
+    if hajm.is_finite() && hajm > 0.0 {
+        hajm
+    } else {
+        f32::from(HAJM_KHALYIA_IFTIRADI)
+    }
 }
 
 /// A resampled dimension, at least one texel.
@@ -435,7 +454,11 @@ fn ila_izaha(qeema: f32) -> i32 {
     if !qeema.is_finite() {
         return 0;
     }
-    i32::from(qeema.round().clamp(f32::from(i16::MIN), f32::from(i16::MAX)) as i16)
+    i32::from(
+        qeema
+            .round()
+            .clamp(f32::from(i16::MIN), f32::from(i16::MAX)) as i16,
+    )
 }
 
 /// The `u16` form of a bitmap dimension, for the `f32::from` that follows it.

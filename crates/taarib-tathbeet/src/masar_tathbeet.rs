@@ -189,8 +189,11 @@ where
     // read it — the tier deploys none — so placing it would be a directory added
     // to a game the product promised not to modify, for nothing.
     let yuktab = qarar.is_some_and(QararTabaqa::tughayyar_al_luba);
-    let adad_muhtawa =
-        if yuktab { ida_muhtawa(&mut tathbeet, &talab.muhtawa)? } else { 0 };
+    let adad_muhtawa = if yuktab {
+        ida_muhtawa(&mut tathbeet, &talab.muhtawa)?
+    } else {
+        0
+    };
 
     let taqreer = tahaqquq_kamil(&talab.luba.jidhr, jidhr_nusakh, NawTathbeet::Nass)?;
     Ok(NatijatTathbeetKamil {
@@ -215,10 +218,7 @@ where
 /// The requirement is read out of the manifest and cloned before the recorder is
 /// borrowed to write into it, which is also why the list is materialised rather
 /// than iterated in place.
-fn naffidh_idadat(
-    tathbeet: &mut Tathbeet,
-    jidhr_steam: Option<&Path>,
-) -> NatijatTathbeet<usize> {
+fn naffidh_idadat(tathbeet: &mut Tathbeet, jidhr_steam: Option<&Path>) -> NatijatTathbeet<usize> {
     let talabat = itlaq::talabat_steam(tathbeet.bayan());
     if talabat.is_empty() {
         return Ok(0);
@@ -251,7 +251,10 @@ fn basmat_ruqaa(jidhr: &Path, ruqaa: &MalafRuqaa) -> NatijatTathbeet<Basma> {
 /// one was seen; [`KhataTathbeet::HalatLubaMajhula`] naming the sandbox when the
 /// question could not be answered at all.
 pub fn la_tashtaghil(tanfidhi: &str) -> NatijatTathbeet<()> {
-    let ism = Path::new(tanfidhi).file_name().and_then(|s| s.to_str()).unwrap_or(tanfidhi);
+    let ism = Path::new(tanfidhi)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or(tanfidhi);
     hukm_tashghil(manassa::halat_tashghil(ism), ism, tanfidhi)
 }
 
@@ -278,9 +281,10 @@ fn hukm_tashghil(hala: HalatTashghil, ism: &str, tanfidhi: &str) -> NatijatTathb
                 tanfidhi: PathBuf::from(tanfidhi),
             },
         }),
-        HalatTashghil::GhayrMaaruf { sunduq } => {
-            Err(KhataTathbeet::HalatLubaMajhula { sunduq, tanfidhi: PathBuf::from(tanfidhi) })
-        }
+        HalatTashghil::GhayrMaaruf { sunduq } => Err(KhataTathbeet::HalatLubaMajhula {
+            sunduq,
+            tanfidhi: PathBuf::from(tanfidhi),
+        }),
     }
 }
 
@@ -291,10 +295,13 @@ fn tahaqquq_ruqaa(
 ) -> NatijatTathbeet<()> {
     let mafateeh = ruqaa.ruqaa().map_err(|khata| khata_ruqaa(jidhr, &khata))?;
     let basma = mafateeh.tarwisa().basma;
-    mafateeh.tawqee().tahaqquq(&basma, mudaqqiq).map_err(|khata| KhataTathbeet::RuqaaMarfuda {
-        masar: jidhr.to_path_buf(),
-        sabab: khata.to_string(),
-    })
+    mafateeh
+        .tawqee()
+        .tahaqquq(&basma, mudaqqiq)
+        .map_err(|khata| KhataTathbeet::RuqaaMarfuda {
+            masar: jidhr.to_path_buf(),
+            sabab: khata.to_string(),
+        })
 }
 
 fn qarrir_tawafuq(talab: &TalabTathbeet<'_>) -> NatijatTathbeet<QararTawafuq> {
@@ -307,8 +314,12 @@ fn qarrir_tawafuq(talab: &TalabTathbeet<'_>) -> NatijatTathbeet<QararTawafuq> {
         SababMutabaqa::MuarrifWaBasma => Ok(QararTawafuq::Tamma),
         SababMutabaqa::BasmaFaqat => Ok(QararTawafuq::BiBasma),
         SababMutabaqa::MuarrifBilaBasma | SababMutabaqa::DakhilNitaq => {
-            if talab.iqrar_taqribi { Ok(QararTawafuq::BiIqrar) } else { Err(marfud(true)) }
-        }
+            if talab.iqrar_taqribi {
+                Ok(QararTawafuq::BiIqrar)
+            } else {
+                Err(marfud(true))
+            }
+        },
         SababMutabaqa::BilaTatabuq => Err(marfud(false)),
     }
 }
@@ -333,7 +344,10 @@ fn ida_muhtawa(tathbeet: &mut Tathbeet, muhtawa: &[WadaMuhtawa]) -> NatijatTathb
 }
 
 fn khata_ruqaa(jidhr: &Path, khata: &taarib_ruqaa::khata::KhataRuqaa) -> KhataTathbeet {
-    KhataTathbeet::RuqaaMarfuda { masar: jidhr.to_path_buf(), sabab: khata.to_string() }
+    KhataTathbeet::RuqaaMarfuda {
+        masar: jidhr.to_path_buf(),
+        sabab: khata.to_string(),
+    }
 }
 
 #[cfg(test)]
@@ -366,7 +380,10 @@ mod ikhtibarat {
     #[test]
     fn la_tashtaghil_tuqbal_ghayr_al_mawjud_faqat() {
         let maftuh = hukm_tashghil(HalatTashghil::LaTashtaghil, ISM_MUSTAHIL, TANFIDHI_MUSTAHIL);
-        assert!(maftuh.is_ok(), "a process seen absent is the one state that clears the guard");
+        assert!(
+            maftuh.is_ok(),
+            "a process seen absent is the one state that clears the guard"
+        );
         for sunduq in [Sunduq::Flatpak, Sunduq::Snap, Sunduq::Hawiya] {
             let hala = HalatTashghil::GhayrMaaruf { sunduq };
             assert!(
@@ -380,7 +397,9 @@ mod ikhtibarat {
     #[test]
     fn al_rafd_yusammi_al_sunduq_wala_yaddai_al_tashghil() {
         let khata = hukm_tashghil(
-            HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Flatpak },
+            HalatTashghil::GhayrMaaruf {
+                sunduq: Sunduq::Flatpak,
+            },
             ISM_MUSTAHIL,
             TANFIDHI_MUSTAHIL,
         )
@@ -389,7 +408,7 @@ mod ikhtibarat {
             KhataTathbeet::HalatLubaMajhula { sunduq, tanfidhi } => {
                 assert_eq!(*sunduq, Sunduq::Flatpak);
                 assert_eq!(tanfidhi, Path::new(TANFIDHI_MUSTAHIL));
-            }
+            },
             akhar => panic!("expected HalatLubaMajhula, got {akhar:?}"),
         }
         // The whole point of the variant: it names where it is, and it does not
@@ -417,7 +436,7 @@ mod ikhtibarat {
             KhataTathbeet::LubaTashtaghil { amaliya, tanfidhi } => {
                 assert_eq!(amaliya, ISM_MUSTAHIL);
                 assert_eq!(tanfidhi, PathBuf::from(TANFIDHI_MUSTAHIL));
-            }
+            },
             akhar => panic!("expected LubaTashtaghil, got {akhar:?}"),
         }
     }
@@ -431,14 +450,14 @@ mod ikhtibarat {
         match ruyat_amaliyat() {
             RuyatAmaliyat::Kamila => {
                 assert!(la_tashtaghil(TANFIDHI_MUSTAHIL).is_ok());
-            }
+            },
             RuyatAmaliyat::Maazula { sunduq } => {
                 let khata = la_tashtaghil(TANFIDHI_MUSTAHIL).expect_err("a blind guard refuses");
                 assert!(matches!(
                     khata,
                     KhataTathbeet::HalatLubaMajhula { sunduq: mawjud, .. } if mawjud == sunduq
                 ));
-            }
+            },
         }
     }
 
@@ -450,7 +469,13 @@ mod ikhtibarat {
     fn fi_sunduq_haqiqi_yarfud_al_tathbeet() {
         let exe = std::env::current_exe().expect("the test binary's own path");
         let natija = std::process::Command::new(exe)
-            .args([ISM_IBN, "--exact", "--ignored", "--nocapture", "--test-threads=1"])
+            .args([
+                ISM_IBN,
+                "--exact",
+                "--ignored",
+                "--nocapture",
+                "--test-threads=1",
+            ])
             .env("FLATPAK_ID", "org.taarib.Studio")
             .output()
             .expect("re-running this test binary");
@@ -481,7 +506,7 @@ mod ikhtibarat {
             KhataTathbeet::HalatLubaMajhula { sunduq, tanfidhi } => {
                 assert_eq!(sunduq, Sunduq::Flatpak);
                 assert_eq!(tanfidhi, PathBuf::from(TANFIDHI_MUSTAHIL));
-            }
+            },
             akhar => panic!("expected HalatLubaMajhula, got {akhar:?}"),
         }
 
@@ -492,11 +517,15 @@ mod ikhtibarat {
         let khata = crate::itlaq::manassa_mughlaqa(&[ISM_MUSTAHIL], "Steam", malaf)
             .expect_err("a launcher guard that cannot see must refuse too");
         match khata {
-            KhataTathbeet::HalatManassaMajhula { sunduq, manassa, malaf: mawdi } => {
+            KhataTathbeet::HalatManassaMajhula {
+                sunduq,
+                manassa,
+                malaf: mawdi,
+            } => {
                 assert_eq!(sunduq, Sunduq::Flatpak);
                 assert_eq!(manassa, "Steam");
                 assert_eq!(mawdi, malaf);
-            }
+            },
             akhar => panic!("expected HalatManassaMajhula, got {akhar:?}"),
         }
     }

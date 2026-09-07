@@ -133,9 +133,7 @@ pub mod wasl;
 use taarib_usus::khata::Natija;
 
 pub use crate::khata::{KhataKhatt, KhataSaff, SababNasq};
-pub use crate::khatt::{
-    HuwiyatKhatt, MawridKhatt, MihwarKhatt, QiyasatKhatt, SilsilatKhutut,
-};
+pub use crate::khatt::{HuwiyatKhatt, MawridKhatt, MihwarKhatt, QiyasatKhatt, SilsilatKhutut};
 pub use crate::maqta::{
     DhuMustawa, FursatQat, HarfMashkul, Kitaba, MaqtaMantiqi, MaqtaMashkul, SifatWasl,
 };
@@ -176,7 +174,9 @@ impl Saff {
     /// A new engine with empty caches.
     #[must_use]
     pub fn jadeed() -> Self {
-        Self { makhzan: wasl::MakhzanTashkeel::jadeed() }
+        Self {
+            makhzan: wasl::MakhzanTashkeel::jadeed(),
+        }
     }
 
     /// Empties the shaping caches, for a caller that has finished with a set of
@@ -243,11 +243,7 @@ impl Saff {
     /// # Errors
     ///
     /// As [`Saff::khattit`].
-    pub fn khattit_fi(
-        &mut self,
-        talab: &TalabTakhtit<'_>,
-        hadaf: &mut TakhtitNass,
-    ) -> Natija<()> {
+    pub fn khattit_fi(&mut self, talab: &TalabTakhtit<'_>, hadaf: &mut TakhtitNass) -> Natija<()> {
         let takhtit = self.khattit(talab)?;
         hadaf.amsah();
         hadaf.huruf.extend_from_slice(&takhtit.huruf);
@@ -343,7 +339,14 @@ impl Saff {
             &mut self.makhzan,
         )?;
         let furas = taqtee::furas_qat(talab.nass, lugha);
-        qiyas::rattib_sutur(talab.nass, mashkula, &furas, talab, &tahleel, &mut self.makhzan)
+        qiyas::rattib_sutur(
+            talab.nass,
+            mashkula,
+            &furas,
+            talab,
+            &tahleel,
+            &mut self.makhzan,
+        )
     }
 }
 
@@ -390,11 +393,13 @@ impl NassMuhaddar {
         // search serves either direction. A linear scan would be simpler and
         // would also be quadratic on a paragraph of numerals, which is exactly
         // the text this map exists for.
-        let fahras = self.nuqat.partition_point(|(min_asli, _)| *min_asli <= asli);
+        let fahras = self
+            .nuqat
+            .partition_point(|(min_asli, _)| *min_asli <= asli);
         match fahras.checked_sub(1).and_then(|i| self.nuqat.get(i)) {
             Some((min_asli, min_muhaddar)) => {
                 min_muhaddar.saturating_add(asli.saturating_sub(*min_asli))
-            }
+            },
             None => asli,
         }
     }
@@ -406,11 +411,13 @@ impl NassMuhaddar {
     /// character under it no longer exists.
     #[must_use]
     pub fn ila_asli(&self, muhaddar: u32) -> u32 {
-        let fahras = self.nuqat.partition_point(|(_, min_muhaddar)| *min_muhaddar <= muhaddar);
+        let fahras = self
+            .nuqat
+            .partition_point(|(_, min_muhaddar)| *min_muhaddar <= muhaddar);
         match fahras.checked_sub(1).and_then(|i| self.nuqat.get(i)) {
             Some((min_asli, min_muhaddar)) => {
                 min_asli.saturating_add(muhaddar.saturating_sub(*min_muhaddar))
-            }
+            },
             None => muhaddar,
         }
     }
@@ -468,11 +475,18 @@ pub fn hayyi(nass: &str, nitaqat: &[NitaqUslub], khiyarat: &KhiyaratTakhtit) -> 
         let muhaddar = u32::try_from(mabni.len()).unwrap_or(u32::MAX);
 
         if yahdhif && tashkeel::huwa_alama(harf) {
-            nuqat.push((asli.saturating_add(u32::try_from(tul_asli).unwrap_or(0)), muhaddar));
+            nuqat.push((
+                asli.saturating_add(u32::try_from(tul_asli).unwrap_or(0)),
+                muhaddar,
+            ));
             continue;
         }
 
-        let makhruj = if yubaddil { raqm_badeel(harf, khiyarat.arqam) } else { harf };
+        let makhruj = if yubaddil {
+            raqm_badeel(harf, khiyarat.arqam)
+        } else {
+            harf
+        };
         mabni.push(makhruj);
         if makhruj.len_utf8() != tul_asli {
             nuqat.push((
@@ -482,7 +496,11 @@ pub fn hayyi(nass: &str, nitaqat: &[NitaqUslub], khiyarat: &KhiyaratTakhtit) -> 
         }
     }
 
-    let muhaddar = NassMuhaddar { nass: mabni, nitaqat: Vec::new(), nuqat };
+    let muhaddar = NassMuhaddar {
+        nass: mabni,
+        nitaqat: Vec::new(),
+        nuqat,
+    };
     let manqula = nitaqat
         .iter()
         .filter_map(|nitaq| {
@@ -493,11 +511,18 @@ pub fn hayyi(nass: &str, nitaqat: &[NitaqUslub], khiyarat: &KhiyaratTakhtit) -> 
             if nihaya <= bidaya && nitaq.uslub.dharra.is_none() {
                 return None;
             }
-            Some(NitaqUslub { tul: nihaya.saturating_sub(bidaya), bidaya, ..*nitaq })
+            Some(NitaqUslub {
+                tul: nihaya.saturating_sub(bidaya),
+                bidaya,
+                ..*nitaq
+            })
         })
         .collect();
 
-    NassMuhaddar { nitaqat: manqula, ..muhaddar }
+    NassMuhaddar {
+        nitaqat: manqula,
+        ..muhaddar
+    }
 }
 
 /// Maps one digit into the requested system, leaving everything else alone.

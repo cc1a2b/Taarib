@@ -203,11 +203,17 @@ impl Makhzan {
             .connection_timeout(MUHLA_INSHIGHAL)
             .build(mudir)
             .map_err(|q| {
-                Khata::from(KhataMakhzan::TaadhurBirka { muhla_thawan: MUHLA_THAWAN, sabab: q })
-                    .ma("masar", masar)
+                Khata::from(KhataMakhzan::TaadhurBirka {
+                    muhla_thawan: MUHLA_THAWAN,
+                    sabab: q,
+                })
+                .ma("masar", masar)
             })?;
 
-        let makhzan = Self { birka, masar: masar.to_path_buf() };
+        let makhzan = Self {
+            birka,
+            masar: masar.to_path_buf(),
+        };
 
         {
             let mut ittisal = makhzan.ittisal()?;
@@ -244,8 +250,11 @@ impl Makhzan {
     /// deadlocked means the pool is undersized rather than that anything failed.
     pub fn ittisal(&self) -> Natija<IttisalMakhzan> {
         self.birka.get().map_err(|q| {
-            Khata::from(KhataMakhzan::TaadhurBirka { muhla_thawan: MUHLA_THAWAN, sabab: q })
-                .ma("masar", self.masar.clone())
+            Khata::from(KhataMakhzan::TaadhurBirka {
+                muhla_thawan: MUHLA_THAWAN,
+                sabab: q,
+            })
+            .ma("masar", self.masar.clone())
         })
     }
 
@@ -282,7 +291,12 @@ impl Makhzan {
         let natija = amal(&muamala)?;
 
         muamala.commit().map_err(|q| {
-            Khata::from(KhataMakhzan::min_rusqlite("commit", "muamala", MUHLA_THAWAN, q))
+            Khata::from(KhataMakhzan::min_rusqlite(
+                "commit",
+                "muamala",
+                MUHLA_THAWAN,
+                q,
+            ))
         })?;
 
         Ok(natija)
@@ -321,7 +335,12 @@ impl Makhzan {
     pub fn tahaqquq_salama(&self) -> Natija<()> {
         let ittisal = self.ittisal()?;
         let mut jumla = ittisal.prepare("PRAGMA integrity_check").map_err(|q| {
-            Khata::from(KhataMakhzan::min_rusqlite("prepare", "integrity_check", MUHLA_THAWAN, q))
+            Khata::from(KhataMakhzan::min_rusqlite(
+                "prepare",
+                "integrity_check",
+                MUHLA_THAWAN,
+                q,
+            ))
         })?;
 
         let sufuf = jumla
@@ -353,9 +372,11 @@ impl Makhzan {
         if satr_khata.is_empty() {
             Ok(())
         } else {
-            Err(Khata::from(KhataMakhzan::QaidaTalifa { tafsil: satr_khata.join("; ") })
-                .ma("masar", self.masar.clone())
-                .ma("tafasil", satr_khata))
+            Err(Khata::from(KhataMakhzan::QaidaTalifa {
+                tafsil: satr_khata.join("; "),
+            })
+            .ma("masar", self.masar.clone())
+            .ma("tafasil", satr_khata))
         }
     }
 
@@ -377,8 +398,13 @@ impl Makhzan {
         }
         let ittisal = self.ittisal()?;
         ittisal.backup(rusqlite::MAIN_DB, ila, None).map_err(|q| {
-            Khata::from(KhataMakhzan::min_rusqlite("backup", "main", MUHLA_THAWAN, q))
-                .ma("ila", ila)
+            Khata::from(KhataMakhzan::min_rusqlite(
+                "backup",
+                "main",
+                MUHLA_THAWAN,
+                q,
+            ))
+            .ma("ila", ila)
         })
     }
 
@@ -395,11 +421,23 @@ impl Makhzan {
     /// because another connection is mid-transaction.
     pub fn idghat(&self) -> Natija<()> {
         let ittisal = self.ittisal()?;
-        ittisal.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);").map_err(|q| {
-            Khata::from(KhataMakhzan::min_rusqlite("checkpoint", "main", MUHLA_THAWAN, q))
-        })?;
+        ittisal
+            .execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+            .map_err(|q| {
+                Khata::from(KhataMakhzan::min_rusqlite(
+                    "checkpoint",
+                    "main",
+                    MUHLA_THAWAN,
+                    q,
+                ))
+            })?;
         ittisal.execute_batch("VACUUM;").map_err(|q| {
-            Khata::from(KhataMakhzan::min_rusqlite("vacuum", "main", MUHLA_THAWAN, q))
+            Khata::from(KhataMakhzan::min_rusqlite(
+                "vacuum",
+                "main",
+                MUHLA_THAWAN,
+                q,
+            ))
         })
     }
 
@@ -431,7 +469,7 @@ impl Makhzan {
         let namat: Result<String, rusqlite::Error> =
             ittisal.query_row("PRAGMA journal_mode", [], |saf| saf.get(0));
         match namat {
-            Ok(qeema) if qeema.eq_ignore_ascii_case("wal") => {}
+            Ok(qeema) if qeema.eq_ignore_ascii_case("wal") => {},
             Ok(qeema) => tracing::warn!(
                 namat = %qeema,
                 masar = %self.masar.display(),
@@ -466,10 +504,17 @@ pub struct IhsaatMakhzan {
 
 /// Reads a single-integer pragma.
 fn raqm_pragma(ittisal: &Connection, jumla: &'static str) -> Natija<u64> {
-    let qeema: i64 = ittisal.query_row(jumla, [], |saf| saf.get(0)).map_err(|q| {
-        Khata::from(KhataMakhzan::min_rusqlite("read", "pragma", MUHLA_THAWAN, q))
+    let qeema: i64 = ittisal
+        .query_row(jumla, [], |saf| saf.get(0))
+        .map_err(|q| {
+            Khata::from(KhataMakhzan::min_rusqlite(
+                "read",
+                "pragma",
+                MUHLA_THAWAN,
+                q,
+            ))
             .ma("pragma", jumla)
-    })?;
+        })?;
     Ok(u64::try_from(qeema).unwrap_or(0))
 }
 
@@ -487,7 +532,9 @@ fn raqm_pragma(ittisal: &Connection, jumla: &'static str) -> Natija<u64> {
 /// Fails only when the connection cannot execute a statement at all.
 pub fn alaan(ittisal: &Connection) -> Natija<String> {
     ittisal
-        .query_row("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')", [], |saf| saf.get(0))
+        .query_row("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')", [], |saf| {
+            saf.get(0)
+        })
         .map_err(|q| Khata::from(KhataMakhzan::min_rusqlite("read", "clock", MUHLA_THAWAN, q)))
 }
 
@@ -497,10 +544,11 @@ pub fn alaan(ittisal: &Connection) -> Natija<String> {
 /// The ledgers call this on every statement, so the operation name and the table
 /// are recorded once at the call site and never assembled into a sentence.
 #[must_use]
-pub fn khata_jumla(
-    amaliya: &'static str,
-    jadwal: &'static str,
-    sabab: rusqlite::Error,
-) -> Khata {
-    Khata::from(KhataMakhzan::min_rusqlite(amaliya, jadwal, MUHLA_THAWAN, sabab))
+pub fn khata_jumla(amaliya: &'static str, jadwal: &'static str, sabab: rusqlite::Error) -> Khata {
+    Khata::from(KhataMakhzan::min_rusqlite(
+        amaliya,
+        jadwal,
+        MUHLA_THAWAN,
+        sabab,
+    ))
 }

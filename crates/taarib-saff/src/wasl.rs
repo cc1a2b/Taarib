@@ -165,7 +165,10 @@ impl MajmuatAshkal {
     /// An empty set able to hold identifiers below `hadd`.
     fn jadida(hadd: u32) -> Self {
         let tul = usize::try_from(hadd).unwrap_or(usize::MAX).div_ceil(64);
-        Self { bitat: vec![0_u64; tul].into_boxed_slice(), hadd }
+        Self {
+            bitat: vec![0_u64; tul].into_boxed_slice(),
+            hadd,
+        }
     }
 
     /// Adds an identifier, ignoring one that is out of range — which means the
@@ -175,7 +178,9 @@ impl MajmuatAshkal {
         if muarrif >= self.hadd {
             return;
         }
-        let Ok(mawqi) = usize::try_from(muarrif >> 6) else { return };
+        let Ok(mawqi) = usize::try_from(muarrif >> 6) else {
+            return;
+        };
         if let Some(kalima) = self.bitat.get_mut(mawqi) {
             *kalima |= 1_u64 << (muarrif & 63);
         }
@@ -265,7 +270,9 @@ impl MushakkilKhatt {
     pub fn jadeed(khatt: &Arc<MawridKhatt>) -> Natija<Self> {
         let wahdat_kham = khatt.qiyasat(1.0).wahdat;
         if wahdat_kham == 0 {
-            return Err(Khata::min_tafsir(&KhataKhatt::JadwalMafqud { jadwal: "head" }));
+            return Err(Khata::min_tafsir(&KhataKhatt::JadwalMafqud {
+                jadwal: "head",
+            }));
         }
 
         // The FontRef borrows `khatt`, and ShaperData does not: it copies out
@@ -359,7 +366,9 @@ impl MushakkilKhatt {
         khiyarat: &KhiyaratTakhtit,
     ) -> Natija<MaqtaMashkul> {
         if !(maqta.hajm.is_finite() && maqta.hajm > 0.0) {
-            return Err(Khata::min_tafsir(&KhataSaff::HajmGhayrSalih { hajm: maqta.hajm }));
+            return Err(Khata::min_tafsir(&KhataSaff::HajmGhayrSalih {
+                hajm: maqta.hajm,
+            }));
         }
 
         // An atom occupies a position and is never shaped. It still takes part
@@ -393,7 +402,11 @@ impl MushakkilKhatt {
         // font and every joined word drifts apart by a fraction of a pixel that
         // accumulates across a line.
         let instans = uslub.and_then(|u| self.instans(&font, u));
-        let mushakkil_hr = self.bayanat.shaper(&font).instance(instans.as_ref()).build();
+        let mushakkil_hr = self
+            .bayanat
+            .shaper(&font)
+            .instance(instans.as_ref())
+            .build();
 
         let mut mahfaza = UnicodeBuffer::new();
         mahfaza.set_direction(ittijah_harfrust(maqta.ittijah));
@@ -418,7 +431,9 @@ impl MushakkilKhatt {
             // into the run. Downstream they are what maps a caret, a selection
             // and a typewriter effect back to the logical string, and a
             // run-relative offset would map them into the wrong word.
-            let mawqi = u32::try_from(izaha).unwrap_or(u32::MAX).saturating_add(bidaya);
+            let mawqi = u32::try_from(izaha)
+                .unwrap_or(u32::MAX)
+                .saturating_add(bidaya);
             mahfaza.add(harf, mawqi);
         }
         mahfaza.set_post_context(siyaq_baad(nass, maqta.nitaq.end));
@@ -434,7 +449,9 @@ impl MushakkilKhatt {
             return Err(fashal_attashkeel(maqta, None));
         }
         if mawsufat.iter().all(|wasf| wasf.glyph_id == 0)
-            && nass_maqta.chars().any(|harf| self.khatt.muarrif(harf).is_some_and(|m| m != 0))
+            && nass_maqta
+                .chars()
+                .any(|harf| self.khatt.muarrif(harf).is_some_and(|m| m != 0))
         {
             return Err(fashal_attashkeel(
                 maqta,
@@ -453,8 +470,16 @@ impl MushakkilKhatt {
                 // zeroes mark advances by `GDEF`, so this normally changes
                 // nothing — it exists so the invariant holds even for a font
                 // whose tables and whose metrics disagree.
-                taqaddum_s: if alama { 0.0 } else { kasr(mawdi.x_advance) * miqyas },
-                taqaddum_a: if alama { 0.0 } else { kasr(mawdi.y_advance) * miqyas },
+                taqaddum_s: if alama {
+                    0.0
+                } else {
+                    kasr(mawdi.x_advance) * miqyas
+                },
+                taqaddum_a: if alama {
+                    0.0
+                } else {
+                    kasr(mawdi.y_advance) * miqyas
+                },
                 // Offsets are never zeroed. A mark's position is what `GPOS`
                 // mark attachment resolved it to, and nothing here second-guesses
                 // it: no synthesised placement, no stacking by hand. That is
@@ -497,12 +522,13 @@ impl MushakkilKhatt {
 
         let mut taghyeerat: SmallVec<[Variation; 2]> = SmallVec::new();
         if let Some(wazn) = uslub.wazn
-            && let Some(mihwar) = mahawir.iter().find(|m| m.wasm == MIHWAR_WAZN) {
-                taghyeerat.push(Variation {
-                    tag: Tag::new(&MIHWAR_WAZN),
-                    value: f32::from(wazn).clamp(mihwar.adna, mihwar.aqsa),
-                });
-            }
+            && let Some(mihwar) = mahawir.iter().find(|m| m.wasm == MIHWAR_WAZN)
+        {
+            taghyeerat.push(Variation {
+                tag: Tag::new(&MIHWAR_WAZN),
+                value: f32::from(wazn).clamp(mihwar.adna, mihwar.aqsa),
+            });
+        }
         if uslub.maail {
             if let Some(mihwar) = mahawir.iter().find(|m| m.wasm == MIHWAR_MAIL) {
                 taghyeerat.push(Variation {
@@ -512,14 +538,20 @@ impl MushakkilKhatt {
             } else if let Some(mihwar) = mahawir.iter().find(|m| m.wasm == MIHWAR_MAYL) {
                 // `slnt` is measured counter-clockwise from vertical, so the
                 // slanted end of the axis is its minimum, not its maximum.
-                taghyeerat.push(Variation { tag: Tag::new(&MIHWAR_MAYL), value: mihwar.adna });
+                taghyeerat.push(Variation {
+                    tag: Tag::new(&MIHWAR_MAYL),
+                    value: mihwar.adna,
+                });
             }
         }
 
         if taghyeerat.is_empty() {
             None
         } else {
-            Some(ShaperInstance::from_variations(font, taghyeerat.iter().copied()))
+            Some(ShaperInstance::from_variations(
+                font,
+                taghyeerat.iter().copied(),
+            ))
         }
     }
 }
@@ -542,7 +574,9 @@ pub struct MakhzanTashkeel {
 
 impl core::fmt::Debug for MakhzanTashkeel {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("MakhzanTashkeel").field("adad", &self.mushakkilat.len()).finish()
+        f.debug_struct("MakhzanTashkeel")
+            .field("adad", &self.mushakkilat.len())
+            .finish()
     }
 }
 
@@ -556,7 +590,9 @@ impl MakhzanTashkeel {
     /// An empty store.
     #[must_use]
     pub fn jadeed() -> Self {
-        Self { mushakkilat: FxHashMap::default() }
+        Self {
+            mushakkilat: FxHashMap::default(),
+        }
     }
 
     /// The prepared shaper for a font, preparing it on first use.
@@ -638,7 +674,10 @@ pub fn shakkil_maqati_bi_asalib(
                 .ma("khatt", u32::from(maqta.khatt))
                 .ma("adad", khutut.adad()));
         };
-        let uslub = nitaqat.iter().find(|nitaq| nitaq.id == maqta.uslub).map(|nitaq| nitaq.uslub);
+        let uslub = nitaqat
+            .iter()
+            .find(|nitaq| nitaq.id == maqta.uslub)
+            .map(|nitaq| nitaq.uslub);
         let mushakkil = makhzan.mushakkil(khatt)?;
         natija.push(mushakkil.shakkil_bi_uslub(nass, maqta, uslub.as_ref(), khiyarat)?);
     }
@@ -705,7 +744,11 @@ pub fn sifat_alkitaba(
     lugha: LughaNass,
     idafiya: &[SifaIdafiya],
 ) -> Vec<([u8; 4], u32)> {
-    let asas: &[[u8; 4]] = if kitaba.tasil() { &SIFAT_WASL_KAMILA } else { &SIFAT_MUSTAQIMA };
+    let asas: &[[u8; 4]] = if kitaba.tasil() {
+        &SIFAT_WASL_KAMILA
+    } else {
+        &SIFAT_MUSTAQIMA
+    };
 
     let mut sifat: Vec<([u8; 4], u32)> = Vec::with_capacity(asas.len() + idafiya.len());
     for wasm in asas {
@@ -785,14 +828,18 @@ fn qita_almaqta<'a>(nass: &'a str, maqta: &MaqtaMantiqi) -> Natija<&'a str> {
     if maqta.nitaq.start > maqta.nitaq.end || maqta.nitaq.end > tul {
         return Err(kharij());
     }
-    let (Ok(bidaya), Ok(nihaya)) =
-        (usize::try_from(maqta.nitaq.start), usize::try_from(maqta.nitaq.end))
-    else {
+    let (Ok(bidaya), Ok(nihaya)) = (
+        usize::try_from(maqta.nitaq.start),
+        usize::try_from(maqta.nitaq.end),
+    ) else {
         return Err(kharij());
     };
     for (mawqi, hadd) in [(maqta.nitaq.start, bidaya), (maqta.nitaq.end, nihaya)] {
         if !nass.is_char_boundary(hadd) {
-            return Err(Khata::min_tafsir(&KhataSaff::HaddNitaqTalif { id: maqta.uslub, mawqi }));
+            return Err(Khata::min_tafsir(&KhataSaff::HaddNitaqTalif {
+                id: maqta.uslub,
+                mawqi,
+            }));
         }
     }
     nass.get(bidaya..nihaya).ok_or_else(kharij)
@@ -801,8 +848,10 @@ fn qita_almaqta<'a>(nass: &'a str, maqta: &MaqtaMantiqi) -> Natija<&'a str> {
 /// Builds the shaping failure, optionally naming which of its two shapes it
 /// took: nothing at all, or nothing but `.notdef` for text the font claims.
 fn fashal_attashkeel(maqta: &MaqtaMantiqi, sabab: Option<&str>) -> Khata {
-    let khata =
-        Khata::min_tafsir(&KhataSaff::TashkeelFashil { tul: maqta.tul(), script: maqta.kitaba.0 });
+    let khata = Khata::min_tafsir(&KhataSaff::TashkeelFashil {
+        tul: maqta.tul(),
+        script: maqta.kitaba.0,
+    });
     match sabab {
         Some(nass) => khata.ma("sabab", nass),
         None => khata,
@@ -836,7 +885,11 @@ const fn kitaba_harfrust(kitaba: Kitaba) -> Option<Script> {
 /// stays undeclared: forcing `ar` onto text that might be Persian is exactly the
 /// mistake `locl` exists to prevent.
 fn lugha_harfrust(lugha: LughaNass) -> Option<Language> {
-    if matches!(lugha, LughaNass::Tilqai) { None } else { Language::new(lugha.wasm()) }
+    if matches!(lugha, LughaNass::Tilqai) {
+        None
+    } else {
+        Language::new(lugha.wasm())
+    }
 }
 
 /// The language in force for a run: the run's own, falling back to the request's.
@@ -845,7 +898,11 @@ fn lugha_harfrust(lugha: LughaNass) -> Option<Language> {
 /// particular stretch is Persian inside a document declared Arabic — so it wins
 /// wherever it has an opinion.
 const fn lugha_almaqta(maqta: &MaqtaMantiqi, khiyarat: &KhiyaratTakhtit) -> LughaNass {
-    if matches!(maqta.lugha, LughaNass::Tilqai) { khiyarat.lugha } else { maqta.lugha }
+    if matches!(maqta.lugha, LughaNass::Tilqai) {
+        khiyarat.lugha
+    } else {
+        maqta.lugha
+    }
 }
 
 /// The buffer flags for a run.
@@ -871,8 +928,12 @@ fn alamat_almahfaza(nass: &str, maqta: &MaqtaMantiqi) -> BufferFlags {
 
 /// The characters immediately before a run, for the shaper's leading context.
 fn siyaq_qabl(nass: &str, hatta: u32) -> &str {
-    let Ok(hadd) = usize::try_from(hatta) else { return "" };
-    let Some(sabiq) = nass.get(..hadd) else { return "" };
+    let Ok(hadd) = usize::try_from(hatta) else {
+        return "";
+    };
+    let Some(sabiq) = nass.get(..hadd) else {
+        return "";
+    };
     let mut bidaya = sabiq.len();
     for (mawqi, _) in sabiq.char_indices().rev().take(TUL_SIYAQ) {
         bidaya = mawqi;
@@ -882,8 +943,12 @@ fn siyaq_qabl(nass: &str, hatta: u32) -> &str {
 
 /// The characters immediately after a run, for the shaper's trailing context.
 fn siyaq_baad(nass: &str, min: u32) -> &str {
-    let Ok(hadd) = usize::try_from(min) else { return "" };
-    let Some(lahiq) = nass.get(hadd..) else { return "" };
+    let Ok(hadd) = usize::try_from(min) else {
+        return "";
+    };
+    let Some(lahiq) = nass.get(hadd..) else {
+        return "";
+    };
     let mut nihaya = 0;
     for (mawqi, harf) in lahiq.char_indices().take(TUL_SIYAQ) {
         nihaya = mawqi.saturating_add(harf.len_utf8());
@@ -915,13 +980,14 @@ fn alamat_alkhatt(khatt: &Arc<MawridKhatt>) -> Natija<MajmuatAshkal> {
     let mut alamat = MajmuatAshkal::jadida(adad);
 
     if let Ok(gdef) = font.gdef()
-        && let Some(Ok(asnaf)) = gdef.glyph_class_def() {
-            for (muarrif, sinf) in asnaf.iter() {
-                if sinf == SINF_ALAMA {
-                    alamat.dai(u32::from(muarrif.to_u16()));
-                }
+        && let Some(Ok(asnaf)) = gdef.glyph_class_def()
+    {
+        for (muarrif, sinf) in asnaf.iter() {
+            if sinf == SINF_ALAMA {
+                alamat.dai(u32::from(muarrif.to_u16()));
             }
         }
+    }
 
     Ok(alamat)
 }
@@ -978,70 +1044,77 @@ fn asil_alwasl(
 
     let mut bidaya = 0_usize;
     while bidaya < huruf.len() {
-        let Some(anqud) = huruf.get(bidaya).map(|harf| harf.anqud) else { break };
+        let Some(anqud) = huruf.get(bidaya).map(|harf| harf.anqud) else {
+            break;
+        };
         let mut nihaya = bidaya.saturating_add(1);
         while huruf.get(nihaya).is_some_and(|harf| harf.anqud == anqud) {
             nihaya = nihaya.saturating_add(1);
         }
 
         if let Ok(fahras) = anaqid.binary_search_by_key(&anqud, |wahid| wahid.bidaya)
-            && let Some(wahid) = anaqid.get(fahras).copied() {
-                // In a right-to-left run the array runs the other way from the
-                // text, so the join that shows up on a glyph's left is the one
-                // the text records on its logically following side. `wasl_yasar`
-                // is the join on the left of this cluster's glyphs, `wasl_yameen`
-                // the one on their right, and `rutba` the rank of that right-hand
-                // joint — the one an elongation would be inserted into.
-                let (wasl_yasar, wasl_yameen, rutba) = if min_alyameen {
-                    (wahid.wasl_baad, wahid.wasl_qabl, wahid.rutba_qabl)
-                } else {
-                    (wahid.wasl_qabl, wahid.wasl_baad, wahid.rutba_baad)
-                };
+            && let Some(wahid) = anaqid.get(fahras).copied()
+        {
+            // In a right-to-left run the array runs the other way from the
+            // text, so the join that shows up on a glyph's left is the one
+            // the text records on its logically following side. `wasl_yasar`
+            // is the join on the left of this cluster's glyphs, `wasl_yameen`
+            // the one on their right, and `rutba` the rank of that right-hand
+            // joint — the one an elongation would be inserted into.
+            let (wasl_yasar, wasl_yameen, rutba) = if min_alyameen {
+                (wahid.wasl_baad, wahid.wasl_qabl, wahid.rutba_qabl)
+            } else {
+                (wahid.wasl_qabl, wahid.wasl_baad, wahid.rutba_baad)
+            };
 
-                let mut awwal_asl: Option<usize> = None;
-                let mut akhir_asl: Option<usize> = None;
-                for mawqi in bidaya..nihaya {
-                    if huruf.get(mawqi).is_some_and(|harf| !harf.alama) {
-                        if awwal_asl.is_none() {
-                            awwal_asl = Some(mawqi);
-                        }
-                        akhir_asl = Some(mawqi);
+            let mut awwal_asl: Option<usize> = None;
+            let mut akhir_asl: Option<usize> = None;
+            for mawqi in bidaya..nihaya {
+                if huruf.get(mawqi).is_some_and(|harf| !harf.alama) {
+                    if awwal_asl.is_none() {
+                        awwal_asl = Some(mawqi);
                     }
-                }
-
-                for mawqi in bidaya..nihaya {
-                    let masmuh = !yunataq
-                        || mawsufat.get(mawqi).is_some_and(GlyphInfo::safe_to_insert_tatweel);
-                    let Some(harf) = huruf.get_mut(mawqi) else { continue };
-                    if harf.alama {
-                        // A mark joins nothing and is never an elongation
-                        // point. Leaving it at the default is what keeps
-                        // justification from stretching a diacritic.
-                        continue;
-                    }
-                    // Only the outermost glyphs of a cluster carry a join: a
-                    // cluster is one indivisible thing for elongation, and an
-                    // interior glyph reporting a join would let justification
-                    // stretch a place that is inside a single letterform.
-                    let hadd_yasar = awwal_asl == Some(mawqi);
-                    let hadd_yameen = akhir_asl == Some(mawqi);
-                    let baad = hadd_yameen && wasl_yameen;
-                    let rutba_harf = if baad { rutba } else { 0 };
-                    harf.wasl = SifatWasl {
-                        qabl: hadd_yasar && wasl_yasar,
-                        baad,
-                        // `madd` is the script's half of the question: this joint
-                        // is one Arabic elongates at, and the shaper agrees a
-                        // tatweel can go in without disturbing shaping. The
-                        // font's half — whether it offers a stretched form
-                        // through `jstf` or an elongation-aware alternate — is
-                        // `kashida`'s to add, because reading `jstf` here would
-                        // be this stage answering a justification question.
-                        madd: baad && rutba_harf > 0 && masmuh,
-                        rutba: rutba_harf,
-                    };
+                    akhir_asl = Some(mawqi);
                 }
             }
+
+            for mawqi in bidaya..nihaya {
+                let masmuh = !yunataq
+                    || mawsufat
+                        .get(mawqi)
+                        .is_some_and(GlyphInfo::safe_to_insert_tatweel);
+                let Some(harf) = huruf.get_mut(mawqi) else {
+                    continue;
+                };
+                if harf.alama {
+                    // A mark joins nothing and is never an elongation
+                    // point. Leaving it at the default is what keeps
+                    // justification from stretching a diacritic.
+                    continue;
+                }
+                // Only the outermost glyphs of a cluster carry a join: a
+                // cluster is one indivisible thing for elongation, and an
+                // interior glyph reporting a join would let justification
+                // stretch a place that is inside a single letterform.
+                let hadd_yasar = awwal_asl == Some(mawqi);
+                let hadd_yameen = akhir_asl == Some(mawqi);
+                let baad = hadd_yameen && wasl_yameen;
+                let rutba_harf = if baad { rutba } else { 0 };
+                harf.wasl = SifatWasl {
+                    qabl: hadd_yasar && wasl_yasar,
+                    baad,
+                    // `madd` is the script's half of the question: this joint
+                    // is one Arabic elongates at, and the shaper agrees a
+                    // tatweel can go in without disturbing shaping. The
+                    // font's half — whether it offers a stretched form
+                    // through `jstf` or an elongation-aware alternate — is
+                    // `kashida`'s to add, because reading `jstf` here would
+                    // be this stage answering a justification question.
+                    madd: baad && rutba_harf > 0 && masmuh,
+                    rutba: rutba_harf,
+                };
+            }
+        }
 
         bidaya = nihaya;
     }
@@ -1060,7 +1133,10 @@ fn anaqid_almaqta(
 
     let mut anaqid: SmallVec<[Anqud; 32]> = SmallVec::with_capacity(mawaqi.len());
     for (fahras, bidaya) in mawaqi.iter().copied().enumerate() {
-        let nihaya = mawaqi.get(fahras.saturating_add(1)).copied().unwrap_or(maqta.nitaq.end);
+        let nihaya = mawaqi
+            .get(fahras.saturating_add(1))
+            .copied()
+            .unwrap_or(maqta.nitaq.end);
         let (awwal, akhir) = tarafa_alanqud(nass, bidaya, nihaya);
         anaqid.push(Anqud {
             bidaya,
@@ -1087,19 +1163,22 @@ fn anaqid_almaqta(
             continue;
         };
 
-        let khatim = sabiq.and_then(|mawqi| anaqid.get(mawqi)).and_then(|wahid| wahid.akhir);
+        let khatim = sabiq
+            .and_then(|mawqi| anaqid.get(mawqi))
+            .and_then(|wahid| wahid.akhir);
         if let (Some(mawqi_sabiq), Some(akhir_sabiq)) = (sabiq, khatim)
-            && yasil(akhir_sabiq, awwal) {
-                let rutba = rutbat_kashida(akhir_sabiq, awwal);
-                if let Some(wahid) = anaqid.get_mut(mawqi_sabiq) {
-                    wahid.wasl_baad = true;
-                    wahid.rutba_baad = rutba;
-                }
-                if let Some(wahid) = anaqid.get_mut(fahras) {
-                    wahid.wasl_qabl = true;
-                    wahid.rutba_qabl = rutba;
-                }
+            && yasil(akhir_sabiq, awwal)
+        {
+            let rutba = rutbat_kashida(akhir_sabiq, awwal);
+            if let Some(wahid) = anaqid.get_mut(mawqi_sabiq) {
+                wahid.wasl_baad = true;
+                wahid.rutba_baad = rutba;
             }
+            if let Some(wahid) = anaqid.get_mut(fahras) {
+                wahid.wasl_qabl = true;
+                wahid.rutba_qabl = rutba;
+            }
+        }
         sabiq = Some(fahras);
     }
 
@@ -1114,7 +1193,9 @@ fn tarafa_alanqud(nass: &str, bidaya: u32, nihaya: u32) -> (Option<char>, Option
     let (Ok(min), Ok(ila)) = (usize::try_from(bidaya), usize::try_from(nihaya)) else {
         return (None, None);
     };
-    let Some(juz) = nass.get(min..ila) else { return (None, None) };
+    let Some(juz) = nass.get(min..ila) else {
+        return (None, None);
+    };
 
     let mut awwal: Option<char> = None;
     let mut akhir: Option<char> = None;

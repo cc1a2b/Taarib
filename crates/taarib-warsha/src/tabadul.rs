@@ -44,8 +44,9 @@ const TUL_IQTIBAS: usize = 48;
 /// without a serializer does not compile. Unity Localization's CSV is absent
 /// deliberately — this module exports the plain table instead, and a format
 /// with no variant here is a format that cannot be half-written.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum SighatTabadul {
     /// XLIFF 1.2 — `<trans-unit>` with `<source>` and `<target>`.
@@ -133,13 +134,15 @@ pub struct KhiyaratTasdir {
 
 impl Default for KhiyaratTasdir {
     fn default() -> Self {
-        Self { lugha_masdar: "en".to_owned(), lugha_hadaf: "ar".to_owned() }
+        Self {
+            lugha_masdar: "en".to_owned(),
+            lugha_hadaf: "ar".to_owned(),
+        }
     }
 }
 
 /// Why a row was left out of an export.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SababTakhatti {
     /// The row has no translation and the format has no way to say so.
@@ -164,10 +167,8 @@ impl SababTakhatti {
             Self::YabdaKaTaaliq => "النص الأصلي يبدأ بما يقرؤه XUnity تعليقًا (//).",
             Self::YabdaKaQaidaNamatiya => {
                 "النص الأصلي يبدأ بما يقرؤه XUnity قاعدة تعبير نمطي (r: أو sr:)."
-            }
-            Self::MasdarFarighPo => {
-                "النص الأصلي فارغ بلا سياق، وgettext يحجز msgid الفارغ للترويسة."
-            }
+            },
+            Self::MasdarFarighPo => "النص الأصلي فارغ بلا سياق، وgettext يحجز msgid الفارغ للترويسة.",
         }
     }
 
@@ -178,15 +179,15 @@ impl SababTakhatti {
             Self::BilaTarjama => "the row has no translation and the format cannot say so",
             Self::YabdaKaTaaliq => {
                 "the escaped source would start the line with //, which XUnity reads as a comment"
-            }
+            },
             Self::YabdaKaQaidaNamatiya => {
                 "the escaped source would start the line with r: or sr:, which XUnity reads as a \
                  regular-expression rule"
-            }
+            },
             Self::MasdarFarighPo => {
                 "the source is empty with no context, and gettext reserves the empty msgid for \
                  the header"
-            }
+            },
         }
     }
 }
@@ -219,13 +220,21 @@ impl TaqreerTasdir {
     /// An empty report for a format and a row count.
     #[must_use]
     pub const fn jadeed(sigha: SighatTabadul, sufuf: usize) -> Self {
-        Self { sigha, sufuf, musaddara: 0, bila_tarjama: 0, mutakhatta: Vec::new() }
+        Self {
+            sigha,
+            sufuf,
+            musaddara: 0,
+            bila_tarjama: 0,
+            mutakhatta: Vec::new(),
+        }
     }
 
     /// How many rows the report accounts for, written or not.
     #[must_use]
     pub const fn adad_muhasab(&self) -> usize {
-        self.musaddara.saturating_add(self.bila_tarjama).saturating_add(self.mutakhatta.len())
+        self.musaddara
+            .saturating_add(self.bila_tarjama)
+            .saturating_add(self.mutakhatta.len())
     }
 
     /// Whether every offered row is accounted for.
@@ -315,13 +324,13 @@ const fn hala_mutawaqqaa(sigha: SighatTabadul, hala: HalatMuraja) -> (HalatWarid
             HalatMuraja::LilMuraja | HalatMuraja::Marfuda => (HalatWarid::LilMuraja, false),
             HalatMuraja::LamTutarjam | HalatMuraja::Musawwada | HalatMuraja::Muakkada => {
                 (HalatWarid::Musawwada, false)
-            }
+            },
         },
         SighatTabadul::Xliff20 => match hala {
             HalatMuraja::TarjamaAaliya => (HalatWarid::Aaliya, false),
             HalatMuraja::LamTutarjam | HalatMuraja::LilMuraja | HalatMuraja::Marfuda => {
                 (HalatWarid::LilMuraja, false)
-            }
+            },
             HalatMuraja::Musawwada | HalatMuraja::Muakkada => (HalatWarid::Musawwada, false),
         },
         SighatTabadul::GettextPo => (HalatWarid::Musawwada, alam_taswid_po(hala)),
@@ -401,12 +410,22 @@ type MiftahMuqarana = (Option<String>, Option<String>, String, Option<String>);
 
 /// A record's matching identity.
 fn miftah_qayd(qayd: &QaydTasdir) -> MiftahMuqarana {
-    (qayd.miftah.clone(), qayd.siyaq.clone(), qayd.masdar.clone(), qayd.hadaf.clone())
+    (
+        qayd.miftah.clone(),
+        qayd.siyaq.clone(),
+        qayd.masdar.clone(),
+        qayd.hadaf.clone(),
+    )
 }
 
 /// A re-imported entry's matching identity.
 fn miftah_warid(warid: &MudkhalWarid) -> MiftahMuqarana {
-    (warid.miftah.clone(), warid.siyaq.clone(), warid.masdar.clone(), warid.hadaf.clone())
+    (
+        warid.miftah.clone(),
+        warid.siyaq.clone(),
+        warid.masdar.clone(),
+        warid.hadaf.clone(),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -495,7 +514,7 @@ fn hurub_po(matn: &str) -> String {
             // Three octal digits always, so a digit after the escape cannot extend it.
             harf if u32::from(harf) < 0x20 => {
                 let _ = write!(natija, "\\{:03o}", u32::from(harf));
-            }
+            },
             harf => natija.push(harf),
         }
     }
@@ -551,16 +570,18 @@ fn saddir_xunity(
     let mut quyud = Vec::with_capacity(madakhil.len());
     for saff in madakhil {
         let Some(hadaf) = hadaf_faal(saff) else {
-            taqreer
-                .mutakhatta
-                .push(QaydTakhatti { wasf: wasf_saff(saff), sabab: SababTakhatti::BilaTarjama });
+            taqreer.mutakhatta.push(QaydTakhatti {
+                wasf: wasf_saff(saff),
+                sabab: SababTakhatti::BilaTarjama,
+            });
             continue;
         };
         let masdar = hurub_xunity(&saff.masdar);
         if masdar.trim_start().starts_with("//") {
-            taqreer
-                .mutakhatta
-                .push(QaydTakhatti { wasf: wasf_saff(saff), sabab: SababTakhatti::YabdaKaTaaliq });
+            taqreer.mutakhatta.push(QaydTakhatti {
+                wasf: wasf_saff(saff),
+                sabab: SababTakhatti::YabdaKaTaaliq,
+            });
             continue;
         }
         if masdar.starts_with("r:") || masdar.starts_with("sr:") {
@@ -685,7 +706,9 @@ fn saddir_po(
 
 /// The XML writer's refusal, which a write into memory can still report.
 fn khata_katib(khata: &std::io::Error) -> KhataWarsha {
-    KhataWarsha::Mawrid { sabab: format!("the XML writer refused an event: {khata}") }
+    KhataWarsha::Mawrid {
+        sabab: format!("the XML writer refused an event: {khata}"),
+    }
 }
 
 /// Writes one event.
@@ -694,7 +717,9 @@ fn khata_katib(khata: &std::io::Error) -> KhataWarsha {
 ///
 /// [`KhataWarsha::Mawrid`] carrying whatever the writer said.
 fn uktub(katib: &mut Writer<Vec<u8>>, hadath: Event<'_>) -> NatijatWarsha<()> {
-    katib.write_event(hadath).map_err(|khata| khata_katib(&khata))
+    katib
+        .write_event(hadath)
+        .map_err(|khata| khata_katib(&khata))
 }
 
 /// One element holding exactly one text run, escaped by the writer.
@@ -737,7 +762,10 @@ fn saddir_xliff_ula(
     taqreer: &mut TaqreerTasdir,
 ) -> NatijatWarsha<(String, Vec<QaydTasdir>)> {
     let mut katib = katib_jadeed();
-    uktub(&mut katib, Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)))?;
+    uktub(
+        &mut katib,
+        Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)),
+    )?;
     let mut jidhr = BytesStart::new("xliff");
     jidhr.push_attribute(("version", "1.2"));
     jidhr.push_attribute(("xmlns", "urn:oasis:names:tc:xliff:document:1.2"));
@@ -808,7 +836,10 @@ fn saddir_xliff_thaniya(
     taqreer: &mut TaqreerTasdir,
 ) -> NatijatWarsha<(String, Vec<QaydTasdir>)> {
     let mut katib = katib_jadeed();
-    uktub(&mut katib, Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)))?;
+    uktub(
+        &mut katib,
+        Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)),
+    )?;
     let mut jidhr = BytesStart::new("xliff");
     jidhr.push_attribute(("version", "2.0"));
     jidhr.push_attribute(("xmlns", "urn:oasis:names:tc:xliff:document:2.0"));
@@ -873,7 +904,10 @@ fn saddir_tmx(
     taqreer: &mut TaqreerTasdir,
 ) -> NatijatWarsha<(String, Vec<QaydTasdir>)> {
     let mut katib = katib_jadeed();
-    uktub(&mut katib, Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)))?;
+    uktub(
+        &mut katib,
+        Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)),
+    )?;
     let mut jidhr = BytesStart::new("tmx");
     jidhr.push_attribute(("version", "1.4"));
     uktub(&mut katib, Event::Start(jidhr))?;
@@ -891,9 +925,10 @@ fn saddir_tmx(
     let mut quyud = Vec::with_capacity(madakhil.len());
     for saff in madakhil {
         let Some(hadaf) = hadaf_faal(saff) else {
-            taqreer
-                .mutakhatta
-                .push(QaydTakhatti { wasf: wasf_saff(saff), sabab: SababTakhatti::BilaTarjama });
+            taqreer.mutakhatta.push(QaydTakhatti {
+                wasf: wasf_saff(saff),
+                sabab: SababTakhatti::BilaTarjama,
+            });
             continue;
         };
         let miftah = saff.id.to_string();
@@ -1012,9 +1047,9 @@ fn athbit(
                 marfud.sabab.wasf_injilizi()
             ));
         };
-        let tamm = qaima.iter().position(|qayd| {
-            matches!(qayd.tawaqqu, Tawaqqu::Yurfad(sabab) if sabab.yutabiq(&marfud.sabab))
-        });
+        let tamm = qaima.iter().position(
+            |qayd| matches!(qayd.tawaqqu, Tawaqqu::Yurfad(sabab) if sabab.yutabiq(&marfud.sabab)),
+        );
         if let Some(mawdi) = tamm {
             let _ = qaima.remove(mawdi);
             continue;
@@ -1110,8 +1145,10 @@ pub fn saddir_wa_athbit(
         SighatTabadul::Csv => saddir_csv(madakhil, &mut taqreer),
         SighatTabadul::XUnityAutoTranslator => saddir_xunity(madakhil, &mut taqreer),
     };
-    athbit(sigha, &nass, &quyud, khiyarat)
-        .map_err(|sabab| KhataWarsha::TabadulGhayrMutabiq { sigha: sigha.ism(), sabab })?;
+    athbit(sigha, &nass, &quyud, khiyarat).map_err(|sabab| KhataWarsha::TabadulGhayrMutabiq {
+        sigha: sigha.ism(),
+        sabab,
+    })?;
     tracing::debug!(
         sigha = sigha.ism(),
         musaddara = taqreer.musaddara,
@@ -1119,7 +1156,10 @@ pub fn saddir_wa_athbit(
         mutakhatta = taqreer.mutakhatta.len(),
         "interchange export round-tripped through its own importer"
     );
-    Ok(HasilatTasdir { bayt: nass.into_bytes(), taqreer })
+    Ok(HasilatTasdir {
+        bayt: nass.into_bytes(),
+        taqreer,
+    })
 }
 
 /// Serializes, proves the round trip, and only then writes the file.

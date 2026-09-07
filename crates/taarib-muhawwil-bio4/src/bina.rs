@@ -224,8 +224,7 @@ pub fn ibni(
         }
         if let Some(alama) = miftah.alama {
             let izaha = natija.izahat.get(&miftah).copied().unwrap_or_default();
-            if let Some(mawdi_alama) =
-                mawdi_shakl(&lawha, miftah.khatt, miftah.hajm_rubi, alama)
+            if let Some(mawdi_alama) = mawdi_shakl(&lawha, miftah.khatt, miftah.hajm_rubi, alama)
                 && !mawdi_alama.khali()
             {
                 wadaa.push((
@@ -240,8 +239,9 @@ pub fn ibni(
             // A space, a joiner, a mark the font draws nothing for. The cell keeps
             // the blank entry it was initialised with, and the advance the shaper
             // wanted for it is a cost the container cannot carry.
-            taqreer.farq_taqaddum =
-                taqreer.farq_taqaddum.saturating_add(taqaddum_texel(mawdi.taqaddum));
+            taqreer.farq_taqaddum = taqreer
+                .farq_taqaddum
+                .saturating_add(taqaddum_texel(mawdi.taqaddum));
             continue;
         }
 
@@ -309,7 +309,13 @@ pub fn ibni(
     }
 
     let khatt = KhattBio4::jadeed(shabaka, madakhil, khiyarat.hizma)?;
-    Ok(KhattMabni { khatt, sura, tawzee, nusus: natija.nusus, taqreer })
+    Ok(KhattMabni {
+        khatt,
+        sura,
+        tawzee,
+        nusus: natija.nusus,
+        taqreer,
+    })
 }
 
 /// Where one glyph's image is in the compiled atlas.
@@ -334,8 +340,11 @@ fn mawdi_shakl(lawha: &Lawha, khatt: u8, hajm_rubi: u16, muarrif: u32) -> Option
 /// would be cells taken out of a budget of a few hundred, and none of them would
 /// ever be found — the transport's key has no bucket field to look one up with.
 fn idif_ashkal(jami: &mut JamiAshkal, takhtit: &TakhtitNass, hajm: f32) {
-    let mustaamal =
-        if takhtit.hajm.is_finite() && takhtit.hajm > 0.0 { takhtit.hajm } else { hajm };
+    let mustaamal = if takhtit.hajm.is_finite() && takhtit.hajm > 0.0 {
+        takhtit.hajm
+    } else {
+        hajm
+    };
     for harf in &takhtit.huruf {
         jami.idif_shakl(MiftahShakl::jadeed(
             harf.khatt,

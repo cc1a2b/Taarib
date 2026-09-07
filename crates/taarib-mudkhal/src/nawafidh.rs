@@ -225,7 +225,14 @@ pub extern "system" fn DllMain(miqbad: HMODULE, sabab: u32, _mahfuz: *mut c_void
         // SAFETY: the thread function is a `'static` item and the argument is
         // null; the handle is dropped because nothing here joins the thread.
         if let Ok(khayt) = unsafe {
-            CreateThread(None, 0, Some(khayt_hamula), None, THREAD_CREATION_FLAGS(0), None)
+            CreateThread(
+                None,
+                0,
+                Some(khayt_hamula),
+                None,
+                THREAD_CREATION_FLAGS(0),
+                None,
+            )
         } {
             // SAFETY: a handle returned by CreateThread, closed exactly once.
             let _ = unsafe { CloseHandle(khayt) };

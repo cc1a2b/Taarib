@@ -81,7 +81,9 @@ use serde::{Deserialize, Serialize};
 use taarib_mustalahat::nass::{AlamJawda, MudkhalNass, NassId, NitaqNasq};
 use taarib_mustalahat::ruqaa::TareeqaTarjama;
 
-use crate::alamat::{AtabatAlamat, ThiqaMublagha, alam_min_khata, ihsib_alamat_nass, thabbit_alamat};
+use crate::alamat::{
+    AtabatAlamat, ThiqaMublagha, alam_min_khata, ihsib_alamat_nass, thabbit_alamat,
+};
 use crate::hima::{NassMahmi, NassMustaad, ihmi, istaridd};
 use crate::khata::{KhataTarjama, tul_u64};
 use crate::muraja_dakhiliya::SijillMuraja;
@@ -208,11 +210,17 @@ impl DaftarTakalif {
     /// [`KhataTarjama::SaqfTakalif`] when spending the estimate would exceed
     /// the ceiling.
     const fn ihjiz(&mut self, taqdeer: u64, saqf: Option<u64>) -> Result<(), KhataTarjama> {
-        let baad = self.munfaq.saturating_add(self.mahjuz).saturating_add(taqdeer);
+        let baad = self
+            .munfaq
+            .saturating_add(self.mahjuz)
+            .saturating_add(taqdeer);
         if let Some(saqf) = saqf
             && baad > saqf
         {
-            return Err(KhataTarjama::SaqfTakalif { munfaq: self.munfaq, saqf });
+            return Err(KhataTarjama::SaqfTakalif {
+                munfaq: self.munfaq,
+                saqf,
+            });
         }
         self.mahjuz = self.mahjuz.saturating_add(taqdeer);
         Ok(())
@@ -347,8 +355,8 @@ impl SijillJawla {
         if !masar.is_file() {
             return Ok(sijill);
         }
-        let bayt = std::fs::read(&masar)
-            .map_err(|sabab| KhataTarjama::KhataMalaf { masar, sabab })?;
+        let bayt =
+            std::fs::read(&masar).map_err(|sabab| KhataTarjama::KhataMalaf { masar, sabab })?;
 
         // Bytes first, UTF-8 per line: a crash mid-append leaves invalid UTF-8
         // at the tail, and decoding the whole file first would turn one torn
@@ -364,7 +372,7 @@ impl SijillJawla {
                 Some(qayd) => {
                     sijill.munfaq_sabiq = sijill.munfaq_sabiq.saturating_add(qayd.taklifa);
                     let _ = sijill.sabiq.insert(qayd.id, qayd);
-                }
+                },
                 None => sijill.talifa = sijill.talifa.saturating_add(1),
             }
         }
@@ -454,7 +462,10 @@ impl SijillJawla {
 fn ilhaq_sijill(masar: &Path, bayt: &[u8]) -> Result<(), KhataTarjama> {
     use std::io::Write as _;
 
-    let khata = |sabab| KhataTarjama::KhataMalaf { masar: masar.to_path_buf(), sabab };
+    let khata = |sabab| KhataTarjama::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    };
     let mut malaf = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -635,8 +646,7 @@ fn muddat_intizar_muadal(
 
 /// The provider's request limiter, or none when it declares no limit.
 fn hadd_muadal(qudrat: &QudratMuzawwid) -> Option<DefaultDirectRateLimiter> {
-    Some(qudrat.hadd_talabat)
-        .map(|fi_daqiqa| RateLimiter::direct(Quota::per_minute(fi_daqiqa)))
+    Some(qudrat.hadd_talabat).map(|fi_daqiqa| RateLimiter::direct(Quota::per_minute(fi_daqiqa)))
 }
 
 /// Everything the concurrent workers share.
@@ -752,7 +762,9 @@ async fn talab_wahid<M>(
 where
     M: Muzawwid + ?Sized + Sync,
 {
-    let majmu: u64 = takdirat.iter().fold(0_u64, |jam, takdir| jam.saturating_add(*takdir));
+    let majmu: u64 = takdirat
+        .iter()
+        .fold(0_u64, |jam, takdir| jam.saturating_add(*takdir));
     let mut intizar = 0_u32;
 
     loop {
@@ -803,7 +815,7 @@ where
                 hala.taqaddum.lock().munfaq = munfaq_alan;
                 hala.anshur();
                 return RaddTalab::Najah(azwaj);
-            }
+            },
             Err(khata) => {
                 hala.daftar.lock().afrij(majmu);
                 if let KhataTarjama::HaddMuadal { thawani, .. } = &khata
@@ -820,7 +832,7 @@ where
                     continue;
                 }
                 return RaddTalab::Fashal(khata);
-            }
+            },
         }
     }
 }
@@ -878,8 +890,10 @@ fn sajjil_najah(
     // A provider that reported nothing leaves `maqisa` false, and `alamat`
     // ignores the value entirely in that case — the zero is the filler the
     // struct's own documentation describes, never a measured score.
-    let thiqa =
-        ThiqaMublagha { qeema: natija.thiqa().unwrap_or(0.0), maqisa: natija.maqisa() };
+    let thiqa = ThiqaMublagha {
+        qeema: natija.thiqa().unwrap_or(0.0),
+        maqisa: natija.maqisa(),
+    };
     let alamat = ihsib_alamat_nass(
         &muswadda,
         Some(&muraja),
@@ -930,7 +944,14 @@ fn sajjil_fashal(
     khata: &KhataTarjama,
     taklifa: u64,
 ) {
-    let qayd = qayd_fashal(id, ism_muzawwid, taklifa, khiyarat.lahza, khata, &mudkhal.dharrat());
+    let qayd = qayd_fashal(
+        id,
+        ism_muzawwid,
+        taklifa,
+        khiyarat.lahza,
+        khata,
+        &mudkhal.dharrat(),
+    );
     let tadwin = hala.sijill.lock().sajjil(qayd);
     if let Err(khata_sijill) = tadwin {
         hala.awqif_aljawla(khata_sijill);
@@ -969,7 +990,12 @@ async fn adi_band<M>(
 ) where
     M: Muzawwid + ?Sized + Sync,
 {
-    let BandMuallaq { id, mahmi, ahruf, mudkhal } = band;
+    let BandMuallaq {
+        id,
+        mahmi,
+        ahruf,
+        mudkhal,
+    } = band;
     let mut mahmi_hali = (muhawala_bidaya == 0).then_some(mahmi);
     let mut infaq = infaq_bidaya;
     let aqsa = khiyarat.aqsa_muhawalat.max(1);
@@ -995,12 +1021,15 @@ async fn adi_band<M>(
                     // log lines.
                     sajjil_fashal(hala, khiyarat, ism_muzawwid, id, mudkhal, &khata, infaq);
                     return;
-                }
+                },
             },
         };
 
         let siyaq = SiyaqTalab::min_mudkhal(mudkhal);
-        let talabat = [TalabTarjama { mahmi: &mahmi, talab: &siyaq }];
+        let talabat = [TalabTarjama {
+            mahmi: &mahmi,
+            talab: &siyaq,
+        }];
         let takdirat = [muzawwid.qudrat().qaddir_taklifa(ahruf)];
 
         match talab_wahid(muzawwid, &talabat, &takdirat, hala, khiyarat).await {
@@ -1011,33 +1040,39 @@ async fn adi_band<M>(
                     return;
                 }
                 akhir = Some(khata);
-            }
+            },
             RaddTalab::Najah(azwaj) => match azwaj.into_iter().next() {
                 Some((natija, mablagh)) => {
                     infaq = infaq.saturating_add(mablagh);
                     match istaridd(&mahmi, natija.matn()) {
                         Ok(mustaad) => {
                             sajjil_najah(
-                                hala, khiyarat, ism_muzawwid, id, mudkhal, mustaad, &natija,
+                                hala,
+                                khiyarat,
+                                ism_muzawwid,
+                                id,
+                                mudkhal,
+                                mustaad,
+                                &natija,
                                 infaq,
                             );
                             return;
-                        }
+                        },
                         Err(khata) => {
                             if khata.yuqif_aljawla() {
                                 hala.awqif_aljawla(khata);
                                 return;
                             }
                             akhir = Some(khata);
-                        }
+                        },
                     }
-                }
+                },
                 None => {
                     akhir = Some(KhataTarjama::RaddGhayrMufassal {
                         muzawwid: ism_muzawwid.to_owned(),
                         radd: "an empty result set for a one-string request".to_owned(),
                     });
-                }
+                },
             },
         }
         muhawala = muhawala.saturating_add(1);
@@ -1079,15 +1114,22 @@ async fn adi_dufa<M>(
     // Built up front and held for the whole request, because `TalabTarjama`
     // borrows: a context constructed inside the `map` would be dropped before
     // the borrow it hands out is used.
-    let siyaqat: Vec<SiyaqTalab> =
-        dufa.iter().map(|band| SiyaqTalab::min_mudkhal(band.mudkhal)).collect();
+    let siyaqat: Vec<SiyaqTalab> = dufa
+        .iter()
+        .map(|band| SiyaqTalab::min_mudkhal(band.mudkhal))
+        .collect();
     let talabat: Vec<TalabTarjama<'_>> = dufa
         .iter()
         .zip(siyaqat.iter())
-        .map(|(band, siyaq)| TalabTarjama { mahmi: &band.mahmi, talab: siyaq })
+        .map(|(band, siyaq)| TalabTarjama {
+            mahmi: &band.mahmi,
+            talab: siyaq,
+        })
         .collect();
-    let takdirat: Vec<u64> =
-        dufa.iter().map(|band| muzawwid.qudrat().qaddir_taklifa(band.ahruf)).collect();
+    let takdirat: Vec<u64> = dufa
+        .iter()
+        .map(|band| muzawwid.qudrat().qaddir_taklifa(band.ahruf))
+        .collect();
 
     match talab_wahid(muzawwid, &talabat, &takdirat, hala, khiyarat).await {
         RaddTalab::Mutawaqqif => (),
@@ -1111,13 +1153,19 @@ async fn adi_dufa<M>(
                     // The chunk consumed the whole attempt budget; the batch's
                     // failure is each string's failure, named.
                     sajjil_fashal(
-                        hala, khiyarat, ism_muzawwid, band.id, band.mudkhal, &khata, 0,
+                        hala,
+                        khiyarat,
+                        ism_muzawwid,
+                        band.id,
+                        band.mudkhal,
+                        &khata,
+                        0,
                     );
                 } else {
                     adi_band(muzawwid, band, hala, khiyarat, ism_muzawwid, 1, 0).await;
                 }
             }
-        }
+        },
         RaddTalab::Najah(azwaj) => {
             drop(talabat);
             for (band, (natija, mablagh)) in dufa.into_iter().zip(azwaj) {
@@ -1136,7 +1184,7 @@ async fn adi_dufa<M>(
                             &natija,
                             mablagh,
                         );
-                    }
+                    },
                     Err(khata) => {
                         if khata.yuqif_aljawla() {
                             hala.awqif_aljawla(khata);
@@ -1158,15 +1206,13 @@ async fn adi_dufa<M>(
                             // text has answered its one request, so the retry
                             // starts at attempt one and re-protects — and it
                             // carries the money the failed reply cost.
-                            adi_band(
-                                muzawwid, band, hala, khiyarat, ism_muzawwid, 1, mablagh,
-                            )
-                            .await;
+                            adi_band(muzawwid, band, hala, khiyarat, ism_muzawwid, 1, mablagh)
+                                .await;
                         }
-                    }
+                    },
                 }
             }
-        }
+        },
     }
 }
 
@@ -1230,7 +1276,7 @@ where
                 tawaqquf: Some(khata),
                 sijill_talif: 0,
             };
-        }
+        },
     };
     let sijill_talif = sijill.talifa();
     let munfaq_sabiq = sijill.munfaq_sabiq();
@@ -1266,8 +1312,7 @@ where
             continue;
         }
         if mudkhal.hadaf.is_some() {
-            mutakhattaha.mutarjama_musbaqan =
-                mutakhattaha.mutarjama_musbaqan.saturating_add(1);
+            mutakhattaha.mutarjama_musbaqan = mutakhattaha.mutarjama_musbaqan.saturating_add(1);
             continue;
         }
         if mudkhal.masdar.trim().is_empty() {
@@ -1277,8 +1322,13 @@ where
         match ihmi(&mudkhal.masdar, &mudkhal.nasq_masdar) {
             Ok(mahmi) => {
                 let ahruf = tul_u64(mahmi.matn().chars().count());
-                bunud.push(BandMuallaq { id: mudkhal.id, mahmi, ahruf, mudkhal });
-            }
+                bunud.push(BandMuallaq {
+                    id: mudkhal.id,
+                    mahmi,
+                    ahruf,
+                    mudkhal,
+                });
+            },
             Err(khata) => {
                 // A string protection refuses never reaches a provider: it is
                 // failed here, journaled here, and carries its broken-markup
@@ -1306,7 +1356,7 @@ where
                     };
                 }
                 fashila.push((mudkhal.id, khata.to_string()));
-            }
+            },
         }
     }
 
@@ -1335,7 +1385,9 @@ where
         })
         .await;
 
-    let HalatJawla { taqaddum, tawaqquf, .. } = hala;
+    let HalatJawla {
+        taqaddum, tawaqquf, ..
+    } = hala;
     TaqreerJawla {
         taqaddum: taqaddum.into_inner(),
         tawaqquf: tawaqquf.into_inner(),
@@ -1400,13 +1452,19 @@ pub fn tabbiq_sijill(
     let mut mawjuda = 0_usize;
 
     for mudkhal in madakhil.iter_mut() {
-        let Some(qayd) = sijill.qayd(mudkhal.id) else { continue };
+        let Some(qayd) = sijill.qayd(mudkhal.id) else {
+            continue;
+        };
         mawjuda = mawjuda.saturating_add(1);
 
         match &qayd.hasila {
-            HasilatNass::Tarjumat { hadaf, nasq, alamat, .. } => {
-                let aali_qadeem =
-                    matches!(mudkhal.tareeqa, Some(TareeqaTarjama::AaliyaFaqat));
+            HasilatNass::Tarjumat {
+                hadaf,
+                nasq,
+                alamat,
+                ..
+            } => {
+                let aali_qadeem = matches!(mudkhal.tareeqa, Some(TareeqaTarjama::AaliyaFaqat));
                 let yuktab = mudkhal.muraja.qabil_lil_kitaba_aliyan()
                     && (mudkhal.hadaf.is_none() || aali_qadeem);
                 if !yuktab {
@@ -1431,11 +1489,11 @@ pub fn tabbiq_sijill(
                 thabbit_alamat(mudkhal, alamat.clone());
 
                 taqreer.mutabbaqa = taqreer.mutabbaqa.saturating_add(1);
-            }
+            },
             HasilatNass::Fashilat { alamat, .. } => {
                 thabbit_alamat(mudkhal, alamat.clone());
                 taqreer.fashila_muallama = taqreer.fashila_muallama.saturating_add(1);
-            }
+            },
         }
     }
 
@@ -1456,10 +1514,18 @@ pub fn tabbiq_sijill(
 pub fn thiqat_min_sijill(sijill: &SijillJawla) -> BTreeMap<NassId, ThiqaMublagha> {
     let mut thiqat = BTreeMap::new();
     for (id, qayd) in sijill.quyud() {
-        if let HasilatNass::Tarjumat { thiqa: Some(qeema), .. } = &qayd.hasila {
-            let _ = thiqat.insert(*id, ThiqaMublagha { qeema: *qeema, maqisa: true });
+        if let HasilatNass::Tarjumat {
+            thiqa: Some(qeema), ..
+        } = &qayd.hasila
+        {
+            let _ = thiqat.insert(
+                *id,
+                ThiqaMublagha {
+                    qeema: *qeema,
+                    maqisa: true,
+                },
+            );
         }
     }
     thiqat
 }
-

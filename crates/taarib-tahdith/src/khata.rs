@@ -139,7 +139,7 @@ impl Tafsir for KhataTahdith {
             // to what the signed manifest declared: a substitution attempt.
             Self::TawqeeGhayrSalih | Self::TawqeeTatwir | Self::TanzeelGhayrMutabiq { .. } => {
                 Khutura::Fadih
-            }
+            },
             _ => Khutura::Khatar,
         }
     }
@@ -198,13 +198,11 @@ impl Tafsir for KhataTahdith {
 
     fn khutwa(&self) -> Khutwa {
         match self {
-            Self::QanatGhayrMutaha { .. } | Self::IstinafMutaadhdhir { .. } => {
-                Khutwa::AadaMuhawala
-            }
+            Self::QanatGhayrMutaha { .. } | Self::IstinafMutaadhdhir { .. } => Khutwa::AadaMuhawala,
             Self::BayanTalif { .. } | Self::HajmMufrit { .. } => Khutwa::FathTashkhis,
             Self::TawqeeGhayrSalih | Self::TawqeeTatwir | Self::TanzeelGhayrMutabiq { .. } => {
                 Khutwa::IblaghLilMalik
-            }
+            },
             Self::LaMadkhal { .. } | Self::AdnaIsdarFawq { .. } => Khutwa::LaShay,
             Self::MisahaGhayrKafiya { .. } => Khutwa::TahrirMasaha,
             Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladRuqaa),
@@ -224,33 +222,41 @@ impl Tafsir for KhataTahdith {
             let _ = siyaq.insert(miftah.to_owned(), qeema);
         };
         match self {
-            Self::KhataMalaf { .. } | Self::TawqeeGhayrSalih | Self::TawqeeTatwir => {}
+            Self::KhataMalaf { .. } | Self::TawqeeGhayrSalih | Self::TawqeeTatwir => {},
             Self::QanatGhayrMutaha { sabab } | Self::BayanTalif { sabab } => {
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::LaMadkhal { hadaf, qanat } => {
                 daa("hadaf", QeemaSiyaq::Nass(hadaf.clone()));
                 daa("qanat", QeemaSiyaq::Nass(qanat.clone()));
-            }
+            },
             Self::AdnaIsdarFawq { adna, hali } => {
                 daa("adna", QeemaSiyaq::Nass(adna.clone()));
                 daa("hali", QeemaSiyaq::Nass(hali.clone()));
-            }
-            Self::TanzeelGhayrMutabiq { rabt, muallana, mahsuba } => {
+            },
+            Self::TanzeelGhayrMutabiq {
+                rabt,
+                muallana,
+                mahsuba,
+            } => {
                 daa("rabt", QeemaSiyaq::Nass(rabt.clone()));
                 daa("muallana", QeemaSiyaq::Nass(muallana.clone()));
                 daa("mahsuba", QeemaSiyaq::Nass(mahsuba.clone()));
-            }
+            },
             Self::HajmMufrit { muallan } => daa("muallan", QeemaSiyaq::Hajm(*muallan)),
             Self::IstinafMutaadhdhir { rabt, sabab } => {
                 daa("rabt", QeemaSiyaq::Nass(rabt.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
-            Self::MisahaGhayrKafiya { matlub, mutah, masar } => {
+            },
+            Self::MisahaGhayrKafiya {
+                matlub,
+                mutah,
+                masar,
+            } => {
                 daa("matlub", QeemaSiyaq::Hajm(*matlub));
                 daa("mutah", QeemaSiyaq::Hajm(*mutah));
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
         }
         siyaq
     }

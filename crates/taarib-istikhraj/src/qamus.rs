@@ -184,7 +184,11 @@ fn crc_bayt(basma: u32, wahda: u8) -> u32 {
     let mut hali = basma ^ u32::from(wahda);
     let mut bit = 0_u8;
     while bit < 8 {
-        hali = if hali & 1 == 0 { hali >> 1 } else { (hali >> 1) ^ 0xEDB8_8320 };
+        hali = if hali & 1 == 0 {
+            hali >> 1
+        } else {
+            (hali >> 1) ^ 0xEDB8_8320
+        };
         bit = bit.saturating_add(1);
     }
     hali
@@ -438,7 +442,10 @@ impl Qamus {
         if basma == self.bidhra {
             return None;
         }
-        let madkhal = *self.madakhil.iter().find(|madkhal| madkhal.basma == basma)?;
+        let madkhal = *self
+            .madakhil
+            .iter()
+            .find(|madkhal| madkhal.basma == basma)?;
         let nass = self.bayt(madkhal)?;
         if nass.is_empty() { None } else { Some(nass) }
     }
@@ -519,7 +526,11 @@ impl Qamus {
         let mut mabniya = Vec::with_capacity(madakhil.len());
         for (fahras, (basma, nass)) in madakhil.iter().enumerate() {
             let Some(nass) = *nass else {
-                mabniya.push(MudkhalQamus { basma: *basma, izaha: 0, mawqi: None });
+                mabniya.push(MudkhalQamus {
+                    basma: *basma,
+                    izaha: 0,
+                    mawqi: None,
+                });
                 continue;
             };
             if nass.contains(&0) {
@@ -529,11 +540,9 @@ impl Qamus {
                     saqf: 0,
                 });
             }
-            let mawqi = u32::try_from(kutla.len()).map_err(|_| {
-                hadd_muashir(u64::try_from(kutla.len()).unwrap_or(u64::MAX))
-            })?;
-            let haql = mawqi_haql(TUL_TARWISA, fahras)
-                .ok_or_else(|| hadd_muashir(u64::MAX))?;
+            let mawqi = u32::try_from(kutla.len())
+                .map_err(|_| hadd_muashir(u64::try_from(kutla.len()).unwrap_or(u64::MAX)))?;
+            let haql = mawqi_haql(TUL_TARWISA, fahras).ok_or_else(|| hadd_muashir(u64::MAX))?;
             let hadaf = nihayat_jadwal
                 .checked_add(hajm_usize(mawqi))
                 .ok_or_else(|| hadd_muashir(u64::MAX))?;
@@ -541,7 +550,11 @@ impl Qamus {
                 .ok_or_else(|| hadd_muashir(u64::try_from(hadaf).unwrap_or(u64::MAX)))?;
             kutla.extend_from_slice(nass);
             kutla.push(0);
-            mabniya.push(MudkhalQamus { basma: *basma, izaha, mawqi: Some(mawqi) });
+            mabniya.push(MudkhalQamus {
+                basma: *basma,
+                izaha,
+                mawqi: Some(mawqi),
+            });
         }
 
         Ok(Self {
@@ -571,7 +584,11 @@ impl Qamus {
         if adad == 0 {
             return true;
         }
-        let mashghul: Vec<bool> = self.madakhil.iter().map(|madkhal| madkhal.mashghul()).collect();
+        let mashghul: Vec<bool> = self
+            .madakhil
+            .iter()
+            .map(|madkhal| madkhal.mashghul())
+            .collect();
         for (fahras, madkhal) in self.madakhil.iter().enumerate() {
             if !madkhal.mashghul() {
                 continue;
@@ -581,9 +598,7 @@ impl Qamus {
             };
             let mut khana = bayt;
             let mut khutwa = 0_usize;
-            while khana != fahras
-                && mashghul.get(khana).copied().unwrap_or(false)
-                && khutwa <= adad
+            while khana != fahras && mashghul.get(khana).copied().unwrap_or(false) && khutwa <= adad
             {
                 khana = khana.saturating_add(1) % adad;
                 khutwa = khutwa.saturating_add(1);
@@ -616,7 +631,11 @@ fn iqra_mudkhal(
     };
 
     if izaha == 0 {
-        return Ok(MudkhalQamus { basma, izaha, mawqi: None });
+        return Ok(MudkhalQamus {
+            basma,
+            izaha,
+            mawqi: None,
+        });
     }
 
     let hadaf = hall_muashir(haql, izaha).ok_or_else(|| SababRafd::Talif {
@@ -646,10 +665,15 @@ fn iqra_mudkhal(
         });
     }
 
-    let mawqi = u32::try_from(hadaf.saturating_sub(nihayat_jadwal)).map_err(|_| {
-        SababRafd::Talif { sabab: format!("bucket {fahras}'s string is past a u32 offset") }
-    })?;
-    Ok(MudkhalQamus { basma, izaha, mawqi: Some(mawqi) })
+    let mawqi =
+        u32::try_from(hadaf.saturating_sub(nihayat_jadwal)).map_err(|_| SababRafd::Talif {
+            sabab: format!("bucket {fahras}'s string is past a u32 offset"),
+        })?;
+    Ok(MudkhalQamus {
+        basma,
+        izaha,
+        mawqi: Some(mawqi),
+    })
 }
 
 /// Where the bucket array starts, from the header's own self-relative pointer.
@@ -690,9 +714,7 @@ fn nihayat_jadwal(bidaya: usize, adad: u32, tul: usize) -> Result<usize, SababRa
     };
     if nihaya > tul {
         return Err(SababRafd::Talif {
-            sabab: format!(
-                "{adad} buckets need {nihaya} bytes and the file has {tul}"
-            ),
+            sabab: format!("{adad} buckets need {nihaya} bytes and the file has {tul}"),
         });
     }
     Ok(nihaya)
@@ -795,18 +817,13 @@ fn masarat_lil_mash(jidhr: &Path) -> Vec<PathBuf> {
 }
 
 /// Reads one dictionary into the table, or records why it was not read.
-fn sajjil_qamus(
-    jadwal: &mut JadwalNusus,
-    taqreer: &mut TaqreerRafd,
-    hawiya: &str,
-    bayt: &[u8],
-) {
+fn sajjil_qamus(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, hawiya: &str, bayt: &[u8]) {
     let qamus = match Qamus::iqra(bayt) {
         Ok(qamus) => qamus,
         Err(sabab) => {
             taqreer.sajjil(hawiya.to_owned(), None, sabab);
             return;
-        }
+        },
     };
 
     // Refused whole, never in part. Two of Resident Evil 4's dictionaries hold
@@ -885,7 +902,9 @@ fn adif_nass(jadwal: &mut JadwalNusus, hawiya: &str, madkhal: MudkhalQamus, khaa
         haql: None,
         miftah_muharrik: Some(miftah),
     };
-    jadwal.adif(ansha_mudkhal(TalabMudkhal::jadeed(mawqi, khaam).bi_nizam_tawtin()));
+    jadwal.adif(ansha_mudkhal(
+        TalabMudkhal::jadeed(mawqi, khaam).bi_nizam_tawtin(),
+    ));
 }
 
 /// The language a dictionary's file name names.
@@ -900,7 +919,7 @@ fn lugha_min_masar(hawiya: &str) -> String {
     match jidh.rsplit_once('_') {
         Some((lugha, mansa)) if mansa.eq_ignore_ascii_case("WIN32") && !lugha.is_empty() => {
             lugha.to_owned()
-        }
+        },
         _ => jidh.to_owned(),
     }
 }
@@ -916,8 +935,9 @@ fn nisbi(jidhr: &Path, masar: &Path) -> String {
 
 /// Reads a whole dictionary, refusing one above [`AQSA_MALAF`] before reserving.
 fn qira_malaf(masar: &Path) -> Result<Vec<u8>, SababRafd> {
-    let bayanat = std::fs::metadata(masar)
-        .map_err(|sabab| SababRafd::TaadhurQira { sabab: sabab.to_string() })?;
+    let bayanat = std::fs::metadata(masar).map_err(|sabab| SababRafd::TaadhurQira {
+        sabab: sabab.to_string(),
+    })?;
     if bayanat.len() > AQSA_MALAF {
         return Err(SababRafd::TajawuzHadd {
             hadd: "a DICT dictionary".to_owned(),
@@ -925,5 +945,7 @@ fn qira_malaf(masar: &Path) -> Result<Vec<u8>, SababRafd> {
             saqf: AQSA_MALAF,
         });
     }
-    std::fs::read(masar).map_err(|sabab| SababRafd::TaadhurQira { sabab: sabab.to_string() })
+    std::fs::read(masar).map_err(|sabab| SababRafd::TaadhurQira {
+        sabab: sabab.to_string(),
+    })
 }

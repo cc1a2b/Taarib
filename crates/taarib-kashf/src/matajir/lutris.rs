@@ -338,7 +338,9 @@ impl JudhurLutris {
 
     /// The first candidate installation that actually has a catalogue.
     fn awwal(siyaq: &SiyaqFahs) -> Option<Self> {
-        Self::muhtamala(siyaq).into_iter().find(|judhur| judhur.qaida().is_file())
+        Self::muhtamala(siyaq)
+            .into_iter()
+            .find(|judhur| judhur.qaida().is_file())
     }
 
     /// Every installation layout worth looking at, most likely first.
@@ -530,9 +532,7 @@ impl SaffLutris {
     /// is declared `TEXT` and stored as an integer by some Lutris releases.
     fn nass(&self, ism: &str) -> Option<String> {
         match self.qiyam.get(ism) {
-            Some(QeemaAmud::Nass(nass)) if !nass.trim().is_empty() => {
-                Some(nass.trim().to_owned())
-            },
+            Some(QeemaAmud::Nass(nass)) if !nass.trim().is_empty() => Some(nass.trim().to_owned()),
             Some(QeemaAmud::Raqm(raqm)) => Some(raqm.to_string()),
             _ => None,
         }
@@ -570,14 +570,19 @@ impl SaffLutris {
 /// fall back to.
 fn asfuf_alaab(ittisal: &Connection) -> Result<Vec<SaffLutris>, rusqlite::Error> {
     let mut bayan = ittisal.prepare(&format!("SELECT * FROM \"{JADWAL_ALAAB}\""))?;
-    let asmaa: Vec<String> =
-        bayan.column_names().into_iter().map(str::to_ascii_lowercase).collect();
+    let asmaa: Vec<String> = bayan
+        .column_names()
+        .into_iter()
+        .map(str::to_ascii_lowercase)
+        .collect();
     let mut nataij = bayan.query([])?;
     let mut khuruj = Vec::new();
     while let Some(saff) = nataij.next()? {
         let mut qiyam = BTreeMap::new();
         for (fahras, ism) in asmaa.iter().enumerate() {
-            let qeema = saff.get_ref(fahras).map_or(QeemaAmud::Faragh, QeemaAmud::min);
+            let qeema = saff
+                .get_ref(fahras)
+                .map_or(QeemaAmud::Faragh, QeemaAmud::min);
             let _ = qiyam.insert(ism.clone(), qeema);
         }
         khuruj.push(SaffLutris { qiyam });
@@ -635,7 +640,10 @@ fn masdar_matjar(
             | "itch"
     );
 
-    let Some(muarrif) = muarrif_khidma.map(str::trim).filter(|qeema| !qeema.is_empty()) else {
+    let Some(muarrif) = muarrif_khidma
+        .map(str::trim)
+        .filter(|qeema| !qeema.is_empty())
+    else {
         if maruf {
             tanbihat.push(TanbihFahs::jadeed(
                 MUARRIF,
@@ -686,9 +694,7 @@ fn masdar_matjar(
             .ok()
             .map(MasdarLuba::Ubisoft)
             .or_else(|| mafqud("a number", tanbihat)),
-        "battlenet" | "battle.net" | "blizzard" => {
-            Some(MasdarLuba::BattleNet(muarrif.to_owned()))
-        },
+        "battlenet" | "battle.net" | "blizzard" => Some(MasdarLuba::BattleNet(muarrif.to_owned())),
         "amazon" => Some(MasdarLuba::Amazon(muarrif.to_owned())),
         // itch.io game ids are signed in the vocabulary because butler's own
         // schema declares them signed, and this adapter does not widen or
@@ -817,7 +823,10 @@ fn beea_luba(
                 .or(maktashaf);
 
             if naw == NawMushaghghil::Proton {
-                BeeatTawafuq::Proton { isdar: isdar.unwrap_or_else(|| "Proton".to_owned()), beea }
+                BeeatTawafuq::Proton {
+                    isdar: isdar.unwrap_or_else(|| "Proton".to_owned()),
+                    beea,
+                }
             } else {
                 BeeatTawafuq::Wine { isdar, beea }
             }
@@ -952,13 +961,19 @@ fn suwar_lutris(judhur: &JudhurLutris, silaa: &str) -> MasadirSuwar {
     // every game and a desktop entry's icon has to be somewhere the desktop
     // looks. That is why this path is resolved from the XDG data root and not
     // from the Lutris directory under it.
-    let shiar = ["128x128", "256x256", "64x64"].into_iter().find_map(|hajm| {
-        let nisbi = format!("icons/hicolor/{hajm}/apps/lutris_{silaa}.png");
-        let masar = dakhil(&judhur.bayanat_am, &nisbi).ok()?;
-        masar.is_file().then_some(MasdarSura::Malaf(masar))
-    });
+    let shiar = ["128x128", "256x256", "64x64"]
+        .into_iter()
+        .find_map(|hajm| {
+            let nisbi = format!("icons/hicolor/{hajm}/apps/lutris_{silaa}.png");
+            let masar = dakhil(&judhur.bayanat_am, &nisbi).ok()?;
+            masar.is_file().then_some(MasdarSura::Malaf(masar))
+        });
 
-    MasadirSuwar { ghilaf: awwal("coverart"), batl: awwal("banners"), shiar }
+    MasadirSuwar {
+        ghilaf: awwal("coverart"),
+        batl: awwal("banners"),
+        shiar,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1110,7 +1125,10 @@ fn luba_min_saff(
     );
 
     Some(LubaMuktashafa {
-        masdar: MasdarLuba::Lutris(Box::new(MasdarLutris { silaa: silaa.clone(), asl })),
+        masdar: MasdarLuba::Lutris(Box::new(MasdarLutris {
+            silaa: silaa.clone(),
+            asl,
+        })),
         hala_matjar: None,
         ism,
         tanfidhi: tanfidhi_luba(&jidhr, &idad, saff, &beea),
@@ -1154,7 +1172,10 @@ fn walid_mutlaq(masar: Option<&str>) -> Option<PathBuf> {
     if !murashah.is_absolute() {
         return None;
     }
-    murashah.parent().map(Path::to_path_buf).filter(|walid| walid.is_dir())
+    murashah
+        .parent()
+        .map(Path::to_path_buf)
+        .filter(|walid| walid.is_dir())
 }
 
 /// Resolves the program Lutris launches for one game.
@@ -1178,9 +1199,15 @@ fn tanfidhi_luba(
     saff: &SaffLutris,
     beea: &BeeatTawafuq,
 ) -> Option<PathBuf> {
-    let murashahat =
-        [idad.tanfidhi.clone(), saff.nass("executable"), idad.malaf_asasi.clone()];
-    murashahat.into_iter().flatten().find_map(|kham| hall_tanfidhi(jidhr, &kham, beea))
+    let murashahat = [
+        idad.tanfidhi.clone(),
+        saff.nass("executable"),
+        idad.malaf_asasi.clone(),
+    ];
+    murashahat
+        .into_iter()
+        .flatten()
+        .find_map(|kham| hall_tanfidhi(jidhr, &kham, beea))
 }
 
 /// Resolves one executable candidate against the install root and the prefix.
@@ -1231,7 +1258,9 @@ fn huwa_masar_windows(masar: &str) -> bool {
 /// repurposed — is dropped rather than clamped, because a timestamp nobody can
 /// parse is worse in a record than an absent one.
 fn waqt_min_thawani(raqm: i64) -> Option<String> {
-    jiff::Timestamp::from_second(raqm).ok().map(|waqt| waqt.to_string())
+    jiff::Timestamp::from_second(raqm)
+        .ok()
+        .map(|waqt| waqt.to_string())
 }
 
 /// Normalizes a textual timestamp to RFC 3339, and shared with
@@ -1264,7 +1293,10 @@ pub(crate) fn waqt_mahalli(nass: &str) -> Option<String> {
 
     let madani = bi_t.parse::<jiff::civil::DateTime>().ok()?;
     let mantiqa = jiff::tz::TimeZone::system();
-    madani.to_zoned(mantiqa).ok().map(|mahalli| mahalli.timestamp().to_string())
+    madani
+        .to_zoned(mantiqa)
+        .ok()
+        .map(|mahalli| mahalli.timestamp().to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -1454,7 +1486,9 @@ pub(crate) fn iqra_yaml(masar: &Path) -> Option<WathiqatYaml> {
     let malaf = std::fs::File::open(masar).ok()?;
     let mut bayt = Vec::new();
     let _ = malaf.take(HADD_WATHIQA).read_to_end(&mut bayt).ok()?;
-    let bila_alama = bayt.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bayt.as_slice());
+    let bila_alama = bayt
+        .strip_prefix(&[0xEF, 0xBB, 0xBF])
+        .unwrap_or(bayt.as_slice());
     Some(hallil_yaml(&String::from_utf8_lossy(bila_alama)))
 }
 
@@ -1518,9 +1552,17 @@ pub(crate) fn hallil_yaml(nass: &str) -> WathiqatYaml {
     // key after it. The minimum has no such cliff: a document that really is
     // consistently indented reads identically, and an inconsistent one produces
     // a visible refusal instead of a truncation.
-    let izaha = muhallil.sutur.iter().map(|satr| satr.izaha).min().unwrap_or(0);
+    let izaha = muhallil
+        .sutur
+        .iter()
+        .map(|satr| satr.izaha)
+        .min()
+        .unwrap_or(0);
     let judhur = muhallil.khareeta(izaha, 0);
-    WathiqatYaml { judhur, marfudat: muhallil.marfudat }
+    WathiqatYaml {
+        judhur,
+        marfudat: muhallil.marfudat,
+    }
 }
 
 /// One line, after comments, blanks and line endings have been dealt with.
@@ -1560,7 +1602,13 @@ impl<'a> MuhallilYaml<'a> {
             let bila_masafat = kham.trim_start_matches(' ');
 
             if bila_masafat.starts_with('\t') {
-                sajjil(&mut marfudat, RafdYaml { bina: "a tab in the indentation", satr: raqm });
+                sajjil(
+                    &mut marfudat,
+                    RafdYaml {
+                        bina: "a tab in the indentation",
+                        satr: raqm,
+                    },
+                );
                 continue;
             }
 
@@ -1580,17 +1628,32 @@ impl<'a> MuhallilYaml<'a> {
             }
             if jism == "---" || jism.starts_with("--- ") {
                 if bada {
-                    sajjil(&mut marfudat, RafdYaml { bina: "a second document", satr: raqm });
+                    sajjil(
+                        &mut marfudat,
+                        RafdYaml {
+                            bina: "a second document",
+                            satr: raqm,
+                        },
+                    );
                     break;
                 }
                 continue;
             }
 
             bada = true;
-            sutur.push(SatrYaml { raqm, izaha, nass: jism });
+            sutur.push(SatrYaml {
+                raqm,
+                izaha,
+                nass: jism,
+            });
         }
 
-        Self { sutur, mawqi: 0, marfudat, adad: 0 }
+        Self {
+            sutur,
+            mawqi: 0,
+            marfudat,
+            adad: 0,
+        }
     }
 
     /// The line the cursor is on.
@@ -1638,7 +1701,10 @@ impl<'a> MuhallilYaml<'a> {
                 break;
             }
             if satr.izaha > izaha {
-                self.sajjil(RafdYaml { bina: "an inconsistently indented block", satr: satr.raqm });
+                self.sajjil(RafdYaml {
+                    bina: "an inconsistently indented block",
+                    satr: satr.raqm,
+                });
                 self.takhatta(izaha);
                 continue;
             }
@@ -1647,7 +1713,10 @@ impl<'a> MuhallilYaml<'a> {
             // this level of it, is a list. Consumed as one unit so that a
             // twenty-item list produces one refusal rather than twenty.
             if satr.nass.starts_with('-') {
-                self.sajjil(RafdYaml { bina: "a block sequence", satr: satr.raqm });
+                self.sajjil(RafdYaml {
+                    bina: "a block sequence",
+                    satr: satr.raqm,
+                });
                 self.takhatta_qaima(izaha);
                 continue;
             }
@@ -1655,7 +1724,10 @@ impl<'a> MuhallilYaml<'a> {
             self.mawqi = self.mawqi.saturating_add(1);
 
             if satr.nass.starts_with('?') {
-                self.sajjil(RafdYaml { bina: "an explicit key", satr: satr.raqm });
+                self.sajjil(RafdYaml {
+                    bina: "an explicit key",
+                    satr: satr.raqm,
+                });
                 self.takhatta(izaha);
                 continue;
             }
@@ -1669,7 +1741,10 @@ impl<'a> MuhallilYaml<'a> {
             };
 
             if miftah == "<<" {
-                self.sajjil(RafdYaml { bina: "a merge key", satr: satr.raqm });
+                self.sajjil(RafdYaml {
+                    bina: "a merge key",
+                    satr: satr.raqm,
+                });
                 self.takhatta(izaha);
                 continue;
             }
@@ -1763,7 +1838,10 @@ impl<'a> MuhallilYaml<'a> {
         // is consumed and refused here rather than being met again by the
         // enclosing mapping and refused a second time.
         if talii.nass.starts_with('-') && talii.izaha >= izaha {
-            let rafd = RafdYaml { bina: "a block sequence", satr: talii.raqm };
+            let rafd = RafdYaml {
+                bina: "a block sequence",
+                satr: talii.raqm,
+            };
             self.sajjil(rafd);
             self.takhatta_qaima(izaha);
             return QeemaYaml::Marfuda(rafd);
@@ -1796,7 +1874,11 @@ fn sajjil(marfudat: &mut Vec<RafdYaml>, rafd: RafdYaml) {
 
 /// A scalar that turned out to be empty is a null, not an empty string.
 fn nass_aw_faragh(qeema: String) -> QeemaYaml {
-    if qeema.is_empty() { QeemaYaml::Faragh } else { QeemaYaml::Nass(qeema) }
+    if qeema.is_empty() {
+        QeemaYaml::Faragh
+    } else {
+        QeemaYaml::Nass(qeema)
+    }
 }
 
 /// Reads a plain scalar: trailing comment removed, null spellings recognised.
@@ -1990,7 +2072,9 @@ mod ikhtibarat {
         // data root from the context and the config root from `~/.config` would
         // find games and none of their executables.
         let muhtamala = JudhurLutris::muhtamala(&siyaq);
-        let awwal = muhtamala.first().ok_or("no candidate installation was built")?;
+        let awwal = muhtamala
+            .first()
+            .ok_or("no candidate installation was built")?;
         assert_eq!(awwal.bayanat_am, bayanat);
         assert_eq!(awwal.idadat, idadat.join(MUJALLAD_LUTRIS));
         assert_eq!(awwal.makhbaa, makhbaa.join(MUJALLAD_LUTRIS));

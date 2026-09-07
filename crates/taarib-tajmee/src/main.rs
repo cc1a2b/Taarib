@@ -61,7 +61,7 @@ fn main() -> ExitCode {
         Err(satr) => {
             eprintln!("{satr}");
             return ExitCode::FAILURE;
-        }
+        },
     };
 
     match nafidh(&khiyarat) {
@@ -70,7 +70,7 @@ fn main() -> ExitCode {
         Err(khata) => {
             eprintln!("{}", khata.satr());
             ExitCode::FAILURE
-        }
+        },
     }
 }
 
@@ -124,7 +124,7 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             "-h" | "--help" => {
                 println!("{MUSAADA}");
                 return Ok(None);
-            }
+            },
             majhul => return Err(format!("tajmee: unknown argument {majhul}")),
         }
     }
@@ -134,7 +134,13 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
     };
     let ahdaf = ahdaf.unwrap_or_else(|| jidhr.join("target"));
     let kharij = kharij.unwrap_or_else(|| jidhr.join("apps/studio/src-tauri/mawarid"));
-    Ok(Some(Khiyarat { hadaf, jidhr, ahdaf, kharij, jalb }))
+    Ok(Some(Khiyarat {
+        hadaf,
+        jidhr,
+        ahdaf,
+        kharij,
+        jalb,
+    }))
 }
 
 /// What `--help` prints, prerequisites included.

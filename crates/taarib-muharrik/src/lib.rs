@@ -178,30 +178,38 @@ impl Mifhas {
         let bidaya = Instant::now();
 
         if !siyaq.jidhr.exists() {
-            return Err(KhataMuharrik::JidhrMafqud { jidhr: siyaq.jidhr.to_path_buf() }.into());
+            return Err(KhataMuharrik::JidhrMafqud {
+                jidhr: siyaq.jidhr.to_path_buf(),
+            }
+            .into());
         }
 
         let mut jami = JamiHasilat::default();
         for fahis in &self.fuhus {
             match fahis.ifhas(siyaq) {
                 Ok(hasila) if hasila.wajad() => jami.hasilat.push((fahis.ism(), hasila)),
-                Ok(_) => {}
+                Ok(_) => {},
                 Err(khata) => {
                     tracing::warn!(
                         fahis = fahis.ism(),
                         ramz = %khata.ramz,
                         "a detector failed; the probe continues without it"
                     );
-                }
+                },
             }
         }
 
         if let Some(tanfidhi) = tanfidhi_muktashaf(&jami)
             && siyaq.tanfidhi != Some(tanfidhi.as_path())
         {
-            let thani = SiyaqFahs { tanfidhi: Some(&tanfidhi), ..siyaq.clone() };
+            let thani = SiyaqFahs {
+                tanfidhi: Some(&tanfidhi),
+                ..siyaq.clone()
+            };
             for fahis in &self.fuhus {
-                let Ok(hasila) = fahis.ifhas(&thani) else { continue };
+                let Ok(hasila) = fahis.ifhas(&thani) else {
+                    continue;
+                };
                 if !hasila.wajad() {
                     continue;
                 }
@@ -262,7 +270,9 @@ impl Mifhas {
 /// — and a proof does not need a second opinion. A detector that merely guessed
 /// would be a detector violating the observe-never-conclude rule.
 fn tanfidhi_muktashaf(jami: &JamiHasilat) -> Option<PathBuf> {
-    jami.hasilat.iter().find_map(|(_, hasila)| hasila.tanfidhi.clone())
+    jami.hasilat
+        .iter()
+        .find_map(|(_, hasila)| hasila.tanfidhi.clone())
 }
 
 /// Builds a probe record from a finished report.

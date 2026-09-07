@@ -68,15 +68,22 @@ fn khiyarat_unreal() -> KhiyaratNasq {
 ///   to a check that compares them as strings.
 #[track_caller]
 fn fahs_uqud(khaam: &str, naqi: &NassNaqi) {
-    assert_eq!(nasq::aid_binaa(naqi), khaam, "round trip differs for {khaam:?}");
+    assert_eq!(
+        nasq::aid_binaa(naqi),
+        khaam,
+        "round trip differs for {khaam:?}"
+    );
     match nasq::tahaqquq(naqi) {
-        Ok(()) => {}
+        Ok(()) => {},
         Err(khata) => panic!("spans do not land on the clean text of {khaam:?}: {khata}"),
     }
 
     for dharra in &naqi.dharrat {
         let Some(nitaq) = naqi.nitaq_dharra(dharra) else {
-            panic!("atom {:?} of {khaam:?} names a span that was never emitted", dharra.khaam);
+            panic!(
+                "atom {:?} of {khaam:?} names a span that was never emitted",
+                dharra.khaam
+            );
         };
         let bidaya = usize::try_from(nitaq.bidaya).unwrap_or(usize::MAX);
         let nihaya = usize::try_from(nitaq.nihaya()).unwrap_or(usize::MAX);
@@ -86,10 +93,16 @@ fn fahs_uqud(khaam: &str, naqi: &NassNaqi) {
             "atom {:?} of {khaam:?} does not occupy one object replacement character",
             dharra.khaam
         );
-        assert!(!dharra.khaam.is_empty(), "an atom of {khaam:?} has no raw text");
+        assert!(
+            !dharra.khaam.is_empty(),
+            "an atom of {khaam:?} has no raw text"
+        );
 
-        let hunaka: Vec<&nasq::AtharNasq> =
-            naqi.aathar.iter().filter(|athar| athar.mawqi == nitaq.bidaya).collect();
+        let hunaka: Vec<&nasq::AtharNasq> = naqi
+            .aathar
+            .iter()
+            .filter(|athar| athar.mawqi == nitaq.bidaya)
+            .collect();
         assert_eq!(
             hunaka.len(),
             1,
@@ -184,7 +197,11 @@ fn nesting_inside_a_format_field_stops_at_the_depth_limit() {
     let mawjud = "{a:{{{{}}}}}";
     let naqi = istakhrij(mawjud, &KhiyaratNasq::default());
     fahs_uqud(mawjud, &naqi);
-    assert_eq!(khaamat(&naqi.dharrat), vec![mawjud], "four levels must still be a placeholder");
+    assert_eq!(
+        khaamat(&naqi.dharrat),
+        vec![mawjud],
+        "four levels must still be a placeholder"
+    );
 
     let zaid = "{a:{{{{{}}}}}}";
     let naqi = istakhrij(zaid, &KhiyaratNasq::default());
@@ -214,8 +231,11 @@ fn an_unfinished_format_field_is_refused_with_or_without_nesting() {
     ] {
         let khata = match nasq::istakhrij(khaam, &KhiyaratNasq::default()) {
             Ok(naqi) => {
-                panic!("{khaam:?} should have been refused, lifted {:?}", khaamat(&naqi.dharrat))
-            }
+                panic!(
+                    "{khaam:?} should have been refused, lifted {:?}",
+                    khaamat(&naqi.dharrat)
+                )
+            },
             Err(khata) => khata,
         };
         // The named reason, not just any failure: refusing this string for an
@@ -240,16 +260,22 @@ fn an_unfinished_format_field_is_refused_with_or_without_nesting() {
 /// under a run and dropping it here would lose it for good.
 #[test]
 fn underline_survives_beside_bold() {
-    const KHAAM: &str =
-        "Fill C.A.R.T.s with valuables. C.A.R.T.s are <b><u>IMPORTANT</u></b> for carrying more \
+    const KHAAM: &str = "Fill C.A.R.T.s with valuables. C.A.R.T.s are <b><u>IMPORTANT</u></b> for carrying more \
          stuff.";
 
     let naqi = istakhrij(KHAAM, &KhiyaratNasq::default());
     fahs_uqud(KHAAM, &naqi);
-    assert!(!naqi.nass.contains('<'), "clean text still carries a tag: {:?}", naqi.nass);
+    assert!(
+        !naqi.nass.contains('<'),
+        "clean text still carries a tag: {:?}",
+        naqi.nass
+    );
 
-    let ghaliz: Vec<&taarib_saff::talab::NitaqUslub> =
-        naqi.nitaqat.iter().filter(|nitaq| nitaq.uslub.wazn == Some(700)).collect();
+    let ghaliz: Vec<&taarib_saff::talab::NitaqUslub> = naqi
+        .nitaqat
+        .iter()
+        .filter(|nitaq| nitaq.uslub.wazn == Some(700))
+        .collect();
     assert_eq!(ghaliz.len(), 1, "expected one bold span");
 
     let taht: Vec<&taarib_saff::talab::NitaqUslub> = naqi
@@ -257,7 +283,12 @@ fn underline_survives_beside_bold() {
         .iter()
         .filter(|nitaq| naqi.zakhrafat_nitaq(nitaq.id) == Some(Zakhrafa::TahtKhat))
         .collect();
-    assert_eq!(taht.len(), 1, "expected one underlined span, found {}", taht.len());
+    assert_eq!(
+        taht.len(),
+        1,
+        "expected one underlined span, found {}",
+        taht.len()
+    );
 
     let (Some(ghaliz), Some(taht)) = (ghaliz.first(), taht.first()) else {
         panic!("unreachable: both lengths were just asserted");
@@ -277,11 +308,23 @@ fn underline_survives_beside_bold() {
 #[test]
 fn every_underlined_string_in_the_game_keeps_its_underlines() {
     let haqiqiya = [
-        ("Activate and fill <b><u>EXTRACTION POINTS</u></b> with valuables.", 1),
+        (
+            "Activate and fill <b><u>EXTRACTION POINTS</u></b> with valuables.",
+            1,
+        ),
         ("Fill <b><u>EXTRACTION POINTS</u></b> with valuables.", 1),
-        ("HELLO! FILL THE <b><u>EXTRACTION POINT</u></b> WITH VALUABLES!", 1),
-        ("If it gets damaged, you can <b><u>HEAL</u></b> it using your own health.", 1),
-        ("Insert <b><u>TAX TOKENS</u></b> into the shop machine to claim your rewards.", 1),
+        (
+            "HELLO! FILL THE <b><u>EXTRACTION POINT</u></b> WITH VALUABLES!",
+            1,
+        ),
+        (
+            "If it gets damaged, you can <b><u>HEAL</u></b> it using your own health.",
+            1,
+        ),
+        (
+            "Insert <b><u>TAX TOKENS</u></b> into the shop machine to claim your rewards.",
+            1,
+        ),
         (
             "Enter the <b><u>TRUCK</u></b> and send a message to your boss in order to leave a \
              level.",
@@ -297,8 +340,14 @@ fn every_underlined_string_in_the_game_keeps_its_underlines() {
              recharge and repair your gear!",
             2,
         ),
-        ("Hvis den tager skade, kan du <b><u>HELE</u></b> den med dit eget liv.", 1),
-        ("Om den skadas så kan du <b><u>HELA</u></b> den med din egen hälsa.", 1),
+        (
+            "Hvis den tager skade, kan du <b><u>HELE</u></b> den med dit eget liv.",
+            1,
+        ),
+        (
+            "Om den skadas så kan du <b><u>HELA</u></b> den med din egen hälsa.",
+            1,
+        ),
     ];
 
     for (khaam, mutawaqqa) in haqiqiya {
@@ -362,10 +411,17 @@ fn unreal_glyph_slots_are_lifted_in_their_dialect() {
     for (khaam, mutawaqqa) in haqiqiya {
         let naqi = istakhrij(khaam, &khiyarat);
         fahs_uqud(khaam, &naqi);
-        assert_eq!(khaamat(&naqi.dharrat), mutawaqqa.to_vec(), "wrong atoms for {khaam:?}");
+        assert_eq!(
+            khaamat(&naqi.dharrat),
+            mutawaqqa.to_vec(),
+            "wrong atoms for {khaam:?}"
+        );
         for dharra in &naqi.dharrat {
             assert_eq!(dharra.naw, NawDharra::Mawdi);
-            let raqm = dharra.khaam.get(1..).and_then(|juz| juz.parse::<u32>().ok());
+            let raqm = dharra
+                .khaam
+                .get(1..)
+                .and_then(|juz| juz.parse::<u32>().ok());
             assert_eq!(dharra.tarteeb, raqm, "{khaam:?} lost the slot number");
         }
     }
@@ -381,9 +437,16 @@ fn unreal_glyph_slots_are_lifted_in_their_dialect() {
 #[test]
 fn glyph_slots_are_not_lifted_without_the_dialect() {
     let iftiradi = KhiyaratNasq::default();
-    assert!(!iftiradi.tashmal(LahjatNasq::UnrealRumuz), "the dialect must be opt-in");
+    assert!(
+        !iftiradi.tashmal(LahjatNasq::UnrealRumuz),
+        "the dialect must be opt-in"
+    );
 
-    for khaam in ["Press %0 to Start", "Hold %0 to sneak", "%0 Equip / Unequip"] {
+    for khaam in [
+        "Press %0 to Start",
+        "Hold %0 to sneak",
+        "%0 Equip / Unequip",
+    ] {
         let naqi = istakhrij(khaam, &iftiradi);
         fahs_uqud(khaam, &naqi);
         assert!(
@@ -391,7 +454,10 @@ fn glyph_slots_are_not_lifted_without_the_dialect() {
             "{khaam:?} lifted {:?} with the dialect off",
             khaamat(&naqi.dharrat)
         );
-        assert_eq!(naqi.nass, khaam, "the text must be untouched with the dialect off");
+        assert_eq!(
+            naqi.nass, khaam,
+            "the text must be untouched with the dialect off"
+        );
     }
 
     // The cost of the dialect, stated as a test rather than left to be
@@ -415,14 +481,21 @@ fn printf_conversions_win_over_glyph_slots() {
         ("%d Pending Actions: %s", &["%d", "%s"]),
         ("Delay (%.3f seconds left)", &["%.3f"]),
         ("Window : %s ", &["%s"]),
-        ("Unrecognized curve easing function type [%i] for FCurveHandle", &["%i"]),
+        (
+            "Unrecognized curve easing function type [%i] for FCurveHandle",
+            &["%i"],
+        ),
         ("%0d and %1$s", &["%0d", "%1$s"]),
     ];
 
     for (khaam, mutawaqqa) in haqiqiya {
         let naqi = istakhrij(khaam, &khiyarat);
         fahs_uqud(khaam, &naqi);
-        assert_eq!(khaamat(&naqi.dharrat), mutawaqqa.to_vec(), "wrong atoms for {khaam:?}");
+        assert_eq!(
+            khaamat(&naqi.dharrat),
+            mutawaqqa.to_vec(),
+            "wrong atoms for {khaam:?}"
+        );
     }
 }
 
@@ -441,10 +514,22 @@ fn printf_conversions_win_over_glyph_slots() {
 fn every_real_placeholder_bearing_string_keeps_its_atoms() {
     // R.E.P.O., read with the options the Unity adapter uses.
     let unity: [(&str, &[&str]); 15] = [
-        ("{players:list:{}|,   |   and   }", &["{players:list:{}|,   |   and   }"]),
-        ("{players:list:{}|,   |   ja   }", &["{players:list:{}|,   |   ja   }"]),
-        ("{players:list:{}|,   |   och   }", &["{players:list:{}|,   |   och   }"]),
-        ("{players:list:{}|,   |   og   }", &["{players:list:{}|,   |   og   }"]),
+        (
+            "{players:list:{}|,   |   and   }",
+            &["{players:list:{}|,   |   and   }"],
+        ),
+        (
+            "{players:list:{}|,   |   ja   }",
+            &["{players:list:{}|,   |   ja   }"],
+        ),
+        (
+            "{players:list:{}|,   |   och   }",
+            &["{players:list:{}|,   |   och   }"],
+        ),
+        (
+            "{players:list:{}|,   |   og   }",
+            &["{players:list:{}|,   |   og   }"],
+        ),
         ("Level {number}", &["{number}"]),
         ("Bana {number}", &["{number}"]),
         ("Niveau {number}", &["{number}"]),
@@ -482,13 +567,21 @@ fn every_real_placeholder_bearing_string_keeps_its_atoms() {
     for (khaam, mutawaqqa) in unity {
         let naqi = istakhrij(khaam, &iftiradi);
         fahs_uqud(khaam, &naqi);
-        assert_eq!(khaamat(&naqi.dharrat), mutawaqqa.to_vec(), "wrong atoms for {khaam:?}");
+        assert_eq!(
+            khaamat(&naqi.dharrat),
+            mutawaqqa.to_vec(),
+            "wrong atoms for {khaam:?}"
+        );
         adad = adad.saturating_add(1);
     }
     for (khaam, mutawaqqa) in unreal {
         let naqi = istakhrij(khaam, &unrealiya);
         fahs_uqud(khaam, &naqi);
-        assert_eq!(khaamat(&naqi.dharrat), mutawaqqa.to_vec(), "wrong atoms for {khaam:?}");
+        assert_eq!(
+            khaamat(&naqi.dharrat),
+            mutawaqqa.to_vec(),
+            "wrong atoms for {khaam:?}"
+        );
         adad = adad.saturating_add(1);
     }
 
@@ -556,7 +649,11 @@ fn braces_around_prose_are_not_placeholders() {
     ] {
         let naqi = istakhrij(khaam, &khiyarat);
         fahs_uqud(khaam, &naqi);
-        assert!(naqi.dharrat.is_empty(), "{khaam:?} lifted {:?}", khaamat(&naqi.dharrat));
+        assert!(
+            naqi.dharrat.is_empty(),
+            "{khaam:?} lifted {:?}",
+            khaamat(&naqi.dharrat)
+        );
         assert_eq!(naqi.nass, khaam, "{khaam:?} was altered");
     }
 }

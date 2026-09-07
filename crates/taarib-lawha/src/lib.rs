@@ -98,7 +98,7 @@ pub use crate::khareeta::{Ihdathiyat, KhareetatAshkal, MawdiShakl, MiftahShakl, 
 pub use crate::khata::KhataLawha;
 pub use crate::misafa::{KhiyaratMisafa, intishar_munasib};
 pub use crate::namu::{IhsaatNamu, LawhaHayya};
-pub use crate::naql::{MasdarLawha, Naql, NamatKhana, NatijatNaql, QiyasatNaql, TaqreerNaql};
+pub use crate::naql::{MasdarLawha, NamatKhana, Naql, NatijatNaql, QiyasatNaql, TaqreerNaql};
 pub use crate::rasf::{KhiyaratRasf, Rasif, Safha};
 pub use crate::tafrigh::JamiAshkal;
 
@@ -179,7 +179,7 @@ impl Lawha {
                         adad: u32::try_from(khutut.adad()).unwrap_or(u32::MAX),
                     }
                     .into());
-                }
+                },
             };
             if !mawjud {
                 let Some(khatt) = khutut.khatt(miftah.khatt) else {
@@ -231,7 +231,11 @@ impl Lawha {
             khareeta.sajjil_safha(raqm, safha.ard, safha.irtifa);
         }
 
-        Ok(Self { safahat, khareeta, namat })
+        Ok(Self {
+            safahat,
+            khareeta,
+            namat,
+        })
     }
 
     /// What the pages cost, in bytes, before compression.
@@ -270,8 +274,14 @@ fn irsim_shakl(
         NamatSafha::Taghtiya => {
             let tahazzuz = f32::from(miftah.bakat) / f32::from(MAWADI_TAHAZZUZ);
             let mawadi: [MihwarQeema; 0] = [];
-            rassam.irsim(miftah.muarrif, miftah.hajm(), NamatRasm::Taghtiya, tahazzuz, &mawadi)
-        }
+            rassam.irsim(
+                miftah.muarrif,
+                miftah.hajm(),
+                NamatRasm::Taghtiya,
+                tahazzuz,
+                &mawadi,
+            )
+        },
         NamatSafha::Masafa => misafa::masafa_shakl(rassam, miftah.muarrif, misafa),
     }
 }

@@ -162,7 +162,12 @@ impl HasilatFahs {
         mawqi: Option<String>,
         wazn: u8,
     ) {
-        self.dalail.push(Daleel { naw, wasf: wasf.into(), mawqi, wazn: wazn.min(100) });
+        self.dalail.push(Daleel {
+            naw,
+            wasf: wasf.into(),
+            mawqi,
+            wazn: wazn.min(100),
+        });
     }
 
     /// Records an observation and names the engine family it points at.
@@ -202,7 +207,11 @@ impl HasilatFahs {
     /// [`crate::tahdid`] uses to rank a detector's claim against another's.
     #[must_use]
     pub fn aqwa(&self) -> u8 {
-        self.dalail.iter().map(|daleel| daleel.wazn).max().unwrap_or(0)
+        self.dalail
+            .iter()
+            .map(|daleel| daleel.wazn)
+            .max()
+            .unwrap_or(0)
     }
 }
 
@@ -246,8 +255,11 @@ impl JamiHasilat {
     /// decided the answer before the evidence that merely agreed with it.
     #[must_use]
     pub fn dalail(&self) -> Vec<&Daleel> {
-        let mut dalail: Vec<&Daleel> =
-            self.hasilat.iter().flat_map(|(_, hasila)| hasila.dalail.iter()).collect();
+        let mut dalail: Vec<&Daleel> = self
+            .hasilat
+            .iter()
+            .flat_map(|(_, hasila)| hasila.dalail.iter())
+            .collect();
         dalail.sort_by_key(|daleel| Reverse(daleel.wazn));
         dalail
     }

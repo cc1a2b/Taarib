@@ -189,7 +189,7 @@ impl NassMahmi {
                 NawRamz::Dharra => vec![ramz_mufrad(ramz.fahras)],
                 NawRamz::Nitaq => {
                     vec![ramz_mufrad(ramz.fahras), ramz_ighlaq(ramz.fahras)]
-                }
+                },
             })
             .collect()
     }
@@ -254,10 +254,7 @@ pub fn ihmi(naqi: &str, nasq: &[NitaqNasq]) -> Result<NassMahmi, KhataTarjama> {
     for nitaq in nasq {
         let bidaya = tul_usize(nitaq.bidaya);
         let nihaya = bidaya.saturating_add(tul_usize(nitaq.tul));
-        if nihaya > naqi.len()
-            || !naqi.is_char_boundary(bidaya)
-            || !naqi.is_char_boundary(nihaya)
-        {
+        if nihaya > naqi.len() || !naqi.is_char_boundary(bidaya) || !naqi.is_char_boundary(nihaya) {
             return Err(KhataTarjama::NitaqKharij {
                 bidaya: nitaq.bidaya,
                 tul: nitaq.tul,
@@ -271,15 +268,38 @@ pub fn ihmi(naqi: &str, nasq: &[NitaqNasq]) -> Result<NassMahmi, KhataTarjama> {
     for (fahras, nitaq) in nasq.iter().enumerate() {
         let bidaya = tul_usize(nitaq.bidaya);
         let nihaya = bidaya.saturating_add(tul_usize(nitaq.tul));
-        let naw = if nitaq.naw.dharra() { NawRamz::Dharra } else { NawRamz::Nitaq };
+        let naw = if nitaq.naw.dharra() {
+            NawRamz::Dharra
+        } else {
+            NawRamz::Nitaq
+        };
         match naw {
-            NawRamz::Dharra => ahdath.push(Hadath::Dharra { fahras, bidaya, nihaya }),
+            NawRamz::Dharra => ahdath.push(Hadath::Dharra {
+                fahras,
+                bidaya,
+                nihaya,
+            }),
             NawRamz::Nitaq => {
-                ahdath.push(Hadath::Iftah { fahras, mawdi: bidaya, nihaya });
-                ahdath.push(Hadath::Ighlaq { fahras, mawdi: nihaya, bidaya });
-            }
+                ahdath.push(Hadath::Iftah {
+                    fahras,
+                    mawdi: bidaya,
+                    nihaya,
+                });
+                ahdath.push(Hadath::Ighlaq {
+                    fahras,
+                    mawdi: nihaya,
+                    bidaya,
+                });
+            },
         }
-        let _ = rumuz.insert(fahras, Ramz { fahras, naw, asl: nitaq.clone() });
+        let _ = rumuz.insert(
+            fahras,
+            Ramz {
+                fahras,
+                naw,
+                asl: nitaq.clone(),
+            },
+        );
     }
     ahdath.sort_by(Hadath::rattib);
 
@@ -308,7 +328,7 @@ pub fn ihmi(naqi: &str, nasq: &[NitaqNasq]) -> Result<NassMahmi, KhataTarjama> {
                 // The atom's own text is not language. It goes entirely.
                 matn.push_str(&ramz_mufrad(fahras));
                 maqru = nihaya;
-            }
+            },
         }
     }
     matn.push_str(naqi.get(maqru..).unwrap_or_default());
@@ -330,11 +350,23 @@ pub fn ihmi(naqi: &str, nasq: &[NitaqNasq]) -> Result<NassMahmi, KhataTarjama> {
 /// meaningful throughout because nothing ever moves them.
 enum Hadath {
     /// A style span begins here; `nihaya` is where it will end.
-    Iftah { fahras: usize, mawdi: usize, nihaya: usize },
+    Iftah {
+        fahras: usize,
+        mawdi: usize,
+        nihaya: usize,
+    },
     /// A style span ends here; `bidaya` is where it began.
-    Ighlaq { fahras: usize, mawdi: usize, bidaya: usize },
+    Ighlaq {
+        fahras: usize,
+        mawdi: usize,
+        bidaya: usize,
+    },
     /// An atom occupies `mawdi..nihaya` and replaces all of it.
-    Dharra { fahras: usize, bidaya: usize, nihaya: usize },
+    Dharra {
+        fahras: usize,
+        bidaya: usize,
+        nihaya: usize,
+    },
 }
 
 impl Hadath {
@@ -373,12 +405,28 @@ impl Hadath {
             .then_with(|| awwal.martaba().cmp(&thani.martaba()))
             .then_with(|| match (awwal, thani) {
                 (
-                    Self::Ighlaq { bidaya: a, fahras: fa, .. },
-                    Self::Ighlaq { bidaya: b, fahras: fb, .. },
+                    Self::Ighlaq {
+                        bidaya: a,
+                        fahras: fa,
+                        ..
+                    },
+                    Self::Ighlaq {
+                        bidaya: b,
+                        fahras: fb,
+                        ..
+                    },
                 ) => b.cmp(a).then_with(|| fb.cmp(fa)),
                 (
-                    Self::Iftah { nihaya: a, fahras: fa, .. },
-                    Self::Iftah { nihaya: b, fahras: fb, .. },
+                    Self::Iftah {
+                        nihaya: a,
+                        fahras: fa,
+                        ..
+                    },
+                    Self::Iftah {
+                        nihaya: b,
+                        fahras: fb,
+                        ..
+                    },
                 ) => b.cmp(a).then_with(|| fa.cmp(fb)),
                 _ => Ordering::Equal,
             })
@@ -459,7 +507,9 @@ pub fn istaridd(mahmi: &NassMahmi, radd: &str) -> Result<NassMustaad, KhataTarja
             let iftitah = mawqi_iftitah.and_then(|q| q.first()).copied().unwrap_or(0);
             let ighlaq = mawqi_ighlaq.and_then(|q| q.first()).copied().unwrap_or(0);
             if ighlaq < iftitah {
-                return Err(KhataTarjama::RamzMaqlub { fahras: ramz.fahras });
+                return Err(KhataTarjama::RamzMaqlub {
+                    fahras: ramz.fahras,
+                });
             }
         }
     }
@@ -469,11 +519,18 @@ pub fn istaridd(mahmi: &NassMahmi, radd: &str) -> Result<NassMustaad, KhataTarja
     // it meant is exactly the repair this crate does not do.
     for (fahras, mughlaq) in mawjuda.keys() {
         match mahmi.rumuz.get(fahras) {
-            Some(ramz) if !*mughlaq || matches!(ramz.naw, NawRamz::Nitaq) => {}
+            Some(ramz) if !*mughlaq || matches!(ramz.naw, NawRamz::Nitaq) => {},
             _ => {
-                let ramz = if *mughlaq { ramz_ighlaq(*fahras) } else { ramz_mufrad(*fahras) };
-                return Err(KhataTarjama::RamzDakhil { ramz, radd: mukhtasar(radd) });
-            }
+                let ramz = if *mughlaq {
+                    ramz_ighlaq(*fahras)
+                } else {
+                    ramz_mufrad(*fahras)
+                };
+                return Err(KhataTarjama::RamzDakhil {
+                    ramz,
+                    radd: mukhtasar(radd),
+                });
+            },
         }
     }
 
@@ -505,9 +562,7 @@ fn ijmaa_rumuz(radd: &str) -> Result<BTreeMap<(usize, bool), Vec<usize>>, KhataT
                 sabab: "a token opened and never closed".to_owned(),
             });
         };
-        let dakhil = baad
-            .get(FATIHA.len_utf8()..tul_ighlaq)
-            .unwrap_or_default();
+        let dakhil = baad.get(FATIHA.len_utf8()..tul_ighlaq).unwrap_or_default();
 
         let (mughlaq, raqm) = match dakhil.strip_prefix(ALAMAT_IGHLAQ) {
             Some(baqi_raqm) => (true, baqi_raqm),
@@ -556,7 +611,9 @@ fn fahras_min_nass(nass: &str) -> Option<usize> {
             '\u{06F0}'..='\u{06F9}' => u32::from(harf) - 0x06F0,
             _ => return None,
         };
-        qeema = qeema.checked_mul(10)?.checked_add(usize::try_from(raqm).ok()?)?;
+        qeema = qeema
+            .checked_mul(10)?
+            .checked_add(usize::try_from(raqm).ok()?)?;
     }
     Some(qeema)
 }
@@ -592,7 +649,9 @@ fn ibn_mustaad(
         let tul_ramz = tul_ramz_fi(radd, makan);
         sabiq = makan.saturating_add(tul_ramz);
 
-        let Some(ramz) = mahmi.rumuz.get(&fahras) else { continue };
+        let Some(ramz) = mahmi.rumuz.get(&fahras) else {
+            continue;
+        };
         match ramz.naw {
             NawRamz::Dharra => {
                 let bidaya = tul_u32(naqi.len());
@@ -605,10 +664,10 @@ fn ibn_mustaad(
                     tul: tul_u32(khaam.len()),
                     naw: ramz.asl.naw.clone(),
                 });
-            }
+            },
             NawRamz::Nitaq if !mughlaq => {
                 let _ = iftitahat.insert(fahras, tul_u32(naqi.len()));
-            }
+            },
             NawRamz::Nitaq => {
                 let bidaya = iftitahat.get(&fahras).copied().unwrap_or(0);
                 nasq.push(NitaqNasq {
@@ -617,7 +676,7 @@ fn ibn_mustaad(
                     tul: tul_u32(naqi.len()).saturating_sub(bidaya),
                     naw: ramz.asl.naw.clone(),
                 });
-            }
+            },
         }
     }
     naqi.push_str(radd.get(sabiq..).unwrap_or_default());
@@ -634,8 +693,9 @@ fn ibn_mustaad(
 /// number of bytes and splice the remainder of the token into the translation.
 fn tul_ramz_fi(radd: &str, makan: usize) -> usize {
     let baad = radd.get(makan..).unwrap_or_default();
-    baad.find(KHATIMA)
-        .map_or(FATIHA.len_utf8(), |izaha| izaha.saturating_add(KHATIMA.len_utf8()))
+    baad.find(KHATIMA).map_or(FATIHA.len_utf8(), |izaha| {
+        izaha.saturating_add(KHATIMA.len_utf8())
+    })
 }
 
 /// The exact source text of an atom.

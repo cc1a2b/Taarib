@@ -70,14 +70,14 @@ fn main() -> ExitCode {
         _ => {
             istikhdam();
             return ExitCode::from(2);
-        }
+        },
     };
     match natija {
         Ok(()) => ExitCode::SUCCESS,
         Err(sabab) => {
             eprintln!("refused: {sabab}");
             ExitCode::FAILURE
-        }
+        },
     }
 }
 
@@ -130,7 +130,10 @@ fn wallid(hujaj: &[String]) -> Result<(), String> {
     let mawjud = mafatih::hat(&ism).ok();
     if let Some(qadeem) = &mawjud {
         println!();
-        println!("a key is already stored under {ism:?}: {}", hex::encode(qadeem.aam().bayt()));
+        println!(
+            "a key is already stored under {ism:?}: {}",
+            hex::encode(qadeem.aam().bayt())
+        );
         println!("replacing it makes every package signed under the old one unverifiable by a");
         println!("client built against its anchor. The passphrase is asked for twice below.");
     }
@@ -229,13 +232,16 @@ fn mirsa(hujaj: &[String]) -> Result<(), String> {
 fn tahaqquq(hujaj: &[String]) -> Result<(), String> {
     let ism = ism_hisab(hujaj);
     let mirsa = masar_mirsa(hujaj)?;
-    let nassi = std::fs::read_to_string(&mirsa)
-        .map_err(|khata| format!("{}: {khata}", mirsa.display()))?;
+    let nassi =
+        std::fs::read_to_string(&mirsa).map_err(|khata| format!("{}: {khata}", mirsa.display()))?;
     let muallan = min_sittashari(nassi.trim())?;
     let khass = mafatih::hat(&ism).map_err(|khata| khata.to_string())?;
     let mahsub = khass.aam().bayt();
     if muallan == mahsub {
-        println!("the key stored under {ism:?} derives the anchor in {}", mirsa.display());
+        println!(
+            "the key stored under {ism:?} derives the anchor in {}",
+            mirsa.display()
+        );
         println!("{}", hex::encode(mahsub));
         Ok(())
     } else {
@@ -307,7 +313,11 @@ fn masar_mirsa(hujaj: &[String]) -> Result<PathBuf, String> {
 /// seed in that file and, not finding it, look somewhere worse. Naming the
 /// refusal is cheaper than the confusion.
 fn hurr_min_sirr(masar: &Path) -> Result<(), String> {
-    let ism = masar.file_name().and_then(|ism| ism.to_str()).unwrap_or_default().to_lowercase();
+    let ism = masar
+        .file_name()
+        .and_then(|ism| ism.to_str())
+        .unwrap_or_default()
+        .to_lowercase();
     for kalima in ASMAA_SIRR {
         if ism.contains(kalima) {
             return Err(format!(
@@ -324,7 +334,10 @@ fn hurr_min_sirr(masar: &Path) -> Result<(), String> {
 fn qeemat_hujja(hujaj: &[String], alam: &str) -> Option<String> {
     let mut baqi = hujaj.iter();
     while let Some(hujja) = baqi.next() {
-        if let Some(qeema) = hujja.strip_prefix(alam).and_then(|baqi| baqi.strip_prefix('=')) {
+        if let Some(qeema) = hujja
+            .strip_prefix(alam)
+            .and_then(|baqi| baqi.strip_prefix('='))
+        {
             return Some(qeema.to_owned());
         }
         if hujja == alam {
@@ -342,7 +355,9 @@ fn qeemat_hujja(hujaj: &[String], alam: &str) -> Option<String> {
 /// keyboard, which is what it is described as being.
 fn iqra_ibara(mutalaba: &str) -> Result<String, String> {
     print!("{mutalaba}");
-    std::io::stdout().flush().map_err(|khata| khata.to_string())?;
+    std::io::stdout()
+        .flush()
+        .map_err(|khata| khata.to_string())?;
     let mut satr = String::new();
     let adad = std::io::stdin()
         .lock()

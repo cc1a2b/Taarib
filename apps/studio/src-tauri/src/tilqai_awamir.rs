@@ -25,10 +25,11 @@ use taarib_tarjama::muzawwidun::Muzawwid;
 use taarib_tathbeet::bayan::waqt_alaan;
 use taarib_tilqai::mashwar::{MALAF_JADWAL, MUJALLAD_MASHRU};
 use taarib_tilqai::{
-    HalatMashwar, IhsaIstikhraj, KhiyaratTilqai, LubaTilqai, MarhalaTilqai, MashwarId,
-    MiqbadIlgha, MudkhalatAman, MukhbirTaqaddum, NatijatMashwar, QaydMarhala, SijillMashwar,
-    TalabTilqai, Taqaddum, WasfTilqai, arrib, ijrud, naqs_jahiziya, tahaqquq_jahiziya,
+    HalatMashwar, IhsaIstikhraj, KhiyaratTilqai, LubaTilqai, MarhalaTilqai, MashwarId, MiqbadIlgha,
+    MudkhalatAman, MukhbirTaqaddum, NatijatMashwar, QaydMarhala, SijillMashwar, TalabTilqai,
+    Taqaddum, WasfTilqai, arrib, ijrud, naqs_jahiziya, tahaqquq_jahiziya,
 };
+use taarib_usus::ISDAR;
 use taarib_usus::idadat::{Idadat, MakhzanIdadat, NawMuzawwid};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
@@ -36,14 +37,11 @@ use taarib_usus::khata::{
 use taarib_usus::khata_min;
 use taarib_usus::manassa::{BeeatTawafuq, NizamTashghil};
 use taarib_usus::masarat::Masarat;
-use taarib_usus::ISDAR;
 use tauri::Emitter as _;
 
 use crate::luba_awamir::{appid_steam, huwiya, ijlib_luba, simat_luba, taqreer_luba};
 use crate::tathbeet_awamir::{HalatSahbHie, iqra_qaimat_sahb, sahb_hie};
-use crate::warsha_awamir::{
-    bin_muzawwid, dolar, lahza_alaan, muzawwid_muntakhab, nano_min_dolar,
-};
+use crate::warsha_awamir::{bin_muzawwid, dolar, lahza_alaan, muzawwid_muntakhab, nano_min_dolar};
 
 /// The window event every run snapshot is published on.
 pub const ISM_HADATH_TILQAI: &str = "taarib://tilqai";
@@ -78,7 +76,15 @@ const MUDDAT_BATH: Duration = Duration::from_millis(120);
 /// compile and the seal are one row, because signing is the tail of compiling
 /// and a row that appears for a hundred milliseconds is noise.
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    serde::Serialize,
+    serde::Deserialize,
     specta::Type,
 )]
 #[serde(rename_all = "snake_case")]
@@ -412,10 +418,16 @@ pub(crate) fn hukm(
         (adad_zahir_min_sijill(sijill), munfaq_min_sijill(sijill))
     });
 
-    let mut hudud_arabi: Vec<String> =
-        taqreer.hudud.iter().map(|hadd| hadd.arabi.clone()).collect();
-    let mut hudud_injilizi: Vec<String> =
-        taqreer.hudud.iter().map(|hadd| hadd.injilizi.clone()).collect();
+    let mut hudud_arabi: Vec<String> = taqreer
+        .hudud
+        .iter()
+        .map(|hadd| hadd.arabi.clone())
+        .collect();
+    let mut hudud_injilizi: Vec<String> = taqreer
+        .hudud
+        .iter()
+        .map(|hadd| hadd.injilizi.clone())
+        .collect();
     // What this build cannot deliver yet is not a limitation of the game, and
     // the capability report keeps the two apart for exactly that reason. The
     // verdict has one list, and a user deciding whether to press the button
@@ -447,7 +459,9 @@ pub(crate) fn hukm(
         .as_ref()
         .is_ok_and(|tarif| yatqada_ajran(tarif.naw) && saqf <= 0.0)
     {
-        let ism = tarif.as_ref().map_or_else(|_| String::new(), |tarif| tarif.muarrif.clone());
+        let ism = tarif
+            .as_ref()
+            .map_or_else(|_| String::new(), |tarif| tarif.muarrif.clone());
         hudud_arabi.push(format!(
             "المزوّد «{ism}» يتقاضى أجرًا على الترجمة ولم يُضبط له سقف إنفاق، والتعريب \
              التلقائي لا يبدأ بدون سقف. اضبط «الميزانية» لهذا المزوّد في الإعدادات ← \
@@ -628,8 +642,13 @@ fn tabbiq_lugha_rasmiya(
     // A game the safety layer already refused keeps that refusal's sentence: it
     // is the more serious of the two and replacing it would hide it.
     if hukm.masar == MasarTilqaiHie::Marfud {
-        hukm.hudud_arabi
-            .insert(0, format!("الناشر يشحن عربية رسمية مع هذه اللعبة ({}).", hala.ism_arabi()));
+        hukm.hudud_arabi.insert(
+            0,
+            format!(
+                "الناشر يشحن عربية رسمية مع هذه اللعبة ({}).",
+                hala.ism_arabi()
+            ),
+        );
         hukm.hudud_injilizi.insert(
             0,
             format!(
@@ -867,9 +886,7 @@ fn tabbiq_qayd(marahil: &mut [TaqaddumMarhalaHie], qayd: &QaydMarhala) {
             None,
             format!("{mutabbaqa} string(s) translated, {fashila} failed"),
         ),
-        QaydMarhala::Takhtit {
-            khutut, azwaj, ..
-        } => {
+        QaydMarhala::Takhtit { khutut, azwaj, .. } => {
             let adad = raqm_u32(khutut.len().try_into().unwrap_or(u64::MAX));
             (
                 MarhalatTilqaiHie::Takhtit,
@@ -878,9 +895,7 @@ fn tabbiq_qayd(marahil: &mut [TaqaddumMarhalaHie], qayd: &QaydMarhala) {
                 format!("{adad} font(s) validated, {azwaj} layout(s) to compute"),
             )
         },
-        QaydMarhala::Tarqee {
-            nusus, safahat, ..
-        } => (
+        QaydMarhala::Tarqee { nusus, safahat, .. } => (
             MarhalatTilqaiHie::Tajmee,
             *nusus,
             Some(*nusus),
@@ -974,18 +989,17 @@ fn asbab_rafd(mujallad: &Path) -> Vec<SatrRafdHie> {
     let Ok(malaf) = std::fs::File::open(&masar) else {
         return Vec::new();
     };
-    let makhzun: RafdFaqat =
-        match serde_json::from_reader(std::io::BufReader::new(malaf)) {
-            Ok(makhzun) => makhzun,
-            Err(sabab) => {
-                tracing::warn!(
-                    masar = %masar.display(),
-                    %sabab,
-                    "the stored extraction table would not read; its refusals are not shown"
-                );
-                return Vec::new();
-            },
-        };
+    let makhzun: RafdFaqat = match serde_json::from_reader(std::io::BufReader::new(malaf)) {
+        Ok(makhzun) => makhzun,
+        Err(sabab) => {
+            tracing::warn!(
+                masar = %masar.display(),
+                %sabab,
+                "the stored extraction table would not read; its refusals are not shown"
+            );
+            return Vec::new();
+        },
+    };
     makhzun
         .rafd
         .majmua()
@@ -1180,12 +1194,22 @@ pub(crate) fn ibda(
     // give, and giving it is a tick rather than a wait or a lost account.
     shabakat_al_bab(&luba, &matjar, iqrar_shabaka)?;
 
-    let mudkhalat = jahhiz(masarat, makhzan, idadat, id, istinaf, jidhr_steam, iqrar_shabaka)?;
+    let mudkhalat = jahhiz(
+        masarat,
+        makhzan,
+        idadat,
+        id,
+        istinaf,
+        jidhr_steam,
+        iqrar_shabaka,
+    )?;
     // A resumed run starts from what the journal already knows rather than from
     // five blank rows: the stages it will skip are finished, and a list that
     // showed them as waiting would tell the user their four thousand translated
     // strings are about to be done again.
-    let sabiqa = istinaf.then(|| laqta_min_qurs(masarat, &hali, id)).flatten();
+    let sabiqa = istinaf
+        .then(|| laqta_min_qurs(masarat, &hali, id))
+        .flatten();
     let laqta = LaqtatTilqaiHie {
         muarrif: id.to_string(),
         tashghila: mudkhalat.tashghila.to_string(),
@@ -1237,7 +1261,9 @@ pub(crate) fn ibda(
     // the whole pipeline and the button would never come back. Detached on
     // purpose — the run outlives this call by minutes, and what it produces
     // reaches the screen on the event rather than through a handle nobody holds.
-    drop(tauri::async_runtime::spawn(shaghghil(mudhee, hay, mudkhalat)));
+    drop(tauri::async_runtime::spawn(shaghghil(
+        mudhee, hay, mudkhalat,
+    )));
     Ok(laqta)
 }
 
@@ -1367,10 +1393,7 @@ pub fn alghi_tilqai(
 /// # Errors
 ///
 /// As [`alghi_tilqai`].
-pub(crate) fn alghi(
-    muarrif: String,
-    mashawir: &MashawirTilqai,
-) -> Natija<LaqtatTilqaiHie> {
+pub(crate) fn alghi(muarrif: String, mashawir: &MashawirTilqai) -> Natija<LaqtatTilqaiHie> {
     let id = huwiya(muarrif)?;
     let hay = mashawir.wahid(id).ok_or_else(|| {
         Khata::from(KhataTilqaiAmr::LaMashwar {
@@ -1474,7 +1497,9 @@ fn jahhiz(
     let hali = idadat.hali();
     let tarif = muzawwid_muntakhab(&hali)?;
     let lahza = lahza_alaan();
-    let saqf_nano = tarif.mizaniya.and_then(|mablagh| nano_min_dolar(mablagh).ok());
+    let saqf_nano = tarif
+        .mizaniya
+        .and_then(|mablagh| nano_min_dolar(mablagh).ok());
     let muzawwid = bin_muzawwid(&tarif, saqf_nano.unwrap_or(u64::MAX), lahza)?;
     // Both spend gates read this one value, so an unset budget opens both at
     // once: the ledger below takes `saqf_takalif: None` and the provider meter
@@ -1606,7 +1631,11 @@ fn khutut_arabiya(masarat: &Masarat, hali: &Idadat) -> Vec<PathBuf> {
     if let Some(masar) = &hali.khutut.masar_khutut_mustakhdim {
         judhur.push(masar.clone());
     }
-    judhur.extend(crate::mukawwinat_tahmil::judhur_khutut(masarat).into_iter().skip(1));
+    judhur.extend(
+        crate::mukawwinat_tahmil::judhur_khutut(masarat)
+            .into_iter()
+            .skip(1),
+    );
 
     let mufaddal = hali.khutut.khatt_luba_iftiradi.to_lowercase();
     let mut arabiya: Vec<(bool, PathBuf)> = Vec::new();
@@ -1657,11 +1686,11 @@ async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mut mudkhalat: Mud
                 return;
             }
             mudkhalat.qaima = qaima;
-        }
+        },
         Err(khata) => {
             awqif_qabl_al_bidaya(&mudhee, &hay, &khata, None);
             return;
-        }
+        },
     }
 
     let mukhbir = {
@@ -1813,7 +1842,11 @@ fn tabbiq_taqaddum(laqta: &mut LaqtatTilqaiHie, taqaddum: &Taqaddum) -> bool {
             Ordering::Equal => {
                 saf.hala = HalatMarhalaHie::Jariya;
                 saf.tamma = if fahs { 0 } else { raqm_u32(taqaddum.munjaz) };
-                saf.majmu = if fahs { None } else { taqaddum.majmu.map(raqm_u32) };
+                saf.majmu = if fahs {
+                    None
+                } else {
+                    taqaddum.majmu.map(raqm_u32)
+                };
                 saf.tafsil = Some(taqaddum.amal.clone());
             },
             Ordering::Greater => {},
@@ -2209,7 +2242,9 @@ impl Tafsir for KhataTilqaiAmr {
                  مهما بلغت التكلفة. اضبط «الميزانية» لهذا المزوّد في الإعدادات ← المزوّدون، \
                  وهي لكلّ جولة لا لكلّ شهر."
             ),
-            Self::HimayaMuktashafa { anwa, dalail_arabi, .. } => format!(
+            Self::HimayaMuktashafa {
+                anwa, dalail_arabi, ..
+            } => format!(
                 "تعمل هذه اللعبة بنظام مكافحة غش ({anwa})، ولا يُعرَّب عنوان كهذا: تعديل \
                  ملفاته قد يكلّفك حظرًا دائمًا لحسابك، والحظر يلحق بالحساب لا باللعبة. \
                  توقّف الأمر قبل أن يُنفَق شيء وقبل أن يُكتب شيء. الدليل:\n{dalail_arabi}"
@@ -2230,7 +2265,11 @@ impl Tafsir for KhataTilqaiAmr {
                  تعديل لعبة تُلعب مع آخرين قد يُفقدك حسابك أو يمنعك من الخوادم، والقرار \
                  قرارك وحدك. لم يُنفَق شيء بعد.\n{wasf_arabi}"
             ),
-            Self::QaimatSahbMahjuba { masdar, sabab, waqt } => format!(
+            Self::QaimatSahbMahjuba {
+                masdar,
+                sabab,
+                waqt,
+            } => format!(
                 "أجاب المستودع ({masdar}) في {waqt} لكنّه لم يقدّم قائمة الإبطال ({sabab})، \
                  فلم تبدأ الجولة ولم يُنفَق شيء. ما دام المستودع يجيب فلا تُثبَّت رقعة قبل \
                  قراءة قائمته، لأنّ الرقعة التي سُحبت لا تُعرف إلا منها. أعد المحاولة بعد \
@@ -2272,7 +2311,11 @@ impl Tafsir for KhataTilqaiAmr {
                  out, whatever that costs. Set this provider's budget in Settings, Providers; \
                  it is per run, not per month."
             ),
-            Self::HimayaMuktashafa { anwa, dalail_injilizi, .. } => format!(
+            Self::HimayaMuktashafa {
+                anwa,
+                dalail_injilizi,
+                ..
+            } => format!(
                 "This game runs anti-cheat ({anwa}), and Taarib does not Arabize such a title: \
                  modifying its files can cost you a permanent ban, and the ban attaches to your \
                  account rather than to the game. Nothing was spent and nothing was written. \
@@ -2296,7 +2339,11 @@ impl Tafsir for KhataTilqaiAmr {
                  your account or your access to its servers, and that decision is yours alone. \
                  Nothing has been spent.\n{wasf_injilizi}"
             ),
-            Self::QaimatSahbMahjuba { masdar, sabab, waqt } => format!(
+            Self::QaimatSahbMahjuba {
+                masdar,
+                sabab,
+                waqt,
+            } => format!(
                 "The registry ({masdar}) answered at {waqt} but did not serve its revocation \
                  list ({sabab}), so the run did not start and nothing was spent. While the \
                  registry is reachable no patch is installed until its list can be read, \
@@ -2353,10 +2400,11 @@ impl Tafsir for KhataTilqaiAmr {
             | Self::LubaBilaMasdar { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
             },
-            Self::LughaRasmiya { ism, hala_injilizi, .. } => {
+            Self::LughaRasmiya {
+                ism, hala_injilizi, ..
+            } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-                let _ = siyaq
-                    .insert("lugha".to_owned(), QeemaSiyaq::Nass(hala_injilizi.clone()));
+                let _ = siyaq.insert("lugha".to_owned(), QeemaSiyaq::Nass(hala_injilizi.clone()));
             },
             Self::BilaSaqfInfaq { muzawwid } => {
                 let _ = siyaq.insert("muzawwid".to_owned(), QeemaSiyaq::Nass(muzawwid.clone()));
@@ -2372,12 +2420,21 @@ impl Tafsir for KhataTilqaiAmr {
                     let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(mawdi.clone()));
                 }
             },
-            Self::ShabakaBilaIqrar { ism, wasf_injilizi, .. } => {
+            Self::ShabakaBilaIqrar {
+                ism, wasf_injilizi, ..
+            } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-                let _ = siyaq.insert("shabaka".to_owned(), QeemaSiyaq::Nass(wasf_injilizi.clone()));
+                let _ = siyaq.insert(
+                    "shabaka".to_owned(),
+                    QeemaSiyaq::Nass(wasf_injilizi.clone()),
+                );
             },
             Self::LaKhattArabi => {},
-            Self::QaimatSahbMahjuba { masdar, sabab, waqt } => {
+            Self::QaimatSahbMahjuba {
+                masdar,
+                sabab,
+                waqt,
+            } => {
                 let _ = siyaq.insert("masdar".to_owned(), QeemaSiyaq::Nass(masdar.clone()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
                 let _ = siyaq.insert("waqt".to_owned(), QeemaSiyaq::Nass(waqt.clone()));
@@ -2748,7 +2805,10 @@ mod ikhtibarat {
     fn idadat_bi_tajawuz(masrah: &Masrah, tajawuz: PathBuf) -> Arc<MakhzanIdadat> {
         let mut qeema = (*masrah.idadat.hali()).clone();
         qeema.manassat.steam = Some(tajawuz);
-        Arc::new(MakhzanIdadat::min_qeema(masrah.masarat.malaf_idadat(), qeema))
+        Arc::new(MakhzanIdadat::min_qeema(
+            masrah.masarat.malaf_idadat(),
+            qeema,
+        ))
     }
 
     /// A catalogue that is valid, readable, and names no applications.
@@ -2861,11 +2921,7 @@ mod ikhtibarat {
     /// that is already in the store.
     #[test]
     fn hukm_yasal_an_iqrar_al_shabaka_qabl_al_zirr() -> NatijatIkhtibar {
-        let jamai = masrah_bi(
-            JahiziyatTashghil::Mukammala,
-            &[SimatLuba::JamaiOnline],
-            &[],
-        )?;
+        let jamai = masrah_bi(JahiziyatTashghil::Mukammala, &[SimatLuba::JamaiOnline], &[])?;
         let hukm_jamai = hukm(
             jamai.id.to_string(),
             &jamai.masarat,
@@ -2931,11 +2987,7 @@ mod ikhtibarat {
     /// reached it has not priced a single string.
     #[test]
     fn ibda_yarfud_al_shabaka_ala_al_bab() -> NatijatIkhtibar {
-        let masrah = masrah_bi(
-            JahiziyatTashghil::Mukammala,
-            &[],
-            &[MALAF_SHABAKA],
-        )?;
+        let masrah = masrah_bi(JahiziyatTashghil::Mukammala, &[], &[MALAF_SHABAKA])?;
         let idadat = idadat_bi_steam(&masrah)?;
         let khata = ibda(
             mudhee_samit(),
@@ -2955,7 +3007,11 @@ mod ikhtibarat {
         // The refusal carries the scan's own evidence, so the interface can show
         // what is being acknowledged rather than asking for a blank yes.
         assert!(khata.injilizi.contains("Mirror"), "{}", khata.injilizi);
-        assert!(khata.injilizi.contains("Nothing has been spent"), "{}", khata.injilizi);
+        assert!(
+            khata.injilizi.contains("Nothing has been spent"),
+            "{}",
+            khata.injilizi
+        );
         assert!(!khata.arabi.is_empty());
         Ok(())
     }
@@ -2965,11 +3021,7 @@ mod ikhtibarat {
     /// after the door, and therefore the proof the door opened.
     #[test]
     fn al_iqrar_yaftah_bawwabat_al_shabaka() -> NatijatIkhtibar {
-        let masrah = masrah_bi(
-            JahiziyatTashghil::Mukammala,
-            &[],
-            &[MALAF_SHABAKA],
-        )?;
+        let masrah = masrah_bi(JahiziyatTashghil::Mukammala, &[], &[MALAF_SHABAKA])?;
         let idadat = idadat_bi_steam(&masrah)?;
         let ramz = ibda(
             mudhee_samit(),
@@ -2998,11 +3050,7 @@ mod ikhtibarat {
     /// override and must not acquire one by accident.
     #[test]
     fn ibda_yarfud_al_himaya_ala_al_bab() -> NatijatIkhtibar {
-        let masrah = masrah_bi(
-            JahiziyatTashghil::Mukammala,
-            &[],
-            &[MALAF_HIMAYA],
-        )?;
+        let masrah = masrah_bi(JahiziyatTashghil::Mukammala, &[], &[MALAF_HIMAYA])?;
         let idadat = idadat_bi_steam(&masrah)?;
         let khata = ibda(
             mudhee_samit(),
@@ -3019,8 +3067,16 @@ mod ikhtibarat {
 
         assert_eq!(khata.ramz, Ramz::jadeed(RAMZ_HIMAYA_BAB));
         assert_ne!(khata.ramz, Ramz::jadeed(RAMZ_LA_MUZAWWID));
-        assert!(khata.injilizi.contains("Easy Anti-Cheat"), "{}", khata.injilizi);
-        assert!(khata.injilizi.contains("Nothing was spent"), "{}", khata.injilizi);
+        assert!(
+            khata.injilizi.contains("Easy Anti-Cheat"),
+            "{}",
+            khata.injilizi
+        );
+        assert!(
+            khata.injilizi.contains("Nothing was spent"),
+            "{}",
+            khata.injilizi
+        );
         assert!(!khata.arabi.is_empty());
         Ok(())
     }
@@ -3067,7 +3123,8 @@ mod ikhtibarat {
     /// `tathbeet_awamir`: each is a private `#[cfg(test)]` module, and a shared
     /// one would have to be a non-test item compiled into the shipping binary.
     fn fiha_arabi(nass: &str) -> bool {
-        nass.chars().any(|harf| matches!(harf, '\u{0600}'..='\u{06ff}' | '\u{0750}'..='\u{077f}'))
+        nass.chars()
+            .any(|harf| matches!(harf, '\u{0600}'..='\u{06ff}' | '\u{0750}'..='\u{077f}'))
     }
 
     /// The withheld-list refusal carries its own code, its own remedy and both
@@ -3081,7 +3138,12 @@ mod ikhtibarat {
         });
 
         assert_eq!(khata.ramz, Ramz::jadeed(RAMZ_SAHB_MAHJUBA));
-        for ramz in [RAMZ_HIMAYA_BAB, RAMZ_FAHS_LAM_YAJRI, RAMZ_SHABAKA, RAMZ_BILA_SAQF] {
+        for ramz in [
+            RAMZ_HIMAYA_BAB,
+            RAMZ_FAHS_LAM_YAJRI,
+            RAMZ_SHABAKA,
+            RAMZ_BILA_SAQF,
+        ] {
             assert_ne!(khata.ramz, Ramz::jadeed(ramz));
         }
         // Nothing on this machine is wrong; the next press refreshes the list.
@@ -3089,7 +3151,11 @@ mod ikhtibarat {
         assert_eq!(khata.khutura, Khutura::Tanbeeh);
         assert!(khata.injilizi.contains("404"), "{}", khata.injilizi);
         // The run's refusals all say what was and was not spent.
-        assert!(khata.injilizi.contains("nothing was spent"), "{}", khata.injilizi);
+        assert!(
+            khata.injilizi.contains("nothing was spent"),
+            "{}",
+            khata.injilizi
+        );
         assert!(fiha_arabi(&khata.arabi));
         assert!(!fiha_arabi(&khata.injilizi), "{}", khata.injilizi);
         assert_eq!(
@@ -3167,8 +3233,11 @@ mod ikhtibarat {
         } else {
             Vec::new()
         };
-        let mut taqreer =
-            taarib_muharrik::imkaniyat::taqreer(muharrik, &simat, "2026-01-01T00:00:00Z".to_owned());
+        let mut taqreer = taarib_muharrik::imkaniyat::taqreer(
+            muharrik,
+            &simat,
+            "2026-01-01T00:00:00Z".to_owned(),
+        );
         if !marfuda {
             taqreer.jahiziya = jahiziya;
         }
@@ -3201,8 +3270,16 @@ mod ikhtibarat {
         let hukm = tabbiq_al_ithnayn(hukm_maftuh(), &taqreer, Some(&rasmiya), false);
 
         assert_eq!(hukm.masar, MasarTilqaiHie::Marfud);
-        assert!(hukm.sabab_injilizi.contains(ATHAR_LUGHA), "{}", hukm.sabab_injilizi);
-        assert!(!hukm.sabab_injilizi.contains(ATHAR_RAFD), "{}", hukm.sabab_injilizi);
+        assert!(
+            hukm.sabab_injilizi.contains(ATHAR_LUGHA),
+            "{}",
+            hukm.sabab_injilizi
+        );
+        assert!(
+            !hukm.sabab_injilizi.contains(ATHAR_RAFD),
+            "{}",
+            hukm.sabab_injilizi
+        );
         // Outranked is not hidden: the report's own account of the gap is what
         // the limits list carries, and `hukm` appends it before either
         // exclusion runs.
@@ -3222,8 +3299,16 @@ mod ikhtibarat {
         let hukm = tabbiq_al_ithnayn(hukm, &taqreer, Some(&rasmiya), false);
 
         assert_eq!(hukm.masar, MasarTilqaiHie::Marfud);
-        assert!(hukm.sabab_injilizi.contains(ATHAR_HIMAYA), "{}", hukm.sabab_injilizi);
-        assert!(!hukm.sabab_injilizi.contains(ATHAR_LUGHA), "{}", hukm.sabab_injilizi);
+        assert!(
+            hukm.sabab_injilizi.contains(ATHAR_HIMAYA),
+            "{}",
+            hukm.sabab_injilizi
+        );
+        assert!(
+            !hukm.sabab_injilizi.contains(ATHAR_LUGHA),
+            "{}",
+            hukm.sabab_injilizi
+        );
         // The other two facts are still stated, as limits.
         assert!(
             hukm.hudud_injilizi
@@ -3242,7 +3327,11 @@ mod ikhtibarat {
         let hukm = tabbiq_al_ithnayn(hukm_maftuh(), &taqreer, None, false);
 
         assert_eq!(hukm.masar, MasarTilqaiHie::Marfud);
-        assert!(hukm.sabab_injilizi.contains(ATHAR_RAFD), "{}", hukm.sabab_injilizi);
+        assert!(
+            hukm.sabab_injilizi.contains(ATHAR_RAFD),
+            "{}",
+            hukm.sabab_injilizi
+        );
     }
 
     /// The start command takes the safety layer's refusal first, and the
@@ -3257,8 +3346,16 @@ mod ikhtibarat {
             &masrah.idadat,
         )?;
         assert_eq!(hukm.masar, MasarTilqaiHie::Marfud);
-        assert!(hukm.sabab_injilizi.contains(ATHAR_HIMAYA), "{}", hukm.sabab_injilizi);
-        assert!(!hukm.sabab_injilizi.contains(ATHAR_RAFD), "{}", hukm.sabab_injilizi);
+        assert!(
+            hukm.sabab_injilizi.contains(ATHAR_HIMAYA),
+            "{}",
+            hukm.sabab_injilizi
+        );
+        assert!(
+            !hukm.sabab_injilizi.contains(ATHAR_RAFD),
+            "{}",
+            hukm.sabab_injilizi
+        );
 
         let ramz = ibda(
             mudhee_samit(),
@@ -3298,7 +3395,10 @@ mod ikhtibarat {
             mizaniya,
         }];
         qeema.muzawwidun.iftiradi = Some("muzawwid-ikhtibar".to_owned());
-        Arc::new(MakhzanIdadat::min_qeema(masrah.masarat.malaf_idadat(), qeema))
+        Arc::new(MakhzanIdadat::min_qeema(
+            masrah.masarat.malaf_idadat(),
+            qeema,
+        ))
     }
 
     /// A clause only the missing-ceiling limit and the refusal itself carry.
@@ -3323,12 +3423,16 @@ mod ikhtibarat {
         )?;
 
         assert!(
-            hukm.hudud_injilizi.iter().any(|hadd| hadd.contains(ATHAR_SAQF)),
+            hukm.hudud_injilizi
+                .iter()
+                .any(|hadd| hadd.contains(ATHAR_SAQF)),
             "{:?}",
             hukm.hudud_injilizi
         );
         assert!(
-            hukm.hudud_arabi.iter().any(|hadd| hadd.contains("سقف إنفاق")),
+            hukm.hudud_arabi
+                .iter()
+                .any(|hadd| hadd.contains("سقف إنفاق")),
             "{:?}",
             hukm.hudud_arabi
         );
@@ -3341,7 +3445,11 @@ mod ikhtibarat {
             .ramz,
             Ramz::jadeed(RAMZ_BILA_SAQF)
         );
-        assert!(hukm.takalif.saqf.abs() < f64::EPSILON, "{}", hukm.takalif.saqf);
+        assert!(
+            hukm.takalif.saqf.abs() < f64::EPSILON,
+            "{}",
+            hukm.takalif.saqf
+        );
         Ok(())
     }
 
@@ -3358,11 +3466,18 @@ mod ikhtibarat {
         )?;
 
         assert!(
-            !hukm.hudud_injilizi.iter().any(|hadd| hadd.contains(ATHAR_SAQF)),
+            !hukm
+                .hudud_injilizi
+                .iter()
+                .any(|hadd| hadd.contains(ATHAR_SAQF)),
             "{:?}",
             hukm.hudud_injilizi
         );
-        assert!((hukm.takalif.saqf - 5.0).abs() < f64::EPSILON, "{}", hukm.takalif.saqf);
+        assert!(
+            (hukm.takalif.saqf - 5.0).abs() < f64::EPSILON,
+            "{}",
+            hukm.takalif.saqf
+        );
         Ok(())
     }
 
@@ -3383,7 +3498,10 @@ mod ikhtibarat {
         )?;
 
         assert!(
-            !hukm.hudud_injilizi.iter().any(|hadd| hadd.contains(ATHAR_SAQF)),
+            !hukm
+                .hudud_injilizi
+                .iter()
+                .any(|hadd| hadd.contains(ATHAR_SAQF)),
             "{:?}",
             hukm.hudud_injilizi
         );

@@ -186,7 +186,9 @@ pub const fn muhadhah(tul: u64) -> Option<u64> {
 /// Reads four little-endian bytes at an offset, bounds-checked.
 fn iqra_u32(bayt: &[u8], izaha: usize) -> Option<u32> {
     let nihaya = izaha.checked_add(4)?;
-    bayt.get(izaha..nihaya).and_then(|juz| <[u8; 4]>::try_from(juz).ok()).map(u32::from_le_bytes)
+    bayt.get(izaha..nihaya)
+        .and_then(|juz| <[u8; 4]>::try_from(juz).ok())
+        .map(u32::from_le_bytes)
 }
 
 /// The sixteen bytes of pickle framing at the start of an archive.
@@ -232,7 +234,10 @@ impl TarwisatAsar {
         };
 
         if iqra_u32(bayt, 0).ok_or_else(|| qaseer("the size pickle"))? != 4 {
-            return Err(KhataNusus::SihrGhayrMutabaq { masar: masar.to_path_buf(), sigha: SIGHA });
+            return Err(KhataNusus::SihrGhayrMutabaq {
+                masar: masar.to_path_buf(),
+                sigha: SIGHA,
+            });
         }
         let tul_tarwisa = u64::from(iqra_u32(bayt, 4).ok_or_else(|| qaseer("the header size"))?);
         if tul_tarwisa > AQSA_TARWISA {
@@ -277,7 +282,11 @@ impl TarwisatAsar {
                 matlub: bidayat_muhtawa,
             });
         }
-        Ok(Self { tul_tarwisa, tul_json, bidayat_muhtawa })
+        Ok(Self {
+            tul_tarwisa,
+            tul_json,
+            bidayat_muhtawa,
+        })
     }
 
     /// Builds the framing for a directory JSON of a given length.
@@ -327,7 +336,9 @@ impl TarwisatAsar {
         };
         let tul_tarwisa = u32::try_from(self.tul_tarwisa).map_err(|_| mufrit(self.tul_tarwisa))?;
         let tul_json = u32::try_from(self.tul_json).map_err(|_| mufrit(self.tul_json))?;
-        let hajm_hamula = tul_tarwisa.checked_sub(4).ok_or_else(|| mufrit(self.tul_tarwisa))?;
+        let hajm_hamula = tul_tarwisa
+            .checked_sub(4)
+            .ok_or_else(|| mufrit(self.tul_tarwisa))?;
         let mut itar = [0_u8; HAJM_ITAR];
         let mut daa = |izaha: usize, qeema: u32| {
             if let Some(khana) = itar.get_mut(izaha..izaha.saturating_add(4)) {
@@ -406,7 +417,11 @@ fn izahat_madkhal(qeema: &Value) -> Option<u64> {
 
 /// Joins a directory path onto a child name.
 fn taht(asas: &str, ism: &str) -> String {
-    if asas.is_empty() { ism.to_owned() } else { format!("{asas}/{ism}") }
+    if asas.is_empty() {
+        ism.to_owned()
+    } else {
+        format!("{asas}/{ism}")
+    }
 }
 
 /// The whole application archive, resident and ready to be rewritten.
@@ -441,8 +456,10 @@ impl HawiyatAsar {
     /// [`KhataNusus::HajmMufrit`] when it is larger than [`AQSA_HAWIYA`], and
     /// whatever [`HawiyatAsar::min_bayt`] refuses.
     pub fn min_masar(masar: &Path) -> Result<Self, KhataNusus> {
-        let bayanat = fs::metadata(masar)
-            .map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+        let bayanat = fs::metadata(masar).map_err(|sabab| KhataNusus::KhataMalaf {
+            masar: masar.to_path_buf(),
+            sabab,
+        })?;
         if bayanat.len() > AQSA_HAWIYA {
             return Err(KhataNusus::HajmMufrit {
                 haql: "the asar archive",
@@ -450,8 +467,10 @@ impl HawiyatAsar {
                 saqf: AQSA_HAWIYA,
             });
         }
-        let bayt = fs::read(masar)
-            .map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+        let bayt = fs::read(masar).map_err(|sabab| KhataNusus::KhataMalaf {
+            masar: masar.to_path_buf(),
+            sabab,
+        })?;
         Self::min_bayt(masar.to_path_buf(), bayt)
     }
 
@@ -473,37 +492,41 @@ impl HawiyatAsar {
             qeema: tarwisa.tul_json,
             saqf: AQSA_TARWISA,
         })?;
-        let nihaya = HAJM_ITAR.checked_add(tul_json).ok_or(KhataNusus::HajmMufrit {
-            haql: "the asar directory header",
-            qeema: tarwisa.tul_json,
-            saqf: AQSA_TARWISA,
-        })?;
-        let khaam = bayt.get(HAJM_ITAR..nihaya).ok_or_else(|| KhataNusus::MalafQaseer {
-            haql: "the asar directory JSON",
-            tul: tul_u64(bayt.len()),
-            matlub: tul_u64(nihaya),
-        })?;
+        let nihaya = HAJM_ITAR
+            .checked_add(tul_json)
+            .ok_or(KhataNusus::HajmMufrit {
+                haql: "the asar directory header",
+                qeema: tarwisa.tul_json,
+                saqf: AQSA_TARWISA,
+            })?;
+        let khaam = bayt
+            .get(HAJM_ITAR..nihaya)
+            .ok_or_else(|| KhataNusus::MalafQaseer {
+                haql: "the asar directory JSON",
+                tul: tul_u64(bayt.len()),
+                matlub: tul_u64(nihaya),
+            })?;
         let ism = masar.display().to_string();
         let nass = std::str::from_utf8(khaam).map_err(|khata| KhataNusus::NassGhayrSalih {
             malaf: ism.clone(),
             tarmiz: "UTF-8",
             mawqi: tul_u64(khata.valid_up_to()),
         })?;
-        let shajara: Value = serde_json::from_str(nass).map_err(|khata| {
-            KhataNusus::BunyaGhayrMutawaqqaa {
+        let shajara: Value =
+            serde_json::from_str(nass).map_err(|khata| KhataNusus::BunyaGhayrMutawaqqaa {
                 malaf: ism.clone(),
                 haql: format!("the directory is not valid JSON: {khata}"),
-            }
-        })?;
+            })?;
 
         let mut madakhil = Vec::new();
         let mut salama = false;
-        let judhur = shajara.get("files").and_then(Value::as_object).ok_or_else(|| {
-            KhataNusus::BunyaGhayrMutawaqqaa {
+        let judhur = shajara
+            .get("files")
+            .and_then(Value::as_object)
+            .ok_or_else(|| KhataNusus::BunyaGhayrMutawaqqaa {
                 malaf: ism.clone(),
                 haql: "files (the directory has no root file map)".to_owned(),
-            }
-        })?;
+            })?;
         imshi(judhur, "", 0, &ism, &mut madakhil, &mut salama)?;
 
         let tul_malaf = tul_u64(bayt.len());
@@ -514,12 +537,14 @@ impl HawiyatAsar {
                 continue;
             }
             let nihayat_madkhal =
-                izaha.checked_add(madkhal.hajm).ok_or(KhataNusus::HawiyaTalifa {
-                    sigha: SIGHA,
-                    haql: "an entry's offset plus its size overflows",
-                    qeema: izaha,
-                    hadd: mutah,
-                })?;
+                izaha
+                    .checked_add(madkhal.hajm)
+                    .ok_or(KhataNusus::HawiyaTalifa {
+                        sigha: SIGHA,
+                        haql: "an entry's offset plus its size overflows",
+                        qeema: izaha,
+                        hadd: mutah,
+                    })?;
             if nihayat_madkhal > mutah {
                 return Err(KhataNusus::HawiyaTalifa {
                     sigha: SIGHA,
@@ -530,7 +555,15 @@ impl HawiyatAsar {
             }
         }
 
-        Ok(Self { masar, tarwisa, shajara, madakhil, bayt, idafat: Vec::new(), salama })
+        Ok(Self {
+            masar,
+            tarwisa,
+            shajara,
+            madakhil,
+            bayt,
+            idafat: Vec::new(),
+            salama,
+        })
     }
 
     /// Where this archive was read from.
@@ -575,8 +608,11 @@ impl HawiyatAsar {
     /// absent body as an empty file.
     #[must_use]
     pub fn muhtawa(&self, masar: &str) -> Option<&[u8]> {
-        if let Some((_, jadeed)) =
-            self.idafat.iter().rev().find(|(ism, _)| ism.as_str() == masar)
+        if let Some((_, jadeed)) = self
+            .idafat
+            .iter()
+            .rev()
+            .find(|(ism, _)| ism.as_str() == masar)
         {
             return Some(jadeed);
         }
@@ -608,7 +644,12 @@ impl HawiyatAsar {
         }
         let ism = self.masar.file_name()?.to_str()?;
         let mujallad = self.masar.parent()?.join(format!("{ism}.unpacked"));
-        Some(madkhal.masar.split('/').fold(mujallad, |masar, juz| masar.join(juz)))
+        Some(
+            madkhal
+                .masar
+                .split('/')
+                .fold(mujallad, |masar, juz| masar.join(juz)),
+        )
     }
 }
 
@@ -654,11 +695,17 @@ fn imshi(
             imshi(atfal, &masar, umq.saturating_add(1), ism, madakhil, salama)?;
             continue;
         }
-        let ghayr_mahzum = uqda.get("unpacked").and_then(Value::as_bool).unwrap_or(false);
+        let ghayr_mahzum = uqda
+            .get("unpacked")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
         let wasla = uqda.get("link").and_then(Value::as_str).map(str::to_owned);
         let izaha = uqda.get("offset").and_then(izahat_madkhal);
         let hajm = uqda.get("size").and_then(Value::as_u64).unwrap_or(0);
-        if uqda.get("size").is_some_and(|qeema| qeema.as_u64().is_none()) {
+        if uqda
+            .get("size")
+            .is_some_and(|qeema| qeema.as_u64().is_none())
+        {
             return Err(KhataNusus::BunyaGhayrMutawaqqaa {
                 malaf: ism.to_owned(),
                 haql: format!("{masar}: size is not a non-negative integer"),
@@ -673,7 +720,10 @@ fn imshi(
                 || format!("{masar}: no offset, no unpacked flag and no link target"),
                 |_| format!("{masar}: offset is not a decimal string, which the format requires"),
             );
-            return Err(KhataNusus::BunyaGhayrMutawaqqaa { malaf: ism.to_owned(), haql: sabab });
+            return Err(KhataNusus::BunyaGhayrMutawaqqaa {
+                malaf: ism.to_owned(),
+                haql: sabab,
+            });
         }
         if uqda.get("integrity").is_some() {
             *salama = true;
@@ -682,7 +732,10 @@ fn imshi(
             masar,
             hajm,
             izaha,
-            tanfidhi: uqda.get("executable").and_then(Value::as_bool).unwrap_or(false),
+            tanfidhi: uqda
+                .get("executable")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
             ghayr_mahzum,
             wasla,
             salama: uqda.get("integrity").is_some(),
@@ -711,8 +764,9 @@ impl HawiyatAsar {
         let ism = self.masar.display().to_string();
         let ajzaa: Vec<&str> = masar.split('/').collect();
         if masar.is_empty()
-            || ajzaa.iter().any(|juz| juz.is_empty() || *juz == "." || *juz == ".."
-                || juz.contains('\\'))
+            || ajzaa
+                .iter()
+                .any(|juz| juz.is_empty() || *juz == "." || *juz == ".." || juz.contains('\\'))
         {
             return Err(KhataNusus::BunyaGhayrMutawaqqaa {
                 malaf: ism,
@@ -727,7 +781,11 @@ impl HawiyatAsar {
             });
         }
         let bidaya = format!("{masar}/");
-        if self.madakhil.iter().any(|madkhal| madkhal.masar.starts_with(&bidaya)) {
+        if self
+            .madakhil
+            .iter()
+            .any(|madkhal| madkhal.masar.starts_with(&bidaya))
+        {
             return Err(KhataNusus::BunyaGhayrMutawaqqaa {
                 malaf: ism,
                 haql: format!("{masar} is a directory in this archive and cannot become a file"),
@@ -798,18 +856,20 @@ impl HawiyatAsar {
             muhtawa.extend_from_slice(bayt);
         }
 
-        let json = serde_json::to_vec(&shajara).map_err(|khata| {
-            KhataNusus::BunyaGhayrMutawaqqaa {
+        let json =
+            serde_json::to_vec(&shajara).map_err(|khata| KhataNusus::BunyaGhayrMutawaqqaa {
                 malaf: self.masar.display().to_string(),
                 haql: format!("the rebuilt directory could not be serialized: {khata}"),
-            }
-        })?;
+            })?;
         let tarwisa = TarwisatAsar::li_tul(tul_u64(json.len()))?;
         let itar = tarwisa.ila_bayt()?;
         // `tul_tarwisa` is `8 + align4(tul_json)`, so what the pickle pads with
         // is exactly `align4(tul_json) - tul_json` zero bytes.
         let hashw = hajm_usize(
-            tarwisa.tul_tarwisa.saturating_sub(8).saturating_sub(tul_u64(json.len())),
+            tarwisa
+                .tul_tarwisa
+                .saturating_sub(8)
+                .saturating_sub(tul_u64(json.len())),
         )
         .unwrap_or(0);
 
@@ -893,8 +953,11 @@ impl HawiyatAsar {
     /// changed, when an entry disappeared, or when a file this session added did
     /// not survive the write.
     pub fn dawra(&self, jadeed: &Self) -> Result<(), KhataNusus> {
-        let mudafa: BTreeSet<&str> =
-            self.idafat.iter().map(|(masar, _)| masar.as_str()).collect();
+        let mudafa: BTreeSet<&str> = self
+            .idafat
+            .iter()
+            .map(|(masar, _)| masar.as_str())
+            .collect();
         let mut farq: u64 = 0;
 
         for madkhal in &self.madakhil {
@@ -918,22 +981,22 @@ impl HawiyatAsar {
                         .filter(|(awwal, thani)| awwal != thani)
                         .count();
                     farq = farq.saturating_add(tul_u64(ikhtilaf));
-                }
+                },
                 Some(hadeeth) => {
                     farq = farq
                         .saturating_add(tul_u64(hadeeth.len().abs_diff(qadeem.len())))
                         .saturating_add(tul_u64(qadeem.len().min(hadeeth.len())));
-                }
+                },
                 None => farq = farq.saturating_add(tul_u64(qadeem.len())),
             }
         }
 
         for (masar, bayt) in &self.idafat {
             match jadeed.muhtawa(masar) {
-                Some(maktub) if maktub == bayt.as_slice() => {}
+                Some(maktub) if maktub == bayt.as_slice() => {},
                 Some(maktub) => {
                     farq = farq.saturating_add(tul_u64(maktub.len().abs_diff(bayt.len()).max(1)));
-                }
+                },
                 None => farq = farq.saturating_add(tul_u64(bayt.len())),
             }
         }
@@ -941,7 +1004,10 @@ impl HawiyatAsar {
         if farq == 0 {
             Ok(())
         } else {
-            Err(KhataNusus::DawraGhayrMutabaqa { sigha: SIGHA, adad: farq })
+            Err(KhataNusus::DawraGhayrMutabaqa {
+                sigha: SIGHA,
+                adad: farq,
+            })
         }
     }
 }
@@ -958,12 +1024,7 @@ impl HawiyatAsar {
 /// reject. Recursion says the same thing in a way that is obviously sound, and
 /// the depth is the path's component count — bounded by [`AQSA_UMQ`] at the
 /// caller — rather than by anything in the archive.
-fn thabbit(
-    shajara: &mut Value,
-    ajzaa: &[&str],
-    uqda: Value,
-    ism: &Path,
-) -> Result<(), KhataNusus> {
+fn thabbit(shajara: &mut Value, ajzaa: &[&str], uqda: Value, ism: &Path) -> Result<(), KhataNusus> {
     let talif = |haql: String| KhataNusus::BunyaGhayrMutawaqqaa {
         malaf: ism.display().to_string(),
         haql,
@@ -1110,8 +1171,11 @@ pub fn yasluh_lil_tarjama(nass: &str) -> bool {
     if !munaqqa.chars().any(char::is_alphabetic) {
         return false;
     }
-    if munaqqa.contains("://") || munaqqa.contains('\\') || munaqqa.starts_with('/')
-        || munaqqa.starts_with("./") || munaqqa.starts_with("../")
+    if munaqqa.contains("://")
+        || munaqqa.contains('\\')
+        || munaqqa.starts_with('/')
+        || munaqqa.starts_with("./")
+        || munaqqa.starts_with("../")
     {
         return false;
     }
@@ -1124,14 +1188,18 @@ pub fn yasluh_lil_tarjama(nass: &str) -> bool {
     if munaqqa.starts_with('#') || munaqqa.starts_with('.') {
         let baqi = munaqqa.get(1..).unwrap_or_default();
         if !baqi.is_empty()
-            && baqi.chars().all(|harf| harf.is_ascii_alphanumeric() || harf == '-' || harf == '_')
+            && baqi
+                .chars()
+                .all(|harf| harf.is_ascii_alphanumeric() || harf == '-' || harf == '_')
         {
             return false;
         }
     }
     let munkhafid = munaqqa.to_ascii_lowercase();
     if !munaqqa.contains(' ')
-        && IMTIDADAT_ASUL.iter().any(|lahiqa| munkhafid.ends_with(lahiqa))
+        && IMTIDADAT_ASUL
+            .iter()
+            .any(|lahiqa| munkhafid.ends_with(lahiqa))
     {
         return false;
     }
@@ -1153,7 +1221,9 @@ pub fn yasluh_lil_tarjama(nass: &str) -> bool {
         && munaqqa.chars().any(|harf| harf.is_ascii_digit())
         && munaqqa.chars().any(char::is_uppercase)
         && munaqqa.chars().any(char::is_lowercase)
-        && munaqqa.chars().all(|harf| harf.is_ascii_alphanumeric() || harf == '+' || harf == '=')
+        && munaqqa
+            .chars()
+            .all(|harf| harf.is_ascii_alphanumeric() || harf == '+' || harf == '=')
     {
         return false;
     }
@@ -1185,7 +1255,11 @@ pub fn nusus_min_json(masdar: &str, qeema: &Value) -> Vec<NassMustakhraj> {
         match uqda {
             Value::String(nass) => {
                 if yasluh_lil_tarjama(nass) {
-                    let miftah = if muashir.is_empty() { "/".to_owned() } else { muashir };
+                    let miftah = if muashir.is_empty() {
+                        "/".to_owned()
+                    } else {
+                        muashir
+                    };
                     hasad.push(NassMustakhraj {
                         huwiya: huwiyat_nass(masdar, &miftah, nass),
                         masdar: masdar.to_owned(),
@@ -1194,18 +1268,18 @@ pub fn nusus_min_json(masdar: &str, qeema: &Value) -> Vec<NassMustakhraj> {
                         naw: NawNass::Mawrid,
                     });
                 }
-            }
+            },
             Value::Array(qeem) => {
                 for (fahras, ibn) in qeem.iter().enumerate().rev() {
                     mukaddas.push((format!("{muashir}/{fahras}"), ibn));
                 }
-            }
+            },
             Value::Object(kain) => {
                 for (ism, ibn) in kain.iter().rev() {
                     mukaddas.push((format!("{muashir}/{}", ramz_muashir(ism)), ibn));
                 }
-            }
-            Value::Null | Value::Bool(_) | Value::Number(_) => {}
+            },
+            Value::Null | Value::Bool(_) | Value::Number(_) => {},
         }
         if hasad.len() >= AQSA_MADAKHIL {
             break;
@@ -1236,7 +1310,9 @@ enum HalatMash {
 /// Decodes one escape sequence, returning what it produced and how many source
 /// characters it consumed after the backslash.
 fn fukk_hurub(huruf: &[char], badi: usize) -> (Option<char>, usize) {
-    let Some(&harf) = huruf.get(badi) else { return (None, 0) };
+    let Some(&harf) = huruf.get(badi) else {
+        return (None, 0);
+    };
     match harf {
         'n' => (Some('\n'), 1),
         't' => (Some('\t'), 1),
@@ -1244,20 +1320,33 @@ fn fukk_hurub(huruf: &[char], badi: usize) -> (Option<char>, usize) {
         'b' => (Some('\u{8}'), 1),
         'f' => (Some('\u{c}'), 1),
         'v' => (Some('\u{b}'), 1),
-        '0' if !huruf.get(badi.saturating_add(1)).is_some_and(char::is_ascii_digit) => {
+        '0' if !huruf
+            .get(badi.saturating_add(1))
+            .is_some_and(char::is_ascii_digit) =>
+        {
             (Some('\0'), 1)
-        }
+        },
         // A backslash before a newline is a line continuation: it produces
         // nothing at all, which is different from producing a newline.
         '\n' => (None, 1),
-        '\r' => (None, if huruf.get(badi.saturating_add(1)) == Some(&'\n') { 2 } else { 1 }),
+        '\r' => (
+            None,
+            if huruf.get(badi.saturating_add(1)) == Some(&'\n') {
+                2
+            } else {
+                1
+            },
+        ),
         'x' => {
             let raqmi: String = huruf.iter().skip(badi.saturating_add(1)).take(2).collect();
-            match u32::from_str_radix(&raqmi, 16).ok().and_then(char::from_u32) {
+            match u32::from_str_radix(&raqmi, 16)
+                .ok()
+                .and_then(char::from_u32)
+            {
                 Some(qeema) if raqmi.len() == 2 => (Some(qeema), 3),
                 _ => (Some('x'), 1),
             }
-        }
+        },
         'u' => {
             if huruf.get(badi.saturating_add(1)) == Some(&'{') {
                 let raqmi: String = huruf
@@ -1266,13 +1355,19 @@ fn fukk_hurub(huruf: &[char], badi: usize) -> (Option<char>, usize) {
                     .take_while(|harf| **harf != '}')
                     .collect();
                 let tul = raqmi.chars().count().saturating_add(3);
-                match u32::from_str_radix(&raqmi, 16).ok().and_then(char::from_u32) {
+                match u32::from_str_radix(&raqmi, 16)
+                    .ok()
+                    .and_then(char::from_u32)
+                {
                     Some(qeema) => (Some(qeema), tul),
                     None => (Some('u'), 1),
                 }
             } else {
                 let raqmi: String = huruf.iter().skip(badi.saturating_add(1)).take(4).collect();
-                match u32::from_str_radix(&raqmi, 16).ok().and_then(char::from_u32) {
+                match u32::from_str_radix(&raqmi, 16)
+                    .ok()
+                    .and_then(char::from_u32)
+                {
                     Some(qeema) if raqmi.chars().count() == 4 => (Some(qeema), 5),
                     // A lone surrogate half is real in JavaScript source and is
                     // not a `char`. It is dropped rather than replaced, because
@@ -1281,7 +1376,7 @@ fn fukk_hurub(huruf: &[char], badi: usize) -> (Option<char>, usize) {
                     _ => (None, 5),
                 }
             }
-        }
+        },
         _ => (Some(harf), 1),
     }
 }
@@ -1367,30 +1462,30 @@ pub fn nusus_min_js(masdar: &str, nass: &str) -> Vec<NassMustakhraj> {
                     halat = HalatMash::TaliqSatr;
                     mawdi = mawdi.saturating_add(2);
                     continue;
-                }
+                },
                 '/' if baad == Some('*') => {
                     halat = HalatMash::TaliqKutla;
                     mawdi = mawdi.saturating_add(2);
                     continue;
-                }
+                },
                 '/' if yasmah => halat = HalatMash::TaabirNamati,
                 '\'' => {
                     halat = HalatMash::NassMufrad;
                     jari.clear();
-                }
+                },
                 '"' => {
                     halat = HalatMash::NassMuzdawaj;
                     jari.clear();
-                }
+                },
                 '`' => {
                     halat = HalatMash::Qalab;
                     jari.clear();
                     fiha_istibdal = false;
-                }
+                },
                 '{' => {
                     umq = umq.saturating_add(1);
                     yasmah = true;
-                }
+                },
                 '}' => {
                     if mukaddas.last() == Some(&umq) {
                         let _ = mukaddas.pop();
@@ -1399,29 +1494,33 @@ pub fn nusus_min_js(masdar: &str, nass: &str) -> Vec<NassMustakhraj> {
                         umq = umq.saturating_sub(1);
                         yasmah = true;
                     }
-                }
+                },
                 _ => {
                     yasmah = !(harf.is_alphanumeric()
                         || harf == '_'
                         || harf == '$'
                         || harf == ')'
                         || harf == ']');
-                }
+                },
             },
             HalatMash::TaliqSatr => {
                 if harf == '\n' {
                     halat = HalatMash::Shifra;
                 }
-            }
+            },
             HalatMash::TaliqKutla => {
                 if harf == '*' && baad == Some('/') {
                     halat = HalatMash::Shifra;
                     mawdi = mawdi.saturating_add(2);
                     continue;
                 }
-            }
+            },
             HalatMash::NassMufrad | HalatMash::NassMuzdawaj => {
-                let mughliq = if halat == HalatMash::NassMufrad { '\'' } else { '"' };
+                let mughliq = if halat == HalatMash::NassMufrad {
+                    '\''
+                } else {
+                    '"'
+                };
                 if harf == '\\' {
                     let (natij, khutwa) = fukk_hurub(&huruf, mawdi.saturating_add(1));
                     if let Some(qeema) = natij {
@@ -1445,7 +1544,7 @@ pub fn nusus_min_js(masdar: &str, nass: &str) -> Vec<NassMustakhraj> {
                 } else {
                     jari.push(harf);
                 }
-            }
+            },
             HalatMash::Qalab => {
                 if harf == '\\' {
                     let (natij, khutwa) = fukk_hurub(&huruf, mawdi.saturating_add(1));
@@ -1479,7 +1578,7 @@ pub fn nusus_min_js(masdar: &str, nass: &str) -> Vec<NassMustakhraj> {
                 } else {
                     jari.push(harf);
                 }
-            }
+            },
             HalatMash::TaabirNamati => {
                 if harf == '\\' {
                     mawdi = mawdi.saturating_add(2);
@@ -1492,7 +1591,7 @@ pub fn nusus_min_js(masdar: &str, nass: &str) -> Vec<NassMustakhraj> {
                     halat = HalatMash::Shifra;
                     yasmah = true;
                 }
-            }
+            },
         }
         mawdi = mawdi.saturating_add(1);
     }
@@ -1540,8 +1639,12 @@ impl HasadNusus {
 }
 
 /// File names that are the application's own bookkeeping rather than its text.
-const MALAFAT_IDARIYA: [&str; 4] =
-    ["package.json", "package-lock.json", "yarn.lock", "npm-shrinkwrap.json"];
+const MALAFAT_IDARIYA: [&str; 4] = [
+    "package.json",
+    "package-lock.json",
+    "yarn.lock",
+    "npm-shrinkwrap.json",
+];
 
 /// Whether an archive path is one this module reads for strings.
 fn yumash(madkhal: &MadkhalAsar) -> bool {
@@ -1656,7 +1759,9 @@ pub fn sittasi_arbaa(bayt: &[u8]) -> String {
     {
         let mut harf = |sitta: u32| {
             let fahras = usize::try_from(sitta & 63).unwrap_or(0);
-            nass.push(char::from(HURUF_SITTASI.get(fahras).copied().unwrap_or(b'A')));
+            nass.push(char::from(
+                HURUF_SITTASI.get(fahras).copied().unwrap_or(b'A'),
+            ));
         };
         let mut kutal = bayt.chunks_exact(3);
         for juz in kutal.by_ref() {
@@ -1973,11 +2078,11 @@ const HAQL_ASL: &str = "taaribAsl";
 /// [`KhataNusus::BunyaGhayrMutawaqqaa`] or [`KhataNusus::HajmMufrit`] from
 /// [`HawiyatAsar::daa`] when a payload path collides with the application's own
 /// tree.
-pub fn rakkib(
-    hawiya: &mut HawiyatAsar,
-    himl: &HimlGhilaf,
-) -> Result<TaqreerTarkeeb, KhataNusus> {
-    let marfud = |sabab: String| KhataNusus::HimlMarfud { alia: "asar entry point", sabab };
+pub fn rakkib(hawiya: &mut HawiyatAsar, himl: &HimlGhilaf) -> Result<TaqreerTarkeeb, KhataNusus> {
+    let marfud = |sabab: String| KhataNusus::HimlMarfud {
+        alia: "asar entry point",
+        sabab,
+    };
 
     let khaam = hawiya
         .muhtawa("package.json")
@@ -1994,7 +2099,11 @@ pub fn rakkib(
     // repoints at the application rather than at the last shim.
     let asl = match kain.get(HAQL_ASL).and_then(Value::as_str) {
         Some(sabiq) => sabiq.to_owned(),
-        None => kain.get("main").and_then(Value::as_str).unwrap_or("index.js").to_owned(),
+        None => kain
+            .get("main")
+            .and_then(Value::as_str)
+            .unwrap_or("index.js")
+            .to_owned(),
     };
     if asl.trim().is_empty() {
         return Err(marfud("package.json names an empty entry point".to_owned()));
@@ -2004,15 +2113,13 @@ pub fn rakkib(
     });
 
     let mut malafat = Vec::new();
-    let mut uktub = |hawiya: &mut HawiyatAsar,
-                     ism: &str,
-                     bayt: Vec<u8>|
-     -> Result<(), KhataNusus> {
-        let masar = format!("{MUJALLAD_HIML}/{ism}");
-        hawiya.daa(&masar, bayt)?;
-        malafat.push(masar);
-        Ok(())
-    };
+    let mut uktub =
+        |hawiya: &mut HawiyatAsar, ism: &str, bayt: Vec<u8>| -> Result<(), KhataNusus> {
+            let masar = format!("{MUJALLAD_HIML}/{ism}");
+            hawiya.daa(&masar, bayt)?;
+            malafat.push(masar);
+            Ok(())
+        };
     uktub(hawiya, "hamula.json", himl.hamula()?)?;
     uktub(hawiya, "taarib.js", himl.tashghil.clone().into_bytes())?;
     uktub(hawiya, "tawtia.js", TAWTIA.as_bytes().to_vec())?;
@@ -2032,8 +2139,10 @@ pub fn rakkib(
                 .map_err(|khata| marfud(format!("the entry point could not be quoted: {khata}")))?,
         );
         uktub(hawiya, "tamhid.js", tamhid.into_bytes())?;
-        let _ = kain
-            .insert("main".to_owned(), Value::String(format!("{MUJALLAD_HIML}/tamhid.js")));
+        let _ = kain.insert(
+            "main".to_owned(),
+            Value::String(format!("{MUJALLAD_HIML}/tamhid.js")),
+        );
         "main"
     };
     let _ = kain.insert(HAQL_ASL.to_owned(), Value::String(asl.clone()));
@@ -2163,15 +2272,30 @@ const ALAMAT_IDAD: [Alama; 6] = [
         Some(Rutba::Idad),
         12,
     ),
-    ("innerText", "text is assigned to DOM nodes", Some(Rutba::Idad), 8),
+    (
+        "innerText",
+        "text is assigned to DOM nodes",
+        Some(Rutba::Idad),
+        8,
+    ),
     (
         "react-dom",
         "a DOM-rendering framework, so the interface is document text",
         Some(Rutba::Idad),
         22,
     ),
-    ("createApp", "a DOM-rendering framework's entry point", Some(Rutba::Idad), 10),
-    ("querySelector", "the document is the interface", Some(Rutba::Idad), 6),
+    (
+        "createApp",
+        "a DOM-rendering framework's entry point",
+        Some(Rutba::Idad),
+        10,
+    ),
+    (
+        "querySelector",
+        "the document is the interface",
+        Some(Rutba::Idad),
+        6,
+    ),
 ];
 
 /// Markers that are context and are deliberately not evidence.
@@ -2193,7 +2317,12 @@ const ALAMAT_SIYAQ: [Alama; 3] = [
         12,
     ),
     ("measureText", "canvas text measurement", None, 0),
-    ("direction", "an explicit text direction is set somewhere in the application", None, 0),
+    (
+        "direction",
+        "an explicit text direction is set somewhere in the application",
+        None,
+        0,
+    ),
 ];
 
 /// Extensions the probe reads while gathering evidence.
@@ -2221,17 +2350,18 @@ impl MasahGhilaf {
     fn ibla(&mut self, nass: &str) {
         self.malafat = self.malafat.saturating_add(1);
         self.bayt = self.bayt.saturating_add(nass.len());
-        for (namat, _, _, _) in
-            ALAMAT_ISTILA.iter().chain(ALAMAT_IDAD.iter()).chain(ALAMAT_SIYAQ.iter())
+        for (namat, _, _, _) in ALAMAT_ISTILA
+            .iter()
+            .chain(ALAMAT_IDAD.iter())
+            .chain(ALAMAT_SIYAQ.iter())
         {
             if nass.contains(*namat) {
                 let adad = self.isabat.entry(*namat).or_insert(0);
                 *adad = adad.saturating_add(1);
             }
         }
-        let bi_harf = nass.contains("charCodeAt")
-            || nass.contains("codePointAt")
-            || nass.contains("charAt");
+        let bi_harf =
+            nass.contains("charCodeAt") || nass.contains("codePointAt") || nass.contains("charAt");
         if bi_harf && nass.contains("drawImage") && !nass.contains("fillText") {
             self.blit_bi_harf = self.blit_bi_harf.saturating_add(1);
         }
@@ -2305,8 +2435,12 @@ impl MifhasGhilaf {
             {
                 continue;
             }
-            let Some(bayt) = hawiya.muhtawa(&madkhal.masar) else { continue };
-            let mahdud = bayt.get(..bayt.len().min(AQSA_NASS_BARMAJI)).unwrap_or(bayt);
+            let Some(bayt) = hawiya.muhtawa(&madkhal.masar) else {
+                continue;
+            };
+            let mahdud = bayt
+                .get(..bayt.len().min(AQSA_NASS_BARMAJI))
+                .unwrap_or(bayt);
             masah.ibla(&String::from_utf8_lossy(mahdud));
         }
         Some(format!("{} entries", hawiya.madakhil().len()))
@@ -2328,7 +2462,10 @@ impl MifhasGhilaf {
                 continue;
             }
             let masar_madkhal = madkhal.path();
-            if masar_madkhal.components().any(|juz| juz.as_os_str() == "node_modules") {
+            if masar_madkhal
+                .components()
+                .any(|juz| juz.as_os_str() == "node_modules")
+            {
                 continue;
             }
             let imtidad = masar_madkhal
@@ -2339,8 +2476,12 @@ impl MifhasGhilaf {
             if !IMTIDADAT_MASH.contains(&imtidad.as_str()) {
                 continue;
             }
-            let Ok(bayt) = fs::read(masar_madkhal) else { continue };
-            let mahdud = bayt.get(..bayt.len().min(AQSA_NASS_BARMAJI)).unwrap_or(&bayt);
+            let Ok(bayt) = fs::read(masar_madkhal) else {
+                continue;
+            };
+            let mahdud = bayt
+                .get(..bayt.len().min(AQSA_NASS_BARMAJI))
+                .unwrap_or(&bayt);
             masah.ibla(&String::from_utf8_lossy(mahdud));
         }
     }
@@ -2415,19 +2556,31 @@ impl Mifhas for MifhasGhilaf {
             return Ok(adilla);
         }
         adilla.push(Dalil::siyaq(
-            if masdar.is_empty() { "nusus:ghilaf" } else { masdar.as_str() },
+            if masdar.is_empty() {
+                "nusus:ghilaf"
+            } else {
+                masdar.as_str()
+            },
             format!(
                 "{} script(s) totalling {} byte(s) were read{}",
                 masah.malafat,
                 masah.bayt,
-                if masah.mabtur { ", and the sweep stopped at its budget" } else { "" }
+                if masah.mabtur {
+                    ", and the sweep stopped at its budget"
+                } else {
+                    ""
+                }
             ),
         ));
 
-        for (namat, wasf, yushir, thiqa) in
-            ALAMAT_ISTILA.iter().chain(ALAMAT_IDAD.iter()).chain(ALAMAT_SIYAQ.iter())
+        for (namat, wasf, yushir, thiqa) in ALAMAT_ISTILA
+            .iter()
+            .chain(ALAMAT_IDAD.iter())
+            .chain(ALAMAT_SIYAQ.iter())
         {
-            let Some(adad) = masah.isabat.get(namat) else { continue };
+            let Some(adad) = masah.isabat.get(namat) else {
+                continue;
+            };
             adilla.push(Dalil::jadeed(
                 format!("script marker {namat}"),
                 format!("found in {adad} file(s): {wasf}"),
@@ -2451,12 +2604,3 @@ impl Mifhas for MifhasGhilaf {
         Ok(adilla)
     }
 }
-
-
-
-
-
-
-
-
-

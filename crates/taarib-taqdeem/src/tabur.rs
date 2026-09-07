@@ -135,7 +135,7 @@ impl MudkhalTabur {
             Some(daqaiq) => {
                 self.umr_daqaiq = daqaiq;
                 true
-            }
+            },
             None => false,
         }
     }
@@ -184,7 +184,9 @@ pub fn umr_bil_daqaiq(mundhu: &str, ila: &str) -> Option<u64> {
     let bidaya = mundhu.parse::<Timestamp>().ok()?;
     let nihaya = ila.parse::<Timestamp>().ok()?;
     let thawani = nihaya.as_second().saturating_sub(bidaya.as_second());
-    u64::try_from(thawani).ok().map(|qeema| qeema.div_euclid(THAWANI_DAQIQA))
+    u64::try_from(thawani)
+        .ok()
+        .map(|qeema| qeema.div_euclid(THAWANI_DAQIQA))
 }
 
 /// What the queue is narrowed to, with [`None`] meaning no constraint.
@@ -243,10 +245,17 @@ impl MurashshihTabur {
         if self.aila.is_some_and(|aila| aila != madkhal.aila) {
             return false;
         }
-        if self.musahim.as_ref().is_some_and(|musahim| *musahim != madkhal.musahim) {
+        if self
+            .musahim
+            .as_ref()
+            .is_some_and(|musahim| *musahim != madkhal.musahim)
+        {
             return false;
         }
-        if self.tareeqa.is_some_and(|tareeqa| tareeqa != madkhal.tareeqa) {
+        if self
+            .tareeqa
+            .is_some_and(|tareeqa| tareeqa != madkhal.tareeqa)
+        {
             return false;
         }
         // `total_cmp`, never `==`: `float_cmp` is denied and a coverage floor
@@ -257,10 +266,17 @@ impl MurashshihTabur {
         {
             return false;
         }
-        if self.hadd_umr_daqaiq.is_some_and(|hadd| madkhal.umr_daqaiq < hadd) {
+        if self
+            .hadd_umr_daqaiq
+            .is_some_and(|hadd| madkhal.umr_daqaiq < hadd)
+        {
             return false;
         }
-        if self.ramz_fuhus.as_ref().is_some_and(|ramz| ramz != madkhal.fuhus.ramz()) {
+        if self
+            .ramz_fuhus
+            .as_ref()
+            .is_some_and(|ramz| ramz != madkhal.fuhus.ramz())
+        {
             return false;
         }
         true
@@ -313,8 +329,10 @@ pub fn tabur<'a>(
     murashshih: &MurashshihTabur,
     tarteeb: TarteebTabur,
 ) -> Vec<&'a MudkhalTabur> {
-    let mut natija: Vec<&MudkhalTabur> =
-        sufuf.iter().filter(|madkhal| murashshih.yaqbal(madkhal)).collect();
+    let mut natija: Vec<&MudkhalTabur> = sufuf
+        .iter()
+        .filter(|madkhal| murashshih.yaqbal(madkhal))
+        .collect();
     natija.sort_by(|awwal, thani| qarin(awwal, thani, tarteeb));
     natija
 }
@@ -344,7 +362,7 @@ pub fn ihsa(_salahiya: &SalahiyatMalik, sufuf: &[&MudkhalTabur]) -> IhsaTabur {
         match madkhal.fuhus {
             HalatFuhus::Akhfaqat { .. } => {
                 natija.akhfaqat = natija.akhfaqat.saturating_add(1);
-            }
+            },
             HalatFuhus::LamTujra => natija.lam_tujra = natija.lam_tujra.saturating_add(1),
             HalatFuhus::Najahat => natija.najahat = natija.najahat.saturating_add(1),
         }
@@ -358,9 +376,10 @@ fn qarin(awwal: &MudkhalTabur, thani: &MudkhalTabur, tarteeb: TarteebTabur) -> O
     let asasi = match tarteeb {
         TarteebTabur::Intizar => qarin_waqt(&awwal.waqt_taqdeem, &thani.waqt_taqdeem),
         TarteebTabur::Taghtiya => thani.taghtiya.nisba().total_cmp(&awwal.taghtiya.nisba()),
-        TarteebTabur::Sumaa => {
-            thani.sumaa.nisbat_qubul().total_cmp(&awwal.sumaa.nisbat_qubul())
-        }
+        TarteebTabur::Sumaa => thani
+            .sumaa
+            .nisbat_qubul()
+            .total_cmp(&awwal.sumaa.nisbat_qubul()),
     };
     asasi
         .then_with(|| qarin_waqt(&awwal.waqt_taqdeem, &thani.waqt_taqdeem))
@@ -370,7 +389,10 @@ fn qarin(awwal: &MudkhalTabur, thani: &MudkhalTabur, tarteeb: TarteebTabur) -> O
 
 /// Oldest first, with an unreadable timestamp sorted last rather than dropped.
 fn qarin_waqt(awwal: &str, thani: &str) -> Ordering {
-    match (awwal.parse::<Timestamp>().ok(), thani.parse::<Timestamp>().ok()) {
+    match (
+        awwal.parse::<Timestamp>().ok(),
+        thani.parse::<Timestamp>().ok(),
+    ) {
         (Some(lahza_awwal), Some(lahza_thani)) => lahza_awwal.cmp(&lahza_thani),
         (Some(_), None) => Ordering::Less,
         (None, Some(_)) => Ordering::Greater,
@@ -509,8 +531,11 @@ impl IkhtiyarTabur {
             return 0;
         };
         let murtakaz = self.murtakaz.unwrap_or(murakkaz);
-        let (min, aqsa) =
-            if murtakaz <= murakkaz { (murtakaz, murakkaz) } else { (murakkaz, murtakaz) };
+        let (min, aqsa) = if murtakaz <= murakkaz {
+            (murtakaz, murakkaz)
+        } else {
+            (murakkaz, murtakaz)
+        };
         let mut mudaf = 0_usize;
         for mawdi in min..=aqsa.min(self.tul.saturating_sub(1)) {
             if self.mukhtar.insert(mawdi) {
@@ -529,7 +554,9 @@ impl IkhtiyarTabur {
     /// Selects exactly the rows that were not selected.
     pub fn aks(&mut self) {
         let qadeem = std::mem::take(&mut self.mukhtar);
-        self.mukhtar = (0..self.tul).filter(|mawdi| !qadeem.contains(mawdi)).collect();
+        self.mukhtar = (0..self.tul)
+            .filter(|mawdi| !qadeem.contains(mawdi))
+            .collect();
     }
 
     /// Clears the selection and the range anchor, leaving the focus alone.
@@ -559,7 +586,10 @@ impl IkhtiyarTabur {
     /// The selected rows of `saff`, in queue order.
     #[must_use]
     pub fn mukhtarat<'a>(&self, saff: &[&'a MudkhalTabur]) -> Vec<&'a MudkhalTabur> {
-        self.mukhtar.iter().filter_map(|mawdi| saff.get(*mawdi).copied()).collect()
+        self.mukhtar
+            .iter()
+            .filter_map(|mawdi| saff.get(*mawdi).copied())
+            .collect()
     }
 
     /// The selected rows as the identities a bulk action is issued against.

@@ -9,9 +9,7 @@
 
 use std::error::Error;
 
-use taarib_tabaqa::iltiqat_shasha::{
-    IdadatTahsin, MuhassinSura, SuraMultaqata, SuratRamadiya,
-};
+use taarib_tabaqa::iltiqat_shasha::{IdadatTahsin, MuhassinSura, SuraMultaqata, SuratRamadiya};
 use taarib_tabaqa::khata::KhataTabaqa;
 use taarib_tabaqa::qira::{
     HududQubul, HukmQira, IkhtiyarQari, Qari, SatrMaqru, THIQA_GHAYR_MAQISA, ThiqatMintaqa,
@@ -35,7 +33,12 @@ fn multaqata(ard: u32, irtifa: u32, lawn: [u8; 3]) -> Result<SuraMultaqata, Box<
         ard,
         irtifa,
         SighatSath::Bgra8,
-        MustatilBiksel { yasar: 300, aala: 700, ard, irtifa },
+        MustatilBiksel {
+            yasar: 300,
+            aala: 700,
+            ard,
+            irtifa,
+        },
     )?)
 }
 
@@ -44,17 +47,17 @@ fn multaqata(ard: u32, irtifa: u32, lawn: [u8; 3]) -> Result<SuraMultaqata, Box<
 /// Flat colour is not enough for the preprocessing tests: the grayscale chain's
 /// stretch and inversion have nothing to act on in a region with one value, so
 /// the two paths a corroborating read uses would differ only by rounding.
-fn multaqata_bi_shareet(
-    ard: u32,
-    irtifa: u32,
-) -> Result<SuraMultaqata, Box<dyn Error>> {
+fn multaqata_bi_shareet(ard: u32, irtifa: u32) -> Result<SuraMultaqata, Box<dyn Error>> {
     let thulth = irtifa.checked_div(3).unwrap_or(0);
     let mut bayt = Vec::new();
     for y in 0..irtifa {
         let dakhil = y >= thulth && y < thulth.saturating_mul(2);
         for x in 0..ard {
-            let [azraq, akhdar, ahmar] =
-                if dakhil && x % 5 < 3 { [40, 26, 24] } else { [190, 202, 206] };
+            let [azraq, akhdar, ahmar] = if dakhil && x % 5 < 3 {
+                [40, 26, 24]
+            } else {
+                [190, 202, 206]
+            };
             bayt.extend_from_slice(&[azraq, akhdar, ahmar, 255]);
         }
     }
@@ -63,14 +66,24 @@ fn multaqata_bi_shareet(
         ard,
         irtifa,
         SighatSath::Bgra8,
-        MustatilBiksel { yasar: 300, aala: 700, ard, irtifa },
+        MustatilBiksel {
+            yasar: 300,
+            aala: 700,
+            ard,
+            irtifa,
+        },
     )?)
 }
 
 fn satr(nass: &str) -> SatrMaqru {
     SatrMaqru::jadeed(
         nass,
-        MustatilBiksel { yasar: 0, aala: 0, ard: 100, irtifa: 20 },
+        MustatilBiksel {
+            yasar: 0,
+            aala: 0,
+            ard: 100,
+            irtifa: 20,
+        },
         THIQA_GHAYR_MAQISA,
         false,
     )
@@ -108,7 +121,11 @@ impl Qari for QariMuzayyaf {
         let ramadi = rgb
             .chunks_exact(3)
             .all(|biksel| biksel.first() == biksel.get(1) && biksel.get(1) == biksel.get(2));
-        let nass = if ramadi { self.fi_ramadi } else { self.fi_alwan };
+        let nass = if ramadi {
+            self.fi_ramadi
+        } else {
+            self.fi_alwan
+        };
         if nass.is_empty() {
             return Err(KhataTabaqa::LaNassMaqru {
                 mintaqa: "stub".to_owned(),
@@ -119,7 +136,12 @@ impl Qari for QariMuzayyaf {
         // caller that forgets to divide the upscale factor out is caught.
         Ok(vec![SatrMaqru::jadeed(
             nass,
-            MustatilBiksel { yasar: 0, aala: 0, ard: sura.ard(), irtifa: sura.irtifa() },
+            MustatilBiksel {
+                yasar: 0,
+                aala: 0,
+                ard: sura.ard(),
+                irtifa: sura.irtifa(),
+            },
             THIQA_GHAYR_MAQISA,
             false,
         )])
@@ -127,7 +149,13 @@ impl Qari for QariMuzayyaf {
 }
 
 fn ikhtiyar(fi_alwan: &'static str, fi_ramadi: &'static str) -> IkhtiyarQari {
-    IkhtiyarQari::min_qari(Box::new(QariMuzayyaf { fi_alwan, fi_ramadi }), Vec::new())
+    IkhtiyarQari::min_qari(
+        Box::new(QariMuzayyaf {
+            fi_alwan,
+            fi_ramadi,
+        }),
+        Vec::new(),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -163,11 +191,21 @@ fn a_short_region_is_upscaled_and_the_boxes_come_back_at_the_original_scale() ->
 
     // A box the recognizer reports inside the upscaled image has to land back
     // on the surface, not at twice the offset from the region's origin.
-    let mahalli = MustatilBiksel { yasar: 20, aala: 4, ard: 60, irtifa: 16 };
+    let mahalli = MustatilBiksel {
+        yasar: 20,
+        aala: 4,
+        ard: 60,
+        irtifa: 16,
+    };
     let sathi = muhassana.ila_sath(mahalli);
     assert_eq!(
         sathi,
-        MustatilBiksel { yasar: 310, aala: 702, ard: 30, irtifa: 8 },
+        MustatilBiksel {
+            yasar: 310,
+            aala: 702,
+            ard: 30,
+            irtifa: 8
+        },
         "the factor has to be divided out before the region's origin is added"
     );
     Ok(())
@@ -179,10 +217,20 @@ fn a_tall_enough_region_is_not_upscaled_and_maps_one_to_one() -> Natija {
     let mut muhassin = MuhassinSura::jadeed(IdadatTahsin::default());
     let muhassana = muhassin.hassin_lil_qari(&sura)?;
     assert_eq!(muhassana.mudaaf(), 1);
-    let mahalli = MustatilBiksel { yasar: 7, aala: 9, ard: 11, irtifa: 13 };
+    let mahalli = MustatilBiksel {
+        yasar: 7,
+        aala: 9,
+        ard: 11,
+        irtifa: 13,
+    };
     assert_eq!(
         muhassana.ila_sath(mahalli),
-        MustatilBiksel { yasar: 307, aala: 709, ard: 11, irtifa: 13 }
+        MustatilBiksel {
+            yasar: 307,
+            aala: 709,
+            ard: 11,
+            irtifa: 13
+        }
     );
     Ok(())
 }
@@ -194,8 +242,22 @@ fn a_tall_enough_region_is_not_upscaled_and_maps_one_to_one() -> Natija {
 #[test]
 fn ordinary_game_text_is_not_malformed() {
     for kalima in [
-        "Continue", "QUIT", "MATCH", "Radahn's", "503425", "90:00", "Waypoint", "XI", "A",
-        "progress?", "Blacksmith's", "24", "/", "-", "Professional", "78%",
+        "Continue",
+        "QUIT",
+        "MATCH",
+        "Radahn's",
+        "503425",
+        "90:00",
+        "Waypoint",
+        "XI",
+        "A",
+        "progress?",
+        "Blacksmith's",
+        "24",
+        "/",
+        "-",
+        "Professional",
+        "78%",
     ] {
         assert!(!kalima_mushawwaha(kalima), "{kalima} is ordinary game text");
     }
@@ -240,7 +302,11 @@ fn an_unreadable_glyph_marker_is_junk_and_a_question_mark_is_not() {
     // end of a token it is punctuation; in the middle it is the engine saying
     // it did not read that region.
     assert_eq!(ihsa_bunya("Save your progress?").alamat_majhula, 0);
-    assert_eq!(ihsa_bunya("What?!").alamat_majhula, 0, "punctuation may follow punctuation");
+    assert_eq!(
+        ihsa_bunya("What?!").alamat_majhula,
+        0,
+        "punctuation may follow punctuation"
+    );
     assert_eq!(ihsa_bunya("i?").alamat_majhula, 0);
 
     assert_eq!(ihsa_bunya("FW?REDLANTERN").alamat_majhula, 1);
@@ -369,8 +435,10 @@ fn the_raw_capture_is_not_a_second_opinion_on_the_default_path() -> Natija {
 
     // Flipping to the grayscale chain is a genuinely different image, which is
     // why that is the pair `iqra_mufattasha` corroborates with.
-    let ramadi_iadadat =
-        IdadatTahsin { yuhawwil_ila_ramadi: true, ..IdadatTahsin::default() };
+    let ramadi_iadadat = IdadatTahsin {
+        yuhawwil_ila_ramadi: true,
+        ..IdadatTahsin::default()
+    };
     let mut ramadi_muhassin = MuhassinSura::jadeed(ramadi_iadadat);
     let ramadi = ramadi_muhassin.hassin_lil_qari(&sura)?;
     assert_ne!(ramadi.sura().ila_rgb()?, sura.ila_rgb()?);
@@ -390,7 +458,10 @@ fn a_region_the_engine_reads_nothing_in_is_refused_without_a_second_pass() -> Na
         &HududQubul::default(),
     )?;
     assert!(natija.sutur.is_empty());
-    assert!(!natija.hukm.maqbul(), "nothing readable is a refusal, not an error");
+    assert!(
+        !natija.hukm.maqbul(),
+        "nothing readable is a refusal, not an error"
+    );
     assert!(
         !natija.tawafuq_jara,
         "the expensive pass must not run on a region the cheap gate already refused"
@@ -408,7 +479,10 @@ fn two_paths_that_read_the_same_text_are_accepted_and_the_second_pass_is_reporte
         &HududQubul::default(),
     )?;
     assert!(natija.tawafuq_jara);
-    assert_eq!(natija.nass_maqbul().as_deref(), Some("Spectral Steed Whistle"));
+    assert_eq!(
+        natija.nass_maqbul().as_deref(),
+        Some("Spectral Steed Whistle")
+    );
     Ok(())
 }
 
@@ -430,7 +504,10 @@ fn a_plausible_read_the_second_path_does_not_share_is_refused() -> Natija {
     assert!(natija.tawafuq_jara);
     assert!(!natija.hukm.maqbul());
     assert!(
-        natija.hukm.sabab().is_some_and(|sabab| sabab.contains("disagree")),
+        natija
+            .hukm
+            .sabab()
+            .is_some_and(|sabab| sabab.contains("disagree")),
         "the reason shown to the player has to say which gate refused and why"
     );
     // The text survives the refusal, because the control panel shows it.
@@ -449,7 +526,12 @@ fn the_lines_come_back_in_the_captures_coordinates_not_the_upscaled_images() -> 
     let awwal = natija.sutur.first().ok_or("the stub returned a line")?;
     assert_eq!(
         awwal.mawdi,
-        MustatilBiksel { yasar: 0, aala: 0, ard: 80, irtifa: 12 },
+        MustatilBiksel {
+            yasar: 0,
+            aala: 0,
+            ard: 80,
+            irtifa: 12
+        },
         "the upscale factor has to be divided out of every box before it is returned"
     );
     Ok(())
@@ -462,12 +544,30 @@ fn the_two_destinations_a_preprocessed_box_can_go_to_differ_by_the_region_origin
     let muhassana = muhassin.hassin_lil_qari(&sura)?;
     assert_eq!(muhassana.mudaaf(), 2);
 
-    let mahalli = MustatilBiksel { yasar: 20, aala: 4, ard: 60, irtifa: 8 };
+    let mahalli = MustatilBiksel {
+        yasar: 20,
+        aala: 4,
+        ard: 60,
+        irtifa: 8,
+    };
     let fil_iltiqat = muhassana.ila_iltiqat(mahalli);
-    assert_eq!(fil_iltiqat, MustatilBiksel { yasar: 10, aala: 2, ard: 30, irtifa: 4 });
+    assert_eq!(
+        fil_iltiqat,
+        MustatilBiksel {
+            yasar: 10,
+            aala: 2,
+            ard: 30,
+            irtifa: 4
+        }
+    );
     assert_eq!(
         muhassana.ila_sath(mahalli),
-        MustatilBiksel { yasar: 310, aala: 702, ard: 30, irtifa: 4 },
+        MustatilBiksel {
+            yasar: 310,
+            aala: 702,
+            ard: 30,
+            irtifa: 4
+        },
         "the surface mapping is the capture mapping plus the region's origin"
     );
     Ok(())
@@ -481,7 +581,10 @@ fn the_two_destinations_a_preprocessed_box_can_go_to_differ_by_the_region_origin
 fn an_engine_that_measures_no_confidence_reports_none_rather_than_the_stand_in() {
     let hudud = HududQubul::default();
     let taqreer = ThiqatMintaqa::min_sutur(&[satr("Classic Match")], &hudud);
-    assert_eq!(taqreer.thiqa, None, "the stand-in must never reach a caller as a number");
+    assert_eq!(
+        taqreer.thiqa, None,
+        "the stand-in must never reach a caller as a number"
+    );
     assert!(taqreer.wasf().contains("unmeasured"));
     assert!(taqreer.hukm.maqbul());
 }
@@ -489,20 +592,34 @@ fn an_engine_that_measures_no_confidence_reports_none_rather_than_the_stand_in()
 #[test]
 fn an_engine_that_does_measure_confidence_reports_its_lowest_line() {
     let hudud = HududQubul::default();
-    let mawdi = MustatilBiksel { yasar: 0, aala: 0, ard: 100, irtifa: 20 };
+    let mawdi = MustatilBiksel {
+        yasar: 0,
+        aala: 0,
+        ard: 100,
+        irtifa: 20,
+    };
     let sutur = [
         SatrMaqru::jadeed("Classic Match", mawdi, 91, true),
         SatrMaqru::jadeed("Serie A XI", mawdi, 74, true),
     ];
     let taqreer = ThiqatMintaqa::min_sutur(&sutur, &hudud);
-    assert_eq!(taqreer.thiqa, Some(74), "a paragraph is as trustworthy as its worst line");
+    assert_eq!(
+        taqreer.thiqa,
+        Some(74),
+        "a paragraph is as trustworthy as its worst line"
+    );
     assert!(taqreer.wasf().contains("74%"));
 }
 
 #[test]
 fn one_unmeasured_line_makes_the_whole_region_unmeasured() {
     let hudud = HududQubul::default();
-    let mawdi = MustatilBiksel { yasar: 0, aala: 0, ard: 100, irtifa: 20 };
+    let mawdi = MustatilBiksel {
+        yasar: 0,
+        aala: 0,
+        ard: 100,
+        irtifa: 20,
+    };
     let sutur = [
         SatrMaqru::jadeed("Classic Match", mawdi, 91, true),
         SatrMaqru::jadeed("Serie A XI", mawdi, THIQA_GHAYR_MAQISA, false),

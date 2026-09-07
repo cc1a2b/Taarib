@@ -254,7 +254,12 @@ impl QalabMawdi {
             return None;
         }
 
-        Some(Self { huwiya, qitaa, mawdi, ahruf_thabita })
+        Some(Self {
+            huwiya,
+            qitaa,
+            mawdi,
+            ahruf_thabita,
+        })
     }
 
     /// The literal run this template starts with.
@@ -322,7 +327,11 @@ impl QalabMawdi {
         let badil = nafidha.get(mawqi..)?;
         let _ = tasjil_badil(&mut badail, badil, kulli, khiyarat)?;
 
-        if badail.len() == self.mawdi.len() { Some(badail) } else { None }
+        if badail.len() == self.mawdi.len() {
+            Some(badail)
+        } else {
+            None
+        }
     }
 
     /// How specific this template is, for choosing between several that match.
@@ -331,7 +340,11 @@ impl QalabMawdi {
     /// more fixed text and fewer holes is constraining more of the captured
     /// string and is the better explanation of it.
     const fn tafdil(&self) -> (usize, std::cmp::Reverse<usize>, NassId) {
-        (self.ahruf_thabita, std::cmp::Reverse(self.mawdi.len()), self.huwiya)
+        (
+            self.ahruf_thabita,
+            std::cmp::Reverse(self.mawdi.len()),
+            self.huwiya,
+        )
     }
 }
 
@@ -370,7 +383,11 @@ fn dharrat_murattaba(nasq: &[NitaqNasq]) -> Vec<(usize, usize, String)> {
                 NawNasq::Sura { marja } => marja.clone(),
                 _ => return None,
             };
-            Some((usize::try_from(nitaq.bidaya).ok()?, usize::try_from(nitaq.tul).ok()?, khaam))
+            Some((
+                usize::try_from(nitaq.bidaya).ok()?,
+                usize::try_from(nitaq.tul).ok()?,
+                khaam,
+            ))
         })
         .collect();
     nitaqat.sort_by_key(|(bidaya, tul, _)| (*bidaya, *tul));
@@ -458,9 +475,17 @@ impl FahrasNusus {
         for madkhal in jadwal.madakhil() {
             let huwiya = madkhal.huwiya();
             let _ = fahras.huwiyat.insert(huwiya);
-            fahras.tamm_khaam.entry(madkhal.khaam.clone()).or_default().push(huwiya);
+            fahras
+                .tamm_khaam
+                .entry(madkhal.khaam.clone())
+                .or_default()
+                .push(huwiya);
             if madkhal.naqi != madkhal.khaam {
-                fahras.tamm_naqi.entry(madkhal.naqi.clone()).or_default().push(huwiya);
+                fahras
+                    .tamm_naqi
+                    .entry(madkhal.naqi.clone())
+                    .or_default()
+                    .push(huwiya);
             }
             if let Some(qalab) =
                 QalabMawdi::min_madkhal(huwiya, &madkhal.naqi, &madkhal.nasq, khiyarat)
@@ -542,7 +567,9 @@ impl FahrasNusus {
                 continue;
             };
             adad = adad.saturating_add(1);
-            let ahsan = afdal.as_ref().is_none_or(|(sabiq, _)| qalab.tafdil() > sabiq.tafdil());
+            let ahsan = afdal
+                .as_ref()
+                .is_none_or(|(sabiq, _)| qalab.tafdil() > sabiq.tafdil());
             if ahsan {
                 afdal = Some((qalab, badail));
             }
@@ -573,7 +600,7 @@ impl FahrasNusus {
                     return;
                 }
                 self.mutlaqa.push(fahras);
-            }
+            },
         }
         self.qawalib.push(qalab);
     }
@@ -921,7 +948,13 @@ pub fn dammij_bi_fahras(
         let khaam = fahras.tabaq_khaam(&mulahaza.nass);
         if !khaam.is_empty() {
             taqreer.mutabaqa_tamma = taqreer.mutabaqa_tamma.saturating_add(1);
-            iftil_ala(jadwal, khaam, mulahaza, MasdarIstikhraj::Multaqat, &mut taqreer);
+            iftil_ala(
+                jadwal,
+                khaam,
+                mulahaza,
+                MasdarIstikhraj::Multaqat,
+                &mut taqreer,
+            );
             malmusa.extend(khaam.iter().copied());
             continue;
         }
@@ -929,33 +962,39 @@ pub fn dammij_bi_fahras(
         let naqi = fahras.tabaq_naqi(&mulahaza.nass);
         if !naqi.is_empty() {
             taqreer.mutabaqa_naqiya = taqreer.mutabaqa_naqiya.saturating_add(1);
-            iftil_ala(jadwal, naqi, mulahaza, MasdarIstikhraj::Multaqat, &mut taqreer);
+            iftil_ala(
+                jadwal,
+                naqi,
+                mulahaza,
+                MasdarIstikhraj::Multaqat,
+                &mut taqreer,
+            );
             malmusa.extend(naqi.iter().copied());
             continue;
         }
 
         if khiyarat.yutabiq_bi_tabdeel
-            && let Some(mutabaqa) = fahras.tabaq_bi_tabdeel(&mulahaza.nass, khiyarat) {
-                if mutabaqa.mubham {
-                    taqreer.mubhama = taqreer.mubhama.saturating_add(1);
-                }
-                if mutabaqa.maqsusa {
-                    taqreer.murashshahat_maqsusa =
-                        taqreer.murashshahat_maqsusa.saturating_add(1);
-                }
-                taqreer.mutabaqa_bi_tabdeel = taqreer.mutabaqa_bi_tabdeel.saturating_add(1);
-                sajjil_tanaqud(jadwal, &mutabaqa, mulahaza, &mut taqreer);
-                let huwiyat = [mutabaqa.huwiya];
-                iftil_ala(
-                    jadwal,
-                    &huwiyat,
-                    mulahaza,
-                    MasdarIstikhraj::Mutanaqid,
-                    &mut taqreer,
-                );
-                let _ = malmusa.insert(mutabaqa.huwiya);
-                continue;
+            && let Some(mutabaqa) = fahras.tabaq_bi_tabdeel(&mulahaza.nass, khiyarat)
+        {
+            if mutabaqa.mubham {
+                taqreer.mubhama = taqreer.mubhama.saturating_add(1);
             }
+            if mutabaqa.maqsusa {
+                taqreer.murashshahat_maqsusa = taqreer.murashshahat_maqsusa.saturating_add(1);
+            }
+            taqreer.mutabaqa_bi_tabdeel = taqreer.mutabaqa_bi_tabdeel.saturating_add(1);
+            sajjil_tanaqud(jadwal, &mutabaqa, mulahaza, &mut taqreer);
+            let huwiyat = [mutabaqa.huwiya];
+            iftil_ala(
+                jadwal,
+                &huwiyat,
+                mulahaza,
+                MasdarIstikhraj::Mutanaqid,
+                &mut taqreer,
+            );
+            let _ = malmusa.insert(mutabaqa.huwiya);
+            continue;
+        }
 
         if !khiyarat.yahfaz_multaqat_faqat {
             taqreer.muhmala = taqreer.muhmala.saturating_add(1);
@@ -972,8 +1011,10 @@ pub fn dammij_bi_fahras(
         jadwal.adif(madkhal);
     }
 
-    taqreer.sakina_lam_tura =
-        fahras.huwiyat().filter(|huwiya| !malmusa.contains(huwiya)).collect();
+    taqreer.sakina_lam_tura = fahras
+        .huwiyat()
+        .filter(|huwiya| !malmusa.contains(huwiya))
+        .collect();
     taqreer
 }
 

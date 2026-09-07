@@ -72,11 +72,15 @@ impl NatijatTajdid {
             ),
             Self::MustawdaGhayrMutah { sabab } => {
                 format!("no registry source answered the manifest: {sabab}")
-            }
+            },
             Self::QaimaMutaadhdhira { masdar, sabab } => {
                 format!("{masdar} served the manifest and not a usable revocation list: {sabab}")
-            }
-            Self::Aqdam { masdar, jadeeda, asas } => format!(
+            },
+            Self::Aqdam {
+                masdar,
+                jadeeda,
+                asas,
+            } => format!(
                 "{masdar} served revocation list #{jadeeda}, older than the #{asas} held; kept the \
                  held one"
             ),
@@ -102,10 +106,16 @@ pub async fn jaddid_qaimat_sahb(
         Ok(majlub) => majlub,
         Err(khata) => {
             let sabab = khata.to_string();
-            sajjil(masarat, al_aan, NatijatMuhawala::MustawdaGhayrMutah { sabab: sabab.clone() })
-                .await;
+            sajjil(
+                masarat,
+                al_aan,
+                NatijatMuhawala::MustawdaGhayrMutah {
+                    sabab: sabab.clone(),
+                },
+            )
+            .await;
             return NatijatTajdid::MustawdaGhayrMutah { sabab };
-        }
+        },
     };
     // A source that answers the manifest with something unreadable is a
     // reachable registry with no usable kill switch, not an unreachable one:
@@ -118,14 +128,25 @@ pub async fn jaddid_qaimat_sahb(
             sajjil(
                 masarat,
                 al_aan,
-                NatijatMuhawala::QaimaMutaadhdhira { masdar: masdar.clone(), sabab: sabab.clone() },
+                NatijatMuhawala::QaimaMutaadhdhira {
+                    masdar: masdar.clone(),
+                    sabab: sabab.clone(),
+                },
             )
             .await;
             return NatijatTajdid::QaimaMutaadhdhira { masdar, sabab };
-        }
+        },
     };
-    jaddid_qaimat_sahb_bi_bayan(silsila, &bayan, &masdar, masarat, miftah_malik, asliya, al_aan)
-        .await
+    jaddid_qaimat_sahb_bi_bayan(
+        silsila,
+        &bayan,
+        &masdar,
+        masarat,
+        miftah_malik,
+        asliya,
+        al_aan,
+    )
+    .await
 }
 
 /// As [`jaddid_qaimat_sahb`], for a caller that has already fetched the
@@ -152,8 +173,11 @@ pub async fn jaddid_qaimat_sahb_bi_bayan(
                 },
             )
             .await;
-            return NatijatTajdid::QaimaMutaadhdhira { masdar: masdar_bayan.to_owned(), sabab };
-        }
+            return NatijatTajdid::QaimaMutaadhdhira {
+                masdar: masdar_bayan.to_owned(),
+                sabab,
+            };
+        },
     };
 
     let masarat_lil_kitaba = masarat.clone();
@@ -174,10 +198,15 @@ pub async fn jaddid_qaimat_sahb_bi_bayan(
 
     match natija {
         Ok(Ok(Qabul::Qubilat(qaima))) => NatijatTajdid::Najah { qaima, masdar },
-        Ok(Ok(Qabul::Aqdam { jadeeda, asas })) => NatijatTajdid::Aqdam { masdar, jadeeda, asas },
-        Ok(Ok(Qabul::Marfuda(khata))) => {
-            NatijatTajdid::QaimaMutaadhdhira { masdar, sabab: khata.to_string() }
-        }
+        Ok(Ok(Qabul::Aqdam { jadeeda, asas })) => NatijatTajdid::Aqdam {
+            masdar,
+            jadeeda,
+            asas,
+        },
+        Ok(Ok(Qabul::Marfuda(khata))) => NatijatTajdid::QaimaMutaadhdhira {
+            masdar,
+            sabab: khata.to_string(),
+        },
         Ok(Err(khata)) => NatijatTajdid::Khata(khata),
         Err(khata) => NatijatTajdid::Khata(KhataAman::QaimatSahbFashila {
             amal: "refreshed",
@@ -191,16 +220,18 @@ pub async fn jaddid_qaimat_sahb_bi_bayan(
 /// caller, and the next gate reads whatever record there is.
 async fn sajjil(masarat: &Masarat, al_aan: Timestamp, natija: NatijatMuhawala) {
     let masarat = masarat.clone();
-    let muhawala = MuhawalatTajdid { waqt: al_aan, natija };
-    match tokio::task::spawn_blocking(move || QaimatSahb::sajjil_muhawala(&masarat, muhawala))
-        .await
+    let muhawala = MuhawalatTajdid {
+        waqt: al_aan,
+        natija,
+    };
+    match tokio::task::spawn_blocking(move || QaimatSahb::sajjil_muhawala(&masarat, muhawala)).await
     {
-        Ok(Ok(())) => {}
+        Ok(Ok(())) => {},
         Ok(Err(khata)) => {
             tracing::warn!(khata = %khata, "the revocation refresh attempt was not recorded");
-        }
+        },
         Err(khata) => {
             tracing::warn!(khata = %khata, "the revocation refresh record task did not finish");
-        }
+        },
     }
 }

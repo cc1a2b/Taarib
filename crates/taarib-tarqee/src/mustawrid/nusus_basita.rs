@@ -100,7 +100,10 @@ pub fn fak_tarmiz(
     bayt: &[u8],
     khiyarat: &IstiradKhiyarat,
 ) -> Result<String, KhataTarqee> {
-    let rafd = |sabab: String| KhataTarqee::IstiradFashil { masar: masar.to_path_buf(), sabab };
+    let rafd = |sabab: String| KhataTarqee::IstiradFashil {
+        masar: masar.to_path_buf(),
+        sabab,
+    };
 
     if bayt.starts_with(&ALAMAT_UTF32_SAGHIR) || bayt.starts_with(&ALAMAT_UTF32_KABIR) {
         return Err(rafd(
@@ -162,7 +165,10 @@ fn min_utf8(masar: &Path, bayt: &[u8]) -> Result<String, KhataTarqee> {
 /// character in the middle of an Arabic sentence is a defect that survives
 /// every check downstream and surfaces in a screenshot.
 fn min_utf16(masar: &Path, bayt: &[u8], kabir: bool) -> Result<String, KhataTarqee> {
-    let rafd = |sabab: String| KhataTarqee::IstiradFashil { masar: masar.to_path_buf(), sabab };
+    let rafd = |sabab: String| KhataTarqee::IstiradFashil {
+        masar: masar.to_path_buf(),
+        sabab,
+    };
     let azwaj = bayt.chunks_exact(2);
     if !azwaj.remainder().is_empty() {
         return Err(rafd(format!(
@@ -175,7 +181,11 @@ fn min_utf16(masar: &Path, bayt: &[u8], kabir: bool) -> Result<String, KhataTarq
     let wahdat = azwaj.map(|zawj| {
         let awwal = zawj.first().copied().unwrap_or(0);
         let thani = zawj.get(1).copied().unwrap_or(0);
-        if kabir { u16::from_be_bytes([awwal, thani]) } else { u16::from_le_bytes([awwal, thani]) }
+        if kabir {
+            u16::from_be_bytes([awwal, thani])
+        } else {
+            u16::from_le_bytes([awwal, thani])
+        }
     });
 
     let mut natija = String::with_capacity(bayt.len());
@@ -188,7 +198,7 @@ fn min_utf16(masar: &Path, bayt: &[u8], kabir: bool) -> Result<String, KhataTarq
                      UTF-16 and substituting a replacement character would put a visible defect \
                      into a translation that every later check would accept."
                 )));
-            }
+            },
         }
     }
     Ok(natija.trim_start_matches('\u{FEFF}').to_owned())
@@ -239,8 +249,7 @@ pub fn iqra_xunity(
     khiyarat: &IstiradKhiyarat,
 ) -> Result<MilaffWarid, KhataTarqee> {
     tracing::debug!(masar = %masar.display(), "reading an XUnity.AutoTranslator cache");
-    let mut milaff =
-        MilaffWarid::jadeed(SighatIstirad::XUnityAutoTranslator, nass.lines().count());
+    let mut milaff = MilaffWarid::jadeed(SighatIstirad::XUnityAutoTranslator, nass.lines().count());
     // The tool writes machine output. Whoever ran it, that is what is in the
     // file, so the ceiling is the machine state whatever the caller supplied.
     let hala = SighatIstirad::XUnityAutoTranslator
@@ -257,9 +266,10 @@ pub fn iqra_xunity(
         if let Some(baqi) = satr.strip_prefix("sr:").or_else(|| satr.strip_prefix("r:")) {
             let mujazzi = satr.starts_with("sr:");
             match qaida_namatiya(baqi, mujazzi, raqm) {
-                Some(warid) => milaff
-                    .marfuda
-                    .push(MudkhalMarfud { warid, sabab: SababRafd::QaidaNamatiya }),
+                Some(warid) => milaff.marfuda.push(MudkhalMarfud {
+                    warid,
+                    sabab: SababRafd::QaidaNamatiya,
+                }),
                 None => milaff.marfuda.push(MudkhalMarfud {
                     warid: satr_ghayr_mafhum(satr, raqm),
                     sabab: SababRafd::SatrGhayrMafhum { juz: iqtibas(satr) },
@@ -277,9 +287,7 @@ pub fn iqra_xunity(
         };
 
         let masdar = fukk_hurub_xunity(satr.get(..fasl).unwrap_or_default());
-        let hadaf = fukk_hurub_xunity(
-            satr.get(fasl.saturating_add(1)..).unwrap_or_default(),
-        );
+        let hadaf = fukk_hurub_xunity(satr.get(fasl.saturating_add(1)..).unwrap_or_default());
 
         let mut warid = MudkhalWarid::jadeed(masdar, Some(hadaf.clone()), raqm);
         warid.hala = hala;
@@ -325,11 +333,11 @@ fn qaida_namatiya(baqi: &str, mujazzi: bool, satr: usize) -> Option<MudkhalWarid
                 if let Some((_, talin)) = ahruf.next() {
                     namat.push(talin);
                 }
-            }
+            },
             '"' => {
                 nihaya = Some(izaha);
                 break;
-            }
+            },
             _ => namat.push(harf),
         }
     }
@@ -382,7 +390,7 @@ fn fukk_hurub_xunity(khaam: &str) -> String {
             Some(akhar) => {
                 natija.push('\\');
                 natija.push(akhar);
-            }
+            },
         }
     }
     natija
@@ -399,7 +407,7 @@ fn rafd_zahir(warid: &MudkhalWarid) -> Option<SababRafd> {
         Some("") => Some(SababRafd::HadafFarigh),
         Some(hadaf) if hadaf == warid.masdar && !warid.masdar.is_empty() => {
             Some(SababRafd::HadafKaAlmasdar)
-        }
+        },
         Some(_) => None,
     }
 }
@@ -409,8 +417,15 @@ fn rafd_zahir(warid: &MudkhalWarid) -> Option<SababRafd> {
 // ---------------------------------------------------------------------------
 
 /// The header names a key column answers to.
-const ASMAA_MIFTAH: [&str; 7] =
-    ["key", "id", "identifier", "name", "msgctxt", "term", "string id"];
+const ASMAA_MIFTAH: [&str; 7] = [
+    "key",
+    "id",
+    "identifier",
+    "name",
+    "msgctxt",
+    "term",
+    "string id",
+];
 
 /// The header names a source column answers to.
 const ASMAA_MASDAR: [&str; 9] = [
@@ -438,8 +453,14 @@ const ASMAA_HADAF: [&str; 8] = [
 ];
 
 /// The header names a comment column answers to.
-const ASMAA_MULAHAZA: [&str; 6] =
-    ["comment", "comments", "note", "notes", "description", "context"];
+const ASMAA_MULAHAZA: [&str; 6] = [
+    "comment",
+    "comments",
+    "note",
+    "notes",
+    "description",
+    "context",
+];
 
 /// Reads a delimited table with the columns the caller named.
 ///
@@ -464,7 +485,10 @@ pub fn iqra_jadwal(
     nass: &str,
     khiyarat: &IstiradKhiyarat,
 ) -> Result<MilaffWarid, KhataTarqee> {
-    let rafd = |sabab: String| KhataTarqee::IstiradFashil { masar: masar.to_path_buf(), sabab };
+    let rafd = |sabab: String| KhataTarqee::IstiradFashil {
+        masar: masar.to_path_buf(),
+        sabab,
+    };
     let amida = &khiyarat.amida;
     tahaqquq_mahdid(masar, amida.mahdid)?;
     let sijillat = sijillat_csv(masar, nass, amida.mahdid)?;
@@ -477,15 +501,24 @@ pub fn iqra_jadwal(
             .is_some_and(|(_, huqul)| tabdu_tarwisa(huqul)),
     };
     let tarwisa: Vec<String> = if laha_tarwisa {
-        sijillat.first().map(|(_, huqul)| huqul.clone()).unwrap_or_default()
+        sijillat
+            .first()
+            .map(|(_, huqul)| huqul.clone())
+            .unwrap_or_default()
     } else {
         Vec::new()
     };
 
-    let miftah = amida.miftah.or_else(|| amud_bilism(&tarwisa, &ASMAA_MIFTAH));
-    let masdar = amida.masdar.or_else(|| amud_bilism(&tarwisa, &ASMAA_MASDAR));
+    let miftah = amida
+        .miftah
+        .or_else(|| amud_bilism(&tarwisa, &ASMAA_MIFTAH));
+    let masdar = amida
+        .masdar
+        .or_else(|| amud_bilism(&tarwisa, &ASMAA_MASDAR));
     let hadaf = amida.hadaf.or_else(|| amud_bilism(&tarwisa, &ASMAA_HADAF));
-    let mulahaza = amida.mulahaza.or_else(|| amud_bilism(&tarwisa, &ASMAA_MULAHAZA));
+    let mulahaza = amida
+        .mulahaza
+        .or_else(|| amud_bilism(&tarwisa, &ASMAA_MULAHAZA));
 
     let Some(hadaf) = hadaf else {
         return Err(rafd(format!(
@@ -505,7 +538,9 @@ pub fn iqra_jadwal(
     let mut milaff = MilaffWarid::jadeed(SighatIstirad::Csv, nass.lines().count());
     let hala = khiyarat.hala_asasiya(SighatIstirad::Csv);
     if laha_tarwisa {
-        milaff.tanbihat.push(format!("header row read as {}", asmaa_amida(&tarwisa)));
+        milaff
+            .tanbihat
+            .push(format!("header row read as {}", asmaa_amida(&tarwisa)));
     }
 
     for (raqm, huqul) in sijillat.iter().skip(usize::from(laha_tarwisa)) {
@@ -541,13 +576,21 @@ fn sajjil_min_huqul(
 ) -> (MudkhalWarid, Option<SababRafd>) {
     let nass_masdar = masdar.and_then(|fahras| huqul.get(fahras)).cloned();
     let nass_miftah = miftah.and_then(|fahras| huqul.get(fahras)).cloned();
-    let asas = nass_masdar.or_else(|| nass_miftah.clone()).unwrap_or_default();
+    let asas = nass_masdar
+        .or_else(|| nass_miftah.clone())
+        .unwrap_or_default();
 
     let Some(nass_hadaf) = huqul.get(hadaf) else {
         let mut warid = MudkhalWarid::jadeed(asas, None, raqm);
         warid.miftah = nass_miftah;
         warid.hala = hala;
-        return (warid, Some(SababRafd::AmudMafqud { fahras: hadaf, mawjud: huqul.len() }));
+        return (
+            warid,
+            Some(SababRafd::AmudMafqud {
+                fahras: hadaf,
+                mawjud: huqul.len(),
+            }),
+        );
     };
 
     let mut warid = MudkhalWarid::jadeed(asas, Some(nass_hadaf.clone()), raqm);
@@ -589,9 +632,9 @@ fn sijillat_csv(
             masar: masar.to_path_buf(),
             sabab: format!("the file does not parse as a delimited table: {khata}"),
         })?;
-        let raqm = sijill
-            .position()
-            .map_or(0, |mawqi| usize::try_from(mawqi.line()).unwrap_or(usize::MAX));
+        let raqm = sijill.position().map_or(0, |mawqi| {
+            usize::try_from(mawqi.line()).unwrap_or(usize::MAX)
+        });
         sijillat.push((raqm, sijill.iter().map(str::to_owned).collect()));
     }
     Ok(sijillat)
@@ -642,8 +685,10 @@ fn asmaa_amida(tarwisa: &[String]) -> String {
     if tarwisa.is_empty() {
         return "(no header row)".to_owned();
     }
-    let asmaa: Vec<String> =
-        tarwisa.iter().map(|haql| format!("{:?}", haql.trim())).collect();
+    let asmaa: Vec<String> = tarwisa
+        .iter()
+        .map(|haql| format!("{:?}", haql.trim()))
+        .collect();
     format!("[{}]", asmaa.join(", "))
 }
 
@@ -695,7 +740,10 @@ pub fn iqra_wahdat_tawteen(
     nass: &str,
     khiyarat: &IstiradKhiyarat,
 ) -> Result<MilaffWarid, KhataTarqee> {
-    let rafd = |sabab: String| KhataTarqee::IstiradFashil { masar: masar.to_path_buf(), sabab };
+    let rafd = |sabab: String| KhataTarqee::IstiradFashil {
+        masar: masar.to_path_buf(),
+        sabab,
+    };
     tahaqquq_mahdid(masar, khiyarat.amida.mahdid)?;
     let sijillat = sijillat_csv(masar, nass, khiyarat.amida.mahdid)?;
 
@@ -705,7 +753,10 @@ pub fn iqra_wahdat_tawteen(
                 .to_owned(),
         ));
     };
-    let awwal = tarwisa.first().map(|haql| haql.trim().to_owned()).unwrap_or_default();
+    let awwal = tarwisa
+        .first()
+        .map(|haql| haql.trim().to_owned())
+        .unwrap_or_default();
     if !awwal.eq_ignore_ascii_case("key") {
         return Err(rafd(format!(
             "the first column is {awwal:?} and a Unity Localization export begins with \"Key\". \
@@ -724,8 +775,7 @@ pub fn iqra_wahdat_tawteen(
         )));
     };
 
-    let mut milaff =
-        MilaffWarid::jadeed(SighatIstirad::UnityLocalizationCsv, nass.lines().count());
+    let mut milaff = MilaffWarid::jadeed(SighatIstirad::UnityLocalizationCsv, nass.lines().count());
     milaff.lugha_hadaf = Some(arabiya.ramz.clone());
 
     let ukhra: Vec<String> = aamida
@@ -734,7 +784,9 @@ pub fn iqra_wahdat_tawteen(
         .map(|amud| amud.unwan.clone())
         .collect();
     if ukhra.is_empty() {
-        milaff.tanbihat.push(format!("Arabic taken from the column {:?}", arabiya.unwan));
+        milaff
+            .tanbihat
+            .push(format!("Arabic taken from the column {:?}", arabiya.unwan));
     } else {
         milaff.tanbihat.push(format!(
             "Arabic taken from the column {:?}; the file also carries {}, which were not \
@@ -748,13 +800,14 @@ pub fn iqra_wahdat_tawteen(
     match masdar.as_ref() {
         Some(amud) => {
             milaff.lugha_masdar = Some(amud.ramz.clone());
-            milaff
-                .tanbihat
-                .push(format!("source text taken from the column {:?}", amud.unwan));
-        }
-        None => milaff.tanbihat.push(
-            "no non-Arabic locale column, so rows are matched by their key alone".to_owned(),
-        ),
+            milaff.tanbihat.push(format!(
+                "source text taken from the column {:?}",
+                amud.unwan
+            ));
+        },
+        None => milaff
+            .tanbihat
+            .push("no non-Arabic locale column, so rows are matched by their key alone".to_owned()),
     }
 
     let mushtaraka = amud_bilism(tarwisa, &["shared comments"]);
@@ -819,7 +872,9 @@ fn aamidat_lugha(tarwisa: &[String]) -> Vec<AmudLugha> {
         let musawwa = mahdhub.to_lowercase();
         let (asas, mulahaza) = match musawwa.strip_suffix(" comments") {
             Some(_) => (
-                mahdhub.get(..mahdhub.len().saturating_sub(" comments".len())).unwrap_or(mahdhub),
+                mahdhub
+                    .get(..mahdhub.len().saturating_sub(" comments".len()))
+                    .unwrap_or(mahdhub),
                 true,
             ),
             None => (mahdhub, false),
@@ -853,11 +908,9 @@ fn ikhtar_arabiya(aamida: &[AmudLugha], mufaddal: &str) -> Option<AmudLugha> {
 /// the first non-Arabic locale column, in column order.
 fn amud_masdar(aamida: &[AmudLugha], mustathna: usize) -> Option<AmudLugha> {
     let mutah = || {
-        aamida
-            .iter()
-            .filter(move |amud| {
-                !amud.mulahaza && amud.fahras != mustathna && !lugha_arabiya(&amud.ramz)
-            })
+        aamida.iter().filter(move |amud| {
+            !amud.mulahaza && amud.fahras != mustathna && !lugha_arabiya(&amud.ramz)
+        })
     };
     mutah()
         .find(|amud| {

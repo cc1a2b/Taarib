@@ -550,8 +550,9 @@ const AJZA_DALLA: &[(&str, TasnifNass)] = &[
 ];
 
 /// What separates one segment of a name from the next.
-const FAWASIL_ISM: &[char] =
-    &['/', '\\', '.', '_', '-', '[', ']', ':', ' ', '\u{1}', '\u{4}'];
+const FAWASIL_ISM: &[char] = &[
+    '/', '\\', '.', '_', '-', '[', ']', ':', ' ', '\u{1}', '\u{4}',
+];
 
 /// The kind a field, path or asset name implies, if any.
 ///
@@ -579,15 +580,17 @@ pub fn tasnif_min_ism(asmaa: &str) -> Option<(TasnifNass, u8)> {
 /// Whether any span is a format placeholder or an inline sprite.
 #[must_use]
 pub fn fihi_mawdi(nasq: &[NitaqNasq]) -> bool {
-    nasq.iter().any(|nitaq| matches!(nitaq.naw, NawNasq::Mawdi { .. } | NawNasq::Sura { .. }))
+    nasq.iter()
+        .any(|nitaq| matches!(nitaq.naw, NawNasq::Mawdi { .. } | NawNasq::Sura { .. }))
 }
 
 /// Separators a path is allowed to use.
 const FAWASIL: [char; 2] = ['/', '\\'];
 
 /// Path roots that settle the question on their own.
-const JUDHUR: &[&str] =
-    &["res://", "user://", "assets/", "content/", "./", "../", "game/", "data/"];
+const JUDHUR: &[&str] = &[
+    "res://", "user://", "assets/", "content/", "./", "../", "game/", "data/",
+];
 
 /// Extensions that mean a token is a file rather than a word.
 ///
@@ -596,10 +599,52 @@ const JUDHUR: &[&str] =
 /// the tail of a dotted string as an extension would classify all three as
 /// internal.
 const LAHIQAT: &[&str] = &[
-    "prefab", "asset", "unity", "mat", "anim", "controller", "uasset", "umap", "pak", "utoc",
-    "ucas", "locres", "locmeta", "tscn", "tres", "scn", "res", "pck", "png", "jpg", "jpeg",
-    "tga", "dds", "bmp", "webp", "ttf", "otf", "woff", "wav", "ogg", "mp3", "bnk", "fbx", "obj",
-    "shader", "hlsl", "glsl", "cginc", "json", "xml", "csv", "lua", "gd", "dll", "so", "dylib",
+    "prefab",
+    "asset",
+    "unity",
+    "mat",
+    "anim",
+    "controller",
+    "uasset",
+    "umap",
+    "pak",
+    "utoc",
+    "ucas",
+    "locres",
+    "locmeta",
+    "tscn",
+    "tres",
+    "scn",
+    "res",
+    "pck",
+    "png",
+    "jpg",
+    "jpeg",
+    "tga",
+    "dds",
+    "bmp",
+    "webp",
+    "ttf",
+    "otf",
+    "woff",
+    "wav",
+    "ogg",
+    "mp3",
+    "bnk",
+    "fbx",
+    "obj",
+    "shader",
+    "hlsl",
+    "glsl",
+    "cginc",
+    "json",
+    "xml",
+    "csv",
+    "lua",
+    "gd",
+    "dll",
+    "so",
+    "dylib",
 ];
 
 /// Whether the text is a path into the game's own data rather than a line a
@@ -631,7 +676,10 @@ pub fn yabdu_masaran(nass: &str) -> bool {
         return false;
     }
 
-    let adad_fawasil = munaqqa.chars().filter(|harf| FAWASIL.contains(harf)).count();
+    let adad_fawasil = munaqqa
+        .chars()
+        .filter(|harf| FAWASIL.contains(harf))
+        .count();
     if adad_fawasil == 0 {
         return false;
     }
@@ -716,7 +764,9 @@ pub fn yabdu_muarrifan(nass: &str) -> bool {
     // this accepts, and it costs a row being hidden behind a filter a translator
     // can lift rather than a string being lost.
     if munaqqa.contains('_')
-        && munaqqa.chars().all(|harf| harf.is_alphanumeric() || harf == '_')
+        && munaqqa
+            .chars()
+            .all(|harf| harf.is_alphanumeric() || harf == '_')
     {
         return true;
     }
@@ -726,7 +776,12 @@ pub fn yabdu_muarrifan(nass: &str) -> bool {
     // `Mr. Smith` (whitespace, already rejected) and `3.5` (one dot) do not
     // reach here.
     let adad_nuqat = munaqqa.chars().filter(|harf| *harf == '.').count();
-    if adad_nuqat >= 2 && munaqqa.split('.').filter(|juz| !juz.is_empty()).all(juz_muarrif) {
+    if adad_nuqat >= 2
+        && munaqqa
+            .split('.')
+            .filter(|juz| !juz.is_empty())
+            .all(juz_muarrif)
+    {
         return true;
     }
 
@@ -747,7 +802,10 @@ pub fn yabdu_muarrifan(nass: &str) -> bool {
 /// labels — `New Game`, `Load Last Save` — and telling a label from a sentence
 /// at that length is not something character composition can do.
 fn yabdu_nathran(nass: &str) -> bool {
-    nass.split_whitespace().filter(|kalima| kalima.chars().any(char::is_alphabetic)).count() >= 4
+    nass.split_whitespace()
+        .filter(|kalima| kalima.chars().any(char::is_alphabetic))
+        .count()
+        >= 4
 }
 
 /// Whether one path or key segment could be an identifier.
@@ -799,7 +857,7 @@ fn lahu_lahiqa(munkhafid: &str) -> bool {
                 && !lahiqa.is_empty()
                 && LAHIQAT.contains(&lahiqa)
                 && !lahiqa.chars().any(char::is_whitespace)
-        }
+        },
         None => false,
     }
 }
@@ -818,7 +876,7 @@ fn shakl_muarrif_alami(nass: &str) -> bool {
                 if !juz.chars().all(|harf| harf.is_ascii_hexdigit()) {
                     return false;
                 }
-            }
+            },
             _ => return false,
         }
     }

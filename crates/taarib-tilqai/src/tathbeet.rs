@@ -234,7 +234,10 @@ pub fn ijri(
         // deployment step here places one and a settings file naming a font that
         // was never deployed is a game rendered in boxes.
         |nashir: &mut Nashir<'_>| -> NatijatTathbeet<()> {
-            nashir.raqqi(IdhnNusus::min_qarar(qarar), nusus::makhzan_mukawwinat().as_deref())
+            nashir.raqqi(
+                IdhnNusus::min_qarar(qarar),
+                nusus::makhzan_mukawwinat().as_deref(),
+            )
         },
     )
     .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?;

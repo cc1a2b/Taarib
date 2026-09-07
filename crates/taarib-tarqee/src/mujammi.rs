@@ -245,7 +245,9 @@ impl HuzmaMabniya {
         mudaqqiq: &dyn MudaqqiqTawqee,
     ) -> Result<(), KhataTarqee> {
         taarib_ruqaa::katib::khatm(self.bayt.bayt_mut(), kutla, mudaqqiq).map_err(|khata| {
-            KhataTarqee::KhatmFashil { sabab: khata.to_string() }
+            KhataTarqee::KhatmFashil {
+                sabab: khata.to_string(),
+            }
         })
     }
 }
@@ -295,7 +297,11 @@ pub fn ijmaa(
     // Declared from the data rather than from a caller's flag: the container's
     // "constraints were informed by runtime capture" bit is true exactly when
     // some string's provenance says a capture session contributed to it.
-    if mudkhalat.nusus.iter().any(|mudkhal| mudkhal.masdar_istikhraj.multaqat()) {
+    if mudkhalat
+        .nusus
+        .iter()
+        .any(|mudkhal| mudkhal.masdar_istikhraj.multaqat())
+    {
         katib = katib.bi_iltiqat();
     }
 
@@ -304,8 +310,11 @@ pub fn ijmaa(
     // project disagreed with itself.
     let (nusus, tawhid) = wahhid_tarajim(mudkhalat.nusus);
     if !tawhid.is_empty() {
-        let amthila: Vec<String> =
-            tawhid.iter().take(AQSA_AMTHILA).map(TawhidTarjama::wasf).collect();
+        let amthila: Vec<String> = tawhid
+            .iter()
+            .take(AQSA_AMTHILA)
+            .map(TawhidTarjama::wasf)
+            .collect();
         tracing::warn!(
             adad = tawhid.len(),
             ?amthila,
@@ -356,7 +365,11 @@ pub fn ijmaa(
 
     let bayt = katib.ikhtim().map_err(|khata| khata_katib(&khata))?;
     tahaqquq_dawra(&bayt, &bayan)?;
-    Ok(HuzmaMabniya { bayt, bayan, tawhid })
+    Ok(HuzmaMabniya {
+        bayt,
+        bayan,
+        tawhid,
+    })
 }
 
 /// Gives every entry sharing a clean source text the same translation and the
@@ -394,7 +407,9 @@ fn wahhid_tarajim(nusus: &[MudkhalNass]) -> (Cow<'_, [MudkhalNass]>, Vec<TawhidT
     for mudkhal in nusus {
         // The same two skips `adif_nusus` applies. An entry that contributes no
         // row cannot contribute a vote on what that row says either.
-        let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+        let Some(hadaf) = mudkhal.hadaf.as_deref() else {
+            continue;
+        };
         if hadaf.trim().is_empty() {
             continue;
         }
@@ -450,11 +465,15 @@ fn wahhid_tarajim(nusus: &[MudkhalNass]) -> (Cow<'_, [MudkhalNass]>, Vec<TawhidT
         // An untranslated or blank entry never voted and must not acquire a
         // translation here: the package deliberately carries no row for it, and
         // giving it one would be this function inventing coverage.
-        let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+        let Some(hadaf) = mudkhal.hadaf.as_deref() else {
+            continue;
+        };
         if hadaf.trim().is_empty() {
             continue;
         }
-        let Some(fayiz) = fayizun.get(mudkhal.masdar.as_str()) else { continue };
+        let Some(fayiz) = fayizun.get(mudkhal.masdar.as_str()) else {
+            continue;
+        };
         if fayiz.hadaf.as_deref() == Some(hadaf) {
             continue;
         }
@@ -510,26 +529,32 @@ fn adif_nusus(
     let mut quyud_mudmaja: BTreeMap<HuwiyatNass, SijillQayd> = BTreeMap::new();
 
     for mudkhal in nusus {
-        let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+        let Some(hadaf) = mudkhal.hadaf.as_deref() else {
+            continue;
+        };
         if hadaf.trim().is_empty() {
             continue;
         }
 
-        let huwiya = katib.nass(&mudkhal.masdar, hadaf).map_err(|khata| khata_katib(&khata))?;
+        let huwiya = katib
+            .nass(&mudkhal.masdar, hadaf)
+            .map_err(|khata| khata_katib(&khata))?;
         let _ = huwiyat.insert(mudkhal.id, huwiya);
 
         // Spans are a function of the translated text alone, and every entry on
         // this handle carries the same translated text — `wahhid_tarajim` moved
         // the spans across with it. So the first writing is kept and the rest
         // are the same spans said again.
-        let _ = nitaqat_mudmaja.entry(huwiya).or_insert_with(|| tahweel::nitaqat_hadaf(mudkhal));
+        let _ = nitaqat_mudmaja
+            .entry(huwiya)
+            .or_insert_with(|| tahweel::nitaqat_hadaf(mudkhal));
 
         if tahweel::qayd_mufid(&mudkhal.quyud, mudkhal.tasnif) {
             let qayd = tahweel::qayd(&mudkhal.quyud, mudkhal.tasnif, &khiyarat.takhtit);
             match quyud_mudmaja.entry(huwiya) {
                 Entry::Vacant(khali) => {
                     let _ = khali.insert(qayd);
-                }
+                },
                 // The tightest wins, taken whole. One string drawn in two
                 // places has to fit in the narrower of them, and a record
                 // assembled field-by-field from two sites would describe a
@@ -539,7 +564,7 @@ fn adif_nusus(
                     if aqyad_min(&qayd, mawjud.get()) {
                         mawjud.insert(qayd);
                     }
-                }
+                },
             }
         }
     }
@@ -611,14 +636,22 @@ fn ijma_muhtawa(
     // translation it keeps.
     let mut farida: BTreeMap<HuwiyatNass, (&str, &str)> = BTreeMap::new();
     for mudkhal in nusus {
-        let Some(huwiya) = huwiyat.get(&mudkhal.id) else { continue };
+        let Some(huwiya) = huwiyat.get(&mudkhal.id) else {
+            continue;
+        };
         let tarjama = mudkhal.hadaf.as_deref().unwrap_or_default();
-        let _ = farida.entry(*huwiya).or_insert((mudkhal.masdar.as_str(), tarjama));
+        let _ = farida
+            .entry(*huwiya)
+            .or_insert((mudkhal.masdar.as_str(), tarjama));
     }
-    muhtawa.extend(farida.into_values().map(|(asl, tarjama)| MuhtawaMasmuh::Nass {
-        asl: asl.to_owned(),
-        tarjama: tarjama.to_owned(),
-    }));
+    muhtawa.extend(
+        farida
+            .into_values()
+            .map(|(asl, tarjama)| MuhtawaMasmuh::Nass {
+                asl: asl.to_owned(),
+                tarjama: tarjama.to_owned(),
+            }),
+    );
     // The same fold, for the same reason, one level down.
     //
     // Precomputation works per extracted entry, because that is where a
@@ -658,17 +691,17 @@ fn uktub_muhtawa(katib: &mut Katib, muhtawa: Vec<MuhtawaMasmuh>) {
         match wahid {
             MuhtawaMasmuh::Takhtit(takhtit) => {
                 let _ = katib.takhtit(takhtit);
-            }
+            },
             MuhtawaMasmuh::Safahat(safahat) => {
                 let (safahat, khareeta, _) = safahat.ikhrij();
                 for safha in safahat {
                     let _ = katib.safha(safha);
                 }
                 for (miftah, mawdi) in khareeta {
-                    let _ = katib
-                        .shakl(tahweel::miftah_shakl(miftah), tahweel::mawdi_shakl(&mawdi));
+                    let _ =
+                        katib.shakl(tahweel::miftah_shakl(miftah), tahweel::mawdi_shakl(&mawdi));
                 }
-            }
+            },
             MuhtawaMasmuh::Khatt(khatt) => {
                 // The first font of the chain is the one shaping reaches for,
                 // and every one after it is a fallback. The flags are derived
@@ -676,17 +709,24 @@ fn uktub_muhtawa(katib: &mut Katib, muhtawa: Vec<MuhtawaMasmuh>) {
                 // what `SijillHarf::khatt` indexes and a declaration that
                 // disagreed with it would name a different font than the one
                 // the glyph was rasterized from.
-                let alam = if khatt_asasi { ALAM_KHATT_ASASI } else { ALAM_KHATT_IHTIYATI };
+                let alam = if khatt_asasi {
+                    ALAM_KHATT_ASASI
+                } else {
+                    ALAM_KHATT_IHTIYATI
+                };
                 khatt_asasi = false;
-                let _ = katib.khatt(KhattMabni { alam: khatt.alam | alam, ..khatt });
-            }
+                let _ = katib.khatt(KhattMabni {
+                    alam: khatt.alam | alam,
+                    ..khatt
+                });
+            },
             // `Nass` was written before this loop, to have handles. A container
             // difference is applied to the user's own copy at install time and
             // is carried in the manifest, not in a section: the format's eight
             // section kinds are fixed and readable by struct overlay in five
             // languages, and adding a ninth for a variable-length instruction
             // list would break that for every one of them.
-            MuhtawaMasmuh::Nass { .. } | MuhtawaMasmuh::Farq(_) => {}
+            MuhtawaMasmuh::Nass { .. } | MuhtawaMasmuh::Farq(_) => {},
         }
     }
 }
@@ -704,9 +744,11 @@ fn tahaqquq_dawra(bayt: &BaytMuhadhah, bayan: &BayanHuzma) -> Result<(), KhataTa
         sabab: format!("the package would not reopen: {khata}"),
     })?;
 
-    let bayanat = ruqaa.bayan_json().map_err(|khata| KhataTarqee::DawraGhayrMutabaqa {
-        sabab: format!("the metadata section did not read back as JSON: {khata}"),
-    })?;
+    let bayanat = ruqaa
+        .bayan_json()
+        .map_err(|khata| KhataTarqee::DawraGhayrMutabaqa {
+            sabab: format!("the metadata section did not read back as JSON: {khata}"),
+        })?;
     if bayanat.get("mukhattat").and_then(serde_json::Value::as_u64)
         != Some(u64::from(bayan.mukhattat))
     {
@@ -728,9 +770,12 @@ fn tahaqquq_dawra(bayt: &BaytMuhadhah, bayan: &BayanHuzma) -> Result<(), KhataTa
 
     if bayan.bawwaba.takhtitat > 0 {
         let qism_takhtit = qism_min(&ruqaa, NawQism::Takhtit)?;
-        let takhtit =
-            qari::takhtit(qism_takhtit.bayt()).map_err(qism_fashil(NawQism::Takhtit))?;
-        qaran("precomputed layout", takhtit.ruus.len(), bayan.bawwaba.takhtitat)?;
+        let takhtit = qari::takhtit(qism_takhtit.bayt()).map_err(qism_fashil(NawQism::Takhtit))?;
+        qaran(
+            "precomputed layout",
+            takhtit.ruus.len(),
+            bayan.bawwaba.takhtitat,
+        )?;
     }
 
     if bayan.bawwaba.safahat > 0 {
@@ -744,13 +789,21 @@ fn tahaqquq_dawra(bayt: &BaytMuhadhah, bayan: &BayanHuzma) -> Result<(), KhataTa
         // a length disagreement between them means the section's own preamble
         // is wrong — and a reader that trusted it would pair each key with a
         // rectangle belonging to some other glyph.
-        qaran("glyph position", khareeta.mawadi.len(), khareeta.mafatih.len())?;
+        qaran(
+            "glyph position",
+            khareeta.mawadi.len(),
+            khareeta.mafatih.len(),
+        )?;
     }
 
     if !bayan.irtibat.khutut.is_empty() {
         let qism_khatt = qism_min(&ruqaa, NawQism::Khatt)?;
         let khatt = qari::khatt(qism_khatt.bayt()).map_err(qism_fashil(NawQism::Khatt))?;
-        qaran("bundled font", khatt.sijillat.len(), bayan.irtibat.khutut.len())?;
+        qaran(
+            "bundled font",
+            khatt.sijillat.len(),
+            bayan.irtibat.khutut.len(),
+        )?;
     }
 
     Ok(())
@@ -758,10 +811,7 @@ fn tahaqquq_dawra(bayt: &BaytMuhadhah, bayan: &BayanHuzma) -> Result<(), KhataTa
 
 /// One section out of the reopened package, in the round-trip failure's own
 /// wording when it is absent or will not decompress.
-fn qism_min<'a>(
-    ruqaa: &Ruqaa<'a>,
-    naw: NawQism,
-) -> Result<qari::BayanatQism<'a>, KhataTarqee> {
+fn qism_min<'a>(ruqaa: &Ruqaa<'a>, naw: NawQism) -> Result<qari::BayanatQism<'a>, KhataTarqee> {
     ruqaa.qism(naw).map_err(qism_fashil(naw))
 }
 
@@ -790,5 +840,7 @@ fn qism_fashil(naw: NawQism) -> impl Fn(KhataRuqaa) -> KhataTarqee {
 /// out into distinct variants here would be a second taxonomy of one crate's
 /// errors, kept in agreement by hand.
 fn khata_katib(khata: &KhataRuqaa) -> KhataTarqee {
-    KhataTarqee::KitabatHuzmaFashila { sabab: khata.to_string() }
+    KhataTarqee::KitabatHuzmaFashila {
+        sabab: khata.to_string(),
+    }
 }

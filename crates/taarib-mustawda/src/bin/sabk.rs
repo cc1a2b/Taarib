@@ -118,20 +118,26 @@ pub fn madkhal_min_huzma(
     asas_mira: Option<&str>,
     tajawuz: Option<&str>,
 ) -> Result<MadkhalManshur, String> {
-    let bayt = fs::read(masar_huzma).map_err(|khata| format!("{}: {khata}", masar_huzma.display()))?;
+    let bayt =
+        fs::read(masar_huzma).map_err(|khata| format!("{}: {khata}", masar_huzma.display()))?;
     let basmat_muhtawa = Basma::min_bayt(*blake3::hash(&bayt).as_bytes());
 
     let malaf = MalafRuqaa::iftah(masar_huzma).map_err(|khata| khata.to_string())?;
     let ruqaa = malaf.ruqaa().map_err(|khata| khata.to_string())?;
     let kutla = ruqaa.tawqee();
     if !kutla.muwaqqaa() {
-        return Err("the package carries no signature; a registry publishes sealed packages only"
-            .to_owned());
+        return Err(
+            "the package carries no signature; a registry publishes sealed packages only"
+                .to_owned(),
+        );
     }
     let bayan = ruqaa.bayan_json().map_err(|khata| khata.to_string())?;
 
     let haql = |ism: &str| -> Result<serde_json::Value, String> {
-        bayan.get(ism).cloned().ok_or_else(|| format!("the manifest has no {ism:?} field"))
+        bayan
+            .get(ism)
+            .cloned()
+            .ok_or_else(|| format!("the manifest has no {ism:?} field"))
     };
     let id: RuqaaId = serde_json::from_value(haql("id")?).map_err(|k| k.to_string())?;
     let murajaa: RuqaaRevision =
@@ -143,31 +149,47 @@ pub fn madkhal_min_huzma(
     let unwan = nass(&wasf, "unwan")?;
     let ism_musahim = nass(&wasf, "ism_musahim")?;
     let rukhsa: RukhsaRuqaa = serde_json::from_value(
-        wasf.get("rukhsa").cloned().ok_or("the manifest declares no licence")?,
+        wasf.get("rukhsa")
+            .cloned()
+            .ok_or("the manifest declares no licence")?,
     )
     .map_err(|k| k.to_string())?;
     let tareeqa: TareeqaTarjama = serde_json::from_value(
-        wasf.get("tareeqa").cloned().ok_or("the manifest declares no translation method")?,
+        wasf.get("tareeqa")
+            .cloned()
+            .ok_or("the manifest declares no translation method")?,
     )
     .map_err(|k| k.to_string())?;
 
     let muharrik = haql("muharrik")?;
     let aila: AilatMuharrik = serde_json::from_value(
-        muharrik.get("aila").cloned().ok_or("the manifest declares no engine family")?,
+        muharrik
+            .get("aila")
+            .cloned()
+            .ok_or("the manifest declares no engine family")?,
     )
     .map_err(|k| k.to_string())?;
     let khalfiya: KhalfiyaBarmajiya = serde_json::from_value(
-        muharrik.get("khalfiya").cloned().ok_or("the manifest declares no scripting backend")?,
+        muharrik
+            .get("khalfiya")
+            .cloned()
+            .ok_or("the manifest declares no scripting backend")?,
     )
     .map_err(|k| k.to_string())?;
     let tabaqa: Tabaqa = serde_json::from_value(
-        muharrik.get("tabaqa").cloned().ok_or("the manifest declares no support tier")?,
+        muharrik
+            .get("tabaqa")
+            .cloned()
+            .ok_or("the manifest declares no support tier")?,
     )
     .map_err(|k| k.to_string())?;
 
     let taqrir = haql("taghtiya")?;
     let taghtiya_kulli: Taghtiya = serde_json::from_value(
-        taqrir.get("kulli").cloned().ok_or("the manifest carries no coverage")?,
+        taqrir
+            .get("kulli")
+            .cloned()
+            .ok_or("the manifest carries no coverage")?,
     )
     .map_err(|k| k.to_string())?;
 
@@ -186,7 +208,9 @@ pub fn madkhal_min_huzma(
     // caster refuses leaves the repository exactly as it found it rather than
     // an orphan asset in `isdar/` that no listing names.
     let rabt = rabt_asl(asas_rabt, &masar_asl, &ism_malaf)?;
-    let rabt_mira = asas_mira.map(|asas| rabt_asl(asas, &masar_asl, &ism_malaf)).transpose()?;
+    let rabt_mira = asas_mira
+        .map(|asas| rabt_asl(asas, &masar_asl, &ism_malaf))
+        .transpose()?;
 
     let wijha = jidhr_mustawda.join(MUJALLAD_ISDAR).join(id.to_string());
     fs::create_dir_all(&wijha).map_err(|khata| format!("{}: {khata}", wijha.display()))?;
@@ -217,7 +241,13 @@ pub fn madkhal_min_huzma(
         rabt_mira,
     };
 
-    Ok(MadkhalManshur { luba, mulakhkhas, irtibat, masar_asl, tajawuz })
+    Ok(MadkhalManshur {
+        luba,
+        mulakhkhas,
+        irtibat,
+        masar_asl,
+        tajawuz,
+    })
 }
 
 /// Applies the package's own coverage gate.
@@ -260,8 +290,11 @@ fn bawwabat_taghtiya(
         .transpose()
         .map_err(|khata| format!("the coverage report's reasons would not read: {khata}"))?
         .unwrap_or_default();
-    let hasima: Vec<String> =
-        asbab.iter().filter(|sabab| sabab.hasim()).map(|sabab| sabab.wasf_injilizi()).collect();
+    let hasima: Vec<String> = asbab
+        .iter()
+        .filter(|sabab| sabab.hasim())
+        .map(|sabab| sabab.wasf_injilizi())
+        .collect();
     // A refusing verdict with no blocking cause is a report that contradicts
     // itself, and publishing on the strength of it would be publishing on the
     // strength of a bug.
@@ -281,7 +314,12 @@ fn bawwabat_taghtiya(
         ));
     };
 
-    Ok(Some(TajawuzNashr { ruqaa: id, murajaa, asbab: matn, sabab: sabab.to_owned() }))
+    Ok(Some(TajawuzNashr {
+        ruqaa: id,
+        murajaa,
+        asbab: matn,
+        sabab: sabab.to_owned(),
+    }))
 }
 
 /// The absolute address one release asset is served from.
@@ -309,11 +347,18 @@ fn bawwabat_taghtiya(
 /// address.
 fn rabt_asl(asas: &str, masar_asl: &str, ism_malaf: &str) -> Result<String, String> {
     if asas.contains("{ism}") || asas.contains("{masar}") {
-        return tahaqquq_rabt(asas.replace("{masar}", masar_asl).replace("{ism}", ism_malaf));
+        return tahaqquq_rabt(
+            asas.replace("{masar}", masar_asl)
+                .replace("{ism}", ism_malaf),
+        );
     }
 
     let maqsus = asas.trim_end_matches('/');
-    if maqsus.rsplit('/').next().is_some_and(|akhir| akhir == MUJALLAD_ISDAR) {
+    if maqsus
+        .rsplit('/')
+        .next()
+        .is_some_and(|akhir| akhir == MUJALLAD_ISDAR)
+    {
         return Err(format!(
             "{asas:?} already ends in {MUJALLAD_ISDAR:?}, and a base with no placeholder has \
              the whole repository path {masar_asl:?} appended to it — which would publish \
@@ -334,7 +379,9 @@ fn tahaqquq_rabt(rabt: String) -> Result<String, String> {
     let muhallal = reqwest::Url::parse(&rabt)
         .map_err(|khata| format!("{rabt:?} is not a usable asset address: {khata}"))?;
     if muhallal.scheme() != "https" {
-        return Err(format!("{rabt:?} is not https, and a package is never fetched in the clear"));
+        return Err(format!(
+            "{rabt:?} is not https, and a package is never fetched in the clear"
+        ));
     }
     Ok(rabt)
 }
@@ -404,13 +451,21 @@ pub fn ijri(
         waqt: waqt.to_owned(),
         sharaih: basmat,
         rabt_qaimat_sahb: MASAR_QAIMAT_SAHB.to_owned(),
-        tajawuzat: madakhil.iter().filter_map(|madkhal| madkhal.tajawuz.clone()).collect(),
+        tajawuzat: madakhil
+            .iter()
+            .filter_map(|madkhal| madkhal.tajawuz.clone())
+            .collect(),
     };
     let bayt = serde_json::to_vec_pretty(&bayan).map_err(|khata| khata.to_string())?;
     uktub(jidhr, MASAR_BAYAN, &bayt)?;
 
     let sharaih = bayan.sharaih.keys().copied().collect();
-    Ok(Mustawda { jidhr: jidhr.to_path_buf(), bayan, sharaih, madakhil })
+    Ok(Mustawda {
+        jidhr: jidhr.to_path_buf(),
+        bayan,
+        sharaih,
+        madakhil,
+    })
 }
 
 /// How long a cast list stays current before every client reports it stale.
@@ -484,7 +539,11 @@ fn slug(nass: &str) -> String {
             fasil = true;
         }
     }
-    if makhraj.is_empty() { "ruqaa".to_owned() } else { makhraj }
+    if makhraj.is_empty() {
+        "ruqaa".to_owned()
+    } else {
+        makhraj
+    }
 }
 
 /// Unix seconds as RFC 3339, which is what every listing field in the registry
@@ -495,8 +554,10 @@ fn min_unix(thawani: i64) -> String {
     // from a scratch crate where jiff genuinely was not a dependency. Here it
     // is one, and a second implementation of the Gregorian calendar is a second
     // place to be wrong about February.
-    Timestamp::from_second(thawani)
-        .map_or_else(|_| "1970-01-01T00:00:00Z".to_owned(), |waqt| waqt.to_string())
+    Timestamp::from_second(thawani).map_or_else(
+        |_| "1970-01-01T00:00:00Z".to_owned(),
+        |waqt| waqt.to_string(),
+    )
 }
 
 /// One `--huzma` and the facts that cannot be read out of it.
@@ -566,10 +627,12 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             "--jidhr" => jidhr = Some(PathBuf::from(baad(&mut hujaj, "--jidhr")?)),
             "--tasalsul" => {
                 let khaam = baad(&mut hujaj, "--tasalsul")?;
-                tasalsul = Some(khaam.parse::<u64>().map_err(|_| {
-                    format!("--tasalsul takes a whole number, not {khaam:?}")
-                })?);
-            }
+                tasalsul = Some(
+                    khaam
+                        .parse::<u64>()
+                        .map_err(|_| format!("--tasalsul takes a whole number, not {khaam:?}"))?,
+                );
+            },
             "--asas" => asas = Some(baad(&mut hujaj, "--asas")?),
             "--mira" => mira = Some(baad(&mut hujaj, "--mira")?),
             "--ism-miftah" => ism_miftah = Some(baad(&mut hujaj, "--ism-miftah")?),
@@ -581,7 +644,7 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
                     ism: String::new(),
                     tajawuz: None,
                 });
-            }
+            },
             "--luba" => {
                 let khaam = baad(&mut hujaj, "--luba")?;
                 let uuid = uuid::Uuid::parse_str(&khaam)
@@ -590,12 +653,14 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
                     .last_mut()
                     .ok_or_else(|| "--luba must follow a --huzma".to_owned())?
                     .luba = LubaId::min_uuid(uuid);
-            }
+            },
             "--ism" => {
                 let ism = baad(&mut hujaj, "--ism")?;
-                talabat.last_mut().ok_or_else(|| "--ism must follow a --huzma".to_owned())?.ism =
-                    ism;
-            }
+                talabat
+                    .last_mut()
+                    .ok_or_else(|| "--ism must follow a --huzma".to_owned())?
+                    .ism = ism;
+            },
             "--tajawuz" => {
                 let sabab = baad(&mut hujaj, "--tajawuz")?;
                 if sabab.trim().is_empty() {
@@ -605,7 +670,7 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
                     .last_mut()
                     .ok_or_else(|| "--tajawuz must follow a --huzma".to_owned())?
                     .tajawuz = Some(sabab);
-            }
+            },
             "--mulgha" => {
                 let khaam = baad(&mut hujaj, "--mulgha")?;
                 // Checked here rather than at signing time so a mistyped key is
@@ -615,18 +680,20 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
                     return Err(format!("--mulgha takes 64 hex characters, not {khaam:?}"));
                 }
                 mulghayat.push((khaam.to_ascii_lowercase(), String::new()));
-            }
+            },
             "--sabab" => {
                 let sabab = baad(&mut hujaj, "--sabab")?;
-                mulghayat.last_mut().ok_or_else(|| "--sabab must follow a --mulgha".to_owned())?.1 =
-                    sabab;
-            }
+                mulghayat
+                    .last_mut()
+                    .ok_or_else(|| "--sabab must follow a --mulgha".to_owned())?
+                    .1 = sabab;
+            },
             // Asking for the usage is neither a failure nor a run. `None`
             // says so, and `main` keeps sole ownership of the exit code.
             "--help" | "-h" => {
                 println!("{ISTIMAL}");
                 return Ok(None);
-            }
+            },
             akhar => return Err(format!("unknown argument {akhar:?}")),
         }
     }
@@ -702,14 +769,20 @@ fn nafidh() -> Result<(), String> {
             talab.tajawuz.as_deref(),
         )?;
         println!("  read {}", talab.huzma.display());
-        println!("    listing   {} {}", madkhal.mulakhkhas.id, madkhal.mulakhkhas.murajaa);
+        println!(
+            "    listing   {} {}",
+            madkhal.mulakhkhas.id, madkhal.mulakhkhas.murajaa
+        );
         println!("    shard     {:02x}", shareeha(madkhal.luba));
         println!("    asset     {}", madkhal.masar_asl);
         println!("    hash      {}", madkhal.mulakhkhas.basmat_muhtawa);
         println!("    size      {} byte(s)", madkhal.mulakhkhas.hajm);
         println!("    primary   {}", madkhal.mulakhkhas.rabt);
         println!("    mirror    {:?}", madkhal.mulakhkhas.rabt_mira);
-        println!("    method    {}", madkhal.mulakhkhas.tareeqa.wasf_injilizi());
+        println!(
+            "    method    {}",
+            madkhal.mulakhkhas.tareeqa.wasf_injilizi()
+        );
         if let Some(tajawuz) = &madkhal.tajawuz {
             println!("    OVERRIDE  its coverage gate refuses this package:");
             for sabab in &tajawuz.asbab {
@@ -746,7 +819,6 @@ fn nafidh() -> Result<(), String> {
     Ok(())
 }
 
-
 #[cfg(test)]
 mod fahs {
     use std::error::Error;
@@ -765,7 +837,10 @@ mod fahs {
     const ISM: &str = "r-e-p-o-r2.ruqaa";
 
     fn hawiya() -> Result<(RuqaaId, RuqaaRevision), uuid::Error> {
-        Ok((RuqaaId::min_uuid(uuid::Uuid::parse_str(ID)?), RuqaaRevision::jadeeda(2)))
+        Ok((
+            RuqaaId::min_uuid(uuid::Uuid::parse_str(ID)?),
+            RuqaaRevision::jadeeda(2),
+        ))
     }
 
     /// A coverage report shaped the way a sealed package carries one.
@@ -773,15 +848,20 @@ mod fahs {
         qabila: bool,
         asbab: &[SababAdamAlnashr],
     ) -> Result<serde_json::Value, serde_json::Error> {
-        let asbab: Vec<serde_json::Value> =
-            asbab.iter().map(serde_json::to_value).collect::<Result<_, _>>()?;
+        let asbab: Vec<serde_json::Value> = asbab
+            .iter()
+            .map(serde_json::to_value)
+            .collect::<Result<_, _>>()?;
         Ok(serde_json::json!({ "qabila_lil_nashr": qabila, "asbab": asbab }))
     }
 
     #[test]
     fn bawwaba_tasmah_bila_tajawuz() -> NatijatIkhtibar {
         let (id, murajaa) = hawiya()?;
-        assert_eq!(bawwabat_taghtiya(&taqrir(true, &[])?, id, murajaa, None), Ok(None));
+        assert_eq!(
+            bawwabat_taghtiya(&taqrir(true, &[])?, id, murajaa, None),
+            Ok(None)
+        );
         Ok(())
     }
 
@@ -825,7 +905,12 @@ mod fahs {
         assert_eq!(tajawuz.ruqaa, id);
         assert_eq!(tajawuz.murajaa, murajaa);
         assert_eq!(tajawuz.sabab, "for the client's own walk");
-        assert_eq!(tajawuz.asbab.len(), 1, "only blocking causes: {:?}", tajawuz.asbab);
+        assert_eq!(
+            tajawuz.asbab.len(),
+            1,
+            "only blocking causes: {:?}",
+            tajawuz.asbab
+        );
         Ok(())
     }
 
@@ -855,22 +940,39 @@ mod fahs {
 
     #[test]
     fn rabt_ism_yamla_mintaqat_alisdar_almusattaha() -> NatijatIkhtibar {
-        let rabt = rabt_asl("https://forge.example/releases/download/nashr-2/{ism}", ASL, ISM)?;
-        assert_eq!(rabt, format!("https://forge.example/releases/download/nashr-2/{ISM}"));
+        let rabt = rabt_asl(
+            "https://forge.example/releases/download/nashr-2/{ism}",
+            ASL,
+            ISM,
+        )?;
+        assert_eq!(
+            rabt,
+            format!("https://forge.example/releases/download/nashr-2/{ISM}")
+        );
         Ok(())
     }
 
     #[test]
     fn rabt_masar_yamla_masar_almustawda() -> NatijatIkhtibar {
-        let rabt = rabt_asl("https://cdn.example/gh/owner/repo@nashr-2/{masar}", ASL, ISM)?;
-        assert_eq!(rabt, format!("https://cdn.example/gh/owner/repo@nashr-2/{ASL}"));
+        let rabt = rabt_asl(
+            "https://cdn.example/gh/owner/repo@nashr-2/{masar}",
+            ASL,
+            ISM,
+        )?;
+        assert_eq!(
+            rabt,
+            format!("https://cdn.example/gh/owner/repo@nashr-2/{ASL}")
+        );
         Ok(())
     }
 
     #[test]
     fn rabt_bila_qalab_yulhiq_masar_almustawda() -> NatijatIkhtibar {
         let rabt = rabt_asl("https://cdn.example/gh/owner/repo@nashr-2/", ASL, ISM)?;
-        assert_eq!(rabt, format!("https://cdn.example/gh/owner/repo@nashr-2/{ASL}"));
+        assert_eq!(
+            rabt,
+            format!("https://cdn.example/gh/owner/repo@nashr-2/{ASL}")
+        );
         Ok(())
     }
 
@@ -882,7 +984,10 @@ mod fahs {
             .err()
             .ok_or("a base already ending in the release directory doubles it")?;
         assert!(khata.contains("already ends in"), "{khata}");
-        assert!(khata.contains("{ism}") && khata.contains("{masar}"), "{khata}");
+        assert!(
+            khata.contains("{ism}") && khata.contains("{masar}"),
+            "{khata}"
+        );
         Ok(())
     }
 

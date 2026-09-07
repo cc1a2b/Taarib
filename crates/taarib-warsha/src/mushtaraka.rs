@@ -288,7 +288,7 @@ impl TarwisatMushtaraka {
         match self.adna_thiqa {
             Some(adna) => {
                 let _ = write!(wasf, ", lowest measured confidence {adna}");
-            }
+            },
             None => wasf.push_str(", no measured confidence anywhere in it"),
         }
         wasf
@@ -349,8 +349,9 @@ impl TarwisatMushtaraka {
 /// Warnings, not blocking checks: each one is a true thing about the payload
 /// that a person might reasonably still choose to share. The gate is that
 /// they have to say so about *this* payload, per warning, by name.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum TahdheerMusharaka {
     /// The readings were taken off the user's own screen.
@@ -390,10 +391,8 @@ impl TahdheerMusharaka {
             Self::MuhtawaShakhsi => {
                 "هذه الأسطر قُرئت من شاشتك أثناء اللعب، وقد تتضمّن اسم شخصيتك أو \
                  أسماء لاعبين آخرين أو أيّ نصّ آخر كان معروضًا."
-            }
-            Self::LamTuqas => {
-                "بعض هذه الأسطر لا يحمل قياسًا لثقة القراءة؛ محرّك التعرّف لم يُصدر رقمًا."
-            }
+            },
+            Self::LamTuqas => "بعض هذه الأسطر لا يحمل قياسًا لثقة القراءة؛ محرّك التعرّف لم يُصدر رقمًا.",
             Self::ThiqaMunkhafida => "بعض هذه الأسطر ثقة قراءتها دون الحدّ المعتاد.",
         }
     }
@@ -406,14 +405,12 @@ impl TahdheerMusharaka {
                 "These lines were read off your screen while you played, and may \
                  include your character's name, other players' names, or anything \
                  else that was on screen."
-            }
+            },
             Self::LamTuqas => {
                 "Some of these lines carry no measured reading confidence; the \
                  recognizer reported none."
-            }
-            Self::ThiqaMunkhafida => {
-                "Some of these lines were read with below-normal confidence."
-            }
+            },
+            Self::ThiqaMunkhafida => "Some of these lines were read with below-normal confidence.",
         }
     }
 }
@@ -474,7 +471,10 @@ impl KhiyaratMusharaka {
     /// The default scope: measured readings at or above [`ATABAT_THIQA`].
     #[must_use]
     pub const fn iftiradiya() -> Self {
-        Self { atabaa: ATABAT_THIQA, ghayr_maqisa: false }
+        Self {
+            atabaa: ATABAT_THIQA,
+            ghayr_maqisa: false,
+        }
     }
 
     /// Includes readings a recognizer never measured.
@@ -581,10 +581,15 @@ impl MusawwadatMusharaka {
             .collect();
         if !naqisa.is_empty() {
             return Err(KhataWarsha::TahdheeratMuallaqa {
-                asma: naqisa.iter().map(|t| t.wasf_injilizi().to_owned()).collect(),
+                asma: naqisa
+                    .iter()
+                    .map(|t| t.wasf_injilizi().to_owned())
+                    .collect(),
             });
         }
-        Ok(IdhnMusharaka { basma: self.basma.clone() })
+        Ok(IdhnMusharaka {
+            basma: self.basma.clone(),
+        })
     }
 }
 
@@ -722,8 +727,11 @@ pub fn saddir(
     }
 
     let miftah = khass.aam().bayt();
-    let maqis: Vec<u8> =
-        musawwada.qayyid.iter().filter_map(|qayd| qayd.thiqa.mia()).collect();
+    let maqis: Vec<u8> = musawwada
+        .qayyid
+        .iter()
+        .filter_map(|qayd| qayd.thiqa.mia())
+        .collect();
     let mut tarwisa = TarwisatMushtaraka {
         isdar: ISDAR_MUSHTARAKA,
         luba: musawwada.luba,
@@ -741,11 +749,14 @@ pub fn saddir(
     };
     tarwisa.tawqee = hex(&khass.waqqi(&tarwisa.matn(&miftah)));
 
-    let mut bayt = serde_json::to_vec(&tarwisa)
-        .map_err(|sabab| KhataWarsha::Mawrid { sabab: sabab.to_string() })?;
+    let mut bayt = serde_json::to_vec(&tarwisa).map_err(|sabab| KhataWarsha::Mawrid {
+        sabab: sabab.to_string(),
+    })?;
     bayt.push(b'\n');
-    let madghut = zstd::encode_all(jasad.as_slice(), MUSTAWA_DAGHT)
-        .map_err(|sabab| KhataWarsha::Mawrid { sabab: sabab.to_string() })?;
+    let madghut =
+        zstd::encode_all(jasad.as_slice(), MUSTAWA_DAGHT).map_err(|sabab| KhataWarsha::Mawrid {
+            sabab: sabab.to_string(),
+        })?;
     bayt.extend_from_slice(&madghut);
     Ok(bayt)
 }
@@ -855,13 +866,11 @@ pub fn istawrid(bayt: &[u8], miftah: &MiftahAam) -> NatijatWarsha<HuzmaMuwaththa
 
     // `split_at` left the newline at the head of the remainder.
     let madghut = baqi.get(1..).unwrap_or_default();
-    let jasad = zstd::bulk::decompress(
-        madghut,
-        usize::try_from(tarwisa.hajm).unwrap_or(usize::MAX),
-    )
-    .map_err(|sabab| KhataWarsha::HuzmaTalifa {
-        sabab: format!("the share body does not decompress: {sabab}"),
-    })?;
+    let jasad =
+        zstd::bulk::decompress(madghut, usize::try_from(tarwisa.hajm).unwrap_or(usize::MAX))
+            .map_err(|sabab| KhataWarsha::HuzmaTalifa {
+                sabab: format!("the share body does not decompress: {sabab}"),
+            })?;
     if u64::try_from(jasad.len()).unwrap_or(u64::MAX) != tarwisa.hajm {
         return Err(KhataWarsha::HuzmaTalifa {
             sabab: format!(
@@ -891,8 +900,7 @@ pub fn istawrid(bayt: &[u8], miftah: &MiftahAam) -> NatijatWarsha<HuzmaMuwaththa
 }
 
 /// Counts of what an import did.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TaqreerIstirad {
     /// Entries read from the share.
     pub zurat: u64,
@@ -966,8 +974,9 @@ pub fn idmij(
 fn ila_jasad(qayyid: &[QaydMushtarak]) -> NatijatWarsha<Vec<u8>> {
     let mut jasad = Vec::with_capacity(qayyid.len().saturating_mul(192));
     for qayd in qayyid {
-        let satr = serde_json::to_vec(qayd)
-            .map_err(|sabab| KhataWarsha::Mawrid { sabab: sabab.to_string() })?;
+        let satr = serde_json::to_vec(qayd).map_err(|sabab| KhataWarsha::Mawrid {
+            sabab: sabab.to_string(),
+        })?;
         jasad.extend_from_slice(&satr);
         jasad.push(b'\n');
     }
@@ -997,7 +1006,9 @@ fn min_jasad(jasad: &[u8]) -> NatijatWarsha<Vec<QaydMushtarak>> {
 
 /// The memory's own refusal, wrapped as this crate's.
 fn mawrid(khata: &KhataTarjama) -> KhataWarsha {
-    KhataWarsha::Mawrid { sabab: khata.injilizi() }
+    KhataWarsha::Mawrid {
+        sabab: khata.injilizi(),
+    }
 }
 
 /// Length-prefixed, little-endian, as `taarib_mustawda::taqyeem` does it.
@@ -1007,10 +1018,13 @@ fn lp(matn: &mut Vec<u8>, bayt: &[u8]) {
 }
 
 fn hex(bayt: &[u8]) -> String {
-    bayt.iter().fold(String::with_capacity(bayt.len().saturating_mul(2)), |mut khraj, w| {
-        let _ = write!(khraj, "{w:02x}");
-        khraj
-    })
+    bayt.iter().fold(
+        String::with_capacity(bayt.len().saturating_mul(2)),
+        |mut khraj, w| {
+            let _ = write!(khraj, "{w:02x}");
+            khraj
+        },
+    )
 }
 
 /// Lowercase hex only, and exactly the declared width — the canonical form.
@@ -1018,7 +1032,10 @@ fn bayt_hex<const N: usize>(nass: &str) -> Option<[u8; N]> {
     if nass.len() != N.checked_mul(2)? {
         return None;
     }
-    if nass.bytes().any(|w| !w.is_ascii_hexdigit() || w.is_ascii_uppercase()) {
+    if nass
+        .bytes()
+        .any(|w| !w.is_ascii_hexdigit() || w.is_ascii_uppercase())
+    {
         return None;
     }
     let mut khraj = [0u8; N];

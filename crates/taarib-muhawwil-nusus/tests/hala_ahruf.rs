@@ -68,7 +68,11 @@ impl Saha {
         let nusakh = dalil.path().join("nusakh");
         fs::create_dir_all(&luba).expect("the game directory");
         fs::create_dir_all(&nusakh).expect("the backup directory");
-        Self { _dalil: dalil, luba, nusakh }
+        Self {
+            _dalil: dalil,
+            luba,
+            nusakh,
+        }
     }
 
     /// The real preservation session every patcher in this crate writes through.
@@ -143,7 +147,9 @@ fn renpy_yaltaqit_min_mujallad_mukhtalif_alhala() {
 
     let (sijillat, _) = tarkeeb::iltiqat_renpy(saha.jidhr());
     assert!(
-        sijillat.iter().any(|sijill| sijill.asl == "Hello, traveller."),
+        sijillat
+            .iter()
+            .any(|sijill| sijill.asl == "Hello, traveller."),
         "the walk has to descend into Game/ or the install translates the empty set"
     );
 }
@@ -162,7 +168,9 @@ fn renpy_yastathni_tarajim_alluba_rughma_ikhtilaf_alhala() {
 
     let (sijillat, _) = tarkeeb::iltiqat_renpy(saha.jidhr());
     assert!(
-        !sijillat.iter().any(|sijill| sijill.asl == "Bonjour, voyageur."),
+        !sijillat
+            .iter()
+            .any(|sijill| sijill.asl == "Bonjour, voyageur."),
         "Game/tl/ is the game's own translations and is never a source"
     );
 }
@@ -172,13 +180,16 @@ fn renpy_yaktub_dakhil_mujallad_alluba_nafsih() {
     let saha = Saha::jadida();
     ibni_renpy(&saha, "Game");
 
-    let idad =
-        renpy::IdadRenPy::jadeed(renpy::Masar::Khadim, Rutba::Idad, 90, "khatt.ttf");
+    let idad = renpy::IdadRenPy::jadeed(renpy::Masar::Khadim, Rutba::Idad, 90, "khatt.ttf");
     let mut hifz = saha.hifz();
     let maktub = renpy::iktub_idad(&mut hifz, saha.jidhr(), &idad).expect("the settings write");
 
     for masar in &maktub {
-        assert!(masar.is_file(), "{} was reported written and is not there", masar.display());
+        assert!(
+            masar.is_file(),
+            "{} was reported written and is not there",
+            masar.display()
+        );
         assert!(
             masar.starts_with(saha.jidhr().join("Game")),
             "{} landed beside the game's own tree rather than inside it, which is an install \
@@ -203,15 +214,22 @@ fn renpy_alhala_almutabiqa_taghlib() {
     // `game/`, so that is the tree whose text must come back.
     ibni_renpy(&saha, "Game");
     saha.iktub("game/script.rpyc", BADEEL);
-    saha.iktub("game/script.rpy", b"label start:\n\n    \"The bridge is out.\"\n");
+    saha.iktub(
+        "game/script.rpy",
+        b"label start:\n\n    \"The bridge is out.\"\n",
+    );
 
     let (sijillat, _) = tarkeeb::iltiqat_renpy(saha.jidhr());
     assert!(
-        sijillat.iter().any(|sijill| sijill.asl == "The bridge is out."),
+        sijillat
+            .iter()
+            .any(|sijill| sijill.asl == "The bridge is out."),
         "the exactly-spelled game/ is the one the engine loads and the one to read"
     );
     assert!(
-        !sijillat.iter().any(|sijill| sijill.asl == "Hello, traveller."),
+        !sijillat
+            .iter()
+            .any(|sijill| sijill.asl == "Hello, traveller."),
         "Game/ must not be walked when game/ is right there"
     );
 }
@@ -225,7 +243,10 @@ fn rpgmaker_yuhaddad_rughma_ikhtilaf_alhala() {
     let saha = Saha::jadida();
     // `WWW/JS/` — every component of MV's deployment layout upper-cased, which
     // is what a Windows repacker produces and what Wine hides from the player.
-    saha.iktub("WWW/JS/rpg_core.js", b"Bitmap.prototype.drawText = function () {};\n");
+    saha.iktub(
+        "WWW/JS/rpg_core.js",
+        b"Bitmap.prototype.drawText = function () {};\n",
+    );
     saha.iktub("WWW/DATA/System.json", br#"{"gameTitle":"Riverside"}"#);
 
     let bunya = rpgmaker::BunyatMashru::iktashif(saha.jidhr())
@@ -236,7 +257,10 @@ fn rpgmaker_yuhaddad_rughma_ikhtilaf_alhala() {
         "the project-relative path has to resolve onto DATA/ or every read and every write \
          in this adapter is against a file that is not there"
     );
-    assert!(bunya.bayanat().is_dir(), "data/ resolves to the directory the game actually has");
+    assert!(
+        bunya.bayanat().is_dir(),
+        "data/ resolves to the directory the game actually has"
+    );
 }
 
 #[test]
@@ -245,9 +269,15 @@ fn rpgmaker_alhala_almutabiqa_taghlib() {
     if !bi_hassasiyat_hala(saha.jidhr()) {
         return;
     }
-    saha.iktub("www/js/rpg_core.js", b"Bitmap.prototype.drawText = function () {};\n");
+    saha.iktub(
+        "www/js/rpg_core.js",
+        b"Bitmap.prototype.drawText = function () {};\n",
+    );
     saha.iktub("www/data/System.json", br#"{"gameTitle":"exact"}"#);
-    saha.iktub("WWW/JS/rpg_core.js", b"Bitmap.prototype.drawText = function () {};\n");
+    saha.iktub(
+        "WWW/JS/rpg_core.js",
+        b"Bitmap.prototype.drawText = function () {};\n",
+    );
     saha.iktub("WWW/DATA/System.json", br#"{"gameTitle":"folded"}"#);
 
     let bunya = rpgmaker::BunyatMashru::iktashif(saha.jidhr()).expect("the project");
@@ -271,13 +301,19 @@ fn rpgmaker_alhala_almutabiqa_taghlib() {
 #[test]
 fn rpgmaker_yastakhrij_min_asmaa_bayanat_mukhtalifat_alhala() {
     let saha = Saha::jadida();
-    saha.iktub("www/js/rpg_core.js", b"Bitmap.prototype.drawText = function () {};\n");
+    saha.iktub(
+        "www/js/rpg_core.js",
+        b"Bitmap.prototype.drawText = function () {};\n",
+    );
     saha.iktub("www/data/System.json", br#"{"gameTitle":"Riverside"}"#);
     saha.iktub(
         "www/data/commonevents.json",
         br#"[null,{"id":1,"list":[{"code":401,"parameters":["Hello, traveller."]}]}]"#,
     );
-    saha.iktub("www/data/map001.json", br#"{"displayName":"Riverside","events":[]}"#);
+    saha.iktub(
+        "www/data/map001.json",
+        br#"{"displayName":"Riverside","events":[]}"#,
+    );
     saha.iktub("www/data/actors.json", br#"[null,{"id":1,"name":"Rowan"}]"#);
 
     let bunya = rpgmaker::BunyatMashru::iktashif(saha.jidhr()).expect("the project");
@@ -299,7 +335,10 @@ fn rpgmaker_yastakhrij_min_asmaa_bayanat_mukhtalifat_alhala() {
 
     // `MapInfos.json` stays excluded through the fold — the digit test, not the
     // spelling, is what keeps the editor's own map tree out of a translation.
-    saha.iktub("www/data/mapinfos.json", br#"[null,{"id":1,"name":"Riverside"}]"#);
+    saha.iktub(
+        "www/data/mapinfos.json",
+        br#"[null,{"id":1,"name":"Riverside"}]"#,
+    );
     let baad = rpgmaker::istakhrij(&bunya).expect("the second extraction");
     assert!(
         !baad.malaffat.contains("data/mapinfos.json"),
@@ -384,8 +423,8 @@ fn vxace_yuhaddad_rughma_ikhtilaf_alhala() {
     let saha = Saha::jadida();
     saha.iktub("DATA/Scripts.rvdata2", BADEEL);
 
-    let mawqi = vxace::ayn_nusus(saha.jidhr())
-        .expect("a script list under DATA/ is still a script list");
+    let mawqi =
+        vxace::ayn_nusus(saha.jidhr()).expect("a script list under DATA/ is still a script list");
     assert!(matches!(mawqi, vxace::MawqiNusus::Malaf(_)));
 }
 
@@ -417,7 +456,10 @@ fn rakkib_luba_yutarjim_rughma_ikhtilaf_alhala() {
         "Game/script.rpy",
         b"label start:\n\n    \"Hello, traveller.\"\n",
     );
-    saha.iktub("Renpy/__init__.py", b"version_tuple = (8, 3, 4, vc_version)\n");
+    saha.iktub(
+        "Renpy/__init__.py",
+        b"version_tuple = (8, 3, 4, vc_version)\n",
+    );
     saha.iktub("Renpy/text/hbfont.so", b"\x7fELF");
     saha.iktub("Lib/py3-linux-x86_64/libharfbuzz.so.0", b"\x7fELF");
     saha.iktub("Lib/py3-linux-x86_64/libfribidi.so.0", b"\x7fELF");
@@ -441,5 +483,8 @@ fn rakkib_luba_yutarjim_rughma_ikhtilaf_alhala() {
         .iter()
         .map(|masar| fs::read_to_string(masar).unwrap_or_default())
         .collect::<String>();
-    assert!(maktub.contains(MARHABAN), "the Arabic reached a generated file");
+    assert!(
+        maktub.contains(MARHABAN),
+        "the Arabic reached a generated file"
+    );
 }

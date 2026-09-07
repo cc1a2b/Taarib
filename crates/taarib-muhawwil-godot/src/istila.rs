@@ -338,7 +338,12 @@ impl Lawn {
     /// and the fallback for a colour pointer the engine did not supply.
     #[must_use]
     pub const fn abyad() -> Self {
-        Self { ahmar: 1.0, akhdar: 1.0, azraq: 1.0, shaffafiya: 1.0 }
+        Self {
+            ahmar: 1.0,
+            akhdar: 1.0,
+            azraq: 1.0,
+            shaffafiya: 1.0,
+        }
     }
 
     /// Whether every component is finite.
@@ -462,16 +467,16 @@ impl HadafIstila {
             Self::Rasm => {
                 "no address was supplied for Font::draw, so strings drawn through it keep \
                  the engine's own unshaped output; the other interception points still run"
-            }
+            },
             Self::RasmHarf => {
                 "no address was supplied for Font::draw_char, which is the path Godot 3's \
                  Label draws through, so labels keep the engine's own unshaped output"
-            }
+            },
             Self::Qiyas => {
                 "no address was supplied for Font::get_string_size, so the game keeps \
                  measuring the unshaped string: glyphs will be drawn correctly and anything \
                  centred, right-aligned or sized from that measurement will be placed wrongly"
-            }
+            },
         }
     }
 }
@@ -517,7 +522,10 @@ impl WaslRasm {
     /// checked here rather than at the first draw, because a null discovered
     /// mid-frame is a null discovered after half a string has been emitted.
     pub fn jadeed(hadha: Unwan, dalla: Unwan) -> Result<Self, KhataGodot> {
-        let wasl = Self { hadha: hadha.raqm(), dalla: dalla.raqm() };
+        let wasl = Self {
+            hadha: hadha.raqm(),
+            dalla: dalla.raqm(),
+        };
         if wasl.hadha == 0 || wasl.dalla == 0 {
             return Err(KhataGodot::RasmGhayrMutah {
                 sabab: "the VisualServer singleton or its canvas draw entry point was null"
@@ -817,7 +825,11 @@ pub fn sajjil_safha(fahras: usize, nasij: Hawiya) -> Result<(), KhataGodot> {
 #[must_use]
 pub fn hawiyat_safha(fahras: usize) -> Option<Hawiya> {
     let khaam = SAFAHAT.get(fahras)?.load(Ordering::Acquire);
-    if khaam == 0 { None } else { Some(Hawiya::min_raqm(khaam)) }
+    if khaam == 0 {
+        None
+    } else {
+        Some(Hawiya::min_raqm(khaam))
+    }
 }
 
 /// Forgets every registered page.
@@ -1178,13 +1190,13 @@ pub fn harf_min_wahda(wahda: u32, ard: ArdWahda) -> Option<char> {
                 return None;
             }
             Some(char::from_u32(u32::from(dayyiq)).unwrap_or(char::REPLACEMENT_CHARACTER))
-        }
+        },
         ArdWahda::Rubaiya => {
             if wahda == 0 {
                 return None;
             }
             Some(char::from_u32(wahda).unwrap_or(char::REPLACEMENT_CHARACTER))
-        }
+        },
     }
 }
 
@@ -1273,7 +1285,10 @@ pub const BAKAT_MUTHABBAT: u8 = 0;
 /// rasterized for, so no glyph is resampled between two texels.
 #[must_use]
 pub fn mawdi_harf(qalam: Muttajih2, asas: f32, harf: &TaaribHarf) -> Muttajih2 {
-    Muttajih2 { s: (qalam.s + harf.s).round(), a: (qalam.a - asas + harf.a).round() }
+    Muttajih2 {
+        s: (qalam.s + harf.s).round(),
+        a: (qalam.a - asas + harf.a).round(),
+    }
 }
 
 /// Places a rasterized glyph's quad around an origin.
@@ -1289,7 +1304,10 @@ pub fn mustatil_shakl(asl: Muttajih2, shakl: &TaaribMawdiShakl) -> Mustatil {
             s: asl.s + f32::from(shakl.izaha_s),
             a: asl.a - f32::from(shakl.izaha_a),
         },
-        hajm: Muttajih2 { s: f32::from(shakl.ard), a: f32::from(shakl.irtifa) },
+        hajm: Muttajih2 {
+            s: f32::from(shakl.ard),
+            a: f32::from(shakl.irtifa),
+        },
     }
 }
 
@@ -1297,8 +1315,14 @@ pub fn mustatil_shakl(asl: Muttajih2, shakl: &TaaribMawdiShakl) -> Mustatil {
 #[must_use]
 pub fn mustatil_masdar(shakl: &TaaribMawdiShakl) -> Mustatil {
     Mustatil {
-        mawdi: Muttajih2 { s: f32::from(shakl.s), a: f32::from(shakl.a) },
-        hajm: Muttajih2 { s: f32::from(shakl.ard), a: f32::from(shakl.irtifa) },
+        mawdi: Muttajih2 {
+            s: f32::from(shakl.s),
+            a: f32::from(shakl.a),
+        },
+        hajm: Muttajih2 {
+            s: f32::from(shakl.ard),
+            a: f32::from(shakl.irtifa),
+        },
     }
 }
 
@@ -1371,7 +1395,11 @@ fn khattit(
     sutur: &mut Vec<TaaribSatr>,
 ) -> Option<NatijatTakhtit> {
     if nass.is_empty() {
-        return Some(NatijatTakhtit { adad_huruf: 0, adad_sutur: 0, ard: 0.0 });
+        return Some(NatijatTakhtit {
+            adad_huruf: 0,
+            adad_sutur: 0,
+            ard: 0.0,
+        });
     }
     let talab = TaaribTalab {
         nass: nass.as_ptr(),
@@ -1408,14 +1436,17 @@ fn khattit(
         // capacities are their lengths, so the counts handed over are writable.
         // The context and chain were published by whoever installed the takeover
         // and are the only party that can destroy them.
-        let ramz = unsafe {
-            taarib_takhtit(hala.maqbad_siyaq(), &raw const talab, &raw mut makhzan)
-        };
+        let ramz =
+            unsafe { taarib_takhtit(hala.maqbad_siyaq(), &raw const talab, &raw mut makhzan) };
         if ramz == TAARIB_NAJAH {
             return Some(NatijatTakhtit {
                 adad_huruf: makhzan.adad_huruf.min(huruf.len()),
                 adad_sutur: makhzan.adad_sutur.min(sutur.len()),
-                ard: if makhzan.ard.is_finite() { makhzan.ard } else { 0.0 },
+                ard: if makhzan.ard.is_finite() {
+                    makhzan.ard
+                } else {
+                    0.0
+                },
             });
         }
         if ramz != TAARIB_SIAT_QASIRA
@@ -1694,7 +1725,11 @@ const unsafe fn qiraat_mawdi(mawdi: *const Muttajih2) -> Option<Muttajih2> {
     // SAFETY: `mawdi` is non-null and the caller guarantees it is valid for an
     // aligned read of one Muttajih2.
     let qalam = unsafe { mawdi.read() };
-    if qalam.s.is_finite() && qalam.a.is_finite() { Some(qalam) } else { None }
+    if qalam.s.is_finite() && qalam.a.is_finite() {
+        Some(qalam)
+    } else {
+        None
+    }
 }
 
 /// Reads a modulate colour, substituting opaque white for null or non-finite.
@@ -1888,7 +1923,11 @@ unsafe fn istawla_rasm(
             let Ok(mut muaddat) = khana.try_borrow_mut() else {
                 return false;
             };
-            let Muaddat { nass: nass_utf8, huruf, sutur } = &mut *muaddat;
+            let Muaddat {
+                nass: nass_utf8,
+                huruf,
+                sutur,
+            } = &mut *muaddat;
             // SAFETY: `nass` is the engine's `String`, per this function's
             // contract, and `hala.ard_wahda` is the code-unit width the caller
             // stated for this build — the two together are exactly what
@@ -1902,9 +1941,10 @@ unsafe fn istawla_rasm(
             let Some(natija) = khattit(&hala, nass_utf8, huruf, sutur) else {
                 return false;
             };
-            let (Some(huruf), Some(sutur)) =
-                (huruf.get(..natija.adad_huruf), sutur.get(..natija.adad_sutur))
-            else {
+            let (Some(huruf), Some(sutur)) = (
+                huruf.get(..natija.adad_huruf),
+                sutur.get(..natija.adad_sutur),
+            ) else {
                 return false;
             };
             irsim(&TalabRasm {
@@ -2026,9 +2066,10 @@ fn usdur(hala: &HalatIstila, jara: &mut Mujammi) -> Option<f32> {
             };
             let Muaddat { huruf, sutur, .. } = &mut *muaddat;
             let natija = khattit(hala, &jara.nass, huruf, sutur)?;
-            let (Some(huruf), Some(sutur)) =
-                (huruf.get(..natija.adad_huruf), sutur.get(..natija.adad_sutur))
-            else {
+            let (Some(huruf), Some(sutur)) = (
+                huruf.get(..natija.adad_huruf),
+                sutur.get(..natija.adad_sutur),
+            ) else {
                 return None;
             };
             let rusim = irsim(&TalabRasm {
@@ -2177,9 +2218,13 @@ impl KhatfIstila {
         // whose address is valid for the life of the loaded library. `retour`
         // decodes the prologue rather than assuming it, so an unrelocatable
         // prologue is the error below and not a corrupted instruction boundary.
-        let detour = unsafe { RawDetour::new(unwan.muashir().cast(), khatf.cast()) }.map_err(
-            |khata| KhataGodot::KhatfFashil { hadaf: hadaf.ism(), tafsil: khata.to_string() },
-        )?;
+        let detour =
+            unsafe { RawDetour::new(unwan.muashir().cast(), khatf.cast()) }.map_err(|khata| {
+                KhataGodot::KhatfFashil {
+                    hadaf: hadaf.ism(),
+                    tafsil: khata.to_string(),
+                }
+            })?;
 
         asl.store(
             core::ptr::from_ref(detour.trampoline()).expose_provenance(),
@@ -2192,10 +2237,19 @@ impl KhatfIstila {
         // prologue `retour` measured.
         unsafe { detour.enable() }.map_err(|khata| {
             asl.store(0, Ordering::Release);
-            KhataGodot::KhatfFashil { hadaf: hadaf.ism(), tafsil: khata.to_string() }
+            KhataGodot::KhatfFashil {
+                hadaf: hadaf.ism(),
+                tafsil: khata.to_string(),
+            }
         })?;
 
-        Ok(Self { hadaf, unwan, laqta, khatf: detour, mufaal: true })
+        Ok(Self {
+            hadaf,
+            unwan,
+            laqta,
+            khatf: detour,
+            mufaal: true,
+        })
     }
 
     /// Removes the detour and checks that the target's bytes came back.
@@ -2368,17 +2422,31 @@ impl Istila {
             let dalla_rasm_harf: DallaRasmHarf = khatf_rasm_harf;
             let dalla_qiyas: DallaQiyas = khatf_qiyas;
 
-            daa(HadafIstila::Rasm, ahdaf.rasm, dalla_rasm as *const c_void, &ASL_RASM);
+            daa(
+                HadafIstila::Rasm,
+                ahdaf.rasm,
+                dalla_rasm as *const c_void,
+                &ASL_RASM,
+            );
             daa(
                 HadafIstila::RasmHarf,
                 ahdaf.rasm_harf,
                 dalla_rasm_harf as *const c_void,
                 &ASL_RASM_HARF,
             );
-            daa(HadafIstila::Qiyas, ahdaf.qiyas, dalla_qiyas as *const c_void, &ASL_QIYAS);
+            daa(
+                HadafIstila::Qiyas,
+                ahdaf.qiyas,
+                dalla_qiyas as *const c_void,
+                &ASL_QIYAS,
+            );
         }
 
-        let mut istila = Self { khutuf, tanbeehat, hala };
+        let mut istila = Self {
+            khutuf,
+            tanbeehat,
+            hala,
+        };
         istila.azil_qiyas_yateem();
 
         for tanbeeh in &istila.tanbeehat {
@@ -2402,9 +2470,10 @@ impl Istila {
     /// right-aligned column and every auto-sized panel is positioned for text
     /// that is not what appears. Unhooked, the game is at least self-consistent.
     fn azil_qiyas_yateem(&mut self) {
-        let yarsim = self.khutuf.iter().any(|(khatf, _)| {
-            matches!(khatf.hadaf(), HadafIstila::Rasm | HadafIstila::RasmHarf)
-        });
+        let yarsim = self
+            .khutuf
+            .iter()
+            .any(|(khatf, _)| matches!(khatf.hadaf(), HadafIstila::Rasm | HadafIstila::RasmHarf));
         if yarsim {
             return;
         }
@@ -2455,9 +2524,10 @@ impl Istila {
     /// differently.
     #[must_use]
     pub fn nuzul_matlub(&self) -> bool {
-        !self.khutuf.iter().any(|(khatf, _)| {
-            matches!(khatf.hadaf(), HadafIstila::Rasm | HadafIstila::RasmHarf)
-        })
+        !self
+            .khutuf
+            .iter()
+            .any(|(khatf, _)| matches!(khatf.hadaf(), HadafIstila::Rasm | HadafIstila::RasmHarf))
     }
 
     /// The policy this takeover was installed with.
@@ -2513,9 +2583,8 @@ impl Istila {
         // SAFETY: both handles were supplied by the caller at install, validated
         // as non-zero by `tahaqquq`, and belong to one `jisr` context that the
         // installer owns for the life of the takeover.
-        let ramz = unsafe {
-            taarib_lawha_ibda_itar(self.hala.maqbad_siyaq(), self.hala.maqbad_lawha())
-        };
+        let ramz =
+            unsafe { taarib_lawha_ibda_itar(self.hala.maqbad_siyaq(), self.hala.maqbad_lawha()) };
         if ramz == TAARIB_NAJAH {
             return Ok(());
         }
@@ -2544,7 +2613,7 @@ impl Istila {
                 Err(khata) => {
                     tracing::warn!(khata = %khata, "an interception did not come out cleanly");
                     tanbeehat.push(khata);
-                }
+                },
             }
         }
         tanbeehat

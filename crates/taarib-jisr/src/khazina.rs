@@ -322,7 +322,7 @@ fn iktub_kasr_ikhtiyari(hashi: &mut FxHasher, qeema: Option<f32>) {
         Some(qeema) => {
             hashi.write_u8(1);
             hashi.write_u32(qeema.to_bits());
-        }
+        },
         None => hashi.write_u8(0),
     }
 }
@@ -347,14 +347,14 @@ fn iktub_uslub(hashi: &mut FxHasher, uslub: &Uslub) {
         Some(khatt) => {
             hashi.write_u8(1);
             hashi.write_u8(khatt);
-        }
+        },
         None => hashi.write_u8(0),
     }
     match uslub.wazn {
         Some(wazn) => {
             hashi.write_u8(1);
             hashi.write_u16(wazn);
-        }
+        },
         None => hashi.write_u8(0),
     }
     hashi.write_u8(u8::from(uslub.maail));
@@ -367,7 +367,7 @@ fn iktub_uslub(hashi: &mut FxHasher, uslub: &Uslub) {
             hashi.write_u32(dharra.ard.to_bits());
             hashi.write_u32(dharra.irtifa.to_bits());
             hashi.write_u32(dharra.asas.to_bits());
-        }
+        },
         None => hashi.write_u8(0),
     }
 }
@@ -390,7 +390,7 @@ fn iktub_khiyarat(hashi: &mut FxHasher, khiyarat: &KhiyaratTakhtit) {
         SiyasatTajawuz::Taqlis { adna } => {
             hashi.write_u8(1);
             hashi.write_u32(adna.to_bits());
-        }
+        },
         SiyasatTajawuz::Ikhtisar => hashi.write_u8(2),
     }
     iktub_kasr_ikhtiyari(hashi, khiyarat.irtifa_satr);
@@ -648,7 +648,9 @@ impl Khazina {
             self.ifsal(uqda);
             self.sadr(uqda);
         }
-        self.uqad.get(ila_fahras(uqda)).map(|mawjud| &mawjud.takhtit)
+        self.uqad
+            .get(ila_fahras(uqda))
+            .map(|mawjud| &mawjud.takhtit)
     }
 
     /// Stores a finished layout under its key, evicting from the cold end
@@ -738,8 +740,10 @@ impl Khazina {
     /// together. The slot's own links are left stale; every caller either
     /// relinks it at the head or retires it to the free list.
     fn ifsal(&mut self, uqda: u32) {
-        let Some((sabiq, tali)) =
-            self.uqad.get(ila_fahras(uqda)).map(|mawjud| (mawjud.sabiq, mawjud.tali))
+        let Some((sabiq, tali)) = self
+            .uqad
+            .get(ila_fahras(uqda))
+            .map(|mawjud| (mawjud.sabiq, mawjud.tali))
         else {
             return;
         };
@@ -790,7 +794,13 @@ impl Khazina {
             if jadeed == LA_SHAY {
                 return None;
             }
-            self.uqad.push(Uqda { miftah, takhtit, bayt: kulfa, sabiq: LA_SHAY, tali: LA_SHAY });
+            self.uqad.push(Uqda {
+                miftah,
+                takhtit,
+                bayt: kulfa,
+                sabiq: LA_SHAY,
+                tali: LA_SHAY,
+            });
             jadeed
         };
         let _ = self.faharis.insert(miftah, uqda);
@@ -855,7 +865,10 @@ impl Khazina {
 /// layout built through a reused buffer carries slack that length would hide.
 const fn kulfat_madkhal(takhtit: &TakhtitNass) -> usize {
     let huruf = takhtit.huruf.capacity().saturating_mul(size_of::<Harf>());
-    let sutur = takhtit.sutur.capacity().saturating_mul(size_of::<SatrMansuq>());
+    let sutur = takhtit
+        .sutur
+        .capacity()
+        .saturating_mul(size_of::<SatrMansuq>());
     KULFA_THABITA.saturating_add(huruf).saturating_add(sutur)
 }
 

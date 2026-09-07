@@ -157,7 +157,9 @@ impl FarqFahs {
         self.taghyeerat
             .iter()
             .filter_map(|(masdar, taghyeer)| match taghyeer {
-                TaghyeerLuba::BinaJadeed { qadeem: Some(_), .. } => Some(masdar),
+                TaghyeerLuba::BinaJadeed {
+                    qadeem: Some(_), ..
+                } => Some(masdar),
                 _ => None,
             })
             .collect()
@@ -263,10 +265,15 @@ pub fn qarin(mukhtashaf: &NatijatFahs, mukhazzan: &[LubaMuktashafa]) -> FarqFahs
         }
     }
 
-    let bila_taghyeer =
-        mukhazzan.iter().filter(|luba| !taghayyarat.contains(&luba.masdar.muarrif())).count();
+    let bila_taghyeer = mukhazzan
+        .iter()
+        .filter(|luba| !taghayyarat.contains(&luba.masdar.muarrif()))
+        .count();
 
-    FarqFahs { taghyeerat, bila_taghyeer }
+    FarqFahs {
+        taghyeerat,
+        bila_taghyeer,
+    }
 }
 
 /// Everything that changed about one game the store already knows.
@@ -337,8 +344,7 @@ fn nafs_muhtawa(qadeem: &LubaMuktashafa, jadeed: &LubaMuktashafa) -> bool {
         (None, None) => true,
         _ => false,
     };
-    let hajm_mutabiq =
-        qadeem.hajm == 0 || jadeed.hajm == 0 || qadeem.hajm == jadeed.hajm;
+    let hajm_mutabiq = qadeem.hajm == 0 || jadeed.hajm == 0 || qadeem.hajm == jadeed.hajm;
 
     bina_mutabiq && hajm_mutabiq
 }
@@ -474,12 +480,11 @@ impl Muraqib {
         let tabteea = tabteea.clamp(TABTEEA_DUNYA, TABTEEA_ULYA);
         let (mursil, mustaqbil) = channel::<DebounceEventResult>();
 
-        let mut murattib = new_debouncer(tabteea, None, mursil).map_err(|khata| {
-            KhataKashf::TaadhurMuraqaba {
+        let mut murattib =
+            new_debouncer(tabteea, None, mursil).map_err(|khata| KhataKashf::TaadhurMuraqaba {
                 masar: judhur.first().cloned().unwrap_or_default(),
                 tafsil: khata.to_string(),
-            }
-        })?;
+            })?;
 
         let mut muraqaba: Vec<PathBuf> = Vec::new();
         let mut tanbihat: Vec<TanbihFahs> = Vec::new();
@@ -547,7 +552,9 @@ impl Muraqib {
                                 .find(|jidhr| masar.starts_with(jidhr))
                                 .cloned()
                                 .unwrap_or_else(|| {
-                                    masar.parent().map_or_else(|| masar.clone(), Path::to_path_buf)
+                                    masar
+                                        .parent()
+                                        .map_or_else(|| masar.clone(), Path::to_path_buf)
                                 });
                             if !mutaathira.contains(&jidhr) {
                                 mutaathira.push(jidhr);

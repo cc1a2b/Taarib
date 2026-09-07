@@ -50,13 +50,15 @@ pub fn iqra(masar: &Path) -> Result<Option<SijillIqrar>, KhataAman> {
                 amal: "read",
                 sabab,
             });
-        }
+        },
     };
-    serde_json::from_slice(&bayt).map(Some).map_err(|khata| KhataAman::KhataIqrar {
-        masar: masar.to_path_buf(),
-        amal: "parsed",
-        sabab: std::io::Error::new(std::io::ErrorKind::InvalidData, khata.to_string()),
-    })
+    serde_json::from_slice(&bayt)
+        .map(Some)
+        .map_err(|khata| KhataAman::KhataIqrar {
+            masar: masar.to_path_buf(),
+            amal: "parsed",
+            sabab: std::io::Error::new(std::io::ErrorKind::InvalidData, khata.to_string()),
+        })
 }
 
 /// Records an acknowledgement of the current statement, never replacing a
@@ -100,7 +102,11 @@ pub fn ahfaz(masar: &Path, waqt: String, isdar_taarib: String) -> Result<SijillI
         return Ok(qadeem);
     }
 
-    let sijill = SijillIqrar { isdar_nass: ISDAR_NASS, waqt, isdar_taarib };
+    let sijill = SijillIqrar {
+        isdar_nass: ISDAR_NASS,
+        waqt,
+        isdar_taarib,
+    };
     let bayt = serde_json::to_vec_pretty(&sijill).map_err(|khata| KhataAman::KhataIqrar {
         masar: masar.to_path_buf(),
         amal: "serialized",
@@ -117,12 +123,10 @@ pub fn ahfaz(masar: &Path, waqt: String, isdar_taarib: String) -> Result<SijillI
     // plain `write` interrupted part way leaves a truncated document, and this
     // one being unreadable makes the product ask for a first-run
     // acknowledgement the user already gave.
-    taarib_usus::masarat::kitaba_dharra(masar, &bayt).map_err(|khata| {
-        KhataAman::KhataIqrar {
-            masar: masar.to_path_buf(),
-            amal: "written",
-            sabab: std::io::Error::other(khata.injilizi),
-        }
+    taarib_usus::masarat::kitaba_dharra(masar, &bayt).map_err(|khata| KhataAman::KhataIqrar {
+        masar: masar.to_path_buf(),
+        amal: "written",
+        sabab: std::io::Error::other(khata.injilizi),
     })?;
     Ok(sijill)
 }

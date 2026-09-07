@@ -451,10 +451,10 @@ impl Tafsir for KhataRuqaa {
             Self::MalafQaseer { .. } => {
                 "هذا الملف أقصر من أن يكون رقعة تعريب؛ يبدو أنه ناقص أو أن تنزيله لم يكتمل."
                     .to_owned()
-            }
+            },
             Self::SihrGhayrMutabaq { .. } => {
                 "هذا الملف ليس رقعة تعريب. لا يبدأ بالعلامة التي تبدأ بها كل رقعة.".to_owned()
-            }
+            },
             Self::IsdarGhayrMadum { wujid, .. } => format!(
                 "هذه الرقعة بصيغة الإصدار {wujid}، وهذه النسخة من تعريب لا تقرأها. حدِّث \
                  التطبيق ثم أعد المحاولة."
@@ -462,101 +462,82 @@ impl Tafsir for KhataRuqaa {
             Self::AlamMajhula { .. } => {
                 "ترويسة الرقعة تحمل خصائص غير معروفة في هذا الإصدار، فلا يمكن الوثوق بمعناها."
                     .to_owned()
-            }
-            Self::AdadAqsamGhayrSalih { adad, aqsa } => format!(
-                "الرقعة تعلن {adad} قسمًا، والصيغة تعرّف {aqsa} أقسام على الأكثر."
-            ),
+            },
+            Self::AdadAqsamGhayrSalih { adad, aqsa } => {
+                format!("الرقعة تعلن {adad} قسمًا، والصيغة تعرّف {aqsa} أقسام على الأكثر.")
+            },
             Self::HajmKulliGhayrMutabaq { .. } => {
                 "حجم الملف لا يطابق ما تعلنه الترويسة؛ إما أن التنزيل لم يكتمل أو أن بايتات \
                  أُلحقت بالملف بعد إنشائه."
                     .to_owned()
-            }
+            },
             Self::QismKharij { .. } | Self::JadwalTalif { .. } => {
-                "أحد أقسام الرقعة يشير خارج حدود الملف. الملف تالف أو عُدِّل بعد توقيعه."
-                    .to_owned()
-            }
+                "أحد أقسام الرقعة يشير خارج حدود الملف. الملف تالف أو عُدِّل بعد توقيعه.".to_owned()
+            },
             Self::IzahaGhayrMuhadhah { .. } | Self::MuhadhahaGhayrSaliha { .. } => {
                 "أحد الأقسام لا يبدأ عند حدٍّ صالح في الذاكرة، ولا يمكن قراءته مباشرة كما \
                  تتطلب الصيغة."
                     .to_owned()
-            }
+            },
             Self::AqsamMutadakhila { .. } => {
-                "قسمان في الرقعة يتشاركان البايتات نفسها، وهو ما لا تنتجه أي رقعة سليمة."
-                    .to_owned()
-            }
+                "قسمان في الرقعة يتشاركان البايتات نفسها، وهو ما لا تنتجه أي رقعة سليمة.".to_owned()
+            },
             Self::NawQismMajhul { naw } => {
                 format!("الرقعة تحتوي قسمًا من نوع غير معروف ({naw}).")
-            }
+            },
             Self::QismMukarrar { naw } => {
                 format!("نوع القسم {naw} مكرر داخل الرقعة، ولا يمكن تحديد أيهما المقصود.")
-            }
-            Self::QismMafqud { .. } => {
-                "الرقعة ينقصها قسم أساسي لا تكتمل بدونه.".to_owned()
-            }
+            },
+            Self::QismMafqud { .. } => "الرقعة ينقصها قسم أساسي لا تكتمل بدونه.".to_owned(),
             Self::DaghtMajhul { .. } => {
                 "أحد الأقسام مضغوط بطريقة لا تعرفها هذه النسخة من تعريب.".to_owned()
-            }
+            },
             Self::HajmKhaamMufrit { .. } | Self::MajmuKhaamMufrit { .. } => {
                 "الرقعة تطلب حجمًا في الذاكرة أكبر بكثير مما تحتاجه أي رقعة حقيقية، ورُفضت \
                  قبل حجز أي بايت."
                     .to_owned()
-            }
-            Self::FakkFashil { .. } => {
-                "تعذّر فك ضغط أحد أقسام الرقعة؛ الملف تالف.".to_owned()
-            }
+            },
+            Self::FakkFashil { .. } => "تعذّر فك ضغط أحد أقسام الرقعة؛ الملف تالف.".to_owned(),
             Self::HajmKhaamGhayrMutabaq { .. } => {
                 "أحد الأقسام أنتج بعد فك الضغط حجمًا غير الذي أعلنه، وهو ما لا يحدث إلا في \
                  ملف مُعدَّل عمدًا."
                     .to_owned()
-            }
+            },
             Self::BasmaGhayrMutabaqa { .. } => {
                 "بصمة محتوى الرقعة لا تطابق المعلن في ترويستها. إما أن التنزيل تلف، وإما أن \
                  الملف عُدِّل. لن يُقرأ أي شيء من داخله."
                     .to_owned()
-            }
+            },
             Self::TawqeeLaysAkhiran => {
                 "كتلة التوقيع ليست في موضعها من الملف، فلا يمكن التحقق منها قبل قراءة \
                  المحتوى."
                     .to_owned()
-            }
+            },
             Self::KutlatTawqeeTalifa { .. } => {
                 "كتلة التوقيع داخل الرقعة تالفة أو ناقصة.".to_owned()
-            }
+            },
             Self::GhayrMuwaqqaa => {
                 "هذه الرقعة غير موقَّعة. لا يثبّت تعريب إلا ما وقّعه مالك المشروع بعد \
                  مراجعته."
                     .to_owned()
-            }
+            },
             Self::TawqeeGhayrSalih { .. } => {
-                "توقيع هذه الرقعة غير صحيح. المحتوى لا يطابق ما وُقِّع عليه، ولن تُثبَّت."
-                    .to_owned()
-            }
+                "توقيع هذه الرقعة غير صحيح. المحتوى لا يطابق ما وُقِّع عليه، ولن تُثبَّت.".to_owned()
+            },
             Self::SijillGhayrMutabaq { .. } => {
-                "أحد جداول الرقعة يعلن حجم سجل مخالفًا لما تثبّته الصيغة، فلا يمكن قراءته."
-                    .to_owned()
-            }
-            Self::FahrasKharij { .. } => {
-                "أحد سجلات الرقعة يشير إلى عنصر غير موجود.".to_owned()
-            }
+                "أحد جداول الرقعة يعلن حجم سجل مخالفًا لما تثبّته الصيغة، فلا يمكن قراءته.".to_owned()
+            },
+            Self::FahrasKharij { .. } => "أحد سجلات الرقعة يشير إلى عنصر غير موجود.".to_owned(),
             Self::NassGhayrSalih { .. } => {
-                "أحد النصوص داخل الرقعة ليس ترميز UTF-8 صالحًا، ولن يُستبدل بحروف بديلة."
-                    .to_owned()
-            }
-            Self::BayanTalif { .. } => {
-                "بيانات الرقعة الوصفية غير قابلة للقراءة.".to_owned()
-            }
+                "أحد النصوص داخل الرقعة ليس ترميز UTF-8 صالحًا، ولن يُستبدل بحروف بديلة.".to_owned()
+            },
+            Self::BayanTalif { .. } => "بيانات الرقعة الوصفية غير قابلة للقراءة.".to_owned(),
             Self::NamatGhayrMuarraf => {
                 "الرقعة تحمل صفحات رسم دون أن تعلن طريقة رسمها، ولا يجوز تخمينها.".to_owned()
-            }
-            Self::SafhaTalifa { .. } => {
-                "إحدى صفحات اللوحة تشير خارج حدود بياناتها.".to_owned()
-            }
-            Self::DaghtFashil { .. } => {
-                "تعذّر ضغط أحد أقسام الرقعة أثناء كتابتها.".to_owned()
-            }
-            Self::KhataMalaf { .. } => {
-                "تعذّر فتح ملف الرقعة أو قراءته.".to_owned()
-            }
+            },
+            Self::SafhaTalifa { .. } => "إحدى صفحات اللوحة تشير خارج حدود بياناتها.".to_owned(),
+            Self::DaghtFashil { .. } => "تعذّر ضغط أحد أقسام الرقعة أثناء كتابتها.".to_owned(),
+            Self::KhataMalaf { .. } => "تعذّر فتح ملف الرقعة أو قراءته.".to_owned(),
         }
     }
 
@@ -570,7 +551,7 @@ impl Tafsir for KhataRuqaa {
                 "This file is not a Taarib patch; it does not begin with the marker every \
                  patch begins with."
                     .to_owned()
-            }
+            },
             Self::IsdarGhayrMadum { wujid, madum } => format!(
                 "This patch is in format version {wujid} and this build reads version \
                  {madum}. Update Taarib and try again."
@@ -579,18 +560,28 @@ impl Tafsir for KhataRuqaa {
                 "The header sets flag bits ({alam:#06x}) that this format version does not \
                  define, so its meaning cannot be trusted."
             ),
-            Self::AdadAqsamGhayrSalih { adad, aqsa } => format!(
-                "The patch declares {adad} sections; the format defines at most {aqsa}."
-            ),
+            Self::AdadAqsamGhayrSalih { adad, aqsa } => {
+                format!("The patch declares {adad} sections; the format defines at most {aqsa}.")
+            },
             Self::HajmKulliGhayrMutabaq { muallan, fili } => format!(
                 "The header declares {muallan} bytes and {fili} are present: the download is \
                  incomplete, or bytes were appended after the patch was made."
             ),
-            Self::QismKharij { naw, haql, qeema, hadd } => format!(
+            Self::QismKharij {
+                naw,
+                haql,
+                qeema,
+                hadd,
+            } => format!(
                 "Section {naw} points outside the file: {haql} is {qeema} against a limit of \
                  {hadd}. The file is corrupt or was edited after it was signed."
             ),
-            Self::JadwalTalif { naw, haql, qeema, hadd } => format!(
+            Self::JadwalTalif {
+                naw,
+                haql,
+                qeema,
+                hadd,
+            } => format!(
                 "Section {naw}'s table header is inconsistent: {haql} is {qeema} against a \
                  limit of {hadd}."
             ),
@@ -609,13 +600,13 @@ impl Tafsir for KhataRuqaa {
             ),
             Self::NawQismMajhul { naw } => {
                 format!("The patch contains a section of unknown kind ({naw}).")
-            }
+            },
             Self::QismMukarrar { naw } => {
                 format!("Section kind {naw} appears twice, so neither can be resolved.")
-            }
+            },
             Self::QismMafqud { ism } => {
                 format!("The patch is missing its {ism} section and is incomplete without it.")
-            }
+            },
             Self::DaghtMajhul { naw, daght } => format!(
                 "Section {naw} is compressed with method {daght}, which this build does not \
                  know."
@@ -630,7 +621,7 @@ impl Tafsir for KhataRuqaa {
             ),
             Self::FakkFashil { naw, .. } => {
                 format!("Section {naw} could not be decompressed; the file is corrupt.")
-            }
+            },
             Self::HajmKhaamGhayrMutabaq { naw, muallan, fili } => format!(
                 "Section {naw} declared {muallan} uncompressed bytes and produced {fili}, \
                  which only happens in a deliberately edited file."
@@ -639,68 +630,79 @@ impl Tafsir for KhataRuqaa {
                 "The patch's content hash does not match the one in its header. The download \
                  is damaged or the file was modified; nothing inside it will be read."
                     .to_owned()
-            }
+            },
             Self::TawqeeLaysAkhiran => {
                 "The signature block is not at the end of the file, so it cannot be verified \
                  before the content is read."
                     .to_owned()
-            }
+            },
             Self::KutlatTawqeeTalifa { haql } => {
                 format!("The signature block is malformed: {haql}.")
-            }
+            },
             Self::GhayrMuwaqqaa => {
                 "This patch carries no signature. Taarib installs only what the project owner \
                  signed after reviewing it."
                     .to_owned()
-            }
+            },
             Self::TawqeeGhayrSalih { miftah } => format!(
                 "This patch's signature does not verify under key {miftah}. Its contents are \
                  not what was signed, and it will not be installed."
             ),
-            Self::SijillGhayrMutabaq { naw, haql, wujid, muntazar } => format!(
+            Self::SijillGhayrMutabaq {
+                naw,
+                haql,
+                wujid,
+                muntazar,
+            } => format!(
                 "Section {naw} declares {haql} as {wujid} bytes; the format fixes it at \
                  {muntazar}, so the table cannot be read."
             ),
             Self::FahrasKharij { haql, fahras, adad } => {
                 format!("A record refers to {haql} {fahras} of {adad}.")
-            }
+            },
             Self::NassGhayrSalih { fahras, mawqi } => format!(
                 "String {fahras} is not valid UTF-8 at byte {mawqi}, and will not be \
                  substituted with replacement characters."
             ),
-            Self::BayanTalif { .. } => {
-                "The patch's metadata record could not be read.".to_owned()
-            }
+            Self::BayanTalif { .. } => "The patch's metadata record could not be read.".to_owned(),
             Self::NamatGhayrMuarraf => {
                 "The patch carries atlas pages but declares no rasterization mode, and \
                  guessing one is not allowed."
                     .to_owned()
-            }
-            Self::SafhaTalifa { safha, izaha, nihaya, tul } => format!(
+            },
+            Self::SafhaTalifa {
+                safha,
+                izaha,
+                nihaya,
+                tul,
+            } => format!(
                 "Page {safha} claims texels at {izaha}..{nihaya} of an atlas that is {tul} \
                  bytes long."
             ),
             Self::DaghtFashil { naw, .. } => {
                 format!("Section {naw} could not be compressed while writing the patch.")
-            }
+            },
             Self::KhataMalaf { masar, .. } => {
-                format!("{} could not be opened or read as a patch.", masar.display())
-            }
+                format!(
+                    "{} could not be opened or read as a patch.",
+                    masar.display()
+                )
+            },
         }
     }
 
     fn khutwa(&self) -> Khutwa {
         match self {
             Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MalafRuqaa),
-            Self::MalafQaseer { .. } | Self::SihrGhayrMutabaq { .. } => {
-                Khutwa::IkhtiyarMasar { matlub: MasarMatlub::MalafRuqaa }
-            }
+            Self::MalafQaseer { .. } | Self::SihrGhayrMutabaq { .. } => Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MalafRuqaa,
+            },
             Self::IsdarGhayrMadum { .. } => Khutwa::TahdithTaarib,
             // A hash mismatch is a corrupt download far more often than it is an
             // attack, and re-fetching resolves the common case in one click.
             Self::BasmaGhayrMutabaqa { .. } | Self::HajmKulliGhayrMutabaq { .. } => {
                 Khutwa::AadaMuhawala
-            }
+            },
             Self::GhayrMuwaqqaa
             | Self::TawqeeGhayrSalih { .. }
             | Self::TawqeeLaysAkhiran
@@ -721,114 +723,134 @@ impl Tafsir for KhataRuqaa {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("tul", QeemaSiyaq::Hajm(*tul));
                 daa("matlub", QeemaSiyaq::Hajm(*matlub));
-            }
+            },
             Self::SihrGhayrMutabaq { wujid } => {
                 daa("wujid", QeemaSiyaq::Nass(format!("{wujid:02x?}")));
-            }
+            },
             Self::IsdarGhayrMadum { wujid, madum } => {
                 daa("wujid", QeemaSiyaq::Raqm(i64::from(*wujid)));
                 daa("madum", QeemaSiyaq::Raqm(i64::from(*madum)));
-            }
+            },
             Self::AlamMajhula { alam } => {
                 daa("alam", QeemaSiyaq::Raqm(i64::from(*alam)));
-            }
+            },
             Self::AdadAqsamGhayrSalih { adad, aqsa } => {
                 daa("adad", QeemaSiyaq::Raqm(i64::from(*adad)));
                 daa("aqsa", QeemaSiyaq::Raqm(i64::from(*aqsa)));
-            }
+            },
             Self::HajmKulliGhayrMutabaq { muallan, fili } => {
                 daa("muallan", QeemaSiyaq::Hajm(*muallan));
                 daa("fili", QeemaSiyaq::Hajm(*fili));
+            },
+            Self::QismKharij {
+                naw,
+                haql,
+                qeema,
+                hadd,
             }
-            Self::QismKharij { naw, haql, qeema, hadd }
-            | Self::JadwalTalif { naw, haql, qeema, hadd } => {
+            | Self::JadwalTalif {
+                naw,
+                haql,
+                qeema,
+                hadd,
+            } => {
                 daa("naw", QeemaSiyaq::Raqm(i64::from(*naw)));
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("qeema", QeemaSiyaq::Hajm(*qeema));
                 daa("hadd", QeemaSiyaq::Hajm(*hadd));
-            }
+            },
             Self::IzahaGhayrMuhadhah { naw, izaha } => {
                 daa("naw", QeemaSiyaq::Raqm(i64::from(*naw)));
                 daa("izaha", QeemaSiyaq::Hajm(*izaha));
-            }
+            },
             Self::MuhadhahaGhayrSaliha { naw, haql, izaha } => {
                 daa("naw", QeemaSiyaq::Raqm(i64::from(*naw)));
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("izaha", QeemaSiyaq::Hajm(*izaha));
-            }
+            },
             Self::AqsamMutadakhila { awwal, thani } => {
                 daa("awwal", QeemaSiyaq::Raqm(i64::from(*awwal)));
                 daa("thani", QeemaSiyaq::Raqm(i64::from(*thani)));
-            }
+            },
             Self::NawQismMajhul { naw } | Self::QismMukarrar { naw } => {
                 daa("naw", QeemaSiyaq::Raqm(i64::from(*naw)));
-            }
+            },
             Self::QismMafqud { ism } => {
                 daa("qism", QeemaSiyaq::Nass((*ism).to_owned()));
-            }
+            },
             Self::DaghtMajhul { naw, daght } => {
                 daa("naw", QeemaSiyaq::Raqm(i64::from(*naw)));
                 daa("daght", QeemaSiyaq::Raqm(i64::from(*daght)));
-            }
+            },
             Self::HajmKhaamMufrit { naw, muallan, saqf } => {
                 daa("naw", QeemaSiyaq::Raqm(i64::from(*naw)));
                 daa("muallan", QeemaSiyaq::Hajm(*muallan));
                 daa("saqf", QeemaSiyaq::Hajm(*saqf));
-            }
+            },
             Self::MajmuKhaamMufrit { majmu, saqf } => {
                 daa("majmu", QeemaSiyaq::Hajm(*majmu));
                 daa("saqf", QeemaSiyaq::Hajm(*saqf));
-            }
+            },
             Self::FakkFashil { naw, tafsil } | Self::DaghtFashil { naw, tafsil } => {
                 daa("naw", QeemaSiyaq::Raqm(i64::from(*naw)));
                 daa("tafsil", QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::HajmKhaamGhayrMutabaq { naw, muallan, fili } => {
                 daa("naw", QeemaSiyaq::Raqm(i64::from(*naw)));
                 daa("muallan", QeemaSiyaq::Hajm(*muallan));
                 daa("fili", QeemaSiyaq::Hajm(*fili));
-            }
+            },
             Self::BasmaGhayrMutabaqa { muallana, mahsuba } => {
                 daa("muallana", QeemaSiyaq::Nass(muallana.clone()));
                 daa("mahsuba", QeemaSiyaq::Nass(mahsuba.clone()));
-            }
+            },
             Self::KutlatTawqeeTalifa { haql } => {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
-            }
+            },
             Self::TawqeeGhayrSalih { miftah } => {
                 daa("miftah", QeemaSiyaq::Nass(miftah.clone()));
-            }
-            Self::SijillGhayrMutabaq { naw, haql, wujid, muntazar } => {
+            },
+            Self::SijillGhayrMutabaq {
+                naw,
+                haql,
+                wujid,
+                muntazar,
+            } => {
                 daa("naw", QeemaSiyaq::Raqm(i64::from(*naw)));
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("wujid", QeemaSiyaq::Raqm(i64::from(*wujid)));
                 daa("muntazar", QeemaSiyaq::Raqm(i64::from(*muntazar)));
-            }
+            },
             Self::FahrasKharij { haql, fahras, adad } => {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("fahras", QeemaSiyaq::Raqm(i64::from(*fahras)));
                 daa("adad", QeemaSiyaq::Raqm(i64::from(*adad)));
-            }
+            },
             Self::NassGhayrSalih { fahras, mawqi } => {
                 daa("fahras", QeemaSiyaq::Raqm(i64::from(*fahras)));
                 daa("mawqi", QeemaSiyaq::Raqm(i64::from(*mawqi)));
-            }
+            },
             Self::BayanTalif { tafsil } => {
                 daa("tafsil", QeemaSiyaq::Nass(tafsil.clone()));
-            }
-            Self::SafhaTalifa { safha, izaha, nihaya, tul } => {
+            },
+            Self::SafhaTalifa {
+                safha,
+                izaha,
+                nihaya,
+                tul,
+            } => {
                 daa("safha", QeemaSiyaq::Raqm(i64::from(*safha)));
                 daa("izaha", QeemaSiyaq::Hajm(*izaha));
                 daa("nihaya", QeemaSiyaq::Hajm(*nihaya));
                 daa("tul", QeemaSiyaq::Hajm(*tul));
-            }
+            },
             Self::KhataMalaf { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 for (miftah, qeema) in siyaq_io(sabab) {
                     daa(&miftah, qeema);
                 }
-            }
-            Self::TawqeeLaysAkhiran | Self::GhayrMuwaqqaa | Self::NamatGhayrMuarraf => {}
+            },
+            Self::TawqeeLaysAkhiran | Self::GhayrMuwaqqaa | Self::NamatGhayrMuarraf => {},
         }
         siyaq
     }

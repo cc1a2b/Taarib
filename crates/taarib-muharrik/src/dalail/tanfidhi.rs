@@ -223,9 +223,14 @@ struct TarwisaPe {
 pub(crate) fn bayan(masar: &Path) -> Option<BayanTanfidhi> {
     let tarwisa = iqra_nafidha(masar, 0, HAJM_TARWISA_PE)?;
     let mafkuk = tarwisa_pe(&tarwisa)?;
-    let mut bayan = BayanTanfidhi { mimariya: mafkuk.mimariya, ..BayanTanfidhi::default() };
+    let mut bayan = BayanTanfidhi {
+        mimariya: mafkuk.mimariya,
+        ..BayanTanfidhi::default()
+    };
 
-    let Some(kutla) = kutlat_isdar(masar, &mafkuk) else { return Some(bayan) };
+    let Some(kutla) = kutlat_isdar(masar, &mafkuk) else {
+        return Some(bayan);
+    };
     bayan.ism_dakhili = qeemat_mawrid(&kutla, "InternalName");
     bayan.ism_muntaj = qeemat_mawrid(&kutla, "ProductName");
     bayan.isdar_muntaj = qeemat_mawrid(&kutla, "ProductVersion");
@@ -253,7 +258,10 @@ pub(crate) fn qism(masar: &Path, ism: &[u8]) -> Option<Qism> {
         if !qism.ism.starts_with(ism) || qism.hajm == 0 || qism.mawdi == 0 {
             continue;
         }
-        return Some(Qism { mawdi: u64::from(qism.mawdi), hajm: usize::try_from(qism.hajm).ok()? });
+        return Some(Qism {
+            mawdi: u64::from(qism.mawdi),
+            hajm: usize::try_from(qism.hajm).ok()?,
+        });
     }
     None
 }
@@ -289,8 +297,9 @@ fn tarwisa_pe(tarwisa: &[u8]) -> Option<TarwisaPe> {
 
     let mut maqati: Vec<TarwisatQism> = Vec::with_capacity(adad);
     for raqm in 0..adad {
-        let Some(madkhal) =
-            raqm.checked_mul(TUL_TARWISAT_QISM).and_then(|izaha| jadwal.checked_add(izaha))
+        let Some(madkhal) = raqm
+            .checked_mul(TUL_TARWISAT_QISM)
+            .and_then(|izaha| jadwal.checked_add(izaha))
         else {
             break;
         };
@@ -302,15 +311,30 @@ fn tarwisa_pe(tarwisa: &[u8]) -> Option<TarwisaPe> {
             break;
         };
         let (Some(mawdi_wahmi), Some(hajm), Some(mawdi)) = (
-            madkhal.checked_add(12).and_then(|izaha| raqm32_sagheer(tarwisa, izaha)),
-            madkhal.checked_add(16).and_then(|izaha| raqm32_sagheer(tarwisa, izaha)),
-            madkhal.checked_add(20).and_then(|izaha| raqm32_sagheer(tarwisa, izaha)),
+            madkhal
+                .checked_add(12)
+                .and_then(|izaha| raqm32_sagheer(tarwisa, izaha)),
+            madkhal
+                .checked_add(16)
+                .and_then(|izaha| raqm32_sagheer(tarwisa, izaha)),
+            madkhal
+                .checked_add(20)
+                .and_then(|izaha| raqm32_sagheer(tarwisa, izaha)),
         ) else {
             break;
         };
-        maqati.push(TarwisatQism { ism, mawdi_wahmi, mawdi, hajm });
+        maqati.push(TarwisatQism {
+            ism,
+            mawdi_wahmi,
+            mawdi,
+            hajm,
+        });
     }
-    Some(TarwisaPe { mimariya, maqati, mawarid })
+    Some(TarwisaPe {
+        mimariya,
+        maqati,
+        mawarid,
+    })
 }
 
 /// The resource tree's address, out of the optional header's data directory.
@@ -326,7 +350,10 @@ fn daleel_mawarid(tarwisa: &[u8], ikhtiyari: usize, hajm_ikhtiyari: usize) -> Op
     // `NumberOfRvaAndSizes` sits immediately in front of the table it counts,
     // and an image is allowed to declare fewer entries than the sixteen the
     // format defines.
-    let adad = raqm32_sagheer(tarwisa, ikhtiyari.checked_add(izahat_jadwal.checked_sub(4)?)?)?;
+    let adad = raqm32_sagheer(
+        tarwisa,
+        ikhtiyari.checked_add(izahat_jadwal.checked_sub(4)?)?,
+    )?;
     if usize::try_from(adad).ok()? <= RUTBAT_MAWARID {
         return None;
     }
@@ -349,7 +376,9 @@ fn mawdi_min_wahmi(maqati: &[TarwisatQism], wahmi: u32) -> Option<u64> {
         if qism.mawdi_wahmi == 0 || qism.mawdi == 0 {
             continue;
         }
-        let Some(dakhil) = wahmi.checked_sub(qism.mawdi_wahmi) else { continue };
+        let Some(dakhil) = wahmi.checked_sub(qism.mawdi_wahmi) else {
+            continue;
+        };
         if dakhil >= qism.hajm {
             continue;
         }
@@ -391,22 +420,34 @@ fn warqat_isdar(shajara: &[u8], maqati: &[TarwisatQism]) -> Option<(u64, usize)>
         if naw != NAW_MAWRID_ISDAR {
             continue;
         }
-        let Some(anwaa) = far_daleel(ila_anwaa) else { continue };
+        let Some(anwaa) = far_daleel(ila_anwaa) else {
+            continue;
+        };
         for (_, ila_asma) in madakhil_daleel(shajara, anwaa) {
-            let Some(asma) = far_daleel(ila_asma) else { continue };
+            let Some(asma) = far_daleel(ila_asma) else {
+                continue;
+            };
             for (_, ila_warqa) in madakhil_daleel(shajara, asma) {
                 if far_daleel(ila_warqa).is_some() {
                     continue;
                 }
-                let Ok(warqa) = usize::try_from(ila_warqa) else { continue };
+                let Ok(warqa) = usize::try_from(ila_warqa) else {
+                    continue;
+                };
                 let (Some(wahmi), Some(hajm)) = (
                     raqm32_sagheer(shajara, warqa),
-                    warqa.checked_add(4).and_then(|izaha| raqm32_sagheer(shajara, izaha)),
+                    warqa
+                        .checked_add(4)
+                        .and_then(|izaha| raqm32_sagheer(shajara, izaha)),
                 ) else {
                     continue;
                 };
-                let Ok(hajm) = usize::try_from(hajm) else { continue };
-                let Some(mawdi) = mawdi_min_wahmi(maqati, wahmi) else { continue };
+                let Ok(hajm) = usize::try_from(hajm) else {
+                    continue;
+                };
+                let Some(mawdi) = mawdi_min_wahmi(maqati, wahmi) else {
+                    continue;
+                };
                 if hajm == 0 {
                     continue;
                 }
@@ -425,24 +466,32 @@ fn warqat_isdar(shajara: &[u8], maqati: &[TarwisatQism]) -> Option<(u64, usize)>
 fn madakhil_daleel(shajara: &[u8], izaha: usize) -> Vec<(u32, u32)> {
     let mut kharij: Vec<(u32, u32)> = Vec::new();
     let (Some(bi_ism), Some(bi_raqm), Some(awwal)) = (
-        izaha.checked_add(12).and_then(|mawdi| raqm16_sagheer(shajara, mawdi)),
-        izaha.checked_add(14).and_then(|mawdi| raqm16_sagheer(shajara, mawdi)),
+        izaha
+            .checked_add(12)
+            .and_then(|mawdi| raqm16_sagheer(shajara, mawdi)),
+        izaha
+            .checked_add(14)
+            .and_then(|mawdi| raqm16_sagheer(shajara, mawdi)),
         izaha.checked_add(TUL_TARWISAT_DALEEL),
     ) else {
         return kharij;
     };
-    let adad =
-        usize::from(bi_ism).saturating_add(usize::from(bi_raqm)).min(AQSA_MADAKHIL_DALEEL);
+    let adad = usize::from(bi_ism)
+        .saturating_add(usize::from(bi_raqm))
+        .min(AQSA_MADAKHIL_DALEEL);
 
     for raqm in 0..adad {
-        let Some(madkhal) =
-            raqm.checked_mul(TUL_MADKHAL_DALEEL).and_then(|izaha| awwal.checked_add(izaha))
+        let Some(madkhal) = raqm
+            .checked_mul(TUL_MADKHAL_DALEEL)
+            .and_then(|izaha| awwal.checked_add(izaha))
         else {
             break;
         };
         let (Some(ism), Some(ila)) = (
             raqm32_sagheer(shajara, madkhal),
-            madkhal.checked_add(4).and_then(|izaha| raqm32_sagheer(shajara, izaha)),
+            madkhal
+                .checked_add(4)
+                .and_then(|izaha| raqm32_sagheer(shajara, izaha)),
         ) else {
             break;
         };
@@ -571,7 +620,10 @@ pub(crate) fn iqra_nafidha(masar: &Path, izaha: u64, hadd: usize) -> Option<Vec<
         return None;
     }
     let mut bayt = Vec::new();
-    let _ = malaf.take(u64::try_from(hadd).ok()?).read_to_end(&mut bayt).ok()?;
+    let _ = malaf
+        .take(u64::try_from(hadd).ok()?)
+        .read_to_end(&mut bayt)
+        .ok()?;
     Some(bayt)
 }
 
@@ -674,9 +726,21 @@ pub mod suwar {
     /// Builds the image `wasf` describes.
     pub(crate) fn sawwir(wasf: &Sura<'_>) -> Vec<u8> {
         let thalathi = wasf.alat == ALAT_32;
-        let hajm_ikhtiyari = if thalathi { HAJM_IKHTIYARI_32 } else { HAJM_IKHTIYARI_64 };
-        let izahat_jadwal = if thalathi { IZAHAT_JADWAL_32 } else { IZAHAT_JADWAL_64 };
-        let sihr = if thalathi { SIHR_IKHTIYARI_32 } else { SIHR_IKHTIYARI_64 };
+        let hajm_ikhtiyari = if thalathi {
+            HAJM_IKHTIYARI_32
+        } else {
+            HAJM_IKHTIYARI_64
+        };
+        let izahat_jadwal = if thalathi {
+            IZAHAT_JADWAL_32
+        } else {
+            IZAHAT_JADWAL_64
+        };
+        let sihr = if thalathi {
+            SIHR_IKHTIYARI_32
+        } else {
+            SIHR_IKHTIYARI_64
+        };
         let simat: u16 = if thalathi { 0x0102 } else { 0x0022 };
 
         // The resource section is mapped behind `.rdata`, so where its block
@@ -720,7 +784,10 @@ pub mod suwar {
         bayt.extend_from_slice(&sihr.to_le_bytes());
         bayt.resize(ikhtiyari.saturating_add(izahat_jadwal.saturating_sub(4)), 0);
         bayt.extend_from_slice(&ADAD_JADWAL.to_le_bytes());
-        bayt.resize(ikhtiyari.saturating_add(izahat_jadwal).saturating_add(16), 0);
+        bayt.resize(
+            ikhtiyari.saturating_add(izahat_jadwal).saturating_add(16),
+            0,
+        );
         bayt.extend_from_slice(&raqm(wahmi_mawarid).to_le_bytes());
         bayt.extend_from_slice(&raqm(hajm_mawarid).to_le_bytes());
         bayt.resize(ikhtiyari.saturating_add(hajm_ikhtiyari), 0);
@@ -867,8 +934,11 @@ mod ikhtibarat {
 
     /// Decodes a hex fixture, dropping anything that is not a hex digit.
     fn min_sitteen(nass: &str) -> Vec<u8> {
-        let arqam: Vec<u8> =
-            nass.bytes().filter(u8::is_ascii_hexdigit).map(qeemat_raqm).collect();
+        let arqam: Vec<u8> = nass
+            .bytes()
+            .filter(u8::is_ascii_hexdigit)
+            .map(qeemat_raqm)
+            .collect();
         arqam
             .chunks_exact(2)
             .filter_map(|zawj| match zawj {
@@ -908,10 +978,23 @@ mod ikhtibarat {
     #[test]
     fn qeema_faragha_tuqra_ka_ghiyab() {
         let kutla = min_sitteen(KUTLAT_FROSTBITE);
-        assert_eq!(qeemat_mawrid(&kutla, "InternalName"), None, "an empty value is absent");
-        assert_eq!(qeemat_mawrid(&kutla, "ProductName").as_deref(), Some("Frostbite"));
-        assert_eq!(qeemat_mawrid(&kutla, "ProductVersion").as_deref(), Some("2.42.5"));
-        assert_eq!(qeemat_mawrid(&kutla, "CompanyName").as_deref(), Some("Electronic Arts"));
+        assert_eq!(
+            qeemat_mawrid(&kutla, "InternalName"),
+            None,
+            "an empty value is absent"
+        );
+        assert_eq!(
+            qeemat_mawrid(&kutla, "ProductName").as_deref(),
+            Some("Frostbite")
+        );
+        assert_eq!(
+            qeemat_mawrid(&kutla, "ProductVersion").as_deref(),
+            Some("2.42.5")
+        );
+        assert_eq!(
+            qeemat_mawrid(&kutla, "CompanyName").as_deref(),
+            Some("Electronic Arts")
+        );
         assert_eq!(
             qeemat_mawrid(&kutla, "LegalCopyright").as_deref(),
             Some("Copyright (C) 2020 Electronic Arts Inc.")
@@ -939,7 +1022,10 @@ mod ikhtibarat {
         assert_eq!(bayan.ism_muntaj.as_deref(), Some("DARK SOULS: REMASTERED"));
         assert_eq!(bayan.sharika.as_deref(), Some("NAMCO BANDAI Games Inc."));
         assert!(
-            bayan.huquq.as_deref().is_some_and(|huquq| huquq.contains("FromSoftware")),
+            bayan
+                .huquq
+                .as_deref()
+                .is_some_and(|huquq| huquq.contains("FromSoftware")),
             "the copyright behind the block is read whole"
         );
         Ok(())

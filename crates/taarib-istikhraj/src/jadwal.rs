@@ -49,8 +49,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use taarib_mustalahat::muraja::SijillMuraja;
 use taarib_mustalahat::nass::{
-    MasdarIstikhraj, MudkhalNass, NassId, NawNasq, NitaqNasq, QuyudNass,
-    SiyaqNass, TasnifNass,
+    MasdarIstikhraj, MudkhalNass, NassId, NawNasq, NitaqNasq, QuyudNass, SiyaqNass, TasnifNass,
 };
 
 use crate::khata::KhataIstikhraj;
@@ -250,7 +249,10 @@ impl JadwalNusus {
     /// An empty table.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { madakhil: BTreeMap::new(), takrar: BTreeMap::new() }
+        Self {
+            madakhil: BTreeMap::new(),
+            takrar: BTreeMap::new(),
+        }
     }
 
     /// How many distinct strings the table holds.
@@ -313,10 +315,10 @@ impl JadwalNusus {
                 if mawjud.jiwar.is_empty() {
                     mawjud.jiwar = madkhal.jiwar;
                 }
-            }
+            },
             None => {
                 let _ = self.madakhil.insert(id, madkhal);
-            }
+            },
         }
     }
 
@@ -536,12 +538,11 @@ impl FarqJadwal {
 pub fn irfa_nasq(khaam: &str) -> Result<(String, Vec<NitaqNasq>), KhataIstikhraj> {
     use taarib_saff::nasq::{KhiyaratNasq, istakhrij};
 
-    let naqi = istakhrij(khaam, &KhiyaratNasq::default()).map_err(|khata| {
-        KhataIstikhraj::NasqTalif {
+    let naqi =
+        istakhrij(khaam, &KhiyaratNasq::default()).map_err(|khata| KhataIstikhraj::NasqTalif {
             nass: khaam.chars().take(64).collect(),
             sabab: khata.injilizi,
-        }
-    })?;
+        })?;
 
     // The atom table first, keyed by the span that carries it. An atom's span
     // says only "this is opaque and this wide"; the raw text a translation is
@@ -555,7 +556,12 @@ pub fn irfa_nasq(khaam: &str) -> Result<(String, Vec<NitaqNasq>), KhataIstikhraj
     for nitaq in &naqi.nitaqat {
         let zakhrafa = naqi.zakhrafat_nitaq(nitaq.id);
         for naw in anwa_min_uslub(&nitaq.uslub, dharrat.get(&nitaq.id).copied(), zakhrafa) {
-            nitaqat.push(NitaqNasq { id: nitaq.id, bidaya: nitaq.bidaya, tul: nitaq.tul, naw });
+            nitaqat.push(NitaqNasq {
+                id: nitaq.id,
+                bidaya: nitaq.bidaya,
+                tul: nitaq.tul,
+                naw,
+            });
         }
     }
     Ok((naqi.nass, nitaqat))
@@ -585,10 +591,12 @@ fn anwa_min_uslub(
             // a variable and a command are all text the engine substitutes. The
             // vocabulary distinguishes only those two, because that is the
             // distinction the layout engine acts on.
-            NawDharra::Sura => NawNasq::Sura { marja: dharra.khaam.clone() },
-            NawDharra::Mawdi | NawDharra::Mutaghayyir | NawDharra::Amr => {
-                NawNasq::Mawdi { khaam: dharra.khaam.clone() }
-            }
+            NawDharra::Sura => NawNasq::Sura {
+                marja: dharra.khaam.clone(),
+            },
+            NawDharra::Mawdi | NawDharra::Mutaghayyir | NawDharra::Amr => NawNasq::Mawdi {
+                khaam: dharra.khaam.clone(),
+            },
         }];
     }
 
@@ -600,14 +608,18 @@ fn anwa_min_uslub(
         anwa.push(NawNasq::Hajm { qeema: hajm });
     }
     if let Some(lawn) = uslub.lawn {
-        anwa.push(NawNasq::Lawn { qeema: sittasi(lawn) });
+        anwa.push(NawNasq::Lawn {
+            qeema: sittasi(lawn),
+        });
     }
     if let Some(khatt) = uslub.khatt {
         // The chain index, not a family name: `saff` resolves families to chain
         // positions before layout and the name is gone by here. Recorded as the
         // index it is rather than invented as a name, so a writer putting this
         // back can look the index up in the same chain.
-        anwa.push(NawNasq::Khatt { ism: format!("#{khatt}") });
+        anwa.push(NawNasq::Khatt {
+            ism: format!("#{khatt}"),
+        });
     }
     if let Some(wazn) = uslub.wazn {
         // A variable-font weight at or above semibold is what the markup
@@ -624,7 +636,7 @@ fn anwa_min_uslub(
     match zakhrafa {
         Some(Zakhrafa::TahtKhat) => anwa.push(NawNasq::TahtKhat),
         Some(Zakhrafa::Shatb) => anwa.push(NawNasq::Shatb),
-        None => {}
+        None => {},
     }
     anwa
 }

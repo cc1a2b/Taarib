@@ -25,8 +25,8 @@
 //! layout is the price of that never happening.
 
 use js_sys::{Float32Array, Uint32Array};
-use taarib_saff::natija::{TakhtitNass, TaqreerTajawuz};
 use taarib_saff::nasq::{self, NassNaqi};
+use taarib_saff::natija::{TakhtitNass, TaqreerTajawuz};
 use taarib_saff::qiyas::QiyasNass;
 use taarib_saff::talab::Ittijah;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -333,7 +333,9 @@ impl TaaribTakhtit {
     #[wasm_bindgen(getter)]
     #[must_use]
     pub fn tajawuz(&self) -> Option<TaaribTajawuz> {
-        self.takhtit.tajawuz.map(|taqreer| TaaribTajawuz { taqreer })
+        self.takhtit
+            .tajawuz
+            .map(|taqreer| TaaribTajawuz { taqreer })
     }
 
     /// Every distinct `(font index, glyph identifier)` this layout draws, as
@@ -442,7 +444,9 @@ impl TaaribTakhtitKhaam {
     #[wasm_bindgen(getter)]
     #[must_use]
     pub fn tajawuz(&self) -> Option<TaaribTajawuz> {
-        self.takhtit.tajawuz.map(|taqreer| TaaribTajawuz { taqreer })
+        self.takhtit
+            .tajawuz
+            .map(|taqreer| TaaribTajawuz { taqreer })
     }
 
     /// Every distinct `(font index, glyph identifier)` this layout draws, as
@@ -464,7 +468,10 @@ impl TaaribTakhtitKhaam {
     /// own escape-code handling against.
     #[must_use]
     pub fn dharra_khaam(&self, fahras: u32) -> Option<String> {
-        self.naqi.dharrat.get(qusize(fahras)).map(|dharra| dharra.khaam.clone())
+        self.naqi
+            .dharrat
+            .get(qusize(fahras))
+            .map(|dharra| dharra.khaam.clone())
     }
 
     /// The identifier of the span that carries the atom, or `undefined` past
@@ -472,19 +479,25 @@ impl TaaribTakhtitKhaam {
     /// the atom.
     #[must_use]
     pub fn dharra_nitaq(&self, fahras: u32) -> Option<u16> {
-        self.naqi.dharrat.get(qusize(fahras)).map(|dharra| dharra.nitaq)
+        self.naqi
+            .dharrat
+            .get(qusize(fahras))
+            .map(|dharra| dharra.nitaq)
     }
 
     /// What the atom stands for, as a [`NawDharra`] value, or `undefined`
     /// past the end.
     #[must_use]
     pub fn dharra_naw(&self, fahras: u32) -> Option<u32> {
-        self.naqi.dharrat.get(qusize(fahras)).map(|dharra| match dharra.naw {
-            nasq::NawDharra::Mawdi => 0,
-            nasq::NawDharra::Sura => 1,
-            nasq::NawDharra::Mutaghayyir => 2,
-            nasq::NawDharra::Amr => 3,
-        })
+        self.naqi
+            .dharrat
+            .get(qusize(fahras))
+            .map(|dharra| match dharra.naw {
+                nasq::NawDharra::Mawdi => 0,
+                nasq::NawDharra::Sura => 1,
+                nasq::NawDharra::Mutaghayyir => 2,
+                nasq::NawDharra::Amr => 3,
+            })
     }
 
     /// The positional index the dialect wrote — the `3` of `\I[3]`, the `0`
@@ -492,7 +505,10 @@ impl TaaribTakhtitKhaam {
     /// end. Kept exactly as written, never renumbered between dialects.
     #[must_use]
     pub fn dharra_tarteeb(&self, fahras: u32) -> Option<u32> {
-        self.naqi.dharrat.get(qusize(fahras)).and_then(|dharra| dharra.tarteeb)
+        self.naqi
+            .dharrat
+            .get(qusize(fahras))
+            .and_then(|dharra| dharra.tarteeb)
     }
 }
 
@@ -512,10 +528,18 @@ impl TaaribTakhtitKhaam {
               format documents both bounds"
 )]
 pub(crate) fn sufuf_huruf(takhtit: &TakhtitNass) -> Float32Array {
-    let mut mabni: Vec<f32> =
-        Vec::with_capacity(takhtit.huruf.len().saturating_mul(qusize(HaqlHarf::Adad as u32)));
+    let mut mabni: Vec<f32> = Vec::with_capacity(
+        takhtit
+            .huruf
+            .len()
+            .saturating_mul(qusize(HaqlHarf::Adad as u32)),
+    );
     for harf in &takhtit.huruf {
-        let alam: u32 = if harf.alama { AlamHarf::Alama as u32 } else { 0 };
+        let alam: u32 = if harf.alama {
+            AlamHarf::Alama as u32
+        } else {
+            0
+        };
         mabni.push(harf.muarrif as f32);
         mabni.push(harf.anqud as f32);
         mabni.push(harf.s);
@@ -536,8 +560,12 @@ pub(crate) fn sufuf_huruf(takhtit: &TakhtitNass) -> Float32Array {
               single layout approaches sixteen million glyphs or sixteen megabytes of text"
 )]
 pub(crate) fn sufuf_sutur(takhtit: &TakhtitNass) -> Float32Array {
-    let mut mabni: Vec<f32> =
-        Vec::with_capacity(takhtit.sutur.len().saturating_mul(qusize(HaqlSatr::Adad as u32)));
+    let mut mabni: Vec<f32> = Vec::with_capacity(
+        takhtit
+            .sutur
+            .len()
+            .saturating_mul(qusize(HaqlSatr::Adad as u32)),
+    );
     for satr in &takhtit.sutur {
         let mut alam: u32 = 0;
         if satr.akhir {

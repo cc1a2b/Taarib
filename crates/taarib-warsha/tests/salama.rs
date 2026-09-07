@@ -26,9 +26,7 @@ use taarib_mustalahat::nass::{
     MasdarIstikhraj, MudkhalNass, NassId, QuyudNass, SiyaqNass, TasnifNass,
 };
 use taarib_warsha::khata::KhataWarsha;
-use taarib_warsha::salama::{
-    self, HalatNusus, MalafTaqreerInqadh, SababTalaf, WASM_TALIF,
-};
+use taarib_warsha::salama::{self, HalatNusus, MalafTaqreerInqadh, SababTalaf, WASM_TALIF};
 
 /// The moment every write in these tests carries.
 const WAQT: &str = "2026-09-06T10:00:00Z";
@@ -88,8 +86,9 @@ fn mashru_jadeed(jidhr: &Path) -> MashruMaftuh {
 /// A project of `adad` good rows, committed to disk.
 fn mashru_bi_sufuf(jidhr: &Path, adad: usize) -> MashruMaftuh {
     let mut mashru = mashru_jadeed(jidhr);
-    let sufuf: Vec<MudkhalNass> =
-        (0..adad).map(|raqm| saf(&format!("menu/{raqm}"), &format!("Option {raqm}"))).collect();
+    let sufuf: Vec<MudkhalNass> = (0..adad)
+        .map(|raqm| saf(&format!("menu/{raqm}"), &format!("Option {raqm}")))
+        .collect();
     mashru.adif(sufuf).expect("rows accepted");
     mashru.ikhtim(WAQT.to_owned()).expect("project closed");
     mashru
@@ -112,7 +111,13 @@ fn atlif(jidhr: &Path) {
 fn asma(jidhr: &Path) -> Vec<String> {
     let mut asma: Vec<String> = std::fs::read_dir(jidhr)
         .expect("the project directory lists")
-        .map(|mudkhal| mudkhal.expect("an entry").file_name().to_string_lossy().into_owned())
+        .map(|mudkhal| {
+            mudkhal
+                .expect("an entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
         .collect();
     asma.sort();
     asma
@@ -145,7 +150,10 @@ fn altalifa_tuhsa_bi_arqamiha_wa_asbabiha() {
 
     let tarmiz = &qiraa.talifa[1];
     assert_eq!(tarmiz.sabab, SababTalaf::Tarmiz);
-    assert_eq!(tarmiz.huwiya, None, "a head cut inside the identity is not guessed");
+    assert_eq!(
+        tarmiz.huwiya, None,
+        "a head cut inside the identity is not guessed"
+    );
     assert_eq!(tarmiz.tul, BAYT_TALIFA.len());
 
     let gharib = &qiraa.talifa[2];
@@ -165,7 +173,10 @@ fn alqiraa_la_taktub_shayan() {
 
     let _ = salama::iqra_nusus(&mashru).expect("the file reads");
 
-    assert_eq!(std::fs::read(muaqqat.path().join(MALAF_NUSUS)).unwrap(), qabl);
+    assert_eq!(
+        std::fs::read(muaqqat.path().join(MALAF_NUSUS)).unwrap(),
+        qabl
+    );
     assert_eq!(asma(muaqqat.path()), asma_qabl);
 }
 
@@ -218,7 +229,12 @@ fn alinqadh_yahfaz_alasl_bayt_bi_bayt_thumma_yuktub_alnajin() {
 
     let mahfudh = std::fs::read(&taqreer.mahfudh).expect("the preserved copy exists");
     assert_eq!(mahfudh, asl, "the damaged file is preserved byte for byte");
-    let ism_mahfudh = taqreer.mahfudh.file_name().unwrap().to_string_lossy().into_owned();
+    let ism_mahfudh = taqreer
+        .mahfudh
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .into_owned();
     assert_eq!(ism_mahfudh, format!("{WASM_TALIF}.20260906T100000Z.jsonl"));
 
     let marfud = std::fs::read(&taqreer.marfud).expect("the rejected lines exist");
@@ -229,7 +245,10 @@ fn alinqadh_yahfaz_alasl_bayt_bi_bayt_thumma_yuktub_alnajin() {
     mutawaqqa.push(b'\n');
     mutawaqqa.extend_from_slice(SHAKL_GHARIB.as_bytes());
     mutawaqqa.push(b'\n');
-    assert_eq!(marfud, mutawaqqa, "exactly the damaged lines, raw, in order");
+    assert_eq!(
+        marfud, mutawaqqa,
+        "exactly the damaged lines, raw, in order"
+    );
 
     let bayt_taqreer = std::fs::read(&taqreer.taqreer).expect("the report exists");
     let malaf: MalafTaqreerInqadh =
@@ -246,10 +265,17 @@ fn alinqadh_yahfaz_alasl_bayt_bi_bayt_thumma_yuktub_alnajin() {
     let baad = salama::iqra_nusus(&mashru).expect("the live table reads");
     assert_eq!(baad.hala(), HalatNusus::Salima);
     assert_eq!(baad.sufuf.len(), 5);
-    assert_eq!(mashru.rasm().adad, 5, "the header counts what the live table holds");
+    assert_eq!(
+        mashru.rasm().adad,
+        5,
+        "the header counts what the live table holds"
+    );
 
     let (sufuf_asl, _) = salama::hallil_jsonl(&asl);
-    assert_eq!(baad.sufuf, sufuf_asl, "the survivors are the rows that read, unchanged");
+    assert_eq!(
+        baad.sufuf, sufuf_asl,
+        "the survivors are the rows that read, unchanged"
+    );
 }
 
 #[test]
@@ -263,7 +289,10 @@ fn alinqadh_yarfud_bila_talaf_wa_la_yaktub() {
 
     assert!(matches!(natija, Err(KhataWarsha::LaTalaf)));
     assert_eq!(asma(muaqqat.path()), asma_qabl, "nothing was written");
-    assert_eq!(std::fs::read(muaqqat.path().join(MALAF_NUSUS)).unwrap(), qabl);
+    assert_eq!(
+        std::fs::read(muaqqat.path().join(MALAF_NUSUS)).unwrap(),
+        qabl
+    );
 }
 
 #[test]
@@ -277,7 +306,10 @@ fn alinqadh_marratayn_la_yaktub_fawq_almahfudh() {
     atlif(muaqqat.path());
     let thani = salama::anqidh(&mut mashru, WAQT).expect("the second rescue runs");
 
-    assert_ne!(thani.mahfudh, awwal.mahfudh, "a second rescue at the same moment gets a new name");
+    assert_ne!(
+        thani.mahfudh, awwal.mahfudh,
+        "a second rescue at the same moment gets a new name"
+    );
     assert_eq!(
         std::fs::read(&awwal.mahfudh).unwrap(),
         mahfudh_awwal,
@@ -294,7 +326,10 @@ fn alinqadh_ala_malaf_kullihi_talif_yutriku_jadwalan_farighan_wa_yahfaz_alasl() 
 
     let qabl = salama::iqra_nusus(&mashru).unwrap();
     assert_eq!(qabl.hala(), HalatNusus::Talifa);
-    assert!(qabl.sufuf.is_empty(), "nothing read, and that is not an empty project");
+    assert!(
+        qabl.sufuf.is_empty(),
+        "nothing read, and that is not an empty project"
+    );
 
     let taqreer = salama::anqidh(&mut mashru, WAQT).expect("the rescue runs");
 

@@ -214,7 +214,11 @@ impl Matjar for MatjarEa {
                 if masar.is_dir() && masar_bayan(&masar).is_file() {
                     damm_murashah(
                         &mut murashahat,
-                        MurashahEa { jidhr: masar, muarrif: None, muktamila: true },
+                        MurashahEa {
+                            jidhr: masar,
+                            muarrif: None,
+                            muktamila: true,
+                        },
                         siyaq.nizam,
                     );
                 }
@@ -234,7 +238,9 @@ impl Matjar for MatjarEa {
             }
         }
 
-        natija.alaab.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
+        natija
+            .alaab
+            .sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
         natija.muddat = bidaya.elapsed();
         Ok(natija)
     }
@@ -464,7 +470,11 @@ fn murashah_min_mfst(masar: &Path) -> Result<Option<MurashahEa>, TanbihFahs> {
         .map(String::as_str)
         .is_none_or(|hala| hala.eq_ignore_ascii_case("kCompleted"));
 
-    Ok(Some(MurashahEa { jidhr, muarrif, muktamila }))
+    Ok(Some(MurashahEa {
+        jidhr,
+        muarrif,
+        muktamila,
+    }))
 }
 
 /// Splits a URL-encoded query string into its pairs.
@@ -507,8 +517,14 @@ fn fak_tarmiz(nass: &str) -> String {
                 fahras = fahras.saturating_add(1);
             },
             b'%' => {
-                let ala = bayt.get(fahras.saturating_add(1)).copied().and_then(raqm_sittashari);
-                let adna = bayt.get(fahras.saturating_add(2)).copied().and_then(raqm_sittashari);
+                let ala = bayt
+                    .get(fahras.saturating_add(1))
+                    .copied()
+                    .and_then(raqm_sittashari);
+                let adna = bayt
+                    .get(fahras.saturating_add(2))
+                    .copied()
+                    .and_then(raqm_sittashari);
                 if let (Some(ala), Some(adna)) = (ala, adna) {
                     kharij.push((ala << 4) | adna);
                     fahras = fahras.saturating_add(3);
@@ -573,7 +589,9 @@ struct BayanTathbeetEa {
 
 /// The per-install manifest path for an install root.
 fn masar_bayan(jidhr: &Path) -> PathBuf {
-    BAYAN_TATHBEET.iter().fold(jidhr.to_path_buf(), |mabni, juz| mabni.join(juz))
+    BAYAN_TATHBEET
+        .iter()
+        .fold(jidhr.to_path_buf(), |mabni, juz| mabni.join(juz))
 }
 
 /// Walks an installer manifest, keeping what it recognises.
@@ -629,11 +647,9 @@ fn iqra_bayan_tathbeet(nass: &str) -> BayanTathbeetEa {
                 }
             },
             Ok(Event::Text(nass_unsur)) => madad.push_str(&nass_unsur.xml10_content()),
-            Ok(Event::GeneralRef(marja)) => {
-                match taarib_usus::kayanat::hall_marja(&marja) {
-                    Some(hall) => madad.push_str(&hall),
-                    None => madad.push_str(&taarib_usus::kayanat::nass_marja(&marja)),
-                }
+            Ok(Event::GeneralRef(marja)) => match taarib_usus::kayanat::hall_marja(&marja) {
+                Some(hall) => madad.push_str(&hall),
+                None => madad.push_str(&taarib_usus::kayanat::nass_marja(&marja)),
             },
             Ok(Event::End(unsur)) => {
                 let ism_nihaya = ism_unsur(unsur.name().local_name().as_ref());
@@ -854,7 +870,11 @@ fn imtidad_hua(masar: &Path, imtidad: &str) -> bool {
 fn muwahhad(masar: &Path, nizam: NizamTashghil) -> String {
     let nass = masar.to_string_lossy().replace('\\', "/");
     let nass = nass.trim_end_matches('/').to_owned();
-    if nizam.hassas_lil_ahruf() { nass } else { nass.to_lowercase() }
+    if nizam.hassas_lil_ahruf() {
+        nass
+    } else {
+        nass.to_lowercase()
+    }
 }
 
 /// Strips a byte order mark, which the installer writes in front of some
@@ -904,7 +924,11 @@ mod ikhtibarat {
             Some(bayanat.join("EA Desktop")),
             "the data root must come from the context"
         );
-        assert_eq!(judhur_matjar(&siyaq).len(), 2, "both client roots are real here");
+        assert_eq!(
+            judhur_matjar(&siyaq).len(),
+            2,
+            "both client roots are real here"
+        );
         Ok(())
     }
 
@@ -924,8 +948,10 @@ mod ikhtibarat {
     #[test]
     fn judhur_al_tathbeet_min_mujalladat_al_baramij() -> NatijatIkhtibar {
         let masrah = tempfile::tempdir()?;
-        let baramij =
-            [masrah.path().join("Program Files (x86)"), masrah.path().join("Program Files")];
+        let baramij = [
+            masrah.path().join("Program Files (x86)"),
+            masrah.path().join("Program Files"),
+        ];
         fs::create_dir_all(baramij[0].join("Origin Games"))?;
         fs::create_dir_all(baramij[1].join("EA Games"))?;
 
@@ -933,9 +959,16 @@ mod ikhtibarat {
         // on a machine whose Windows is not on `C:` the old code looked in a
         // folder that was not there.
         let judhur = judhur_tathbeet(&siyaq(masrah.path(), None, &baramij), &[]);
-        assert!(judhur.contains(&baramij[0].join("Origin Games")), "{judhur:?}");
+        assert!(
+            judhur.contains(&baramij[0].join("Origin Games")),
+            "{judhur:?}"
+        );
         assert!(judhur.contains(&baramij[1].join("EA Games")), "{judhur:?}");
-        assert_eq!(judhur.len(), 2, "only the directories that exist: {judhur:?}");
+        assert_eq!(
+            judhur.len(),
+            2,
+            "only the directories that exist: {judhur:?}"
+        );
         Ok(())
     }
 }

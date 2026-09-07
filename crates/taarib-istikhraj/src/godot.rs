@@ -57,11 +57,9 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use taarib_muhawwil_godot::khata::KhataGodot;
-use taarib_muhawwil_godot::pck::hawiya::HawiyaMaftuha;
-use taarib_muhawwil_godot::pck::tarjama::{
-    MawridTarjama, Qeema, Tarjama, TarjamaMurakkaza,
-};
 use taarib_muhawwil_godot::pck::Mawrid as _;
+use taarib_muhawwil_godot::pck::hawiya::HawiyaMaftuha;
+use taarib_muhawwil_godot::pck::tarjama::{MawridTarjama, Qeema, Tarjama, TarjamaMurakkaza};
 use taarib_mustalahat::nass::TasnifNass;
 
 use crate::jadwal::{JadwalNusus, MawqiNass};
@@ -150,8 +148,15 @@ pub fn istakhrij(jidhr: &Path) -> (JadwalNusus, TaqreerRafd) {
         let hawiya = nisbi(jidhr, masar);
         match qira_nass(masar) {
             Ok(nass) => {
-                sajjil_po(&mut jadwal, &mut taqreer, &mut muarrifat, &hawiya, None, &nass);
-            }
+                sajjil_po(
+                    &mut jadwal,
+                    &mut taqreer,
+                    &mut muarrifat,
+                    &hawiya,
+                    None,
+                    &nass,
+                );
+            },
             Err(khata) => taqreer.sajjil(hawiya, None, sabab_min_khata(&khata)),
         }
     }
@@ -163,7 +168,7 @@ pub fn istakhrij(jidhr: &Path) -> (JadwalNusus, TaqreerRafd) {
                 if sajjil_mashhad(&mut jadwal, &mut taqreer, &hawiya, None, &nass) == 0 {
                     taqreer.sajjil(hawiya, None, SababRafd::BilaNusus);
                 }
-            }
+            },
             Err(khata) => taqreer.sajjil(hawiya, None, sabab_min_khata(&khata)),
         }
     }
@@ -180,7 +185,14 @@ pub fn istakhrij(jidhr: &Path) -> (JadwalNusus, TaqreerRafd) {
     }
 
     for (hawiya, asl, murakkaza) in murakkazat {
-        sajjil_murakkaza(&mut jadwal, &mut taqreer, &muarrifat, &hawiya, asl, &murakkaza);
+        sajjil_murakkaza(
+            &mut jadwal,
+            &mut taqreer,
+            &muarrifat,
+            &hawiya,
+            asl,
+            &murakkaza,
+        );
     }
 
     (jadwal, taqreer)
@@ -222,7 +234,7 @@ fn masarat_lil_mash(jidhr: &Path) -> MasaratGodot {
             "po" => masarat.po.push(masar),
             "tscn" | "tres" => masarat.mashhad.push(masar),
             "pck" => masarat.hazma.push(masar),
-            _ => {}
+            _ => {},
         }
     }
 
@@ -248,11 +260,15 @@ fn min_hazma(
         Err(khata) => {
             taqreer.sajjil(hawiya, None, sabab_min_khata(&khata));
             return;
-        }
+        },
     };
 
-    let masarat: Vec<String> =
-        hazma.hawiya().madakhil().iter().map(|madkhal| madkhal.masar.clone()).collect();
+    let masarat: Vec<String> = hazma
+        .hawiya()
+        .madakhil()
+        .iter()
+        .map(|madkhal| madkhal.masar.clone())
+        .collect();
     if masarat.is_empty() {
         taqreer.sajjil(hawiya, None, SababRafd::BilaNusus);
         return;
@@ -282,7 +298,7 @@ fn min_hazma(
                     Some(asl.clone()),
                     &bayt,
                 );
-            }
+            },
             "po" => {
                 let Some(bayt) = istakhrij_udw(&hazma, &mut mujammi, asl) else {
                     continue;
@@ -290,7 +306,7 @@ fn min_hazma(
                 match std::str::from_utf8(&bayt) {
                     Ok(nass) => {
                         sajjil_po(jadwal, taqreer, muarrifat, &hawiya, Some(asl.clone()), nass);
-                    }
+                    },
                     Err(khata) => taqreer.sajjil(
                         hawiya.clone(),
                         Some(asl.clone()),
@@ -302,7 +318,7 @@ fn min_hazma(
                         },
                     ),
                 }
-            }
+            },
             "tscn" | "tres" => {
                 let Some(bayt) = istakhrij_udw(&hazma, &mut mujammi, asl) else {
                     continue;
@@ -312,7 +328,7 @@ fn min_hazma(
                         if sajjil_mashhad(jadwal, taqreer, &hawiya, Some(asl), nass) == 0 {
                             bila_nusus = bila_nusus.saturating_add(1);
                         }
-                    }
+                    },
                     Err(khata) => mujammi.sajjil(
                         asl.clone(),
                         SababRafd::Talif {
@@ -323,7 +339,7 @@ fn min_hazma(
                         },
                     ),
                 }
-            }
+            },
             "res" | "scn" => {
                 if mizaniya == 0 {
                     mashahid_marfuda = mashahid_marfuda.saturating_add(1);
@@ -340,11 +356,11 @@ fn min_hazma(
                 mizaniya = mizaniya.saturating_sub(tul);
                 match sajjil_mawrid_binai(jadwal, taqreer, &hawiya, Some(asl), &bayt) {
                     Some(0) => bila_nusus = bila_nusus.saturating_add(1),
-                    Some(_) => {}
+                    Some(_) => {},
                     None => mashahid_marfuda = mashahid_marfuda.saturating_add(1),
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
@@ -384,17 +400,13 @@ fn min_hazma(
 /// the export encrypted is refused here, and the refusal is what the report
 /// needs: it is the one whose remedy is capture, and the one whose absence made
 /// an encrypted game read as an empty one.
-fn istakhrij_udw(
-    hazma: &HawiyaMaftuha,
-    mujammi: &mut MujammiRafd,
-    asl: &str,
-) -> Option<Vec<u8>> {
+fn istakhrij_udw(hazma: &HawiyaMaftuha, mujammi: &mut MujammiRafd, asl: &str) -> Option<Vec<u8>> {
     match hazma.istakhrij(asl, None) {
         Ok(bayt) => Some(bayt),
         Err(khata) => {
             mujammi.sajjil(asl.to_owned(), sabab_min_khata(&khata));
             None
-        }
+        },
     }
 }
 
@@ -417,7 +429,7 @@ fn sajjil_tarjama(
         Err(khata) => {
             taqreer.sajjil(hawiya.to_owned(), asl, sabab_min_khata(&khata));
             return;
-        }
+        },
     };
 
     if mawrid.murakkaza() {
@@ -444,7 +456,7 @@ fn sajjil_tarjama(
         Err(khata) => {
             taqreer.sajjil(hawiya.to_owned(), asl, sabab_min_khata(&khata));
             return;
-        }
+        },
     };
 
     let thaqafa = tarjama.thaqafa().to_owned();
@@ -513,12 +525,20 @@ fn sajjil_murakkaza(
                 if khaam.trim().is_empty() {
                     continue;
                 }
-                adif_risala(jadwal, hawiya, asl.as_ref(), &thaqafa, muarrif, &khaam, "message");
+                adif_risala(
+                    jadwal,
+                    hawiya,
+                    asl.as_ref(),
+                    &thaqafa,
+                    muarrif,
+                    &khaam,
+                    "message",
+                );
                 adad = adad.saturating_add(1);
-            }
+            },
             // A miss is the ordinary case: an id from one locale's catalogue
             // simply is not in this table.
-            Ok(None) => {}
+            Ok(None) => {},
             // A SMAZ-compressed entry. The reader refuses to expand it rather
             // than guessing at the codebook, so the string is lost and counted
             // rather than replaced with something plausible.
@@ -546,7 +566,10 @@ fn sajjil_murakkaza(
          message ids from this game's plain catalogues"
     );
     if madghut > 0 {
-        let _ = write!(wasf, "; {madghut} entr(y/ies) are SMAZ-compressed and were not expanded");
+        let _ = write!(
+            wasf,
+            "; {madghut} entr(y/ies) are SMAZ-compressed and were not expanded"
+        );
     }
     taqreer.sajjil_qira(hawiya.to_owned(), adad, wasf);
 }
@@ -646,7 +669,7 @@ fn adif_qeema(
             }
             adif_khasiya(jadwal, hawiya, asl, naw, masar, nass);
             1
-        }
+        },
         Qeema::Nusus(nusus) => {
             let mut adad = 0_usize;
             for (khana, nass) in nusus.iter().enumerate() {
@@ -657,17 +680,15 @@ fn adif_qeema(
                 adad = adad.saturating_add(1);
             }
             adad
-        }
+        },
         Qeema::Masfufa { anasir, .. } => {
             let mut adad = 0_usize;
             for (khana, unsur) in anasir.iter().enumerate() {
                 let dakhili = format!("{masar}[{khana}]");
-                adad = adad.saturating_add(adif_qeema(
-                    jadwal, hawiya, asl, naw, &dakhili, unsur,
-                ));
+                adad = adad.saturating_add(adif_qeema(jadwal, hawiya, asl, naw, &dakhili, unsur));
             }
             adad
-        }
+        },
         Qeema::Qamus { azwaj, .. } => {
             let mut adad = 0_usize;
             for (miftah, qeemat_zawj) in azwaj {
@@ -690,7 +711,7 @@ fn adif_qeema(
                 ));
             }
             adad
-        }
+        },
         Qeema::Faragh
         | Qeema::Mantiqi(_)
         | Qeema::Sahih(_)
@@ -821,14 +842,14 @@ fn madakhil_po(nass: &str) -> (Vec<MadkhalPo>, Option<String>) {
                     if let Some(siyaq) = hali.siyaq.as_mut() {
                         siyaq.push_str(&qitaa);
                     }
-                }
+                },
                 HaqlPo::Muarrif => hali.muarrif.push_str(&qitaa),
                 HaqlPo::Tarjama => {
                     if let Some(akhir) = hali.tarjamat.last_mut() {
                         akhir.push_str(&qitaa);
                     }
-                }
-                HaqlPo::Laashay => {}
+                },
+                HaqlPo::Laashay => {},
             }
         }
     }
@@ -859,11 +880,7 @@ impl HaqlPo {
 }
 
 /// Files a finished entry, pulling the locale out of the header entry.
-fn khatim_madkhal(
-    madakhil: &mut Vec<MadkhalPo>,
-    lugha: &mut Option<String>,
-    madkhal: MadkhalPo,
-) {
+fn khatim_madkhal(madakhil: &mut Vec<MadkhalPo>, lugha: &mut Option<String>, madkhal: MadkhalPo) {
     if madkhal.muarrif.is_empty() && madkhal.siyaq.is_none() {
         if lugha.is_none() {
             *lugha = madkhal
@@ -916,7 +933,11 @@ fn sajjil_po(
     let mut adad = 0_usize;
     for madkhal in &madakhil {
         let _ = muarrifat.insert(madkhal.muarrif.clone());
-        let tarjama = madkhal.tarjamat.first().map(String::as_str).unwrap_or_default();
+        let tarjama = madkhal
+            .tarjamat
+            .first()
+            .map(String::as_str)
+            .unwrap_or_default();
         let (khaam, haql) = if tarjama.trim().is_empty() {
             (madkhal.muarrif.as_str(), "msgid")
         } else {
@@ -944,7 +965,9 @@ fn sajjil_po(
             // same string.
             miftah_muharrik: Some(format!("{thaqafa}\u{1}{muarrif}")),
         };
-        jadwal.adif(ansha_mudkhal(TalabMudkhal::jadeed(mawqi, khaam).bi_nizam_tawtin()));
+        jadwal.adif(ansha_mudkhal(
+            TalabMudkhal::jadeed(mawqi, khaam).bi_nizam_tawtin(),
+        ));
         adad = adad.saturating_add(1);
     }
 
@@ -994,7 +1017,10 @@ fn sajjil_mashhad(
             continue;
         }
 
-        if let Some(jism) = munaqqa.strip_prefix('[').and_then(|juz| juz.strip_suffix(']')) {
+        if let Some(jism) = munaqqa
+            .strip_prefix('[')
+            .and_then(|juz| juz.strip_suffix(']'))
+        {
             let (naw, sifat) = qism_mashhad(jism);
             mawqi_hali = masar_qism(naw, &sifat, &mut jidhr_mashhad);
             continue;
@@ -1013,7 +1039,11 @@ fn sajjil_mashhad(
             if khaam.trim().is_empty() {
                 continue;
             }
-            let haql = if khana == 0 { ism.to_owned() } else { format!("{ism}[{khana}]") };
+            let haql = if khana == 0 {
+                ism.to_owned()
+            } else {
+                format!("{ism}[{khana}]")
+            };
             let mawqi = MawqiNass {
                 hawiya: hawiya.to_owned(),
                 asl: asl.cloned(),
@@ -1022,8 +1052,7 @@ fn sajjil_mashhad(
                 miftah_muharrik: None,
             };
             let mut talab = TalabMudkhal::jadeed(mawqi, &khaam);
-            if let Some((_, tasnif)) = KHASAIS_MARSUMA.iter().find(|(marsuma, _)| *marsuma == ism)
-            {
+            if let Some((_, tasnif)) = KHASAIS_MARSUMA.iter().find(|(marsuma, _)| *marsuma == ism) {
                 talab = talab.bi_tasrih(*tasnif, THIQAT_KHASIYA);
             }
             jadwal.adif(ansha_mudkhal(talab));
@@ -1113,7 +1142,10 @@ fn qism_mashhad(jism: &str) -> (&str, Vec<(String, String)>) {
 /// then Phase 14 would write one node's Arabic into the other.
 fn masar_qism(naw: &str, sifat: &[(String, String)], jidhr: &mut Option<String>) -> String {
     let jid = |matlub: &str| {
-        sifat.iter().find(|(ism, _)| ism == matlub).map(|(_, qeema)| qeema.as_str())
+        sifat
+            .iter()
+            .find(|(ism, _)| ism == matlub)
+            .map(|(_, qeema)| qeema.as_str())
     };
     match naw {
         "node" => {
@@ -1128,7 +1160,7 @@ fn masar_qism(naw: &str, sifat: &[(String, String)], jidhr: &mut Option<String>)
                         *jidhr = Some(ism.to_owned());
                     }
                     ism.to_owned()
-                }
+                },
                 Some(walid) => {
                     let asas = jidhr.as_deref().unwrap_or("");
                     if walid == "." {
@@ -1136,9 +1168,9 @@ fn masar_qism(naw: &str, sifat: &[(String, String)], jidhr: &mut Option<String>)
                     } else {
                         format!("{asas}/{walid}/{ism}")
                     }
-                }
+                },
             }
-        }
+        },
         "sub_resource" | "ext_resource" => {
             // A sub-resource's id is written by the editor and kept across
             // saves, which makes it the only stable name one has. It is not the
@@ -1147,7 +1179,7 @@ fn masar_qism(naw: &str, sifat: &[(String, String)], jidhr: &mut Option<String>)
             let muarrif = jid("id").unwrap_or("");
             let sanf = jid("type").unwrap_or(naw);
             format!("{naw}:{sanf}:{muarrif}")
-        }
+        },
         "resource" => "resource".to_owned(),
         "editable" | "connection" | "gd_scene" | "gd_resource" => String::new(),
         akhar => akhar.to_owned(),
@@ -1193,7 +1225,7 @@ fn tul_iqtibas(jism: &str) -> Option<usize> {
         match harf {
             '\\' => haarib = true,
             '"' => return Some(mawqi),
-            _ => {}
+            _ => {},
         }
     }
     None
@@ -1255,7 +1287,7 @@ fn shakl_thaqafa(murashah: &str) -> bool {
         Some(iqlim) => {
             let tul = iqlim.chars().count();
             (2..=4).contains(&tul) && iqlim.chars().all(|harf| harf.is_ascii_alphanumeric())
-        }
+        },
     }
 }
 
@@ -1278,8 +1310,10 @@ fn nisbi(jidhr: &Path, masar: &Path) -> String {
 
 /// Reads a whole file, refusing one above `saqf` before reserving anything.
 fn qira_malaf(masar: &Path, saqf: u64) -> Result<Vec<u8>, KhataGodot> {
-    let bayanat = std::fs::metadata(masar)
-        .map_err(|sabab| KhataGodot::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+    let bayanat = std::fs::metadata(masar).map_err(|sabab| KhataGodot::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })?;
     if bayanat.len() > saqf {
         return Err(KhataGodot::HajmMufrit {
             haql: "a loose Godot resource",
@@ -1287,8 +1321,10 @@ fn qira_malaf(masar: &Path, saqf: u64) -> Result<Vec<u8>, KhataGodot> {
             saqf,
         });
     }
-    std::fs::read(masar)
-        .map_err(|sabab| KhataGodot::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    std::fs::read(masar).map_err(|sabab| KhataGodot::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 /// Reads a whole text file, refusing one that is not valid UTF-8.
@@ -1299,38 +1335,39 @@ fn qira_malaf(masar: &Path, saqf: u64) -> Result<Vec<u8>, KhataGodot> {
 fn qira_nass(masar: &Path) -> Result<String, KhataGodot> {
     let bayt = qira_malaf(masar, AQSA_MALAF_NASSI)?;
     let munaqqa = bayt.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(&bayt);
-    std::str::from_utf8(munaqqa).map(str::to_owned).map_err(|khata| {
-        KhataGodot::NassGhayrSalih {
+    std::str::from_utf8(munaqqa)
+        .map(str::to_owned)
+        .map_err(|khata| KhataGodot::NassGhayrSalih {
             fahras: 0,
             mawqi: u32::try_from(khata.valid_up_to()).unwrap_or(u32::MAX),
-        }
-    })
+        })
 }
 
 /// Turns a reader's refusal into the reason the report shows.
 fn sabab_min_khata(khata: &KhataGodot) -> SababRafd {
     match khata {
-        KhataGodot::KhataMalaf { sabab, .. } => {
-            SababRafd::TaadhurQira { sabab: sabab.to_string() }
-        }
+        KhataGodot::KhataMalaf { sabab, .. } => SababRafd::TaadhurQira {
+            sabab: sabab.to_string(),
+        },
         // One sentence for both an encrypted index and an encrypted member,
         // because the reader raises the same refusal for both and the remedy
         // is the same: the game's own export key, which Taarib does not seek.
         KhataGodot::PckMushaffar { .. } => SababRafd::Mushaffar {
-            wasf: "AES-256-CBC, Godot's own package encryption, and no key was supplied"
-                .to_owned(),
+            wasf: "AES-256-CBC, Godot's own package encryption, and no key was supplied".to_owned(),
         },
-        KhataGodot::MiftahGhayrSalih { sabab, .. } => {
-            SababRafd::Mushaffar { wasf: (*sabab).to_owned() }
-        }
+        KhataGodot::MiftahGhayrSalih { sabab, .. } => SababRafd::Mushaffar {
+            wasf: (*sabab).to_owned(),
+        },
         KhataGodot::IsdarGhayrMadum { wujid, aqsa } => SababRafd::IsdarGhayrMadum {
             sigha: "Godot PCK".to_owned(),
             wujid: wujid.to_string(),
             madum: format!("up to and including {aqsa}"),
         },
-        KhataGodot::HajmMufrit { haql, qeema, saqf } => {
-            SababRafd::TajawuzHadd { hadd: (*haql).to_owned(), qeema: *qeema, saqf: *saqf }
-        }
+        KhataGodot::HajmMufrit { haql, qeema, saqf } => SababRafd::TajawuzHadd {
+            hadd: (*haql).to_owned(),
+            qeema: *qeema,
+            saqf: *saqf,
+        },
         KhataGodot::SihrGhayrMutabaq { .. } => SababRafd::SighaMajhula {
             wujid: "a file that does not carry Godot's package or resource magic".to_owned(),
         },
@@ -1339,6 +1376,8 @@ fn sabab_min_khata(khata: &KhataGodot) -> SababRafd {
                 "an entry compressed with Godot mode {naw}, which this build cannot expand"
             ),
         },
-        akhar => SababRafd::Talif { sabab: akhar.to_string() },
+        akhar => SababRafd::Talif {
+            sabab: akhar.to_string(),
+        },
     }
 }

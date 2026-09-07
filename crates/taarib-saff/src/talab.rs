@@ -40,7 +40,11 @@ impl Ittijah {
     /// The direction of an embedding level.
     #[must_use]
     pub const fn min_mustawa(mustawa: u8) -> Self {
-        if mustawa.is_multiple_of(2) { Self::Yasar } else { Self::Yameen }
+        if mustawa.is_multiple_of(2) {
+            Self::Yasar
+        } else {
+            Self::Yameen
+        }
     }
 }
 
@@ -200,7 +204,6 @@ pub enum SiyasatTajawuz {
     /// Truncate and mark the cut with an ellipsis on the correct side.
     Ikhtisar,
 }
-
 
 /// An OpenType feature the caller wants on or off beyond the defaults.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

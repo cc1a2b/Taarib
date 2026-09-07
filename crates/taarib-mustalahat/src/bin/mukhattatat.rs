@@ -36,9 +36,9 @@ use schemars::generate::{SchemaGenerator, SchemaSettings};
 use serde::Serialize;
 use serde_json::{Map, Value};
 use taarib_mustalahat::{
-    AlamJawda, Basma, BinaId, HalatLuba, HalatRuqaa, Luba, LubaId, MasdarLuba,
-    MudkhalNass, Muharrik, MulakhkhasRuqaa, Musahim, MusahimId, MutabaqaBina, NassId, NitaqNasq,
-    RukhsaRuqaa, RuqaaId, Sumaa, Tabaqa, Taghtiya, TaqreerImkaniyat, TareeqaTarjama,
+    AlamJawda, Basma, BinaId, HalatLuba, HalatRuqaa, Luba, LubaId, MasdarLuba, MudkhalNass,
+    Muharrik, MulakhkhasRuqaa, Musahim, MusahimId, MutabaqaBina, NassId, NitaqNasq, RukhsaRuqaa,
+    RuqaaId, Sumaa, Tabaqa, Taghtiya, TaqreerImkaniyat, TareeqaTarjama,
 };
 use taarib_usus::Khata;
 use taarib_usus::khata::RisalatMustakhdim;
@@ -156,9 +156,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut khuruj = std::io::stdout().lock();
     for madkhal in &madakhil {
-        writeln!(khuruj, "{:<24} {:<20} {} bytes", madkhal.malaf, madkhal.unwan, madkhal.hajm)?;
+        writeln!(
+            khuruj,
+            "{:<24} {:<20} {} bytes",
+            madkhal.malaf, madkhal.unwan, madkhal.hajm
+        )?;
     }
-    writeln!(khuruj, "{MALAF_FAHRAS:<24} {UNWAN_FAHRAS:<20} {hajm_fahras} bytes")?;
+    writeln!(
+        khuruj,
+        "{MALAF_FAHRAS:<24} {UNWAN_FAHRAS:<20} {hajm_fahras} bytes"
+    )?;
     for malaf in &matruka {
         writeln!(khuruj, "{malaf:<24} {:<20} removed", "—")?;
     }
@@ -235,13 +242,23 @@ fn mukhattat<T: JsonSchema>(mujallad: &Path) -> Result<Madkhal, Box<dyn Error>> 
     let Value::Object(jism) = khaam else {
         return Err(format!("{unwan} does not generate a JSON object").into());
     };
-    let wasf = jism.get("description").and_then(Value::as_str).unwrap_or_default().to_owned();
+    let wasf = jism
+        .get("description")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
 
     let mut nass = serde_json::to_string_pretty(&Value::Object(rattib(&unwan, &muarrif, jism)))?;
     nass.push('\n');
     masarat::kitaba_dharra_nass(&mujallad.join(&malaf), &nass)?;
 
-    Ok(Madkhal { unwan, malaf, muarrif, wasf, hajm: nass.len() })
+    Ok(Madkhal {
+        unwan,
+        malaf,
+        muarrif,
+        wasf,
+        hajm: nass.len(),
+    })
 }
 
 /// Writes the index.
@@ -251,7 +268,10 @@ fn mukhattat<T: JsonSchema>(mujallad: &Path) -> Result<Madkhal, Box<dyn Error>> 
 /// Fails when the index cannot be serialized or written.
 fn iktub_fahras(mujallad: &Path, madakhil: &[Madkhal]) -> Result<usize, Box<dyn Error>> {
     let mut fahras = Map::with_capacity(5);
-    let _ = fahras.insert("$id".to_owned(), format!("{JIDHR_MUARRIF}/{MALAF_FAHRAS}").into());
+    let _ = fahras.insert(
+        "$id".to_owned(),
+        format!("{JIDHR_MUARRIF}/{MALAF_FAHRAS}").into(),
+    );
     let _ = fahras.insert("title".to_owned(), UNWAN_FAHRAS.into());
     let _ = fahras.insert("description".to_owned(), WASF_FAHRAS.into());
     let _ = fahras.insert("mukhattat".to_owned(), ISDAR_FAHRAS.into());
@@ -280,10 +300,10 @@ fn rattib(unwan: &str, muarrif: &str, jism: Map<String, Value>) -> Map<String, V
         match miftah.as_str() {
             "description" => wasf = Some(qeema),
             "$defs" => tarifat = Some(qeema),
-            "$schema" | "$id" | "title" => {}
+            "$schema" | "$id" | "title" => {},
             _ => {
                 let _ = jasad.insert(miftah, qeema);
-            }
+            },
         }
     }
 
@@ -355,12 +375,12 @@ fn awjiz_shajara(qeema: &mut Value) {
             for far in kain.values_mut() {
                 awjiz_shajara(far);
             }
-        }
+        },
         Value::Array(qaima) => {
             for far in qaima {
                 awjiz_shajara(far);
             }
-        }
-        Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => {}
+        },
+        Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => {},
     }
 }

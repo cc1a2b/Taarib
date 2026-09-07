@@ -277,8 +277,12 @@ pub struct WahdatGl {
 
 impl WahdatGl {
     /// The modules a fixed-function context can be behind, in the order tried.
-    const MURASHAHAT: &'static [&'static str] =
-        &["opengl32.dll", "libGL.so.1", "libGL.so", "/System/Library/Frameworks/OpenGL.framework/OpenGL"];
+    const MURASHAHAT: &'static [&'static str] = &[
+        "opengl32.dll",
+        "libGL.so.1",
+        "libGL.so",
+        "/System/Library/Frameworks/OpenGL.framework/OpenGL",
+    ];
 
     /// Finds the module the game already has, without loading one.
     ///
@@ -313,8 +317,7 @@ impl MuhillGl for WahdatGl {
     fn unwan(&self, ramz: &str) -> Option<*const c_void> {
         // SAFETY: `self.qaida` is a base this type obtained from
         // `qaidat_wahda` and has not closed.
-        unsafe { taarib_haqn::mawqi::ramz_wahda(self.qaida, ramz) }
-            .map(<*mut c_void>::cast_const)
+        unsafe { taarib_haqn::mawqi::ramz_wahda(self.qaida, ramz) }.map(<*mut c_void>::cast_const)
     }
 
     fn ism(&self) -> &str {
@@ -506,7 +509,9 @@ impl DawallThabit {
     fn iqra_isdar(&self) -> (u32, u32) {
         let nass = self.nass(GL_VERSION);
         let mut raqmiya = nass.split(|harf: char| !harf.is_ascii_digit());
-        let kabir = raqmiya.find(|juz: &&str| !juz.is_empty()).and_then(|juz| juz.parse().ok());
+        let kabir = raqmiya
+            .find(|juz: &&str| !juz.is_empty())
+            .and_then(|juz| juz.parse().ok());
         let sagheer = raqmiya.next().and_then(|juz| juz.parse().ok());
         match (kabir, sagheer) {
             (Some(kabir), Some(sagheer)) => (kabir, sagheer),
@@ -517,7 +522,12 @@ impl DawallThabit {
 
     /// Vendor, renderer and version as one line.
     fn iqra_wasf(&self) -> String {
-        format!("{} / {} / {}", self.nass(GL_VENDOR), self.nass(GL_RENDERER), self.nass(GL_VERSION))
+        format!(
+            "{} / {} / {}",
+            self.nass(GL_VENDOR),
+            self.nass(GL_RENDERER),
+            self.nass(GL_VERSION)
+        )
     }
 
     /// One integer of state.
@@ -708,9 +718,10 @@ impl HifzThabit {
             (dawall.push_attrib)(GL_ALL_ATTRIB_BITS);
             hifz.sifat = true;
 
-            if !dawall
-                .fiha_masaha(GL_CLIENT_ATTRIB_STACK_DEPTH, GL_MAX_CLIENT_ATTRIB_STACK_DEPTH)
-            {
+            if !dawall.fiha_masaha(
+                GL_CLIENT_ATTRIB_STACK_DEPTH,
+                GL_MAX_CLIENT_ATTRIB_STACK_DEPTH,
+            ) {
                 hifz.ustud(dawall);
                 return Err(mumtali("client attribute"));
             }
@@ -722,7 +733,12 @@ impl HifzThabit {
             };
 
             for (namat, hali, aqsa, ism) in [
-                (GL_TEXTURE, GL_TEXTURE_STACK_DEPTH, GL_MAX_TEXTURE_STACK_DEPTH, "texture matrix"),
+                (
+                    GL_TEXTURE,
+                    GL_TEXTURE_STACK_DEPTH,
+                    GL_MAX_TEXTURE_STACK_DEPTH,
+                    "texture matrix",
+                ),
                 (
                     GL_PROJECTION,
                     GL_PROJECTION_STACK_DEPTH,
@@ -755,7 +771,7 @@ impl HifzThabit {
                             1.0,
                         );
                         hifz.isqat = true;
-                    }
+                    },
                     _ => hifz.namudhaj = true,
                 }
             }
@@ -987,7 +1003,11 @@ impl KhattafGlThabit {
     /// letterboxed cutscene has a viewport that is not the surface, and an
     /// overlay sized to it puts the subtitles in the middle of the screen.
     pub const fn hadith_qiyas(&mut self, ard: u32, irtifa: u32) {
-        self.qiyas_mubarmaj = if ard == 0 || irtifa == 0 { None } else { Some((ard, irtifa)) };
+        self.qiyas_mubarmaj = if ard == 0 || irtifa == 0 {
+            None
+        } else {
+            Some((ard, irtifa))
+        };
     }
 
     /// Records which context the object names belong to.
@@ -1109,7 +1129,11 @@ impl KhattafGlThabit {
             let mut masturat_alaan: Option<bool> = None;
             let mut maftuh = false;
             for qita in &lawha.qitaat {
-                let QitaRasm { mawdi, khareeta, lawn } = *qita;
+                let QitaRasm {
+                    mawdi,
+                    khareeta,
+                    lawn,
+                } = *qita;
                 if mawdi.ard == 0 || mawdi.irtifa == 0 {
                     continue;
                 }
@@ -1179,7 +1203,10 @@ impl KhattafGlThabit {
         else {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "glyph atlas texture",
-                sabab: format!("a {}×{} texture does not fit a GLsizei", mubattan.0, mubattan.1),
+                sabab: format!(
+                    "a {}×{} texture does not fit a GLsizei",
+                    mubattan.0, mubattan.1
+                ),
             });
         };
 
@@ -1193,15 +1220,15 @@ impl KhattafGlThabit {
         let masdar_irtifa = usize::try_from(irtifa).unwrap_or(0);
         let hadaf_ard = usize::try_from(mubattan.0).unwrap_or(0);
         let hadaf_irtifa = usize::try_from(mubattan.1).unwrap_or(0);
-        let mut mubattana =
-            vec![0u8; hadaf_ard.saturating_mul(hadaf_irtifa).saturating_mul(4)];
+        let mut mubattana = vec![0u8; hadaf_ard.saturating_mul(hadaf_irtifa).saturating_mul(4)];
         for satr in 0..masdar_irtifa.min(hadaf_irtifa) {
             let masdar = satr.saturating_mul(masdar_ard).saturating_mul(4);
             let hadaf = satr.saturating_mul(hadaf_ard).saturating_mul(4);
             let tul = masdar_ard.min(hadaf_ard).saturating_mul(4);
-            let (Some(min), Some(ila)) =
-                (bayt.get(masdar..masdar.saturating_add(tul)), mubattana.get_mut(hadaf..hadaf + tul))
-            else {
+            let (Some(min), Some(ila)) = (
+                bayt.get(masdar..masdar.saturating_add(tul)),
+                mubattana.get_mut(hadaf..hadaf + tul),
+            ) else {
                 continue;
             };
             ila.copy_from_slice(min);
@@ -1400,9 +1427,10 @@ impl KhattafGlThabit {
                 hala: "the fixed-function OpenGL attribute, client-attribute and matrix stacks",
                 sabab,
             }),
-            RaddFasad::Mawrid => {
-                Err(KhataTabaqa::MawridFashil { mawrid: "an OpenGL object", sabab })
-            }
+            RaddFasad::Mawrid => Err(KhataTabaqa::MawridFashil {
+                mawrid: "an OpenGL object",
+                sabab,
+            }),
             RaddFasad::Iltiqat => Err(KhataTabaqa::IltiqatFashil { sabab }),
         }
     }
@@ -1464,7 +1492,12 @@ impl Khattaf for KhattafGlThabit {
                 ),
             });
         }
-        Ok(WasfSath { ard, irtifa, sigha: SighatSath::Rgba8, sirgb: false })
+        Ok(WasfSath {
+            ard,
+            irtifa,
+            sigha: SighatSath::Rgba8,
+            sirgb: false,
+        })
     }
 
     /// Reads the one implementation limit this backend needs and records the
@@ -1477,7 +1510,10 @@ impl Khattaf for KhattafGlThabit {
     fn hayyi(&mut self, sath: WasfSath) -> Result<(), KhataTabaqa> {
         if sath.ard == 0 || sath.irtifa == 0 {
             return Err(KhataTabaqa::SathTaghayyar {
-                sabab: format!("a {}×{} surface has no pixels to draw on", sath.ard, sath.irtifa),
+                sabab: format!(
+                    "a {}×{} surface has no pixels to draw on",
+                    sath.ard, sath.irtifa
+                ),
             });
         }
         if self.aqsa_nasij == 0 {
@@ -1487,7 +1523,8 @@ impl Khattaf for KhattafGlThabit {
             self.aqsa_nasij = u32::try_from(khaam).unwrap_or(0);
         }
         if self.sath != Some(sath) {
-            self.athar.push(format!("surface {}×{}", sath.ard, sath.irtifa));
+            self.athar
+                .push(format!("surface {}×{}", sath.ard, sath.irtifa));
         }
         self.sath = Some(sath);
         Ok(())
@@ -1529,7 +1566,9 @@ impl Khattaf for KhattafGlThabit {
         }
 
         let bayt = bayt.to_vec();
-        self.bi_hifz(None, RaddFasad::Mawrid, move |hadha| hadha.arfa_nasij(&bayt, ard, irtifa))
+        self.bi_hifz(None, RaddFasad::Mawrid, move |hadha| {
+            hadha.arfa_nasij(&bayt, ard, irtifa)
+        })
     }
 
     /// Pushes the game's state, draws, pops it, and audits the pop.
@@ -1580,13 +1619,18 @@ impl Khattaf for KhattafGlThabit {
         }
 
         let sath = lawha.sath;
-        self.bi_hifz(Some(sath), RaddFasad::Hala, |hadha| hadha.arsil_dufaat(lawha))
+        self.bi_hifz(Some(sath), RaddFasad::Hala, |hadha| {
+            hadha.arsil_dufaat(lawha)
+        })
     }
 
     fn iltaqit(&mut self, mintaqa: MustatilBiksel) -> Result<Vec<u8>, KhataTabaqa> {
         let sath = Khattaf::sath(self)?;
         let wasf = || {
-            format!("{}×{} at {},{}", mintaqa.ard, mintaqa.irtifa, mintaqa.yasar, mintaqa.aala)
+            format!(
+                "{}×{} at {},{}",
+                mintaqa.ard, mintaqa.irtifa, mintaqa.yasar, mintaqa.aala
+            )
         };
         let (Some(yameen), Some(asfal)) = (
             mintaqa.yasar.checked_add(mintaqa.ard),
@@ -1606,7 +1650,9 @@ impl Khattaf for KhattafGlThabit {
             });
         }
 
-        self.bi_hifz(None, RaddFasad::Iltiqat, |hadha| hadha.iqra_bikselat(mintaqa, sath))
+        self.bi_hifz(None, RaddFasad::Iltiqat, |hadha| {
+            hadha.iqra_bikselat(mintaqa, sath)
+        })
     }
 
     fn ahmil(&mut self) -> Result<(), KhataTabaqa> {
@@ -1617,7 +1663,8 @@ impl Khattaf for KhattafGlThabit {
         self.atlif();
         let baqi = self.dawall.ifragh();
         if baqi == GL_NO_ERROR {
-            self.athar.push("released the overlay's glyph atlas".to_owned());
+            self.athar
+                .push("released the overlay's glyph atlas".to_owned());
             return Ok(());
         }
         let sabab = format!(
@@ -1626,7 +1673,10 @@ impl Khattaf for KhattafGlThabit {
             self.dawall.wasf
         );
         self.athar.push(sabab.clone());
-        Err(KhataTabaqa::MawridFashil { mawrid: "the overlay's glyph atlas", sabab })
+        Err(KhataTabaqa::MawridFashil {
+            mawrid: "the overlay's glyph atlas",
+            sabab,
+        })
     }
 }
 
@@ -1674,7 +1724,7 @@ pub fn ikhtar() -> Result<Box<dyn Khattaf>, KhataTabaqa> {
                     thabit.dawall.isdar.0, thabit.dawall.isdar.1
                 ));
                 return Ok(Box::new(thabit));
-            }
+            },
         }
     }
 
@@ -1707,8 +1757,7 @@ pub fn ikhtar() -> Result<Box<dyn Khattaf>, KhataTabaqa> {
 pub fn qudra() -> crate::qudra::QudratTarkeeb {
     use crate::qudra::{MilShasha, QudratTarkeeb, SababQudra};
 
-    let mut taqreer =
-        QudratTarkeeb::jadeeda(WajihatRusum::OpenGlThabit, MilShasha::KhilalAlJihaz);
+    let mut taqreer = QudratTarkeeb::jadeeda(WajihatRusum::OpenGlThabit, MilShasha::KhilalAlJihaz);
 
     let wahda = match WahdatGl::ijid() {
         Ok(wahda) => wahda,
@@ -1717,7 +1766,7 @@ pub fn qudra() -> crate::qudra::QudratTarkeeb {
                 "لا توجد مكتبة أوبن‌جي‌إل محمّلة في هذه اللعبة، فلا يوجد ما تُركَّب عليه الطبقة.",
                 format!("no OpenGL module is loaded in this process: {khata}"),
             ));
-        }
+        },
     };
 
     match DawallThabit::min_muhill(&wahda) {
@@ -1747,13 +1796,13 @@ pub fn qudra() -> crate::qudra::QudratTarkeeb {
                     ),
                 ));
             }
-        }
+        },
         Err(khata) => {
             return taqreer.maa(SababQudra::mustaheela(
                 "المكتبة الموجودة لا تصدّر إحدى نقاط دخول أوبن‌جي‌إل ١٫١ التي تحتاجها الطبقة.",
                 format!("the module found does not export an OpenGL 1.1 entry point: {khata}"),
             ));
-        }
+        },
     }
 
     qudrat_siyaq(taqreer)
@@ -1820,8 +1869,7 @@ fn qudrat_siyaq(taqreer: crate::qudra::QudratTarkeeb) -> crate::qudra::QudratTar
     // SAFETY: `hdc` is live, `fahras` is a format index it reported, the byte
     // count is this structure's own size, and the out-pointer addresses a live
     // local of exactly that type.
-    let natija =
-        unsafe { DescribePixelFormat(hdc, fahras, u32::from(hajm), Some(&raw mut wasf)) };
+    let natija = unsafe { DescribePixelFormat(hdc, fahras, u32::from(hajm), Some(&raw mut wasf)) };
     if natija == 0 {
         return taqreer.maa(SababQudra::majhula(
             format!(
@@ -1920,7 +1968,7 @@ mod ikhtibar {
                 } else {
                     &[0]
                 }
-            }
+            },
             GL_MAX_TEXTURE_SIZE => &[2048],
             _ => &[0],
         };
@@ -2128,15 +2176,28 @@ mod ikhtibar {
     fn dufaa(sath: WasfSath) -> LawhatRasm {
         use crate::wajiha::MustatilNisbi;
         let lawh = QitaRasm {
-            mawdi: MustatilBiksel { yasar: 10, aala: 20, ard: 100, irtifa: 16 },
+            mawdi: MustatilBiksel {
+                yasar: 10,
+                aala: 20,
+                ard: 100,
+                irtifa: 16,
+            },
             khareeta: None,
             lawn: [1.0, 1.0, 1.0, 1.0],
         };
         let shakl = QitaRasm {
-            khareeta: Some(MustatilNisbi { yasar: 0.25, aala: 0.5, ard: 0.25, irtifa: 0.25 }),
+            khareeta: Some(MustatilNisbi {
+                yasar: 0.25,
+                aala: 0.5,
+                ard: 0.25,
+                irtifa: 0.25,
+            }),
             ..lawh
         };
-        LawhatRasm { qitaat: vec![lawh, shakl, shakl, lawh], sath }
+        LawhatRasm {
+            qitaat: vec![lawh, shakl, shakl, lawh],
+            sath,
+        }
     }
 
     /// How many times a token appears in the log.
@@ -2157,7 +2218,12 @@ mod ikhtibar {
         ISQAT_MUMTALI.store(false, Ordering::Release);
 
         let mut khattaf = khattaf();
-        let sath = WasfSath { ard: 1280, irtifa: 720, sigha: SighatSath::Rgba8, sirgb: false };
+        let sath = WasfSath {
+            ard: 1280,
+            irtifa: 720,
+            sigha: SighatSath::Rgba8,
+            sirgb: false,
+        };
         if let Err(khata) = khattaf.hayyi(sath) {
             panic!("the backend would not initialise: {khata}");
         }
@@ -2170,13 +2236,41 @@ mod ikhtibar {
         }
 
         let sijill = sijill();
-        assert_eq!(adad(&sijill, "push_attrib"), 1, "the server attribute stack was not pushed");
-        assert_eq!(adad(&sijill, "pop_attrib"), 1, "the server attribute stack was not popped");
-        assert_eq!(adad(&sijill, "push_client_attrib"), 1, "the client stack was not pushed");
-        assert_eq!(adad(&sijill, "pop_client_attrib"), 1, "the client stack was not popped");
-        assert_eq!(adad(&sijill, "push_matrix"), 3, "three matrix stacks must each be pushed once");
-        assert_eq!(adad(&sijill, "pop_matrix"), 3, "three matrix stacks must each be popped once");
-        assert_eq!(adad(&sijill, "ortho"), 1, "the projection must be replaced exactly once");
+        assert_eq!(
+            adad(&sijill, "push_attrib"),
+            1,
+            "the server attribute stack was not pushed"
+        );
+        assert_eq!(
+            adad(&sijill, "pop_attrib"),
+            1,
+            "the server attribute stack was not popped"
+        );
+        assert_eq!(
+            adad(&sijill, "push_client_attrib"),
+            1,
+            "the client stack was not pushed"
+        );
+        assert_eq!(
+            adad(&sijill, "pop_client_attrib"),
+            1,
+            "the client stack was not popped"
+        );
+        assert_eq!(
+            adad(&sijill, "push_matrix"),
+            3,
+            "three matrix stacks must each be pushed once"
+        );
+        assert_eq!(
+            adad(&sijill, "pop_matrix"),
+            3,
+            "three matrix stacks must each be popped once"
+        );
+        assert_eq!(
+            adad(&sijill, "ortho"),
+            1,
+            "the projection must be replaced exactly once"
+        );
 
         let bidaya: Vec<&str> = sijill.iter().take(12).map(String::as_str).collect();
         assert_eq!(
@@ -2198,8 +2292,13 @@ mod ikhtibar {
             "the save did not happen in the order the restore reverses"
         );
 
-        let nihaya: Vec<&str> =
-            sijill.iter().rev().take(9).rev().map(String::as_str).collect();
+        let nihaya: Vec<&str> = sijill
+            .iter()
+            .rev()
+            .take(9)
+            .rev()
+            .map(String::as_str)
+            .collect();
         assert_eq!(
             nihaya,
             vec![
@@ -2233,7 +2332,12 @@ mod ikhtibar {
         ISQAT_MUMTALI.store(true, Ordering::Release);
 
         let mut khattaf = khattaf();
-        let sath = WasfSath { ard: 1280, irtifa: 720, sigha: SighatSath::Rgba8, sirgb: false };
+        let sath = WasfSath {
+            ard: 1280,
+            irtifa: 720,
+            sigha: SighatSath::Rgba8,
+            sirgb: false,
+        };
         let _ = khattaf.hayyi(sath);
         SIJILL.lock().clear();
 
@@ -2249,7 +2353,11 @@ mod ikhtibar {
         );
 
         let sijill = sijill();
-        assert_eq!(adad(&sijill, "begin"), 0, "the overlay drew after refusing to save state");
+        assert_eq!(
+            adad(&sijill, "begin"),
+            0,
+            "the overlay drew after refusing to save state"
+        );
         assert_eq!(
             adad(&sijill, "push_matrix"),
             1,
@@ -2260,7 +2368,11 @@ mod ikhtibar {
             1,
             "the texture matrix that was pushed before the refusal was not popped back"
         );
-        assert_eq!(adad(&sijill, "push_attrib"), adad(&sijill, "pop_attrib"), "attribs unbalanced");
+        assert_eq!(
+            adad(&sijill, "push_attrib"),
+            adad(&sijill, "pop_attrib"),
+            "attribs unbalanced"
+        );
         assert_eq!(
             adad(&sijill, "push_client_attrib"),
             adad(&sijill, "pop_client_attrib"),
@@ -2275,7 +2387,12 @@ mod ikhtibar {
         ISQAT_MUMTALI.store(false, Ordering::Release);
 
         let mut khattaf = khattaf();
-        let sath = WasfSath { ard: 1280, irtifa: 720, sigha: SighatSath::Rgba8, sirgb: false };
+        let sath = WasfSath {
+            ard: 1280,
+            irtifa: 720,
+            sigha: SighatSath::Rgba8,
+            sirgb: false,
+        };
         let _ = khattaf.hayyi(sath);
         if let Err(khata) = khattaf.arfa_lawha(&[0u8; 16], 2, 2) {
             panic!("the atlas would not upload: {khata}");
@@ -2286,7 +2403,11 @@ mod ikhtibar {
         }
 
         let sijill = sijill();
-        assert_eq!(adad(&sijill, "begin"), 3, "plate, two glyphs, plate is three runs");
+        assert_eq!(
+            adad(&sijill, "begin"),
+            3,
+            "plate, two glyphs, plate is three runs"
+        );
         assert_eq!(adad(&sijill, "end"), 3, "every glBegin must be closed");
         assert_eq!(adad(&sijill, "color4f"), 4, "one colour per quad");
         assert_eq!(adad(&sijill, "vertex2f"), 16, "four quads of four vertices");
@@ -2325,15 +2446,28 @@ mod ikhtibar {
 
         let _dawr = DAWR.lock();
         let mut khattaf = khattaf();
-        let sath = WasfSath { ard: 640, irtifa: 480, sigha: SighatSath::Rgba8, sirgb: false };
+        let sath = WasfSath {
+            ard: 640,
+            irtifa: 480,
+            sigha: SighatSath::Rgba8,
+            sirgb: false,
+        };
         let _ = khattaf.hayyi(sath);
         // A three-by-three page: OpenGL 1.1 will not take it and the backend
         // uploads a four-by-four texture with the page in its corner.
         if let Err(khata) = khattaf.arfa_lawha(&[0u8; 36], 3, 3) {
             panic!("a non-power-of-two page must be padded, not refused: {khata}");
         }
-        assert_eq!(khattaf.qiyas_lawha, (3, 3), "the page's own size must be remembered");
-        assert_eq!(khattaf.qiyas_nasij, (4, 4), "the texture must be the next power of two");
+        assert_eq!(
+            khattaf.qiyas_lawha,
+            (3, 3),
+            "the page's own size must be remembered"
+        );
+        assert_eq!(
+            khattaf.qiyas_nasij,
+            (4, 4),
+            "the texture must be the next power of two"
+        );
         let (u, v) = khattaf.nisbat_lawha();
         assert!(
             (u - 0.75).abs() < f32::EPSILON && (v - 0.75).abs() < f32::EPSILON,

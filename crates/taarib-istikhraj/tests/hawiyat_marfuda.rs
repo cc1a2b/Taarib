@@ -102,7 +102,11 @@ fn uktub(masar: &Path, bayt: &[u8]) {
 
 /// Every refusal the report holds against one container.
 fn marfudat<'a>(taqreer: &'a TaqreerRafd, hawiya: &str) -> Vec<&'a MadkhalRafd> {
-    taqreer.marfuda.iter().filter(|madkhal| madkhal.hawiya == hawiya).collect()
+    taqreer
+        .marfuda
+        .iter()
+        .filter(|madkhal| madkhal.hawiya == hawiya)
+        .collect()
 }
 
 /// A length as the signed field the pak format writes.
@@ -118,7 +122,9 @@ fn musir(tul: usize) -> i64 {
 fn locres_injilizi() -> Vec<u8> {
     let mut mawrid = MawridLocres::jadeed(IsdarLocres::MuhassanMadina);
     mawrid.adif("", "Back", "Back", "Back").expect("one entry");
-    mawrid.adif("Menu", "Play", "Play", "Play").expect("a second entry");
+    mawrid
+        .adif("Menu", "Play", "Play", "Play")
+        .expect("a second entry");
     mawrid.ahsi_ihsaat();
     mawrid.ila_bayt().expect("a .locres this workspace writes")
 }
@@ -126,7 +132,11 @@ fn locres_injilizi() -> Vec<u8> {
 /// One ANSI `FString`, as every index writes it.
 fn nass(katib: &mut Katib, nass: &str) {
     katib
-        .uktub_nass("a fixture", "a fixture string", &NassMukhazzan::jadeed(nass))
+        .uktub_nass(
+            "a fixture",
+            "a fixture string",
+            &NassMukhazzan::jadeed(nass),
+        )
         .expect("an ASCII string fits its length field");
 }
 
@@ -242,18 +252,29 @@ fn pak_bi_dalil_mabtur_yurfad_la_yuqal_bila_nusus() {
     let qari = HawiyatPak::min_bayt(kamil.clone(), Path::new(HAWIYAT_PAK), None)
         .expect("the version 11 fixture opens");
     assert!(qari.fahras().dalil_kamil());
-    assert_eq!(qari.masarat_locres().collect::<Vec<_>>(), vec![MASAR_LOCRES]);
+    assert_eq!(
+        qari.masarat_locres().collect::<Vec<_>>(),
+        vec![MASAR_LOCRES]
+    );
     uktub(&jidhr.join(HAWIYAT_PAK), &kamil);
     let (jadwal, taqreer) = unreal::istakhrij(&jidhr);
     assert_eq!(jadwal.adad(), 2, "{:?}", taqreer.taqreer());
-    assert!(marfudat(&taqreer, HAWIYAT_PAK).is_empty(), "{:?}", taqreer.marfuda);
+    assert!(
+        marfudat(&taqreer, HAWIYAT_PAK).is_empty(),
+        "{:?}",
+        taqreer.marfuda
+    );
 
     // The same container with the index pruned names nothing, and must say so.
     let mabtur = pak_masarat(&locres, false);
     let qari = HawiyatPak::min_bayt(mabtur.clone(), Path::new(HAWIYAT_PAK), None)
         .expect("a pruned index is a container this build opens");
     assert!(!qari.fahras().dalil_kamil());
-    assert_eq!(qari.fahras().adad_muallan(), 1, "the container still declares its one file");
+    assert_eq!(
+        qari.fahras().adad_muallan(),
+        1,
+        "the container still declares its one file"
+    );
     assert_eq!(qari.adad(), 0, "and can name none of them");
     uktub(&jidhr.join(HAWIYAT_PAK), &mabtur);
     let (jadwal, taqreer) = unreal::istakhrij(&jidhr);
@@ -261,10 +282,16 @@ fn pak_bi_dalil_mabtur_yurfad_la_yuqal_bila_nusus() {
     let marfudat = marfudat(&taqreer, HAWIYAT_PAK);
     assert_eq!(marfudat.len(), 1, "{marfudat:?}");
     let SababRafd::SighaMajhula { wujid } = &marfudat[0].sabab else {
-        panic!("a pruned index is not \"holds no text\": {:?}", marfudat[0].sabab)
+        panic!(
+            "a pruned index is not \"holds no text\": {:?}",
+            marfudat[0].sabab
+        )
     };
     assert!(wujid.contains("pruned"), "{wujid}");
-    assert!(marfudat[0].asl.is_none(), "the refusal is about the whole container");
+    assert!(
+        marfudat[0].asl.is_none(),
+        "the refusal is about the whole container"
+    );
     assert!(
         taqreer.yanfa_iltiqat(),
         "the strings a pruned index hides are drawn on screen, so capture is the remedy"
@@ -319,13 +346,27 @@ fn pak_hizamuhu_bila_jadwal_yusajjal_maqruan() {
     uktub(&jidhr.join(HAWIYAT_PAK), &pak_khamis(&hizma_bila_jadwal()));
     let (jadwal, taqreer) = unreal::istakhrij(&jidhr);
     assert!(jadwal.khali());
-    assert!(marfudat(&taqreer, HAWIYAT_PAK).is_empty(), "{:?}", taqreer.marfuda);
-    let maqru = taqreer.maqrua.iter().find(|qira| qira.hawiya == HAWIYAT_PAK);
+    assert!(
+        marfudat(&taqreer, HAWIYAT_PAK).is_empty(),
+        "{:?}",
+        taqreer.marfuda
+    );
+    let maqru = taqreer
+        .maqrua
+        .iter()
+        .find(|qira| qira.hawiya == HAWIYAT_PAK);
     let Some(maqru) = maqru else {
-        panic!("a container whose package was searched must be in the report: {:?}", taqreer.maqrua)
+        panic!(
+            "a container whose package was searched must be in the report: {:?}",
+            taqreer.maqrua
+        )
     };
     assert_eq!(maqru.adad, 0);
-    assert!(maqru.wasf.contains("1 package(s) searched"), "{}", maqru.wasf);
+    assert!(
+        maqru.wasf.contains("1 package(s) searched"),
+        "{}",
+        maqru.wasf
+    );
     let _ = std::fs::remove_dir_all(&jidhr);
 }
 
@@ -351,9 +392,16 @@ fn pak_hizamuhu_talif_yuzkar_la_yakhtafi() {
         1,
         "a container whose only package failed to read must be in the report: {marfudat:?}"
     );
-    assert!(matches!(marfudat[0].sabab, SababRafd::Talif { .. }), "{:?}", marfudat[0].sabab);
+    assert!(
+        matches!(marfudat[0].sabab, SababRafd::Talif { .. }),
+        "{:?}",
+        marfudat[0].sabab
+    );
     assert_eq!(marfudat[0].asl.as_deref(), Some(MASAR_HIZMA));
-    assert!(!taqreer.yanfa_iltiqat(), "a damaged container is one capture cannot help");
+    assert!(
+        !taqreer.yanfa_iltiqat(),
+        "a damaged container is one capture cannot help"
+    );
     let _ = std::fs::remove_dir_all(&jidhr);
 }
 
@@ -368,7 +416,10 @@ fn pak_hizamuhu_mushaffar_yaqtarih_al_iltiqat() {
     // flagged encrypted in the index this build resolves through.
     let qari = HawiyatPak::min_bayt(bayt.clone(), Path::new(HAWIYAT_PAK), None)
         .expect("the altered container still opens: only the payload is locked");
-    assert!(qari.jid(MASAR_HIZMA).is_some_and(|madkhal| madkhal.mushaffar));
+    assert!(
+        qari.jid(MASAR_HIZMA)
+            .is_some_and(|madkhal| madkhal.mushaffar)
+    );
     uktub(&jidhr.join(HAWIYAT_PAK), &bayt);
 
     let (jadwal, taqreer) = unreal::istakhrij(&jidhr);
@@ -376,7 +427,11 @@ fn pak_hizamuhu_mushaffar_yaqtarih_al_iltiqat() {
     assert!(taqreer.maqrua.iter().all(|qira| qira.hawiya != HAWIYAT_PAK));
     let marfudat = marfudat(&taqreer, HAWIYAT_PAK);
     assert_eq!(marfudat.len(), 1, "{marfudat:?}");
-    assert!(matches!(marfudat[0].sabab, SababRafd::Mushaffar { .. }), "{:?}", marfudat[0].sabab);
+    assert!(
+        matches!(marfudat[0].sabab, SababRafd::Mushaffar { .. }),
+        "{:?}",
+        marfudat[0].sabab
+    );
     assert_eq!(marfudat[0].asl.as_deref(), Some(MASAR_HIZMA));
     assert!(
         taqreer.yanfa_iltiqat(),
@@ -395,7 +450,9 @@ fn tarjama_rabia(thaqafa: &str, rasail: &[(&str, &str)]) -> Vec<u8> {
     for (masdar, hadaf) in rasail {
         tarjama.daa(masdar, hadaf).expect("one message");
     }
-    tarjama.ila_bayt(JeelMawrid::Rabi, (4, 3)).expect("a Godot 4 resource")
+    tarjama
+        .ila_bayt(JeelMawrid::Rabi, (4, 3))
+        .expect("a Godot 4 resource")
 }
 
 /// One member's stored bytes, encrypted the way Godot's exporter encrypts it:
@@ -410,7 +467,11 @@ fn shaffir(wadih: &[u8]) -> Vec<u8> {
         .expect("a whole number of blocks");
     let mut bayt = Vec::with_capacity(40 + madfu);
     bayt.extend_from_slice(&basma_md5(wadih));
-    bayt.extend_from_slice(&u64::try_from(wadih.len()).expect("a small resource").to_le_bytes());
+    bayt.extend_from_slice(
+        &u64::try_from(wadih.len())
+            .expect("a small resource")
+            .to_le_bytes(),
+    );
     bayt.extend_from_slice(&MUTTAJIH);
     bayt.extend_from_slice(&hajz);
     bayt
@@ -427,9 +488,12 @@ fn pck_bi_adaa_mushaffara() -> (Vec<u8>, Vec<u8>) {
         .to_vec();
 
     let mut bina = BinaHawiya::jadeed(IsdarHawiya::Thani, (4, 3, 0));
-    bina.daa(MASAR_INJILIZI, injilizi).expect("the plaintext member");
-    bina.daa(MASAR_ARABI, shaffir(&arabi)).expect("the locked translation");
-    bina.daa(MASAR_MASHHAD, shaffir(&mashhad)).expect("the locked scene");
+    bina.daa(MASAR_INJILIZI, injilizi)
+        .expect("the plaintext member");
+    bina.daa(MASAR_ARABI, shaffir(&arabi))
+        .expect("the locked translation");
+    bina.daa(MASAR_MASHHAD, shaffir(&mashhad))
+        .expect("the locked scene");
     let mut bayt = bina.ila_bayt().expect("a package this workspace writes");
 
     // The builder writes every entry plain, with the digest of the bytes it
@@ -451,8 +515,8 @@ fn pck_bi_adaa_mushaffara() -> (Vec<u8>, Vec<u8>) {
             bayt[izahat_alam..izahat_alam + 4]
                 .copy_from_slice(&ALAM_MADKHAL_MUSHAFFAR.to_le_bytes());
         }
-        izaha += usize::try_from(madkhal.hajm_fi_al_fahras(IsdarHawiya::Thani))
-            .expect("a short entry");
+        izaha +=
+            usize::try_from(madkhal.hajm_fi_al_fahras(IsdarHawiya::Thani)).expect("a short entry");
     }
     (bayt, arabi)
 }
@@ -470,26 +534,44 @@ fn pck_adauhu_almushaffara_tudhkar_bi_sababiha() {
     // through the same reader and the same two digest checks an engine-written
     // package goes through, and is refused without one.
     let maftuha = HawiyaMaftuha::iftah(&masar).expect("the package opens: its index is plain");
-    assert_eq!(maftuha.istakhrij(MASAR_ARABI, Some(&MIFTAH)).expect("the right key"), arabi);
+    assert_eq!(
+        maftuha
+            .istakhrij(MASAR_ARABI, Some(&MIFTAH))
+            .expect("the right key"),
+        arabi
+    );
     assert!(maftuha.istakhrij(MASAR_ARABI, None).is_err());
     drop(maftuha);
 
     let (jadwal, taqreer) = godot::istakhrij(&jidhr);
     // The plaintext member still reads, so this is a package read in part.
     assert!(
-        taqreer.maqrua.iter().any(|qira| qira.hawiya == "luba.pck" && qira.adad == 2),
+        taqreer
+            .maqrua
+            .iter()
+            .any(|qira| qira.hawiya == "luba.pck" && qira.adad == 2),
         "{:?}",
         taqreer.maqrua
     );
     assert_eq!(jadwal.adad(), 2);
     let marfudat = marfudat(&taqreer, "luba.pck");
-    assert_eq!(marfudat.len(), 1, "two members locked one way are one line: {marfudat:?}");
+    assert_eq!(
+        marfudat.len(),
+        1,
+        "two members locked one way are one line: {marfudat:?}"
+    );
     let SababRafd::Mushaffar { wasf } = &marfudat[0].sabab else {
-        panic!("a locked member is a refusal that names encryption: {:?}", marfudat[0].sabab)
+        panic!(
+            "a locked member is a refusal that names encryption: {:?}",
+            marfudat[0].sabab
+        )
     };
     assert!(wasf.contains("2 members"), "{wasf}");
     assert_eq!(marfudat[0].asl.as_deref(), Some(MASAR_ARABI));
-    assert!(taqreer.yanfa_iltiqat(), "a game decrypts its own text before drawing it");
+    assert!(
+        taqreer.yanfa_iltiqat(),
+        "a game decrypts its own text before drawing it"
+    );
     assert_eq!(taqreer.adad_khasara(), 1);
     let _ = std::fs::remove_dir_all(&jidhr);
 }

@@ -46,8 +46,8 @@ use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
 use crate::bawwaba::ShahadatBawwaba;
 use crate::fuhusat::{IjtiyazFuhus, WasfHuzma};
 use crate::irtibat::IrtibatBina;
-use crate::tahdid_maqasat::TaqreerMaqasat;
 use crate::taghtiya_ruqaa::TaqrirTaghtiya;
+use crate::tahdid_maqasat::TaqreerMaqasat;
 use crate::tahweel::SiyasatHuzma;
 use crate::takhtit::{MizaniyatIqama, TaqreerTakhtit};
 use crate::taqrir_tajawuz::TaqrirTajawuz;
@@ -96,7 +96,10 @@ impl From<IjtiyazFuhus> for SijillFuhus {
     /// the same reason [`crate::mujammi::ijmaa`] consumes the token rather than
     /// borrowing it.
     fn from(ijtiyaz: IjtiyazFuhus) -> Self {
-        Self { nusus: ijtiyaz.nusus(), muakkada: ijtiyaz.muakkada() }
+        Self {
+            nusus: ijtiyaz.nusus(),
+            muakkada: ijtiyaz.muakkada(),
+        }
     }
 }
 

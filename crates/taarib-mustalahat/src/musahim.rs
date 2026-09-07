@@ -36,8 +36,14 @@ impl MusahimId {
     pub fn jadeed(basma: impl Into<String>) -> Result<Self, MusahimIdGhayrSalih> {
         let basma = basma.into();
         let salih = basma.len() == 64
-            && basma.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase());
-        if salih { Ok(Self(basma)) } else { Err(MusahimIdGhayrSalih) }
+            && basma
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase());
+        if salih {
+            Ok(Self(basma))
+        } else {
+            Err(MusahimIdGhayrSalih)
+        }
     }
 
     /// The full fingerprint.

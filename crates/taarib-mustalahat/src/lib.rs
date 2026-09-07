@@ -44,10 +44,9 @@ pub use muharrik::{
 };
 pub use musahim::{Musahim, MusahimId, Sumaa};
 pub use nass::{
-    AlamJawda, MudkhalNass, Mustatil, NassId, NawNasq, NitaqNasq, QuyudNass,
-    SiyaqNass,
+    AlamJawda, MudkhalNass, Mustatil, NassId, NawNasq, NitaqNasq, QuyudNass, SiyaqNass,
 };
-pub use ruqaa::{HalatRuqaa, MulakhkhasRuqaa, RuqaaId, RuqaaRevision, RukhsaRuqaa, TareeqaTarjama};
+pub use ruqaa::{HalatRuqaa, MulakhkhasRuqaa, RukhsaRuqaa, RuqaaId, RuqaaRevision, TareeqaTarjama};
 pub use taghtiya::Taghtiya;
 
 /// The namespace every deterministic Taarib identifier is derived under.

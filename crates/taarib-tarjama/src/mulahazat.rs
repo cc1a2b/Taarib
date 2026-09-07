@@ -57,9 +57,7 @@ use std::collections::{HashMap, VecDeque};
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::nass::TasnifNass;
 
-use crate::dhakira::{
-    AslQayd, Dhakira, NawAsl, QaydJadid, ThiqatQira, miftah_muwahhad,
-};
+use crate::dhakira::{AslQayd, Dhakira, NawAsl, QaydJadid, ThiqatQira, miftah_muwahhad};
 use crate::khata::KhataTarjama;
 
 /// The fewest characters a reading may have and still be worth storing.
@@ -184,11 +182,7 @@ impl MulahazaTabaqa {
 
     /// Names the recognizer and the provider.
     #[must_use]
-    pub fn bi_muharrikayn(
-        mut self,
-        qari: Option<String>,
-        muzawwid: Option<String>,
-    ) -> Self {
+    pub fn bi_muharrikayn(mut self, qari: Option<String>, muzawwid: Option<String>) -> Self {
         self.qari = qari;
         self.muzawwid = muzawwid;
         self
@@ -731,8 +725,7 @@ mod fuhus {
     #[test]
     fn ghayr_al_maqisa_tabqa_ghayr_maqisa() {
         let qayd =
-            MulahazaTabaqa::jadeeda("Loading", "جارٍ التحميل", luba(), ThiqatQira::Ghayr)
-                .ila_qayd();
+            MulahazaTabaqa::jadeeda("Loading", "جارٍ التحميل", luba(), ThiqatQira::Ghayr).ila_qayd();
         assert_eq!(qayd.asl.thiqat_qira(), ThiqatQira::Ghayr);
         assert_eq!(qayd.asl.thiqat_qira().mia(), None);
         assert!(!qayd.asl.thiqat_qira().yajtaz(0));

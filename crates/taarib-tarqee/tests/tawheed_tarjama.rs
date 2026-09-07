@@ -72,7 +72,10 @@ fn masar_khatt() -> PathBuf {
         }
         dalil = jidhr.parent();
     }
-    panic!("no Arabic font found at or above {}", env!("CARGO_MANIFEST_DIR"));
+    panic!(
+        "no Arabic font found at or above {}",
+        env!("CARGO_MANIFEST_DIR")
+    );
 }
 
 /// One string, with everything a compile needs and nothing it does not.
@@ -82,8 +85,15 @@ fn mudkhal(hawiya: &str, masdar: &str, hadaf: &str) -> MudkhalNass {
         masdar: masdar.to_owned(),
         hadaf: Some(hadaf.to_owned()),
         muraja: SijillMuraja::jadeed(),
-        siyaq: SiyaqNass { hawiya: hawiya.to_owned(), mawqi: "0".to_owned(), ..SiyaqNass::default() },
-        quyud: QuyudNass { hajm_khatt: Some(HAJM), ..QuyudNass::default() },
+        siyaq: SiyaqNass {
+            hawiya: hawiya.to_owned(),
+            mawqi: "0".to_owned(),
+            ..SiyaqNass::default()
+        },
+        quyud: QuyudNass {
+            hajm_khatt: Some(HAJM),
+            ..QuyudNass::default()
+        },
         nasq_masdar: Vec::new(),
         nasq_hadaf: Vec::new(),
         takrar: 1,
@@ -107,8 +117,12 @@ fn mudkhal(hawiya: &str, masdar: &str, hadaf: &str) -> MudkhalNass {
 /// behind it — pass on it the way they would on a real project.
 fn muakkad(mut wahid: MudkhalNass) -> MudkhalNass {
     let murajii = MusahimId::jadeed("a".repeat(64)).expect("a 64-character fingerprint");
-    wahid.muraja.sajjil_musawwada(murajii.clone(), 1_700_000_000);
-    wahid.muraja.iaatimad(ShahadatMuraja::baad_muraja(murajii, 1_700_000_100), None);
+    wahid
+        .muraja
+        .sajjil_musawwada(murajii.clone(), 1_700_000_000);
+    wahid
+        .muraja
+        .iaatimad(ShahadatMuraja::baad_muraja(murajii, 1_700_000_100), None);
     wahid.tareeqa = Some(TareeqaTarjama::AaliyaThumBashariya);
     wahid
 }
@@ -135,8 +149,12 @@ fn ijmi(nusus: &[MudkhalNass]) -> HuzmaMabniya {
         tareeqa: TareeqaTarjama::AaliyaFaqat,
         isdar_taarib: "1.0.0".to_owned(),
     };
-    let ijtiyaz = ijri(&MudkhalatFahs { madakhil: nusus, wasf: &wasf, takhtitat_fashila: &[] })
-        .expect("the hard checks pass on this project");
+    let ijtiyaz = ijri(&MudkhalatFahs {
+        madakhil: nusus,
+        wasf: &wasf,
+        takhtitat_fashila: &[],
+    })
+    .expect("the hard checks pass on this project");
 
     let irtibat = IrtibatBina {
         manassat: vec!["ikhtibar-1".to_owned()],
@@ -196,7 +214,10 @@ fn adad_sufuf(huzma: &HuzmaMabniya) -> usize {
     let khaam = huzma.bayt.bayt();
     let ruqaa = Ruqaa::iftah(khaam).expect("the package reopens");
     let qism = ruqaa.qism(NawQism::Nusus).expect("a string section");
-    qari::nusus(qism.bayt()).expect("the string section reads back").sijillat.len()
+    qari::nusus(qism.bayt())
+        .expect("the string section reads back")
+        .sijillat
+        .len()
 }
 
 // ---------------------------------------------------------------------------
@@ -244,16 +265,26 @@ fn ikhtibar_mashru_mutanaqid_yubna() {
     ];
     let huzma = ijmi(&nusus);
 
-    assert_eq!(adad_sufuf(&huzma), 2, "one row per source string, not one per project entry");
+    assert_eq!(
+        adad_sufuf(&huzma),
+        2,
+        "one row per source string, not one per project entry"
+    );
     assert_eq!(
         tarjama_fil_huzma(&huzma, "Back"),
         RUJU,
         "the reading two of the three entries already carried is the one that ships"
     );
-    assert_eq!(tarjama_fil_huzma(&huzma, "Play"), "ابدأ", "the undisputed string is untouched");
+    assert_eq!(
+        tarjama_fil_huzma(&huzma, "Play"),
+        "ابدأ",
+        "the undisputed string is untouched"
+    );
 
     assert_eq!(huzma.tawhid.len(), 1, "exactly one source string disagreed");
-    let Some(wahid) = huzma.tawhid.first() else { panic!("the disagreement is reported") };
+    let Some(wahid) = huzma.tawhid.first() else {
+        panic!("the disagreement is reported")
+    };
     assert_eq!(wahid.masdar, "Back");
     assert_eq!(wahid.mukhtara, RUJU);
     assert_eq!(wahid.muwafiqa, 2);
@@ -274,7 +305,10 @@ fn ikhtibar_mashru_muttafiq_la_yuwahhad() {
     ];
     let huzma = ijmi(&nusus);
 
-    assert!(huzma.tawhid.is_empty(), "nothing disagreed, so nothing is reported");
+    assert!(
+        huzma.tawhid.is_empty(),
+        "nothing disagreed, so nothing is reported"
+    );
     assert_eq!(adad_sufuf(&huzma), 2);
     assert_eq!(tarjama_fil_huzma(&huzma, "Back"), RUJU);
 }
@@ -294,9 +328,14 @@ fn ikhtibar_al_muakkada_taghlib_al_aghlabiya() {
         AWDA,
         "somebody read this one and said yes; the other two are a provider repeating itself"
     );
-    let Some(wahid) = huzma.tawhid.first() else { panic!("the disagreement is reported") };
+    let Some(wahid) = huzma.tawhid.first() else {
+        panic!("the disagreement is reported")
+    };
     assert_eq!(wahid.mukhtara, AWDA);
-    assert_eq!(wahid.muwafiqa, 1, "the winner is reported with its own count, not the majority's");
+    assert_eq!(
+        wahid.muwafiqa, 1,
+        "the winner is reported with its own count, not the majority's"
+    );
 }
 
 /// The choice does not depend on the order the entries arrive in.
@@ -315,7 +354,10 @@ fn ikhtibar_al_ikhtiyar_la_yatabi_al_tarteeb() {
     nusus.reverse();
     let khalfi = tarjama_fil_huzma(&ijmi(&nusus), "Back");
 
-    assert_eq!(amami, khalfi, "the same project in the other order picks the same translation");
+    assert_eq!(
+        amami, khalfi,
+        "the same project in the other order picks the same translation"
+    );
     assert_eq!(amami, RUJU);
 }
 
@@ -341,9 +383,15 @@ fn ikhtibar_al_takhtit_yatbaa_al_tarjama_al_fayiza() {
     let ruqaa = Ruqaa::iftah(khaam).expect("the package reopens");
     let qism = ruqaa.qism(NawQism::Takhtit).expect("a layout section");
     let jadwal = qari::takhtit(qism.bayt()).expect("the layout section reads back");
-    assert_eq!(jadwal.ruus.len(), 1, "one string at one size is one layout, not three");
+    assert_eq!(
+        jadwal.ruus.len(),
+        1,
+        "one string at one size is one layout, not three"
+    );
 
-    let Some(ras) = jadwal.ruus.first() else { panic!("the layout is present") };
+    let Some(ras) = jadwal.ruus.first() else {
+        panic!("the layout is present")
+    };
     let (huruf, _) = jadwal.muhtawa(ras).expect("the layout's glyphs");
     assert_eq!(
         huruf.len(),

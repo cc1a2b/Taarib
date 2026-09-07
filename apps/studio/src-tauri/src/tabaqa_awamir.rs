@@ -256,8 +256,7 @@ fn majmuat_luba(
     let id = huwiya(muarrif.to_owned())?;
     let luba = ijlib_luba(makhzan, id)?;
     let masar = MajmuatManatiq::masar_malaf(&mujallad_tabaqa(masarat), id);
-    let majmua =
-        MajmuatManatiq::hammil_aw_jadeeda(&masar, id, &luba.ism).map_err(Khata::from)?;
+    let majmua = MajmuatManatiq::hammil_aw_jadeeda(&masar, id, &luba.ism).map_err(Khata::from)?;
     Ok((majmua, masar))
 }
 
@@ -265,19 +264,17 @@ fn majmuat_luba(
 fn tatbeeq(natija: NatijatMintaqa) -> Natija<MuarrifMintaqa> {
     match natija {
         NatijatMintaqa::Tammat(muarrif) => Ok(muarrif),
-        NatijatMintaqa::GhayrMawjuda(muarrif) => {
-            Err(Khata::from(KhataTabaqaAmr::MintaqaMajhula { raqm: muarrif.raqm() }))
-        }
+        NatijatMintaqa::GhayrMawjuda(muarrif) => Err(Khata::from(KhataTabaqaAmr::MintaqaMajhula {
+            raqm: muarrif.raqm(),
+        })),
         NatijatMintaqa::LaMisaha => Err(Khata::from(KhataTabaqaAmr::MustatilGhayrSalih)),
         radd @ (NatijatMintaqa::IsmFarigh
         | NatijatMintaqa::IsmTaweel { .. }
         | NatijatMintaqa::IsmMakrur { .. }
-        | NatijatMintaqa::TajawuzSaqf { .. }) => {
-            Err(Khata::from(KhataTabaqaAmr::TadeelMarfud {
-                unwan: radd.unwan(),
-                wasf: radd.wasf(),
-            }))
-        }
+        | NatijatMintaqa::TajawuzSaqf { .. }) => Err(Khata::from(KhataTabaqaAmr::TadeelMarfud {
+            unwan: radd.unwan(),
+            wasf: radd.wasf(),
+        })),
     }
 }
 
@@ -428,15 +425,23 @@ pub fn sijill_qira_luba(
     let bayt = match std::fs::read(&masar) {
         Ok(bayt) => bayt,
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(SijillQiraHie { sutur: Vec::new(), adad_kulli: 0 });
-        }
+            return Ok(SijillQiraHie {
+                sutur: Vec::new(),
+                adad_kulli: 0,
+            });
+        },
         Err(sabab) => return Err(khata_malaf(&masar, sabab)),
     };
 
     let madakhil = hallil_sutur(&bayt);
     let maqsura = usize::try_from(hadd).unwrap_or(usize::MAX);
     Ok(SijillQiraHie {
-        sutur: madakhil.iter().rev().take(maqsura).map(madkhal_hie).collect(),
+        sutur: madakhil
+            .iter()
+            .rev()
+            .take(maqsura)
+            .map(madkhal_hie)
+            .collect(),
         adad_kulli: u32::try_from(madakhil.len()).unwrap_or(u32::MAX),
     })
 }
@@ -500,7 +505,10 @@ pub fn nass_ifsah(masarat: tauri::State<'_, Masarat>) -> Result<IfsahHie, Khata>
 #[specta::specta]
 pub fn aqirr_ifsah(masarat: tauri::State<'_, Masarat>) -> Result<IfsahHie, Khata> {
     let waqt = waqt_alaan();
-    let qayd = QaydIfsah { basma: BasmatIfsah::hadhihi_al_bina().raqm(), waqt: waqt.clone() };
+    let qayd = QaydIfsah {
+        basma: BasmatIfsah::hadhihi_al_bina().raqm(),
+        waqt: waqt.clone(),
+    };
     let masar = masar_ifsah(&masarat);
     let bayt = serde_json::to_vec(&qayd).map_err(|sabab| khata_malaf(&masar, sabab))?;
     kitaba_dharra(&masar, &bayt)?;
@@ -592,7 +600,7 @@ impl Tafsir for KhataTabaqaAmr {
                 "مستطيل المنطقة بلا مساحة داخل الشاشة. اسحب مستطيلًا أوسع داخل حدود الشاشة \
                  ثم أعد المحاولة."
                     .to_owned()
-            }
+            },
             Self::MalafTalif { masar, .. } => format!(
                 "الملف {} موجود ولا يُقرأ. افحصه أو انقله ثم أعد المحاولة.",
                 masar.display()
@@ -615,7 +623,7 @@ impl Tafsir for KhataTabaqaAmr {
                 "The region rectangle has no usable area inside the screen. Drag a larger \
                  rectangle within the surface, then try again."
                     .to_owned()
-            }
+            },
             Self::MalafTalif { masar, sabab } => format!(
                 "{} exists and does not read ({sabab}). Inspect or move it, then retry.",
                 masar.display()
@@ -636,18 +644,18 @@ impl Tafsir for KhataTabaqaAmr {
                     "raqm".to_owned(),
                     QeemaSiyaq::Raqm(i64::try_from(*raqm).unwrap_or(i64::MAX)),
                 );
-            }
+            },
             Self::QaidaMajhula { qaida } => {
                 let _ = siyaq.insert("qaida".to_owned(), QeemaSiyaq::Nass(qaida.clone()));
-            }
+            },
             Self::MalafTalif { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::TadeelMarfud { wasf, .. } => {
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(wasf.clone()));
-            }
-            Self::MustatilGhayrSalih => {}
+            },
+            Self::MustatilGhayrSalih => {},
         }
         siyaq
     }

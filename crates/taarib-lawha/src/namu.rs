@@ -229,13 +229,18 @@ impl LawhaHayya {
 
         let masmuh = mizaniya.checked_div(hajm_safha).unwrap_or(0);
         if masmuh == 0 {
-            return Err(KhataLawha::MizaniyaAsghurMinSafha { mizaniya, hajm_safha }.into());
+            return Err(KhataLawha::MizaniyaAsghurMinSafha {
+                mizaniya,
+                hajm_safha,
+            }
+            .into());
         }
         // The budget decides, unless the caller asked for fewer pages than it
         // pays for. A caller that asked for none is refused by the packer rather
         // than quietly given one.
-        khiyarat.aqsa_safahat =
-            u16::try_from(masmuh).unwrap_or(u16::MAX).min(khiyarat.aqsa_safahat);
+        khiyarat.aqsa_safahat = u16::try_from(masmuh)
+            .unwrap_or(u16::MAX)
+            .min(khiyarat.aqsa_safahat);
 
         let rasif = Rasif::jadeed(khiyarat, namat)?;
         let mut khareeta = KhareetatAshkal::jadeeda();
@@ -430,7 +435,8 @@ impl LawhaHayya {
         self.rasif.amsah();
         self.khareeta.amsah();
         for (fahras, safha) in self.rasif.safahat().iter().enumerate() {
-            self.khareeta.sajjil_safha(ila_raqm_safha(fahras), safha.ard, safha.irtifa);
+            self.khareeta
+                .sajjil_safha(ila_raqm_safha(fahras), safha.ard, safha.irtifa);
         }
         self.quyud.clear();
         self.mathbutat.clear();
@@ -473,7 +479,7 @@ impl LawhaHayya {
                     ..self.misafa
                 };
                 masafa_shakl(rassam, miftah.muarrif, khiyarat)
-            }
+            },
         };
         natija.map_err(|sabab| {
             Khata::min_tafsir(&KhataLawha::RasmFashil {
@@ -486,12 +492,7 @@ impl LawhaHayya {
     }
 
     /// Packs a rasterized glyph, evicting until it fits, and records it.
-    fn udkhil(
-        &mut self,
-        miftah: MiftahShakl,
-        surah: &SurahHarf,
-        tik: u64,
-    ) -> Natija<MawdiShakl> {
+    fn udkhil(&mut self, miftah: MiftahShakl, surah: &SurahHarf, tik: u64) -> Natija<MawdiShakl> {
         if surah.khali() {
             // A space, a joiner, a mark with no outline. Roughly a fifth of the
             // glyphs in a line of Arabic prose land here, and they occupy no
@@ -532,7 +533,7 @@ impl LawhaHayya {
                         .bi_sabab(khata));
                     }
                     self.ihsaat.ikhlaat = self.ihsaat.ikhlaat.saturating_add(1);
-                }
+                },
             }
         };
 
@@ -541,7 +542,8 @@ impl LawhaHayya {
             for fahras in qabl..baad {
                 if let Some(waraqa) = self.rasif.safahat().get(fahras) {
                     let (ard_safha, irtifa_safha) = (waraqa.ard, waraqa.irtifa);
-                    self.khareeta.sajjil_safha(ila_raqm_safha(fahras), ard_safha, irtifa_safha);
+                    self.khareeta
+                        .sajjil_safha(ila_raqm_safha(fahras), ard_safha, irtifa_safha);
                 }
             }
             let jadeed = u64::try_from(baad.saturating_sub(qabl)).unwrap_or(0);
@@ -573,15 +575,16 @@ impl LawhaHayya {
     }
 
     /// Records a placed glyph in both the map and the evictor's book.
-    fn sajjil(
-        &mut self,
-        miftah: MiftahShakl,
-        mawdi: MawdiShakl,
-        takhsees: Option<u32>,
-        tik: u64,
-    ) {
+    fn sajjil(&mut self, miftah: MiftahShakl, mawdi: MawdiShakl, takhsees: Option<u32>, tik: u64) {
         self.khareeta.daa(miftah, mawdi);
-        let _ = self.quyud.insert(miftah, QaydShakl { safha: mawdi.safha, takhsees, akhir: tik });
+        let _ = self.quyud.insert(
+            miftah,
+            QaydShakl {
+                safha: mawdi.safha,
+                takhsees,
+                akhir: tik,
+            },
+        );
         self.ihsaat.ashkal = ila_adad(self.quyud.len());
     }
 

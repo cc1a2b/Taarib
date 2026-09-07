@@ -214,17 +214,23 @@ impl MurashahSura {
         irtifa: u32,
         wasf: impl Into<String>,
     ) -> Self {
-        Self { masdar, martaba, abaad: Some((ard, irtifa)), wasf: wasf.into() }
+        Self {
+            masdar,
+            martaba,
+            abaad: Some((ard, irtifa)),
+            wasf: wasf.into(),
+        }
     }
 
     /// A candidate whose dimensions are not known yet.
     #[must_use]
-    pub fn bila_abaad(
-        masdar: MasdarSura,
-        martaba: MartabatSura,
-        wasf: impl Into<String>,
-    ) -> Self {
-        Self { masdar, martaba, abaad: None, wasf: wasf.into() }
+    pub fn bila_abaad(masdar: MasdarSura, martaba: MartabatSura, wasf: impl Into<String>) -> Self {
+        Self {
+            masdar,
+            martaba,
+            abaad: None,
+            wasf: wasf.into(),
+        }
     }
 
     /// Whether this candidate is usable at the requested size.
@@ -244,8 +250,7 @@ impl MurashahSura {
             return false;
         }
         // The upscale ceiling, and the reason rung 3 does not produce garbage.
-        u64::from(ard).saturating_mul(u64::from(Silsila::AQSA_TAKBIR))
-            >= u64::from(ard_matlub)
+        u64::from(ard).saturating_mul(u64::from(Silsila::AQSA_TAKBIR)) >= u64::from(ard_matlub)
     }
 }
 
@@ -352,15 +357,12 @@ impl Silsila {
     /// picture chose it, and second-guessing them would make the override a
     /// suggestion rather than a decision.
     #[must_use]
-    pub fn hall(
-        naw: NawSura,
-        murashahat: &[MurashahSura],
-        ard_matlub: u32,
-    ) -> Option<SuraMahlula> {
+    pub fn hall(naw: NawSura, murashahat: &[MurashahSura], ard_matlub: u32) -> Option<SuraMahlula> {
         let mut athar: Vec<String> = Vec::with_capacity(murashahat.len());
 
-        if let Some(tajawuz) =
-            murashahat.iter().find(|q| matches!(q.martaba, MartabatSura::Tajawuz))
+        if let Some(tajawuz) = murashahat
+            .iter()
+            .find(|q| matches!(q.martaba, MartabatSura::Tajawuz))
         {
             athar.push(format!("{}: taken (user override)", tajawuz.wasf));
             return Some(SuraMahlula {
@@ -417,9 +419,13 @@ impl Silsila {
         for (naw, majmua) in murashahat {
             match Self::hall(*naw, majmua, talab.ard_matlub) {
                 Some(sura) => {
-                    athar.extend(sura.athar.iter().map(|satr| format!("{}: {satr}", naw.ism())));
+                    athar.extend(
+                        sura.athar
+                            .iter()
+                            .map(|satr| format!("{}: {satr}", naw.ism())),
+                    );
                     mahlula.push(sura);
-                }
+                },
                 None => athar.push(format!(
                     "{}: no candidate passed; the plate is used",
                     naw.ism()
@@ -456,7 +462,7 @@ pub fn murashahat_matjar(min_matjar: &MasadirSuwar) -> Vec<(NawSura, Vec<Murasha
                 ),
                 MasdarSura::Rabt(rabt) => {
                     (MartabatSura::Khidma, format!("launcher endpoint: {rabt}"))
-                }
+                },
             };
             majmua.push(MurashahSura::bila_abaad(masdar.clone(), martaba, wasf));
         }
@@ -490,9 +496,7 @@ pub fn murashahat_tajawuz(tajawuz: &TajawuzSuwar) -> Vec<(NawSura, Vec<MurashahS
 /// matters because [`Silsila::hall`] sorts by rung and needs every candidate for
 /// one picture in one list.
 #[must_use]
-pub fn admij(
-    majmuat: Vec<Vec<(NawSura, Vec<MurashahSura>)>>,
-) -> Vec<(NawSura, Vec<MurashahSura>)> {
+pub fn admij(majmuat: Vec<Vec<(NawSura, Vec<MurashahSura>)>>) -> Vec<(NawSura, Vec<MurashahSura>)> {
     let mut kul: Vec<(NawSura, Vec<MurashahSura>)> =
         [NawSura::Ghilaf, NawSura::Batl, NawSura::Shiar]
             .into_iter()

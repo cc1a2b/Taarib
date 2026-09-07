@@ -466,10 +466,13 @@ pub fn lughat_steam(
             tanbihat.push(TanbihFahs::jadeed(
                 "steam",
                 masar.display().to_string(),
-                format!("cannot read Steam's app metadata cache for languages: {:?}", sabab.kind()),
+                format!(
+                    "cannot read Steam's app metadata cache for languages: {:?}",
+                    sabab.kind()
+                ),
             ));
             return fahras;
-        }
+        },
     };
 
     let natija = vdf::murur_appinfo(&masar, &bayt, &mut |madkhal| {
@@ -482,7 +485,11 @@ pub fn lughat_steam(
     });
 
     if let Err(khata) = natija {
-        tanbihat.push(TanbihFahs::jadeed("steam", masar.display().to_string(), khata.injilizi));
+        tanbihat.push(TanbihFahs::jadeed(
+            "steam",
+            masar.display().to_string(),
+            khata.injilizi,
+        ));
     }
 
     fahras
@@ -493,8 +500,9 @@ pub fn lughat_steam(
 pub fn lughat_min_appinfo(bayanat: &QeemaVdf) -> Option<LughatMuallana> {
     let mut lughat: Vec<LughaMuallana> = Vec::new();
 
-    for (ramz, madkhal) in
-        bayanat.kain_bi_masar(&["appinfo", "common", "supported_languages"]).unwrap_or(&[])
+    for (ramz, madkhal) in bayanat
+        .kain_bi_masar(&["appinfo", "common", "supported_languages"])
+        .unwrap_or(&[])
     {
         lughat.push(LughaMuallana {
             ramz: ramz.clone(),
@@ -508,7 +516,9 @@ pub fn lughat_min_appinfo(bayanat: &QeemaVdf) -> Option<LughatMuallana> {
         // The older flat list. Presence only: `english 1`, `arabic 1`. Recorded
         // as interface support because that is the weakest reading of a bare
         // listing, and claiming subtitles from it would be inventing a fact.
-        let qadeema = bayanat.kain_bi_masar(&["appinfo", "common", "languages"]).unwrap_or(&[]);
+        let qadeema = bayanat
+            .kain_bi_masar(&["appinfo", "common", "languages"])
+            .unwrap_or(&[]);
         for (ramz, qeema) in qadeema {
             if qeema.raqm().unwrap_or(1) == 0 {
                 continue;
@@ -527,14 +537,22 @@ pub fn lughat_min_appinfo(bayanat: &QeemaVdf) -> Option<LughatMuallana> {
     }
     lughat.sort();
     lughat.dedup();
-    Some(LughatMuallana { matjar: "steam", lughat })
+    Some(LughatMuallana {
+        matjar: "steam",
+        lughat,
+    })
 }
 
 /// Reads one `"true"`/`"1"` flag out of a `supported_languages` entry.
 fn raya(madkhal: &QeemaVdf, ism: &str) -> bool {
     madkhal.nass_bi_masar(&[ism]).is_some_and(|qeema| {
-        matches!(qeema.trim().to_ascii_lowercase().as_str(), "true" | "1" | "yes")
-    }) || madkhal.raqm_bi_masar(&[ism]).is_some_and(|qeema| qeema != 0)
+        matches!(
+            qeema.trim().to_ascii_lowercase().as_str(),
+            "true" | "1" | "yes"
+        )
+    }) || madkhal
+        .raqm_bi_masar(&[ism])
+        .is_some_and(|qeema| qeema != 0)
 }
 
 // ---------------------------------------------------------------------------
@@ -778,7 +796,12 @@ fn shakl_masar(nisbi: &Path, ism: &str, mujallad: bool) -> Option<ShaklMasar> {
     }
     // `Content/Localization/<Target>/<culture>` — the culture's parent is the
     // target and the grandparent is the localization directory.
-    let jadd = nisbi.parent()?.parent()?.file_name()?.to_str()?.to_lowercase();
+    let jadd = nisbi
+        .parent()?
+        .parent()?
+        .file_name()?
+        .to_str()?
+        .to_lowercase();
     if ASMAA_LUGHAT.contains(&jadd.as_str()) {
         return Some(ShaklMasar::LocalizationUnreal);
     }
@@ -958,7 +981,10 @@ struct Mizan {
 
 impl Mizan {
     const fn jadeed() -> Self {
-        Self { hala: TughtiyaLugha::Majhula, wazn: 0 }
+        Self {
+            hala: TughtiyaLugha::Majhula,
+            wazn: 0,
+        }
     }
 
     const fn min_hala(hala: TughtiyaLugha, wazn: u8) -> Self {
@@ -1010,19 +1036,28 @@ impl<'a> Fahis<'a> {
     /// run itself, computed fresh every time.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { massah: &[], khazina: None }
+        Self {
+            massah: &[],
+            khazina: None,
+        }
     }
 
     /// Adds the deep engine probes.
     #[must_use]
     pub const fn bi_massah(self, massah: &'a [&'a dyn FahisMawarid]) -> Self {
-        Self { massah, khazina: self.khazina }
+        Self {
+            massah,
+            khazina: self.khazina,
+        }
     }
 
     /// Adds a cache.
     #[must_use]
     pub const fn bi_khazina(self, khazina: &'a dyn KhazinatLugha) -> Self {
-        Self { massah: self.massah, khazina: Some(khazina) }
+        Self {
+            massah: self.massah,
+            khazina: Some(khazina),
+        }
     }
 
     /// Decides whether a game already speaks Arabic, reading the cache first.
@@ -1075,7 +1110,7 @@ impl<'a> Fahis<'a> {
                 let (w, n) = min_matjar(lughat, &mut dalail, &mut majhul);
                 wajiha.dammij(w);
                 nusus.dammij(n);
-            }
+            },
             None => majhul.push(sabab_bila_matjar(talab.masdar)),
         }
 
@@ -1142,7 +1177,7 @@ fn sabab_bila_matjar(masdar: &MasdarLuba) -> String {
         ),
         MasdarLughat::La => {
             format!("{matjar} records nothing about which languages a game supports")
-        }
+        },
     }
 }
 
@@ -1179,8 +1214,11 @@ fn min_matjar(
     if arabiya.sawt {
         facets.push("full audio");
     }
-    let masrud =
-        if facets.is_empty() { "with no facet flags set".to_owned() } else { facets.join(", ") };
+    let masrud = if facets.is_empty() {
+        "with no facet flags set".to_owned()
+    } else {
+        facets.join(", ")
+    };
 
     dalail.push(DaleelLugha {
         naw: NawDaleelLugha::LughatMatjar,
@@ -1247,7 +1285,9 @@ fn min_mawarid(mawarid: &[MawridLugha], dalail: &mut Vec<DaleelLugha>) -> (Mizan
             .filter(|mawrid| mawrid.li_luba)
             .map(|mawrid| mawrid.thaqafa.as_str())
             .collect();
-        let muharrik = mawarid.first().map_or("the engine", |mawrid| mawrid.muharrik);
+        let muharrik = mawarid
+            .first()
+            .map_or("the engine", |mawrid| mawrid.muharrik);
         dalail.push(DaleelLugha {
             naw: NawDaleelLugha::MawridMuharrik,
             wasf: format!(
@@ -1257,7 +1297,10 @@ fn min_mawarid(mawarid: &[MawridLugha], dalail: &mut Vec<DaleelLugha>) -> (Mizan
                 ahdaf.iter().copied().collect::<Vec<_>>(),
                 thaqafat.iter().copied().collect::<Vec<_>>().join(", ")
             ),
-            mawqi: mawarid.iter().find(|mawrid| mawrid.li_luba).map(|mawrid| mawrid.mawqi.clone()),
+            mawqi: mawarid
+                .iter()
+                .find(|mawrid| mawrid.li_luba)
+                .map(|mawrid| mawrid.mawqi.clone()),
             wazn: WAZN_MAWRID,
         });
         let nafi = Mizan::min_hala(TughtiyaLugha::Ghaiba, WAZN_MAWRID);
@@ -1290,13 +1333,16 @@ fn min_mawarid(mawarid: &[MawridLugha], dalail: &mut Vec<DaleelLugha>) -> (Mizan
         let masrud = match (takafu, mawrid.marja) {
             (Some(nisba), Some(marja)) => {
                 format!(", {nisba}% of the {marja} its reference culture carries")
-            }
+            },
             _ => String::new(),
         };
         let muallana = if mawrid.thaqafat.is_empty() {
             String::new()
         } else {
-            format!("; the target's manifest declares {} cultures", mawrid.thaqafat.len())
+            format!(
+                "; the target's manifest declares {} cultures",
+                mawrid.thaqafat.len()
+            )
         };
 
         dalail.push(DaleelLugha {
@@ -1304,11 +1350,7 @@ fn min_mawarid(mawarid: &[MawridLugha], dalail: &mut Vec<DaleelLugha>) -> (Mizan
             wasf: format!(
                 "{} compiles culture `{}` into this game's own localization target `{}` with {} \
                  entries{masrud}, {} of them in Arabic script{muallana}",
-                mawrid.muharrik,
-                mawrid.thaqafa,
-                mawrid.hadaf,
-                mawrid.adad,
-                mawrid.arabi
+                mawrid.muharrik, mawrid.thaqafa, mawrid.hadaf, mawrid.adad, mawrid.arabi
             ),
             mawqi: Some(mawrid.mawqi.clone()),
             wazn: WAZN_MAWRID,
@@ -1334,8 +1376,10 @@ fn min_mawarid(mawarid: &[MawridLugha], dalail: &mut Vec<DaleelLugha>) -> (Mizan
 /// menus or dialogue, and claiming otherwise from a directory name would be
 /// inventing a fact.
 fn min_masarat(masarat: &[MasarThaqafa], dalail: &mut Vec<DaleelLugha>) -> Mizan {
-    let arabiya: Vec<&MasarThaqafa> =
-        masarat.iter().filter(|masar| huwa_arabi(&masar.thaqafa)).collect();
+    let arabiya: Vec<&MasarThaqafa> = masarat
+        .iter()
+        .filter(|masar| huwa_arabi(&masar.thaqafa))
+        .collect();
 
     if let Some(awwal) = arabiya.first() {
         dalail.push(DaleelLugha {
@@ -1412,7 +1456,11 @@ mod ikhtibarat {
 
     impl MassahThabit {
         fn jadeed(mawarid: Vec<MawridLugha>) -> Self {
-            Self { mawarid, majhul: Vec::new(), marrat: AtomicUsize::new(0) }
+            Self {
+                mawarid,
+                majhul: Vec::new(),
+                marrat: AtomicUsize::new(0),
+            }
         }
 
         fn marrat(&self) -> usize {
@@ -1464,24 +1512,46 @@ mod ikhtibarat {
 
     #[test]
     fn ramz_arabi_yuqbal_bi_kul_sighah() {
-        for ramz in ["ar", "AR", "ar-SA", "ar_SA", "Arabic", "arabic", "ara", "ar-EG"] {
+        for ramz in [
+            "ar", "AR", "ar-SA", "ar_SA", "Arabic", "arabic", "ara", "ar-EG",
+        ] {
             assert!(huwa_arabi(ramz), "{ramz} should read as Arabic");
         }
     }
 
     #[test]
     fn ramz_ghayr_arabi_yurfad() {
-        for ramz in ["art", "arm", "en", "en-US", "armenian", "brazilian", "schinese", ""] {
+        for ramz in [
+            "art",
+            "arm",
+            "en",
+            "en-US",
+            "armenian",
+            "brazilian",
+            "schinese",
+            "",
+        ] {
             assert!(!huwa_arabi(ramz), "{ramz} should not read as Arabic");
         }
     }
 
     #[test]
     fn shakl_al_ramz_yumayyiz_al_thaqafat_min_asma_al_wajiha() {
-        for ramz in ["ar", "en-US", "zh-Hans", "pt-BR", "en-US-POSIX", "ara", "arabic", "koreana"] {
+        for ramz in [
+            "ar",
+            "en-US",
+            "zh-Hans",
+            "pt-BR",
+            "en-US-POSIX",
+            "ara",
+            "arabic",
+            "koreana",
+        ] {
             assert!(huwa_ramz_thaqafa(ramz), "{ramz} is a culture position");
         }
-        for ramz in ["HUD", "Menu", "Game", "Default", "readme", "shared", "", "x"] {
+        for ramz in [
+            "HUD", "Menu", "Game", "Default", "readme", "shared", "", "x",
+        ] {
             assert!(!huwa_ramz_thaqafa(ramz), "{ramz} is not a culture position");
         }
     }
@@ -1495,7 +1565,10 @@ mod ikhtibarat {
                 .as_deref(),
             Some("da-dk")
         );
-        assert_eq!(ramz_min_huzma("localization-assets-shared_assets_all.bundle"), None);
+        assert_eq!(
+            ramz_min_huzma("localization-assets-shared_assets_all.bundle"),
+            None
+        );
     }
 
     #[test]
@@ -1504,7 +1577,10 @@ mod ikhtibarat {
         let marja: [&dyn FahisMawarid; 1] = [&massah];
         let fahis = Fahis::jadeed().bi_massah(&marja);
         let masdar = MasdarLuba::Steam(2_149_010);
-        let muallana = lughat(&[("arabic", true, false, false), ("english", true, false, false)]);
+        let muallana = lughat(&[
+            ("arabic", true, false, false),
+            ("english", true, false, false),
+        ]);
         let hukm = fahis.ihsib_bila_khazina(&TalabLugha {
             luba: LubaId::min_masdar(&masdar, "Little Nightmares Enhanced Edition"),
             masdar: &masdar,
@@ -1561,7 +1637,10 @@ mod ikhtibarat {
         let mut dalail = Vec::new();
         let mut majhul = Vec::new();
         let (wajiha, nusus) = min_matjar(
-            &lughat(&[("arabic", true, false, false), ("english", true, false, false)]),
+            &lughat(&[
+                ("arabic", true, false, false),
+                ("english", true, false, false),
+            ]),
             &mut dalail,
             &mut majhul,
         );
@@ -1575,7 +1654,10 @@ mod ikhtibarat {
         let mut dalail = Vec::new();
         let mut majhul = Vec::new();
         let (wajiha, nusus) = min_matjar(
-            &lughat(&[("arabic", true, false, false), ("english", true, true, false)]),
+            &lughat(&[
+                ("arabic", true, false, false),
+                ("english", true, true, false),
+            ]),
             &mut dalail,
             &mut majhul,
         );
@@ -1600,10 +1682,17 @@ mod ikhtibarat {
             masdar: &masdar,
             jidhr: Path::new("/nowhere"),
             bina: Some("1"),
-            lughat: Some(&lughat(&[("arabic", true, true, false), ("english", true, true, false)])),
+            lughat: Some(&lughat(&[
+                ("arabic", true, true, false),
+                ("english", true, true, false),
+            ])),
         });
         assert_eq!(hukm.hala(), HalatLughaRasmiya::Ghaib);
-        assert_eq!(hukm.dalail.len(), 2, "both observations stay in the evidence list");
+        assert_eq!(
+            hukm.dalail.len(),
+            2,
+            "both observations stay in the evidence list"
+        );
     }
 
     #[test]
@@ -1620,9 +1709,16 @@ mod ikhtibarat {
             &masdar,
             jidhr,
             Some("23363152"),
-            &["arabic".to_owned(), "english".to_owned(), "french".to_owned()],
+            &[
+                "arabic".to_owned(),
+                "english".to_owned(),
+                "french".to_owned(),
+            ],
         );
-        assert_ne!(qabl, baad, "adding a declared language must invalidate the key");
+        assert_ne!(
+            qabl, baad,
+            "adding a declared language must invalidate the key"
+        );
     }
 
     #[test]
@@ -1669,18 +1765,35 @@ mod ikhtibarat {
 
         let thani = fahis.ifhas(&talab);
         assert_eq!(awwal, thani, "the second run must be the cached verdict");
-        assert_eq!(massah.marrat(), 1, "the second run must not walk the containers again");
+        assert_eq!(
+            massah.marrat(),
+            1,
+            "the second run must not walk the containers again"
+        );
 
         // A store update that adds a language changes the key, so the verdict is
         // recomputed rather than served.
-        let jadeeda = lughat(&[("arabic", true, false, false), ("polish", true, false, false)]);
-        let talab_jadeed = TalabLugha { lughat: Some(&jadeeda), ..talab.clone() };
+        let jadeeda = lughat(&[
+            ("arabic", true, false, false),
+            ("polish", true, false, false),
+        ]);
+        let talab_jadeed = TalabLugha {
+            lughat: Some(&jadeeda),
+            ..talab.clone()
+        };
         let thalith = fahis.ifhas(&talab_jadeed);
-        assert_eq!(massah.marrat(), 2, "a changed declared-language list must invalidate");
+        assert_eq!(
+            massah.marrat(),
+            2,
+            "a changed declared-language list must invalidate"
+        );
         assert_ne!(awwal.lughat_muallana, thalith.lughat_muallana);
 
         // And a game update that changes the build does the same.
-        let talab_bina = TalabLugha { bina: Some("2"), ..talab.clone() };
+        let talab_bina = TalabLugha {
+            bina: Some("2"),
+            ..talab.clone()
+        };
         let _ = fahis.ifhas(&talab_bina);
         assert_eq!(massah.marrat(), 3, "a changed build must invalidate");
     }

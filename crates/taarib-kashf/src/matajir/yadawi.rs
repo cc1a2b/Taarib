@@ -119,8 +119,11 @@ use crate::khata::KhataKashf;
 const MUARRIF: &str = "yadawi";
 
 /// Manual addition works everywhere, by construction.
-const MANASSAT: [NizamTashghil; 3] =
-    [NizamTashghil::Windows, NizamTashghil::Linux, NizamTashghil::Mac];
+const MANASSAT: [NizamTashghil; 3] = [
+    NizamTashghil::Windows,
+    NizamTashghil::Linux,
+    NizamTashghil::Mac,
+];
 
 /// One entry the user added by hand, as the local store keeps it.
 ///
@@ -143,7 +146,11 @@ impl MudkhalYadawi {
     /// Builds an entry for a path, with no name and not hidden.
     #[must_use]
     pub fn jadeed(masar: impl Into<PathBuf>) -> Self {
-        Self { masar: masar.into(), ism: None, mukhfi: false }
+        Self {
+            masar: masar.into(),
+            ism: None,
+            mukhfi: false,
+        }
     }
 }
 
@@ -192,7 +199,9 @@ impl MatjarYadawi {
     /// folders in the user's settings.
     #[must_use]
     pub fn jadeed() -> Self {
-        Self { sijill: Arc::new(SijillThabit::default()) }
+        Self {
+            sijill: Arc::new(SijillThabit::default()),
+        }
     }
 
     /// Builds the adapter over a store.
@@ -281,15 +290,19 @@ impl Matjar for MatjarYadawi {
                 ));
                 continue;
             };
-            let mut abnaa: Vec<PathBuf> =
-                qaima
-                    .flatten()
-                    .map(|madkhal| madkhal.path())
-                    .filter(|masar| masar.is_dir())
-                    .collect();
+            let mut abnaa: Vec<PathBuf> = qaima
+                .flatten()
+                .map(|madkhal| madkhal.path())
+                .filter(|masar| masar.is_dir())
+                .collect();
             abnaa.sort();
             for ibn in abnaa {
-                adif(&MudkhalYadawi::jadeed(ibn), siyaq.nizam, &mut maruf, &mut natija);
+                adif(
+                    &MudkhalYadawi::jadeed(ibn),
+                    siyaq.nizam,
+                    &mut maruf,
+                    &mut natija,
+                );
             }
         }
 
@@ -381,8 +394,13 @@ fn jidhr_min_masar(masar: &Path) -> Option<PathBuf> {
 /// Visible to the crate because [`crate::matajir::mahmul`] classifies the same
 /// files out of a directory listing it already holds, and two lists of artwork
 /// names that could drift apart would be one list too many.
-pub(crate) const ASMAA_SUWAR: [&str; 5] =
-    ["cover.png", "cover.jpg", "folder.jpg", "poster.png", "grid.png"];
+pub(crate) const ASMAA_SUWAR: [&str; 5] = [
+    "cover.png",
+    "cover.jpg",
+    "folder.jpg",
+    "poster.png",
+    "grid.png",
+];
 
 /// Turns a path the user chose into a discovered game.
 ///
@@ -415,12 +433,16 @@ fn hall_masar(
     nizam: NizamTashghil,
 ) -> Natija<(LubaMuktashafa, bool)> {
     if !masar.exists() {
-        return Err(KhataKashf::LaYujadTanfidhi { jidhr: masar.to_path_buf() }.into());
+        return Err(KhataKashf::LaYujadTanfidhi {
+            jidhr: masar.to_path_buf(),
+        }
+        .into());
     }
 
     let mulaff = masar.is_file();
-    let jidhr = jidhr_min_masar(masar)
-        .ok_or_else(|| KhataKashf::LaYujadTanfidhi { jidhr: masar.to_path_buf() })?;
+    let jidhr = jidhr_min_masar(masar).ok_or_else(|| KhataKashf::LaYujadTanfidhi {
+        jidhr: masar.to_path_buf(),
+    })?;
 
     let mashhad = imsah_mujallad(&jidhr, nizam);
 
@@ -432,7 +454,9 @@ fn hall_masar(
             .first()
             .filter(|murashah| murashah.natija >= HADD_QUBUL)
             .map(|murashah| murashah.masar.clone())
-            .ok_or_else(|| KhataKashf::LaYujadTanfidhi { jidhr: jidhr.clone() })?
+            .ok_or_else(|| KhataKashf::LaYujadTanfidhi {
+                jidhr: jidhr.clone(),
+            })?
     };
 
     let ism = ism
@@ -441,13 +465,17 @@ fn hall_masar(
         .map(str::to_owned)
         .or_else(|| ism_min_mujallad(&jidhr))
         .or_else(|| {
-            tanfidhi.file_stem().map(|jidhr_ism| jidhr_ism.to_string_lossy().into_owned())
+            tanfidhi
+                .file_stem()
+                .map(|jidhr_ism| jidhr_ism.to_string_lossy().into_owned())
         })
         .unwrap_or_else(|| "Added game".to_owned());
 
     let mut simat = Vec::new();
     if nizam != NizamTashghil::Windows
-        && tanfidhi.extension().is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("exe"))
+        && tanfidhi
+            .extension()
+            .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("exe"))
     {
         simat.push(SimatLuba::TabaqatTawafuq(
             "a Windows executable on a system that is not Windows, so it runs through Wine or \
@@ -492,12 +520,14 @@ fn hall_masar(
 /// one file.
 #[must_use]
 pub fn muarrif_yadawi(tanfidhi: &Path, nizam: NizamTashghil) -> String {
-    let mutlaq =
-        std::fs::canonicalize(tanfidhi).unwrap_or_else(|_| tanfidhi.to_path_buf());
+    let mutlaq = std::fs::canonicalize(tanfidhi).unwrap_or_else(|_| tanfidhi.to_path_buf());
     let nass = mutlaq.to_string_lossy();
     let munaqqa = nass.strip_prefix(r"\\?\").unwrap_or_else(|| nass.as_ref());
-    let mabni =
-        if nizam.hassas_lil_ahruf() { munaqqa.to_owned() } else { munaqqa.to_lowercase() };
+    let mabni = if nizam.hassas_lil_ahruf() {
+        munaqqa.to_owned()
+    } else {
+        munaqqa.to_lowercase()
+    };
 
     let basma = blake3::hash(mabni.as_bytes());
     basma.to_hex().get(..32).unwrap_or_default().to_owned()
@@ -515,7 +545,10 @@ pub fn muarrif_yadawi(tanfidhi: &Path, nizam: NizamTashghil) -> String {
 /// would drift, and the two sources would then spell one folder's name two
 /// different ways in one library.
 pub(crate) fn ism_min_mujallad(jidhr: &Path) -> Option<String> {
-    let kham = jidhr.file_name()?.to_string_lossy().replace(['_', '.'], " ");
+    let kham = jidhr
+        .file_name()?
+        .to_string_lossy()
+        .replace(['_', '.'], " ");
     let mut kalimat: Vec<&str> = Vec::new();
     for kalima in kham.split_whitespace() {
         let munaqqa = kalima.trim_matches(|harf: char| matches!(harf, '(' | ')' | '[' | ']'));
@@ -545,7 +578,11 @@ fn suwar_mujawira(jidhr: &Path) -> MasadirSuwar {
         .map(|ism| jidhr.join(ism))
         .find(|masar| masar.is_file())
         .map(MasdarSura::Malaf);
-    MasadirSuwar { ghilaf, batl: None, shiar: None }
+    MasadirSuwar {
+        ghilaf,
+        batl: None,
+        shiar: None,
+    }
 }
 
 /// A file's modification time, as RFC 3339.
@@ -562,7 +599,9 @@ pub(crate) fn waqt_tadeel(masar: &Path) -> Option<String> {
     let mubaddal = std::fs::metadata(masar).ok()?.modified().ok()?;
     let mudda = mubaddal.duration_since(std::time::UNIX_EPOCH).ok()?;
     let thawani = i64::try_from(mudda.as_secs()).ok()?;
-    jiff::Timestamp::from_second(thawani).ok().map(|waqt| waqt.to_string())
+    jiff::Timestamp::from_second(thawani)
+        .ok()
+        .map(|waqt| waqt.to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -886,8 +925,10 @@ fn aqib_al_mushaghghilat(murashahat: &mut [MurashahTanfidhi]) {
 /// [`crate::ayquna`] and should not do twice — and because the layout above is
 /// evidence a stripped or packed binary cannot take away.
 fn aqib_al_aghlifa(murashahat: &mut [MurashahTanfidhi]) {
-    let khass: Vec<i64> =
-        murashahat.iter().map(|murashah| wazn_muharrik_khass(&murashah.masar)).collect();
+    let khass: Vec<i64> = murashahat
+        .iter()
+        .map(|murashah| wazn_muharrik_khass(&murashah.masar))
+        .collect();
 
     let marajii = || murashahat.iter().zip(&khass).filter(|(_, wazn)| **wazn > 0);
     let akbar_marja = marajii().map(|(murashah, _)| murashah.hajm).max();
@@ -900,10 +941,10 @@ fn aqib_al_aghlifa(murashahat: &mut [MurashahTanfidhi]) {
         if *wazn > 0 {
             continue;
         }
-        let mudhawwab = akbar_marja
-            .is_some_and(|akbar| murashah.hajm.saturating_mul(NISBAT_GHILAF) < akbar);
-        let fawq_al_bina = akbar_fi_binaries
-            .is_some_and(|akbar| murashah.umq <= 1 && murashah.hajm < akbar);
+        let mudhawwab =
+            akbar_marja.is_some_and(|akbar| murashah.hajm.saturating_mul(NISBAT_GHILAF) < akbar);
+        let fawq_al_bina =
+            akbar_fi_binaries.is_some_and(|akbar| murashah.umq <= 1 && murashah.hajm < akbar);
         if mudhawwab || fawq_al_bina {
             murashah.natija = murashah.natija.saturating_add(WAZN_GHILAF);
         }
@@ -922,8 +963,10 @@ fn qayyim(
 ) -> i64 {
     let mut natija: i64 = 0;
 
-    let jidhr_ism =
-        masar.file_stem().map(|ism| wahhid_ism(&ism.to_string_lossy())).unwrap_or_default();
+    let jidhr_ism = masar
+        .file_stem()
+        .map(|ism| wahhid_ism(&ism.to_string_lossy()))
+        .unwrap_or_default();
 
     // 1 — the name.
     if !jidhr_ism.is_empty() && !ism_mujallad.is_empty() {
@@ -977,7 +1020,9 @@ fn wazn_muharrik_khass(masar: &Path) -> i64 {
     // Unity names the data folder after the player executable, so this is not a
     // guess about the engine — it is the engine's own naming rule.
     if let Some(jidhr_ism) = masar.file_stem()
-        && mujallad.join(format!("{}_Data", jidhr_ism.to_string_lossy())).is_dir()
+        && mujallad
+            .join(format!("{}_Data", jidhr_ism.to_string_lossy()))
+            .is_dir()
     {
         wazn = wazn.saturating_add(WAZN_BAYANAT_UNITY);
     }
@@ -1007,7 +1052,9 @@ fn wazn_muharrik(masar: &Path) -> i64 {
 
     let mut wazn = wazn_muharrik_khass(masar);
     if let Some(mujallad) = masar.parent()
-        && JIRAN_MUHARRIK.iter().any(|jar| mujallad.join(jar).is_file())
+        && JIRAN_MUHARRIK
+            .iter()
+            .any(|jar| mujallad.join(jar).is_file())
     {
         wazn = wazn.saturating_add(WAZN_MUHARRIK_MUJAWIR);
     }
@@ -1030,8 +1077,10 @@ fn fi_mujallad_binaries(masar: &Path) -> bool {
 
 /// Whether a path is named like a launcher.
 fn huwa_mushaghghil(masar: &Path) -> bool {
-    let jidhr_ism =
-        masar.file_stem().map(|ism| wahhid_ism(&ism.to_string_lossy())).unwrap_or_default();
+    let jidhr_ism = masar
+        .file_stem()
+        .map(|ism| wahhid_ism(&ism.to_string_lossy()))
+        .unwrap_or_default();
     AJZAA_MUSHAGHGHIL.iter().any(|juz| jidhr_ism.contains(juz))
 }
 
@@ -1040,7 +1089,10 @@ fn dakhil_hazma(masar: &Path) -> bool {
     let mut ajzaa: Vec<_> = masar.components().collect();
     let _ = ajzaa.pop();
     ajzaa.iter().any(|juz| {
-        juz.as_os_str().to_string_lossy().to_ascii_lowercase().ends_with(".app")
+        juz.as_os_str()
+            .to_string_lossy()
+            .to_ascii_lowercase()
+            .ends_with(".app")
     })
 }
 
@@ -1062,8 +1114,9 @@ fn dakhil_hazma(masar: &Path) -> bool {
 /// is admitted. Without that, thirteen megabytes of Unity scene data outscored
 /// `hollow_knight.exe`.
 fn naw_murashah(masar: &Path, bayanat: &std::fs::Metadata) -> Option<NawBarnamaj> {
-    let imtidad =
-        masar.extension().map(|imtidad| imtidad.to_string_lossy().to_ascii_lowercase());
+    let imtidad = masar
+        .extension()
+        .map(|imtidad| imtidad.to_string_lossy().to_ascii_lowercase());
 
     if bayanat.is_dir() {
         // A `.app` bundle is a directory and is the thing the user runs.
@@ -1087,7 +1140,11 @@ fn naw_murashah(masar: &Path, bayanat: &std::fs::Metadata) -> Option<NawBarnamaj
 /// The kind a file's own header says it is, for an entry whose name did not
 /// settle it.
 fn naw_min_tarwisa(masar: &Path, bayanat: &std::fs::Metadata) -> Option<NawBarnamaj> {
-    if qabil_lil_tanfidh(bayanat) { sihr_barnamaj(masar) } else { None }
+    if qabil_lil_tanfidh(bayanat) {
+        sihr_barnamaj(masar)
+    } else {
+        None
+    }
 }
 
 /// The kind a file's first bytes say it is.
@@ -1111,7 +1168,10 @@ fn sihr_barnamaj(masar: &Path) -> Option<NawBarnamaj> {
 
     let mut sihr = [0_u8; TUL_SIHR];
     // A file too short to hold a magic is too short to be a program.
-    std::fs::File::open(masar).ok()?.read_exact(&mut sihr).ok()?;
+    std::fs::File::open(masar)
+        .ok()?
+        .read_exact(&mut sihr)
+        .ok()?;
 
     if sihr == SIHR_ELF || ASHKAL_MACH.contains(&sihr) || sihr.starts_with(b"#!") {
         return Some(NawBarnamaj::Yuniks);

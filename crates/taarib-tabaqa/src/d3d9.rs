@@ -176,25 +176,25 @@ use std::mem;
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::Graphics::Direct3D9::{
     D3DBACKBUFFER_TYPE_MONO, D3DBLEND_INVSRCALPHA, D3DBLEND_ONE, D3DBLENDOP_ADD, D3DCAPS9,
-    D3DCREATE_PUREDEVICE, D3DCULL_NONE, D3DDEVICE_CREATION_PARAMETERS, D3DFILL_SOLID, D3DFORMAT,
-    D3DFMT_A8R8G8B8, D3DFMT_A16B16G16R16F, D3DFMT_A2R10G10B10, D3DFMT_INDEX16, D3DFMT_R5G6B5,
-    D3DFMT_X1R5G5B5, D3DFMT_X8R8G8B8, D3DFVF_DIFFUSE, D3DFVF_TEX1, D3DFVF_XYZRHW,
+    D3DCREATE_PUREDEVICE, D3DCULL_NONE, D3DDEVICE_CREATION_PARAMETERS, D3DFILL_SOLID,
+    D3DFMT_A2R10G10B10, D3DFMT_A8R8G8B8, D3DFMT_A16B16G16R16F, D3DFMT_INDEX16, D3DFMT_R5G6B5,
+    D3DFMT_X1R5G5B5, D3DFMT_X8R8G8B8, D3DFORMAT, D3DFVF_DIFFUSE, D3DFVF_TEX1, D3DFVF_XYZRHW,
     D3DLOCK_DISCARD, D3DLOCK_READONLY, D3DLOCKED_RECT, D3DMULTISAMPLE_NONE, D3DPOOL,
-    D3DPOOL_DEFAULT, D3DPOOL_MANAGED, D3DPOOL_SYSTEMMEM, D3DPT_TRIANGLELIST,
-    D3DRS_ALPHABLENDENABLE, D3DRS_ALPHATESTENABLE, D3DRS_ANTIALIASEDLINEENABLE, D3DRS_BLENDOP,
-    D3DRS_CLIPPING, D3DRS_CLIPPLANEENABLE, D3DRS_COLORWRITEENABLE, D3DRS_CULLMODE, D3DRS_DESTBLEND,
-    D3DRS_FILLMODE, D3DRS_FOGENABLE, D3DRS_INDEXEDVERTEXBLENDENABLE, D3DRS_LIGHTING,
-    D3DRS_SCISSORTESTENABLE, D3DRS_SEPARATEALPHABLENDENABLE, D3DRS_SHADEMODE, D3DRS_SRCBLEND,
-    D3DRS_SRGBWRITEENABLE, D3DRS_STENCILENABLE, D3DRS_VERTEXBLEND, D3DRS_ZENABLE,
+    D3DPOOL_DEFAULT, D3DPOOL_MANAGED, D3DPOOL_SYSTEMMEM, D3DPRESENT_PARAMETERS, D3DPT_TRIANGLELIST,
+    D3DRENDERSTATETYPE, D3DRS_ALPHABLENDENABLE, D3DRS_ALPHATESTENABLE, D3DRS_ANTIALIASEDLINEENABLE,
+    D3DRS_BLENDOP, D3DRS_CLIPPING, D3DRS_CLIPPLANEENABLE, D3DRS_COLORWRITEENABLE, D3DRS_CULLMODE,
+    D3DRS_DESTBLEND, D3DRS_FILLMODE, D3DRS_FOGENABLE, D3DRS_INDEXEDVERTEXBLENDENABLE,
+    D3DRS_LIGHTING, D3DRS_SCISSORTESTENABLE, D3DRS_SEPARATEALPHABLENDENABLE, D3DRS_SHADEMODE,
+    D3DRS_SRCBLEND, D3DRS_SRGBWRITEENABLE, D3DRS_STENCILENABLE, D3DRS_VERTEXBLEND, D3DRS_ZENABLE,
     D3DRS_ZWRITEENABLE, D3DSAMP_ADDRESSU, D3DSAMP_ADDRESSV, D3DSAMP_MAGFILTER, D3DSAMP_MINFILTER,
-    D3DSAMP_MIPFILTER, D3DSAMP_SRGBTEXTURE, D3DSBT_ALL, D3DSHADE_GOURAUD, D3DSURFACE_DESC,
-    D3DTA_DIFFUSE, D3DTA_TEXTURE, D3DTADDRESS_CLAMP, D3DTEXF_LINEAR, D3DTEXF_NONE,
+    D3DSAMP_MIPFILTER, D3DSAMP_SRGBTEXTURE, D3DSAMPLERSTATETYPE, D3DSBT_ALL, D3DSHADE_GOURAUD,
+    D3DSURFACE_DESC, D3DTA_DIFFUSE, D3DTA_TEXTURE, D3DTADDRESS_CLAMP, D3DTEXF_LINEAR, D3DTEXF_NONE,
     D3DTOP_DISABLE, D3DTOP_MODULATE, D3DTOP_SELECTARG1, D3DTSS_ALPHAARG1, D3DTSS_ALPHAARG2,
     D3DTSS_ALPHAOP, D3DTSS_COLORARG1, D3DTSS_COLORARG2, D3DTSS_COLOROP, D3DTSS_TEXCOORDINDEX,
-    D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE, D3DUSAGE_DYNAMIC, D3DVBF_DISABLE, D3DZB_FALSE,
-    D3DPRESENT_PARAMETERS, D3DRENDERSTATETYPE, D3DSAMPLERSTATETYPE, D3DVIEWPORT9,
-    IDirect3DBaseTexture9, IDirect3DDevice9, IDirect3DDevice9Ex, IDirect3DPixelShader9,
-    IDirect3DStateBlock9, IDirect3DSurface9, IDirect3DTexture9, IDirect3DVertexShader9,
+    D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE, D3DUSAGE_DYNAMIC, D3DVBF_DISABLE, D3DVIEWPORT9,
+    D3DZB_FALSE, IDirect3DBaseTexture9, IDirect3DDevice9, IDirect3DDevice9Ex,
+    IDirect3DPixelShader9, IDirect3DStateBlock9, IDirect3DSurface9, IDirect3DTexture9,
+    IDirect3DVertexShader9,
 };
 use windows::core::{HRESULT, Interface};
 
@@ -289,10 +289,16 @@ const KITABAT_ALWAN: u32 = 0x0F;
 // FVF fixes the order — position, then diffuse, then one texture coordinate —
 // so the agreement is checked at compile time rather than trusted.
 const _: () = {
-    assert!(size_of::<RasD3D9>() == KHATWAT_RAS as usize, "RasD3D9 is not 28 bytes");
+    assert!(
+        size_of::<RasD3D9>() == KHATWAT_RAS as usize,
+        "RasD3D9 is not 28 bytes"
+    );
     assert!(mem::offset_of!(RasD3D9, mawdi) == 0, "RasD3D9.mawdi moved");
     assert!(mem::offset_of!(RasD3D9, lawn) == 16, "RasD3D9.lawn moved");
-    assert!(mem::offset_of!(RasD3D9, khareeta) == IZAHAT_KHAREETA, "RasD3D9.khareeta moved");
+    assert!(
+        mem::offset_of!(RasD3D9, khareeta) == IZAHAT_KHAREETA,
+        "RasD3D9.khareeta moved"
+    );
 };
 
 /// One corner of one quad, in the layout `SIGHAT_RAS` describes.
@@ -324,7 +330,11 @@ struct RasD3D9 {
 /// live in, which is where a wrong curve is visible and nowhere else.
 fn ila_sirgb(khatti: f32) -> f32 {
     let amin = khatti.max(0.0);
-    if amin <= 0.003_130_8 { amin * 12.92 } else { 1.055_f32.mul_add(amin.powf(1.0 / 2.4), -0.055) }
+    if amin <= 0.003_130_8 {
+        amin * 12.92
+    } else {
+        1.055_f32.mul_add(amin.powf(1.0 / 2.4), -0.055)
+    }
 }
 
 /// A premultiplied linear RGBA quad colour as a premultiplied sRGB `D3DCOLOR`.
@@ -424,10 +434,26 @@ fn imla_qita_d3d9(musawwada: &mut Vec<RasD3D9>, qita: &QitaRasm) {
     });
 
     musawwada.extend_from_slice(&[
-        RasD3D9 { mawdi: [yasar, aala, 0.0, 1.0], lawn, khareeta: [u0, v0] },
-        RasD3D9 { mawdi: [yameen, aala, 0.0, 1.0], lawn, khareeta: [u1, v0] },
-        RasD3D9 { mawdi: [yameen, asfal, 0.0, 1.0], lawn, khareeta: [u1, v1] },
-        RasD3D9 { mawdi: [yasar, asfal, 0.0, 1.0], lawn, khareeta: [u0, v1] },
+        RasD3D9 {
+            mawdi: [yasar, aala, 0.0, 1.0],
+            lawn,
+            khareeta: [u0, v0],
+        },
+        RasD3D9 {
+            mawdi: [yameen, aala, 0.0, 1.0],
+            lawn,
+            khareeta: [u1, v0],
+        },
+        RasD3D9 {
+            mawdi: [yameen, asfal, 0.0, 1.0],
+            lawn,
+            khareeta: [u1, v1],
+        },
+        RasD3D9 {
+            mawdi: [yasar, asfal, 0.0, 1.0],
+            lawn,
+            khareeta: [u0, v1],
+        },
     ]);
 }
 
@@ -607,11 +633,10 @@ impl KhattafD3D9 {
     pub fn qudra(&self) -> Result<QudratTarkeeb, KhataTabaqa> {
         // SAFETY: `jihaz` is the live device this backend was built around.
         // `GetSwapChain` returns an owned reference to the implicit swap chain.
-        let silsila = unsafe { self.jihaz.GetSwapChain(0) }.map_err(|khata| {
-            KhataTabaqa::SathTaghayyar {
+        let silsila =
+            unsafe { self.jihaz.GetSwapChain(0) }.map_err(|khata| KhataTabaqa::SathTaghayyar {
                 sabab: format!("the device would not hand over its swap chain: {khata}"),
-            }
-        })?;
+            })?;
 
         let mut muallimat = D3DPRESENT_PARAMETERS::default();
         // SAFETY: `silsila` is the live swap chain from the line above, and the
@@ -629,8 +654,7 @@ impl KhattafD3D9 {
         // this crate: the overlay draws into the frame the game is about to
         // present, so exclusive fullscreen is composed over exactly as windowed
         // mode is.
-        let mut taqrir =
-            QudratTarkeeb::jadeeda(WajihatRusum::Direct3D9, MilShasha::KhilalAlJihaz);
+        let mut taqrir = QudratTarkeeb::jadeeda(WajihatRusum::Direct3D9, MilShasha::KhilalAlJihaz);
 
         // Direct3D 9 lets a game create additional swap chains and present
         // through `IDirect3DSwapChain9::Present` rather than the device's own.
@@ -657,13 +681,29 @@ impl KhattafD3D9 {
         taqrir = taqrir.maa(SababQudra::kamila(
             format!(
                 "الجهاز {} ويعرض في وضع {}.",
-                if self.jihaz_ex.is_some() { "ممتد (9Ex)" } else { "عادي" },
-                if hasri { "ملء الشاشة الحصري" } else { "النافذة" }
+                if self.jihaz_ex.is_some() {
+                    "ممتد (9Ex)"
+                } else {
+                    "عادي"
+                },
+                if hasri {
+                    "ملء الشاشة الحصري"
+                } else {
+                    "النافذة"
+                }
             ),
             format!(
                 "the game made an {} device and is presenting {}",
-                if self.jihaz_ex.is_some() { "IDirect3DDevice9Ex" } else { "IDirect3DDevice9" },
-                if hasri { "in exclusive fullscreen" } else { "windowed" }
+                if self.jihaz_ex.is_some() {
+                    "IDirect3DDevice9Ex"
+                } else {
+                    "IDirect3DDevice9"
+                },
+                if hasri {
+                    "in exclusive fullscreen"
+                } else {
+                    "windowed"
+                }
             ),
         ));
 
@@ -713,7 +753,6 @@ impl KhattafD3D9 {
         Ok(taqrir)
     }
 
-
     /// The backbuffer's own description.
     ///
     /// Read every time rather than cached: it is the authority on the surface's
@@ -723,18 +762,17 @@ impl KhattafD3D9 {
         // SAFETY: `jihaz` is the live device this backend was built around, and
         // `GetBackBuffer` returns an owned reference dropped at the end of this
         // function.
-        let khalfiya = unsafe { self.jihaz.GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO) }
-            .map_err(|khata| KhataTabaqa::SathTaghayyar {
+        let khalfiya = unsafe { self.jihaz.GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO) }.map_err(
+            |khata| KhataTabaqa::SathTaghayyar {
                 sabab: format!("the backbuffer could not be fetched: {khata}"),
-            })?;
+            },
+        )?;
 
         let mut wasf = D3DSURFACE_DESC::default();
         // SAFETY: `khalfiya` is the live surface from above and the out-pointer
         // addresses a fully initialised local of the runtime's own type.
-        unsafe { khalfiya.GetDesc(&raw mut wasf) }.map_err(|khata| {
-            KhataTabaqa::SathTaghayyar {
-                sabab: format!("the backbuffer would not describe itself: {khata}"),
-            }
+        unsafe { khalfiya.GetDesc(&raw mut wasf) }.map_err(|khata| KhataTabaqa::SathTaghayyar {
+            sabab: format!("the backbuffer would not describe itself: {khata}"),
         })?;
         Ok(wasf)
     }
@@ -794,7 +832,11 @@ impl KhattafD3D9 {
     /// exist there — so the choice is not an optimisation and cannot be made
     /// once for both.
     const fn hawd_lawha(&self) -> D3DPOOL {
-        if self.jihaz_ex.is_some() { D3DPOOL_DEFAULT } else { D3DPOOL_MANAGED }
+        if self.jihaz_ex.is_some() {
+            D3DPOOL_DEFAULT
+        } else {
+            D3DPOOL_MANAGED
+        }
     }
 
     /// Releases everything that would make the game's own `Reset` fail.
@@ -840,7 +882,9 @@ impl KhattafD3D9 {
         // time, so these record rather than take effect, and each returns an
         // `HRESULT` that is checked.
         unsafe {
-            self.jihaz.SetFVF(SIGHAT_RAS).map_err(radd("overlay vertex format"))?;
+            self.jihaz
+                .SetFVF(SIGHAT_RAS)
+                .map_err(radd("overlay vertex format"))?;
             // Both stages cleared. A game with a pixel shader still bound would
             // run it over the overlay's triangles, and whatever it produced
             // would not be Arabic.
@@ -856,7 +900,9 @@ impl KhattafD3D9 {
             // already multiplied into the colour, and multiplying it again
             // darkens every glyph edge relative to its interior.
             let hala = |ism: D3DRENDERSTATETYPE, qeema: u32| {
-                self.jihaz.SetRenderState(ism, qeema).map_err(radd("overlay render state"))
+                self.jihaz
+                    .SetRenderState(ism, qeema)
+                    .map_err(radd("overlay render state"))
             };
             hala(D3DRS_ALPHABLENDENABLE, 1)?;
             hala(D3DRS_SRCBLEND, D3DBLEND_ONE.0.cast_unsigned())?;
@@ -923,7 +969,9 @@ impl KhattafD3D9 {
             // linear filtering because the overlay draws at whatever scale the
             // control panel's font size asks for rather than always one to one.
             let akhidh = |ism: D3DSAMPLERSTATETYPE, qeema: u32| {
-                self.jihaz.SetSamplerState(0, ism, qeema).map_err(radd("overlay sampler state"))
+                self.jihaz
+                    .SetSamplerState(0, ism, qeema)
+                    .map_err(radd("overlay sampler state"))
             };
             akhidh(D3DSAMP_MINFILTER, D3DTEXF_LINEAR.0.cast_unsigned())?;
             akhidh(D3DSAMP_MAGFILTER, D3DTEXF_LINEAR.0.cast_unsigned())?;
@@ -942,7 +990,9 @@ impl KhattafD3D9 {
                 MinZ: 0.0,
                 MaxZ: 1.0,
             };
-            self.jihaz.SetViewport(&raw const manzar).map_err(radd("overlay viewport"))?;
+            self.jihaz
+                .SetViewport(&raw const manzar)
+                .map_err(radd("overlay viewport"))?;
         }
         Ok(())
     }
@@ -982,14 +1032,18 @@ impl KhattafD3D9 {
             self.jihaz
                 .SetTextureStageState(0, D3DTSS_COLOROP, amaliya.0.cast_unsigned())
                 .map_err(radd)?;
-            self.jihaz.SetTextureStageState(0, D3DTSS_COLORARG1, awwal).map_err(radd)?;
+            self.jihaz
+                .SetTextureStageState(0, D3DTSS_COLORARG1, awwal)
+                .map_err(radd)?;
             self.jihaz
                 .SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE)
                 .map_err(radd)?;
             self.jihaz
                 .SetTextureStageState(0, D3DTSS_ALPHAOP, amaliya.0.cast_unsigned())
                 .map_err(radd)?;
-            self.jihaz.SetTextureStageState(0, D3DTSS_ALPHAARG1, awwal).map_err(radd)?;
+            self.jihaz
+                .SetTextureStageState(0, D3DTSS_ALPHAARG1, awwal)
+                .map_err(radd)?;
             self.jihaz
                 .SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE)
                 .map_err(radd)?;
@@ -1034,8 +1088,9 @@ impl KhattafD3D9 {
         // SAFETY: `jihaz` is the live device and `masdar` is either a texture
         // this backend created or nothing. The call returns an `HRESULT` either
         // way, which is checked.
-        unsafe { self.jihaz.SetTexture(0, masdar) }.map_err(|khata| {
-            KhataTabaqa::MawridFashil { mawrid: "glyph atlas", sabab: khata.to_string() }
+        unsafe { self.jihaz.SetTexture(0, masdar) }.map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "glyph atlas",
+            sabab: khata.to_string(),
         })?;
 
         let mut marhala: Option<bool> = None;
@@ -1085,7 +1140,10 @@ impl KhattafD3D9 {
         }
         let ruus = u32::try_from(musawwada.len()).unwrap_or(0);
         let muthallathat = u32::try_from(adad_qitaat.saturating_mul(2)).unwrap_or(0);
-        let faharis = self.faharis.get(..adad_qitaat.saturating_mul(6)).unwrap_or(&[]);
+        let faharis = self
+            .faharis
+            .get(..adad_qitaat.saturating_mul(6))
+            .unwrap_or(&[]);
         if ruus == 0 || muthallathat == 0 || faharis.is_empty() {
             return Ok(());
         }
@@ -1138,18 +1196,18 @@ impl KhattafD3D9 {
         // depth-stencil is cleared rather than left, because a surface sized for
         // a different render target is a refusal at draw time.
         unsafe {
-            self.jihaz.SetRenderTarget(0, khalfiya).map_err(|khata| {
-                KhataTabaqa::MawridFashil {
+            self.jihaz
+                .SetRenderTarget(0, khalfiya)
+                .map_err(|khata| KhataTabaqa::MawridFashil {
                     mawrid: "overlay render target",
                     sabab: khata.to_string(),
-                }
-            })?;
-            self.jihaz.SetDepthStencilSurface(None::<&IDirect3DSurface9>).map_err(|khata| {
-                KhataTabaqa::MawridFashil {
+                })?;
+            self.jihaz
+                .SetDepthStencilSurface(None::<&IDirect3DSurface9>)
+                .map_err(|khata| KhataTabaqa::MawridFashil {
                     mawrid: "overlay depth-stencil binding",
                     sabab: khata.to_string(),
-                }
-            })?;
+                })?;
         }
 
         // A draw outside a scene is refused by the runtime, and `Present` is
@@ -1202,7 +1260,10 @@ impl Khattaf for KhattafD3D9 {
         let wasf = self.wasf_khalfiya()?;
         if wasf.Width == 0 || wasf.Height == 0 {
             return Err(KhataTabaqa::SathTaghayyar {
-                sabab: format!("the backbuffer reports a {}×{} surface", wasf.Width, wasf.Height),
+                sabab: format!(
+                    "the backbuffer reports a {}×{} surface",
+                    wasf.Width, wasf.Height
+                ),
             });
         }
 
@@ -1245,7 +1306,8 @@ impl Khattaf for KhattafD3D9 {
         // the only allocation on the draw path and it is made here, off it.
         let matlub = QITA_LIL_DUFA.saturating_mul(4);
         if self.musawwada.capacity() < matlub {
-            self.musawwada.reserve(matlub.saturating_sub(self.musawwada.capacity()));
+            self.musawwada
+                .reserve(matlub.saturating_sub(self.musawwada.capacity()));
         }
 
         // The 9Ex path only: a `D3DPOOL_DEFAULT` atlas did not survive the reset
@@ -1280,7 +1342,9 @@ impl Khattaf for KhattafD3D9 {
         // Four bytes per pixel, stated by the trait. The check is on the whole
         // buffer rather than per row because a short buffer would be read past
         // the end by this function, inside the game's process, with no error.
-        let matlub = u64::from(ard).saturating_mul(4).saturating_mul(u64::from(irtifa));
+        let matlub = u64::from(ard)
+            .saturating_mul(4)
+            .saturating_mul(u64::from(irtifa));
         if tul_u64(bayt.len()) < matlub {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "glyph atlas",
@@ -1294,7 +1358,11 @@ impl Khattaf for KhattafD3D9 {
         let hawd = self.hawd_lawha();
         // A managed texture is written once and restored by the runtime; a
         // default-pool one has to be dynamic to be lockable at all.
-        let istikhdam = if hawd == D3DPOOL_DEFAULT { D3DUSAGE_DYNAMIC.cast_unsigned() } else { 0 };
+        let istikhdam = if hawd == D3DPOOL_DEFAULT {
+            D3DUSAGE_DYNAMIC.cast_unsigned()
+        } else {
+            0
+        };
 
         let mut lawha: Option<IDirect3DTexture9> = None;
         // SAFETY: `jihaz` is the live device, the out-pointer addresses a local
@@ -1325,7 +1393,11 @@ impl Khattaf for KhattafD3D9 {
             });
         };
 
-        let alam = if hawd == D3DPOOL_DEFAULT { D3DLOCK_DISCARD.cast_unsigned() } else { 0 };
+        let alam = if hawd == D3DPOOL_DEFAULT {
+            D3DLOCK_DISCARD.cast_unsigned()
+        } else {
+            0
+        };
         let mut marsum = D3DLOCKED_RECT::default();
         // SAFETY: `lawha` is the texture created immediately above with one mip
         // level, the out-pointer addresses a live local, and a null rectangle
@@ -1353,8 +1425,11 @@ impl Khattaf for KhattafD3D9 {
         // Kept only where the pool will not survive a reset. On a plain device
         // the managed copy the runtime holds is the copy, and a second one here
         // would be a megabyte of a game's memory spent on nothing.
-        self.bayt_lawha =
-            if hawd == D3DPOOL_DEFAULT { Some((bayt.to_vec(), ard, irtifa)) } else { None };
+        self.bayt_lawha = if hawd == D3DPOOL_DEFAULT {
+            Some((bayt.to_vec(), ard, irtifa))
+        } else {
+            None
+        };
         Ok(())
     }
 
@@ -1402,11 +1477,12 @@ impl Khattaf for KhattafD3D9 {
         // `GetRenderTarget` return owned references dropped at the end of this
         // function, which is what keeps this backend from holding a backbuffer
         // across a reset.
-        let khalfiya = unsafe { self.jihaz.GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
+        let khalfiya = unsafe { self.jihaz.GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO) }.map_err(
+            |khata| KhataTabaqa::MawridFashil {
                 mawrid: "overlay render target",
                 sabab: format!("the backbuffer could not be fetched: {khata}"),
-            })?;
+            },
+        )?;
         // SAFETY: as above. The render target is not state-block state, so it
         // is saved and restored by hand — see this module's header.
         let hadaf_qadim = unsafe { self.jihaz.GetRenderTarget(0) }.map_err(|khata| {
@@ -1452,12 +1528,16 @@ impl Khattaf for KhattafD3D9 {
         }
         // SAFETY: `umq_qadim` is the surface the game had bound, or nothing.
         if let Err(khata) = unsafe { self.jihaz.SetDepthStencilSurface(umq_qadim.as_ref()) } {
-            fasad.push(format!("the depth-stencil surface could not be put back: {khata}"));
+            fasad.push(format!(
+                "the depth-stencil surface could not be put back: {khata}"
+            ));
         }
         // SAFETY: `hala` holds the snapshot `Capture` took at the head of this
         // function, from this same live device.
         if let Err(khata) = unsafe { hala.Apply() } {
-            fasad.push(format!("the captured device state could not be re-applied: {khata}"));
+            fasad.push(format!(
+                "the captured device state could not be re-applied: {khata}"
+            ));
         }
 
         if !fasad.is_empty() {
@@ -1493,16 +1573,19 @@ impl Khattaf for KhattafD3D9 {
             });
         }
 
-        let wasf = self.wasf_khalfiya().map_err(|khata| KhataTabaqa::IltiqatFashil {
-            sabab: khata.to_string(),
-        })?;
+        let wasf = self
+            .wasf_khalfiya()
+            .map_err(|khata| KhataTabaqa::IltiqatFashil {
+                sabab: khata.to_string(),
+            })?;
 
         // SAFETY: `jihaz` is the live device; the reference is dropped when this
         // function returns.
-        let khalfiya = unsafe { self.jihaz.GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO) }
-            .map_err(|khata| KhataTabaqa::IltiqatFashil {
+        let khalfiya = unsafe { self.jihaz.GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO) }.map_err(
+            |khata| KhataTabaqa::IltiqatFashil {
                 sabab: format!("the backbuffer could not be fetched: {khata}"),
-            })?;
+            },
+        )?;
 
         let sunduq = mustatil_win(mintaqa)?;
 
@@ -1592,10 +1675,16 @@ impl Khattaf for KhattafD3D9 {
         // SAFETY: `marhala` is the system-memory surface created above, the
         // out-pointer addresses a live local, and a null rectangle asks for the
         // whole surface, which is the region.
-        unsafe { marhala.LockRect(&raw mut marsum, core::ptr::null(), D3DLOCK_READONLY.cast_unsigned()) }
-            .map_err(|khata| KhataTabaqa::IltiqatFashil {
-                sabab: format!("the read-back surface could not be locked: {khata}"),
-            })?;
+        unsafe {
+            marhala.LockRect(
+                &raw mut marsum,
+                core::ptr::null(),
+                D3DLOCK_READONLY.cast_unsigned(),
+            )
+        }
+        .map_err(|khata| KhataTabaqa::IltiqatFashil {
+            sabab: format!("the read-back surface could not be locked: {khata}"),
+        })?;
 
         let natija = jami_sufuf(&marsum, mintaqa, wasf.Format);
 
@@ -1672,7 +1761,9 @@ pub fn sigha_min_d3d9(sigha: D3DFORMAT) -> Result<SighatSath, KhataTabaqa> {
         D3DFMT_A16B16G16R16F => Err(KhataTabaqa::SighaGhayrMaduma {
             sigha: "D3DFMT_A16B16G16R16F".to_owned(),
         }),
-        _ => Err(KhataTabaqa::SighaGhayrMaduma { sigha: format!("D3DFORMAT({})", sigha.0) }),
+        _ => Err(KhataTabaqa::SighaGhayrMaduma {
+            sigha: format!("D3DFORMAT({})", sigha.0),
+        }),
     }
 }
 

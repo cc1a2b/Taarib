@@ -85,17 +85,25 @@ struct BayanHuzma {
 }
 
 fn khata_sijillat(sabab: impl std::fmt::Display) -> Khata {
-    Khata::from(KhataTashkhisAmr::SijillatGhayrMaqrua { sabab: sabab.to_string() })
+    Khata::from(KhataTashkhisAmr::SijillatGhayrMaqrua {
+        sabab: sabab.to_string(),
+    })
 }
 
 fn khata_huzma(sabab: impl std::fmt::Display) -> Khata {
-    Khata::from(KhataTashkhisAmr::HuzmaFashila { sabab: sabab.to_string() })
+    Khata::from(KhataTashkhisAmr::HuzmaFashila {
+        sabab: sabab.to_string(),
+    })
 }
 
 /// A filesystem timestamp as RFC 3339, or the raw seconds when no calendar holds it.
 fn waqt_rfc3339(waqt: SystemTime) -> String {
     jiff::Timestamp::try_from(waqt).map_or_else(
-        |_| waqt.duration_since(UNIX_EPOCH).map_or(0, |mudda| mudda.as_secs()).to_string(),
+        |_| {
+            waqt.duration_since(UNIX_EPOCH)
+                .map_or(0, |mudda| mudda.as_secs())
+                .to_string()
+        },
         |lahza| lahza.to_string(),
     )
 }
@@ -110,8 +118,14 @@ fn akhir_sutur(masar: &Path, satr: u32) -> Vec<String> {
     };
     let nass = String::from_utf8_lossy(&bayt);
     let sutur: Vec<&str> = nass.lines().collect();
-    let bidaya = sutur.len().saturating_sub(usize::try_from(satr).unwrap_or(usize::MAX));
-    sutur.into_iter().skip(bidaya).map(ToOwned::to_owned).collect()
+    let bidaya = sutur
+        .len()
+        .saturating_sub(usize::try_from(satr).unwrap_or(usize::MAX));
+    sutur
+        .into_iter()
+        .skip(bidaya)
+        .map(ToOwned::to_owned)
+        .collect()
 }
 
 /// Copies one file into the bundle directory under its own name.
@@ -140,7 +154,9 @@ pub fn sijillat_akhira(
 
     let mut murattaba = Vec::new();
     for dakhla in qaima.flatten() {
-        let Ok(bayanat) = dakhla.metadata() else { continue };
+        let Ok(bayanat) = dakhla.metadata() else {
+            continue;
+        };
         if !bayanat.is_file() {
             continue;
         }
@@ -157,8 +173,9 @@ pub fn sijillat_akhira(
     }
     murattaba.sort_by_key(|(waqt, _, _)| Reverse(*waqt));
 
-    let akhir =
-        murattaba.first().map_or_else(Vec::new, |(_, masar, _)| akhir_sutur(masar, satr));
+    let akhir = murattaba
+        .first()
+        .map_or_else(Vec::new, |(_, masar, _)| akhir_sutur(masar, satr));
     Ok(SijillatHie {
         malaffat: murattaba.into_iter().map(|(_, _, malaf)| malaf).collect(),
         akhir,
@@ -188,7 +205,9 @@ pub fn taqreer_tawafuq(
         Ok((taqreer, bina))
     })?;
     let Some(taqreer) = taqreer else {
-        return Err(Khata::from(KhataTashkhisAmr::TaqreerMafqud { ism: luba.ism }));
+        return Err(Khata::from(KhataTashkhisAmr::TaqreerMafqud {
+            ism: luba.ism,
+        }));
     };
 
     let watheeqa = WatheeqatTawafuq {
@@ -272,7 +291,9 @@ pub fn huzmat_tashkhis(
         let ism = dakhla.file_name().to_string_lossy().into_owned();
         if masar.is_file()
             && ism.starts_with(BADIYAT_TAWAFUQ)
-            && masar.extension().is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("json"))
+            && masar
+                .extension()
+                .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("json"))
         {
             unsakh(&masar, &mujallad)?;
         }
@@ -281,7 +302,9 @@ pub fn huzmat_tashkhis(
     let mut adad_malaffat = 0_u32;
     let mut hajm = 0_u64;
     for dakhla in fs::read_dir(&mujallad).map_err(khata_huzma)?.flatten() {
-        let Ok(bayanat) = dakhla.metadata() else { continue };
+        let Ok(bayanat) = dakhla.metadata() else {
+            continue;
+        };
         if bayanat.is_file() {
             adad_malaffat = adad_malaffat.saturating_add(1);
             hajm = hajm.saturating_add(bayanat.len());
@@ -313,9 +336,14 @@ pub fn iftah_tashkhis(masarat: tauri::State<'_, Masarat>) -> Result<bool, Khata>
         NizamTashghil::Mac => "open",
         NizamTashghil::Linux => "xdg-open",
     };
-    std::process::Command::new(barnamij).arg(&mujallad).spawn().map_err(|sabab| {
-        Khata::from(KhataTashkhisAmr::FathFashil { sabab: sabab.to_string() })
-    })?;
+    std::process::Command::new(barnamij)
+        .arg(&mujallad)
+        .spawn()
+        .map_err(|sabab| {
+            Khata::from(KhataTashkhisAmr::FathFashil {
+                sabab: sabab.to_string(),
+            })
+        })?;
     Ok(true)
 }
 
@@ -432,10 +460,10 @@ impl Tafsir for KhataTashkhisAmr {
             | Self::HuzmaFashila { sabab }
             | Self::FathFashil { sabab } => {
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::TaqreerMafqud { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-            }
+            },
         }
         siyaq
     }

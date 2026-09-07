@@ -81,7 +81,11 @@ impl Hijra {
 }
 
 /// Migration 1 — the foundation, and the only step there has ever been.
-const AL_ASAS: Hijra = Hijra { raqm: 1, ism: "al-asas", jumal: HIJRA_1 };
+const AL_ASAS: Hijra = Hijra {
+    raqm: 1,
+    ism: "al-asas",
+    jumal: HIJRA_1,
+};
 
 /// Every migration this build defines, in ascending order.
 ///
@@ -178,10 +182,18 @@ pub fn rahhil(ittisal: &mut Connection) -> Natija<TaqreerHijra> {
     for hijra in HIJRAT.iter().filter(|h| h.raqm > min_isdar) {
         tabbiq(ittisal, hijra)?;
         jarat.push(hijra.raqm);
-        tracing::info!(hijra = hijra.raqm, ism = hijra.ism, "schema migration applied");
+        tracing::info!(
+            hijra = hijra.raqm,
+            ism = hijra.ism,
+            "schema migration applied"
+        );
     }
 
-    Ok(TaqreerHijra { min_isdar, ila_isdar: ISDAR_MADUM, mutabbaqa: jarat })
+    Ok(TaqreerHijra {
+        min_isdar,
+        ila_isdar: ISDAR_MADUM,
+        mutabbaqa: jarat,
+    })
 }
 
 /// Every step the database records, as `(number, checksum)`, in order.
@@ -241,7 +253,10 @@ fn tahaqquq(mutabbaqa: &[(u32, String)]) -> Natija<u32> {
     // would run it against tables written by the steps that came after it.
     for hijra in HIJRAT.iter().filter(|h| h.raqm <= aqsa) {
         if !mutabbaqa.iter().any(|(raqm, _)| *raqm == hijra.raqm) {
-            return Err(Khata::from(KhataMakhzan::HijraNaqisa { raqm: hijra.raqm, aqsa }));
+            return Err(Khata::from(KhataMakhzan::HijraNaqisa {
+                raqm: hijra.raqm,
+                aqsa,
+            }));
         }
     }
 
@@ -251,15 +266,27 @@ fn tahaqquq(mutabbaqa: &[(u32, String)]) -> Natija<u32> {
 /// Applies one step, together with the row that records it, in one transaction.
 fn tabbiq(ittisal: &mut Connection, hijra: &Hijra) -> Natija<()> {
     let muamala = ittisal.transaction().map_err(|q| {
-        Khata::from(KhataMakhzan::TaadhurMuamala { marhala: "begun", sabab: q })
+        Khata::from(KhataMakhzan::TaadhurMuamala {
+            marhala: "begun",
+            sabab: q,
+        })
     })?;
 
-    muamala.execute_batch("PRAGMA defer_foreign_keys = ON;").map_err(|q| {
-        Khata::from(KhataMakhzan::TaadhurDabt { pragma: "defer_foreign_keys", sabab: q })
-    })?;
+    muamala
+        .execute_batch("PRAGMA defer_foreign_keys = ON;")
+        .map_err(|q| {
+            Khata::from(KhataMakhzan::TaadhurDabt {
+                pragma: "defer_foreign_keys",
+                sabab: q,
+            })
+        })?;
 
     muamala.execute_batch(hijra.jumal).map_err(|q| {
-        Khata::from(KhataMakhzan::HijraFashila { raqm: hijra.raqm, ism: hijra.ism, sabab: q })
+        Khata::from(KhataMakhzan::HijraFashila {
+            raqm: hijra.raqm,
+            ism: hijra.ism,
+            sabab: q,
+        })
     })?;
 
     let _ = muamala
@@ -269,11 +296,18 @@ fn tabbiq(ittisal: &mut Connection, hijra: &Hijra) -> Natija<()> {
             params![hijra.raqm, hijra.ism, hijra.basma()],
         )
         .map_err(|q| {
-            Khata::from(KhataMakhzan::HijraFashila { raqm: hijra.raqm, ism: hijra.ism, sabab: q })
+            Khata::from(KhataMakhzan::HijraFashila {
+                raqm: hijra.raqm,
+                ism: hijra.ism,
+                sabab: q,
+            })
         })?;
 
     muamala.commit().map_err(|q| {
-        Khata::from(KhataMakhzan::TaadhurMuamala { marhala: "committed", sabab: q })
+        Khata::from(KhataMakhzan::TaadhurMuamala {
+            marhala: "committed",
+            sabab: q,
+        })
     })
 }
 

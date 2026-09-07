@@ -56,13 +56,16 @@ impl HasilatSandooq {
         match self {
             Self::RafadaAlaman { sabab } => format!("safety refused: {sabab}"),
             Self::FashilaTathbeet { sabab } => format!("install failed: {sabab}"),
-            Self::IstiadaNaqisa { mustaada, mutabaqqi } => format!(
+            Self::IstiadaNaqisa {
+                mustaada,
+                mutabaqqi,
+            } => format!(
                 "installed, {mustaada} path(s) restored, {} still modified",
                 mutabaqqi.len()
             ),
             Self::Salima { maktuba, mustaada } => {
                 format!("installed {maktuba} path(s) and restored {mustaada} cleanly")
-            }
+            },
         }
     }
 }
@@ -140,7 +143,11 @@ impl BeeatSandooq {
                 sabab: format!("{} could not be created: {sabab}", masar.display()),
             })?;
         }
-        Ok(Self { jidhr, jidhr_luba, jidhr_nusakh })
+        Ok(Self {
+            jidhr,
+            jidhr_luba,
+            jidhr_nusakh,
+        })
     }
 
     /// The isolated copy of the game.
@@ -162,8 +169,12 @@ impl BeeatSandooq {
     /// [`KhataTaqdeem::SandooqFashil`] when the restore itself could not run.
     pub fn istaid(&self) -> NatijatTaqdeem<(usize, Vec<String>)> {
         let mut radd = RadLaShay;
-        let taqreer =
-            istiada_kul(&self.jidhr_luba, &self.jidhr_nusakh, SiyasatIstiada::Sarima, &mut radd);
+        let taqreer = istiada_kul(
+            &self.jidhr_luba,
+            &self.jidhr_nusakh,
+            SiyasatIstiada::Sarima,
+            &mut radd,
+        );
         let mut mustaada = 0_usize;
         let mut mutabaqqi = Vec::new();
         for wahid in [taqreer.nass, taqreer.sawt].into_iter().flatten() {
@@ -171,11 +182,13 @@ impl BeeatSandooq {
                 Ok(natija) => {
                     mustaada = mustaada.saturating_add(natija.mustaada);
                     mutabaqqi.extend(natija.mustabdala.iter().cloned());
-                }
+                },
                 Err(khata) => {
                     use taarib_usus::khata::Tafsir as _;
-                    return Err(KhataTaqdeem::SandooqFashil { sabab: khata.injilizi() });
-                }
+                    return Err(KhataTaqdeem::SandooqFashil {
+                        sabab: khata.injilizi(),
+                    });
+                },
             }
         }
         Ok((mustaada, mutabaqqi))

@@ -323,14 +323,20 @@ impl Taqyeem {
     ) -> NatijatIrsal<Self> {
         let taaliq = nazzif(taaliq)
             .map(|nass| {
-                aqsa_tul(nass, AQSA_TUL_TAALIQ, |tul, aqsa| KhataIrsal::TaaliqTaweel {
-                    tul,
-                    aqsa,
+                aqsa_tul(nass, AQSA_TUL_TAALIQ, |tul, aqsa| {
+                    KhataIrsal::TaaliqTaweel { tul, aqsa }
                 })
             })
             .transpose()?;
         lahza(&waqt)?;
-        Ok(Self { ruqaa, murajaa, daraja, taaliq, muqayyim, waqt })
+        Ok(Self {
+            ruqaa,
+            murajaa,
+            daraja,
+            taaliq,
+            muqayyim,
+            waqt,
+        })
     }
 
     /// The patch lineage.
@@ -374,7 +380,11 @@ impl Taqyeem {
     pub fn waqqi(&self, miftah: &MiftahKhass) -> TaqyeemMuwaqqa {
         let aam = miftah.aam().bayt();
         let tawqee = miftah.waqqi(&matn_taqyeem(self, &aam));
-        TaqyeemMuwaqqa { taqyeem: self.clone(), miftah: aam, tawqee }
+        TaqyeemMuwaqqa {
+            taqyeem: self.clone(),
+            miftah: aam,
+            tawqee,
+        }
     }
 }
 
@@ -408,12 +418,24 @@ impl Balagh {
         let wasf = wasf.trim().to_owned();
         let tul = wasf.chars().count();
         if tul < ADNA_TUL_WASF {
-            return Err(KhataIrsal::WasfQaseer { tul, adna: ADNA_TUL_WASF });
+            return Err(KhataIrsal::WasfQaseer {
+                tul,
+                adna: ADNA_TUL_WASF,
+            });
         }
-        let wasf =
-            aqsa_tul(wasf, AQSA_TUL_WASF, |tul, aqsa| KhataIrsal::WasfTaweel { tul, aqsa })?;
+        let wasf = aqsa_tul(wasf, AQSA_TUL_WASF, |tul, aqsa| KhataIrsal::WasfTaweel {
+            tul,
+            aqsa,
+        })?;
         lahza(&waqt)?;
-        Ok(Self { ruqaa, murajaa, sabab, wasf, mublagh, waqt })
+        Ok(Self {
+            ruqaa,
+            murajaa,
+            sabab,
+            wasf,
+            mublagh,
+            waqt,
+        })
     }
 
     /// The patch lineage.
@@ -457,7 +479,11 @@ impl Balagh {
     pub fn waqqi(&self, miftah: &MiftahKhass) -> BalaghMuwaqqa {
         let aam = miftah.aam().bayt();
         let tawqee = miftah.waqqi(&matn_balagh(self, &aam));
-        BalaghMuwaqqa { balagh: self.clone(), miftah: aam, tawqee }
+        BalaghMuwaqqa {
+            balagh: self.clone(),
+            miftah: aam,
+            tawqee,
+        }
     }
 }
 
@@ -484,12 +510,16 @@ impl TaqyeemMuwaqqa {
     /// `miftah`, [`KhataIrsal::TawqeeGhayrSalih`] when the signature does not
     /// verify, and every error [`Taqyeem::jadeed`] returns.
     pub fn min_bayt(bayt: &[u8], miftah: &MiftahAam) -> NatijatIrsal<Self> {
-        let khaam: TaqyeemKhaam = serde_json::from_slice(bayt)
-            .map_err(|khata| KhataIrsal::BaytTalifa { sabab: khata.to_string() })?;
+        let khaam: TaqyeemKhaam =
+            serde_json::from_slice(bayt).map_err(|khata| KhataIrsal::BaytTalifa {
+                sabab: khata.to_string(),
+            })?;
         isdar_maqru(khaam.isdar)?;
         let (miftah_muallan, tawqee) = khatm(&khaam.miftah, &khaam.tawqee, miftah)?;
-        let daraja = DarajatTaqyeem::min_raqm(khaam.daraja)
-            .ok_or(KhataIrsal::DarajaKharijNitaq { qeema: khaam.daraja })?;
+        let daraja =
+            DarajatTaqyeem::min_raqm(khaam.daraja).ok_or(KhataIrsal::DarajaKharijNitaq {
+                qeema: khaam.daraja,
+            })?;
         let taqyeem = Taqyeem::jadeed(
             khaam.ruqaa,
             khaam.murajaa,
@@ -498,7 +528,11 @@ impl TaqyeemMuwaqqa {
             huwiya(&khaam.muqayyim)?,
             khaam.waqt,
         )?;
-        let muwaqqa = Self { taqyeem, miftah: miftah_muallan, tawqee };
+        let muwaqqa = Self {
+            taqyeem,
+            miftah: miftah_muallan,
+            tawqee,
+        };
         if !muwaqqa.tahaqquq(miftah) {
             return Err(KhataIrsal::TawqeeGhayrSalih);
         }
@@ -569,8 +603,10 @@ impl BalaghMuwaqqa {
     /// `miftah`, [`KhataIrsal::TawqeeGhayrSalih`] when the signature does not
     /// verify, and every error [`Balagh::jadeed`] returns.
     pub fn min_bayt(bayt: &[u8], miftah: &MiftahAam) -> NatijatIrsal<Self> {
-        let khaam: BalaghKhaam = serde_json::from_slice(bayt)
-            .map_err(|khata| KhataIrsal::BaytTalifa { sabab: khata.to_string() })?;
+        let khaam: BalaghKhaam =
+            serde_json::from_slice(bayt).map_err(|khata| KhataIrsal::BaytTalifa {
+                sabab: khata.to_string(),
+            })?;
         isdar_maqru(khaam.isdar)?;
         let (miftah_muallan, tawqee) = khatm(&khaam.miftah, &khaam.tawqee, miftah)?;
         let balagh = Balagh::jadeed(
@@ -581,7 +617,11 @@ impl BalaghMuwaqqa {
             huwiya(&khaam.mublagh)?,
             khaam.waqt,
         )?;
-        let muwaqqa = Self { balagh, miftah: miftah_muallan, tawqee };
+        let muwaqqa = Self {
+            balagh,
+            miftah: miftah_muallan,
+            tawqee,
+        };
         if !muwaqqa.tahaqquq(miftah) {
             return Err(KhataIrsal::TawqeeGhayrSalih);
         }
@@ -702,10 +742,10 @@ impl HalatMuaddal {
             Self::Masmuh => "يمكن الإرسال الآن.".to_owned(),
             Self::MamnuLilRuqaa { mutabaqqi } => {
                 format!("أرسلت رأيك في هذه الرقعة قريبًا؛ انتظر {mutabaqqi} ثانية.")
-            }
+            },
             Self::MamnuLilMusahim { mutabaqqi } => {
                 format!("أرسلت للتو؛ انتظر {mutabaqqi} ثانية قبل الإرسال مرة أخرى.")
-            }
+            },
         }
     }
 
@@ -716,10 +756,10 @@ impl HalatMuaddal {
             Self::Masmuh => "You can submit now.".to_owned(),
             Self::MamnuLilRuqaa { mutabaqqi } => {
                 format!("You submitted about this patch recently; wait {mutabaqqi} seconds.")
-            }
+            },
             Self::MamnuLilMusahim { mutabaqqi } => {
                 format!("You just submitted; wait {mutabaqqi} seconds before submitting again.")
-            }
+            },
         }
     }
 }
@@ -815,7 +855,7 @@ fn ikhtiyari(matn: &mut Vec<u8>, qeema: Option<&str>) {
         Some(nass) => {
             matn.push(1);
             lp(matn, nass.as_bytes());
-        }
+        },
         None => matn.push(0),
     }
 }
@@ -850,7 +890,10 @@ const fn isdar_maqru(wujid: u32) -> NatijatIrsal<()> {
     if wujid == ISDAR_IRSAL {
         Ok(())
     } else {
-        Err(KhataIrsal::IsdarMajhul { wujid, maqru: ISDAR_IRSAL })
+        Err(KhataIrsal::IsdarMajhul {
+            wujid,
+            maqru: ISDAR_IRSAL,
+        })
     }
 }
 
@@ -877,10 +920,13 @@ fn khatm(
 
 fn nass_hex(bayt: &[u8]) -> String {
     use std::fmt::Write as _;
-    bayt.iter().fold(String::with_capacity(bayt.len().saturating_mul(2)), |mut khraj, wahid| {
-        let _ = write!(khraj, "{wahid:02x}");
-        khraj
-    })
+    bayt.iter().fold(
+        String::with_capacity(bayt.len().saturating_mul(2)),
+        |mut khraj, wahid| {
+            let _ = write!(khraj, "{wahid:02x}");
+            khraj
+        },
+    )
 }
 
 fn bayt_hex<const N: usize>(nass: &str) -> Option<[u8; N]> {
@@ -888,7 +934,10 @@ fn bayt_hex<const N: usize>(nass: &str) -> Option<[u8; N]> {
     if nass.len() != N.checked_mul(2)? {
         return None;
     }
-    if nass.bytes().any(|wahid| !wahid.is_ascii_hexdigit() || wahid.is_ascii_uppercase()) {
+    if nass
+        .bytes()
+        .any(|wahid| !wahid.is_ascii_hexdigit() || wahid.is_ascii_uppercase())
+    {
         return None;
     }
     let mut khraj = [0u8; N];
@@ -901,7 +950,10 @@ fn bayt_hex<const N: usize>(nass: &str) -> Option<[u8; N]> {
 }
 
 fn lahza(nass: &str) -> NatijatIrsal<Timestamp> {
-    nass.parse::<Timestamp>().map_err(|_| KhataIrsal::WaqtTalif { waqt: nass.to_owned() })
+    nass.parse::<Timestamp>()
+        .map_err(|_| KhataIrsal::WaqtTalif {
+            waqt: nass.to_owned(),
+        })
 }
 
 fn mutabaqqi(al_aan: Timestamp, sabiq: Timestamp, fasil: i64) -> i64 {

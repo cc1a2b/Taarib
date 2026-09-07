@@ -99,13 +99,13 @@ impl Tafsir for KhataAman {
             Self::KhataMalaf { .. } => "تعذّرت قراءة أحد ملفات اللعبة أثناء الفحص.".to_owned(),
             Self::FakFashil { .. } => {
                 "تعذّر فكّ ضغط الحزمة في الحجر الآمن، ولم يُفحص منها شيء.".to_owned()
-            }
+            },
             Self::MadkhalKharij { .. } => {
                 "يحتوي أرشيف الحزمة على مسار يخرج عن مجلّد الحجر، ورُفض.".to_owned()
-            }
+            },
             Self::QaimatSahbFashila { .. } => {
                 "تعذّر الحصول على قائمة الإبطال أو قراءتها، ولا يُثبَّت شيء دون فحصها.".to_owned()
-            }
+            },
             Self::KhataIqrar { .. } => "تعذّرت قراءة سجلّ الإقرار أو الكتابة إليه.".to_owned(),
         }
     }
@@ -126,14 +126,13 @@ impl Tafsir for KhataAman {
 
     fn siyaq(&self) -> BTreeMap<String, QeemaSiyaq> {
         match self {
-            Self::KhataMalaf { masar, amal, sabab }
-            | Self::KhataIqrar { masar, amal, sabab } => {
+            Self::KhataMalaf { masar, amal, sabab } | Self::KhataIqrar { masar, amal, sabab } => {
                 let mut siyaq = siyaq_io(sabab);
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("amal".to_owned(), QeemaSiyaq::Nass((*amal).to_owned()));
                 return siyaq;
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         let mut siyaq = BTreeMap::new();
@@ -141,13 +140,13 @@ impl Tafsir for KhataAman {
             let _ = siyaq.insert(miftah.to_owned(), qeema);
         };
         match self {
-            Self::KhataMalaf { .. } | Self::KhataIqrar { .. } => {}
+            Self::KhataMalaf { .. } | Self::KhataIqrar { .. } => {},
             Self::FakFashil { sabab } => daa("sabab", QeemaSiyaq::Nass(sabab.clone())),
             Self::MadkhalKharij { madkhal } => daa("madkhal", QeemaSiyaq::Nass(madkhal.clone())),
             Self::QaimatSahbFashila { amal, sabab } => {
                 daa("amal", QeemaSiyaq::Nass((*amal).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
         }
         siyaq
     }

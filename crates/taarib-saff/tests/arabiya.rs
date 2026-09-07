@@ -79,7 +79,10 @@ fn masar_khatt() -> PathBuf {
         }
         dalil = jidhr.parent();
     }
-    panic!("{MURASHAH} not found at or above {}", env!("CARGO_MANIFEST_DIR"));
+    panic!(
+        "{MURASHAH} not found at or above {}",
+        env!("CARGO_MANIFEST_DIR")
+    );
 }
 
 /// Loads the Arabic face through the **validated** constructor.
@@ -96,7 +99,10 @@ fn khatt() -> Arc<MawridKhatt> {
         "{} is not the byte length the hash lock records; the staged font was replaced",
         masar.display()
     );
-    Arc::new(lazim(MawridKhatt::jadeed(Arc::new(bayt), 0), "loading the font"))
+    Arc::new(lazim(
+        MawridKhatt::jadeed(Arc::new(bayt), 0),
+        "loading the font",
+    ))
 }
 
 /// Lays one string out on a single unconstrained line with default options.
@@ -130,7 +136,10 @@ fn huruf(takhtit: &TakhtitNass) -> Vec<Harf> {
 
 /// The glyph identifiers of a single-line layout, in visual order.
 fn muarrifat(nass: &str) -> Vec<u32> {
-    huruf(&khattit(nass)).iter().map(|harf| harf.muarrif).collect()
+    huruf(&khattit(nass))
+        .iter()
+        .map(|harf| harf.muarrif)
+        .collect()
 }
 
 /// The `GPOS` offsets each glyph carries, recovered by re-walking the pen.
@@ -158,7 +167,9 @@ fn izahat(takhtit: &TakhtitNass) -> Vec<(f32, f32)> {
 /// abstract.
 fn sadij(nass: &str) -> Vec<u32> {
     let khatt = khatt();
-    nass.chars().filter_map(|harf| khatt.muarrif(harf)).collect()
+    nass.chars()
+        .filter_map(|harf| khatt.muarrif(harf))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -175,7 +186,11 @@ fn sadij(nass: &str) -> Vec<u32> {
 #[test]
 fn contextual_joining_selects_four_distinct_forms_of_beh() {
     let arbaa = muarrifat("بببب");
-    assert_eq!(arbaa.len(), 4, "four beh must produce four glyphs, got {arbaa:?}");
+    assert_eq!(
+        arbaa.len(),
+        4,
+        "four beh must produce four glyphs, got {arbaa:?}"
+    );
 
     // Visual order is left to right and the text is right to left, so the
     // leftmost glyph is the *last* beh.
@@ -186,7 +201,11 @@ fn contextual_joining_selects_four_distinct_forms_of_beh() {
     };
 
     let munfarid = muarrifat("ب");
-    assert_eq!(munfarid.len(), 1, "a lone beh must produce one glyph, got {munfarid:?}");
+    assert_eq!(
+        munfarid.len(),
+        1,
+        "a lone beh must produce one glyph, got {munfarid:?}"
+    );
     let Some(&munfarid) = munfarid.first() else {
         panic!("one glyph expected");
     };
@@ -224,7 +243,11 @@ fn contextual_joining_selects_four_distinct_forms_of_beh() {
 #[test]
 fn shaped_output_differs_from_naive_codepoint_rendering() {
     let ghayr_mashkul = sadij("بببب");
-    assert_eq!(ghayr_mashkul.len(), 4, "the font maps every beh through cmap");
+    assert_eq!(
+        ghayr_mashkul.len(),
+        4,
+        "the font maps every beh through cmap"
+    );
     let awwal = ghayr_mashkul.first().copied();
     assert!(
         ghayr_mashkul.iter().all(|muarrif| Some(*muarrif) == awwal),
@@ -273,8 +296,16 @@ fn non_joining_letters_break_the_joining_run() {
         munfarid_ba.first().copied(),
         "the beh after a dal must be isolated, not medial or final"
     );
-    assert_eq!(Some(dal), munfarid_dal.first().copied(), "the dal after an alef must be isolated");
-    assert_eq!(Some(alif), munfarid_alif.first().copied(), "a leading alef must be isolated");
+    assert_eq!(
+        Some(dal),
+        munfarid_dal.first().copied(),
+        "the dal after an alef must be isolated"
+    );
+    assert_eq!(
+        Some(alif),
+        munfarid_alif.first().copied(),
+        "a leading alef must be isolated"
+    );
 
     // The control: the same beh, joined, is neither of those.
     let mawsul = muarrifat("بب");
@@ -282,8 +313,14 @@ fn non_joining_letters_break_the_joining_run() {
     let (Some(&nihai), Some(&ibtidai)) = (mawsul.first(), mawsul.get(1)) else {
         panic!("two glyphs expected, got {mawsul:?}");
     };
-    assert_ne!(ibtidai, ba, "a beh that joins forward must not take the isolated shape");
-    assert_ne!(nihai, ba, "a beh that joins backward must not take the isolated shape");
+    assert_ne!(
+        ibtidai, ba,
+        "a beh that joins forward must not take the isolated shape"
+    );
+    assert_ne!(
+        nihai, ba,
+        "a beh that joins backward must not take the isolated shape"
+    );
     assert_ne!(ibtidai, nihai, "initial and final beh are different shapes");
 }
 
@@ -330,7 +367,11 @@ fn lam_alef_ligates_into_one_glyph() {
     );
 
     // And an unshaped renderer would have drawn two.
-    assert_eq!(mufradat.len(), 2, "cmap maps lam and alef to two glyphs: {mufradat:?}");
+    assert_eq!(
+        mufradat.len(),
+        2,
+        "cmap maps lam and alef to two glyphs: {mufradat:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -345,10 +386,17 @@ fn lam_alef_ligates_into_one_glyph() {
 #[test]
 fn arabic_lays_out_right_to_left() {
     let takhtit = khattit("بببب");
-    assert_eq!(takhtit.ittijah, Ittijah::Yameen, "the paragraph must resolve right to left");
+    assert_eq!(
+        takhtit.ittijah,
+        Ittijah::Yameen,
+        "the paragraph must resolve right to left"
+    );
 
     let mashkul = huruf(&takhtit);
-    assert!(mashkul.len() >= 2, "need at least two glyphs to have an order");
+    assert!(
+        mashkul.len() >= 2,
+        "need at least two glyphs to have an order"
+    );
 
     for zawj in mashkul.windows(2) {
         let (Some(sabiq), Some(lahiq)) = (zawj.first(), zawj.get(1)) else {
@@ -376,7 +424,10 @@ fn arabic_lays_out_right_to_left() {
     let (Some(awwal_basari), Some(akhir_basari)) = (mashkul.first(), mashkul.last()) else {
         panic!("glyphs expected");
     };
-    assert_eq!(akhir_basari.anqud, 0, "the first logical character must be the rightmost glyph");
+    assert_eq!(
+        akhir_basari.anqud, 0,
+        "the first logical character must be the rightmost glyph"
+    );
     assert!(
         akhir_basari.s > awwal_basari.s,
         "the first logical character must sit at the greatest x"
@@ -390,7 +441,11 @@ fn arabic_lays_out_right_to_left() {
 #[test]
 fn latin_control_lays_out_left_to_right() {
     let takhtit = khattit("abcd");
-    assert_eq!(takhtit.ittijah, Ittijah::Yasar, "a Latin paragraph must resolve left to right");
+    assert_eq!(
+        takhtit.ittijah,
+        Ittijah::Yasar,
+        "a Latin paragraph must resolve left to right"
+    );
 
     let mashkul = huruf(&takhtit);
     assert_eq!(mashkul.len(), 4, "four letters, four glyphs");
@@ -426,8 +481,11 @@ fn diacritics_are_positioned_not_advanced() {
     let izahat = izahat(&takhtit);
     assert_eq!(mashkul.len(), izahat.len(), "one offset per glyph");
 
-    let alamat: Vec<(usize, &Harf)> =
-        mashkul.iter().enumerate().filter(|(_, harf)| harf.alama).collect();
+    let alamat: Vec<(usize, &Harf)> = mashkul
+        .iter()
+        .enumerate()
+        .filter(|(_, harf)| harf.alama)
+        .collect();
     assert!(
         alamat.len() >= 3,
         "{MUSHAKKAL} carries several marks; the shaper reported {} of them",
@@ -453,8 +511,11 @@ fn diacritics_are_positioned_not_advanced() {
 
     // Every mark must share a cluster with a base letter — it is attached to a
     // letter, not standing on its own.
-    let qawaid: BTreeSet<u32> =
-        mashkul.iter().filter(|harf| !harf.alama).map(|harf| harf.anqud).collect();
+    let qawaid: BTreeSet<u32> = mashkul
+        .iter()
+        .filter(|harf| !harf.alama)
+        .map(|harf| harf.anqud)
+        .collect();
     for (_, alama) in &alamat {
         assert!(
             qawaid.contains(&alama.anqud),
@@ -509,7 +570,11 @@ fn latin_run_stays_left_to_right_inside_an_arabic_line() {
     let nihaya = bidaya + 11; // "Half-Life 2"
 
     let takhtit = khattit(NASS);
-    assert_eq!(takhtit.ittijah, Ittijah::Yameen, "the paragraph is Arabic and reads right to left");
+    assert_eq!(
+        takhtit.ittijah,
+        Ittijah::Yameen,
+        "the paragraph is Arabic and reads right to left"
+    );
 
     let mashkul = huruf(&takhtit);
     let latini: Vec<&Harf> = mashkul
@@ -521,7 +586,10 @@ fn latin_run_stays_left_to_right_inside_an_arabic_line() {
         .filter(|harf| (harf.anqud < bidaya || harf.anqud >= nihaya) && !harf.alama)
         .collect();
 
-    assert!(latini.len() >= 10, "the Latin run should shape to about eleven glyphs");
+    assert!(
+        latini.len() >= 10,
+        "the Latin run should shape to about eleven glyphs"
+    );
     assert!(arabi.len() >= 8, "both Arabic runs should shape");
 
     // Inside the Latin run: cluster rises with x.
@@ -566,7 +634,10 @@ fn latin_run_stays_left_to_right_inside_an_arabic_line() {
     };
     let qabl: Vec<&&Harf> = arabi.iter().filter(|harf| harf.anqud < bidaya).collect();
     let baad: Vec<&&Harf> = arabi.iter().filter(|harf| harf.anqud >= nihaya).collect();
-    assert!(!qabl.is_empty() && !baad.is_empty(), "both Arabic runs must be present");
+    assert!(
+        !qabl.is_empty() && !baad.is_empty(),
+        "both Arabic runs must be present"
+    );
 
     for harf in &qabl {
         assert!(
@@ -615,7 +686,10 @@ fn no_glyph_is_notdef() {
 
     for nass in AYINAT {
         let takhtit = khattit(nass);
-        assert!(!takhtit.huruf.is_empty(), "{nass:?} produced no glyphs at all");
+        assert!(
+            !takhtit.huruf.is_empty(),
+            "{nass:?} produced no glyphs at all"
+        );
         for harf in &takhtit.huruf {
             assert_ne!(
                 harf.muarrif, 0,
@@ -672,7 +746,10 @@ fn every_shaped_glyph_resolves_to_an_outline() {
             );
         }
     }
-    assert!(marsuma >= 20, "only {marsuma} glyphs of the sentence produced ink");
+    assert!(
+        marsuma >= 20,
+        "only {marsuma} glyphs of the sentence produced ink"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -702,7 +779,10 @@ fn shipped_font_passes_arabic_validation_without_declaring_isol() {
     let bayt = lazim(fs::read(&masar), "reading the font");
 
     let sifat = sifat_gsub(&bayt);
-    assert!(!sifat.is_empty(), "the font must declare some GSUB features; read {sifat:?}");
+    assert!(
+        !sifat.is_empty(),
+        "the font must declare some GSUB features; read {sifat:?}"
+    );
     for matlub in ["init", "medi", "fina", "rlig"] {
         assert!(
             sifat.contains(matlub),
@@ -719,7 +799,11 @@ fn shipped_font_passes_arabic_validation_without_declaring_isol() {
         MawridKhatt::jadeed(Arc::new(bayt), 0),
         "Decision 6 validation rejected the font this product ships",
     );
-    assert_eq!(mawrid.aila(), "IBM Plex Sans Arabic", "the face is what it says it is");
+    assert_eq!(
+        mawrid.aila(),
+        "IBM Plex Sans Arabic",
+        "the face is what it says it is"
+    );
     lazim(mawrid.fahs_arabi(), "the Arabic table and coverage check");
     lazim(
         mawrid.fahs_taghtiya("مرحبًا بالعالم لا إله إلا الله"),
@@ -738,7 +822,10 @@ fn sifat_gsub(bayt: &[u8]) -> BTreeSet<String> {
     /// Reads a big-endian `u16` at a byte offset.
     fn iqra16(bayt: &[u8], mawqi: usize) -> Option<usize> {
         let zawj = bayt.get(mawqi..mawqi.checked_add(2)?)?;
-        Some(usize::from(u16::from_be_bytes([*zawj.first()?, *zawj.get(1)?])))
+        Some(usize::from(u16::from_be_bytes([
+            *zawj.first()?,
+            *zawj.get(1)?,
+        ])))
     }
     /// Reads a big-endian `u32` at a byte offset.
     fn iqra32(bayt: &[u8], mawqi: usize) -> Option<usize> {

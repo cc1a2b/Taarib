@@ -53,9 +53,7 @@ use std::path::{Path, PathBuf};
 use taarib_mustalahat::luba::{LubaId, MasdarLuba};
 use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
 use taarib_tathbeet::bayan::{Muthabbit, NawTathbeet, TarifLuba, Tathbeet};
-use taarib_tathbeet::taraju::{
-    RadLaShay, SiyasatIstiada, istiada_nass, khutta, nazzif_nusakh,
-};
+use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass, khutta, nazzif_nusakh};
 
 /// The largest fixture body written. The proof is about names and bytes, not
 /// volume.
@@ -72,9 +70,12 @@ fn iktub(masar: &Path, hajm: usize) {
     }
     let tul = hajm.min(AQSA_JISM);
     let ism = masar.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    let badhra = ism.bytes().fold(17_u8, |akk, bayt| akk.wrapping_mul(31).wrapping_add(bayt));
-    let jism: Vec<u8> =
-        (0..tul).map(|mawdi| badhra.wrapping_add(u8::try_from(mawdi % 251).unwrap_or(0))).collect();
+    let badhra = ism
+        .bytes()
+        .fold(17_u8, |akk, bayt| akk.wrapping_mul(31).wrapping_add(bayt));
+    let jism: Vec<u8> = (0..tul)
+        .map(|mawdi| badhra.wrapping_add(u8::try_from(mawdi % 251).unwrap_or(0)))
+        .collect();
     fs::write(masar, jism).expect("a fixture file");
 }
 
@@ -113,7 +114,9 @@ fn shajara(jidhr: &Path) -> BTreeMap<String, Option<Vec<u8>>> {
     let mut jadwal = BTreeMap::new();
     for madkhal in walkdir::WalkDir::new(jidhr).sort_by_file_name() {
         let madkhal = madkhal.expect("walking the game directory");
-        let Ok(nisbi) = madkhal.path().strip_prefix(jidhr) else { continue };
+        let Ok(nisbi) = madkhal.path().strip_prefix(jidhr) else {
+            continue;
+        };
         if nisbi.as_os_str().is_empty() {
             continue;
         }
@@ -148,7 +151,11 @@ impl Masrah {
         fs::create_dir_all(&luba).expect("the game directory");
         fs::create_dir_all(&nusakh).expect("the backup directory");
         ibni_luba(&luba);
-        Self { _dalil: dalil, luba, nusakh }
+        Self {
+            _dalil: dalil,
+            luba,
+            nusakh,
+        }
     }
 
     /// The install, through the recorder that a real deployment uses.
@@ -210,39 +217,56 @@ fn al_baqaya_tusamma_wa_la_tuadd() {
         taqreer.mujalladat_matruka, 2,
         "`itar` and `itar/mulhaq` both hold files Taarib did not write: {taqreer:?}"
     );
-    assert!(!taqreer.nazif(), "and the game is therefore not what it was");
+    assert!(
+        !taqreer.nazif(),
+        "and the game is therefore not what it was"
+    );
 
     let mut mismar: Vec<(&str, Vec<&str>)> = taqreer
         .baqaya
         .iter()
         .map(|baqiya| {
-            (baqiya.mujallad.as_str(), baqiya.madakhil.iter().map(String::as_str).collect())
+            (
+                baqiya.mujallad.as_str(),
+                baqiya.madakhil.iter().map(String::as_str).collect(),
+            )
         })
         .collect();
     mismar.sort_by(|awwal, thani| awwal.0.cmp(thani.0));
     assert_eq!(
         mismar,
         vec![
-            ("itar", vec![
-                "itar/idadat/",
-                "itar/idadat/itar.cfg",
-                "itar/makhbaa/",
-                "itar/sijill_tashghil.log",
-            ]),
+            (
+                "itar",
+                vec![
+                    "itar/idadat/",
+                    "itar/idadat/itar.cfg",
+                    "itar/makhbaa/",
+                    "itar/sijill_tashghil.log",
+                ]
+            ),
             ("itar/mulhaq", vec!["itar/mulhaq/mud_allaib.dll"]),
         ],
         "every leftover entry is named, directories included and marked as such; a count \
          alone tells a user something is left and withholds the only part they can act on"
     );
-    assert!(taqreer.maknusa.is_empty(), "and nothing was removed: {:?}", taqreer.maknusa);
+    assert!(
+        taqreer.maknusa.is_empty(),
+        "and nothing was removed: {:?}",
+        taqreer.maknusa
+    );
 
     let sutur = taqreer.taqreer();
     assert!(
-        sutur.iter().any(|satr| satr.contains("Taarib did not put there")),
+        sutur
+            .iter()
+            .any(|satr| satr.contains("Taarib did not put there")),
         "the report says so in its own words: {sutur:?}"
     );
     assert!(
-        sutur.iter().any(|satr| satr.contains("itar/sijill_tashghil.log")),
+        sutur
+            .iter()
+            .any(|satr| satr.contains("itar/sijill_tashghil.log")),
         "and names the file rather than only the directory: {sutur:?}"
     );
 }
@@ -290,7 +314,10 @@ fn al_sijill_la_yuhdhaf_ma_dama_athar_baq() {
         "the manifest survives — it is the only thing that says these files came with Taarib"
     );
     assert!(
-        masrah.nusakh.join(NawTathbeet::Nass.ism_mujallad()).is_dir(),
+        masrah
+            .nusakh
+            .join(NawTathbeet::Nass.ism_mujallad())
+            .is_dir(),
         "and so do the preserved originals it names"
     );
 
@@ -342,7 +369,10 @@ fn tafrigh_almujallad_yutimm_alsatr() {
         &mut RadLaShay,
     )
     .expect("the second run picks the manifest up where the first left it");
-    assert_eq!(thani.mujalladat_matruka, 0, "nothing is left standing now: {thani:?}");
+    assert_eq!(
+        thani.mujalladat_matruka, 0,
+        "nothing is left standing now: {thani:?}"
+    );
     assert_eq!(
         thani.mujalladat_muzala, 2,
         "and the two lines the first run left outstanding came off — `itar/core` was empty \
@@ -368,17 +398,36 @@ fn alkans_yuid_alluba_mutabiqa_bayt_bi_bayt() {
     let qabl = shajara(&masrah.luba);
     masrah.thabbit();
     masrah.ishtaghil();
-    assert_ne!(shajara(&masrah.luba), qabl, "the install and the session both landed");
+    assert_ne!(
+        shajara(&masrah.luba),
+        qabl,
+        "the install and the session both landed"
+    );
 
-    let taqreer =
-        istiada_nass(&masrah.luba, &masrah.nusakh, SiyasatIstiada::Kanasa, &mut RadLaShay)
-            .expect("the sweep completes");
+    let taqreer = istiada_nass(
+        &masrah.luba,
+        &masrah.nusakh,
+        SiyasatIstiada::Kanasa,
+        &mut RadLaShay,
+    )
+    .expect("the sweep completes");
 
-    assert_eq!(taqreer.mujalladat_matruka, 0, "nothing was left: {taqreer:?}");
+    assert_eq!(
+        taqreer.mujalladat_matruka, 0,
+        "nothing was left: {taqreer:?}"
+    );
     assert!(taqreer.nazif());
-    assert!(taqreer.baqaya.is_empty(), "and nothing is reported as left: {:?}", taqreer.baqaya);
+    assert!(
+        taqreer.baqaya.is_empty(),
+        "and nothing is reported as left: {:?}",
+        taqreer.baqaya
+    );
 
-    let maknusa: Vec<&str> = taqreer.maknusa.iter().map(|b| b.mujallad.as_str()).collect();
+    let maknusa: Vec<&str> = taqreer
+        .maknusa
+        .iter()
+        .map(|b| b.mujallad.as_str())
+        .collect();
     assert_eq!(
         maknusa,
         vec!["itar/mulhaq", "itar"],
@@ -386,7 +435,10 @@ fn alkans_yuid_alluba_mutabiqa_bayt_bi_bayt() {
          that reported only a count would have destroyed a player's mod silently"
     );
     assert!(
-        taqreer.taqreer().iter().any(|satr| satr.contains("mud_allaib.dll")),
+        taqreer
+            .taqreer()
+            .iter()
+            .any(|satr| satr.contains("mud_allaib.dll")),
         "including the file that was a player's own: {:?}",
         taqreer.taqreer()
     );
@@ -397,7 +449,10 @@ fn alkans_yuid_alluba_mutabiqa_bayt_bi_bayt() {
         asmaa(&qabl),
         "not one entry may remain that was not there before the install"
     );
-    assert!(baad == qabl, "and every file the game shipped still holds exactly its own bytes");
+    assert!(
+        baad == qabl,
+        "and every file the game shipped still holds exactly its own bytes"
+    );
 
     let _ = nazzif_nusakh(&masrah.luba, &masrah.nusakh, NawTathbeet::Nass)
         .expect("with nothing left in the game, the record may go");
@@ -439,15 +494,26 @@ fn alkans_la_yastati_bulugh_jidhr_alluba() {
     // so it is not a sweep target however aggressive the policy.
     iktub(&masrah.luba.join("Capture/lightat.png"), 64);
 
-    let _ = istiada_nass(&masrah.luba, &masrah.nusakh, SiyasatIstiada::Kanasa, &mut RadLaShay)
-        .expect("the sweep completes");
+    let _ = istiada_nass(
+        &masrah.luba,
+        &masrah.nusakh,
+        SiyasatIstiada::Kanasa,
+        &mut RadLaShay,
+    )
+    .expect("the sweep completes");
 
-    assert!(masrah.luba.join("Luba.exe").is_file(), "the game is still there");
+    assert!(
+        masrah.luba.join("Luba.exe").is_file(),
+        "the game is still there"
+    );
     assert!(
         masrah.luba.join("Capture/lightat.png").is_file(),
         "and a file in a directory the game shipped is untouched by a sweep of Taarib's"
     );
-    assert!(!masrah.luba.join("itar").exists(), "while Taarib's own directory is gone");
+    assert!(
+        !masrah.luba.join("itar").exists(),
+        "while Taarib's own directory is gone"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -471,8 +537,11 @@ fn alkhutta_tasrud_albaqaya_qabl_hadhf_ayya_bayt() {
         "an uninstall that will leave a framework's log behind is not a clean one, and the \
          screen that says it is has made the product's central promise untrue"
     );
-    let mut asmaa_baqaya: Vec<&str> =
-        mukhattat.baqaya.iter().map(|baqiya| baqiya.mujallad.as_str()).collect();
+    let mut asmaa_baqaya: Vec<&str> = mukhattat
+        .baqaya
+        .iter()
+        .map(|baqiya| baqiya.mujallad.as_str())
+        .collect();
     asmaa_baqaya.sort_unstable();
     assert_eq!(asmaa_baqaya, vec!["itar", "itar/mulhaq"]);
     assert!(
@@ -508,8 +577,11 @@ fn baqiya_dakhil_mujallad_musajjal_tunsab_marra_wahida() {
     let mukhattat = khutta(&masrah.luba, &masrah.nusakh, NawTathbeet::Nass)
         .expect("the dry run reads the manifest");
 
-    let kul: Vec<&String> =
-        mukhattat.baqaya.iter().flat_map(|baqiya| &baqiya.madakhil).collect();
+    let kul: Vec<&String> = mukhattat
+        .baqaya
+        .iter()
+        .flat_map(|baqiya| &baqiya.madakhil)
+        .collect();
     let mut farid = kul.clone();
     farid.sort_unstable();
     farid.dedup();
@@ -518,7 +590,12 @@ fn baqiya_dakhil_mujallad_musajjal_tunsab_marra_wahida() {
     let sahib: Vec<&str> = mukhattat
         .baqaya
         .iter()
-        .filter(|baqiya| baqiya.madakhil.iter().any(|ism| ism.ends_with("mud_allaib.dll")))
+        .filter(|baqiya| {
+            baqiya
+                .madakhil
+                .iter()
+                .any(|ism| ism.ends_with("mud_allaib.dll"))
+        })
         .map(|baqiya| baqiya.mujallad.as_str())
         .collect();
     assert_eq!(
@@ -528,5 +605,8 @@ fn baqiya_dakhil_mujallad_musajjal_tunsab_marra_wahida() {
     );
 
     let adad_kulli: usize = mukhattat.baqaya.iter().map(|baqiya| baqiya.adad).sum();
-    assert_eq!(adad_kulli, 5, "four entries under itar, one under itar/mulhaq");
+    assert_eq!(
+        adad_kulli, 5,
+        "four entries under itar, one under itar/mulhaq"
+    );
 }

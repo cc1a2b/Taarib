@@ -148,9 +148,12 @@ impl WasfHuzma {
         // filled in with nothing, which is worse than leaving it at a default:
         // it reads as a deliberate declaration on every listing that shows it.
         if let RukhsaRuqaa::Ukhra { ism } = &self.rukhsa
-            && ism.trim().is_empty() {
-                return Err(KhataTarqee::BayanNaqis { haql: "the name of the licence" });
-            }
+            && ism.trim().is_empty()
+        {
+            return Err(KhataTarqee::BayanNaqis {
+                haql: "the name of the licence",
+            });
+        }
         Ok(())
     }
 }
@@ -199,7 +202,10 @@ pub fn ijri(mudkhalat: &MudkhalatFahs<'_>) -> Result<IjtiyazFuhus, KhataTarqee> 
     fahs_takhtit(mudkhalat.takhtitat_fashila)?;
     let muakkada = fahs_iaatimad(mudkhalat.madakhil)?;
 
-    Ok(IjtiyazFuhus { nusus: mudkhalat.madakhil.len(), muakkada })
+    Ok(IjtiyazFuhus {
+        nusus: mudkhalat.madakhil.len(),
+        muakkada,
+    })
 }
 
 /// The placeholder check: the recorded flag, and the recorded span tables.
@@ -211,7 +217,9 @@ fn fahs_nasq(madakhil: &[MudkhalNass]) -> Result<(), KhataTarqee> {
         // An untranslated string has no placeholders to have broken. Reporting
         // one would turn "this project is 40% done" into thousands of hard
         // failures and make the check useless on the day it matters most.
-        let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+        let Some(hadaf) = mudkhal.hadaf.as_deref() else {
+            continue;
+        };
         if hadaf.is_empty() {
             continue;
         }
@@ -220,7 +228,11 @@ fn fahs_nasq(madakhil: &[MudkhalNass]) -> Result<(), KhataTarqee> {
             .alamat
             .iter()
             .any(|alam| matches!(alam, AlamJawda::NasqMaksur { .. }));
-        let mafqud = if mublagh { Vec::new() } else { faraq_dharrat(mudkhal) };
+        let mafqud = if mublagh {
+            Vec::new()
+        } else {
+            faraq_dharrat(mudkhal)
+        };
 
         if !mublagh && mafqud.is_empty() {
             continue;
@@ -228,7 +240,10 @@ fn fahs_nasq(madakhil: &[MudkhalNass]) -> Result<(), KhataTarqee> {
         adad = adad.saturating_add(1);
         if amthila.len() < AQSA_AMTHILA {
             let wasf = if mublagh {
-                format!("{}: the protection pass refused this translation", mudkhal.id)
+                format!(
+                    "{}: the protection pass refused this translation",
+                    mudkhal.id
+                )
             } else {
                 format!("{}: {}", mudkhal.id, mafqud.join(", "))
             };
@@ -236,7 +251,11 @@ fn fahs_nasq(madakhil: &[MudkhalNass]) -> Result<(), KhataTarqee> {
         }
     }
 
-    if adad == 0 { Ok(()) } else { Err(KhataTarqee::NasqMaksur { adad, amthila }) }
+    if adad == 0 {
+        Ok(())
+    } else {
+        Err(KhataTarqee::NasqMaksur { adad, amthila })
+    }
 }
 
 /// The atoms present in the source but not in the target, and the reverse.
@@ -269,8 +288,10 @@ fn faraq_dharrat(mudkhal: &MudkhalNass) -> Vec<String> {
     }
     for (dharra, adad_hadaf) in &hadaf {
         if !masdar.contains_key(dharra) {
-            mafqud.push(format!("{dharra}: absent from the source, {adad_hadaf} in the \
-                                 translation"));
+            mafqud.push(format!(
+                "{dharra}: absent from the source, {adad_hadaf} in the \
+                                 translation"
+            ));
         }
     }
     mafqud
@@ -294,13 +315,18 @@ fn adud_dharrat(nitaqat: &[NitaqNasq]) -> BTreeMap<String, usize> {
 
 /// The layout check.
 fn fahs_takhtit(fashila: &[FashalTakhtit]) -> Result<(), KhataTarqee> {
-    let Some(awwal) = fashila.first() else { return Ok(()) };
+    let Some(awwal) = fashila.first() else {
+        return Ok(());
+    };
     Err(KhataTarqee::TakhtitFashil {
         nass: awwal.nass.clone(),
         hajm: awwal.hajm,
         sabab: if fashila.len() > 1 {
             let baqi = fashila.len().saturating_sub(1);
-            format!("{} ({baqi} more string(s) also failed to lay out)", awwal.sabab)
+            format!(
+                "{} ({baqi} more string(s) also failed to lay out)",
+                awwal.sabab
+            )
         } else {
             awwal.sabab.clone()
         },

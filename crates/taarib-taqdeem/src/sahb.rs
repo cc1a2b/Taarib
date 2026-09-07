@@ -89,7 +89,15 @@ pub fn ishab(
     if bayan.trim().is_empty() {
         return Err(KhataTaqdeem::RafdBilaSabab);
     }
-    Ok(QaydSahb { ruqaa, murajaa, basma, sabab, bayan, murajii, waqt })
+    Ok(QaydSahb {
+        ruqaa,
+        murajaa,
+        basma,
+        sabab,
+        bayan,
+        murajii,
+        waqt,
+    })
 }
 
 /// What a user who installed a revoked patch is told on next launch.

@@ -12,9 +12,7 @@ use crate::damj::{Qarar, QaydHasm};
 /// Field order is the record's identity order: string first, then the
 /// timestamp string, so a deduplicated set already reads per string in time
 /// order — for display, never for resolution.
-#[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct QaydTarikh {
     /// The string.
     pub nass: NassId,
@@ -67,7 +65,14 @@ impl TarikhMashru {
         if sabiq == jadeed {
             return false;
         }
-        self.quyud.push(QaydTarikh { nass, waqt, kaatib, sabiq, jadeed, sabab });
+        self.quyud.push(QaydTarikh {
+            nass,
+            waqt,
+            kaatib,
+            sabiq,
+            jadeed,
+            sabab,
+        });
         true
     }
 
@@ -80,10 +85,14 @@ impl TarikhMashru {
         madmuja: &[MudkhalNass],
         waqt: &str,
     ) -> usize {
-        let bil_id: BTreeMap<NassId, &MudkhalNass> =
-            madmuja.iter().map(|mudkhal| (mudkhal.id, mudkhal)).collect();
+        let bil_id: BTreeMap<NassId, &MudkhalNass> = madmuja
+            .iter()
+            .map(|mudkhal| (mudkhal.id, mudkhal))
+            .collect();
         for hasm in husum {
-            let jadeed = bil_id.get(&hasm.nass).and_then(|mudkhal| mudkhal.hadaf.clone());
+            let jadeed = bil_id
+                .get(&hasm.nass)
+                .and_then(|mudkhal| mudkhal.hadaf.clone());
             self.quyud.push(QaydTarikh {
                 nass: hasm.nass,
                 waqt: waqt.to_owned(),
@@ -142,8 +151,11 @@ impl TarikhMashru {
     /// Every record one author wrote, ordered by timestamp string for display.
     #[must_use]
     pub fn li_kaatib(&self, kaatib: &MusahimId) -> Vec<&QaydTarikh> {
-        let mut mahdar: Vec<&QaydTarikh> =
-            self.quyud.iter().filter(|qayd| qayd.kaatib == *kaatib).collect();
+        let mut mahdar: Vec<&QaydTarikh> = self
+            .quyud
+            .iter()
+            .filter(|qayd| qayd.kaatib == *kaatib)
+            .collect();
         mahdar.sort_by(|awwal, thani| awwal.waqt.cmp(&thani.waqt));
         mahdar
     }
@@ -224,7 +236,10 @@ impl TarikhMashru {
     /// One string's ledger, ordered for display.
     #[must_use]
     pub fn mahdar(&self, nass: NassId) -> MahdarNass<'_> {
-        MahdarNass { nass, quyud: self.bi_nass(nass) }
+        MahdarNass {
+            nass,
+            quyud: self.bi_nass(nass),
+        }
     }
 }
 
@@ -309,5 +324,7 @@ fn wasf_hasm(qarar: &Qarar) -> String {
 pub fn damj_tarikh(ana: &TarikhMashru, hum: &TarikhMashru) -> TarikhMashru {
     let muwahhada: BTreeSet<QaydTarikh> =
         ana.quyud.iter().chain(hum.quyud.iter()).cloned().collect();
-    TarikhMashru { quyud: muwahhada.into_iter().collect() }
+    TarikhMashru {
+        quyud: muwahhada.into_iter().collect(),
+    }
 }

@@ -455,7 +455,10 @@ impl KhattRuqaa {
                 ),
             });
         }
-        Ok(Self { ism: ism.into(), bayt })
+        Ok(Self {
+            ism: ism.into(),
+            bayt,
+        })
     }
 
     /// The name the theme entries refer to this font by.
@@ -496,7 +499,10 @@ impl MadkhalSima {
     /// Names one theme entry.
     #[must_use]
     pub fn jadeed(naw: impl Into<String>, madkhal: impl Into<String>) -> Self {
-        Self { naw: naw.into(), madkhal: madkhal.into() }
+        Self {
+            naw: naw.into(),
+            madkhal: madkhal.into(),
+        }
     }
 
     /// The pair as one string, for logs and for the record.
@@ -780,7 +786,11 @@ impl SijillGodot {
         if muakkada && self.nafidha.is_none() {
             self.nafidha = Some(rutba);
         }
-        self.rutab.push(NatijatRutba { rutba, muakkada, mulahaza: mulahaza.into() });
+        self.rutab.push(NatijatRutba {
+            rutba,
+            muakkada,
+            mulahaza: mulahaza.into(),
+        });
     }
 
     /// Whether any rung was confirmed.
@@ -805,7 +815,12 @@ impl SijillGodot {
             .iter()
             .map(|natija| {
                 let rutba = natija.rutba;
-                format!("rung {} ({}): {}", rutba.raqm(), rutba.ism(), natija.mulahaza)
+                format!(
+                    "rung {} ({}): {}",
+                    rutba.raqm(),
+                    rutba.ism(),
+                    natija.mulahaza
+                )
             })
             .collect::<Vec<_>>()
             .join("; ")
@@ -844,7 +859,9 @@ impl NatijatKhadim {
     /// Whether every concern was confirmed by a read-back.
     #[must_use]
     pub const fn muakkad(&self) -> bool {
-        self.khatt.muakkad() && self.sima.muakkad() && self.ittijah.muakkad()
+        self.khatt.muakkad()
+            && self.sima.muakkad()
+            && self.ittijah.muakkad()
             && self.thaqafa.muakkad()
     }
 }
@@ -911,10 +928,13 @@ impl QeemaIdad {
             Self::Nass(nass) => iqtibas(nass),
             Self::Raqm(raqm) => raqm.to_string(),
             Self::Qaima(qaima) => {
-                let dakhil =
-                    qaima.iter().map(|nass| iqtibas(nass)).collect::<Vec<_>>().join(", ");
+                let dakhil = qaima
+                    .iter()
+                    .map(|nass| iqtibas(nass))
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 format!("{}({dakhil})", lahja.ism_qaima())
-            }
+            },
         }
     }
 
@@ -958,7 +978,7 @@ pub fn iqtibas(nass: &str) -> String {
             '\n' => makhraj.push_str("\\n"),
             '\r' => makhraj.push_str("\\r"),
             '\t' => makhraj.push_str("\\t"),
-            _ if harf.is_control() => {}
+            _ if harf.is_control() => {},
             _ => makhraj.push(harf),
         }
     }
@@ -979,7 +999,10 @@ impl MadkhalIdad {
     /// Builds an entry.
     #[must_use]
     pub fn jadeed(miftah: impl Into<String>, qeema: QeemaIdad) -> Self {
-        Self { miftah: miftah.into(), qeema }
+        Self {
+            miftah: miftah.into(),
+            qeema,
+        }
     }
 
     /// The section this setting lives in — everything before the first slash.
@@ -991,13 +1014,17 @@ impl MadkhalIdad {
     /// settings nobody asked for.
     #[must_use]
     pub fn qism(&self) -> &str {
-        self.miftah.split_once('/').map_or(self.miftah.as_str(), |(awwal, _)| awwal)
+        self.miftah
+            .split_once('/')
+            .map_or(self.miftah.as_str(), |(awwal, _)| awwal)
     }
 
     /// The key within the section — everything after the first slash.
     #[must_use]
     pub fn miftah_qism(&self) -> &str {
-        self.miftah.split_once('/').map_or(self.miftah.as_str(), |(_, baqi)| baqi)
+        self.miftah
+            .split_once('/')
+            .map_or(self.miftah.as_str(), |(_, baqi)| baqi)
     }
 
     /// The line as it is written, in one generation's spelling.
@@ -1064,7 +1091,12 @@ fn ibn_bila_hala(mujallad: &Path, ism: &str) -> Option<PathBuf> {
         .ok()?
         .take(AQSA_MUTABAQA)
         .flatten()
-        .find(|madkhal| madkhal.file_name().to_string_lossy().eq_ignore_ascii_case(ism))
+        .find(|madkhal| {
+            madkhal
+                .file_name()
+                .to_string_lossy()
+                .eq_ignore_ascii_case(ism)
+        })
         .map(|madkhal| madkhal.path())
 }
 
@@ -1085,7 +1117,9 @@ impl MalafTajawuz {
     /// Names the override file beside a game's executable.
     #[must_use]
     pub fn jadeed(masar: impl Into<PathBuf>) -> Self {
-        Self { masar: masar.into() }
+        Self {
+            masar: masar.into(),
+        }
     }
 
     /// Names it from the directory the executable lives in.
@@ -1102,8 +1136,7 @@ impl MalafTajawuz {
     #[must_use]
     pub fn fi_mujallad(mujallad: &Path) -> Self {
         Self::jadeed(
-            ibn_bila_hala(mujallad, MALAF_TAJAWUZ)
-                .unwrap_or_else(|| mujallad.join(MALAF_TAJAWUZ)),
+            ibn_bila_hala(mujallad, MALAF_TAJAWUZ).unwrap_or_else(|| mujallad.join(MALAF_TAJAWUZ)),
         )
     }
 
@@ -1131,10 +1164,13 @@ impl MalafTajawuz {
             Ok(bayt) => bayt,
             Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
                 return Ok(HalatTajawuz::Ghaib);
-            }
+            },
             Err(sabab) => {
-                return Err(KhataGodot::KhataMalaf { masar: self.masar.clone(), sabab });
-            }
+                return Err(KhataGodot::KhataMalaf {
+                    masar: self.masar.clone(),
+                    sabab,
+                });
+            },
         };
         let tul = tul_u64(bayt.len());
         if tul > AQSA_HAJM_TAJAWUZ {
@@ -1265,9 +1301,10 @@ impl MalafTajawuz {
             HalatTajawuz::Lana => match std::fs::remove_file(&self.masar) {
                 Ok(()) => Ok(true),
                 Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => Ok(false),
-                Err(sabab) => {
-                    Err(KhataGodot::KhataMalaf { masar: self.masar.clone(), sabab })
-                }
+                Err(sabab) => Err(KhataGodot::KhataMalaf {
+                    masar: self.masar.clone(),
+                    sabab,
+                }),
             },
         }
     }
@@ -1285,7 +1322,11 @@ impl MalafTajawuz {
 /// or the read-back re-asserts a locale that is already active.
 #[must_use]
 pub fn lugha_wasm(wasm: &str) -> String {
-    wasm.trim().split(['-', '_']).next().unwrap_or("").to_ascii_lowercase()
+    wasm.trim()
+        .split(['-', '_'])
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase()
 }
 
 /// Whether an active locale satisfies a request for another.
@@ -1595,7 +1636,10 @@ impl KhadimNusus {
         if let Some(tarjamat) = self.qaimat_tarjamat()
             && !tarjamat.is_empty()
         {
-            madakhil.push(MadkhalIdad::jadeed(MIFTAH_TARJAMAT, QeemaIdad::Qaima(tarjamat)));
+            madakhil.push(MadkhalIdad::jadeed(
+                MIFTAH_TARJAMAT,
+                QeemaIdad::Qaima(tarjamat),
+            ));
         }
         if !self.wasm.trim().is_empty() {
             madakhil.push(MadkhalIdad::jadeed(
@@ -1665,10 +1709,7 @@ impl KhadimNusus {
     /// that makes the difference concrete — the text server is built during
     /// engine start, so writing its name here stores a value nothing will read
     /// until the next launch.
-    fn rutbat_idadat_hayya(
-        &self,
-        musajjil: &dyn Musajjil,
-    ) -> (usize, usize, Vec<String>) {
+    fn rutbat_idadat_hayya(&self, musajjil: &dyn Musajjil) -> (usize, usize, Vec<String>) {
         let mut kutibat = 0_usize;
         let mut muakkada = 0_usize;
         let mut fashila: Vec<String> = Vec::new();
@@ -1683,7 +1724,7 @@ impl KhadimNusus {
                     ) {
                         muakkada = muakkada.saturating_add(1);
                     }
-                }
+                },
                 Err(khata) => fashila.push(format!("{}: {khata}", madkhal.miftah)),
             }
         }
@@ -1693,7 +1734,9 @@ impl KhadimNusus {
     /// Rung three, the font: build a `FontFile` from the patch's bytes.
     fn rutbat_khatt(&self, musajjil: &dyn Musajjil, natija: &mut NatijatKhadim) {
         let Some(khatt) = self.khatt.as_ref() else {
-            natija.khatt.sajjil(Rutba::Imtidad, false, "the patch carries no font");
+            natija
+                .khatt
+                .sajjil(Rutba::Imtidad, false, "the patch carries no font");
             return;
         };
         match musajjil.sajjil_khatt(khatt.ism(), khatt.bayt()) {
@@ -1711,14 +1754,18 @@ impl KhadimNusus {
                     khatt.ism()
                 ),
             ),
-            Err(khata) => natija.khatt.sajjil(Rutba::Imtidad, false, khata.to_string()),
+            Err(khata) => natija
+                .khatt
+                .sajjil(Rutba::Imtidad, false, khata.to_string()),
         }
     }
 
     /// Rung three, the theme: the default font, then each named entry.
     fn rutbat_sima(&self, musajjil: &dyn Musajjil, natija: &mut NatijatKhadim) {
         let Some(khatt) = self.khatt.as_ref() else {
-            natija.sima.sajjil(Rutba::Imtidad, false, "the patch carries no font to assign");
+            natija
+                .sima
+                .sajjil(Rutba::Imtidad, false, "the patch carries no font to assign");
             return;
         };
         let iftiradi = musajjil.asnid_khatt_iftiradi(khatt.ism());
@@ -1818,7 +1865,10 @@ impl KhadimNusus {
             natija.thaqafa.sajjil(
                 Rutba::Imtidad,
                 true,
-                format!("{} was already active; only the translation was added", self.wasm),
+                format!(
+                    "{} was already active; only the translation was added",
+                    self.wasm
+                ),
             );
             return;
         }
@@ -1841,8 +1891,10 @@ impl KhadimNusus {
                         )
                     },
                 );
-            }
-            Err(khata) => natija.thaqafa.sajjil(Rutba::Imtidad, false, khata.to_string()),
+            },
+            Err(khata) => natija
+                .thaqafa
+                .sajjil(Rutba::Imtidad, false, khata.to_string()),
         }
     }
 
@@ -1860,19 +1912,19 @@ impl KhadimNusus {
     /// when rung one did not write and no concern was confirmed. It is a warning
     /// in the error contract rather than a failure, because a Godot 4 game that
     /// refuses all of this keeps running in its own language.
-    pub fn hayyi(
-        &self,
-        musajjil: Option<&dyn Musajjil>,
-    ) -> Result<NatijatKhadim, KhataGodot> {
+    pub fn hayyi(&self, musajjil: Option<&dyn Musajjil>) -> Result<NatijatKhadim, KhataGodot> {
         let mut natija = NatijatKhadim::default();
         let masar = self.tajawuz.masar().display().to_string();
 
         let idadat_najahat = match self.rutbat_idadat() {
             Ok(()) => {
-                let mulahaza =
-                    format!("{masar} written; every key applies at the next launch");
-                natija.khatt.sajjil(Rutba::Idadat, false, format!("{mulahaza} (font path)"));
-                natija.sima.sajjil(Rutba::Idadat, false, format!("{mulahaza} (theme font)"));
+                let mulahaza = format!("{masar} written; every key applies at the next launch");
+                natija
+                    .khatt
+                    .sajjil(Rutba::Idadat, false, format!("{mulahaza} (font path)"));
+                natija
+                    .sima
+                    .sajjil(Rutba::Idadat, false, format!("{mulahaza} (theme font)"));
                 natija.ittijah.sajjil(
                     Rutba::Idadat,
                     false,
@@ -1881,10 +1933,14 @@ impl KhadimNusus {
                 natija.thaqafa.sajjil(
                     Rutba::Idadat,
                     false,
-                    format!("{mulahaza} (locale {}){}", self.wasm, self.mulahazat_tarjamat()),
+                    format!(
+                        "{mulahaza} (locale {}){}",
+                        self.wasm,
+                        self.mulahazat_tarjamat()
+                    ),
                 );
                 true
-            }
+            },
             Err(khata) => {
                 let sabab = khata.to_string();
                 natija.khatt.sajjil(Rutba::Idadat, false, sabab.clone());
@@ -1892,14 +1948,17 @@ impl KhadimNusus {
                 natija.ittijah.sajjil(Rutba::Idadat, false, sabab.clone());
                 natija.thaqafa.sajjil(Rutba::Idadat, false, sabab);
                 false
-            }
+            },
         };
 
         let khiyarat = self.rutbat_satr();
         natija.thaqafa.sajjil(
             Rutba::SatrAwamir,
             false,
-            format!("{} launch option(s) offered to the installer", khiyarat.len()),
+            format!(
+                "{} launch option(s) offered to the installer",
+                khiyarat.len()
+            ),
         );
         for sijill in [&mut natija.khatt, &mut natija.sima, &mut natija.ittijah] {
             sijill.sajjil(
@@ -1913,7 +1972,9 @@ impl KhadimNusus {
             if idadat_najahat {
                 return Ok(natija);
             }
-            return Err(KhataGodot::ImtidadMarfud { sabab: sabab_shamil(&natija) });
+            return Err(KhataGodot::ImtidadMarfud {
+                sabab: sabab_shamil(&natija),
+            });
         };
 
         if !musajjil.muhayya() {
@@ -1929,7 +1990,9 @@ impl KhadimNusus {
             if idadat_najahat {
                 return Ok(natija);
             }
-            return Err(KhataGodot::ImtidadMarfud { sabab: sabab_shamil(&natija) });
+            return Err(KhataGodot::ImtidadMarfud {
+                sabab: sabab_shamil(&natija),
+            });
         }
 
         natija.khadim = musajjil.ism_khadim().ok();
@@ -1973,7 +2036,9 @@ impl KhadimNusus {
         if shay_muakkad || idadat_najahat {
             Ok(natija)
         } else {
-            Err(KhataGodot::ImtidadMarfud { sabab: sabab_shamil(&natija) })
+            Err(KhataGodot::ImtidadMarfud {
+                sabab: sabab_shamil(&natija),
+            })
         }
     }
 

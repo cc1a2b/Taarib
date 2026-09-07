@@ -56,9 +56,16 @@ impl HirasatKitaba {
         let natija =
             unsafe { VirtualProtect(oinwan, tul, PAGE_EXECUTE_READWRITE, &raw mut sabiqa) };
         if natija.is_err() {
-            return Err(KhataHaqn::HimayaGhayrQabila { oinwan: oinwan as usize as u64, tul });
+            return Err(KhataHaqn::HimayaGhayrQabila {
+                oinwan: oinwan as usize as u64,
+                tul,
+            });
         }
-        Ok(Self { oinwan, tul, sabiqa })
+        Ok(Self {
+            oinwan,
+            tul,
+            sabiqa,
+        })
     }
 
     /// Makes `tul` bytes at `oinwan` writable.
@@ -87,9 +94,15 @@ impl HirasatKitaba {
             )
         };
         if natija != 0 {
-            return Err(KhataHaqn::HimayaGhayrQabila { oinwan: khaam as u64, tul });
+            return Err(KhataHaqn::HimayaGhayrQabila {
+                oinwan: khaam as u64,
+                tul,
+            });
         }
-        Ok(Self { bidaya: bidaya as *mut c_void, tul: mamtad })
+        Ok(Self {
+            bidaya: bidaya as *mut c_void,
+            tul: mamtad,
+        })
     }
 }
 
@@ -184,6 +197,8 @@ pub unsafe fn iktub_muashir(
     if std::ptr::eq(baad.cast_const(), qeema.cast_const()) {
         Ok(())
     } else {
-        Err(KhataHaqn::KitabaMuhmala { mawdi: mawdi.to_owned() })
+        Err(KhataHaqn::KitabaMuhmala {
+            mawdi: mawdi.to_owned(),
+        })
     }
 }

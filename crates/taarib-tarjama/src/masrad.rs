@@ -288,9 +288,14 @@ fn tasalsul_matwi(nass: &str) -> Vec<HarfMatwi> {
         let mufrad: String = asl.to_string();
         for harf in wahhid_latini(&wahhid_arabi(&mufrad)).chars() {
             if let Some(mawqi_faragh) = faragh.take()
-                && !natija.is_empty() {
-                    natija.push(HarfMatwi { harf: ' ', asl: ' ', mawqi: mawqi_faragh });
-                }
+                && !natija.is_empty()
+            {
+                natija.push(HarfMatwi {
+                    harf: ' ',
+                    asl: ' ',
+                    mawqi: mawqi_faragh,
+                });
+            }
             natija.push(HarfMatwi { harf, asl, mawqi });
         }
     }
@@ -299,7 +304,10 @@ fn tasalsul_matwi(nass: &str) -> Vec<HarfMatwi> {
 
 /// Folds a needle the same way, keeping only the folded characters.
 fn ibra_matwiya(nass: &str) -> Vec<char> {
-    tasalsul_matwi(nass).into_iter().map(|harf| harf.harf).collect()
+    tasalsul_matwi(nass)
+        .into_iter()
+        .map(|harf| harf.harf)
+        .collect()
 }
 
 /// Every boundary-respecting occurrence of a folded needle in a folded
@@ -332,9 +340,13 @@ fn mawaqi_ibra(matn: &[HarfMatwi], ibra: &[char]) -> Vec<usize> {
             continue;
         }
 
-        let Some(awwal) = matn.get(bidaya) else { continue };
+        let Some(awwal) = matn.get(bidaya) else {
+            continue;
+        };
         let nihaya = bidaya.saturating_add(ibra.len());
-        let Some(akhir) = matn.get(nihaya.saturating_sub(1)) else { continue };
+        let Some(akhir) = matn.get(nihaya.saturating_sub(1)) else {
+            continue;
+        };
 
         // Before the match: nothing, or a non-word character — judged on the
         // original text — and never the tail of the same original character.
@@ -474,7 +486,10 @@ impl Masrad {
             return false;
         }
         let miftah = mustalah.miftah();
-        let muaadd = MustalahMuaadd { ibra: ibra_matwiya(&mustalah.masdar), mustalah };
+        let muaadd = MustalahMuaadd {
+            ibra: ibra_matwiya(&mustalah.masdar),
+            mustalah,
+        };
 
         match self.faharis.get(&miftah) {
             None => {
@@ -483,7 +498,7 @@ impl Masrad {
                     .faharis
                     .insert(miftah, self.mustalahat.len().saturating_sub(1));
                 true
-            }
+            },
             Some(fahras) => {
                 let Some(qaim) = self.mustalahat.get_mut(*fahras) else {
                     return false;
@@ -503,7 +518,7 @@ impl Masrad {
                     );
                 }
                 yahkum
-            }
+            },
         }
     }
 
@@ -617,7 +632,9 @@ impl Masrad {
                 mudkhal.masdar.trim().clone_into(&mut tarshih.masdar_khaam);
             }
 
-            let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+            let Some(hadaf) = mudkhal.hadaf.as_deref() else {
+                continue;
+            };
             let miftah_hadaf = miftah_muwahhad(hadaf);
             if miftah_hadaf.is_empty() {
                 continue;
@@ -639,7 +656,11 @@ impl Masrad {
                 .suwar
                 .iter()
                 .max_by_key(|(miftah_hadaf, sura)| {
-                    (sura.muakkada, sura.adad, std::cmp::Reverse((*miftah_hadaf).clone()))
+                    (
+                        sura.muakkada,
+                        sura.adad,
+                        std::cmp::Reverse((*miftah_hadaf).clone()),
+                    )
                 })
                 .map(|(_, sura)| sura.khaam.clone());
             let Some(arabi) = mukhtara else { continue };
@@ -691,11 +712,15 @@ impl Masrad {
         let mut natija = Vec::new();
         for muaadd in &self.mustalahat {
             let miftah = muaadd.mustalah.miftah();
-            let Some(huduth) = bil_masdar.get(&miftah) else { continue };
+            let Some(huduth) = bil_masdar.get(&miftah) else {
+                continue;
+            };
 
             let mut suwar: BTreeMap<String, SuratMustalah> = BTreeMap::new();
             for mudkhal in huduth {
-                let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+                let Some(hadaf) = mudkhal.hadaf.as_deref() else {
+                    continue;
+                };
                 let miftah_hadaf = miftah_muwahhad(hadaf);
                 if miftah_hadaf.is_empty() {
                     continue;
@@ -882,7 +907,7 @@ impl Masrad {
                         masdar,
                         &format!("scope cell is {gharib:?}; it must be mashru, aam, or empty"),
                     ));
-                }
+                },
             };
             let mulahaza = khanat
                 .get(3)
@@ -912,7 +937,12 @@ fn tahaqquq_mustalah(
     mustalah: &MustalahMasrad,
 ) -> Result<(), KhataTarjama> {
     if mustalah.miftah().is_empty() {
-        return Err(khata_satr(masar, raqm, &mustalah.masdar, "has an empty source form"));
+        return Err(khata_satr(
+            masar,
+            raqm,
+            &mustalah.masdar,
+            "has an empty source form",
+        ));
     }
     if miftah_muwahhad(&mustalah.arabi).is_empty() {
         return Err(khata_satr(
@@ -1050,8 +1080,12 @@ pub fn wahhid_tadarub(
     let mut taadilat = Vec::new();
     for sura in &tadarub.suwar {
         for id in &sura.mawaqi {
-            let Some(mudkhal) = bil_id.get(id) else { continue };
-            let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+            let Some(mudkhal) = bil_id.get(id) else {
+                continue;
+            };
+            let Some(hadaf) = mudkhal.hadaf.as_deref() else {
+                continue;
+            };
             if miftah_muwahhad(hadaf) == miftah_mukhtar {
                 continue;
             }
@@ -1064,4 +1098,3 @@ pub fn wahhid_tadarub(
     }
     taadilat
 }
-

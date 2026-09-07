@@ -25,8 +25,8 @@ pub fn masar_nafsi() -> Option<PathBuf> {
     use std::os::windows::ffi::OsStringExt as _;
     use windows::Win32::Foundation::{HMODULE, MAX_PATH};
     use windows::Win32::System::LibraryLoader::{
-        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, GetModuleFileNameW, GetModuleHandleExW,
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        GetModuleFileNameW, GetModuleHandleExW,
     };
     use windows::core::PCWSTR;
 
@@ -36,8 +36,7 @@ pub fn masar_nafsi() -> Option<PathBuf> {
     // change the module's lifetime, only report it.
     let natija = unsafe {
         GetModuleHandleExW(
-            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
-                | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             PCWSTR((masar_nafsi as *const ()).cast::<u16>()),
             &raw mut miqbad,
         )
@@ -57,7 +56,9 @@ pub fn masar_nafsi() -> Option<PathBuf> {
     if tul == 0 || tul >= hajiz.len() {
         return None;
     }
-    Some(PathBuf::from(std::ffi::OsString::from_wide(hajiz.get(..tul)?)))
+    Some(PathBuf::from(std::ffi::OsString::from_wide(
+        hajiz.get(..tul)?,
+    )))
 }
 
 /// The full path of the calling module.
@@ -113,7 +114,11 @@ pub fn qaidat_wahda(ism: &str) -> Option<*mut c_void> {
     // SAFETY: `wasi` is a NUL-terminated wide string that outlives the call.
     // `GetModuleHandleW` takes no reference, so the handle must not be freed.
     let miqbad = unsafe { GetModuleHandleW(PCWSTR(wasi.as_ptr())) }.ok()?;
-    if miqbad.is_invalid() { None } else { Some(miqbad.0.cast::<c_void>()) }
+    if miqbad.is_invalid() {
+        None
+    } else {
+        Some(miqbad.0.cast::<c_void>())
+    }
 }
 
 /// The base address of a loaded module, by name.
@@ -126,7 +131,10 @@ pub fn qaidat_wahda(ism: &str) -> Option<*mut c_void> {
     // `RTLD_NOLOAD` asks only whether the module is already loaded, so this
     // never brings one in as a side effect of asking.
     let miqbad = unsafe {
-        libc::dlopen(bayt.as_ptr().cast::<core::ffi::c_char>(), libc::RTLD_NOW | libc::RTLD_NOLOAD)
+        libc::dlopen(
+            bayt.as_ptr().cast::<core::ffi::c_char>(),
+            libc::RTLD_NOW | libc::RTLD_NOLOAD,
+        )
     };
     if miqbad.is_null() {
         return None;
@@ -172,7 +180,10 @@ pub unsafe fn ramz_wahda(qaida: *mut c_void, ism: &str) -> Option<*mut c_void> {
     bayt.push(0);
     // SAFETY: the caller guarantees `qaida` is a live handle from `dlopen`, and
     // `bayt` is a NUL-terminated name that outlives the call.
-    let unwan =
-        unsafe { libc::dlsym(qaida, bayt.as_ptr().cast::<core::ffi::c_char>()) };
-    if unwan.is_null() { None } else { Some(unwan.cast::<c_void>()) }
+    let unwan = unsafe { libc::dlsym(qaida, bayt.as_ptr().cast::<core::ffi::c_char>()) };
+    if unwan.is_null() {
+        None
+    } else {
+        Some(unwan.cast::<c_void>())
+    }
 }

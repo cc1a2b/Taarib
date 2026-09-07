@@ -53,12 +53,20 @@ use taarib_tabaqa::wajiha::{MeezaniyatItar, MustatilBiksel, SighatSath, WasfSath
 use taarib_tabaqa::watira::{MunazzimWatira, NAFIDHAT_TADAHWUR, TaghyeerWatira};
 
 /// The surface every test positions against.
-const SATH: WasfSath =
-    WasfSath { ard: 1920, irtifa: 1080, sigha: SighatSath::Bgra8, sirgb: true };
+const SATH: WasfSath = WasfSath {
+    ard: 1920,
+    irtifa: 1080,
+    sigha: SighatSath::Bgra8,
+    sirgb: true,
+};
 
 /// The subtitle strip, in surface pixels.
-const SUNDUQ: MustatilBiksel =
-    MustatilBiksel { yasar: 400, aala: 900, ard: 1120, irtifa: 40 };
+const SUNDUQ: MustatilBiksel = MustatilBiksel {
+    yasar: 400,
+    aala: 900,
+    ard: 1120,
+    irtifa: 40,
+};
 
 /// The default poll interval, which every synthetic pass advances by.
 const KHUTWA_MIKRO: u64 = 250_000;
@@ -100,7 +108,12 @@ impl MutarjimAadd {
     }
 
     fn usul(&self) -> Vec<String> {
-        self.0.sijill.lock().iter().map(|(asl, _, _)| asl.clone()).collect()
+        self.0
+            .sijill
+            .lock()
+            .iter()
+            .map(|(asl, _, _)| asl.clone())
+            .collect()
     }
 }
 
@@ -161,7 +174,10 @@ impl DhakiraMalaf {
                 }
             }
         }
-        Self { masar, qiyud: Mutex::new(qiyud) }
+        Self {
+            masar,
+            qiyud: Mutex::new(qiyud),
+        }
     }
 
     fn iktub(&self) -> std::io::Result<()> {
@@ -187,11 +203,17 @@ impl DhakiraTabaqa for DhakiraMalaf {
     }
 
     fn ibhath(&self, talab: &TalabDhakira<'_>) -> Option<RaddSatr> {
-        self.qiyud.lock().get(talab.asl).map(|arabi| RaddSatr::aaliya(arabi.clone()))
+        self.qiyud
+            .lock()
+            .get(talab.asl)
+            .map(|arabi| RaddSatr::aaliya(arabi.clone()))
     }
 
     fn sajjil(&self, qayd: &QaydTabaqa<'_>) -> Result<(), KhataTabaqa> {
-        let _ = self.qiyud.lock().insert(qayd.asl.to_owned(), qayd.arabi.to_owned());
+        let _ = self
+            .qiyud
+            .lock()
+            .insert(qayd.asl.to_owned(), qayd.arabi.to_owned());
         self.iktub().map_err(|sabab| KhataTabaqa::KhataMalaf {
             masar: self.masar.clone(),
             sabab,
@@ -214,7 +236,10 @@ impl DhakiraTabaqa for DhakiraMalaf {
 /// entry. **Nothing here is a real game.** No Unity, Unreal, Ren'Py, RPG Maker
 /// or GameMaker title is involved; the readings below are constructed text.
 fn luba() -> LubaId {
-    LubaId::min_masdar(&MasdarLuba::Yadawi("taarib-qissa-fixture".to_owned()), ISM_LUBA)
+    LubaId::min_masdar(
+        &MasdarLuba::Yadawi("taarib-qissa-fixture".to_owned()),
+        ISM_LUBA,
+    )
 }
 
 /// The fixture's display name.
@@ -222,7 +247,11 @@ const ISM_LUBA: &str = "Synthetic Frames (a test fixture, not a game)";
 
 /// Options with the settle policy left at its shipped defaults.
 fn khiyarat() -> KhiyaratQissa {
-    KhiyaratQissa { tasnif: TasnifNass::Hiwar, yasjil: false, ..KhiyaratQissa::iftiradiya() }
+    KhiyaratQissa {
+        tasnif: TasnifNass::Hiwar,
+        yasjil: false,
+        ..KhiyaratQissa::iftiradiya()
+    }
 }
 
 /// A session with a counting translator and a chosen memory.
@@ -243,7 +272,12 @@ fn dhakirat_jalsa() -> Arc<dyn DhakiraTabaqa> {
 
 /// One recognized line in the subtitle strip.
 fn mulahaza(nass: &str) -> Vec<QiraaMulahaza> {
-    vec![QiraaMulahaza { nass: nass.to_owned(), mawdi: SUNDUQ, thiqa: 92, maqisa: true }]
+    vec![QiraaMulahaza {
+        nass: nass.to_owned(),
+        mawdi: SUNDUQ,
+        thiqa: 92,
+        maqisa: true,
+    }]
 }
 
 /// Feeds a sequence of readings in, one poll interval apart.
@@ -268,21 +302,40 @@ fn mrir(qissa: &mut Qissa, bidaya: u64, qiraat: &[&str]) -> u64 {
 /// differed only by an index would be measuring the tracker against text no game
 /// produces, and would pass for the wrong reason.
 fn satr_hiwar(raqm: u32) -> String {
-    const AFAAL: [&str; 7] =
-        ["Take", "Follow", "Guard", "Sell", "Burn", "Forget", "Deliver"];
+    const AFAAL: [&str; 7] = [
+        "Take", "Follow", "Guard", "Sell", "Burn", "Forget", "Deliver",
+    ];
     const ASMA: [&str; 11] = [
         "ferry", "lantern", "ledger", "pass", "cellar", "banner", "mill", "quarry", "shrine",
         "causeway", "toll",
     ];
     const AMAKIN: [&str; 13] = [
-        "eastern pier", "north gate", "old mill", "salt marsh", "broken bridge", "upper ward",
-        "tanner's row", "fisher's stair", "chapel yard", "dry well", "stone circle",
-        "watch tower", "long barrow",
+        "eastern pier",
+        "north gate",
+        "old mill",
+        "salt marsh",
+        "broken bridge",
+        "upper ward",
+        "tanner's row",
+        "fisher's stair",
+        "chapel yard",
+        "dry well",
+        "stone circle",
+        "watch tower",
+        "long barrow",
     ];
-    let fil = AFAAL.get(usize::try_from(raqm % 7).unwrap_or(0)).copied().unwrap_or("Take");
-    let ism = ASMA.get(usize::try_from(raqm % 11).unwrap_or(0)).copied().unwrap_or("ferry");
-    let makan =
-        AMAKIN.get(usize::try_from(raqm % 13).unwrap_or(0)).copied().unwrap_or("north gate");
+    let fil = AFAAL
+        .get(usize::try_from(raqm % 7).unwrap_or(0))
+        .copied()
+        .unwrap_or("Take");
+    let ism = ASMA
+        .get(usize::try_from(raqm % 11).unwrap_or(0))
+        .copied()
+        .unwrap_or("ferry");
+    let makan = AMAKIN
+        .get(usize::try_from(raqm % 13).unwrap_or(0))
+        .copied()
+        .unwrap_or("north gate");
     format!("{fil} the {ism} at the {makan} before the thaw sets in.")
 }
 
@@ -344,7 +397,10 @@ fn satr_wahid_tarjama_wahida() {
     );
     let ihsaat = qissa.ihsaat();
     assert_eq!(ihsaat.maqruaat, 200, "every reading must reach the tracker");
-    assert_eq!(ihsaat.talabat, 1, "the session's own counter must agree with the provider's");
+    assert_eq!(
+        ihsaat.talabat, 1,
+        "the session's own counter must agree with the provider's"
+    );
     assert_eq!(
         ihsaat.muwaffara(),
         199,
@@ -411,8 +467,16 @@ fn satr_jadeed_hawiya_jadeeda() {
     let mutarjim = MutarjimAadd::default();
     let mut qissa = jalsa(&mutarjim, dhakirat_jalsa());
 
-    let lahza = mrir(&mut qissa, 0, &["The old road north is closed until the thaw."; 4]);
-    let _ = mrir(&mut qissa, lahza, &["Take the ferry from the eastern pier instead."; 4]);
+    let lahza = mrir(
+        &mut qissa,
+        0,
+        &["The old road north is closed until the thaw."; 4],
+    );
+    let _ = mrir(
+        &mut qissa,
+        lahza,
+        &["Take the ferry from the eastern pier instead."; 4],
+    );
 
     assert_eq!(
         mutarjim.adad(),
@@ -451,7 +515,11 @@ fn assatr_attali_yahmil_ma_qablah() {
     let _ = mrir(&mut qissa, lahza, &[thalith; 3]);
 
     let sijill = mutarjim.sijill();
-    assert_eq!(sijill.len(), 3, "three sentences must produce three requests");
+    assert_eq!(
+        sijill.len(),
+        3,
+        "three sentences must produce three requests"
+    );
 
     let Some((asl_awwal, jiwar_awwal, _)) = sijill.first() else {
         panic!("the first request is missing");
@@ -580,7 +648,10 @@ fn mintaqa_thabita_la_tuqra_marratayn() {
     let awwal = qissa
         .hal_taghayyarat(MINTAQA, QaidatTarjama::IndaTaghyeer, &bi_nass)
         .unwrap_or_else(|khata| panic!("the gate refused the first capture: {khata}"));
-    assert!(awwal, "the first capture of a region has nothing to compare against and must pass");
+    assert!(
+        awwal,
+        "the first capture of a region has nothing to compare against and must pass"
+    );
 
     for marra in 0..8 {
         let mukarrar = qissa
@@ -596,14 +667,20 @@ fn mintaqa_thabita_la_tuqra_marratayn() {
     let baada = qissa
         .hal_taghayyarat(MINTAQA, QaidatTarjama::IndaTaghyeer, &bila_nass)
         .unwrap_or_else(|khata| panic!("the gate refused the changed capture: {khata}"));
-    assert!(baada, "a region whose contents genuinely changed must pass the gate");
+    assert!(
+        baada,
+        "a region whose contents genuinely changed must pass the gate"
+    );
 
     // The continuous rule is documented as paying every interval regardless.
     // A gate that quietly held it back would make that documentation false.
     let mustamirra = qissa
         .hal_taghayyarat(MINTAQA, QaidatTarjama::Mustamirra, &bila_nass)
         .unwrap_or_else(|khata| panic!("the gate refused a continuous capture: {khata}"));
-    assert!(mustamirra, "the continuous rule bypasses the change gate by design");
+    assert!(
+        mustamirra,
+        "the continuous rule bypasses the change gate by design"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -619,30 +696,46 @@ fn mintaqa_thabita_la_tuqra_marratayn() {
 /// panel sentence say so with the real numbers.
 #[test]
 fn tajawuz_almeezaniya_yukhaffid_alwatira() {
-    let mut watira =
-        MunazzimWatira::jadeed(250_000, MeezaniyatItar::SAQF_IFTIRADI);
+    let mut watira = MunazzimWatira::jadeed(250_000, MeezaniyatItar::SAQF_IFTIRADI);
     let asas = watira.fasil_mikro();
     assert!(!watira.mutadahwira(), "a fresh governor is not degraded");
 
     let mut taghyeer: Option<TaghyeerWatira> = None;
     for _ in 0..NAFIDHAT_TADAHWUR {
-        taghyeer = watira.sajjil_itar(MeezaniyatItar::SAQF_IFTIRADI * 3).or(taghyeer);
+        taghyeer = watira
+            .sajjil_itar(MeezaniyatItar::SAQF_IFTIRADI * 3)
+            .or(taghyeer);
     }
 
-    let Some(TaghyeerWatira::Tadahwur { min_mikro, ila_mikro, daraja }) = taghyeer else {
+    let Some(TaghyeerWatira::Tadahwur {
+        min_mikro,
+        ila_mikro,
+        daraja,
+    }) = taghyeer
+    else {
         panic!(
             "{NAFIDHAT_TADAHWUR} consecutive frames at three times the budget reported no \
              degradation at all: {taghyeer:?}"
         );
     };
-    assert_eq!(min_mikro, asas, "the change must name the interval it started from");
+    assert_eq!(
+        min_mikro, asas,
+        "the change must name the interval it started from"
+    );
     assert_eq!(
         ila_mikro, 500_000,
         "one degradation step doubles the interval; it went to {ila_mikro} µs"
     );
     assert_eq!(daraja, 1, "one window of overrun is one step");
-    assert_eq!(watira.fasil_mikro(), 500_000, "the governor must be polling at the new rate");
-    assert!(watira.mutadahwira(), "the panel's one boolean must say the overlay is struggling");
+    assert_eq!(
+        watira.fasil_mikro(),
+        500_000,
+        "the governor must be polling at the new rate"
+    );
+    assert!(
+        watira.mutadahwira(),
+        "the panel's one boolean must say the overlay is struggling"
+    );
 
     let wasf = watira.wasf();
     assert!(
@@ -669,12 +762,18 @@ fn tajawuz_almeezaniya_yukhaffid_alwatira() {
     for _ in 0..(NAFIDHAT_TADAHWUR * 8) {
         taafi = watira.sajjil_itar(500).or(taafi);
     }
-    let Some(TaghyeerWatira::Taafi { ila_mikro, daraja, .. }) = taafi else {
+    let Some(TaghyeerWatira::Taafi {
+        ila_mikro, daraja, ..
+    }) = taafi
+    else {
         panic!("a long run of cheap frames did not recover the rate: {taafi:?}");
     };
     assert_eq!(ila_mikro, asas, "recovery returns to the base interval");
     assert_eq!(daraja, 0, "and to no degradation at all");
-    assert!(!watira.mutadahwira(), "a recovered governor is not degraded");
+    assert!(
+        !watira.mutadahwira(),
+        "a recovered governor is not degraded"
+    );
 }
 
 /// Degrading does not stop the overlay drawing what it already has.
@@ -685,7 +784,11 @@ fn tajawuz_almeezaniya_yukhaffid_alwatira() {
 fn attadahwur_la_yusqit_alitarat() {
     let mutarjim = MutarjimAadd::default();
     let mut qissa = jalsa(&mutarjim, dhakirat_jalsa());
-    let _ = mrir(&mut qissa, 0, &["The old road north is closed until the thaw."; 3]);
+    let _ = mrir(
+        &mut qissa,
+        0,
+        &["The old road north is closed until the thaw."; 3],
+    );
 
     let mut munassiq = Munassiq::jadeed(
         qissa.manshura(),
@@ -695,7 +798,9 @@ fn attadahwur_la_yusqit_alitarat() {
     let mut marsuma = 0_u32;
     let mut khaffad = false;
     for _ in 0..(NAFIDHAT_TADAHWUR * 2) {
-        if munassiq.itar(MeezaniyatItar::SAQF_IFTIRADI * 3).is_some_and(TaghyeerWatira::tadahwur)
+        if munassiq
+            .itar(MeezaniyatItar::SAQF_IFTIRADI * 3)
+            .is_some_and(TaghyeerWatira::tadahwur)
         {
             khaffad = true;
         }
@@ -704,14 +809,21 @@ fn attadahwur_la_yusqit_alitarat() {
         }
     }
 
-    assert!(khaffad, "the rate must have been given up under a sustained overrun");
+    assert!(
+        khaffad,
+        "the rate must have been given up under a sustained overrun"
+    );
     assert_eq!(
         marsuma,
         NAFIDHAT_TADAHWUR * 2,
         "every one of the {} frames must still have had a line to draw; {marsuma} did",
         NAFIDHAT_TADAHWUR * 2
     );
-    assert_eq!(munassiq.tark_qufl(), 0, "nothing here contends for the snapshot lock");
+    assert_eq!(
+        munassiq.tark_qufl(),
+        0,
+        "nothing here contends for the snapshot lock"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -818,11 +930,22 @@ impl taarib_tabaqa::qira::Qari for QariShareet {
                 thiqa: None,
             });
         };
-        let fahras = usize::try_from(aala).unwrap_or(0).checked_div(14).unwrap_or(0);
-        let nass = HIWAR_SHAREET.get(fahras).copied().unwrap_or("An unreadable line.");
+        let fahras = usize::try_from(aala)
+            .unwrap_or(0)
+            .checked_div(14)
+            .unwrap_or(0);
+        let nass = HIWAR_SHAREET
+            .get(fahras)
+            .copied()
+            .unwrap_or("An unreadable line.");
         Ok(vec![taarib_tabaqa::qira::SatrMaqru::jadeed(
             nass,
-            MustatilBiksel { yasar: 0, aala, ard: sura.ard(), irtifa: 12 },
+            MustatilBiksel {
+                yasar: 0,
+                aala,
+                ard: sura.ard(),
+                irtifa: 12,
+            },
             90,
             true,
         )])
@@ -893,9 +1016,21 @@ fn nisfa_alitar_wa_ma_khalfah() {
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
 
-    assert_eq!(khayt.matruka(), 0, "the queue must not have overflowed at this pace");
-    assert!(khayt.muaalaja() > 0, "the worker must have processed captures");
-    assert_eq!(khayt.akhta(), 0, "no pass should have refused: {}", khayt.wasf());
+    assert_eq!(
+        khayt.matruka(),
+        0,
+        "the queue must not have overflowed at this pace"
+    );
+    assert!(
+        khayt.muaalaja() > 0,
+        "the worker must have processed captures"
+    );
+    assert_eq!(
+        khayt.akhta(),
+        0,
+        "no pass should have refused: {}",
+        khayt.wasf()
+    );
     assert_eq!(khayt.hala(), HalatKhayt::Salima, "and the worker says so");
     assert_eq!(
         mutarjim.adad(),
@@ -906,7 +1041,10 @@ fn nisfa_alitar_wa_ma_khalfah() {
     let usul = mutarjim.usul();
     assert_eq!(
         usul,
-        HIWAR_SHAREET.iter().map(|nass| (*nass).to_owned()).collect::<Vec<_>>(),
+        HIWAR_SHAREET
+            .iter()
+            .map(|nass| (*nass).to_owned())
+            .collect::<Vec<_>>(),
         "the requests must be the three lines, in the order they were on screen"
     );
     assert!(
@@ -993,7 +1131,10 @@ impl taarib_tabaqa::qira::Qari for QariMutaqallib {
                 sabab: "the frame could not be read back this once".to_owned(),
             });
         }
-        Err(KhataTabaqa::LaNassMaqru { mintaqa: "synthetic".to_owned(), thiqa: None })
+        Err(KhataTabaqa::LaNassMaqru {
+            mintaqa: "synthetic".to_owned(),
+            thiqa: None,
+        })
     }
 }
 
@@ -1049,7 +1190,11 @@ fn intazir(shart: impl Fn() -> bool) {
 fn qari_mayyit_yuqif_al_jalsa_wa_yusammi_al_sabab() {
     let mut khayt = khayt_bi_qari(Box::new(QariMayyit));
 
-    assert_eq!(adfa_wahida(&khayt, 0), HalatDaf::Qubilat, "the first capture is posted");
+    assert_eq!(
+        adfa_wahida(&khayt, 0),
+        HalatDaf::Qubilat,
+        "the first capture is posted"
+    );
     intazir(|| khayt.akhta() >= 1);
 
     let hala = khayt.hala();
@@ -1057,7 +1202,10 @@ fn qari_mayyit_yuqif_al_jalsa_wa_yusammi_al_sabab() {
         panic!("a dead recognizer must stop the session, not merely count: {hala:?}");
     };
     assert!(hala.mutawaqqifa());
-    assert!(sabab.contains("language pack"), "the reason survives verbatim: {sabab}");
+    assert!(
+        sabab.contains("language pack"),
+        "the reason survives verbatim: {sabab}"
+    );
     assert!(!sabab_arabi.trim().is_empty(), "and is readable in Arabic");
 
     // The door is closed: no queueing, no recognition, and the refusals are
@@ -1066,22 +1214,49 @@ fn qari_mayyit_yuqif_al_jalsa_wa_yusammi_al_sabab() {
     assert_eq!(adfa_wahida(&khayt, KHUTWA_MIKRO * 2), HalatDaf::Rufidat);
     assert_eq!(khayt.marfuda(), 2, "refused at the door, twice");
     assert_eq!(khayt.matruka(), 0, "refused is not dropped");
-    assert_eq!(khayt.akhta(), 1, "a closed door costs no further recognition");
+    assert_eq!(
+        khayt.akhta(),
+        1,
+        "a closed door costs no further recognition"
+    );
 
     let wasf = khayt.wasf();
-    assert!(wasf.contains("language pack"), "the panel sentence carries the reason: {wasf}");
-    assert!(wasf.contains("stopped"), "and says the session is stopped: {wasf}");
-    assert!(wasf.contains("2 refused at the door"), "and counts the door: {wasf}");
+    assert!(
+        wasf.contains("language pack"),
+        "the panel sentence carries the reason: {wasf}"
+    );
+    assert!(
+        wasf.contains("stopped"),
+        "and says the session is stopped: {wasf}"
+    );
+    assert!(
+        wasf.contains("2 refused at the door"),
+        "and counts the door: {wasf}"
+    );
     let wasf_arabi = khayt.wasf_arabi();
-    assert!(wasf_arabi.contains("توقّفت"), "the Arabic says stopped too: {wasf_arabi}");
+    assert!(
+        wasf_arabi.contains("توقّفت"),
+        "the Arabic says stopped too: {wasf_arabi}"
+    );
 
     // Translate-now is the user's way back in. The next pass either succeeds
     // or stops the session again with a fresh reason — here, the same one.
     khayt.iqra_alan();
-    assert_eq!(adfa_wahida(&khayt, KHUTWA_MIKRO * 3), HalatDaf::Qubilat, "reopened");
+    assert_eq!(
+        adfa_wahida(&khayt, KHUTWA_MIKRO * 3),
+        HalatDaf::Qubilat,
+        "reopened"
+    );
     intazir(|| khayt.akhta() >= 2);
-    assert!(khayt.hala().mutawaqqifa(), "the engine is still dead, and the worker says so again");
-    assert_eq!(adfa_wahida(&khayt, KHUTWA_MIKRO * 4), HalatDaf::Rufidat, "and the door is shut");
+    assert!(
+        khayt.hala().mutawaqqifa(),
+        "the engine is still dead, and the worker says so again"
+    );
+    assert_eq!(
+        adfa_wahida(&khayt, KHUTWA_MIKRO * 4),
+        HalatDaf::Rufidat,
+        "and the door is shut"
+    );
 
     khayt.awqif();
 }
@@ -1107,14 +1282,24 @@ fn rafd_aabir_la_yuqif_al_jalsa() {
 
     // The door is open, the next capture is processed, and the record of the
     // last refusal stays readable rather than being erased by a success.
-    assert_eq!(adfa_wahida(&khayt, KHUTWA_MIKRO), HalatDaf::Qubilat, "the door stays open");
+    assert_eq!(
+        adfa_wahida(&khayt, KHUTWA_MIKRO),
+        HalatDaf::Qubilat,
+        "the door stays open"
+    );
     intazir(|| khayt.muaalaja() >= 1);
     assert_eq!(khayt.marfuda(), 0, "nothing was refused at the door");
     assert_eq!(khayt.akhta(), 1, "one refusal, and it stayed one");
     assert!(matches!(khayt.hala(), HalatKhayt::Aabira { .. }));
     let wasf = khayt.wasf();
-    assert!(wasf.contains("one capture's"), "the panel says which kind it was: {wasf}");
-    assert!(!wasf.contains("stopped"), "and does not say the session stopped: {wasf}");
+    assert!(
+        wasf.contains("one capture's"),
+        "the panel says which kind it was: {wasf}"
+    );
+    assert!(
+        !wasf.contains("stopped"),
+        "and does not say the session stopped: {wasf}"
+    );
 
     khayt.awqif();
 }
@@ -1144,12 +1329,18 @@ impl DhakiraTabaqa for DhakiraShahida {
         // Answered as an observation, which is what the shared memory returns
         // for anything a person did not write: read off somebody's screen and
         // machine-translated from that reading.
-        self.qiyud.lock().get(talab.asl).map(|arabi| RaddSatr::mulahaza(arabi.clone()))
+        self.qiyud
+            .lock()
+            .get(talab.asl)
+            .map(|arabi| RaddSatr::mulahaza(arabi.clone()))
     }
 
     fn sajjil(&self, qayd: &QaydTabaqa<'_>) -> Result<(), KhataTabaqa> {
         self.thiqat.lock().push(qayd.thiqa);
-        let _ = self.qiyud.lock().insert(qayd.asl.to_owned(), qayd.arabi.to_owned());
+        let _ = self
+            .qiyud
+            .lock()
+            .insert(qayd.asl.to_owned(), qayd.arabi.to_owned());
         Ok(())
     }
 
@@ -1160,7 +1351,12 @@ impl DhakiraTabaqa for DhakiraShahida {
 
 /// One reading with the recognizer's own `maqisa` bit set as given.
 fn mulahaza_bi_qiyas(nass: &str, thiqa: u8, maqisa: bool) -> Vec<QiraaMulahaza> {
-    vec![QiraaMulahaza { nass: nass.to_owned(), mawdi: SUNDUQ, thiqa, maqisa }]
+    vec![QiraaMulahaza {
+        nass: nass.to_owned(),
+        mawdi: SUNDUQ,
+        thiqa,
+        maqisa,
+    }]
 }
 
 /// An engine that measures nothing hands the memory nothing, not a constant.
@@ -1184,7 +1380,10 @@ fn qiyas_ghayr_mawjud_la_yusbih_raqman() {
     let mut qissa = Qissa::jadeeda(
         luba(),
         ISM_LUBA,
-        KhiyaratQissa { tasnif: TasnifNass::Hiwar, ..KhiyaratQissa::iftiradiya() },
+        KhiyaratQissa {
+            tasnif: TasnifNass::Hiwar,
+            ..KhiyaratQissa::iftiradiya()
+        },
     )
     .bi_mutarjim(Box::new(mutarjim.clone()))
     .bi_dhakira(Arc::<DhakiraShahida>::clone(&shahida))
@@ -1195,16 +1394,29 @@ fn qiyas_ghayr_mawjud_la_yusbih_raqman() {
     // A line no engine measured: the confidence field carries the stand-in.
     let ghayr = "The old road north is closed until the thaw.";
     for lahza in [0, KHUTWA_MIKRO] {
-        let _ = qissa.aalij_sutur(MINTAQA, "subtitles", lahza, &mulahaza_bi_qiyas(ghayr, 80, false));
+        let _ = qissa.aalij_sutur(
+            MINTAQA,
+            "subtitles",
+            lahza,
+            &mulahaza_bi_qiyas(ghayr, 80, false),
+        );
     }
     // A line macOS Vision measured at 62, which is below the stand-in.
     let maqis = "Take the ferry from the eastern pier instead.";
     for lahza in [KHUTWA_MIKRO * 2, KHUTWA_MIKRO * 3] {
-        let _ =
-            qissa.aalij_sutur(MINTAQA, "subtitles", lahza, &mulahaza_bi_qiyas(maqis, 62, true));
+        let _ = qissa.aalij_sutur(
+            MINTAQA,
+            "subtitles",
+            lahza,
+            &mulahaza_bi_qiyas(maqis, 62, true),
+        );
     }
 
-    assert_eq!(mutarjim.adad(), 2, "both lines must have been translated once each");
+    assert_eq!(
+        mutarjim.adad(),
+        2,
+        "both lines must have been translated once each"
+    );
     let thiqat = shahida.thiqat.lock().clone();
     assert_eq!(
         thiqat,
@@ -1217,13 +1429,19 @@ fn qiyas_ghayr_mawjud_la_yusbih_raqman() {
     let ghayr_madkhal = madakhil.iter().find(|madkhal| madkhal.asl == ghayr);
     let maqis_madkhal = madakhil.iter().find(|madkhal| madkhal.asl == maqis);
     let (Some(ghayr_madkhal), Some(maqis_madkhal)) = (ghayr_madkhal, maqis_madkhal) else {
-        panic!("both lines must be in the reading history; it holds {} row(s)", madakhil.len());
+        panic!(
+            "both lines must be in the reading history; it holds {} row(s)",
+            madakhil.len()
+        );
     };
     assert!(
         !ghayr_madkhal.maqisa,
         "the history must record that nothing measured this reading"
     );
-    assert!(maqis_madkhal.maqisa, "and that something measured the other one");
+    assert!(
+        maqis_madkhal.maqisa,
+        "and that something measured the other one"
+    );
     assert_eq!(
         maqis_madkhal.thiqa, 62,
         "a measured reading keeps its own number rather than the stand-in"
@@ -1265,7 +1483,10 @@ fn isabat_dhakira_tusajjal_kaqiraa() {
     let mut qissa = Qissa::jadeeda(
         luba(),
         ISM_LUBA,
-        KhiyaratQissa { tasnif: TasnifNass::Hiwar, ..KhiyaratQissa::iftiradiya() },
+        KhiyaratQissa {
+            tasnif: TasnifNass::Hiwar,
+            ..KhiyaratQissa::iftiradiya()
+        },
     )
     .bi_mutarjim(Box::new(mutarjim.clone()))
     .bi_dhakira(Arc::<DhakiraShahida>::clone(&shahida))
@@ -1274,7 +1495,11 @@ fn isabat_dhakira_tusajjal_kaqiraa() {
     qissa.ayyin_sath(SATH);
     let _ = mrir(&mut qissa, 0, &[nass; 3]);
 
-    assert_eq!(mutarjim.adad(), 0, "the memory answered, so nothing was translated");
+    assert_eq!(
+        mutarjim.adad(),
+        0,
+        "the memory answered, so nothing was translated"
+    );
     let madakhil = sijill.laqta(4);
     let Some(madkhal) = madakhil.first() else {
         panic!("the line must be in the reading history");
@@ -1286,7 +1511,9 @@ fn isabat_dhakira_tusajjal_kaqiraa() {
          rather than calling it this session's machine translation"
     );
     assert_eq!(
-        madkhal.masdar.map(taarib_tabaqa::sijill_qira::MasdarTarjama::unwan),
+        madkhal
+            .masdar
+            .map(taarib_tabaqa::sijill_qira::MasdarTarjama::unwan),
         Some("قراءة شاشة سابقة"),
         "and the panel's Arabic label must say it too"
     );

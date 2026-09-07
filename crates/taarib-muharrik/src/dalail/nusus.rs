@@ -255,7 +255,10 @@ impl Fahis for FahisNusus {
 
     fn ifhas(&self, siyaq: &SiyaqFahs<'_>) -> Natija<HasilatFahs> {
         if !siyaq.jidhr.is_dir() {
-            return Err(KhataMuharrik::JidhrMafqud { jidhr: siyaq.jidhr.to_path_buf() }.into());
+            return Err(KhataMuharrik::JidhrMafqud {
+                jidhr: siyaq.jidhr.to_path_buf(),
+            }
+            .into());
         }
         Ok(match self.hadaf {
             HadafNusus::RpgMakerJs => rpg_maker(siyaq),
@@ -308,7 +311,7 @@ fn iqra_izaha(malaf: &mut File, tul_malaf: u64, izaha: u64, tul: usize) -> Optio
         match malaf.read(bayt.get_mut(mala..)?) {
             Ok(0) => break,
             Ok(adad) => mala = mala.checked_add(adad)?,
-            Err(khata) if khata.kind() == ErrorKind::Interrupted => {}
+            Err(khata) if khata.kind() == ErrorKind::Interrupted => {},
             Err(_) => return None,
         }
     }
@@ -332,7 +335,7 @@ fn nass_min_bayt(bayt: &[u8]) -> String {
                 .map(u16::from_le_bytes)
                 .collect();
             String::from_utf16_lossy(&wahdat)
-        }
+        },
         Some([0xFE, 0xFF]) => {
             let wahdat: Vec<u16> = bayt
                 .get(2..)
@@ -342,7 +345,7 @@ fn nass_min_bayt(bayt: &[u8]) -> String {
                 .map(u16::from_be_bytes)
                 .collect();
             String::from_utf16_lossy(&wahdat)
-        }
+        },
         _ => String::from_utf8_lossy(bayt.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bayt))
             .into_owned(),
     }
@@ -407,7 +410,11 @@ fn awwal_mujallad(siyaq: &SiyaqFahs<'_>, murashahat: &[&str]) -> Option<(String,
 /// A path rendered relative to the game root, with forward slashes, for the
 /// `mawqi` field of a piece of evidence.
 fn mawqi_nisbi(siyaq: &SiyaqFahs<'_>, masar: &Path) -> String {
-    masar.strip_prefix(siyaq.jidhr).unwrap_or(masar).to_string_lossy().replace('\\', "/")
+    masar
+        .strip_prefix(siyaq.jidhr)
+        .unwrap_or(masar)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
 // ---------------------------------------------------------------------------
@@ -441,8 +448,9 @@ fn i32_le(bayt: &[u8], izaha: usize) -> Option<i32> {
 /// the parse makes of it — `1.6.2`, `7.4.11`, `2.3.1.542` and `RGSS300` all keep
 /// the spelling they were found with.
 fn isdar_min_nass(khaam: &str) -> IsdarMuharrik {
-    let mut ajzaa =
-        khaam.split(['.', '-', '+', '_']).filter_map(|juz| juz.trim().parse::<u16>().ok());
+    let mut ajzaa = khaam
+        .split(['.', '-', '+', '_'])
+        .filter_map(|juz| juz.trim().parse::<u16>().ok());
     IsdarMuharrik {
         kabir: ajzaa.next().unwrap_or(0),
         sagheer: ajzaa.next().unwrap_or(0),
@@ -561,12 +569,20 @@ impl QaidaRpg {
 
 /// Joins a project prefix onto a relative path.
 fn taht(asas: &str, lahiqa: &str) -> String {
-    if asas.is_empty() { lahiqa.to_owned() } else { format!("{asas}/{lahiqa}") }
+    if asas.is_empty() {
+        lahiqa.to_owned()
+    } else {
+        format!("{asas}/{lahiqa}")
+    }
 }
 
 /// The entries of a marker list that actually exist under a prefix.
 fn mawjud_taht(siyaq: &SiyaqFahs<'_>, asas: &str, lawahiq: &[&str]) -> Vec<String> {
-    lawahiq.iter().map(|lahiqa| taht(asas, lahiqa)).filter(|nisbi| siyaq.yujad(nisbi)).collect()
+    lawahiq
+        .iter()
+        .map(|lahiqa| taht(asas, lahiqa))
+        .filter(|nisbi| siyaq.yujad(nisbi))
+        .collect()
 }
 
 /// Finds the project root, when one of the four layouts is present.
@@ -584,8 +600,17 @@ fn qaida_rpg(siyaq: &SiyaqFahs<'_>) -> Option<QaidaRpg> {
         if mv.is_empty() && mz.is_empty() && !(nizam && mulhaqat) {
             continue;
         }
-        let murashah = QaidaRpg { asas: asas.to_owned(), mv, mz, nizam, mulhaqat };
-        if afdal.as_ref().is_none_or(|sabiq| murashah.quwwa() > sabiq.quwwa()) {
+        let murashah = QaidaRpg {
+            asas: asas.to_owned(),
+            mv,
+            mz,
+            nizam,
+            mulhaqat,
+        };
+        if afdal
+            .as_ref()
+            .is_none_or(|sabiq| murashah.quwwa() > sabiq.quwwa())
+        {
             afdal = Some(murashah);
         }
     }
@@ -618,8 +643,10 @@ struct BayanNawat {
 /// happily walk a thousand lines and return a sprite filename.
 fn qeema_muqtabasa(nass: &str, miftah: &str) -> Option<String> {
     let baqi = nass.split_once(miftah)?.1;
-    let (mawqi, alama) =
-        baqi.char_indices().take(96).find(|(_, harf)| matches!(*harf, '"' | '\''))?;
+    let (mawqi, alama) = baqi
+        .char_indices()
+        .take(96)
+        .find(|(_, harf)| matches!(*harf, '"' | '\''))?;
     let baad = baqi.get(mawqi.checked_add(alama.len_utf8())?..)?;
     let nihaya = baad
         .char_indices()
@@ -685,7 +712,11 @@ fn adad_mulhaqat(masar: &Path) -> Option<AdadMulhaqat> {
             .iter()
             .filter(|madkhal| madkhal.get("status").and_then(Value::as_bool) == Some(true))
             .count();
-        return Some(AdadMulhaqat { kul: qeem.len(), mufaala, daqiq: true });
+        return Some(AdadMulhaqat {
+            kul: qeem.len(),
+            mufaala,
+            daqiq: true,
+        });
     }
 
     // A hand-edited `plugins.js` is common and still runs, because the engine
@@ -696,9 +727,13 @@ fn adad_mulhaqat(masar: &Path) -> Option<AdadMulhaqat> {
     if kul == 0 {
         return None;
     }
-    let mufaala = masfufa.matches("\"status\":true").count()
-        + masfufa.matches("\"status\": true").count();
-    Some(AdadMulhaqat { kul, mufaala: mufaala.min(kul), daqiq: false })
+    let mufaala =
+        masfufa.matches("\"status\":true").count() + masfufa.matches("\"status\": true").count();
+    Some(AdadMulhaqat {
+        kul,
+        mufaala: mufaala.min(kul),
+        daqiq: false,
+    })
 }
 
 /// Library files only MZ ships.
@@ -710,8 +745,11 @@ const ALAMAT_MZ: [&str; 4] = [
 ];
 
 /// Library files only MV ships.
-const ALAMAT_MV: [&str; 3] =
-    ["js/libs/fpsmeter.js", "js/libs/iphone-inline-video.browser.js", "js/libs/lz-string.js"];
+const ALAMAT_MV: [&str; 3] = [
+    "js/libs/fpsmeter.js",
+    "js/libs/iphone-inline-video.browser.js",
+    "js/libs/lz-string.js",
+];
 
 /// What `data/System.json` says.
 ///
@@ -747,10 +785,17 @@ fn bayan_nizam(masar: &Path) -> Option<BayanNizam> {
         return None;
     }
     let mutaqaddim = jidhr.get("advanced").is_some_and(Value::is_object);
-    let khatt = jidhr.get("advanced").and_then(|kutla| nass_json(kutla, "mainFontFilename"));
-    let hajm_khatt = jidhr.get("advanced").and_then(|kutla| raqm_json(kutla, "fontSize"));
+    let khatt = jidhr
+        .get("advanced")
+        .and_then(|kutla| nass_json(kutla, "mainFontFilename"));
+    let hajm_khatt = jidhr
+        .get("advanced")
+        .and_then(|kutla| raqm_json(kutla, "fontSize"));
     let shasha = jidhr.get("advanced").and_then(|kutla| {
-        Some((raqm_json(kutla, "screenWidth")?, raqm_json(kutla, "screenHeight")?))
+        Some((
+            raqm_json(kutla, "screenWidth")?,
+            raqm_json(kutla, "screenHeight")?,
+        ))
     });
     // The editor version is not in every export, which is why it is looked for
     // in three shapes and reported only when one of them is actually there.
@@ -813,9 +858,9 @@ fn bayan_huzma(masar: &Path) -> Option<BayanHuzma> {
         return None;
     }
     let taba = |miftah: &str| -> Option<String> {
-        ["dependencies", "devDependencies", "optionalDependencies"].iter().find_map(|kutla| {
-            nass_json(jidhr.get(*kutla)?, miftah).map(str::to_owned)
-        })
+        ["dependencies", "devDependencies", "optionalDependencies"]
+            .iter()
+            .find_map(|kutla| nass_json(jidhr.get(*kutla)?, miftah).map(str::to_owned))
     };
     Some(BayanHuzma {
         ism: nass_json(&jidhr, "name").map(str::to_owned),
@@ -866,8 +911,11 @@ impl JeelChromium {
 
 /// Reads the Chromium generation off the shell's own runtime files.
 fn jeel_chromium(siyaq: &SiyaqFahs<'_>) -> Option<(JeelChromium, String)> {
-    const HADEETHA: [&str; 3] =
-        ["vk_swiftshader.dll", "vk_swiftshader_icd.json", "libvk_swiftshader.so"];
+    const HADEETHA: [&str; 3] = [
+        "vk_swiftshader.dll",
+        "vk_swiftshader_icd.json",
+        "libvk_swiftshader.so",
+    ];
     if let Some((nisbi, _)) = awwal_malaf(siyaq, &HADEETHA) {
         return Some((JeelChromium::Hadeeth, nisbi));
     }
@@ -895,7 +943,11 @@ fn arjah(hali: &mut Option<(AilatMuharrik, u8)>, aila: AilatMuharrik, wazn: u8) 
 
 /// The absolute path of a project prefix.
 fn masar_asas(siyaq: &SiyaqFahs<'_>, asas: &str) -> Option<PathBuf> {
-    if asas.is_empty() { Some(siyaq.jidhr.to_path_buf()) } else { siyaq.dakhil(asas).ok() }
+    if asas.is_empty() {
+        Some(siyaq.jidhr.to_path_buf())
+    } else {
+        siyaq.dakhil(asas).ok()
+    }
 }
 
 /// The RPG Maker MV and MZ detector.
@@ -960,7 +1012,7 @@ fn rpg_maker(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
                     Some(nisbi.clone()),
                     99,
                 );
-            }
+            },
             Some("MV") => {
                 arjah(&mut mutalab, AilatMuharrik::RpgMakerMv, 99);
                 hasila.sajjil(
@@ -969,22 +1021,28 @@ fn rpg_maker(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
                     Some(nisbi.clone()),
                     99,
                 );
-            }
+            },
             Some(gharib) => {
                 let wasf = format!("RPGMAKER_NAME is neither MV nor MZ: {}", iqtibas(gharib));
                 hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi.clone()), 35);
-            }
-            None => {}
+            },
+            None => {},
         }
         if let Some(khaam) = bayan.isdar.as_deref() {
             hasila.isdar = Some(isdar_min_nass(khaam));
-            let wasf = format!("Utils.RPGMAKER_VERSION in the core script is {}", iqtibas(khaam));
+            let wasf = format!(
+                "Utils.RPGMAKER_VERSION in the core script is {}",
+                iqtibas(khaam)
+            );
             hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi.clone()), 92);
         }
         if let Some(tarwisa) = bayan.tarwisa.as_deref() {
             hasila.sajjil(
                 NawDaleel::BayanatMudmaja,
-                format!("the core script's header comment reads: {}", iqtibas(tarwisa)),
+                format!(
+                    "the core script's header comment reads: {}",
+                    iqtibas(tarwisa)
+                ),
                 Some(nisbi),
                 60,
             );
@@ -999,7 +1057,10 @@ fn rpg_maker(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
         arjah(&mut mutalab, AilatMuharrik::RpgMakerMz, 74);
         hasila.sajjil(
             NawDaleel::BinyatMujallad,
-            format!("libraries only MZ ships are present: {}", asmaa_mujmaa(&mz_libs)),
+            format!(
+                "libraries only MZ ships are present: {}",
+                asmaa_mujmaa(&mz_libs)
+            ),
             mz_libs.first().cloned(),
             74,
         );
@@ -1008,7 +1069,10 @@ fn rpg_maker(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
         arjah(&mut mutalab, AilatMuharrik::RpgMakerMv, 72);
         hasila.sajjil(
             NawDaleel::BinyatMujallad,
-            format!("libraries only MV ships are present: {}", asmaa_mujmaa(&mv_libs)),
+            format!(
+                "libraries only MV ships are present: {}",
+                asmaa_mujmaa(&mv_libs)
+            ),
             mv_libs.first().cloned(),
             72,
         );
@@ -1071,14 +1135,20 @@ fn rpg_maker_bayanat(
     {
         match bayan_nizam(&masar) {
             Some(bayan) => {
-                let unwan = bayan.unwan.as_deref().map_or_else(String::new, |nass| {
-                    format!(", gameTitle {}", iqtibas(nass))
-                });
+                let unwan = bayan
+                    .unwan
+                    .as_deref()
+                    .map_or_else(String::new, |nass| format!(", gameTitle {}", iqtibas(nass)));
                 let raqm = bayan
                     .raqm_hifz
                     .map_or_else(String::new, |qeema| format!(", versionId {qeema}"));
                 let wasf = format!("data/System.json parses as a system record{raqm}{unwan}");
-                hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi_nizam.clone()), 74);
+                hasila.sajjil(
+                    NawDaleel::BayanatMudmaja,
+                    wasf,
+                    Some(nisbi_nizam.clone()),
+                    74,
+                );
 
                 if bayan.mutaqaddim {
                     arjah(mutalab, AilatMuharrik::RpgMakerMz, 62);
@@ -1093,24 +1163,44 @@ fn rpg_maker_bayanat(
                 if let Some(khatt) = bayan.khatt.as_deref() {
                     let hajm = bayan.hajm_khatt.unwrap_or_default();
                     let wasf = format!("the runtime loads {} at size {hajm}", iqtibas(khatt));
-                    hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi_nizam.clone()), 40);
+                    hasila.sajjil(
+                        NawDaleel::BayanatMudmaja,
+                        wasf,
+                        Some(nisbi_nizam.clone()),
+                        40,
+                    );
                 }
                 if let Some((ard, irtifa)) = bayan.shasha {
                     let wasf = format!("the declared screen is {ard} by {irtifa}");
-                    hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi_nizam.clone()), 30);
+                    hasila.sajjil(
+                        NawDaleel::BayanatMudmaja,
+                        wasf,
+                        Some(nisbi_nizam.clone()),
+                        30,
+                    );
                 }
                 if let Some(lugha) = bayan.lugha.as_deref() {
                     let wasf = format!("the declared locale is {}", iqtibas(lugha));
-                    hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi_nizam.clone()), 25);
+                    hasila.sajjil(
+                        NawDaleel::BayanatMudmaja,
+                        wasf,
+                        Some(nisbi_nizam.clone()),
+                        25,
+                    );
                 }
                 if let Some(muharrir) = bayan.muharrir.as_deref() {
                     if hasila.isdar.is_none() {
                         hasila.isdar = Some(isdar_min_nass(muharrir));
                     }
                     let wasf = format!("System.json names editor version {}", iqtibas(muharrir));
-                    hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi_nizam.clone()), 70);
+                    hasila.sajjil(
+                        NawDaleel::BayanatMudmaja,
+                        wasf,
+                        Some(nisbi_nizam.clone()),
+                        70,
+                    );
                 }
-            }
+            },
             None => hasila.sajjil(
                 NawDaleel::BinyatMujallad,
                 "data/System.json is present but does not parse as JSON; the file's presence \
@@ -1136,8 +1226,13 @@ fn rpg_maker_bayanat(
                     "js/plugins.js registers {} plugins, {} enabled{daqqa}",
                     adad.kul, adad.mufaala
                 );
-                hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi_mulhaqat.clone()), 82);
-            }
+                hasila.sajjil(
+                    NawDaleel::BayanatMudmaja,
+                    wasf,
+                    Some(nisbi_mulhaqat.clone()),
+                    82,
+                );
+            },
             None => hasila.sajjil(
                 NawDaleel::BinyatMujallad,
                 "js/plugins.js is present and its $plugins array could not be read",
@@ -1150,14 +1245,19 @@ fn rpg_maker_bayanat(
     let Some(jidhr_asas) = masar_asas(siyaq, asas) else {
         return;
     };
-    let mashru = madakhil(&jidhr_asas).into_iter().find_map(|(ism, mujallad)| {
-        let munkhafid = ism.to_ascii_lowercase();
-        let yutabiq = munkhafid.ends_with(".rpgproject") || munkhafid.ends_with(".rmmzproject");
-        (!mujallad && yutabiq).then_some(ism)
-    });
+    let mashru = madakhil(&jidhr_asas)
+        .into_iter()
+        .find_map(|(ism, mujallad)| {
+            let munkhafid = ism.to_ascii_lowercase();
+            let yutabiq = munkhafid.ends_with(".rpgproject") || munkhafid.ends_with(".rmmzproject");
+            (!mujallad && yutabiq).then_some(ism)
+        });
     if let Some(ism) = mashru {
         let nisbi = taht(asas, &ism);
-        let nass = siyaq.dakhil(&nisbi).ok().and_then(|masar| iqra_nass(&masar, AQSA_NASS));
+        let nass = siyaq
+            .dakhil(&nisbi)
+            .ok()
+            .and_then(|masar| iqra_nass(&masar, AQSA_NASS));
         if let Some((aila, isdar)) = nass.as_deref().and_then(bayan_mashru) {
             arjah(mutalab, aila, 88);
             if let Some(khaam) = isdar.as_deref() {
@@ -1249,7 +1349,10 @@ fn rpg_maker_ghilaf(siyaq: &SiyaqFahs<'_>, asas: &str, hasila: &mut HasilatFahs)
 
     let nwjs = mawjud_taht(siyaq, "", &ALAMAT_NWJS);
     if !nwjs.is_empty() {
-        let wasf = format!("NW.js runtime files sit beside the project: {}", asmaa_mujmaa(&nwjs));
+        let wasf = format!(
+            "NW.js runtime files sit beside the project: {}",
+            asmaa_mujmaa(&nwjs)
+        );
         hasila.sajjil(NawDaleel::BinyatMujallad, wasf, nwjs.first().cloned(), 55);
     }
     if let Some((jeel, mawqi)) = jeel_chromium(siyaq) {
@@ -1313,7 +1416,8 @@ struct TarwisatRgssad {
 impl TarwisatRgssad {
     /// The obfuscation key a version 3 archive derives from its seed.
     fn miftah(self) -> Option<u32> {
-        self.bidhra.map(|bidhra| bidhra.wrapping_mul(9).wrapping_add(3))
+        self.bidhra
+            .map(|bidhra| bidhra.wrapping_mul(9).wrapping_add(3))
     }
 
     /// Which editor an archive of this version came from.
@@ -1375,10 +1479,15 @@ fn ism_malaf_min_nass(masar: &str) -> &str {
 /// nothing downstream has to trust this reading of it.
 fn isdar_rgss(ism: &str) -> Option<IsdarMuharrik> {
     let jidhr = ism.split('.').next().unwrap_or(ism);
-    let baqi = jidhr.strip_prefix("RGSS").or_else(|| jidhr.strip_prefix("rgss"))?;
+    let baqi = jidhr
+        .strip_prefix("RGSS")
+        .or_else(|| jidhr.strip_prefix("rgss"))?;
     let arqam: String = baqi.chars().take_while(char::is_ascii_digit).collect();
     let mut huruf = arqam.chars();
-    let kabir = huruf.next()?.to_digit(10).and_then(|raqm| u16::try_from(raqm).ok())?;
+    let kabir = huruf
+        .next()?
+        .to_digit(10)
+        .and_then(|raqm| u16::try_from(raqm).ok())?;
     let bina: String = huruf.collect();
     Some(IsdarMuharrik {
         kabir,
@@ -1417,7 +1526,7 @@ fn vx_ace(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
                      table key derives to {miftah}"
                 );
                 hasila.sajjil(NawDaleel::TarwisatHawiya, wasf, Some(nisbi), 96);
-            }
+            },
             Some(tarwisa) => {
                 let wasf = format!(
                     "{nisbi} is an RGSSAD version {} archive, which is {}; Taarib has no \
@@ -1426,11 +1535,11 @@ fn vx_ace(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
                     tarwisa.muharrir()
                 );
                 hasila.sajjil(NawDaleel::TarwisatHawiya, wasf, Some(nisbi), 45);
-            }
+            },
             None => {
                 let wasf = format!("{nisbi} is present and carries no RGSSAD header");
                 hasila.sajjil(NawDaleel::TarwisatHawiya, wasf, Some(nisbi), 30);
-            }
+            },
         }
     }
 
@@ -1468,9 +1577,7 @@ fn vx_ace(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
     if let Some((nisbi, masar)) = awwal_mujallad(siyaq, &["Data", "data"]) {
         let bayanat: Vec<String> = madakhil(&masar)
             .into_iter()
-            .filter(|(ism, mujallad)| {
-                !*mujallad && ism.to_ascii_lowercase().ends_with(".rvdata2")
-            })
+            .filter(|(ism, mujallad)| !*mujallad && ism.to_ascii_lowercase().ends_with(".rvdata2"))
             .map(|(ism, _)| ism)
             .collect();
         if !bayanat.is_empty() {
@@ -1494,7 +1601,10 @@ fn vx_ace(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
             .map(|(ism, _)| ism)
             .collect();
         if !maktabat.is_empty() {
-            let wasf = format!("the RGSS runtime ships beside it: {}", asmaa_mujmaa(&maktabat));
+            let wasf = format!(
+                "the RGSS runtime ships beside it: {}",
+                asmaa_mujmaa(&maktabat)
+            );
             hasila.sajjil(NawDaleel::BinyatMujallad, wasf, Some(nisbi), 70);
         }
     }
@@ -1613,8 +1723,10 @@ fn isdar_renpy(nass: &str) -> Option<(u16, u16, u16)> {
     let bidaya = satr.find('(')?;
     let baqi = satr.get(bidaya.checked_add(1)?..)?;
     let nihaya = baqi.find(')')?;
-    let mut arqam =
-        baqi.get(..nihaya)?.split(',').filter_map(|juz| juz.trim().parse::<u16>().ok());
+    let mut arqam = baqi
+        .get(..nihaya)?
+        .split(',')
+        .filter_map(|juz| juz.trim().parse::<u16>().ok());
     Some((arqam.next()?, arqam.next()?, arqam.next().unwrap_or(0)))
 }
 
@@ -1714,7 +1826,10 @@ fn renpy(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
 
     let mut isdar_maqru: Option<(u16, u16, u16)> = None;
     if let Some((nisbi, masar)) = awwal_malaf(siyaq, &["renpy/__init__.py"]) {
-        match iqra_nass(&masar, AQSA_NASS).as_deref().and_then(isdar_renpy) {
+        match iqra_nass(&masar, AQSA_NASS)
+            .as_deref()
+            .and_then(isdar_renpy)
+        {
             Some((kabir, sagheer, tasheeh)) => {
                 isdar_maqru = Some((kabir, sagheer, tasheeh));
                 arjah(&mut mutalab, AilatMuharrik::Renpy, 97);
@@ -1729,7 +1844,7 @@ fn renpy(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
                     "renpy/__init__.py declares version_tuple ({kabir}, {sagheer}, {tasheeh})"
                 );
                 hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi), 97);
-            }
+            },
             None => hasila.sajjil(
                 NawDaleel::BayanatMudmaja,
                 "renpy/__init__.py is present and carries no readable version_tuple, so \
@@ -1750,12 +1865,17 @@ fn renpy(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
         if !bina.is_empty() {
             arjah(&mut mutalab, AilatMuharrik::Renpy, 80);
             let asmaa: Vec<String> = bina.iter().map(|wahda| wahda.ism.clone()).collect();
-            let wasf =
-                format!("lib/ holds {} platform builds: {}", bina.len(), asmaa_mujmaa(&asmaa));
+            let wasf = format!(
+                "lib/ holds {} platform builds: {}",
+                bina.len(),
+                asmaa_mujmaa(&asmaa)
+            );
             hasila.sajjil(NawDaleel::BinyatMujallad, wasf, Some(nisbi), 80);
 
-            let mut mimariyat: Vec<String> =
-                bina.iter().map(|wahda| wahda.mimariya_khaam.clone()).collect();
+            let mut mimariyat: Vec<String> = bina
+                .iter()
+                .map(|wahda| wahda.mimariya_khaam.clone())
+                .collect();
             mimariyat.sort();
             mimariyat.dedup();
             if mimariyat.len() == 1 {
@@ -1809,7 +1929,12 @@ fn renpy_tashkeel(hasila: &mut HasilatFahs, isdar: Option<(u16, u16, u16)>, bina
                  shaper and Arabic has to be laid out and drawn by Taarib"
             )
         };
-        hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some("renpy/__init__.py".to_owned()), 95);
+        hasila.sajjil(
+            NawDaleel::BayanatMudmaja,
+            wasf,
+            Some("renpy/__init__.py".to_owned()),
+            95,
+        );
         return;
     }
     if bina.is_empty() {
@@ -1866,7 +1991,10 @@ fn renpy_bayanat(
             }
         }
         let wasf = if isdarat.is_empty() {
-            format!("game/ holds {} .rpa archives with no readable header", arshifa.len())
+            format!(
+                "game/ holds {} .rpa archives with no readable header",
+                arshifa.len()
+            )
         } else {
             format!(
                 "game/ holds {} archives headed {}: {}",
@@ -1898,8 +2026,10 @@ fn renpy_bayanat(
             .collect();
         lughat.sort();
         if !lughat.is_empty() {
-            let wasf =
-                format!("the game already ships translations for {}", asmaa_mujmaa(&lughat));
+            let wasf = format!(
+                "the game already ships translations for {}",
+                asmaa_mujmaa(&lughat)
+            );
             hasila.sajjil(NawDaleel::BinyatMujallad, wasf, Some(nisbi), 70);
         }
     }
@@ -2007,7 +2137,11 @@ fn qita_form(malaf: &mut File, tul_malaf: u64) -> Option<TabulForm> {
         });
         izaha = baad;
     }
-    Some(TabulForm { mualan, qita, mabtura })
+    Some(TabulForm {
+        mualan,
+        qita,
+        mabtura,
+    })
 }
 
 /// What the `GEN8` chunk carries.
@@ -2077,7 +2211,12 @@ fn bayan_gen8(bayt: &[u8]) -> Option<BayanGen8> {
         bytecode: *bayt.get(1)?,
         muarrif: u32_le(bayt, 20)?,
         mu_ashir_ism: u32_le(bayt, 40)?,
-        isdar: (u32_le(bayt, 44)?, u32_le(bayt, 48)?, u32_le(bayt, 52)?, u32_le(bayt, 56)?),
+        isdar: (
+            u32_le(bayt, 44)?,
+            u32_le(bayt, 48)?,
+            u32_le(bayt, 52)?,
+            u32_le(bayt, 56)?,
+        ),
         nafidha: (u32_le(bayt, 60)?, u32_le(bayt, 64)?),
         waqt: u64_le(bayt, 92),
         mu_ashir_ard: u32_le(bayt, 100),
@@ -2103,7 +2242,10 @@ fn nass_strg(malaf: &mut File, tul_malaf: u64, mu_ashir: u32) -> Option<String> 
     let tul = usize::try_from(u32_le(&bayt, 0)?).ok()?;
     let mutah = bayt.get(4..)?;
     let juz = mutah.get(..tul.min(mutah.len()))?;
-    let nihaya = juz.iter().position(|wahda| *wahda == 0).unwrap_or(juz.len());
+    let nihaya = juz
+        .iter()
+        .position(|wahda| *wahda == 0)
+        .unwrap_or(juz.len());
     let nass = String::from_utf8_lossy(juz.get(..nihaya)?).into_owned();
     (!nass.is_empty()).then_some(nass)
 }
@@ -2125,8 +2267,15 @@ const HAWIYAT_GAMEMAKER: [&str; 9] = [
 const QITA_MUHIMMA: [&str; 6] = ["STRG", "TXTR", "FONT", "CODE", "SPRT", "AUDO"];
 
 /// Executable name prefixes that are never the game.
-const MUSTATHNAYAT_TANFIDH: [&str; 7] =
-    ["unins", "vcredist", "dxwebsetup", "dotnetfx", "oalinst", "directx", "crashhandler"];
+const MUSTATHNAYAT_TANFIDH: [&str; 7] = [
+    "unins",
+    "vcredist",
+    "dxwebsetup",
+    "dotnetfx",
+    "oalinst",
+    "directx",
+    "crashhandler",
+];
 
 /// Finds the container, including inside a macOS application bundle.
 fn hawiyat_gamemaker(siyaq: &SiyaqFahs<'_>) -> Option<(String, PathBuf)> {
@@ -2165,7 +2314,10 @@ fn tanfidhi_wahid(nizam: NizamTashghil, mujallad: &Path) -> Option<PathBuf> {
         if dakhili || !imtidad(&munkhafid, "exe") {
             continue;
         }
-        if MUSTATHNAYAT_TANFIDH.iter().any(|mustathna| munkhafid.starts_with(mustathna)) {
+        if MUSTATHNAYAT_TANFIDH
+            .iter()
+            .any(|mustathna| munkhafid.starts_with(mustathna))
+        {
             continue;
         }
         if wahid.is_some() {
@@ -2277,7 +2429,11 @@ fn gamemaker_gen8(
     let wasf = format!(
         "game id {}, default window {ard} by {irtifa}, debugger {}",
         bayan.muarrif,
-        if bayan.munaqqih_muattal { "disabled" } else { "enabled" }
+        if bayan.munaqqih_muattal {
+            "disabled"
+        } else {
+            "enabled"
+        }
     );
     hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi.to_owned()), 40);
 
@@ -2294,7 +2450,11 @@ fn gamemaker_gen8(
 /// Records the chunk table, and what its absences mean.
 fn gamemaker_qita(tabul: &TabulForm, nisbi: &str, hasila: &mut HasilatFahs) {
     let asmaa: Vec<String> = tabul.qita.iter().map(|qita| qita.ism.clone()).collect();
-    let wasf = format!("the container holds {} chunks: {}", asmaa.len(), asmaa_mujmaa(&asmaa));
+    let wasf = format!(
+        "the container holds {} chunks: {}",
+        asmaa.len(),
+        asmaa_mujmaa(&asmaa)
+    );
     hasila.sajjil(NawDaleel::TarwisatHawiya, wasf, Some(nisbi.to_owned()), 88);
 
     for ism in QITA_MUHIMMA {
@@ -2408,8 +2568,10 @@ fn amshi_asar(fihris: &Value) -> HasadAsar {
         return hasad;
     };
     hasad.madakhil = judhur.keys().cloned().collect();
-    let mut kudsa: Vec<(&String, &Value, usize)> =
-        judhur.iter().map(|(ism, qeema)| (ism, qeema, 1_usize)).collect();
+    let mut kudsa: Vec<(&String, &Value, usize)> = judhur
+        .iter()
+        .map(|(ism, qeema)| (ism, qeema, 1_usize))
+        .collect();
 
     while let Some((ism, qeema, umq)) = kudsa.pop() {
         hasad.uqad = hasad.uqad.saturating_add(1);
@@ -2491,9 +2653,11 @@ fn qira_asar(masar: &Path) -> QiraatAsar {
     let Some(itar) = iqra_izaha(&mut malaf, tul_malaf, 0, 16) else {
         return QiraatAsar::Ghayr;
     };
-    let (Some(4), Some(hajm_tarwisa), Some(tul_json)) =
-        (u32_le(&itar, 0), u32_le(&itar, 4).map(u64::from), u32_le(&itar, 12).map(u64::from))
-    else {
+    let (Some(4), Some(hajm_tarwisa), Some(tul_json)) = (
+        u32_le(&itar, 0),
+        u32_le(&itar, 4).map(u64::from),
+        u32_le(&itar, 12).map(u64::from),
+    ) else {
         return QiraatAsar::Ghayr;
     };
     if hajm_tarwisa > AQSA_TARWISAT_ASAR {
@@ -2502,9 +2666,8 @@ fn qira_asar(masar: &Path) -> QiraatAsar {
     let Some(bidayat_bayanat) = 8_u64.checked_add(hajm_tarwisa) else {
         return QiraatAsar::Ghayr;
     };
-    let sahih = bidayat_bayanat <= tul_malaf
-        && tul_json.saturating_add(4) <= hajm_tarwisa
-        && tul_json > 0;
+    let sahih =
+        bidayat_bayanat <= tul_malaf && tul_json.saturating_add(4) <= hajm_tarwisa && tul_json > 0;
     if !sahih {
         return QiraatAsar::Ghayr;
     }
@@ -2529,18 +2692,54 @@ fn qira_asar(masar: &Path) -> QiraatAsar {
 /// Every shell marker, with what it is worth and what it actually means.
 const ALAMAT_GHILAF: [(&str, u8, &str); 17] = [
     ("resources/app.asar", 88, "an Electron application archive"),
-    ("Contents/Resources/app.asar", 88, "an application archive inside a macOS bundle"),
-    ("resources/electron.asar", 92, "Electron's own bundled archive"),
-    ("resources/default_app.asar", 90, "Electron's default application archive"),
-    ("resources/app/package.json", 76, "an unpacked Electron application"),
-    ("Contents/Frameworks/Electron Framework.framework", 92, "the Electron framework"),
+    (
+        "Contents/Resources/app.asar",
+        88,
+        "an application archive inside a macOS bundle",
+    ),
+    (
+        "resources/electron.asar",
+        92,
+        "Electron's own bundled archive",
+    ),
+    (
+        "resources/default_app.asar",
+        90,
+        "Electron's default application archive",
+    ),
+    (
+        "resources/app/package.json",
+        76,
+        "an unpacked Electron application",
+    ),
+    (
+        "Contents/Frameworks/Electron Framework.framework",
+        92,
+        "the Electron framework",
+    ),
     ("nw.pak", 88, "NW.js's own resource pack"),
     ("nw_100_percent.pak", 66, "NW.js's interface resources"),
-    ("LICENSES.chromium.html", 70, "the Chromium licence file a shell ships"),
+    (
+        "LICENSES.chromium.html",
+        70,
+        "the Chromium licence file a shell ships",
+    ),
     ("chrome-sandbox", 60, "Chromium's Linux sandbox helper"),
-    ("chrome_100_percent.pak", 65, "Chromium's interface resources"),
-    ("chrome_200_percent.pak", 60, "Chromium's high-density interface resources"),
-    ("icudtl.dat", 45, "Chromium's ICU data, which other embedders ship too"),
+    (
+        "chrome_100_percent.pak",
+        65,
+        "Chromium's interface resources",
+    ),
+    (
+        "chrome_200_percent.pak",
+        60,
+        "Chromium's high-density interface resources",
+    ),
+    (
+        "icudtl.dat",
+        45,
+        "Chromium's ICU data, which other embedders ship too",
+    ),
     ("v8_context_snapshot.bin", 55, "a V8 context snapshot"),
     ("snapshot_blob.bin", 50, "a V8 startup snapshot"),
     ("resources.pak", 40, "a Chromium resource pack"),
@@ -2660,7 +2859,12 @@ fn ghilaf(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
             qatia = true;
         }
         let jumla = format!("{nisbi} is present: {wasf}");
-        hasila.sajjil(NawDaleel::BinyatMujallad, jumla, Some(nisbi.to_owned()), wazn);
+        hasila.sajjil(
+            NawDaleel::BinyatMujallad,
+            jumla,
+            Some(nisbi.to_owned()),
+            wazn,
+        );
     }
     if adad == 0 {
         return hasila;
@@ -2697,7 +2901,7 @@ fn ghilaf(siyaq: &SiyaqFahs<'_>) -> HasilatFahs {
         (true, true) => {
             "both NW.js and Electron runtime files are present, which is one repacked \
              inside the other; the installer has to identify the shell that actually starts"
-        }
+        },
         (true, false) => "the shell is NW.js",
         (false, true) => "the shell is Electron",
         (false, false) => "the shell is a Chromium application whose files do not name it",
@@ -2756,7 +2960,7 @@ fn ghilaf_hawiya(siyaq: &SiyaqFahs<'_>, hasila: &mut HasilatFahs) {
                     hasila.sajjil(NawDaleel::TarwisatHawiya, wasf, Some(nisbi.clone()), 25);
                 }
                 itarat_ghilaf(hasad, &nisbi, hasila);
-            }
+            },
             QiraatAsar::Mubalagh(mualan) => {
                 let saqf = AQSA_TARWISAT_ASAR;
                 let wasf = format!(
@@ -2764,18 +2968,18 @@ fn ghilaf_hawiya(siyaq: &SiyaqFahs<'_>, hasila: &mut HasilatFahs) {
                      {saqf}-byte ceiling this probe reads, so it was refused unread"
                 );
                 hasila.sajjil(NawDaleel::TarwisatHawiya, wasf, Some(nisbi), 60);
-            }
+            },
             QiraatAsar::LaYuqra => {
                 let wasf = format!(
                     "{nisbi} frames as an asar and its directory is not valid JSON, so \
                      the archive is there and its contents are unknown"
                 );
                 hasila.sajjil(NawDaleel::TarwisatHawiya, wasf, Some(nisbi), 62);
-            }
+            },
             QiraatAsar::Ghayr => {
                 let wasf = format!("{nisbi} is present and carries no asar framing");
                 hasila.sajjil(NawDaleel::TarwisatHawiya, wasf, Some(nisbi), 35);
-            }
+            },
         }
     }
 
@@ -2812,8 +3016,10 @@ fn ghilaf_hawiya(siyaq: &SiyaqFahs<'_>, hasila: &mut HasilatFahs) {
 /// Reads the application's own manifest, which is where a shell version turns up
 /// when it turns up anywhere.
 fn ghilaf_huzma(siyaq: &SiyaqFahs<'_>, hasila: &mut HasilatFahs) {
-    const HUZAM: [&str; 2] =
-        ["resources/app/package.json", "Contents/Resources/app/package.json"];
+    const HUZAM: [&str; 2] = [
+        "resources/app/package.json",
+        "Contents/Resources/app/package.json",
+    ];
     let Some((nisbi, masar)) = awwal_malaf(siyaq, &HUZAM) else {
         return;
     };
@@ -2824,7 +3030,11 @@ fn ghilaf_huzma(siyaq: &SiyaqFahs<'_>, hasila: &mut HasilatFahs) {
     };
     if let Some(ism) = bayan.ism.as_deref() {
         let isdar = bayan.isdar.as_deref().unwrap_or("no version");
-        let wasf = format!("the application calls itself {} {}", iqtibas(ism), iqtibas(isdar));
+        let wasf = format!(
+            "the application calls itself {} {}",
+            iqtibas(ism),
+            iqtibas(isdar)
+        );
         hasila.sajjil(NawDaleel::BayanatMudmaja, wasf, Some(nisbi.clone()), 35);
     }
     if let Some(rais) = bayan.ra_isiy.as_deref() {

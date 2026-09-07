@@ -38,13 +38,19 @@ impl Kitaba {
     /// boundary can be placed inside a word at all.
     #[must_use]
     pub const fn tasil(self) -> bool {
-        matches!(&self.0, b"arab" | b"syrc" | b"mand" | b"mong" | b"nkoo" | b"phag" | b"adlm")
+        matches!(
+            &self.0,
+            b"arab" | b"syrc" | b"mand" | b"mong" | b"nkoo" | b"phag" | b"adlm"
+        )
     }
 
     /// Whether this script is written right to left by default.
     #[must_use]
     pub const fn min_alyameen(self) -> bool {
-        matches!(&self.0, b"arab" | b"hebr" | b"syrc" | b"thaa" | b"nkoo" | b"adlm" | b"mand")
+        matches!(
+            &self.0,
+            b"arab" | b"hebr" | b"syrc" | b"thaa" | b"nkoo" | b"adlm" | b"mand"
+        )
     }
 
     /// The tag as text, for logs and diagnostics.
@@ -184,7 +190,13 @@ impl MaqtaMashkul {
     /// An empty shaped run, used for atoms and for zero-length runs.
     #[must_use]
     pub const fn min_asl(asl: MaqtaMantiqi) -> Self {
-        Self { asl, huruf: Vec::new(), ard: 0.0, suud: 0.0, hubut: 0.0 }
+        Self {
+            asl,
+            huruf: Vec::new(),
+            ard: 0.0,
+            suud: 0.0,
+            hubut: 0.0,
+        }
     }
 
     /// Recomputes the run's width from its glyphs.

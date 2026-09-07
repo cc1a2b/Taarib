@@ -48,9 +48,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::bina::Basma;
-use crate::musahim::MusahimId;
 use crate::muharrik::AilatMuharrik;
-use crate::ruqaa::{RuqaaId, RuqaaRevision, RukhsaRuqaa};
+use crate::musahim::MusahimId;
+use crate::ruqaa::{RukhsaRuqaa, RuqaaId, RuqaaRevision};
 
 /// How a voice pack's audio reaches the game.
 ///
@@ -115,15 +115,15 @@ impl TareeqatTarkeebSawt {
             Self::Tarakub => {
                 "تُضاف ملفات الصوت بجوار ملفات اللعبة دون تعديل أيٍّ منها، وإزالتها تحذف ما \
                  أُضيف فقط."
-            }
+            },
             Self::Istibdal => {
                 "تُستبدل بعض ملفات صوت اللعبة، وتُحفظ نسخها الأصلية أولًا؛ الإزالة تُعيدها كما \
                  كانت."
-            }
+            },
             Self::IadatBina => {
                 "تُعاد كتابة حاوية صوت اللعبة. تُحفظ الحاوية الأصلية كاملةً وتُكتب المعدَّلة \
                  بجوارها، ويحتاج ذلك مساحة إضافية تعادل ثلاثة أضعاف حجم الحزمة."
-            }
+            },
         }
     }
 
@@ -134,16 +134,16 @@ impl TareeqatTarkeebSawt {
             Self::Tarakub => {
                 "Audio files are added beside the game's own and none of them are modified. \
                  Uninstalling deletes only what was added."
-            }
+            },
             Self::Istibdal => {
                 "Some of the game's audio files are replaced, and each original is preserved \
                  first. Uninstalling puts them back."
-            }
+            },
             Self::IadatBina => {
                 "The game's audio container is rebuilt. The original is preserved whole and the \
                  rebuilt one written beside it, which needs about three times the pack's size \
                  in free space."
-            }
+            },
         }
     }
 }
@@ -262,10 +262,8 @@ impl SilatRuqaa {
             ),
             Self::Tawsiya { unwan, .. } => {
                 format!("ينصح ناشرها بتثبيتها مع ترجمة «{unwan}».")
-            }
-            Self::Mustaqilla => {
-                "لا ترتبط هذه الحزمة بترجمة نصية بعينها.".to_owned()
-            }
+            },
+            Self::Mustaqilla => "لا ترتبط هذه الحزمة بترجمة نصية بعينها.".to_owned(),
         }
     }
 }
@@ -364,7 +362,8 @@ impl MulakhkhasSawt {
     /// to wait for a refusal that was knowable at the start.
     #[must_use]
     pub fn masaha_matluba(&self) -> u64 {
-        self.hajm.saturating_mul(u64::from(self.tareeqa.muddaaf_masaha()))
+        self.hajm
+            .saturating_mul(u64::from(self.tareeqa.muddaaf_masaha()))
     }
 
     /// Whether this pack matches a game's content fingerprint exactly.

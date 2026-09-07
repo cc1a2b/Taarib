@@ -227,22 +227,43 @@ static TAWAQI_RUSUM: &[TawqiRusum] = &[
     TawqiRusum {
         ism: "ReShade",
         ism_arabi: "ReShade",
-        slotat: &["d3d9.dll", "d3d10.dll", "d3d11.dll", "d3d12.dll", "ddraw.dll", "dxgi.dll",
-                  "opengl32.dll"],
+        slotat: &[
+            "d3d9.dll",
+            "d3d10.dll",
+            "d3d11.dll",
+            "d3d12.dll",
+            "ddraw.dll",
+            "dxgi.dll",
+            "opengl32.dll",
+        ],
         basmat: &[b"ReShade", b"reshade-shaders"],
         tariqa: TariqatJar::Ghilaf,
     },
     TawqiRusum {
         ism: "ENBSeries",
         ism_arabi: "ENBSeries",
-        slotat: &["d3d8.dll", "d3d9.dll", "d3d11.dll", "d3d12.dll", "ddraw.dll", "dxgi.dll"],
+        slotat: &[
+            "d3d8.dll",
+            "d3d9.dll",
+            "d3d11.dll",
+            "d3d12.dll",
+            "ddraw.dll",
+            "dxgi.dll",
+        ],
         basmat: &[b"ENBSeries", b"enbseries.ini", b"Boris Vorontsov"],
         tariqa: TariqatJar::Ghilaf,
     },
     TawqiRusum {
         ism: "Special K",
         ism_arabi: "Special K",
-        slotat: &["d3d8.dll", "d3d9.dll", "d3d11.dll", "ddraw.dll", "dxgi.dll", "opengl32.dll"],
+        slotat: &[
+            "d3d8.dll",
+            "d3d9.dll",
+            "d3d11.dll",
+            "ddraw.dll",
+            "dxgi.dll",
+            "opengl32.dll",
+        ],
         basmat: &[b"SpecialK", b"Special K", b"Kaldaien"],
         // Both, depending on how it was installed, so the worse of the two is
         // what the verdict is written against.
@@ -266,11 +287,25 @@ static TAWAQI_RUSUM: &[TawqiRusum] = &[
         ism: "an ASI plugin loader",
         ism_arabi: "مُحمِّل إضافات ASI",
         slotat: &[
-            "d3d8.dll", "d3d9.dll", "d3d11.dll", "ddraw.dll", "dinput8.dll", "dsound.dll",
-            "dxgi.dll", "winmm.dll", "wininet.dll", "xinput1_3.dll", "xinput1_4.dll",
+            "d3d8.dll",
+            "d3d9.dll",
+            "d3d11.dll",
+            "ddraw.dll",
+            "dinput8.dll",
+            "dsound.dll",
+            "dxgi.dll",
+            "winmm.dll",
+            "wininet.dll",
+            "xinput1_3.dll",
+            "xinput1_4.dll",
             SLOT_TAARIB,
         ],
-        basmat: &[b"Ultimate ASI Loader", b"ThirteenAG", b"asiloader", b"Alexander Blade"],
+        basmat: &[
+            b"Ultimate ASI Loader",
+            b"ThirteenAG",
+            b"asiloader",
+            b"Alexander Blade",
+        ],
         tariqa: TariqatJar::LaShay,
     },
     TawqiRusum {
@@ -385,7 +420,11 @@ impl TaqrirIstitlaa {
     /// The worst of the findings, which is the verdict.
     #[must_use]
     pub fn hukm(&self) -> HukmQudra {
-        self.asbab.iter().map(|sabab| sabab.hukm).max().unwrap_or(HukmQudra::Kamila)
+        self.asbab
+            .iter()
+            .map(|sabab| sabab.hukm)
+            .max()
+            .unwrap_or(HukmQudra::Kamila)
     }
 
     /// Whether the overlay can be installed into this game at all.
@@ -404,12 +443,20 @@ impl TaqrirIstitlaa {
     /// them.
     #[must_use]
     pub fn halat_slot(&self) -> HalatSlot {
-        if let Some(thughra) =
-            self.thughrat.iter().find(|thughra| thughra.ism.eq_ignore_ascii_case(SLOT_TAARIB))
+        if let Some(thughra) = self
+            .thughrat
+            .iter()
+            .find(|thughra| thughra.ism.eq_ignore_ascii_case(SLOT_TAARIB))
         {
-            return HalatSlot::GhayrMaqru { thughra: thughra.clone() };
+            return HalatSlot::GhayrMaqru {
+                thughra: thughra.clone(),
+            };
         }
-        match self.mashghula.iter().find(|slot| slot.ism.eq_ignore_ascii_case(SLOT_TAARIB)) {
+        match self
+            .mashghula
+            .iter()
+            .find(|slot| slot.ism.eq_ignore_ascii_case(SLOT_TAARIB))
+        {
             None => HalatSlot::Hurr,
             Some(slot) if slot.taarib => HalatSlot::Taarib,
             Some(slot) => HalatSlot::Mashghul { slot: slot.clone() },
@@ -453,10 +500,17 @@ impl TaqrirIstitlaa {
     pub fn sutur(&self) -> Vec<String> {
         let mut sutur = vec![format!("{}: {}", self.luba.display(), self.hukm())];
         sutur.extend(self.thughrat.iter().map(|thughra| {
-            format!("unread: {} at {} — {}", thughra.ism, thughra.masar.display(), thughra.sabab)
+            format!(
+                "unread: {} at {} — {}",
+                thughra.ism,
+                thughra.masar.display(),
+                thughra.sabab
+            )
         }));
         sutur.extend(
-            self.asbab.iter().map(|sabab| format!("{}: {}", sabab.hukm, sabab.injilizi)),
+            self.asbab
+                .iter()
+                .map(|sabab| format!("{}: {}", sabab.hukm, sabab.injilizi)),
         );
         sutur
     }
@@ -485,7 +539,10 @@ pub fn istatli(malaf_luba: &Path) -> Result<TaqrirIstitlaa, KhataTabaqa> {
     for wajiha in WajihatRusum::jamee() {
         let mut wujidat = false;
         for maktaba in wajiha.maktabat() {
-            if mustawradat.iter().any(|ism| ism.eq_ignore_ascii_case(maktaba)) {
+            if mustawradat
+                .iter()
+                .any(|ism| ism.eq_ignore_ascii_case(maktaba))
+            {
                 if !asmaa.iter().any(|ism| ism.eq_ignore_ascii_case(maktaba)) {
                     asmaa.push((*maktaba).to_owned());
                 }
@@ -576,8 +633,12 @@ pub fn istatli(malaf_luba: &Path) -> Result<TaqrirIstitlaa, KhataTabaqa> {
 /// could hold is another product, and the survey will neither claim that nor
 /// deny it about bytes it did not read.
 fn sabab_thughra(thughra: &ThughraIstitlaa) -> SababQudra {
-    let hajm = thughra.hajm.map_or_else(String::new, |hajm| format!(", {hajm} bytes"));
-    let hajm_arabi = thughra.hajm.map_or_else(String::new, |hajm| format!("، {hajm} بايت"));
+    let hajm = thughra
+        .hajm
+        .map_or_else(String::new, |hajm| format!(", {hajm} bytes"));
+    let hajm_arabi = thughra
+        .hajm
+        .map_or_else(String::new, |hajm| format!("، {hajm} بايت"));
     if thughra.ism.eq_ignore_ascii_case(SLOT_TAARIB) {
         return SababQudra::majhula(
             format!(
@@ -599,7 +660,10 @@ fn sabab_thughra(thughra: &ThughraIstitlaa) -> SababQudra {
             ),
         );
     }
-    if SLOTAT_RUSUM.iter().any(|slot| slot.eq_ignore_ascii_case(&thughra.ism)) {
+    if SLOTAT_RUSUM
+        .iter()
+        .any(|slot| slot.eq_ignore_ascii_case(&thughra.ism))
+    {
         return SababQudra::naqisa(
             format!(
                 "الاسم {} يحمل ملفًا لم يتمكّن الاستطلاع من قراءته ({}{hajm_arabi})، وهو على \
@@ -680,8 +744,12 @@ fn sabab_slot(slot: &SlotMashghul) -> SababQudra {
     if slot.tariqa == TariqatJar::Ghilaf {
         return sabab_ghilaf(slot);
     }
-    let man = slot.muntaj.map_or_else(String::new, |ism| format!(", which is {ism},"));
-    let man_arabi = slot.muntaj_arabi.map_or_else(String::new, |ism| format!("، وهو {ism}،"));
+    let man = slot
+        .muntaj
+        .map_or_else(String::new, |ism| format!(", which is {ism},"));
+    let man_arabi = slot
+        .muntaj_arabi
+        .map_or_else(String::new, |ism| format!("، وهو {ism}،"));
     SababQudra::kamila(
         format!(
             "الاسم {} يشغله منتج آخر ({} بايت){man_arabi} ولا يستخدمه تعريب ولا يمسّه. يعني ذلك \
@@ -788,7 +856,7 @@ fn slotat_mashghula(mujallad: &Path) -> (Vec<SlotMashghul>, Vec<ThughraIstitlaa>
                     sabab: sabab.to_string(),
                 });
                 continue;
-            }
+            },
         };
         if !bayan.is_file() {
             continue;
@@ -803,10 +871,14 @@ fn slotat_mashghula(mujallad: &Path) -> (Vec<SlotMashghul>, Vec<ThughraIstitlaa>
                     sabab: khata.to_string(),
                 });
                 continue;
-            }
+            },
         };
         let taarib = fihi(&bayt, BASMAT_MUDKHAL);
-        let tawqi = if taarib { None } else { tawqi_min_bayt(ism, &bayt) };
+        let tawqi = if taarib {
+            None
+        } else {
+            tawqi_min_bayt(ism, &bayt)
+        };
         // A name a game may legitimately ship is Microsoft's own file until
         // something inside it says otherwise, and reporting it unidentified
         // would be the survey crying wolf over a redistributable.
@@ -847,7 +919,11 @@ fn slotat_mashghula(mujallad: &Path) -> (Vec<SlotMashghul>, Vec<ThughraIstitlaa>
 fn tawqi_min_bayt(ism: &str, bayt: &[u8]) -> Option<&'static TawqiRusum> {
     let mut wajid: Option<&'static TawqiRusum> = None;
     for tawqi in TAWAQI_RUSUM {
-        if !tawqi.slotat.iter().any(|slot| slot.eq_ignore_ascii_case(ism)) {
+        if !tawqi
+            .slotat
+            .iter()
+            .any(|slot| slot.eq_ignore_ascii_case(ism))
+        {
             continue;
         }
         if !tawqi.basmat.iter().any(|basma| fihi(bayt, basma)) {
@@ -871,7 +947,9 @@ fn fihi(kawm: &[u8], basma: &[u8]) -> bool {
         return false;
     }
     if kawm.len() >= basma.len()
-        && kawm.windows(basma.len()).any(|nafidha| nafidha.eq_ignore_ascii_case(basma))
+        && kawm
+            .windows(basma.len())
+            .any(|nafidha| nafidha.eq_ignore_ascii_case(basma))
     {
         return true;
     }
@@ -882,7 +960,9 @@ fn fihi(kawm: &[u8], basma: &[u8]) -> bool {
     kawm.windows(tul).any(|nafidha| {
         basma.iter().enumerate().all(|(fahras, harf)| {
             let mawdi = fahras.saturating_mul(2);
-            nafidha.get(mawdi).is_some_and(|bayt| bayt.eq_ignore_ascii_case(harf))
+            nafidha
+                .get(mawdi)
+                .is_some_and(|bayt| bayt.eq_ignore_ascii_case(harf))
                 && nafidha.get(mawdi.saturating_add(1)) == Some(&0)
         })
     })
@@ -905,8 +985,10 @@ fn fihi(kawm: &[u8], basma: &[u8]) -> bool {
 /// [`KhataTabaqa::HajmMufrit`] for a file past the cap, and
 /// [`KhataTabaqa::KhataMalaf`] for anything the filesystem refuses.
 fn iqra_mahdud(masar: &Path) -> Result<Vec<u8>, KhataTabaqa> {
-    let bayan = std::fs::metadata(masar)
-        .map_err(|sabab| KhataTabaqa::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+    let bayan = std::fs::metadata(masar).map_err(|sabab| KhataTabaqa::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })?;
     if bayan.len() > AQSA_MALAF {
         return Err(KhataTabaqa::HajmMufrit {
             haql: "the file this survey would read",
@@ -914,8 +996,10 @@ fn iqra_mahdud(masar: &Path) -> Result<Vec<u8>, KhataTabaqa> {
             saqf: AQSA_MALAF,
         });
     }
-    std::fs::read(masar)
-        .map_err(|sabab| KhataTabaqa::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    std::fs::read(masar).map_err(|sabab| KhataTabaqa::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -954,16 +1038,21 @@ fn mustawradat_pe(masar: &Path, bayt: &[u8]) -> Result<Vec<String>, KhataTabaqa>
     };
 
     if iqra_u16(bayt, 0).ok_or_else(|| ghayr("the file is empty".to_owned()))? != 0x5A4D {
-        return Err(ghayr("the file does not begin with the MZ signature".to_owned()));
+        return Err(ghayr(
+            "the file does not begin with the MZ signature".to_owned(),
+        ));
     }
     let bidayat_pe = usize::try_from(
         iqra_u32(bayt, 0x3C).ok_or_else(|| ghayr("the DOS header is truncated".to_owned()))?,
     )
     .unwrap_or(usize::MAX);
-    if iqra_u32(bayt, bidayat_pe).ok_or_else(|| ghayr("e_lfanew points past the file".to_owned()))?
+    if iqra_u32(bayt, bidayat_pe)
+        .ok_or_else(|| ghayr("e_lfanew points past the file".to_owned()))?
         != 0x0000_4550
     {
-        return Err(ghayr("e_lfanew does not point at a PE signature".to_owned()));
+        return Err(ghayr(
+            "e_lfanew does not point at a PE signature".to_owned(),
+        ));
     }
 
     // The COFF header is twenty bytes and the optional header follows it.
@@ -988,12 +1077,18 @@ fn mustawradat_pe(masar: &Path, bayt: &[u8]) -> Result<Vec<String>, KhataTabaqa>
     {
         0x010B => 96,
         0x020B => 112,
-        akhar => return Err(ghayr(format!("the optional header's magic is {akhar:#06x}"))),
+        akhar => {
+            return Err(ghayr(format!(
+                "the optional header's magic is {akhar:#06x}"
+            )));
+        },
     };
 
     // Data directory entry one is the import table: eight bytes in, then its
     // relative virtual address.
-    let bidayat_ustuwana = bidayat_ikhtiyari.saturating_add(izahat_adilla).saturating_add(8);
+    let bidayat_ustuwana = bidayat_ikhtiyari
+        .saturating_add(izahat_adilla)
+        .saturating_add(8);
     let Some(oinwan_ustuwana) = iqra_u32(bayt, bidayat_ustuwana) else {
         return Err(ghayr("the data directories are truncated".to_owned()));
     };
@@ -1003,9 +1098,15 @@ fn mustawradat_pe(masar: &Path, bayt: &[u8]) -> Result<Vec<String>, KhataTabaqa>
         return Ok(Vec::new());
     }
 
-    let aqsam = aqsam_pe(bayt, bidayat_ikhtiyari.saturating_add(hajm_ikhtiyari), adad_aqsam);
+    let aqsam = aqsam_pe(
+        bayt,
+        bidayat_ikhtiyari.saturating_add(hajm_ikhtiyari),
+        adad_aqsam,
+    );
     let Some(mut mawdi) = izaha_min_oinwan(&aqsam, oinwan_ustuwana) else {
-        return Err(ghayr("the import directory's address is not inside any section".to_owned()));
+        return Err(ghayr(
+            "the import directory's address is not inside any section".to_owned(),
+        ));
     };
 
     let mut asmaa = Vec::new();
@@ -1053,7 +1154,11 @@ fn aqsam_pe(bayt: &[u8], bidaya: usize, adad: usize) -> Vec<Qism> {
         // than its raw size — the loader zero-fills the tail — and a mapping
         // built from the raw size alone would miss an import directory a linker
         // placed in a section's padded region.
-        aqsam.push(Qism { oinwan, madaa: madaa_wahmi.max(madaa_khaam), izaha });
+        aqsam.push(Qism {
+            oinwan,
+            madaa: madaa_wahmi.max(madaa_khaam),
+            izaha,
+        });
     }
     aqsam
 }
@@ -1065,11 +1170,13 @@ fn aqsam_pe(bayt: &[u8], bidaya: usize, adad: usize) -> Vec<Qism> {
 fn izaha_min_oinwan(aqsam: &[Qism], oinwan: u32) -> Option<usize> {
     aqsam
         .iter()
-        .find(|qism| {
-            oinwan >= qism.oinwan && oinwan < qism.oinwan.saturating_add(qism.madaa)
-        })
+        .find(|qism| oinwan >= qism.oinwan && oinwan < qism.oinwan.saturating_add(qism.madaa))
         .and_then(|qism| {
-            usize::try_from(qism.izaha.saturating_add(oinwan.saturating_sub(qism.oinwan))).ok()
+            usize::try_from(
+                qism.izaha
+                    .saturating_add(oinwan.saturating_sub(qism.oinwan)),
+            )
+            .ok()
         })
 }
 

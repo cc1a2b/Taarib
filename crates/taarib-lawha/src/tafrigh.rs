@@ -92,7 +92,11 @@ impl JamiAshkal {
     /// describe an atlas no patch can declare.
     #[must_use]
     pub fn jadeed(namat: NamatSafha) -> Self {
-        Self { namat, ashkal: FxHashSet::default(), ahjam: FxHashSet::default() }
+        Self {
+            namat,
+            ashkal: FxHashSet::default(),
+            ahjam: FxHashSet::default(),
+        }
     }
 
     /// The mode every key in this collector carries.
@@ -139,7 +143,10 @@ impl JamiAshkal {
     /// capture reported. The key's mode is replaced with this collector's, since
     /// the mode belongs to the patch rather than to the caller.
     pub fn idif_shakl(&mut self, miftah: MiftahShakl) {
-        let miftah = miftah_qiyasi(MiftahShakl { namat: self.namat, ..miftah });
+        let miftah = miftah_qiyasi(MiftahShakl {
+            namat: self.namat,
+            ..miftah
+        });
         let _ = self.ahjam.insert(miftah.hajm_rubi);
         let _ = self.ashkal.insert(miftah);
     }
@@ -178,7 +185,10 @@ impl JamiAshkal {
     pub fn ahjam(&self) -> Vec<f32> {
         let mut ahjam: Vec<u16> = self.ahjam.iter().copied().collect();
         ahjam.sort_unstable();
-        ahjam.into_iter().map(|rubi| f32::from(rubi) / 4.0).collect()
+        ahjam
+            .into_iter()
+            .map(|rubi| f32::from(rubi) / 4.0)
+            .collect()
     }
 
     /// The keys belonging to one font of the chain, sorted.
@@ -189,8 +199,12 @@ impl JamiAshkal {
     /// wrong order looks like from the outside.
     #[must_use]
     pub fn ashkal_khatt(&self, khatt: u8) -> Vec<MiftahShakl> {
-        let mut ashkal: Vec<MiftahShakl> =
-            self.ashkal.iter().copied().filter(|miftah| miftah.khatt == khatt).collect();
+        let mut ashkal: Vec<MiftahShakl> = self
+            .ashkal
+            .iter()
+            .copied()
+            .filter(|miftah| miftah.khatt == khatt)
+            .collect();
         ashkal.sort_unstable();
         ashkal
     }

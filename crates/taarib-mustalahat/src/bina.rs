@@ -55,11 +55,14 @@ impl Basma {
     /// full fingerprint would be noise.
     #[must_use]
     pub fn mukhtasara(&self) -> String {
-        self.0.iter().take(4).fold(String::with_capacity(8), |mut out, bayt| {
-            use fmt::Write as _;
-            let _ = write!(out, "{bayt:02x}");
-            out
-        })
+        self.0
+            .iter()
+            .take(4)
+            .fold(String::with_capacity(8), |mut out, bayt| {
+                use fmt::Write as _;
+                let _ = write!(out, "{bayt:02x}");
+                out
+            })
     }
 }
 
@@ -87,7 +90,9 @@ impl FromStr for Basma {
         let mut bayt = [0u8; 32];
         let mut huruf = nass.as_bytes().chunks_exact(2);
         for khana in &mut bayt {
-            let Some(zawj) = huruf.next() else { return Err(BasmaGhayrSaliha) };
+            let Some(zawj) = huruf.next() else {
+                return Err(BasmaGhayrSaliha);
+            };
             let nass_zawj = std::str::from_utf8(zawj).map_err(|_| BasmaGhayrSaliha)?;
             if nass_zawj.bytes().any(|b| b.is_ascii_uppercase()) {
                 return Err(BasmaGhayrSaliha);
@@ -134,7 +139,9 @@ impl BinaId {
     /// otherwise the first bytes of the fingerprint.
     #[must_use]
     pub fn wasm(&self) -> String {
-        self.manassa.clone().unwrap_or_else(|| self.basma.mukhtasara())
+        self.manassa
+            .clone()
+            .unwrap_or_else(|| self.basma.mukhtasara())
     }
 }
 

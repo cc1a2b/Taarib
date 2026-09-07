@@ -129,12 +129,15 @@ impl Masarat {
             std::env::var_os(BEEAT_IDADAT).map(PathBuf::from),
         );
 
-        let qawaid = directories::BaseDirs::new().ok_or_else(|| {
-            Khata::min_tafsir(&KhataMasarat::LaMujalladManzili)
-        })?;
+        let qawaid = directories::BaseDirs::new()
+            .ok_or_else(|| Khata::min_tafsir(&KhataMasarat::LaMujalladManzili))?;
 
         // The override outranks the marker; a layout it redirected is not a portable one.
-        let hamil = if bayanat_env.is_some() { None } else { mujallad_mahmul() };
+        let hamil = if bayanat_env.is_some() {
+            None
+        } else {
+            mujallad_mahmul()
+        };
 
         let bayanat = bayanat_env.unwrap_or_else(|| {
             if let Some(mujallad) = &hamil {
@@ -158,7 +161,13 @@ impl Masarat {
         });
 
         let manzil = qawaid.home_dir().to_path_buf();
-        Ok(Self { bayanat, idadat, manzil, mahmul: hamil.is_some(), ruqaa: None })
+        Ok(Self {
+            bayanat,
+            idadat,
+            manzil,
+            mahmul: hamil.is_some(),
+            ruqaa: None,
+        })
     }
 
     /// Builds a layout rooted anywhere — used by the sandbox and by tests of
@@ -172,7 +181,13 @@ impl Masarat {
         // directory would have the sandbox scanning the machine it is isolating
         // itself from.
         let manzil = bayanat.parent().unwrap_or(&bayanat).to_path_buf();
-        Self { bayanat, idadat: idadat.into(), manzil, mahmul: false, ruqaa: None }
+        Self {
+            bayanat,
+            idadat: idadat.into(),
+            manzil,
+            mahmul: false,
+            ruqaa: None,
+        }
     }
 
     /// Re-roots patch storage at the directory the user chose, or puts it back
@@ -260,7 +275,9 @@ impl Masarat {
     /// [`Masarat::maa_jidhr_ruqaa`]; everything else is derived from the roots.
     #[must_use]
     pub fn ruqaa(&self) -> PathBuf {
-        self.ruqaa.clone().unwrap_or_else(|| self.bayanat.join("ruqaa"))
+        self.ruqaa
+            .clone()
+            .unwrap_or_else(|| self.bayanat.join("ruqaa"))
     }
 
     /// Original-file backups, one directory per installation.
@@ -345,7 +362,9 @@ impl Masarat {
     /// than a real content hash.
     pub fn ruqaa_bi_basma(&self, basma_hex: &str) -> Natija<PathBuf> {
         let salih = basma_hex.len() >= 4
-            && basma_hex.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase());
+            && basma_hex
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase());
         if !salih {
             return Err(Khata::min_tafsir(&KhataMasarat::BasmaGhayrSaliha {
                 basma: basma_hex.to_owned(),
@@ -498,7 +517,10 @@ fn ithbat_hadaf(judhur: &[&Path], mahmiyat: &[&Path], masar: &Path) -> Natija<Ha
 
     // A `..` anywhere makes `starts_with` meaningless: `<root>/x/..` is the
     // root, and `starts_with` would happily confirm it is below itself.
-    if masar.components().any(|juz| matches!(juz, Component::ParentDir)) {
+    if masar
+        .components()
+        .any(|juz| matches!(juz, Component::ParentDir))
+    {
         return rafd(masar);
     }
 
@@ -510,7 +532,10 @@ fn ithbat_hadaf(judhur: &[&Path], mahmiyat: &[&Path], masar: &Path) -> Natija<Ha
         }
     }
 
-    if judhur.iter().any(|jidhr| masar != *jidhr && masar.starts_with(jidhr)) {
+    if judhur
+        .iter()
+        .any(|jidhr| masar != *jidhr && masar.starts_with(jidhr))
+    {
         Ok(HadafHadhf(masar.to_path_buf()))
     } else {
         rafd(judhur.first().copied().unwrap_or(masar))
@@ -596,8 +621,7 @@ pub fn dakhil(jidhr: &Path, nisbi: &str) -> Natija<PathBuf> {
                 // file "does not refer to a real file" is being refused for
                 // another operating system's reasons.
                 if cfg!(windows) {
-                    let jidhr_ism =
-                        nass.split('.').next().unwrap_or(nass).to_ascii_uppercase();
+                    let jidhr_ism = nass.split('.').next().unwrap_or(nass).to_ascii_uppercase();
                     if ASMAA_MAHJOOZA.contains(&jidhr_ism.as_str()) {
                         return Err(Khata::min_tafsir(&KhataMasarat::IsmMahjooz {
                             ism: nass.to_owned(),
@@ -617,14 +641,14 @@ pub fn dakhil(jidhr: &Path, nisbi: &str) -> Natija<PathBuf> {
                     }
                 }
                 mabni.push(nass);
-            }
-            Component::CurDir => {}
+            },
+            Component::CurDir => {},
             Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
                 return Err(Khata::min_tafsir(&KhataMasarat::MasarKharij {
                     jidhr: jidhr.to_path_buf(),
                     nisbi: nisbi.to_owned(),
                 }));
-            }
+            },
         }
     }
 
@@ -662,10 +686,16 @@ pub fn dakhil(jidhr: &Path, nisbi: &str) -> Natija<PathBuf> {
 /// and [`KhataMasarat::TaadhurQira`] when either path cannot be resolved.
 pub fn tahaqquq_ihtiwa(jidhr: &Path, masar: &Path) -> Natija<PathBuf> {
     let jidhr_haqiqi = fs::canonicalize(jidhr).map_err(|q| {
-        Khata::min_tafsir(&KhataMasarat::TaadhurQira { masar: jidhr.to_path_buf(), sabab: q })
+        Khata::min_tafsir(&KhataMasarat::TaadhurQira {
+            masar: jidhr.to_path_buf(),
+            sabab: q,
+        })
     })?;
     let masar_haqiqi = fs::canonicalize(masar).map_err(|q| {
-        Khata::min_tafsir(&KhataMasarat::TaadhurQira { masar: masar.to_path_buf(), sabab: q })
+        Khata::min_tafsir(&KhataMasarat::TaadhurQira {
+            masar: masar.to_path_buf(),
+            sabab: q,
+        })
     })?;
     if masar_haqiqi.starts_with(&jidhr_haqiqi) {
         Ok(masar_haqiqi)
@@ -685,7 +715,10 @@ pub fn tahaqquq_ihtiwa(jidhr: &Path, masar: &Path) -> Natija<PathBuf> {
 /// Fails when the directory cannot be created, naming the path and the reason.
 pub fn insha_mujallad(masar: &Path) -> Natija<()> {
     fs::create_dir_all(masar).map_err(|q| {
-        Khata::min_tafsir(&KhataMasarat::TaadhurInsha { masar: masar.to_path_buf(), sabab: q })
+        Khata::min_tafsir(&KhataMasarat::TaadhurInsha {
+            masar: masar.to_path_buf(),
+            sabab: q,
+        })
     })
 }
 
@@ -711,16 +744,28 @@ pub fn kitaba_dharra(masar: &Path, bayt: &[u8]) -> Natija<()> {
     insha_mujallad(mujallad)?;
 
     let mut muaqqat = tempfile::NamedTempFile::new_in(mujallad).map_err(|q| {
-        Khata::min_tafsir(&KhataMasarat::TaadhurKitaba { masar: masar.to_path_buf(), sabab: q })
+        Khata::min_tafsir(&KhataMasarat::TaadhurKitaba {
+            masar: masar.to_path_buf(),
+            sabab: q,
+        })
     })?;
     muaqqat.write_all(bayt).map_err(|q| {
-        Khata::min_tafsir(&KhataMasarat::TaadhurKitaba { masar: masar.to_path_buf(), sabab: q })
+        Khata::min_tafsir(&KhataMasarat::TaadhurKitaba {
+            masar: masar.to_path_buf(),
+            sabab: q,
+        })
     })?;
     muaqqat.flush().map_err(|q| {
-        Khata::min_tafsir(&KhataMasarat::TaadhurKitaba { masar: masar.to_path_buf(), sabab: q })
+        Khata::min_tafsir(&KhataMasarat::TaadhurKitaba {
+            masar: masar.to_path_buf(),
+            sabab: q,
+        })
     })?;
     muaqqat.as_file().sync_all().map_err(|q| {
-        Khata::min_tafsir(&KhataMasarat::TaadhurKitaba { masar: masar.to_path_buf(), sabab: q })
+        Khata::min_tafsir(&KhataMasarat::TaadhurKitaba {
+            masar: masar.to_path_buf(),
+            sabab: q,
+        })
     })?;
     muaqqat.persist(masar).map_err(|q| {
         Khata::min_tafsir(&KhataMasarat::TaadhurKitaba {
@@ -758,7 +803,10 @@ pub fn kitaba_dharra_nass(masar: &Path, nass: &str) -> Natija<()> {
 /// action that actually fixes that particular I/O failure.
 pub fn qira(masar: &Path) -> Natija<Vec<u8>> {
     fs::read(masar).map_err(|q| {
-        Khata::min_tafsir(&KhataMasarat::TaadhurQira { masar: masar.to_path_buf(), sabab: q })
+        Khata::min_tafsir(&KhataMasarat::TaadhurQira {
+            masar: masar.to_path_buf(),
+            sabab: q,
+        })
     })
 }
 
@@ -789,7 +837,9 @@ pub fn naql(min: &Path, ila: &Path) -> Natija<()> {
     if let Some(mujallad) = ila.parent() {
         insha_mujallad(mujallad)?;
     }
-    if matches!(fs::rename(min, ila), Ok(())) { Ok(()) } else {
+    if matches!(fs::rename(min, ila), Ok(())) {
+        Ok(())
+    } else {
         let _ = fs::copy(min, ila).map_err(|q| {
             Khata::min_tafsir(&KhataMasarat::TaadhurNaql {
                 min: min.to_path_buf(),
@@ -1006,29 +1056,29 @@ impl Tafsir for KhataMasarat {
         match self {
             Self::LaMujalladManzili => {
                 "تعذّر تحديد مجلد المستخدم على هذا الجهاز، ولا يستطيع تعريب حفظ بياناته.".to_owned()
-            }
+            },
             Self::TaadhurInsha { masar, .. } => {
                 format!("تعذّر إنشاء المجلد: {}", masar.display())
-            }
+            },
             Self::TaadhurKitaba { masar, .. } => {
                 format!("تعذّرت الكتابة إلى الملف: {}", masar.display())
-            }
+            },
             Self::TaadhurQira { masar, .. } => {
                 format!("تعذّرت قراءة الملف: {}", masar.display())
-            }
+            },
             Self::TaadhurNaql { min, .. } => {
                 format!("تعذّر نقل الملف: {}", min.display())
-            }
+            },
             Self::TaadhurHadhf { masar, .. } => {
                 format!("تعذّر حذف: {}", masar.display())
-            }
+            },
             Self::MasarKharij { nisbi, .. } => format!(
                 "رُفض مسار يحاول الخروج من مجلده المسموح: {nisbi}. \
                  هذا يدلّ على ملف تالف أو محتوى غير موثوق."
             ),
-            Self::IsmMahjooz { ism } => format!(
-                "رُفض اسم محجوز في نظام التشغيل: {ism}. هذا الاسم لا يشير إلى ملف حقيقي."
-            ),
+            Self::IsmMahjooz { ism } => {
+                format!("رُفض اسم محجوز في نظام التشغيل: {ism}. هذا الاسم لا يشير إلى ملف حقيقي.")
+            },
             Self::MasarTaweel { hadd, .. } => format!(
                 "المسار أطول مما يدعمه النظام ({hadd} حرفًا). انقل اللعبة أو مجلد تعريب إلى \
                  مسار أقصر."
@@ -1039,7 +1089,7 @@ impl Tafsir for KhataMasarat {
             ),
             Self::BasmaGhayrSaliha { .. } => {
                 "بصمة الرقعة غير صالحة، ولا يمكن تحديد موضع ملفها.".to_owned()
-            }
+            },
             Self::TarmizGhayrSalih { masar, .. } => format!(
                 "الملف {} ليس بترميز UTF-8، ويحتاج قارئًا خاصًا بترميزه.",
                 masar.display()
@@ -1058,10 +1108,10 @@ impl Tafsir for KhataMasarat {
             Self::LaMujalladManzili => {
                 "No home directory on this machine, so Taarib has nowhere to keep its data."
                     .to_owned()
-            }
+            },
             Self::TaadhurInsha { masar, .. } => {
                 format!("Cannot create folder: {}", masar.display())
-            }
+            },
             Self::TaadhurKitaba { masar, .. } => format!("Cannot write file: {}", masar.display()),
             Self::TaadhurQira { masar, .. } => format!("Cannot read file: {}", masar.display()),
             Self::TaadhurNaql { min, .. } => format!("Cannot move file: {}", min.display()),
@@ -1072,7 +1122,7 @@ impl Tafsir for KhataMasarat {
             ),
             Self::IsmMahjooz { ism } => {
                 format!("Refused a reserved device name: {ism}. It does not name a real file.")
-            }
+            },
             Self::MasarTaweel { hadd, .. } => format!(
                 "Path is longer than the system supports ({hadd} characters). Move the game or \
                  Taarib's folder somewhere shorter."
@@ -1084,7 +1134,7 @@ impl Tafsir for KhataMasarat {
             ),
             Self::BasmaGhayrSaliha { .. } => {
                 "Invalid patch content hash, so its file location cannot be derived.".to_owned()
-            }
+            },
             Self::TarmizGhayrSalih { masar, .. } => format!(
                 "{} is not UTF-8 and needs a reader for its own encoding.",
                 masar.display()
@@ -1106,9 +1156,7 @@ impl Tafsir for KhataMasarat {
             Self::TaadhurInsha { sabab, .. }
             | Self::TaadhurKitaba { sabab, .. }
             | Self::TaadhurNaql { sabab, .. }
-            | Self::TaadhurHadhf { sabab, .. } => {
-                khutwa_io(sabab, MasarMatlub::MujalladRuqaa)
-            }
+            | Self::TaadhurHadhf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladRuqaa),
             Self::TaadhurQira { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladLuba),
             Self::MasarKharij { .. }
             | Self::IsmMahjooz { .. }
@@ -1123,46 +1171,50 @@ impl Tafsir for KhataMasarat {
     fn siyaq(&self) -> BTreeMap<String, QeemaSiyaq> {
         let mut siyaq = BTreeMap::new();
         match self {
-            Self::LaMujalladManzili => {}
+            Self::LaMujalladManzili => {},
             Self::TaadhurInsha { masar, sabab }
             | Self::TaadhurKitaba { masar, sabab }
             | Self::TaadhurQira { masar, sabab }
             | Self::TaadhurHadhf { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 siyaq.extend(siyaq_io(sabab));
-            }
+            },
             Self::TaadhurNaql { min, ila, sabab } => {
                 let _ = siyaq.insert("min".to_owned(), QeemaSiyaq::Masar(min.clone()));
                 let _ = siyaq.insert("ila".to_owned(), QeemaSiyaq::Masar(ila.clone()));
                 siyaq.extend(siyaq_io(sabab));
-            }
+            },
             Self::MasarKharij { jidhr, nisbi } => {
                 let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
                 let _ = siyaq.insert("nisbi".to_owned(), QeemaSiyaq::Nass(nisbi.clone()));
-            }
+            },
             Self::IsmMahjooz { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-            }
+            },
             Self::MasarTaweel { masar, hadd } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("hadd".to_owned(), QeemaSiyaq::Hajm(*hadd as u64));
-            }
-            Self::RabtRamzi { masar, hadaf, jidhr } => {
+            },
+            Self::RabtRamzi {
+                masar,
+                hadaf,
+                jidhr,
+            } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("hadaf".to_owned(), QeemaSiyaq::Masar(hadaf.clone()));
                 let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
-            }
+            },
             Self::BasmaGhayrSaliha { basma } => {
                 let _ = siyaq.insert("basma".to_owned(), QeemaSiyaq::Nass(basma.clone()));
-            }
+            },
             Self::TarmizGhayrSalih { masar, mawqi } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("mawqi".to_owned(), QeemaSiyaq::Hajm(*mawqi as u64));
-            }
+            },
             Self::JidhrMahmi { masar, jidhr } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
-            }
+            },
         }
         siyaq
     }
@@ -1177,7 +1229,10 @@ mod ikhtibarat {
     use super::Masarat;
 
     fn layout() -> Masarat {
-        Masarat::min_judhur(PathBuf::from("/tmp/taarib-test/bayanat"), "/tmp/taarib-test/idadat")
+        Masarat::min_judhur(
+            PathBuf::from("/tmp/taarib-test/bayanat"),
+            "/tmp/taarib-test/idadat",
+        )
     }
 
     #[test]
@@ -1263,10 +1318,16 @@ mod ikhtibarat {
         // The guard must not refuse the sweep it exists to permit: quarantine is
         // cleared recursively on every launch and is one level below the root.
         let asas = layout();
-        for masmuh in [asas.hajr(), asas.nusakh().join("luba-ma"), asas.sandooq().join("musawwada")]
-        {
+        for masmuh in [
+            asas.hajr(),
+            asas.nusakh().join("luba-ma"),
+            asas.sandooq().join("musawwada"),
+        ] {
             assert_eq!(
-                asas.hadaf_hadhf(&masmuh).map(|hadaf| hadaf.masar().to_path_buf()).ok().as_deref(),
+                asas.hadaf_hadhf(&masmuh)
+                    .map(|hadaf| hadaf.masar().to_path_buf())
+                    .ok()
+                    .as_deref(),
                 Some(masmuh.as_path()),
                 "{} should be deletable",
                 masmuh.display()
@@ -1298,7 +1359,9 @@ mod ikhtibarat {
         // What Taarib actually created inside the game still is deletable.
         let mudaf = luba.join("BepInEx").join("plugins").join("Taarib");
         assert_eq!(
-            super::hadaf_hadhf_fi_luba(luba, &mudaf).map(|h| h.masar().to_path_buf()).ok(),
+            super::hadaf_hadhf_fi_luba(luba, &mudaf)
+                .map(|h| h.masar().to_path_buf())
+                .ok(),
             Some(mudaf)
         );
     }
@@ -1356,10 +1419,22 @@ mod ikhtibarat {
         // Patch storage keeps its protection after it moves: the setting names
         // somewhere the user put their library, not somewhere to be cleared.
         let manqul = layout().maa_jidhr_ruqaa(Some(Path::new("/mnt/store/taarib-ruqaa")));
-        assert!(manqul.hadaf_hadhf(Path::new("/mnt/store/taarib-ruqaa")).is_err());
+        assert!(
+            manqul
+                .hadaf_hadhf(Path::new("/mnt/store/taarib-ruqaa"))
+                .is_err()
+        );
         // A shard below it is still an ordinary target.
-        assert!(manqul.hadaf_hadhf(Path::new("/mnt/store/taarib-ruqaa/ab")).is_ok());
+        assert!(
+            manqul
+                .hadaf_hadhf(Path::new("/mnt/store/taarib-ruqaa/ab"))
+                .is_ok()
+        );
         // And the old in-root location is now merely inside the data root.
-        assert!(manqul.hadaf_hadhf(&manqul.jidhr_bayanat().join("ruqaa")).is_ok());
+        assert!(
+            manqul
+                .hadaf_hadhf(&manqul.jidhr_bayanat().join("ruqaa"))
+                .is_ok()
+        );
     }
 }

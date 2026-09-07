@@ -76,15 +76,18 @@ impl Tafsir for KhataKhatm {
             let _ = siyaq.insert(miftah.to_owned(), qeema);
         };
         match self {
-            Self::MiftahTalif => {}
+            Self::MiftahTalif => {},
             Self::KhataMiftah { amal, sabab } => {
                 daa("amal", QeemaSiyaq::Nass((*amal).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::MiftahMafqud { ism } => daa("ism", QeemaSiyaq::Nass(ism.clone())),
             Self::MaddaTalifa { tul } => {
-                daa("tul", QeemaSiyaq::Hajm(u64::try_from(*tul).unwrap_or(u64::MAX)));
-            }
+                daa(
+                    "tul",
+                    QeemaSiyaq::Hajm(u64::try_from(*tul).unwrap_or(u64::MAX)),
+                );
+            },
         }
         siyaq
     }

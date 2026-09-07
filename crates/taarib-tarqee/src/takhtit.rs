@@ -302,9 +302,7 @@ impl SababLaTakhtit {
             Self::BilaTarjama => "no translation to lay out".to_owned(),
             Self::TarjamaFarigha => "the translation is empty".to_owned(),
             Self::BilaHajm { sabab } => sabab.wasf(),
-            Self::BilaHuwiya => {
-                "no container handle was supplied for this string".to_owned()
-            }
+            Self::BilaHuwiya => "no container handle was supplied for this string".to_owned(),
             Self::SuraBilaQiyas { marja } => format!(
                 "contains the inline sprite {marja}, whose width was never measured; laid out \
                  at run time where the engine knows its own sprite metrics"
@@ -409,7 +407,6 @@ pub enum SiyasatNamu {
     Rafd,
 }
 
-
 impl SiyasatNamu {
     /// Whether the runtime may open pages beyond the ones it starts with.
     #[must_use]
@@ -429,7 +426,7 @@ impl SiyasatNamu {
         match self {
             Self::NumuThummaIkhla => {
                 "open another page while the budget allows, then evict the least recently used"
-            }
+            },
             Self::IkhlaFaqat => "evict the least recently used; never open another page",
             Self::Rafd => "refuse the glyph and report it; never evict and never grow",
         }
@@ -641,7 +638,10 @@ impl TaqreerTakhtit {
     /// How many skipped strings the runtime path will have to lay out.
     #[must_use]
     pub fn ila_zaman_tashghil(&self) -> usize {
-        self.matwiya.iter().filter(|bila| bila.sabab.ila_zaman_tashghil()).count()
+        self.matwiya
+            .iter()
+            .filter(|bila| bila.sabab.ila_zaman_tashghil())
+            .count()
     }
 }
 
@@ -723,7 +723,12 @@ impl TakhtitMusbaq {
     #[must_use]
     pub fn ikhrij(
         self,
-    ) -> (Vec<TakhtitMabni>, Option<SafhatMasmuha>, Vec<KhattMabni>, TaqrirTajawuz) {
+    ) -> (
+        Vec<TakhtitMabni>,
+        Option<SafhatMasmuha>,
+        Vec<KhattMabni>,
+        TaqrirTajawuz,
+    ) {
         (self.takhtitat, self.safahat, self.khutut, self.tajawuz)
     }
 }
@@ -790,19 +795,28 @@ pub fn sabbiq(
                 if let Some(adam) = sabab.sabab_adam_altahaqquq() {
                     bani.sajjil_bila_takhtit(mudkhal, adam);
                 }
-                matwiya.push(NassBilaTakhtit { nass: mudkhal.id, sabab });
-            }
+                matwiya.push(NassBilaTakhtit {
+                    nass: mudkhal.id,
+                    sabab,
+                });
+            },
         }
     }
 
     let qiyas = khiyarat_qiyas_dharra(&khiyarat.takhtit);
-    let siyaq = SiyaqTasbeeq { silsila, khiyarat: &khiyarat.takhtit, qiyas: &qiyas };
+    let siyaq = SiyaqTasbeeq {
+        silsila,
+        khiyarat: &khiyarat.takhtit,
+        qiyas: &qiyas,
+    };
 
     // One `Saff` per rayon worker, reused across every item that worker takes.
     // See the module header for why this is `map_init` and not a shared engine.
     let natayij: Vec<Result<NatijatWahda, KhataTarqee>> = wahdat
         .par_iter()
-        .map_init(Saff::jadeed, |saff, wahda| khattit_wahda(saff, wahda, &siyaq))
+        .map_init(Saff::jadeed, |saff, wahda| {
+            khattit_wahda(saff, wahda, &siyaq)
+        })
         .collect();
 
     let mut jami = JamiAshkal::jadeed(khiyarat.namat);
@@ -835,8 +849,7 @@ pub fn sabbiq(
         // never samples.
         (None, None)
     } else {
-        let (mabniya, ithbat) =
-            rassim(&ashkal, khutut, silsila, khiyarat.rasf, khiyarat.namat)?;
+        let (mabniya, ithbat) = rassim(&ashkal, khutut, silsila, khiyarat.rasf, khiyarat.namat)?;
         let masmuha = SafhatMasmuha::min_lawha(&mabniya, ithbat);
         (Some(masmuha), Some(mabniya))
     };
@@ -857,7 +870,9 @@ pub fn sabbiq(
         takhtitat: takhtitat.len(),
         nusus: asma.len(),
         ashkal: ashkal.len(),
-        safahat: safahat.as_ref().map_or(0, |safahat| safahat.safahat().len()),
+        safahat: safahat
+            .as_ref()
+            .map_or(0, |safahat| safahat.safahat().len()),
         ahjam_rubi: ahjam_lawha,
         bila_qayd_ard: adad_bi_alam(&takhtitat, ALAM_TAKHTIT_BILA_QAYD_ARD),
         bi_dharrat: adad_bi_alam(&takhtitat, ALAM_TAKHTIT_DHARRAT),
@@ -971,14 +986,19 @@ fn wahhid<'a>(
         // The reason travels from size discovery rather than being restated
         // here. "No size" and "the size was 0.0" are different news, and this
         // stage is not the one that knows which.
-        let sabab = asbab.get(&mudkhal.id).copied().unwrap_or(SababLaHajm::LamYuqas);
+        let sabab = asbab
+            .get(&mudkhal.id)
+            .copied()
+            .unwrap_or(SababLaHajm::LamYuqas);
         return Err(SababLaTakhtit::BilaHajm { sabab });
     };
 
     let dharrat = fahs_nasq(&mudkhal.nasq_hadaf)?;
     let ard = QayasArd::min_quyud(&mudkhal.quyud);
-    let irtifa_mutah =
-        mudkhal.quyud.aqsa_irtifa.filter(|qeema| qeema.is_finite() && *qeema > 0.0);
+    let irtifa_mutah = mudkhal
+        .quyud
+        .aqsa_irtifa
+        .filter(|qeema| qeema.is_finite() && *qeema > 0.0);
 
     Ok(maqas
         .shuhud
@@ -1016,17 +1036,23 @@ fn fahs_nasq(nasq: &[NitaqNasq]) -> Result<bool, SababLaTakhtit> {
     for nitaq in nasq {
         match &nitaq.naw {
             NawNasq::Sura { marja } => {
-                return Err(SababLaTakhtit::SuraBilaQiyas { marja: marja.clone() });
-            }
+                return Err(SababLaTakhtit::SuraBilaQiyas {
+                    marja: marja.clone(),
+                });
+            },
             NawNasq::Satr => {
-                return Err(SababLaTakhtit::KasrSatrSarih { khaam: "\n".to_owned() });
-            }
+                return Err(SababLaTakhtit::KasrSatrSarih {
+                    khaam: "\n".to_owned(),
+                });
+            },
             NawNasq::Mawdi { khaam } => {
                 if khaam.chars().any(huwa_kasr_satr) {
-                    return Err(SababLaTakhtit::KasrSatrSarih { khaam: khaam.clone() });
+                    return Err(SababLaTakhtit::KasrSatrSarih {
+                        khaam: khaam.clone(),
+                    });
                 }
                 dharrat = true;
-            }
+            },
             // Listed rather than wildcarded. A new markup construct added to
             // the vocabulary is a construct this function has never decided
             // about, and a `_` arm would decide "it is fine to precompute"
@@ -1041,7 +1067,7 @@ fn fahs_nasq(nasq: &[NitaqNasq]) -> Result<bool, SababLaTakhtit> {
             | NawNasq::Rabt { .. }
             | NawNasq::Tawaqquf { .. }
             | NawNasq::BilaTahleel
-            | NawNasq::Muhadhaha { .. } => {}
+            | NawNasq::Muhadhaha { .. } => {},
         }
     }
     Ok(dharrat)
@@ -1091,11 +1117,13 @@ fn khattit_wahda(
         nitaqat: &nitaqat,
         khiyarat: &khiyarat,
     };
-    let takhtit = saff.khattit(&talab).map_err(|khata| KhataTarqee::TakhtitFashil {
-        nass: mukhtasar(wahda.hadaf),
-        hajm,
-        sabab: khata.injilizi,
-    })?;
+    let takhtit = saff
+        .khattit(&talab)
+        .map_err(|khata| KhataTarqee::TakhtitFashil {
+            nass: mukhtasar(wahda.hadaf),
+            hajm,
+            sabab: khata.injilizi,
+        })?;
 
     // The size the layout settled on, which is what the container records and
     // what the atlas was keyed by — not the size that was requested. A layout
@@ -1171,13 +1199,26 @@ fn hayyi_nitaqat(
     let mut nitaqat: Vec<NitaqUslub> = Vec::with_capacity(wahda.nasq.len());
     for nitaq in wahda.nasq {
         let uslub = match &nitaq.naw {
-            NawNasq::Lawn { qeema } => Uslub { lawn: lawn_min_nass(qeema), ..Uslub::default() },
-            NawNasq::Ghaliz => Uslub { wazn: Some(WAZN_GHALIZ), ..Uslub::default() },
-            NawNasq::Maail => Uslub { maail: true, ..Uslub::default() },
-            NawNasq::Hajm { qeema } => Uslub { hajm: hajm_nitaq(*qeema), ..Uslub::default() },
-            NawNasq::Khatt { ism } => {
-                Uslub { khatt: fahras_khatt(ism, siyaq.silsila), ..Uslub::default() }
-            }
+            NawNasq::Lawn { qeema } => Uslub {
+                lawn: lawn_min_nass(qeema),
+                ..Uslub::default()
+            },
+            NawNasq::Ghaliz => Uslub {
+                wazn: Some(WAZN_GHALIZ),
+                ..Uslub::default()
+            },
+            NawNasq::Maail => Uslub {
+                maail: true,
+                ..Uslub::default()
+            },
+            NawNasq::Hajm { qeema } => Uslub {
+                hajm: hajm_nitaq(*qeema),
+                ..Uslub::default()
+            },
+            NawNasq::Khatt { ism } => Uslub {
+                khatt: fahras_khatt(ism, siyaq.silsila),
+                ..Uslub::default()
+            },
             NawNasq::Mawdi { khaam } => {
                 let ard = qis_dharra(saff, khaam, siyaq, hajm)?;
                 Uslub {
@@ -1194,7 +1235,7 @@ fn hayyi_nitaqat(
                     }),
                     ..Uslub::default()
                 }
-            }
+            },
             // Refused when the work list was built, and refused again here
             // rather than given a default: there is no honest width for a
             // sprite, so there is no default to fall back to.
@@ -1206,7 +1247,7 @@ fn hayyi_nitaqat(
                         "the inline sprite {marja} reached layout with no measured width"
                     ),
                 });
-            }
+            },
             // No layout effect. The span is still emitted, so its identifier
             // reaches the glyphs it covers. `Satr` is here rather than beside
             // the sprite because a span that styles nothing *is* the honest
@@ -1220,7 +1261,12 @@ fn hayyi_nitaqat(
             | NawNasq::BilaTahleel
             | NawNasq::Muhadhaha { .. } => Uslub::default(),
         };
-        nitaqat.push(NitaqUslub { id: nitaq.id, bidaya: nitaq.bidaya, tul: nitaq.tul, uslub });
+        nitaqat.push(NitaqUslub {
+            id: nitaq.id,
+            bidaya: nitaq.bidaya,
+            tul: nitaq.tul,
+            uslub,
+        });
     }
     Ok(nitaqat)
 }
@@ -1284,12 +1330,18 @@ fn qis_dharra(
         nitaqat: &[],
         khiyarat: siyaq.qiyas,
     };
-    let qiyas = saff.qis(&talab).map_err(|khata| KhataTarqee::TakhtitFashil {
-        nass: mukhtasar(khaam),
-        hajm,
-        sabab: khata.injilizi,
-    })?;
-    Ok(if qiyas.ard.is_finite() && qiyas.ard > 0.0 { qiyas.ard } else { 0.0 })
+    let qiyas = saff
+        .qis(&talab)
+        .map_err(|khata| KhataTarqee::TakhtitFashil {
+            nass: mukhtasar(khaam),
+            hajm,
+            sabab: khata.injilizi,
+        })?;
+    Ok(if qiyas.ard.is_finite() && qiyas.ard > 0.0 {
+        qiyas.ard
+    } else {
+        0.0
+    })
 }
 
 /// A span's size override, on the same quarter-pixel grid as everything else.
@@ -1299,7 +1351,9 @@ fn qis_dharra(
 /// becomes [`None`], which makes the span inherit the run's size rather than
 /// poison the layout with it.
 fn hajm_nitaq(qeema: f32) -> Option<f32> {
-    HajmMuqannan::min_biksal(qeema).ok().map(HajmMuqannan::biksal)
+    HajmMuqannan::min_biksal(qeema)
+        .ok()
+        .map(HajmMuqannan::biksal)
 }
 
 /// A font span's chain index, when the span names one.
@@ -1332,15 +1386,13 @@ fn lawn_min_sittasi(rumuz: &str) -> Option<[u8; 4]> {
     // Slice patterns rather than indices: the length is the discriminant, and
     // matching on it is what makes every arm total.
     match arqam.as_slice() {
-        [ahmar, akhdar, azraq] => {
-            Some([dabl(*ahmar), dabl(*akhdar), dabl(*azraq), u8::MAX])
-        }
+        [ahmar, akhdar, azraq] => Some([dabl(*ahmar), dabl(*akhdar), dabl(*azraq), u8::MAX]),
         [ahmar, akhdar, azraq, shaffaf] => {
             Some([dabl(*ahmar), dabl(*akhdar), dabl(*azraq), dabl(*shaffaf)])
-        }
+        },
         [ah1, ah0, ak1, ak0, az1, az0] => {
             Some([dam(*ah1, *ah0), dam(*ak1, *ak0), dam(*az1, *az0), u8::MAX])
-        }
+        },
         [ah1, ah0, ak1, ak0, az1, az0, sh1, sh0] => Some([
             dam(*ah1, *ah0),
             dam(*ak1, *ak0),
@@ -1504,8 +1556,9 @@ fn qis_iqama(
     // not pay for one. Deriving this from the compiled pages would hand
     // `LawhaHayya::jadeeda` a budget it rejects, and the diagnostics would read
     // as an atlas that cannot be built rather than as a plan.
-    let (ard, irtifa) = abaad_masmuha(khiyarat.rasf)
-        .map_err(|khata| KhataTarqee::RasfFashil { sabab: khata.injilizi })?;
+    let (ard, irtifa) = abaad_masmuha(khiyarat.rasf).map_err(|khata| KhataTarqee::RasfFashil {
+        sabab: khata.injilizi,
+    })?;
     let bayt_safha = u64::from(ard).saturating_mul(u64::from(irtifa)).max(1);
 
     let ashkal_mabniya = lawha.map_or(0, |mabniya| adad_u32(mabniya.adad_ashkal()));
@@ -1521,8 +1574,8 @@ fn qis_iqama(
         .and_then(|qeema| u32::try_from(qeema).ok());
 
     let khanat_mahjuza = khiyarat.khanat_mahjuza.min(AQSA_KHANAT_IQAMA);
-    let matlub = u64::from(khanat_mahjuza)
-        .saturating_mul(u64::from(mutawassit_bayt_shakl.unwrap_or(0)));
+    let matlub =
+        u64::from(khanat_mahjuza).saturating_mul(u64::from(mutawassit_bayt_shakl.unwrap_or(0)));
     // Rounded up to whole pages because a page is the unit the runtime
     // allocator actually buys, and floored at one for the reason above.
     let safahat_mahjuza = matlub.div_ceil(bayt_safha).max(1);
@@ -1564,7 +1617,10 @@ fn masahat_ashkal(lawha: &Lawha) -> u64 {
 
 /// How many layouts carry a flag.
 fn adad_bi_alam(takhtitat: &[TakhtitMabni], alam: u16) -> usize {
-    takhtitat.iter().filter(|takhtit| takhtit.alam & alam != 0).count()
+    takhtitat
+        .iter()
+        .filter(|takhtit| takhtit.alam & alam != 0)
+        .count()
 }
 
 /// A count as the `u32` the record stores, saturating rather than wrapping.

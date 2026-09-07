@@ -420,7 +420,8 @@ impl TaghtiyaMawzuna {
     /// at all, because an unmeasured project is not a trustworthy one.
     #[must_use]
     pub fn mawthuqa(&self) -> bool {
-        self.hissat_almulahaza().is_some_and(|hissa| hissa > HADD_WITHUQ_ALMULAHAZA)
+        self.hissat_almulahaza()
+            .is_some_and(|hissa| hissa > HADD_WITHUQ_ALMULAHAZA)
     }
 
     /// Folds another weighting into this one.
@@ -689,39 +690,55 @@ impl SababAdamAlnashr {
     pub fn wasf_arabi(self) -> String {
         match self {
             Self::BilaNusus => "لا نصوص في المشروع.".to_owned(),
-            Self::NususGhayrMutarjama { adad, matlub_lilhadd } => {
+            Self::NususGhayrMutarjama {
+                adad,
+                matlub_lilhadd,
+            } => {
                 if matlub_lilhadd > 0 {
                     format!("{adad} عبارة دون ترجمة، ويلزم {matlub_lilhadd} منها لبلوغ الحدّ.")
                 } else {
                     format!("{adad} عبارة دون ترجمة، والحدّ مبلوغ.")
                 }
-            }
-            Self::BiIntizarAlmuraja { adad, aali_faqat, musawwada, matlub_muraja } => format!(
+            },
+            Self::BiIntizarAlmuraja {
+                adad,
+                aali_faqat,
+                musawwada,
+                matlub_muraja,
+            } => format!(
                 "{adad} عبارة تنتظر المراجعة: {aali_faqat} آلية لم يقرأها إنسان، \
                  و{musawwada} مسوّدة، و{matlub_muraja} مطلوبة للمراجعة."
             ),
             Self::MarfudaBaqiya { adad } => {
                 format!("{adad} ترجمة مرفوضة لم يُستبدل نصّها بعد.")
-            }
-            Self::TaghtiyaDunAlhadd { miawi, hadd_miawi, naqis } => format!(
+            },
+            Self::TaghtiyaDunAlhadd {
+                miawi,
+                hadd_miawi,
+                naqis,
+            } => format!(
                 "التغطية {miawi:.0}٪ دون حدّ النشر {hadd_miawi:.0}٪؛ يلزم {naqis} عبارة أخرى."
             ),
-            Self::AwwalSaaDunAlhadd { miawi, hadd_miawi, naqis } => format!(
+            Self::AwwalSaaDunAlhadd {
+                miawi,
+                hadd_miawi,
+                naqis,
+            } => format!(
                 "تغطية أول ساعة {miawi:.0}٪ دون حدّ النشر {hadd_miawi:.0}٪؛ يلزم {naqis} عبارة \
                  أخرى مما رُصد في الافتتاح."
             ),
             Self::BilaJalsatAwwal => {
                 "لم تُسجَّل جلسة التقاط لافتتاح اللعبة، فلا قياس لتغطية أول ساعة أصلًا.".to_owned()
-            }
+            },
             Self::JalsatAwwalFarigha => {
                 "سُجّلت جلسة افتتاح ولم تُسمِّ أي عبارة، فالقياس فارغ لا كامل.".to_owned()
-            }
+            },
             Self::AlamatMania { adad } => {
                 format!("{adad} عبارة تحمل علامة جودة تمنع النشر.")
-            }
-            Self::BilaWaznZahir { mustabaad } => format!(
-                "لا نصّ ظاهر للاعب في المشروع: {mustabaad} عبارة كلّها من تصنيفات بلا وزن."
-            ),
+            },
+            Self::BilaWaznZahir { mustabaad } => {
+                format!("لا نصّ ظاهر للاعب في المشروع: {mustabaad} عبارة كلّها من تصنيفات بلا وزن.")
+            },
         }
     }
 
@@ -730,7 +747,10 @@ impl SababAdamAlnashr {
     pub fn wasf_injilizi(self) -> String {
         match self {
             Self::BilaNusus => "The project holds no strings.".to_owned(),
-            Self::NususGhayrMutarjama { adad, matlub_lilhadd } => {
+            Self::NususGhayrMutarjama {
+                adad,
+                matlub_lilhadd,
+            } => {
                 if matlub_lilhadd > 0 {
                     format!(
                         "{adad} string(s) untranslated; {matlub_lilhadd} of them are needed to \
@@ -739,19 +759,32 @@ impl SababAdamAlnashr {
                 } else {
                     format!("{adad} string(s) untranslated; the floor is already cleared.")
                 }
-            }
-            Self::BiIntizarAlmuraja { adad, aali_faqat, musawwada, matlub_muraja } => format!(
+            },
+            Self::BiIntizarAlmuraja {
+                adad,
+                aali_faqat,
+                musawwada,
+                matlub_muraja,
+            } => format!(
                 "{adad} string(s) awaiting review: {aali_faqat} machine-translated and unread, \
                  {musawwada} draft(s), {matlub_muraja} explicitly flagged."
             ),
             Self::MarfudaBaqiya { adad } => {
                 format!("{adad} rejected translation(s) have not been replaced.")
-            }
-            Self::TaghtiyaDunAlhadd { miawi, hadd_miawi, naqis } => format!(
+            },
+            Self::TaghtiyaDunAlhadd {
+                miawi,
+                hadd_miawi,
+                naqis,
+            } => format!(
                 "Coverage is {miawi:.0}%, below the {hadd_miawi:.0}% publishing floor; {naqis} \
                  more string(s) would clear it."
             ),
-            Self::AwwalSaaDunAlhadd { miawi, hadd_miawi, naqis } => format!(
+            Self::AwwalSaaDunAlhadd {
+                miawi,
+                hadd_miawi,
+                naqis,
+            } => format!(
                 "First-hour coverage is {miawi:.0}%, below the {hadd_miawi:.0}% floor; {naqis} \
                  more of the observed opening strings would clear it."
             ),
@@ -759,15 +792,15 @@ impl SababAdamAlnashr {
                 "No capture session recorded the opening of the game, so first-hour coverage was \
                  never measured at all."
                     .to_owned()
-            }
+            },
             Self::JalsatAwwalFarigha => {
                 "A capture session was recorded and named no strings, so the first-hour figure is \
                  empty rather than complete."
                     .to_owned()
-            }
+            },
             Self::AlamatMania { adad } => {
                 format!("{adad} string(s) carry a quality flag that forbids shipping.")
-            }
+            },
             Self::BilaWaznZahir { mustabaad } => format!(
                 "Nothing in the project is player-visible: all {mustabaad} string(s) fall in \
                  zero-weight classes."
@@ -841,7 +874,11 @@ impl TaqrirTaghtiya {
     /// Only the causes that actually block publication.
     #[must_use]
     pub fn asbab_hasima(&self) -> Vec<SababAdamAlnashr> {
-        self.asbab.iter().copied().filter(|sabab| sabab.hasim()).collect()
+        self.asbab
+            .iter()
+            .copied()
+            .filter(|sabab| sabab.hasim())
+            .collect()
     }
 
     /// One class's coverage, when the project holds any string of that class.
@@ -1027,7 +1064,9 @@ pub fn ihsib_taghtiya(
         });
         damm_madkhal(&mut qism.taghtiya, alam, takrar);
 
-        let hasil = majmuat.entry(madkhal.majmua.unwrap_or(madkhal.id)).or_default();
+        let hasil = majmuat
+            .entry(madkhal.majmua.unwrap_or(madkhal.id))
+            .or_default();
         hasil.alam.mutarjam |= alam.mutarjam;
         hasil.alam.muakkad |= alam.muakkad;
         hasil.alam.fi_alawwal |= alam.fi_alawwal;
@@ -1042,7 +1081,11 @@ pub fn ihsib_taghtiya(
 
         let marrat = mulahazat.and_then(|sijill| sijill.takrar(madkhal.id));
         let wazn = wazn_asas * muamil_takrar(marrat);
-        let masdar = if marrat.is_some() { MasdarWazn::Mulahaza } else { MasdarWazn::Tasnif };
+        let masdar = if marrat.is_some() {
+            MasdarWazn::Mulahaza
+        } else {
+            MasdarWazn::Tasnif
+        };
         if masdar == MasdarWazn::Mulahaza {
             let _ = nusus_bi_mulahaza.insert(madkhal.id);
         }
@@ -1139,11 +1182,11 @@ fn damm_wazn(mawzuna: &mut TaghtiyaMawzuna, wazn: f64, masdar: MasdarWazn, alam:
         MasdarWazn::Mulahaza => {
             mawzuna.bi_mulahaza = mawzuna.bi_mulahaza.saturating_add(1);
             mawzuna.wazn_bi_mulahaza += wazn;
-        }
+        },
         MasdarWazn::Tasnif => {
             mawzuna.bi_tasnif = mawzuna.bi_tasnif.saturating_add(1);
             mawzuna.wazn_bi_tasnif += wazn;
-        }
+        },
     }
 }
 
@@ -1204,7 +1247,9 @@ fn ihsib_asbab(
     let aali_faqat = adad_hala(HalatMuraja::TarjamaAaliya);
     let musawwada = adad_hala(HalatMuraja::Musawwada);
     let matlub_muraja = adad_hala(HalatMuraja::LilMuraja);
-    let muntazir = aali_faqat.saturating_add(musawwada).saturating_add(matlub_muraja);
+    let muntazir = aali_faqat
+        .saturating_add(musawwada)
+        .saturating_add(matlub_muraja);
     if muntazir > 0 {
         asbab.push(SababAdamAlnashr::BiIntizarAlmuraja {
             adad: muntazir,
@@ -1235,7 +1280,7 @@ fn ihsib_asbab(
         None => asbab.push(SababAdamAlnashr::BilaJalsatAwwal),
         Some(majmua) if majmua.khaliya() => {
             asbab.push(SababAdamAlnashr::JalsatAwwalFarigha);
-        }
+        },
         Some(_) => {
             if f64::from(kulli.nisba_awwal()) < HADD_AWWAL_LILNASHR {
                 asbab.push(SababAdamAlnashr::AwwalSaaDunAlhadd {
@@ -1248,7 +1293,7 @@ fn ihsib_asbab(
                     ),
                 });
             }
-        }
+        },
     }
 
     if alamat_mania > 0 {
@@ -1256,7 +1301,9 @@ fn ihsib_asbab(
     }
 
     if mawzuna.wazn_kulli.is_nan() || mawzuna.wazn_kulli <= 0.0 {
-        asbab.push(SababAdamAlnashr::BilaWaznZahir { mustabaad: mawzuna.mustabaad });
+        asbab.push(SababAdamAlnashr::BilaWaznZahir {
+            mustabaad: mawzuna.mustabaad,
+        });
     }
 
     asbab
@@ -1268,7 +1315,9 @@ fn ihsib_asbab(
 /// integer division, which would floor the requirement and report a project as
 /// one string closer to the floor than it is.
 fn naqis_lilhadd(majmu: u32, mughatta: u32, hadd: f64) -> u32 {
-    let matlub = (f64::from(majmu) * hadd).ceil().clamp(0.0, f64::from(u32::MAX));
+    let matlub = (f64::from(majmu) * hadd)
+        .ceil()
+        .clamp(0.0, f64::from(u32::MAX));
     // `ceil` made the value integral and `clamp` pinned it into 0..=u32::MAX,
     // so the conversion below is exact and can neither wrap nor lose a sign.
     #[expect(

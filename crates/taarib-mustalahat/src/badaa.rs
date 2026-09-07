@@ -46,7 +46,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::muharrik::{Tabaqa, TaqreerImkaniyat};
-use crate::ruqaa::{RuqaaId, RukhsaRuqaa};
+use crate::ruqaa::{RukhsaRuqaa, RuqaaId};
 use crate::taghtiya::Taghtiya;
 
 /// Which of the five situations this game's entry point is in.

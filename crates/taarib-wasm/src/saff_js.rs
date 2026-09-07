@@ -85,7 +85,9 @@ impl TaaribSaff {
     #[wasm_bindgen(constructor)]
     #[must_use]
     pub fn jadeed() -> Self {
-        Self { saff: Saff::jadeed() }
+        Self {
+            saff: Saff::jadeed(),
+        }
     }
 
     /// Lays text out.

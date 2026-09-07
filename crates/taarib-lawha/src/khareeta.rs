@@ -87,7 +87,13 @@ impl MiftahShakl {
             reason = "clamped to the u16 range and non-negative on the line above"
         )]
         let hajm_rubi = rubi as u16;
-        Self { khatt, bakat, hajm_rubi, namat, muarrif }
+        Self {
+            khatt,
+            bakat,
+            hajm_rubi,
+            namat,
+            muarrif,
+        }
     }
 
     /// The pixel size this key was built from.
@@ -135,7 +141,12 @@ impl MawdiShakl {
     /// The rectangle as `(left, top, right, bottom)` in page pixels.
     #[must_use]
     pub const fn mustatil(&self) -> (u16, u16, u16, u16) {
-        (self.s, self.a, self.s.saturating_add(self.ard), self.a.saturating_add(self.irtifa))
+        (
+            self.s,
+            self.a,
+            self.s.saturating_add(self.ard),
+            self.a.saturating_add(self.irtifa),
+        )
     }
 }
 
@@ -215,7 +226,10 @@ impl KhareetatAshkal {
     /// A page's dimensions.
     #[must_use]
     pub fn abaad_safha(&self, safha: u16) -> Option<(u16, u16)> {
-        self.abaad.get(usize::from(safha)).copied().filter(|(ard, irtifa)| *ard > 0 && *irtifa > 0)
+        self.abaad
+            .get(usize::from(safha))
+            .copied()
+            .filter(|(ard, irtifa)| *ard > 0 && *irtifa > 0)
     }
 
     /// How many pages the atlas has.
@@ -249,8 +263,11 @@ impl KhareetatAshkal {
     /// lets a rebuilt patch keep its content hash when nothing changed.
     #[must_use]
     pub fn murattaba(&self) -> Vec<(MiftahShakl, MawdiShakl)> {
-        let mut madkhalat: Vec<(MiftahShakl, MawdiShakl)> =
-            self.mawadi.iter().map(|(miftah, mawdi)| (*miftah, *mawdi)).collect();
+        let mut madkhalat: Vec<(MiftahShakl, MawdiShakl)> = self
+            .mawadi
+            .iter()
+            .map(|(miftah, mawdi)| (*miftah, *mawdi))
+            .collect();
         madkhalat.sort_unstable_by_key(|(miftah, _)| *miftah);
         madkhalat
     }

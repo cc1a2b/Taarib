@@ -161,7 +161,10 @@ impl SababGhiyab {
     /// quietly start deleting people's patch state.
     #[must_use]
     pub const fn yubqa(&self) -> bool {
-        matches!(self, Self::QursGhayrMuttasil { .. } | Self::ShabakaGhayrMutaha { .. })
+        matches!(
+            self,
+            Self::QursGhayrMuttasil { .. } | Self::ShabakaGhayrMutaha { .. }
+        )
     }
 
     /// Whether the launcher is actively working on this game.
@@ -186,7 +189,7 @@ impl SababGhiyab {
             Self::QaydTanzil { .. } | Self::QaydTahdith => FiatGhiyab::Jariya,
             Self::TanzilMutawaqqif { .. } | Self::TathbeetNaqis { .. } | Self::HimlSahabi => {
                 FiatGhiyab::Naqis
-            }
+            },
             Self::MujalladMafqud { .. }
             | Self::MujalladMamnu { .. }
             | Self::TanfidhiMafqud { .. }
@@ -195,7 +198,7 @@ impl SababGhiyab {
             | Self::TanfidhiKharijBeea { .. } => FiatGhiyab::Mafquda,
             Self::QursGhayrMuttasil { .. } | Self::ShabakaGhayrMutaha { .. } => {
                 FiatGhiyab::GhayrMuttasila
-            }
+            },
         }
     }
 
@@ -216,40 +219,39 @@ impl SababGhiyab {
                 "مجلّد اللعبة موجود لكنه شبه فارغ؛ يبدو أن التثبيت لم يكتمل. اطلب من المتجر \
                  التحقّق من الملفات."
                     .to_owned()
-            }
+            },
             Self::MujalladMafqud { .. } => {
                 "مجلّد اللعبة غير موجود. ربما حُذفت اللعبة أو نُقلت خارج المتجر.".to_owned()
-            }
+            },
             Self::MujalladMamnu { .. } => {
                 "مجلّد اللعبة موجود لكن لا يمكن قراءته. قد تكون اللعبة مثبّتة باسم مستخدم آخر."
                     .to_owned()
-            }
+            },
             Self::TanfidhiMafqud { .. } => {
-                "ملف تشغيل اللعبة غير موجود في مكانه. اطلب من المتجر التحقّق من الملفات."
-                    .to_owned()
-            }
+                "ملف تشغيل اللعبة غير موجود في مكانه. اطلب من المتجر التحقّق من الملفات.".to_owned()
+            },
             Self::TanfidhiMukhtalif { .. } => {
                 "ملف تشغيل اللعبة يختلف عمّا سجّله المتجر، وقد يكون التحديث لم يكتمل.".to_owned()
-            }
+            },
             Self::HimlSahabi => {
                 "هذه اللعبة سحابية ولم يُنزَّل منها شيء على هذا الجهاز بعد.".to_owned()
-            }
+            },
             Self::BeeaMafquda { .. } => {
                 "بيئة التوافق الخاصة بهذه اللعبة غير موجودة. شغّل اللعبة مرة واحدة لينشئها \
                  المتجر."
                     .to_owned()
-            }
+            },
             Self::TanfidhiKharijBeea { .. } => {
                 "ملف التشغيل لا يُحَلّ داخل بيئة التوافق. شغّل اللعبة مرة واحدة ليعيد المتجر \
                  بناء البيئة."
                     .to_owned()
-            }
+            },
             Self::QursGhayrMuttasil { qurs } => {
                 format!("القرص ({qurs}) غير متصل. ستظهر اللعبة فور توصيله.")
-            }
+            },
             Self::ShabakaGhayrMutaha { .. } => {
                 "موقع الشبكة الذي تُخزَّن فيه هذه اللعبة لا يستجيب.".to_owned()
-            }
+            },
         }
     }
 
@@ -272,33 +274,40 @@ impl SababGhiyab {
             ),
             Self::MujalladMafqud { masar } => {
                 format!("The install folder is not at {}.", masar.display())
-            }
+            },
             Self::MujalladMamnu { masar, sabab } => {
                 format!("{} cannot be read: {sabab}", masar.display())
-            }
+            },
             Self::TanfidhiMafqud { masar } => {
                 format!("The executable is not at {}.", masar.display())
-            }
-            Self::TanfidhiMukhtalif { masar, musajjal, mawjud } => format!(
+            },
+            Self::TanfidhiMukhtalif {
+                masar,
+                musajjal,
+                mawjud,
+            } => format!(
                 "{} is {mawjud} bytes; the launcher recorded {musajjal}.",
                 masar.display()
             ),
             Self::HimlSahabi => {
                 "This is a cloud entry with nothing downloaded to this machine.".to_owned()
-            }
+            },
             Self::BeeaMafquda { masar } => {
                 format!("The compatibility prefix is not at {}.", masar.display())
-            }
-            Self::TanfidhiKharijBeea { beea, masar_windows } => format!(
+            },
+            Self::TanfidhiKharijBeea {
+                beea,
+                masar_windows,
+            } => format!(
                 "{masar_windows} does not resolve inside the prefix at {}.",
                 beea.display()
             ),
             Self::QursGhayrMuttasil { qurs } => {
                 format!("The volume {qurs} is not connected.")
-            }
+            },
             Self::ShabakaGhayrMutaha { masar } => {
                 format!("The network location {} did not answer.", masar.display())
-            }
+            },
         }
     }
 }
@@ -363,7 +372,10 @@ impl ShahidTanfidhi {
     /// Nothing recorded, which is the common case.
     #[must_use]
     pub const fn khali() -> Self {
-        Self { hajm: None, waqt: None }
+        Self {
+            hajm: None,
+            waqt: None,
+        }
     }
 
     /// Whether this witness constrains anything at all.
@@ -414,14 +426,27 @@ impl HukmWujud {
 
     /// A present verdict, carrying whatever was noticed on the way.
     #[must_use]
-    pub const fn hadira(tanfidhi: Option<PathBuf>, hajm: Option<u64>, mulahazat: Vec<String>) -> Self {
-        Self { ghiyab: None, mulahazat, tanfidhi, hajm }
+    pub const fn hadira(
+        tanfidhi: Option<PathBuf>,
+        hajm: Option<u64>,
+        mulahazat: Vec<String>,
+    ) -> Self {
+        Self {
+            ghiyab: None,
+            mulahazat,
+            tanfidhi,
+            hajm,
+        }
     }
 
     /// An absent verdict.
     #[must_use]
     pub const fn ghaiba(sabab: SababGhiyab) -> Self {
-        Self { ghiyab: Some(sabab), mulahazat: Vec::new(), tanfidhi: None, hajm: None }
+        Self {
+            ghiyab: Some(sabab),
+            mulahazat: Vec::new(),
+            tanfidhi: None,
+            hajm: None,
+        }
     }
 }
-

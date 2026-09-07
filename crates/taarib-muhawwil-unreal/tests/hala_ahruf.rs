@@ -42,7 +42,11 @@ use taarib_muhawwil_unreal::mawarid::pak::KatibPak;
 fn mujallad_ikhtibar(ism: &str) -> PathBuf {
     let masar = std::env::temp_dir().join(format!("taarib-unreal-hala-{ism}"));
     let _ = fs::remove_dir_all(&masar);
-    assert!(fs::create_dir_all(&masar).is_ok(), "{} could not be created", masar.display());
+    assert!(
+        fs::create_dir_all(&masar).is_ok(),
+        "{} could not be created",
+        masar.display()
+    );
     masar
 }
 
@@ -85,7 +89,9 @@ fn dalil_alhawiyat_yuhaddad_rughma_ikhtilaf_alhala() {
         bina.athar
     );
     assert!(
-        bina.hawiyat.iter().any(|masar| masar.ends_with("Riverside-Windows.pak")),
+        bina.hawiyat
+            .iter()
+            .any(|masar| masar.ends_with("Riverside-Windows.pak")),
         "the container has to be collected or the adapter reports a game with nothing in it"
     );
 }
@@ -98,8 +104,12 @@ fn dalil_alhawiyat_yaqbal_muhtawa_bila_paks() {
     fs::create_dir_all(jidhr.join("Riverside/CONTENT")).expect("the content directory");
 
     let bina = afhas(&jidhr).expect("the probe");
-    assert_ne!(bina.tabaa, Tabaa::Majhul, "loose CONTENT/ is still the game's content: {:?}",
-        bina.athar);
+    assert_ne!(
+        bina.tabaa,
+        Tabaa::Majhul,
+        "loose CONTENT/ is still the game's content: {:?}",
+        bina.athar
+    );
 }
 
 #[test]
@@ -113,12 +123,17 @@ fn dalil_alhawiyat_alhala_almutabiqa_taghlib() {
 
     let bina = afhas(&jidhr).expect("the probe");
     assert!(
-        bina.hawiyat.iter().any(|masar| masar.ends_with("exact.pak")),
+        bina.hawiyat
+            .iter()
+            .any(|masar| masar.ends_with("exact.pak")),
         "Unreal's own spelling is the directory the engine mounts: {:?}",
         bina.hawiyat
     );
     assert!(
-        !bina.hawiyat.iter().any(|masar| masar.ends_with("folded.pak")),
+        !bina
+            .hawiyat
+            .iter()
+            .any(|masar| masar.ends_with("folded.pak")),
         "the folded directory must not be read when the exact one is right there"
     );
 }
@@ -131,11 +146,18 @@ fn hawiyat_alruqaa_taqa_dakhil_dalil_alluba_nafsih() {
 
     let mut katib = KatibPak::jadeed();
     katib
-        .daa("Riverside/Content/Localization/Game/ar/Game.locres", b"taarib".to_vec())
+        .daa(
+            "Riverside/Content/Localization/Game/ar/Game.locres",
+            b"taarib".to_vec(),
+        )
         .expect("one entry");
 
     let masar = katib.uktub_fi_luba(&mashru).expect("the container write");
-    assert!(masar.is_file(), "{} was reported written and is not there", masar.display());
+    assert!(
+        masar.is_file(),
+        "{} was reported written and is not there",
+        masar.display()
+    );
     assert!(
         masar.starts_with(mashru.join("content/paks")),
         "{} landed in a directory the engine never mounts, which is an install that reports \
@@ -158,7 +180,9 @@ fn hawiyat_alruqaa_tunshi_almasar_haythu_la_yujad() {
     fs::create_dir_all(mashru.join("CONTENT")).expect("the content directory");
 
     let mut katib = KatibPak::jadeed();
-    katib.daa("Riverside/Content/x.uasset", b"taarib".to_vec()).expect("one entry");
+    katib
+        .daa("Riverside/Content/x.uasset", b"taarib".to_vec())
+        .expect("one entry");
 
     let masar = katib.uktub_fi_luba(&mashru).expect("the container write");
     assert!(
@@ -166,5 +190,8 @@ fn hawiyat_alruqaa_tunshi_almasar_haythu_la_yujad() {
         "{} was created beside the game's content rather than under it",
         masar.display()
     );
-    assert!(masar.ends_with("zzz_taarib_P.pak"), "the patch container keeps its own name");
+    assert!(
+        masar.ends_with("zzz_taarib_P.pak"),
+        "the patch container keeps its own name"
+    );
 }

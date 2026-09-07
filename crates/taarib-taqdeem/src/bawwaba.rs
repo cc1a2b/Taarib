@@ -298,13 +298,19 @@ impl QaimatFahs {
     /// Every failing row.
     #[must_use]
     pub fn rasiba(&self) -> Vec<&SatrFahs> {
-        self.sutur.iter().filter(|satr| satr.hala == HalatBand::Rasab).collect()
+        self.sutur
+            .iter()
+            .filter(|satr| satr.hala == HalatBand::Rasab)
+            .collect()
     }
 
     /// Every warning still waiting for an acknowledgement.
     #[must_use]
     pub fn tantazir_iqrar(&self) -> Vec<&SatrFahs> {
-        self.sutur.iter().filter(|satr| satr.hala == HalatBand::YantazirIqrar).collect()
+        self.sutur
+            .iter()
+            .filter(|satr| satr.hala == HalatBand::YantazirIqrar)
+            .collect()
     }
 
     /// Whether nothing fails and nothing is left unacknowledged.
@@ -316,8 +322,11 @@ impl QaimatFahs {
     /// Every string any row points at, once each.
     #[must_use]
     pub fn nusus_muashshara(&self) -> Vec<NassId> {
-        let farida: BTreeSet<NassId> =
-            self.sutur.iter().flat_map(|satr| satr.nusus.iter().copied()).collect();
+        let farida: BTreeSet<NassId> = self
+            .sutur
+            .iter()
+            .flat_map(|satr| satr.nusus.iter().copied())
+            .collect();
         farida.into_iter().collect()
     }
 
@@ -452,10 +461,7 @@ pub fn ifhas(mudkhalat: &MudkhalatBawwaba<'_>, iqrarat: &Iqrarat) -> QaimatFahs 
 /// published patch for the same build, [`KhataTaqdeem::BawwabaMaghlaqa`] when
 /// any other blocking check failed, and [`KhataTaqdeem::TahdheerBilaIqrar`]
 /// when only warnings are outstanding.
-pub fn ijri(
-    mudkhalat: &MudkhalatBawwaba<'_>,
-    iqrarat: &Iqrarat,
-) -> NatijatTaqdeem<IjtiyazTaqdeem> {
+pub fn ijri(mudkhalat: &MudkhalatBawwaba<'_>, iqrarat: &Iqrarat) -> NatijatTaqdeem<IjtiyazTaqdeem> {
     match fuhusat::ijri(&mudkhalat.mudkhalat_fahs()) {
         Ok(fuhus) => {
             let qaima = ijmaa(mudkhalat, iqrarat, None);
@@ -470,11 +476,11 @@ pub fn ijri(
                 fuhus,
                 qaima,
             })
-        }
+        },
         Err(khata) => {
             let qaima = ijmaa(mudkhalat, iqrarat, Some(&khata));
             Err(khata_qaima(&qaima, mudkhalat))
-        }
+        },
     }
 }
 
@@ -492,7 +498,11 @@ fn ijmaa(
     sutur.push(satr_lugha_rasmiya(mudkhalat.lugha_rasmiya));
     sutur.push(satr_fuhusat(mudkhalat, khata));
     sutur.push(satr_shahada(musawwada.shahada()));
-    sutur.push(satr_taghtiya(musawwada, ghayr_mutarjama.clone(), adad_ghayr));
+    sutur.push(satr_taghtiya(
+        musawwada,
+        ghayr_mutarjama.clone(),
+        adad_ghayr,
+    ));
     sutur.push(satr_takrar(mudkhalat));
     sutur.push(satr_irtibat(musawwada));
 
@@ -539,7 +549,10 @@ fn ijmaa(
         mukhalafat.iter().copied().take(AQSA_MARBUT).collect(),
         mukhalafat.len(),
         format!("{} عبارة تخالف مسرد المشروع.", mukhalafat.len()),
-        format!("{} string(s) disagree with the project glossary.", mukhalafat.len()),
+        format!(
+            "{} string(s) disagree with the project glossary.",
+            mukhalafat.len()
+        ),
     ));
 
     QaimatFahs { sutur }
@@ -587,7 +600,10 @@ fn satr_lugha_rasmiya(hukm: Option<&HukmLughaRasmiya>) -> SatrFahs {
     // The heaviest observation, which is the first: `ihsib` sorts the evidence
     // by weight before it builds the verdict, so a contributor reading this row
     // is reading the strongest reason and not an arbitrary one.
-    let daleel = hukm.dalail.first().map_or_else(String::new, |awwal| format!(" {}", awwal.wasf));
+    let daleel = hukm
+        .dalail
+        .first()
+        .map_or_else(String::new, |awwal| format!(" {}", awwal.wasf));
     satr(
         band,
         HalatBand::Rasab,
@@ -617,14 +633,27 @@ fn satr_fuhusat(mudkhalat: &MudkhalatBawwaba<'_>, khata: Option<&KhataTarqee>) -
             HalatBand::Ijtaz,
             Vec::new(),
             0,
-            format!("اجتازت الفحوصات الصارمة على {} عبارة.", mudkhalat.madakhil.len()),
-            format!("The hard checks passed over {} string(s).", mudkhalat.madakhil.len()),
+            format!(
+                "اجتازت الفحوصات الصارمة على {} عبارة.",
+                mudkhalat.madakhil.len()
+            ),
+            format!(
+                "The hard checks passed over {} string(s).",
+                mudkhalat.madakhil.len()
+            ),
         ),
         Some(khata) => {
             let nusus = nusus_min_khata(khata, mudkhalat.madakhil);
             let adad = nusus.len();
-            satr(band, HalatBand::Rasab, nusus, adad, khata.arabi(), khata.injilizi())
-        }
+            satr(
+                band,
+                HalatBand::Rasab,
+                nusus,
+                adad,
+                khata.arabi(),
+                khata.injilizi(),
+            )
+        },
     }
 }
 
@@ -731,7 +760,10 @@ fn satr_irtibat(musawwada: &Musawwada) -> SatrFahs {
         nusus,
         muallaqa.len(),
         format!("{} ارتباط استيراد ينتظر قرارك.", muallaqa.len()),
-        format!("{} import mapping(s) are still waiting on you.", muallaqa.len()),
+        format!(
+            "{} import mapping(s) are still waiting on you.",
+            muallaqa.len()
+        ),
     )
 }
 
@@ -748,7 +780,11 @@ fn satr_tahdheer(
     if !waqaa {
         return satr(band, HalatBand::Ijtaz, Vec::new(), 0, arabi, injilizi);
     }
-    let hala = if iqrarat.muqarr(tahdheer) { HalatBand::Muqarr } else { HalatBand::YantazirIqrar };
+    let hala = if iqrarat.muqarr(tahdheer) {
+        HalatBand::Muqarr
+    } else {
+        HalatBand::YantazirIqrar
+    };
     satr(band, hala, nusus, adad, arabi, injilizi)
 }
 
@@ -760,7 +796,14 @@ const fn satr(
     tafsil_arabi: String,
     tafsil_injilizi: String,
 ) -> SatrFahs {
-    SatrFahs { band, hala, nusus, adad, tafsil_arabi, tafsil_injilizi }
+    SatrFahs {
+        band,
+        hala,
+        nusus,
+        adad,
+        tafsil_arabi,
+        tafsil_injilizi,
+    }
 }
 
 /// The first incoherence in the certificate, or [`None`] when it has none.
@@ -808,8 +851,14 @@ fn mukarrar<'a>(mudkhalat: &MudkhalatBawwaba<'a>) -> Option<&'a MulakhkhasRuqaa>
         if manshura.id == musawwada.id() || &manshura.musahim != sahib {
             return false;
         }
-        manshura.bina_manassa.iter().any(|bina| irtibat.manassat.contains(bina))
-            || manshura.basmat.iter().any(|basma| irtibat.basmat.contains(basma))
+        manshura
+            .bina_manassa
+            .iter()
+            .any(|bina| irtibat.manassat.contains(bina))
+            || manshura
+                .basmat
+                .iter()
+                .any(|basma| irtibat.basmat.contains(basma))
     })
 }
 
@@ -817,7 +866,11 @@ fn nusus_ghayr_mutarjama(madakhil: &[MudkhalNass]) -> (Vec<NassId>, usize) {
     let mut nusus: Vec<NassId> = Vec::new();
     let mut adad = 0_usize;
     for madkhal in madakhil {
-        if madkhal.hadaf.as_deref().is_some_and(|hadaf| !hadaf.is_empty()) {
+        if madkhal
+            .hadaf
+            .as_deref()
+            .is_some_and(|hadaf| !hadaf.is_empty())
+        {
             continue;
         }
         adad = adad.saturating_add(1);
@@ -865,7 +918,12 @@ fn nusus_min_amthila(madakhil: &[MudkhalNass], amthila: &[String]) -> Vec<NassId
 fn nusus_bi_nass(madakhil: &[MudkhalNass], nass: &str) -> Vec<NassId> {
     madakhil
         .iter()
-        .filter(|madkhal| madkhal.hadaf.as_deref().is_some_and(|hadaf| hadaf.starts_with(nass)))
+        .filter(|madkhal| {
+            madkhal
+                .hadaf
+                .as_deref()
+                .is_some_and(|hadaf| hadaf.starts_with(nass))
+        })
         .map(|madkhal| madkhal.id)
         .take(AQSA_MARBUT)
         .collect()
@@ -882,7 +940,9 @@ fn khata_qaima(qaima: &QaimatFahs, mudkhalat: &MudkhalatBawwaba<'_>) -> KhataTaq
         };
     }
     if rasiba.is_empty() {
-        return KhataTaqdeem::TahdheerBilaIqrar { adad: qaima.tantazir_iqrar().len() };
+        return KhataTaqdeem::TahdheerBilaIqrar {
+            adad: qaima.tantazir_iqrar().len(),
+        };
     }
     KhataTaqdeem::BawwabaMaghlaqa {
         adad: rasiba.len(),
@@ -896,9 +956,7 @@ fn khata_qaima(qaima: &QaimatFahs, mudkhalat: &MudkhalatBawwaba<'_>) -> KhataTaq
 
 #[cfg(test)]
 mod ikhtibarat {
-    use taarib_mustalahat::luba::{
-        DaleelLugha, HalatLughaRasmiya, NawDaleelLugha, TughtiyaLugha,
-    };
+    use taarib_mustalahat::luba::{DaleelLugha, HalatLughaRasmiya, NawDaleelLugha, TughtiyaLugha};
 
     use super::*;
 
@@ -952,7 +1010,10 @@ mod ikhtibarat {
         assert!(satr.tafsil_injilizi.contains("345 entries"));
 
         let qaima = QaimatFahs { sutur: vec![satr] };
-        assert!(!qaima.jahiza(), "a submission for a game with official Arabic cannot be sent");
+        assert!(
+            !qaima.jahiza(),
+            "a submission for a game with official Arabic cannot be sent"
+        );
         assert_eq!(qaima.rasiba().len(), 1);
     }
 

@@ -73,11 +73,15 @@ pub fn iqra<T: DhuMukhattat>(bayt: &[u8]) -> Natija<T> {
 /// As [`iqra`], minus the parse failure.
 pub fn min_qeema<T: DhuMukhattat>(mut qeema: Value) -> Natija<T> {
     let Some(kain) = qeema.as_object() else {
-        return Err(Khata::min_tafsir(&KhataMukhattat::LaysaKainan { ism: T::ISM }));
+        return Err(Khata::min_tafsir(&KhataMukhattat::LaysaKainan {
+            ism: T::ISM,
+        }));
     };
 
     let Some(mawjud) = kain.get(HAQL).and_then(Value::as_u64) else {
-        return Err(Khata::min_tafsir(&KhataMukhattat::IsdarMafqud { ism: T::ISM }));
+        return Err(Khata::min_tafsir(&KhataMukhattat::IsdarMafqud {
+            ism: T::ISM,
+        }));
     };
     let mut mawjud = u32::try_from(mawjud).unwrap_or(u32::MAX);
 
@@ -131,7 +135,9 @@ pub fn iktub<T: DhuMukhattat>(qeema: &T) -> Natija<Vec<u8>> {
     })?;
 
     let Some(kain) = khaam.as_object_mut() else {
-        return Err(Khata::min_tafsir(&KhataMukhattat::LaysaKainan { ism: T::ISM }));
+        return Err(Khata::min_tafsir(&KhataMukhattat::LaysaKainan {
+            ism: T::ISM,
+        }));
     };
     let _ = kain.insert(HAQL.to_owned(), Value::from(T::ISDAR));
 
@@ -279,19 +285,19 @@ impl Tafsir for KhataMukhattat {
                 "هذه البيانات كُتبت بإصدار أحدث من تعريب. حدِّث البرنامج لفتحها؛ فتحها بهذا \
                  الإصدار قد يفقد جزءًا منها."
                     .to_owned()
-            }
+            },
             Self::IsdarMafqud { .. } | Self::LaysaKainan { .. } => {
                 "ملف بيانات تالف: لا يحمل رقم مخطّطه. لن يُقرأ لتفادي إتلاف ما فيه.".to_owned()
-            }
+            },
             Self::TaadhurTahleel { satr, amud, .. } => {
                 format!("ملف بيانات تالف عند السطر {satr} والعمود {amud}.")
-            }
+            },
             Self::HijraNaqisa { min, .. } => {
                 format!("لا توجد ترقية من المخطّط رقم {min}؛ هذه البيانات أقدم مما يقرؤه تعريب.")
-            }
+            },
             Self::TaadhurTahweel { .. } => {
                 "ملف بيانات لا يطابق شكله المتوقّع بعد الترقية.".to_owned()
-            }
+            },
         }
     }
 
@@ -304,16 +310,16 @@ impl Tafsir for KhataMukhattat {
             Self::IsdarMafqud { .. } | Self::LaysaKainan { .. } => {
                 "Corrupt data file: it carries no schema version, so it will not be read."
                     .to_owned()
-            }
+            },
             Self::TaadhurTahleel { satr, amud, .. } => {
                 format!("Corrupt data file at line {satr}, column {amud}.")
-            }
+            },
             Self::HijraNaqisa { min, .. } => {
                 format!("No migration from schema {min}; this data predates what Taarib reads.")
-            }
+            },
             Self::TaadhurTahweel { .. } => {
                 "Data file does not match its expected shape after migration.".to_owned()
-            }
+            },
         }
     }
 
@@ -331,21 +337,21 @@ impl Tafsir for KhataMukhattat {
                 let _ = siyaq.insert("mawjud".to_owned(), QeemaSiyaq::Raqm(i64::from(*mawjud)));
                 let _ = siyaq.insert("madum".to_owned(), QeemaSiyaq::Raqm(i64::from(*madum)));
                 *ism
-            }
+            },
             Self::IsdarMafqud { ism } | Self::LaysaKainan { ism } => *ism,
             Self::TaadhurTahleel { ism, satr, amud } => {
                 let _ = siyaq.insert("satr".to_owned(), QeemaSiyaq::Hajm(*satr as u64));
                 let _ = siyaq.insert("amud".to_owned(), QeemaSiyaq::Hajm(*amud as u64));
                 *ism
-            }
+            },
             Self::HijraNaqisa { ism, min } => {
                 let _ = siyaq.insert("min".to_owned(), QeemaSiyaq::Raqm(i64::from(*min)));
                 *ism
-            }
+            },
             Self::TaadhurTahweel { ism, tafsil } => {
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
                 *ism
-            }
+            },
         };
         let _ = siyaq.insert("mabna".to_owned(), QeemaSiyaq::Nass(ism.to_owned()));
         siyaq

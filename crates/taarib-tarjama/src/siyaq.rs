@@ -260,37 +260,37 @@ pub const fn tawjih_tasnif(tasnif: TasnifNass) -> &'static str {
     match tasnif {
         TasnifNass::Hiwar => {
             "هذا سطر حوار منطوق. ترجمه بعربية فصيحة مبسّطة قريبة من إيقاع الكلام، لا بلغة الصحف ولا بعامية محلية: جمل قصيرة، تراكيب يقولها متحدث فعلًا، وانفعال يطابق انفعال الأصل. راعِ جنس المتكلم والمخاطب في تصريف الأفعال والضمائر إن دلّ السياق عليهما، وحافظ على شخصية المتكلم كما تظهر في السطور المجاورة — من يتكلم بجفاء يبقى جافيًا ومن يمزح يبقى مازحًا."
-        }
+        },
         TasnifNass::Ikhtiyar => {
             "هذا خيار يظهر للاعب ليختاره من بين خيارات. ترجمه بصيغة موجزة مباشرة يقرؤها اللاعب بلمحة، وبتركيب نحوي متوازٍ مع بقية الخيارات إن ظهرت في الجوار: إن كانت أفعالًا فأفعال، وإن كانت جملًا اسمية فجمل اسمية. لا تحوّل الخيار إلى جملة تفسيرية."
-        }
+        },
         TasnifNass::Ism => {
             "هذا اسم — اسم عنصر أو مهارة أو شخصية أو مكان. ترجمه تركيبًا اسميًا ثابتًا لا جملة فعلية، بلا نقطة في آخره، وبصيغة تصلح للتكرار في كل موضع يظهر فيه: في قائمة، في وصف، في حوار. إن ورد الاسم في المسرد فالمسرد هو الحجة ولا اجتهاد معه."
-        }
+        },
         TasnifNass::Wasf => {
             "هذا نص وصفي — وصف عنصر أو مهارة أو مكان. ترجمه بعربية فصيحة سليمة بجمل تامة، تنقل المعلومة والنبرة معًا، من غير حشو تفسيري لم يرد في الأصل ومن غير اختصار يسقط معلومة وردت فيه."
-        }
+        },
         TasnifNass::Qaima => {
             "هذا عنصر واجهة — زر أو تبويب أو بند قائمة. ترجمه بفصحى موجزة على عرف الواجهات العربية: المصدر لا فعل الأمر حيث يستقيم («حفظ» لا «احفظ»)، كلمة أو كلمتان حيث أمكن، بلا نقطة في الآخر، وبثبات تام — البند نفسه يُترجم الترجمة نفسها في كل شاشة."
-        }
+        },
         TasnifNass::Tafseer => {
             "هذا نص مساعدة أو تلميح يظهر عند التمرير أو الوقوف على عنصر. ترجمه جملة قصيرة تامة تشرح وظيفة العنصر مباشرة، وخاطب اللاعب بصيغة المخاطب حيث يرشده النص إلى فعل شيء."
-        }
+        },
         TasnifNass::Nizam => {
             "هذه رسالة نظام — حُفظت اللعبة، انقطع الاتصال، اكتمل التنزيل. ترجمها بصيغة إخبارية موجزة محايدة كما تصاغ رسائل الأنظمة العربية («تم الحفظ»، «انقطع الاتصال بالخادم»)، من غير خطاب شخصي ومن غير زخرفة."
-        }
+        },
         TasnifNass::Khata => {
             "هذه رسالة خطأ يراها اللاعب. ترجمها بعبارة مباشرة تقول ما الذي حدث وما الذي يفعله اللاعب حياله إن ذكره الأصل، من غير لوم ومن غير تهويل، وبمصطلحات تقنية متسقة مع بقية الرسائل."
-        }
+        },
         TasnifNass::Nusub => {
             "هذا نص ثابت — أسماء فريق العمل أو تراخيص أو نص قانوني. ترجمه بفصحى رسمية دقيقة، وأبقِ أسماء الأعلام والمؤسسات والتراخيص بحروفها اللاتينية كما وردت إلا ما نصّ المسرد على تعريبه. في النص القانوني الدقة قبل السلاسة."
-        }
+        },
         TasnifNass::Dakhili => {
             "صُنّف هذا النص داخليًا — معرّف أو مسار أو مفتاح لا يُعرض للاعب عادة — وقد اختار مترجم بشري إرساله رغم ذلك. ترجم الكلمات المقروءة وحدها إن وُجدت، وأبقِ كل ما يشبه المعرّف التقني أو المسار أو المفتاح البرمجي كما هو حرفًا بحرف، فتغييره قد يعطّل اللعبة لا نصّها."
-        }
+        },
         TasnifNass::Majhul => {
             "لم يتبيّن نوع هذا النص من موضعه. ترجمه بفصحى محايدة ملتزمة ببنية الأصل التزامًا وثيقًا، من غير افتراض أنه حوار أو زر أو وصف: لا تضف نبرة ولا تحذف شيئًا، فالترجمة المحافظة هي الوحيدة الصالحة لكل الاحتمالات."
-        }
+        },
     }
 }
 
@@ -329,9 +329,7 @@ pub fn tawjih_nizam(talab: &SiyaqTalab, mahmi: &NassMahmi, bi_thiqa: bool) -> St
 
     nass.push_str(tawjih_tasnif(talab.tasnif));
     nass.push('\n');
-    if talab.thiqat_tasnif < AQALL_THIQAT_TASNIF
-        && !matches!(talab.tasnif, TasnifNass::Majhul)
-    {
+    if talab.thiqat_tasnif < AQALL_THIQAT_TASNIF && !matches!(talab.tasnif, TasnifNass::Majhul) {
         nass.push_str(
             "تنبيه: تصنيف هذا النص غير مؤكد، فهو استنتاج من موضعه لا حقيقة قاطعة. إن بدا لك من \
              النص نفسه أنه من نوع آخر فالتزم الحذر: حافظ على بنية الأصل ولا تفرض عليه قالب \
@@ -411,9 +409,7 @@ fn idraj_qayd_hajm(nass: &mut String, quyud: &QuyudNass) {
         return;
     }
     if quyud.satr_wahid {
-        nass.push_str(
-            "يُعرض هذا النص في سطر واحد لا يلتف. لا تُدخل فواصل أسطر في الترجمة.\n\n",
-        );
+        nass.push_str("يُعرض هذا النص في سطر واحد لا يلتف. لا تُدخل فواصل أسطر في الترجمة.\n\n");
     }
 }
 
@@ -427,7 +423,9 @@ fn idraj_mustalahat(nass: &mut String, mustalahat: &[MustalahMulzim]) {
     if mustalahat.is_empty() {
         return;
     }
-    let mahduda = mustalahat.get(..mustalahat.len().min(AQSA_MUSTALAHAT)).unwrap_or_default();
+    let mahduda = mustalahat
+        .get(..mustalahat.len().min(AQSA_MUSTALAHAT))
+        .unwrap_or_default();
 
     let (thabita, mutarjama): (Vec<_>, Vec<_>) =
         mahduda.iter().partition(|mustalah| mustalah.thabit);
@@ -519,9 +517,7 @@ pub fn risalat_mustakhdim(talab: &SiyaqTalab, mahmi: &NassMahmi) -> String {
 
     let jiwar = talab.jiwar_mahdud();
     if !jiwar.is_empty() {
-        nass.push_str(
-            "\nالسطور المجاورة في الحوار، للسياق فقط — لا تترجمها ولا تضمّنها في الجواب:\n",
-        );
+        nass.push_str("\nالسطور المجاورة في الحوار، للسياق فقط — لا تترجمها ولا تضمّنها في الجواب:\n");
         for satr in jiwar {
             nass.push_str("| ");
             nass.push_str(satr);
@@ -529,7 +525,10 @@ pub fn risalat_mustakhdim(talab: &SiyaqTalab, mahmi: &NassMahmi) -> String {
         }
     }
 
-    let dhakira = talab.dhakira.get(..talab.dhakira.len().min(AQSA_DHAKIRA)).unwrap_or_default();
+    let dhakira = talab
+        .dhakira
+        .get(..talab.dhakira.len().min(AQSA_DHAKIRA))
+        .unwrap_or_default();
     if !dhakira.is_empty() {
         nass.push_str(
             "\nترجمات سابقة معتمدة لنصوص مشابهة في هذا المشروع، فالتزم أسلوبها ومصطلحاتها:\n",
@@ -688,8 +687,8 @@ impl RaddMufassal {
 /// accepting it would ship [`taarib_mustalahat::nass::AlamJawda::Farigh`]
 /// with extra steps.
 pub fn hallil_radd(nass: &str, muzawwid: &str) -> Result<RaddMufassal, KhataTarjama> {
-    let qeema: Value = serde_json::from_str(nass.trim())
-        .map_err(|_| ghayr_mufassal(muzawwid, nass))?;
+    let qeema: Value =
+        serde_json::from_str(nass.trim()).map_err(|_| ghayr_mufassal(muzawwid, nass))?;
     hallil_qeema(&qeema, muzawwid)
 }
 
@@ -755,10 +754,7 @@ pub fn siyaq_khatti(talab: &SiyaqTalab) -> Option<String> {
     }
     let jiwar = talab.jiwar_mahdud();
     if !jiwar.is_empty() {
-        ajza.push(format!(
-            "Surrounding dialogue: {}",
-            jiwar.join(" / ")
-        ));
+        ajza.push(format!("Surrounding dialogue: {}", jiwar.join(" / ")));
     }
 
     // The classification line alone is worth sending — "this is a menu label"

@@ -133,7 +133,7 @@ impl Tafsir for KhataMuharrik {
                 "رُفض مسار يشير خارج مجلد اللعبة. لن يُفحص، لأن فحصه قد يصف محركًا لا تستخدمه \
                  اللعبة."
                     .to_owned()
-            }
+            },
         }
     }
 
@@ -145,8 +145,11 @@ impl Tafsir for KhataMuharrik {
                 jidhr.display()
             ),
             Self::TaadhurQiraatJidhr { jidhr, .. } => {
-                format!("Cannot read the game folder: {}. Check its permissions.", jidhr.display())
-            }
+                format!(
+                    "Cannot read the game folder: {}. Check its permissions.",
+                    jidhr.display()
+                )
+            },
             Self::LaYushbihLuba { jidhr, .. } => format!(
                 "Nothing under {} resembles a game. Check that the path points at the game's own \
                  folder rather than the launcher's or a save folder.",
@@ -160,7 +163,7 @@ impl Tafsir for KhataMuharrik {
                 "Refused a path pointing outside the game folder. It will not be examined, because \
                  doing so could describe an engine the game does not use."
                     .to_owned()
-            }
+            },
         }
     }
 
@@ -168,9 +171,9 @@ impl Tafsir for KhataMuharrik {
         match self {
             Self::JidhrMafqud { .. } => Khutwa::AadaFahsMaktaba,
             Self::TaadhurQiraatJidhr { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladLuba),
-            Self::LaYushbihLuba { .. } => {
-                Khutwa::IkhtiyarMasar { matlub: MasarMatlub::MujalladLuba }
-            }
+            Self::LaYushbihLuba { .. } => Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MujalladLuba,
+            },
             Self::TajawuzHadd { .. } | Self::MasarKharij { .. } => Khutwa::FathTashkhis,
         }
     }
@@ -180,19 +183,19 @@ impl Tafsir for KhataMuharrik {
         match self {
             Self::JidhrMafqud { jidhr } => {
                 let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
-            }
+            },
             Self::TaadhurQiraatJidhr { jidhr, sabab } => {
                 let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
                 siyaq.extend(siyaq_io(sabab));
-            }
+            },
             Self::LaYushbihLuba { jidhr, adad } | Self::TajawuzHadd { jidhr, adad } => {
                 let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
                 let _ = siyaq.insert("adad".to_owned(), QeemaSiyaq::Raqm(i64::from(*adad)));
-            }
+            },
             Self::MasarKharij { masar, jidhr } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
-            }
+            },
         }
         siyaq
     }

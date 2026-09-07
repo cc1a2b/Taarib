@@ -248,15 +248,22 @@ impl KhataMakhzan {
                     return Self::QaidaTalifa {
                         tafsil: risala.clone().unwrap_or_else(|| qeema.to_string()),
                     };
-                }
+                },
                 RamzSqlite::DatabaseBusy | RamzSqlite::DatabaseLocked => {
-                    return Self::QaidaMuqfala { amaliya, muhla_thawan };
-                }
-                _ => {}
+                    return Self::QaidaMuqfala {
+                        amaliya,
+                        muhla_thawan,
+                    };
+                },
+                _ => {},
             }
         }
 
-        Self::TaadhurJumla { amaliya, jadwal, sabab }
+        Self::TaadhurJumla {
+            amaliya,
+            jadwal,
+            sabab,
+        }
     }
 }
 
@@ -312,17 +319,15 @@ impl Tafsir for KhataMakhzan {
         match self {
             Self::TaadhurFath { masar, .. } => {
                 format!("تعذّر فتح قاعدة بيانات تعريب: {}", masar.display())
-            }
+            },
             Self::TaadhurDabt { pragma, .. } => format!(
                 "تعذّر ضبط الاتصال بقاعدة البيانات (الخاصية {pragma})، ولن يُستخدم اتصال ناقص \
                  الضمانات."
             ),
-            Self::TaadhurBirka { muhla_thawan, .. } => format!(
-                "لم يتوفّر اتصال بقاعدة البيانات خلال {muhla_thawan} ثانية. جرّب مرة أخرى."
-            ),
-            Self::TaadhurJumla { .. } => {
-                "تعذّرت عملية على قاعدة بيانات تعريب المحلية.".to_owned()
-            }
+            Self::TaadhurBirka { muhla_thawan, .. } => {
+                format!("لم يتوفّر اتصال بقاعدة البيانات خلال {muhla_thawan} ثانية. جرّب مرة أخرى.")
+            },
+            Self::TaadhurJumla { .. } => "تعذّرت عملية على قاعدة بيانات تعريب المحلية.".to_owned(),
             Self::QaidaMuqfala { muhla_thawan, .. } => format!(
                 "قاعدة البيانات مشغولة بعملية أخرى منذ أكثر من {muhla_thawan} ثانية. \
                  قد يكون فحص المكتبة أو تثبيت رقعة جاريًا؛ جرّب مرة أخرى."
@@ -331,7 +336,7 @@ impl Tafsir for KhataMakhzan {
                 "ملف قاعدة بيانات تعريب تالف. لن يُحذف ولن يُعاد إنشاؤه تلقائيًا لأن مشاريع \
                  الترجمة والنسخ الاحتياطية بداخله؛ أرسل حزمة التشخيص."
                     .to_owned()
-            }
+            },
             Self::IsdarAhdath { mawjud, madum } => format!(
                 "قاعدة البيانات كُتبت بإصدار أحدث من تعريب (مخطّط {mawjud} مقابل {madum}). \
                  حدِّث البرنامج؛ فتحها بهذا الإصدار قد يفقد جزءًا منها."
@@ -343,9 +348,9 @@ impl Tafsir for KhataMakhzan {
                 "الترقية رقم {raqm} المطبَّقة على هذه القاعدة تختلف عمّا يحمله هذا الإصدار. \
                  لا يمكن الاعتماد على شكل الجداول، فتوقّف تعريب عن الكتابة."
             ),
-            Self::HijraMajhula { raqm } => format!(
-                "قاعدة البيانات تسجّل الترقية رقم {raqm} وهي غير معرَّفة في هذا الإصدار."
-            ),
+            Self::HijraMajhula { raqm } => {
+                format!("قاعدة البيانات تسجّل الترقية رقم {raqm} وهي غير معرَّفة في هذا الإصدار.")
+            },
             Self::HijraNaqisa { raqm, aqsa } => format!(
                 "الترقية رقم {raqm} غير مطبَّقة رغم تسجيل الترقية رقم {aqsa} بعدها. \
                  شكل الجداول غير معروف، فتوقّف تعريب عن الكتابة."
@@ -361,10 +366,10 @@ impl Tafsir for KhataMakhzan {
             ),
             Self::SafMafqud { .. } => {
                 "السجلّ المطلوب غير موجود في قاعدة البيانات المحلية. أعد فحص المكتبة.".to_owned()
-            }
+            },
             Self::TaadhurMuamala { .. } => {
                 "تعذّر إتمام عملية الكتابة في قاعدة البيانات، ولم يُكتب منها شيء.".to_owned()
-            }
+            },
         }
     }
 
@@ -372,7 +377,7 @@ impl Tafsir for KhataMakhzan {
         match self {
             Self::TaadhurFath { masar, .. } => {
                 format!("Cannot open Taarib's database: {}", masar.display())
-            }
+            },
             Self::TaadhurDabt { pragma, .. } => format!(
                 "The database connection refused the {pragma} pragma; a connection missing that \
                  guarantee will not be used."
@@ -380,9 +385,11 @@ impl Tafsir for KhataMakhzan {
             Self::TaadhurBirka { muhla_thawan, .. } => format!(
                 "No database connection became available within {muhla_thawan}s. Try again."
             ),
-            Self::TaadhurJumla { amaliya, jadwal, .. } => {
+            Self::TaadhurJumla {
+                amaliya, jadwal, ..
+            } => {
                 format!("A local database operation failed: {amaliya} on {jadwal}.")
-            }
+            },
             Self::QaidaMuqfala { muhla_thawan, .. } => format!(
                 "The database was held by another writer for more than {muhla_thawan}s. A \
                  library scan or a patch install may be running; try again."
@@ -406,12 +413,16 @@ impl Tafsir for KhataMakhzan {
             ),
             Self::HijraMajhula { raqm } => {
                 format!("The database records migration {raqm}, which this build does not define.")
-            }
+            },
             Self::HijraNaqisa { raqm, aqsa } => format!(
                 "Migration {raqm} was never applied although migration {aqsa} after it was. The \
                  schema is a shape no build has been tested against, so Taarib stopped."
             ),
-            Self::SafTalif { jadwal, amud, qeema } => format!(
+            Self::SafTalif {
+                jadwal,
+                amud,
+                qeema,
+            } => format!(
                 "Column {amud} of table {jadwal} holds {qeema}, which is not a value Taarib \
                  defines. The row will not be read rather than be read wrongly."
             ),
@@ -423,10 +434,10 @@ impl Tafsir for KhataMakhzan {
             ),
             Self::SafMafqud { jadwal, miftah } => {
                 format!("No row in {jadwal} for {miftah}. Rescan the library.")
-            }
+            },
             Self::TaadhurMuamala { marhala, .. } => {
                 format!("A database transaction could not be {marhala}; nothing was written.")
-            }
+            },
         }
     }
 
@@ -438,16 +449,16 @@ impl Tafsir for KhataMakhzan {
             | Self::HijraNaqisa { .. }
             | Self::HijraFashila { .. }
             | Self::SafTalif { .. } => Khutwa::IblaghLilMalik,
-            Self::QaidaMuqfala { .. }
-            | Self::TaadhurBirka { .. }
-            | Self::TaadhurMuamala { .. } => Khutwa::AadaMuhawala,
+            Self::QaidaMuqfala { .. } | Self::TaadhurBirka { .. } | Self::TaadhurMuamala { .. } => {
+                Khutwa::AadaMuhawala
+            },
             Self::SafMafqud { .. } => Khutwa::AadaFahsMaktaba,
-            Self::MasarGhayrNassi { .. } => {
-                Khutwa::IkhtiyarMasar { matlub: MasarMatlub::MujalladLuba }
-            }
+            Self::MasarGhayrNassi { .. } => Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MujalladLuba,
+            },
             Self::TaadhurFath { .. } | Self::TaadhurDabt { .. } | Self::TaadhurJumla { .. } => {
                 Khutwa::FathTashkhis
-            }
+            },
         }
     }
 
@@ -457,68 +468,90 @@ impl Tafsir for KhataMakhzan {
             Self::TaadhurFath { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 siyaq.extend(siyaq_sqlite(sabab));
-            }
+            },
             Self::TaadhurDabt { pragma, sabab } => {
                 let _ = siyaq.insert("pragma".to_owned(), QeemaSiyaq::Nass((*pragma).to_owned()));
                 siyaq.extend(siyaq_sqlite(sabab));
-            }
+            },
             Self::TaadhurBirka { muhla_thawan, .. } => {
                 let _ = siyaq.insert("muhla".to_owned(), QeemaSiyaq::Hajm(*muhla_thawan));
-            }
-            Self::TaadhurJumla { amaliya, jadwal, sabab } => {
-                let _ =
-                    siyaq.insert("amaliya".to_owned(), QeemaSiyaq::Nass((*amaliya).to_owned()));
+            },
+            Self::TaadhurJumla {
+                amaliya,
+                jadwal,
+                sabab,
+            } => {
+                let _ = siyaq.insert(
+                    "amaliya".to_owned(),
+                    QeemaSiyaq::Nass((*amaliya).to_owned()),
+                );
                 let _ = siyaq.insert("jadwal".to_owned(), QeemaSiyaq::Nass((*jadwal).to_owned()));
                 siyaq.extend(siyaq_sqlite(sabab));
-            }
-            Self::QaidaMuqfala { amaliya, muhla_thawan } => {
-                let _ =
-                    siyaq.insert("amaliya".to_owned(), QeemaSiyaq::Nass((*amaliya).to_owned()));
+            },
+            Self::QaidaMuqfala {
+                amaliya,
+                muhla_thawan,
+            } => {
+                let _ = siyaq.insert(
+                    "amaliya".to_owned(),
+                    QeemaSiyaq::Nass((*amaliya).to_owned()),
+                );
                 let _ = siyaq.insert("muhla".to_owned(), QeemaSiyaq::Hajm(*muhla_thawan));
-            }
+            },
             Self::QaidaTalifa { tafsil } => {
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::IsdarAhdath { mawjud, madum } => {
                 let _ = siyaq.insert("mawjud".to_owned(), QeemaSiyaq::Raqm(i64::from(*mawjud)));
                 let _ = siyaq.insert("madum".to_owned(), QeemaSiyaq::Raqm(i64::from(*madum)));
-            }
+            },
             Self::HijraFashila { raqm, ism, sabab } => {
                 let _ = siyaq.insert("hijra".to_owned(), QeemaSiyaq::Raqm(i64::from(*raqm)));
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass((*ism).to_owned()));
                 siyaq.extend(siyaq_sqlite(sabab));
-            }
-            Self::BasmaHijraMukhtalifa { raqm, ism, masjala, mahmula } => {
+            },
+            Self::BasmaHijraMukhtalifa {
+                raqm,
+                ism,
+                masjala,
+                mahmula,
+            } => {
                 let _ = siyaq.insert("hijra".to_owned(), QeemaSiyaq::Raqm(i64::from(*raqm)));
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass((*ism).to_owned()));
                 let _ = siyaq.insert("masjala".to_owned(), QeemaSiyaq::Nass(masjala.clone()));
                 let _ = siyaq.insert("mahmula".to_owned(), QeemaSiyaq::Nass(mahmula.clone()));
-            }
+            },
             Self::HijraMajhula { raqm } => {
                 let _ = siyaq.insert("hijra".to_owned(), QeemaSiyaq::Raqm(i64::from(*raqm)));
-            }
+            },
             Self::HijraNaqisa { raqm, aqsa } => {
                 let _ = siyaq.insert("hijra".to_owned(), QeemaSiyaq::Raqm(i64::from(*raqm)));
                 let _ = siyaq.insert("aqsa".to_owned(), QeemaSiyaq::Raqm(i64::from(*aqsa)));
-            }
-            Self::SafTalif { jadwal, amud, qeema } => {
+            },
+            Self::SafTalif {
+                jadwal,
+                amud,
+                qeema,
+            } => {
                 let _ = siyaq.insert("jadwal".to_owned(), QeemaSiyaq::Nass((*jadwal).to_owned()));
                 let _ = siyaq.insert("amud".to_owned(), QeemaSiyaq::Nass((*amud).to_owned()));
                 let _ = siyaq.insert("qeema".to_owned(), QeemaSiyaq::Nass(qeema.clone()));
-            }
+            },
             Self::MasarGhayrNassi { amud, masar } => {
                 let _ = siyaq.insert("amud".to_owned(), QeemaSiyaq::Nass((*amud).to_owned()));
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
             Self::SafMafqud { jadwal, miftah } => {
                 let _ = siyaq.insert("jadwal".to_owned(), QeemaSiyaq::Nass((*jadwal).to_owned()));
                 let _ = siyaq.insert("miftah".to_owned(), QeemaSiyaq::Nass(miftah.clone()));
-            }
+            },
             Self::TaadhurMuamala { marhala, sabab } => {
-                let _ =
-                    siyaq.insert("marhala".to_owned(), QeemaSiyaq::Nass((*marhala).to_owned()));
+                let _ = siyaq.insert(
+                    "marhala".to_owned(),
+                    QeemaSiyaq::Nass((*marhala).to_owned()),
+                );
                 siyaq.extend(siyaq_sqlite(sabab));
-            }
+            },
         }
         siyaq
     }

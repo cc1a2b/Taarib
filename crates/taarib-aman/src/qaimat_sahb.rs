@@ -62,8 +62,8 @@ impl QaimatSahb {
     /// signature, timestamp or duplicate entry, or when the embedded signature
     /// does not verify against `miftah_malik`.
     pub fn min_bayt(bayt: &[u8], miftah_malik: &MiftahAam) -> NatijatAman<Self> {
-        let khaam: QaimatKhaam = serde_json::from_slice(bayt)
-            .map_err(|khata| fashila("parsed", khata.to_string()))?;
+        let khaam: QaimatKhaam =
+            serde_json::from_slice(bayt).map_err(|khata| fashila("parsed", khata.to_string()))?;
 
         if khaam.isdar != ISDAR_QAIMA {
             return Err(fashila(
@@ -73,7 +73,10 @@ impl QaimatSahb {
         }
 
         let Some(tawqee) = min_hex::<64>(&khaam.tawqee) else {
-            return Err(fashila("parsed", "signature is not 128 lowercase hex digits"));
+            return Err(fashila(
+                "parsed",
+                "signature is not 128 lowercase hex digits",
+            ));
         };
 
         // Both dates are judged later, against a clock, and a list whose dates
@@ -93,7 +96,10 @@ impl QaimatSahb {
             };
             let ilgha = Ilgha::jadeed(&madkhal.sabab, &madkhal.waqt);
             if mafatih.insert(miftah, ilgha).is_some() {
-                return Err(fashila("parsed", "the same signing key is revoked more than once"));
+                return Err(fashila(
+                    "parsed",
+                    "the same signing key is revoked more than once",
+                ));
             }
         }
 
@@ -101,7 +107,10 @@ impl QaimatSahb {
         for madkhal in &khaam.ruqa_mulgha {
             let ilgha = Ilgha::jadeed(&madkhal.sabab, &madkhal.waqt);
             if ruqa.insert(madkhal.ruqaa, ilgha).is_some() {
-                return Err(fashila("parsed", "the same patch lineage is revoked more than once"));
+                return Err(fashila(
+                    "parsed",
+                    "the same patch lineage is revoked more than once",
+                ));
             }
         }
 
@@ -109,7 +118,10 @@ impl QaimatSahb {
         for madkhal in &khaam.basmat_mulgha {
             let ilgha = Ilgha::jadeed(&madkhal.sabab, &madkhal.waqt);
             if basmat.insert(madkhal.basma, ilgha).is_some() {
-                return Err(fashila("parsed", "the same content hash is revoked more than once"));
+                return Err(fashila(
+                    "parsed",
+                    "the same content hash is revoked more than once",
+                ));
             }
         }
 
@@ -177,7 +189,7 @@ impl QaimatSahb {
             Err(khata) if khata.kind() == std::io::ErrorKind::NotFound => return Ok(None),
             Err(khata) => {
                 return Err(fashila("read", format!("{}: {khata}", masar.display())));
-            }
+            },
         };
         Self::min_bayt(&bayt, miftah_malik).map(Some)
     }
@@ -219,8 +231,9 @@ impl QaimatSahb {
 
         // absent or unverifiable cache = no cached baseline; the build's own list still floors
         let mukhazzana = Self::min_makhbaa(masarat, miftah_malik).ok().flatten();
-        let tasalsul_asas =
-            mukhazzana.as_ref().map_or(asas.tasalsul, |qaima| qaima.tasalsul.max(asas.tasalsul));
+        let tasalsul_asas = mukhazzana
+            .as_ref()
+            .map_or(asas.tasalsul, |qaima| qaima.tasalsul.max(asas.tasalsul));
 
         let jadeeda = match Self::min_bayt(bayt_jadeed, miftah_malik) {
             Ok(jadeeda) => jadeeda,
@@ -229,9 +242,15 @@ impl QaimatSahb {
                     masdar: masdar.to_owned(),
                     sabab: khata.to_string(),
                 };
-                sajjil_muhawala_maqfula(masarat, MuhawalatTajdid { waqt: al_aan, natija })?;
+                sajjil_muhawala_maqfula(
+                    masarat,
+                    MuhawalatTajdid {
+                        waqt: al_aan,
+                        natija,
+                    },
+                )?;
                 return Ok(Qabul::Marfuda(khata));
-            }
+            },
         };
 
         if jadeeda.tasalsul < tasalsul_asas {
@@ -240,8 +259,17 @@ impl QaimatSahb {
                 jadeeda: jadeeda.tasalsul,
                 asas: tasalsul_asas,
             };
-            sajjil_muhawala_maqfula(masarat, MuhawalatTajdid { waqt: al_aan, natija })?;
-            return Ok(Qabul::Aqdam { jadeeda: jadeeda.tasalsul, asas: tasalsul_asas });
+            sajjil_muhawala_maqfula(
+                masarat,
+                MuhawalatTajdid {
+                    waqt: al_aan,
+                    natija,
+                },
+            )?;
+            return Ok(Qabul::Aqdam {
+                jadeeda: jadeeda.tasalsul,
+                asas: tasalsul_asas,
+            });
         }
 
         kitaba_dharra(&masar_qaima(masarat), bayt_jadeed)
@@ -255,7 +283,10 @@ impl QaimatSahb {
         });
         sijill.akhir_muhawala = Some(MuhawalatTajdid {
             waqt: al_aan,
-            natija: NatijatMuhawala::Najah { masdar: masdar.to_owned(), tasalsul: jadeeda.tasalsul },
+            natija: NatijatMuhawala::Najah {
+                masdar: masdar.to_owned(),
+                tasalsul: jadeeda.tasalsul,
+            },
         });
         uktub_sijill(masarat, &sijill)?;
         Ok(Qabul::Qubilat(jadeeda))
@@ -346,7 +377,10 @@ impl QaimatSahb {
     /// How many revocations the list carries across all three kinds.
     #[must_use]
     pub fn adad(&self) -> usize {
-        self.mafatih.len().saturating_add(self.ruqa.len()).saturating_add(self.basmat.len())
+        self.mafatih
+            .len()
+            .saturating_add(self.ruqa.len())
+            .saturating_add(self.basmat.len())
     }
 }
 
@@ -515,16 +549,23 @@ impl MuhawalatTajdid {
     pub fn wasf_arabi(&self) -> String {
         match &self.natija {
             NatijatMuhawala::Najah { masdar, tasalsul } => {
-                format!("آخر محاولة في {} نجحت من {masdar} بالتسلسل #{tasalsul}.", self.waqt)
-            }
+                format!(
+                    "آخر محاولة في {} نجحت من {masdar} بالتسلسل #{tasalsul}.",
+                    self.waqt
+                )
+            },
             NatijatMuhawala::MustawdaGhayrMutah { sabab } => {
                 format!("آخر محاولة في {} لم تبلغ المستودع: {sabab}.", self.waqt)
-            }
+            },
             NatijatMuhawala::QaimaMutaadhdhira { masdar, sabab } => format!(
                 "آخر محاولة في {} بلغت {masdar} لكنّه لم يقدّم قائمة الإبطال: {sabab}.",
                 self.waqt
             ),
-            NatijatMuhawala::Aqdam { masdar, jadeeda, asas } => format!(
+            NatijatMuhawala::Aqdam {
+                masdar,
+                jadeeda,
+                asas,
+            } => format!(
                 "آخر محاولة في {} عُرضت عليها من {masdar} قائمة أقدم (#{jadeeda}) من \
                  المعتمدة (#{asas})، فأُبقيت المعتمدة.",
                 self.waqt
@@ -541,14 +582,21 @@ impl MuhawalatTajdid {
                 self.waqt
             ),
             NatijatMuhawala::MustawdaGhayrMutah { sabab } => {
-                format!("the last attempt at {} could not reach the registry: {sabab}.", self.waqt)
-            }
+                format!(
+                    "the last attempt at {} could not reach the registry: {sabab}.",
+                    self.waqt
+                )
+            },
             NatijatMuhawala::QaimaMutaadhdhira { masdar, sabab } => format!(
                 "the last attempt at {} reached {masdar}, which did not serve the revocation \
                  list: {sabab}.",
                 self.waqt
             ),
-            NatijatMuhawala::Aqdam { masdar, jadeeda, asas } => format!(
+            NatijatMuhawala::Aqdam {
+                masdar,
+                jadeeda,
+                asas,
+            } => format!(
                 "the last attempt at {} was offered an older list (#{jadeeda}) than the one \
                  held (#{asas}) by {masdar}, and the held one was kept.",
                 self.waqt
@@ -771,7 +819,11 @@ impl QaimaMuraqaba {
         let (qaima, hala) = match QaimatSahb::min_makhbaa(masarat, miftah_malik) {
             Err(khata) => (
                 asliya,
-                HalatQaima::Talifa { sabab: khata.to_string(), julibat: julibat_musajjal, akhir },
+                HalatQaima::Talifa {
+                    sabab: khata.to_string(),
+                    julibat: julibat_musajjal,
+                    akhir,
+                },
             ),
             Ok(None) if sijill.akhir_najah.is_some() => (
                 asliya,
@@ -792,7 +844,7 @@ impl QaimaMuraqaba {
                     }
                 };
                 (asliya, hala)
-            }
+            },
             Ok(Some(mukhazzana)) => {
                 // The record vouches for the cache only when it names the same
                 // sequence: a crash between the two writes, or a file copied in
@@ -810,16 +862,27 @@ impl QaimaMuraqaba {
                     })
                 });
                 // the newer of the two; a tie keeps the fetched one, which is the same list
-                let qaima = if asliya.tasalsul > mukhazzana.tasalsul { asliya } else { mukhazzana };
+                let qaima = if asliya.tasalsul > mukhazzana.tasalsul {
+                    asliya
+                } else {
+                    mukhazzana
+                };
                 let hala = if !qaima.hala_salahiya(al_aan).sariya() {
-                    HalatQaima::Muntahiya { julibat, salih_hatta: qaima.salih_hatta_lahza, akhir }
+                    HalatQaima::Muntahiya {
+                        julibat,
+                        salih_hatta: qaima.salih_hatta_lahza,
+                        akhir,
+                    }
                 } else if hadith && let Some(najah) = najah {
-                    HalatQaima::Muhaddatha { julibat: najah.waqt, masdar: najah.masdar.clone() }
+                    HalatQaima::Muhaddatha {
+                        julibat: najah.waqt,
+                        masdar: najah.masdar.clone(),
+                    }
                 } else {
                     HalatQaima::Mukhazzana { julibat, akhir }
                 };
                 (qaima, hala)
-            }
+            },
         };
 
         Self::min_ajzaa(qaima, hala, al_aan, nafidha)
@@ -848,7 +911,7 @@ impl QaimaMuraqaba {
                     sabab: sabab.clone(),
                     waqt: muhawala.waqt,
                 })
-            }
+            },
             _ => None,
         });
         Self { qaima, hala, rafd }
@@ -896,11 +959,18 @@ impl QaimaMuraqaba {
             // Answered above.
             HalatQaima::Muhaddatha { .. } => String::new(),
             HalatQaima::Mukhazzana { julibat, akhir } => {
-                let waqt =
-                    julibat.map_or_else(|| "وقت غير مسجّل".to_owned(), |julibat| julibat.to_string());
-                format!("آخر تأكيد لها من المستودع في {waqt}؛ {}", akhir_arabi(akhir))
-            }
-            HalatQaima::Muntahiya { julibat, salih_hatta, akhir } => {
+                let waqt = julibat
+                    .map_or_else(|| "وقت غير مسجّل".to_owned(), |julibat| julibat.to_string());
+                format!(
+                    "آخر تأكيد لها من المستودع في {waqt}؛ {}",
+                    akhir_arabi(akhir)
+                )
+            },
+            HalatQaima::Muntahiya {
+                julibat,
+                salih_hatta,
+                akhir,
+            } => {
                 let asl = julibat.map_or_else(
                     || "وهي المضمّنة في هذه النسخة".to_owned(),
                     |julibat| format!("وآخر تأكيد لها من المستودع في {julibat}"),
@@ -909,13 +979,17 @@ impl QaimaMuraqaba {
                     "انتهت صلاحيتها في {salih_hatta} ولم تُحدَّث، {asl}؛ {}",
                     akhir_arabi(akhir)
                 )
-            }
+            },
             HalatQaima::LamTujlab { akhir } => format!(
                 "لم تُجلب أيّ قائمة من المستودع على هذا الجهاز قط، فالمستخدمة هي المضمّنة في \
                  هذه النسخة؛ {}",
                 akhir_arabi(akhir)
             ),
-            HalatQaima::Talifa { sabab, julibat, akhir } => {
+            HalatQaima::Talifa {
+                sabab,
+                julibat,
+                akhir,
+            } => {
                 let asl = julibat.map_or_else(String::new, |julibat| {
                     format!(" مع أنّ المستودع أكّد قائمة في {julibat}")
                 });
@@ -924,7 +998,7 @@ impl QaimaMuraqaba {
                      هذه النسخة؛ {}",
                     akhir_arabi(akhir)
                 )
-            }
+            },
         };
         format!("{ras}{dhayl} فحص الإبطال جرى على هذه القائمة لا على قائمة المستودع الحالية.")
     }
@@ -950,11 +1024,20 @@ impl QaimaMuraqaba {
         let dhayl = match &self.hala {
             HalatQaima::Muhaddatha { .. } => String::new(),
             HalatQaima::Mukhazzana { julibat, akhir } => {
-                let waqt = julibat
-                    .map_or_else(|| "an unrecorded time".to_owned(), |julibat| julibat.to_string());
-                format!("The registry last confirmed it at {waqt}; {}", akhir_injilizi(akhir))
-            }
-            HalatQaima::Muntahiya { julibat, salih_hatta, akhir } => {
+                let waqt = julibat.map_or_else(
+                    || "an unrecorded time".to_owned(),
+                    |julibat| julibat.to_string(),
+                );
+                format!(
+                    "The registry last confirmed it at {waqt}; {}",
+                    akhir_injilizi(akhir)
+                )
+            },
+            HalatQaima::Muntahiya {
+                julibat,
+                salih_hatta,
+                akhir,
+            } => {
                 let asl = julibat.map_or_else(
                     || "it is the one compiled into this build".to_owned(),
                     |julibat| format!("the registry last confirmed it at {julibat}"),
@@ -963,13 +1046,17 @@ impl QaimaMuraqaba {
                     "It expired at {salih_hatta} and was not refreshed; {asl}; {}",
                     akhir_injilizi(akhir)
                 )
-            }
+            },
             HalatQaima::LamTujlab { akhir } => format!(
                 "No list has ever been fetched from the registry on this machine, so the one in \
                  use is the one compiled into this build; {}",
                 akhir_injilizi(akhir)
             ),
-            HalatQaima::Talifa { sabab, julibat, akhir } => {
+            HalatQaima::Talifa {
+                sabab,
+                julibat,
+                akhir,
+            } => {
                 let asl = julibat.map_or_else(String::new, |julibat| {
                     format!(" although the registry confirmed a list at {julibat}")
                 });
@@ -978,7 +1065,7 @@ impl QaimaMuraqaba {
                      one compiled into this build; {}",
                     akhir_injilizi(akhir)
                 )
-            }
+            },
         };
         format!(
             "{ras}{dhayl} The revocation check ran against this list, not against the \
@@ -1005,7 +1092,7 @@ pub fn sijill_tajdid(masarat: &Masarat) -> SijillTajdid {
                     "the revocation refresh record is unreadable and is treated as empty"
                 );
                 SijillTajdid::default()
-            }
+            },
         },
         Err(khata) if khata.kind() == std::io::ErrorKind::NotFound => SijillTajdid::default(),
         Err(khata) => {
@@ -1015,7 +1102,7 @@ pub fn sijill_tajdid(masarat: &Masarat) -> SijillTajdid {
                 "the revocation refresh record could not be read and is treated as empty"
             );
             SijillTajdid::default()
-        }
+        },
     }
 }
 
@@ -1028,7 +1115,10 @@ struct Ilgha {
 
 impl Ilgha {
     fn jadeed(sabab: &str, waqt: &str) -> Self {
-        Self { sabab: sabab.to_owned(), waqt: waqt.to_owned() }
+        Self {
+            sabab: sabab.to_owned(),
+            waqt: waqt.to_owned(),
+        }
     }
 }
 
@@ -1090,7 +1180,10 @@ fn sajjil_muhawala_maqfula(masarat: &Masarat, muhawala: MuhawalatTajdid) -> Nati
 }
 
 fn uktub_sijill(masarat: &Masarat, sijill: &SijillTajdid) -> NatijatAman<()> {
-    let mubayyan = SijillTajdid { isdar: ISDAR_SIJILL, ..sijill.clone() };
+    let mubayyan = SijillTajdid {
+        isdar: ISDAR_SIJILL,
+        ..sijill.clone()
+    };
     let bayt = serde_json::to_vec_pretty(&mubayyan)
         .map_err(|khata| fashila("written", khata.to_string()))?;
     kitaba_dharra(&masar_sijill(masarat), &bayt)
@@ -1175,7 +1268,10 @@ fn tul(adad: usize) -> u64 {
 
 fn min_hex<const N: usize>(nass: &str) -> Option<[u8; N]> {
     // lowercase hex only — the canonical form
-    if !nass.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()) {
+    if !nass
+        .bytes()
+        .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+    {
         return None;
     }
     let mut khraj = [0u8; N];
@@ -1184,7 +1280,10 @@ fn min_hex<const N: usize>(nass: &str) -> Option<[u8; N]> {
 }
 
 fn fashila(amal: &'static str, sabab: impl Into<String>) -> KhataAman {
-    KhataAman::QaimatSahbFashila { amal, sabab: sabab.into() }
+    KhataAman::QaimatSahbFashila {
+        amal,
+        sabab: sabab.into(),
+    }
 }
 
 #[cfg(test)]
@@ -1228,7 +1327,11 @@ mod ikhtibarat {
         Ok(KatibQaima::jadeed(tasalsul, USDIRAT, SALIH_HATTA)
             .ilgha_miftah([1u8; 32], "the signing key was compromised", USDIRAT)
             .ilgha_ruqaa(ruqaa_mulgha()?, "the patch bricks the game", USDIRAT)
-            .ilgha_basma(Basma::min_bayt([2u8; 32]), "the package carries a bad pak", USDIRAT)
+            .ilgha_basma(
+                Basma::min_bayt([2u8; 32]),
+                "the package carries a bad pak",
+                USDIRAT,
+            )
             .uktub(&malik())?)
     }
 
@@ -1249,13 +1352,23 @@ mod ikhtibarat {
 
         assert_eq!(qaima.tasalsul(), 2);
         assert_eq!(qaima.adad(), 3);
-        assert_eq!(qaima.mulgha_miftah(&[1u8; 32]), Some("the signing key was compromised"));
-        assert_eq!(qaima.mulgha_ruqaa(ruqaa_mulgha()?), Some("the patch bricks the game"));
+        assert_eq!(
+            qaima.mulgha_miftah(&[1u8; 32]),
+            Some("the signing key was compromised")
+        );
+        assert_eq!(
+            qaima.mulgha_ruqaa(ruqaa_mulgha()?),
+            Some("the patch bricks the game")
+        );
         assert_eq!(
             qaima.mulgha_basma(&Basma::min_bayt([2u8; 32])),
             Some("the package carries a bad pak")
         );
-        assert_eq!(qaima.mulgha_miftah(&[9u8; 32]), None, "an unrelated key is not revoked");
+        assert_eq!(
+            qaima.mulgha_miftah(&[9u8; 32]),
+            None,
+            "an unrelated key is not revoked"
+        );
 
         // The pre-flight order: key first, then lineage, then hash.
         let bariya = Basma::min_bayt([8u8; 32]);
@@ -1338,19 +1451,42 @@ mod ikhtibarat {
             "mirror",
             waqt,
         )?;
-        assert!(matches!(qabul, Qabul::Aqdam { jadeeda: 3, asas: 5 }));
+        assert!(matches!(
+            qabul,
+            Qabul::Aqdam {
+                jadeeda: 3,
+                asas: 5
+            }
+        ));
 
         let mukhazzana =
             QaimatSahb::min_makhbaa(&masarat, &malik().aam())?.ok_or("the cache vanished")?;
-        assert_eq!(mukhazzana.tasalsul(), 5, "the replayed list must not touch the cache");
-        assert!(mukhazzana.mulgha_miftah(&[1u8; 32]).is_some(), "the revocation survived");
+        assert_eq!(
+            mukhazzana.tasalsul(),
+            5,
+            "the replayed list must not touch the cache"
+        );
+        assert!(
+            mukhazzana.mulgha_miftah(&[1u8; 32]).is_some(),
+            "the revocation survived"
+        );
 
         // The attempt was recorded as what it was.
         let sijill = sijill_tajdid(&masarat);
-        assert_eq!(sijill.akhir_najah.as_ref().map(|najah| najah.tasalsul), Some(5));
+        assert_eq!(
+            sijill.akhir_najah.as_ref().map(|najah| najah.tasalsul),
+            Some(5)
+        );
         assert!(matches!(
-            sijill.akhir_muhawala.as_ref().map(|muhawala| &muhawala.natija),
-            Some(NatijatMuhawala::Aqdam { jadeeda: 3, asas: 5, .. })
+            sijill
+                .akhir_muhawala
+                .as_ref()
+                .map(|muhawala| &muhawala.natija),
+            Some(NatijatMuhawala::Aqdam {
+                jadeeda: 3,
+                asas: 5,
+                ..
+            })
         ));
         Ok(())
     }
@@ -1371,7 +1507,13 @@ mod ikhtibarat {
             "mirror",
             al_aan()?,
         )?;
-        assert!(matches!(qabul, Qabul::Aqdam { jadeeda: 2, asas: 4 }));
+        assert!(matches!(
+            qabul,
+            Qabul::Aqdam {
+                jadeeda: 2,
+                asas: 4
+            }
+        ));
         assert!(QaimatSahb::min_makhbaa(&masarat, &malik().aam())?.is_none());
         Ok(())
     }
@@ -1393,7 +1535,9 @@ mod ikhtibarat {
         assert!(matches!(qabul, Qabul::Marfuda(_)));
         assert!(QaimatSahb::min_makhbaa(&masarat, &malik().aam())?.is_none());
         assert!(matches!(
-            sijill_tajdid(&masarat).akhir_muhawala.map(|muhawala| muhawala.natija),
+            sijill_tajdid(&masarat)
+                .akhir_muhawala
+                .map(|muhawala| muhawala.natija),
             Some(NatijatMuhawala::QaimaMutaadhdhira { .. })
         ));
         Ok(())
@@ -1407,9 +1551,15 @@ mod ikhtibarat {
 
         let muraqaba = QaimaMuraqaba::iqra(&masarat, &malik().aam(), asliya, al_aan()?, NAFIDHA);
 
-        assert!(matches!(muraqaba.hala(), HalatQaima::LamTujlab { akhir: None }));
+        assert!(matches!(
+            muraqaba.hala(),
+            HalatQaima::LamTujlab { akhir: None }
+        ));
         assert!(!muraqaba.hala().muhaddatha());
-        assert!(muraqaba.rafd().is_none(), "a machine that never went online still installs");
+        assert!(
+            muraqaba.rafd().is_none(),
+            "a machine that never went online still installs"
+        );
         assert_eq!(muraqaba.qaima().tasalsul(), 1);
         assert!(muraqaba.wasf_injilizi().contains("has ever been fetched"));
         assert!(muraqaba.wasf_arabi().contains("لم تُجلب"));
@@ -1450,8 +1600,15 @@ mod ikhtibarat {
             HalatQaima::Mukhazzana { julibat: Some(julibat), .. } if *julibat == waqt
         ));
         assert!(!muraqaba.hala().muhaddatha());
-        assert!(muraqaba.rafd().is_none(), "a stale but valid list does not block");
-        assert_eq!(muraqaba.qaima().tasalsul(), 2, "stale still means the fetched list");
+        assert!(
+            muraqaba.rafd().is_none(),
+            "a stale but valid list does not block"
+        );
+        assert_eq!(
+            muraqaba.qaima().tasalsul(),
+            2,
+            "stale still means the fetched list"
+        );
         Ok(())
     }
 
@@ -1471,10 +1628,24 @@ mod ikhtibarat {
         )?;
 
         let baad_amayn = "2028-09-06T12:00:00Z".parse::<Timestamp>()?;
-        let muraqaba =
-            QaimaMuraqaba::iqra(&masarat, &malik().aam(), asliya.clone(), baad_amayn, NAFIDHA);
-        assert!(matches!(muraqaba.hala(), HalatQaima::Muntahiya { julibat: Some(_), .. }));
-        assert!(muraqaba.rafd().is_none(), "an expired list on an offline machine does not block");
+        let muraqaba = QaimaMuraqaba::iqra(
+            &masarat,
+            &malik().aam(),
+            asliya.clone(),
+            baad_amayn,
+            NAFIDHA,
+        );
+        assert!(matches!(
+            muraqaba.hala(),
+            HalatQaima::Muntahiya {
+                julibat: Some(_),
+                ..
+            }
+        ));
+        assert!(
+            muraqaba.rafd().is_none(),
+            "an expired list on an offline machine does not block"
+        );
         assert!(muraqaba.wasf_injilizi().contains("expired"));
 
         // The compiled-in list expires too, and says so without a fetch record.
@@ -1486,7 +1657,10 @@ mod ikhtibarat {
             baad_amayn,
             NAFIDHA,
         );
-        assert!(matches!(muraqaba.hala(), HalatQaima::Muntahiya { julibat: None, .. }));
+        assert!(matches!(
+            muraqaba.hala(),
+            HalatQaima::Muntahiya { julibat: None, .. }
+        ));
         Ok(())
     }
 
@@ -1507,8 +1681,18 @@ mod ikhtibarat {
         std::fs::write(masar_qaima(&masarat), b"not a list any more")?;
 
         let muraqaba = QaimaMuraqaba::iqra(&masarat, &malik().aam(), asliya, waqt, NAFIDHA);
-        assert!(matches!(muraqaba.hala(), HalatQaima::Talifa { julibat: Some(_), .. }));
-        assert_eq!(muraqaba.qaima().tasalsul(), 1, "the compiled-in list is the floor");
+        assert!(matches!(
+            muraqaba.hala(),
+            HalatQaima::Talifa {
+                julibat: Some(_),
+                ..
+            }
+        ));
+        assert_eq!(
+            muraqaba.qaima().tasalsul(),
+            1,
+            "the compiled-in list is the floor"
+        );
         assert!(!muraqaba.hala().muhaddatha());
         assert!(muraqaba.wasf_injilizi().contains("could not be read"));
 
@@ -1539,19 +1723,33 @@ mod ikhtibarat {
         )?;
 
         let baad_daqiqa = waqt.checked_add(SignedDuration::from_secs(60))?;
-        let muraqaba =
-            QaimaMuraqaba::iqra(&masarat, &malik().aam(), asliya.clone(), baad_daqiqa, NAFIDHA);
-        let rafd = muraqaba.rafd().ok_or("a reachable registry without a list must refuse")?;
+        let muraqaba = QaimaMuraqaba::iqra(
+            &masarat,
+            &malik().aam(),
+            asliya.clone(),
+            baad_daqiqa,
+            NAFIDHA,
+        );
+        let rafd = muraqaba
+            .rafd()
+            .ok_or("a reachable registry without a list must refuse")?;
         assert!(rafd.injilizi().contains("404"), "{}", rafd.injilizi());
         assert!(rafd.arabi().contains("404"), "{}", rafd.arabi());
-        assert!(matches!(muraqaba.hala(), HalatQaima::LamTujlab { akhir: Some(_) }));
+        assert!(matches!(
+            muraqaba.hala(),
+            HalatQaima::LamTujlab { akhir: Some(_) }
+        ));
 
         // Long after the attempt, the finding is old news and no longer refuses;
         // the state still names it.
         let baad_yawm = waqt.checked_add(SignedDuration::from_hours(24))?;
         let muraqaba = QaimaMuraqaba::iqra(&masarat, &malik().aam(), asliya, baad_yawm, NAFIDHA);
         assert!(muraqaba.rafd().is_none());
-        assert!(muraqaba.wasf_injilizi().contains("did not serve the revocation list"));
+        assert!(
+            muraqaba
+                .wasf_injilizi()
+                .contains("did not serve the revocation list")
+        );
         Ok(())
     }
 
@@ -1573,8 +1771,15 @@ mod ikhtibarat {
         let muraqaba =
             QaimaMuraqaba::iqra(&masarat, &malik().aam(), qaima_farigha(1)?, waqt, NAFIDHA);
         assert!(muraqaba.rafd().is_none(), "offline is not a refusal");
-        assert!(matches!(muraqaba.hala(), HalatQaima::LamTujlab { akhir: Some(_) }));
-        assert!(muraqaba.wasf_injilizi().contains("could not reach the registry"));
+        assert!(matches!(
+            muraqaba.hala(),
+            HalatQaima::LamTujlab { akhir: Some(_) }
+        ));
+        assert!(
+            muraqaba
+                .wasf_injilizi()
+                .contains("could not reach the registry")
+        );
         assert!(muraqaba.wasf_arabi().contains("لم تبلغ المستودع"));
         Ok(())
     }
@@ -1619,14 +1824,22 @@ mod ikhtibarat {
             &masarat,
             MuhawalatTajdid {
                 waqt: baad_saa,
-                natija: NatijatMuhawala::MustawdaGhayrMutah { sabab: "timed out".to_owned() },
+                natija: NatijatMuhawala::MustawdaGhayrMutah {
+                    sabab: "timed out".to_owned(),
+                },
             },
         )?;
 
         // A success an hour ago followed by a failure just now: the registry has
         // not confirmed anything recently, and the state must say so.
         let muraqaba = QaimaMuraqaba::iqra(&masarat, &malik().aam(), asliya, baad_saa, NAFIDHA);
-        assert!(matches!(muraqaba.hala(), HalatQaima::Mukhazzana { julibat: Some(_), .. }));
+        assert!(matches!(
+            muraqaba.hala(),
+            HalatQaima::Mukhazzana {
+                julibat: Some(_),
+                ..
+            }
+        ));
         assert!(muraqaba.rafd().is_none());
         Ok(())
     }

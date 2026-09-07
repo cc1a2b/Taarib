@@ -241,13 +241,7 @@ impl HajmMuqannan {
     /// hand, so that if the atlas ever changes its quantization this stops
     /// compiling instead of silently producing keys the packer will not find.
     #[must_use]
-    pub fn miftah(
-        self,
-        khatt: u8,
-        muarrif: u32,
-        namat: NamatSafha,
-        bakat: u8,
-    ) -> MiftahShakl {
+    pub fn miftah(self, khatt: u8, muarrif: u32, namat: NamatSafha, bakat: u8) -> MiftahShakl {
         MiftahShakl::jadeed(khatt, muarrif, self.biksal(), namat, bakat)
     }
 }
@@ -291,22 +285,19 @@ impl SababLaHajm {
     pub fn wasf(self) -> String {
         match self {
             Self::LamYuqas => {
-                "no size was ever observed for this string; it falls to the runtime path"
-                    .to_owned()
-            }
-            Self::GhayrMuntahi => {
-                "the reported size was not a finite number".to_owned()
-            }
+                "no size was ever observed for this string; it falls to the runtime path".to_owned()
+            },
+            Self::GhayrMuntahi => "the reported size was not a finite number".to_owned(),
             Self::SaghirJiddan { hajm } => {
                 format!("the reported size {hajm} is below the {ADNA_HAJM_BIKSAL}px floor")
-            }
+            },
             Self::KabirJiddan { hajm } => {
                 format!("the reported size {hajm} is above the {AQSA_HAJM_BIKSAL}px ceiling")
-            }
+            },
             Self::HudhifaBiHadd => {
                 "every size this string was measured at was dropped by the project size cap"
                     .to_owned()
-            }
+            },
         }
     }
 
@@ -316,7 +307,10 @@ impl SababLaHajm {
     /// which are two different things to fix.
     #[must_use]
     pub const fn qeesa(self) -> bool {
-        matches!(self, Self::GhayrMuntahi | Self::SaghirJiddan { .. } | Self::KabirJiddan { .. })
+        matches!(
+            self,
+            Self::GhayrMuntahi | Self::SaghirJiddan { .. } | Self::KabirJiddan { .. }
+        )
     }
 }
 
@@ -725,7 +719,12 @@ impl IktishafMaqasat {
     fn sajjil_nass(&mut self, nass: NassId, hajm: f32, masdar: MasdarHajm) {
         match HajmMuqannan::min_biksal(hajm) {
             Ok(muqannan) => {
-                let shahid = ShahidHajm { hajm: muqannan, masdar, khaam: hajm, adad: 1 };
+                let shahid = ShahidHajm {
+                    hajm: muqannan,
+                    masdar,
+                    khaam: hajm,
+                    adad: 1,
+                };
                 let _ = self
                     .shuhud
                     .entry(nass)
@@ -736,12 +735,12 @@ impl IktishafMaqasat {
                 // A string that once produced a usable size is no longer a
                 // refusal, whatever an earlier bad sighting said.
                 let _ = self.marfuda.remove(&nass);
-            }
+            },
             Err(sabab) => {
                 if !self.shuhud.contains_key(&nass) {
                     let _ = self.marfuda.insert(nass, sabab);
                 }
-            }
+            },
         }
     }
 
@@ -775,8 +774,7 @@ impl IktishafMaqasat {
                     .then(thani.adad.cmp(&awwal.adad))
                     .then(awwal.hajm.cmp(&thani.hajm))
             });
-            let muhmala: Vec<ShahidHajm> =
-                shuhud.split_off(shuhud.len().min(AQSA_MAQASAT_LILNASS));
+            let muhmala: Vec<ShahidHajm> = shuhud.split_off(shuhud.len().min(AQSA_MAQASAT_LILNASS));
             shuhud.sort_by_key(|shahid| shahid.hajm);
 
             for shahid in &muhmala {
@@ -791,7 +789,14 @@ impl IktishafMaqasat {
                     });
             }
 
-            let _ = maqasat.insert(*nass, MaqasatNass { nass: *nass, shuhud, muhmala });
+            let _ = maqasat.insert(
+                *nass,
+                MaqasatNass {
+                    nass: *nass,
+                    shuhud,
+                    muhmala,
+                },
+            );
         }
 
         // Pass two: the project cap, over what pass one kept.
@@ -818,15 +823,24 @@ impl IktishafMaqasat {
 
         let mut bila_hajm: Vec<NassBilaHajm> = mufragha
             .iter()
-            .map(|nass| NassBilaHajm { nass: *nass, sabab: SababLaHajm::HudhifaBiHadd })
+            .map(|nass| NassBilaHajm {
+                nass: *nass,
+                sabab: SababLaHajm::HudhifaBiHadd,
+            })
             .collect();
         for mudkhal in nusus {
             if maqasat.contains_key(&mudkhal.id) || mufragha.contains(&mudkhal.id) {
                 continue;
             }
-            let sabab =
-                self.marfuda.get(&mudkhal.id).copied().unwrap_or(SababLaHajm::LamYuqas);
-            bila_hajm.push(NassBilaHajm { nass: mudkhal.id, sabab });
+            let sabab = self
+                .marfuda
+                .get(&mudkhal.id)
+                .copied()
+                .unwrap_or(SababLaHajm::LamYuqas);
+            bila_hajm.push(NassBilaHajm {
+                nass: mudkhal.id,
+                sabab,
+            });
         }
         bila_hajm.sort_by_key(|bila| bila.nass);
         bila_hajm.dedup_by_key(|bila| bila.nass);
@@ -876,8 +890,7 @@ fn jami_ahjam(
 fn qassim_ittihad(
     majmu: &BTreeMap<u16, (HajmMuqannan, MasdarHajm, u32)>,
 ) -> (Vec<HajmMuqannan>, Vec<HajmMuhmal>) {
-    let mut murattaba: Vec<(HajmMuqannan, MasdarHajm, u32)> =
-        majmu.values().copied().collect();
+    let mut murattaba: Vec<(HajmMuqannan, MasdarHajm, u32)> = majmu.values().copied().collect();
     if murattaba.len() <= AQSA_MAQASAT_MASHRU {
         let mut mahfuza: Vec<HajmMuqannan> =
             murattaba.into_iter().map(|(hajm, _, _)| hajm).collect();
@@ -886,12 +899,15 @@ fn qassim_ittihad(
     }
 
     murattaba.sort_by(|awwal, thani| {
-        awwal.1.cmp(&thani.1).then(thani.2.cmp(&awwal.2)).then(awwal.0.cmp(&thani.0))
+        awwal
+            .1
+            .cmp(&thani.1)
+            .then(thani.2.cmp(&awwal.2))
+            .then(awwal.0.cmp(&thani.0))
     });
     let masqata_khaam = murattaba.split_off(AQSA_MAQASAT_MASHRU);
 
-    let mut mahfuza: Vec<HajmMuqannan> =
-        murattaba.into_iter().map(|(hajm, _, _)| hajm).collect();
+    let mut mahfuza: Vec<HajmMuqannan> = murattaba.into_iter().map(|(hajm, _, _)| hajm).collect();
     mahfuza.sort_unstable();
 
     let masqata: Vec<HajmMuhmal> = masqata_khaam

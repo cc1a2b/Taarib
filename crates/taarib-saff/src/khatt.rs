@@ -45,8 +45,11 @@ use crate::khata::{KhataKhatt, KhataSaff};
 
 /// The tables Arabic shaping cannot work without, checked in this order so the
 /// first failure names the most fundamental thing that is missing.
-const JADAWIL_MATLUBA: [(&str, Tag); 3] =
-    [("cmap", Tag::new(b"cmap")), ("GSUB", Tag::new(b"GSUB")), ("GPOS", Tag::new(b"GPOS"))];
+const JADAWIL_MATLUBA: [(&str, Tag); 3] = [
+    ("cmap", Tag::new(b"cmap")),
+    ("GSUB", Tag::new(b"GSUB")),
+    ("GPOS", Tag::new(b"GPOS")),
+];
 
 /// The `GSUB` features that turn characters into joined letterforms.
 ///
@@ -98,8 +101,7 @@ const HURUF_MATLUBA: [char; 40] = [
     // hamza, alef madda, alef hamza above, alef hamza below
     '\u{0621}', '\u{0622}', '\u{0623}', '\u{0625}',
     // teh marbuta, alef maqsura, tatweel
-    '\u{0629}', '\u{0649}', '\u{0640}',
-    // fatha, damma, kasra, shadda, sukun
+    '\u{0629}', '\u{0649}', '\u{0640}', // fatha, damma, kasra, shadda, sukun
     '\u{064E}', '\u{064F}', '\u{0650}', '\u{0651}', '\u{0652}',
 ];
 
@@ -318,13 +320,28 @@ impl MawridKhatt {
                 })
                 .collect();
             (
-                nass_khatt(&khatt, StringId::TYPOGRAPHIC_FAMILY_NAME, StringId::FAMILY_NAME),
-                nass_khatt(&khatt, StringId::TYPOGRAPHIC_SUBFAMILY_NAME, StringId::SUBFAMILY_NAME),
+                nass_khatt(
+                    &khatt,
+                    StringId::TYPOGRAPHIC_FAMILY_NAME,
+                    StringId::FAMILY_NAME,
+                ),
+                nass_khatt(
+                    &khatt,
+                    StringId::TYPOGRAPHIC_SUBFAMILY_NAME,
+                    StringId::SUBFAMILY_NAME,
+                ),
                 mahawir,
             )
         };
         let huwiya = HuwiyatKhatt::min_bayt(bayt.as_slice(), fahras);
-        Ok(Self { bayt, fahras, huwiya, aila, namat, mahawir })
+        Ok(Self {
+            bayt,
+            fahras,
+            huwiya,
+            aila,
+            namat,
+            mahawir,
+        })
     }
 
     /// This font's identity, which is what the atlas and the layout cache key
@@ -508,13 +525,19 @@ impl MawridKhatt {
         let mut adad: u32 = 0;
         let mut awwal: Option<u32> = None;
         for harf in HURUF_MATLUBA {
-            if kharita.map(harf).is_none_or(|muarrif| muarrif == GlyphId::NOTDEF) {
+            if kharita
+                .map(harf)
+                .is_none_or(|muarrif| muarrif == GlyphId::NOTDEF)
+            {
                 adad = adad.saturating_add(1);
                 let _ = awwal.get_or_insert_with(|| u32::from(harf));
             }
         }
         if let Some(awwal) = awwal {
-            return Err(Khata::min_tafsir(&KhataKhatt::TaghtiyaNaqisa { adad, awwal }));
+            return Err(Khata::min_tafsir(&KhataKhatt::TaghtiyaNaqisa {
+                adad,
+                awwal,
+            }));
         }
 
         Ok(())
@@ -547,14 +570,20 @@ impl MawridKhatt {
             if ghayr_marii(harf) || !ruiya.insert(harf) {
                 continue;
             }
-            if kharita.map(harf).is_none_or(|muarrif| muarrif == GlyphId::NOTDEF) {
+            if kharita
+                .map(harf)
+                .is_none_or(|muarrif| muarrif == GlyphId::NOTDEF)
+            {
                 adad = adad.saturating_add(1);
                 let _ = awwal.get_or_insert_with(|| u32::from(harf));
             }
         }
 
         if let Some(awwal) = awwal {
-            return Err(Khata::min_tafsir(&KhataKhatt::TaghtiyaNaqisa { adad, awwal }));
+            return Err(Khata::min_tafsir(&KhataKhatt::TaghtiyaNaqisa {
+                adad,
+                awwal,
+            }));
         }
 
         Ok(())
@@ -721,13 +750,19 @@ fn tahleel(bayt: &[u8], fahras: u32) -> Natija<FontRef<'_>> {
             if fahras == 0 {
                 Ok(khatt)
             } else {
-                Err(Khata::min_tafsir(&KhataKhatt::FahrasKharij { fahras, adad: 1 }))
+                Err(Khata::min_tafsir(&KhataKhatt::FahrasKharij {
+                    fahras,
+                    adad: 1,
+                }))
             }
         },
         FileRef::Collection(majmua) => {
             let adad = majmua.len();
             if fahras >= adad {
-                return Err(Khata::min_tafsir(&KhataKhatt::FahrasKharij { fahras, adad }));
+                return Err(Khata::min_tafsir(&KhataKhatt::FahrasKharij {
+                    fahras,
+                    adad,
+                }));
             }
             majmua.get(fahras).map_err(|sabab| talif(&sabab))
         },
@@ -738,7 +773,9 @@ fn tahleel(bayt: &[u8], fahras: u32) -> Natija<FontRef<'_>> {
 /// the user reads is Taarib's; what `read-fonts` reported travels underneath it
 /// for the diagnostics bundle.
 fn talif(sabab: &ReadError) -> Khata {
-    Khata::min_tafsir(&KhataKhatt::TahleelFashil { tafsil: sabab.to_string() })
+    Khata::min_tafsir(&KhataKhatt::TahleelFashil {
+        tafsil: sabab.to_string(),
+    })
 }
 
 /// Reads a name from the `name` table, preferring the typographic id over the

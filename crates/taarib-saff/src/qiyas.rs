@@ -69,8 +69,8 @@ use crate::khata::KhataSaff;
 use crate::maqta::{FursatQat, HarfMashkul, MaqtaMantiqi, MaqtaMashkul};
 use crate::natija::{Harf, SatrMansuq, TakhtitNass, TaqreerTajawuz};
 use crate::talab::{
-    Dharra, Ittijah, KhiyaratTakhtit, LughaNass, Muhadhaha, NamatDabt, NitaqUslub,
-    SiyasatTajawuz, TalabTakhtit, Uslub,
+    Dharra, Ittijah, KhiyaratTakhtit, LughaNass, Muhadhaha, NamatDabt, NitaqUslub, SiyasatTajawuz,
+    TalabTakhtit, Uslub,
 };
 use crate::wasl::{MakhzanTashkeel, shakkil_maqati_bi_asalib};
 
@@ -188,9 +188,7 @@ fn uslub_ind(nitaqat: &[NitaqUslub], mawqi: u32) -> (u16, Uslub) {
             mughattiya.push((nitaq.tul, fahras));
         }
     }
-    mughattiya.sort_unstable_by(|awwal, thani| {
-        thani.0.cmp(&awwal.0).then(awwal.1.cmp(&thani.1))
-    });
+    mughattiya.sort_unstable_by(|awwal, thani| thani.0.cmp(&awwal.0).then(awwal.1.cmp(&thani.1)));
 
     let mut uslub = Uslub::default();
     let mut muarrif = 0_u16;
@@ -227,7 +225,10 @@ fn tabaud_harf(nitaqat: &[NitaqUslub], mawqi: u32, khiyarat: &KhiyaratTakhtit) -
     if nitaqat.is_empty() {
         return khiyarat.tabaud_ahruf;
     }
-    uslub_ind(nitaqat, mawqi).1.tabaud.unwrap_or(khiyarat.tabaud_ahruf)
+    uslub_ind(nitaqat, mawqi)
+        .1
+        .tabaud
+        .unwrap_or(khiyarat.tabaud_ahruf)
 }
 
 /// The width one glyph contributes, advance plus whatever spacing applies to it.
@@ -267,7 +268,11 @@ fn ard_maqta_bil_tabaud(nass: &str, maqta: &MaqtaMashkul, talab: &TalabTakhtit<'
     if maqta.asl.dharra.is_some() {
         return maqta.ard;
     }
-    maqta.huruf.iter().map(|harf| ard_harf(nass, harf, talab)).sum()
+    maqta
+        .huruf
+        .iter()
+        .map(|harf| ard_harf(nass, harf, talab))
+        .sum()
 }
 
 /// Whether the cluster at a byte offset is a word space.
@@ -281,7 +286,10 @@ fn masafa_ind(nass: &str, mawqi: u32) -> bool {
 
 /// The width of a sequence of runs including the request's spacing.
 fn ard_maqati_bil_tabaud(nass: &str, maqati: &[MaqtaMashkul], talab: &TalabTakhtit<'_>) -> f32 {
-    maqati.iter().map(|maqta| ard_maqta_bil_tabaud(nass, maqta, talab)).sum()
+    maqati
+        .iter()
+        .map(|maqta| ard_maqta_bil_tabaud(nass, maqta, talab))
+        .sum()
 }
 
 /// The width of the whitespace that trails a line, measured on its **logical**
@@ -327,12 +335,7 @@ fn ard_dhail(nass: &str, maqati: &[MaqtaMashkul], talab: &TalabTakhtit<'_>) -> f
 
 /// The width a line is judged by, given the trailing whitespace already measured
 /// for it.
-fn ard_assatr(
-    nass: &str,
-    maqati: &[MaqtaMashkul],
-    talab: &TalabTakhtit<'_>,
-    dhail: f32,
-) -> f32 {
+fn ard_assatr(nass: &str, maqati: &[MaqtaMashkul], talab: &TalabTakhtit<'_>, dhail: f32) -> f32 {
     (ard_maqati_bil_tabaud(nass, maqati, talab) - dhail).max(0.0)
 }
 
@@ -359,7 +362,9 @@ fn ard_assatr(
 ///   [`SiyasatTajawuz::Taqlis`] floor is not a positive size at or below it.
 pub fn tahaqquq(talab: &TalabTakhtit<'_>) -> Natija<()> {
     if !talab.hajm.is_finite() || talab.hajm < HAJM_ADNA || talab.hajm > HAJM_AQSA {
-        return Err(Khata::min_tafsir(&KhataSaff::HajmGhayrSalih { hajm: talab.hajm }));
+        return Err(Khata::min_tafsir(&KhataSaff::HajmGhayrSalih {
+            hajm: talab.hajm,
+        }));
     }
     if let Some(ard) = talab.ard_mutah
         && (!ard.is_finite() || ard <= 0.0)
@@ -593,12 +598,7 @@ fn fursa_baad(furas: &[FursatQat], baad: u32) -> Option<u32> {
 ///
 /// An atom answers with its own start: a placeholder or a sprite is one
 /// indivisible box, and the only place it can be broken is before it.
-fn hadd_attajawuz(
-    nass: &str,
-    maqta: &MaqtaMashkul,
-    mutah: f32,
-    talab: &TalabTakhtit<'_>,
-) -> u32 {
+fn hadd_attajawuz(nass: &str, maqta: &MaqtaMashkul, mutah: f32, talab: &TalabTakhtit<'_>) -> u32 {
     if maqta.asl.dharra.is_some() {
         return maqta.asl.nitaq.start;
     }
@@ -646,7 +646,9 @@ fn ashkil_maqta(
         talab.khiyarat,
         makhzan,
     )?;
-    Ok(mashkula.pop().unwrap_or_else(|| MaqtaMashkul::min_asl(asl.clone())))
+    Ok(mashkula
+        .pop()
+        .unwrap_or_else(|| MaqtaMashkul::min_asl(asl.clone())))
 }
 
 /// Cuts the line at a byte offset and reshapes both sides of the cut.
@@ -685,7 +687,10 @@ fn iqta(
     talab: &TalabTakhtit<'_>,
     makhzan: &mut MakhzanTashkeel,
 ) -> Natija<()> {
-    while jari.last().is_some_and(|akhir| akhir.asl.nitaq.start >= mawqi) {
+    while jari
+        .last()
+        .is_some_and(|akhir| akhir.asl.nitaq.start >= mawqi)
+    {
         if let Some(akhir) = jari.pop() {
             tabur.push_front(akhir);
         }
@@ -707,7 +712,9 @@ fn iqta(
         }
     }
 
-    if jari.is_empty() && let Some(awwal) = tabur.pop_front() {
+    if jari.is_empty()
+        && let Some(awwal) = tabur.pop_front()
+    {
         jari.push(awwal);
     }
 
@@ -718,7 +725,9 @@ fn iqta(
     };
 
     if let Some(akhir) = jari.last().map(|akhir| akhir.asl.clone()) {
-        let Ok(nihaya) = usize::try_from(hadd) else { return Ok(()) };
+        let Ok(nihaya) = usize::try_from(hadd) else {
+            return Ok(());
+        };
         if let Some(ras) = dhail.get(..nihaya.min(dhail.len())) {
             let mashkul = ashkil_maqta(ras, &akhir, talab, makhzan)?;
             if let Some(hadaf) = jari.last_mut() {
@@ -774,7 +783,11 @@ fn iqta_assutur(
     talab: &TalabTakhtit<'_>,
     makhzan: &mut MakhzanTashkeel,
 ) -> Natija<Vec<SatrMaqtu>> {
-    let mutah = if talab.khiyarat.satr_wahid { None } else { talab.ard_mutah };
+    let mutah = if talab.khiyarat.satr_wahid {
+        None
+    } else {
+        talab.ard_mutah
+    };
 
     let mut tabur: VecDeque<MaqtaMashkul> = maqati.into();
     let mut sutur: Vec<SatrMaqtu> = Vec::new();
@@ -796,7 +809,9 @@ fn iqta_assutur(
             if let Some(qat) = fursa_ilzamiya(furas, nitaq.start.max(bidaya), nitaq.end) {
                 jari.push(maqta);
                 let masdar = dhail.get_or_insert_with(|| nass.to_owned());
-                iqta(masdar, &mut mansi, &mut jari, &mut tabur, qat, talab, makhzan)?;
+                iqta(
+                    masdar, &mut mansi, &mut jari, &mut tabur, qat, talab, makhzan,
+                )?;
                 ilzami = true;
                 break;
             }
@@ -823,7 +838,9 @@ fn iqta_assutur(
 
             if let Some(qat) = qat.filter(|qat| *qat > bidaya) {
                 let masdar = dhail.get_or_insert_with(|| nass.to_owned());
-                iqta(masdar, &mut mansi, &mut jari, &mut tabur, qat, talab, makhzan)?;
+                iqta(
+                    masdar, &mut mansi, &mut jari, &mut tabur, qat, talab, makhzan,
+                )?;
                 break;
             }
         }
@@ -832,7 +849,11 @@ fn iqta_assutur(
             break;
         }
         let nihaya = jari.last().map_or(bidaya, |akhir| akhir.asl.nitaq.end);
-        sutur.push(SatrMaqtu { maqati: jari, mantiqi: bidaya..nihaya, ilzami });
+        sutur.push(SatrMaqtu {
+            maqati: jari,
+            mantiqi: bidaya..nihaya,
+            ilzami,
+        });
     }
 
     Ok(sutur)
@@ -868,16 +889,20 @@ fn ibni(
 ) -> Natija<BinaSutur> {
     tahaqquq(talab)?;
     if nass.is_empty() || maqati.is_empty() {
-        return Ok(BinaSutur::farigha(tahleel.ittijah_asas(), talab.hajm, talab));
+        return Ok(BinaSutur::farigha(
+            tahleel.ittijah_asas(),
+            talab.hajm,
+            talab,
+        ));
     }
 
     match talab.khiyarat.tajawuz {
         SiyasatTajawuz::Taqlis { adna } => {
             taqlis(nass, maqati, furas, talab, tahleel, makhzan, adna)
-        }
+        },
         SiyasatTajawuz::Ballagh | SiyasatTajawuz::Ikhtisar => {
             ibni_asasi(nass, maqati, furas, talab, tahleel, makhzan, talab.hajm)
-        }
+        },
     }
 }
 
@@ -978,10 +1003,19 @@ fn ansha_bi_hajm(
     makhzan: &mut MakhzanTashkeel,
     hajm: f32,
 ) -> Natija<BinaSutur> {
-    let nisba = if talab.hajm > DIQQA { hajm / talab.hajm } else { 1.0 };
+    let nisba = if talab.hajm > DIQQA {
+        hajm / talab.hajm
+    } else {
+        1.0
+    };
     let nitaqat = nitaqat_bi_nisba(talab.nitaqat, nisba);
     let khiyarat = khiyarat_bi_nisba(talab.khiyarat, nisba);
-    let farii = TalabTakhtit { hajm, nitaqat: &nitaqat, khiyarat: &khiyarat, ..*talab };
+    let farii = TalabTakhtit {
+        hajm,
+        nitaqat: &nitaqat,
+        khiyarat: &khiyarat,
+        ..*talab
+    };
 
     let lugha = lugha_almatlub(nass, &khiyarat);
     let mantiqiya =
@@ -1114,7 +1148,10 @@ fn ikhtasir(
     let hadhf = maqta_hadhf(nass, talab, tahleel.mustawa_asas(), makhzan, hajm)?;
     let ard_hadhf = ard_maqta_bil_tabaud(nass, &hadhf, talab);
     if ard_hadhf > mutah + DIQQA {
-        return Err(Khata::min_tafsir(&KhataSaff::TaadhurAlqat { ard: ard_hadhf, mutah }));
+        return Err(Khata::min_tafsir(&KhataSaff::TaadhurAlqat {
+            ard: ard_hadhf,
+            mutah,
+        }));
     }
 
     let akhir_satr = sutur.len().saturating_sub(1);
@@ -1229,7 +1266,9 @@ fn maqta_hadhf(
         talab.khiyarat,
         makhzan,
     )?;
-    let mut mashkul = mashkula.pop().unwrap_or_else(|| MaqtaMashkul::min_asl(asl.clone()));
+    let mut mashkul = mashkula
+        .pop()
+        .unwrap_or_else(|| MaqtaMashkul::min_asl(asl.clone()));
 
     let nihaya = u32::try_from(nass.len()).unwrap_or(u32::MAX);
     for harf in &mut mashkul.huruf {
@@ -1272,11 +1311,14 @@ fn iqtata_satr(
 ) -> Natija<()> {
     satr.maqati.retain(|maqta| maqta.asl.nitaq.start < hadd);
 
-    let yashtur = satr.maqati.last().is_some_and(|akhir| {
-        akhir.asl.nitaq.end > hadd && akhir.asl.dharra.is_none()
-    });
+    let yashtur = satr
+        .maqati
+        .last()
+        .is_some_and(|akhir| akhir.asl.nitaq.end > hadd && akhir.asl.dharra.is_none());
     if yashtur && let Some(akhir) = satr.maqati.last().map(|akhir| akhir.asl.clone()) {
-        let Ok(nihaya) = usize::try_from(hadd) else { return Ok(()) };
+        let Ok(nihaya) = usize::try_from(hadd) else {
+            return Ok(());
+        };
         let mut maqsus = akhir.clone();
         maqsus.nitaq = akhir.nitaq.start..hadd;
         if let Some(ras) = nass.get(..nihaya.min(nass.len())) {
@@ -1342,7 +1384,11 @@ fn irtifa_assatr(
                 aqsa = aqsa.max(khatt.qiyasat(maqta.asl.hajm).irtifa_satr);
             }
         }
-        if aqsa > 0.0 { aqsa } else { talab.khutut.awwal().qiyasat(hajm).irtifa_satr }
+        if aqsa > 0.0 {
+            aqsa
+        } else {
+            talab.khutut.awwal().qiyasat(hajm).irtifa_satr
+        }
     });
     asas.max(suud + hubut)
 }
@@ -1389,14 +1435,14 @@ fn muhadhaha_assatr(satr: &SatrJari, talab: &TalabTakhtit<'_>) -> f32 {
             } else {
                 0.0
             }
-        }
+        },
         Muhadhaha::Nihaya => {
             if min_alyameen {
                 0.0
             } else {
                 fadl
             }
-        }
+        },
         Muhadhaha::Wasat => fadl * 0.5,
     }
 }
@@ -1420,7 +1466,9 @@ fn taqreer(
     ard: f32,
     irtifa: f32,
 ) -> Option<TaqreerTajawuz> {
-    let tajawuz_tul = talab.irtifa_mutah.is_some_and(|mutah| irtifa > mutah + DIQQA);
+    let tajawuz_tul = talab
+        .irtifa_mutah
+        .is_some_and(|mutah| irtifa > mutah + DIQQA);
 
     let Some(mutah) = talab.ard_mutah else {
         if !tajawuz_tul {
@@ -1643,11 +1691,26 @@ fn ibni_asasi(
 /// a value substituted at runtime. Its width was counted in every measurement,
 /// so the hole is exactly the size the layout reserved.
 fn mawqi_huruf(nass: &str, bina: BinaSutur, talab: &TalabTakhtit<'_>) -> TakhtitNass {
-    let BinaSutur { sutur, ard, irtifa, ittijah, hajm, tajawuz, maqsus, nitaqat, khiyarat } = bina;
+    let BinaSutur {
+        sutur,
+        ard,
+        irtifa,
+        ittijah,
+        hajm,
+        tajawuz,
+        maqsus,
+        nitaqat,
+        khiyarat,
+    } = bina;
 
     // The layout is positioned against the spans and options it was *built*
     // with, which after shrink-to-fit are not the caller's originals.
-    let farii = TalabTakhtit { hajm, nitaqat: &nitaqat, khiyarat: &khiyarat, ..*talab };
+    let farii = TalabTakhtit {
+        hajm,
+        nitaqat: &nitaqat,
+        khiyarat: &khiyarat,
+        ..*talab
+    };
 
     let mut takhtit = TakhtitNass::farigh(ittijah, hajm);
     takhtit.ard = ard;

@@ -216,7 +216,7 @@ pub fn bayan(masar_maktaba: &str) -> String {
             // Control characters have no place in a path and would produce
             // invalid JSON if one arrived; they are dropped rather than emitted,
             // because a path containing one is already not a path.
-            harf if (harf as u32) < 0x20 => {}
+            harf if (harf as u32) < 0x20 => {},
             harf => masar.push(harf),
         }
     }
@@ -468,7 +468,9 @@ unsafe fn jid_rabt_jihaz(mut talee: *const c_void) -> Option<*mut MalumatInshaTa
 /// `*const c_void`. The conversion is a pointer-to-pointer cast rather than a
 /// transmute, so it stays a cast the compiler checks.
 fn ka_muashir(dalla: vk::PFN_vkVoidFunction) -> *const c_void {
-    dalla.map_or_else(core::ptr::null, |dalla| (dalla as *const ()).cast::<c_void>())
+    dalla.map_or_else(core::ptr::null, |dalla| {
+        (dalla as *const ()).cast::<c_void>()
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -596,7 +598,12 @@ impl WasfSilsila {
     /// produces.
     pub fn sath(&self) -> Result<WasfSath, KhataTabaqa> {
         let (sigha, sirgb) = sigha_min_vulkan(self.sigha)?;
-        Ok(WasfSath { ard: self.imtidad.width, irtifa: self.imtidad.height, sigha, sirgb })
+        Ok(WasfSath {
+            ard: self.imtidad.width,
+            irtifa: self.imtidad.height,
+            sigha,
+            sirgb,
+        })
     }
 }
 
@@ -619,9 +626,11 @@ pub fn sigha_min_vulkan(sigha: vk::Format) -> Result<(SighatSath, bool), KhataTa
         vk::Format::R8G8B8A8_SRGB => Ok((SighatSath::Rgba8, true)),
         vk::Format::A2B10G10R10_UNORM_PACK32 | vk::Format::A2R10G10B10_UNORM_PACK32 => {
             Ok((SighatSath::Rgb10a2, false))
-        }
+        },
         vk::Format::R16G16B16A16_SFLOAT => Ok((SighatSath::Rgba16f, false)),
-        _ => Err(KhataTabaqa::SighaGhayrMaduma { sigha: format!("VkFormat({})", sigha.as_raw()) }),
+        _ => Err(KhataTabaqa::SighaGhayrMaduma {
+            sigha: format!("VkFormat({})", sigha.as_raw()),
+        }),
     }
 }
 
@@ -844,13 +853,18 @@ pub fn bina(jihaz: vk::Device) -> Result<BinaVulkan, KhataTabaqa> {
                 .to_owned(),
         });
     };
-    let silsila = jadwal.hala.lock().salasil.last().cloned().ok_or_else(|| {
-        KhataTabaqa::SathTaghayyar {
-            sabab: "the device has no swapchain yet; the game has not called \
+    let silsila =
+        jadwal
+            .hala
+            .lock()
+            .salasil
+            .last()
+            .cloned()
+            .ok_or_else(|| KhataTabaqa::SathTaghayyar {
+                sabab: "the device has no swapchain yet; the game has not called \
                     vkCreateSwapchainKHR"
-                .to_owned(),
-        }
-    })?;
+                    .to_owned(),
+            })?;
     Ok(BinaVulkan {
         jihaz: jadwal.jihaz.clone(),
         jihaz_madi: jadwal.jihaz_madi,
@@ -866,7 +880,12 @@ pub fn bina(jihaz: vk::Device) -> Result<BinaVulkan, KhataTabaqa> {
 /// swapchain rather than the first one here.
 #[must_use]
 pub fn ajhiza() -> Vec<vk::Device> {
-    sijill().lock().ajhiza.values().map(|jadwal| jadwal.jihaz.handle()).collect()
+    sijill()
+        .lock()
+        .ajhiza
+        .values()
+        .map(|jadwal| jadwal.jihaz.handle())
+        .collect()
 }
 
 /// What the layer has recorded about a device, for the diagnostics bundle.
@@ -979,10 +998,15 @@ extern "system" fn insha_mithal(
 
     // SAFETY: `maqbad` is a live dispatchable instance handle.
     let miftah = unsafe { miftah(maqbad.as_raw()) };
-    let _ = sijill()
-        .lock()
-        .mithalat
-        .insert(miftah, Arc::new(JadwalMithal { mithal, gipa_talee, itlaf, qudurat_sath }));
+    let _ = sijill().lock().mithalat.insert(
+        miftah,
+        Arc::new(JadwalMithal {
+            mithal,
+            gipa_talee,
+            itlaf,
+            qudurat_sath,
+        }),
+    );
     vk::Result::SUCCESS
 }
 
@@ -1054,9 +1078,9 @@ extern "system" fn insha_jihaz(
     // SAFETY: a physical device is dispatchable and shares its instance's
     // loader key, which is how the instance record is found from it.
     let sahib = unsafe { mithal_min_maqbad(jihaz_madi.as_raw()) };
-    let maqbad_mithal = sahib.as_ref().map_or(vk::Instance::null(), |jadwal| {
-        jadwal.mithal.handle()
-    });
+    let maqbad_mithal = sahib
+        .as_ref()
+        .map_or(vk::Instance::null(), |jadwal| jadwal.mithal.handle());
 
     // SAFETY: `vkCreateDevice` is an instance-level command, resolved against
     // the instance this physical device came from.
@@ -1092,18 +1116,18 @@ extern "system" fn insha_jihaz(
     // SAFETY: `gdpa_talee` resolves against the device just created.
     let jihaz = unsafe { ash::Device::load_with(hall, maqbad) };
     // SAFETY: the physical device is live and belongs to this instance.
-    let dhakira = unsafe { sahib.mithal.get_physical_device_memory_properties(jihaz_madi) };
+    let dhakira = unsafe {
+        sahib
+            .mithal
+            .get_physical_device_memory_properties(jihaz_madi)
+    };
 
     // SAFETY: every name below is a command of the device just created, and each
     // requested type is that command's own signature from the specification.
     let (itlaf, insha_silsila, itlaf_silsila, suwar_silsila, taqdeem, jib_tabur) = unsafe {
         (
             hall_jihaz::<vk::PFN_vkDestroyDevice>(gdpa_talee, maqbad, c"vkDestroyDevice"),
-            hall_jihaz::<vk::PFN_vkCreateSwapchainKHR>(
-                gdpa_talee,
-                maqbad,
-                c"vkCreateSwapchainKHR",
-            ),
+            hall_jihaz::<vk::PFN_vkCreateSwapchainKHR>(gdpa_talee, maqbad, c"vkCreateSwapchainKHR"),
             hall_jihaz::<vk::PFN_vkDestroySwapchainKHR>(
                 gdpa_talee,
                 maqbad,
@@ -1123,7 +1147,11 @@ extern "system" fn insha_jihaz(
     hala.athar.push(format!(
         "device created with {} memory types; swapchain support: {}",
         dhakira.memory_type_count,
-        if insha_silsila.is_some() { "yes" } else { "no, this device is left alone" }
+        if insha_silsila.is_some() {
+            "yes"
+        } else {
+            "no, this device is left alone"
+        }
     ));
 
     // SAFETY: `maqbad` is a live dispatchable device handle.
@@ -1172,12 +1200,7 @@ extern "system" fn itlaf_jihaz(jihaz: vk::Device, mukhassis: *const vk::Allocati
 /// the only way to know — and a layer that guessed "family zero" would build a
 /// command pool that fails validation on every game whose present queue is not
 /// the first one.
-extern "system" fn jib_tabur(
-    jihaz: vk::Device,
-    usra: u32,
-    fahras: u32,
-    mukhraj: *mut vk::Queue,
-) {
+extern "system" fn jib_tabur(jihaz: vk::Device, usra: u32, fahras: u32, mukhraj: *mut vk::Queue) {
     // Both early returns leave the application without its queue, and there is
     // no better answer available: reaching either means this layer is in the
     // dispatch chain for a device it never saw created, so it holds no pointer
@@ -1263,16 +1286,20 @@ extern "system" fn insha_silsila(
     let mut nuskha = unsafe { *malumat };
     let matlub = nuskha.image_usage | vk::ImageUsageFlags::TRANSFER_SRC;
     let mut madum = None;
-    if !nuskha.image_usage.contains(vk::ImageUsageFlags::TRANSFER_SRC) {
+    if !nuskha
+        .image_usage
+        .contains(vk::ImageUsageFlags::TRANSFER_SRC)
+    {
         if let Some(qudurat) = jadwal.sahib.qudurat_sath {
             let mut qudra = vk::SurfaceCapabilitiesKHR::default();
             // SAFETY: the physical device and the surface are both live — the
             // surface is the one the application is about to create a swapchain
             // for — and `qudra` is one live, aligned structure to write into.
-            let natija =
-                unsafe { qudurat(jadwal.jihaz_madi, nuskha.surface, &raw mut qudra) };
+            let natija = unsafe { qudurat(jadwal.jihaz_madi, nuskha.surface, &raw mut qudra) };
             if natija == vk::Result::SUCCESS
-                && qudra.supported_usage_flags.contains(vk::ImageUsageFlags::TRANSFER_SRC)
+                && qudra
+                    .supported_usage_flags
+                    .contains(vk::ImageUsageFlags::TRANSFER_SRC)
             {
                 nuskha.image_usage = matlub;
             } else {
@@ -1304,7 +1331,8 @@ extern "system" fn insha_silsila(
         hala.salasil.retain(|wasf| wasf.silsila != qadeema);
     }
     if natija != vk::Result::SUCCESS {
-        hala.athar.push(format!("vkCreateSwapchainKHR failed: {natija}"));
+        hala.athar
+            .push(format!("vkCreateSwapchainKHR failed: {natija}"));
         return natija;
     }
 
@@ -1383,7 +1411,11 @@ extern "system" fn itlaf_silsila(
     let Some(jadwal) = (unsafe { jihaz_min_maqbad(jihaz.as_raw()) }) else {
         return;
     };
-    jadwal.hala.lock().salasil.retain(|wasf| wasf.silsila != silsila);
+    jadwal
+        .hala
+        .lock()
+        .salasil
+        .retain(|wasf| wasf.silsila != silsila);
     if let Some(itlaf) = jadwal.itlaf_silsila {
         // SAFETY: the swapchain is still live — nothing below has destroyed it —
         // and `itlaf` is the next layer's own `vkDestroySwapchainKHR`.
@@ -1500,7 +1532,10 @@ fn ishtaghil_taqdeem(
 
     let usra = {
         let hala = jadwal.hala.lock();
-        hala.tawabir.iter().find(|masjjal| masjjal.tabur == tabur).map(|masjjal| masjjal.usra)
+        hala.tawabir
+            .iter()
+            .find(|masjjal| masjjal.tabur == tabur)
+            .map(|masjjal| masjjal.usra)
     };
 
     let mut siyaq = SiyaqTaqdeem {
@@ -1562,7 +1597,7 @@ fn dalla_mithal(ism: &CStr) -> Option<vk::PFN_vkVoidFunction> {
     let dalla = match ism.to_bytes() {
         b"vkGetInstanceProcAddr" => {
             amma!(vkGetInstanceProcAddr, vk::PFN_vkGetInstanceProcAddr)
-        }
+        },
         b"vkCreateInstance" => amma!(insha_mithal, vk::PFN_vkCreateInstance),
         b"vkDestroyInstance" => amma!(itlaf_mithal, vk::PFN_vkDestroyInstance),
         b"vkCreateDevice" => amma!(insha_jihaz, vk::PFN_vkCreateDevice),
@@ -1713,9 +1748,7 @@ pub extern "system" fn taaribTabaqaGetDeviceProcAddr(
 ///
 /// Never. See [`vkGetInstanceProcAddr`].
 #[unsafe(no_mangle)]
-pub extern "system" fn vkNegotiateLoaderLayerInterfaceVersion(
-    bunya: *mut c_void,
-) -> vk::Result {
+pub extern "system" fn vkNegotiateLoaderLayerInterfaceVersion(bunya: *mut c_void) -> vk::Result {
     tafawud(bunya)
 }
 
@@ -1822,7 +1855,10 @@ fn ila_spirv(masdar: &str, marhala: naga::ShaderStage) -> Result<Vec<u32>, Khata
     // scanner to have an opinion about.
     khiyarat_spv.flags.remove(spv::WriterFlags::DEBUG);
 
-    let nuqtat = spv::PipelineOptions { shader_stage: marhala, entry_point: "main".to_owned() };
+    let nuqtat = spv::PipelineOptions {
+        shader_stage: marhala,
+        entry_point: "main".to_owned(),
+    };
     spv::write_vec(&wahda, &malumat, &khiyarat_spv, Some(&nuqtat))
         .map_err(|sabab| khata("emitting SPIR-V for", format!("{sabab:?}")))
 }
@@ -2005,7 +2041,8 @@ pub fn ikhtar_naw_dhakira(
         .enumerate()
         .filter_map(|(fahras, naw)| u32::try_from(fahras).ok().map(|fahras| (fahras, naw)))
         .find(|(fahras, naw)| {
-            1u32.checked_shl(*fahras).is_some_and(|bit| matlub & bit != 0)
+            1u32.checked_shl(*fahras)
+                .is_some_and(|bit| matlub & bit != 0)
                 && naw.property_flags.contains(khasais)
         })
         .map(|(fahras, _)| fahras)
@@ -2013,7 +2050,10 @@ pub fn ikhtar_naw_dhakira(
 
 /// A failed Vulkan call as the error the trait returns.
 fn khata_mawrid(mawrid: &'static str, natija: vk::Result) -> KhataTabaqa {
-    KhataTabaqa::MawridFashil { mawrid, sabab: format!("{natija}") }
+    KhataTabaqa::MawridFashil {
+        mawrid,
+        sabab: format!("{natija}"),
+    }
 }
 
 /// A pixel count as a float, for the projection and the vertices.
@@ -2061,7 +2101,12 @@ struct MahfazaMazjura {
 impl MahfazaMazjura {
     /// An allocation that does not exist yet.
     const fn khaliya() -> Self {
-        Self { mahfaza: vk::Buffer::null(), dhakira: vk::DeviceMemory::null(), saa: 0, unwan: 0 }
+        Self {
+            mahfaza: vk::Buffer::null(),
+            dhakira: vk::DeviceMemory::null(),
+            saa: 0,
+            unwan: 0,
+        }
     }
 
     /// Whether anything has been allocated.
@@ -2253,7 +2298,11 @@ impl KhattafVulkan {
             sath.irtifa,
             sath.sigha.ism(),
             bina.silsila.suwar.len(),
-            if bina.silsila.istikhdam.contains(vk::ImageUsageFlags::TRANSFER_SRC) {
+            if bina
+                .silsila
+                .istikhdam
+                .contains(vk::ImageUsageFlags::TRANSFER_SRC)
+            {
                 "available"
             } else {
                 "unavailable: the swapchain has no TRANSFER_SRC usage"
@@ -2321,7 +2370,13 @@ impl KhattafVulkan {
         fahras_sura: u32,
         intizar: Vec<vk::Semaphore>,
     ) {
-        self.siyaq = Some(SiyaqItar { tabur, usra, fahras_sura, intizar, sallam: false });
+        self.siyaq = Some(SiyaqItar {
+            tabur,
+            usra,
+            fahras_sura,
+            intizar,
+            sallam: false,
+        });
     }
 
     /// The semaphore the present must wait on, or [`None`] if nothing was done.
@@ -2334,7 +2389,11 @@ impl KhattafVulkan {
     #[must_use]
     pub fn isharat_taqdeem(&self) -> Option<vk::Semaphore> {
         let siyaq = self.siyaq.as_ref()?;
-        if siyaq.sallam { siyaq.intizar.first().copied() } else { None }
+        if siyaq.sallam {
+            siyaq.intizar.first().copied()
+        } else {
+            None
+        }
     }
 
     /// Ends the frame, dropping the present context.
@@ -2377,8 +2436,7 @@ impl KhattafVulkan {
         let mutatallabat = unsafe { self.jihaz.get_buffer_memory_requirements(mahfaza) };
         let khasais =
             vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT;
-        let Some(naw) =
-            ikhtar_naw_dhakira(&self.dhakira, mutatallabat.memory_type_bits, khasais)
+        let Some(naw) = ikhtar_naw_dhakira(&self.dhakira, mutatallabat.memory_type_bits, khasais)
         else {
             // SAFETY: the buffer is live and unbound, so destroying it here
             // releases everything this function allocated.
@@ -2404,7 +2462,7 @@ impl KhattafVulkan {
                 // SAFETY: the buffer is live and unbound.
                 unsafe { self.jihaz.destroy_buffer(mahfaza, None) };
                 return Err(khata_mawrid(mawrid, natija));
-            }
+            },
         };
 
         // SAFETY: both handles are live, the allocation is at least
@@ -2422,7 +2480,8 @@ impl KhattafVulkan {
 
         // SAFETY: the allocation is live, host-visible, and not already mapped.
         let muashir = match unsafe {
-            self.jihaz.map_memory(dhakira, 0, vk::WHOLE_SIZE, vk::MemoryMapFlags::empty())
+            self.jihaz
+                .map_memory(dhakira, 0, vk::WHOLE_SIZE, vk::MemoryMapFlags::empty())
         } {
             Ok(muashir) => muashir,
             Err(natija) => {
@@ -2432,7 +2491,7 @@ impl KhattafVulkan {
                     self.jihaz.free_memory(dhakira, None);
                 }
                 return Err(khata_mawrid(mawrid, natija));
-            }
+            },
         };
 
         Ok(MahfazaMazjura {
@@ -2648,8 +2707,9 @@ impl KhattafVulkan {
         let ahjam = [vk::DescriptorPoolSize::default()
             .ty(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
             .descriptor_count(1)];
-        let malumat =
-            vk::DescriptorPoolCreateInfo::default().pool_sizes(&ahjam).max_sets(1);
+        let malumat = vk::DescriptorPoolCreateInfo::default()
+            .pool_sizes(&ahjam)
+            .max_sets(1);
         // SAFETY: `ahjam` outlives the call.
         self.hawd_wasf = unsafe { self.jihaz.create_descriptor_pool(&malumat, None) }
             .map_err(|natija| khata_mawrid("descriptor pool", natija))?;
@@ -2662,12 +2722,15 @@ impl KhattafVulkan {
         // the call; the pool was created with room for exactly this one set.
         let majmuat = unsafe { self.jihaz.allocate_descriptor_sets(&malumat) }
             .map_err(|natija| khata_mawrid("descriptor set", natija))?;
-        self.majmuat_wasf = majmuat.into_iter().next().ok_or_else(|| {
-            KhataTabaqa::MawridFashil {
-                mawrid: "descriptor set",
-                sabab: "vkAllocateDescriptorSets returned no sets for a request of one".to_owned(),
-            }
-        })?;
+        self.majmuat_wasf =
+            majmuat
+                .into_iter()
+                .next()
+                .ok_or_else(|| KhataTabaqa::MawridFashil {
+                    mawrid: "descriptor set",
+                    sabab: "vkAllocateDescriptorSets returned no sets for a request of one"
+                        .to_owned(),
+                })?;
 
         // Linear filtering and clamp to edge, for the same two reasons the
         // OpenGL backend gives: the atlas is sampled at close to one texel per
@@ -2717,7 +2780,7 @@ impl KhattafVulkan {
                 // pipeline, because the pipeline has not been created.
                 unsafe { self.jihaz.destroy_shader_module(wahdat_raas, None) };
                 return Err(khata_mawrid("fragment shader module", natija));
-            }
+            },
         };
 
         let natija = self.ansha_khatt_bi_wahdat(wahdat_raas, wahdat_qita);
@@ -2856,19 +2919,21 @@ impl KhattafVulkan {
         // modules are live handles on this device. No pipeline cache is used,
         // which `PipelineCache::null` denotes.
         let khutut = unsafe {
-            self.jihaz.create_graphics_pipelines(vk::PipelineCache::null(), &malumat, None)
+            self.jihaz
+                .create_graphics_pipelines(vk::PipelineCache::null(), &malumat, None)
         };
         let khutut = match khutut {
             Ok(khutut) => khutut,
             Err((_, natija)) => return Err(khata_mawrid("graphics pipeline", natija)),
         };
-        self.khatt = khutut.into_iter().next().ok_or_else(|| {
-            KhataTabaqa::MawridFashil {
+        self.khatt = khutut
+            .into_iter()
+            .next()
+            .ok_or_else(|| KhataTabaqa::MawridFashil {
                 mawrid: "graphics pipeline",
                 sabab: "vkCreateGraphicsPipelines returned no pipelines for a request of one"
                     .to_owned(),
-            }
-        })?;
+            })?;
         Ok(())
     }
 
@@ -2917,8 +2982,7 @@ impl KhattafVulkan {
     /// for a submission that never happened — a hang at startup, on the render
     /// thread, that looks exactly like the game freezing on launch.
     fn ansha_muzamana(&mut self) -> Result<(), KhataTabaqa> {
-        let malumat_qayd =
-            vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED);
+        let malumat_qayd = vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED);
         let malumat_ishara = vk::SemaphoreCreateInfo::default();
         for _ in 0..self.silsila.suwar.len() {
             // SAFETY: both create-infos are live locals for the calls, and
@@ -2937,9 +3001,8 @@ impl KhattafVulkan {
                 .push(qayd_iltiqat.map_err(|natija| khata_mawrid("capture fence", natija))?);
             self.isharat_rasm
                 .push(ishara_rasm.map_err(|natija| khata_mawrid("draw semaphore", natija))?);
-            self.isharat_iltiqat.push(
-                ishara_iltiqat.map_err(|natija| khata_mawrid("capture semaphore", natija))?,
-            );
+            self.isharat_iltiqat
+                .push(ishara_iltiqat.map_err(|natija| khata_mawrid("capture semaphore", natija))?);
         }
         Ok(())
     }
@@ -3032,7 +3095,8 @@ impl KhattafVulkan {
                 self.majmuat_wasf = vk::DescriptorSet::null();
             }
             if !self.wahdat_wasf.is_null() {
-                self.jihaz.destroy_descriptor_set_layout(self.wahdat_wasf, None);
+                self.jihaz
+                    .destroy_descriptor_set_layout(self.wahdat_wasf, None);
                 self.wahdat_wasf = vk::DescriptorSetLayout::null();
             }
             if !self.akhidh.is_null() {
@@ -3160,7 +3224,11 @@ impl KhattafVulkan {
         self.faharis.reserve(lawha.qitaat.len().saturating_mul(6));
 
         for qita in &lawha.qitaat {
-            let QitaRasm { mawdi, khareeta, lawn } = *qita;
+            let QitaRasm {
+                mawdi,
+                khareeta,
+                lawn,
+            } = *qita;
             if mawdi.ard == 0 || mawdi.irtifa == 0 {
                 continue;
             }
@@ -3185,10 +3253,30 @@ impl KhattafVulkan {
             let Ok(asas) = u32::try_from(self.ruus.len()) else {
                 break;
             };
-            self.ruus.push(RaasQita { mawdi: [yasar, aala], khareeta: [u0, v0], lawn, nasij });
-            self.ruus.push(RaasQita { mawdi: [yameen, aala], khareeta: [u1, v0], lawn, nasij });
-            self.ruus.push(RaasQita { mawdi: [yameen, asfal], khareeta: [u1, v1], lawn, nasij });
-            self.ruus.push(RaasQita { mawdi: [yasar, asfal], khareeta: [u0, v1], lawn, nasij });
+            self.ruus.push(RaasQita {
+                mawdi: [yasar, aala],
+                khareeta: [u0, v0],
+                lawn,
+                nasij,
+            });
+            self.ruus.push(RaasQita {
+                mawdi: [yameen, aala],
+                khareeta: [u1, v0],
+                lawn,
+                nasij,
+            });
+            self.ruus.push(RaasQita {
+                mawdi: [yameen, asfal],
+                khareeta: [u1, v1],
+                lawn,
+                nasij,
+            });
+            self.ruus.push(RaasQita {
+                mawdi: [yasar, asfal],
+                khareeta: [u0, v1],
+                lawn,
+                nasij,
+            });
             self.faharis.extend_from_slice(&[
                 asas,
                 asas.saturating_add(1),
@@ -3284,8 +3372,7 @@ impl KhattafVulkan {
         // fields. They go back in unconditionally, including on the error path,
         // so a failed growth does not leak the allocation that succeeded.
         let mut ruus_gpu = core::mem::replace(&mut self.ruus_gpu, MahfazaMazjura::khaliya());
-        let mut faharis_gpu =
-            core::mem::replace(&mut self.faharis_gpu, MahfazaMazjura::khaliya());
+        let mut faharis_gpu = core::mem::replace(&mut self.faharis_gpu, MahfazaMazjura::khaliya());
         // SAFETY: the fence wait above proves nothing in flight reads either
         // buffer, which is exactly what `wassi_mahfaza` requires of its caller.
         let numuw = unsafe {
@@ -3347,7 +3434,10 @@ impl KhattafVulkan {
         let Ok(adad_faharis) = u32::try_from(self.faharis.len()) else {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "index buffer",
-                sabab: format!("{} indices is more than a u32 can count", self.faharis.len()),
+                sabab: format!(
+                    "{} indices is more than a u32 can count",
+                    self.faharis.len()
+                ),
             });
         };
 
@@ -3366,18 +3456,17 @@ impl KhattafVulkan {
         // pass. The push-constant slice is sixteen bytes and the layout declares
         // a sixteen-byte range at offset zero.
         let tasjeel = unsafe {
-            let mut hasila =
-                self.jihaz.reset_command_buffer(amr, vk::CommandBufferResetFlags::empty());
+            let mut hasila = self
+                .jihaz
+                .reset_command_buffer(amr, vk::CommandBufferResetFlags::empty());
             if hasila.is_ok() {
                 hasila = self.jihaz.begin_command_buffer(amr, &bidaya);
             }
             if hasila.is_ok() {
-                self.jihaz.cmd_begin_render_pass(amr, &mamarr, vk::SubpassContents::INLINE);
-                self.jihaz.cmd_bind_pipeline(
-                    amr,
-                    vk::PipelineBindPoint::GRAPHICS,
-                    self.khatt,
-                );
+                self.jihaz
+                    .cmd_begin_render_pass(amr, &mamarr, vk::SubpassContents::INLINE);
+                self.jihaz
+                    .cmd_bind_pipeline(amr, vk::PipelineBindPoint::GRAPHICS, self.khatt);
                 self.jihaz.cmd_set_viewport(amr, 0, &[manzur]);
                 self.jihaz.cmd_set_scissor(amr, 0, &[mada]);
                 self.jihaz.cmd_push_constants(
@@ -3395,7 +3484,8 @@ impl KhattafVulkan {
                     &[self.majmuat_wasf],
                     &[],
                 );
-                self.jihaz.cmd_bind_vertex_buffers(amr, 0, &[self.ruus_gpu.mahfaza], &[0]);
+                self.jihaz
+                    .cmd_bind_vertex_buffers(amr, 0, &[self.ruus_gpu.mahfaza], &[0]);
                 self.jihaz.cmd_bind_index_buffer(
                     amr,
                     self.faharis_gpu.mahfaza,
@@ -3410,10 +3500,7 @@ impl KhattafVulkan {
         };
         tasjeel.map_err(|natija| khata_mawrid("draw command buffer", natija))?;
 
-        let marahil = vec![
-            vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
-            siyaq.intizar.len()
-        ];
+        let marahil = vec![vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT; siyaq.intizar.len()];
         let awamir = [amr];
         let isharat = [ishara];
         let irsal = [vk::SubmitInfo::default()
@@ -3474,7 +3561,11 @@ impl KhattafVulkan {
         let malumat = vk::ImageCreateInfo::default()
             .image_type(vk::ImageType::TYPE_2D)
             .format(vk::Format::R8G8B8A8_UNORM)
-            .extent(vk::Extent3D { width: ard, height: irtifa, depth: 1 })
+            .extent(vk::Extent3D {
+                width: ard,
+                height: irtifa,
+                depth: 1,
+            })
             .mip_levels(1)
             .array_layers(1)
             .samples(vk::SampleCountFlags::TYPE_1)
@@ -3512,8 +3603,11 @@ impl KhattafVulkan {
             .map_err(|natija| khata_mawrid("glyph atlas memory", natija))?;
         // SAFETY: both handles are live, the allocation is large enough and of
         // an accepted type, and the image has not been bound before.
-        unsafe { self.jihaz.bind_image_memory(self.lawha, self.dhakirat_lawha, 0) }
-            .map_err(|natija| khata_mawrid("glyph atlas memory binding", natija))?;
+        unsafe {
+            self.jihaz
+                .bind_image_memory(self.lawha, self.dhakirat_lawha, 0)
+        }
+        .map_err(|natija| khata_mawrid("glyph atlas memory binding", natija))?;
 
         let mada = vk::ImageSubresourceRange::default()
             .aspect_mask(vk::ImageAspectFlags::COLOR)
@@ -3559,17 +3653,13 @@ impl KhattafVulkan {
         // SAFETY: `naql_lawha` waited on its fence, so the copy that read this
         // buffer has completed and nothing references it.
         unsafe { self.atlif_mahfaza(&mut raf) };
-        self.athar.push(format!("glyph atlas uploaded at {ard}×{irtifa}"));
+        self.athar
+            .push(format!("glyph atlas uploaded at {ard}×{irtifa}"));
         Ok(())
     }
 
     /// Records and submits the atlas copy, and waits for it.
-    fn naql_lawha(
-        &mut self,
-        ard: u32,
-        irtifa: u32,
-        siyaq: &SiyaqItar,
-    ) -> Result<(), KhataTabaqa> {
+    fn naql_lawha(&mut self, ard: u32, irtifa: u32, siyaq: &SiyaqItar) -> Result<(), KhataTabaqa> {
         let Some(amr) = self.awamir_iltiqat.first().copied() else {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "glyph atlas upload command buffer",
@@ -3623,7 +3713,11 @@ impl KhattafVulkan {
                     .layer_count(1),
             )
             .image_offset(vk::Offset3D { x: 0, y: 0, z: 0 })
-            .image_extent(vk::Extent3D { width: ard, height: irtifa, depth: 1 });
+            .image_extent(vk::Extent3D {
+                width: ard,
+                height: irtifa,
+                depth: 1,
+            });
         let bidaya = vk::CommandBufferBeginInfo::default()
             .flags(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT);
 
@@ -3634,8 +3728,9 @@ impl KhattafVulkan {
         // `ard * irtifa * 4` bytes and the copy names exactly that region, and
         // both barriers name the same image and subresource the copy writes.
         let tasjeel = unsafe {
-            let mut hasila =
-                self.jihaz.reset_command_buffer(amr, vk::CommandBufferResetFlags::empty());
+            let mut hasila = self
+                .jihaz
+                .reset_command_buffer(amr, vk::CommandBufferResetFlags::empty());
             if hasila.is_ok() {
                 hasila = self.jihaz.begin_command_buffer(amr, &bidaya);
             }
@@ -3717,7 +3812,11 @@ impl KhattafVulkan {
         siyaq: &mut SiyaqItar,
         mintaqa: MustatilBiksel,
     ) -> Result<Vec<u8>, KhataTabaqa> {
-        if !self.silsila.istikhdam.contains(vk::ImageUsageFlags::TRANSFER_SRC) {
+        if !self
+            .silsila
+            .istikhdam
+            .contains(vk::ImageUsageFlags::TRANSFER_SRC)
+        {
             return Err(KhataTabaqa::IltiqatFashil {
                 sabab: "the swapchain was created without TRANSFER_SRC usage and the surface \
                         does not support adding it, so its images cannot be copied out of"
@@ -3774,8 +3873,7 @@ impl KhattafVulkan {
         unsafe { self.jihaz.wait_for_fences(&[qayd], true, MUHLAT_QAYD) }
             .map_err(|natija| khata_mawrid("capture fence wait", natija))?;
 
-        let mut iltiqat_gpu =
-            core::mem::replace(&mut self.iltiqat_gpu, MahfazaMazjura::khaliya());
+        let mut iltiqat_gpu = core::mem::replace(&mut self.iltiqat_gpu, MahfazaMazjura::khaliya());
         // SAFETY: the wait above proves the previous capture finished, so
         // nothing in flight references the buffer being replaced.
         let numuw = unsafe {
@@ -3837,7 +3935,11 @@ impl KhattafVulkan {
                     .layer_count(1),
             )
             .image_offset(vk::Offset3D { x, y, z: 0 })
-            .image_extent(vk::Extent3D { width: ard, height: irtifa, depth: 1 });
+            .image_extent(vk::Extent3D {
+                width: ard,
+                height: irtifa,
+                depth: 1,
+            });
         let bidaya = vk::CommandBufferBeginInfo::default()
             .flags(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT);
 
@@ -3848,8 +3950,9 @@ impl KhattafVulkan {
         // the first barrier names as old. The destination buffer holds exactly
         // `tul` bytes and the copy writes exactly that many.
         let tasjeel = unsafe {
-            let mut hasila =
-                self.jihaz.reset_command_buffer(amr, vk::CommandBufferResetFlags::empty());
+            let mut hasila = self
+                .jihaz
+                .reset_command_buffer(amr, vk::CommandBufferResetFlags::empty());
             if hasila.is_ok() {
                 hasila = self.jihaz.begin_command_buffer(amr, &bidaya);
             }
@@ -3885,8 +3988,7 @@ impl KhattafVulkan {
         };
         tasjeel.map_err(|natija| khata_mawrid("capture command buffer", natija))?;
 
-        let marahil =
-            vec![vk::PipelineStageFlags::TRANSFER; siyaq.intizar.len()];
+        let marahil = vec![vk::PipelineStageFlags::TRANSFER; siyaq.intizar.len()];
         let awamir = [amr];
         let isharat = [ishara];
         let irsal = [vk::SubmitInfo::default()
@@ -4118,7 +4220,7 @@ impl Khattaf for KhattafVulkan {
                 } else {
                     self.arsil_rasm(&mut siyaq)
                 }
-            }
+            },
             Err(khata) => Err(khata),
         };
         self.siyaq = Some(siyaq);
@@ -4128,7 +4230,10 @@ impl Khattaf for KhattafVulkan {
     fn iltaqit(&mut self, mintaqa: MustatilBiksel) -> Result<Vec<u8>, KhataTabaqa> {
         let sath = Khattaf::sath(self)?;
         let wasf = || {
-            format!("{}×{} at {},{}", mintaqa.ard, mintaqa.irtifa, mintaqa.yasar, mintaqa.aala)
+            format!(
+                "{}×{} at {},{}",
+                mintaqa.ard, mintaqa.irtifa, mintaqa.yasar, mintaqa.aala
+            )
         };
         if mintaqa.ard == 0 || mintaqa.irtifa == 0 {
             return Err(KhataTabaqa::MintaqaKharij {
@@ -4137,16 +4242,18 @@ impl Khattaf for KhattafVulkan {
                 irtifa: sath.irtifa,
             });
         }
-        match (mintaqa.yasar.checked_add(mintaqa.ard), mintaqa.aala.checked_add(mintaqa.irtifa))
-        {
-            (Some(yameen), Some(asfal)) if yameen <= sath.ard && asfal <= sath.irtifa => {}
+        match (
+            mintaqa.yasar.checked_add(mintaqa.ard),
+            mintaqa.aala.checked_add(mintaqa.irtifa),
+        ) {
+            (Some(yameen), Some(asfal)) if yameen <= sath.ard && asfal <= sath.irtifa => {},
             _ => {
                 return Err(KhataTabaqa::MintaqaKharij {
                     mintaqa: wasf(),
                     ard: sath.ard,
                     irtifa: sath.irtifa,
                 });
-            }
+            },
         }
 
         let Some(mut siyaq) = self.siyaq.take() else {
@@ -4209,9 +4316,10 @@ impl Khattaf for KhattafVulkan {
 
         match intizar {
             Ok(()) => {
-                self.athar.push("released every Vulkan object the overlay created".to_owned());
+                self.athar
+                    .push("released every Vulkan object the overlay created".to_owned());
                 Ok(())
-            }
+            },
             Err(natija) => {
                 let sabab = format!(
                     "vkDeviceWaitIdle reported {natija} before the overlay released its \
@@ -4219,8 +4327,11 @@ impl Khattaf for KhattafVulkan {
                      executing anything either"
                 );
                 self.athar.push(sabab.clone());
-                Err(KhataTabaqa::MawridFashil { mawrid: "the overlay's Vulkan objects", sabab })
-            }
+                Err(KhataTabaqa::MawridFashil {
+                    mawrid: "the overlay's Vulkan objects",
+                    sabab,
+                })
+            },
         }
     }
 }

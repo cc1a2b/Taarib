@@ -4,8 +4,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use taarib_usus::khata::{
-    Khutura, Khutwa, MasarMatlub, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam, khutwa_io,
-    siyaq_io,
+    Khutura, Khutwa, MasarMatlub, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam, khutwa_io, siyaq_io,
 };
 use taarib_usus::khata_min;
 
@@ -149,21 +148,18 @@ impl Tafsir for KhataTaqdeem {
             ),
             Self::TahdheerBilaIqrar { adad } => {
                 format!("{adad} تنبيهًا يحتاج إقرارك قبل الإرسال.")
-            }
+            },
             Self::BayanNaqis { haql } => format!("لا يمكن الإرسال بدون ({haql})."),
-            Self::Mukarrar { .. } => {
-                "لديك رقعة منشورة لهذه اللعبة ولهذا البناء نفسه.".to_owned()
-            }
+            Self::Mukarrar { .. } => "لديك رقعة منشورة لهذه اللعبة ولهذا البناء نفسه.".to_owned(),
             Self::KhataMalaf { .. } => "تعذّرت قراءة مسوّدة التقديم أو الكتابة إليها.".to_owned(),
             Self::TawthiqFashil { .. } => {
-                "لم يكتمل التوثيق مع مستضيف المستودع. أعد المحاولة وأدخل الرمز القصير."
-                    .to_owned()
-            }
+                "لم يكتمل التوثيق مع مستضيف المستودع. أعد المحاولة وأدخل الرمز القصير.".to_owned()
+            },
             Self::MustawdaRafad { .. } => "رفض مستضيف المستودع العملية.".to_owned(),
             Self::RafdBilaSabab => "الرفض يحتاج سببًا مكتوبًا.".to_owned(),
             Self::NashrFashil { .. } => {
                 "أخفق النشر وأُعيد ما رُفع إلى ما كان عليه؛ لا توجد رقعة نصف منشورة.".to_owned()
-            }
+            },
             Self::SandooqFashil { .. } => "تعذّر تشغيل التحقّق في البيئة المعزولة.".to_owned(),
             Self::IrsalGhayrMuhayya { naqis } => format!(
                 "قناة الرفع إلى السجلّ غير مجهّزة بعد: الحقل {naqis} فارغ في الإعدادات. بقي \
@@ -194,10 +190,10 @@ impl Tafsir for KhataTaqdeem {
             Self::TawthiqFashil { .. } | Self::MustawdaRafad { .. } => Khutwa::AadaMuhawala,
             Self::RafdBilaSabab | Self::NashrFashil { .. } | Self::SandooqFashil { .. } => {
                 Khutwa::IblaghLilMalik
-            }
-            Self::IrsalGhayrMuhayya { .. } => {
-                Khutwa::FathIdadat { qism: QismIdadat::Masadir }
-            }
+            },
+            Self::IrsalGhayrMuhayya { .. } => Khutwa::FathIdadat {
+                qism: QismIdadat::Masadir,
+            },
             Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladManassa),
         }
     }
@@ -215,30 +211,36 @@ impl Tafsir for KhataTaqdeem {
             let _ = siyaq.insert(miftah.to_owned(), qeema);
         };
         match self {
-            Self::KhataMalaf { .. } | Self::RafdBilaSabab => {}
+            Self::KhataMalaf { .. } | Self::RafdBilaSabab => {},
             Self::BawwabaMaghlaqa { adad, amthila } => {
-                daa("adad", QeemaSiyaq::Hajm(u64::try_from(*adad).unwrap_or(u64::MAX)));
+                daa(
+                    "adad",
+                    QeemaSiyaq::Hajm(u64::try_from(*adad).unwrap_or(u64::MAX)),
+                );
                 daa("amthila", QeemaSiyaq::Qaima(amthila.clone()));
-            }
+            },
             Self::TahdheerBilaIqrar { adad } => {
-                daa("adad", QeemaSiyaq::Hajm(u64::try_from(*adad).unwrap_or(u64::MAX)));
-            }
+                daa(
+                    "adad",
+                    QeemaSiyaq::Hajm(u64::try_from(*adad).unwrap_or(u64::MAX)),
+                );
+            },
             Self::BayanNaqis { haql } => daa("haql", QeemaSiyaq::Nass((*haql).to_owned())),
             Self::IrsalGhayrMuhayya { naqis } => {
                 daa("naqis", QeemaSiyaq::Nass((*naqis).to_owned()));
-            }
+            },
             Self::Mukarrar { ruqaa } => daa("ruqaa", QeemaSiyaq::Nass(ruqaa.clone())),
             Self::TawthiqFashil { sabab } | Self::SandooqFashil { sabab } => {
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::MustawdaRafad { amal, sabab } => {
                 daa("amal", QeemaSiyaq::Nass((*amal).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::NashrFashil { marhala, sabab } => {
                 daa("marhala", QeemaSiyaq::Nass((*marhala).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
         }
         siyaq
     }

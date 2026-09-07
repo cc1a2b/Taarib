@@ -14,8 +14,11 @@ use std::path::{Path, PathBuf};
 /// Base names without the platform's prefix or extension. The order is the
 /// order they are attempted in: the overlay last, because it is the fallback
 /// tier and an engine adapter that took the process has no need of it.
-const HAMULAT: [&str; 3] =
-    ["taarib_muhawwil_unreal", "taarib_muhawwil_godot", "taarib_tabaqa"];
+const HAMULAT: [&str; 3] = [
+    "taarib_muhawwil_unreal",
+    "taarib_muhawwil_godot",
+    "taarib_tabaqa",
+];
 
 /// The entry point every payload exports, called once after it loads.
 ///
@@ -72,7 +75,11 @@ pub(crate) fn sajjil(jidhr: &Path, satr: &str) {
     if std::fs::metadata(&masar).is_ok_and(|bayan| bayan.len() > AQSA_SIJILL) {
         let _ = std::fs::remove_file(&masar);
     }
-    let Ok(mut malaf) = std::fs::OpenOptions::new().create(true).append(true).open(&masar) else {
+    let Ok(mut malaf) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&masar)
+    else {
         return;
     };
     let _ = writeln!(malaf, "{satr}");

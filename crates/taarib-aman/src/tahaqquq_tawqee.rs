@@ -38,16 +38,14 @@ impl SababTawqee {
             Self::GhayrMuwaqqaa => "الحزمة غير موقّعة، ولا يُثبّت تعريب حزمة غير موقّعة.".to_owned(),
             Self::MiftahMajhul { .. } => {
                 "وقّعت الحزمة بمفتاح ليس مفتاح المالك المضمّن في البرنامج.".to_owned()
-            }
+            },
             Self::TawqeeTatwir => {
                 "الحزمة موقّعة بمفتاح التطوير المعلن، وهذه نسخة إصدار ترفضه بالاسم.".to_owned()
-            }
-            Self::MusahimFaqat => {
-                "الحزمة موقّعة من المساهم ولم يعتمدها المالك بعد.".to_owned()
-            }
+            },
+            Self::MusahimFaqat => "الحزمة موقّعة من المساهم ولم يعتمدها المالك بعد.".to_owned(),
             Self::TawqeeGhayrSalih => {
                 "توقيع الحزمة لا يطابق محتواها؛ رُبّما عُدّلت بعد توقيعها.".to_owned()
-            }
+            },
             Self::HuzmaTalifa { .. } => "بنية الحزمة أو بصمتها غير سليمة.".to_owned(),
         }
     }
@@ -59,18 +57,18 @@ impl SababTawqee {
             Self::GhayrMuwaqqaa => "the package is unsigned".to_owned(),
             Self::MiftahMajhul { miftah } => {
                 format!("the package was signed by {miftah}, not the owner's embedded key")
-            }
+            },
             Self::TawqeeTatwir => {
                 "the package is signed by the published development key, which a release build \
                  refuses by name"
                     .to_owned()
-            }
+            },
             Self::MusahimFaqat => {
                 "the package is contributor-self-signed and not yet owner-approved".to_owned()
-            }
+            },
             Self::TawqeeGhayrSalih => {
                 "the signature does not verify over the package's content hash".to_owned()
-            }
+            },
             Self::HuzmaTalifa { sabab } => format!("the package framing is invalid: {sabab}"),
         }
     }

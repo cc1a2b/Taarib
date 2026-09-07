@@ -260,7 +260,12 @@ impl SatrMaqru {
     /// trailing whitespace on some inputs and none of them documents when.
     #[must_use]
     pub fn jadeed(nass: &str, mawdi: MustatilBiksel, thiqa: u8, maqisa: bool) -> Self {
-        Self { nass: nass.trim().to_owned(), mawdi, thiqa: thiqa.min(100), maqisa }
+        Self {
+            nass: nass.trim().to_owned(),
+            mawdi,
+            thiqa: thiqa.min(100),
+            maqisa,
+        }
     }
 
     /// Whether this line carries no text.
@@ -380,7 +385,11 @@ impl SatrMaqru {
     /// across a zero-pixel gap did not see a space there, and inserting one
     /// would produce a word no dictionary has.
     fn idmij(&mut self, akhar: &Self) {
-        let fasl = if self.fajwa_ufuqiya(akhar) == 0 { "" } else { " " };
+        let fasl = if self.fajwa_ufuqiya(akhar) == 0 {
+            ""
+        } else {
+            " "
+        };
         if akhar.mawdi.yasar < self.mawdi.yasar {
             self.nass = format!("{}{fasl}{}", akhar.nass, self.nass);
         } else {
@@ -506,7 +515,11 @@ impl IdadatQira {
     #[must_use]
     pub fn jadeeda(lugha: &str, mujallad_namadhij: impl Into<PathBuf>) -> Self {
         Self {
-            lughat: if lugha.is_empty() { Vec::new() } else { vec![lugha.to_owned()] },
+            lughat: if lugha.is_empty() {
+                Vec::new()
+            } else {
+                vec![lugha.to_owned()]
+            },
             mujallad_namadhij: mujallad_namadhij.into(),
             yufaddil_al_mahmul: false,
         }
@@ -600,18 +613,16 @@ impl QariMahmul {
         let masar_kashf = ijad_namudhaj(mujallad, &ASMA_NAMUDHAJ_KASHF, "text detection")?;
         let masar_taaruf = ijad_namudhaj(mujallad, &ASMA_NAMUDHAJ_TAARUF, "text recognition")?;
 
-        let namudhaj_kashf = rten::Model::load_file(&masar_kashf).map_err(|khata| {
-            KhataTabaqa::NamudhajFashil {
+        let namudhaj_kashf =
+            rten::Model::load_file(&masar_kashf).map_err(|khata| KhataTabaqa::NamudhajFashil {
                 masar: masar_kashf.clone(),
                 sabab: format!("the detection model would not load: {khata}"),
-            }
-        })?;
-        let namudhaj_taaruf = rten::Model::load_file(&masar_taaruf).map_err(|khata| {
-            KhataTabaqa::NamudhajFashil {
+            })?;
+        let namudhaj_taaruf =
+            rten::Model::load_file(&masar_taaruf).map_err(|khata| KhataTabaqa::NamudhajFashil {
                 masar: masar_taaruf.clone(),
                 sabab: format!("the recognition model would not load: {khata}"),
-            }
-        })?;
+            })?;
 
         let muharrik = ocrs::OcrEngine::new(ocrs::OcrEngineParams {
             detection_model: Some(namudhaj_kashf),
@@ -625,7 +636,11 @@ impl QariMahmul {
             ),
         })?;
 
-        Ok(Self { muharrik, masar_kashf, masar_taaruf })
+        Ok(Self {
+            muharrik,
+            masar_kashf,
+            masar_taaruf,
+        })
     }
 
     /// Where the detection model was loaded from.
@@ -677,17 +692,21 @@ impl Qari for QariMahmul {
                 ),
             }
         })?;
-        let madkhal = self.muharrik.prepare_input(masdar).map_err(|khata| {
-            KhataTabaqa::IltiqatFashil {
-                sabab: format!("the portable engine could not prepare the input: {khata}"),
-            }
-        })?;
+        let madkhal =
+            self.muharrik
+                .prepare_input(masdar)
+                .map_err(|khata| KhataTabaqa::IltiqatFashil {
+                    sabab: format!("the portable engine could not prepare the input: {khata}"),
+                })?;
 
-        let kalimat = self.muharrik.detect_words(&madkhal).map_err(|khata| {
-            KhataTabaqa::QariGhayrMutah {
-                sabab: format!("the portable detector failed on a {ard}×{irtifa} region: {khata}"),
-            }
-        })?;
+        let kalimat =
+            self.muharrik
+                .detect_words(&madkhal)
+                .map_err(|khata| KhataTabaqa::QariGhayrMutah {
+                    sabab: format!(
+                        "the portable detector failed on a {ard}×{irtifa} region: {khata}"
+                    ),
+                })?;
         if kalimat.is_empty() {
             return Err(KhataTabaqa::LaNassMaqru {
                 mintaqa: wasf_mintaqa(sura),
@@ -696,13 +715,14 @@ impl Qari for QariMahmul {
         }
 
         let majmuaat = self.muharrik.find_text_lines(&madkhal, &kalimat);
-        let maqru = self.muharrik.recognize_text(&madkhal, &majmuaat).map_err(|khata| {
-            KhataTabaqa::QariGhayrMutah {
+        let maqru = self
+            .muharrik
+            .recognize_text(&madkhal, &majmuaat)
+            .map_err(|khata| KhataTabaqa::QariGhayrMutah {
                 sabab: format!(
                     "the portable recognizer failed on a {ard}×{irtifa} region: {khata}"
                 ),
-            }
-        })?;
+            })?;
 
         let mut sutur = Vec::new();
         for satr in maqru.iter().flatten() {
@@ -815,7 +835,12 @@ fn yutabiq_lugha(mutah: &str, matlub: &str) -> bool {
     if mutah.eq_ignore_ascii_case(matlub) {
         return true;
     }
-    let jidhr = |wasm: &str| wasm.split(['-', '_']).next().unwrap_or("").to_ascii_lowercase();
+    let jidhr = |wasm: &str| {
+        wasm.split(['-', '_'])
+            .next()
+            .unwrap_or("")
+            .to_ascii_lowercase()
+    };
     let awwal = jidhr(mutah);
     !awwal.is_empty() && awwal == jidhr(matlub)
 }
@@ -881,7 +906,9 @@ where
             });
         }
     }
-    amaliya.GetResults().map_err(|khata| khata_winrt(wasf, &khata))
+    amaliya
+        .GetResults()
+        .map_err(|khata| khata_winrt(wasf, &khata))
 }
 
 /// Closes an event handle however the wait around it ends.
@@ -956,11 +983,11 @@ fn hayyi_al_khayt() -> Result<(), KhataTabaqa> {
             Ok(()) => {
                 hala.set(true);
                 Ok(())
-            }
+            },
             Err(khata) if khata.code().0 == RAMZ_TAGHYIR_AL_WADE => {
                 hala.set(true);
                 Ok(())
-            }
+            },
             Err(khata) => Err(KhataTabaqa::QariGhayrMutah {
                 sabab: format!(
                     "this thread could not be put into a WinRT apartment, so Windows OCR \
@@ -975,7 +1002,10 @@ fn hayyi_al_khayt() -> Result<(), KhataTabaqa> {
 #[cfg(windows)]
 fn khata_winrt(mawdi: &str, khata: &windows::core::Error) -> KhataTabaqa {
     KhataTabaqa::QariGhayrMutah {
-        sabab: format!("Windows OCR: {mawdi} failed ({:#010x}): {khata}", khata.code().0),
+        sabab: format!(
+            "Windows OCR: {mawdi} failed ({:#010x}): {khata}",
+            khata.code().0
+        ),
     }
 }
 
@@ -1120,7 +1150,12 @@ impl QariWindows {
         let aqsa_buad = MuharrikNawafidh::MaxImageDimension()
             .map_err(|khata| khata_winrt("reading the maximum image dimension", &khata))?;
         let lughat = mutaha.iter().map(|wasm| ramz_lugha_thabit(wasm)).collect();
-        Ok(Self { muharrik, lugha, lughat, aqsa_buad })
+        Ok(Self {
+            muharrik,
+            lugha,
+            lughat,
+            aqsa_buad,
+        })
     }
 
     /// The recognizer language this engine was built for.
@@ -1171,8 +1206,7 @@ impl QariWindows {
                 ),
             });
         }
-        let (Ok(ard), Ok(irtifa)) =
-            (i32::try_from(sura.ard()), i32::try_from(sura.irtifa()))
+        let (Ok(ard), Ok(irtifa)) = (i32::try_from(sura.ard()), i32::try_from(sura.irtifa()))
         else {
             return Err(KhataTabaqa::IltiqatFashil {
                 sabab: format!(
@@ -1193,8 +1227,8 @@ impl QariWindows {
             bgra.extend_from_slice(&[azraq, akhdar, ahmar, 255]);
         }
 
-        let katib = DataWriter::new()
-            .map_err(|khata| khata_winrt("creating the byte writer", &khata))?;
+        let katib =
+            DataWriter::new().map_err(|khata| khata_winrt("creating the byte writer", &khata))?;
         katib
             .WriteBytes(&bgra)
             .map_err(|khata| khata_winrt("writing the captured bytes", &khata))?;
@@ -1266,7 +1300,10 @@ impl Qari for QariWindows {
         }
 
         if sutur.is_empty() {
-            return Err(KhataTabaqa::LaNassMaqru { mintaqa: wasf_mintaqa(sura), thiqa: None });
+            return Err(KhataTabaqa::LaNassMaqru {
+                mintaqa: wasf_mintaqa(sura),
+                thiqa: None,
+            });
         }
         Ok(sutur)
     }
@@ -1321,8 +1358,13 @@ fn hudud_al_satr(
     Ok(match hudud {
         Some((yasar, aala, yameen, asfal)) => {
             mustatil_min_hudud(yasar, aala, yameen, asfal, ard, irtifa)
-        }
-        None => MustatilBiksel { yasar: 0, aala: 0, ard, irtifa },
+        },
+        None => MustatilBiksel {
+            yasar: 0,
+            aala: 0,
+            ard,
+            irtifa,
+        },
     })
 }
 
@@ -1333,7 +1375,11 @@ fn hudud_al_satr(
 /// message rather than as an answer.
 #[cfg(windows)]
 fn wasf_qaima(wusum: &[String]) -> String {
-    if wusum.is_empty() { "none".to_owned() } else { wusum.join(", ") }
+    if wusum.is_empty() {
+        "none".to_owned()
+    } else {
+        wusum.join(", ")
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1458,10 +1504,17 @@ impl QariVision {
     /// at all, which means the Vision framework is not present — a stripped
     /// system, or a macOS older than the text recognizer.
     pub fn jadeed(lughat_matluba: &[&str]) -> Result<Self, KhataTabaqa> {
-        let matlub: Vec<String> = lughat_matluba.iter().map(|wasm| (*wasm).to_owned()).collect();
+        let matlub: Vec<String> = lughat_matluba
+            .iter()
+            .map(|wasm| (*wasm).to_owned())
+            .collect();
         let talab = Self::ibni_talab(&matlub)?;
         let madumah = Self::lughat_al_talab(&talab);
-        let asas: Vec<String> = if madumah.is_empty() { matlub.clone() } else { madumah };
+        let asas: Vec<String> = if madumah.is_empty() {
+            matlub.clone()
+        } else {
+            madumah
+        };
         let lughat = asas.iter().map(|wasm| ramz_lugha_thabit(wasm)).collect();
         Ok(Self { matlub, lughat })
     }
@@ -1561,8 +1614,7 @@ impl QariVision {
             // is strictly below the count read immediately above, so it cannot
             // raise a range exception. Every element of this array is an
             // `NSString` by the method's declared type.
-            let wasm: Retained<NSString> =
-                unsafe { msg_send![&*masfufa, objectAtIndex: mawdi] };
+            let wasm: Retained<NSString> = unsafe { msg_send![&*masfufa, objectAtIndex: mawdi] };
             wusum.push(wasm.to_string());
         }
         wusum
@@ -1633,7 +1685,10 @@ impl Qari for QariVision {
         let mulahazat: Option<Retained<NSArray<VNRecognizedTextObservation>>> =
             unsafe { msg_send![&*talab, results] };
         let Some(mulahazat) = mulahazat else {
-            return Err(KhataTabaqa::LaNassMaqru { mintaqa: wasf_mintaqa(sura), thiqa: None });
+            return Err(KhataTabaqa::LaNassMaqru {
+                mintaqa: wasf_mintaqa(sura),
+                thiqa: None,
+            });
         };
 
         // SAFETY: `NSArray`'s own `-count`, and every `-objectAtIndex:` below
@@ -1688,7 +1743,12 @@ impl Qari for QariVision {
             }
             let thiqa = thiqa_min_nisba(thiqa_khaam);
             adna_thiqa = Some(adna_thiqa.map_or(thiqa, |sabiqa| sabiqa.min(thiqa)));
-            sutur.push(SatrMaqru::jadeed(&nass, min_sunduq(sunduq, ard, irtifa), thiqa, true));
+            sutur.push(SatrMaqru::jadeed(
+                &nass,
+                min_sunduq(sunduq, ard, irtifa),
+                thiqa,
+                true,
+            ));
         }
 
         if sutur.is_empty() {
@@ -1749,7 +1809,12 @@ fn sura_png(sura: &SuraMultaqata) -> Result<Vec<u8>, KhataTabaqa> {
     let rgb = sura.ila_rgb()?;
     let mut png = Vec::new();
     image::codecs::png::PngEncoder::new(&mut png)
-        .write_image(&rgb, sura.ard(), sura.irtifa(), image::ExtendedColorType::Rgb8)
+        .write_image(
+            &rgb,
+            sura.ard(),
+            sura.irtifa(),
+            image::ExtendedColorType::Rgb8,
+        )
         .map_err(|khata| KhataTabaqa::IltiqatFashil {
             sabab: format!(
                 "a {}×{} region could not be encoded for Vision: {khata}",
@@ -1781,11 +1846,11 @@ fn jarrib_al_manassa(wusum: &[&str], athar: &mut Vec<String>) -> Option<Box<dyn 
                 qari.lugha()
             ));
             Some(Box::new(qari))
-        }
+        },
         Err(khata) => {
             athar.push(format!("Windows Runtime OCR: not usable. {khata}"));
             None
-        }
+        },
     }
 }
 
@@ -1800,11 +1865,11 @@ fn jarrib_al_manassa(wusum: &[&str], athar: &mut Vec<String>) -> Option<Box<dyn 
                 qari.lughat().join(", ")
             ));
             Some(Box::new(qari))
-        }
+        },
         Err(khata) => {
             athar.push(format!("macOS Vision: not usable. {khata}"));
             None
-        }
+        },
     }
 }
 
@@ -1827,7 +1892,9 @@ fn jarrib_al_manassa(_wusum: &[&str], athar: &mut Vec<String>) -> Option<Box<dyn
 fn yaqra_al_matlub(qari: &dyn Qari, wusum: &[&str]) -> bool {
     wusum.is_empty()
         || wusum.iter().any(|matlub| {
-            qari.lughat().iter().any(|mutah| yutabiq_lugha(mutah, matlub))
+            qari.lughat()
+                .iter()
+                .any(|mutah| yutabiq_lugha(mutah, matlub))
         })
 }
 
@@ -1863,8 +1930,11 @@ impl IkhtiyarQari {
     pub fn ikhtar(iadadat: &IdadatQira) -> Result<Self, KhataTabaqa> {
         let mut athar = Vec::new();
         let wusum = iadadat.wusum();
-        let wasf_lughat =
-            if wusum.is_empty() { "the platform default".to_owned() } else { wusum.join(", ") };
+        let wasf_lughat = if wusum.is_empty() {
+            "the platform default".to_owned()
+        } else {
+            wusum.join(", ")
+        };
         athar.push(format!("source languages requested: [{wasf_lughat}]"));
 
         if iadadat.yufaddil_al_mahmul {
@@ -1907,12 +1977,17 @@ impl IkhtiyarQari {
                         qari.lughat().join(", ")
                     ));
                 }
-                Ok(Self { qari: Box::new(qari), athar })
-            }
+                Ok(Self {
+                    qari: Box::new(qari),
+                    athar,
+                })
+            },
             Err(khata) => {
                 athar.push(format!("portable ocrs: not usable. {khata}"));
-                Err(KhataTabaqa::QariGhayrMutah { sabab: athar.join(" | ") })
-            }
+                Err(KhataTabaqa::QariGhayrMutah {
+                    sabab: athar.join(" | "),
+                })
+            },
         }
     }
 
@@ -2008,10 +2083,7 @@ impl IkhtiyarQari {
     /// A region the engine found nothing in comes back as an empty vector rather
     /// than an error: "nothing was there" is a *result* here, and it is the one
     /// the gate below turns into a refusal.
-    fn iqra_muhassana(
-        &mut self,
-        muhassana: &SuraMuhassana,
-    ) -> Result<Vec<SatrMaqru>, KhataTabaqa> {
+    fn iqra_muhassana(&mut self, muhassana: &SuraMuhassana) -> Result<Vec<SatrMaqru>, KhataTabaqa> {
         let sutur = match self.qari.iqra(muhassana.sura()) {
             Ok(sutur) => sutur,
             Err(KhataTabaqa::LaNassMaqru { .. }) => return Ok(Vec::new()),
@@ -2094,7 +2166,11 @@ impl IkhtiyarQari {
 
         let hukm = hukm_bunya(&sutur, hudud);
         if !hukm.maqbul() {
-            return Ok(QiraMufattasha { sutur, hukm, tawafuq_jara: false });
+            return Ok(QiraMufattasha {
+                sutur,
+                hukm,
+                tawafuq_jara: false,
+            });
         }
 
         let mut iadadat_thani = *iadadat;
@@ -2104,7 +2180,11 @@ impl IkhtiyarQari {
         let thani = self.iqra_muhassana(&muhassana_thani)?;
 
         let hukm = hukm_tawafuq(&sutur, &thani, hudud);
-        Ok(QiraMufattasha { sutur, hukm, tawafuq_jara: true })
+        Ok(QiraMufattasha {
+            sutur,
+            hukm,
+            tawafuq_jara: true,
+        })
     }
 }
 
@@ -2406,7 +2486,10 @@ fn alamat_majhula(kalima: &str) -> usize {
 
 /// Whether one character is one this crate believes the screen contained.
 fn harf_maqbul(harf: char) -> bool {
-    harf.is_alphanumeric() || harf == ' ' || harf == '?' || harf == '!'
+    harf.is_alphanumeric()
+        || harf == ' '
+        || harf == '?'
+        || harf == '!'
         || RUMUZ_MAQBULA.contains(harf)
 }
 
@@ -2443,10 +2526,17 @@ pub fn ihsa_bunya(nass: &str) -> IhsaBunya {
         }
         majhula = majhula.saturating_add(alamat_majhula(kalima));
     }
-    let mushawwaha = kalimat.iter().filter(|kalima| kalima_mushawwaha(kalima)).count();
+    let mushawwaha = kalimat
+        .iter()
+        .filter(|kalima| kalima_mushawwaha(kalima))
+        .count();
 
     IhsaBunya {
-        nisbat_ramz: if kull == 0 { 0.0 } else { adad_f64(ramz) / adad_f64(kull) },
+        nisbat_ramz: if kull == 0 {
+            0.0
+        } else {
+            adad_f64(ramz) / adad_f64(kull)
+        },
         nisbat_tashawwuh: if kalimat.is_empty() {
             0.0
         } else {
@@ -2472,8 +2562,12 @@ pub fn ihsa_bunya(nass: &str) -> IhsaBunya {
 #[must_use]
 pub fn hukm_bunya(sutur: &[SatrMaqru], hudud: &HududQubul) -> HukmQira {
     let nass = SatrMaqru::fiqra(sutur);
-    let IhsaBunya { nisbat_ramz, nisbat_tashawwuh, adad_huruf: adad, alamat_majhula } =
-        ihsa_bunya(&nass);
+    let IhsaBunya {
+        nisbat_ramz,
+        nisbat_tashawwuh,
+        adad_huruf: adad,
+        alamat_majhula,
+    } = ihsa_bunya(&nass);
 
     if adad < hudud.adna_huruf {
         return HukmQira::Marfud {
@@ -2542,7 +2636,11 @@ fn masafat_tahrir(awwal: &str, thani: &str) -> usize {
         for (j, hb) in b.iter().enumerate() {
             let takleefa = usize::from(ha != hb);
             let qutri = sabiq.get(j).copied().unwrap_or(0).saturating_add(takleefa);
-            let fawq = sabiq.get(j.saturating_add(1)).copied().unwrap_or(0).saturating_add(1);
+            let fawq = sabiq
+                .get(j.saturating_add(1))
+                .copied()
+                .unwrap_or(0)
+                .saturating_add(1);
             let yasar = hali.get(j).copied().unwrap_or(0).saturating_add(1);
             if let Some(khana) = hali.get_mut(j.saturating_add(1)) {
                 *khana = qutri.min(fawq).min(yasar);
@@ -2603,11 +2701,7 @@ pub fn khilaf_qiraatayn(awwal: &[SatrMaqru], thani: &[SatrMaqru]) -> f64 {
 /// tenth of the regions a capture loop hands this crate, and never on one that
 /// has already been refused.
 #[must_use]
-pub fn hukm_tawafuq(
-    awwal: &[SatrMaqru],
-    thani: &[SatrMaqru],
-    hudud: &HududQubul,
-) -> HukmQira {
+pub fn hukm_tawafuq(awwal: &[SatrMaqru], thani: &[SatrMaqru], hudud: &HududQubul) -> HukmQira {
     let khilaf = khilaf_qiraatayn(awwal, thani);
     if khilaf > hudud.aqsa_khilaf {
         return HukmQira::Marfud {
@@ -2647,7 +2741,11 @@ impl ThiqatMintaqa {
     pub fn min_sutur(sutur: &[SatrMaqru], hudud: &HududQubul) -> Self {
         let maqisa = !sutur.is_empty() && sutur.iter().all(|satr| satr.maqisa);
         Self {
-            thiqa: if maqisa { SatrMaqru::adna_thiqa(sutur) } else { None },
+            thiqa: if maqisa {
+                SatrMaqru::adna_thiqa(sutur)
+            } else {
+                None
+            },
             hukm: hukm_bunya(sutur, hudud),
         }
     }

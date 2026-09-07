@@ -116,5 +116,6 @@ pub fn kul() -> Vec<Box<dyn Fahis>> {
 /// are bare file names that may begin with one — `Path::extension` reports none
 /// for `.app`, where a suffix test matches.
 pub(crate) fn imtidad(ism: &str, matlub: &str) -> bool {
-    ism.rsplit_once('.').is_some_and(|(_, lahiqa)| lahiqa.eq_ignore_ascii_case(matlub))
+    ism.rsplit_once('.')
+        .is_some_and(|(_, lahiqa)| lahiqa.eq_ignore_ascii_case(matlub))
 }

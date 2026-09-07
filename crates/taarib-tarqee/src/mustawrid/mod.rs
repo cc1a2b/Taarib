@@ -322,8 +322,14 @@ pub enum FiatJama {
 
 impl FiatJama {
     /// The six categories in the order gettext indexes them for Arabic.
-    pub const TARTEEB: [Self; 6] =
-        [Self::Sifr, Self::Wahid, Self::Ithnan, Self::Qalil, Self::Kathir, Self::Ghayr];
+    pub const TARTEEB: [Self; 6] = [
+        Self::Sifr,
+        Self::Wahid,
+        Self::Ithnan,
+        Self::Qalil,
+        Self::Kathir,
+        Self::Ghayr,
+    ];
 
     /// The category a `msgstr[N]` index denotes.
     ///
@@ -492,7 +498,11 @@ impl MudkhalWarid {
     pub fn wasf(&self) -> String {
         let raas = self.miftah.as_deref().unwrap_or(&self.masdar);
         let mukhtasar: String = raas.chars().take(64).collect();
-        if self.satr == 0 { mukhtasar } else { format!("{}: {mukhtasar}", self.satr) }
+        if self.satr == 0 {
+            mukhtasar
+        } else {
+            format!("{}: {mukhtasar}", self.satr)
+        }
     }
 }
 
@@ -651,35 +661,33 @@ impl SababRafd {
             Self::BilaHadaf => "المُدخل بلا ترجمة أصلًا.".to_owned(),
             Self::HadafFarigh => "الترجمة فارغة.".to_owned(),
             Self::HadafKaAlmasdar => "الترجمة مطابقة للنص الأصلي حرفًا بحرف.".to_owned(),
-            Self::QaidaNamatiya => {
-                "قاعدة تعبير نمطي، لا نصّ ثابت. لا تُطبَّق كنصّ حرفي.".to_owned()
-            }
+            Self::QaidaNamatiya => "قاعدة تعبير نمطي، لا نصّ ثابت. لا تُطبَّق كنصّ حرفي.".to_owned(),
             Self::Taalim => "سطر بيانات الملف، لا عبارة قابلة للترجمة.".to_owned(),
             Self::Mahjura => "مُدخل مهجور في ملف gettext.".to_owned(),
             Self::MamnuMinAttarjama => "الملف يمنع ترجمة هذه الوحدة.".to_owned(),
             Self::DharratMafquda { mafqud } => {
                 format!("فقدت الترجمة عناصر محفوظة: {}.", mafqud.join("، "))
-            }
+            },
             Self::MajmuatJama { suwar } => {
                 format!("مجموعة جمع بـ{suwar} صيغة، والصفّ يحمل ترجمة واحدة.")
-            }
+            },
             Self::SuwarJamaGhayrArabiya { adad } => {
                 format!("الملف يعلن {adad} صيغة جمع، والعربية ستّ. لا تُنقل الفهارس.")
-            }
+            },
             Self::SighatJamaMajhula => {
                 "لا ترويسة Plural-Forms في الملف، فلا معنى لفهارس الجمع.".to_owned()
-            }
+            },
             Self::LughaGhayrArabiya { ramz } => format!("العمود بلغة ({ramz}) لا بالعربية."),
             Self::LughaGhayrMawjuda => "لا يحمل المُدخل مقطعًا عربيًّا.".to_owned(),
             Self::AmudMafqud { fahras, mawjud } => {
                 format!("طُلب العمود رقم {fahras} والسجلّ يحمل {mawjud} عمودًا.")
-            }
+            },
             Self::SatrGhayrMafhum { juz } => {
                 format!("سطر لا تعرفه قواعد الصيغة: «{juz}».")
-            }
-            Self::SufufMashghula { adad } => format!(
-                "تطابق المُدخل مع {adad} صفًّا، وكلّها يحمل ترجمة، ولم تُطلب اقتراحات الاستبدال."
-            ),
+            },
+            Self::SufufMashghula { adad } => {
+                format!("تطابق المُدخل مع {adad} صفًّا، وكلّها يحمل ترجمة، ولم تُطلب اقتراحات الاستبدال.")
+            },
         }
     }
 
@@ -694,13 +702,16 @@ impl SababRafd {
                 "a regular-expression rule, not a literal string; applying it as text would be \
                  wrong"
                     .to_owned()
-            }
+            },
             Self::Taalim => "the file's own metadata entry, not a translatable string".to_owned(),
             Self::Mahjura => "an obsolete gettext entry".to_owned(),
             Self::MamnuMinAttarjama => "the file marks this unit as not translatable".to_owned(),
             Self::DharratMafquda { mafqud } => {
-                format!("the translation lost these placeholders: {}", mafqud.join(", "))
-            }
+                format!(
+                    "the translation lost these placeholders: {}",
+                    mafqud.join(", ")
+                )
+            },
             Self::MajmuatJama { suwar } => format!(
                 "a plural set with {suwar} form(s); the project row holds one target and \
                  choosing a form silently would be a guess"
@@ -712,15 +723,15 @@ impl SababRafd {
             Self::SighatJamaMajhula => {
                 "the file has no Plural-Forms header, so its plural indices mean nothing here"
                     .to_owned()
-            }
+            },
             Self::LughaGhayrArabiya { ramz } => format!("the column is {ramz}, not Arabic"),
             Self::LughaGhayrMawjuda => "the unit carries no Arabic segment".to_owned(),
             Self::AmudMafqud { fahras, mawjud } => {
                 format!("column {fahras} was asked for and the record has {mawjud}")
-            }
+            },
             Self::SatrGhayrMafhum { juz } => {
                 format!("a line the format's grammar does not define: {juz:?}")
-            }
+            },
             Self::SufufMashghula { adad } => format!(
                 "the entry matched {adad} row(s), all of which already hold a translation, and \
                  overwrite proposals were switched off"
@@ -791,10 +802,10 @@ impl SababAdamTatabuq {
             Self::MiftahMajhul { miftah } => format!("المفتاح ({miftah}) ليس في جدول المشروع."),
             Self::MasdarMajhul { masdar } => {
                 format!("لا صفّ يحمل هذا النص الأصلي: «{masdar}».")
-            }
+            },
             Self::MiftahMultabis { miftah, adad } => {
                 format!("المفتاح ({miftah}) يشير إلى {adad} صفًّا، ولا مُرجِّح بينها.")
-            }
+            },
             Self::TashabuhDunAlhadd { afdal, hadd } => format!(
                 "أقرب مرشّح تشابهه {:.0}٪ وحدّ الاقتراح {:.0}٪.",
                 afdal * 100.0,
@@ -803,9 +814,7 @@ impl SababAdamTatabuq {
             Self::AqsarMinAlhadd { tul } => format!(
                 "النص الأصلي {tul} محرفًا، وهو أقصر من أن يُقترح له شبيه ({ADNA_TUL_LITTAKHMEEN})."
             ),
-            Self::TakhmeenGhayrMasmuh => {
-                "لم يُطلب التطابق التقريبي، فلم يُخمَّن شيء.".to_owned()
-            }
+            Self::TakhmeenGhayrMasmuh => "لم يُطلب التطابق التقريبي، فلم يُخمَّن شيء.".to_owned(),
         }
     }
 
@@ -815,13 +824,13 @@ impl SababAdamTatabuq {
         match self {
             Self::MiftahMajhul { miftah } => {
                 format!("the key {miftah} names nothing in this project")
-            }
+            },
             Self::MasdarMajhul { masdar } => {
                 format!("no row carries the source text \"{masdar}\"")
-            }
+            },
             Self::MiftahMultabis { miftah, adad } => {
                 format!("the key {miftah} answers to {adad} rows and nothing chooses between them")
-            }
+            },
             Self::TashabuhDunAlhadd { afdal, hadd } => format!(
                 "the closest candidate scored {:.0}% against a threshold of {:.0}%",
                 afdal * 100.0,
@@ -833,7 +842,7 @@ impl SababAdamTatabuq {
             ),
             Self::TakhmeenGhayrMasmuh => {
                 "similarity matching was not enabled, so nothing was guessed".to_owned()
-            }
+            },
         }
     }
 }
@@ -1197,9 +1206,9 @@ impl NatijatIstirad {
     /// How many project rows would actually be written.
     #[must_use]
     pub fn sufuf_qabila_lilkitaba(&self) -> usize {
-        self.mutatabiqa
-            .iter()
-            .fold(0_usize, |majmu, tatabuq| majmu.saturating_add(tatabuq.jahiza.len()))
+        self.mutatabiqa.iter().fold(0_usize, |majmu, tatabuq| {
+            majmu.saturating_add(tatabuq.jahiza.len())
+        })
     }
 
     /// The paragraph the import preview shows, in Arabic.
@@ -1223,9 +1232,7 @@ impl NatijatIstirad {
                 "تحذير: الفارق بين ما قُرئ وما سُجّل {farq}. سقط شيء بين التحليل والتقرير."
             ));
         }
-        jumal.push(
-            "كل ما استُورد يدخل مسوّدةً أو ترجمةً آلية. لا يصل الاستيراد إلى الاعتماد.".to_owned(),
-        );
+        jumal.push("كل ما استُورد يدخل مسوّدةً أو ترجمةً آلية. لا يصل الاستيراد إلى الاعتماد.".to_owned());
         jumal.join(" ")
     }
 
@@ -1420,7 +1427,11 @@ impl IstiradKhiyarat {
     /// output, which records no author and asserts that no human has read it.
     #[must_use]
     pub const fn hala_asasiya(&self, sigha: SighatIstirad) -> HalatWarid {
-        if self.musahim.is_some() { sigha.saqf_hala() } else { HalatWarid::Aaliya }
+        if self.musahim.is_some() {
+            sigha.saqf_hala()
+        } else {
+            HalatWarid::Aaliya
+        }
     }
 }
 
@@ -1456,7 +1467,7 @@ pub fn shakhkhis(nass: &str) -> Option<SighatIstirad> {
                 None if nafidha.contains("<trans-unit") => Some(SighatIstirad::Xliff12),
                 None if nafidha.contains("<unit ") || nafidha.contains("<segment") => {
                     Some(SighatIstirad::Xliff20)
-                }
+                },
                 _ => None,
             },
             "tmx" => match sifa_khaam(&sifat, "version") {
@@ -1506,7 +1517,7 @@ pub fn wasf_ma_wujid(nass: &str) -> String {
         return match sifa_khaam(&sifat, "version") {
             Some(nuskha) => {
                 format!("XML whose root element is <{ism}>, declaring version=\"{nuskha}\"")
-            }
+            },
             None => format!("XML whose root element is <{ism}>, declaring no version"),
         };
     }
@@ -1590,7 +1601,10 @@ fn sifa_khaam(sifat: &str, matlub: &str) -> Option<String> {
     while let Some(mawqi) = baqi.find('=') {
         let qabl = baqi.get(..mawqi).unwrap_or_default();
         let ism = qabl.split_whitespace().next_back().unwrap_or_default();
-        let baad = baqi.get(mawqi.saturating_add(1)..).unwrap_or_default().trim_start();
+        let baad = baqi
+            .get(mawqi.saturating_add(1)..)
+            .unwrap_or_default()
+            .trim_start();
         let iqtibas = baad.chars().next().unwrap_or(' ');
         let (qeema, taqaddum) = if iqtibas == '"' || iqtibas == '\'' {
             let jasad = baad.get(1..).unwrap_or_default();
@@ -1600,10 +1614,18 @@ fn sifa_khaam(sifat: &str, matlub: &str) -> Option<String> {
             let tul = baad.find(char::is_whitespace).unwrap_or(baad.len());
             (baad.get(..tul).unwrap_or_default(), tul)
         };
-        if ism.rsplit(':').next().unwrap_or(ism).eq_ignore_ascii_case(matlub) {
+        if ism
+            .rsplit(':')
+            .next()
+            .unwrap_or(ism)
+            .eq_ignore_ascii_case(matlub)
+        {
             return Some(qeema.to_owned());
         }
-        let mustahlak = baqi.len().saturating_sub(baad.len()).saturating_add(taqaddum);
+        let mustahlak = baqi
+            .len()
+            .saturating_sub(baad.len())
+            .saturating_add(taqaddum);
         baqi = baqi.get(mustahlak..).unwrap_or_default();
         if baqi.is_empty() {
             break;
@@ -1759,7 +1781,7 @@ pub fn mawqi_fasil_xunity(satr: &str) -> Option<usize> {
         match harf {
             '\\' => mailat = true,
             '=' => return Some(izaha),
-            _ => {}
+            _ => {},
         }
     }
     None
@@ -1783,7 +1805,11 @@ pub fn ramz_lugha_min_unwan(unwan: &str) -> Option<String> {
         }
         return None;
     }
-    if ramz_bcp47(mahdhub) { Some(mahdhub.to_owned()) } else { None }
+    if ramz_bcp47(mahdhub) {
+        Some(mahdhub.to_owned())
+    } else {
+        None
+    }
 }
 
 /// Whether a string is shaped like a BCP-47 tag this module would act on.
@@ -1794,7 +1820,9 @@ pub fn ramz_lugha_min_unwan(unwan: &str) -> Option<String> {
 /// headed `Notes` for a locale.
 fn ramz_bcp47(ramz: &str) -> bool {
     let mut ajza = ramz.split(['-', '_']);
-    let Some(awwal) = ajza.next() else { return false };
+    let Some(awwal) = ajza.next() else {
+        return false;
+    };
     if !(2..=3).contains(&awwal.chars().count()) || !awwal.chars().all(|h| h.is_ascii_alphabetic())
     {
         return false;
@@ -1872,7 +1900,7 @@ pub fn iqra_bi_sigha(
         SighatIstirad::Csv => nusus_basita::iqra_jadwal(masar, nass, khiyarat),
         SighatIstirad::UnityLocalizationCsv => {
             nusus_basita::iqra_wahdat_tawteen(masar, nass, khiyarat)
-        }
+        },
         SighatIstirad::Xliff12 => xliff::iqra_nuskha_ula(masar, nass, khiyarat),
         SighatIstirad::Xliff20 => xliff::iqra_nuskha_thaniya(masar, nass, khiyarat),
         SighatIstirad::GettextPo => po_tmx::iqra_po(masar, nass, khiyarat),
@@ -1892,8 +1920,10 @@ pub fn iqra_bi_sigha(
 /// [`KhataTarqee::IstiradFashil`] when the encoding cannot be established or
 /// the format's own parser refuses the document.
 pub fn iqra(masar: &Path, khiyarat: &IstiradKhiyarat) -> Result<MilaffWarid, KhataTarqee> {
-    let bayt = std::fs::read(masar)
-        .map_err(|sabab| KhataTarqee::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+    let bayt = std::fs::read(masar).map_err(|sabab| KhataTarqee::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })?;
     let nass = nusus_basita::fak_tarmiz(masar, &bayt, khiyarat)?;
     let sigha = shakhkhis_aw_irfud(masar, &nass)?;
     tracing::debug!(masar = %masar.display(), sigha = sigha.ism(), "import format identified");
@@ -1979,7 +2009,9 @@ impl<'a> FahrasJadwal<'a> {
     /// One row by identity.
     #[must_use]
     pub fn saff(&self, id: NassId) -> Option<&'a MudkhalNass> {
-        self.mawqi.get(&id).and_then(|mawdi| self.jadwal.get(*mawdi))
+        self.mawqi
+            .get(&id)
+            .and_then(|mawdi| self.jadwal.get(*mawdi))
     }
 
     /// The rows an entry identifies, and how.
@@ -1995,8 +2027,8 @@ impl<'a> FahrasJadwal<'a> {
                 match qaima.len() {
                     1 => {
                         return IltimasNatija::Wujid(TareeqaTatabuq::Miftah, qaima.clone());
-                    }
-                    0 => {}
+                    },
+                    0 => {},
                     adad => iltibas = Some((miftah, adad)),
                 }
             }
@@ -2155,14 +2187,16 @@ fn hasilat_wahid(
                 warid: warid.clone(),
                 sabab: SababAdamTatabuq::MiftahMultabis { miftah, adad },
             });
-        }
+        },
         IltimasNatija::Mafqud => return bila_tatabuq(fahras, warid, khiyarat),
     };
 
     let mut jahiza = Vec::new();
     let mut mujjala = Vec::new();
     for id in &sufuf {
-        let Some(saff) = fahras.saff(*id) else { continue };
+        let Some(saff) = fahras.saff(*id) else {
+            continue;
+        };
         match sabab_taajil(saff) {
             Some(sabab) => mujjala.push(SaffIstibdal {
                 id: *id,
@@ -2203,7 +2237,9 @@ fn hasilat_wahid(
     }
     HasilatMudkhal::Marfud(MudkhalMarfud {
         warid: warid.clone(),
-        sabab: SababRafd::SufufMashghula { adad: mujjala.len() },
+        sabab: SababRafd::SufufMashghula {
+            adad: mujjala.len(),
+        },
     })
 }
 
@@ -2214,7 +2250,9 @@ fn bila_tatabuq(
     khiyarat: &IstiradKhiyarat,
 ) -> HasilatMudkhal {
     let sabab_asasi = || match warid.miftah.as_deref() {
-        Some(miftah) => SababAdamTatabuq::MiftahMajhul { miftah: miftah.to_owned() },
+        Some(miftah) => SababAdamTatabuq::MiftahMajhul {
+            miftah: miftah.to_owned(),
+        },
         None => SababAdamTatabuq::MasdarMajhul {
             masdar: warid.masdar.chars().take(64).collect(),
         },
@@ -2393,13 +2431,18 @@ pub fn tabbiq(
     jadwal: &mut [MudkhalNass],
     khiyarat: &IstiradKhiyarat,
 ) -> TaqreerTatbeeq {
-    let mawqi: BTreeMap<NassId, usize> =
-        jadwal.iter().enumerate().map(|(mawdi, saff)| (saff.id, mawdi)).collect();
+    let mawqi: BTreeMap<NassId, usize> = jadwal
+        .iter()
+        .enumerate()
+        .map(|(mawdi, saff)| (saff.id, mawdi))
+        .collect();
     let mut taqreer = TaqreerTatbeeq::default();
     let muzawwid = format!("istirad:{}", natija.sigha().ism());
 
     for tatabuq in natija.mutatabiqa() {
-        let Some(hadaf) = tatabuq.warid.hadaf.as_deref() else { continue };
+        let Some(hadaf) = tatabuq.warid.hadaf.as_deref() else {
+            continue;
+        };
         taqreer.madakhil = taqreer.madakhil.saturating_add(1);
         let (naqi, nasq) = match taarib_istikhraj::jadwal::irfa_nasq(hadaf) {
             Ok((naqi, nasq)) => (naqi, nasq),
@@ -2407,7 +2450,7 @@ pub fn tabbiq(
                 tracing::warn!(sabab = %khata, "imported translation kept its markup unlifted");
                 taqreer.bila_nasq = taqreer.bila_nasq.saturating_add(1);
                 (hadaf.to_owned(), Vec::new())
-            }
+            },
         };
 
         for id in &tatabuq.jahiza {
@@ -2446,7 +2489,7 @@ fn sajjil_hala(saff: &mut MudkhalNass, hala: HalatWarid, khiyarat: &IstiradKhiya
             saff.muharrir = Some(musahim.clone());
             saff.tareeqa = None;
             saff.muraja.sajjil_musawwada(musahim, khiyarat.lahza);
-        }
+        },
         (HalatWarid::LilMuraja, musahim) => {
             saff.muharrir.clone_from(&musahim);
             saff.tareeqa = None;
@@ -2455,12 +2498,12 @@ fn sajjil_hala(saff: &mut MudkhalNass, hala: HalatWarid, khiyarat: &IstiradKhiya
                 khiyarat.lahza,
                 Some("imported from an interchange file".to_owned()),
             );
-        }
+        },
         (HalatWarid::Aaliya | HalatWarid::Musawwada, _) => {
             saff.muharrir = None;
             saff.tareeqa = Some(TareeqaTarjama::AaliyaFaqat);
             saff.muraja.sajjil_aali(khiyarat.lahza);
-        }
+        },
     }
 }
 
@@ -2576,7 +2619,9 @@ fn masafat_tahrir(awwal: &[char], thani: &[char], saqf: usize) -> Option<usize> 
             let ala = saf.get(talia).copied().unwrap_or(usize::MAX);
             let yasar = saf.get(amud).copied().unwrap_or(usize::MAX);
             let badal = qutri.saturating_add(usize::from(harf_a != harf_b));
-            let qeema = badal.min(ala.saturating_add(1)).min(yasar.saturating_add(1));
+            let qeema = badal
+                .min(ala.saturating_add(1))
+                .min(yasar.saturating_add(1));
             if let Some(khana) = saf.get_mut(talia) {
                 *khana = qeema;
             }
@@ -2604,12 +2649,16 @@ pub(crate) struct FahrasAstur {
 impl FahrasAstur {
     /// Indexes every newline in a document.
     pub(crate) fn jadeed(nass: &str) -> Self {
-        Self { nihayat: nass.match_indices('\n').map(|(izaha, _)| izaha).collect() }
+        Self {
+            nihayat: nass.match_indices('\n').map(|(izaha, _)| izaha).collect(),
+        }
     }
 
     /// The one-based line a byte offset falls on.
     pub(crate) fn satr(&self, bayt: usize) -> usize {
-        self.nihayat.partition_point(|nihaya| *nihaya < bayt).saturating_add(1)
+        self.nihayat
+            .partition_point(|nihaya| *nihaya < bayt)
+            .saturating_add(1)
     }
 
     /// How many lines the document has.

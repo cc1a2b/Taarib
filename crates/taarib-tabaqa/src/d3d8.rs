@@ -112,9 +112,18 @@ const D3DERR_INVALIDCALL: Natija8 = -0x7789_F794;
 // computes them, and checked here against the hexadecimal spellings that appear
 // in `d3d8.h` and in every bug report anybody will ever paste.
 const _: () = {
-    assert!(D3DERR_DEVICELOST.cast_unsigned() == 0x8876_0868, "D3DERR_DEVICELOST is wrong");
-    assert!(D3DERR_DEVICENOTRESET.cast_unsigned() == 0x8876_0869, "D3DERR_DEVICENOTRESET is wrong");
-    assert!(D3DERR_INVALIDCALL.cast_unsigned() == 0x8876_086C, "D3DERR_INVALIDCALL is wrong");
+    assert!(
+        D3DERR_DEVICELOST.cast_unsigned() == 0x8876_0868,
+        "D3DERR_DEVICELOST is wrong"
+    );
+    assert!(
+        D3DERR_DEVICENOTRESET.cast_unsigned() == 0x8876_0869,
+        "D3DERR_DEVICENOTRESET is wrong"
+    );
+    assert!(
+        D3DERR_INVALIDCALL.cast_unsigned() == 0x8876_086C,
+        "D3DERR_INVALIDCALL is wrong"
+    );
 };
 
 /// A `RECT`, declared here because this module compiles off Windows too.
@@ -227,13 +236,21 @@ struct MuallimatInsha8 {
 
 impl Default for MustatilMaqful8 {
     fn default() -> Self {
-        Self { khatwa: 0, bayt: core::ptr::null_mut() }
+        Self {
+            khatwa: 0,
+            bayt: core::ptr::null_mut(),
+        }
     }
 }
 
 impl Default for MuallimatInsha8 {
     fn default() -> Self {
-        Self { muhawwil: 0, naw: 0, nafidha: core::ptr::null_mut(), aalam: 0 }
+        Self {
+            muhawwil: 0,
+            naw: 0,
+            nafidha: core::ptr::null_mut(),
+            aalam: 0,
+        }
     }
 }
 
@@ -522,9 +539,16 @@ struct JadwalJihaz8 {
     /// Slot 19, `GetGammaRamp`.
     ijlib_tadarruj: KhanaMuhmala,
     /// Slot 20, `CreateTexture`.
-    insha_nasij:
-        unsafe extern "system" fn(*mut c_void, u32, u32, u32, u32, u32, u32, *mut *mut c_void)
-            -> Natija8,
+    insha_nasij: unsafe extern "system" fn(
+        *mut c_void,
+        u32,
+        u32,
+        u32,
+        u32,
+        u32,
+        u32,
+        *mut *mut c_void,
+    ) -> Natija8,
     /// Slot 21, `CreateVolumeTexture`.
     insha_nasij_hajmi: KhanaMuhmala,
     /// Slot 22, `CreateCubeTexture`.
@@ -636,8 +660,7 @@ struct JadwalJihaz8 {
     /// Slot 71, `DrawIndexedPrimitive`.
     irsim_mufahras: KhanaMuhmala,
     /// Slot 72, `DrawPrimitiveUP`.
-    irsim_mubashir:
-        unsafe extern "system" fn(*mut c_void, u32, u32, *const c_void, u32) -> Natija8,
+    irsim_mubashir: unsafe extern "system" fn(*mut c_void, u32, u32, *const c_void, u32) -> Natija8,
     /// Slot 73, `DrawIndexedPrimitiveUP`.
     irsim_mufahras_mubashir: KhanaMuhmala,
     /// Slot 74, `ProcessVertices`.
@@ -716,8 +739,7 @@ const _: () = {
         "Present is not at the slot the hook writes"
     );
     assert!(
-        core::mem::offset_of!(JadwalJihaz8, tasfir)
-            == KHANAT_TASFIR_8 * size_of::<*const c_void>(),
+        core::mem::offset_of!(JadwalJihaz8, tasfir) == KHANAT_TASFIR_8 * size_of::<*const c_void>(),
         "Reset is not at the slot the hook writes"
     );
     assert!(
@@ -728,7 +750,10 @@ const _: () = {
 
 /// `IDirect3DSurface8`'s method table.
 #[repr(C)]
-#[allow(dead_code, reason = "as `JadwalJihaz8`: the untyped slots carry the offsets")]
+#[allow(
+    dead_code,
+    reason = "as `JadwalJihaz8`: the untyped slots carry the offsets"
+)]
 struct JadwalSath8 {
     /// Slot 0, `QueryInterface`.
     istifsar: KhanaMuhmala,
@@ -761,7 +786,10 @@ struct JadwalSath8 {
 
 /// `IDirect3DTexture8`'s method table.
 #[repr(C)]
-#[allow(dead_code, reason = "as `JadwalJihaz8`: the untyped slots carry the offsets")]
+#[allow(
+    dead_code,
+    reason = "as `JadwalJihaz8`: the untyped slots carry the offsets"
+)]
 struct JadwalNasij8 {
     /// Slot 0, `QueryInterface`.
     istifsar: KhanaMuhmala,
@@ -811,7 +839,10 @@ struct JadwalNasij8 {
 
 /// `IDirect3D8`'s method table, for the throwaway device the probe creates.
 #[repr(C)]
-#[allow(dead_code, reason = "as `JadwalJihaz8`: the untyped slots carry the offsets")]
+#[allow(
+    dead_code,
+    reason = "as `JadwalJihaz8`: the untyped slots carry the offsets"
+)]
 struct JadwalD3d8 {
     /// Slot 0, `QueryInterface`.
     istifsar: KhanaMuhmala,
@@ -1028,8 +1059,9 @@ impl Jihaz8 {
         let mut khaam: *mut c_void = core::ptr::null_mut();
         // SAFETY: the out-parameter addresses a live local initialised to null,
         // which the runtime overwrites with an owned reference on success.
-        let natija =
-            unsafe { ((*self.jadwal()).khalfiya)(self.0, fahras, KHALFIYA_UHADIYA, &raw mut khaam) };
+        let natija = unsafe {
+            ((*self.jadwal()).khalfiya)(self.0, fahras, KHALFIYA_UHADIYA, &raw mut khaam)
+        };
         if !najah(natija) || khaam.is_null() {
             return None;
         }
@@ -1078,7 +1110,14 @@ impl Jihaz8 {
         // every other argument is a plain integer.
         let natija = unsafe {
             ((*self.jadwal()).insha_nasij)(
-                self.0, ard, irtifa, 1, 0, sigha, HAWD_MUDAR, &raw mut khaam,
+                self.0,
+                ard,
+                irtifa,
+                1,
+                0,
+                sigha,
+                HAWD_MUDAR,
+                &raw mut khaam,
             )
         };
         if !najah(natija) || khaam.is_null() {
@@ -1093,8 +1132,9 @@ impl Jihaz8 {
     fn insha_sath_sura(self, ard: u32, irtifa: u32, sigha: u32) -> Option<Sath8> {
         let mut khaam: *mut c_void = core::ptr::null_mut();
         // SAFETY: as `insha_nasij`.
-        let natija =
-            unsafe { ((*self.jadwal()).insha_sath_sura)(self.0, ard, irtifa, sigha, &raw mut khaam) };
+        let natija = unsafe {
+            ((*self.jadwal()).insha_sath_sura)(self.0, ard, irtifa, sigha, &raw mut khaam)
+        };
         if !najah(natija) || khaam.is_null() {
             return None;
         }
@@ -1304,8 +1344,14 @@ const _: () = {
         size_of::<RasQadim>() == KHATWAT_RAS_QADIM as usize,
         "RasQadim is not twenty-eight bytes"
     );
-    assert!(core::mem::offset_of!(RasQadim, mawdi) == 0, "the FVF wants position first");
-    assert!(core::mem::offset_of!(RasQadim, lawn) == 16, "the FVF wants the colour after XYZRHW");
+    assert!(
+        core::mem::offset_of!(RasQadim, mawdi) == 0,
+        "the FVF wants position first"
+    );
+    assert!(
+        core::mem::offset_of!(RasQadim, lawn) == 16,
+        "the FVF wants the colour after XYZRHW"
+    );
     assert!(
         core::mem::offset_of!(RasQadim, khareeta) == 20,
         "the FVF wants the texture coordinate last"
@@ -1339,7 +1385,11 @@ struct DufaaQadima {
 /// edges live in, which is where a difference is visible.
 fn ila_sirgb(khatti: f32) -> f32 {
     let amin = khatti.clamp(0.0, 1.0);
-    if amin <= 0.003_130_8 { amin * 12.92 } else { 1.055f32.mul_add(amin.powf(1.0 / 2.4), -0.055) }
+    if amin <= 0.003_130_8 {
+        amin * 12.92
+    } else {
+        1.055f32.mul_add(amin.powf(1.0 / 2.4), -0.055)
+    }
 }
 
 /// A zero-to-one channel as the byte a `D3DCOLOR` carries.
@@ -1438,7 +1488,11 @@ fn ibni_ruus(
     let (nisbat_u, nisbat_v) = nisbat;
 
     for qita in &lawha.qitaat {
-        let QitaRasm { mawdi, khareeta, lawn } = *qita;
+        let QitaRasm {
+            mawdi,
+            khareeta,
+            lawn,
+        } = *qita;
         if mawdi.ard == 0 || mawdi.irtifa == 0 {
             continue;
         }
@@ -1475,8 +1529,12 @@ fn ibni_ruus(
         match dufaat.last_mut() {
             Some(akhira) if akhira.masturat == masturat => {
                 akhira.adad = akhira.adad.saturating_add(6);
-            }
-            _ => dufaat.push(DufaaQadima { masturat, bidaya, adad: 6 }),
+            },
+            _ => dufaat.push(DufaaQadima {
+                masturat,
+                bidaya,
+                adad: 6,
+            }),
         }
     }
 }
@@ -1528,7 +1586,9 @@ fn sigha_min_d3d8(sigha: u32) -> Result<SighatSath, KhataTabaqa> {
     if bayt_lil_biksel8(sigha).is_some() {
         Ok(SighatSath::Bgra8)
     } else {
-        Err(KhataTabaqa::SighaGhayrMaduma { sigha: format!("D3DFORMAT({sigha})") })
+        Err(KhataTabaqa::SighaGhayrMaduma {
+            sigha: format!("D3DFORMAT({sigha})"),
+        })
     }
 }
 
@@ -1592,7 +1652,11 @@ fn biksel_bgra8(saf: &[u8], sigha: u32, fahras: usize) -> Option<[u8; 4]> {
                 khams_ila_thaman(qeema),
                 khams_ila_thaman(qeema >> 5),
                 khams_ila_thaman(qeema >> 10),
-                if sigha == SIGHA_A1R5G5B5 && (qeema & 0x8000) == 0 { 0x00 } else { 0xFF },
+                if sigha == SIGHA_A1R5G5B5 && (qeema & 0x8000) == 0 {
+                    0x00
+                } else {
+                    0xFF
+                },
             ],
         });
     }
@@ -1621,13 +1685,20 @@ fn biksel_bgra8(saf: &[u8], sigha: u32, fahras: usize) -> Option<[u8; 4]> {
             }
         };
         // Two bits of alpha expanded by replication: 0, 85, 170, 255.
-        let shaffaf = u8::try_from((qeema >> 30) & 0x3).unwrap_or(0).saturating_mul(0x55);
+        let shaffaf = u8::try_from((qeema >> 30) & 0x3)
+            .unwrap_or(0)
+            .saturating_mul(0x55);
         return Some([qanat(0), qanat(10), qanat(20), shaffaf]);
     }
 
     // `A8R8G8B8` and `X8R8G8B8` are already blue, green, red, alpha in memory.
     // The `X` spelling's fourth byte is undefined, so it is forced opaque.
-    Some([*b0, *b1, *b2, if sigha == SIGHA_X8R8G8B8 { 0xFF } else { *b3 }])
+    Some([
+        *b0,
+        *b1,
+        *b2,
+        if sigha == SIGHA_X8R8G8B8 { 0xFF } else { *b3 },
+    ])
 }
 
 /// Copies one row of a region out of a locked surface, widening as it goes.
@@ -1701,7 +1772,10 @@ fn tahaqquq_jadwal(jihaz: Jihaz8, mutawaqqa: Option<&MuallimatInsha8>) -> Result
     };
 
     let taawun = jihaz.ikhtibar_taawun();
-    if !matches!(taawun, 0 | D3DERR_DEVICELOST | D3DERR_DEVICENOTRESET | D3DERR_INVALIDCALL) {
+    if !matches!(
+        taawun,
+        0 | D3DERR_DEVICELOST | D3DERR_DEVICENOTRESET | D3DERR_INVALIDCALL
+    ) {
         return Err(radd(format!(
             "TestCooperativeLevel answered {taawun:#010x}, which is not one of the codes the \
              method is documented to return; slot three is not the method this build thinks it is"
@@ -1733,13 +1807,13 @@ fn tahaqquq_jadwal(jihaz: Jihaz8, mutawaqqa: Option<&MuallimatInsha8>) -> Result
     }
 
     match jihaz.namat_ard() {
-        Some(namat) if namat.ard > 0 && namat.irtifa > 0 && namat.ard <= 65_535 => {}
+        Some(namat) if namat.ard > 0 && namat.irtifa > 0 && namat.ard <= 65_535 => {},
         Some(namat) => {
             return Err(radd(format!(
                 "GetDisplayMode reported a {}×{} desktop, which is not a mode any adapter has",
                 namat.ard, namat.irtifa
             )));
-        }
+        },
         None => return Err(radd("GetDisplayMode refused".to_owned())),
     }
 
@@ -1910,13 +1984,12 @@ impl KhattafD3D8 {
 
         tahaqquq_jadwal(jihaz, None)?;
 
-        let muallimat = jihaz.muallimat_insha().ok_or_else(|| {
-            KhataTabaqa::JadwalGhayrMawjud {
+        let muallimat = jihaz
+            .muallimat_insha()
+            .ok_or_else(|| KhataTabaqa::JadwalGhayrMawjud {
                 wajiha: "IDirect3DDevice8".to_owned(),
-                sabab: "GetCreationParameters refused after the table had been verified"
-                    .to_owned(),
-            }
-        })?;
+                sabab: "GetCreationParameters refused after the table had been verified".to_owned(),
+            })?;
         let naqi = muallimat.aalam & INSHA_NAQI != 0;
         let mutaadid = muallimat.aalam & INSHA_MUTAADID != 0;
 
@@ -1927,8 +2000,16 @@ impl KhattafD3D8 {
             muallimat.muhawwil,
             muallimat.naw,
             muallimat.aalam,
-            if muallimat.aalam & INSHA_RUUS_ARIDA == 0 { "software or mixed" } else { "hardware" },
-            if naqi { ", pure (no state may be read back)" } else { "" },
+            if muallimat.aalam & INSHA_RUUS_ARIDA == 0 {
+                "software or mixed"
+            } else {
+                "hardware"
+            },
+            if naqi {
+                ", pure (no state may be read back)"
+            } else {
+                ""
+            },
             if mutaadid { ", multithreaded" } else { "" }
         )];
 
@@ -1984,7 +2065,10 @@ impl KhattafD3D8 {
     /// renderer.
     fn arsil_dufaat(&self, sath: WasfSath) -> Result<(), KhataTabaqa> {
         let jihaz = self.jihaz;
-        let nasij = self.nasij.as_ref().map_or(core::ptr::null_mut(), |nasij| nasij.0);
+        let nasij = self
+            .nasij
+            .as_ref()
+            .map_or(core::ptr::null_mut(), |nasij| nasij.0);
         if nasij.is_null() && self.dufaat.iter().any(|dufaa| dufaa.masturat) {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "glyph atlas",
@@ -2004,7 +2088,10 @@ impl KhattafD3D8 {
         if !najah(natija) {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "overlay viewport",
-                sabab: format!("SetViewport refused a {}×{} viewport: {natija:#010x}", sath.ard, sath.irtifa),
+                sabab: format!(
+                    "SetViewport refused a {}×{} viewport: {natija:#010x}",
+                    sath.ard, sath.irtifa
+                ),
             });
         }
 
@@ -2067,7 +2154,11 @@ impl KhattafD3D8 {
         let mut masturat_alaan: Option<bool> = None;
         for dufaa in &self.dufaat {
             if masturat_alaan != Some(dufaa.masturat) {
-                let amal = if dufaa.masturat { AMAL_DARB } else { AMAL_IKHTAR_2 };
+                let amal = if dufaa.masturat {
+                    AMAL_DARB
+                } else {
+                    AMAL_IKHTAR_2
+                };
                 let _ = jihaz.dai_hala_marhala(0, marhala::AMALIYAT_LAWN, amal);
                 let _ = jihaz.dai_hala_marhala(0, marhala::AMALIYAT_SHAFAFIYA, amal);
                 masturat_alaan = Some(dufaa.masturat);
@@ -2099,7 +2190,9 @@ impl KhattafD3D8 {
             if !najah(natija) {
                 return Err(KhataTabaqa::MawridFashil {
                     mawrid: "overlay draw call",
-                    sabab: format!("DrawPrimitiveUP refused {muthallathat} triangles: {natija:#010x}"),
+                    sabab: format!(
+                        "DrawPrimitiveUP refused {muthallathat} triangles: {natija:#010x}"
+                    ),
                 });
             }
         }
@@ -2157,7 +2250,9 @@ impl KhattafD3D8 {
         if nasij.is_none() {
             let mubattan = (quwwat_ithnayn(ard), quwwat_ithnayn(irtifa));
             if mubattan != qiyas {
-                nasij = self.jihaz.insha_nasij(mubattan.0, mubattan.1, SIGHA_A8R8G8B8);
+                nasij = self
+                    .jihaz
+                    .insha_nasij(mubattan.0, mubattan.1, SIGHA_A8R8G8B8);
                 if nasij.is_some() {
                     qiyas = mubattan;
                     self.athar.push(format!(
@@ -2213,8 +2308,10 @@ impl KhattafD3D8 {
             saf.fill(0);
             if satr < masdar_irtifa {
                 for amud in 0..masdar_ard {
-                    let masdar =
-                        satr.saturating_mul(masdar_ard).saturating_add(amud).saturating_mul(4);
+                    let masdar = satr
+                        .saturating_mul(masdar_ard)
+                        .saturating_add(amud)
+                        .saturating_mul(4);
                     let hadaf = amud.saturating_mul(4);
                     let (Some(khaam), Some(makan)) =
                         (bayt.get(masdar..masdar + 4), saf.get_mut(hadaf..hadaf + 4))
@@ -2339,7 +2436,10 @@ impl Khattaf for KhattafD3D8 {
         };
         if wasf.ard == 0 || wasf.irtifa == 0 {
             return Err(KhataTabaqa::SathTaghayyar {
-                sabab: format!("the backbuffer reports a {}×{} surface", wasf.ard, wasf.irtifa),
+                sabab: format!(
+                    "the backbuffer reports a {}×{} surface",
+                    wasf.ard, wasf.irtifa
+                ),
             });
         }
 
@@ -2367,7 +2467,10 @@ impl Khattaf for KhattafD3D8 {
     fn hayyi(&mut self, sath: WasfSath) -> Result<(), KhataTabaqa> {
         if sath.ard == 0 || sath.irtifa == 0 {
             return Err(KhataTabaqa::SathTaghayyar {
-                sabab: format!("a {}×{} surface has no pixels to draw on", sath.ard, sath.irtifa),
+                sabab: format!(
+                    "a {}×{} surface has no pixels to draw on",
+                    sath.ard, sath.irtifa
+                ),
             });
         }
         if self.kutla.is_none() {
@@ -2407,7 +2510,9 @@ impl Khattaf for KhattafD3D8 {
                 saqf: u64::from(SAQF_LAWHA_8),
             });
         }
-        let matlub = u64::from(ard).saturating_mul(u64::from(irtifa)).saturating_mul(4);
+        let matlub = u64::from(ard)
+            .saturating_mul(u64::from(irtifa))
+            .saturating_mul(4);
         if crate::khata::tul_u64(bayt.len()) < matlub {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "glyph atlas texture",
@@ -2516,7 +2621,9 @@ impl Khattaf for KhattafD3D8 {
         // this backend can return that makes leaving the game's pipeline
         // pointed at Taarib's vertices the better outcome.
         let mut aalik: Vec<String> = Vec::new();
-        let umq_khaam = umq_sabiq.as_ref().map_or(core::ptr::null_mut(), |sath| sath.0);
+        let umq_khaam = umq_sabiq
+            .as_ref()
+            .map_or(core::ptr::null_mut(), |sath| sath.0);
         let istirdad = self.jihaz.dai_hadaf(hadaf_sabiq.0, umq_khaam);
         if !najah(istirdad) {
             aalik.push(format!("SetRenderTarget answered {istirdad:#010x}"));
@@ -2557,7 +2664,10 @@ impl Khattaf for KhattafD3D8 {
     fn iltaqit(&mut self, mintaqa: MustatilBiksel) -> Result<Vec<u8>, KhataTabaqa> {
         let sath = Khattaf::sath(self)?;
         let wasf_mintaqa = || {
-            format!("{}×{} at {},{}", mintaqa.ard, mintaqa.irtifa, mintaqa.yasar, mintaqa.aala)
+            format!(
+                "{}×{} at {},{}",
+                mintaqa.ard, mintaqa.irtifa, mintaqa.yasar, mintaqa.aala
+            )
         };
         let (Some(yameen), Some(asfal)) = (
             mintaqa.yasar.checked_add(mintaqa.ard),
@@ -2603,7 +2713,9 @@ impl Khattaf for KhattafD3D8 {
             });
         }
         if bayt_lil_biksel8(wasf.sigha).is_none() {
-            return Err(KhataTabaqa::SighaGhayrMaduma { sigha: format!("D3DFORMAT({})", wasf.sigha) });
+            return Err(KhataTabaqa::SighaGhayrMaduma {
+                sigha: format!("D3DFORMAT({})", wasf.sigha),
+            });
         }
 
         self.marhala_li(wasf.ard, wasf.irtifa, wasf.sigha)?;
@@ -2674,7 +2786,9 @@ fn jami_sufuf8(
     mintaqa: MustatilBiksel,
 ) -> Result<Vec<u8>, KhataTabaqa> {
     let Some(saa) = bayt_lil_biksel8(wasf.sigha) else {
-        return Err(KhataTabaqa::SighaGhayrMaduma { sigha: format!("D3DFORMAT({})", wasf.sigha) });
+        return Err(KhataTabaqa::SighaGhayrMaduma {
+            sigha: format!("D3DFORMAT({})", wasf.sigha),
+        });
     };
     let khatwa = usize::try_from(maqful.khatwa).unwrap_or(0);
     let saf_matlub = usize::try_from(wasf.ard).unwrap_or(0).saturating_mul(saa);
@@ -2689,7 +2803,10 @@ fn jami_sufuf8(
     let irtifa = usize::try_from(mintaqa.irtifa).unwrap_or(0);
     let aala = usize::try_from(mintaqa.aala).unwrap_or(0);
     let mut kharj = Vec::with_capacity(
-        usize::try_from(mintaqa.ard).unwrap_or(0).saturating_mul(irtifa).saturating_mul(4),
+        usize::try_from(mintaqa.ard)
+            .unwrap_or(0)
+            .saturating_mul(irtifa)
+            .saturating_mul(4),
     );
     for satr in 0..irtifa {
         let mawdi = aala.saturating_add(satr).saturating_mul(khatwa);
@@ -2698,9 +2815,8 @@ fn jami_sufuf8(
         // was checked against the surface before this was called. `khatwa`
         // bytes from the row's start are therefore inside the mapping, and the
         // slice does not outlive the `UnlockRect` that follows in the caller.
-        let saf = unsafe {
-            core::slice::from_raw_parts(maqful.bayt.cast::<u8>().add(mawdi), khatwa)
-        };
+        let saf =
+            unsafe { core::slice::from_raw_parts(maqful.bayt.cast::<u8>().add(mawdi), khatwa) };
         if !ansikh_saf(saf, wasf.sigha, mintaqa.yasar, mintaqa.ard, &mut kharj) {
             return Err(KhataTabaqa::IltiqatFashil {
                 sabab: format!(
@@ -2874,8 +2990,7 @@ impl TarkeebD3D8 {
         NIDA_TAQDEEM.ihfaz(nida_taqdeem as *const () as *mut c_void);
         NIDA_TASFIR.ihfaz(nida_tasfir as *const () as *mut c_void);
 
-        let mut jadwal =
-            taarib_haqn::jadwal::KhatfJadwal::jadeed("IDirect3DDevice8".to_owned());
+        let mut jadwal = taarib_haqn::jadwal::KhatfJadwal::jadeed("IDirect3DDevice8".to_owned());
         // SAFETY: `jihaz` is a live COM interface, so its first machine word is
         // its method table pointer.
         let lawh = unsafe { taarib_haqn::jadwal::jadwal_min_wajiha(jihaz) };
@@ -3126,7 +3241,11 @@ pub fn jihaz_muaqqat() -> Result<JihazMuaqqat8, KhataTabaqa> {
         )
     };
 
-    let mabni = JihazMuaqqat8 { jihaz, d3d, _nafidha: nafidha };
+    let mabni = JihazMuaqqat8 {
+        jihaz,
+        d3d,
+        _nafidha: nafidha,
+    };
     if !najah(natija) || mabni.jihaz.is_null() {
         return Err(KhataTabaqa::JadwalGhayrMawjud {
             wajiha: "IDirect3DDevice8".to_owned(),
@@ -3163,8 +3282,7 @@ pub fn qudra() -> crate::qudra::QudratTarkeeb {
     use crate::qudra::{MilShasha, QudratTarkeeb, SababQudra};
     use taarib_haqn::mawqi::qaidat_wahda;
 
-    let mut taqreer =
-        QudratTarkeeb::jadeeda(WajihatRusum::Direct3D8, MilShasha::KhilalAlJihaz);
+    let mut taqreer = QudratTarkeeb::jadeeda(WajihatRusum::Direct3D8, MilShasha::KhilalAlJihaz);
 
     if qaidat_wahda("d3d8.dll").is_none() {
         return taqreer.maa(SababQudra::mustaheela(
@@ -3196,13 +3314,13 @@ pub fn qudra() -> crate::qudra::QudratTarkeeb {
                 "a throwaway device was created and its method table verified before anything was \
                  hooked",
             ));
-        }
+        },
         Err(khata) => {
             return taqreer.maa(SababQudra::mustaheela(
                 "تعذّر إنشاء جهاز دايركت٣د ٨ على هذا الحاسوب، ولا يمكن قراءة جدول الدوال بدونه.",
                 format!("no Direct3D 8 device could be created on this machine: {khata}"),
             ));
-        }
+        },
     }
 
     if qaidat_wahda("d3d9.dll").is_some() || qaidat_wahda("dxvk_d3d8.dll").is_some() {
@@ -3238,12 +3356,10 @@ pub fn qudra() -> crate::qudra::QudratTarkeeb {
 pub fn qudra() -> crate::qudra::QudratTarkeeb {
     use crate::qudra::{MilShasha, QudratTarkeeb, SababQudra};
 
-    QudratTarkeeb::jadeeda(WajihatRusum::Direct3D8, MilShasha::LaShay).maa(
-        SababQudra::mustaheela(
-            "دايركت٣د ٨ واجهة خاصة بويندوز، ولا وجود لها على هذه المنصة.",
-            "Direct3D 8 is a Windows API and does not exist on this platform",
-        ),
-    )
+    QudratTarkeeb::jadeeda(WajihatRusum::Direct3D8, MilShasha::LaShay).maa(SababQudra::mustaheela(
+        "دايركت٣د ٨ واجهة خاصة بويندوز، ولا وجود لها على هذه المنصة.",
+        "Direct3D 8 is a Windows API and does not exist on this platform",
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -3296,10 +3412,11 @@ mod ikhtibar {
             let tul = 4096;
             // SAFETY: a null base with a non-zero size asks the allocator to
             // choose an address; the return is checked for null below.
-            let asas = unsafe {
-                VirtualAlloc(None, tul, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)
-            };
-            assert!(!asas.is_null(), "the stub vtable page could not be reserved");
+            let asas = unsafe { VirtualAlloc(None, tul, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE) };
+            assert!(
+                !asas.is_null(),
+                "the stub vtable page could not be reserved"
+            );
             Self { asas, tul }
         }
 
@@ -3344,22 +3461,30 @@ mod ikhtibar {
             // `sabiqa` is a live out-parameter.
             let natija =
                 unsafe { VirtualProtect(self.asas, self.tul, PAGE_READWRITE, &raw mut sabiqa) };
-            assert!(natija.is_ok(), "the stub vtable page could not be made writable again");
+            assert!(
+                natija.is_ok(),
+                "the stub vtable page could not be made writable again"
+            );
         }
 
         /// Makes the page writable again after the hook's guard sealed it.
         #[cfg(not(windows))]
         fn iftah(&self) {
             // SAFETY: the span is this type's own mapping, whole.
-            let natija = unsafe {
-                libc::mprotect(self.asas, self.tul, libc::PROT_READ | libc::PROT_WRITE)
-            };
-            assert_eq!(natija, 0, "the stub vtable page could not be made writable again");
+            let natija =
+                unsafe { libc::mprotect(self.asas, self.tul, libc::PROT_READ | libc::PROT_WRITE) };
+            assert_eq!(
+                natija, 0,
+                "the stub vtable page could not be made writable again"
+            );
         }
 
         /// Writes one slot.
         fn ida(&self, khana: usize, qeema: *mut c_void) {
-            assert!(khana < 96, "slot {khana} is past the end of an IDirect3DDevice8 table");
+            assert!(
+                khana < 96,
+                "slot {khana} is past the end of an IDirect3DDevice8 table"
+            );
             // SAFETY: `khana` is below ninety-six and the mapping holds five
             // hundred and twelve pointers, so the offset is inside it. The page
             // is writable: `jadeeda` maps it so and `iftah` puts it back.
@@ -3368,7 +3493,10 @@ mod ikhtibar {
 
         /// Reads one slot.
         fn iqra(&self, khana: usize) -> *mut c_void {
-            assert!(khana < 96, "slot {khana} is past the end of an IDirect3DDevice8 table");
+            assert!(
+                khana < 96,
+                "slot {khana} is past the end of an IDirect3DDevice8 table"
+            );
             // SAFETY: as `ida`, and a read needs only the mapping's read
             // permission, which no guard removes.
             unsafe { self.khanat().add(khana).read() }
@@ -3408,7 +3536,12 @@ mod ikhtibar {
         // SAFETY: the caller — this module's own verification — passes a live
         // local of exactly this type.
         unsafe {
-            namat.write(NamatArd8 { ard: 1920, irtifa: 1080, taraddud: 60, sigha: SIGHA_X8R8G8B8 });
+            namat.write(NamatArd8 {
+                ard: 1920,
+                irtifa: 1080,
+                taraddud: 60,
+                sigha: SIGHA_X8R8G8B8,
+            });
         }
         0
     }
@@ -3581,7 +3714,11 @@ mod ikhtibar {
         );
 
         qaddim(jihaz);
-        assert_eq!(NIDA_MARRAT.load(Ordering::Acquire), 1, "the frame callback was not reached");
+        assert_eq!(
+            NIDA_MARRAT.load(Ordering::Acquire),
+            1,
+            "the frame callback was not reached"
+        );
         assert_eq!(
             ASL_MARRAT.load(Ordering::Acquire),
             1,
@@ -3589,7 +3726,7 @@ mod ikhtibar {
         );
 
         match tarkeeb.fukk() {
-            Ok(()) => {}
+            Ok(()) => {},
             Err(khata) => panic!("the hook would not come off: {khata}"),
         }
         assert_eq!(
@@ -3605,7 +3742,11 @@ mod ikhtibar {
             1,
             "the callback was reached after the hook was removed"
         );
-        assert_eq!(ASL_MARRAT.load(Ordering::Acquire), 2, "the stub's own Present was not reached");
+        assert_eq!(
+            ASL_MARRAT.load(Ordering::Acquire),
+            2,
+            "the stub's own Present was not reached"
+        );
     }
 
     /// A slot another overlay took after Taarib is left alone, and said so.
@@ -3649,7 +3790,11 @@ mod ikhtibar {
             ghareeb,
             "Taarib overwrote another overlay's hook with its own saved original"
         );
-        assert_ne!(safha.iqra(KHANAT_TAQDEEM_8), asli, "the slot was restored anyway");
+        assert_ne!(
+            safha.iqra(KHANAT_TAQDEEM_8),
+            asli,
+            "the slot was restored anyway"
+        );
         // Reset was hooked second and popped first, so it was restored before
         // the refusal was reached. Both halves matter: the refusal is per slot,
         // not per installation.
@@ -3723,7 +3868,11 @@ mod ikhtibar {
             );
         }
 
-        assert_eq!(lawn_d3d([0.0, 0.0, 0.0, 0.0]), 0, "a transparent quad must pack to zero");
+        assert_eq!(
+            lawn_d3d([0.0, 0.0, 0.0, 0.0]),
+            0,
+            "a transparent quad must pack to zero"
+        );
     }
 
     /// The batch becomes six vertices a quad, in runs that follow the plates.
@@ -3731,17 +3880,35 @@ mod ikhtibar {
     fn dufaat_tatba_al_alwah() {
         use crate::wajiha::{MustatilNisbi, SighatSath};
 
-        let sath = WasfSath { ard: 640, irtifa: 480, sigha: SighatSath::Bgra8, sirgb: false };
+        let sath = WasfSath {
+            ard: 640,
+            irtifa: 480,
+            sigha: SighatSath::Bgra8,
+            sirgb: false,
+        };
         let lawh = QitaRasm {
-            mawdi: MustatilBiksel { yasar: 10, aala: 20, ard: 100, irtifa: 16 },
+            mawdi: MustatilBiksel {
+                yasar: 10,
+                aala: 20,
+                ard: 100,
+                irtifa: 16,
+            },
             khareeta: None,
             lawn: [1.0, 1.0, 1.0, 1.0],
         };
         let shakl = QitaRasm {
-            khareeta: Some(MustatilNisbi { yasar: 0.25, aala: 0.5, ard: 0.25, irtifa: 0.25 }),
+            khareeta: Some(MustatilNisbi {
+                yasar: 0.25,
+                aala: 0.5,
+                ard: 0.25,
+                irtifa: 0.25,
+            }),
             ..lawh
         };
-        let lawha = LawhatRasm { qitaat: vec![lawh, shakl, shakl, lawh], sath };
+        let lawha = LawhatRasm {
+            qitaat: vec![lawh, shakl, shakl, lawh],
+            sath,
+        };
 
         let mut ruus = Vec::new();
         let mut dufaat = Vec::new();
@@ -3749,9 +3916,30 @@ mod ikhtibar {
 
         assert_eq!(ruus.len(), 24, "four quads are twenty-four vertices");
         assert_eq!(dufaat.len(), 3, "plate, two glyphs, plate is three runs");
-        assert_eq!(dufaat[0], DufaaQadima { masturat: false, bidaya: 0, adad: 6 });
-        assert_eq!(dufaat[1], DufaaQadima { masturat: true, bidaya: 6, adad: 12 });
-        assert_eq!(dufaat[2], DufaaQadima { masturat: false, bidaya: 18, adad: 6 });
+        assert_eq!(
+            dufaat[0],
+            DufaaQadima {
+                masturat: false,
+                bidaya: 0,
+                adad: 6
+            }
+        );
+        assert_eq!(
+            dufaat[1],
+            DufaaQadima {
+                masturat: true,
+                bidaya: 6,
+                adad: 12
+            }
+        );
+        assert_eq!(
+            dufaat[2],
+            DufaaQadima {
+                masturat: false,
+                bidaya: 18,
+                adad: 6
+            }
+        );
 
         // The half-pixel offset, which nothing else in this crate applies and
         // which Direct3D 8 requires of pre-transformed vertices.
@@ -3773,7 +3961,12 @@ mod ikhtibar {
         // A padded texture rescales the atlas coordinates and nothing else.
         let mut ruus_mubattana = Vec::new();
         let mut dufaat_mubattana = Vec::new();
-        ibni_ruus(&lawha, (0.5, 0.25), &mut ruus_mubattana, &mut dufaat_mubattana);
+        ibni_ruus(
+            &lawha,
+            (0.5, 0.25),
+            &mut ruus_mubattana,
+            &mut dufaat_mubattana,
+        );
         assert!(
             (ruus_mubattana[6].khareeta[0] - 0.125).abs() < f32::EPSILON,
             "a half-width padding must halve u, and u became {}",
@@ -3830,8 +4023,14 @@ mod ikhtibar {
     /// and this is the single number a reviewer most wants to see checked.
     #[test]
     fn khanat_taqdeem_wa_tasfir() {
-        assert_eq!(KHANAT_TAQDEEM_8, 15, "IDirect3DDevice8::Present is slot fifteen");
-        assert_eq!(KHANAT_TASFIR_8, 14, "IDirect3DDevice8::Reset is slot fourteen");
+        assert_eq!(
+            KHANAT_TAQDEEM_8, 15,
+            "IDirect3DDevice8::Present is slot fifteen"
+        );
+        assert_eq!(
+            KHANAT_TASFIR_8, 14,
+            "IDirect3DDevice8::Reset is slot fourteen"
+        );
         assert_eq!(
             size_of::<JadwalJihaz8>(),
             96 * size_of::<*const c_void>(),

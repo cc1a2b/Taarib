@@ -64,11 +64,10 @@ use taarib_ruqaa::katib::Katib;
 use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_tathbeet::bayan::{NawTathbeet, TarifLuba, Tathbeet};
 use taarib_tathbeet::nusus::Nashir;
-use taarib_tathbeet::tarkib::{
-    HalatIdadat, KhuttatTarkib, LubaMuhallala, NatijatTarkib, SababLaHaja, khutta,
-    nashr_bi_khutta,
-};
 use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass, nazzif_nusakh};
+use taarib_tathbeet::tarkib::{
+    HalatIdadat, KhuttatTarkib, LubaMuhallala, NatijatTarkib, SababLaHaja, khutta, nashr_bi_khutta,
+};
 use taarib_usus::khata::Tafsir;
 use taarib_usus::manassa::{BeeatTawafuq, Mimariya, NizamTashghil};
 
@@ -87,9 +86,12 @@ fn iktub(masar: &Path, hajm: usize) {
     }
     let tul = hajm.min(AQSA_JISM);
     let ism = masar.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    let badhra = ism.bytes().fold(17_u8, |akk, bayt| akk.wrapping_mul(31).wrapping_add(bayt));
-    let jism: Vec<u8> =
-        (0..tul).map(|mawdi| badhra.wrapping_add(u8::try_from(mawdi % 251).unwrap_or(0))).collect();
+    let badhra = ism
+        .bytes()
+        .fold(17_u8, |akk, bayt| akk.wrapping_mul(31).wrapping_add(bayt));
+    let jism: Vec<u8> = (0..tul)
+        .map(|mawdi| badhra.wrapping_add(u8::try_from(mawdi % 251).unwrap_or(0)))
+        .collect();
     fs::write(masar, jism).expect("a fixture file");
 }
 
@@ -126,7 +128,9 @@ fn ibni_ruqaa(masar: &Path) -> MalafRuqaa {
     let mut katib = Katib::jadeed();
     let _ = katib.bayan(br#"{"isdar":1}"#);
     let _ = katib.nass("Bonfire", "شعلة").expect("a string record");
-    let _ = katib.nass("Estus Flask", "قارورة الإستوس").expect("a string record");
+    let _ = katib
+        .nass("Estus Flask", "قارورة الإستوس")
+        .expect("a string record");
     let bayt = katib.ikhtim().expect("a sealed package");
     fs::write(masar, bayt.bayt()).expect("writing the package");
     MalafRuqaa::iftah(masar).expect("the package opens and validates")
@@ -205,7 +209,9 @@ fn shajara(jidhr: &Path) -> BTreeMap<String, Option<Vec<u8>>> {
     let mut jadwal = BTreeMap::new();
     for madkhal in walkdir::WalkDir::new(jidhr).sort_by_file_name() {
         let madkhal = madkhal.expect("walking the game directory");
-        let Ok(nisbi) = madkhal.path().strip_prefix(jidhr) else { continue };
+        let Ok(nisbi) = madkhal.path().strip_prefix(jidhr) else {
+            continue;
+        };
         if nisbi.as_os_str().is_empty() {
             continue;
         }
@@ -294,8 +300,16 @@ fn tabaqa_fawqiya_la_taktub_ayya_bayt_fi_alluba() {
          other reason would pass this line while leaving the engines that share the reason \
          unprotected"
     );
-    assert!(mulhaqat.mudafa.is_empty(), "no file was added: {:?}", mulhaqat.mudafa);
-    assert!(mulhaqat.muaddala.is_empty(), "no file was modified: {:?}", mulhaqat.muaddala);
+    assert!(
+        mulhaqat.mudafa.is_empty(),
+        "no file was added: {:?}",
+        mulhaqat.mudafa
+    );
+    assert!(
+        mulhaqat.muaddala.is_empty(),
+        "no file was modified: {:?}",
+        mulhaqat.muaddala
+    );
     assert!(
         mulhaqat.mujalladat.is_empty(),
         "and no directory was created: {:?}",
@@ -310,7 +324,10 @@ fn tabaqa_fawqiya_la_taktub_ayya_bayt_fi_alluba() {
         "tier 3 states that the game is not modified at all, so not one entry may appear or \
          disappear"
     );
-    assert!(baad == qabl, "and every file that was there still holds exactly its own bytes");
+    assert!(
+        baad == qabl,
+        "and every file that was there still holds exactly its own bytes"
+    );
     assert!(
         !luba.join("version.dll").exists(),
         "the loader an unrecognised engine would get at tier 1 must not be here"
@@ -349,9 +366,15 @@ fn nafs_almuharrik_bi_tabaqa_kamila_yansur_almuhammil() {
     // The identical engine, identical store, identical directory. Only the tier
     // differs, and it is the only thing that may decide this.
     let mukhattat = khutta_li(&muhallala, &makhzan, Tabaqa::Kamil);
-    let slot = mukhattat.slot_muhammil.as_ref().expect("tier 1 deploys a loader, so it has a slot");
+    let slot = mukhattat
+        .slot_muhammil
+        .as_ref()
+        .expect("tier 1 deploys a loader, so it has a slot");
     assert_eq!(slot.ism, "version.dll");
-    assert!(!slot.yarfud(), "and nothing holds it in this game: {slot:?}");
+    assert!(
+        !slot.yarfud(),
+        "and nothing holds it in this game: {slot:?}"
+    );
 
     let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
         .expect("an installation session");
@@ -373,7 +396,10 @@ fn nafs_almuharrik_bi_tabaqa_kamila_yansur_almuhammil() {
         luba.join("version.dll").is_file(),
         "the loader landed beside the executable, exactly as before the tier gate existed"
     );
-    assert!(luba.join("taarib/iqra.txt").is_file(), "and the payload landed under taarib/");
+    assert!(
+        luba.join("taarib/iqra.txt").is_file(),
+        "and the payload landed under taarib/"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -442,7 +468,10 @@ fn istiada_tatruk_ma_katabahu_alitar_bi_nafsihi() {
         "the restore leaves the directory standing and counts it: {taqreer:?}"
     );
     assert!(
-        taqreer.taqreer().iter().any(|satr| satr.contains("Taarib did not put there")),
+        taqreer
+            .taqreer()
+            .iter()
+            .any(|satr| satr.contains("Taarib did not put there")),
         "and says so in its own report: {:?}",
         taqreer.taqreer()
     );
@@ -453,10 +482,18 @@ fn istiada_tatruk_ma_katabahu_alitar_bi_nafsihi() {
         "this is the finding, not a passing case: the game is NOT byte-identical to what it \
          was before the install"
     );
-    let zaida: Vec<&str> = asmaa(&baad).into_iter().filter(|ism| !qabl.contains_key(*ism)).collect();
+    let zaida: Vec<&str> = asmaa(&baad)
+        .into_iter()
+        .filter(|ism| !qabl.contains_key(*ism))
+        .collect();
     assert_eq!(
         zaida,
-        vec!["taarib", "taarib/idadat", "taarib/idadat/itar.cfg", "taarib/sijill_tashghil.log"],
+        vec![
+            "taarib",
+            "taarib/idadat",
+            "taarib/idadat/itar.cfg",
+            "taarib/sijill_tashghil.log"
+        ],
         "exactly the framework's own runtime output and the directories holding it survive; \
          nothing the manifest recorded does"
     );
@@ -470,7 +507,11 @@ fn istiada_tatruk_ma_katabahu_alitar_bi_nafsihi() {
     // manifest deleted here is the moment these files stop being attributable to
     // anything and become litter no later run can identify.
     assert_eq!(
-        taqreer.baqaya.iter().map(|baqiya| baqiya.mujallad.as_str()).collect::<Vec<_>>(),
+        taqreer
+            .baqaya
+            .iter()
+            .map(|baqiya| baqiya.mujallad.as_str())
+            .collect::<Vec<_>>(),
         vec!["taarib"],
         "the directory that would not go is named: {:?}",
         taqreer.baqaya

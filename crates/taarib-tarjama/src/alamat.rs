@@ -188,14 +188,14 @@ pub fn alam_min_khata(khata: &KhataTarjama, dharrat: &[String]) -> Option<AlamJa
             vec![format!(
                 "{FATIHA}{fahras}{KHATIMA}\u{2026}{FATIHA}{ALAMAT_IGHLAQ}{fahras}{KHATIMA}"
             )]
-        }
+        },
         KhataTarjama::RumuzKathira { .. } | KhataTarjama::NitaqKharij { .. } => {
             if dharrat.is_empty() {
                 vec![khata.to_string()]
             } else {
                 dharrat.to_vec()
             }
-        }
+        },
         // Unreachable while this match and `khalal_himaya` agree. If a new
         // protection failure is added there and not here, the correct behaviour
         // is a flag that quotes the failure rather than a silently dropped one
@@ -270,11 +270,7 @@ pub const fn alam_aali(muraja: Option<&SijillMuraja>) -> Option<AlamJawda> {
 /// evaluated at all — see that field for why — and an absent or empty target
 /// produces nothing here because [`alam_farigh`] already owns that case.
 #[must_use]
-pub fn alam_nisba(
-    masdar: &str,
-    hadaf: Option<&str>,
-    atabat: &AtabatAlamat,
-) -> Option<AlamJawda> {
+pub fn alam_nisba(masdar: &str, hadaf: Option<&str>, atabat: &AtabatAlamat) -> Option<AlamJawda> {
     let hadaf = hadaf?;
     if hadaf.trim().is_empty() {
         return None;
@@ -407,7 +403,10 @@ fn akhtim_kalima(hali: &mut String, kalimat: &mut Vec<KalimaLatiniya>) {
         return;
     }
     let sinf = sannif_kalima(hali);
-    kalimat.push(KalimaLatiniya { nass: std::mem::take(hali), sinf });
+    kalimat.push(KalimaLatiniya {
+        nass: std::mem::take(hali),
+        sinf,
+    });
 }
 
 /// Classifies a word by its letter-case shape.
@@ -461,11 +460,7 @@ fn sannif_kalima(kalima: &str) -> SinfKalima {
 /// untranslated clause is not counted — accepted, because untranslated clauses
 /// have more than one word and the rest of them count.
 #[must_use]
-pub fn alam_latini(
-    masdar: &str,
-    hadaf: Option<&str>,
-    atabat: &AtabatAlamat,
-) -> Option<AlamJawda> {
+pub fn alam_latini(masdar: &str, hadaf: Option<&str>, atabat: &AtabatAlamat) -> Option<AlamJawda> {
     let hadaf = hadaf?;
     if hadaf.trim().is_empty() {
         return None;
@@ -495,7 +490,11 @@ pub fn alam_latini(
         adad = adad.saturating_add(1);
     }
 
-    let hadd = if makhlut { atabat.hadd_latini_makhlut } else { 1 };
+    let hadd = if makhlut {
+        atabat.hadd_latini_makhlut
+    } else {
+        1
+    };
     if adad >= hadd.max(1) {
         Some(AlamJawda::NassLatiniMutabaqqi { adad })
     } else {
@@ -561,7 +560,11 @@ pub fn alam_tajawuz(
     // what the engine will not do for it; a wrappable one is measured against
     // its own width so that only an unbreakable run — the case wrapping cannot
     // save — reports as wider than the box.
-    let ard_mutah = if mudkhal.quyud.satr_wahid { None } else { Some(mutah) };
+    let ard_mutah = if mudkhal.quyud.satr_wahid {
+        None
+    } else {
+        Some(mutah)
+    };
     let khiyarat = KhiyaratTakhtit::default();
     let talab = TalabTakhtit {
         nass: hadaf,
@@ -576,11 +579,15 @@ pub fn alam_tajawuz(
     match mudkhalat.saff.qis(&talab) {
         Ok(qiyas_nass) => {
             if qiyas_nass.ard > mutah {
-                Some(AlamJawda::KhatarTajawuz { ard: qiyas_nass.ard, mutah, hajm })
+                Some(AlamJawda::KhatarTajawuz {
+                    ard: qiyas_nass.ard,
+                    mutah,
+                    hajm,
+                })
             } else {
                 None
             }
-        }
+        },
         Err(khata) => {
             tracing::debug!(
                 id = %mudkhal.id,
@@ -588,7 +595,7 @@ pub fn alam_tajawuz(
                 "قياس التجاوز تعذّر؛ لا علامة بدل التخمين"
             );
             None
-        }
+        },
     }
 }
 
@@ -672,7 +679,9 @@ pub fn ihsib_alamat_nass(
 /// (`hadaf` present), a surviving broken-markup flag would be describing a
 /// reply that no longer exists, so it is dropped.
 pub fn thabbit_alamat(mudkhal: &mut MudkhalNass, jadida: Vec<AlamJawda>) {
-    let fih_maksur = jadida.iter().any(|alam| matches!(alam, AlamJawda::NasqMaksur { .. }));
+    let fih_maksur = jadida
+        .iter()
+        .any(|alam| matches!(alam, AlamJawda::NasqMaksur { .. }));
     let mut mahfudha: Vec<AlamJawda> = Vec::new();
     for alam in mudkhal.alamat.drain(..) {
         let yubqa = match &alam {
@@ -740,12 +749,17 @@ pub fn ihsib_tanaqud(madakhil: &[MudkhalNass]) -> BTreeMap<NassId, Vec<AlamJawda
     // Source text -> [(id, trimmed target)], targets present and non-empty.
     let mut majmuat: BTreeMap<&str, Vec<(NassId, &str)>> = BTreeMap::new();
     for mudkhal in madakhil {
-        let Some(hadaf) = mudkhal.hadaf.as_deref() else { continue };
+        let Some(hadaf) = mudkhal.hadaf.as_deref() else {
+            continue;
+        };
         let mahdhuf = hadaf.trim();
         if mahdhuf.is_empty() {
             continue;
         }
-        majmuat.entry(mudkhal.masdar.as_str()).or_default().push((mudkhal.id, mahdhuf));
+        majmuat
+            .entry(mudkhal.masdar.as_str())
+            .or_default()
+            .push((mudkhal.id, mahdhuf));
     }
 
     let mut alamat: BTreeMap<NassId, Vec<AlamJawda>> = BTreeMap::new();
@@ -785,7 +799,9 @@ pub fn thabbit_tanaqud(madakhil: &mut [MudkhalNass]) -> usize {
     let jadida = ihsib_tanaqud(madakhil);
     let mut mualama = 0_usize;
     for mudkhal in madakhil.iter_mut() {
-        mudkhal.alamat.retain(|alam| !matches!(alam, AlamJawda::TarjamaMutanaqida { .. }));
+        mudkhal
+            .alamat
+            .retain(|alam| !matches!(alam, AlamJawda::TarjamaMutanaqida { .. }));
         if let Some(alamat) = jadida.get(&mudkhal.id) {
             let mut zad = false;
             for alam in alamat {
@@ -904,8 +920,7 @@ pub fn ihsib_mashru(
     for mudkhal in madakhil.iter_mut() {
         let sijill = muraja.and_then(|kharita| kharita.get(&mudkhal.id));
         let thiqa = thiqat.get(&mudkhal.id);
-        let masrad: &[AlamJawda] =
-            alamat_masrad.get(&mudkhal.id).map_or(&[], Vec::as_slice);
+        let masrad: &[AlamJawda] = alamat_masrad.get(&mudkhal.id).map_or(&[], Vec::as_slice);
         let jadida =
             ihsib_alamat_nass(mudkhal, sijill, thiqa, masrad, qiyas.as_deref_mut(), atabat);
         thabbit_alamat(mudkhal, jadida);

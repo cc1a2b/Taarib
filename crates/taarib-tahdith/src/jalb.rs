@@ -47,14 +47,13 @@ pub struct MalafMuhaqqaq {
 /// file cannot be continued, [`KhataTahdith::TanzeelGhayrMutabiq`] when the
 /// completed file hashes to something else, and
 /// [`KhataTahdith::KhataMalaf`] for the local reads and writes.
-pub async fn ijlib(
-    madkhal: &MadkhalTahdith,
-    sandooq: &Path,
-) -> NatijatTahdith<MalafMuhaqqaq> {
+pub async fn ijlib(madkhal: &MadkhalTahdith, sandooq: &Path) -> NatijatTahdith<MalafMuhaqqaq> {
     let hadaf = sandooq.join(ism_min_rabt(&madkhal.rabt));
     let juz = masar_juz(&hadaf);
 
-    let mahjuz = tokio::fs::metadata(&juz).await.map_or(0, |bayan| bayan.len());
+    let mahjuz = tokio::fs::metadata(&juz)
+        .await
+        .map_or(0, |bayan| bayan.len());
     // A partial longer than the whole file describes a different file.
     let mahjuz = if mahjuz > madkhal.hajm { 0 } else { mahjuz };
     if mahjuz == 0 {
@@ -64,19 +63,27 @@ pub async fn ijlib(
 
     // The resumed prefix must go through the hasher in order, so it is read
     // once here rather than re-read after the transfer.
-    let mut hashib =
-        if mahjuz > 0 { ihshi_juz(&juz, mahjuz).await? } else { Sha256::new() };
+    let mut hashib = if mahjuz > 0 {
+        ihshi_juz(&juz, mahjuz).await?
+    } else {
+        Sha256::new()
+    };
 
     let mut mabni = reqwest::Client::new().get(&madkhal.rabt);
     if mahjuz > 0 {
         mabni = mabni.header(RANGE, format!("bytes={mahjuz}-"));
     }
-    let radd = mabni.send().await.map_err(|khata| KhataTahdith::QanatGhayrMutaha {
-        sabab: khata.to_string(),
-    })?;
-    let radd = radd.error_for_status().map_err(|khata| KhataTahdith::QanatGhayrMutaha {
-        sabab: khata.to_string(),
-    })?;
+    let radd = mabni
+        .send()
+        .await
+        .map_err(|khata| KhataTahdith::QanatGhayrMutaha {
+            sabab: khata.to_string(),
+        })?;
+    let radd = radd
+        .error_for_status()
+        .map_err(|khata| KhataTahdith::QanatGhayrMutaha {
+            sabab: khata.to_string(),
+        })?;
 
     // A server that ignored the Range header answers 200 with the whole file,
     // and appending that to a partial would concatenate two prefixes.
@@ -90,7 +97,9 @@ pub async fn ijlib(
 
     let baqi = madkhal.hajm.saturating_sub(mahjuz);
     if radd.content_length().is_some_and(|tul| tul > baqi) {
-        return Err(KhataTahdith::HajmMufrit { muallan: madkhal.hajm });
+        return Err(KhataTahdith::HajmMufrit {
+            muallan: madkhal.hajm,
+        });
     }
 
     let mut malaf = tokio::fs::OpenOptions::new()
@@ -111,38 +120,51 @@ pub async fn ijlib(
             Ok(Ok(Some(qita))) => qita,
             Ok(Ok(None)) => break,
             Ok(Err(khata)) => {
-                return Err(KhataTahdith::QanatGhayrMutaha { sabab: khata.to_string() });
-            }
+                return Err(KhataTahdith::QanatGhayrMutaha {
+                    sabab: khata.to_string(),
+                });
+            },
             Err(_) => {
                 return Err(KhataTahdith::QanatGhayrMutaha {
                     sabab: format!("no data for {} seconds", MUHLAT_QITA.as_secs()),
                 });
-            }
+            },
         };
         maktub = maktub.saturating_add(qita.len() as u64);
         if maktub > madkhal.hajm {
-            return Err(KhataTahdith::HajmMufrit { muallan: madkhal.hajm });
+            return Err(KhataTahdith::HajmMufrit {
+                muallan: madkhal.hajm,
+            });
         }
         hashib.update(&qita);
-        malaf.write_all(&qita).await.map_err(|sabab| KhataTahdith::KhataMalaf {
-            masar: juz.clone(),
-            amal: "writing the partial download",
-            sabab,
-        })?;
+        malaf
+            .write_all(&qita)
+            .await
+            .map_err(|sabab| KhataTahdith::KhataMalaf {
+                masar: juz.clone(),
+                amal: "writing the partial download",
+                sabab,
+            })?;
     }
 
     // Flushed to the device before the rename, so the length on disk is a real
     // resume point and the finished file is not a rename over unwritten pages.
-    malaf.flush().await.map_err(|sabab| KhataTahdith::KhataMalaf {
-        masar: juz.clone(),
-        amal: "flushing the download",
-        sabab,
-    })?;
-    malaf.sync_all().await.map_err(|sabab| KhataTahdith::KhataMalaf {
-        masar: juz.clone(),
-        amal: "flushing the download to the device",
-        sabab,
-    })?;
+    malaf
+        .flush()
+        .await
+        .map_err(|sabab| KhataTahdith::KhataMalaf {
+            masar: juz.clone(),
+            amal: "flushing the download",
+            sabab,
+        })?;
+    malaf
+        .sync_all()
+        .await
+        .map_err(|sabab| KhataTahdith::KhataMalaf {
+            masar: juz.clone(),
+            amal: "flushing the download to the device",
+            sabab,
+        })?;
     drop(malaf);
 
     let mahsuba = hex_min_bayt(&hashib.finalize());
@@ -155,13 +177,19 @@ pub async fn ijlib(
         });
     }
 
-    tokio::fs::rename(&juz, &hadaf).await.map_err(|sabab| KhataTahdith::KhataMalaf {
-        masar: hadaf.clone(),
-        amal: "naming the verified download",
-        sabab,
-    })?;
+    tokio::fs::rename(&juz, &hadaf)
+        .await
+        .map_err(|sabab| KhataTahdith::KhataMalaf {
+            masar: hadaf.clone(),
+            amal: "naming the verified download",
+            sabab,
+        })?;
 
-    Ok(MalafMuhaqqaq { masar: hadaf, sha256: mahsuba, hajm: maktub })
+    Ok(MalafMuhaqqaq {
+        masar: hadaf,
+        sha256: mahsuba,
+        hajm: maktub,
+    })
 }
 
 /// The partial file's path for a destination.
@@ -191,22 +219,25 @@ fn ism_min_rabt(rabt: &str) -> String {
 async fn ihshi_juz(juz: &Path, mahjuz: u64) -> NatijatTahdith<Sha256> {
     use tokio::io::AsyncReadExt as _;
 
-    let mut malaf = tokio::fs::File::open(juz).await.map_err(|sabab| {
-        KhataTahdith::KhataMalaf {
-            masar: juz.to_path_buf(),
-            amal: "reading the partial download",
-            sabab,
-        }
-    })?;
-    let mut hashib = Sha256::new();
-    let mut hajiz = vec![0u8; 65_536];
-    let mut maqru: u64 = 0;
-    while maqru < mahjuz {
-        let tul = malaf.read(&mut hajiz).await.map_err(|sabab| KhataTahdith::KhataMalaf {
+    let mut malaf = tokio::fs::File::open(juz)
+        .await
+        .map_err(|sabab| KhataTahdith::KhataMalaf {
             masar: juz.to_path_buf(),
             amal: "reading the partial download",
             sabab,
         })?;
+    let mut hashib = Sha256::new();
+    let mut hajiz = vec![0u8; 65_536];
+    let mut maqru: u64 = 0;
+    while maqru < mahjuz {
+        let tul = malaf
+            .read(&mut hajiz)
+            .await
+            .map_err(|sabab| KhataTahdith::KhataMalaf {
+                masar: juz.to_path_buf(),
+                amal: "reading the partial download",
+                sabab,
+            })?;
         if tul == 0 {
             break;
         }
@@ -227,9 +258,15 @@ async fn ihshi_juz(juz: &Path, mahjuz: u64) -> NatijatTahdith<Sha256> {
 /// Skipped when no mounted disk matches the destination: a check that cannot be
 /// made is not a refusal.
 fn akkid_misaha(hadaf: &Path, hajm: u64, mahjuz: u64) -> NatijatTahdith<()> {
-    let Some(walid) = hadaf.parent() else { return Ok(()) };
-    let Ok(walid) = std::fs::canonicalize(walid) else { return Ok(()) };
-    let Some(mutah) = misaha_mutaha(&walid) else { return Ok(()) };
+    let Some(walid) = hadaf.parent() else {
+        return Ok(());
+    };
+    let Ok(walid) = std::fs::canonicalize(walid) else {
+        return Ok(());
+    };
+    let Some(mutah) = misaha_mutaha(&walid) else {
+        return Ok(());
+    };
 
     #[expect(
         clippy::integer_division,
@@ -240,7 +277,11 @@ fn akkid_misaha(hadaf: &Path, hajm: u64, mahjuz: u64) -> NatijatTahdith<()> {
     if mutah >= matlub {
         return Ok(());
     }
-    Err(KhataTahdith::MisahaGhayrKafiya { matlub, mutah, masar: hadaf.to_path_buf() })
+    Err(KhataTahdith::MisahaGhayrKafiya {
+        matlub,
+        mutah,
+        masar: hadaf.to_path_buf(),
+    })
 }
 
 /// Free bytes on the mounted filesystem whose mount point is the longest
@@ -258,18 +299,22 @@ fn misaha_mutaha(masar: &Path) -> Option<u64> {
 
 /// Strips Windows' verbatim prefix, which no mount point carries.
 fn bila_badiya_harfiya(masar: &Path) -> PathBuf {
-    let Some(nass) = masar.to_str() else { return masar.to_path_buf() };
+    let Some(nass) = masar.to_str() else {
+        return masar.to_path_buf();
+    };
     if let Some(baqi) = nass.strip_prefix(r"\\?\UNC\") {
         return PathBuf::from(format!(r"\\{baqi}"));
     }
-    nass.strip_prefix(r"\\?\").map_or_else(|| masar.to_path_buf(), PathBuf::from)
+    nass.strip_prefix(r"\\?\")
+        .map_or_else(|| masar.to_path_buf(), PathBuf::from)
 }
 
 /// Lowercase hex of a digest.
 fn hex_min_bayt(bayt: &[u8]) -> String {
     use std::fmt::Write as _;
-    bayt.iter().fold(String::with_capacity(bayt.len() * 2), |mut nass, bayta| {
-        let _ = write!(nass, "{bayta:02x}");
-        nass
-    })
+    bayt.iter()
+        .fold(String::with_capacity(bayt.len() * 2), |mut nass, bayta| {
+            let _ = write!(nass, "{bayta:02x}");
+            nass
+        })
 }

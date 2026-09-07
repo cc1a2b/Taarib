@@ -45,7 +45,10 @@ const DAKHIL_KHATT_RENPY: &str = "taarib/khutut";
 /// inside somebody's game rather than beside the Studio, and the OFL binds
 /// every redistribution rather than the first.
 const KHATT_RENPY: [(&str, &str); 2] = [
-    ("NotoNaskhArabic/NotoNaskhArabic[wght].ttf", "NotoNaskhArabic[wght].ttf"),
+    (
+        "NotoNaskhArabic/NotoNaskhArabic[wght].ttf",
+        "NotoNaskhArabic[wght].ttf",
+    ),
     ("NotoNaskhArabic/rukhsa", "OFL.txt"),
 ];
 
@@ -113,7 +116,14 @@ fn saf_bepinex(
 
                 // The redistributable itself, unpacked verbatim.
                 let muarrif = muarrif_bepinex(khalfiya, nizam, mimariya);
-                qufl.ifragh("D1", &muarrif, &mukawwin, &masadir.jidhr, masadir.jalb, mustaqarr)?;
+                qufl.ifragh(
+                    "D1",
+                    &muarrif,
+                    &mukawwin,
+                    &masadir.jidhr,
+                    masadir.jalb,
+                    mustaqarr,
+                )?;
 
                 // The Taarib payload, at the path BepInEx resolves once the
                 // component is deployed beside the game's executable.
@@ -132,8 +142,7 @@ fn saf_bepinex(
                 // The C-ABI core, where Muhammil.cs derives it from the
                 // assembly's own directory.
                 let ism_jisr = nizam.ism_maktaba("taarib_jisr");
-                let masdar =
-                    masadir.bina(muthallath_hamula(nizam, mimariya), &ism_jisr);
+                let masdar = masadir.bina(muthallath_hamula(nizam, mimariya), &ism_jisr);
                 mustaqarr.insakh(
                     saf_jisr(nizam),
                     &masdar,
@@ -159,8 +168,11 @@ fn saf_mudkhal(
     mustaqarr: &mut Mustaqarr,
 ) -> NatijatTajmee<()> {
     for (nizam, mimariya) in hamulat_alalaab(hadaf) {
-        let mukawwin =
-            format!("mukawwinat/mudkhal/{}/{}", ism_hadaf(nizam), mimariya.mujallad());
+        let mukawwin = format!(
+            "mukawwinat/mudkhal/{}/{}",
+            ism_hadaf(nizam),
+            mimariya.mujallad()
+        );
         let muthallath = muthallath_hamula(nizam, mimariya);
 
         // The loader, under muhammil/ because a split component deploys only
@@ -169,9 +181,7 @@ fn saf_mudkhal(
         let mabni = nizam.ism_maktaba("taarib_mudkhal");
         let masmi = match nizam {
             NizamTashghil::Windows => "version.dll".to_owned(),
-            NizamTashghil::Linux | NizamTashghil::Mac => {
-                nizam.ism_maktaba("taarib_muhammil")
-            }
+            NizamTashghil::Linux | NizamTashghil::Mac => nizam.ism_maktaba("taarib_muhammil"),
         };
         mustaqarr.insakh(
             saf_mudkhal_lil(nizam),
@@ -209,7 +219,9 @@ fn saf_mulhaq(
     // The wasm pair, built by wasm-bindgen with --out-name taarib_core; the
     // adapter loads exactly these two names and cannot be parameterised.
     let wasm = masadir.jidhr.join("target/wasm-bindgen/taarib_core.js");
-    let wasm_bg = masadir.jidhr.join("target/wasm-bindgen/taarib_core_bg.wasm");
+    let wasm_bg = masadir
+        .jidhr
+        .join("target/wasm-bindgen/taarib_core_bg.wasm");
 
     // RPG Maker needs one component per generation: rpg_maker() resolves
     // mulhaq/rpgmaker/mv and mulhaq/rpgmaker/mz separately.
@@ -229,8 +241,16 @@ fn saf_mulhaq(
     // embeds it takes it as a caller-supplied string, so the component store
     // is where that caller reads it from.
     let mabni_electron = masadir.jidhr.join("target/adapters/electron/taarib.js");
-    mustaqarr.insakh("I1", &mabni_electron, "mukawwinat/mulhaq/electron/taarib.js")?;
-    mustaqarr.insakh("H1", &wasm, "mukawwinat/mulhaq/electron/taarib/taarib_core.js")?;
+    mustaqarr.insakh(
+        "I1",
+        &mabni_electron,
+        "mukawwinat/mulhaq/electron/taarib.js",
+    )?;
+    mustaqarr.insakh(
+        "H1",
+        &wasm,
+        "mukawwinat/mulhaq/electron/taarib/taarib_core.js",
+    )?;
     mustaqarr.insakh(
         "H1",
         &wasm_bg,
@@ -240,11 +260,7 @@ fn saf_mulhaq(
     // Ren'Py takes the package directory intact: __init__.py uses relative
     // imports, so a flattened copy raises ImportError at game start.
     let masdar = masadir.jidhr.join("adapters-script/renpy/taarib_renpy");
-    mustaqarr.insakh_mujallad(
-        "I3",
-        &masdar,
-        "mukawwinat/mulhaq/renpy/taarib_renpy",
-    )?;
+    mustaqarr.insakh_mujallad("I3", &masdar, "mukawwinat/mulhaq/renpy/taarib_renpy")?;
 
     // The face that component registers. Ren'Py resolves a font path against
     // `game/`, and this component's whole tree is copied there, so the face has
@@ -346,4 +362,3 @@ const fn ism_hadaf(nizam: NizamTashghil) -> &'static str {
         NizamTashghil::Mac => "mac",
     }
 }
-

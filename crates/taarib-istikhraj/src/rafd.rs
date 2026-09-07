@@ -218,7 +218,11 @@ impl SababRafd {
             Self::SighaMajhula { wujid } => Self::SighaMajhula {
                 wujid: format!("{adad} members of this container, each {wujid}"),
             },
-            Self::IsdarGhayrMadum { sigha, wujid, madum } => Self::IsdarGhayrMadum {
+            Self::IsdarGhayrMadum {
+                sigha,
+                wujid,
+                madum,
+            } => Self::IsdarGhayrMadum {
                 sigha,
                 wujid: format!("{wujid} across {adad} members of this container"),
                 madum,
@@ -255,25 +259,22 @@ impl SababRafd {
                 "هذه الحاوية مشفَّرة ولم يُعثر على مفتاحها. لم يُستخرج منها شيء، ولم تُخمَّن \
                  محتوياتها."
                     .to_owned()
-            }
+            },
             Self::SighaMajhula { wujid } => {
                 format!("الصيغة ({wujid}) ليست مما تقرؤه هذه النسخة.")
-            }
+            },
             Self::IsdarGhayrMadum { sigha, wujid, .. } => {
                 format!("صيغة {sigha} بإصدار ({wujid}) لا تعرفه هذه النسخة.")
-            }
-            Self::Talif { .. } => {
-                "الحاوية تالفة أو ناقصة، ولم يُستخرج منها شيء.".to_owned()
-            }
+            },
+            Self::Talif { .. } => "الحاوية تالفة أو ناقصة، ولم يُستخرج منها شيء.".to_owned(),
             Self::TaadhurQira { .. } => "تعذّرت قراءة الملف.".to_owned(),
             Self::BilaNusus => "قُرئت الحاوية ولا تحتوي نصوصًا.".to_owned(),
             Self::HadUlBina { wujid, sabab } => {
                 format!("{wujid}: لا تقرأه هذه النسخة من تعريب ({sabab}).")
-            }
+            },
             Self::TajawuzHadd { .. } => {
-                "تعلن الحاوية حجمًا أكبر مما تسمح به هذه النسخة، ورُفضت قبل حجز أي ذاكرة."
-                    .to_owned()
-            }
+                "تعلن الحاوية حجمًا أكبر مما تسمح به هذه النسخة، ورُفضت قبل حجز أي ذاكرة.".to_owned()
+            },
         }
     }
 
@@ -291,23 +292,27 @@ impl SababRafd {
                      not text. The strings exist and are drawn on screen; capture reads them \
                      there."
                 )
-            }
+            },
             Self::Mushaffar { wasf } => format!(
                 "This container is encrypted ({wasf}) and no key was recoverable. Nothing was \
                  extracted and nothing was guessed."
             ),
             Self::SighaMajhula { wujid } => {
                 format!("{wujid} is not a format this build reads.")
-            }
-            Self::IsdarGhayrMadum { sigha, wujid, madum } => format!(
-                "{sigha} version {wujid} is not one this build handles; it reads {madum}."
-            ),
+            },
+            Self::IsdarGhayrMadum {
+                sigha,
+                wujid,
+                madum,
+            } => {
+                format!("{sigha} version {wujid} is not one this build handles; it reads {madum}.")
+            },
             Self::Talif { sabab } => format!("The container is damaged: {sabab}"),
             Self::TaadhurQira { sabab } => format!("The file could not be read: {sabab}"),
             Self::BilaNusus => "Read, and holds no text.".to_owned(),
             Self::HadUlBina { wujid, sabab } => {
                 format!("{wujid}: this build of Taarib does not read it ({sabab}).")
-            }
+            },
             Self::TajawuzHadd { hadd, qeema, saqf } => format!(
                 "{hadd} declares {qeema}, above this build's ceiling of {saqf}. Refused before \
                  allocating."
@@ -321,7 +326,7 @@ impl SababRafd {
         match self {
             Self::BilaShajaratAnwa { .. } | Self::SighaMajhula { .. } => {
                 "شغّل اللعبة مرة واحدة مع تفعيل الالتقاط، ثم عُد."
-            }
+            },
             Self::Mushaffar { .. } => "لا يمكن لتعريب فتح هذه الحاوية.",
             Self::IsdarGhayrMadum { .. } => "حدِّث تعريب؛ قد تدعم نسخة أحدث هذا الإصدار.",
             Self::Talif { .. } => "اطلب من المتجر التحقّق من ملفات اللعبة.",
@@ -338,13 +343,13 @@ impl SababRafd {
         match self {
             Self::BilaShajaratAnwa { .. } | Self::SighaMajhula { .. } => {
                 "Play the game once with capture enabled, then come back."
-            }
+            },
             Self::Mushaffar { .. } => "Taarib cannot open this container.",
             Self::IsdarGhayrMadum { .. } => "Update Taarib; a newer build may read this version.",
             Self::Talif { .. } => "Ask the launcher to verify the game's files.",
             Self::TaadhurQira { .. } => {
                 "Check the file's permissions, and that the game is not running."
-            }
+            },
             Self::BilaNusus => "Nothing to do.",
             Self::HadUlBina { .. } => "Update Taarib; a newer build may read it. The game is fine.",
             // Not "the container may be damaged". This ceiling is Taarib's own,
@@ -354,7 +359,7 @@ impl SababRafd {
             // send them to verify files that are fine.
             Self::TajawuzHadd { .. } => {
                 "Report this game; the limit is Taarib's, not a fault in the game."
-            }
+            },
         }
     }
 }
@@ -404,7 +409,10 @@ impl TaqreerRafd {
     /// An empty report.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { maqrua: Vec::new(), marfuda: Vec::new() }
+        Self {
+            maqrua: Vec::new(),
+            marfuda: Vec::new(),
+        }
     }
 
     /// Records a container that was read.
@@ -422,7 +430,11 @@ impl TaqreerRafd {
     /// salvage: a refused container contributes nothing. See this module's
     /// header.
     pub fn sajjil(&mut self, hawiya: impl Into<String>, asl: Option<String>, sabab: SababRafd) {
-        self.marfuda.push(MadkhalRafd { hawiya: hawiya.into(), asl, sabab });
+        self.marfuda.push(MadkhalRafd {
+            hawiya: hawiya.into(),
+            asl,
+            sabab,
+        });
     }
 
     /// How many strings were extracted in total.
@@ -458,7 +470,10 @@ impl TaqreerRafd {
     pub fn majmua(&self) -> BTreeMap<String, Vec<&MadkhalRafd>> {
         let mut majmuat: BTreeMap<String, Vec<&MadkhalRafd>> = BTreeMap::new();
         for madkhal in &self.marfuda {
-            majmuat.entry(madkhal.sabab.miftah().to_owned()).or_default().push(madkhal);
+            majmuat
+                .entry(madkhal.sabab.miftah().to_owned())
+                .or_default()
+                .push(madkhal);
         }
         majmuat
     }
@@ -474,11 +489,7 @@ impl TaqreerRafd {
         )];
         for (_, majmua) in self.majmua() {
             if let Some(awwal) = majmua.first() {
-                satr.push(format!(
-                    "  {} × {}",
-                    majmua.len(),
-                    awwal.sabab.injilizi()
-                ));
+                satr.push(format!("  {} × {}", majmua.len(), awwal.sabab.injilizi()));
                 satr.push(format!("      remedy: {}", awwal.sabab.ilaj_injilizi()));
             }
         }
@@ -527,7 +538,10 @@ impl MujammiRafd {
     /// A collector for one container.
     #[must_use]
     pub fn jadeed(hawiya: impl Into<String>) -> Self {
-        Self { hawiya: hawiya.into(), majmuat: BTreeMap::new() }
+        Self {
+            hawiya: hawiya.into(),
+            majmuat: BTreeMap::new(),
+        }
     }
 
     /// Records one member the reader refused.
@@ -538,8 +552,12 @@ impl MujammiRafd {
     pub fn sajjil(&mut self, asl: impl Into<String>, sabab: SababRafd) {
         match self.majmuat.entry(sabab.miftah()) {
             std::collections::btree_map::Entry::Vacant(khana) => {
-                let _ = khana.insert(MajmuatRafd { asl: asl.into(), sabab, adad: 1 });
-            }
+                let _ = khana.insert(MajmuatRafd {
+                    asl: asl.into(),
+                    sabab,
+                    adad: 1,
+                });
+            },
             std::collections::btree_map::Entry::Occupied(mut khana) => {
                 let majmua = khana.get_mut();
                 majmua.adad = majmua.adad.saturating_add(1);
@@ -550,14 +568,17 @@ impl MujammiRafd {
                 {
                     *adad = adad.saturating_add(*zaid);
                 }
-            }
+            },
         }
     }
 
     /// How many members have been refused so far, over every reason.
     #[must_use]
     pub fn adad(&self) -> usize {
-        self.majmuat.values().map(|majmua| majmua.adad).fold(0, usize::saturating_add)
+        self.majmuat
+            .values()
+            .map(|majmua| majmua.adad)
+            .fold(0, usize::saturating_add)
     }
 
     /// Whether nothing was refused.
@@ -570,7 +591,11 @@ impl MujammiRafd {
     pub fn ikhtim(self, taqreer: &mut TaqreerRafd) {
         let Self { hawiya, majmuat } = self;
         for majmua in majmuat.into_values() {
-            taqreer.sajjil(hawiya.clone(), Some(majmua.asl), majmua.sabab.bi_adad(majmua.adad));
+            taqreer.sajjil(
+                hawiya.clone(),
+                Some(majmua.asl),
+                majmua.sabab.bi_adad(majmua.adad),
+            );
         }
     }
 }

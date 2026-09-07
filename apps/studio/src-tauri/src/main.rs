@@ -67,16 +67,16 @@ pub mod luba_awamir;
 pub mod maktaba_awamir;
 pub mod tathbeet_awamir;
 // No commands inside these three, so they stay private.
+pub mod aql_awamir;
 mod bidaya;
+pub mod idadat_awamir;
 mod istiada_cli;
 mod mukawwinat_tahmil;
-pub mod aql_awamir;
-pub mod idadat_awamir;
 pub mod musharaka_awamir;
 pub mod suwar_awamir;
 pub mod tabaqa_awamir;
-pub mod taqdeem_awamir;
 pub mod tahdith_awamir;
+pub mod taqdeem_awamir;
 pub mod tashkhis_awamir;
 pub mod tilqai_awamir;
 pub mod warsha_awamir;
@@ -88,20 +88,16 @@ use std::sync::Arc;
 
 use rfd::{MessageButtons, MessageDialog, MessageDialogResult, MessageLevel};
 use taarib_kashf::fahs::{LubaMuktashafa, SimatLuba};
-use taarib_makhzan::wasl::Makhzan;
-use taarib_kashf::wujud::{self, SijillWujud, TalabWujud};
 use taarib_kashf::tawheed;
+use taarib_kashf::wujud::{self, SijillWujud, TalabWujud};
+use taarib_makhzan::sijillat::{HasilatMash, SijillAlaab, SijillMuharrik};
+use taarib_makhzan::wasl::Makhzan;
 use taarib_mustalahat::ghiyab::{SababGhiyab, ShahidTanfidhi};
 use taarib_mustalahat::lawha_badila::{LawhaBadila, SimatLawha};
-use taarib_makhzan::sijillat::{HasilatMash, SijillAlaab, SijillMuharrik};
 use taarib_mustalahat::luba::{LawnBariz, Luba, Manassa, MasdarLuba};
-use taarib_mustalahat::muharrik::{
-    AilatMuharrik, JahiziyatTashghil, Tabaqa, TaqreerImkaniyat,
-};
+use taarib_mustalahat::muharrik::{AilatMuharrik, JahiziyatTashghil, Tabaqa, TaqreerImkaniyat};
 use taarib_usus::idadat::{Idadat, MakhzanIdadat};
-use taarib_usus::khata::{
-    Khata, Khutura, Khutwa, Natija, QeemaSiyaq, Ramz, Tafsir, arqam,
-};
+use taarib_usus::khata::{Khata, Khutura, Khutwa, Natija, QeemaSiyaq, Ramz, Tafsir, arqam};
 use taarib_usus::manassa::{Mimariya, NizamTashghil};
 use taarib_usus::masarat::Masarat;
 use taarib_usus::{ISDAR, khata_min, sijill};
@@ -494,10 +490,17 @@ fn maktaba(
     // Only a launcher whose catalogue was read end to end was searched in the
     // sense the empty-library sentence uses, and only its stored games may be
     // marked absent below.
-    let manassat: Vec<String> = natija.matajir_tamma().into_iter().map(str::to_owned).collect();
+    let manassat: Vec<String> = natija
+        .matajir_tamma()
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
 
-    let madkhalat: Vec<LubaMuktashafa> =
-        natija.matajir.into_iter().flat_map(|wahid| wahid.alaab).collect();
+    let madkhalat: Vec<LubaMuktashafa> = natija
+        .matajir
+        .into_iter()
+        .flat_map(|wahid| wahid.alaab)
+        .collect();
     let (muwahhada, taqreer_tawheed) = tawheed::wahhid(madkhalat);
 
     // Steam's declared languages, read once for the whole scan and shared by
@@ -609,23 +612,31 @@ fn maktaba(
             .simat
             .iter()
             .filter_map(|sima| match sima {
-                SimatLuba::JamaiMahalli => {
-                    Some(SimaMukhzana::jadeeda(asasi.masdar.aila().slug(), sima::JAMAI_MAHALLI, ""))
-                }
-                SimatLuba::JamaiOnline => {
-                    Some(SimaMukhzana::jadeeda(asasi.masdar.aila().slug(), sima::JAMAI_ONLINE, ""))
-                }
+                SimatLuba::JamaiMahalli => Some(SimaMukhzana::jadeeda(
+                    asasi.masdar.aila().slug(),
+                    sima::JAMAI_MAHALLI,
+                    "",
+                )),
+                SimatLuba::JamaiOnline => Some(SimaMukhzana::jadeeda(
+                    asasi.masdar.aila().slug(),
+                    sima::JAMAI_ONLINE,
+                    "",
+                )),
                 SimatLuba::HimayaMuhtamala(ism) => Some(SimaMukhzana::jadeeda(
                     asasi.masdar.aila().slug(),
                     sima::HIMAYA_MUHTAMALA,
                     ism,
                 )),
-                SimatLuba::MuammanaVac => {
-                    Some(SimaMukhzana::jadeeda(asasi.masdar.aila().slug(), sima::MUAMMANA_VAC, ""))
-                }
-                SimatLuba::LaysatLuba(naw) => {
-                    Some(SimaMukhzana::jadeeda(asasi.masdar.aila().slug(), sima::LAYSAT_LUBA, naw))
-                }
+                SimatLuba::MuammanaVac => Some(SimaMukhzana::jadeeda(
+                    asasi.masdar.aila().slug(),
+                    sima::MUAMMANA_VAC,
+                    "",
+                )),
+                SimatLuba::LaysatLuba(naw) => Some(SimaMukhzana::jadeeda(
+                    asasi.masdar.aila().slug(),
+                    sima::LAYSAT_LUBA,
+                    naw,
+                )),
                 SimatLuba::TabaqatTawafuq(tabaqa) => Some(SimaMukhzana::jadeeda(
                     asasi.masdar.aila().slug(),
                     sima::TABAQAT_TAWAFUQ,
@@ -650,10 +661,14 @@ fn maktaba(
                 })
             })?;
 
-            let taqreer = qaida
-                .bil_qira(|ittisal| SijillMuharrik::jadeed(ittisal).wahid(id))?;
-            let KhulasatFahs { mafhusa, aila, tabaqa, marfuda, jahiziya } =
-                KhulasatFahs::min_taqreer(taqreer.as_ref());
+            let taqreer = qaida.bil_qira(|ittisal| SijillMuharrik::jadeed(ittisal).wahid(id))?;
+            let KhulasatFahs {
+                mafhusa,
+                aila,
+                tabaqa,
+                marfuda,
+                jahiziya,
+            } = KhulasatFahs::min_taqreer(taqreer.as_ref());
 
             let nusakh = luba_awamir::jidhr_nusakh(&masarat, &qaida, id)?;
             let nass_muthabbat = luba_awamir::muthabbat(&sajl.jidhr, &nusakh, NawTathbeet::Nass);
@@ -681,8 +696,11 @@ fn maktaba(
             } else {
                 HalatSawt::LaShay
             };
-            let sawt_hala =
-                if sawt_muthabbat { HalatSawt::Mutabbaqa } else { HalatSawt::LaShay };
+            let sawt_hala = if sawt_muthabbat {
+                HalatSawt::Mutabbaqa
+            } else {
+                HalatSawt::LaShay
+            };
 
             // Every game gets a plate. The cover, when one resolves, is drawn over
             // it — see the card, where the two share one rectangle so the well is
@@ -742,12 +760,15 @@ fn maktaba(
                 // the grid is drawn. Recorded only for a game that made it into
                 // the library: artwork for a row nobody can see is a fetch
                 // nobody asked for.
-                let _ = dhakhira_suwar.insert(id, suwar_awamir::TalabSuwar {
-                    ism: asasi.ism.clone(),
-                    masadir: asasi.suwar.clone(),
-                });
+                let _ = dhakhira_suwar.insert(
+                    id,
+                    suwar_awamir::TalabSuwar {
+                        ism: asasi.ism.clone(),
+                        masadir: asasi.suwar.clone(),
+                    },
+                );
                 alaab.push(sijill_luba);
-            }
+            },
             Err(khata) => mutaadhira.push(SijillMutaadhir {
                 muarrif: id.to_string(),
                 ism: asasi.ism.clone(),
@@ -767,14 +788,14 @@ fn maktaba(
             match SijillAlaab::jadeed(muamala).allim_ghayr_mawjud(fahs, manassa)? {
                 HasilatMash::Jarat { adad } => {
                     tracing::debug!(manassa = %manassa, adad, "absence sweep");
-                }
+                },
                 HasilatMash::Rufidat => {
                     tracing::warn!(
                         manassa = %manassa,
                         "the store refused an absence sweep for a launcher this scan did not \
                          record as read whole"
                     );
-                }
+                },
             }
         }
         SijillFahs::jadeed(muamala).anhi(fahs, u32::try_from(alaab.len()).unwrap_or(u32::MAX))
@@ -809,23 +830,21 @@ fn maktaba(
 /// [`Khata`] when the game is unknown or the file manager will not start.
 #[tauri::command]
 #[specta::specta]
-fn iftah_manassa(
-    muarrif: String,
-    qaida: tauri::State<'_, Makhzan>,
-) -> Result<bool, Khata> {
+fn iftah_manassa(muarrif: String, qaida: tauri::State<'_, Makhzan>) -> Result<bool, Khata> {
     let id = luba_awamir::huwiya(muarrif)?;
     let luba = luba_awamir::ijlib_luba(&qaida, id)?;
-    let (barnamij, wusata): (&str, Vec<std::ffi::OsString>) =
-        match NizamTashghil::hali() {
-            NizamTashghil::Windows => ("explorer", vec![luba.jidhr.into()]),
-            NizamTashghil::Mac => ("open", vec![luba.jidhr.into()]),
-            NizamTashghil::Linux => ("xdg-open", vec![luba.jidhr.into()]),
-        };
+    let (barnamij, wusata): (&str, Vec<std::ffi::OsString>) = match NizamTashghil::hali() {
+        NizamTashghil::Windows => ("explorer", vec![luba.jidhr.into()]),
+        NizamTashghil::Mac => ("open", vec![luba.jidhr.into()]),
+        NizamTashghil::Linux => ("xdg-open", vec![luba.jidhr.into()]),
+    };
     std::process::Command::new(barnamij)
         .args(wusata)
         .spawn()
         .map_err(|sabab| {
-            Khata::min_tafsir(&KhataStudio::FathMujalladFashil { tafsil: sabab.to_string() })
+            Khata::min_tafsir(&KhataStudio::FathMujalladFashil {
+                tafsil: sabab.to_string(),
+            })
         })?;
     Ok(true)
 }
@@ -867,7 +886,7 @@ fn main() -> Natija<()> {
         Err(khata) => {
             aalin_fashal_bidaya(&khata, mujallad_sijillat.as_deref());
             Err(khata)
-        }
+        },
     }
 }
 
@@ -930,17 +949,17 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
         Ok(tanfidhi) => match taarib_tahdith::tahaqqaq_bad_iqla(&tanfidhi) {
             Ok(Some(sabiq)) => {
                 tracing::info!(sabiq = %sabiq.display(), "the superseded version was removed");
-            }
-            Ok(None) => {}
+            },
+            Ok(None) => {},
             Err(khata) => {
                 // The previous version was put back, so this launch is the old
                 // one running: a warning, not a failure to start.
                 tracing::warn!(khata = %Khata::min_tafsir(&khata).li_sijill(), "update rollback");
-            }
+            },
         },
         Err(sabab) => {
             tracing::warn!(%sabab, "the running executable could not be located");
-        }
+        },
     }
 
     // Opened after diagnostics start, because bringing the schema forward is
@@ -1290,7 +1309,11 @@ fn uktub_sijill_iqla(mujallad: &Path, matn: &str) {
     else {
         return;
     };
-    let _ = writeln!(malaf, "--- {} — Taarib {ISDAR}\n{matn}", jiff::Timestamp::now());
+    let _ = writeln!(
+        malaf,
+        "--- {} — Taarib {ISDAR}\n{matn}",
+        jiff::Timestamp::now()
+    );
     let _ = malaf.sync_all();
 }
 
@@ -1382,7 +1405,14 @@ fn iftah_idadat(masarat: &Masarat) -> (Arc<MakhzanIdadat>, Option<TaadhurIdadat>
 
     let nuskha = matches!(tabaqa, TabaqatIdadat::Malaf).then(|| ihfaz_idadat(&masar));
     let makhzan = MakhzanIdadat::min_qeema(masar, idadat);
-    (Arc::new(makhzan), Some(TaadhurIdadat { khata, tabaqa, nuskha }))
+    (
+        Arc::new(makhzan),
+        Some(TaadhurIdadat {
+            khata,
+            tabaqa,
+            nuskha,
+        }),
+    )
 }
 
 /// Copies an unreadable settings file beside itself before defaults take over.
@@ -1439,7 +1469,10 @@ fn aalin_taadhur_idadat(taadhur: &TaadhurIdadat, masar: &Path) {
         None => (String::new(), String::new()),
         Some(Ok(hadaf)) => (
             format!("\nحُفظت نسخة من الملف كما هو في {}.", hadaf.display()),
-            format!("\nA copy of the file as it stands was saved to {}.", hadaf.display()),
+            format!(
+                "\nA copy of the file as it stands was saved to {}.",
+                hadaf.display()
+            ),
         ),
         Some(Err(sabab)) => (
             format!("\nتعذّر حفظ نسخة احتياطية من الملف: {sabab}"),
@@ -1478,7 +1511,9 @@ fn aalin_taadhur_idadat(taadhur: &TaadhurIdadat, masar: &Path) {
 /// The first argument is skipped because it is this executable.
 fn masar_ruqaa<I: IntoIterator<Item = PathBuf>>(hujaj: I) -> Option<PathBuf> {
     hujaj.into_iter().skip(1).find(|masar| {
-        masar.extension().is_some_and(|lahiqa| lahiqa.eq_ignore_ascii_case(LAHIQAT_RUQAA))
+        masar
+            .extension()
+            .is_some_and(|lahiqa| lahiqa.eq_ignore_ascii_case(LAHIQAT_RUQAA))
             && masar.is_file()
     })
 }
@@ -1604,7 +1639,7 @@ fn wajjih_ruqaa(tatbiq: &tauri::AppHandle, masar: &Path) {
                 ))
                 .set_buttons(MessageButtons::Ok)
                 .show();
-        }
+        },
         Err(khata) => aarid_khata_ruqaa(&khata),
     }
 }
@@ -1642,12 +1677,20 @@ fn iqra_talab(masar: &Path) -> Result<TalabRuqaa, Khata> {
         // A package with a blank title still has to be nameable in the
         // confirmation, and the file name is what the user just clicked on.
         if muallan.trim().is_empty() {
-            masar.file_name().unwrap_or_default().to_string_lossy().into_owned()
+            masar
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned()
         } else {
             muallan
         }
     };
-    Ok(TalabRuqaa { unwan, ism_luba: nass("ism_luba"), irtibat })
+    Ok(TalabRuqaa {
+        unwan,
+        ism_luba: nass("ism_luba"),
+        irtibat,
+    })
 }
 
 /// One [`KhataStudio::RuqaaLaTuqra`], from wherever the reading gave out.
@@ -1691,7 +1734,10 @@ fn ijlib_hadaf(qaida: &Makhzan, talab: &TalabRuqaa) -> Result<Luba, Khata> {
     let alaab = qaida.bil_qira(|ittisal| {
         let sijill = SijillAlaab::jadeed(ittisal);
         let mut kull = sijill.qaima(&TalabMaktaba::default())?;
-        let makhfiya = sijill.qaima(&TalabMaktaba { mukhfiya: true, ..TalabMaktaba::default() })?;
+        let makhfiya = sijill.qaima(&TalabMaktaba {
+            mukhfiya: true,
+            ..TalabMaktaba::default()
+        })?;
         kull.extend(makhfiya);
         Ok(kull)
     })?;
@@ -1707,8 +1753,10 @@ fn ijlib_hadaf(qaida: &Makhzan, talab: &TalabRuqaa) -> Result<Luba, Khata> {
 
     let hadaf = talab.ism_luba.trim();
     if murashshaha.len() != 1 && !hadaf.is_empty() {
-        let bil_ism: Vec<&Luba> =
-            alaab.iter().filter(|luba| luba.ism.trim().eq_ignore_ascii_case(hadaf)).collect();
+        let bil_ism: Vec<&Luba> = alaab
+            .iter()
+            .filter(|luba| luba.ism.trim().eq_ignore_ascii_case(hadaf))
+            .collect();
         if bil_ism.len() == 1 {
             murashshaha = bil_ism;
         }
@@ -1717,7 +1765,11 @@ fn ijlib_hadaf(qaida: &Makhzan, talab: &TalabRuqaa) -> Result<Luba, Khata> {
     match murashshaha.as_slice() {
         [wahida] => Ok((*wahida).clone()),
         akhar => Err(Khata::from(KhataStudio::LubaGhayrMuhaddada {
-            ism_luba: if hadaf.is_empty() { talab.unwan.clone() } else { hadaf.to_owned() },
+            ism_luba: if hadaf.is_empty() {
+                talab.unwan.clone()
+            } else {
+                hadaf.to_owned()
+            },
             adad: akhar.len(),
         })),
     }
@@ -1766,7 +1818,10 @@ fn aarid_khata_ruqaa(khata: &Khata) {
     let _ = MessageDialog::new()
         .set_level(MessageLevel::Error)
         .set_title(UNWAN_HIWAR)
-        .set_description(format!("{}\n\n{}\n\n[{}]", khata.arabi, khata.injilizi, khata.ramz))
+        .set_description(format!(
+            "{}\n\n{}\n\n[{}]",
+            khata.arabi, khata.injilizi, khata.ramz
+        ))
         .set_buttons(MessageButtons::Ok)
         .show();
 }
@@ -1869,12 +1924,12 @@ impl Tafsir for KhataStudio {
                 "تعذّر فتح نافذة تعريب على هذا الجهاز. راجع سجلّ التشخيص لمعرفة ما رفضه \
                  نظام العرض."
                     .to_owned()
-            }
+            },
             Self::FathMujalladFashil { .. } => {
                 "تعذّر فتح المجلد في مدير ملفات النظام. افتح مجلد اللعبة يدويًا من مساره \
                  الظاهر في الشاشة."
                     .to_owned()
-            }
+            },
             Self::MujalladGhayrMutlaq { masar } => format!(
                 "المسار «{masar}» ليس مسارًا مطلقًا، ولم يُضف إلى مجلدات الفحص. اكتب المسار \
                  كاملًا من جذر القرص."
@@ -1894,7 +1949,7 @@ impl Tafsir for KhataStudio {
                      افتح تعريب، وحدِّث المكتبة حتى تُعرَف نسخة كل لعبة، ثم ثبّت الرقعة من شاشة \
                      اللعبة نفسها."
                 )
-            }
+            },
         }
     }
 
@@ -1908,12 +1963,12 @@ impl Tafsir for KhataStudio {
                 "Could not open the Taarib window on this machine. The diagnostics log records \
                  what the display system refused."
                     .to_owned()
-            }
+            },
             Self::FathMujalladFashil { .. } => {
                 "The system file manager would not open the folder. Open the game's folder \
                  by the path shown on the screen."
                     .to_owned()
-            }
+            },
             Self::MujalladGhayrMutlaq { masar } => format!(
                 "{masar} is not an absolute path and was not added to the scanned folders. \
                  Give the full path from the root of the drive."
@@ -1934,7 +1989,7 @@ impl Tafsir for KhataStudio {
                      \"{ism_luba}\", which matched {matches}. Open Taarib, rescan the library so \
                      each game's build is known, then install the patch from that game's screen."
                 )
-            }
+            },
         }
     }
 
@@ -1958,20 +2013,20 @@ impl Tafsir for KhataStudio {
             Self::TasdirRubut { masar, tafsil } | Self::RuqaaLaTuqra { masar, tafsil } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(masar.clone()));
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::TaadhurTashghil { tafsil } | Self::FathMujalladFashil { tafsil } => {
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::MujalladGhayrMutlaq { masar } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(masar.clone()));
-            }
+            },
             Self::LubaGhayrMuhaddada { ism_luba, adad } => {
                 let _ = siyaq.insert("luba".to_owned(), QeemaSiyaq::Nass(ism_luba.clone()));
                 let _ = siyaq.insert(
                     "adad".to_owned(),
                     QeemaSiyaq::Hajm(u64::try_from(*adad).unwrap_or(u64::MAX)),
                 );
-            }
+            },
         }
         siyaq
     }
@@ -2040,7 +2095,10 @@ mod ikhtibarat {
     fn al_aalam_laysat_masarat() {
         let mujallad = mujallad("aalam");
         let tanfidhi = malaf(&mujallad, "taarib-studio");
-        assert_eq!(masar_ruqaa([tanfidhi, std::path::PathBuf::from("--istiada")]), None);
+        assert_eq!(
+            masar_ruqaa([tanfidhi, std::path::PathBuf::from("--istiada")]),
+            None
+        );
     }
 
     /// A path with the right extension that names nothing on disk is not a file
@@ -2101,7 +2159,10 @@ mod ikhtibarat {
         assert_eq!(mafhusa.aila, ghayr_mafhusa.aila);
         assert_eq!(mafhusa.tabaqa, ghayr_mafhusa.tabaqa);
         assert_eq!(
-            KhulasatFahs { mafhusa: false, ..mafhusa },
+            KhulasatFahs {
+                mafhusa: false,
+                ..mafhusa
+            },
             ghayr_mafhusa,
             "the two differ in nothing but the flag, which is why the flag is sent"
         );

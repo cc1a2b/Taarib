@@ -211,7 +211,10 @@ impl<T> JadwalMaqabid<T> {
     /// which is exactly where the context registry sits.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { khanat: Vec::new(), faragh: Vec::new() }
+        Self {
+            khanat: Vec::new(),
+            faragh: Vec::new(),
+        }
     }
 
     /// Registers a value and returns its handle.
@@ -240,7 +243,10 @@ impl<T> JadwalMaqabid<T> {
         if u64::try_from(fahras).unwrap_or(u64::MAX) >= AQSA_KHANAT {
             return 0;
         }
-        self.khanat.push(Khana { jeel: 1, qeema: Some(qeema) });
+        self.khanat.push(Khana {
+            jeel: 1,
+            qeema: Some(qeema),
+        });
         rakkib(fahras, 1)
     }
 
@@ -251,7 +257,11 @@ impl<T> JadwalMaqabid<T> {
     pub fn qeema(&self, maqbad: u64) -> Option<&T> {
         let (fahras, jeel) = fakk(maqbad)?;
         let khana = self.khanat.get(fahras)?;
-        if khana.jeel == jeel { khana.qeema.as_ref() } else { None }
+        if khana.jeel == jeel {
+            khana.qeema.as_ref()
+        } else {
+            None
+        }
     }
 
     /// As [`JadwalMaqabid::qeema`], mutably.
@@ -259,7 +269,11 @@ impl<T> JadwalMaqabid<T> {
     pub fn qeema_mut(&mut self, maqbad: u64) -> Option<&mut T> {
         let (fahras, jeel) = fakk(maqbad)?;
         let khana = self.khanat.get_mut(fahras)?;
-        if khana.jeel == jeel { khana.qeema.as_mut() } else { None }
+        if khana.jeel == jeel {
+            khana.qeema.as_mut()
+        } else {
+            None
+        }
     }
 
     /// Destroys a handle, returning its value so the caller decides where the
@@ -292,7 +306,10 @@ impl<T> JadwalMaqabid<T> {
     /// How many entries are live.
     #[must_use]
     pub fn adad(&self) -> usize {
-        self.khanat.iter().filter(|khana| khana.qeema.is_some()).count()
+        self.khanat
+            .iter()
+            .filter(|khana| khana.qeema.is_some())
+            .count()
     }
 
     /// Destroys every live entry at once, without forgetting the generations.
@@ -504,7 +521,10 @@ impl Siyaq {
     /// itself over a context that quietly does the wrong thing.
     pub fn jadeed(khiyarat: TaaribKhiyaratSiyaq) -> Natija<Self> {
         if khiyarat.hashw != 0 {
-            return Err(KhataJisr::HaqlMahjuzGhayrSifri { qeema: khiyarat.hashw }.into());
+            return Err(KhataJisr::HaqlMahjuzGhayrSifri {
+                qeema: khiyarat.hashw,
+            }
+            .into());
         }
         Ok(Self {
             saff: Saff::jadeed(),

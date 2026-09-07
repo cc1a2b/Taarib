@@ -127,7 +127,7 @@ pub fn istakhrij(jidhr: &Path, aila: AilatMuharrik) -> (JadwalNusus, TaqreerRafd
     match aila {
         AilatMuharrik::RpgMakerMv | AilatMuharrik::RpgMakerMz => {
             min_rpgmaker(&mut jadwal, &mut taqreer, jidhr);
-        }
+        },
         AilatMuharrik::RpgMakerVxAce => min_vxace(&mut jadwal, &mut taqreer, jidhr),
         AilatMuharrik::Renpy => min_renpy(&mut jadwal, &mut taqreer, jidhr),
         AilatMuharrik::GameMaker => min_gamemaker(&mut jadwal, &mut taqreer, jidhr),
@@ -147,7 +147,7 @@ pub fn istakhrij(jidhr: &Path, aila: AilatMuharrik) -> (JadwalNusus, TaqreerRafd
                     ),
                 },
             );
-        }
+        },
         // Named, and read by nothing. Separate from the unknown family below
         // because the reason differs and a maintainer reading a refusal report
         // needs the difference: this build knows exactly which engine this is
@@ -170,7 +170,7 @@ pub fn istakhrij(jidhr: &Path, aila: AilatMuharrik) -> (JadwalNusus, TaqreerRafd
                     ),
                 },
             );
-        }
+        },
         AilatMuharrik::Majhul => {
             taqreer.sajjil(
                 jidhr.display().to_string(),
@@ -180,7 +180,7 @@ pub fn istakhrij(jidhr: &Path, aila: AilatMuharrik) -> (JadwalNusus, TaqreerRafd
                         .to_owned(),
                 },
             );
-        }
+        },
     }
 
     (jadwal, taqreer)
@@ -222,7 +222,7 @@ fn min_rpgmaker(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Pat
         Err(khata) => {
             taqreer.sajjil(jidhr.display().to_string(), None, sabab_min_khata(&khata));
             return;
-        }
+        },
     };
 
     let sijill = match rpgmaker::istakhrij(&bunya) {
@@ -230,7 +230,7 @@ fn min_rpgmaker(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Pat
         Err(khata) => {
             taqreer.sajjil(jidhr.display().to_string(), None, sabab_min_khata(&khata));
             return;
-        }
+        },
     };
 
     if sijill.madakhil.is_empty() {
@@ -257,8 +257,8 @@ fn min_rpgmaker(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Pat
                 miftah_muharrik: None,
             };
 
-            let mut talab = TalabMudkhal::jadeed(mawqi, &madkhal.khaam)
-                .bi_tarmiz(Some("UTF-8".to_owned()));
+            let mut talab =
+                TalabMudkhal::jadeed(mawqi, &madkhal.khaam).bi_tarmiz(Some("UTF-8".to_owned()));
             if let Some((tasnif, thiqa)) = tasrih_rpgmaker(madkhal) {
                 talab = talab.bi_tasrih(tasnif, thiqa);
             }
@@ -296,13 +296,13 @@ fn tasrih_rpgmaker(madkhal: &rpgmaker::MadkhalNusus) -> Option<(TasnifNass, u8)>
         // Both are proper names and nothing else.
         NawMadkhal::IsmMutakallim | NawMadkhal::IsmKhareeta => {
             Some((TasnifNass::Ism, THIQAT_BUNYA))
-        }
+        },
         // Command 401 is one line of the message the window is showing, and 405
         // is one line of the scrolling text window. Both are narration or speech
         // by the format's definition.
         NawMadkhal::SatrNass | NawMadkhal::NassMutamarrir => {
             Some((TasnifNass::Hiwar, THIQAT_BUNYA))
-        }
+        },
         // Command 102 is the choice list and 402 is the branch header for one
         // chosen option, which is the same string echoed.
         NawMadkhal::Ikhtiyar => Some((TasnifNass::Ikhtiyar, THIQAT_BUNYA)),
@@ -367,10 +367,7 @@ fn qaimat_amr(masar: &str) -> Option<&str> {
 /// Command 101 writes the header for the message that follows it, so the nearest
 /// preceding 101 *in the same command list* is the speaker, exactly. There is no
 /// nearest-neighbour heuristic here — a scan that left the list stops.
-fn mutakallim_rpgmaker(
-    madakhil: &[&rpgmaker::MadkhalNusus],
-    khana: usize,
-) -> Option<String> {
+fn mutakallim_rpgmaker(madakhil: &[&rpgmaker::MadkhalNusus], khana: usize) -> Option<String> {
     let hali = madakhil.get(khana)?;
     let qaima = qaimat_amr(&hali.masar)?;
     let mut sabiq = khana;
@@ -402,7 +399,9 @@ fn jiwar_rpgmaker(madakhil: &[&rpgmaker::MadkhalNusus], khana: usize) -> Vec<Str
         && let Some(fahras) = sabiq.checked_sub(1)
     {
         sabiq = fahras;
-        let Some(madkhal) = madakhil.get(fahras) else { break };
+        let Some(madkhal) = madakhil.get(fahras) else {
+            break;
+        };
         if qaimat_amr(&madkhal.masar) != Some(qaima) {
             break;
         }
@@ -415,9 +414,13 @@ fn jiwar_rpgmaker(madakhil: &[&rpgmaker::MadkhalNusus], khana: usize) -> Vec<Str
     let mut baad: Vec<String> = Vec::new();
     let mut taali = khana;
     while baad.len() < JIWAR_ATRAF {
-        let Some(fahras) = taali.checked_add(1) else { break };
+        let Some(fahras) = taali.checked_add(1) else {
+            break;
+        };
         taali = fahras;
-        let Some(madkhal) = madakhil.get(fahras) else { break };
+        let Some(madkhal) = madakhil.get(fahras) else {
+            break;
+        };
         if qaimat_amr(&madkhal.masar) != Some(qaima) {
             break;
         }
@@ -486,7 +489,7 @@ fn min_vxace(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Path) 
             Err(khata) => {
                 taqreer.sajjil(hawiya, None, sabab_min_khata(&khata));
                 continue;
-            }
+            },
         };
         wujida = true;
         let madakhil: Vec<vxace::MadkhalRgss> = qari.madakhil().to_vec();
@@ -539,7 +542,7 @@ fn sajjil_silsila_vxace(
         Err(khata) => {
             taqreer.sajjil(hawiya.to_owned(), asl, sabab_min_khata(&khata));
             return;
-        }
+        },
     };
 
     let ism = asl.as_deref().unwrap_or(hawiya);
@@ -639,7 +642,9 @@ fn min_renpy(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Path) 
         }
     }
     for masar in &masarat_rpa {
-        let Ok(qari) = renpy::Hawiya::iqra(masar) else { continue };
+        let Ok(qari) = renpy::Hawiya::iqra(masar) else {
+            continue;
+        };
         let madakhil: Vec<renpy::MadkhalRpa> = qari.bi_lahiqa(".rpy").cloned().collect();
         for madkhal in &madakhil {
             if !fi_mujallad_tarjama(&madkhal.masar) {
@@ -665,7 +670,7 @@ fn min_renpy(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Path) 
             Ok(nass) => {
                 let sijillat = renpy::iltiqat_min_rpy(&nass, &hawiya);
                 sajjil_sijillat(jadwal, taqreer, &khareeta, &hawiya, None, &sijillat, ".rpy");
-            }
+            },
             Err(khata) => taqreer.sajjil(hawiya, None, sabab_min_khata(&khata)),
         }
     }
@@ -685,12 +690,14 @@ fn min_renpy(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Path) 
             Err(khata) => {
                 taqreer.sajjil(hawiya, None, sabab_min_khata(&khata));
                 continue;
-            }
+            },
         };
         match renpy::iltiqat_min_rpyc(&bayt, &hawiya) {
             Ok(sijillat) => {
-                sajjil_sijillat(jadwal, taqreer, &khareeta, &hawiya, None, &sijillat, ".rpyc");
-            }
+                sajjil_sijillat(
+                    jadwal, taqreer, &khareeta, &hawiya, None, &sijillat, ".rpyc",
+                );
+            },
             Err(khata) => taqreer.sajjil(hawiya, None, sabab_min_khata(&khata)),
         }
     }
@@ -702,7 +709,7 @@ fn min_renpy(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Path) 
             Err(khata) => {
                 taqreer.sajjil(hawiya, None, sabab_min_khata(&khata));
                 continue;
-            }
+            },
         };
         wujida = true;
         let madakhil: Vec<renpy::MadkhalRpa> = qari.madakhil().to_vec();
@@ -736,7 +743,7 @@ fn min_renpy(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Path) 
                         sabab_min_khata(&khata),
                     );
                     continue;
-                }
+                },
             };
             let sijillat = if masdar {
                 match std::str::from_utf8(&bayt) {
@@ -753,7 +760,7 @@ fn min_renpy(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Path) 
                             },
                         );
                         continue;
-                    }
+                    },
                 }
             } else {
                 match renpy::iltiqat_min_rpyc(&bayt, &madkhal.masar) {
@@ -765,7 +772,7 @@ fn min_renpy(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Path) 
                             sabab_min_khata(&khata),
                         );
                         continue;
-                    }
+                    },
                 }
             };
             sajjil_sijillat(
@@ -808,11 +815,11 @@ fn damma_muarrifat(khareeta: &mut BTreeMap<String, Option<String>>, nass: &str) 
         match mawjud {
             None => {
                 let _ = khareeta.insert(asl, Some(muarrif));
-            }
-            Some(Some(sabiq)) if sabiq == muarrif => {}
+            },
+            Some(Some(sabiq)) if sabiq == muarrif => {},
             Some(_) => {
                 let _ = khareeta.insert(asl, None);
-            }
+            },
         }
     }
 }
@@ -853,7 +860,7 @@ fn sajjil_sijillat(
             mawqi: match sijill.mutakallim.as_deref() {
                 Some(mutakallim) if !mutakallim.is_empty() => {
                     format!("{}/{mutakallim}", sijill.naw.ism())
-                }
+                },
                 _ => sijill.naw.ism().to_owned(),
             },
             haql: None,
@@ -970,14 +977,14 @@ fn min_gamemaker(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Pa
         Err(khata) => {
             taqreer.sajjil(hawiya, None, sabab_min_khata(&khata));
             return;
-        }
+        },
     };
     let qari = match gamemaker::HawiyatGameMaker::min_bayt(bayt, &masar) {
         Ok(qari) => qari,
         Err(khata) => {
             taqreer.sajjil(hawiya, None, sabab_min_khata(&khata));
             return;
-        }
+        },
     };
 
     let ramz_mafhum = qari.maraji().mafhuma(QITAA_RAMZ);
@@ -1102,8 +1109,8 @@ const SIFAT_MARSUMA: &[(&str, TasnifNass)] = &[
 
 /// Elements HTML never closes, which therefore never pop the path stack.
 const UNASIR_FARIGHA: &[&str] = &[
-    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
-    "source", "track", "wbr",
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
+    "track", "wbr",
 ];
 
 /// Reads an Electron or NW.js application out of its `.asar`.
@@ -1145,7 +1152,7 @@ fn min_electron(jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd, jidhr: &Pat
             Err(khata) => {
                 taqreer.sajjil(hawiya, None, sabab_min_khata(&khata));
                 continue;
-            }
+            },
         };
 
         match electron::istakhrij(&qari) {
@@ -1167,7 +1174,9 @@ fn sajjil_hasad(
         taqreer.sajjil(
             hawiya.to_owned(),
             Some(masar.clone()),
-            SababRafd::Talif { sabab: sabab.clone() },
+            SababRafd::Talif {
+                sabab: sabab.clone(),
+            },
         );
     }
 
@@ -1185,12 +1194,15 @@ fn sajjil_hasad(
         let mawqi = MawqiNass {
             hawiya: hawiya.to_owned(),
             asl: Some(nass.masdar.clone()),
-            mawqi: if barmaji { "js".to_owned() } else { nass.miftah.clone() },
+            mawqi: if barmaji {
+                "js".to_owned()
+            } else {
+                nass.miftah.clone()
+            },
             haql: None,
             miftah_muharrik: None,
         };
-        let talab =
-            TalabMudkhal::jadeed(mawqi, &nass.nass).bi_tarmiz(Some("UTF-8".to_owned()));
+        let talab = TalabMudkhal::jadeed(mawqi, &nass.nass).bi_tarmiz(Some("UTF-8".to_owned()));
         let mut mudkhal = ansha_mudkhal(talab);
         if barmaji {
             mudkhal.thiqa = mudkhal.thiqa.min(THIQAT_BARMAJI);
@@ -1249,7 +1261,9 @@ fn sajjil_html(
             taqreer.sajjil(
                 hawiya.to_owned(),
                 Some(madkhal.masar.clone()),
-                SababRafd::Talif { sabab: "an HTML document that is not valid UTF-8".to_owned() },
+                SababRafd::Talif {
+                    sabab: "an HTML document that is not valid UTF-8".to_owned(),
+                },
             );
             continue;
         };
@@ -1363,7 +1377,7 @@ fn nusus_html(nass: &str) -> Vec<NassHtml> {
                     sifat_html(&mut natija, &kawm, &ism, &marka);
                 }
                 asmaa.push(ism);
-            }
+            },
             Ok(Event::Empty(marka)) => {
                 asdir_nass(&mut natija, &mut madad, &kawm, &asmaa);
                 if tajahul > 0 {
@@ -1373,7 +1387,7 @@ fn nusus_html(nass: &str) -> Vec<NassHtml> {
                 kawm.push(juz_unsur(&ism, &marka));
                 sifat_html(&mut natija, &kawm, &ism, &marka);
                 let _ = kawm.pop();
-            }
+            },
             Ok(Event::End(_)) => {
                 asdir_nass(&mut natija, &mut madad, &kawm, &asmaa);
                 if tajahul > 0 {
@@ -1381,13 +1395,13 @@ fn nusus_html(nass: &str) -> Vec<NassHtml> {
                 }
                 let _ = kawm.pop();
                 let _ = asmaa.pop();
-            }
+            },
             Ok(Event::Text(jism)) => {
                 if tajahul > 0 {
                     continue;
                 }
                 madad.push_str(&jism.xml10_content());
-            }
+            },
             Ok(Event::GeneralRef(marja)) => {
                 if tajahul > 0 {
                     continue;
@@ -1400,8 +1414,8 @@ fn nusus_html(nass: &str) -> Vec<NassHtml> {
                     Some(hall) => madad.push_str(&hall),
                     None => madad.push_str(&taarib_usus::kayanat::nass_marja(&marja)),
                 }
-            }
-            Ok(_) => {}
+            },
+            Ok(_) => {},
         }
     }
     asdir_nass(&mut natija, &mut madad, &kawm, &asmaa);
@@ -1409,12 +1423,7 @@ fn nusus_html(nass: &str) -> Vec<NassHtml> {
 }
 
 /// Emits the accumulated text run at the position it was read from, if any.
-fn asdir_nass(
-    natija: &mut Vec<NassHtml>,
-    madad: &mut String,
-    kawm: &[String],
-    asmaa: &[String],
-) {
+fn asdir_nass(natija: &mut Vec<NassHtml>, madad: &mut String, kawm: &[String], asmaa: &[String]) {
     let munaqqa = madad.trim();
     if !munaqqa.is_empty() {
         natija.push(NassHtml {
@@ -1560,7 +1569,11 @@ fn nisbi(jidhr: &Path, masar: &Path) -> String {
 /// A path's last component, lowercased.
 fn ism_asfal(masar: &str) -> String {
     let munkhafid = masar.replace('\\', "/").to_ascii_lowercase();
-    munkhafid.rsplit('/').next().unwrap_or(&munkhafid).to_owned()
+    munkhafid
+        .rsplit('/')
+        .next()
+        .unwrap_or(&munkhafid)
+        .to_owned()
 }
 
 /// Whether an archive-relative path carries `lahiqa` as its extension.
@@ -1569,7 +1582,9 @@ fn ism_asfal(masar: &str) -> String {
 /// built on Windows can hold `SCRIPT.RPYC`, and a case-sensitive test would
 /// walk past it and lose the whole script.
 fn lahiqatuhu(masar: &str, lahiqa: &str) -> bool {
-    Path::new(masar).extension().is_some_and(|mawjuda| mawjuda.eq_ignore_ascii_case(lahiqa))
+    Path::new(masar)
+        .extension()
+        .is_some_and(|mawjuda| mawjuda.eq_ignore_ascii_case(lahiqa))
 }
 
 /// A Ren'Py path with its `.rpy` or `.rpyc` extension removed, lowercased.
@@ -1588,8 +1603,10 @@ fn jidhr_ism(masar: &str) -> String {
 
 /// Reads a whole file, refusing one above `saqf` before reserving anything.
 fn qira_malaf(masar: &Path, saqf: u64) -> Result<Vec<u8>, KhataNusus> {
-    let bayanat = std::fs::metadata(masar)
-        .map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+    let bayanat = std::fs::metadata(masar).map_err(|sabab| KhataNusus::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })?;
     if bayanat.len() > saqf {
         return Err(KhataNusus::HajmMufrit {
             haql: "a game data file",
@@ -1597,8 +1614,10 @@ fn qira_malaf(masar: &Path, saqf: u64) -> Result<Vec<u8>, KhataNusus> {
             saqf,
         });
     }
-    std::fs::read(masar)
-        .map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    std::fs::read(masar).map_err(|sabab| KhataNusus::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 /// Reads a whole text file, refusing one that is not valid UTF-8.
@@ -1609,13 +1628,13 @@ fn qira_malaf(masar: &Path, saqf: u64) -> Result<Vec<u8>, KhataNusus> {
 fn qira_nass(masar: &Path) -> Result<String, KhataNusus> {
     let bayt = qira_malaf(masar, AQSA_MALAF_NASSI)?;
     let munaqqa = bayt.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(&bayt);
-    std::str::from_utf8(munaqqa).map(str::to_owned).map_err(|khata| {
-        KhataNusus::NassGhayrSalih {
+    std::str::from_utf8(munaqqa)
+        .map(str::to_owned)
+        .map_err(|khata| KhataNusus::NassGhayrSalih {
             malaf: masar.display().to_string(),
             tarmiz: "UTF-8",
             mawqi: u64::try_from(khata.valid_up_to()).unwrap_or(u64::MAX),
-        }
-    })
+        })
 }
 
 /// Turns a reader's refusal into the reason the report shows.
@@ -1625,29 +1644,38 @@ fn qira_nass(masar: &Path) -> Result<String, KhataNusus> {
 /// [`SababRafd::Talif`].
 fn sabab_min_khata(khata: &KhataNusus) -> SababRafd {
     match khata {
-        KhataNusus::KhataMalaf { sabab, .. } => {
-            SababRafd::TaadhurQira { sabab: sabab.to_string() }
-        }
-        KhataNusus::MiftahMafqud { sabab, .. } => SababRafd::Mushaffar { wasf: sabab.clone() },
-        KhataNusus::MiftahGhayrSalih { sabab, .. } => {
-            SababRafd::Mushaffar { wasf: (*sabab).to_owned() }
-        }
-        KhataNusus::IsdarGhayrMadum { sigha, wujid, adna, aqsa } => {
-            SababRafd::IsdarGhayrMadum {
-                sigha: (*sigha).to_owned(),
-                wujid: wujid.to_string(),
-                madum: format!("{adna} to {aqsa}"),
-            }
-        }
-        KhataNusus::HajmMufrit { haql, qeema, saqf } => {
-            SababRafd::TajawuzHadd { hadd: (*haql).to_owned(), qeema: *qeema, saqf: *saqf }
-        }
+        KhataNusus::KhataMalaf { sabab, .. } => SababRafd::TaadhurQira {
+            sabab: sabab.to_string(),
+        },
+        KhataNusus::MiftahMafqud { sabab, .. } => SababRafd::Mushaffar {
+            wasf: sabab.clone(),
+        },
+        KhataNusus::MiftahGhayrSalih { sabab, .. } => SababRafd::Mushaffar {
+            wasf: (*sabab).to_owned(),
+        },
+        KhataNusus::IsdarGhayrMadum {
+            sigha,
+            wujid,
+            adna,
+            aqsa,
+        } => SababRafd::IsdarGhayrMadum {
+            sigha: (*sigha).to_owned(),
+            wujid: wujid.to_string(),
+            madum: format!("{adna} to {aqsa}"),
+        },
+        KhataNusus::HajmMufrit { haql, qeema, saqf } => SababRafd::TajawuzHadd {
+            hadd: (*haql).to_owned(),
+            qeema: *qeema,
+            saqf: *saqf,
+        },
         KhataNusus::SihrGhayrMutabaq { sigha, .. } => SababRafd::SighaMajhula {
             wujid: format!("a file that does not carry the {sigha} signature"),
         },
         KhataNusus::BunyaGhayrMutawaqqaa { malaf, haql } => SababRafd::SighaMajhula {
             wujid: format!("{malaf}: this build expected {haql} and did not find it"),
         },
-        akhar => SababRafd::Talif { sabab: akhar.to_string() },
+        akhar => SababRafd::Talif {
+            sabab: akhar.to_string(),
+        },
     }
 }

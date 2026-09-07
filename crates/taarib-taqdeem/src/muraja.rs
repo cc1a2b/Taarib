@@ -221,7 +221,11 @@ impl MarjiMuraja {
     /// Names one revision of one submission and who is reviewing it.
     #[must_use]
     pub const fn jadeed(ruqaa: RuqaaId, murajaa: RuqaaRevision, murajii: MusahimId) -> Self {
-        Self { ruqaa, murajaa, murajii }
+        Self {
+            ruqaa,
+            murajaa,
+            murajii,
+        }
     }
 
     /// The identity a bulk action is issued against.
@@ -304,7 +308,15 @@ pub fn utlub_taadil(
     taaliqat: Vec<TaaliqId>,
     waqt: String,
 ) -> QaydMuraja {
-    qayd(salahiya, marji, IjraMuraja::TalabTaadil { mulakhkhas, taaliqat }, waqt)
+    qayd(
+        salahiya,
+        marji,
+        IjraMuraja::TalabTaadil {
+            mulakhkhas,
+            taaliqat,
+        },
+        waqt,
+    )
 }
 
 /// Rejects a submission.
@@ -361,7 +373,9 @@ pub fn urfud_jumla(
     sabab: &SababRafd,
     waqt: &str,
 ) -> Vec<QaydMuraja> {
-    jumla(salahiya, murajii, ahdaf, waqt, |_| IjraMuraja::Rafd { sabab: sabab.clone() })
+    jumla(salahiya, murajii, ahdaf, waqt, |_| IjraMuraja::Rafd {
+        sabab: sabab.clone(),
+    })
 }
 
 /// Withdraws every selected published revision for the same written reason.
@@ -373,7 +387,9 @@ pub fn ishab_jumla(
     sabab: &SababRafd,
     waqt: &str,
 ) -> Vec<QaydMuraja> {
-    jumla(salahiya, murajii, ahdaf, waqt, |_| IjraMuraja::Sahb { sabab: sabab.clone() })
+    jumla(salahiya, murajii, ahdaf, waqt, |_| IjraMuraja::Sahb {
+        sabab: sabab.clone(),
+    })
 }
 
 /// Returns every selected submission for revision with the same summary.
@@ -385,9 +401,11 @@ pub fn utlub_taadil_jumla(
     mulakhkhas: &MulakhkhasTaadil,
     waqt: &str,
 ) -> Vec<QaydMuraja> {
-    jumla(salahiya, murajii, ahdaf, waqt, |_| IjraMuraja::TalabTaadil {
-        mulakhkhas: mulakhkhas.clone(),
-        taaliqat: Vec::new(),
+    jumla(salahiya, murajii, ahdaf, waqt, |_| {
+        IjraMuraja::TalabTaadil {
+            mulakhkhas: mulakhkhas.clone(),
+            taaliqat: Vec::new(),
+        }
     })
 }
 
@@ -599,7 +617,10 @@ impl SijillMuraja {
     /// Every entry against one lineage.
     #[must_use]
     pub fn li_ruqaa(&self, ruqaa: RuqaaId) -> Vec<&QaydMuraja> {
-        self.quyud.iter().filter(|qayd| qayd.ruqaa == ruqaa).collect()
+        self.quyud
+            .iter()
+            .filter(|qayd| qayd.ruqaa == ruqaa)
+            .collect()
     }
 
     /// Every entry against one revision.
@@ -620,7 +641,10 @@ impl SijillMuraja {
     /// Every entry by one reviewer.
     #[must_use]
     pub fn li_murajii(&self, murajii: &MusahimId) -> Vec<&QaydMuraja> {
-        self.quyud.iter().filter(|qayd| qayd.murajii == *murajii).collect()
+        self.quyud
+            .iter()
+            .filter(|qayd| qayd.murajii == *murajii)
+            .collect()
     }
 
     /// Every lineage that has been withdrawn after publication.
@@ -645,7 +669,7 @@ impl SijillMuraja {
             match qayd.ijra {
                 IjraMuraja::Iaatimad => muaatamad = true,
                 IjraMuraja::Sahb { .. } | IjraMuraja::Rafd { .. } => muaatamad = false,
-                IjraMuraja::Taaliq { .. } | IjraMuraja::TalabTaadil { .. } => {}
+                IjraMuraja::Taaliq { .. } | IjraMuraja::TalabTaadil { .. } => {},
             }
         }
         muaatamad
@@ -656,7 +680,11 @@ impl SijillMuraja {
     #[must_use]
     pub fn yatba(&self, sabiq: &Self) -> bool {
         self.quyud.len() >= sabiq.quyud.len()
-            && self.quyud.iter().zip(sabiq.quyud.iter()).all(|(jadid, qadeem)| jadid == qadeem)
+            && self
+                .quyud
+                .iter()
+                .zip(sabiq.quyud.iter())
+                .all(|(jadid, qadeem)| jadid == qadeem)
     }
 
     /// The whole log rendered for display, in Arabic.
@@ -722,5 +750,9 @@ impl SijillMuraja {
 }
 
 fn khata_malaf(masar: &Path, amal: &'static str, sabab: io::Error) -> KhataTaqdeem {
-    KhataTaqdeem::KhataMalaf { masar: masar.to_path_buf(), amal, sabab }
+    KhataTaqdeem::KhataMalaf {
+        masar: masar.to_path_buf(),
+        amal,
+        sabab,
+    }
 }

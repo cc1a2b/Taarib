@@ -180,7 +180,11 @@ fn mawdi_miawi(adad: usize, nisba: f64) -> usize {
 /// and a 2.2 approximation there is off by enough to move a Sauvola threshold
 /// across a stroke edge.
 fn min_sirgb(qeema: f32) -> f32 {
-    if qeema <= 0.040_449_936 { qeema / 12.92 } else { ((qeema + 0.055) / 1.055).powf(2.4) }
+    if qeema <= 0.040_449_936 {
+        qeema / 12.92
+    } else {
+        ((qeema + 0.055) / 1.055).powf(2.4)
+    }
 }
 
 /// A linear channel value, zero to one, encoded to sRGB.
@@ -190,7 +194,11 @@ fn min_sirgb(qeema: f32) -> f32 {
 /// conversion to a byte rather than here, so that a tone mapper can hand over a
 /// value of 1.0000001 without this function pretending it is out of domain.
 fn ila_sirgb(qeema: f32) -> f32 {
-    if qeema <= 0.003_130_8 { 12.92 * qeema } else { 1.055f32.mul_add(qeema.powf(1.0 / 2.4), -0.055) }
+    if qeema <= 0.003_130_8 {
+        12.92 * qeema
+    } else {
+        1.055f32.mul_add(qeema.powf(1.0 / 2.4), -0.055)
+    }
 }
 
 /// The 256 sRGB byte values as linear floats, built once.
@@ -213,7 +221,10 @@ fn jadwal_khatti() -> &'static [f32; 256] {
 
 /// One sRGB byte as a linear float, through the table.
 fn khatti_min_bayt(qeema: u8) -> f32 {
-    jadwal_khatti().get(usize::from(qeema)).copied().unwrap_or(0.0)
+    jadwal_khatti()
+        .get(usize::from(qeema))
+        .copied()
+        .unwrap_or(0.0)
 }
 
 /// An IEEE 754 binary16 value as an `f32`, exactly.
@@ -356,7 +367,13 @@ impl SuraMultaqata {
             });
         }
 
-        Ok(Self { bayt, ard, irtifa, sigha, mintaqa })
+        Ok(Self {
+            bayt,
+            ard,
+            irtifa,
+            sigha,
+            mintaqa,
+        })
     }
 
     /// The captured bytes, in the surface's own format.
@@ -463,7 +480,7 @@ impl SuraMultaqata {
                     let ahmar = biksel.get(2).copied().unwrap_or(0);
                     mukhraj.extend_from_slice(&[ahmar, akhdar, azraq]);
                 }
-            }
+            },
             SighatSath::Rgba8 => {
                 for biksel in self.bayt.chunks_exact(4) {
                     let ahmar = biksel.first().copied().unwrap_or(0);
@@ -471,7 +488,7 @@ impl SuraMultaqata {
                     let azraq = biksel.get(2).copied().unwrap_or(0);
                     mukhraj.extend_from_slice(&[ahmar, akhdar, azraq]);
                 }
-            }
+            },
             SighatSath::Rgb10a2 => {
                 for biksel in self.bayt.chunks_exact(4) {
                     let hazma = u32::from_le_bytes([
@@ -486,7 +503,7 @@ impl SuraMultaqata {
                         ashra_ila_thamania((hazma >> 20) & 0x3ff),
                     ]);
                 }
-            }
+            },
             SighatSath::Rgba16f => {
                 let khatti = self.ila_khatti_hdr();
                 let bayda = nuqtat_bayda(&khatti);
@@ -500,7 +517,7 @@ impl SuraMultaqata {
                         bayt_min_f32(ila_sirgb(daght_mada(azraq, bayda)) * 255.0),
                     ]);
                 }
-            }
+            },
         }
 
         Ok(mukhraj)
@@ -512,7 +529,12 @@ impl SuraMultaqata {
     /// — one to find the white point and one to apply it — and decoding twice
     /// would be decoding four half-floats per pixel twice.
     fn ila_khatti_hdr(&self) -> Vec<f32> {
-        let sia = self.bayt.len().saturating_mul(3).checked_div(8).unwrap_or(0);
+        let sia = self
+            .bayt
+            .len()
+            .saturating_mul(3)
+            .checked_div(8)
+            .unwrap_or(0);
         let mut khatti = Vec::with_capacity(sia);
         for biksel in self.bayt.chunks_exact(8) {
             let qanat = |mawdi: usize| -> f32 {
@@ -561,7 +583,11 @@ fn nuqtat_bayda(khatti: &[f32]) -> f32 {
             let akhdar = biksel.get(1).copied().unwrap_or(0.0);
             let azraq = biksel.get(2).copied().unwrap_or(0.0);
             let qeema = idaa(ahmar, akhdar, azraq);
-            if qeema.is_finite() { Some(qeema.max(0.0)) } else { None }
+            if qeema.is_finite() {
+                Some(qeema.max(0.0))
+            } else {
+                None
+            }
         })
         .collect();
 
@@ -692,9 +718,9 @@ impl SuratRamadiya {
         if x >= self.ard || y >= self.irtifa {
             return 0;
         }
-        let mawdi = mawdi_usize(y).saturating_mul(mawdi_usize(self.ard)).saturating_add(
-            mawdi_usize(x),
-        );
+        let mawdi = mawdi_usize(y)
+            .saturating_mul(mawdi_usize(self.ard))
+            .saturating_add(mawdi_usize(x));
         self.bayt.get(mawdi).copied().unwrap_or(0)
     }
 
@@ -752,7 +778,12 @@ impl SuratRamadiya {
             self.ard,
             self.irtifa,
             SighatSath::Rgba8,
-            MustatilBiksel { yasar: 0, aala: 0, ard: self.ard, irtifa: self.irtifa },
+            MustatilBiksel {
+                yasar: 0,
+                aala: 0,
+                ard: self.ard,
+                irtifa: self.irtifa,
+            },
         )
     }
 }
@@ -970,7 +1001,10 @@ impl MuhassinSura {
     /// A preprocessor with the given settings.
     #[must_use]
     pub const fn jadeed(iadadat: IdadatTahsin) -> Self {
-        Self { iadadat, athar: Vec::new() }
+        Self {
+            iadadat,
+            athar: Vec::new(),
+        }
     }
 
     /// The settings.
@@ -1029,7 +1063,9 @@ impl MuhassinSura {
         ard: u32,
         irtifa: u32,
     ) -> Result<SuratRamadiya, KhataTabaqa> {
-        let matlub = u64::from(ard).saturating_mul(u64::from(irtifa)).saturating_mul(3);
+        let matlub = u64::from(ard)
+            .saturating_mul(u64::from(irtifa))
+            .saturating_mul(3);
         let mawjud = tul_u64(rgb.len());
         if mawjud != matlub {
             return Err(KhataTabaqa::IltiqatFashil {
@@ -1105,8 +1141,8 @@ impl MuhassinSura {
             return false;
         }
         if qaa == 0 && saqf == 255 {
-            self.athar.push("contrast: left alone, the region already uses the full range"
-                .to_owned());
+            self.athar
+                .push("contrast: left alone, the region already uses the full range".to_owned());
             return false;
         }
 
@@ -1116,7 +1152,8 @@ impl MuhassinSura {
             let mumaddad = (f32::from(*khana) - asfal) * 255.0 / mada;
             *khana = bayt_min_f32(mumaddad);
         }
-        self.athar.push(format!("contrast: stretched {qaa}..={saqf} onto 0..=255"));
+        self.athar
+            .push(format!("contrast: stretched {qaa}..={saqf} onto 0..=255"));
         true
     }
 
@@ -1262,7 +1299,10 @@ impl MuhassinSura {
         for (y, saf) in surah.sufuf().enumerate() {
             let saf_raqm = tul_u32(y);
             let aala = saf_raqm.saturating_sub(nisf);
-            let asfal = saf_raqm.saturating_add(nisf).saturating_add(1).min(surah.irtifa);
+            let asfal = saf_raqm
+                .saturating_add(nisf)
+                .saturating_add(1)
+                .min(surah.irtifa);
             for (x, &qeema) in saf.iter().enumerate() {
                 let amud = tul_u32(x);
                 let yasar = amud.saturating_sub(nisf);
@@ -1276,8 +1316,11 @@ impl MuhassinSura {
                 let mutawassit = hajm_f64(majmu) / adad_ashari;
                 let tabayun = mutawassit.mul_add(-mutawassit, hajm_f64(murabbaat) / adad_ashari);
                 let inhiraf = tabayun.max(0.0).sqrt();
-                let atabah =
-                    mutawassit * self.iadadat.muamil_sauvola.mul_add(inhiraf / mada - 1.0, 1.0);
+                let atabah = mutawassit
+                    * self
+                        .iadadat
+                        .muamil_sauvola
+                        .mul_add(inhiraf / mada - 1.0, 1.0);
                 mukhraj.push(if f64::from(qeema) < atabah { 0 } else { 255 });
             }
         }
@@ -1288,7 +1331,11 @@ impl MuhassinSura {
             nisf.saturating_mul(2).saturating_add(1),
             self.iadadat.muamil_sauvola
         ));
-        SuratRamadiya { bayt: mukhraj, ard: surah.ard, irtifa: surah.irtifa }
+        SuratRamadiya {
+            bayt: mukhraj,
+            ard: surah.ard,
+            irtifa: surah.irtifa,
+        }
     }
 
     /// The height of the text in a region, not the height of the region.
@@ -1312,13 +1359,19 @@ impl MuhassinSura {
     /// under the text, would drag a mean far enough to suppress the upscale.
     fn irtifa_nass(surah: &SuratRamadiya) -> Option<u32> {
         let kutal = KutalNass::iktashif(surah, &IdadatKutal::default());
-        let mut irtifaat: Vec<u32> =
-            kutal.sutur().iter().map(|satr| satr.itar.irtifa).filter(|q| *q > 0).collect();
+        let mut irtifaat: Vec<u32> = kutal
+            .sutur()
+            .iter()
+            .map(|satr| satr.itar.irtifa)
+            .filter(|q| *q > 0)
+            .collect();
         if irtifaat.is_empty() {
             return None;
         }
         irtifaat.sort_unstable();
-        irtifaat.get(irtifaat.len().checked_div(2).unwrap_or(0)).copied()
+        irtifaat
+            .get(irtifaat.len().checked_div(2).unwrap_or(0))
+            .copied()
     }
 
     /// The integer factor this region should be upscaled by.
@@ -1365,8 +1418,8 @@ impl MuhassinSura {
         // The text's height, and the region's only when no text was found —
         // at which point there is nothing to upscale for and the fallback is
         // the conservative one.
-        let (irtifa_qiyas, masdar) = Self::irtifa_nass(surah)
-            .map_or((surah.irtifa, "the region"), |q| (q, "the text"));
+        let (irtifa_qiyas, masdar) =
+            Self::irtifa_nass(surah).map_or((surah.irtifa, "the region"), |q| (q, "the text"));
         let mudaaf = self.muamil_takbir(irtifa_qiyas);
         if mudaaf <= 1 {
             self.athar.push(format!(
@@ -1507,10 +1560,7 @@ impl MuhassinSura {
     /// [`MuhassinSura::ila_ramadi`] and [`SuratRamadiya::ila_multaqata`] refuse,
     /// plus [`KhataTabaqa::HajmMufrit`] when the upscaled colour buffer would
     /// exceed this build's pixel ceiling.
-    pub fn hassin_lil_qari(
-        &mut self,
-        sura: &SuraMultaqata,
-    ) -> Result<SuraMuhassana, KhataTabaqa> {
+    pub fn hassin_lil_qari(&mut self, sura: &SuraMultaqata) -> Result<SuraMuhassana, KhataTabaqa> {
         if self.iadadat.yuhawwil_ila_ramadi {
             let irtifa_asli = sura.irtifa().max(1);
             let ramadi = self.hassin(sura)?;
@@ -1535,8 +1585,7 @@ impl MuhassinSura {
             .map_or_else(|| (qiyas.irtifa(), "the region"), |q| (q, "the text"));
         let mudaaf = self.muamil_takbir(irtifa_qiyas);
 
-        let (mukabbar, ard, irtifa) =
-            Self::kabbir_rgb(&rgb, sura.ard(), sura.irtifa(), mudaaf)?;
+        let (mukabbar, ard, irtifa) = Self::kabbir_rgb(&rgb, sura.ard(), sura.irtifa(), mudaaf)?;
         self.athar.push(format!(
             "to the recognizer: colour, {ard}×{irtifa}, upscaled {mudaaf}× because {masdar} \
              is {irtifa_qiyas}px and the floor is {}px. The grayscale was built to measure \
@@ -1561,7 +1610,12 @@ impl MuhassinSura {
                 ard,
                 irtifa,
                 SighatSath::Rgba8,
-                MustatilBiksel { yasar: 0, aala: 0, ard, irtifa },
+                MustatilBiksel {
+                    yasar: 0,
+                    aala: 0,
+                    ard,
+                    irtifa,
+                },
             )?,
             mintaqa: sura.mintaqa(),
             mudaaf,
@@ -1707,10 +1761,11 @@ impl SuraTarakumiya {
                 jari_majmu = jari_majmu.saturating_add(wahid);
                 jari_murabba = jari_murabba.saturating_add(wahid.saturating_mul(wahid));
                 let mawdi = x.saturating_add(1);
-                let fawq_majmu =
-                    majmu.get(sabiq.saturating_add(mawdi)).copied().unwrap_or(0);
-                let fawq_murabba =
-                    murabbaat.get(sabiq.saturating_add(mawdi)).copied().unwrap_or(0);
+                let fawq_majmu = majmu.get(sabiq.saturating_add(mawdi)).copied().unwrap_or(0);
+                let fawq_murabba = murabbaat
+                    .get(sabiq.saturating_add(mawdi))
+                    .copied()
+                    .unwrap_or(0);
                 if let Some(khana) = majmu.get_mut(hali.saturating_add(mawdi)) {
                     *khana = fawq_majmu.saturating_add(jari_majmu);
                 }
@@ -1720,7 +1775,11 @@ impl SuraTarakumiya {
             }
         }
 
-        Self { majmu, murabbaat, ard }
+        Self {
+            majmu,
+            murabbaat,
+            ard,
+        }
     }
 
     /// The sum, the sum of squares and the pixel count of a half-open window.
@@ -1738,7 +1797,10 @@ impl SuraTarakumiya {
         let y2 = mawdi_usize(asfal);
 
         let qeema = |jadwal: &[u64], x: usize, y: usize| -> u64 {
-            jadwal.get(y.saturating_mul(self.ard).saturating_add(x)).copied().unwrap_or(0)
+            jadwal
+                .get(y.saturating_mul(self.ard).saturating_add(x))
+                .copied()
+                .unwrap_or(0)
         };
         let hisab = |jadwal: &[u64]| -> u64 {
             qeema(jadwal, x2, y2)
@@ -1928,7 +1990,11 @@ impl KutalNass {
             sutur.len(),
             sutur.iter().map(|satr| satr.kalimat.len()).sum::<usize>()
         ));
-        Self { sutur, atabah, athar }
+        Self {
+            sutur,
+            atabah,
+            athar,
+        }
     }
 
     /// The detected lines, top to bottom.
@@ -2074,9 +2140,10 @@ fn ihsa_aamida(surah: &SuratRamadiya, atabah: u8, aala: u32, asfal: u32) -> Vec<
         }
         for (x, &qeema) in saf.iter().enumerate() {
             if qeema < atabah
-                && let Some(khana) = ihsa.get_mut(x) {
-                    *khana = khana.saturating_add(1);
-                }
+                && let Some(khana) = ihsa.get_mut(x)
+            {
+                *khana = khana.saturating_add(1);
+            }
         }
     }
     ihsa
@@ -2104,10 +2171,11 @@ fn nitaqat_min_ihsa(ihsa: &[u32], adna: u32, fajwa: u32) -> Vec<(u32, u32)> {
             continue;
         }
         if let Some(bidayat_nitaq) = bidaya
-            && raqm.saturating_sub(akhir_maleeh) > fajwa {
-                nitaqat.push((bidayat_nitaq, akhir_maleeh.saturating_add(1)));
-                bidaya = None;
-            }
+            && raqm.saturating_sub(akhir_maleeh) > fajwa
+        {
+            nitaqat.push((bidayat_nitaq, akhir_maleeh.saturating_add(1)));
+            bidaya = None;
+        }
     }
 
     if let Some(bidayat_nitaq) = bidaya {
@@ -2185,9 +2253,16 @@ pub fn basmat_mutawassit(surah: &SuratRamadiya) -> u64 {
     }
 
     let mutawassit = khalaya.iter().sum::<f64>() / 64.0;
-    khalaya.iter().enumerate().fold(0_u64, |basma, (fahras, &qeema)| {
-        if qeema > mutawassit { basma | (1_u64 << (fahras & 63)) } else { basma }
-    })
+    khalaya
+        .iter()
+        .enumerate()
+        .fold(0_u64, |basma, (fahras, &qeema)| {
+            if qeema > mutawassit {
+                basma | (1_u64 << (fahras & 63))
+            } else {
+                basma
+            }
+        })
 }
 
 /// One of eight equal slices of a dimension, as a half-open range.
@@ -2318,11 +2393,11 @@ impl MuqayyidMuadal {
     pub const fn hal_yalzam(&mut self, lahza_mikro: u64) -> bool {
         if let Some(sabiqa) = self.akhir_lahza
             && lahza_mikro >= sabiqa
-                && lahza_mikro.saturating_sub(sabiqa) < self.fasil_adna_mikro
-            {
-                self.tark_zaman = self.tark_zaman.saturating_add(1);
-                return false;
-            }
+            && lahza_mikro.saturating_sub(sabiqa) < self.fasil_adna_mikro
+        {
+            self.tark_zaman = self.tark_zaman.saturating_add(1);
+            return false;
+        }
         self.akhir_lahza = Some(lahza_mikro);
         true
     }
@@ -2335,10 +2410,11 @@ impl MuqayyidMuadal {
     /// threshold one bit at a time and never triggering.
     pub const fn hal_taghayyarat(&mut self, basma: u64) -> bool {
         if let Some(sabiqa) = self.akhir_basma
-            && masafat_basmatayn(sabiqa, basma) <= self.aqsa_masafa {
-                self.tark_tashabuh = self.tark_tashabuh.saturating_add(1);
-                return false;
-            }
+            && masafat_basmatayn(sabiqa, basma) <= self.aqsa_masafa
+        {
+            self.tark_tashabuh = self.tark_tashabuh.saturating_add(1);
+            return false;
+        }
         self.akhir_basma = Some(basma);
         self.marrat = self.marrat.saturating_add(1);
         true

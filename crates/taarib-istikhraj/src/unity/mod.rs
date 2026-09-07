@@ -156,8 +156,12 @@ pub const AQSA_JUDHUR: usize = 8;
 /// ports do. Testing for these rather than for a `_Data` suffix means a game
 /// whose folder was renamed is still found, and a folder called `Foo_Data` that
 /// holds somebody's spreadsheets is not.
-pub const ALAMAT_BAYANAT: &[&str] =
-    &["globalgamemanagers", "resources.assets", "data.unity3d", "unity_builtin_extra"];
+pub const ALAMAT_BAYANAT: &[&str] = &[
+    "globalgamemanagers",
+    "resources.assets",
+    "data.unity3d",
+    "unity_builtin_extra",
+];
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -299,7 +303,9 @@ fn huwa_jidhr_bayanat(masar: &Path) -> bool {
     if !masar.is_dir() {
         return false;
     }
-    ALAMAT_BAYANAT.iter().any(|alama| masar.join(alama).is_file())
+    ALAMAT_BAYANAT
+        .iter()
+        .any(|alama| masar.join(alama).is_file())
 }
 
 /// Walks one data directory and reads every container in it.
@@ -344,11 +350,13 @@ fn imshi(
                     taqreer.sajjil(
                         masar_nisbi(jidhr, &masar),
                         None,
-                        SababRafd::TaadhurQira { sabab: khata.to_string() },
+                        SababRafd::TaadhurQira {
+                            sabab: khata.to_string(),
+                        },
                     );
                 }
                 continue;
-            }
+            },
         };
         if !madkhal.file_type().is_file() {
             continue;
@@ -398,7 +406,7 @@ fn imshi(
                     taqreer.sajjil(nisbi, None, sabab);
                 }
                 continue;
-            }
+            },
         };
         let bayt: &[u8] = &khareeta;
 
@@ -483,7 +491,9 @@ fn huwa_janibi(ism: &str) -> bool {
 /// `StreamingAssets`.
 fn fi_tadfuq(masar: &Path) -> bool {
     masar.components().any(|juz| {
-        juz.as_os_str().to_string_lossy().eq_ignore_ascii_case("StreamingAssets")
+        juz.as_os_str()
+            .to_string_lossy()
+            .eq_ignore_ascii_case("StreamingAssets")
     })
 }
 
@@ -496,11 +506,14 @@ fn fi_tadfuq(masar: &Path) -> bool {
 /// and one above [`AQSA_HAJM_MALAF`] are three different things to tell a user
 /// and only the first is about the filesystem.
 fn iftah(masar: &Path) -> Result<Mmap, SababRafd> {
-    let malaf = File::open(masar)
-        .map_err(|khata| SababRafd::TaadhurQira { sabab: khata.to_string() })?;
+    let malaf = File::open(masar).map_err(|khata| SababRafd::TaadhurQira {
+        sabab: khata.to_string(),
+    })?;
     let tul = malaf
         .metadata()
-        .map_err(|khata| SababRafd::TaadhurQira { sabab: khata.to_string() })?
+        .map_err(|khata| SababRafd::TaadhurQira {
+            sabab: khata.to_string(),
+        })?
         .len();
     if tul == 0 {
         return Err(SababRafd::BilaNusus);
@@ -522,7 +535,9 @@ fn iftah(masar: &Path) -> Result<Mmap, SababRafd> {
     // alternative is reading a two-gibibyte `data.unity3d` into a `Vec`, which
     // costs the memory the game itself needs on the machine doing the extraction.
     let khareeta = unsafe { Mmap::map(&malaf) };
-    khareeta.map_err(|khata| SababRafd::TaadhurQira { sabab: khata.to_string() })
+    khareeta.map_err(|khata| SababRafd::TaadhurQira {
+        sabab: khata.to_string(),
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -554,18 +569,13 @@ fn iqra_hawiya(
 }
 
 /// Reads a bundle and every `SerializedFile` inside it.
-fn iqra_huzma(
-    bayt: &[u8],
-    hawiya: &str,
-    jadwal: &mut JadwalNusus,
-    taqreer: &mut TaqreerRafd,
-) {
+fn iqra_huzma(bayt: &[u8], hawiya: &str, jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd) {
     let huzma = match Huzma::iqra(bayt) {
         Ok(huzma) => huzma,
         Err(khata) => {
             taqreer.sajjil(hawiya.to_owned(), None, sabab_min_qira(&khata));
             return;
-        }
+        },
     };
 
     let muharrik = if huzma.isdar_muharrik().is_empty() {
@@ -593,7 +603,11 @@ fn iqra_huzma(
         };
 
         if huwa_janibi(&uqda.masar) {
-            taqreer.sajjil(hawiya.to_owned(), Some(uqda.masar.clone()), SababRafd::BilaNusus);
+            taqreer.sajjil(
+                hawiya.to_owned(),
+                Some(uqda.masar.clone()),
+                SababRafd::BilaNusus,
+            );
             continue;
         }
         if TawqiHuzma::min_bayt(mihtawa).is_some() {
@@ -609,7 +623,11 @@ fn iqra_huzma(
             continue;
         }
         if !Mulsal::yabdu_mulsalan(mihtawa) {
-            taqreer.sajjil(hawiya.to_owned(), Some(uqda.masar.clone()), SababRafd::BilaNusus);
+            taqreer.sajjil(
+                hawiya.to_owned(),
+                Some(uqda.masar.clone()),
+                SababRafd::BilaNusus,
+            );
             continue;
         }
 
@@ -653,7 +671,7 @@ fn iqra_mulsal(
                 sabab_min_qira(&khata),
             );
             return 0;
-        }
+        },
     };
 
     let hasila = istakhrij_mulsal(&mulsal, hawiya, asl);
@@ -719,12 +737,20 @@ fn iqra_mulsal(
 /// Turns a container-level read failure into the refusal the report shows.
 fn sabab_min_qira(khata: &KhataQira) -> SababRafd {
     match khata {
-        KhataQira::TajawuzHadd { hadd, qeema, saqf } => {
-            SababRafd::TajawuzHadd { hadd: (*hadd).to_owned(), qeema: *qeema, saqf: *saqf }
-        }
-        KhataQira::SighaMajhula { wujid } => SababRafd::SighaMajhula { wujid: wujid.clone() },
+        KhataQira::TajawuzHadd { hadd, qeema, saqf } => SababRafd::TajawuzHadd {
+            hadd: (*hadd).to_owned(),
+            qeema: *qeema,
+            saqf: *saqf,
+        },
+        KhataQira::SighaMajhula { wujid } => SababRafd::SighaMajhula {
+            wujid: wujid.clone(),
+        },
         KhataQira::Mushaffar { wasf } => SababRafd::Mushaffar { wasf: wasf.clone() },
-        KhataQira::IsdarGhayrMadum { sigha, wujid, madum } => SababRafd::IsdarGhayrMadum {
+        KhataQira::IsdarGhayrMadum {
+            sigha,
+            wujid,
+            madum,
+        } => SababRafd::IsdarGhayrMadum {
             sigha: (*sigha).to_owned(),
             wujid: wujid.clone(),
             madum: (*madum).to_owned(),
@@ -733,13 +759,16 @@ fn sabab_min_qira(khata: &KhataQira) -> SababRafd {
         // intact and this build simply cannot name one of its fields. Reporting
         // it as damage would send the user to verify their game files, which
         // would come back clean and teach them the report is unreliable.
-        KhataQira::IsmMajhul { .. } => {
-            SababRafd::BilaShajaratAnwa { naw_kaen: None, adad: 1 }
-        }
+        KhataQira::IsmMajhul { .. } => SababRafd::BilaShajaratAnwa {
+            naw_kaen: None,
+            adad: 1,
+        },
         KhataQira::MalafQaseer { .. }
         | KhataQira::HaqlTalif { .. }
         | KhataQira::NassGhayrSalih { .. }
-        | KhataQira::DaghtTalif { .. } => SababRafd::Talif { sabab: khata.to_string() },
+        | KhataQira::DaghtTalif { .. } => SababRafd::Talif {
+            sabab: khata.to_string(),
+        },
     }
 }
 

@@ -184,7 +184,7 @@ const fn ramz_min_khata(khata: &Khata) -> i32 {
             } else {
                 TAARIB_QEEMA_BATILA
             }
-        }
+        },
         _ => TAARIB_KHATA_AAM,
     }
 }

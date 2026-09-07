@@ -370,26 +370,23 @@ impl SalahiyatMalaf {
         {
             if let Some(namat) = self.namat_unix {
                 use std::os::unix::fs::PermissionsExt as _;
-                fs::set_permissions(masar, fs::Permissions::from_mode(namat)).map_err(
-                    |sabab| KhataTathbeet::SalahiyatGhayrMustaada {
+                fs::set_permissions(masar, fs::Permissions::from_mode(namat)).map_err(|sabab| {
+                    KhataTathbeet::SalahiyatGhayrMustaada {
                         masar: masar.to_path_buf(),
                         sabab: format!("mode {namat:04o} could not be set: {sabab}"),
-                    },
-                )?;
+                    }
+                })?;
             }
         }
 
         #[cfg(windows)]
         {
             if let Some(qira_faqat) = self.qira_faqat {
-                let bayanat = fs::metadata(masar).map_err(|sabab| {
-                    KhataTathbeet::SalahiyatGhayrMustaada {
+                let bayanat =
+                    fs::metadata(masar).map_err(|sabab| KhataTathbeet::SalahiyatGhayrMustaada {
                         masar: masar.to_path_buf(),
-                        sabab: format!(
-                            "the file's current attributes could not be read: {sabab}"
-                        ),
-                    }
-                })?;
+                        sabab: format!("the file's current attributes could not be read: {sabab}"),
+                    })?;
                 let mut salahiyat = bayanat.permissions();
                 salahiyat.set_readonly(qira_faqat);
                 fs::set_permissions(masar, salahiyat).map_err(|sabab| {
@@ -425,7 +422,9 @@ impl SalahiyatMalaf {
     /// cannot be cleared, which means the write that follows would fail anyway
     /// and failing here names the actual reason.
     pub fn ataih_kitaba(masar: &Path) -> Result<bool, KhataTathbeet> {
-        let Ok(bayanat) = fs::metadata(masar) else { return Ok(false) };
+        let Ok(bayanat) = fs::metadata(masar) else {
+            return Ok(false);
+        };
         let mut salahiyat = bayanat.permissions();
         if !salahiyat.readonly() {
             return Ok(false);
@@ -500,7 +499,10 @@ impl WaqtNizam {
                 let thawani = i64::try_from(mudda.as_secs()).ok()?;
                 let nano = mudda.subsec_nanos();
                 if nano == 0 {
-                    Some(Self { thawani: thawani.checked_neg()?, nano: 0 })
+                    Some(Self {
+                        thawani: thawani.checked_neg()?,
+                        nano: 0,
+                    })
                 } else {
                     // A duration *before* the epoch is measured backwards, so
                     // the sub-second part has to be turned around: 1.25s before
@@ -510,7 +512,7 @@ impl WaqtNizam {
                         nano: 1_000_000_000_u32.saturating_sub(nano),
                     })
                 }
-            }
+            },
         }
     }
 
@@ -625,17 +627,22 @@ impl AwqatMalaf {
             )));
         };
 
-        let malaf = fs::OpenOptions::new().write(true).open(masar).map_err(|sabab| {
-            khalal(format!("the file could not be opened to set its timestamps: {sabab}"))
-        })?;
+        let malaf = fs::OpenOptions::new()
+            .write(true)
+            .open(masar)
+            .map_err(|sabab| {
+                khalal(format!(
+                    "the file could not be opened to set its timestamps: {sabab}"
+                ))
+            })?;
 
         let mut awqat = fs::FileTimes::new().set_modified(tadeel);
         if let Some(wusul) = self.wusul.and_then(WaqtNizam::ila_nizam) {
             awqat = awqat.set_accessed(wusul);
         }
-        malaf.set_times(awqat).map_err(|sabab| {
-            khalal(format!("the file's timestamps could not be set: {sabab}"))
-        })?;
+        malaf
+            .set_times(awqat)
+            .map_err(|sabab| khalal(format!("the file's timestamps could not be set: {sabab}")))?;
         Ok(())
     }
 }
@@ -696,12 +703,15 @@ impl MahallIdad {
     #[must_use]
     pub fn wasf(&self) -> String {
         match self {
-            Self::KhiyaratTashghil { manassa, muarrif_luba } => {
+            Self::KhiyaratTashghil {
+                manassa,
+                muarrif_luba,
+            } => {
                 format!("{manassa} launch options for {muarrif_luba}")
-            }
+            },
             Self::SijillWindows { miftah, qeema } if qeema.is_empty() => {
                 format!("registry {miftah} (default value)")
-            }
+            },
             Self::SijillWindows { miftah, qeema } => format!("registry {miftah}\\{qeema}"),
             Self::MalafIdad { masar, miftah } => format!("{miftah} in {masar}"),
             Self::MutaghayyirBeea { ism } => format!("environment variable {ism}"),
@@ -782,7 +792,7 @@ impl SijillIdad {
             (None, Some(jadeed)) => format!("{}: set to {jadeed} (was unset)", self.mahall.wasf()),
             (Some(qadeem), Some(jadeed)) => {
                 format!("{}: {qadeem} -> {jadeed}", self.mahall.wasf())
-            }
+            },
             (Some(qadeem), None) => format!("{}: removed (was {qadeem})", self.mahall.wasf()),
             (None, None) => format!("{}: recorded, unchanged", self.mahall.wasf()),
         }
@@ -930,7 +940,7 @@ impl SijillTaghyeer {
                             .to_owned(),
                     ));
                 }
-            }
+            },
             NawTaghyeer::Idafa | NawTaghyeer::MujalladMudaf => {
                 if self.kan_mawjudan {
                     return Err(khalal(
@@ -954,7 +964,7 @@ impl SijillTaghyeer {
                             .to_owned(),
                     ));
                 }
-            }
+            },
         }
 
         if matches!(self.naw, NawTaghyeer::MujalladMudaf)
@@ -962,7 +972,9 @@ impl SijillTaghyeer {
                 || self.basma_maktuba.is_some()
                 || self.hajm_maktub.is_some())
         {
-            return Err(khalal("recorded as a directory and also as having contents".to_owned()));
+            return Err(khalal(
+                "recorded as a directory and also as having contents".to_owned(),
+            ));
         }
 
         Ok(())
@@ -1267,11 +1279,19 @@ impl BayanTathbeet {
             self.hajm_nusakh()
         ));
         for sijill in self.sijillat.values() {
-            let alama = if sijill.istiada_tammat { "restored" } else { "in place" };
+            let alama = if sijill.istiada_tammat {
+                "restored"
+            } else {
+                "in place"
+            };
             sutur.push(format!("  {} [{}] {alama}", sijill.masar, sijill.naw.ism()));
         }
         for idad in self.idadat.values() {
-            let alama = if idad.istiada_tammat { "restored" } else { "in place" };
+            let alama = if idad.istiada_tammat {
+                "restored"
+            } else {
+                "in place"
+            };
             sutur.push(format!("  {} [{alama}]", idad.wasf()));
         }
         sutur
@@ -1370,8 +1390,10 @@ impl Tathbeet {
     ) -> Result<Self, KhataTathbeet> {
         let masar_bayan = jidhr_nusakh.join(naw.ism_bayan());
         if masar_bayan.exists() {
-            let huwiya_qadeema = mukhattat::iqra_malaf::<BayanTathbeet>(&masar_bayan)
-                .map_or_else(|_| "an unreadable manifest".to_owned(), |sabiq| sabiq.huwiya);
+            let huwiya_qadeema = mukhattat::iqra_malaf::<BayanTathbeet>(&masar_bayan).map_or_else(
+                |_| "an unreadable manifest".to_owned(),
+                |sabiq| sabiq.huwiya,
+            );
             return Err(KhataTathbeet::BayanMawjud {
                 masar: masar_bayan,
                 huwiya: huwiya_qadeema,
@@ -1528,28 +1550,34 @@ impl Tathbeet {
                     ),
                 });
             }
-            return Ok(HarisTathbeet { tathbeet: self, miftah: masar });
+            return Ok(HarisTathbeet {
+                tathbeet: self,
+                miftah: masar,
+            });
         }
 
         let Ok(bayanat) = fs::metadata(&mutlaq) else {
             // Nothing there: this is an addition, and an addition has no
             // original. Recording it as one would mean writing an empty file
             // over the game on uninstall.
-            return self.sajjil_wa_ihris(masar, SijillTaghyeer {
-                masar: String::new(),
-                naw: NawTaghyeer::Idafa,
-                kan_mawjudan: false,
-                hajm_asli: None,
-                basma_asliya: None,
-                salahiyat_asliya: None,
-                awqat_asliya: None,
-                nuskha: None,
-                hajm_nuskha: None,
-                basma_maktuba: None,
-                hajm_maktub: None,
-                waqt_maktub: None,
-                istiada_tammat: false,
-            });
+            return self.sajjil_wa_ihris(
+                masar,
+                SijillTaghyeer {
+                    masar: String::new(),
+                    naw: NawTaghyeer::Idafa,
+                    kan_mawjudan: false,
+                    hajm_asli: None,
+                    basma_asliya: None,
+                    salahiyat_asliya: None,
+                    awqat_asliya: None,
+                    nuskha: None,
+                    hajm_nuskha: None,
+                    basma_maktuba: None,
+                    hajm_maktub: None,
+                    waqt_maktub: None,
+                    istiada_tammat: false,
+                },
+            );
         };
 
         if !bayanat.is_file() {
@@ -1595,21 +1623,24 @@ impl Tathbeet {
         let miftah = miftah_nuskha(&masar);
         let hajm_nuskha = self.iktub_nuskha(&miftah, &mutlaq, &asli, basma_asliya)?;
 
-        self.sajjil_wa_ihris(masar, SijillTaghyeer {
-            masar: String::new(),
-            naw: NawTaghyeer::Tadeel,
-            kan_mawjudan: true,
-            hajm_asli: Some(hajm),
-            basma_asliya: Some(basma_asliya),
-            salahiyat_asliya: Some(salahiyat),
-            awqat_asliya: Some(awqat),
-            nuskha: Some(miftah),
-            hajm_nuskha: Some(hajm_nuskha),
-            basma_maktuba: None,
-            hajm_maktub: None,
-            waqt_maktub: None,
-            istiada_tammat: false,
-        })
+        self.sajjil_wa_ihris(
+            masar,
+            SijillTaghyeer {
+                masar: String::new(),
+                naw: NawTaghyeer::Tadeel,
+                kan_mawjudan: true,
+                hajm_asli: Some(hajm),
+                basma_asliya: Some(basma_asliya),
+                salahiyat_asliya: Some(salahiyat),
+                awqat_asliya: Some(awqat),
+                nuskha: Some(miftah),
+                hajm_nuskha: Some(hajm_nuskha),
+                basma_maktuba: None,
+                hajm_maktub: None,
+                waqt_maktub: None,
+                istiada_tammat: false,
+            },
+        )
     }
 
     /// Records an addition and returns the permission to write it.
@@ -1638,7 +1669,10 @@ impl Tathbeet {
 
         if let Some(naw) = self.bayan.sijillat.get(&masar).map(|mawjud| mawjud.naw) {
             if matches!(naw, NawTaghyeer::Idafa) {
-                return Ok(HarisTathbeet { tathbeet: self, miftah: masar });
+                return Ok(HarisTathbeet {
+                    tathbeet: self,
+                    miftah: masar,
+                });
             }
             return Err(KhataTathbeet::BayanTalif {
                 masar: self.masar_bayan.clone(),
@@ -1661,21 +1695,24 @@ impl Tathbeet {
             });
         }
 
-        self.sajjil_wa_ihris(masar, SijillTaghyeer {
-            masar: String::new(),
-            naw: NawTaghyeer::Idafa,
-            kan_mawjudan: false,
-            hajm_asli: None,
-            basma_asliya: None,
-            salahiyat_asliya: None,
-            awqat_asliya: None,
-            nuskha: None,
-            hajm_nuskha: None,
-            basma_maktuba: None,
-            hajm_maktub: None,
-            waqt_maktub: None,
-            istiada_tammat: false,
-        })
+        self.sajjil_wa_ihris(
+            masar,
+            SijillTaghyeer {
+                masar: String::new(),
+                naw: NawTaghyeer::Idafa,
+                kan_mawjudan: false,
+                hajm_asli: None,
+                basma_asliya: None,
+                salahiyat_asliya: None,
+                awqat_asliya: None,
+                nuskha: None,
+                hajm_nuskha: None,
+                basma_maktuba: None,
+                hajm_maktub: None,
+                waqt_maktub: None,
+                istiada_tammat: false,
+            },
+        )
     }
 
     /// Creates a directory for additions and records it so uninstall can remove
@@ -1699,21 +1736,24 @@ impl Tathbeet {
         }
 
         insha_aw_khata(&mutlaq)?;
-        let _ = self.bayan.sijillat.insert(masar.clone(), SijillTaghyeer {
-            masar,
-            naw: NawTaghyeer::MujalladMudaf,
-            kan_mawjudan: false,
-            hajm_asli: None,
-            basma_asliya: None,
-            salahiyat_asliya: None,
-            awqat_asliya: None,
-            nuskha: None,
-            hajm_nuskha: None,
-            basma_maktuba: None,
-            hajm_maktub: None,
-            waqt_maktub: None,
-            istiada_tammat: false,
-        });
+        let _ = self.bayan.sijillat.insert(
+            masar.clone(),
+            SijillTaghyeer {
+                masar,
+                naw: NawTaghyeer::MujalladMudaf,
+                kan_mawjudan: false,
+                hajm_asli: None,
+                basma_asliya: None,
+                salahiyat_asliya: None,
+                awqat_asliya: None,
+                nuskha: None,
+                hajm_nuskha: None,
+                basma_maktuba: None,
+                hajm_maktub: None,
+                waqt_maktub: None,
+                istiada_tammat: false,
+            },
+        );
         self.iktub_bayan()?;
         Ok(true)
     }
@@ -1762,16 +1802,19 @@ impl Tathbeet {
             Some(mawjud) => {
                 mawjud.qeema_maktuba = qeema_maktuba;
                 mawjud.istiada_tammat = false;
-            }
+            },
             None => {
-                let _ = self.bayan.idadat.insert(muarrif.clone(), SijillIdad {
-                    muarrif,
-                    mahall,
-                    qeema_sabiqa,
-                    qeema_maktuba,
-                    istiada_tammat: false,
-                });
-            }
+                let _ = self.bayan.idadat.insert(
+                    muarrif.clone(),
+                    SijillIdad {
+                        muarrif,
+                        mahall,
+                        qeema_sabiqa,
+                        qeema_maktuba,
+                        istiada_tammat: false,
+                    },
+                );
+            },
         }
         self.iktub_bayan()
     }
@@ -1793,13 +1836,12 @@ impl Tathbeet {
     ) -> Result<u64, KhataTathbeet> {
         let masar_nuskha = self.mujallad_asl.join(miftah);
 
-        let madghut = zstd::encode_all(bayt, MUSTAWA_DAGHT).map_err(|sabab| {
-            KhataTathbeet::DaghtFashil {
+        let madghut =
+            zstd::encode_all(bayt, MUSTAWA_DAGHT).map_err(|sabab| KhataTathbeet::DaghtFashil {
                 masar: masar_nuskha.clone(),
                 ittijah: IttijahDaght::Daght,
                 tafsil: sabab.to_string(),
-            }
-        })?;
+            })?;
 
         masarat::kitaba_dharra(&masar_nuskha, &madghut).map_err(|khata| {
             KhataTathbeet::KhataMalaf {
@@ -1865,7 +1907,10 @@ impl Tathbeet {
         sijill.tahaqquq(&self.masar_bayan)?;
         let _ = self.bayan.sijillat.insert(masar.clone(), sijill);
         self.iktub_bayan()?;
-        Ok(HarisTathbeet { tathbeet: self, miftah: masar })
+        Ok(HarisTathbeet {
+            tathbeet: self,
+            miftah: masar,
+        })
     }
 
     /// Writes the manifest atomically, through the shared mechanism.
@@ -1994,7 +2039,11 @@ impl HarisTathbeet<'_> {
     /// reason the path is: one fact, one place.
     #[must_use]
     pub fn naw(&self) -> Option<NawTaghyeer> {
-        self.tathbeet.bayan.sijillat.get(&self.miftah).map(|sijill| sijill.naw)
+        self.tathbeet
+            .bayan
+            .sijillat
+            .get(&self.miftah)
+            .map(|sijill| sijill.naw)
     }
 
     /// The absolute path this guard authorizes, derived from the manifest key.
@@ -2055,7 +2104,9 @@ impl HarisTathbeet<'_> {
 
         let basma = basma_bayt(bayt);
         let bayanat = fs::metadata(&mutlaq).ok();
-        let hajm = bayanat.as_ref().map_or_else(|| tul_u64(bayt.len()), fs::Metadata::len);
+        let hajm = bayanat
+            .as_ref()
+            .map_or_else(|| tul_u64(bayt.len()), fs::Metadata::len);
         let waqt = bayanat
             .as_ref()
             .and_then(|b| b.modified().ok())
@@ -2347,13 +2398,12 @@ pub(crate) fn mutlaq_lil_kitaba(jidhr: &Path, nisbi: &str) -> Result<PathBuf, Kh
     let (walid, ism) = (walid.to_path_buf(), ism.to_owned());
     insha_aw_khata(&walid)?;
 
-    let haqiqi = masarat::tahaqquq_ihtiwa(jidhr, &walid).map_err(|khata| {
-        KhataTathbeet::MasarKharij {
+    let haqiqi =
+        masarat::tahaqquq_ihtiwa(jidhr, &walid).map_err(|khata| KhataTathbeet::MasarKharij {
             masar: walid,
             jidhr: jidhr.to_path_buf(),
             sabab: khata.injilizi,
-        }
-    })?;
+        })?;
     Ok(haqiqi.join(ism))
 }
 
@@ -2372,7 +2422,9 @@ pub(crate) fn nisbi_min(jidhr: &Path, masar: &Path) -> Option<String> {
     let baqi = masar.strip_prefix(jidhr).ok()?;
     let mut nateeja = String::new();
     for juz in baqi.components() {
-        let std::path::Component::Normal(ism) = juz else { return None };
+        let std::path::Component::Normal(ism) = juz else {
+            return None;
+        };
         let nass = ism.to_str()?;
         if !nateeja.is_empty() {
             nateeja.push('/');
@@ -2467,7 +2519,11 @@ pub fn waqt_rfc3339(thawani: i64) -> String {
     let fi_as_sana = fi_al_ahd - (365 * sana_fi_al_ahd + sana_fi_al_ahd / 4 - sana_fi_al_ahd / 100);
     let shahr_muzah = (5 * fi_as_sana + 2) / 153;
     let yawm = fi_as_sana - (153 * shahr_muzah + 2) / 5 + 1;
-    let shahr = if shahr_muzah < 10 { shahr_muzah + 3 } else { shahr_muzah - 9 };
+    let shahr = if shahr_muzah < 10 {
+        shahr_muzah + 3
+    } else {
+        shahr_muzah - 9
+    };
     let sana = if shahr <= 2 { sana + 1 } else { sana };
 
     format!("{sana:04}-{shahr:02}-{yawm:02}T{saa:02}:{daqiqa:02}:{thaniya:02}Z")
@@ -2513,11 +2569,21 @@ pub fn thawani_min_rfc3339(nass: &str) -> Option<i64> {
               Gregorian calendar, on a year already shifted to start in March"
 )]
 fn ayyam_min_taqweem(sana: i64, shahr: i64, yawm: i64) -> Option<i64> {
-    let sana = if shahr <= 2 { sana.checked_sub(1)? } else { sana };
-    let ahd = (if sana >= 0 { sana } else { sana.checked_sub(399)? }) / 400;
+    let sana = if shahr <= 2 {
+        sana.checked_sub(1)?
+    } else {
+        sana
+    };
+    let ahd = (if sana >= 0 {
+        sana
+    } else {
+        sana.checked_sub(399)?
+    }) / 400;
     let sana_fi_al_ahd = sana - ahd * 400;
     let shahr_muzah = if shahr > 2 { shahr - 3 } else { shahr + 9 };
     let fi_as_sana = (153 * shahr_muzah + 2) / 5 + yawm - 1;
     let fi_al_ahd = sana_fi_al_ahd * 365 + sana_fi_al_ahd / 4 - sana_fi_al_ahd / 100 + fi_as_sana;
-    ahd.checked_mul(146_097)?.checked_add(fi_al_ahd)?.checked_sub(719_468)
+    ahd.checked_mul(146_097)?
+        .checked_add(fi_al_ahd)?
+        .checked_sub(719_468)
 }

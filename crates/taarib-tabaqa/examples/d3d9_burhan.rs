@@ -67,23 +67,22 @@ mod windows_only {
 
     use parking_lot::Mutex;
     use taarib_saff::{MawridKhatt, SilsilatKhutut};
+    use taarib_tabaqa::d3d9::KhattafD3D9;
     use taarib_tabaqa::d3d9::lawn_d3d;
+    use taarib_tabaqa::istitlaa::{HalatSlot, istatli};
     use taarib_tabaqa::khata::KhataTabaqa;
+    use taarib_tabaqa::khataf::nafidha_muaqqata;
     use taarib_tabaqa::sidq::{BasmatIfsah, Iqrar, NASS_IFSAH_ARABI};
     use taarib_tabaqa::talqeem::{KhiyaratTalqeem, Mulaqqim, SatrMulaqqam};
-    use taarib_tabaqa::d3d9::KhattafD3D9;
-    use taarib_tabaqa::istitlaa::{HalatSlot, istatli};
-    use taarib_tabaqa::khataf::nafidha_muaqqata;
     use taarib_tabaqa::wajiha::{
         Khattaf, LawhatRasm, MustatilBiksel, MustatilNisbi, SighatSath, Tabaqa, WajihatRusum,
         WasfSath,
     };
     use windows::Win32::Graphics::Direct3D9::{
-        D3D_SDK_VERSION, D3DADAPTER_DEFAULT, D3DCREATE_FPU_PRESERVE, D3DCREATE_MULTITHREADED,
-        D3DCREATE_NOWINDOWCHANGES, D3DCREATE_SOFTWARE_VERTEXPROCESSING, D3DDEVTYPE_HAL,
-        D3DCLEAR_TARGET, D3DFMT_X8R8G8B8, D3DPRESENT_PARAMETERS, D3DRS_CULLMODE,
-        D3DSWAPEFFECT_DISCARD,
-        Direct3DCreate9, IDirect3DDevice9,
+        D3D_SDK_VERSION, D3DADAPTER_DEFAULT, D3DCLEAR_TARGET, D3DCREATE_FPU_PRESERVE,
+        D3DCREATE_MULTITHREADED, D3DCREATE_NOWINDOWCHANGES, D3DCREATE_SOFTWARE_VERTEXPROCESSING,
+        D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DPRESENT_PARAMETERS, D3DRS_CULLMODE,
+        D3DSWAPEFFECT_DISCARD, Direct3DCreate9, IDirect3DDevice9,
     };
     use windows::core::BOOL;
 
@@ -143,7 +142,12 @@ mod windows_only {
             .iter()
             .map(|(nass, yasar, aala, ard)| SatrMulaqqam {
                 nass: (*nass).to_owned(),
-                mawdi: MustatilBiksel { yasar: *yasar, aala: *aala, ard: *ard, irtifa: 24 },
+                mawdi: MustatilBiksel {
+                    yasar: *yasar,
+                    aala: *aala,
+                    ard: *ard,
+                    irtifa: 24,
+                },
                 thiqa: 94,
             })
             .collect();
@@ -151,17 +155,22 @@ mod windows_only {
         println!("\n--- the tier-3 disclosure, shown because the type system requires it ---");
         println!("{NASS_IFSAH_ARABI}");
         println!("--- end of disclosure ---\n");
-        let lahza =
-            SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |mudda| mudda.as_secs());
+        let lahza = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |mudda| mudda.as_secs());
 
         // -- 1. the fixed-function stage, transcribed ------------------------
         let itar = Arc::new(Mutex::new(Itar::jadeed(ARD, IRTIFA)));
         itar.lock().mashhad();
         let iqrar = Iqrar::baad_ard(BasmatIfsah::hadhihi_al_bina(), lahza, "برهان دايركت٣د ٩")?;
-        let mut tabaqa =
-            Tabaqa::shaghghil(Box::new(KhattafBarnamaji::jadeed(Arc::clone(&itar), sath)), iqrar)?;
+        let mut tabaqa = Tabaqa::shaghghil(
+            Box::new(KhattafBarnamaji::jadeed(Arc::clone(&itar), sath)),
+            iqrar,
+        )?;
         let Some(hayy) = tabaqa.sath() else {
-            return Err(Box::<dyn Error>::from("the overlay reported no live surface"));
+            return Err(Box::<dyn Error>::from(
+                "the overlay reported no live surface",
+            ));
         };
         let dufaa = mulaqqim.qaddim(&mut tabaqa, hayy, &sutur, &[], 0)?;
         utbua_dufaa(&dufaa);
@@ -203,7 +212,11 @@ mod windows_only {
     fn istatli_luba(masar: &Path) -> Result<(), Box<dyn Error>> {
         let taqrir = istatli(masar)?;
         println!("survey: {}", masar.display());
-        println!("verdict: {}  ({})", taqrir.hukm(), taqrir.hukm().ism_arabi());
+        println!(
+            "verdict: {}  ({})",
+            taqrir.hukm(),
+            taqrir.hukm().ism_arabi()
+        );
         println!(
             "graphics: {}",
             if taqrir.wajihat.is_empty() {
@@ -222,7 +235,8 @@ mod windows_only {
             match taqrir.halat_slot() {
                 HalatSlot::Hurr => "free".to_owned(),
                 HalatSlot::Taarib => "Taarib's own loader (a reinstall)".to_owned(),
-                HalatSlot::Mashghul { slot } => format!("TAKEN by {} bytes at {}", slot.hajm, slot.masar.display()),
+                HalatSlot::Mashghul { slot } =>
+                    format!("TAKEN by {} bytes at {}", slot.hajm, slot.masar.display()),
                 HalatSlot::GhayrMaqru { thughra } => format!("UNREAD — {}", thughra.sabab),
             }
         );
@@ -242,14 +256,22 @@ mod windows_only {
         }
         println!(
             "installable: {}",
-            if taqrir.yumkin() { "yes" } else { "no — see the refusal above" }
+            if taqrir.yumkin() {
+                "yes"
+            } else {
+                "no — see the refusal above"
+            }
         );
         Ok(())
     }
 
     /// Prints what the batch contained.
     fn utbua_dufaa(dufaa: &LawhatRasm) {
-        let masturat = dufaa.qitaat.iter().filter(|qita| qita.khareeta.is_some()).count();
+        let masturat = dufaa
+            .qitaat
+            .iter()
+            .filter(|qita| qita.khareeta.is_some())
+            .count();
         println!("=== the batch ===");
         println!("quads {}", dufaa.qitaat.len());
         println!("  textured (glyphs, drawn with D3DTOP_MODULATE):   {masturat}");
@@ -257,7 +279,10 @@ mod windows_only {
             "  solid (plates, drawn with D3DTOP_SELECTARG1):    {}",
             dufaa.qitaat.len() - masturat
         );
-        println!("surface recorded on the batch: {}×{}", dufaa.sath.ard, dufaa.sath.irtifa);
+        println!(
+            "surface recorded on the batch: {}×{}",
+            dufaa.sath.ard, dufaa.sath.irtifa
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -284,7 +309,11 @@ mod windows_only {
     impl Itar {
         /// A black frame.
         fn jadeed(ard: u32, irtifa: u32) -> Self {
-            Self { ard, irtifa, biksel: vec![0.0; (ard as usize) * (irtifa as usize) * 4] }
+            Self {
+                ard,
+                irtifa,
+                biksel: vec![0.0; (ard as usize) * (irtifa as usize) * 4],
+            }
         }
 
         /// The index of a pixel's first channel, when it is on the frame.
@@ -335,8 +364,8 @@ mod windows_only {
                     bayt.push((qanat * 255.0).round().clamp(0.0, 255.0) as u8);
                 }
             }
-            let surah: image::RgbImage =
-                image::ImageBuffer::from_raw(self.ard, self.irtifa, bayt).ok_or_else(|| {
+            let surah: image::RgbImage = image::ImageBuffer::from_raw(self.ard, self.irtifa, bayt)
+                .ok_or_else(|| {
                     Box::<dyn Error>::from("the frame's byte count did not match its size")
                 })?;
             surah.save(masar)?;
@@ -375,7 +404,11 @@ mod windows_only {
     impl KhattafBarnamaji {
         /// A backend over a frame buffer.
         const fn jadeed(itar: Arc<Mutex<Itar>>, sath: WasfSath) -> Self {
-            Self { itar, sath, lawha: None }
+            Self {
+                itar,
+                sath,
+                lawha: None,
+            }
         }
 
         /// One texel of the uploaded page, nearest-sampled.
@@ -426,7 +459,9 @@ mod windows_only {
         }
 
         fn arfa_lawha(&mut self, bayt: &[u8], ard: u32, irtifa: u32) -> Result<(), KhataTabaqa> {
-            let matlub = (ard as usize).saturating_mul(irtifa as usize).saturating_mul(4);
+            let matlub = (ard as usize)
+                .saturating_mul(irtifa as usize)
+                .saturating_mul(4);
             if bayt.len() != matlub {
                 return Err(KhataTabaqa::MawridFashil {
                     mawrid: "glyph atlas texture",
@@ -505,7 +540,9 @@ mod windows_only {
                     // BGRA, which is what `D3DFMT_A8R8G8B8` is in memory.
                     for qanat in [2_usize, 1, 0, 3] {
                         kharj.push(
-                            (itar.biksel[fahras + qanat] * 255.0).round().clamp(0.0, 255.0) as u8,
+                            (itar.biksel[fahras + qanat] * 255.0)
+                                .round()
+                                .clamp(0.0, 255.0) as u8,
                         );
                     }
                 }
@@ -548,7 +585,9 @@ mod windows_only {
 
     /// Where a picture goes. Beside the build output, which is already ignored.
     fn masar_kharj(ism: &str) -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/burhan").join(ism)
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/burhan")
+            .join(ism)
     }
 
     // -----------------------------------------------------------------------
@@ -629,7 +668,14 @@ mod windows_only {
         // are named so the whole target is cleared, and the depth and stencil
         // values are ignored because only the colour buffer is named.
         unsafe {
-            jihaz.Clear(0, core::ptr::null(), D3DCLEAR_TARGET.cast_unsigned(), 0xFF33_3A4A, 1.0, 0)?;
+            jihaz.Clear(
+                0,
+                core::ptr::null(),
+                D3DCLEAR_TARGET.cast_unsigned(),
+                0xFF33_3A4A,
+                1.0,
+                0,
+            )?;
         }
 
         let khattaf = KhattafD3D9::min_jihaz(jihaz)?;
@@ -651,12 +697,15 @@ mod windows_only {
         // out-pointer addresses a live local.
         unsafe { jihaz.GetRenderState(D3DRS_CULLMODE, &raw mut qabl) }?;
 
-        let lahza =
-            SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |mudda| mudda.as_secs());
+        let lahza = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |mudda| mudda.as_secs());
         let iqrar = Iqrar::baad_ard(BasmatIfsah::hadhihi_al_bina(), lahza, "برهان دايركت٣د ٩")?;
         let mut tabaqa = Tabaqa::shaghghil(Box::new(khattaf), iqrar)?;
         let Some(hayy) = tabaqa.sath() else {
-            return Err(Box::<dyn Error>::from("the overlay reported no live surface"));
+            return Err(Box::<dyn Error>::from(
+                "the overlay reported no live surface",
+            ));
         };
         println!("surface: {}×{} {}", hayy.ard, hayy.irtifa, hayy.sigha.ism());
 
@@ -677,8 +726,12 @@ mod windows_only {
             )));
         }
 
-        let mintaqa =
-            MustatilBiksel { yasar: 0, aala: 0, ard: hayy.ard, irtifa: hayy.irtifa };
+        let mintaqa = MustatilBiksel {
+            yasar: 0,
+            aala: 0,
+            ard: hayy.ard,
+            irtifa: hayy.irtifa,
+        };
         let bayt = tabaqa.iltaqit(MustatilNisbi::KAAMIL, "the whole surface")?;
         println!("read back {} bytes from the GPU", bayt.len());
 
@@ -706,8 +759,8 @@ mod windows_only {
         for biksel in bayt.chunks_exact(4) {
             rgb.extend_from_slice(&[biksel[2], biksel[1], biksel[0]]);
         }
-        let surah: image::RgbImage =
-            image::ImageBuffer::from_raw(mintaqa.ard, mintaqa.irtifa, rgb).ok_or_else(|| {
+        let surah: image::RgbImage = image::ImageBuffer::from_raw(mintaqa.ard, mintaqa.irtifa, rgb)
+            .ok_or_else(|| {
                 Box::<dyn Error>::from("the read-back byte count did not match the region")
             })?;
         surah.save(masar)?;

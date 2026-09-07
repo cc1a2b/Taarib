@@ -101,8 +101,8 @@ use windows::Win32::Graphics::Direct3D11::{
     D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_MAP_READ, D3D11_MAP_WRITE_DISCARD,
     D3D11_MAPPED_SUBRESOURCE, D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
     D3D11_SAMPLER_DESC, D3D11_SHADER_RESOURCE_VIEW_DESC, D3D11_SHADER_RESOURCE_VIEW_DESC_0,
-    D3D11_STENCIL_OP_KEEP, D3D11_SUBRESOURCE_DATA, D3D11_TEX2D_SRV, D3D11_TEXTURE2D_DESC,
-    D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC, D3D11_USAGE_IMMUTABLE,
+    D3D11_STENCIL_OP_KEEP, D3D11_SUBRESOURCE_DATA, D3D11_TEX2D_SRV, D3D11_TEXTURE_ADDRESS_CLAMP,
+    D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC, D3D11_USAGE_IMMUTABLE,
     D3D11_USAGE_STAGING, D3D11_VIEWPORT, ID3D11BlendState, ID3D11Buffer, ID3D11ClassInstance,
     ID3D11DepthStencilState, ID3D11DepthStencilView, ID3D11Device, ID3D11DeviceContext,
     ID3D11DomainShader, ID3D11GeometryShader, ID3D11HullShader, ID3D11InputLayout,
@@ -174,11 +174,26 @@ pub(crate) const KHATWAT_RAS: u32 = 36;
 // wrong colour, with no error anywhere. The agreement is checked at compile time
 // instead of trusted.
 const _: () = {
-    assert!(size_of::<Ras>() == KHATWAT_RAS as usize, "Ras is not 36 bytes");
-    assert!(mem::offset_of!(Ras, mawdi) == IZAHAT_MAWDI as usize, "Ras.mawdi moved");
-    assert!(mem::offset_of!(Ras, khareeta) == IZAHAT_KHAREETA as usize, "Ras.khareeta moved");
-    assert!(mem::offset_of!(Ras, lawn) == IZAHAT_LAWN as usize, "Ras.lawn moved");
-    assert!(mem::offset_of!(Ras, khalt) == IZAHAT_KHALT as usize, "Ras.khalt moved");
+    assert!(
+        size_of::<Ras>() == KHATWAT_RAS as usize,
+        "Ras is not 36 bytes"
+    );
+    assert!(
+        mem::offset_of!(Ras, mawdi) == IZAHAT_MAWDI as usize,
+        "Ras.mawdi moved"
+    );
+    assert!(
+        mem::offset_of!(Ras, khareeta) == IZAHAT_KHAREETA as usize,
+        "Ras.khareeta moved"
+    );
+    assert!(
+        mem::offset_of!(Ras, lawn) == IZAHAT_LAWN as usize,
+        "Ras.lawn moved"
+    );
+    assert!(
+        mem::offset_of!(Ras, khalt) == IZAHAT_KHALT as usize,
+        "Ras.khalt moved"
+    );
 };
 
 /// The overlay's whole shader program, as HLSL text.
@@ -362,9 +377,8 @@ impl MusarrifHlsl {
         // on `DallatTasrif` from `d3dcompiler.h`. Both sides are `extern
         // "system"` function pointers of identical size, so the transmute is a
         // reinterpretation of one pointer as another with a matching ABI.
-        let dalla = unsafe {
-            mem::transmute::<unsafe extern "system" fn() -> isize, DallatTasrif>(ramz)
-        };
+        let dalla =
+            unsafe { mem::transmute::<unsafe extern "system" fn() -> isize, DallatTasrif>(ramz) };
         Ok(Self { dalla })
     }
 
@@ -539,7 +553,11 @@ impl ThawabitIsqat {
             // A float target is scRGB and is already linear, which
             // `SighatSath::wasi_al_mada` is the authority on.
             dabt: [
-                if sath.sirgb || sath.sigha.wasi_al_mada() { 0.0 } else { 1.0 },
+                if sath.sirgb || sath.sigha.wasi_al_mada() {
+                    0.0
+                } else {
+                    1.0
+                },
                 0.0,
                 0.0,
                 0.0,
@@ -562,7 +580,10 @@ struct Mutajassidat {
 impl Mutajassidat {
     /// An empty array for a `*GetShader` call to fill.
     fn jadeeda() -> Self {
-        Self { qaima: core::array::from_fn(|_| None), adad: 0 }
+        Self {
+            qaima: core::array::from_fn(|_| None),
+            adad: 0,
+        }
     }
 
     /// The prefix the runtime actually wrote.
@@ -570,7 +591,9 @@ impl Mutajassidat {
     /// Empty when the stage had no class instances, which is the case for every
     /// shader that does not use interfaces — that is to say, almost all of them.
     fn shariha(&self) -> &[Option<ID3D11ClassInstance>] {
-        let adad = usize::try_from(self.adad).unwrap_or(0).min(ADAD_MUTAJASSIDAT);
+        let adad = usize::try_from(self.adad)
+            .unwrap_or(0)
+            .min(ADAD_MUTAJASSIDAT);
         self.qaima.get(..adad).unwrap_or(&[])
     }
 }
@@ -735,17 +758,17 @@ impl HalatMasar {
                 Some(&mut hala.amil_khalt),
                 Some(&raw mut hala.qina_ayyina),
             );
-            siyaq.OMGetDepthStencilState(
-                Some(&raw mut hala.umq),
-                Some(&raw mut hala.marji_tazlil),
-            );
+            siyaq.OMGetDepthStencilState(Some(&raw mut hala.umq), Some(&raw mut hala.marji_tazlil));
             siyaq.OMGetRenderTargets(Some(&mut hala.ahdaf), Some(&raw mut hala.ru2yat_umq));
 
             hala.munaqqit = siyaq.RSGetState().ok();
             hala.adad_manazir = ADAD_MANAZIR_U32;
             siyaq.RSGetViewports(&raw mut hala.adad_manazir, Some(hala.manazir.as_mut_ptr()));
             hala.adad_maqassat = ADAD_MANAZIR_U32;
-            siyaq.RSGetScissorRects(&raw mut hala.adad_maqassat, Some(hala.maqassat.as_mut_ptr()));
+            siyaq.RSGetScissorRects(
+                &raw mut hala.adad_maqassat,
+                Some(hala.maqassat.as_mut_ptr()),
+            );
         }
 
         hala
@@ -786,7 +809,10 @@ impl HalatMasar {
             siyaq.PSSetShaderResources(0, Some(core::slice::from_ref(&self.mawrid_biksel)));
             siyaq.PSSetSamplers(0, Some(core::slice::from_ref(&self.akhidh_biksel)));
 
-            siyaq.VSSetShader(self.shader_ras.as_ref(), Some(self.mutajassidat_ras.shariha()));
+            siyaq.VSSetShader(
+                self.shader_ras.as_ref(),
+                Some(self.mutajassidat_ras.shariha()),
+            );
             siyaq.PSSetShader(
                 self.shader_biksel.as_ref(),
                 Some(self.mutajassidat_biksel.shariha()),
@@ -804,14 +830,22 @@ impl HalatMasar {
                 Some(self.mutajassidat_majali.shariha()),
             );
 
-            siyaq.OMSetBlendState(self.khalt.as_ref(), Some(&self.amil_khalt), self.qina_ayyina);
+            siyaq.OMSetBlendState(
+                self.khalt.as_ref(),
+                Some(&self.amil_khalt),
+                self.qina_ayyina,
+            );
             siyaq.OMSetDepthStencilState(self.umq.as_ref(), self.marji_tazlil);
             siyaq.OMSetRenderTargets(Some(&self.ahdaf), self.ru2yat_umq.as_ref());
 
             siyaq.RSSetState(self.munaqqit.as_ref());
-            let adad = usize::try_from(self.adad_manazir).unwrap_or(0).min(ADAD_MANAZIR);
+            let adad = usize::try_from(self.adad_manazir)
+                .unwrap_or(0)
+                .min(ADAD_MANAZIR);
             siyaq.RSSetViewports(self.manazir.get(..adad));
-            let adad = usize::try_from(self.adad_maqassat).unwrap_or(0).min(ADAD_MANAZIR);
+            let adad = usize::try_from(self.adad_maqassat)
+                .unwrap_or(0)
+                .min(ADAD_MANAZIR);
             siyaq.RSSetScissorRects(self.maqassat.get(..adad));
         }
     }
@@ -823,7 +857,10 @@ const ADAD_MANAZIR_U32: u32 = 16;
 // The two spellings of the viewport count must agree or the getters are told a
 // capacity the arrays do not have, which the runtime would write past.
 const _: () = {
-    assert!(ADAD_MANAZIR == ADAD_MANAZIR_U32 as usize, "viewport counts disagree");
+    assert!(
+        ADAD_MANAZIR == ADAD_MANAZIR_U32 as usize,
+        "viewport counts disagree"
+    );
 };
 
 /// The Direct3D 11 overlay backend.
@@ -892,12 +929,11 @@ impl KhattafD3D11 {
         // SAFETY: `jihaz` is the live device from the call above.
         // `GetImmediateContext` returns an owned reference to the one context
         // the device has, or an error.
-        let siyaq = unsafe { jihaz.GetImmediateContext() }.map_err(|khata| {
-            KhataTabaqa::MawridFashil {
+        let siyaq =
+            unsafe { jihaz.GetImmediateContext() }.map_err(|khata| KhataTabaqa::MawridFashil {
                 mawrid: "the device's immediate context",
                 sabab: khata.to_string(),
-            }
-        })?;
+            })?;
 
         // SAFETY: `silsila` is live and `GetDesc` fills a caller-owned
         // `DXGI_SWAP_CHAIN_DESC` the binding allocates on the stack.
@@ -999,11 +1035,13 @@ impl KhattafD3D11 {
     fn ihdar_ramz(&mut self) -> Result<(), KhataTabaqa> {
         if self.bayt_ras.is_empty() {
             self.bayt_ras =
-                self.musarrif.sarrif("overlay vertex shader", s!("ras"), s!("vs_4_0"))?;
+                self.musarrif
+                    .sarrif("overlay vertex shader", s!("ras"), s!("vs_4_0"))?;
         }
         if self.bayt_biksel.is_empty() {
             self.bayt_biksel =
-                self.musarrif.sarrif("overlay pixel shader", s!("biksel"), s!("ps_4_0"))?;
+                self.musarrif
+                    .sarrif("overlay pixel shader", s!("biksel"), s!("ps_4_0"))?;
         }
         Ok(())
     }
@@ -1022,7 +1060,8 @@ impl KhattafD3D11 {
         // out-pointer addresses a local initialised to `None`, so the reference
         // the runtime writes is owned by that local.
         unsafe {
-            self.jihaz.CreateVertexShader(&self.bayt_ras, None, Some(&raw mut shader_ras))
+            self.jihaz
+                .CreateVertexShader(&self.bayt_ras, None, Some(&raw mut shader_ras))
         }
         .map_err(|khata| KhataTabaqa::MawridFashil {
             mawrid: "overlay vertex shader",
@@ -1032,7 +1071,8 @@ impl KhattafD3D11 {
         let mut shader_biksel = None;
         // SAFETY: as above, for the pixel stage.
         unsafe {
-            self.jihaz.CreatePixelShader(&self.bayt_biksel, None, Some(&raw mut shader_biksel))
+            self.jihaz
+                .CreatePixelShader(&self.bayt_biksel, None, Some(&raw mut shader_biksel))
         }
         .map_err(|khata| KhataTabaqa::MawridFashil {
             mawrid: "overlay pixel shader",
@@ -1086,7 +1126,8 @@ impl KhattafD3D11 {
         // The runtime validates the layout against the shader's input signature
         // and fails rather than accepting a mismatch.
         unsafe {
-            self.jihaz.CreateInputLayout(&anasir, &self.bayt_ras, Some(&raw mut takhtit))
+            self.jihaz
+                .CreateInputLayout(&anasir, &self.bayt_ras, Some(&raw mut takhtit))
         }
         .map_err(|khata| KhataTabaqa::MawridFashil {
             mawrid: "overlay input layout",
@@ -1105,11 +1146,14 @@ impl KhattafD3D11 {
         // SAFETY: the description is a fully initialised local, there is no
         // initial data for a dynamic buffer, and the out-pointer addresses a
         // local initialised to `None`.
-        unsafe { self.jihaz.CreateBuffer(&raw const wasf_ruus, None, Some(&raw mut ruus)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay vertex buffer",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateBuffer(&raw const wasf_ruus, None, Some(&raw mut ruus))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay vertex buffer",
+            sabab: khata.to_string(),
+        })?;
 
         // The index buffer is the same six-index pattern repeated, so it is
         // built once and never touched again. Rebuilding it per frame alongside
@@ -1222,11 +1266,14 @@ impl KhattafD3D11 {
         let mut khalt = None;
         // SAFETY: the description is a fully initialised local and the
         // out-pointer addresses a local initialised to `None`.
-        unsafe { self.jihaz.CreateBlendState(&raw const wasf_khalt, Some(&raw mut khalt)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay blend state",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateBlendState(&raw const wasf_khalt, Some(&raw mut khalt))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay blend state",
+            sabab: khata.to_string(),
+        })?;
 
         // Scissor off and culling off. Culling off because the overlay's quads
         // are generated in one winding and a game that left `FrontCounterClock-
@@ -1247,7 +1294,8 @@ impl KhattafD3D11 {
         let mut munaqqit = None;
         // SAFETY: as above.
         unsafe {
-            self.jihaz.CreateRasterizerState(&raw const wasf_munaqqit, Some(&raw mut munaqqit))
+            self.jihaz
+                .CreateRasterizerState(&raw const wasf_munaqqit, Some(&raw mut munaqqit))
         }
         .map_err(|khata| KhataTabaqa::MawridFashil {
             mawrid: "overlay rasterizer state",
@@ -1277,7 +1325,8 @@ impl KhattafD3D11 {
         let mut umq = None;
         // SAFETY: as above.
         unsafe {
-            self.jihaz.CreateDepthStencilState(&raw const wasf_umq, Some(&raw mut umq))
+            self.jihaz
+                .CreateDepthStencilState(&raw const wasf_umq, Some(&raw mut umq))
         }
         .map_err(|khata| KhataTabaqa::MawridFashil {
             mawrid: "overlay depth-stencil state",
@@ -1303,7 +1352,8 @@ impl KhattafD3D11 {
         let mut akhidh = None;
         // SAFETY: as above.
         unsafe {
-            self.jihaz.CreateSamplerState(&raw const wasf_akhidh, Some(&raw mut akhidh))
+            self.jihaz
+                .CreateSamplerState(&raw const wasf_akhidh, Some(&raw mut akhidh))
         }
         .map_err(|khata| KhataTabaqa::MawridFashil {
             mawrid: "overlay sampler state",
@@ -1332,21 +1382,25 @@ impl KhattafD3D11 {
     fn ibni_hadaf(&mut self) -> Result<(), KhataTabaqa> {
         // SAFETY: `silsila` is live. `GetBuffer` performs a QueryInterface on
         // the named buffer and returns an owned reference or an error.
-        let khalfiya = unsafe { self.silsila.GetBuffer::<ID3D11Texture2D>(0) }.map_err(
-            |khata| KhataTabaqa::SathTaghayyar {
-                sabab: format!("the backbuffer could not be fetched: {khata}"),
-            },
-        )?;
+        let khalfiya =
+            unsafe { self.silsila.GetBuffer::<ID3D11Texture2D>(0) }.map_err(|khata| {
+                KhataTabaqa::SathTaghayyar {
+                    sabab: format!("the backbuffer could not be fetched: {khata}"),
+                }
+            })?;
 
         let mut hadaf = None;
         // SAFETY: `khalfiya` is a live texture, the null description asks the
         // runtime to take the resource's own format, and the out-pointer
         // addresses a local initialised to `None`.
-        unsafe { self.jihaz.CreateRenderTargetView(&khalfiya, None, Some(&raw mut hadaf)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay render target view",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateRenderTargetView(&khalfiya, None, Some(&raw mut hadaf))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay render target view",
+            sabab: khata.to_string(),
+        })?;
 
         self.hadaf = hadaf;
         Ok(())
@@ -1429,7 +1483,8 @@ impl KhattafD3D11 {
         // immediately above. Binding cannot fail; it is recorded, not validated.
         unsafe {
             self.siyaq.IASetInputLayout(Some(takhtit));
-            self.siyaq.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            self.siyaq
+                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             self.siyaq.IASetVertexBuffers(
                 0,
                 1,
@@ -1437,13 +1492,17 @@ impl KhattafD3D11 {
                 Some(&raw const khatwa),
                 Some(&raw const izaha),
             );
-            self.siyaq.IASetIndexBuffer(Some(faharis), DXGI_FORMAT_R16_UINT, 0);
+            self.siyaq
+                .IASetIndexBuffer(Some(faharis), DXGI_FORMAT_R16_UINT, 0);
 
             self.siyaq.VSSetShader(Some(shader_ras), None);
-            self.siyaq.VSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
+            self.siyaq
+                .VSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
             self.siyaq.PSSetShader(Some(shader_biksel), None);
-            self.siyaq.PSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
-            self.siyaq.PSSetShaderResources(0, Some(core::slice::from_ref(&self.ru2yat_lawha)));
+            self.siyaq
+                .PSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
+            self.siyaq
+                .PSSetShaderResources(0, Some(core::slice::from_ref(&self.ru2yat_lawha)));
             self.siyaq.PSSetSamplers(0, Some(&[Some(akhidh.clone())]));
 
             // The three stages the overlay does not use are cleared rather than
@@ -1454,9 +1513,11 @@ impl KhattafD3D11 {
             self.siyaq.HSSetShader(None, None);
             self.siyaq.DSSetShader(None, None);
 
-            self.siyaq.OMSetBlendState(Some(khalt), Some(&amil_khalt), u32::MAX);
+            self.siyaq
+                .OMSetBlendState(Some(khalt), Some(&amil_khalt), u32::MAX);
             self.siyaq.OMSetDepthStencilState(Some(umq), 0);
-            self.siyaq.OMSetRenderTargets(Some(&[Some(hadaf.clone())]), None);
+            self.siyaq
+                .OMSetRenderTargets(Some(&[Some(hadaf.clone())]), None);
 
             self.siyaq.RSSetState(Some(munaqqit));
             self.siyaq.RSSetViewports(Some(&[manzar]));
@@ -1480,7 +1541,8 @@ impl KhattafD3D11 {
             // with CPU write access, and `WRITE_DISCARD` is the documented map
             // type for it. The out-pointer addresses a live local.
             unsafe {
-                self.siyaq.Map(ruus, 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&raw mut marsum))
+                self.siyaq
+                    .Map(ruus, 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&raw mut marsum))
             }
             .map_err(|khata| KhataTabaqa::MawridFashil {
                 mawrid: "overlay vertex buffer",
@@ -1545,11 +1607,10 @@ impl Khattaf for KhattafD3D11 {
     fn sath(&self) -> Result<WasfSath, KhataTabaqa> {
         // SAFETY: `silsila` is the live swap chain this backend was built
         // around, and `GetDesc` fills a stack description the binding owns.
-        let wasf = unsafe { self.silsila.GetDesc() }.map_err(|khata| {
-            KhataTabaqa::SathTaghayyar {
+        let wasf =
+            unsafe { self.silsila.GetDesc() }.map_err(|khata| KhataTabaqa::SathTaghayyar {
                 sabab: format!("the swap chain would not describe itself: {khata}"),
-            }
-        })?;
+            })?;
 
         let ard = wasf.BufferDesc.Width;
         let irtifa = wasf.BufferDesc.Height;
@@ -1563,7 +1624,12 @@ impl Khattaf for KhattafD3D11 {
         }
 
         let (sigha, sirgb) = sigha_min_dxgi(wasf.BufferDesc.Format)?;
-        Ok(WasfSath { ard, irtifa, sigha, sirgb })
+        Ok(WasfSath {
+            ard,
+            irtifa,
+            sigha,
+            sirgb,
+        })
     }
 
     fn hayyi(&mut self, sath: WasfSath) -> Result<(), KhataTabaqa> {
@@ -1582,7 +1648,8 @@ impl Khattaf for KhattafD3D11 {
         // the only allocation on the draw path and it is made here, off it.
         let matlub = QITA_LIL_DUFA.saturating_mul(4);
         if self.musawwada.capacity() < matlub {
-            self.musawwada.reserve(matlub.saturating_sub(self.musawwada.capacity()));
+            self.musawwada
+                .reserve(matlub.saturating_sub(self.musawwada.capacity()));
         }
 
         self.sath = Some(sath);
@@ -1635,7 +1702,10 @@ impl Khattaf for KhattafD3D11 {
             // encoded, so it is uploaded as plain `UNORM` and the shader is left
             // to do the one transfer this backend does at all.
             Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
             // Immutable rather than default: the atlas is replaced wholesale
             // when it changes and never partially written, and immutable is the
             // usage that lets a driver put it wherever it likes.
@@ -1678,7 +1748,10 @@ impl Khattaf for KhattafD3D11 {
             Format: DXGI_FORMAT_R8G8B8A8_UNORM,
             ViewDimension: D3D_SRV_DIMENSION_TEXTURE2D,
             Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                Texture2D: D3D11_TEX2D_SRV { MostDetailedMip: 0, MipLevels: 1 },
+                Texture2D: D3D11_TEX2D_SRV {
+                    MostDetailedMip: 0,
+                    MipLevels: 1,
+                },
             },
         };
         let mut ru2ya = None;
@@ -1785,11 +1858,12 @@ impl Khattaf for KhattafD3D11 {
         }
 
         // SAFETY: `silsila` is live; `GetBuffer` returns an owned reference.
-        let khalfiya = unsafe { self.silsila.GetBuffer::<ID3D11Texture2D>(0) }.map_err(
-            |khata| KhataTabaqa::IltiqatFashil {
-                sabab: format!("the backbuffer could not be fetched: {khata}"),
-            },
-        )?;
+        let khalfiya =
+            unsafe { self.silsila.GetBuffer::<ID3D11Texture2D>(0) }.map_err(|khata| {
+                KhataTabaqa::IltiqatFashil {
+                    sabab: format!("the backbuffer could not be fetched: {khata}"),
+                }
+            })?;
 
         let mut wasf_khalfiya = D3D11_TEXTURE2D_DESC::default();
         // SAFETY: `khalfiya` is a live texture and the out-pointer addresses a
@@ -1803,7 +1877,10 @@ impl Khattaf for KhattafD3D11 {
         // presents MSAA directly.
         let masdar = if wasf_khalfiya.SampleDesc.Count > 1 {
             let wasf_hall = D3D11_TEXTURE2D_DESC {
-                SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+                SampleDesc: DXGI_SAMPLE_DESC {
+                    Count: 1,
+                    Quality: 0,
+                },
                 Usage: D3D11_USAGE_DEFAULT,
                 // A default-usage texture with no bind flags at all is rejected
                 // by the runtime, so the resolve target carries the one flag
@@ -1819,10 +1896,13 @@ impl Khattaf for KhattafD3D11 {
             let mut hall = None;
             // SAFETY: the description is a live local, there is no initial data,
             // and the out-pointer addresses a local initialised to `None`.
-            unsafe { self.jihaz.CreateTexture2D(&raw const wasf_hall, None, Some(&raw mut hall)) }
-                .map_err(|khata| KhataTabaqa::IltiqatFashil {
-                    sabab: format!("the multisample resolve target could not be created: {khata}"),
-                })?;
+            unsafe {
+                self.jihaz
+                    .CreateTexture2D(&raw const wasf_hall, None, Some(&raw mut hall))
+            }
+            .map_err(|khata| KhataTabaqa::IltiqatFashil {
+                sabab: format!("the multisample resolve target could not be created: {khata}"),
+            })?;
             let Some(hall) = hall else {
                 return Err(KhataTabaqa::IltiqatFashil {
                     sabab: "the multisample resolve target was not produced".to_owned(),
@@ -1832,7 +1912,8 @@ impl Khattaf for KhattafD3D11 {
             // zero, and the format is the backbuffer's own on both sides, which
             // is what `ResolveSubresource` requires.
             unsafe {
-                self.siyaq.ResolveSubresource(&hall, 0, &khalfiya, 0, wasf_khalfiya.Format);
+                self.siyaq
+                    .ResolveSubresource(&hall, 0, &khalfiya, 0, wasf_khalfiya.Format);
             }
             hall
         } else {
@@ -1845,7 +1926,10 @@ impl Khattaf for KhattafD3D11 {
             MipLevels: 1,
             ArraySize: 1,
             Format: wasf_khalfiya.Format,
-            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
             Usage: D3D11_USAGE_STAGING,
             BindFlags: 0,
             CPUAccessFlags: D3D11_CPU_ACCESS_READ.0.cast_unsigned(),
@@ -1855,7 +1939,8 @@ impl Khattaf for KhattafD3D11 {
         // SAFETY: the description is a live local, a staging texture takes no
         // initial data, and the out-pointer addresses a local set to `None`.
         unsafe {
-            self.jihaz.CreateTexture2D(&raw const wasf_marhala, None, Some(&raw mut marhala))
+            self.jihaz
+                .CreateTexture2D(&raw const wasf_marhala, None, Some(&raw mut marhala))
         }
         .map_err(|khata| KhataTabaqa::IltiqatFashil {
             sabab: format!("the read-back texture could not be created: {khata}"),
@@ -1895,11 +1980,13 @@ impl Khattaf for KhattafD3D11 {
         // SAFETY: `marhala` is the staging texture created above with CPU read
         // access, which is the one usage `D3D11_MAP_READ` accepts. The
         // out-pointer addresses a live local.
-        unsafe { self.siyaq.Map(&marhala, 0, D3D11_MAP_READ, 0, Some(&raw mut marsum)) }.map_err(
-            |khata| KhataTabaqa::IltiqatFashil {
-                sabab: format!("the read-back texture could not be mapped: {khata}"),
-            },
-        )?;
+        unsafe {
+            self.siyaq
+                .Map(&marhala, 0, D3D11_MAP_READ, 0, Some(&raw mut marsum))
+        }
+        .map_err(|khata| KhataTabaqa::IltiqatFashil {
+            sabab: format!("the read-back texture could not be mapped: {khata}"),
+        })?;
 
         let natija = jami_sufuf(&marsum, mintaqa, sath.sigha);
 
@@ -1933,7 +2020,10 @@ pub(crate) const RUUS_LIL_DUFA: u32 = 16_384;
 // them. A chunk size raised without this following it would map a buffer
 // smaller than the copy that follows.
 const _: () = {
-    assert!(RUUS_LIL_DUFA as usize == QITA_LIL_DUFA * 4, "the vertex buffer is the wrong size");
+    assert!(
+        RUUS_LIL_DUFA as usize == QITA_LIL_DUFA * 4,
+        "the vertex buffer is the wrong size"
+    );
 };
 
 /// Appends one quad's four vertices to the scratch buffer.
@@ -1966,10 +2056,30 @@ pub(crate) fn imla_qita(musawwada: &mut Vec<Ras>, qita: &QitaRasm) {
     };
 
     musawwada.extend_from_slice(&[
-        Ras { mawdi: [yasar, aala], khareeta: [u0, v0], lawn: qita.lawn, khalt },
-        Ras { mawdi: [yameen, aala], khareeta: [u1, v0], lawn: qita.lawn, khalt },
-        Ras { mawdi: [yameen, asfal], khareeta: [u1, v1], lawn: qita.lawn, khalt },
-        Ras { mawdi: [yasar, asfal], khareeta: [u0, v1], lawn: qita.lawn, khalt },
+        Ras {
+            mawdi: [yasar, aala],
+            khareeta: [u0, v0],
+            lawn: qita.lawn,
+            khalt,
+        },
+        Ras {
+            mawdi: [yameen, aala],
+            khareeta: [u1, v0],
+            lawn: qita.lawn,
+            khalt,
+        },
+        Ras {
+            mawdi: [yameen, asfal],
+            khareeta: [u1, v1],
+            lawn: qita.lawn,
+            khalt,
+        },
+        Ras {
+            mawdi: [yasar, asfal],
+            khareeta: [u0, v1],
+            lawn: qita.lawn,
+            khalt,
+        },
     ]);
 }
 
@@ -2075,6 +2185,8 @@ pub(crate) fn sigha_min_dxgi(sigha: DXGI_FORMAT) -> Result<(SighatSath, bool), K
         // flag the capture path reads to know it must tone-map before
         // recognition. Two facts, two fields, neither standing in for the other.
         DXGI_FORMAT_R16G16B16A16_FLOAT => Ok((SighatSath::Rgba16f, false)),
-        _ => Err(KhataTabaqa::SighaGhayrMaduma { sigha: format!("DXGI_FORMAT({})", sigha.0) }),
+        _ => Err(KhataTabaqa::SighaGhayrMaduma {
+            sigha: format!("DXGI_FORMAT({})", sigha.0),
+        }),
     }
 }

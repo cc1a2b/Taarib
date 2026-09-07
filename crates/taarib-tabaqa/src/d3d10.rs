@@ -75,7 +75,7 @@ use windows::Win32::Graphics::Direct3D10::{
     D3D10_INPUT_ELEMENT_DESC, D3D10_INPUT_PER_VERTEX_DATA, D3D10_MAP_READ, D3D10_MAP_WRITE_DISCARD,
     D3D10_RASTERIZER_DESC, D3D10_SAMPLER_DESC, D3D10_SHADER_RESOURCE_VIEW_DESC,
     D3D10_SHADER_RESOURCE_VIEW_DESC_0, D3D10_STENCIL_OP_KEEP, D3D10_SUBRESOURCE_DATA,
-    D3D10_TEX2D_SRV, D3D10_TEXTURE2D_DESC, D3D10_TEXTURE_ADDRESS_CLAMP, D3D10_USAGE_DEFAULT,
+    D3D10_TEX2D_SRV, D3D10_TEXTURE_ADDRESS_CLAMP, D3D10_TEXTURE2D_DESC, D3D10_USAGE_DEFAULT,
     D3D10_USAGE_DYNAMIC, D3D10_USAGE_IMMUTABLE, D3D10_USAGE_STAGING, D3D10_VIEWPORT,
     ID3D10BlendState, ID3D10Buffer, ID3D10DepthStencilState, ID3D10DepthStencilView, ID3D10Device,
     ID3D10GeometryShader, ID3D10InputLayout, ID3D10PixelShader, ID3D10RasterizerState,
@@ -94,9 +94,7 @@ use crate::d3d11::{
     QITA_LIL_DUFA, RUUS_LIL_DUFA, Ras, SAQF_LAWHA, ThawabitIsqat, imla_qita, sigha_min_dxgi,
 };
 use crate::khata::{KhataTabaqa, tul_u64};
-use crate::wajiha::{
-    Khattaf, LawhatRasm, MustatilBiksel, SighatSath, WajihatRusum, WasfSath,
-};
+use crate::wajiha::{Khattaf, LawhatRasm, MustatilBiksel, SighatSath, WajihatRusum, WasfSath};
 
 /// How many render target slots the output merger has.
 ///
@@ -113,7 +111,10 @@ const ADAD_MANAZIR_U32: u32 = 16;
 // The two spellings must agree or the getters are told a capacity the arrays do
 // not have, which the runtime would write past.
 const _: () = {
-    assert!(ADAD_MANAZIR == ADAD_MANAZIR_U32 as usize, "viewport counts disagree");
+    assert!(
+        ADAD_MANAZIR == ADAD_MANAZIR_U32 as usize,
+        "viewport counts disagree"
+    );
 };
 
 /// Everything the overlay is about to overwrite on the device.
@@ -244,17 +245,17 @@ impl HalatMasar10 {
                 Some(&mut hala.amil_khalt),
                 Some(&raw mut hala.qina_ayyina),
             );
-            jihaz.OMGetDepthStencilState(
-                Some(&raw mut hala.umq),
-                Some(&raw mut hala.marji_tazlil),
-            );
+            jihaz.OMGetDepthStencilState(Some(&raw mut hala.umq), Some(&raw mut hala.marji_tazlil));
             jihaz.OMGetRenderTargets(Some(&mut hala.ahdaf), Some(&raw mut hala.ru2yat_umq));
 
             hala.munaqqit = jihaz.RSGetState().ok();
             hala.adad_manazir = ADAD_MANAZIR_U32;
             jihaz.RSGetViewports(&raw mut hala.adad_manazir, Some(hala.manazir.as_mut_ptr()));
             hala.adad_maqassat = ADAD_MANAZIR_U32;
-            jihaz.RSGetScissorRects(&raw mut hala.adad_maqassat, Some(hala.maqassat.as_mut_ptr()));
+            jihaz.RSGetScissorRects(
+                &raw mut hala.adad_maqassat,
+                Some(hala.maqassat.as_mut_ptr()),
+            );
         }
 
         hala
@@ -308,9 +309,13 @@ impl HalatMasar10 {
             jihaz.OMSetRenderTargets(Some(&self.ahdaf), self.ru2yat_umq.as_ref());
 
             jihaz.RSSetState(self.munaqqit.as_ref());
-            let adad = usize::try_from(self.adad_manazir).unwrap_or(0).min(ADAD_MANAZIR);
+            let adad = usize::try_from(self.adad_manazir)
+                .unwrap_or(0)
+                .min(ADAD_MANAZIR);
             jihaz.RSSetViewports(self.manazir.get(..adad));
-            let adad = usize::try_from(self.adad_maqassat).unwrap_or(0).min(ADAD_MANAZIR);
+            let adad = usize::try_from(self.adad_maqassat)
+                .unwrap_or(0)
+                .min(ADAD_MANAZIR);
             jihaz.RSSetScissorRects(self.maqassat.get(..adad));
         }
     }
@@ -446,11 +451,14 @@ impl KhattafD3D10 {
     /// thread.
     fn ihdar_ramz(&mut self) -> Result<(), KhataTabaqa> {
         if self.bayt_ras.is_empty() {
-            self.bayt_ras = self.musarrif.sarrif("overlay vertex shader", s!("ras"), s!("vs_4_0"))?;
+            self.bayt_ras =
+                self.musarrif
+                    .sarrif("overlay vertex shader", s!("ras"), s!("vs_4_0"))?;
         }
         if self.bayt_biksel.is_empty() {
             self.bayt_biksel =
-                self.musarrif.sarrif("overlay pixel shader", s!("biksel"), s!("ps_4_0"))?;
+                self.musarrif
+                    .sarrif("overlay pixel shader", s!("biksel"), s!("ps_4_0"))?;
         }
         Ok(())
     }
@@ -463,19 +471,25 @@ impl KhattafD3D10 {
         // SAFETY: `bayt_ras` holds DXBC the compiler produced from the shared
         // HLSL, and the out-pointer addresses a local initialised to `None`, so
         // the reference the runtime writes is owned by that local.
-        unsafe { self.jihaz.CreateVertexShader(&self.bayt_ras, Some(&raw mut shader_ras)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay vertex shader",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateVertexShader(&self.bayt_ras, Some(&raw mut shader_ras))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay vertex shader",
+            sabab: khata.to_string(),
+        })?;
 
         let mut shader_biksel = None;
         // SAFETY: as above, for the pixel stage.
-        unsafe { self.jihaz.CreatePixelShader(&self.bayt_biksel, Some(&raw mut shader_biksel)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay pixel shader",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreatePixelShader(&self.bayt_biksel, Some(&raw mut shader_biksel))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay pixel shader",
+            sabab: khata.to_string(),
+        })?;
 
         // The offsets come from `crate::d3d11`, where they are checked against
         // the vertex type by `const` assertion. Spelling them again here would
@@ -524,11 +538,14 @@ impl KhattafD3D10 {
         // the call, and the out-pointer addresses a local initialised to
         // `None`. The runtime validates the layout against the shader's input
         // signature and fails rather than accepting a mismatch.
-        unsafe { self.jihaz.CreateInputLayout(&anasir, &self.bayt_ras, Some(&raw mut takhtit)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay input layout",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateInputLayout(&anasir, &self.bayt_ras, Some(&raw mut takhtit))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay input layout",
+            sabab: khata.to_string(),
+        })?;
 
         let wasf_ruus = D3D10_BUFFER_DESC {
             ByteWidth: KHATWAT_RAS.saturating_mul(RUUS_LIL_DUFA),
@@ -541,11 +558,14 @@ impl KhattafD3D10 {
         // SAFETY: the description is a fully initialised local, there is no
         // initial data for a dynamic buffer, and the out-pointer addresses a
         // local initialised to `None`.
-        unsafe { self.jihaz.CreateBuffer(&raw const wasf_ruus, None, Some(&raw mut ruus)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay vertex buffer",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateBuffer(&raw const wasf_ruus, None, Some(&raw mut ruus))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay vertex buffer",
+            sabab: khata.to_string(),
+        })?;
 
         // The index buffer is the same six-index pattern repeated, so it is
         // built once and never touched again.
@@ -652,11 +672,14 @@ impl KhattafD3D10 {
         let mut khalt = None;
         // SAFETY: the description is a fully initialised local and the
         // out-pointer addresses a local initialised to `None`.
-        unsafe { self.jihaz.CreateBlendState(&raw const wasf_khalt, Some(&raw mut khalt)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay blend state",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateBlendState(&raw const wasf_khalt, Some(&raw mut khalt))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay blend state",
+            sabab: khata.to_string(),
+        })?;
 
         // Culling off because the overlay's quads are generated in one winding
         // and a game that left `FrontCounterClockwise` set would otherwise cull
@@ -676,7 +699,8 @@ impl KhattafD3D10 {
         let mut munaqqit = None;
         // SAFETY: as above.
         unsafe {
-            self.jihaz.CreateRasterizerState(&raw const wasf_munaqqit, Some(&raw mut munaqqit))
+            self.jihaz
+                .CreateRasterizerState(&raw const wasf_munaqqit, Some(&raw mut munaqqit))
         }
         .map_err(|khata| KhataTabaqa::MawridFashil {
             mawrid: "overlay rasterizer state",
@@ -705,11 +729,14 @@ impl KhattafD3D10 {
         };
         let mut umq = None;
         // SAFETY: as above.
-        unsafe { self.jihaz.CreateDepthStencilState(&raw const wasf_umq, Some(&raw mut umq)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay depth-stencil state",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateDepthStencilState(&raw const wasf_umq, Some(&raw mut umq))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay depth-stencil state",
+            sabab: khata.to_string(),
+        })?;
 
         // Clamped addressing so a glyph whose atlas rectangle sits against the
         // edge cannot bleed a neighbouring glyph's pixels into itself.
@@ -727,11 +754,14 @@ impl KhattafD3D10 {
         };
         let mut akhidh = None;
         // SAFETY: as above.
-        unsafe { self.jihaz.CreateSamplerState(&raw const wasf_akhidh, Some(&raw mut akhidh)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay sampler state",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateSamplerState(&raw const wasf_akhidh, Some(&raw mut akhidh))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay sampler state",
+            sabab: khata.to_string(),
+        })?;
 
         self.khalt = khalt;
         self.munaqqit = munaqqit;
@@ -749,21 +779,25 @@ impl KhattafD3D10 {
     fn ibni_hadaf(&mut self) -> Result<(), KhataTabaqa> {
         // SAFETY: `silsila` is live. `GetBuffer` performs a QueryInterface on
         // the named buffer and returns an owned reference or an error.
-        let khalfiya = unsafe { self.silsila.GetBuffer::<ID3D10Texture2D>(0) }.map_err(
-            |khata| KhataTabaqa::SathTaghayyar {
-                sabab: format!("the backbuffer could not be fetched: {khata}"),
-            },
-        )?;
+        let khalfiya =
+            unsafe { self.silsila.GetBuffer::<ID3D10Texture2D>(0) }.map_err(|khata| {
+                KhataTabaqa::SathTaghayyar {
+                    sabab: format!("the backbuffer could not be fetched: {khata}"),
+                }
+            })?;
 
         let mut hadaf = None;
         // SAFETY: `khalfiya` is a live texture, the null description asks the
         // runtime to take the resource's own format, and the out-pointer
         // addresses a local initialised to `None`.
-        unsafe { self.jihaz.CreateRenderTargetView(&khalfiya, None, Some(&raw mut hadaf)) }
-            .map_err(|khata| KhataTabaqa::MawridFashil {
-                mawrid: "overlay render target view",
-                sabab: khata.to_string(),
-            })?;
+        unsafe {
+            self.jihaz
+                .CreateRenderTargetView(&khalfiya, None, Some(&raw mut hadaf))
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay render target view",
+            sabab: khata.to_string(),
+        })?;
 
         self.hadaf = hadaf;
         Ok(())
@@ -845,7 +879,8 @@ impl KhattafD3D10 {
         // validated.
         unsafe {
             self.jihaz.IASetInputLayout(Some(takhtit));
-            self.jihaz.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            self.jihaz
+                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             self.jihaz.IASetVertexBuffers(
                 0,
                 1,
@@ -853,13 +888,17 @@ impl KhattafD3D10 {
                 Some(&raw const khatwa),
                 Some(&raw const izaha),
             );
-            self.jihaz.IASetIndexBuffer(Some(faharis), DXGI_FORMAT_R16_UINT, 0);
+            self.jihaz
+                .IASetIndexBuffer(Some(faharis), DXGI_FORMAT_R16_UINT, 0);
 
             self.jihaz.VSSetShader(Some(shader_ras));
-            self.jihaz.VSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
+            self.jihaz
+                .VSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
             self.jihaz.PSSetShader(Some(shader_biksel));
-            self.jihaz.PSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
-            self.jihaz.PSSetShaderResources(0, Some(core::slice::from_ref(&self.ru2yat_lawha)));
+            self.jihaz
+                .PSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
+            self.jihaz
+                .PSSetShaderResources(0, Some(core::slice::from_ref(&self.ru2yat_lawha)));
             self.jihaz.PSSetSamplers(0, Some(&[Some(akhidh.clone())]));
 
             // The one stage the overlay does not use is cleared rather than
@@ -868,9 +907,11 @@ impl KhattafD3D10 {
             // not be Arabic.
             self.jihaz.GSSetShader(None);
 
-            self.jihaz.OMSetBlendState(Some(khalt), &amil_khalt, u32::MAX);
+            self.jihaz
+                .OMSetBlendState(Some(khalt), &amil_khalt, u32::MAX);
             self.jihaz.OMSetDepthStencilState(Some(umq), 0);
-            self.jihaz.OMSetRenderTargets(Some(&[Some(hadaf.clone())]), None);
+            self.jihaz
+                .OMSetRenderTargets(Some(&[Some(hadaf.clone())]), None);
 
             self.jihaz.RSSetState(Some(munaqqit));
             self.jihaz.RSSetViewports(Some(&[manzar]));
@@ -958,11 +999,10 @@ impl Khattaf for KhattafD3D10 {
     fn sath(&self) -> Result<WasfSath, KhataTabaqa> {
         // SAFETY: `silsila` is the live swap chain this backend was built
         // around, and `GetDesc` fills a stack description the binding owns.
-        let wasf = unsafe { self.silsila.GetDesc() }.map_err(|khata| {
-            KhataTabaqa::SathTaghayyar {
+        let wasf =
+            unsafe { self.silsila.GetDesc() }.map_err(|khata| KhataTabaqa::SathTaghayyar {
                 sabab: format!("the swap chain would not describe itself: {khata}"),
-            }
-        })?;
+            })?;
 
         let ard = wasf.BufferDesc.Width;
         let irtifa = wasf.BufferDesc.Height;
@@ -976,7 +1016,12 @@ impl Khattaf for KhattafD3D10 {
         }
 
         let (sigha, sirgb) = sigha_min_dxgi(wasf.BufferDesc.Format)?;
-        Ok(WasfSath { ard, irtifa, sigha, sirgb })
+        Ok(WasfSath {
+            ard,
+            irtifa,
+            sigha,
+            sirgb,
+        })
     }
 
     fn hayyi(&mut self, sath: WasfSath) -> Result<(), KhataTabaqa> {
@@ -994,7 +1039,8 @@ impl Khattaf for KhattafD3D10 {
         // the only allocation on the draw path and it is made here, off it.
         let matlub = QITA_LIL_DUFA.saturating_mul(4);
         if self.musawwada.capacity() < matlub {
-            self.musawwada.reserve(matlub.saturating_sub(self.musawwada.capacity()));
+            self.musawwada
+                .reserve(matlub.saturating_sub(self.musawwada.capacity()));
         }
 
         self.sath = Some(sath);
@@ -1047,7 +1093,10 @@ impl Khattaf for KhattafD3D10 {
             // encoded, so it is uploaded as plain `UNORM` and the shader is
             // left to do the one transfer this backend does at all.
             Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
             // Immutable rather than default: the atlas is replaced wholesale
             // when it changes and never partially written.
             Usage: D3D10_USAGE_IMMUTABLE,
@@ -1065,7 +1114,8 @@ impl Khattaf for KhattafD3D10 {
         // least `khatwa * irtifa` bytes, which is exactly what the row pitch
         // and the height in the description tell the runtime to read.
         let lawha = unsafe {
-            self.jihaz.CreateTexture2D(&raw const wasf, Some(&raw const bidaya))
+            self.jihaz
+                .CreateTexture2D(&raw const wasf, Some(&raw const bidaya))
         }
         .map_err(|khata| KhataTabaqa::MawridFashil {
             mawrid: "glyph atlas texture",
@@ -1076,7 +1126,10 @@ impl Khattaf for KhattafD3D10 {
             Format: DXGI_FORMAT_R8G8B8A8_UNORM,
             ViewDimension: D3D_SRV_DIMENSION_TEXTURE2D,
             Anonymous: D3D10_SHADER_RESOURCE_VIEW_DESC_0 {
-                Texture2D: D3D10_TEX2D_SRV { MostDetailedMip: 0, MipLevels: 1 },
+                Texture2D: D3D10_TEX2D_SRV {
+                    MostDetailedMip: 0,
+                    MipLevels: 1,
+                },
             },
         };
         let mut ru2ya = None;
@@ -1178,11 +1231,12 @@ impl Khattaf for KhattafD3D10 {
         }
 
         // SAFETY: `silsila` is live; `GetBuffer` returns an owned reference.
-        let khalfiya = unsafe { self.silsila.GetBuffer::<ID3D10Texture2D>(0) }.map_err(
-            |khata| KhataTabaqa::IltiqatFashil {
-                sabab: format!("the backbuffer could not be fetched: {khata}"),
-            },
-        )?;
+        let khalfiya =
+            unsafe { self.silsila.GetBuffer::<ID3D10Texture2D>(0) }.map_err(|khata| {
+                KhataTabaqa::IltiqatFashil {
+                    sabab: format!("the backbuffer could not be fetched: {khata}"),
+                }
+            })?;
 
         let mut wasf_khalfiya = D3D10_TEXTURE2D_DESC::default();
         // SAFETY: `khalfiya` is a live texture and the out-pointer addresses a
@@ -1196,7 +1250,10 @@ impl Khattaf for KhattafD3D10 {
         // that presents MSAA directly.
         let masdar = if wasf_khalfiya.SampleDesc.Count > 1 {
             let wasf_hall = D3D10_TEXTURE2D_DESC {
-                SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+                SampleDesc: DXGI_SAMPLE_DESC {
+                    Count: 1,
+                    Quality: 0,
+                },
                 Usage: D3D10_USAGE_DEFAULT,
                 // A default-usage texture with no bind flags at all is rejected
                 // by the runtime, so the resolve target carries the one flag
@@ -1211,15 +1268,17 @@ impl Khattaf for KhattafD3D10 {
             };
             // SAFETY: the description is a live local and there is no initial
             // data for a render target.
-            let hall = unsafe { self.jihaz.CreateTexture2D(&raw const wasf_hall, None) }
-                .map_err(|khata| KhataTabaqa::IltiqatFashil {
+            let hall = unsafe { self.jihaz.CreateTexture2D(&raw const wasf_hall, None) }.map_err(
+                |khata| KhataTabaqa::IltiqatFashil {
                     sabab: format!("the multisample resolve target could not be created: {khata}"),
-                })?;
+                },
+            )?;
             // SAFETY: both textures are live, both have one subresource at
             // index zero, and the format is the backbuffer's own on both sides,
             // which is what `ResolveSubresource` requires.
             unsafe {
-                self.jihaz.ResolveSubresource(&hall, 0, &khalfiya, 0, wasf_khalfiya.Format);
+                self.jihaz
+                    .ResolveSubresource(&hall, 0, &khalfiya, 0, wasf_khalfiya.Format);
             }
             hall
         } else {
@@ -1232,7 +1291,10 @@ impl Khattaf for KhattafD3D10 {
             MipLevels: 1,
             ArraySize: 1,
             Format: wasf_khalfiya.Format,
-            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
             Usage: D3D10_USAGE_STAGING,
             BindFlags: 0,
             CPUAccessFlags: D3D10_CPU_ACCESS_READ.0.cast_unsigned(),
@@ -1393,8 +1455,7 @@ pub fn qudra() -> crate::qudra::QudratTarkeeb {
     use crate::qudra::{MilShasha, QudratTarkeeb, SababQudra};
     use taarib_haqn::mawqi::qaidat_wahda;
 
-    let mut taqreer =
-        QudratTarkeeb::jadeeda(WajihatRusum::Direct3D10, MilShasha::KhilalAlJihaz);
+    let mut taqreer = QudratTarkeeb::jadeeda(WajihatRusum::Direct3D10, MilShasha::KhilalAlJihaz);
 
     let ashira = qaidat_wahda("d3d10.dll").is_some();
     let ashira_wahid = qaidat_wahda("d3d10_1.dll").is_some();

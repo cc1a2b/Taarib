@@ -303,7 +303,13 @@ impl ShiddatTajawuz {
     /// serialized report as an explicit zero. A missing key would read as "not
     /// measured", which is the one thing this module refuses to let a reader
     /// confuse with "measured, none found".
-    pub const KULL: [Self; 5] = [Self::Bila, Self::Tafif, Self::Malhuz, Self::Shadid, Self::Qati];
+    pub const KULL: [Self; 5] = [
+        Self::Bila,
+        Self::Tafif,
+        Self::Malhuz,
+        Self::Shadid,
+        Self::Qati,
+    ];
 
     /// Scores an entry.
     ///
@@ -467,11 +473,11 @@ impl MasuliyatTajawuz {
             Self::Attarjama => "The original fitted this width and the translation does not.",
             Self::Alluba => {
                 "The original overruns the same width; the widget is too small for its own content."
-            }
+            },
             Self::Majhula => {
                 "The original was not laid out at this size, so the source of the overrun is \
                  unknown."
-            }
+            },
         }
     }
 }
@@ -572,7 +578,11 @@ impl MadkhalTajawuz {
     /// what the report's second sort key is.
     #[must_use]
     pub fn nisba_muassara(&self) -> f64 {
-        let daaf = if self.satr_wahid { DAAF_SATR_WAHID } else { 1.0 };
+        let daaf = if self.satr_wahid {
+            DAAF_SATR_WAHID
+        } else {
+            1.0
+        };
         self.nisba() * hassasiyat_tasnif(self.tasnif) * daaf
     }
 
@@ -592,13 +602,15 @@ impl MadkhalTajawuz {
     /// limit cannot be exceeded.
     #[must_use]
     pub fn tajawuz_sutur(&self) -> bool {
-        self.sutur_masmuha.is_some_and(|masmuh| self.sutur_maqisa > masmuh)
+        self.sutur_masmuha
+            .is_some_and(|masmuh| self.sutur_maqisa > masmuh)
     }
 
     /// Whether the text needed more height than the constraint recorded.
     #[must_use]
     pub fn tajawuz_irtifa(&self) -> bool {
-        self.irtifa_mutah.is_some_and(|mutah| self.irtifa_maqis > mutah)
+        self.irtifa_mutah
+            .is_some_and(|mutah| self.irtifa_maqis > mutah)
     }
 
     /// Whether the layout engine set this string smaller than it was asked to.
@@ -913,18 +925,18 @@ impl NawAdamAltahaqquq {
             Self::TakhtitFarigh => "The layout came back empty for text that is not empty.",
             Self::BilaHajm => {
                 "No font size was discovered for this string, so there is no size to lay it out at."
-            }
+            },
             Self::BilaHuwiya => {
                 "The string was never added to the container, so no layout could be bound to it."
-            }
+            },
             Self::SuraBilaQiyas => {
                 "It carries an inline sprite of unmeasured width; it is laid out at run time and \
                  not measured here."
-            }
+            },
             Self::KasrSatrSarih => {
                 "It carries a mandatory line break inside an atom; it is laid out at run time and \
                  not measured here."
-            }
+            },
         }
     }
 
@@ -935,14 +947,14 @@ impl NawAdamAltahaqquq {
             Self::BilaTarjama => "ترجم العبارة ثم أعد البناء.",
             Self::BilaArdMutah | Self::ArdGhayrMujdi | Self::BilaHajm => {
                 "شغّل جلسة التقاط تمرّ على الشاشة التي تظهر فيها العبارة لتُسجَّل مساحتها وحجمها."
-            }
+            },
             Self::HajmGhayrMujdi | Self::BilaTakhtit | Self::BilaHuwiya => {
                 "أعد اكتشاف المقاسات ثم أعد حساب التخطيطات."
-            }
+            },
             Self::TakhtitFarigh => "تحقّق من تغطية الخطّ للنص العربي في هذا المشروع.",
             Self::SuraBilaQiyas | Self::KasrSatrSarih => {
                 "لا يقيسها المترجم المسبق؛ تحقّق منها في جلسة التقاط أثناء اللعب."
-            }
+            },
         }
     }
 
@@ -954,17 +966,15 @@ impl NawAdamAltahaqquq {
             Self::BilaArdMutah | Self::ArdGhayrMujdi | Self::BilaHajm => {
                 "Run a capture session that reaches the screen this string appears on, so its \
                  rectangle and size are recorded."
-            }
+            },
             Self::HajmGhayrMujdi | Self::BilaTakhtit | Self::BilaHuwiya => {
                 "Re-run size discovery and recompute the layouts."
-            }
-            Self::TakhtitFarigh => {
-                "Check that the project's font chain covers the Arabic script."
-            }
+            },
+            Self::TakhtitFarigh => "Check that the project's font chain covers the Arabic script.",
             Self::SuraBilaQiyas | Self::KasrSatrSarih => {
                 "The precompiler does not measure it; check it in a capture session while the \
                  game runs."
-            }
+            },
         }
     }
 
@@ -1313,13 +1323,19 @@ impl TaqrirTajawuz {
     /// Every overrun of a given class, worst first.
     #[must_use]
     pub fn tajawuzat_tasnif(&self, tasnif: TasnifNass) -> Vec<&MadkhalTajawuz> {
-        self.tajawuzat.iter().filter(|madkhal| madkhal.tasnif == tasnif).collect()
+        self.tajawuzat
+            .iter()
+            .filter(|madkhal| madkhal.tasnif == tasnif)
+            .collect()
     }
 
     /// Every overrun in a band or worse, worst first.
     #[must_use]
     pub fn tajawuzat_min_shidda(&self, adna: ShiddatTajawuz) -> Vec<&MadkhalTajawuz> {
-        self.tajawuzat.iter().filter(|madkhal| madkhal.shidda >= adna).collect()
+        self.tajawuzat
+            .iter()
+            .filter(|madkhal| madkhal.shidda >= adna)
+            .collect()
     }
 
     /// Every measurement recorded for one string, at any size.
@@ -1355,17 +1371,28 @@ impl TaqrirTajawuz {
             }
         }
         if mutajawiz > 0 {
-            return HalatTahaqquq::Mutajawiz { adad: mutajawiz, aswa };
+            return HalatTahaqquq::Mutajawiz {
+                adad: mutajawiz,
+                aswa,
+            };
         }
 
         let ghayr = adad_u32(
-            self.ghayr_qabil_lil_tahaqquq.iter().filter(|madkhal| madkhal.nass == nass).count(),
+            self.ghayr_qabil_lil_tahaqquq
+                .iter()
+                .filter(|madkhal| madkhal.nass == nass)
+                .count(),
         );
         if ghayr > 0 {
             return HalatTahaqquq::GhayrMutahaqqaq { adad: ghayr };
         }
 
-        let salim = adad_u32(self.salima.iter().filter(|madkhal| madkhal.nass == nass).count());
+        let salim = adad_u32(
+            self.salima
+                .iter()
+                .filter(|madkhal| madkhal.nass == nass)
+                .count(),
+        );
         if salim > 0 {
             return HalatTahaqquq::Salim { adad: salim };
         }
@@ -1476,7 +1503,10 @@ impl BaniTaqrirTajawuz {
     /// How many pairs have been submitted so far, measurable or not.
     #[must_use]
     pub const fn adad_almuqaddam(&self) -> usize {
-        self.tajawuzat.len().saturating_add(self.salima.len()).saturating_add(self.ghayr.len())
+        self.tajawuzat
+            .len()
+            .saturating_add(self.salima.len())
+            .saturating_add(self.ghayr.len())
     }
 
     /// Records one (string, size) measurement.
@@ -1510,7 +1540,11 @@ impl BaniTaqrirTajawuz {
         };
 
         let sutur_maqisa = adad_u32(takhtit.sutur.len());
-        let irtifa_satr = takhtit.sutur.iter().map(|satr| satr.irtifa).fold(0.0_f32, f32::max);
+        let irtifa_satr = takhtit
+            .sutur
+            .iter()
+            .map(|satr| satr.irtifa)
+            .fold(0.0_f32, f32::max);
         let sutur_masmuha = if madkhal.quyud.satr_wahid {
             Some(1)
         } else {
@@ -1525,9 +1559,8 @@ impl BaniTaqrirTajawuz {
         // The layout engine's own count of how many lines went past the width it
         // was given, kept rather than recomputed: it saw every line and this
         // report only sees the widest.
-        let (sutur_mutajawiza, awwal_satr_mutajawiz) = takhtit
-            .tajawuz
-            .map_or((0_u32, None), |taqreer| {
+        let (sutur_mutajawiza, awwal_satr_mutajawiz) =
+            takhtit.tajawuz.map_or((0_u32, None), |taqreer| {
                 (taqreer.adad_sutur, Some(taqreer.awwal_satr))
             });
 
@@ -1667,23 +1700,22 @@ impl BaniTaqrirTajawuz {
                 mulakhkhas.musaghghara = mulakhkhas.musaghghara.saturating_add(1);
             }
             if madkhal.tajawuz_sutur() {
-                mulakhkhas.mutajawizat_alsutur =
-                    mulakhkhas.mutajawizat_alsutur.saturating_add(1);
+                mulakhkhas.mutajawizat_alsutur = mulakhkhas.mutajawizat_alsutur.saturating_add(1);
             }
             if mutajawiz {
                 match madkhal.masuliya {
                     MasuliyatTajawuz::Attarjama => {
                         mulakhkhas.bi_masuliyat_altarjama =
                             mulakhkhas.bi_masuliyat_altarjama.saturating_add(1);
-                    }
+                    },
                     MasuliyatTajawuz::Alluba => {
                         mulakhkhas.bi_masuliyat_alluba =
                             mulakhkhas.bi_masuliyat_alluba.saturating_add(1);
-                    }
+                    },
                     MasuliyatTajawuz::Majhula => {
                         mulakhkhas.majhulat_almasuliya =
                             mulakhkhas.majhulat_almasuliya.saturating_add(1);
-                    }
+                    },
                 }
                 mulakhkhas.aswa_nisba_miawiya =
                     Some(aqsa(mulakhkhas.aswa_nisba_miawiya, madkhal.zaid_miawi));

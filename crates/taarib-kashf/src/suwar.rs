@@ -255,7 +255,7 @@ fn wasf_masdar(masdar: &MasdarSura, hajm: u64, waqt_nano: u128) -> String {
     match masdar {
         MasdarSura::Malaf(masar) => {
             format!("malaf:{}:{hajm}:{waqt_nano}", masar.display())
-        }
+        },
         MasdarSura::Rabt(rabt) => format!("rabt:{rabt}"),
     }
 }
@@ -265,7 +265,9 @@ fn wasf_masdar(masdar: &MasdarSura, hajm: u64, waqt_nano: u128) -> String {
 fn hallil_miftah(miftah: &str) -> Option<(&str, &str)> {
     let (asas, imtidad) = miftah.rsplit_once('.')?;
     let salih = asas.len() == TUL_BASMA
-        && asas.bytes().all(|q| q.is_ascii_hexdigit() && !q.is_ascii_uppercase());
+        && asas
+            .bytes()
+            .all(|q| q.is_ascii_hexdigit() && !q.is_ascii_uppercase());
     if !salih || !IMTIDADAT.contains(&imtidad) {
         return None;
     }
@@ -321,9 +323,8 @@ fn hallil_sittasi(nass: &str) -> Option<LawnBariz> {
     if raqm.len() != 6 {
         return None;
     }
-    let qanat = |min: usize, ila: usize| -> Option<u8> {
-        u8::from_str_radix(raqm.get(min..ila)?, 16).ok()
-    };
+    let qanat =
+        |min: usize, ila: usize| -> Option<u8> { u8::from_str_radix(raqm.get(min..ila)?, 16).ok() };
     Some(LawnBariz {
         ahmar: qanat(0, 2)?,
         akhdar: qanat(2, 4)?,
@@ -539,8 +540,8 @@ impl KhaziantSuwar {
         loop {
             match radd.chunk().await {
                 Ok(Some(qita)) => {
-                    let majmu = u64::try_from(bayt.len().saturating_add(qita.len()))
-                        .unwrap_or(u64::MAX);
+                    let majmu =
+                        u64::try_from(bayt.len().saturating_add(qita.len())).unwrap_or(u64::MAX);
                     if majmu > HADD_HAJM_SURA {
                         sajjil(
                             naw,
@@ -622,7 +623,8 @@ fn rabt_amin(rabt: &str) -> bool {
     if rabt.bytes().any(|q| q.is_ascii_control() || q == b' ') {
         return false;
     }
-    rabt.get(.."https://".len()).is_some_and(|q| q.eq_ignore_ascii_case("https://"))
+    rabt.get(.."https://".len())
+        .is_some_and(|q| q.eq_ignore_ascii_case("https://"))
 }
 
 /// Re-derives the colour of an image already in the cache and rewrites its
@@ -665,8 +667,9 @@ fn khazzin(jidhr: &Path, asas: &str, bayt: &[u8]) -> Natija<(String, LawnBariz)>
     })?;
 
     let miftah = format!("{asas}.{imtidad}");
-    let masar = masar_miftah(jidhr, &miftah)
-        .ok_or_else(|| KhataMasarat::BasmaGhayrSaliha { basma: asas.to_owned() })?;
+    let masar = masar_miftah(jidhr, &miftah).ok_or_else(|| KhataMasarat::BasmaGhayrSaliha {
+        basma: asas.to_owned(),
+    })?;
 
     let lawn = lawn_bariz_min_sura(&sura);
 
@@ -700,9 +703,12 @@ fn ifhas_sura(bayt: &[u8], wasf: &str) -> Natija<(DynamicImage, ImageFormat)> {
         .into());
     }
 
-    let qari = ImageReader::new(Cursor::new(bayt)).with_guessed_format().map_err(|khata| {
-        KhataKashf::SuraGhayrSaliha { rabt: wasf.to_owned(), tafsil: khata.to_string() }
-    })?;
+    let qari = ImageReader::new(Cursor::new(bayt))
+        .with_guessed_format()
+        .map_err(|khata| KhataKashf::SuraGhayrSaliha {
+            rabt: wasf.to_owned(),
+            tafsil: khata.to_string(),
+        })?;
 
     let sigha = qari.format().ok_or_else(|| KhataKashf::SuraGhayrSaliha {
         rabt: wasf.to_owned(),
@@ -716,10 +722,12 @@ fn ifhas_sura(bayt: &[u8], wasf: &str) -> Natija<(DynamicImage, ImageFormat)> {
         .into());
     }
 
-    let (ard, tul) = qari.into_dimensions().map_err(|khata| KhataKashf::SuraGhayrSaliha {
-        rabt: wasf.to_owned(),
-        tafsil: khata.to_string(),
-    })?;
+    let (ard, tul) = qari
+        .into_dimensions()
+        .map_err(|khata| KhataKashf::SuraGhayrSaliha {
+            rabt: wasf.to_owned(),
+            tafsil: khata.to_string(),
+        })?;
     let biksilat = u64::from(ard).saturating_mul(u64::from(tul));
     let takhsis = biksilat.saturating_mul(4);
     if ard == 0 || tul == 0 || ard > HADD_BUD || tul > HADD_BUD || biksilat > HADD_BIKSILAT {
@@ -733,9 +741,12 @@ fn ifhas_sura(bayt: &[u8], wasf: &str) -> Natija<(DynamicImage, ImageFormat)> {
         .into());
     }
 
-    let mut qari = ImageReader::new(Cursor::new(bayt)).with_guessed_format().map_err(|khata| {
-        KhataKashf::SuraGhayrSaliha { rabt: wasf.to_owned(), tafsil: khata.to_string() }
-    })?;
+    let mut qari = ImageReader::new(Cursor::new(bayt))
+        .with_guessed_format()
+        .map_err(|khata| KhataKashf::SuraGhayrSaliha {
+            rabt: wasf.to_owned(),
+            tafsil: khata.to_string(),
+        })?;
     qari.limits(hudud_amina());
 
     let sura = qari.decode().map_err(|khata| KhataKashf::SuraGhayrSaliha {
@@ -965,19 +976,43 @@ const JAWLAT_NITAQ: usize = 24;
 const HUBUT_ISHBAA: f32 = 0.96;
 
 /// `sath-0`, the application background every accent is judged against.
-const SATH_ASAS: LawnBariz = LawnBariz { ahmar: 0x0B, akhdar: 0x0C, azraq: 0x0D };
+const SATH_ASAS: LawnBariz = LawnBariz {
+    ahmar: 0x0B,
+    akhdar: 0x0C,
+    azraq: 0x0D,
+};
 
 /// `tamyeez`, the default accent, and the answer when a cover yields nothing
 /// usable.
-const TAMYEEZ: LawnBariz = LawnBariz { ahmar: 0x2A, akhdar: 0x9D, azraq: 0x8F };
+const TAMYEEZ: LawnBariz = LawnBariz {
+    ahmar: 0x2A,
+    akhdar: 0x9D,
+    azraq: 0x8F,
+};
 
 /// `najah`, `tanbeeh`, `khatar`, `maalumat` — the four status colours an accent
 /// must not be mistaken for.
 const ALWAN_HALA: [LawnBariz; 4] = [
-    LawnBariz { ahmar: 0x57, akhdar: 0xA7, azraq: 0x73 },
-    LawnBariz { ahmar: 0xC9, akhdar: 0x9A, azraq: 0x2E },
-    LawnBariz { ahmar: 0xD0, akhdar: 0x53, azraq: 0x53 },
-    LawnBariz { ahmar: 0x5B, akhdar: 0x8D, azraq: 0xBE },
+    LawnBariz {
+        ahmar: 0x57,
+        akhdar: 0xA7,
+        azraq: 0x73,
+    },
+    LawnBariz {
+        ahmar: 0xC9,
+        akhdar: 0x9A,
+        azraq: 0x2E,
+    },
+    LawnBariz {
+        ahmar: 0xD0,
+        akhdar: 0x53,
+        azraq: 0x53,
+    },
+    LawnBariz {
+        ahmar: 0x5B,
+        akhdar: 0x8D,
+        azraq: 0xBE,
+    },
 ];
 
 /// Extracts a game's colour from encoded image bytes.
@@ -1034,7 +1069,10 @@ pub fn lawn_bariz_min_sura(sura: &DynamicImage) -> LawnBariz {
     // The last rejection section 8.3 asks for, applied to what the interface
     // will actually paint rather than to the raw centroid.
     let mawdi = Oklab::min_lawn(lawn);
-    if ALWAN_HALA.iter().any(|hala| mawdi.masafa(Oklab::min_lawn(*hala)) < NITAQ_RAFD) {
+    if ALWAN_HALA
+        .iter()
+        .any(|hala| mawdi.masafa(Oklab::min_lawn(*hala)) < NITAQ_RAFD)
+    {
         return TAMYEEZ;
     }
 
@@ -1065,16 +1103,51 @@ struct Oklab {
 impl Oklab {
     /// From linear-light sRGB components.
     fn min_khatti(ahmar: f32, akhdar: f32, azraq: f32) -> Self {
-        let tawil = saff(0.412_221_47, 0.536_332_54, 0.051_445_995, ahmar, akhdar, azraq);
+        let tawil = saff(
+            0.412_221_47,
+            0.536_332_54,
+            0.051_445_995,
+            ahmar,
+            akhdar,
+            azraq,
+        );
         let mutawassit = saff(0.211_903_5, 0.680_699_5, 0.107_396_96, ahmar, akhdar, azraq);
-        let qasir = saff(0.088_302_46, 0.281_718_85, 0.629_978_7, ahmar, akhdar, azraq);
+        let qasir = saff(
+            0.088_302_46,
+            0.281_718_85,
+            0.629_978_7,
+            ahmar,
+            akhdar,
+            azraq,
+        );
 
         let (tawil, mutawassit, qasir) = (tawil.cbrt(), mutawassit.cbrt(), qasir.cbrt());
 
         Self {
-            l: saff(0.210_454_26, 0.793_617_8, -0.004_072_047, tawil, mutawassit, qasir),
-            a: saff(1.977_998_5, -2.428_592_2, 0.450_593_7, tawil, mutawassit, qasir),
-            b: saff(0.025_904_037, 0.782_771_77, -0.808_675_77, tawil, mutawassit, qasir),
+            l: saff(
+                0.210_454_26,
+                0.793_617_8,
+                -0.004_072_047,
+                tawil,
+                mutawassit,
+                qasir,
+            ),
+            a: saff(
+                1.977_998_5,
+                -2.428_592_2,
+                0.450_593_7,
+                tawil,
+                mutawassit,
+                qasir,
+            ),
+            b: saff(
+                0.025_904_037,
+                0.782_771_77,
+                -0.808_675_77,
+                tawil,
+                mutawassit,
+                qasir,
+            ),
         }
     }
 
@@ -1095,13 +1168,37 @@ impl Oklab {
         let mutawassit = saff(1.0, -0.105_561_346, -0.063_854_17, self.l, self.a, self.b);
         let qasir = saff(1.0, -0.089_484_18, -1.291_485_5, self.l, self.a, self.b);
 
-        let (tawil, mutawassit, qasir) =
-            (tawil * tawil * tawil, mutawassit * mutawassit * mutawassit, qasir * qasir * qasir);
+        let (tawil, mutawassit, qasir) = (
+            tawil * tawil * tawil,
+            mutawassit * mutawassit * mutawassit,
+            qasir * qasir * qasir,
+        );
 
         (
-            saff(4.076_741_7, -3.307_711_6, 0.230_969_94, tawil, mutawassit, qasir),
-            saff(-1.268_438, 2.609_757_4, -0.341_319_38, tawil, mutawassit, qasir),
-            saff(-0.004_196_086_3, -0.703_418_6, 1.707_614_7, tawil, mutawassit, qasir),
+            saff(
+                4.076_741_7,
+                -3.307_711_6,
+                0.230_969_94,
+                tawil,
+                mutawassit,
+                qasir,
+            ),
+            saff(
+                -1.268_438,
+                2.609_757_4,
+                -0.341_319_38,
+                tawil,
+                mutawassit,
+                qasir,
+            ),
+            saff(
+                -0.004_196_086_3,
+                -0.703_418_6,
+                1.707_614_7,
+                tawil,
+                mutawassit,
+                qasir,
+            ),
         )
     }
 
@@ -1117,7 +1214,11 @@ impl Oklab {
 
     /// Rebuilds a colour from lightness, chroma and hue.
     fn min_lch(l: f32, ishbaa: f32, tadarruj: f32) -> Self {
-        Self { l, a: ishbaa * tadarruj.cos(), b: ishbaa * tadarruj.sin() }
+        Self {
+            l,
+            a: ishbaa * tadarruj.cos(),
+            b: ishbaa * tadarruj.sin(),
+        }
     }
 
     /// Perceived difference between two colours.
@@ -1139,7 +1240,11 @@ fn saff(m0: f32, m1: f32, m2: f32, x: f32, y: f32, z: f32) -> f32 {
 /// One sRGB byte as linear light.
 fn fakk_gamma(qeema: u8) -> f32 {
     let n = f32::from(qeema) / 255.0;
-    if n <= 0.040_45 { n / 12.92 } else { ((n + 0.055) / 1.055).powf(2.4) }
+    if n <= 0.040_45 {
+        n / 12.92
+    } else {
+        ((n + 0.055) / 1.055).powf(2.4)
+    }
 }
 
 /// One linear-light component back to the sRGB transfer curve.
@@ -1187,9 +1292,7 @@ fn ayinat_min_sura(sura: &DynamicImage) -> Vec<Oklab> {
 /// answer because a cluster is a mean, and a mean of black sky and orange fire
 /// is a brown nobody chose.
 fn maqbul(ayina: Oklab) -> bool {
-    ayina.l >= IDAA_AYINA_DUNYA
-        && ayina.l <= IDAA_AYINA_ULYA
-        && ayina.ishbaa() >= ISHBAA_AYINA_ADNA
+    ayina.l >= IDAA_AYINA_DUNYA && ayina.l <= IDAA_AYINA_ULYA && ayina.ishbaa() >= ISHBAA_AYINA_ADNA
 }
 
 /// One region of the artwork.
@@ -1206,7 +1309,11 @@ struct Anqud {
 impl Anqud {
     /// A cluster seeded at a colour, with nothing assigned yet.
     const fn jadeed(markaz: Oklab) -> Self {
-        Self { markaz, majmu: (0.0, 0.0, 0.0), adad: 0 }
+        Self {
+            markaz,
+            majmu: (0.0, 0.0, 0.0),
+            adad: 0,
+        }
     }
 
     /// Clears the accumulator before an assignment pass.
@@ -1270,7 +1377,11 @@ fn budhur(ayinat: &[Oklab]) -> Vec<Oklab> {
         majmu.1 += ayina.a;
         majmu.2 += ayina.b;
     }
-    let wasat = Oklab { l: majmu.0 / adad, a: majmu.1 / adad, b: majmu.2 / adad };
+    let wasat = Oklab {
+        l: majmu.0 / adad,
+        a: majmu.1 / adad,
+        b: majmu.2 / adad,
+    };
 
     let mut budhur = Vec::with_capacity(ADAD_ANAQID);
     let mut abad = *awwal;
@@ -1477,7 +1588,11 @@ fn dakhil_nitaq(qeema: f32) -> bool {
 /// Linear-light components to an interface colour.
 fn min_khatti_ila_lawn(ahmar: f32, akhdar: f32, azraq: f32) -> LawnBariz {
     let qanat = |qeema: f32| ila_bayt(rukkib_gamma(qeema.clamp(0.0, 1.0)) * 255.0);
-    LawnBariz { ahmar: qanat(ahmar), akhdar: qanat(akhdar), azraq: qanat(azraq) }
+    LawnBariz {
+        ahmar: qanat(ahmar),
+        akhdar: qanat(akhdar),
+        azraq: qanat(azraq),
+    }
 }
 
 /// The WCAG contrast ratio between two colours, from their relative luminance.
@@ -1555,14 +1670,20 @@ impl KhaziantSuwar {
             Ok(_) => {},
             Err(khata) if khata.kind() == std::io::ErrorKind::NotFound => return Ok(0),
             Err(sabab) => {
-                return Err(
-                    KhataMasarat::TaadhurQira { masar: self.jidhr.clone(), sabab }.into()
-                );
+                return Err(KhataMasarat::TaadhurQira {
+                    masar: self.jidhr.clone(),
+                    sabab,
+                }
+                .into());
             },
         }
 
         let mut majmu = 0_u64;
-        for madkhal in WalkDir::new(&self.jidhr).follow_links(false).into_iter().flatten() {
+        for madkhal in WalkDir::new(&self.jidhr)
+            .follow_links(false)
+            .into_iter()
+            .flatten()
+        {
             if !madkhal.file_type().is_file() {
                 continue;
             }
@@ -1608,16 +1729,25 @@ impl KhaziantSuwar {
         }
 
         let mut murashahat: Vec<(PathBuf, u64, SystemTime)> = Vec::new();
-        for madkhal in WalkDir::new(&self.jidhr).follow_links(false).into_iter().flatten() {
+        for madkhal in WalkDir::new(&self.jidhr)
+            .follow_links(false)
+            .into_iter()
+            .flatten()
+        {
             if !madkhal.file_type().is_file() {
                 continue;
             }
             let masar = madkhal.path();
-            let imtidad = masar.extension().and_then(std::ffi::OsStr::to_str).unwrap_or_default();
+            let imtidad = masar
+                .extension()
+                .and_then(std::ffi::OsStr::to_str)
+                .unwrap_or_default();
             if !IMTIDADAT.contains(&imtidad) {
                 continue;
             }
-            let Ok(bayanat) = madkhal.metadata() else { continue };
+            let Ok(bayanat) = madkhal.metadata() else {
+                continue;
+            };
             let waqt = bayanat
                 .accessed()
                 .or_else(|_| bayanat.modified())

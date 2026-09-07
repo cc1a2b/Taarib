@@ -53,11 +53,7 @@ pub struct MadkhalTahdith {
 /// signed by the committed development key — refused by that name, exactly as
 /// a dev-signed patch is — and [`KhataTahdith::TawqeeGhayrSalih`] when the
 /// signature does not verify against the anchor at all.
-pub fn ihlil(
-    matn: &[u8],
-    tawqee_hex: &str,
-    mirsa: &MirsatThiqa,
-) -> NatijatTahdith<BayanTahdith> {
+pub fn ihlil(matn: &[u8], tawqee_hex: &str, mirsa: &MirsatThiqa) -> NatijatTahdith<BayanTahdith> {
     let Some(tawqee) = min_hex::<64>(tawqee_hex) else {
         return Err(KhataTahdith::BayanTalif {
             sabab: "the detached signature is not 128 lowercase hex digits".to_owned(),
@@ -65,8 +61,7 @@ pub fn ihlil(
     };
 
     // An anchor that is not a canonical Ed25519 point can vouch for nothing.
-    let miftah = MiftahAam::min_bayt(&mirsa.miftah)
-        .map_err(|_| KhataTahdith::TawqeeGhayrSalih)?;
+    let miftah = MiftahAam::min_bayt(&mirsa.miftah).map_err(|_| KhataTahdith::TawqeeGhayrSalih)?;
 
     if !miftah.tahaqquq(matn, &tawqee) {
         // Identity-aware refusal: under a release anchor, a manifest the
@@ -81,8 +76,10 @@ pub fn ihlil(
         return Err(KhataTahdith::TawqeeGhayrSalih);
     }
 
-    let khaam: BayanKhaam = serde_json::from_slice(matn)
-        .map_err(|khata| KhataTahdith::BayanTalif { sabab: khata.to_string() })?;
+    let khaam: BayanKhaam =
+        serde_json::from_slice(matn).map_err(|khata| KhataTahdith::BayanTalif {
+            sabab: khata.to_string(),
+        })?;
 
     Ok(BayanTahdith {
         isdar: khaam.isdar,
@@ -203,7 +200,10 @@ fn juz_raqmi(juz: &str) -> Option<u64> {
 
 fn min_hex<const N: usize>(nass: &str) -> Option<[u8; N]> {
     // lowercase hex only — the canonical form
-    if !nass.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()) {
+    if !nass
+        .bytes()
+        .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+    {
         return None;
     }
     let mut khraj = [0u8; N];

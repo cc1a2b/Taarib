@@ -318,7 +318,12 @@ pub struct MustatilNisbi {
 
 impl MustatilNisbi {
     /// The whole surface.
-    pub const KAAMIL: Self = Self { yasar: 0.0, aala: 0.0, ard: 1.0, irtifa: 1.0 };
+    pub const KAAMIL: Self = Self {
+        yasar: 0.0,
+        aala: 0.0,
+        ard: 1.0,
+        irtifa: 1.0,
+    };
 
     /// A rectangle from its edges, clamped into range.
     ///
@@ -327,8 +332,16 @@ impl MustatilNisbi {
     /// rejecting the drag would be rejecting the obvious intent.
     #[must_use]
     pub fn min_hudud(yasar: f32, aala: f32, yameen: f32, asfal: f32) -> Self {
-        let (yasar, yameen) = if yasar <= yameen { (yasar, yameen) } else { (yameen, yasar) };
-        let (aala, asfal) = if aala <= asfal { (aala, asfal) } else { (asfal, aala) };
+        let (yasar, yameen) = if yasar <= yameen {
+            (yasar, yameen)
+        } else {
+            (yameen, yasar)
+        };
+        let (aala, asfal) = if aala <= asfal {
+            (aala, asfal)
+        } else {
+            (asfal, aala)
+        };
         let yasar = yasar.clamp(0.0, 1.0);
         let aala = aala.clamp(0.0, 1.0);
         Self {
@@ -384,7 +397,12 @@ impl MustatilNisbi {
         if araad == 0 || irtifaa == 0 {
             return None;
         }
-        Some(MustatilBiksel { yasar, aala, ard: araad, irtifa: irtifaa })
+        Some(MustatilBiksel {
+            yasar,
+            aala,
+            ard: araad,
+            irtifa: irtifaa,
+        })
     }
 }
 
@@ -427,9 +445,9 @@ impl MustatilBiksel {
     /// The byte length of a tightly packed copy in the given format.
     #[must_use]
     pub const fn tul_bayt(self, sigha: SighatSath) -> u64 {
-        self.adad_bikselat().saturating_mul(sigha.bayt_lil_biksel() as u64)
+        self.adad_bikselat()
+            .saturating_mul(sigha.bayt_lil_biksel() as u64)
     }
-
 }
 
 /// The overlay's per-frame time budget, in microseconds.
@@ -466,7 +484,12 @@ impl MeezaniyatItar {
     /// A fresh budget at the default ceiling.
     #[must_use]
     pub const fn jadeeda() -> Self {
-        Self { saqf_mikro: Self::SAQF_IFTIRADI, akhir_mikro: 0, matruka: 0, marsuma: 0 }
+        Self {
+            saqf_mikro: Self::SAQF_IFTIRADI,
+            akhir_mikro: 0,
+            matruka: 0,
+            marsuma: 0,
+        }
     }
 
     /// Whether this frame can afford the overlay.
@@ -528,7 +551,10 @@ impl LawhatRasm {
     /// An empty batch for a surface.
     #[must_use]
     pub const fn khaliya(sath: WasfSath) -> Self {
-        Self { qitaat: Vec::new(), sath }
+        Self {
+            qitaat: Vec::new(),
+            sath,
+        }
     }
 
     /// Whether there is anything to draw.
@@ -767,7 +793,10 @@ impl Tabaqa {
     /// cannot describe its surface or build its resources is torn down here
     /// rather than left half-initialized, and the caller gets the refusal.
     pub fn shaghghil(mut khattaf: Box<dyn Khattaf>, iqrar: Iqrar) -> Result<Self, KhataTabaqa> {
-        let mut athar = vec![iqrar.satr_sijill(), format!("backend: {}", khattaf.wajiha())];
+        let mut athar = vec![
+            iqrar.satr_sijill(),
+            format!("backend: {}", khattaf.wajiha()),
+        ];
         let sath = match khattaf.sath().and_then(|sath| {
             khattaf.hayyi(sath)?;
             Ok(sath)
@@ -780,7 +809,7 @@ impl Tabaqa {
                 // to handle exactly that.
                 let _ = khattaf.ahmil();
                 return Err(khata);
-            }
+            },
         };
         athar.push(format!(
             "surface {}×{} {}{}",
@@ -908,10 +937,11 @@ impl Tabaqa {
                 // that no longer exists.
                 self.sath = None;
                 return Err(khata);
-            }
+            },
         };
         if self.sath != Some(sath) {
-            self.athar.push(format!("surface changed to {}×{}", sath.ard, sath.irtifa));
+            self.athar
+                .push(format!("surface changed to {}×{}", sath.ard, sath.irtifa));
             self.khattaf.hayyi(sath)?;
             self.sath = Some(sath);
             // The batch in hand was positioned against the old surface. Drawing
@@ -933,20 +963,21 @@ impl Tabaqa {
             Ok(()) => {
                 self.meezaniya.sajjil_rasm(mikro);
                 Ok(())
-            }
+            },
             Err(khata @ KhataTabaqa::HalaGhayrMustaada { .. }) => {
                 // Terminal, and terminal immediately. The game is now drawing
                 // with state the overlay left behind, and every further frame
                 // compounds it. Nothing here retries.
                 self.hala = HalatTabaqa::Muattala;
-                self.athar.push(format!("disabled after a state fault: {khata}"));
+                self.athar
+                    .push(format!("disabled after a state fault: {khata}"));
                 let _ = self.khattaf.ahmil();
                 Err(khata)
-            }
+            },
             Err(khata) => {
                 self.meezaniya.sajjil_tark();
                 Err(khata)
-            }
+            },
         }
     }
 
@@ -975,7 +1006,8 @@ impl Tabaqa {
     /// that stopped drawing.
     pub fn qabl_taghyeer_hajm(&mut self) -> Result<(), KhataTabaqa> {
         self.sath = None;
-        self.athar.push("surface release requested before a resize".to_owned());
+        self.athar
+            .push("surface release requested before a resize".to_owned());
         self.khattaf.atliq_sath()
     }
 

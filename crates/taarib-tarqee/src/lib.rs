@@ -115,8 +115,7 @@ pub mod takhtit;
 pub mod taqrir_tajawuz;
 
 pub use crate::bawwaba::{
-    FarqHawiya, IthbatTawlid, KhattMujammaa, MuhtawaMasmuh, SafhatMasmuha, ShahadatBawwaba,
-    rassim,
+    FarqHawiya, IthbatTawlid, KhattMujammaa, MuhtawaMasmuh, SafhatMasmuha, ShahadatBawwaba, rassim,
 };
 pub use crate::bayan::{BayanHuzma, MUKHATTAT_BAYAN, MuharrikHuzma, SijillFuhus};
 pub use crate::fuhusat::{FashalTakhtit, IjtiyazFuhus, MudkhalatFahs, WasfHuzma, ijri};
@@ -125,6 +124,7 @@ pub use crate::irtibat::{
 };
 pub use crate::khata::{KhataTarqee, SababMasar};
 pub use crate::mujammi::{HuzmaMabniya, MudkhalatTajmee, TawhidTarjama, ijmaa};
+pub use crate::taghtiya_ruqaa::{TaqrirTaghtiya, ihsib_taghtiya};
 pub use crate::tahdid_maqasat::{HajmMuqannan, IktishafMaqasat, TaqreerMaqasat};
 pub use crate::tahweel::SiyasatHuzma;
 pub use crate::takhtit::{KhiyaratTasbeeq, MizaniyatIqama, SiyasatNamu, TakhtitMusbaq, sabbiq};
@@ -132,4 +132,3 @@ pub use crate::taqrir_tajawuz::{
     BaniTaqrirTajawuz, HalatQiyasTajawuz, MudkhalQiyas, NawAdamAltahaqquq, SababAdamAltahaqquq,
     ShiddatTajawuz, TaqrirTajawuz,
 };
-pub use crate::taghtiya_ruqaa::{TaqrirTaghtiya, ihsib_taghtiya};

@@ -131,13 +131,19 @@ impl<'a> IdhnNusus<'a> {
     /// The permit a deployment plan carries.
     #[must_use]
     pub fn min_khutta(mukhattat: &'a KhuttatTarkib) -> Self {
-        Self { qarar: mukhattat.qarar(), khatt_renpy: mukhattat.khatt_renpy.as_deref() }
+        Self {
+            qarar: mukhattat.qarar(),
+            khatt_renpy: mukhattat.khatt_renpy.as_deref(),
+        }
     }
 
     /// The permit an install that deploys nothing carries.
     #[must_use]
     pub const fn min_qarar(qarar: QararTabaqa) -> Self {
-        Self { qarar, khatt_renpy: None }
+        Self {
+            qarar,
+            khatt_renpy: None,
+        }
     }
 
     /// The decision itself.
@@ -186,7 +192,13 @@ impl<'a> Nashir<'a> {
         ruqaa: &'a MalafRuqaa,
         jidhr_luba: &'a Path,
     ) -> Self {
-        Self { muthabbit, ruqaa, jidhr_luba, qarar: None, nusus: None }
+        Self {
+            muthabbit,
+            ruqaa,
+            jidhr_luba,
+            qarar: None,
+            nusus: None,
+        }
     }
 
     /// The recorder, for the deployment's own writes.
@@ -205,17 +217,18 @@ impl<'a> Nashir<'a> {
     /// # Errors
     ///
     /// Whatever [`raqqi_nusus`] raises.
-    pub fn raqqi(
-        &mut self,
-        idhn: IdhnNusus<'_>,
-        mukawwinat: Option<&Path>,
-    ) -> NatijatTathbeet<()> {
+    pub fn raqqi(&mut self, idhn: IdhnNusus<'_>, mukawwinat: Option<&Path>) -> NatijatTathbeet<()> {
         if self.qarar.is_some() {
             return Ok(());
         }
         self.qarar = Some(idhn.qarar());
-        self.nusus =
-            raqqi_nusus(idhn, self.jidhr_luba, self.ruqaa, mukawwinat, self.muthabbit)?;
+        self.nusus = raqqi_nusus(
+            idhn,
+            self.jidhr_luba,
+            self.ruqaa,
+            mukawwinat,
+            self.muthabbit,
+        )?;
         Ok(())
     }
 
@@ -289,14 +302,19 @@ pub struct HafizMuthabbit<'a> {
 // thing it holds that is its own.
 impl std::fmt::Debug for HafizMuthabbit<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("HafizMuthabbit").field("khata", &self.khata).finish_non_exhaustive()
+        f.debug_struct("HafizMuthabbit")
+            .field("khata", &self.khata)
+            .finish_non_exhaustive()
     }
 }
 
 impl<'a> HafizMuthabbit<'a> {
     /// Wraps a recorder for the duration of one script-engine write.
     pub fn jadeed(muthabbit: &'a mut dyn Muthabbit) -> Self {
-        Self { muthabbit, khata: None }
+        Self {
+            muthabbit,
+            khata: None,
+        }
     }
 
     /// The real refusal, when one was raised while crossing.
@@ -310,7 +328,10 @@ impl<'a> HafizMuthabbit<'a> {
         natija.map_err(|khata| {
             let sabab = khata.injilizi();
             self.khata = Some(khata);
-            KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab: io::Error::other(sabab) }
+            KhataNusus::KhataMalaf {
+                masar: masar.to_path_buf(),
+                sabab: io::Error::other(sabab),
+            }
         })
     }
 }
@@ -399,7 +420,9 @@ pub fn raqqi_nusus(
         return Ok(None);
     };
 
-    let mafateeh = ruqaa.ruqaa().map_err(|khata| marfud(jidhr_luba, &khata.to_string()))?;
+    let mafateeh = ruqaa
+        .ruqaa()
+        .map_err(|khata| marfud(jidhr_luba, &khata.to_string()))?;
     if !mafateeh.yahwi(NawQism::Nusus) {
         return Ok(None);
     }
@@ -409,7 +432,8 @@ pub fn raqqi_nusus(
     // The section's own bytes, never the whole file: every table reader here
     // parses a preamble at the start of what it is handed, and handed the
     // package it would read the file header as one.
-    let jadwal = qari::nusus(qism.bayt()).map_err(|khata| marfud(jidhr_luba, &khata.to_string()))?;
+    let jadwal =
+        qari::nusus(qism.bayt()).map_err(|khata| marfud(jidhr_luba, &khata.to_string()))?;
     if jadwal.khali() {
         return Ok(None);
     }
@@ -427,7 +451,10 @@ pub fn raqqi_nusus(
         AilatMuharrik::Renpy => idhn.khatt_renpy,
         _ => None,
     };
-    let mawarid = Mawarid { tashghil_ghilaf: tashghil.as_deref(), khatt_renpy: khatt };
+    let mawarid = Mawarid {
+        tashghil_ghilaf: tashghil.as_deref(),
+        khatt_renpy: khatt,
+    };
 
     let mutarjim = MutarjimRuqaa::jadeed(jadwal);
     let mut hafiz = HafizMuthabbit::jadeed(muthabbit);
@@ -435,7 +462,9 @@ pub fn raqqi_nusus(
         Ok(taqreer) => Ok(taqreer),
         // The recorder's own refusal outranks the restatement of it: it carries
         // the permanent code, the path and the remedy.
-        Err(khata) => Err(hafiz.khata().unwrap_or_else(|| marfud(jidhr_luba, &khata.injilizi()))),
+        Err(khata) => Err(hafiz
+            .khata()
+            .unwrap_or_else(|| marfud(jidhr_luba, &khata.injilizi()))),
     }
 }
 
@@ -469,11 +498,13 @@ fn iqra_tashghil(jidhr_makhzan: &Path) -> Option<NatijatTathbeet<String>> {
             saqf: AQSA_TASHGHIL,
         }));
     }
-    Some(std::fs::read_to_string(&masar).map_err(|sabab| KhataTathbeet::KhataMalaf {
-        masar,
-        amal: "reading the compiled Electron renderer runtime from the component store",
-        sabab,
-    }))
+    Some(
+        std::fs::read_to_string(&masar).map_err(|sabab| KhataTathbeet::KhataMalaf {
+            masar,
+            amal: "reading the compiled Electron renderer runtime from the component store",
+            sabab,
+        }),
+    )
 }
 
 /// The component store this machine resolves to, when it resolves to one.
@@ -497,5 +528,8 @@ pub fn makhzan_mukawwinat() -> Option<PathBuf> {
 
 /// The refusal this module raises when the write could not be attempted.
 fn marfud(jidhr: &Path, sabab: &str) -> KhataTathbeet {
-    KhataTathbeet::NususMarfuda { masar: jidhr.to_path_buf(), sabab: sabab.to_owned() }
+    KhataTathbeet::NususMarfuda {
+        masar: jidhr.to_path_buf(),
+        sabab: sabab.to_owned(),
+    }
 }

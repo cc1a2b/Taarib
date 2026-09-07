@@ -13,21 +13,17 @@ use taarib_kashf::lugha_rasmiya::{
     TalabLugha,
 };
 use taarib_kashf::matajir::MatjarSteam;
-use taarib_mustalahat::luba::{
-    DaleelLugha, HalatLughaRasmiya, HukmLughaRasmiya, NawDaleelLugha,
-};
-use taarib_makhzan::sijillat::{
-    SijillAlaab, SijillMuharrik, SijillTathbeet, SimaMukhzana, sima,
-};
+use taarib_makhzan::sijillat::{SijillAlaab, SijillMuharrik, SijillTathbeet, SimaMukhzana, sima};
 use taarib_makhzan::wasl::{Makhzan, alaan};
-use taarib_mustalahat::bina::BinaId;
-use taarib_mustalahat::luba::{LawnBariz, Luba, LubaId, MasdarLuba};
+use taarib_muharrik::fahs::SiyaqFahs;
+use taarib_muharrik::{ISDAR_FAHS, Mifhas};
 use taarib_muhawwil_unreal::mawarid::{Mawrid as _, iostore, locmeta, locres, pak};
+use taarib_mustalahat::bina::BinaId;
+use taarib_mustalahat::luba::{DaleelLugha, HalatLughaRasmiya, HukmLughaRasmiya, NawDaleelLugha};
+use taarib_mustalahat::luba::{LawnBariz, Luba, LubaId, MasdarLuba};
 use taarib_mustalahat::muharrik::{
     AilatMuharrik, Daleel, KhalfiyaBarmajiya, NawDaleel, Tabaqa, TaqreerImkaniyat,
 };
-use taarib_muharrik::fahs::SiyaqFahs;
-use taarib_muharrik::{ISDAR_FAHS, Mifhas};
 use taarib_tathbeet::bayan::{NawTathbeet, Tathbeet};
 use taarib_usus::idadat::{Idadat, MakhzanIdadat};
 use taarib_usus::khata::{
@@ -253,8 +249,15 @@ pub fn tafasil_luba(
         muarrif: id.to_string(),
         ism: luba.ism.clone(),
         jidhr: luba.jidhr.to_string_lossy().into_owned(),
-        tanfidhi: luba.tanfidhi.as_ref().map(|q| q.to_string_lossy().into_owned()),
-        manassat: luba.masadir.iter().map(|q| q.ism_arabi().to_owned()).collect(),
+        tanfidhi: luba
+            .tanfidhi
+            .as_ref()
+            .map(|q| q.to_string_lossy().into_owned()),
+        manassat: luba
+            .masadir
+            .iter()
+            .map(|q| q.ism_arabi().to_owned())
+            .collect(),
         // The stored value is a content-addressed cache key, not a path and
         // not a URL. Handed to the interface as-is it becomes the `src` of an
         // `<img>`, which the webview resolves against the document origin and
@@ -392,7 +395,11 @@ pub fn huwiya(muarrif: String) -> Natija<LubaId> {
 pub fn ijlib_luba(makhzan: &Makhzan, id: LubaId) -> Natija<Luba> {
     makhzan
         .bil_qira(|ittisal| SijillAlaab::jadeed(ittisal).wahida(id))?
-        .ok_or_else(|| Khata::from(KhataLuba::LubaMafquda { muarrif: id.to_string() }))
+        .ok_or_else(|| {
+            Khata::from(KhataLuba::LubaMafquda {
+                muarrif: id.to_string(),
+            })
+        })
 }
 
 /// The launcher metadata hints recorded for one game, in the probe's vocabulary.
@@ -537,7 +544,9 @@ fn hasm_jidhr_steam(
     ism: &str,
 ) -> Natija<Option<PathBuf>> {
     if jidhr.is_none() && appid.is_some() {
-        return Err(Khata::from(KhataLuba::JidhrSteamMajhul { ism: ism.to_owned() }));
+        return Err(Khata::from(KhataLuba::JidhrSteamMajhul {
+            ism: ism.to_owned(),
+        }));
     }
     Ok(jidhr)
 }
@@ -660,14 +669,10 @@ fn simat_min_makhzan(mukhzana: &[SimaMukhzana]) -> Vec<SimatLuba> {
         .filter_map(|wahida| match wahida.naw.as_str() {
             sima::JAMAI_MAHALLI => Some(SimatLuba::JamaiMahalli),
             sima::JAMAI_ONLINE => Some(SimatLuba::JamaiOnline),
-            sima::HIMAYA_MUHTAMALA => {
-                Some(SimatLuba::HimayaMuhtamala(wahida.qeema.clone()))
-            }
+            sima::HIMAYA_MUHTAMALA => Some(SimatLuba::HimayaMuhtamala(wahida.qeema.clone())),
             sima::MUAMMANA_VAC => Some(SimatLuba::MuammanaVac),
             sima::LAYSAT_LUBA => Some(SimatLuba::LaysatLuba(wahida.qeema.clone())),
-            sima::TABAQAT_TAWAFUQ => {
-                Some(SimatLuba::TabaqatTawafuq(wahida.qeema.clone()))
-            }
+            sima::TABAQAT_TAWAFUQ => Some(SimatLuba::TabaqatTawafuq(wahida.qeema.clone())),
             _ => None,
         })
         .collect()
@@ -704,17 +709,17 @@ const fn sharh_injilizi(tabaqa: Tabaqa) -> &'static str {
         Tabaqa::Kamil => {
             "The game's own text is replaced from the inside. Menus, dialogue and \
              interface appear in Arabic as though the game had been built that way."
-        }
+        },
         Tabaqa::RasmMubashir => {
             "Taarib draws the text itself over the game's own text objects. The result \
              looks native in most cases, and the effects the game applies to its text \
              are reproduced by Taarib rather than lost."
-        }
+        },
         Tabaqa::TarjamaFawqiya => {
             "The game is not modified at all. Taarib reads what is on screen and shows \
              Arabic over it. This is a reading aid, not a translation installed inside \
              the game."
-        }
+        },
     }
 }
 
@@ -729,9 +734,21 @@ fn taqreer_hie(taqreer: &TaqreerImkaniyat) -> TaqreerHie {
         sharh_injilizi: sharh_injilizi(taqreer.tabaqa).to_owned(),
         sabab_arabi: taqreer.sabab_arabi.clone(),
         sabab_injilizi: taqreer.sabab_injilizi.clone(),
-        anzimat: taqreer.anzimat_qabila.iter().map(|q| q.wasf_arabi().to_owned()).collect(),
-        hudud: taqreer.hudud.iter().map(|hadd| hadd.arabi.clone()).collect(),
-        hudud_injilizi: taqreer.hudud.iter().map(|hadd| hadd.injilizi.clone()).collect(),
+        anzimat: taqreer
+            .anzimat_qabila
+            .iter()
+            .map(|q| q.wasf_arabi().to_owned())
+            .collect(),
+        hudud: taqreer
+            .hudud
+            .iter()
+            .map(|hadd| hadd.arabi.clone())
+            .collect(),
+        hudud_injilizi: taqreer
+            .hudud
+            .iter()
+            .map(|hadd| hadd.injilizi.clone())
+            .collect(),
         marfuda: taqreer.marfuda,
         // The machine name rather than the enum: this crossing is already a
         // string for every other verdict on this record, and the interface
@@ -768,7 +785,11 @@ fn himaya_hie(ijmaa: &IjmaaHimaya, faqad_matjar: bool) -> HimayaHie {
     }
     HimayaHie {
         mahmiya: kashf_himaya::mahmiya(ijmaa),
-        anwa: ijmaa.anwa().into_iter().map(|naw| naw.arabi().to_owned()).collect(),
+        anwa: ijmaa
+            .anwa()
+            .into_iter()
+            .map(|naw| naw.arabi().to_owned())
+            .collect(),
         adilla: ijmaa.adilla.iter().map(DaleelHimaya::arabi).collect(),
         thughrat,
         mabtur: ijmaa.mabtur,
@@ -848,8 +869,11 @@ const MUJALLAD_MUHARRIK: &str = "Engine/";
 
 /// Whether a string carries Arabic script.
 fn fihi_arabi(nass: &str) -> bool {
-    nass.chars()
-        .any(|harf| NITAQAT_ARABIYA.iter().any(|(min, ila)| (*min..=*ila).contains(&harf)))
+    nass.chars().any(|harf| {
+        NITAQAT_ARABIYA
+            .iter()
+            .any(|(min, ila)| (*min..=*ila).contains(&harf))
+    })
 }
 
 /// A count that cannot be represented is reported as the ceiling rather than
@@ -921,7 +945,10 @@ fn hadaf_wa_thaqafa(masar: &str) -> Option<(String, String)> {
     let ajza: Vec<&str> = masar.split('/').collect();
     let akhir = ajza.len().checked_sub(2)?;
     let qabl = ajza.len().checked_sub(3)?;
-    Some(((*ajza.get(qabl)?).to_owned(), (*ajza.get(akhir)?).to_owned()))
+    Some((
+        (*ajza.get(qabl)?).to_owned(),
+        (*ajza.get(akhir)?).to_owned(),
+    ))
 }
 
 /// The localization target a `.locmeta` describes, taken from its directory.
@@ -964,7 +991,7 @@ impl MassahUnreal {
                     masar.display()
                 ));
                 return;
-            }
+            },
         };
         // A pruned index names no files, so the container is present and
         // unreadable rather than present and empty — a distinction the verdict
@@ -978,8 +1005,11 @@ impl MassahUnreal {
             return;
         }
 
-        let ism_hawiya =
-            masar.file_name().and_then(std::ffi::OsStr::to_str).unwrap_or_default().to_owned();
+        let ism_hawiya = masar
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .unwrap_or_default()
+            .to_owned();
         let mut manifests: BTreeMap<String, Vec<String>> = BTreeMap::new();
         let asma_meta: Vec<String> = hawiya.masarat_locmeta().map(str::to_owned).collect();
         for asl in asma_meta {
@@ -1000,7 +1030,9 @@ impl MassahUnreal {
                 continue;
             };
             let Ok(bayt) = hawiya.iqra_masar(&asl) else {
-                majhul.push(format!("{munaddaf} could not be decompressed out of {ism_hawiya}"));
+                majhul.push(format!(
+                    "{munaddaf} could not be decompressed out of {ism_hawiya}"
+                ));
                 continue;
             };
             let Some((adad, arabi)) = ihsi_locres(&bayt) else {
@@ -1033,14 +1065,19 @@ impl MassahUnreal {
                     masar.display()
                 ));
                 return;
-            }
+            },
         };
 
-        let ism_hawiya =
-            masar.file_name().and_then(std::ffi::OsStr::to_str).unwrap_or_default().to_owned();
+        let ism_hawiya = masar
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .unwrap_or_default()
+            .to_owned();
         let mut manifests: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        let asma_meta: Vec<String> =
-            hawiya.masarat_locmeta().map(|(dakhili, _)| dakhili.to_owned()).collect();
+        let asma_meta: Vec<String> = hawiya
+            .masarat_locmeta()
+            .map(|(dakhili, _)| dakhili.to_owned())
+            .collect();
         for asl in asma_meta {
             if let Ok(bayt) = hawiya.iqra_masar(&asl)
                 && let Ok(bayan) = locmeta::MawridLocmeta::min_bayt(&bayt)
@@ -1052,15 +1089,19 @@ impl MassahUnreal {
             }
         }
 
-        let asma_res: Vec<String> =
-            hawiya.masarat_locres().map(|(dakhili, _)| dakhili.to_owned()).collect();
+        let asma_res: Vec<String> = hawiya
+            .masarat_locres()
+            .map(|(dakhili, _)| dakhili.to_owned())
+            .collect();
         for asl in asma_res {
             let munaddaf = masar_nazeef(&asl);
             let Some((hadaf, thaqafa)) = hadaf_wa_thaqafa(&munaddaf) else {
                 continue;
             };
             let Ok(bayt) = hawiya.iqra_masar(&asl) else {
-                majhul.push(format!("{munaddaf} could not be decompressed out of {ism_hawiya}"));
+                majhul.push(format!(
+                    "{munaddaf} could not be decompressed out of {ism_hawiya}"
+                ));
                 continue;
             };
             let Some((adad, arabi)) = ihsi_locres(&bayt) else {
@@ -1080,7 +1121,9 @@ impl MassahUnreal {
 
     /// Every container this build carries, or nothing when it is not Unreal.
     fn hawiyat(jidhr: &Path) -> Vec<PathBuf> {
-        taarib_muhawwil_unreal::afhas(jidhr).map(|bina| bina.hawiyat).unwrap_or_default()
+        taarib_muhawwil_unreal::afhas(jidhr)
+            .map(|bina| bina.hawiyat)
+            .unwrap_or_default()
     }
 }
 
@@ -1096,7 +1139,7 @@ impl FahisMawarid for MassahUnreal {
             match hawiya.extension().and_then(std::ffi::OsStr::to_str) {
                 Some("pak") => Self::min_pak(&hawiya, &mut hasilat, &mut mahdur),
                 Some("utoc") => Self::min_iostore(&hawiya, &mut hasilat, &mut mahdur),
-                _ => {}
+                _ => {},
             }
         }
         mawarid_min_hasilat(hasilat, "Unreal")
@@ -1112,7 +1155,7 @@ impl FahisMawarid for MassahUnreal {
             match hawiya.extension().and_then(std::ffi::OsStr::to_str) {
                 Some("pak") => Self::min_pak(&hawiya, &mut hasilat, &mut mahdur),
                 Some("utoc") => Self::min_iostore(&hawiya, &mut hasilat, &mut mahdur),
-                _ => {}
+                _ => {},
             }
         }
         mahdur
@@ -1161,7 +1204,9 @@ impl FahisMawarid for MassahUnity {
             let Some(majmua) = majmuat_unity(asas).filter(|_| !lugha.is_empty()) else {
                 continue;
             };
-            let khana = majmuat.entry((majmua, lugha.to_lowercase())).or_insert((0, 0));
+            let khana = majmuat
+                .entry((majmua, lugha.to_lowercase()))
+                .or_insert((0, 0));
             khana.0 = khana.0.saturating_add(1);
             if fihi_arabi(&madkhal.khaam) {
                 khana.1 = khana.1.saturating_add(1);
@@ -1223,11 +1268,14 @@ impl FahisMawarid for MassahUnity {
 
 /// The `<Game>_Data` directory a Unity build keeps its assemblies under.
 fn mujallad_bayanat_unity(jidhr: &Path) -> Option<PathBuf> {
-    std::fs::read_dir(jidhr).ok()?.flatten().find_map(|madkhal| {
-        let masar = madkhal.path();
-        let ism = madkhal.file_name().to_string_lossy().into_owned();
-        (ism.ends_with("_Data") && masar.is_dir()).then_some(masar)
-    })
+    std::fs::read_dir(jidhr)
+        .ok()?
+        .flatten()
+        .find_map(|madkhal| {
+            let masar = madkhal.path();
+            let ism = madkhal.file_name().to_string_lossy().into_owned();
+            (ism.ends_with("_Data") && masar.is_dir()).then_some(masar)
+        })
 }
 
 /// Everything one process remembers about official Arabic.
@@ -1299,13 +1347,15 @@ fn masdar_lil_hukm(luba: &Luba) -> MasdarLuba {
 #[must_use]
 pub fn hukm_sathi(luba: &Luba, lughat: Option<&LughatMuallana>) -> HukmLughaRasmiya {
     let masdar = masdar_lil_hukm(luba);
-    Fahis::jadeed().bi_khazina(&DHAKIRA.sathiya).ifhas(&TalabLugha {
-        luba: luba.id,
-        masdar: &masdar,
-        jidhr: &luba.jidhr,
-        bina: luba.bina.as_ref().and_then(|bina| bina.manassa.as_deref()),
-        lughat,
-    })
+    Fahis::jadeed()
+        .bi_khazina(&DHAKIRA.sathiya)
+        .ifhas(&TalabLugha {
+            luba: luba.id,
+            masdar: &masdar,
+            jidhr: &luba.jidhr,
+            bina: luba.bina.as_ref().and_then(|bina| bina.manassa.as_deref()),
+            lughat,
+        })
 }
 
 /// The full verdict for one game, engine containers included.
@@ -1319,13 +1369,16 @@ pub fn hukm_amiq(luba: &Luba, lughat: Option<&LughatMuallana>) -> HukmLughaRasmi
     let unity = MassahUnity;
     let massah: [&dyn FahisMawarid; 2] = [&unreal, &unity];
     let masdar = masdar_lil_hukm(luba);
-    Fahis::jadeed().bi_massah(&massah).bi_khazina(&DHAKIRA.amiqa).ifhas(&TalabLugha {
-        luba: luba.id,
-        masdar: &masdar,
-        jidhr: &luba.jidhr,
-        bina: luba.bina.as_ref().and_then(|bina| bina.manassa.as_deref()),
-        lughat,
-    })
+    Fahis::jadeed()
+        .bi_massah(&massah)
+        .bi_khazina(&DHAKIRA.amiqa)
+        .ifhas(&TalabLugha {
+            luba: luba.id,
+            masdar: &masdar,
+            jidhr: &luba.jidhr,
+            bina: luba.bina.as_ref().and_then(|bina| bina.manassa.as_deref()),
+            lughat,
+        })
 }
 
 /// The best verdict this process already holds for one game, without computing
@@ -1527,12 +1580,12 @@ impl Tafsir for KhataLuba {
                 "المعرّف المطلوب ليس معرّف لعبة يصدره تعريب. أعد فحص المكتبة ثم افتح اللعبة \
                  من جديد."
                     .to_owned()
-            }
+            },
             Self::LubaMafquda { .. } => {
                 "لم تعد هذه اللعبة في مكتبة تعريب. ربما حُذفت من مشغّلها بعد آخر فحص؛ أعد \
                  فحص المكتبة."
                     .to_owned()
-            }
+            },
             Self::LubaGhayrMawjuda { ism, jidhr } => format!(
                 "لم يعد مجلد {ism} موجودًا في {}. لا يمكن فحص محرّك لعبة ليست على القرص؛ \
                  أعد تثبيتها من مشغّلها أو دلّ تعريب على مكانها الجديد.",
@@ -1551,7 +1604,7 @@ impl Tafsir for KhataLuba {
         match self {
             Self::MuarrifGhayrSalih { muarrif } => {
                 format!("{muarrif} is not a game identity Taarib issues. Rescan the library.")
-            }
+            },
             Self::LubaMafquda { muarrif } => format!(
                 "No game in the library is {muarrif} any more. It was probably removed from \
                  its launcher after the last scan; rescan the library."
@@ -1574,17 +1627,15 @@ impl Tafsir for KhataLuba {
 
     fn khutwa(&self) -> Khutwa {
         match self {
-            Self::MuarrifGhayrSalih { .. } | Self::LubaMafquda { .. } => {
-                Khutwa::AadaFahsMaktaba
-            }
-            Self::LubaGhayrMawjuda { .. } => {
-                Khutwa::IkhtiyarMasar { matlub: MasarMatlub::MujalladLuba }
-            }
+            Self::MuarrifGhayrSalih { .. } | Self::LubaMafquda { .. } => Khutwa::AadaFahsMaktaba,
+            Self::LubaGhayrMawjuda { .. } => Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MujalladLuba,
+            },
             // The launcher-locations section, which is where the override that
             // makes this answerable is typed.
-            Self::JidhrSteamMajhul { .. } => {
-                Khutwa::FathIdadat { qism: QismIdadat::Manassat }
-            }
+            Self::JidhrSteamMajhul { .. } => Khutwa::FathIdadat {
+                qism: QismIdadat::Manassat,
+            },
         }
     }
 
@@ -1593,14 +1644,14 @@ impl Tafsir for KhataLuba {
         match self {
             Self::MuarrifGhayrSalih { muarrif } | Self::LubaMafquda { muarrif } => {
                 let _ = siyaq.insert("muarrif".to_owned(), QeemaSiyaq::Nass(muarrif.clone()));
-            }
+            },
             Self::LubaGhayrMawjuda { ism, jidhr } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
                 let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
-            }
+            },
             Self::JidhrSteamMajhul { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-            }
+            },
         }
         siyaq
     }
@@ -1682,7 +1733,10 @@ mod ikhtibarat {
     /// Settings with one launcher override set and nothing else.
     fn idadat_bi_tajawuz(steam: Option<PathBuf>) -> Idadat {
         Idadat {
-            manassat: IdadatManassat { steam, ..IdadatManassat::default() },
+            manassat: IdadatManassat {
+                steam,
+                ..IdadatManassat::default()
+            },
             ..Idadat::default()
         }
     }
@@ -1813,8 +1867,16 @@ mod ikhtibarat {
         let hie = himaya_hie(&ijmaa, true);
 
         assert_eq!(hie.thughrat.len(), 2);
-        assert!(hie.thughrat.iter().any(|satr| satr.contains("not a directory")));
-        assert!(hie.thughrat.iter().any(|satr| satr == THUGHRAT_MATJAR_STEAM));
+        assert!(
+            hie.thughrat
+                .iter()
+                .any(|satr| satr.contains("not a directory"))
+        );
+        assert!(
+            hie.thughrat
+                .iter()
+                .any(|satr| satr == THUGHRAT_MATJAR_STEAM)
+        );
     }
 
     /// Both multiplayer hints raise the question, and nothing else does.
@@ -1856,9 +1918,8 @@ mod ikhtibarat {
     /// shown a sentence with no Arabic in it, rather than the Arabic one under
     /// an English heading.
     fn fiha_arabi(nass: &str) -> bool {
-        nass.chars().any(|harf| {
-            matches!(harf, '\u{0600}'..='\u{06ff}' | '\u{0750}'..='\u{077f}')
-        })
+        nass.chars()
+            .any(|harf| matches!(harf, '\u{0600}'..='\u{06ff}' | '\u{0750}'..='\u{077f}'))
     }
 
     /// One identified engine, with nothing invented beyond the family.
@@ -1893,7 +1954,11 @@ mod ikhtibarat {
     /// what made this record the odd one out rather than a consistent choice.
     #[test]
     fn bitaqat_altabaqa_tasil_bil_lughatayn() {
-        for aila in [AilatMuharrik::Unity, AilatMuharrik::Renpy, AilatMuharrik::Majhul] {
+        for aila in [
+            AilatMuharrik::Unity,
+            AilatMuharrik::Renpy,
+            AilatMuharrik::Majhul,
+        ] {
             let asli = taqreer_ikhtibar(aila, KhalfiyaBarmajiya::Majhula);
             let hie = taqreer_hie(&asli);
 
@@ -1916,7 +1981,10 @@ mod ikhtibarat {
         for tabaqa in [Tabaqa::Kamil, Tabaqa::RasmMubashir, Tabaqa::TarjamaFawqiya] {
             let injilizi = sharh_injilizi(tabaqa);
             assert!(!injilizi.is_empty(), "{tabaqa:?}");
-            assert!(!fiha_arabi(injilizi), "an English explanation holds no Arabic: {injilizi}");
+            assert!(
+                !fiha_arabi(injilizi),
+                "an English explanation holds no Arabic: {injilizi}"
+            );
             assert!(fiha_arabi(tabaqa.sharh_arabi()), "{tabaqa:?}");
         }
 

@@ -20,29 +20,29 @@ use core::ffi::c_void;
 use crate::khata::NatijatHaqn;
 
 /// The NT headers of a module of this process's width.
-#[cfg(all(windows, target_pointer_width = "64"))]
-use windows::Win32::System::Diagnostics::Debug::IMAGE_NT_HEADERS64 as RaasNt;
-/// The NT headers of a module of this process's width.
 #[cfg(all(windows, target_pointer_width = "32"))]
 use windows::Win32::System::Diagnostics::Debug::IMAGE_NT_HEADERS32 as RaasNt;
+/// The NT headers of a module of this process's width.
+#[cfg(all(windows, target_pointer_width = "64"))]
+use windows::Win32::System::Diagnostics::Debug::IMAGE_NT_HEADERS64 as RaasNt;
 
+/// The bit that marks an import as by-ordinal rather than by-name.
+#[cfg(all(windows, target_pointer_width = "32"))]
+use windows::Win32::System::SystemServices::IMAGE_ORDINAL_FLAG32 as ALAM_TARTEEBI;
 /// The bit that marks an import as by-ordinal rather than by-name, at this
 /// process's thunk width.
 #[cfg(all(windows, target_pointer_width = "64"))]
 use windows::Win32::System::SystemServices::IMAGE_ORDINAL_FLAG64 as ALAM_TARTEEBI;
-/// The bit that marks an import as by-ordinal rather than by-name.
-#[cfg(all(windows, target_pointer_width = "32"))]
-use windows::Win32::System::SystemServices::IMAGE_ORDINAL_FLAG32 as ALAM_TARTEEBI;
 
+/// One entry of an import thunk array, at this process's width.
+#[cfg(all(windows, target_pointer_width = "32"))]
+use windows::Win32::System::WindowsProgramming::IMAGE_THUNK_DATA32 as Thunk;
 /// One entry of an import thunk array, at this process's width.
 ///
 /// The thunk is the one import-table type the bindings file under
 /// `WindowsProgramming` rather than beside the descriptor it belongs to.
 #[cfg(all(windows, target_pointer_width = "64"))]
 use windows::Win32::System::WindowsProgramming::IMAGE_THUNK_DATA64 as Thunk;
-/// One entry of an import thunk array, at this process's width.
-#[cfg(all(windows, target_pointer_width = "32"))]
-use windows::Win32::System::WindowsProgramming::IMAGE_THUNK_DATA32 as Thunk;
 
 /// One redirected import, and what to put back.
 #[derive(Debug)]
@@ -120,7 +120,9 @@ pub unsafe fn ikhtif_istirad(
     // point before the image, which is a header this reader refuses rather than
     // an offset it applies.
     let Ok(izahat_nt) = usize::try_from(dos.e_lfanew) else {
-        return Err(raas_ghayr("the DOS header's offset to the NT headers is negative"));
+        return Err(raas_ghayr(
+            "the DOS header's offset to the NT headers is negative",
+        ));
     };
     // SAFETY: `e_lfanew` is the header's own offset to the NT headers, inside
     // the same mapped image.
@@ -129,10 +131,15 @@ pub unsafe fn ikhtif_istirad(
         return Err(raas_ghayr("the NT headers carry no PE signature"));
     }
 
-    let Some(dalil) =
-        nt.OptionalHeader.DataDirectory.get(IMAGE_DIRECTORY_ENTRY_IMPORT.0 as usize).copied()
+    let Some(dalil) = nt
+        .OptionalHeader
+        .DataDirectory
+        .get(IMAGE_DIRECTORY_ENTRY_IMPORT.0 as usize)
+        .copied()
     else {
-        return Err(raas_ghayr("the optional header has no import entry in its data directory"));
+        return Err(raas_ghayr(
+            "the optional header has no import entry in its data directory",
+        ));
     };
     if dalil.VirtualAddress == 0 || dalil.Size == 0 {
         return Err(raas_ghayr("the module has no import directory"));
@@ -164,7 +171,11 @@ pub unsafe fn ikhtif_istirad(
             // are the only array there is.
             // SAFETY: both RVAs are inside the mapped image.
             let rva_asma = unsafe { hali.Anonymous.OriginalFirstThunk };
-            let rva_asma = if rva_asma == 0 { hali.FirstThunk } else { rva_asma };
+            let rva_asma = if rva_asma == 0 {
+                hali.FirstThunk
+            } else {
+                rva_asma
+            };
             // SAFETY: as above.
             let asma = unsafe { min_rva(qaida, rva_asma) }?.cast::<Thunk>();
             // SAFETY: as above.
@@ -202,7 +213,12 @@ pub unsafe fn ikhtif_istirad(
                         let kamil = format!("{wahda}!{ism}");
                         // SAFETY: as above.
                         unsafe { iktub_muashir(khana, badil, asli, &kamil) }?;
-                        return Ok(IstiradMakhtuf { khana, asli, badil, ism: kamil });
+                        return Ok(IstiradMakhtuf {
+                            khana,
+                            asli,
+                            badil,
+                            ism: kamil,
+                        });
                     }
                 }
                 fihris = fihris.saturating_add(1);
@@ -272,7 +288,9 @@ pub const unsafe fn ikhtif_istirad(
     _ism: &str,
     _badil: *mut c_void,
 ) -> NatijatHaqn<IstiradMakhtuf> {
-    Err(crate::khata::KhataHaqn::GhayrMutahaHuna { amal: "import table redirection" })
+    Err(crate::khata::KhataHaqn::GhayrMutahaHuna {
+        amal: "import table redirection",
+    })
 }
 
 /// Puts a redirected import back, unless something else took the slot.
@@ -344,13 +362,18 @@ mod ikhtibarat {
         // the walk returns before any write because no import carries this
         // name — `badil` is never installed anywhere.
         let natija = unsafe {
-            ikhtif_istirad(qaida, "ntdll.dll", RAMZ_MUSTAHIL, core::ptr::null_mut::<c_void>())
+            ikhtif_istirad(
+                qaida,
+                "ntdll.dll",
+                RAMZ_MUSTAHIL,
+                core::ptr::null_mut::<c_void>(),
+            )
         };
         match natija {
             Err(KhataHaqn::IstiradMafqud { wahda, ism, .. }) => {
                 assert_eq!(wahda, "ntdll.dll");
                 assert_eq!(ism, RAMZ_MUSTAHIL);
-            }
+            },
             Err(akhar) => panic!(
                 "the reader did not reach the end of a real import table, which is what a \
                  wrong-width parse looks like: {akhar:?}"
@@ -400,7 +423,7 @@ mod ikhtibarat {
         match natija {
             Err(KhataHaqn::GhayrMutahaHuna { amal }) => {
                 assert_eq!(amal, "import table redirection");
-            }
+            },
             akhar => panic!("expected GhayrMutahaHuna, got {akhar:?}"),
         }
     }

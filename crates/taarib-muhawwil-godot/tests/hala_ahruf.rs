@@ -44,7 +44,11 @@ use taarib_muhawwil_godot::khadim_nusus::{HalatTajawuz, MALAF_TAJAWUZ, MalafTaja
 fn mujallad_ikhtibar(ism: &str) -> PathBuf {
     let masar = std::env::temp_dir().join(format!("taarib-godot-hala-{ism}"));
     let _ = fs::remove_dir_all(&masar);
-    assert!(fs::create_dir_all(&masar).is_ok(), "{} could not be created", masar.display());
+    assert!(
+        fs::create_dir_all(&masar).is_ok(),
+        "{} could not be created",
+        masar.display()
+    );
     masar
 }
 
@@ -74,8 +78,11 @@ fn tajawuz_ghareeb_yura_rughma_ikhtilaf_alhala() {
     let jidhr = mujallad_ikhtibar("ghareeb");
     // Somebody else's settings, under a spelling Godot itself would open.
     let ghareeb = jidhr.join(ism_mukhtalif());
-    fs::write(&ghareeb, b"[locale]\ntranslations=PoolStringArray( \"res://en.translation\" )\n")
-        .expect("the foreign override");
+    fs::write(
+        &ghareeb,
+        b"[locale]\ntranslations=PoolStringArray( \"res://en.translation\" )\n",
+    )
+    .expect("the foreign override");
 
     let tajawuz = MalafTajawuz::fi_mujallad(&jidhr);
     assert_eq!(
@@ -83,7 +90,9 @@ fn tajawuz_ghareeb_yura_rughma_ikhtilaf_alhala() {
         ghareeb,
         "the file already on disk is the one this module has to reason about"
     );
-    let Ok(hala) = tajawuz.hala() else { panic!("the state could not be read") };
+    let Ok(hala) = tajawuz.hala() else {
+        panic!("the state could not be read")
+    };
     assert_eq!(
         hala,
         HalatTajawuz::Ghareeb,
@@ -103,9 +112,14 @@ fn la_yujad_fa_yuhfaz_alism_almatlub() {
         "with nothing on disk the spelling asked for is kept, which is the lower-case name \
          Godot documents"
     );
-    let Ok(hala) = tajawuz.hala() else { panic!("the state could not be read") };
+    let Ok(hala) = tajawuz.hala() else {
+        panic!("the state could not be read")
+    };
     assert_eq!(hala, HalatTajawuz::Ghaib);
-    assert!(hala.qabil_lil_kitaba(), "an empty directory is rung one's ordinary case");
+    assert!(
+        hala.qabil_lil_kitaba(),
+        "an empty directory is rung one's ordinary case"
+    );
 }
 
 #[test]

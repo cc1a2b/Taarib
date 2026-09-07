@@ -258,25 +258,34 @@ pub fn afhas(jidhr: &Path) -> Result<Bina, KhataUnreal> {
                             "{}: pak format version {}, {}",
                             ism_malaf(masar),
                             dhayl.nuskha,
-                            if dhayl.yahtaj_miftah() { "encrypted" } else { "plain" }
+                            if dhayl.yahtaj_miftah() {
+                                "encrypted"
+                            } else {
+                                "plain"
+                            }
                         ));
                     }
                 } else if imtidad == "utoc"
-                    && let Some(tarwisa) = TarwisatUtoc::iqra(masar) {
-                        ra_utoc = true;
-                        mushaffar = mushaffar || tarwisa.mushaffara();
-                        let hadha = tarwisa.mada();
-                        mada = Some(mada.map_or(hadha, |sabiq| adyaq(sabiq, hadha)));
-                        if isdar.is_none() {
-                            isdar = hadha.isdar("utoc header");
-                        }
-                        athar.push(format!(
-                            "{}: IoStore ToC version {}, {}",
-                            ism_malaf(masar),
-                            tarwisa.nuskha,
-                            if tarwisa.mushaffara() { "encrypted" } else { "plain" }
-                        ));
+                    && let Some(tarwisa) = TarwisatUtoc::iqra(masar)
+                {
+                    ra_utoc = true;
+                    mushaffar = mushaffar || tarwisa.mushaffara();
+                    let hadha = tarwisa.mada();
+                    mada = Some(mada.map_or(hadha, |sabiq| adyaq(sabiq, hadha)));
+                    if isdar.is_none() {
+                        isdar = hadha.isdar("utoc header");
                     }
+                    athar.push(format!(
+                        "{}: IoStore ToC version {}, {}",
+                        ism_malaf(masar),
+                        tarwisa.nuskha,
+                        if tarwisa.mushaffara() {
+                            "encrypted"
+                        } else {
+                            "plain"
+                        }
+                    ));
+                }
             }
 
             // IoStore wins when both are present, because a UE5 title ships both
@@ -289,7 +298,7 @@ pub fn afhas(jidhr: &Path) -> Result<Bina, KhataUnreal> {
                 (false, true) => Tabaa::Pak,
                 (false, false) => Tabaa::Sayib,
             }
-        }
+        },
         None => Tabaa::Majhul,
     };
 
@@ -301,7 +310,16 @@ pub fn afhas(jidhr: &Path) -> Result<Bina, KhataUnreal> {
         );
     }
 
-    Ok(Bina { jidhr: jidhr.to_path_buf(), isdar, mada, naw, tabaa, mushaffar, hawiyat, athar })
+    Ok(Bina {
+        jidhr: jidhr.to_path_buf(),
+        isdar,
+        mada,
+        naw,
+        tabaa,
+        mushaffar,
+        hawiyat,
+        athar,
+    })
 }
 
 /// How many entries one directory listing in this module will look at.
@@ -327,7 +345,12 @@ fn ibn_bila_hala(jidhr: &Path, ism: &str) -> Option<PathBuf> {
         .ok()?
         .take(AQSA_MUTABAQA)
         .flatten()
-        .find(|madkhal| madkhal.file_name().to_string_lossy().eq_ignore_ascii_case(ism))
+        .find(|madkhal| {
+            madkhal
+                .file_name()
+                .to_string_lossy()
+                .eq_ignore_ascii_case(ism)
+        })
         .map(|madkhal| madkhal.path())
 }
 
@@ -347,7 +370,10 @@ fn ibn_bila_hala(jidhr: &Path, ism: &str) -> Option<PathBuf> {
 pub(crate) fn masar_bila_hala(jidhr: &Path, nisbi: &str) -> PathBuf {
     let mut mabni = jidhr.to_path_buf();
     let mut mafqud = false;
-    for juz in nisbi.split(['/', '\\']).filter(|juz| !juz.is_empty() && *juz != ".") {
+    for juz in nisbi
+        .split(['/', '\\'])
+        .filter(|juz| !juz.is_empty() && *juz != ".")
+    {
         if mafqud {
             mabni.push(juz);
             continue;
@@ -373,8 +399,12 @@ fn naw_bina(jidhr: &Path, athar: &mut Vec<String>) -> Naw {
 
     let binaries = masar_bila_hala(jidhr, "Engine/Binaries");
     for manassa in ["Win64", "WinGDK", "Linux", "Mac"] {
-        let Some(dalil) = ibn_bila_hala(&binaries, manassa) else { continue };
-        let Ok(madkhalat) = std::fs::read_dir(&dalil) else { continue };
+        let Some(dalil) = ibn_bila_hala(&binaries, manassa) else {
+            continue;
+        };
+        let Ok(madkhalat) = std::fs::read_dir(&dalil) else {
+            continue;
+        };
 
         for madkhal in madkhalat.flatten() {
             let ism = madkhal.file_name();
@@ -426,7 +456,10 @@ fn jid_dalil_pak(jidhr: &Path, athar: &mut Vec<String>) -> Option<PathBuf> {
             continue;
         }
         // Engine/ holds the engine's own content, never the game's text.
-        if masar.file_name().is_some_and(|ism| ism.eq_ignore_ascii_case("Engine")) {
+        if masar
+            .file_name()
+            .is_some_and(|ism| ism.eq_ignore_ascii_case("Engine"))
+        {
             continue;
         }
         let muhtawa = masar_bila_hala(&masar, "Content");
@@ -452,8 +485,10 @@ fn jid_dalil_pak(jidhr: &Path, athar: &mut Vec<String>) -> Option<PathBuf> {
 /// system happened to return entries in: two launches reporting two different
 /// engine versions for one game would be unreportable.
 fn ijma_hawiyat(dalil: &Path, hawiyat: &mut Vec<PathBuf>) -> Result<(), KhataUnreal> {
-    let madkhalat = std::fs::read_dir(dalil)
-        .map_err(|sabab| KhataUnreal::KhataMalaf { masar: dalil.to_path_buf(), sabab })?;
+    let madkhalat = std::fs::read_dir(dalil).map_err(|sabab| KhataUnreal::KhataMalaf {
+        masar: dalil.to_path_buf(),
+        sabab,
+    })?;
 
     for madkhal in madkhalat.flatten() {
         let masar = madkhal.path();
@@ -478,8 +513,16 @@ fn ijma_hawiyat(dalil: &Path, hawiyat: &mut Vec<PathBuf>) -> Result<(), KhataUnr
 /// because the engine that mounts them is at least as new as the newest thing
 /// it can read.
 fn adyaq(awwal: MadaIsdar, thani: MadaIsdar) -> MadaIsdar {
-    let adna = if awwal.adna >= thani.adna { awwal.adna } else { thani.adna };
-    let aqsa = if awwal.aqsa <= thani.aqsa { awwal.aqsa } else { thani.aqsa };
+    let adna = if awwal.adna >= thani.adna {
+        awwal.adna
+    } else {
+        thani.adna
+    };
+    let aqsa = if awwal.aqsa <= thani.aqsa {
+        awwal.aqsa
+    } else {
+        thani.aqsa
+    };
     if adna <= aqsa {
         MadaIsdar { adna, aqsa }
     } else if awwal.adna >= thani.adna {

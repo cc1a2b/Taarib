@@ -305,9 +305,13 @@ impl Rassam {
         if marja.outline_glyphs().format().is_none() {
             return Err(KhataKhatt::JadwalMafqud { jadwal: "glyf" }.into());
         }
-        let adad_ashkal =
-            marja.glyph_metrics(Size::unscaled(), LocationRef::default()).glyph_count();
-        Ok(Self { khatt: Arc::clone(khatt), adad_ashkal })
+        let adad_ashkal = marja
+            .glyph_metrics(Size::unscaled(), LocationRef::default())
+            .glyph_count();
+        Ok(Self {
+            khatt: Arc::clone(khatt),
+            adad_ashkal,
+        })
     }
 
     /// The font resource this rasterizer draws from.
@@ -373,9 +377,10 @@ impl Rassam {
 
         let taghtiya = irsim_taghtiya(&hafat, hudud);
         let bayt = match namat {
-            NamatRasm::Taghtiya => {
-                taghtiya.iter().map(|qeema| ila_bayt(tarmiz_srgb(*qeema))).collect()
-            }
+            NamatRasm::Taghtiya => taghtiya
+                .iter()
+                .map(|qeema| ila_bayt(tarmiz_srgb(*qeema)))
+                .collect(),
             NamatRasm::Masafa { intishar } => {
                 // The distance transform is fed the *linear* coverage, through
                 // the same public function the atlas calls, so that a glyph
@@ -383,7 +388,7 @@ impl Rassam {
                 // about where the edge of a letter is.
                 let khattiya: Vec<u8> = taghtiya.iter().map(|qeema| ila_bayt(*qeema)).collect();
                 masafa_min_taghtiya(&khattiya, hudud.ard, hudud.irtifa, intishar)?
-            }
+            },
         };
 
         Ok(SurahHarf {
@@ -511,9 +516,7 @@ pub fn bakat_tahazzuz(s: f32) -> u8 {
     let mut baka: u8 = 0;
     // Compared rather than multiplied-and-cast: four comparisons cost nothing
     // and there is no float-to-integer conversion to reason about.
-    while baka + 1 < MAWADI_TAHAZZUZ
-        && kasr >= f32::from(baka + 1) / f32::from(MAWADI_TAHAZZUZ)
-    {
+    while baka + 1 < MAWADI_TAHAZZUZ && kasr >= f32::from(baka + 1) / f32::from(MAWADI_TAHAZZUZ) {
         baka += 1;
     }
     baka
@@ -613,7 +616,10 @@ impl QalamTastih {
     }
 
     fn hawwil(&self, s: f32, a: f32) -> Nuqta {
-        Nuqta { s: s + self.izaha, a }
+        Nuqta {
+            s: s + self.izaha,
+            a,
+        }
     }
 
     const fn wassi(&mut self, nuqta: Nuqta) {
@@ -627,7 +633,10 @@ impl QalamTastih {
     }
 
     fn ila(&mut self, nuqta: Nuqta) {
-        self.hafat.push(Hafa { min: self.jari, ila: nuqta });
+        self.hafat.push(Hafa {
+            min: self.jari,
+            ila: nuqta,
+        });
         self.jari = nuqta;
         self.wassi(nuqta);
     }
@@ -641,7 +650,10 @@ impl QalamTastih {
     fn aghliq(&mut self) {
         if self.maftuh {
             let bidaya = self.bidaya;
-            self.hafat.push(Hafa { min: self.jari, ila: bidaya });
+            self.hafat.push(Hafa {
+                min: self.jari,
+                ila: bidaya,
+            });
             self.jari = bidaya;
             self.maftuh = false;
         }
@@ -665,9 +677,17 @@ impl QalamTastih {
             return Ok(None);
         }
         if ard > ABAD_AQSA || irtifa > ABAD_AQSA {
-            return Err(KhataSaff::ArdGhayrSalih { ard: ila_kasr(ard.max(irtifa)) }.into());
+            return Err(KhataSaff::ArdGhayrSalih {
+                ard: ila_kasr(ard.max(irtifa)),
+            }
+            .into());
         }
-        Ok(Some(Hudud { izaha_s: s0, izaha_a: a1, ard, irtifa }))
+        Ok(Some(Hudud {
+            izaha_s: s0,
+            izaha_a: a1,
+            ard,
+            irtifa,
+        }))
     }
 }
 
@@ -830,7 +850,10 @@ fn irsim_taghtiya(hafat: &[Hafa], hudud: Hudud) -> Vec<f32> {
         let hadaf = satr.saturating_mul(ard);
         let mut jam = 0.0f32;
         for amud in 0..ard {
-            jam += mutarakim.get(bidaya.saturating_add(amud)).copied().unwrap_or(0.0);
+            jam += mutarakim
+                .get(bidaya.saturating_add(amud))
+                .copied()
+                .unwrap_or(0.0);
             if let Some(khana) = taghtiya.get_mut(hadaf.saturating_add(amud)) {
                 *khana = jam.abs().min(1.0);
             }
@@ -848,14 +871,7 @@ fn irsim_taghtiya(hafat: &[Hafa], hudud: Hudud) -> Vec<f32> {
 /// vertical extent travels with it, so integrating the row left to right
 /// reproduces the winding value at every pixel — which is the whole trick, and
 /// the reason no sample grid appears anywhere in this function.
-fn khutt(
-    mutarakim: &mut [f32],
-    khatwa: usize,
-    ard: usize,
-    irtifa: usize,
-    min: Nuqta,
-    ila: Nuqta,
-) {
+fn khutt(mutarakim: &mut [f32], khatwa: usize, ard: usize, irtifa: usize, min: Nuqta, ila: Nuqta) {
     if ard == 0 || irtifa == 0 {
         return;
     }
@@ -867,8 +883,11 @@ fn khutt(
         return;
     }
 
-    let (ittijah, aala, adna) =
-        if min.a < ila.a { (1.0f32, min, ila) } else { (-1.0f32, ila, min) };
+    let (ittijah, aala, adna) = if min.a < ila.a {
+        (1.0f32, min, ila)
+    } else {
+        (-1.0f32, ila, min)
+    };
 
     let dsda = (adna.s - aala.s) / (adna.a - aala.a);
     let irtifa_f = ila_kasr_hajm(irtifa);
@@ -899,8 +918,11 @@ fn khutt(
 
         let s_awwal = s.clamp(0.0, ard_f);
         let s_thani = s_talin.clamp(0.0, ard_f);
-        let (s0, s1) =
-            if s_awwal < s_thani { (s_awwal, s_thani) } else { (s_thani, s_awwal) };
+        let (s0, s1) = if s_awwal < s_thani {
+            (s_awwal, s_thani)
+        } else {
+            (s_thani, s_awwal)
+        };
 
         let s0_ard = s0.floor();
         let s1_saqf = s1.ceil();
@@ -975,7 +997,11 @@ fn zid(mutarakim: &mut [f32], fahras: usize, qeema: f32) {
 /// precisely where a power curve is worst and precisely where Arabic needs it
 /// most.
 fn tarmiz_srgb(khatti: f32) -> f32 {
-    let qeema = if khatti.is_finite() { khatti.clamp(0.0, 1.0) } else { 0.0 };
+    let qeema = if khatti.is_finite() {
+        khatti.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
     if qeema <= 0.003_130_8 {
         qeema * 12.92
     } else {
@@ -1066,9 +1092,20 @@ pub fn masafa_min_taghtiya(
         // contour actually is, and gives the two pixels straddling an edge
         // the symmetric values ±0.5 they should have.
         let masafa = if *qeema >= 128 {
-            masafat_dakhil.get(fahras).copied().unwrap_or(LA_NIHAYA).max(0.0).sqrt() - 0.5
+            masafat_dakhil
+                .get(fahras)
+                .copied()
+                .unwrap_or(LA_NIHAYA)
+                .max(0.0)
+                .sqrt()
+                - 0.5
         } else {
-            0.5 - masafat_kharij.get(fahras).copied().unwrap_or(LA_NIHAYA).max(0.0).sqrt()
+            0.5 - masafat_kharij
+                .get(fahras)
+                .copied()
+                .unwrap_or(LA_NIHAYA)
+                .max(0.0)
+                .sqrt()
         };
         let mansub = 0.5f32.mul_add(masafa / intishar, 0.5);
         if let Some(khana) = natij.get_mut(fahras) {
@@ -1107,9 +1144,7 @@ fn tahweel_thunai(mut bidhar: Vec<f32>, ard: usize, irtifa: usize) -> Vec<f32> {
         tahweel_uhadi(irtifa, &f, &mut d, &mut v, &mut z);
         for satr in 0..irtifa {
             let qeema = d.get(satr).copied().unwrap_or(LA_NIHAYA);
-            if let Some(khana) =
-                bidhar.get_mut(satr.saturating_mul(ard).saturating_add(amud))
-            {
+            if let Some(khana) = bidhar.get_mut(satr.saturating_mul(ard).saturating_add(amud)) {
                 *khana = qeema;
             }
         }
@@ -1118,8 +1153,10 @@ fn tahweel_thunai(mut bidhar: Vec<f32>, ard: usize, irtifa: usize) -> Vec<f32> {
     for satr in 0..irtifa {
         let bidaya = satr.saturating_mul(ard);
         for amud in 0..ard {
-            let qeema =
-                bidhar.get(bidaya.saturating_add(amud)).copied().unwrap_or(LA_NIHAYA);
+            let qeema = bidhar
+                .get(bidaya.saturating_add(amud))
+                .copied()
+                .unwrap_or(LA_NIHAYA);
             if let Some(khana) = f.get_mut(amud) {
                 *khana = qeema;
             }

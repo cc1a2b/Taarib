@@ -110,10 +110,10 @@ use windows::Win32::Graphics::Direct3D12::{
     D3D12_TEXTURE_COPY_LOCATION, D3D12_TEXTURE_COPY_LOCATION_0,
     D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT, D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
     D3D12_TEXTURE_DATA_PITCH_ALIGNMENT, D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-    D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_VERTEX_BUFFER_VIEW,
-    D3D12_VIEWPORT, D3D12SerializeRootSignature, ID3D12CommandAllocator, ID3D12CommandList,
-    ID3D12CommandQueue, ID3D12DescriptorHeap, ID3D12Device, ID3D12Fence,
-    ID3D12GraphicsCommandList, ID3D12PipelineState, ID3D12Resource, ID3D12RootSignature,
+    D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_VERTEX_BUFFER_VIEW, D3D12_VIEWPORT,
+    D3D12SerializeRootSignature, ID3D12CommandAllocator, ID3D12CommandList, ID3D12CommandQueue,
+    ID3D12DescriptorHeap, ID3D12Device, ID3D12Fence, ID3D12GraphicsCommandList,
+    ID3D12PipelineState, ID3D12Resource, ID3D12RootSignature,
 };
 use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_FORMAT, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_R32_UINT,
@@ -129,9 +129,7 @@ use crate::d3d11::{
     QITA_LIL_DUFA, Ras, SAQF_LAWHA, ThawabitIsqat, imla_qita, madaa_f32, sigha_min_dxgi,
 };
 use crate::khata::{KhataTabaqa, tul_u64};
-use crate::wajiha::{
-    Khattaf, LawhatRasm, MustatilBiksel, SighatSath, WajihatRusum, WasfSath,
-};
+use crate::wajiha::{Khattaf, LawhatRasm, MustatilBiksel, SighatSath, WajihatRusum, WasfSath};
 
 /// How long a fence wait is given before it is treated as a fault.
 ///
@@ -319,7 +317,10 @@ const fn wasf_mukhazzan(tul: u64) -> D3D12_RESOURCE_DESC {
         DepthOrArraySize: 1,
         MipLevels: 1,
         Format: DXGI_FORMAT_UNKNOWN,
-        SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+        SampleDesc: DXGI_SAMPLE_DESC {
+            Count: 1,
+            Quality: 0,
+        },
         // A buffer is always row-major; naming anything else here is rejected at
         // creation rather than at first use, which is the reason this is a
         // function and not a literal repeated at four call sites.
@@ -417,11 +418,9 @@ impl KhattafD3D12 {
         // SAFETY: `saff` is a live command queue, which is a device child, and
         // `GetDevice` performs a QueryInterface into the out-pointer, which
         // addresses a local initialised to `None`.
-        unsafe { saff.GetDevice(&raw mut jihaz) }.map_err(|khata| {
-            KhataTabaqa::MawridFashil {
-                mawrid: "the command queue's D3D12 device",
-                sabab: khata.to_string(),
-            }
+        unsafe { saff.GetDevice(&raw mut jihaz) }.map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "the command queue's D3D12 device",
+            sabab: khata.to_string(),
         })?;
         let Some(jihaz) = jihaz else {
             return Err(KhataTabaqa::MawridFashil {
@@ -489,8 +488,7 @@ impl KhattafD3D12 {
         let (Some(hajiz), Some(hadath)) = (self.hajiz.as_ref(), self.hadath.as_ref()) else {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "overlay fence",
-                sabab: "the backend was asked to synchronise before its fence was built"
-                    .to_owned(),
+                sabab: "the backend was asked to synchronise before its fence was built".to_owned(),
             });
         };
 
@@ -569,7 +567,7 @@ impl KhattafD3D12 {
                         "the queue would not signal before the backbuffers were released: {khata}"
                     ),
                 });
-            }
+            },
         };
         self.intazir_qabl_massa(qeema, MUHLAT_INTIZAR)?;
         self.itarat.clear();
@@ -596,10 +594,11 @@ impl KhattafD3D12 {
     /// [`KhataTabaqa::HalaGhayrMustaada`] for anything
     /// [`KhattafD3D12::intazir`] refuses.
     fn intazir_qabl_massa(&self, qeema: u64, muhla: u32) -> Result<(), KhataTabaqa> {
-        self.intazir(qeema, muhla).map_err(|khata| KhataTabaqa::HalaGhayrMustaada {
-            hala: "the overlay's fence-tracked resource lifetimes",
-            sabab: khata.to_string(),
-        })
+        self.intazir(qeema, muhla)
+            .map_err(|khata| KhataTabaqa::HalaGhayrMustaada {
+                hala: "the overlay's fence-tracked resource lifetimes",
+                sabab: khata.to_string(),
+            })
     }
 
     /// Signals the queue with a fresh value and returns it.
@@ -684,11 +683,13 @@ impl KhattafD3D12 {
     fn ihdar_ramz(&mut self) -> Result<(), KhataTabaqa> {
         if self.bayt_ras.is_empty() {
             self.bayt_ras =
-                self.musarrif.sarrif("overlay vertex shader", s!("ras"), s!("vs_5_0"))?;
+                self.musarrif
+                    .sarrif("overlay vertex shader", s!("ras"), s!("vs_5_0"))?;
         }
         if self.bayt_biksel.is_empty() {
             self.bayt_biksel =
-                self.musarrif.sarrif("overlay pixel shader", s!("biksel"), s!("ps_5_0"))?;
+                self.musarrif
+                    .sarrif("overlay pixel shader", s!("biksel"), s!("ps_5_0"))?;
         }
         Ok(())
     }
@@ -718,12 +719,13 @@ impl KhattafD3D12 {
             // the event auto-resets after each wait, an unsignalled initial
             // state, and no name — a named event could be opened by another
             // process, which an overlay has no reason to allow.
-            let hadath = unsafe { CreateEventW(None, false, false, PCWSTR::null()) }.map_err(
-                |khata| KhataTabaqa::MawridFashil {
-                    mawrid: "overlay fence event",
-                    sabab: khata.to_string(),
-                },
-            )?;
+            let hadath =
+                unsafe { CreateEventW(None, false, false, PCWSTR::null()) }.map_err(|khata| {
+                    KhataTabaqa::MawridFashil {
+                        mawrid: "overlay fence event",
+                        sabab: khata.to_string(),
+                    }
+                })?;
             self.hadath = Some(HadathIntizar(hadath));
         }
         Ok(())
@@ -753,7 +755,10 @@ impl KhattafD3D12 {
             D3D12_ROOT_PARAMETER {
                 ParameterType: D3D12_ROOT_PARAMETER_TYPE_CBV,
                 Anonymous: D3D12_ROOT_PARAMETER_0 {
-                    Descriptor: D3D12_ROOT_DESCRIPTOR { ShaderRegister: 0, RegisterSpace: 0 },
+                    Descriptor: D3D12_ROOT_DESCRIPTOR {
+                        ShaderRegister: 0,
+                        RegisterSpace: 0,
+                    },
                 },
                 // Visible to both stages: the vertex shader reads the matrix and
                 // the pixel shader reads the encode flag out of the same buffer.
@@ -990,12 +995,19 @@ impl KhattafD3D12 {
             PrimitiveTopologyType: D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
             NumRenderTargets: 1,
             RTVFormats: core::array::from_fn(|fahras| {
-                if fahras == 0 { sigha } else { DXGI_FORMAT_UNKNOWN }
+                if fahras == 0 {
+                    sigha
+                } else {
+                    DXGI_FORMAT_UNKNOWN
+                }
             }),
             DSVFormat: DXGI_FORMAT_UNKNOWN,
             // A D3D12 flip-model swap chain cannot be multisampled, so the
             // overlay never faces the resolve the D3D11 capture path has to.
-            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
             NodeMask: 0,
             CachedPSO: D3D12_CACHED_PIPELINE_STATE::default(),
             Flags: D3D12_PIPELINE_STATE_FLAG_NONE,
@@ -1038,18 +1050,19 @@ impl KhattafD3D12 {
         };
         // SAFETY: `jihaz` is live and the description is a fully initialised
         // local the device copies out of before returning.
-        let kawmat_ahdaf: ID3D12DescriptorHeap =
-            unsafe { self.jihaz.CreateDescriptorHeap(&raw const wasf_ahdaf) }.map_err(
-                |khata| KhataTabaqa::MawridFashil {
-                    mawrid: "overlay render target descriptor heap",
-                    sabab: khata.to_string(),
-                },
-            )?;
+        let kawmat_ahdaf: ID3D12DescriptorHeap = unsafe {
+            self.jihaz.CreateDescriptorHeap(&raw const wasf_ahdaf)
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay render target descriptor heap",
+            sabab: khata.to_string(),
+        })?;
 
         // SAFETY: `jihaz` is live; this reads a hardware constant and has no
         // preconditions beyond the device existing.
         let khatwa = unsafe {
-            self.jihaz.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+            self.jihaz
+                .GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
         };
 
         let wasf_wasfiyat = D3D12_DESCRIPTOR_HEAP_DESC {
@@ -1083,7 +1096,9 @@ impl KhattafD3D12 {
     ///
     /// [`KhataTabaqa::MawridFashil`] when the device refuses the allocation.
     fn ibni_ruus(&self, adad_ruus: usize) -> Result<(ID3D12Resource, u64), KhataTabaqa> {
-        let tul = tul_u64(adad_ruus).saturating_mul(u64::from(KHATWAT_RAS)).max(1);
+        let tul = tul_u64(adad_ruus)
+            .saturating_mul(u64::from(KHATWAT_RAS))
+            .max(1);
         let khasais = khasais_rafa();
         let wasf = wasf_mukhazzan(tul);
         let mut mawrid: Option<ID3D12Resource> = None;
@@ -1135,8 +1150,7 @@ impl KhattafD3D12 {
         let Some(kawma) = self.kawmat_ahdaf.as_ref() else {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "overlay frame resources",
-                sabab: "the frames were asked for before their descriptor heap existed"
-                    .to_owned(),
+                sabab: "the frames were asked for before their descriptor heap existed".to_owned(),
             });
         };
         // SAFETY: `kawma` is a live descriptor heap; this reads its base handle,
@@ -1149,40 +1163,46 @@ impl KhattafD3D12 {
             // SAFETY: `silsila` is live and `fahras` is below the buffer count
             // the swap chain itself reported. `GetBuffer` QueryInterfaces the
             // backbuffer and returns an owned reference or an error.
-            let khalfiya: ID3D12Resource = unsafe { self.silsila.GetBuffer(fahras) }.map_err(
-                |khata| KhataTabaqa::SathTaghayyar {
-                    sabab: format!("backbuffer {fahras} could not be fetched: {khata}"),
-                },
-            )?;
+            let khalfiya: ID3D12Resource =
+                unsafe { self.silsila.GetBuffer(fahras) }.map_err(|khata| {
+                    KhataTabaqa::SathTaghayyar {
+                        sabab: format!("backbuffer {fahras} could not be fetched: {khata}"),
+                    }
+                })?;
 
-            let izaha = usize::try_from(fahras).unwrap_or(0).saturating_mul(self.khatwat_hadaf);
-            let mawdi_hadaf = D3D12_CPU_DESCRIPTOR_HANDLE { ptr: asas.ptr.saturating_add(izaha) };
+            let izaha = usize::try_from(fahras)
+                .unwrap_or(0)
+                .saturating_mul(self.khatwat_hadaf);
+            let mawdi_hadaf = D3D12_CPU_DESCRIPTOR_HANDLE {
+                ptr: asas.ptr.saturating_add(izaha),
+            };
             // SAFETY: `khalfiya` is a live texture, the null description asks
             // the runtime to take the resource's own format, and `mawdi_hadaf`
             // is inside the heap created for exactly `adad_ilqa` descriptors.
-            unsafe { self.jihaz.CreateRenderTargetView(&khalfiya, None, mawdi_hadaf) };
+            unsafe {
+                self.jihaz
+                    .CreateRenderTargetView(&khalfiya, None, mawdi_hadaf)
+            };
 
             // SAFETY: `jihaz` is live. Both calls return owned interfaces or
             // errors; `CreateCommandList` hands back a list already in the
             // recording state, which is why it is closed immediately below —
             // every later use begins with `Reset`, and `Reset` on an open list
             // is refused.
-            let mukhassis: ID3D12CommandAllocator =
-                unsafe { self.jihaz.CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT) }
-                    .map_err(|khata| KhataTabaqa::MawridFashil {
-                        mawrid: "overlay command allocator",
-                        sabab: khata.to_string(),
-                    })?;
+            let mukhassis: ID3D12CommandAllocator = unsafe {
+                self.jihaz
+                    .CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT)
+            }
+            .map_err(|khata| KhataTabaqa::MawridFashil {
+                mawrid: "overlay command allocator",
+                sabab: khata.to_string(),
+            })?;
             // SAFETY: `mukhassis` is the allocator created immediately above and
             // is alive for the call; no initial pipeline state is named because
             // the pipeline is set at every `Reset`.
             let qaima: ID3D12GraphicsCommandList = unsafe {
-                self.jihaz.CreateCommandList(
-                    0,
-                    D3D12_COMMAND_LIST_TYPE_DIRECT,
-                    &mukhassis,
-                    None,
-                )
+                self.jihaz
+                    .CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, &mukhassis, None)
             }
             .map_err(|khata| KhataTabaqa::MawridFashil {
                 mawrid: "overlay command list",
@@ -1270,10 +1290,7 @@ impl KhattafD3D12 {
         // exactly its allocation reinterpreted as bytes, which is sound for a
         // type with no padding and no invalid bit patterns.
         let bayt = unsafe {
-            core::slice::from_raw_parts(
-                khaam.as_ptr().cast::<u8>(),
-                khaam.len().saturating_mul(4),
-            )
+            core::slice::from_raw_parts(khaam.as_ptr().cast::<u8>(), khaam.len().saturating_mul(4))
         };
         iktub_fi(&mawrid, bayt, "overlay index buffer")?;
 
@@ -1362,16 +1379,18 @@ impl KhattafD3D12 {
             return Ok(());
         }
         // SAFETY: `jihaz` is live and returns an owned interface or an error.
-        let mukhassis: ID3D12CommandAllocator =
-            unsafe { self.jihaz.CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT) }.map_err(
-                |khata| KhataTabaqa::MawridFashil {
-                    mawrid: "overlay transfer allocator",
-                    sabab: khata.to_string(),
-                },
-            )?;
+        let mukhassis: ID3D12CommandAllocator = unsafe {
+            self.jihaz
+                .CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT)
+        }
+        .map_err(|khata| KhataTabaqa::MawridFashil {
+            mawrid: "overlay transfer allocator",
+            sabab: khata.to_string(),
+        })?;
         // SAFETY: `mukhassis` is the allocator created immediately above.
         let qaima: ID3D12GraphicsCommandList = unsafe {
-            self.jihaz.CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, &mukhassis, None)
+            self.jihaz
+                .CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, &mukhassis, None)
         }
         .map_err(|khata| KhataTabaqa::MawridFashil {
             mawrid: "overlay transfer command list",
@@ -1428,7 +1447,8 @@ impl KhattafD3D12 {
         // own base, so it is inside the heap by construction.
         unsafe {
             let mawdi = kawma.GetCPUDescriptorHandleForHeapStart();
-            self.jihaz.CreateShaderResourceView(lawha, Some(&raw const wasf), mawdi);
+            self.jihaz
+                .CreateShaderResourceView(lawha, Some(&raw const wasf), mawdi);
         }
         Ok(())
     }
@@ -1451,7 +1471,10 @@ impl KhattafD3D12 {
         }
         // Rounded up to a power of two so a batch that grows by one glyph a
         // frame does not reallocate on every one of them.
-        let jadeed = matlub.checked_next_power_of_two().unwrap_or(matlub).max(RUUS_IBTIDAIYA);
+        let jadeed = matlub
+            .checked_next_power_of_two()
+            .unwrap_or(matlub)
+            .max(RUUS_IBTIDAIYA);
         let (ruus, masar_ruus) = self.ibni_ruus(jadeed)?;
         if let Some(itar) = self.itarat.get_mut(fahras) {
             itar.ruus = ruus;
@@ -1491,13 +1514,14 @@ impl KhattafD3D12 {
         // happen leaves that work with nothing tracking it, so every later reset
         // and every later release would be guesswork — which is precisely the
         // condition `khata.rs` names as terminal.
-        self.ashir().map_err(|khata| KhataTabaqa::HalaGhayrMustaada {
-            hala: "the overlay's fence-tracked resource lifetimes",
-            sabab: format!(
-                "a command list was submitted and the queue would not signal the fence \
+        self.ashir()
+            .map_err(|khata| KhataTabaqa::HalaGhayrMustaada {
+                hala: "the overlay's fence-tracked resource lifetimes",
+                sabab: format!(
+                    "a command list was submitted and the queue would not signal the fence \
                  that tracks it: {khata}"
-            ),
-        })
+                ),
+            })
     }
 }
 
@@ -1510,7 +1534,10 @@ const RUUS_IBTIDAIYA: usize = 16_384;
 // Four vertices per quad, and the initial capacity must cover one whole chunk or
 // the very first frame reallocates.
 const _: () = {
-    assert!(RUUS_IBTIDAIYA == QITA_LIL_DUFA * 4, "the initial vertex capacity is wrong");
+    assert!(
+        RUUS_IBTIDAIYA == QITA_LIL_DUFA * 4,
+        "the initial vertex capacity is wrong"
+    );
 };
 
 /// Copies bytes into an upload-heap resource.
@@ -1531,7 +1558,10 @@ fn iktub_fi(mawrid: &ID3D12Resource, bayt: &[u8], mawdu: &'static str) -> Result
     // kind `Map` accepts here; subresource zero is the whole buffer, and both
     // pointers address live locals.
     unsafe { mawrid.Map(0, Some(&raw const mada), Some(&raw mut hadaf)) }.map_err(|khata| {
-        KhataTabaqa::MawridFashil { mawrid: mawdu, sabab: format!("the map was refused: {khata}") }
+        KhataTabaqa::MawridFashil {
+            mawrid: mawdu,
+            sabab: format!("the map was refused: {khata}"),
+        }
     })?;
 
     if hadaf.is_null() {
@@ -1594,11 +1624,10 @@ impl Khattaf for KhattafD3D12 {
     fn sath(&self) -> Result<WasfSath, KhataTabaqa> {
         // SAFETY: `silsila` is the live swap chain this backend was built
         // around; `GetDesc` fills a stack description the binding owns.
-        let wasf = unsafe { self.silsila.GetDesc() }.map_err(|khata| {
-            KhataTabaqa::SathTaghayyar {
+        let wasf =
+            unsafe { self.silsila.GetDesc() }.map_err(|khata| KhataTabaqa::SathTaghayyar {
                 sabab: format!("the swap chain would not describe itself: {khata}"),
-            }
-        })?;
+            })?;
 
         let ard = wasf.BufferDesc.Width;
         let irtifa = wasf.BufferDesc.Height;
@@ -1609,7 +1638,12 @@ impl Khattaf for KhattafD3D12 {
         }
 
         let (sigha, sirgb) = sigha_min_dxgi(wasf.BufferDesc.Format)?;
-        Ok(WasfSath { ard, irtifa, sigha, sirgb })
+        Ok(WasfSath {
+            ard,
+            irtifa,
+            sigha,
+            sirgb,
+        })
     }
 
     fn hayyi(&mut self, sath: WasfSath) -> Result<(), KhataTabaqa> {
@@ -1624,11 +1658,10 @@ impl Khattaf for KhattafD3D12 {
         self.ibni_hajiz()?;
 
         // SAFETY: `silsila` is live and `GetDesc` fills a stack description.
-        let wasf = unsafe { self.silsila.GetDesc() }.map_err(|khata| {
-            KhataTabaqa::SathTaghayyar {
+        let wasf =
+            unsafe { self.silsila.GetDesc() }.map_err(|khata| KhataTabaqa::SathTaghayyar {
                 sabab: format!("the swap chain would not describe itself: {khata}"),
-            }
-        })?;
+            })?;
         let adad_ilqa = wasf.BufferCount.max(1);
 
         self.ihdar_ramz()?;
@@ -1650,7 +1683,8 @@ impl Khattaf for KhattafD3D12 {
 
         let matlub = QITA_LIL_DUFA.saturating_mul(4);
         if self.musawwada.capacity() < matlub {
-            self.musawwada.reserve(matlub.saturating_sub(self.musawwada.capacity()));
+            self.musawwada
+                .reserve(matlub.saturating_sub(self.musawwada.capacity()));
         }
 
         self.sath = Some(sath);
@@ -1704,7 +1738,10 @@ impl Khattaf for KhattafD3D12 {
             DepthOrArraySize: 1,
             MipLevels: 1,
             Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
             Layout: D3D12_TEXTURE_LAYOUT_UNKNOWN,
             Flags: D3D12_RESOURCE_FLAG_NONE,
         };
@@ -1779,10 +1816,13 @@ impl Khattaf for KhattafD3D12 {
             });
         }
         let mut mubattan = vec![0_u8; usize::try_from(al_kul).unwrap_or(0)];
-        for (saf, masdar) in bayt.chunks_exact(khatwa_masdar).take(irtifa_usize).enumerate() {
+        for (saf, masdar) in bayt
+            .chunks_exact(khatwa_masdar)
+            .take(irtifa_usize)
+            .enumerate()
+        {
             let bidaya = saf.saturating_mul(khatwa_hadaf);
-            let Some(hadaf) = mubattan.get_mut(bidaya..bidaya.saturating_add(khatwa_masdar))
-            else {
+            let Some(hadaf) = mubattan.get_mut(bidaya..bidaya.saturating_add(khatwa_masdar)) else {
                 return Err(KhataTabaqa::MawridFashil {
                     mawrid: "glyph atlas texture",
                     sabab: "the copy footprint is smaller than the atlas it must hold".to_owned(),
@@ -1844,12 +1884,16 @@ impl Khattaf for KhattafD3D12 {
         let hadaf_naskh = D3D12_TEXTURE_COPY_LOCATION {
             pResource: muara(&lawha),
             Type: D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-            Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { SubresourceIndex: 0 },
+            Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 {
+                SubresourceIndex: 0,
+            },
         };
         let masdar_naskh = D3D12_TEXTURE_COPY_LOCATION {
             pResource: muara(&rafaa),
             Type: D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-            Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { PlacedFootprint: takhtit },
+            Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 {
+                PlacedFootprint: takhtit,
+            },
         };
         let hajiz = hajiz_intiqal(
             &lawha,
@@ -1863,7 +1907,14 @@ impl Khattaf for KhattafD3D12 {
         // produced for this texture, and the upload buffer was filled to exactly
         // its total byte count.
         unsafe {
-            qaima.CopyTextureRegion(&raw const hadaf_naskh, 0, 0, 0, &raw const masdar_naskh, None);
+            qaima.CopyTextureRegion(
+                &raw const hadaf_naskh,
+                0,
+                0,
+                0,
+                &raw const masdar_naskh,
+                None,
+            );
             qaima.ResourceBarrier(&[hajiz]);
         }
 
@@ -1954,8 +2005,7 @@ impl Khattaf for KhattafD3D12 {
         if self.lawha.is_none() {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "glyph atlas",
-                sabab: "the D3D12 backend cannot draw before an atlas has been uploaded"
-                    .to_owned(),
+                sabab: "the D3D12 backend cannot draw before an atlas has been uploaded".to_owned(),
             });
         }
 
@@ -2043,11 +2093,12 @@ impl Khattaf for KhattafD3D12 {
         // SAFETY: `silsila` is live and the index it reports is its own.
         let fahras = unsafe { self.silsila.GetCurrentBackBufferIndex() };
         // SAFETY: `silsila` is live and `fahras` is the index it just named.
-        let khalfiya: ID3D12Resource = unsafe { self.silsila.GetBuffer(fahras) }.map_err(
-            |khata| KhataTabaqa::IltiqatFashil {
-                sabab: format!("backbuffer {fahras} could not be fetched: {khata}"),
-            },
-        )?;
+        let khalfiya: ID3D12Resource =
+            unsafe { self.silsila.GetBuffer(fahras) }.map_err(|khata| {
+                KhataTabaqa::IltiqatFashil {
+                    sabab: format!("backbuffer {fahras} could not be fetched: {khata}"),
+                }
+            })?;
         // SAFETY: `khalfiya` is a live resource; `GetDesc` returns a value.
         let wasf_khalfiya = unsafe { khalfiya.GetDesc() };
 
@@ -2063,7 +2114,10 @@ impl Khattaf for KhattafD3D12 {
             DepthOrArraySize: 1,
             MipLevels: 1,
             Format: wasf_khalfiya.Format,
-            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
             Layout: D3D12_TEXTURE_LAYOUT_UNKNOWN,
             Flags: D3D12_RESOURCE_FLAG_NONE,
         };
@@ -2153,12 +2207,16 @@ impl Khattaf for KhattafD3D12 {
         let hadaf_naskh = D3D12_TEXTURE_COPY_LOCATION {
             pResource: muara(&qira),
             Type: D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-            Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { PlacedFootprint: takhtit },
+            Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 {
+                PlacedFootprint: takhtit,
+            },
         };
         let masdar_naskh = D3D12_TEXTURE_COPY_LOCATION {
             pResource: muara(&khalfiya),
             Type: D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-            Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { SubresourceIndex: 0 },
+            Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 {
+                SubresourceIndex: 0,
+            },
         };
         let sunduq = D3D12_BOX {
             left: mintaqa.yasar,
@@ -2385,18 +2443,28 @@ impl KhattafD3D12 {
             mawarid.qaima.ResourceBarrier(&[ila_hadaf]);
 
             mawarid.qaima.SetGraphicsRootSignature(Some(mawarid.tawqee));
-            mawarid.qaima.SetDescriptorHeaps(&[Some(mawarid.kawma.clone())]);
-            mawarid.qaima.SetGraphicsRootConstantBufferView(0, self.masar_thawabit);
+            mawarid
+                .qaima
+                .SetDescriptorHeaps(&[Some(mawarid.kawma.clone())]);
+            mawarid
+                .qaima
+                .SetGraphicsRootConstantBufferView(0, self.masar_thawabit);
             let jadwal = mawarid.kawma.GetGPUDescriptorHandleForHeapStart();
             mawarid.qaima.SetGraphicsRootDescriptorTable(1, jadwal);
 
-            mawarid.qaima.OMSetRenderTargets(1, Some(&raw const mawarid.mawdi_hadaf), false, None);
+            mawarid
+                .qaima
+                .OMSetRenderTargets(1, Some(&raw const mawarid.mawdi_hadaf), false, None);
             mawarid.qaima.OMSetBlendFactor(Some(&amil_khalt));
             mawarid.qaima.OMSetStencilRef(0);
             mawarid.qaima.RSSetViewports(&[manzar]);
             mawarid.qaima.RSSetScissorRects(&[maqas]);
-            mawarid.qaima.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            mawarid.qaima.IASetIndexBuffer(Some(&raw const manzur_faharis));
+            mawarid
+                .qaima
+                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            mawarid
+                .qaima
+                .IASetIndexBuffer(Some(&raw const manzur_faharis));
 
             for (raqm, dufa) in lawha.qitaat.chunks(QITA_LIL_DUFA).enumerate() {
                 // Every chunk but the last is full, so a chunk's first vertex is
@@ -2463,7 +2531,10 @@ fn jami_sufuf(
     }
 
     let mut asas: *mut core::ffi::c_void = core::ptr::null_mut();
-    let mada = D3D12_RANGE { Begin: 0, End: tul_kul };
+    let mada = D3D12_RANGE {
+        Begin: 0,
+        End: tul_kul,
+    };
     // SAFETY: `qira` is a live read-back buffer with one subresource, the read
     // range names exactly the bytes the copy wrote, and both pointers address
     // live locals.

@@ -28,9 +28,9 @@
 //! paid per growth event, not per frame.
 
 use js_sys::Uint8Array;
-use taarib_lawha::{KhiyaratMisafa, KhiyaratRasf, LawhaHayya, MiftahShakl, NamatSafha};
 use taarib_lawha::khareeta::MawdiShakl;
 use taarib_lawha::namu::IhsaatNamu;
+use taarib_lawha::{KhiyaratMisafa, KhiyaratRasf, LawhaHayya, MiftahShakl, NamatSafha};
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -374,7 +374,10 @@ impl TaaribLawha {
             khiyarat.mizaniyat_bayt,
             khiyarat.misafa,
         ))?;
-        Ok(Self { lawha, namat: khiyarat.namat })
+        Ok(Self {
+            lawha,
+            namat: khiyarat.namat,
+        })
     }
 
     /// Begins a frame: releases every pin the last frame took.
@@ -418,8 +421,7 @@ impl TaaribLawha {
         bakat: u8,
     ) -> Result<TaaribMawdi, JsValue> {
         let miftah = MiftahShakl::jadeed(khatt, muarrif, hajm, self.namat, bakat);
-        let mawdi =
-            khata_js::min_natija(self.lawha.shakl_min_silsila(miftah, &silsila.silsila))?;
+        let mawdi = khata_js::min_natija(self.lawha.shakl_min_silsila(miftah, &silsila.silsila))?;
         Ok(TaaribMawdi::min_dakhili(mawdi))
     }
 
@@ -430,13 +432,15 @@ impl TaaribLawha {
     /// from positions it cached. Pinning a glyph the atlas does not hold is
     /// allowed and costs nothing.
     pub fn ithbit(&mut self, khatt: u8, muarrif: u32, hajm: f32, bakat: u8) {
-        self.lawha.ithbit(MiftahShakl::jadeed(khatt, muarrif, hajm, self.namat, bakat));
+        self.lawha
+            .ithbit(MiftahShakl::jadeed(khatt, muarrif, hajm, self.namat, bakat));
     }
 
     /// Releases one pin early, for a caller that finished with a glyph
     /// mid-frame and would rather let a large batch behind it succeed.
     pub fn atliq(&mut self, khatt: u8, muarrif: u32, hajm: f32, bakat: u8) {
-        self.lawha.atliq(MiftahShakl::jadeed(khatt, muarrif, hajm, self.namat, bakat));
+        self.lawha
+            .atliq(MiftahShakl::jadeed(khatt, muarrif, hajm, self.namat, bakat));
     }
 
     /// One page's texels, as a fresh copy — one byte per texel, row-major
@@ -455,13 +459,19 @@ impl TaaribLawha {
     /// A page's width in texels, or `undefined` past the last page.
     #[must_use]
     pub fn ard_safha(&self, fahras: u16) -> Option<u16> {
-        self.lawha.safahat().get(usize::from(fahras)).map(|safha| safha.ard)
+        self.lawha
+            .safahat()
+            .get(usize::from(fahras))
+            .map(|safha| safha.ard)
     }
 
     /// A page's height in texels, or `undefined` past the last page.
     #[must_use]
     pub fn irtifa_safha(&self, fahras: u16) -> Option<u16> {
-        self.lawha.safahat().get(usize::from(fahras)).map(|safha| safha.irtifa)
+        self.lawha
+            .safahat()
+            .get(usize::from(fahras))
+            .map(|safha| safha.irtifa)
     }
 
     /// How many pages are open.

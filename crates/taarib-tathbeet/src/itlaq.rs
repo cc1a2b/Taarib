@@ -135,7 +135,10 @@ fn dam_qaima(hali: Option<&str>, jadeed: &str, fasil: char) -> String {
 
 /// The entries of a separated list value, empty ones dropped.
 fn madakhil_qaima(qeema: &str, fasil: char) -> impl Iterator<Item = &str> {
-    qeema.split(fasil).map(str::trim).filter(|madkhal| !madkhal.is_empty())
+    qeema
+        .split(fasil)
+        .map(str::trim)
+        .filter(|madkhal| !madkhal.is_empty())
 }
 
 /// The separator a variable lists its entries with, for the variables whose
@@ -159,9 +162,14 @@ const fn fasil_qaima(ism: &str) -> Option<char> {
 /// Removes Taarib's override entry from a `WINEDLLOVERRIDES` value.
 #[must_use]
 pub fn bidun_tajawuz(hali: &str) -> Option<String> {
-    let baqi: Vec<&str> =
-        madakhil_tajawuz(hali).filter(|madkhal| *madkhal != TAJAWUZ_TAARIB).collect();
-    if baqi.is_empty() { None } else { Some(baqi.join(";")) }
+    let baqi: Vec<&str> = madakhil_tajawuz(hali)
+        .filter(|madkhal| *madkhal != TAJAWUZ_TAARIB)
+        .collect();
+    if baqi.is_empty() {
+        None
+    } else {
+        Some(baqi.join(";"))
+    }
 }
 
 /// The entries of a `WINEDLLOVERRIDES` value, empty ones dropped.
@@ -223,7 +231,7 @@ pub fn khiyarat_maa_mutaghayyir(sabiqa: Option<&str>, ism: &str, qeema: &str) ->
             nateeja.push(' ');
             nateeja.push_str(hali.get(mawqi..).unwrap_or_default());
             nateeja
-        }
+        },
         // Steam appends a placeholder-free value after the command line.
         None => format!("{badiya} {RAMZ_AMR} {hali}"),
     }
@@ -245,7 +253,7 @@ pub fn khiyarat_maa_amr(sabiqa: Option<&str>, amr: &str) -> String {
             nateeja.push_str(amr);
             nateeja.push_str(hali.get(baad..).unwrap_or_default());
             nateeja
-        }
+        },
         None => format!("{amr} {hali}"),
     }
 }
@@ -316,17 +324,17 @@ fn wahdat_amr(nass: &str) -> Vec<String> {
             None if harf == '"' || harf == '\'' => {
                 iqtibas = Some(harf);
                 bada = true;
-            }
+            },
             None if harf.is_whitespace() => {
                 if bada {
                     wahdat.push(std::mem::take(&mut hali));
                     bada = false;
                 }
-            }
+            },
             None => {
                 hali.push(harf);
                 bada = true;
-            }
+            },
         }
     }
     if bada {
@@ -369,7 +377,11 @@ pub fn isnadat_talab(
         .map(wahdat_amr)
         .unwrap_or_default()
         .iter()
-        .filter_map(|wahda| wahda.split_once('=').map(|(ism, _)| ism.to_ascii_uppercase()))
+        .filter_map(|wahda| {
+            wahda
+                .split_once('=')
+                .map(|(ism, _)| ism.to_ascii_uppercase())
+        })
         .collect();
     let mut baqiya: Vec<String> = sabiq.map(wahdat_amr).unwrap_or_default();
 
@@ -393,13 +405,20 @@ pub fn isnadat_talab(
                 ),
             ));
         };
-        if ism.is_empty() || !ism.chars().all(|harf| harf.is_ascii_alphanumeric() || harf == '_') {
+        if ism.is_empty()
+            || !ism
+                .chars()
+                .all(|harf| harf.is_ascii_alphanumeric() || harf == '_')
+        {
             return Err(khata_tanfidh(
                 mahall,
                 format!("`{ism}` is not a name an environment variable can have"),
             ));
         }
-        if asmaa_sabiqa.iter().any(|qadeem| *qadeem == ism.to_ascii_uppercase()) {
+        if asmaa_sabiqa
+            .iter()
+            .any(|qadeem| *qadeem == ism.to_ascii_uppercase())
+        {
             return Err(khata_tanfidh(
                 mahall,
                 format!(
@@ -409,7 +428,10 @@ pub fn isnadat_talab(
                 ),
             ));
         }
-        isnadat.push(IsnadItlaq { ism: ism.to_owned(), qeema: qeema.to_owned() });
+        isnadat.push(IsnadItlaq {
+            ism: ism.to_owned(),
+            qeema: qeema.to_owned(),
+        });
     }
 
     if isnadat.is_empty() {
@@ -439,7 +461,11 @@ pub fn badiyat_amr_maa_tahmeel(sabiqa: Option<&str>) -> String {
     }
 
     let badiya = format!("{AMR_BEEA} {MUTAGHAYYIR_TAJAWUZ}=\"{TAJAWUZ_TAARIB}\"");
-    if hali.is_empty() { badiya } else { format!("{badiya} {hali}") }
+    if hali.is_empty() {
+        badiya
+    } else {
+        format!("{badiya} {hali}")
+    }
 }
 
 /// Removes Taarib's command prefix, leaving everything else where it was.
@@ -507,7 +533,11 @@ fn mawqi_mutaghayyir(qeema: &str, ism: &str) -> Option<(usize, usize, String)> {
         }
         let nihaya = nihaya?;
         let dakhil = baqi.get(awwal.len_utf8()..nihaya)?.to_owned();
-        return Some((mawqi, baad.checked_add(nihaya.checked_add(awwal.len_utf8())?)?, dakhil));
+        return Some((
+            mawqi,
+            baad.checked_add(nihaya.checked_add(awwal.len_utf8())?)?,
+            dakhil,
+        ));
     }
 
     let tul = baqi.find(char::is_whitespace).unwrap_or(baqi.len());
@@ -527,10 +557,12 @@ pub(crate) fn halat_manassa(asmaa: &[&str]) -> HalatTashghil {
         match manassa::halat_tashghil(ism) {
             HalatTashghil::Tashtaghil => return HalatTashghil::Tashtaghil,
             HalatTashghil::GhayrMaaruf { sunduq } => mahjub = Some(sunduq),
-            HalatTashghil::LaTashtaghil => {}
+            HalatTashghil::LaTashtaghil => {},
         }
     }
-    mahjub.map_or(HalatTashghil::LaTashtaghil, |sunduq| HalatTashghil::GhayrMaaruf { sunduq })
+    mahjub.map_or(HalatTashghil::LaTashtaghil, |sunduq| {
+        HalatTashghil::GhayrMaaruf { sunduq }
+    })
 }
 
 /// Refuses while a launcher that rewrites its own configuration on exit is up —
@@ -582,7 +614,10 @@ fn khata_shakl(masar: &Path, amal: &'static str, sabab: String) -> KhataTathbeet
 /// say why: [`KhataTathbeet::KhataMalaf`] carries its reason as a source and
 /// drops it on the way to the screen.
 fn khata_tanfidh(mahall: &str, sabab: String) -> KhataTathbeet {
-    KhataTathbeet::IdadGhayrMunaffadh { mahall: mahall.to_owned(), sabab }
+    KhataTathbeet::IdadGhayrMunaffadh {
+        mahall: mahall.to_owned(),
+        sabab,
+    }
 }
 
 /// Builds the refusal a [`RadIdad`] raises when a setting cannot be put back.
@@ -694,7 +729,7 @@ impl<'a> MasihVdf<'a> {
             match self.bayt.get(self.mawqi) {
                 Some(b) if b.is_ascii_whitespace() => {
                     self.mawqi = self.mawqi.saturating_add(1);
-                }
+                },
                 Some(b'/') if self.bayt.get(self.mawqi.saturating_add(1)) == Some(&b'/') => {
                     while let Some(b) = self.bayt.get(self.mawqi) {
                         if *b == b'\n' {
@@ -702,7 +737,7 @@ impl<'a> MasihVdf<'a> {
                         }
                         self.mawqi = self.mawqi.saturating_add(1);
                     }
-                }
+                },
                 _ => return,
             }
         }
@@ -724,16 +759,26 @@ impl<'a> MasihVdf<'a> {
     fn wahda(&mut self, masar: &Path) -> NatijatTathbeet<Option<WahdaKhaam>> {
         self.takhatti();
         let bidaya = self.mawqi;
-        let Some(&awwal) = self.bayt.get(bidaya) else { return Ok(None) };
+        let Some(&awwal) = self.bayt.get(bidaya) else {
+            return Ok(None);
+        };
         match awwal {
             b'{' => {
                 self.mawqi = bidaya.saturating_add(1);
-                Ok(Some(WahdaKhaam { bidaya, nihaya: self.mawqi, naw: NawWahda::Fath }))
-            }
+                Ok(Some(WahdaKhaam {
+                    bidaya,
+                    nihaya: self.mawqi,
+                    naw: NawWahda::Fath,
+                }))
+            },
             b'}' => {
                 self.mawqi = bidaya.saturating_add(1);
-                Ok(Some(WahdaKhaam { bidaya, nihaya: self.mawqi, naw: NawWahda::Ighlaq }))
-            }
+                Ok(Some(WahdaKhaam {
+                    bidaya,
+                    nihaya: self.mawqi,
+                    naw: NawWahda::Ighlaq,
+                }))
+            },
             b'"' => {
                 let kalima = self.muqtabas(masar)?;
                 Ok(Some(WahdaKhaam {
@@ -741,7 +786,7 @@ impl<'a> MasihVdf<'a> {
                     nihaya: self.mawqi,
                     naw: NawWahda::Kalima(kalima),
                 }))
-            }
+            },
             _ => {
                 let kalima = self.mujarrad(masar)?;
                 Ok(Some(WahdaKhaam {
@@ -749,7 +794,7 @@ impl<'a> MasihVdf<'a> {
                     nihaya: self.mawqi,
                     naw: NawWahda::Kalima(kalima),
                 }))
-            }
+            },
         }
     }
 
@@ -789,9 +834,9 @@ impl<'a> MasihVdf<'a> {
                         _ => {
                             kharij.push('\\');
                             kharij.push(char::from(tali));
-                        }
+                        },
                     }
-                }
+                },
                 _ => {
                     let harf = self
                         .nass
@@ -802,7 +847,7 @@ impl<'a> MasihVdf<'a> {
                             kharij.push(harf);
                             self.mawqi =
                                 self.mawqi.saturating_sub(1).saturating_add(harf.len_utf8());
-                        }
+                        },
                         None => {
                             return Err(khata_talif(
                                 masar,
@@ -810,9 +855,9 @@ impl<'a> MasihVdf<'a> {
                                 bidaya,
                                 "a quoted string ends inside a character",
                             ));
-                        }
+                        },
                     }
-                }
+                },
             }
         }
         Ok(kharij)
@@ -868,9 +913,18 @@ fn izahat_ibn(nass: &str, mawqi: usize) -> String {
         .get(..mawqi.min(nass.len()))
         .and_then(|sabiq| sabiq.rfind('\n').map(|mawdi| mawdi.saturating_add(1)))
         .unwrap_or(0);
-    let satr = nass.get(bidayat_satr..mawqi.min(nass.len())).unwrap_or_default();
-    let izaha: String = satr.chars().take_while(|harf| *harf == '\t' || *harf == ' ').collect();
-    let dakhili = if izaha.contains(' ') && !izaha.contains('\t') { "    " } else { "\t" };
+    let satr = nass
+        .get(bidayat_satr..mawqi.min(nass.len()))
+        .unwrap_or_default();
+    let izaha: String = satr
+        .chars()
+        .take_while(|harf| *harf == '\t' || *harf == ' ')
+        .collect();
+    let dakhili = if izaha.contains(' ') && !izaha.contains('\t') {
+        "    "
+    } else {
+        "\t"
+    };
     format!("{izaha}{dakhili}")
 }
 
@@ -892,7 +946,7 @@ fn mawqi_khiyarat(masar: &Path, nass: &str, app: &str) -> NatijatTathbeet<MawqiK
                         "a closing brace with no matching open brace",
                     ));
                 }
-            }
+            },
             NawWahda::Fath => {
                 return Err(khata_talif(
                     masar,
@@ -900,7 +954,7 @@ fn mawqi_khiyarat(masar: &Path, nass: &str, app: &str) -> NatijatTathbeet<MawqiK
                     wahda.bidaya,
                     "an open brace where a key was expected",
                 ));
-            }
+            },
             NawWahda::Kalima(miftah) => {
                 masih.takhatti_shart();
                 let Some(baad) = masih.wahda(masar)? else {
@@ -919,18 +973,17 @@ fn mawqi_khiyarat(masar: &Path, nass: &str, app: &str) -> NatijatTathbeet<MawqiK
                         } else if yutabiq_luba(&kudus, app) {
                             baad_luba = Some(baad.nihaya);
                         }
-                    }
+                    },
                     NawWahda::Kalima(_) => {
                         masih.takhatti_shart();
-                        if yutabiq_luba(&kudus, app)
-                            && miftah.eq_ignore_ascii_case(MIFTAH_KHIYARAT)
+                        if yutabiq_luba(&kudus, app) && miftah.eq_ignore_ascii_case(MIFTAH_KHIYARAT)
                         {
                             return Ok(MawqiKhiyarat::Qeema {
                                 bidaya: baad.bidaya,
                                 nihaya: baad.nihaya,
                             });
                         }
-                    }
+                    },
                     NawWahda::Ighlaq => {
                         return Err(khata_talif(
                             masar,
@@ -938,20 +991,31 @@ fn mawqi_khiyarat(masar: &Path, nass: &str, app: &str) -> NatijatTathbeet<MawqiK
                             baad.bidaya,
                             "a key is followed by a closing brace instead of a value",
                         ));
-                    }
+                    },
                 }
-            }
+            },
         }
     }
 
     if !kudus.is_empty() {
-        return Err(khata_talif(masar, nass, nass.len(), "a block is never closed"));
+        return Err(khata_talif(
+            masar,
+            nass,
+            nass.len(),
+            "a block is never closed",
+        ));
     }
     if let Some(mawqi) = baad_luba {
-        return Ok(MawqiKhiyarat::DakhilLuba { mawqi, izaha: izahat_ibn(nass, mawqi) });
+        return Ok(MawqiKhiyarat::DakhilLuba {
+            mawqi,
+            izaha: izahat_ibn(nass, mawqi),
+        });
     }
     if let Some(mawqi) = baad_alaab {
-        return Ok(MawqiKhiyarat::DakhilAlaab { mawqi, izaha: izahat_ibn(nass, mawqi) });
+        return Ok(MawqiKhiyarat::DakhilAlaab {
+            mawqi,
+            izaha: izahat_ibn(nass, mawqi),
+        });
     }
     Err(khata_shakl(
         masar,
@@ -967,22 +1031,22 @@ fn mawqi_khiyarat(masar: &Path, nass: &str, app: &str) -> NatijatTathbeet<MawqiK
 /// Whether a key stack is exactly this path, ignoring case at every step.
 fn yutabiq(kudus: &[String], masar: &[&str]) -> bool {
     kudus.len() == masar.len()
-        && kudus.iter().zip(masar.iter()).all(|(hali, matlub)| hali.eq_ignore_ascii_case(matlub))
+        && kudus
+            .iter()
+            .zip(masar.iter())
+            .all(|(hali, matlub)| hali.eq_ignore_ascii_case(matlub))
 }
 
 /// Whether a key stack is the per-app map plus this game's identifier.
 fn yutabiq_luba(kudus: &[String], app: &str) -> bool {
-    let Some((akhir, sabiq)) = kudus.split_last() else { return false };
+    let Some((akhir, sabiq)) = kudus.split_last() else {
+        return false;
+    };
     akhir.eq_ignore_ascii_case(app) && yutabiq(sabiq, &MASAR_ALAAB)
 }
 
 /// Replaces or inserts one game's launch options, changing nothing else.
-fn nass_bi_khiyarat(
-    masar: &Path,
-    nass: &str,
-    app: &str,
-    qeema: &str,
-) -> NatijatTathbeet<String> {
+fn nass_bi_khiyarat(masar: &Path, nass: &str, app: &str, qeema: &str) -> NatijatTathbeet<String> {
     let muqtabasa = iqtibas_vdf(masar, qeema)?;
     let mawqi = mawqi_khiyarat(masar, nass, app)?;
     let mut kharij = String::with_capacity(nass.len().saturating_add(muqtabasa.len()));
@@ -992,12 +1056,12 @@ fn nass_bi_khiyarat(
             kharij.push_str(nass.get(..bidaya).unwrap_or_default());
             kharij.push_str(&muqtabasa);
             kharij.push_str(nass.get(nihaya..).unwrap_or_default());
-        }
+        },
         MawqiKhiyarat::DakhilLuba { mawqi, izaha } => {
             kharij.push_str(nass.get(..mawqi).unwrap_or_default());
             let _ = write!(kharij, "\n{izaha}\"{MIFTAH_KHIYARAT}\"\t\t{muqtabasa}");
             kharij.push_str(nass.get(mawqi..).unwrap_or_default());
-        }
+        },
         MawqiKhiyarat::DakhilAlaab { mawqi, izaha } => {
             let dakhili = if izaha.contains('\t') {
                 format!("{izaha}\t")
@@ -1011,7 +1075,7 @@ fn nass_bi_khiyarat(
                  {izaha}}}"
             );
             kharij.push_str(nass.get(mawqi..).unwrap_or_default());
-        }
+        },
     }
     Ok(kharij)
 }
@@ -1068,7 +1132,10 @@ impl KhiyaratSteam {
     /// A writer for one `localconfig.vdf` and one application identifier.
     #[must_use]
     pub fn jadeeda(malaf: impl Into<PathBuf>, app: impl Into<String>) -> Self {
-        Self { malaf: malaf.into(), app: app.into() }
+        Self {
+            malaf: malaf.into(),
+            app: app.into(),
+        }
     }
 
     /// A writer for one account's configuration directory.
@@ -1128,7 +1195,9 @@ impl KhiyaratSteam {
     /// were never asked.
     #[must_use]
     pub fn min_mahall(mahall: &MahallIdad) -> Option<Self> {
-        let MahallIdad::MalafIdad { masar, miftah } = mahall else { return None };
+        let MahallIdad::MalafIdad { masar, miftah } = mahall else {
+            return None;
+        };
         let app = miftah.strip_prefix(MIFTAH_SIJILL)?.strip_prefix(':')?;
         if app.is_empty() || masar.is_empty() {
             return None;
@@ -1155,10 +1224,13 @@ impl KhiyaratSteam {
     ///
     /// As [`KhiyaratSteam::athbit_talab`].
     pub fn athbit(&self, muthabbit: &mut dyn Muthabbit) -> NatijatTathbeet<bool> {
-        self.athbit_talab(muthabbit, &[IsnadItlaq {
-            ism: MUTAGHAYYIR_TAJAWUZ.to_owned(),
-            qeema: TAJAWUZ_TAARIB.to_owned(),
-        }])
+        self.athbit_talab(
+            muthabbit,
+            &[IsnadItlaq {
+                ism: MUTAGHAYYIR_TAJAWUZ.to_owned(),
+                qeema: TAJAWUZ_TAARIB.to_owned(),
+            }],
+        )
     }
 
     /// Puts a set of environment assignments in front of this game's command
@@ -1215,9 +1287,15 @@ impl KhiyaratSteam {
 
         let mut jadeeda = sabiqa.clone();
         for isnad in isnadat {
-            jadeeda = Some(khiyarat_maa_isnad(jadeeda.as_deref(), &isnad.ism, &isnad.qeema));
+            jadeeda = Some(khiyarat_maa_isnad(
+                jadeeda.as_deref(),
+                &isnad.ism,
+                &isnad.qeema,
+            ));
         }
-        let Some(jadeeda) = jadeeda else { return Ok(false) };
+        let Some(jadeeda) = jadeeda else {
+            return Ok(false);
+        };
         if sabiqa.as_deref() == Some(jadeeda.as_str()) {
             return Ok(false);
         }
@@ -1231,7 +1309,11 @@ impl KhiyaratSteam {
     /// Reads this game's launch options out of a document already in memory.
     fn qeema_min(&self, nass: &str) -> NatijatTathbeet<Option<String>> {
         let shajara = vdf::iqra_nassi(nass).map_err(|khata| {
-            khata_shakl(&self.malaf, "parsing Steam's account configuration", khata.injilizi)
+            khata_shakl(
+                &self.malaf,
+                "parsing Steam's account configuration",
+                khata.injilizi,
+            )
         })?;
         let mut masar: Vec<&str> = MASAR_ALAAB.to_vec();
         masar.push(self.app.as_str());
@@ -1258,11 +1340,7 @@ impl KhiyaratSteam {
 
     /// The body of the restore with the launcher verdict supplied rather than
     /// observed.
-    fn rudd_bi_hala(
-        &self,
-        hala: HalatTashghil,
-        sijill: &SijillIdad,
-    ) -> Result<(), KhataTathbeet> {
+    fn rudd_bi_hala(&self, hala: HalatTashghil, sijill: &SijillIdad) -> Result<(), KhataTathbeet> {
         self.tahaqquq_min(sijill)?;
         hukm_manassa(hala, ISM_STEAM, &self.malaf)?;
 
@@ -1277,7 +1355,9 @@ impl KhiyaratSteam {
         // resurrect options the person deleted themselves. Emptied and deleted
         // are the same answer to that question — Steam's properties dialog
         // produces the first and only a hand edit produces the second.
-        let Some(hali) = hali.filter(|qeema| !qeema.is_empty()) else { return Ok(()) };
+        let Some(hali) = hali.filter(|qeema| !qeema.is_empty()) else {
+            return Ok(());
+        };
 
         // Exact, or nothing. The alternative — subtracting what Taarib thinks
         // it added from whatever is in the field now — decides on a stale
@@ -1337,7 +1417,13 @@ fn khata_ila_sabab(khata: &KhataTathbeet) -> String {
 /// [`MasdarLuba::muarrif`]: taarib_mustalahat::luba::MasdarLuba::muarrif
 #[must_use]
 pub fn app_talab_steam(mahall: &MahallIdad) -> Option<&str> {
-    let MahallIdad::KhiyaratTashghil { manassa, muarrif_luba } = mahall else { return None };
+    let MahallIdad::KhiyaratTashghil {
+        manassa,
+        muarrif_luba,
+    } = mahall
+    else {
+        return None;
+    };
     if !manassa.eq_ignore_ascii_case(MANASSA_STEAM) && !manassa.eq_ignore_ascii_case(ISM_STEAM) {
         return None;
     }
@@ -1414,7 +1500,9 @@ fn naffidh_bi_hala(
     // A requirement nobody can apply is not a requirement that quietly does not
     // apply: the framework was just deployed and will not load without it.
     let Some(jidhr) = jidhr_steam else {
-        let mahall = talabat.first().map_or_else(String::new, |talab| talab.mahall.wasf());
+        let mahall = talabat
+            .first()
+            .map_or_else(String::new, |talab| talab.mahall.wasf());
         return Err(khata_tanfidh(
             &mahall,
             "this install was given no Steam root to apply the requirement in, so there is no \
@@ -1427,8 +1515,12 @@ fn naffidh_bi_hala(
 
     let mut adad = 0_usize;
     for talab in talabat {
-        let Some(app) = app_talab_steam(&talab.mahall) else { continue };
-        let Some(matlub) = talab.qeema_maktuba.as_deref() else { continue };
+        let Some(app) = app_talab_steam(&talab.mahall) else {
+            continue;
+        };
+        let Some(matlub) = talab.qeema_maktuba.as_deref() else {
+            continue;
+        };
         let mahall = talab.mahall.wasf();
         let isnadat = isnadat_talab(&mahall, matlub, talab.qeema_sabiqa.as_deref())?;
 
@@ -1602,18 +1694,19 @@ impl KhiyaratMughallif {
                         "this file holds no object under {miftah}, so it is not this game's \
                          configuration and nothing was written to it"
                     ),
-                    None => "this file is not a JSON object, so there is no field to set"
-                        .to_owned(),
+                    None => {
+                        "this file is not a JSON object, so there is no field to set".to_owned()
+                    },
                 },
             ));
         };
         match qeema {
             Some(qeema) => {
                 let _ = kaain.insert(self.miftah.clone(), Value::String(qeema.to_owned()));
-            }
+            },
             None => {
                 let _ = kaain.remove(&self.miftah);
-            }
+            },
         }
         Ok(())
     }
@@ -1634,12 +1727,14 @@ impl KhiyaratMughallif {
     /// Refuses a record that belongs to another launcher or another game.
     fn tahaqquq_min(&self, sijill: &SijillIdad) -> Result<(), KhataTathbeet> {
         match &sijill.mahall {
-            MahallIdad::KhiyaratTashghil { manassa, muarrif_luba }
-                if manassa.eq_ignore_ascii_case(&self.manassa)
-                    && *muarrif_luba == self.muarrif_luba =>
+            MahallIdad::KhiyaratTashghil {
+                manassa,
+                muarrif_luba,
+            } if manassa.eq_ignore_ascii_case(&self.manassa)
+                && *muarrif_luba == self.muarrif_luba =>
             {
                 Ok(())
-            }
+            },
             _ => Err(khata_idad(
                 sijill,
                 format!(
@@ -1659,21 +1754,29 @@ impl RadIdad for KhiyaratMughallif {
 
         let nass = iqra_idad(&self.malaf, "reading a launcher's command prefix")
             .map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))?;
-        let mut wathiqa =
-            self.hallil(&nass).map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))?;
-        let Some(hali) = self.qeema_min(&wathiqa) else { return Ok(()) };
+        let mut wathiqa = self
+            .hallil(&nass)
+            .map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))?;
+        let Some(hali) = self.qeema_min(&wathiqa) else {
+            return Ok(());
+        };
 
         let matlub = if sijill.qeema_maktuba.as_deref() == Some(hali.as_str()) {
             sijill.qeema_sabiqa.clone()
         } else {
             let kan_fih_beea = sijill.qeema_sabiqa.as_deref().is_some_and(yabda_bi_beea);
             let baqiya = badiyat_amr_bidun_tahmeel(&hali, kan_fih_beea);
-            if baqiya.is_empty() { None } else { Some(baqiya) }
+            if baqiya.is_empty() {
+                None
+            } else {
+                Some(baqiya)
+            }
         };
 
         self.daa(&mut wathiqa, matlub.as_deref())
             .map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))?;
-        self.iktub(&wathiqa).map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))
+        self.iktub(&wathiqa)
+            .map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))
     }
 }
 
@@ -1688,7 +1791,10 @@ impl KhiyaratLutris {
     /// A writer for one Lutris game configuration file.
     #[must_use]
     pub fn jadeeda(malaf: impl Into<PathBuf>, silaa: impl Into<String>) -> Self {
-        Self { malaf: malaf.into(), silaa: silaa.into() }
+        Self {
+            malaf: malaf.into(),
+            silaa: silaa.into(),
+        }
     }
 
     /// The file this writer edits.
@@ -1806,13 +1912,13 @@ impl KhiyaratLutris {
                 if let Some(satr) = mabniya.get_mut(mawqi) {
                     *satr = format!("{izaha}{MIFTAH_LUTRIS}: {muqtabasa}");
                 }
-            }
+            },
             (Some(mawqi), None) => {
                 if mawqi < mabniya.len() {
                     let _ = mabniya.remove(mawqi);
                 }
-            }
-            (None, None) => {}
+            },
+            (None, None) => {},
             (None, Some(qeema)) => {
                 let muqtabasa = iqtibas_yaml(&self.malaf, qeema)?;
                 if let Some(nizam) = nizam {
@@ -1826,7 +1932,7 @@ impl KhiyaratLutris {
                     mabniya.push(format!("{MIFTAH_LUTRIS_NIZAM}:"));
                     mabniya.push(format!("  {MIFTAH_LUTRIS}: {muqtabasa}"));
                 }
-            }
+            },
         }
 
         Ok(format!("{}{nihaya}", mabniya.join("\n")))
@@ -1835,11 +1941,12 @@ impl KhiyaratLutris {
     /// Refuses a record that belongs to another launcher or another game.
     fn tahaqquq_min(&self, sijill: &SijillIdad) -> Result<(), KhataTathbeet> {
         match &sijill.mahall {
-            MahallIdad::KhiyaratTashghil { manassa, muarrif_luba }
-                if manassa.eq_ignore_ascii_case(MANASSA_LUTRIS) && *muarrif_luba == self.silaa =>
-            {
+            MahallIdad::KhiyaratTashghil {
+                manassa,
+                muarrif_luba,
+            } if manassa.eq_ignore_ascii_case(MANASSA_LUTRIS) && *muarrif_luba == self.silaa => {
                 Ok(())
-            }
+            },
             _ => Err(khata_idad(
                 sijill,
                 format!(
@@ -1870,7 +1977,11 @@ impl RadIdad for KhiyaratLutris {
         } else {
             let kan_fih_beea = sijill.qeema_sabiqa.as_deref().is_some_and(yabda_bi_beea);
             let baqiya = badiyat_amr_bidun_tahmeel(&hali, kan_fih_beea);
-            if baqiya.is_empty() { None } else { Some(baqiya) }
+            if baqiya.is_empty() {
+                None
+            } else {
+                Some(baqiya)
+            }
         };
 
         let kharij = self
@@ -1904,19 +2015,29 @@ fn mawqi_miftah(sutur: &[&str], walid: Option<usize>, miftah: &str) -> Option<us
             walid.saturating_add(1),
             izahat_maani(sutur.get(walid).copied().unwrap_or_default()).unwrap_or(0),
         ),
-        None => (0, sutur.iter().copied().filter_map(izahat_maani).min().unwrap_or(0)),
+        None => (
+            0,
+            sutur
+                .iter()
+                .copied()
+                .filter_map(izahat_maani)
+                .min()
+                .unwrap_or(0),
+        ),
     };
 
     let mut mustawa_ibn: Option<usize> = None;
     for (mawqi, satr) in sutur.iter().enumerate().skip(bidaya) {
-        let Some(izaha) = izahat_maani(satr) else { continue };
+        let Some(izaha) = izahat_maani(satr) else {
+            continue;
+        };
         if walid.is_some() {
             if izaha <= mustawa {
                 return None;
             }
             match mustawa_ibn {
                 Some(matlub) if izaha != matlub => continue,
-                Some(_) => {}
+                Some(_) => {},
                 None => mustawa_ibn = Some(izaha),
             }
         } else if izaha != mustawa {
@@ -1944,7 +2065,9 @@ fn miftah_satr(satr: &str) -> Option<String> {
 /// The raw text after a mapping line's colon, with a trailing comment removed.
 fn qeemat_satr(sutur: &[&str], mawqi: usize) -> String {
     let satr = sutur.get(mawqi).copied().unwrap_or_default().trim();
-    let Some((_, baqi)) = satr.split_once(':') else { return String::new() };
+    let Some((_, baqi)) = satr.split_once(':') else {
+        return String::new();
+    };
     let baqi = baqi.trim();
     if baqi.starts_with('"') || baqi.starts_with('\'') {
         return baqi.to_owned();
@@ -1959,10 +2082,16 @@ fn qeemat_satr(sutur: &[&str], mawqi: usize) -> String {
 /// quoting styles Lutris writes.
 fn qeemat_khaam(khaam: &str) -> String {
     let khaam = khaam.trim();
-    if let Some(dakhil) = khaam.strip_prefix('\'').and_then(|baqi| baqi.strip_suffix('\'')) {
+    if let Some(dakhil) = khaam
+        .strip_prefix('\'')
+        .and_then(|baqi| baqi.strip_suffix('\''))
+    {
         return dakhil.replace("''", "'");
     }
-    let Some(dakhil) = khaam.strip_prefix('"').and_then(|baqi| baqi.strip_suffix('"')) else {
+    let Some(dakhil) = khaam
+        .strip_prefix('"')
+        .and_then(|baqi| baqi.strip_suffix('"'))
+    else {
         if matches!(khaam, "~" | "null" | "Null" | "NULL") {
             return String::new();
         }
@@ -1986,7 +2115,7 @@ fn qeemat_khaam(khaam: &str) -> String {
             Some(akhar) => {
                 kharij.push('\\');
                 kharij.push(akhar);
-            }
+            },
         }
     }
     kharij
@@ -2033,7 +2162,10 @@ impl IdadBeea {
     /// A writer for one variable in one environment file.
     #[must_use]
     pub fn jadeed(malaf: impl Into<PathBuf>, ism: impl Into<String>) -> Self {
-        Self { malaf: malaf.into(), ism: ism.into() }
+        Self {
+            malaf: malaf.into(),
+            ism: ism.into(),
+        }
     }
 
     /// A writer for the DLL override variable Proton and Wine read.
@@ -2057,7 +2189,9 @@ impl IdadBeea {
     /// Where a change to this variable is recorded.
     #[must_use]
     pub fn mahall(&self) -> MahallIdad {
-        MahallIdad::MutaghayyirBeea { ism: self.ism.clone() }
+        MahallIdad::MutaghayyirBeea {
+            ism: self.ism.clone(),
+        }
     }
 
     /// The value the file currently assigns, or [`None`] when it assigns none
@@ -2068,7 +2202,9 @@ impl IdadBeea {
     /// [`KhataTathbeet::KhataMalaf`] when the file exists and cannot be read or
     /// is not valid UTF-8.
     pub fn qeema_haliya(&self) -> NatijatTathbeet<Option<String>> {
-        let Some(nass) = self.iqra()? else { return Ok(None) };
+        let Some(nass) = self.iqra()? else {
+            return Ok(None);
+        };
         Ok(self.qeema_min(&nass))
     }
 
@@ -2129,13 +2265,21 @@ impl IdadBeea {
         let bila_iqtibas = qeema
             .strip_prefix('"')
             .and_then(|dakhil| dakhil.strip_suffix('"'))
-            .or_else(|| qeema.strip_prefix('\'').and_then(|dakhil| dakhil.strip_suffix('\'')));
+            .or_else(|| {
+                qeema
+                    .strip_prefix('\'')
+                    .and_then(|dakhil| dakhil.strip_suffix('\''))
+            });
         Some(bila_iqtibas.unwrap_or(qeema).to_owned())
     }
 
     /// Rewrites, removes or appends this variable's assignment.
     fn bi_qeema(&self, nass: &str, qeema: Option<&str>) -> String {
-        let nihaya = if nass.is_empty() || nass.ends_with('\n') { "\n" } else { "" };
+        let nihaya = if nass.is_empty() || nass.ends_with('\n') {
+            "\n"
+        } else {
+            ""
+        };
         let mut sutur: Vec<String> = Vec::new();
         let mut kutibat = false;
         for satr in nass.lines() {
@@ -2144,15 +2288,17 @@ impl IdadBeea {
                 continue;
             }
             if let Some(qeema) = qeema
-                && !kutibat {
-                    sutur.push(format!("{}={}", self.ism, iqtibas_beea(qeema)));
-                    kutibat = true;
-                }
+                && !kutibat
+            {
+                sutur.push(format!("{}={}", self.ism, iqtibas_beea(qeema)));
+                kutibat = true;
+            }
         }
         if let Some(qeema) = qeema
-            && !kutibat {
-                sutur.push(format!("{}={}", self.ism, iqtibas_beea(qeema)));
-            }
+            && !kutibat
+        {
+            sutur.push(format!("{}={}", self.ism, iqtibas_beea(qeema)));
+        }
         if sutur.is_empty() {
             return String::new();
         }
@@ -2178,11 +2324,15 @@ impl IdadBeea {
 impl RadIdad for IdadBeea {
     fn rudd(&mut self, sijill: &SijillIdad) -> Result<(), KhataTathbeet> {
         self.tahaqquq_min(sijill)?;
-        let Some(nass) = self.iqra().map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))?
+        let Some(nass) = self
+            .iqra()
+            .map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))?
         else {
             return Ok(());
         };
-        let Some(hali) = self.qeema_min(&nass) else { return Ok(()) };
+        let Some(hali) = self.qeema_min(&nass) else {
+            return Ok(());
+        };
 
         let matlub = if sijill.qeema_maktuba.as_deref() == Some(hali.as_str()) {
             sijill.qeema_sabiqa.clone()
@@ -2280,7 +2430,7 @@ impl RadItlaq {
             MahallIdad::MalafIdad { .. } => KhiyaratSteam::min_mahall(mahall).is_some(),
             MahallIdad::KhiyaratTashghil { .. } => {
                 app_talab_steam(mahall).is_some_and(|app| self.yughatti(app))
-            }
+            },
             MahallIdad::SijillWindows { .. } | MahallIdad::MutaghayyirBeea { .. } => false,
         }
     }
@@ -2342,7 +2492,10 @@ impl RadIdad for RadItlaq {
                     ),
                 )),
             },
-            MahallIdad::KhiyaratTashghil { manassa, muarrif_luba } => {
+            MahallIdad::KhiyaratTashghil {
+                manassa,
+                muarrif_luba,
+            } => {
                 // The requirement the deployment recorded, already carried out
                 // by the per-account records this restorer holds writers for.
                 // Nothing is left to write here, and saying so is not the same
@@ -2352,14 +2505,18 @@ impl RadIdad for RadItlaq {
                     return Ok(());
                 }
                 if manassa.eq_ignore_ascii_case(MANASSA_STEAM) {
-                    if let Some(katib) =
-                        self.khiyarat.iter_mut().find(|katib| katib.app == *muarrif_luba)
+                    if let Some(katib) = self
+                        .khiyarat
+                        .iter_mut()
+                        .find(|katib| katib.app == *muarrif_luba)
                     {
                         return katib.rudd(sijill);
                     }
                 } else if manassa.eq_ignore_ascii_case(MANASSA_LUTRIS) {
-                    if let Some(katib) =
-                        self.lutris.iter_mut().find(|katib| katib.silaa == *muarrif_luba)
+                    if let Some(katib) = self
+                        .lutris
+                        .iter_mut()
+                        .find(|katib| katib.silaa == *muarrif_luba)
                     {
                         return katib.rudd(sijill);
                     }
@@ -2376,10 +2533,12 @@ impl RadIdad for RadItlaq {
                          so the option is still in place and was not reported as restored"
                     ),
                 ))
-            }
+            },
             MahallIdad::MutaghayyirBeea { ism } => {
-                if let Some(katib) =
-                    self.beea.iter_mut().find(|katib| katib.ism.eq_ignore_ascii_case(ism))
+                if let Some(katib) = self
+                    .beea
+                    .iter_mut()
+                    .find(|katib| katib.ism.eq_ignore_ascii_case(ism))
                 {
                     return katib.rudd(sijill);
                 }
@@ -2390,7 +2549,7 @@ impl RadIdad for RadItlaq {
                          the variable is still set and was not reported as restored"
                     ),
                 ))
-            }
+            },
             MahallIdad::SijillWindows { .. } => Err(khata_idad(
                 sijill,
                 format!(
@@ -2419,21 +2578,28 @@ mod ikhtibarat {
     use super::{
         ASMAA_STEAM, HalatTashghil, IsnadItlaq, KhataTathbeet, KhiyaratSteam, MANASSA_STEAM,
         MIFTAH_SIJILL, MUTAGHAYYIR_TAHMIL_LINUX, MUTAGHAYYIR_TAJAWUZ, MahallIdad, Muthabbit,
-        RAMZ_AMR, RadItlaq, SijillIdad, TAJAWUZ_TAARIB, app_talab_steam,
-        halat_manassa, hukm_manassa, isnadat_talab, khiyarat_maa_isnad, naffidh_bi_hala,
-        wahdat_amr,
+        RAMZ_AMR, RadItlaq, SijillIdad, TAJAWUZ_TAARIB, app_talab_steam, halat_manassa,
+        hukm_manassa, isnadat_talab, khiyarat_maa_isnad, naffidh_bi_hala, wahdat_amr,
     };
 
     /// Executable names nothing on any machine is running.
-    const ASMAA_MUSTAHILA: [&str; 2] =
-        ["la-tujad-hadhihi-al-manassa", "wala-hadhihi-al-manassa-aydan"];
+    const ASMAA_MUSTAHILA: [&str; 2] = [
+        "la-tujad-hadhihi-al-manassa",
+        "wala-hadhihi-al-manassa-aydan",
+    ];
 
     /// The two verdicts that must stop a launcher edit, whatever else is true.
     const HALAT_RAFIDA: [HalatTashghil; 4] = [
         HalatTashghil::Tashtaghil,
-        HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Flatpak },
-        HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Snap },
-        HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Hawiya },
+        HalatTashghil::GhayrMaaruf {
+            sunduq: Sunduq::Flatpak,
+        },
+        HalatTashghil::GhayrMaaruf {
+            sunduq: Sunduq::Snap,
+        },
+        HalatTashghil::GhayrMaaruf {
+            sunduq: Sunduq::Hawiya,
+        },
     ];
 
     fn malaf() -> &'static Path {
@@ -2459,7 +2625,10 @@ mod ikhtibarat {
         }
 
         fn ansha_mujallad(&mut self, masar: &Path) -> Result<(), KhataTathbeet> {
-            panic!("the guard let a directory be created at {}", masar.display())
+            panic!(
+                "the guard let a directory be created at {}",
+                masar.display()
+            )
         }
 
         fn ihdhif(&mut self, masar: &Path) -> Result<bool, KhataTathbeet> {
@@ -2516,14 +2685,20 @@ mod ikhtibarat {
         assert_eq!(taamal.khutwa(), Khutwa::AadaMuhawala);
 
         let majhula = hukm_manassa(
-            HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Flatpak },
+            HalatTashghil::GhayrMaaruf {
+                sunduq: Sunduq::Flatpak,
+            },
             "Steam",
             malaf(),
         )
         .expect_err("a blind launcher guard refuses");
         assert!(matches!(majhula, KhataTathbeet::HalatManassaMajhula { .. }));
         assert!(majhula.injilizi().contains("Flatpak"));
-        assert!(majhula.injilizi().contains("cannot tell whether Steam is running"));
+        assert!(
+            majhula
+                .injilizi()
+                .contains("cannot tell whether Steam is running")
+        );
         assert!(!majhula.injilizi().contains("Steam is running and"));
         assert!(majhula.arabi().contains("فلاتباك"));
         assert!(majhula.arabi().contains("تعذّر عليه معرفة"));
@@ -2542,7 +2717,7 @@ mod ikhtibarat {
             RuyatAmaliyat::Kamila => assert_eq!(hala, HalatTashghil::LaTashtaghil),
             RuyatAmaliyat::Maazula { sunduq } => {
                 assert_eq!(hala, HalatTashghil::GhayrMaaruf { sunduq });
-            }
+            },
         }
         // An empty list has nothing to look for and nothing to be blind about.
         assert_eq!(halat_manassa(&[]), HalatTashghil::LaTashtaghil);
@@ -2581,12 +2756,14 @@ mod ikhtibarat {
             assert!(
                 matches!(
                     khata,
-                    KhataTathbeet::MunassaTaamal { .. }
-                        | KhataTathbeet::HalatManassaMajhula { .. }
+                    KhataTathbeet::MunassaTaamal { .. } | KhataTathbeet::HalatManassaMajhula { .. }
                 ),
                 "the refusal must name the launcher, not something else: {khata:?}"
             );
-            assert!(khata.arabi().contains("Steam"), "and it must say so in Arabic too");
+            assert!(
+                khata.arabi().contains("Steam"),
+                "and it must say so in Arabic too"
+            );
         }
     }
 
@@ -2607,10 +2784,23 @@ mod ikhtibarat {
         // The sentence a person reads has to carry the reason, in both
         // languages: a refusal whose detail is only a `source` is a refusal the
         // screen renders as "something went wrong".
-        assert!(khata.injilizi().contains("no Steam root"), "{}", khata.injilizi());
-        assert!(khata.injilizi().contains("would have loaded"), "{}", khata.injilizi());
+        assert!(
+            khata.injilizi().contains("no Steam root"),
+            "{}",
+            khata.injilizi()
+        );
+        assert!(
+            khata.injilizi().contains("would have loaded"),
+            "{}",
+            khata.injilizi()
+        );
         assert!(khata.arabi().contains("لا تُحمَّل"), "{}", khata.arabi());
-        assert_eq!(khata.khutwa(), Khutwa::FathIdadat { qism: QismIdadat::Manassat });
+        assert_eq!(
+            khata.khutwa(),
+            Khutwa::FathIdadat {
+                qism: QismIdadat::Manassat
+            }
+        );
     }
 
     #[test]
@@ -2677,8 +2867,14 @@ mod ikhtibarat {
         // reason, which reads identically from the outside and is not the same
         // thing at all.
         let sabab = khata.injilizi();
-        assert!(sabab.contains("handed a record for something else"), "{sabab}");
-        assert!(sabab.contains("userdata/1"), "and it names which account it was built for");
+        assert!(
+            sabab.contains("handed a record for something else"),
+            "{sabab}"
+        );
+        assert!(
+            sabab.contains("userdata/1"),
+            "and it names which account it was built for"
+        );
     }
 
     #[test]
@@ -2688,8 +2884,10 @@ mod ikhtibarat {
         // here does not exist: reaching a read at all would mean the guard let
         // the call past.
         let katib = KhiyaratSteam::jadeeda(malaf(), "480");
-        let isnadat =
-            [IsnadItlaq { ism: MUTAGHAYYIR_TAJAWUZ.to_owned(), qeema: TAJAWUZ_TAARIB.to_owned() }];
+        let isnadat = [IsnadItlaq {
+            ism: MUTAGHAYYIR_TAJAWUZ.to_owned(),
+            qeema: TAJAWUZ_TAARIB.to_owned(),
+        }];
         for hala in HALAT_RAFIDA {
             let khata = katib
                 .athbit_bi_hala(hala, &mut MuthabbitSamit, &isnadat)
@@ -2697,8 +2895,7 @@ mod ikhtibarat {
             assert!(
                 matches!(
                     khata,
-                    KhataTathbeet::MunassaTaamal { .. }
-                        | KhataTathbeet::HalatManassaMajhula { .. }
+                    KhataTathbeet::MunassaTaamal { .. } | KhataTathbeet::HalatManassaMajhula { .. }
                 ),
                 "the refusal must be the guard's rather than a file that was not there: {khata:?}"
             );
@@ -2715,9 +2912,12 @@ mod ikhtibarat {
         let mahall = katib.mahall();
         match &mahall {
             MahallIdad::MalafIdad { masar, miftah } => {
-                assert!(masar.contains("userdata"), "the record names the account file");
+                assert!(
+                    masar.contains("userdata"),
+                    "the record names the account file"
+                );
                 assert_eq!(miftah, &format!("{MIFTAH_SIJILL}:480"));
-            }
+            },
             akhar => panic!("a per-account record must be a MalafIdad, got {akhar:?}"),
         }
 
@@ -2740,8 +2940,13 @@ mod ikhtibarat {
                 masar: "/etc/environment".to_owned(),
                 miftah: "LD_PRELOAD".to_owned(),
             },
-            MahallIdad::MutaghayyirBeea { ism: MUTAGHAYYIR_TAJAWUZ.to_owned() },
-            MahallIdad::SijillWindows { miftah: "HKCU\\X".to_owned(), qeema: String::new() },
+            MahallIdad::MutaghayyirBeea {
+                ism: MUTAGHAYYIR_TAJAWUZ.to_owned(),
+            },
+            MahallIdad::SijillWindows {
+                miftah: "HKCU\\X".to_owned(),
+                qeema: String::new(),
+            },
         ] {
             assert!(
                 KhiyaratSteam::min_mahall(&mahall).is_none(),
@@ -2806,23 +3011,33 @@ mod ikhtibarat {
 
     #[test]
     fn tajzia_amr_tahtarim_al_iqtibas() {
-        assert_eq!(wahdat_amr(r#"A="x y" B"#), vec!["A=x y".to_owned(), "B".to_owned()]);
+        assert_eq!(
+            wahdat_amr(r#"A="x y" B"#),
+            vec!["A=x y".to_owned(), "B".to_owned()]
+        );
         assert_eq!(wahdat_amr("  "), Vec::<String>::new());
         assert_eq!(wahdat_amr(r#"A="""#), vec!["A=".to_owned()]);
-        assert_eq!(wahdat_amr("-name 'The Player'"), vec![
-            "-name".to_owned(),
-            "The Player".to_owned()
-        ]);
+        assert_eq!(
+            wahdat_amr("-name 'The Player'"),
+            vec!["-name".to_owned(), "The Player".to_owned()]
+        );
     }
 
     #[test]
     fn qiraat_al_talab_tuqbal_ma_yasjuluhu_al_nashr() {
-        let isnadat = isnadat_talab(MAHALL_IKHTIBAR, talab_wine("480").qeema_maktuba.as_deref().unwrap_or(""), None)
-            .expect("the shape the deployment records");
-        assert_eq!(isnadat, vec![IsnadItlaq {
-            ism: MUTAGHAYYIR_TAJAWUZ.to_owned(),
-            qeema: TAJAWUZ_TAARIB.to_owned(),
-        }]);
+        let isnadat = isnadat_talab(
+            MAHALL_IKHTIBAR,
+            talab_wine("480").qeema_maktuba.as_deref().unwrap_or(""),
+            None,
+        )
+        .expect("the shape the deployment records");
+        assert_eq!(
+            isnadat,
+            vec![IsnadItlaq {
+                ism: MUTAGHAYYIR_TAJAWUZ.to_owned(),
+                qeema: TAJAWUZ_TAARIB.to_owned(),
+            }]
+        );
     }
 
     #[test]
@@ -2838,7 +3053,10 @@ mod ikhtibarat {
             .expect_err("a wrapper command is not something this build composes");
         assert!(khata.injilizi().contains("not an environment assignment"));
 
-        assert!(isnadat_talab(MAHALL_IKHTIBAR, RAMZ_AMR, None).is_err(), "a requirement that adds nothing");
+        assert!(
+            isnadat_talab(MAHALL_IKHTIBAR, RAMZ_AMR, None).is_err(),
+            "a requirement that adds nothing"
+        );
     }
 
     #[test]
@@ -2849,14 +3067,21 @@ mod ikhtibarat {
         let isnadat = isnadat_talab(MAHALL_IKHTIBAR, &matlub, Some("-dx11"))
             .expect("one account's own flag is not part of the requirement");
         assert_eq!(isnadat.len(), 1);
-        assert_eq!(isnadat.first().map(|isnad| isnad.ism.as_str()), Some(MUTAGHAYYIR_TAJAWUZ));
+        assert_eq!(
+            isnadat.first().map(|isnad| isnad.ism.as_str()),
+            Some(MUTAGHAYYIR_TAJAWUZ)
+        );
 
         // …and a variable the previous value also assigned has been merged with
         // one account's own setting, which is not a value any other account may
         // be given.
         let mudmaj = format!("{MUTAGHAYYIR_TAJAWUZ}=\"d3d9=n;{TAJAWUZ_TAARIB}\" {RAMZ_AMR}");
-        let khata = isnadat_talab(MAHALL_IKHTIBAR, &mudmaj, Some(&format!("{MUTAGHAYYIR_TAJAWUZ}=\"d3d9=n\" {RAMZ_AMR}")))
-            .expect_err("a requirement carrying one account's own overrides must be refused");
+        let khata = isnadat_talab(
+            MAHALL_IKHTIBAR,
+            &mudmaj,
+            Some(&format!("{MUTAGHAYYIR_TAJAWUZ}=\"d3d9=n\" {RAMZ_AMR}")),
+        )
+        .expect_err("a requirement carrying one account's own overrides must be refused");
         assert!(khata.injilizi().contains("merged for one account"));
     }
 
@@ -2882,12 +3107,18 @@ mod ikhtibarat {
         // assignment goes where the game's own command line starts.
         let hali = "mangohud %command% -vulkan";
         let baad = khiyarat_maa_isnad(Some(hali), MUTAGHAYYIR_TAJAWUZ, TAJAWUZ_TAARIB);
-        assert_eq!(baad, format!("mangohud {MUTAGHAYYIR_TAJAWUZ}=\"{TAJAWUZ_TAARIB}\" %command% -vulkan"));
+        assert_eq!(
+            baad,
+            format!("mangohud {MUTAGHAYYIR_TAJAWUZ}=\"{TAJAWUZ_TAARIB}\" %command% -vulkan")
+        );
 
         // A user's own override list keeps every entry; Taarib adds one.
         let mawjud = format!("{MUTAGHAYYIR_TAJAWUZ}=\"d3d9=n,b\" {RAMZ_AMR}");
         let baad = khiyarat_maa_isnad(Some(&mawjud), MUTAGHAYYIR_TAJAWUZ, TAJAWUZ_TAARIB);
-        assert!(baad.contains("d3d9=n,b"), "the user's own override survives: {baad}");
+        assert!(
+            baad.contains("d3d9=n,b"),
+            "the user's own override survives: {baad}"
+        );
         assert!(baad.contains(TAJAWUZ_TAARIB));
         assert_eq!(baad.matches(MUTAGHAYYIR_TAJAWUZ).count(), 1);
     }
@@ -2900,7 +3131,10 @@ mod ikhtibarat {
         // back.
         let mawjud = format!("{MUTAGHAYYIR_TAHMIL_LINUX}=\"/a/b.so\" {RAMZ_AMR}");
         let baad = khiyarat_maa_isnad(Some(&mawjud), MUTAGHAYYIR_TAHMIL_LINUX, "./c.so");
-        assert!(baad.contains("/a/b.so:./c.so"), "a preload list gains an entry: {baad}");
+        assert!(
+            baad.contains("/a/b.so:./c.so"),
+            "a preload list gains an entry: {baad}"
+        );
 
         let mawjud = format!("PROTON_NO_ESYNC=\"0\" {RAMZ_AMR}");
         let baad = khiyarat_maa_isnad(Some(&mawjud), "PROTON_NO_ESYNC", "1");

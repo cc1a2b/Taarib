@@ -150,8 +150,12 @@ const AAMIDA_ISDAR: [&str; 3] = ["InstallVersion", "Version", "ProductVersion"];
 const AAMIDA_HAJM: [&str; 3] = ["SizeOnDisk", "InstallSize", "Size"];
 
 /// Column names that may carry an installation or update timestamp.
-const AAMIDA_TARIKH: [&str; 4] =
-    ["InstallDate", "InstallDateUtc", "LastUpdateUtc", "UpdatedAt"];
+const AAMIDA_TARIKH: [&str; 4] = [
+    "InstallDate",
+    "InstallDateUtc",
+    "LastUpdateUtc",
+    "UpdatedAt",
+];
 
 /// Column names that may carry a last-played timestamp.
 const AAMIDA_LAAB: [&str; 3] = ["LastPlayDate", "LastPlayedUtc", "LastPlayed"];
@@ -174,8 +178,12 @@ const AAMIDA_AYQUNA: [&str; 3] = ["ProductIconUrl", "IconUrl", "ProductIcon"];
 const AAMIDA_SHIAR: [&str; 3] = ["ProductLogoUrl", "LogoUrl", "ProductLogo"];
 
 /// Column names in the product catalogue that may carry a wide background.
-const AAMIDA_KHALFIYA: [&str; 4] =
-    ["BackgroundUrl1", "BackgroundUrl2", "ProductBackgroundUrl", "HeroUrl"];
+const AAMIDA_KHALFIYA: [&str; 4] = [
+    "BackgroundUrl1",
+    "BackgroundUrl2",
+    "ProductBackgroundUrl",
+    "HeroUrl",
+];
 
 /// How many rows either catalogue is read for.
 ///
@@ -253,7 +261,9 @@ impl Matjar for MatjarAmazon {
             // The client's folder is here and its catalogue is not: the same
             // answer `mawqi` gives, so the two cannot disagree about whether
             // Amazon Games is installed.
-            let matlub = MASAR_QAIDA.iter().fold(jidhr.clone(), |mabni, juz| mabni.join(juz));
+            let matlub = MASAR_QAIDA
+                .iter()
+                .fold(jidhr.clone(), |mabni, juz| mabni.join(juz));
             return Ok(NatijatMatjar::naqisa(
                 MUARRIF,
                 Some(jidhr),
@@ -264,8 +274,7 @@ impl Matjar for MatjarAmazon {
             ));
         };
 
-        let mut natija =
-            NatijatMatjar::muthabbat(MUARRIF, jidhr.is_dir().then(|| jidhr.clone()));
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, jidhr.is_dir().then(|| jidhr.clone()));
 
         let (ittisal, thabita) = match iftah_qaida(&masar_qaida) {
             Ok(maftuh) => maftuh,
@@ -289,8 +298,9 @@ impl Matjar for MatjarAmazon {
         }
 
         let sufuf = sufuf_tathbeet(&ittisal, &mut natija.tanbihat);
-        let muntajat =
-            malaf_qaida_muntaj(&jidhr).map(|masar| bayanat_muntajat(&masar)).unwrap_or_default();
+        let muntajat = malaf_qaida_muntaj(&jidhr)
+            .map(|masar| bayanat_muntajat(&masar))
+            .unwrap_or_default();
 
         // Read once, here, rather than by a caller remembering to call
         // `halat_matjar` after every scan. A state that has to be fetched
@@ -319,7 +329,9 @@ impl Matjar for MatjarAmazon {
             }
         }
 
-        natija.alaab.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
+        natija
+            .alaab
+            .sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
         natija.muddat = bidaya.elapsed();
         Ok(natija)
     }
@@ -417,7 +429,9 @@ fn jidhr_tilqai(siyaq: &SiyaqFahs) -> Option<PathBuf> {
 
 /// Locates the install catalogue under the client root.
 fn malaf_qaida(jidhr: &Path) -> Option<PathBuf> {
-    let masar = MASAR_QAIDA.iter().fold(jidhr.to_path_buf(), |mabni, juz| mabni.join(juz));
+    let masar = MASAR_QAIDA
+        .iter()
+        .fold(jidhr.to_path_buf(), |mabni, juz| mabni.join(juz));
     masar.is_file().then_some(masar)
 }
 
@@ -503,8 +517,16 @@ fn rabt_qaida(masar: &Path) -> Option<String> {
 
 /// The column names of a table, or `None` when the table is not there.
 fn asmaa_aamida(ittisal: &Connection, jadwal: &str) -> Option<Vec<String>> {
-    let bayan = ittisal.prepare(&format!("SELECT * FROM \"{jadwal}\" LIMIT 0")).ok()?;
-    Some(bayan.column_names().into_iter().map(str::to_owned).collect())
+    let bayan = ittisal
+        .prepare(&format!("SELECT * FROM \"{jadwal}\" LIMIT 0"))
+        .ok()?;
+    Some(
+        bayan
+            .column_names()
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
+    )
 }
 
 /// The first candidate column name the table actually has, in the table's own
@@ -512,7 +534,11 @@ fn asmaa_aamida(ittisal: &Connection, jadwal: &str) -> Option<Vec<String>> {
 fn amud_mutah(asmaa: &[String], murashahat: &[&str]) -> Option<String> {
     murashahat
         .iter()
-        .find_map(|matlub| asmaa.iter().find(|mawjud| mawjud.eq_ignore_ascii_case(matlub)))
+        .find_map(|matlub| {
+            asmaa
+                .iter()
+                .find(|mawjud| mawjud.eq_ignore_ascii_case(matlub))
+        })
         .cloned()
 }
 
@@ -536,9 +562,9 @@ fn qeema_nass(saff: &Row<'_>, amud: &str) -> Option<String> {
 fn qeema_raqm(saff: &Row<'_>, amud: &str) -> Option<u64> {
     match saff.get_ref(amud).ok()? {
         ValueRef::Integer(raqm) => u64::try_from(raqm).ok(),
-        ValueRef::Text(bayt) => {
-            std::str::from_utf8(bayt).ok().and_then(|nass| nass.trim().parse::<u64>().ok())
-        },
+        ValueRef::Text(bayt) => std::str::from_utf8(bayt)
+            .ok()
+            .and_then(|nass| nass.trim().parse::<u64>().ok()),
         ValueRef::Real(_) | ValueRef::Blob(_) | ValueRef::Null => None,
     }
 }
@@ -605,9 +631,10 @@ fn sufuf_tathbeet(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec<S
         return Vec::new();
     };
 
-    let (Some(amud_muarrif), Some(amud_masar)) =
-        (amud_mutah(&asmaa, &AAMIDA_MUARRIF), amud_mutah(&asmaa, &AAMIDA_MASAR))
-    else {
+    let (Some(amud_muarrif), Some(amud_masar)) = (
+        amud_mutah(&asmaa, &AAMIDA_MUARRIF),
+        amud_mutah(&asmaa, &AAMIDA_MASAR),
+    ) else {
         tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             JADWAL.to_owned(),
@@ -656,8 +683,10 @@ fn sufuf_tathbeet(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec<S
                     // the client has not placed anywhere. Not a fault.
                     continue;
                 };
-                let taqaddum =
-                    amud_taqaddum.as_ref().and_then(|amud| qeema_raqm(saff, amud)).and_then(nisba);
+                let taqaddum = amud_taqaddum
+                    .as_ref()
+                    .and_then(|amud| qeema_raqm(saff, amud))
+                    .and_then(nisba);
                 sufuf.push(SaffTathbeet {
                     muarrif,
                     jidhr: PathBuf::from(masar),
@@ -666,7 +695,10 @@ fn sufuf_tathbeet(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec<S
                         .as_ref()
                         .is_none_or(|amud| qeema_sawab(saff, amud).unwrap_or(false)),
                     isdar: amud_isdar.as_ref().and_then(|amud| qeema_nass(saff, amud)),
-                    hajm: amud_hajm.as_ref().and_then(|amud| qeema_raqm(saff, amud)).unwrap_or(0),
+                    hajm: amud_hajm
+                        .as_ref()
+                        .and_then(|amud| qeema_raqm(saff, amud))
+                        .unwrap_or(0),
                     tarikh: amud_tarikh
                         .as_ref()
                         .and_then(|amud| qeema_nass(saff, amud))
@@ -704,7 +736,11 @@ fn sufuf_tathbeet(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec<S
 /// discarded rather than reported, because a progress bar that reads two
 /// hundred per cent is worse than a progress bar with no number in it.
 fn nisba(kham: u64) -> Option<u8> {
-    let mabdai = if kham > 100 { kham.div_euclid(100) } else { kham };
+    let mabdai = if kham > 100 {
+        kham.div_euclid(100)
+    } else {
+        kham
+    };
     u8::try_from(mabdai).ok().filter(|qeema| *qeema <= 100)
 }
 
@@ -736,10 +772,7 @@ fn hala_min_qeema(qeema: &str, taqaddum: Option<u8>) -> Option<SababGhiyab> {
     {
         return Some(SababGhiyab::TanzilMutawaqqif { nisba: taqaddum });
     }
-    if munkhafid.contains("update")
-        || munkhafid.contains("patch")
-        || munkhafid.contains("repair")
-    {
+    if munkhafid.contains("update") || munkhafid.contains("patch") || munkhafid.contains("repair") {
         return Some(SababGhiyab::QaydTahdith);
     }
     if munkhafid.contains("download")
@@ -854,7 +887,9 @@ fn tanfidhi_waqud(jidhr: &Path) -> Option<String> {
     let masar = jidhr.join(ISM_WAQUD);
     let nass = qira_nass(&masar).ok()?;
     let qeema: Value = serde_json::from_str(bila_bom(&nass)).ok()?;
-    let amr = qeema.get("Main").and_then(|main| nass_haql(main, "Command"));
+    let amr = qeema
+        .get("Main")
+        .and_then(|main| nass_haql(main, "Command"));
     amr.filter(|qeema| !qeema.is_empty())
 }
 
@@ -925,12 +960,17 @@ fn suwar_mahalliya(jidhr_matjar: &Path, muarrif: &str) -> MasadirSuwar {
             .extension()
             .and_then(|imtidad| imtidad.to_str())
             .is_some_and(|imtidad| {
-                IMTIDADAT_SURA.iter().any(|maqbul| imtidad.eq_ignore_ascii_case(maqbul))
+                IMTIDADAT_SURA
+                    .iter()
+                    .any(|maqbul| imtidad.eq_ignore_ascii_case(maqbul))
             });
         if !sura_maqbula {
             continue;
         }
-        let Some(ism) = masar.file_name().and_then(|ism| ism.to_str()).map(str::to_lowercase)
+        let Some(ism) = masar
+            .file_name()
+            .and_then(|ism| ism.to_str())
+            .map(str::to_lowercase)
         else {
             continue;
         };
@@ -1083,7 +1123,11 @@ fn ism_min_mujallad(jidhr: &Path) -> Option<String> {
 fn muwahhad(masar: &Path, nizam: NizamTashghil) -> String {
     let nass = masar.to_string_lossy().replace('\\', "/");
     let nass = nass.trim_end_matches('/').to_owned();
-    if nizam.hassas_lil_ahruf() { nass } else { nass.to_lowercase() }
+    if nizam.hassas_lil_ahruf() {
+        nass
+    } else {
+        nass.to_lowercase()
+    }
 }
 
 /// Accepts a timestamp only when it already carries an offset.

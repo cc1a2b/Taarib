@@ -223,7 +223,7 @@ impl SababFahs {
                 "تغيّرت ملفات اللعبة منذ آخر فحص — تحديث أو إعادة تثبيت — وقد يكون إصدار \
                  المحرّك تغيّر معها."
                     .to_owned()
-            }
+            },
             Self::TalabMustakhdim => "طلبتَ إعادة فحص هذه اللعبة.".to_owned(),
         }
     }
@@ -242,7 +242,7 @@ impl SababFahs {
                 "The game's files changed since it was last examined — an update or a \
                  reinstall — and its engine version may have changed with them."
                     .to_owned()
-            }
+            },
             Self::TalabMustakhdim => "You asked for this game to be examined again.".to_owned(),
         }
     }
@@ -289,7 +289,12 @@ impl BitaqatMuharrik {
     #[must_use]
     pub fn jadeeda(luba: LubaId, taqreer: TaqreerImkaniyat, basmat_jidhr: Option<String>) -> Self {
         let waqt = taqreer.waqt.clone();
-        Self { luba, taqreer, basmat_jidhr, waqt }
+        Self {
+            luba,
+            taqreer,
+            basmat_jidhr,
+            waqt,
+        }
     }
 
     /// The probe version that produced this record.
@@ -367,7 +372,7 @@ pub fn basmat_jidhr(jidhr: &Path, tanfidhi: Option<&Path>) -> Option<String> {
     Some(match basmat_tanfidhi(tanfidhi) {
         Some((hajm, thawani, nano)) => {
             format!("b{ISDAR_BASMA}:{hajm}:{thawani}.{nano:09}:{adad}{hadd}")
-        }
+        },
         None => format!("b{ISDAR_BASMA}:-:-:{adad}{hadd}"),
     })
 }
@@ -462,7 +467,10 @@ pub fn hal_yahtaj_fahs_bil_basma(
 
     let mukhazzan = bitaqa.isdar_fahs();
     if mukhazzan < isdar_hali {
-        return SababFahs::IsdarAqdam { mukhazzan, hali: isdar_hali };
+        return SababFahs::IsdarAqdam {
+            mukhazzan,
+            hali: isdar_hali,
+        };
     }
 
     if bitaqa.taghayyar(basmat_haliya) {
@@ -526,7 +534,12 @@ impl<'a> SijillBitaqat<'a> {
         };
         let basmat_jidhr = self.sijill.basmat_jidhr(luba)?;
         let waqt = taqreer.waqt.clone();
-        Ok(Some(BitaqatMuharrik { luba, taqreer, basmat_jidhr, waqt }))
+        Ok(Some(BitaqatMuharrik {
+            luba,
+            taqreer,
+            basmat_jidhr,
+            waqt,
+        }))
     }
 
     /// Writes a record, replacing whatever was stored for that game.
@@ -551,7 +564,8 @@ impl<'a> SijillBitaqat<'a> {
     /// another writer holds the database past the busy timeout.
     pub fn sajjil(self, bitaqa: &BitaqatMuharrik) -> Natija<()> {
         self.sijill.sajjil(bitaqa.luba, &bitaqa.taqreer, None)?;
-        self.sijill.sajjil_basmat_jidhr(bitaqa.luba, bitaqa.basmat_jidhr.as_deref())
+        self.sijill
+            .sajjil_basmat_jidhr(bitaqa.luba, bitaqa.basmat_jidhr.as_deref())
     }
 
     /// Every game whose record predates the running probe.

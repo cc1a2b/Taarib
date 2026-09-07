@@ -80,11 +80,17 @@ fn ibni_renpy(jidhr: &Path) {
         fs::create_dir_all(masar.parent().expect("a parent")).expect("a fixture directory");
         fs::write(&masar, muhtawa).expect("a fixture file");
     };
-    iktub("renpy/__init__.py", "version_tuple = (8, 3, 4, vc_version)\n");
+    iktub(
+        "renpy/__init__.py",
+        "version_tuple = (8, 3, 4, vc_version)\n",
+    );
     iktub("renpy/text/hbfont.so", "\u{7f}ELF");
     iktub("lib/py3-linux-x86_64/libharfbuzz.so.0", "\u{7f}ELF");
     iktub("lib/py3-linux-x86_64/libfribidi.so.0", "\u{7f}ELF");
-    iktub("Riverside.sh", "#!/bin/sh\nexec ./lib/py3-linux-x86_64/Riverside \"$@\"\n");
+    iktub(
+        "Riverside.sh",
+        "#!/bin/sh\nexec ./lib/py3-linux-x86_64/Riverside \"$@\"\n",
+    );
     iktub(
         "game/script.rpy",
         concat!(
@@ -112,12 +118,21 @@ fn ibni_makhzan(jidhr: &Path) {
         fs::create_dir_all(masar.parent().expect("a parent")).expect("a store directory");
         fs::write(&masar, muhtawa).expect("a store file");
     };
-    iktub("taarib_renpy/__init__.py", b"def rakkib(gamedir):\n    pass\n");
+    iktub(
+        "taarib_renpy/__init__.py",
+        b"def rakkib(gamedir):\n    pass\n",
+    );
     // The first four bytes of a TrueType file. The installer never parses a
     // face — it copies bytes and names a path — but a fixture that is not even
     // framed like a font would be a fixture pretending to be one.
-    iktub("taarib/khutut/NotoNaskhArabic[wght].ttf", b"\x00\x01\x00\x00");
-    iktub("taarib/khutut/OFL.txt", b"Copyright (c) The Noto Project Authors\n");
+    iktub(
+        "taarib/khutut/NotoNaskhArabic[wght].ttf",
+        b"\x00\x01\x00\x00",
+    );
+    iktub(
+        "taarib/khutut/OFL.txt",
+        b"Copyright (c) The Noto Project Authors\n",
+    );
 }
 
 /// Writes a real `.ruqaa` holding the two translations and opens it.
@@ -128,7 +143,9 @@ fn ibni_makhzan(jidhr: &Path) {
 fn ibni_ruqaa(masar: &Path) -> MalafRuqaa {
     let mut katib = Katib::jadeed();
     let _ = katib.bayan(br#"{"isdar":1}"#);
-    let _ = katib.nass("Hello, traveller.", MARHABAN).expect("a string record");
+    let _ = katib
+        .nass("Hello, traveller.", MARHABAN)
+        .expect("a string record");
     let _ = katib.nass("Start Game", IBDA).expect("a string record");
     let bayt = katib.ikhtim().expect("a sealed package");
     fs::write(masar, bayt.bayt()).expect("writing the package");
@@ -206,7 +223,9 @@ fn shajara(jidhr: &Path) -> BTreeMap<String, Option<Vec<u8>>> {
     let mut jadwal = BTreeMap::new();
     for madkhal in walkdir::WalkDir::new(jidhr).sort_by_file_name() {
         let madkhal = madkhal.expect("walking the game directory");
-        let Ok(nisbi) = madkhal.path().strip_prefix(jidhr) else { continue };
+        let Ok(nisbi) = madkhal.path().strip_prefix(jidhr) else {
+            continue;
+        };
         if nisbi.as_os_str().is_empty() {
             continue;
         }
@@ -246,7 +265,13 @@ impl Masrah {
         ibni_renpy(&luba);
         ibni_makhzan(&makhzan);
         let ruqaa = ibni_ruqaa(&dalil.path().join("riverside.ruqaa"));
-        Self { _dalil: dalil, luba, nusakh, makhzan, ruqaa }
+        Self {
+            _dalil: dalil,
+            luba,
+            nusakh,
+            makhzan,
+            ruqaa,
+        }
     }
 
     fn sijill(&self) -> Tathbeet {
@@ -261,7 +286,11 @@ impl Masrah {
     /// is therefore reached exactly the way the product reaches it: a plan
     /// first, and a write that is handed that plan and nothing else.
     fn khutta(&self, tabaqa: Tabaqa, marfuda: bool) -> Result<KhuttatTarkib, KhataTathbeet> {
-        tarkib::khutta(&imkaniyat(tabaqa, marfuda), &luba_muhallala(&self.luba), &self.makhzan)
+        tarkib::khutta(
+            &imkaniyat(tabaqa, marfuda),
+            &luba_muhallala(&self.luba),
+            &self.makhzan,
+        )
     }
 }
 
@@ -289,8 +318,16 @@ fn tabaqa_fawqiya_la_tuaid_kitabat_nusus_alluba() {
             &mut nashir,
         )
         .expect("tier 3 has nothing to deploy and therefore nothing to fail at");
-        assert!(mulhaqat.mudafa.is_empty(), "no file was added: {:?}", mulhaqat.mudafa);
-        assert!(mulhaqat.muaddala.is_empty(), "no file was modified: {:?}", mulhaqat.muaddala);
+        assert!(
+            mulhaqat.mudafa.is_empty(),
+            "no file was added: {:?}",
+            mulhaqat.mudafa
+        );
+        assert!(
+            mulhaqat.muaddala.is_empty(),
+            "no file was modified: {:?}",
+            mulhaqat.muaddala
+        );
         assert!(
             matches!(itar, NatijatTarkib::LaHaja(_)),
             "and no framework was deployed: {itar:?}"
@@ -308,7 +345,10 @@ fn tabaqa_fawqiya_la_tuaid_kitabat_nusus_alluba() {
         asmaa(&qabl),
         "tier 3 states that the game is not modified at all, so not one entry may appear"
     );
-    assert!(baad == qabl, "and every file that was there still holds exactly its own bytes");
+    assert!(
+        baad == qabl,
+        "and every file that was there still holds exactly its own bytes"
+    );
     assert!(
         !masrah.luba.join(HIWAR).exists(),
         "the generated dialogue file is the shape the defect took: five files into a game the \
@@ -388,7 +428,10 @@ fn alluba_almarfuda_amanan_la_yulmas_minha_bayt() {
             matches!(khata, KhataTathbeet::IdhnGhayrMutabiq),
             "and it refuses as an authorisation failure, by name: {khata:?}"
         );
-        assert!(nashir.nusus().is_none(), "with the script-engine write never attempted");
+        assert!(
+            nashir.nusus().is_none(),
+            "with the script-engine write never attempted"
+        );
     }
 
     let baad = shajara(&masrah.luba);
@@ -397,8 +440,15 @@ fn alluba_almarfuda_amanan_la_yulmas_minha_bayt() {
         asmaa(&qabl),
         "a refusal that had already rewritten the game's dialogue would not be a refusal"
     );
-    assert!(baad == qabl, "byte for byte, including the game's own script");
-    assert_eq!(tathbeet.bayan().sijillat().count(), 0, "and the manifest records nothing");
+    assert!(
+        baad == qabl,
+        "byte for byte, including the game's own script"
+    );
+    assert_eq!(
+        tathbeet.bayan().sijillat().count(),
+        0,
+        "and the manifest records nothing"
+    );
 }
 
 /// The refusal at the decision's own level: a refused report mints no permit.
@@ -410,7 +460,10 @@ fn alluba_almarfuda_amanan_la_yulmas_minha_bayt() {
 fn altaqreer_almarfud_la_yuntij_qararan() {
     let khata = QararTabaqa::min_taqreer(&imkaniyat(Tabaqa::Kamil, true))
         .expect_err("a refused report yields no decision");
-    assert!(matches!(khata, KhataTathbeet::IdhnGhayrMutabiq), "{khata:?}");
+    assert!(
+        matches!(khata, KhataTathbeet::IdhnGhayrMutabiq),
+        "{khata:?}"
+    );
     for tabaqa in [Tabaqa::Kamil, Tabaqa::RasmMubashir, Tabaqa::TarjamaFawqiya] {
         assert!(
             QararTabaqa::min_taqreer(&imkaniyat(tabaqa, false)).is_ok(),
@@ -427,7 +480,9 @@ fn altaqreer_almarfud_la_yuntij_qararan() {
 fn nafs_alluba_bi_tabaqa_kamila_tunqal_nususuha() {
     let masrah = Masrah::ibni();
     // The identical game, package and store. Only the tier differs.
-    let mukhattat = masrah.khutta(Tabaqa::Kamil, false).expect("a deployment plan");
+    let mukhattat = masrah
+        .khutta(Tabaqa::Kamil, false)
+        .expect("a deployment plan");
     let mut tathbeet = masrah.sijill();
     {
         let mut nashir = Nashir::jadeed(&mut tathbeet, &masrah.ruqaa, &masrah.luba);
@@ -439,13 +494,18 @@ fn nafs_alluba_bi_tabaqa_kamila_tunqal_nususuha() {
             &mut nashir,
         )
         .expect("a Ren'Py game at tier 1 is patched");
-        let taqreer = nashir.nusus().expect("an adapter that applies to this directory");
+        let taqreer = nashir
+            .nusus()
+            .expect("an adapter that applies to this directory");
         assert_eq!(taqreer.aila.ism(), "Ren'Py");
-        assert_eq!(taqreer.nusus, 2, "both strings in the package were placed: {taqreer:?}");
+        assert_eq!(
+            taqreer.nusus, 2,
+            "both strings in the package were placed: {taqreer:?}"
+        );
     }
 
-    let hiwar = fs::read_to_string(masrah.luba.join(HIWAR))
-        .expect("the generated interface strings");
+    let hiwar =
+        fs::read_to_string(masrah.luba.join(HIWAR)).expect("the generated interface strings");
     assert!(
         hiwar.contains(&format!("new \"{MARHABAN}\"")),
         "the Arabic came out of the package and into the game:\n{hiwar}"
@@ -469,6 +529,10 @@ fn nafs_alluba_bi_tabaqa_kamila_tunqal_nususuha() {
     // Every byte of it went through the manifest, so an uninstall is a delete
     // rather than a search.
     let bayan = tathbeet.bayan();
-    assert!(bayan.sijillat().any(|sijill| sijill.masar.ends_with("taarib_mustalahat.rpy")));
+    assert!(
+        bayan
+            .sijillat()
+            .any(|sijill| sijill.masar.ends_with("taarib_mustalahat.rpy"))
+    );
     assert!(bayan.sijillat().all(|sijill| !sijill.masar.contains("..")));
 }

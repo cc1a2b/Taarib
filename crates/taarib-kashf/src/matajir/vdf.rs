@@ -323,7 +323,11 @@ fn talif_nass(masar: &Path, bayt: &[u8], mawdi: usize, tafsil: &str) -> Khata {
     let satr = bayt
         .get(..mawdi.min(bayt.len()))
         .map_or(1, |sabiq| sabiq.split(|b| *b == b'\n').count());
-    talif(masar, format!("{tafsil} (line {satr}, byte {mawdi})"), Some(mawdi))
+    talif(
+        masar,
+        format!("{tafsil} (line {satr}, byte {mawdi})"),
+        Some(mawdi),
+    )
 }
 
 /// A path standing in for bytes that came from somewhere other than a file.
@@ -377,7 +381,7 @@ pub fn iqra_nassi_bi_masar(masar: &Path, nass: &str) -> Natija<QeemaVdf> {
                 };
                 walid.push((miftah, QeemaVdf::Kain(std::mem::take(&mut hali))));
                 hali = walid;
-            }
+            },
             Wahda::Fath => {
                 return Err(talif_nass(
                     masar,
@@ -385,7 +389,7 @@ pub fn iqra_nassi_bi_masar(masar: &Path, nass: &str) -> Natija<QeemaVdf> {
                     mawdi,
                     "an open brace where a key was expected",
                 ));
-            }
+            },
             Wahda::Kalima(miftah) => {
                 qari.takhatti_shart();
                 let Some((mawdi_qeema, baad)) = qari.wahda(masar)? else {
@@ -407,11 +411,11 @@ pub fn iqra_nassi_bi_masar(masar: &Path, nass: &str) -> Natija<QeemaVdf> {
                             ));
                         }
                         abaa.push((miftah, mawdi, std::mem::take(&mut hali)));
-                    }
+                    },
                     Wahda::Kalima(qeema) => {
                         qari.takhatti_shart();
                         hali.push((miftah, QeemaVdf::Nass(qeema)));
-                    }
+                    },
                     Wahda::Ighlaq => {
                         return Err(talif_nass(
                             masar,
@@ -422,9 +426,9 @@ pub fn iqra_nassi_bi_masar(masar: &Path, nass: &str) -> Natija<QeemaVdf> {
                                  value"
                             ),
                         ));
-                    }
+                    },
                 }
-            }
+            },
         }
     }
 
@@ -484,7 +488,7 @@ impl QariNass<'_> {
                         }
                         self.mawqi += 1;
                     }
-                }
+                },
                 _ => return,
             }
         }
@@ -512,16 +516,18 @@ impl QariNass<'_> {
     fn wahda(&mut self, masar: &Path) -> Natija<Option<(usize, Wahda)>> {
         self.takhatti();
         let bidaya = self.mawqi;
-        let Some(&awwal) = self.bayt.get(bidaya) else { return Ok(None) };
+        let Some(&awwal) = self.bayt.get(bidaya) else {
+            return Ok(None);
+        };
         match awwal {
             b'{' => {
                 self.mawqi += 1;
                 Ok(Some((bidaya, Wahda::Fath)))
-            }
+            },
             b'}' => {
                 self.mawqi += 1;
                 Ok(Some((bidaya, Wahda::Ighlaq)))
-            }
+            },
             b'"' => Ok(Some((bidaya, Wahda::Kalima(self.muqtabas(masar)?)))),
             _ => Ok(Some((bidaya, Wahda::Kalima(self.mujarrad(masar)?)))),
         }
@@ -566,14 +572,20 @@ impl QariNass<'_> {
                         _ => {
                             kharij.push(b'\\');
                             kharij.push(tali);
-                        }
+                        },
                     }
-                }
+                },
                 _ => kharij.push(b),
             }
         }
-        String::from_utf8(kharij)
-            .map_err(|_| talif_nass(masar, self.bayt, bidaya, "a quoted string is not valid UTF-8"))
+        String::from_utf8(kharij).map_err(|_| {
+            talif_nass(
+                masar,
+                self.bayt,
+                bidaya,
+                "a quoted string is not valid UTF-8",
+            )
+        })
     }
 
     /// Reads an unquoted token: everything up to whitespace, a brace, a quote,
@@ -595,7 +607,12 @@ impl QariNass<'_> {
             .get(bidaya..self.mawqi)
             .ok_or_else(|| talif_nass(masar, self.bayt, bidaya, "a token runs past the end"))?;
         String::from_utf8(qita.to_vec()).map_err(|_| {
-            talif_nass(masar, self.bayt, bidaya, "an unquoted token is not valid UTF-8")
+            talif_nass(
+                masar,
+                self.bayt,
+                bidaya,
+                "an unquoted token is not valid UTF-8",
+            )
         })
     }
 }
@@ -625,7 +642,11 @@ pub fn iqra_thunai(bayt: &[u8]) -> Natija<QeemaVdf> {
 ///
 /// As [`iqra_thunai`].
 pub fn iqra_thunai_bi_masar(masar: &Path, bayt: &[u8]) -> Natija<QeemaVdf> {
-    let mut qari = QariThunai { bayt, mawqi: 0, asas: 0 };
+    let mut qari = QariThunai {
+        bayt,
+        mawqi: 0,
+        asas: 0,
+    };
     Ok(QeemaVdf::Kain(iqra_kain(&mut qari, masar, None)?))
 }
 
@@ -659,7 +680,7 @@ fn iqra_kain(
                 Some((miftah, mut walid)) => {
                     walid.push((miftah, QeemaVdf::Kain(std::mem::take(&mut hali))));
                     hali = walid;
-                }
+                },
                 None => return Ok(hali),
             },
             NAW_KAIN => {
@@ -672,39 +693,39 @@ fn iqra_kain(
                     ));
                 }
                 abaa.push((miftah, std::mem::take(&mut hali)));
-            }
+            },
             NAW_NASS => {
                 let miftah = qari.miftah(masar, jadwal)?;
                 let qeema = qari.nass_muntahi(masar)?;
                 hali.push((miftah, QeemaVdf::Nass(qeema)));
-            }
+            },
             NAW_NASS_AREED => {
                 let miftah = qari.miftah(masar, jadwal)?;
                 let qeema = qari.nass_areed(masar)?;
                 hali.push((miftah, QeemaVdf::Nass(qeema)));
-            }
+            },
             NAW_SAHIH32 | NAW_MUASHIR | NAW_LAWN => {
                 let miftah = qari.miftah(masar, jadwal)?;
                 let qeema = qari.sahih32(masar)?;
                 hali.push((miftah, QeemaVdf::Raqm(qeema)));
-            }
+            },
             NAW_ASHARI => {
                 let miftah = qari.miftah(masar, jadwal)?;
                 let qeema = qari.ashari(masar)?;
                 hali.push((miftah, QeemaVdf::Nass(format!("{qeema}"))));
-            }
+            },
             NAW_KABIR | NAW_SAHIH64 => {
                 let miftah = qari.miftah(masar, jadwal)?;
                 let qeema = qari.kabir(masar)?;
                 hali.push((miftah, QeemaVdf::Kabir(qeema)));
-            }
+            },
             _ => {
                 return Err(qari.khata_fi(
                     masar,
                     mawdi,
                     &format!("unknown binary VDF type tag {naw:#04x}"),
                 ));
-            }
+            },
         }
     }
 }
@@ -768,7 +789,9 @@ impl<'a> QariThunai<'a> {
     /// One byte.
     fn bayt_wahid(&mut self, masar: &Path) -> Natija<u8> {
         let qita = self.khudh(masar, 1)?;
-        qita.first().copied().ok_or_else(|| self.khata(masar, "a byte read produced nothing"))
+        qita.first()
+            .copied()
+            .ok_or_else(|| self.khata(masar, "a byte read produced nothing"))
     }
 
     /// A little-endian `u32`.
@@ -824,10 +847,9 @@ impl<'a> QariThunai<'a> {
             }
             nihaya += 1;
         }
-        let qita = self
-            .bayt
-            .get(bidaya..nihaya)
-            .ok_or_else(|| self.khata_fi(masar, bidaya, "a string runs past the end of the data"))?;
+        let qita = self.bayt.get(bidaya..nihaya).ok_or_else(|| {
+            self.khata_fi(masar, bidaya, "a string runs past the end of the data")
+        })?;
         let nass = String::from_utf8_lossy(qita).into_owned();
         self.mawqi = nihaya + 1;
         Ok(nass)
@@ -846,9 +868,11 @@ impl<'a> QariThunai<'a> {
                     "a wide string is never terminated before the end of the data",
                 )
             })?;
-            let wahda = <[u8; 2]>::try_from(zawj).map(u16::from_le_bytes).map_err(|_| {
-                self.khata_fi(masar, bidaya, "a two-byte read produced the wrong width")
-            })?;
+            let wahda = <[u8; 2]>::try_from(zawj)
+                .map(u16::from_le_bytes)
+                .map_err(|_| {
+                    self.khata_fi(masar, bidaya, "a two-byte read produced the wrong width")
+                })?;
             if wahda == 0 {
                 return Ok(String::from_utf16_lossy(&wahdat));
             }
@@ -881,7 +905,7 @@ impl<'a> QariThunai<'a> {
                         ),
                     )
                 })
-            }
+            },
             None => self.nass_muntahi(masar),
         }
     }
@@ -950,7 +974,7 @@ pub fn iqra_appinfo_bi_masar(masar: &Path, bayt: &[u8]) -> Natija<Vec<MadkhalApp
             if khata_madkhal.is_none() {
                 khata_madkhal = Some(khata);
             }
-        }
+        },
     })?;
     khata_madkhal.map_or(Ok(madakhil), Err)
 }
@@ -1001,9 +1025,17 @@ pub fn murur_appinfo(
     bayt: &[u8],
     zair: &mut dyn FnMut(Natija<MadkhalAppinfo>),
 ) -> Natija<()> {
-    let mut tarwisa = QariThunai { bayt, mawqi: 0, asas: 0 };
+    let mut tarwisa = QariThunai {
+        bayt,
+        mawqi: 0,
+        asas: 0,
+    };
     let sihr = tarwisa.raqm32(masar).map_err(|_| {
-        talif(masar, "the file is too short to hold an appinfo.vdf header".to_owned(), Some(0))
+        talif(
+            masar,
+            "the file is too short to hold an appinfo.vdf header".to_owned(),
+            Some(0),
+        )
     })?;
     if !SIHR_APPINFO.contains(&sihr) {
         return Err(talif(
@@ -1026,11 +1058,19 @@ pub fn murur_appinfo(
         None
     };
 
-    let tul_tarwisa = if sihr == SIHR_APPINFO_27 { TUL_TARWISA_27 } else { TUL_TARWISA_28 };
+    let tul_tarwisa = if sihr == SIHR_APPINFO_27 {
+        TUL_TARWISA_27
+    } else {
+        TUL_TARWISA_28
+    };
     let mut mawqi = tarwisa.mawqi;
 
     loop {
-        let mut ras = QariThunai { bayt, mawqi, asas: 0 };
+        let mut ras = QariThunai {
+            bayt,
+            mawqi,
+            asas: 0,
+        };
         let app = ras.raqm32(masar).map_err(|_| {
             talif(
                 masar,
@@ -1045,7 +1085,11 @@ pub fn murur_appinfo(
         let hajm = ras.raqm32(masar)?;
         let bidayat_jism = ras.mawqi;
         let hajm_jism = usize::try_from(hajm).map_err(|_| {
-            talif(masar, format!("app {app} declares a size that does not fit"), Some(mawqi))
+            talif(
+                masar,
+                format!("app {app} declares a size that does not fit"),
+                Some(mawqi),
+            )
         })?;
         if hajm_jism < tul_tarwisa {
             return Err(talif(
@@ -1058,7 +1102,11 @@ pub fn murur_appinfo(
             ));
         }
         let nihaya = bidayat_jism.checked_add(hajm_jism).ok_or_else(|| {
-            talif(masar, format!("app {app} declares a size that overflows"), Some(mawqi))
+            talif(
+                masar,
+                format!("app {app} declares a size that overflows"),
+                Some(mawqi),
+            )
         })?;
         let Some(jism) = bayt.get(bidayat_jism..nihaya) else {
             return Err(talif(
@@ -1072,7 +1120,14 @@ pub fn murur_appinfo(
             ));
         };
 
-        zair(madkhal_wahid(masar, app, jism, bidayat_jism, tul_tarwisa, jadwal.as_deref()));
+        zair(madkhal_wahid(
+            masar,
+            app,
+            jism,
+            bidayat_jism,
+            tul_tarwisa,
+            jadwal.as_deref(),
+        ));
         mawqi = nihaya;
     }
 }
@@ -1086,7 +1141,11 @@ fn madkhal_wahid(
     tul_tarwisa: usize,
     jadwal: Option<&[String]>,
 ) -> Natija<MadkhalAppinfo> {
-    let mut qari = QariThunai { bayt: jism, mawqi: 0, asas };
+    let mut qari = QariThunai {
+        bayt: jism,
+        mawqi: 0,
+        asas,
+    };
     let _hala = qari.raqm32(masar)?;
     let akhir_tahdith = qari.raqm32(masar)?;
     let _ramz_wusul = qari.kabir(masar)?;
@@ -1097,13 +1156,25 @@ fn madkhal_wahid(
     }
 
     let bayanat_bayt = jism.get(tul_tarwisa..).ok_or_else(|| {
-        talif(masar, format!("app {app} has no data after its header"), Some(asas))
+        talif(
+            masar,
+            format!("app {app} has no data after its header"),
+            Some(asas),
+        )
     })?;
-    let mut bayanat_qari =
-        QariThunai { bayt: bayanat_bayt, mawqi: 0, asas: asas.saturating_add(tul_tarwisa) };
+    let mut bayanat_qari = QariThunai {
+        bayt: bayanat_bayt,
+        mawqi: 0,
+        asas: asas.saturating_add(tul_tarwisa),
+    };
     let bayanat = QeemaVdf::Kain(iqra_kain(&mut bayanat_qari, masar, jadwal)?);
 
-    Ok(MadkhalAppinfo { app, akhir_tahdith, raqm_taghyeer, bayanat })
+    Ok(MadkhalAppinfo {
+        app,
+        akhir_tahdith,
+        raqm_taghyeer,
+        bayanat,
+    })
 }
 
 /// Reads version 29's footer string table.
@@ -1115,7 +1186,11 @@ fn jadwal_nusus(masar: &Path, bayt: &[u8], izaha: i64, mawdi_izaha: usize) -> Na
             Some(mawdi_izaha),
         )
     })?;
-    let mut qari = QariThunai { bayt, mawqi: bidaya, asas: 0 };
+    let mut qari = QariThunai {
+        bayt,
+        mawqi: bidaya,
+        asas: 0,
+    };
     let adad = qari.raqm32(masar).map_err(|_| {
         talif(
             masar,
@@ -1124,7 +1199,11 @@ fn jadwal_nusus(masar: &Path, bayt: &[u8], izaha: i64, mawdi_izaha: usize) -> Na
         )
     })?;
     let matlub = usize::try_from(adad).map_err(|_| {
-        talif(masar, format!("the string table declares {adad} entries"), Some(bidaya))
+        talif(
+            masar,
+            format!("the string table declares {adad} entries"),
+            Some(bidaya),
+        )
     })?;
 
     // Each entry costs at least its terminator, so a count larger than the

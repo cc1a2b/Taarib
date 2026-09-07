@@ -45,17 +45,16 @@ use taarib_saff::talab::{Dharra, KhiyaratTakhtit, NitaqUslub, SifaIdafiya, Talab
 
 use crate::anwa::{
     TAARIB_KHIYAR_HIWAR, TAARIB_KHIYAR_SATR_WAHID, TAARIB_USLUB_DHARRA, TAARIB_USLUB_HAJM,
-    TAARIB_USLUB_KHATT, TAARIB_USLUB_LAWN, TAARIB_USLUB_MAAIL, TAARIB_USLUB_WAZN, TaaribIhsaatLawha,
-    TaaribKhatt, TaaribKhattKhas, TaaribKhiyaratSiyaq, TaaribLawha, TaaribLawhaKhas,
-    TaaribMakhzanTakhtit, TaaribMawdiShakl, TaaribMiftahShakl, TaaribQiyasNass, TaaribQiyasatKhatt,
-    TaaribSafha, TaaribSilsila, TaaribSilsilaKhas, TaaribSiyaq, TaaribTalab, arqam_min_raqm,
-    dabt_min_raqm, ittijah_min_raqm, lugha_min_raqm, muhadhaha_min_raqm, tajawuz_min_raqm,
-    tashkeel_min_raqm,
+    TAARIB_USLUB_KHATT, TAARIB_USLUB_LAWN, TAARIB_USLUB_MAAIL, TAARIB_USLUB_WAZN,
+    TaaribIhsaatLawha, TaaribKhatt, TaaribKhattKhas, TaaribKhiyaratSiyaq, TaaribLawha,
+    TaaribLawhaKhas, TaaribMakhzanTakhtit, TaaribMawdiShakl, TaaribMiftahShakl, TaaribQiyasNass,
+    TaaribQiyasatKhatt, TaaribSafha, TaaribSilsila, TaaribSilsilaKhas, TaaribSiyaq, TaaribTalab,
+    arqam_min_raqm, dabt_min_raqm, ittijah_min_raqm, lugha_min_raqm, muhadhaha_min_raqm,
+    tajawuz_min_raqm, tashkeel_min_raqm,
 };
 use crate::dhakira::{iktub_takhtit, iqra_nass, iqra_shariha};
 use crate::hayat::{
-    QanatIltiqat, Siyaq, ihdhif_siyaq, ila_muashir, maa_siyaq, min_muashir,
-    sajjil_siyaq,
+    QanatIltiqat, Siyaq, ihdhif_siyaq, ila_muashir, maa_siyaq, min_muashir, sajjil_siyaq,
 };
 use crate::khata_c::{
     TAARIB_INHIYAR, TAARIB_MAQBAD_BATIL, TAARIB_MUASHIR_BATIL, TAARIB_NAJAH, TAARIB_QEEMA_BATILA,
@@ -219,10 +218,10 @@ fn maa_hifz_alkhata(amal: impl FnOnce() -> i32) -> i32 {
         match mahfuz.as_ref() {
             Some(khata) => {
                 let _ = sajjil(khata);
-            }
+            },
             None => {
                 let _ = sajjil_ramz(ramz_mahfuz);
-            }
+            },
         }
     }
     natija
@@ -285,11 +284,7 @@ pub unsafe extern "C" fn taarib_abi_isdar(kabir: *mut u32, sagheer: *mut u32) ->
 /// `hadaf` must be null or valid for writes of `siaa` bytes, and `matlub` must
 /// be null or valid for an aligned write of one `usize`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn taarib_isdar_nass(
-    hadaf: *mut u8,
-    siaa: usize,
-    matlub: *mut usize,
-) -> i32 {
+pub unsafe extern "C" fn taarib_isdar_nass(hadaf: *mut u8, siaa: usize, matlub: *mut usize) -> i32 {
     ihmi(|| {
         // SAFETY: the caller's guarantees on `hadaf` and `matlub` are exactly
         // the ones `iktub_nass` requires.
@@ -335,11 +330,7 @@ pub unsafe extern "C" fn taarib_khata_akhir() -> i32 {
 /// `hadaf` must be null or valid for writes of `siaa` bytes, and `matlub` must
 /// be null or valid for an aligned write of one `usize`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn taarib_khata_ramz(
-    hadaf: *mut u8,
-    siaa: usize,
-    matlub: *mut usize,
-) -> i32 {
+pub unsafe extern "C" fn taarib_khata_ramz(hadaf: *mut u8, siaa: usize, matlub: *mut usize) -> i32 {
     ihmi(|| {
         maa_hifz_alkhata(|| {
             let nass = akhir_ramz_nass();
@@ -450,7 +441,7 @@ pub unsafe extern "C" fn taarib_siyaq_insha(
                 // valid for an aligned write of one pointer.
                 unsafe { khuruj.write(maqbad) };
                 khitam(TAARIB_NAJAH)
-            }
+            },
             Err(khata) => sajjil(&khata),
         }
     })
@@ -813,14 +804,14 @@ pub unsafe extern "C" fn taarib_silsila_insha(
                     // it is valid for an aligned write of one pointer.
                     unsafe { khuruj.write(ila_muashir::<TaaribSilsilaKhas>(maqbad)) };
                     TAARIB_NAJAH
-                }
+                },
                 Err(khata) => sajjil(&khata),
             }
         }) {
             Some(TAARIB_NAJAH) => khitam(TAARIB_NAJAH),
             Some(ramz) if ramz == TAARIB_MUASHIR_BATIL || ramz == TAARIB_MAQBAD_BATIL => {
                 sajjil_ramz(ramz)
-            }
+            },
             Some(ramz) => khitam(ramz),
             None => sajjil_ramz(TAARIB_MAQBAD_BATIL),
         }
@@ -846,7 +837,10 @@ pub unsafe extern "C" fn taarib_silsila_ihdham(siyaq: TaaribSiyaq, silsila: Taar
             return sajjil_ramz(TAARIB_MUASHIR_BATIL);
         }
         match maa_siyaq(siyaq, |siyaq| {
-            match siyaq.salasil.ihdhif(min_muashir::<TaaribSilsilaKhas>(silsila)) {
+            match siyaq
+                .salasil
+                .ihdhif(min_muashir::<TaaribSilsilaKhas>(silsila))
+            {
                 Some(_) => TAARIB_NAJAH,
                 None => TAARIB_MAQBAD_BATIL,
             }
@@ -964,14 +958,19 @@ unsafe fn ifrid_talab<'a>(
     };
 
     muaddat.nitaqat.clear();
-    muaddat.nitaqat.extend(nitaqat_kharij.iter().map(nitaq_min_kharij));
+    muaddat
+        .nitaqat
+        .extend(nitaqat_kharij.iter().map(nitaq_min_kharij));
 
     let kharij = &talab.khiyarat;
     let khiyarat = &mut muaddat.khiyarat;
     khiyarat.sifat.clear();
-    khiyarat.sifat.extend(
-        sifat_kharij.iter().map(|sifa| SifaIdafiya { wasm: sifa.wasm, qeema: sifa.qeema }),
-    );
+    khiyarat
+        .sifat
+        .extend(sifat_kharij.iter().map(|sifa| SifaIdafiya {
+            wasm: sifa.wasm,
+            qeema: sifa.qeema,
+        }));
     khiyarat.ittijah = ittijah_min_raqm(kharij.ittijah);
     khiyarat.lugha = lugha_min_raqm(kharij.lugha);
     khiyarat.dabt = dabt_min_raqm(kharij.dabt);
@@ -1082,7 +1081,14 @@ pub unsafe extern "C" fn taarib_takhtit(
         }
 
         match maa_siyaq(siyaq, |siyaq| {
-            let Siyaq { saff, khazina, salasil, makhzan: mujammaa, iltiqat, .. } = siyaq;
+            let Siyaq {
+                saff,
+                khazina,
+                salasil,
+                makhzan: mujammaa,
+                iltiqat,
+                ..
+            } = siyaq;
             let Some(silsila) = salasil.qeema(min_muashir::<TaaribSilsilaKhas>(talab.silsila))
             else {
                 return sajjil_ramz(TAARIB_MAQBAD_BATIL);
@@ -1117,7 +1123,10 @@ pub unsafe extern "C" fn taarib_takhtit(
                 // caller's buffer was short: the work is done, and the retry
                 // that follows a TAARIB_SIAT_QASIRA should be a hit.
                 if khazina.mufaala() {
-                    khazina.daa(MiftahTakhtit::min_talab(&mursal, huwiyat), musawadda.clone());
+                    khazina.daa(
+                        MiftahTakhtit::min_talab(&mursal, huwiyat),
+                        musawadda.clone(),
+                    );
                 }
                 mujammaa.dawwir();
                 // Capture fires on the miss path whatever the negotiation
@@ -1171,7 +1180,12 @@ pub unsafe extern "C" fn taarib_qiyas(
             return sajjil_ramz(TAARIB_MUASHIR_BATIL);
         }
         match maa_siyaq(siyaq, |siyaq| {
-            let Siyaq { saff, khazina, salasil, .. } = siyaq;
+            let Siyaq {
+                saff,
+                khazina,
+                salasil,
+                ..
+            } = siyaq;
             let Some(silsila) = salasil.qeema(min_muashir::<TaaribSilsilaKhas>(talab.silsila))
             else {
                 return sajjil_ramz(TAARIB_MAQBAD_BATIL);
@@ -1296,8 +1310,16 @@ pub unsafe extern "C" fn taarib_lawha_insha(
             return sajjil_ramz(TAARIB_MUASHIR_BATIL);
         }
         let khiyarat = KhiyaratRasf {
-            aqsa_ard: if aqsa_ard == 0 { BUD_IFTIRADI } else { aqsa_ard },
-            aqsa_irtifa: if aqsa_irtifa == 0 { BUD_IFTIRADI } else { aqsa_irtifa },
+            aqsa_ard: if aqsa_ard == 0 {
+                BUD_IFTIRADI
+            } else {
+                aqsa_ard
+            },
+            aqsa_irtifa: if aqsa_irtifa == 0 {
+                BUD_IFTIRADI
+            } else {
+                aqsa_irtifa
+            },
             hashw,
             quwwat_ithnayn: false,
             aqsa_safahat: AQSA_SAFAHAT_IFTIRADI,
@@ -1400,7 +1422,9 @@ pub unsafe extern "C" fn taarib_lawha_shakl(
         // for an aligned read of one TaaribMiftahShakl.
         let miftah = unsafe { miftah.read() };
         match maa_siyaq(siyaq, |siyaq| {
-            let Siyaq { salasil, lawhat, .. } = siyaq;
+            let Siyaq {
+                salasil, lawhat, ..
+            } = siyaq;
             let Some(hayya) = lawhat.qeema_mut(min_muashir::<TaaribLawhaKhas>(lawha)) else {
                 return TAARIB_MAQBAD_BATIL;
             };
@@ -1410,7 +1434,10 @@ pub unsafe extern "C" fn taarib_lawha_shakl(
             // The wire key carries no rasterization mode: the atlas was built
             // in one mode and every glyph in it shares it, so the mode comes
             // from the atlas rather than trusting the two to agree.
-            let namat = hayya.safahat().first().map_or(NamatSafha::Taghtiya, |safha| safha.namat);
+            let namat = hayya
+                .safahat()
+                .first()
+                .map_or(NamatSafha::Taghtiya, |safha| safha.namat);
             let talab = MiftahShakl {
                 khatt: miftah.khatt,
                 bakat: miftah.bakat,
@@ -1436,7 +1463,7 @@ pub unsafe extern "C" fn taarib_lawha_shakl(
                         });
                     }
                     TAARIB_NAJAH
-                }
+                },
                 Err(khata) => sajjil(&khata),
             }
         }) {
@@ -1579,7 +1606,10 @@ pub unsafe extern "C" fn taarib_lawha_ibda_itar(siyaq: TaaribSiyaq, lawha: Taari
             return sajjil_ramz(TAARIB_MUASHIR_BATIL);
         }
         match maa_siyaq(siyaq, |siyaq| {
-            let Some(hayya) = siyaq.lawhat.qeema_mut(min_muashir::<TaaribLawhaKhas>(lawha)) else {
+            let Some(hayya) = siyaq
+                .lawhat
+                .qeema_mut(min_muashir::<TaaribLawhaKhas>(lawha))
+            else {
                 return TAARIB_MAQBAD_BATIL;
             };
             hayya.ibda_itar();

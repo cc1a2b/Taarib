@@ -274,13 +274,19 @@ impl KhiyaratNasq {
     /// Options that recognize exactly one dialect.
     #[must_use]
     pub fn wahida(lahja: LahjatNasq) -> Self {
-        Self { lahjat: vec![lahja], ..Self::default() }
+        Self {
+            lahjat: vec![lahja],
+            ..Self::default()
+        }
     }
 
     /// Options that recognize nothing but the dialect-independent escapes.
     #[must_use]
     pub fn bila_lahja() -> Self {
-        Self { lahjat: Vec::new(), ..Self::default() }
+        Self {
+            lahjat: Vec::new(),
+            ..Self::default()
+        }
     }
 
     /// Whether a dialect is enabled.
@@ -292,7 +298,11 @@ impl KhiyaratNasq {
     /// The nesting limit in force.
     #[must_use]
     pub const fn umq(&self) -> u8 {
-        if self.aqsa_umq == 0 { UMQ_IFTIRADI } else { self.aqsa_umq }
+        if self.aqsa_umq == 0 {
+            UMQ_IFTIRADI
+        } else {
+            self.aqsa_umq
+        }
     }
 }
 
@@ -441,7 +451,10 @@ impl NassNaqi {
     /// more to build than every lookup it would ever serve.
     #[must_use]
     pub fn zakhrafat_nitaq(&self, id: u16) -> Option<Zakhrafa> {
-        self.zakhrafat.iter().find(|zakhrafa| zakhrafa.nitaq == id).map(|zakhrafa| zakhrafa.naw)
+        self.zakhrafat
+            .iter()
+            .find(|zakhrafa| zakhrafa.nitaq == id)
+            .map(|zakhrafa| zakhrafa.naw)
     }
 }
 
@@ -593,7 +606,10 @@ struct Massah<'a> {
 
 /// Builds the malformed-markup failure with the offset that caused it.
 fn khata(mawqi: usize, sabab: SababNasq) -> KhataSaff {
-    KhataSaff::NasqTalif { mawqi: q32(mawqi), sabab }
+    KhataSaff::NasqTalif {
+        mawqi: q32(mawqi),
+        sabab,
+    }
 }
 
 impl<'a> Massah<'a> {
@@ -662,7 +678,10 @@ impl<'a> Massah<'a> {
         // Sixty-five thousand spans in one string is the same class of
         // pathology as sixty-five thousand levels of nesting: the input is not
         // markup, and there is no rendering of it to salvage.
-        self.talii = self.talii.checked_add(1).ok_or_else(|| khata(mawqi, SababNasq::UmqZaid))?;
+        self.talii = self
+            .talii
+            .checked_add(1)
+            .ok_or_else(|| khata(mawqi, SababNasq::UmqZaid))?;
         Ok(id)
     }
 
@@ -693,11 +712,21 @@ impl<'a> Massah<'a> {
             // width, and a sprite or a variable takes the caller's default
             // because only the caller can know what it will expand to.
             uslub: Uslub {
-                dharra: Some(Dharra { ard, irtifa: 0.0, asas: 0.0, marja }),
+                dharra: Some(Dharra {
+                    ard,
+                    irtifa: 0.0,
+                    asas: 0.0,
+                    marja,
+                }),
                 ..Uslub::default()
             },
         });
-        self.dharrat.push(DharraMustakhraja { nitaq: id, khaam: nass_khaam, naw, tarteeb });
+        self.dharrat.push(DharraMustakhraja {
+            nitaq: id,
+            khaam: nass_khaam,
+            naw,
+            tarteeb,
+        });
         Ok(())
     }
 
@@ -872,7 +901,10 @@ impl<'a> Massah<'a> {
         // before the style nested inside it. A stable sort keeps the original
         // open order for spans that agree on both.
         self.nitaqat.sort_by(|awwal, thani| {
-            awwal.bidaya.cmp(&thani.bidaya).then_with(|| thani.tul.cmp(&awwal.tul))
+            awwal
+                .bidaya
+                .cmp(&thani.bidaya)
+                .then_with(|| thani.tul.cmp(&awwal.tul))
         });
 
         Ok(NassNaqi {
@@ -923,7 +955,9 @@ fn asfar<'b>(ism: &str, mukhazzan: &'b mut [u8]) -> Option<&'b str> {
     for (hadaf, masdar) in mukhazzan.iter_mut().zip(bayt) {
         *hadaf = masdar.to_ascii_lowercase();
     }
-    mukhazzan.get(..bayt.len()).and_then(|juz| core::str::from_utf8(juz).ok())
+    mukhazzan
+        .get(..bayt.len())
+        .and_then(|juz| core::str::from_utf8(juz).ok())
 }
 
 /// The rule a tag name draws, for the four names that draw one.
@@ -950,7 +984,9 @@ fn mawdi_ighlaq(khaam: &str, min: usize, ism: &str, fath: u8, ghalq: u8) -> Opti
         if bayt.get(i) == Some(&fath) && bayt.get(i.saturating_add(1)) == Some(&b'/') {
             let baad = i.saturating_add(2);
             let baad_ism = baad.saturating_add(ism.len());
-            if khaam.get(baad..baad_ism).is_some_and(|juz| juz.eq_ignore_ascii_case(ism))
+            if khaam
+                .get(baad..baad_ism)
+                .is_some_and(|juz| juz.eq_ignore_ascii_case(ism))
                 && bayt.get(baad_ism) == Some(&ghalq)
             {
                 return Some((i, baad_ism.saturating_add(1)));
@@ -1007,7 +1043,7 @@ impl Massah<'_> {
                         mughlaq,
                         mukhtasar: false,
                     });
-                }
+                },
                 Some(&b) if b == fath || b == b'\n' || b == b'\r' => return None,
                 Some(_) => k = k.saturating_add(1),
                 None => return None,
@@ -1027,7 +1063,9 @@ impl Massah<'_> {
     /// silently ate would not be noticed until a player saw the gap.
     fn zawi(&mut self) -> Natija<bool> {
         let bida = self.i;
-        let Some(hudud) = self.hudud(bida, b'<', b'>') else { return Ok(false) };
+        let Some(hudud) = self.hudud(bida, b'<', b'>') else {
+            return Ok(false);
+        };
 
         if hudud.mukhtasar {
             if self.khiyarat.tashmal(LahjatNasq::Unity) || self.khiyarat.tashmal(LahjatNasq::Unreal)
@@ -1091,7 +1129,7 @@ impl Massah<'_> {
             "br" | "pos" | "page" => {
                 self.dharra(bida, niha, NawDharra::Amr, None, 0.0)?;
                 return Ok(true);
-            }
+            },
             "space" => {
                 let ard = qeema
                     .and_then(hall_qadr)
@@ -1099,7 +1137,7 @@ impl Massah<'_> {
                     .unwrap_or(0.0);
                 self.dharra(bida, niha, NawDharra::Amr, None, ard)?;
                 return Ok(true);
-            }
+            },
             "sprite" => {
                 // Every spelling Unity accepts — `<sprite=3>`,
                 // `<sprite index=3>`, `<sprite name="star">`,
@@ -1107,9 +1145,9 @@ impl Massah<'_> {
                 // inline image of a width only the engine's sprite asset knows.
                 self.dharra(bida, niha, NawDharra::Sura, None, iftiradi)?;
                 return Ok(true);
-            }
+            },
             "noparse" => return self.noparse(bida, niha),
-            _ => {}
+            _ => {},
         }
 
         // Paired tags. `uslub` carries only what changes layout; everything
@@ -1120,14 +1158,23 @@ impl Massah<'_> {
             // font chain both understand. There is no separate bold flag to
             // set, and there should not be: `<b>` on a family that has a real
             // semibold should reach that face, not a synthesised one.
-            "b" => Uslub { wazn: Some(700), ..Uslub::default() },
-            "i" => Uslub { maail: true, ..Uslub::default() },
+            "b" => Uslub {
+                wazn: Some(700),
+                ..Uslub::default()
+            },
+            "i" => Uslub {
+                maail: true,
+                ..Uslub::default()
+            },
             "size" => {
                 let Some(qadr) = qeema.and_then(hall_qadr) else {
                     return self.la_qeema(bida);
                 };
-                Uslub { hajm: qadr.bikselat(asas), ..Uslub::default() }
-            }
+                Uslub {
+                    hajm: qadr.bikselat(asas),
+                    ..Uslub::default()
+                }
+            },
             "color" | "mark" => {
                 let Some(lawn) = qeema.and_then(hall_lawn) else {
                     return self.la_qeema(bida);
@@ -1139,21 +1186,30 @@ impl Massah<'_> {
                 if ism == "mark" {
                     Uslub::default()
                 } else {
-                    Uslub { lawn: Some(lawn), ..Uslub::default() }
+                    Uslub {
+                        lawn: Some(lawn),
+                        ..Uslub::default()
+                    }
                 }
-            }
+            },
             "voffset" => {
                 let Some(qadr) = qeema.and_then(hall_qadr) else {
                     return self.la_qeema(bida);
                 };
-                Uslub { izaha: qadr.bikselat(asas), ..Uslub::default() }
-            }
+                Uslub {
+                    izaha: qadr.bikselat(asas),
+                    ..Uslub::default()
+                }
+            },
             "cspace" => {
                 let Some(qadr) = qeema.and_then(hall_qadr) else {
                     return self.la_qeema(bida);
                 };
-                Uslub { tabaud: qadr.bikselat(asas), ..Uslub::default() }
-            }
+                Uslub {
+                    tabaud: qadr.bikselat(asas),
+                    ..Uslub::default()
+                }
+            },
             "align" => {
                 let salih = qeema.is_some_and(|qeema| {
                     let mut buf = [0_u8; 16];
@@ -1165,7 +1221,7 @@ impl Massah<'_> {
                     return self.la_qeema(bida);
                 }
                 Uslub::default()
-            }
+            },
             "gradient" => {
                 // Parsed so that it is removed from the text and restored by
                 // the round trip, and then dropped: a gradient is a colour
@@ -1174,9 +1230,16 @@ impl Massah<'_> {
                 // to change, and carrying it as a style span would invite a
                 // renderer to treat it as a flat colour, which is worse than
                 // not carrying it.
-                self.iftah(bida, niha, hudud.ism.clone(), Uslub::default(), Lisan::Zawi, false)?;
+                self.iftah(
+                    bida,
+                    niha,
+                    hudud.ism.clone(),
+                    Uslub::default(),
+                    Lisan::Zawi,
+                    false,
+                )?;
                 return Ok(true);
-            }
+            },
             // Everything else opens a span with no layout effect of its own:
             // interaction (`link`), casing, the named font and style sheet, and
             // the paragraph-level geometry Unity applies outside the run.
@@ -1220,7 +1283,12 @@ impl Massah<'_> {
             self.iltahim(qat_bida);
             let tul = q32(self.nass.len()).saturating_sub(bidaya);
             self.athar(qat_bida, qat_niha, "");
-            self.nitaqat.push(NitaqUslub { id, bidaya, tul, uslub: Uslub::default() });
+            self.nitaqat.push(NitaqUslub {
+                id,
+                bidaya,
+                tul,
+                uslub: Uslub::default(),
+            });
         } else {
             if self.khiyarat.sarim {
                 return Err(khata(bida, SababNasq::WasmMaftuh).into());
@@ -1228,7 +1296,12 @@ impl Massah<'_> {
             self.iltahim(khaam.len());
             self.i = khaam.len();
             let tul = q32(self.nass.len()).saturating_sub(bidaya);
-            self.nitaqat.push(NitaqUslub { id, bidaya, tul, uslub: Uslub::default() });
+            self.nitaqat.push(NitaqUslub {
+                id,
+                bidaya,
+                tul,
+                uslub: Uslub::default(),
+            });
         }
         Ok(true)
     }
@@ -1294,7 +1367,11 @@ fn nazi_iqtibas(qeema: &str) -> &str {
     qeema
         .strip_prefix('"')
         .and_then(|juz| juz.strip_suffix('"'))
-        .or_else(|| qeema.strip_prefix('\'').and_then(|juz| juz.strip_suffix('\'')))
+        .or_else(|| {
+            qeema
+                .strip_prefix('\'')
+                .and_then(|juz| juz.strip_suffix('\''))
+        })
         .unwrap_or(qeema)
 }
 
@@ -1359,7 +1436,11 @@ fn hall_qadr(qeema: &str) -> Option<Qadr> {
     if !mahlul.is_finite() {
         return None;
     }
-    Some(if izafi { Qadr::Izafi(mahlul) } else { Qadr::Mutlaq(mahlul) })
+    Some(if izafi {
+        Qadr::Izafi(mahlul)
+    } else {
+        Qadr::Mutlaq(mahlul)
+    })
 }
 
 /// Reads a colour in any of the forms these dialects accept: three, four, six
@@ -1417,7 +1498,7 @@ fn lawn_sitta_ashar(sitteen: &str) -> Option<[u8; 4]> {
             for (fahras, hadaf) in lawn.iter_mut().enumerate().take(tul) {
                 *hadaf = khana(fahras)?.saturating_mul(17);
             }
-        }
+        },
         tul @ (6 | 8) => {
             let azwaj = if tul == 8 { 4 } else { 3 };
             for (fahras, hadaf) in lawn.iter_mut().enumerate().take(azwaj) {
@@ -1425,7 +1506,7 @@ fn lawn_sitta_ashar(sitteen: &str) -> Option<[u8; 4]> {
                 let adna = khana(fahras.saturating_mul(2).saturating_add(1))?;
                 *hadaf = ala.saturating_mul(16).saturating_add(adna);
             }
-        }
+        },
         _ => return None,
     }
     Some(lawn)
@@ -1447,7 +1528,14 @@ impl Massah<'_> {
             self.aghliq(bida, hudud.niha, Some(hudud.ism.clone()), Lisan::Zawi)?;
             return Ok(true);
         }
-        self.iftah(bida, hudud.niha, hudud.ism.clone(), Uslub::default(), Lisan::Zawi, true)?;
+        self.iftah(
+            bida,
+            hudud.niha,
+            hudud.ism.clone(),
+            Uslub::default(),
+            Lisan::Zawi,
+            true,
+        )?;
         Ok(true)
     }
 
@@ -1511,15 +1599,15 @@ impl Massah<'_> {
             "lb" => {
                 self.athar(bida, niha, "[");
                 return Ok(true);
-            }
+            },
             "rb" => {
                 self.athar(bida, niha, "]");
                 return Ok(true);
-            }
+            },
             "br" => {
                 self.dharra(bida, niha, NawDharra::Amr, None, 0.0)?;
                 return Ok(true);
-            }
+            },
             // `[img]path[/img]` wraps a *path*, not text. The whole
             // construct — both tags and everything between them — is one atom,
             // because the path must never be translated, never be shaped, and
@@ -1538,25 +1626,37 @@ impl Massah<'_> {
                     self.khiyarat.ard_dharra_iftiradi,
                 )?;
                 return Ok(true);
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         let uslub = match ism {
-            "b" => Uslub { wazn: Some(700), ..Uslub::default() },
-            "i" => Uslub { maail: true, ..Uslub::default() },
+            "b" => Uslub {
+                wazn: Some(700),
+                ..Uslub::default()
+            },
+            "i" => Uslub {
+                maail: true,
+                ..Uslub::default()
+            },
             "color" | "fgcolor" => {
                 let Some(lawn) = qeema.and_then(hall_lawn) else {
                     return self.la_qeema(bida);
                 };
-                Uslub { lawn: Some(lawn), ..Uslub::default() }
-            }
+                Uslub {
+                    lawn: Some(lawn),
+                    ..Uslub::default()
+                }
+            },
             "size" => {
                 let Some(qadr) = qeema.and_then(hall_qadr) else {
                     return self.la_qeema(bida);
                 };
-                Uslub { hajm: qadr.bikselat(self.khiyarat.hajm_asas), ..Uslub::default() }
-            }
+                Uslub {
+                    hajm: qadr.bikselat(self.khiyarat.hajm_asas),
+                    ..Uslub::default()
+                }
+            },
             // Alignment, indentation, decoration, the named font, the
             // background colour and Godot's animated effects all leave layout
             // within the run untouched, so they open a span with no style of
@@ -1577,7 +1677,10 @@ impl Massah<'_> {
         // A substitution names a Python expression, and every one of those
         // begins with a letter or an underscore. Requiring that is what keeps
         // `[3]` and `[ ]` out.
-        if !bayt.get(i).is_some_and(|b| b.is_ascii_alphabetic() || *b == b'_') {
+        if !bayt
+            .get(i)
+            .is_some_and(|b| b.is_ascii_alphabetic() || *b == b'_')
+        {
             return None;
         }
         let hadd = bida.saturating_add(HADD_WASM).min(bayt.len());
@@ -1678,7 +1781,13 @@ impl Massah<'_> {
             if self.khiyarat.tashmal(LahjatNasq::Web)
                 && let Some(niha) = self.hudud_mustache(bida)
             {
-                self.dharra(bida, niha, NawDharra::Mawdi, None, self.khiyarat.ard_dharra_iftiradi)?;
+                self.dharra(
+                    bida,
+                    niha,
+                    NawDharra::Mawdi,
+                    None,
+                    self.khiyarat.ard_dharra_iftiradi,
+                )?;
                 return Ok(true);
             }
             self.athar(bida, bida.saturating_add(2), "{");
@@ -1777,9 +1886,9 @@ impl Massah<'_> {
                         if umq > UMQ_TANSIQ {
                             return Ok(false);
                         }
-                    }
+                    },
                     Some(&(b'\n' | b'\r')) => return Ok(false),
-                    Some(_) => {}
+                    Some(_) => {},
                     // Committed and never finished: the formatter throws here.
                     None => return Err(khata(bida, SababNasq::MawdiTalif).into()),
                 }
@@ -1788,7 +1897,7 @@ impl Massah<'_> {
         }
 
         match bayt.get(i) {
-            Some(&b'}') => {}
+            Some(&b'}') => {},
             // A brace followed by a word and then something that is not part of
             // the syntax was never a placeholder: `{Hello world}` is a sentence
             // in braces, and it stays one.
@@ -1797,7 +1906,13 @@ impl Massah<'_> {
         }
         let niha = i.saturating_add(1);
         let tarteeb = ism.parse::<u32>().ok();
-        self.dharra(bida, niha, NawDharra::Mawdi, tarteeb, self.khiyarat.ard_dharra_iftiradi)?;
+        self.dharra(
+            bida,
+            niha,
+            NawDharra::Mawdi,
+            tarteeb,
+            self.khiyarat.ard_dharra_iftiradi,
+        )?;
         Ok(true)
     }
 
@@ -1842,7 +1957,7 @@ impl Massah<'_> {
             "w" | "p" | "nw" | "fast" | "done" | "clear" => {
                 self.dharra(bida, niha, NawDharra::Amr, None, 0.0)?;
                 return Ok(true);
-            }
+            },
             "space" | "vspace" => {
                 let ard = qeema
                     .and_then(hall_qadr)
@@ -1853,35 +1968,56 @@ impl Massah<'_> {
                 let ard = if ism == "space" { ard } else { 0.0 };
                 self.dharra(bida, niha, NawDharra::Amr, None, ard)?;
                 return Ok(true);
-            }
+            },
             "image" => {
-                self.dharra(bida, niha, NawDharra::Sura, None, self.khiyarat.ard_dharra_iftiradi)?;
+                self.dharra(
+                    bida,
+                    niha,
+                    NawDharra::Sura,
+                    None,
+                    self.khiyarat.ard_dharra_iftiradi,
+                )?;
                 return Ok(true);
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         let uslub = match ism {
-            "b" => Uslub { wazn: Some(700), ..Uslub::default() },
-            "i" => Uslub { maail: true, ..Uslub::default() },
+            "b" => Uslub {
+                wazn: Some(700),
+                ..Uslub::default()
+            },
+            "i" => Uslub {
+                maail: true,
+                ..Uslub::default()
+            },
             "color" => {
                 let Some(lawn) = qeema.and_then(hall_lawn) else {
                     return self.la_qeema(bida);
                 };
-                Uslub { lawn: Some(lawn), ..Uslub::default() }
-            }
+                Uslub {
+                    lawn: Some(lawn),
+                    ..Uslub::default()
+                }
+            },
             "size" => {
                 let Some(qadr) = qeema.and_then(hall_qadr) else {
                     return self.la_qeema(bida);
                 };
-                Uslub { hajm: qadr.bikselat(self.khiyarat.hajm_asas), ..Uslub::default() }
-            }
+                Uslub {
+                    hajm: qadr.bikselat(self.khiyarat.hajm_asas),
+                    ..Uslub::default()
+                }
+            },
             "k" => {
                 let Some(qadr) = qeema.and_then(hall_qadr) else {
                     return self.la_qeema(bida);
                 };
-                Uslub { tabaud: qadr.bikselat(self.khiyarat.hajm_asas), ..Uslub::default() }
-            }
+                Uslub {
+                    tabaud: qadr.bikselat(self.khiyarat.hajm_asas),
+                    ..Uslub::default()
+                }
+            },
             _ => Uslub::default(),
         };
 
@@ -1906,7 +2042,10 @@ impl Massah<'_> {
         // follows it; otherwise it is the field width and belongs below.
         let baad_arqam = nihayat_arqam(bayt, i);
         if baad_arqam > i && bayt.get(baad_arqam) == Some(&b'$') {
-            tarteeb = self.khaam.get(i..baad_arqam).and_then(|juz| juz.parse::<u32>().ok());
+            tarteeb = self
+                .khaam
+                .get(i..baad_arqam)
+                .and_then(|juz| juz.parse::<u32>().ok());
             i = baad_arqam.saturating_add(1);
         }
 
@@ -1955,10 +2094,27 @@ impl Massah<'_> {
 
         let tahweel = matches!(
             bayt.get(i),
-            Some(&(
-                b'd' | b'i' | b'u' | b'o' | b'x' | b'X' | b'e' | b'E' | b'f' | b'F' | b'g' | b'G'
-                    | b'a' | b'A' | b'c' | b's' | b'p' | b'n' | b'@'
-            ))
+            Some(
+                &(b'd'
+                    | b'i'
+                    | b'u'
+                    | b'o'
+                    | b'x'
+                    | b'X'
+                    | b'e'
+                    | b'E'
+                    | b'f'
+                    | b'F'
+                    | b'g'
+                    | b'G'
+                    | b'a'
+                    | b'A'
+                    | b'c'
+                    | b's'
+                    | b'p'
+                    | b'n'
+                    | b'@')
+            )
         );
         if !tahweel {
             // Not a C conversion. It may still be a glyph slot, and printf is
@@ -1969,7 +2125,13 @@ impl Massah<'_> {
         }
 
         let niha = i.saturating_add(1);
-        self.dharra(bida, niha, NawDharra::Mawdi, tarteeb, self.khiyarat.ard_dharra_iftiradi)?;
+        self.dharra(
+            bida,
+            niha,
+            NawDharra::Mawdi,
+            tarteeb,
+            self.khiyarat.ard_dharra_iftiradi,
+        )?;
         Ok(true)
     }
 
@@ -2000,8 +2162,17 @@ impl Massah<'_> {
         if niha == arqam || self.bayt.get(niha) == Some(&b'$') {
             return Ok(false);
         }
-        let tarteeb = self.khaam.get(arqam..niha).and_then(|juz| juz.parse::<u32>().ok());
-        self.dharra(bida, niha, NawDharra::Mawdi, tarteeb, self.khiyarat.ard_dharra_iftiradi)?;
+        let tarteeb = self
+            .khaam
+            .get(arqam..niha)
+            .and_then(|juz| juz.parse::<u32>().ok());
+        self.dharra(
+            bida,
+            niha,
+            NawDharra::Mawdi,
+            tarteeb,
+            self.khiyarat.ard_dharra_iftiradi,
+        )?;
         Ok(true)
     }
 
@@ -2033,7 +2204,7 @@ impl Massah<'_> {
                             self.khiyarat.ard_dharra_iftiradi,
                         )?;
                         return Ok(true);
-                    }
+                    },
                     Some(&(b'\n' | b'\r' | b'{')) => return Ok(false),
                     Some(_) => i = i.saturating_add(1),
                     // Committed and never finished: the substitution throws.
@@ -2046,13 +2217,25 @@ impl Massah<'_> {
 
         // A bare `$` takes a name, never a number: `$5.00` is a price and
         // `$gold` is a variable, and the difference is the first character.
-        if !bayt.get(i).is_some_and(|b| b.is_ascii_alphabetic() || *b == b'_') {
+        if !bayt
+            .get(i)
+            .is_some_and(|b| b.is_ascii_alphabetic() || *b == b'_')
+        {
             return Ok(false);
         }
-        while bayt.get(i).is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_') {
+        while bayt
+            .get(i)
+            .is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_')
+        {
             i = i.saturating_add(1);
         }
-        self.dharra(bida, i, NawDharra::Mutaghayyir, None, self.khiyarat.ard_dharra_iftiradi)?;
+        self.dharra(
+            bida,
+            i,
+            NawDharra::Mutaghayyir,
+            None,
+            self.khiyarat.ard_dharra_iftiradi,
+        )?;
         Ok(true)
     }
 
@@ -2068,7 +2251,9 @@ impl Massah<'_> {
     fn mailil(&mut self) -> Natija<bool> {
         let bida = self.i;
         let bayt = self.bayt;
-        let Some(&harf) = bayt.get(bida.saturating_add(1)) else { return Ok(false) };
+        let Some(&harf) = bayt.get(bida.saturating_add(1)) else {
+            return Ok(false);
+        };
         let iftiradi = self.khiyarat.ard_dharra_iftiradi;
 
         if harf == b'\\' {
@@ -2238,7 +2423,12 @@ pub fn aid_binaa(naqi: &NassNaqi) -> String {
 pub fn dharrat_nass(khaam: &str, khiyarat: &KhiyaratNasq) -> Vec<String> {
     istakhrij(khaam, khiyarat).map_or_else(
         |_| Vec::new(),
-        |naqi| naqi.dharrat.into_iter().map(|dharra| dharra.khaam).collect(),
+        |naqi| {
+            naqi.dharrat
+                .into_iter()
+                .map(|dharra| dharra.khaam)
+                .collect()
+        },
     )
 }
 
@@ -2274,7 +2464,11 @@ pub fn tahaqquq(naqi: &NassNaqi) -> Natija<()> {
         }
         for mawqi in [nitaq.bidaya, nihaya] {
             if !naqi.nass.is_char_boundary(qusize(mawqi)) {
-                return Err(KhataSaff::HaddNitaqTalif { id: nitaq.id, mawqi }.into());
+                return Err(KhataSaff::HaddNitaqTalif {
+                    id: nitaq.id,
+                    mawqi,
+                }
+                .into());
             }
         }
     }

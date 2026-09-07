@@ -210,10 +210,13 @@ pub(crate) fn hajm_usize(qeema: u64) -> Option<usize> {
 /// to whoever is comparing them against a registry page.
 pub(crate) fn sittasi(bayt: &[u8]) -> String {
     use std::fmt::Write as _;
-    bayt.iter().fold(String::with_capacity(bayt.len().saturating_mul(2)), |mut nass, wahid| {
-        let _ = write!(nass, "{wahid:02x}");
-        nass
-    })
+    bayt.iter().fold(
+        String::with_capacity(bayt.len().saturating_mul(2)),
+        |mut nass, wahid| {
+            let _ = write!(nass, "{wahid:02x}");
+            nass
+        },
+    )
 }
 
 /// The sixty-four byte header.
@@ -278,7 +281,10 @@ impl Tarwisa {
 
         let isdar = iqra_u16(bayt, IZAHAT_ISDAR).ok_or_else(|| qaseer("the format version"))?;
         if isdar != ISDAR_SIYAGHA {
-            return Err(KhataRuqaa::IsdarGhayrMadum { wujid: isdar, madum: ISDAR_SIYAGHA });
+            return Err(KhataRuqaa::IsdarGhayrMadum {
+                wujid: isdar,
+                madum: ISDAR_SIYAGHA,
+            });
         }
 
         let alam = iqra_u16(bayt, IZAHAT_ALAM).ok_or_else(|| qaseer("the header flags"))?;
@@ -288,19 +294,31 @@ impl Tarwisa {
 
         let adad_aqsam = iqra_u32(bayt, IZAHAT_ADAD).ok_or_else(|| qaseer("the section count"))?;
         if adad_aqsam == 0 || adad_aqsam > AQSA_AQSAM {
-            return Err(KhataRuqaa::AdadAqsamGhayrSalih { adad: adad_aqsam, aqsa: AQSA_AQSAM });
+            return Err(KhataRuqaa::AdadAqsamGhayrSalih {
+                adad: adad_aqsam,
+                aqsa: AQSA_AQSAM,
+            });
         }
 
         let hajm_kulli = iqra_u64(bayt, IZAHAT_HAJM).ok_or_else(|| qaseer("the total size"))?;
         let fili = tul_u64(bayt.len());
         if hajm_kulli != fili {
-            return Err(KhataRuqaa::HajmKulliGhayrMutabaq { muallan: hajm_kulli, fili });
+            return Err(KhataRuqaa::HajmKulliGhayrMutabaq {
+                muallan: hajm_kulli,
+                fili,
+            });
         }
 
         let basma: [u8; 32] =
             iqra_masfufa(bayt, IZAHAT_BASMA).ok_or_else(|| qaseer("the content hash"))?;
 
-        Ok(Self { isdar, alam, adad_aqsam, hajm_kulli, basma })
+        Ok(Self {
+            isdar,
+            alam,
+            adad_aqsam,
+            hajm_kulli,
+            basma,
+        })
     }
 
     /// Writes the header into the first sixty-four bytes of a buffer.
@@ -417,10 +435,12 @@ impl JadwalAqsam {
     /// [`KhataRuqaa::KutlatTawqeeTalifa`] or [`KhataRuqaa::QismMafqud`],
     /// each naming the entry and the field that was refused.
     pub fn min_bayt(bayt: &[u8], tarwisa: &Tarwisa) -> Result<Self, KhataRuqaa> {
-        let nihayat_jadwal = tarwisa.nihayat_jadwal().ok_or(KhataRuqaa::AdadAqsamGhayrSalih {
-            adad: tarwisa.adad_aqsam,
-            aqsa: AQSA_AQSAM,
-        })?;
+        let nihayat_jadwal = tarwisa
+            .nihayat_jadwal()
+            .ok_or(KhataRuqaa::AdadAqsamGhayrSalih {
+                adad: tarwisa.adad_aqsam,
+                aqsa: AQSA_AQSAM,
+            })?;
         if nihayat_jadwal > tarwisa.hajm_kulli {
             return Err(KhataRuqaa::MalafQaseer {
                 haql: "the section table",
@@ -433,9 +453,11 @@ impl JadwalAqsam {
         let mut tarteeb = [0u8; 8];
         let mut majmu_khaam: u64 = 0;
         let mut nihayat_muhtawa: u64 = 0;
-        let adad = u8::try_from(tarwisa.adad_aqsam).map_err(|_| {
-            KhataRuqaa::AdadAqsamGhayrSalih { adad: tarwisa.adad_aqsam, aqsa: AQSA_AQSAM }
-        })?;
+        let adad =
+            u8::try_from(tarwisa.adad_aqsam).map_err(|_| KhataRuqaa::AdadAqsamGhayrSalih {
+                adad: tarwisa.adad_aqsam,
+                aqsa: AQSA_AQSAM,
+            })?;
 
         for fahras in 0..usize::from(adad) {
             let izaha_madkhal = HAJM_TARWISA.saturating_add(fahras.saturating_mul(HAJM_MADKHAL));
@@ -455,13 +477,19 @@ impl JadwalAqsam {
                 return Err(KhataRuqaa::QismMukarrar { naw });
             }
             if !madkhal.muhadhah() {
-                return Err(KhataRuqaa::IzahaGhayrMuhadhah { naw, izaha: madkhal.izaha });
+                return Err(KhataRuqaa::IzahaGhayrMuhadhah {
+                    naw,
+                    izaha: madkhal.izaha,
+                });
             }
             // Kind zero in this refusal is the framing itself: a section that
             // starts before the section table ends is claiming bytes the header
             // and the table already own.
             if madkhal.izaha < nihayat_jadwal {
-                return Err(KhataRuqaa::AqsamMutadakhila { awwal: 0, thani: naw });
+                return Err(KhataRuqaa::AqsamMutadakhila {
+                    awwal: 0,
+                    thani: naw,
+                });
             }
             let nihaya = madkhal.nihaya().ok_or_else(|| KhataRuqaa::QismKharij {
                 naw,
@@ -484,9 +512,13 @@ impl JadwalAqsam {
                     saqf: AQSA_QISM_KHAAM,
                 });
             }
-            majmu_khaam = majmu_khaam.checked_add(madkhal.tul_khaam).ok_or(
-                KhataRuqaa::MajmuKhaamMufrit { majmu: u64::MAX, saqf: AQSA_MAJMU_KHAAM },
-            )?;
+            majmu_khaam =
+                majmu_khaam
+                    .checked_add(madkhal.tul_khaam)
+                    .ok_or(KhataRuqaa::MajmuKhaamMufrit {
+                        majmu: u64::MAX,
+                        saqf: AQSA_MAJMU_KHAAM,
+                    })?;
             if majmu_khaam > AQSA_MAJMU_KHAAM {
                 return Err(KhataRuqaa::MajmuKhaamMufrit {
                     majmu: majmu_khaam,
@@ -509,13 +541,21 @@ impl JadwalAqsam {
 
         Self::tahaqquq_tadakhul(&madkhalat)?;
         for naw in NawQism::KULL {
-            let khana = usize::try_from(naw.raqm()).unwrap_or(usize::MAX).saturating_sub(1);
+            let khana = usize::try_from(naw.raqm())
+                .unwrap_or(usize::MAX)
+                .saturating_sub(1);
             if naw.ilzami() && madkhalat.get(khana).copied().flatten().is_none() {
                 return Err(KhataRuqaa::QismMafqud { ism: naw.ism() });
             }
         }
 
-        Ok(Self { madkhalat, tarteeb, adad, nihayat_muhtawa, majmu_khaam })
+        Ok(Self {
+            madkhalat,
+            tarteeb,
+            adad,
+            nihayat_muhtawa,
+            majmu_khaam,
+        })
     }
 
     /// The signature section's own rules, kept together because they are one
@@ -566,7 +606,10 @@ impl JadwalAqsam {
         for i in 1..adad {
             let mut j = i;
             while j > 0 {
-                let sabiq = nitaqat.get(j.saturating_sub(1)).copied().unwrap_or_default();
+                let sabiq = nitaqat
+                    .get(j.saturating_sub(1))
+                    .copied()
+                    .unwrap_or_default();
                 let hali = nitaqat.get(j).copied().unwrap_or_default();
                 if sabiq.0 <= hali.0 {
                     break;
@@ -581,10 +624,16 @@ impl JadwalAqsam {
             }
         }
         for i in 1..adad {
-            let sabiq = nitaqat.get(i.saturating_sub(1)).copied().unwrap_or_default();
+            let sabiq = nitaqat
+                .get(i.saturating_sub(1))
+                .copied()
+                .unwrap_or_default();
             let hali = nitaqat.get(i).copied().unwrap_or_default();
             if hali.0 < sabiq.1 {
-                return Err(KhataRuqaa::AqsamMutadakhila { awwal: sabiq.2, thani: hali.2 });
+                return Err(KhataRuqaa::AqsamMutadakhila {
+                    awwal: sabiq.2,
+                    thani: hali.2,
+                });
             }
         }
         Ok(())
@@ -593,7 +642,9 @@ impl JadwalAqsam {
     /// The entry for a kind, if the container carries it.
     #[must_use]
     pub fn qism(&self, naw: NawQism) -> Option<MadkhalQism> {
-        let khana = usize::try_from(naw.raqm()).unwrap_or(usize::MAX).saturating_sub(1);
+        let khana = usize::try_from(naw.raqm())
+            .unwrap_or(usize::MAX)
+            .saturating_sub(1);
         self.madkhalat.get(khana).copied().flatten()
     }
 
@@ -603,10 +654,13 @@ impl JadwalAqsam {
     /// which sections a package carries, where each one is, how many bytes it
     /// occupies stored, and how many it becomes — before anything is expanded.
     pub fn madkhalat(&self) -> impl Iterator<Item = MadkhalQism> + '_ {
-        self.tarteeb.iter().take(usize::from(self.adad)).filter_map(move |naw| {
-            let khana = usize::from(*naw).checked_sub(1)?;
-            self.madkhalat.get(khana).copied().flatten()
-        })
+        self.tarteeb
+            .iter()
+            .take(usize::from(self.adad))
+            .filter_map(move |naw| {
+                let khana = usize::from(*naw).checked_sub(1)?;
+                self.madkhalat.get(khana).copied().flatten()
+            })
     }
 
     /// How many sections the container carries.

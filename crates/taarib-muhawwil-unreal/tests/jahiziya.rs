@@ -14,16 +14,20 @@
               that cannot fail"
 )]
 
-use taarib_mustalahat::muharrik::JahiziyatTashghil;
 use taarib_muhawwil_unreal::jahiziya::{
     HalatQudra, QUDRAT, Qudra, bayan, hala, hamula_mabniya, jahiziya, naqs, taqreer,
 };
+use taarib_mustalahat::muharrik::JahiziyatTashghil;
 
 #[test]
 fn every_capability_carries_both_sentences() {
     for qudra in QUDRAT {
         let bayan = bayan(qudra);
-        assert!(!bayan.arabi.trim().is_empty(), "{} has no Arabic sentence", qudra.ism());
+        assert!(
+            !bayan.arabi.trim().is_empty(),
+            "{} has no Arabic sentence",
+            qudra.ism()
+        );
         assert!(
             !bayan.injilizi.trim().is_empty(),
             "{} has no English sentence",
@@ -74,7 +78,11 @@ fn the_verdict_follows_from_the_rows() {
     let kull = QUDRAT.iter().all(|qudra| hala(*qudra).tajri());
     let yaktub = hala(Qudra::Kitaba).tajri();
     let mutawaqqa = if yaktub {
-        if kull { JahiziyatTashghil::Mukammala } else { JahiziyatTashghil::Naqisa }
+        if kull {
+            JahiziyatTashghil::Mukammala
+        } else {
+            JahiziyatTashghil::Naqisa
+        }
     } else {
         JahiziyatTashghil::Ghaiba
     };
@@ -90,8 +98,11 @@ fn a_sentence_is_offered_exactly_when_something_is_missing() {
 fn the_shaping_rung_tracks_the_feature_that_carries_it() {
     // The one mechanical row. Without `hamula` this crate exports no bootstrap,
     // so nothing drives `Tashghil` and the row must say so.
-    let mutawaqqa =
-        if hamula_mabniya() { HalatQudra::Amila } else { HalatQudra::Ghaiba };
+    let mutawaqqa = if hamula_mabniya() {
+        HalatQudra::Amila
+    } else {
+        HalatQudra::Ghaiba
+    };
     assert_eq!(hala(Qudra::Tashghil), mutawaqqa);
 }
 

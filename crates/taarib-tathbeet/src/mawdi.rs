@@ -55,21 +55,27 @@ impl WajhatLuba {
                         return Err(kharij("a path component is not valid UTF-8"));
                     };
                     if ism_mahjuz(nass) {
-                        return Err(kharij("a component is a reserved name or ends in a dot/space"));
+                        return Err(kharij(
+                            "a component is a reserved name or ends in a dot/space",
+                        ));
                     }
                     ajza.push(nass);
-                }
-                Component::CurDir => {}
+                },
+                Component::CurDir => {},
                 Component::ParentDir => return Err(kharij("a parent component leaves the game")),
                 Component::RootDir | Component::Prefix(_) => {
-                    return Err(kharij("an absolute path is not a destination inside a game"));
-                }
+                    return Err(kharij(
+                        "an absolute path is not a destination inside a game",
+                    ));
+                },
             }
         }
         if ajza.is_empty() {
             return Err(kharij("path resolves to the game root itself"));
         }
-        Ok(Self { nisbi: ajza.join("/") })
+        Ok(Self {
+            nisbi: ajza.join("/"),
+        })
     }
 
     /// A destination under Taarib's own subdirectory of the game.
@@ -79,7 +85,9 @@ impl WajhatLuba {
     /// As [`WajhatLuba::jadeed`], applied to the joined form.
     pub fn dakhil_taarib(khaam: &str) -> Result<Self, KhataTathbeet> {
         let dakhil = Self::jadeed(khaam)?;
-        Ok(Self { nisbi: format!("{MUJALLAD_TAARIB}/{}", dakhil.nisbi) })
+        Ok(Self {
+            nisbi: format!("{MUJALLAD_TAARIB}/{}", dakhil.nisbi),
+        })
     }
 
     /// The normalized relative form the manifest stores.
@@ -191,7 +199,7 @@ impl WajhatNizam {
         match self.naw {
             NawWajhatNizam::BeeatTawafuq => {
                 taarib_kashf::beea::hall_bila_hala(&self.jidhr, Path::new(self.dhayl.nisbi()))
-            }
+            },
         }
     }
 }
@@ -203,8 +211,27 @@ fn ism_mahjuz(nass: &str) -> bool {
     let jidhr = nass.split('.').next().unwrap_or(nass);
     matches!(
         jidhr.to_ascii_uppercase().as_str(),
-        "CON" | "PRN" | "AUX" | "NUL"
-            | "COM1" | "COM2" | "COM3" | "COM4" | "COM5" | "COM6" | "COM7" | "COM8" | "COM9"
-            | "LPT1" | "LPT2" | "LPT3" | "LPT4" | "LPT5" | "LPT6" | "LPT7" | "LPT8" | "LPT9"
+        "CON"
+            | "PRN"
+            | "AUX"
+            | "NUL"
+            | "COM1"
+            | "COM2"
+            | "COM3"
+            | "COM4"
+            | "COM5"
+            | "COM6"
+            | "COM7"
+            | "COM8"
+            | "COM9"
+            | "LPT1"
+            | "LPT2"
+            | "LPT3"
+            | "LPT4"
+            | "LPT5"
+            | "LPT6"
+            | "LPT7"
+            | "LPT8"
+            | "LPT9"
     )
 }

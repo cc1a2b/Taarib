@@ -287,7 +287,13 @@ impl Tafsir for KhataLawha {
 
     fn arabi(&self) -> String {
         match self {
-            Self::ShaklAkbarMinSafha { ard, irtifa, hadd_ard, hadd_irtifa, .. } => format!(
+            Self::ShaklAkbarMinSafha {
+                ard,
+                irtifa,
+                hadd_ard,
+                hadd_irtifa,
+                ..
+            } => format!(
                 "أحد الأشكال أكبر من صفحة اللوحة كاملة: يحتاج {ard}×{irtifa} بكسل بينما أقصى \
                  صفحة {hadd_ard}×{hadd_irtifa}. لن تُصغَّر الحروف لتدخل، لأن ذلك يجعل ما يُرسم \
                  مخالفًا لما قِيس عند الترجمة؛ اخفض حجم الخط أو ارفع حد الصفحة."
@@ -304,7 +310,10 @@ impl Tafsir for KhataLawha {
                 "لا يمكن إخلاء موضع في اللوحة: {mathbut} شكلًا مثبتًا للإطار الجاري، والمثبَّت لا \
                  يُزاح ما دام الإطار يرسمه. النص المعروض في مشهد واحد أكبر مما تتسع له اللوحة."
             ),
-            Self::MizaniyaAsghurMinSafha { mizaniya, hajm_safha } => format!(
+            Self::MizaniyaAsghurMinSafha {
+                mizaniya,
+                hajm_safha,
+            } => format!(
                 "ميزانية اللوحة {mizaniya} بايت، وهي أقل من صفحة واحدة تكلّف {hajm_safha} بايت. \
                  ارفع الميزانية أو اختر مقاس صفحة أصغر."
             ),
@@ -316,7 +325,10 @@ impl Tafsir for KhataLawha {
                 "طُلب شكل من الخط رقم {khatt}، وسلسلة الخطوط تحتوي {adad} خطًا فقط. اللوحة \
                  والسلسلة لا تصفان الرقعة نفسها."
             ),
-            Self::DaqqaGhayrSaliha { daqqa, hajm_khalyia } => format!(
+            Self::DaqqaGhayrSaliha {
+                daqqa,
+                hajm_khalyia,
+            } => format!(
                 "دقة المصدر {daqqa} لا تصلح لخلية من {hajm_khalyia} بكسل: لا بد أن تكون واحدًا \
                  فأكثر، وأن يبقى حاصل ضربها في مقاس الخلية ضمن ما يمكن رسمه."
             ),
@@ -327,7 +339,7 @@ impl Tafsir for KhataLawha {
                 "تعذّر توليد جدول أشكال النقل. النقل آخر مسار للمحرّكات التي لا تسمّي الشكل إلا \
                  برمز محرف، وحين يمتنع يبقى النص بلغته الأصلية."
                     .to_owned()
-            }
+            },
             Self::NaqlMumtali { matlub, mutah } => format!(
                 "النصوص تحتاج {matlub} خانة شكل، ولا يتّسع جدول النقل إلا لـ{mutah}. رُفض \
                  التوليد بدل قصّ الجدول، لأن الجدول المقصوص يرسم حروفًا خاطئة تُقرأ كأن الخطّ \
@@ -338,23 +350,29 @@ impl Tafsir for KhataLawha {
                  تُكتب أعدادًا صحيحة، ولا بد أن يتّسق بعضها مع بعض وإلا تراكب كل سطر على ما \
                  فوقه، وهو خلل يبدو كعيب في رسم اللعبة لا كرقم خاطئ في الرقعة."
                     .to_owned()
-            }
+            },
             Self::HajmMufrit { .. } => {
                 "أحد المدخلات يعلن حجمًا أكبر بكثير مما تحتاجه أي رقعة حقيقية، ورُفض قبل حجز أي \
                  ذاكرة له."
                     .to_owned()
-            }
+            },
             Self::KhataMalaf { .. } => {
                 "تعذّرت كتابة المورد المولَّد. اللوحة لا تفتح ملفًّا بنفسها؛ المصرف يأتي من \
                  المستدعي، والمسار هنا اسمٌ للملف الذي كان يُكتب لا ملفٌّ فُتح هنا."
                     .to_owned()
-            }
+            },
         }
     }
 
     fn injilizi(&self) -> String {
         match self {
-            Self::ShaklAkbarMinSafha { ard, irtifa, hadd_ard, hadd_irtifa, .. } => format!(
+            Self::ShaklAkbarMinSafha {
+                ard,
+                irtifa,
+                hadd_ard,
+                hadd_irtifa,
+                ..
+            } => format!(
                 "One glyph is larger than an entire atlas page: it needs {ard}x{irtifa} px and \
                  the largest page allowed is {hadd_ard}x{hadd_irtifa}. Glyphs are never scaled \
                  down to fit, because that would draw text at a size the translator never \
@@ -374,7 +392,10 @@ impl Tafsir for KhataLawha {
                  being drawn, and a pinned glyph is never moved while the frame still samples \
                  it. The text on screen at one moment is larger than the atlas it was given."
             ),
-            Self::MizaniyaAsghurMinSafha { mizaniya, hajm_safha } => format!(
+            Self::MizaniyaAsghurMinSafha {
+                mizaniya,
+                hajm_safha,
+            } => format!(
                 "The atlas budget is {mizaniya} bytes, less than the {hajm_safha} bytes one page \
                  costs. Raise the budget or choose a smaller page size."
             ),
@@ -386,7 +407,10 @@ impl Tafsir for KhataLawha {
                 "A glyph was asked for from font index {khatt} and the chain holds {adad} fonts. \
                  The atlas and the chain do not describe the same patch."
             ),
-            Self::DaqqaGhayrSaliha { daqqa, hajm_khalyia } => format!(
+            Self::DaqqaGhayrSaliha {
+                daqqa,
+                hajm_khalyia,
+            } => format!(
                 "A source resolution of {daqqa} is not usable for a {hajm_khalyia} px cell: it \
                  must be at least one, and the cell multiplied by it must stay inside what the \
                  rasterizer will draw."
@@ -396,7 +420,7 @@ impl Tafsir for KhataLawha {
                  and the other is a distance field, and the same byte means a different thing in \
                  each."
                     .to_owned()
-            }
+            },
             Self::NaqlMarfud { sabab } => format!(
                 "The glyph transport could not be generated, and it is the last path available \
                  to an engine that can name a glyph only by a character code. {sabab}"
@@ -442,72 +466,96 @@ impl Tafsir for KhataLawha {
     fn siyaq(&self) -> BTreeMap<String, QeemaSiyaq> {
         let mut siyaq = BTreeMap::new();
         match self {
-            Self::ShaklAkbarMinSafha { khatt, muarrif, ard, irtifa, hadd_ard, hadd_irtifa } => {
+            Self::ShaklAkbarMinSafha {
+                khatt,
+                muarrif,
+                ard,
+                irtifa,
+                hadd_ard,
+                hadd_irtifa,
+            } => {
                 let _ = siyaq.insert("khatt".to_owned(), QeemaSiyaq::Raqm(i64::from(*khatt)));
                 let _ = siyaq.insert("muarrif".to_owned(), QeemaSiyaq::Raqm(i64::from(*muarrif)));
                 let _ = siyaq.insert("ard".to_owned(), QeemaSiyaq::Raqm(i64::from(*ard)));
                 let _ = siyaq.insert("irtifa".to_owned(), QeemaSiyaq::Raqm(i64::from(*irtifa)));
-                let _ =
-                    siyaq.insert("hadd_ard".to_owned(), QeemaSiyaq::Raqm(i64::from(*hadd_ard)));
-                let _ = siyaq
-                    .insert("hadd_irtifa".to_owned(), QeemaSiyaq::Raqm(i64::from(*hadd_irtifa)));
-            }
+                let _ = siyaq.insert(
+                    "hadd_ard".to_owned(),
+                    QeemaSiyaq::Raqm(i64::from(*hadd_ard)),
+                );
+                let _ = siyaq.insert(
+                    "hadd_irtifa".to_owned(),
+                    QeemaSiyaq::Raqm(i64::from(*hadd_irtifa)),
+                );
+            },
             Self::AbaadSafhaGhayrSaliha { ard, irtifa } => {
                 let _ = siyaq.insert("ard".to_owned(), QeemaSiyaq::Raqm(i64::from(*ard)));
                 let _ = siyaq.insert("irtifa".to_owned(), QeemaSiyaq::Raqm(i64::from(*irtifa)));
-            }
+            },
             Self::SafahatNafidat { adad, hadd } => {
                 let _ = siyaq.insert("adad".to_owned(), QeemaSiyaq::Raqm(i64::from(*adad)));
                 let _ = siyaq.insert("hadd".to_owned(), QeemaSiyaq::Raqm(i64::from(*hadd)));
-            }
-            Self::LaShayLilIkhla { mathbut, matlub_bayt } => {
+            },
+            Self::LaShayLilIkhla {
+                mathbut,
+                matlub_bayt,
+            } => {
                 let _ = siyaq.insert("mathbut".to_owned(), QeemaSiyaq::Raqm(i64::from(*mathbut)));
                 let matlub = QeemaSiyaq::Hajm(u64::from(*matlub_bayt));
                 let _ = siyaq.insert("matlub".to_owned(), matlub);
-            }
-            Self::MizaniyaAsghurMinSafha { mizaniya, hajm_safha } => {
+            },
+            Self::MizaniyaAsghurMinSafha {
+                mizaniya,
+                hajm_safha,
+            } => {
                 let _ = siyaq.insert("mizaniya".to_owned(), QeemaSiyaq::Hajm(*mizaniya));
                 let _ = siyaq.insert("hajm_safha".to_owned(), QeemaSiyaq::Hajm(*hajm_safha));
-            }
-            Self::RasmFashil { khatt, muarrif, hajm_rubi } => {
+            },
+            Self::RasmFashil {
+                khatt,
+                muarrif,
+                hajm_rubi,
+            } => {
                 let _ = siyaq.insert("khatt".to_owned(), QeemaSiyaq::Raqm(i64::from(*khatt)));
                 let _ = siyaq.insert("muarrif".to_owned(), QeemaSiyaq::Raqm(i64::from(*muarrif)));
                 let _ = siyaq.insert(
                     "hajm".to_owned(),
                     QeemaSiyaq::Kasr(f64::from(*hajm_rubi) / 4.0),
                 );
-            }
+            },
             Self::KhattKharijSilsila { khatt, adad } => {
                 let _ = siyaq.insert("khatt".to_owned(), QeemaSiyaq::Raqm(i64::from(*khatt)));
                 let _ = siyaq.insert("adad".to_owned(), QeemaSiyaq::Raqm(i64::from(*adad)));
-            }
-            Self::DaqqaGhayrSaliha { daqqa, hajm_khalyia } => {
+            },
+            Self::DaqqaGhayrSaliha {
+                daqqa,
+                hajm_khalyia,
+            } => {
                 let _ = siyaq.insert("daqqa".to_owned(), QeemaSiyaq::Kasr(f64::from(*daqqa)));
                 let _ = siyaq.insert(
                     "hajm_khalyia".to_owned(),
                     QeemaSiyaq::Raqm(i64::from(*hajm_khalyia)),
                 );
-            }
+            },
             Self::NamatMukhtalif { safha, surah } => {
                 let _ = siyaq.insert("safha".to_owned(), QeemaSiyaq::Raqm(i64::from(*safha)));
                 let _ = siyaq.insert("surah".to_owned(), QeemaSiyaq::Raqm(i64::from(*surah)));
-            }
+            },
             Self::NaqlMarfud { sabab } | Self::KhattMarfud { sabab } => {
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::NaqlMumtali { matlub, mutah } => {
                 let _ = siyaq.insert("matlub".to_owned(), QeemaSiyaq::Hajm(*matlub));
                 let _ = siyaq.insert("mutah".to_owned(), QeemaSiyaq::Hajm(*mutah));
-            }
+            },
             Self::HajmMufrit { haql, qeema, saqf } => {
                 let _ = siyaq.insert("haql".to_owned(), QeemaSiyaq::Nass((*haql).to_owned()));
                 let _ = siyaq.insert("qeema".to_owned(), QeemaSiyaq::Hajm(*qeema));
                 let _ = siyaq.insert("saqf".to_owned(), QeemaSiyaq::Hajm(*saqf));
-            }
+            },
             Self::KhataMalaf { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 siyaq.extend(siyaq_io(sabab));
-            }
+            },
         }
         siyaq
     }

@@ -81,8 +81,11 @@ use crate::khata::KhataKashf;
 const MUARRIF: &str = "itch";
 
 /// The itch app runs on all three desktop systems.
-const MANASSAT: [NizamTashghil; 3] =
-    [NizamTashghil::Windows, NizamTashghil::Linux, NizamTashghil::Mac];
+const MANASSAT: [NizamTashghil; 3] = [
+    NizamTashghil::Windows,
+    NizamTashghil::Linux,
+    NizamTashghil::Mac,
+];
 
 /// The database, relative to the app's configuration root.
 const MASAR_QAIDA: [&str; 2] = ["db", "butler.db"];
@@ -95,8 +98,15 @@ const HAWIYAT_FLATPAK: &str = "io.itch.itch";
 /// itch hosts far more than games, and a library that shows a user's font packs
 /// and Twine tools alongside their games is a library they have to filter every
 /// time they open it.
-const TASNIFAT_GHAYR_LUBA: &[&str] =
-    &["assets", "book", "comic", "other", "physical_game", "soundtrack", "tool"];
+const TASNIFAT_GHAYR_LUBA: &[&str] = &[
+    "assets",
+    "book",
+    "comic",
+    "other",
+    "physical_game",
+    "soundtrack",
+    "tool",
+];
 
 /// itch.io.
 #[derive(Debug, Clone, Copy, Default)]
@@ -114,12 +124,20 @@ impl MatjarItch {
         let mut judhur = Vec::new();
         match siyaq.nizam {
             NizamTashghil::Windows => {
-                judhur
-                    .extend(siyaq.bayanat_mutajawwila.as_ref().map(|bayanat| bayanat.join("itch")));
+                judhur.extend(
+                    siyaq
+                        .bayanat_mutajawwila
+                        .as_ref()
+                        .map(|bayanat| bayanat.join("itch")),
+                );
             },
             NizamTashghil::Mac => {
                 judhur.push(
-                    siyaq.manzil.join("Library").join("Application Support").join("itch"),
+                    siyaq
+                        .manzil
+                        .join("Library")
+                        .join("Application Support")
+                        .join("itch"),
                 );
             },
             NizamTashghil::Linux => {
@@ -162,7 +180,9 @@ impl Matjar for MatjarItch {
         if let Some(tajawuz) = siyaq.manassat.itch.as_ref() {
             return Some(tajawuz.clone());
         }
-        Self::judhur_muhtamala(siyaq).into_iter().find(|jidhr| qaida_fih(jidhr).is_file())
+        Self::judhur_muhtamala(siyaq)
+            .into_iter()
+            .find(|jidhr| qaida_fih(jidhr).is_file())
     }
 
     /// # Errors
@@ -238,7 +258,9 @@ impl Matjar for MatjarItch {
 
 /// The database file under an itch configuration root.
 fn qaida_fih(jidhr: &Path) -> PathBuf {
-    MASAR_QAIDA.iter().fold(jidhr.to_path_buf(), |masar, juz| masar.join(juz))
+    MASAR_QAIDA
+        .iter()
+        .fold(jidhr.to_path_buf(), |masar, juz| masar.join(juz))
 }
 
 // ---------------------------------------------------------------------------
@@ -296,8 +318,7 @@ fn iftah_lil_qiraa(masar: &Path) -> Natija<(Connection, bool)> {
 fn jarrib_fath(uri: &str, aalam: OpenFlags) -> Result<Connection, rusqlite::Error> {
     let sila = Connection::open_with_flags(uri, aalam)?;
     sila.busy_timeout(MUHLAT_INTIZAR)?;
-    let _: i64 =
-        sila.query_row("SELECT count(*) FROM sqlite_master", [], |saf| saf.get(0))?;
+    let _: i64 = sila.query_row("SELECT count(*) FROM sqlite_master", [], |saf| saf.get(0))?;
     Ok(sila)
 }
 
@@ -354,8 +375,7 @@ impl Qeema {
             rusqlite::types::ValueRef::Null => Self::Faragh,
             rusqlite::types::ValueRef::Integer(raqm) => Self::Raqm(raqm),
             rusqlite::types::ValueRef::Real(ashari) => Self::Ashari(ashari),
-            rusqlite::types::ValueRef::Text(bayt)
-            | rusqlite::types::ValueRef::Blob(bayt) => {
+            rusqlite::types::ValueRef::Text(bayt) | rusqlite::types::ValueRef::Blob(bayt) => {
                 // butler stores its JSON verdict as a blob in some builds and
                 // as text in others; both are UTF-8, and a blob that is not is
                 // not a value this adapter reads.
@@ -455,8 +475,11 @@ fn waqt_min_thawani(raqm: i64) -> Option<String> {
 /// expected reason.
 fn asfuf(sila: &Connection, jadwal: &str) -> Result<Vec<Saf>, rusqlite::Error> {
     let mut bayan = sila.prepare(&format!("SELECT * FROM \"{jadwal}\""))?;
-    let asmaa: Vec<String> =
-        bayan.column_names().into_iter().map(str::to_ascii_lowercase).collect();
+    let asmaa: Vec<String> = bayan
+        .column_names()
+        .into_iter()
+        .map(str::to_ascii_lowercase)
+        .collect();
     let mut nataij = bayan.query([])?;
     let mut khuruj = Vec::new();
     while let Some(saf) = nataij.next()? {
@@ -501,7 +524,10 @@ fn jama_alaab(sila: &Connection, nizam: NizamTashghil, natija: &mut NatijatMatja
     };
 
     let bitaqat: BTreeMap<i64, Saf> = match asfuf(sila, "games") {
-        Ok(asfuf) => asfuf.into_iter().filter_map(|saf| Some((saf.raqm("id")?, saf))).collect(),
+        Ok(asfuf) => asfuf
+            .into_iter()
+            .filter_map(|saf| Some((saf.raqm("id")?, saf)))
+            .collect(),
         Err(sabab) => {
             natija.tanbihat.push(TanbihFahs::jadeed(
                 MUARRIF,
@@ -566,29 +592,34 @@ fn luba_min_kahf(
         ));
     }
 
-    let muarrif_luba = kahf.raqm("game_id").or_else(|| kahf.raqm("external_game_id")).ok_or_else(
-        || {
+    let muarrif_luba = kahf
+        .raqm("game_id")
+        .or_else(|| kahf.raqm("external_game_id"))
+        .ok_or_else(|| {
             TanbihFahs::jadeed(
                 MUARRIF,
                 format!("butler.db: cave {muarrif_kahf}"),
                 "this installation names no game, so it cannot be matched against anything in \
                  the patch registry",
             )
-        },
-    )?;
+        })?;
 
     let bitaqa = bitaqat.get(&muarrif_luba);
     let ism = bitaqa
         .and_then(|saf| saf.nass("title"))
         .or_else(|| kahf.nass("install_folder_name"))
         .or_else(|| {
-            jidhr.file_name().map(|ism| ism.to_string_lossy().into_owned())
+            jidhr
+                .file_name()
+                .map(|ism| ism.to_string_lossy().into_owned())
         })
         .unwrap_or_else(|| format!("itch.io game {muarrif_luba}"));
 
     let mut simat = Vec::new();
     if let Some(tasnif) = bitaqa.and_then(|saf| saf.nass("classification"))
-        && TASNIFAT_GHAYR_LUBA.iter().any(|ghayr| ghayr.eq_ignore_ascii_case(&tasnif))
+        && TASNIFAT_GHAYR_LUBA
+            .iter()
+            .any(|ghayr| ghayr.eq_ignore_ascii_case(&tasnif))
     {
         simat.push(SimatLuba::LaysatLuba(tasnif));
     }
@@ -605,12 +636,13 @@ fn luba_min_kahf(
     let tanfidhi = hukm
         .as_ref()
         .and_then(|hukm| hukm.murashah.as_deref())
-        .and_then(|nisbi| {
-            dakhil(&jidhr, &nisbi.replace('\\', std::path::MAIN_SEPARATOR_STR)).ok()
-        })
+        .and_then(|nisbi| dakhil(&jidhr, &nisbi.replace('\\', std::path::MAIN_SEPARATOR_STR)).ok())
         .filter(|masar| masar.is_file());
 
-    let hajm = kahf.raqm("installed_size").and_then(|raqm| u64::try_from(raqm).ok()).unwrap_or(0);
+    let hajm = kahf
+        .raqm("installed_size")
+        .and_then(|raqm| u64::try_from(raqm).ok())
+        .unwrap_or(0);
 
     Ok(LubaMuktashafa {
         masdar: MasdarLuba::Itch(muarrif_luba),
@@ -628,7 +660,10 @@ fn luba_min_kahf(
         beea: BeeatTawafuq::Asli,
         suwar: MasadirSuwar {
             ghilaf: bitaqa
-                .and_then(|saf| saf.nass("cover_url").or_else(|| saf.nass("still_cover_url")))
+                .and_then(|saf| {
+                    saf.nass("cover_url")
+                        .or_else(|| saf.nass("still_cover_url"))
+                })
                 .map(MasdarSura::Rabt),
             batl: None,
             shiar: None,
@@ -686,10 +721,15 @@ struct HukmButler {
 fn hukm_butler(kahf: &Saf) -> Option<HukmButler> {
     let kham = kahf.nass("verdict")?;
     let qeema: serde_json::Value = serde_json::from_str(&kham).ok()?;
-    let murashahun = qeema.get("candidates").and_then(serde_json::Value::as_array);
+    let murashahun = qeema
+        .get("candidates")
+        .and_then(serde_json::Value::as_array);
     let awwal = murashahun.and_then(|qaima| qaima.first());
     Some(HukmButler {
-        asas: qeema.get("basePath").and_then(serde_json::Value::as_str).map(PathBuf::from),
+        asas: qeema
+            .get("basePath")
+            .and_then(serde_json::Value::as_str)
+            .map(PathBuf::from),
         murashah: awwal
             .and_then(|murashah| murashah.get("path"))
             .and_then(serde_json::Value::as_str)

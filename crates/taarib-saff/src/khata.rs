@@ -191,33 +191,31 @@ impl Tafsir for KhataSaff {
         match self {
             Self::ArdGhayrSalih { .. } => {
                 "العرض المتاح للنص صفر أو أقل، فلا يمكن ترتيب أي سطر داخله.".to_owned()
-            }
+            },
             Self::HajmGhayrSalih { hajm } => {
                 format!("حجم الخط {hajm} خارج المدى الذي يمكن رسمه.")
-            }
+            },
             Self::NitaqKharij { .. } | Self::HaddNitaqTalif { .. } => {
                 "أحد نطاقات التنسيق يشير خارج النص أو يقطع حرفًا في منتصفه.".to_owned()
-            }
+            },
             Self::NitaqMutadakhil { .. } => {
                 "نطاقا تنسيق متداخلان من النوع نفسه، ولا يمكن تحديد أيهما يسري.".to_owned()
-            }
+            },
             Self::NasqTalif { sabab, .. } => {
                 format!("وسوم النص غير سليمة: {}.", sabab.wasf_arabi())
-            }
+            },
             Self::UmqIttijahTajawuz { .. } => {
                 "تداخل اتجاهات النص أعمق مما تسمح به خوارزمية الاتجاهين.".to_owned()
-            }
+            },
             Self::TashkeelFashil { .. } => {
                 "لم يُنتج الخط أي حرف لهذا النص. الخط لا يدعم هذه الكتابة فعليًا رغم اجتيازه \
                  الفحص المبدئي؛ اختر خطًا آخر."
                     .to_owned()
-            }
-            Self::SilsilaFarigha => {
-                "لم يُحدَّد أي خط لهذا النص، فلا شيء يمكن الرسم به.".to_owned()
-            }
+            },
+            Self::SilsilaFarigha => "لم يُحدَّد أي خط لهذا النص، فلا شيء يمكن الرسم به.".to_owned(),
             Self::TaadhurAlqat { .. } => {
                 "كلمة أطول من المساحة المتاحة ولا يوجد موضع قطع داخلها.".to_owned()
-            }
+            },
         }
     }
 
@@ -226,33 +224,32 @@ impl Tafsir for KhataSaff {
             Self::ArdGhayrSalih { .. } => {
                 "The width available for text is zero or less, so no line can be laid out in it."
                     .to_owned()
-            }
+            },
             Self::HajmGhayrSalih { hajm } => {
                 format!("Font size {hajm} is outside the range that can be rasterized.")
-            }
+            },
             Self::NitaqKharij { .. } | Self::HaddNitaqTalif { .. } => {
                 "A style span points outside the text, or splits a character in half.".to_owned()
-            }
+            },
             Self::NitaqMutadakhil { .. } => {
                 "Two style spans of the same kind overlap, so neither can be resolved.".to_owned()
-            }
+            },
             Self::NasqTalif { sabab, .. } => format!("The text's markup is malformed: {sabab}."),
             Self::UmqIttijahTajawuz { .. } => {
-                "Directional nesting is deeper than the bidirectional algorithm allows."
-                    .to_owned()
-            }
+                "Directional nesting is deeper than the bidirectional algorithm allows.".to_owned()
+            },
             Self::TashkeelFashil { .. } => {
                 "The font produced no glyphs for this text. It does not really support this \
                  script despite passing the initial check; choose another font."
                     .to_owned()
-            }
+            },
             Self::SilsilaFarigha => {
                 "No font was given for this text, so there is nothing to draw with.".to_owned()
-            }
+            },
             Self::TaadhurAlqat { .. } => {
                 "A word is wider than the space available and has no break opportunity inside it."
                     .to_owned()
-            }
+            },
         }
     }
 
@@ -274,44 +271,51 @@ impl Tafsir for KhataSaff {
         match self {
             Self::ArdGhayrSalih { ard } => {
                 let _ = siyaq.insert("ard".to_owned(), QeemaSiyaq::Kasr(f64::from(*ard)));
-            }
+            },
             Self::HajmGhayrSalih { hajm } => {
                 let _ = siyaq.insert("hajm".to_owned(), QeemaSiyaq::Kasr(f64::from(*hajm)));
-            }
-            Self::NitaqKharij { id, bidaya, nihaya, tul } => {
+            },
+            Self::NitaqKharij {
+                id,
+                bidaya,
+                nihaya,
+                tul,
+            } => {
                 let _ = siyaq.insert("nitaq".to_owned(), QeemaSiyaq::Raqm(i64::from(*id)));
                 let _ = siyaq.insert("bidaya".to_owned(), QeemaSiyaq::Raqm(i64::from(*bidaya)));
                 let _ = siyaq.insert("nihaya".to_owned(), QeemaSiyaq::Raqm(i64::from(*nihaya)));
                 let _ = siyaq.insert("tul".to_owned(), QeemaSiyaq::Raqm(i64::from(*tul)));
-            }
+            },
             Self::HaddNitaqTalif { id, mawqi } => {
                 let _ = siyaq.insert("nitaq".to_owned(), QeemaSiyaq::Raqm(i64::from(*id)));
                 let _ = siyaq.insert("mawqi".to_owned(), QeemaSiyaq::Raqm(i64::from(*mawqi)));
-            }
+            },
             Self::NitaqMutadakhil { awwal, thani } => {
                 let _ = siyaq.insert("awwal".to_owned(), QeemaSiyaq::Raqm(i64::from(*awwal)));
                 let _ = siyaq.insert("thani".to_owned(), QeemaSiyaq::Raqm(i64::from(*thani)));
-            }
+            },
             Self::NasqTalif { mawqi, sabab } => {
                 let _ = siyaq.insert("mawqi".to_owned(), QeemaSiyaq::Raqm(i64::from(*mawqi)));
-                let _ = siyaq
-                    .insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.wasf_injilizi().to_owned()));
-            }
+                let _ = siyaq.insert(
+                    "sabab".to_owned(),
+                    QeemaSiyaq::Nass(sabab.wasf_injilizi().to_owned()),
+                );
+            },
             Self::UmqIttijahTajawuz { aqsa } => {
                 let _ = siyaq.insert("aqsa".to_owned(), QeemaSiyaq::Raqm(i64::from(*aqsa)));
-            }
+            },
             Self::TashkeelFashil { tul, script } => {
                 let _ = siyaq.insert("tul".to_owned(), QeemaSiyaq::Raqm(i64::from(*tul)));
                 let _ = siyaq.insert(
                     "script".to_owned(),
                     QeemaSiyaq::Nass(String::from_utf8_lossy(script).into_owned()),
                 );
-            }
-            Self::SilsilaFarigha => {}
+            },
+            Self::SilsilaFarigha => {},
             Self::TaadhurAlqat { ard, mutah } => {
                 let _ = siyaq.insert("ard".to_owned(), QeemaSiyaq::Kasr(f64::from(*ard)));
                 let _ = siyaq.insert("mutah".to_owned(), QeemaSiyaq::Kasr(f64::from(*mutah)));
-            }
+            },
         }
         siyaq
     }
@@ -415,12 +419,10 @@ impl Tafsir for KhataKhatt {
 
     fn arabi(&self) -> String {
         match self {
-            Self::TahleelFashil { .. } => {
-                "هذا الملف ليس خطًا يمكن قراءته، أو أنه تالف.".to_owned()
-            }
+            Self::TahleelFashil { .. } => "هذا الملف ليس خطًا يمكن قراءته، أو أنه تالف.".to_owned(),
             Self::FahrasKharij { adad, .. } => {
                 format!("الخط المطلوب غير موجود داخل الملف؛ يحتوي على {adad} خط فقط.")
-            }
+            },
             Self::JadwalMafqud { jadwal } => format!(
                 "هذا الخط لا يحتوي جدول {jadwal}، وبدونه لا يمكن تشكيل العربية إطلاقًا. \
                  اختر خطًا عربيًا كاملًا."
@@ -429,15 +431,13 @@ impl Tafsir for KhataKhatt {
                 "هذا الخط لا يحتوي خاصية {sifa} المسؤولة عن وصل الحروف العربية. سيظهر النص \
                  حروفًا منفصلة، لذلك رُفض الخط."
             ),
-            Self::TaghtiyaNaqisa { adad, awwal } => format!(
-                "الخط لا يغطي {adad} حرفًا من الحروف المطلوبة، أولها U+{awwal:04X}."
-            ),
+            Self::TaghtiyaNaqisa { adad, awwal } => {
+                format!("الخط لا يغطي {adad} حرفًا من الحروف المطلوبة، أولها U+{awwal:04X}.")
+            },
             Self::MihwarMajhul { mihwar } => {
                 format!("الخط لا يحتوي محور التغيّر {mihwar}.")
-            }
-            Self::InstansMajhula { .. } => {
-                "النمط المطلوب غير معرَّف داخل هذا الخط.".to_owned()
-            }
+            },
+            Self::InstansMajhula { .. } => "النمط المطلوب غير معرَّف داخل هذا الخط.".to_owned(),
             Self::SilsilaTaweela { adad } => format!(
                 "سلسلة الخطوط تحتوي {adad} خطًا، والحد الأقصى ٢٥٦؛ ما بعدها لا يمكن الإشارة \
                  إليه في النص المرسوم."
@@ -449,10 +449,10 @@ impl Tafsir for KhataKhatt {
         match self {
             Self::TahleelFashil { .. } => {
                 "This file is not a readable font, or it is corrupt.".to_owned()
-            }
+            },
             Self::FahrasKharij { adad, .. } => {
                 format!("The requested face is not in the file; it contains {adad} faces.")
-            }
+            },
             Self::JadwalMafqud { jadwal } => format!(
                 "This font has no {jadwal} table, and without it Arabic cannot be shaped at \
                  all. Choose a complete Arabic font."
@@ -467,10 +467,10 @@ impl Tafsir for KhataKhatt {
             ),
             Self::MihwarMajhul { mihwar } => {
                 format!("The font has no {mihwar} variation axis.")
-            }
+            },
             Self::InstansMajhula { .. } => {
                 "The requested named style is not defined in this font.".to_owned()
-            }
+            },
             Self::SilsilaTaweela { adad } => format!(
                 "The font chain has {adad} fonts and the maximum is 256; anything past that \
                  could never be referred to by a drawn glyph."
@@ -484,9 +484,9 @@ impl Tafsir for KhataKhatt {
 
     fn khutwa(&self) -> Khutwa {
         match self {
-            Self::TahleelFashil { .. } => {
-                Khutwa::IkhtiyarMasar { matlub: MasarMatlub::MalafKhatt }
-            }
+            Self::TahleelFashil { .. } => Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MalafKhatt,
+            },
             _ => Khutwa::IkhtiyarKhattAakhar,
         }
     }
@@ -496,31 +496,30 @@ impl Tafsir for KhataKhatt {
         match self {
             Self::TahleelFashil { tafsil } => {
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::FahrasKharij { fahras, adad } => {
                 let _ = siyaq.insert("fahras".to_owned(), QeemaSiyaq::Raqm(i64::from(*fahras)));
                 let _ = siyaq.insert("adad".to_owned(), QeemaSiyaq::Raqm(i64::from(*adad)));
-            }
+            },
             Self::JadwalMafqud { jadwal } => {
-                let _ = siyaq
-                    .insert("jadwal".to_owned(), QeemaSiyaq::Nass((*jadwal).to_owned()));
-            }
+                let _ = siyaq.insert("jadwal".to_owned(), QeemaSiyaq::Nass((*jadwal).to_owned()));
+            },
             Self::SifaMafquda { sifa } => {
                 let _ = siyaq.insert("sifa".to_owned(), QeemaSiyaq::Nass((*sifa).to_owned()));
-            }
+            },
             Self::TaghtiyaNaqisa { adad, awwal } => {
                 let _ = siyaq.insert("adad".to_owned(), QeemaSiyaq::Raqm(i64::from(*adad)));
                 let _ = siyaq.insert("awwal".to_owned(), QeemaSiyaq::Raqm(i64::from(*awwal)));
-            }
+            },
             Self::MihwarMajhul { mihwar } => {
                 let _ = siyaq.insert("mihwar".to_owned(), QeemaSiyaq::Nass(mihwar.clone()));
-            }
+            },
             Self::InstansMajhula { fahras } => {
                 let _ = siyaq.insert("fahras".to_owned(), QeemaSiyaq::Raqm(i64::from(*fahras)));
-            }
+            },
             Self::SilsilaTaweela { adad } => {
                 let _ = siyaq.insert("adad".to_owned(), QeemaSiyaq::Raqm(i64::from(*adad)));
-            }
+            },
         }
         siyaq
     }

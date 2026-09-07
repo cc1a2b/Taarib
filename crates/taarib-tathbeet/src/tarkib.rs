@@ -101,8 +101,12 @@ const LAWAHIQ_KHATT: [&str; 2] = ["ttf", "otf"];
 /// the list does name — a bundle that staged one Kufi face into the Ren'Py
 /// component meant to ship it, and answering "no font" to that would be this
 /// module overruling the build rather than reading it.
-const TARTIB_KHATT_RENPY: [&str; 4] =
-    ["NotoNaskhArabic", "Amiri", "IBMPlexSansArabic", "NotoSansArabic"];
+const TARTIB_KHATT_RENPY: [&str; 4] = [
+    "NotoNaskhArabic",
+    "Amiri",
+    "IBMPlexSansArabic",
+    "NotoSansArabic",
+];
 
 /// The largest loader registry Taarib will read in order to append its own
 /// registration.
@@ -256,10 +260,10 @@ impl TahmilMusbaq {
         match self {
             Self::WakeelWindows { wahda } => {
                 format!("loaded as the {wahda} proxy beside the executable")
-            }
+            },
             Self::TajawuzWine { wahda } => {
                 format!("loaded through a Wine override of {wahda} to native")
-            }
+            },
             Self::LdPreload => format!("loaded through {ISM_TAHMIL_LINUX}"),
             Self::DyldInsert => format!("loaded through {ISM_TAHMIL_MAC}"),
         }
@@ -271,10 +275,10 @@ impl TahmilMusbaq {
         match self {
             Self::WakeelWindows { wahda } => {
                 format!("يُحمَّل وكيلًا باسم {wahda} بجانب الملف التنفيذي")
-            }
+            },
             Self::TajawuzWine { wahda } => {
                 format!("يُحمَّل بتجاوز واين للوحدة {wahda} إلى الأصلية")
-            }
+            },
             Self::LdPreload => format!("يُحمَّل عبر {ISM_TAHMIL_LINUX}"),
             Self::DyldInsert => format!("يُحمَّل عبر {ISM_TAHMIL_MAC}"),
         }
@@ -328,26 +332,26 @@ impl SababLaHaja {
             Self::BayanatWaMulhaq => {
                 "this engine loads the translated data and Taarib's additional package on its \
                  own, so no framework is installed into the game"
-            }
+            },
             Self::KhalfiyaMajhula => {
                 "the scripting backend was not identified, and which framework belongs in this \
                  game is decided by it"
-            }
+            },
             Self::IsdarMajhul => {
                 "the engine version was not read, and which framework belongs in this game is \
                  decided by it"
-            }
+            },
             Self::IsdarKharijAlDam => {
                 "the engine version is older than any framework Taarib carries a build for"
-            }
+            },
             Self::TabaqaFawqiya => {
                 "this game is not modified at all; Arabic is shown by Taarib's overlay, which \
                  attaches from outside when the game launches"
-            }
+            },
             Self::DakhilAlRuqaa => {
                 "this engine is translated through its own patched data file, which is part of \
                  the patch itself; there is no framework to install"
-            }
+            },
         }
     }
 
@@ -358,23 +362,21 @@ impl SababLaHaja {
             Self::BayanatWaMulhaq => {
                 "هذا المحرّك يحمّل البيانات المعرّبة وحزمة تعريب الإضافية بنفسه، فلا يُثبَّت داخل \
                  اللعبة أي إطار."
-            }
+            },
             Self::KhalfiyaMajhula => {
                 "لم تُحدَّد خلفية تشغيل الشيفرة في هذه اللعبة، وعليها يُبنى اختيار الإطار."
-            }
+            },
             Self::IsdarMajhul => {
                 "لم تُقرأ نسخة المحرّك، وعليها يُبنى اختيار الإطار المناسب لهذه اللعبة."
-            }
-            Self::IsdarKharijAlDam => {
-                "نسخة المحرّك أقدم من كل إطار يحمل تعريب بناءً له."
-            }
+            },
+            Self::IsdarKharijAlDam => "نسخة المحرّك أقدم من كل إطار يحمل تعريب بناءً له.",
             Self::TabaqaFawqiya => {
                 "لا تُعدَّل هذه اللعبة إطلاقًا؛ تُعرض العربية من طبقة تعريب الخارجية عند تشغيلها."
-            }
+            },
             Self::DakhilAlRuqaa => {
                 "تُعرَّب هذه اللعبة عبر ملف بياناتها المرقوع، وهو جزء من الرقعة نفسها؛ لا إطار \
                  يُثبَّت هنا."
-            }
+            },
         }
     }
 }
@@ -423,14 +425,9 @@ impl MukawwinItar {
         mimariya: Mimariya,
         beea: bool,
     ) -> Self {
-        let (ism_muhammil, tahmil) = muhammil_windows_aw_unix(
-            hadaf,
-            beea,
-            WAKEEL_BEPINEX,
-            ASAS_DOORSTOP,
-        );
-        let mut alamat: Vec<String> =
-            ALAMAT_BEPINEX.iter().map(|ism| (*ism).to_owned()).collect();
+        let (ism_muhammil, tahmil) =
+            muhammil_windows_aw_unix(hadaf, beea, WAKEEL_BEPINEX, ASAS_DOORSTOP);
+        let mut alamat: Vec<String> = ALAMAT_BEPINEX.iter().map(|ism| (*ism).to_owned()).collect();
         alamat.push(ism_muhammil.clone());
         Self {
             ism: format!(
@@ -504,11 +501,7 @@ pub enum HajatItar {
 /// consults. Nothing on the install path calls it directly any more, and a new
 /// caller that does is re-introducing the defect [`rakkib_itar`] was fixed for.
 #[must_use]
-pub fn hajat_itar(
-    muharrik: &Muharrik,
-    nizam: NizamTashghil,
-    beea: &BeeatTawafuq,
-) -> HajatItar {
+pub fn hajat_itar(muharrik: &Muharrik, nizam: NizamTashghil, beea: &BeeatTawafuq) -> HajatItar {
     let hadaf = hadaf_hamula(nizam, beea);
     let fi_beea = beea.windows_dakhilan();
     let mimariya = muharrik.mimariya;
@@ -525,23 +518,21 @@ pub fn hajat_itar(
                 HajatItar::Matlub(Box::new(MukawwinItar::bepinex(
                     hadaf, khalfiya, jeel, mimariya, fi_beea,
                 )))
-            }
+            },
             None => HajatItar::LaHaja(SababLaHaja::KhalfiyaMajhula),
         },
 
         AilatMuharrik::Unreal => match muharrik.khalfiya {
-            KhalfiyaBarmajiya::UnrealNative => HajatItar::Matlub(Box::new(
-                MukawwinItar::mudkhal(hadaf, mimariya, fi_beea),
-            )),
+            KhalfiyaBarmajiya::UnrealNative => {
+                HajatItar::Matlub(Box::new(MukawwinItar::mudkhal(hadaf, mimariya, fi_beea)))
+            },
             _ => HajatItar::LaHaja(SababLaHaja::KhalfiyaMajhula),
         },
 
         AilatMuharrik::Godot => match muharrik.isdar.as_ref().map(|isdar| isdar.kabir) {
             None => HajatItar::LaHaja(SababLaHaja::IsdarMajhul),
             Some(0..=2) => HajatItar::LaHaja(SababLaHaja::IsdarKharijAlDam),
-            Some(3) => HajatItar::Matlub(Box::new(MukawwinItar::mudkhal(
-                hadaf, mimariya, fi_beea,
-            ))),
+            Some(3) => HajatItar::Matlub(Box::new(MukawwinItar::mudkhal(hadaf, mimariya, fi_beea))),
             Some(_) => HajatItar::LaHaja(SababLaHaja::BayanatWaMulhaq),
         },
 
@@ -552,7 +543,7 @@ pub fn hajat_itar(
 
         AilatMuharrik::RpgMakerVxAce | AilatMuharrik::GameMaker => {
             HajatItar::LaHaja(SababLaHaja::DakhilAlRuqaa)
-        }
+        },
 
         // The proprietary native engines, and the game whose engine was never
         // identified, take the same answer for the same reason: no plugin
@@ -572,14 +563,18 @@ pub fn hajat_itar(
         | AilatMuharrik::Snowdrop
         | AilatMuharrik::Majhul => {
             HajatItar::Matlub(Box::new(MukawwinItar::mudkhal(hadaf, mimariya, fi_beea)))
-        }
+        },
     }
 }
 
 /// Which platform's payload a game needs.
 #[must_use]
 const fn hadaf_hamula(nizam: NizamTashghil, beea: &BeeatTawafuq) -> NizamTashghil {
-    if beea.windows_dakhilan() { NizamTashghil::Windows } else { nizam }
+    if beea.windows_dakhilan() {
+        NizamTashghil::Windows
+    } else {
+        nizam
+    }
 }
 
 /// The component store's directory name for a payload target.
@@ -612,18 +607,24 @@ fn muhammil_windows_aw_unix(
     match hadaf {
         NizamTashghil::Windows => {
             let tahmil = if beea {
-                TahmilMusbaq::TajawuzWine { wahda: wakeel.to_owned() }
+                TahmilMusbaq::TajawuzWine {
+                    wahda: wakeel.to_owned(),
+                }
             } else {
-                TahmilMusbaq::WakeelWindows { wahda: wakeel.to_owned() }
+                TahmilMusbaq::WakeelWindows {
+                    wahda: wakeel.to_owned(),
+                }
             };
             (format!("{wakeel}.dll"), tahmil)
-        }
-        NizamTashghil::Linux => {
-            (NizamTashghil::Linux.ism_maktaba(asas), TahmilMusbaq::LdPreload)
-        }
-        NizamTashghil::Mac => {
-            (NizamTashghil::Mac.ism_maktaba(asas), TahmilMusbaq::DyldInsert)
-        }
+        },
+        NizamTashghil::Linux => (
+            NizamTashghil::Linux.ism_maktaba(asas),
+            TahmilMusbaq::LdPreload,
+        ),
+        NizamTashghil::Mac => (
+            NizamTashghil::Mac.ism_maktaba(asas),
+            TahmilMusbaq::DyldInsert,
+        ),
     }
 }
 
@@ -672,8 +673,11 @@ impl MawqiTarkib {
                         sabab: khata.injilizi,
                     }
                 })?;
-                Ok(taarib_kashf::beea::hall_bila_hala(jidhr_luba, Path::new(wajha.nisbi())))
-            }
+                Ok(taarib_kashf::beea::hall_bila_hala(
+                    jidhr_luba,
+                    Path::new(wajha.nisbi()),
+                ))
+            },
             Self::DakhilBeea(wajha) => Ok(wajha.mutlaq()),
         }
     }
@@ -912,7 +916,7 @@ impl NatijatTarkib {
                     ));
                 }
                 sutur
-            }
+            },
             Self::Mawjud(qaim) => {
                 let mut sutur = Vec::with_capacity(qaim.idadat.len().saturating_add(1));
                 sutur.push(format!(
@@ -928,10 +932,13 @@ impl NatijatTarkib {
                     ));
                 }
                 sutur
-            }
+            },
             Self::LaHaja(sabab) => {
-                vec![format!("framework: none needed — {}", sabab.wasf_injilizi())]
-            }
+                vec![format!(
+                    "framework: none needed — {}",
+                    sabab.wasf_injilizi()
+                )]
+            },
         }
     }
 }
@@ -945,9 +952,7 @@ impl NatijatTarkib {
 /// game running on Windows, or when Rosetta was reported off macOS. A framework
 /// deployed into a prefix that has never been built is a framework nothing will
 /// ever load, and it fails silently rather than loudly.
-pub fn tahaqquq_beea(
-    luba: &LubaMuhallala,
-) -> Result<Option<(PathBuf, PathBuf)>, KhataTathbeet> {
+pub fn tahaqquq_beea(luba: &LubaMuhallala) -> Result<Option<(PathBuf, PathBuf)>, KhataTathbeet> {
     tahaqquq_beea_ajzaa(luba.nizam, &luba.beea, &luba.jidhr)
 }
 
@@ -971,7 +976,7 @@ fn tahaqquq_beea_ajzaa(
                         .to_owned(),
                 })
             }
-        }
+        },
 
         BeeatTawafuq::Proton { beea, .. } | BeeatTawafuq::Wine { beea, .. } => {
             if matches!(nizam, NizamTashghil::Windows) {
@@ -1002,7 +1007,7 @@ fn tahaqquq_beea_ajzaa(
                 });
             }
             Ok(Some((beea.clone(), qurs)))
-        }
+        },
     }
 }
 
@@ -1120,13 +1125,12 @@ pub fn hamil_mukawwin(
     jidhr_makhzan: &Path,
     ism: &str,
 ) -> Result<Vec<(String, Vec<u8>)>, KhataTathbeet> {
-    let jidhr = masarat::dakhil(jidhr_makhzan, ism).map_err(|khata| {
-        KhataTathbeet::MasarKharij {
+    let jidhr =
+        masarat::dakhil(jidhr_makhzan, ism).map_err(|khata| KhataTathbeet::MasarKharij {
             masar: PathBuf::from(ism),
             jidhr: jidhr_makhzan.to_path_buf(),
             sabab: khata.injilizi,
-        }
-    })?;
+        })?;
     if !jidhr.is_dir() {
         return Err(KhataTathbeet::MukawwinMafqud {
             mukawwin: ism.to_owned(),
@@ -1142,7 +1146,9 @@ pub fn hamil_mukawwin(
     let mut majmu = 0_u64;
     for madkhal in WalkDir::new(&jidhr) {
         let madkhal = madkhal.map_err(|sabab| {
-            let masar = sabab.path().map_or_else(|| jidhr.clone(), Path::to_path_buf);
+            let masar = sabab
+                .path()
+                .map_or_else(|| jidhr.clone(), Path::to_path_buf);
             let sabab = sabab.into_io_error().unwrap_or_else(|| {
                 std::io::Error::other("the component store could not be walked")
             });
@@ -1153,7 +1159,12 @@ pub fn hamil_mukawwin(
         if !madkhal.file_type().is_file() {
             continue;
         }
-        let Some(nisbi) = madkhal.path().strip_prefix(&jidhr).ok().and_then(nisbi_nass) else {
+        let Some(nisbi) = madkhal
+            .path()
+            .strip_prefix(&jidhr)
+            .ok()
+            .and_then(nisbi_nass)
+        else {
             return Err(KhataTathbeet::MukawwinMafqud {
                 mukawwin: ism.to_owned(),
                 masar: madkhal.path().to_path_buf(),
@@ -1205,7 +1216,9 @@ fn fs_qira(masar: &Path) -> Result<Vec<u8>, KhataTathbeet> {
 fn nisbi_nass(masar: &Path) -> Option<String> {
     let mut nateeja = String::new();
     for juz in masar.components() {
-        let Component::Normal(ism) = juz else { return None };
+        let Component::Normal(ism) = juz else {
+            return None;
+        };
         let nass = ism.to_str()?;
         if !nateeja.is_empty() {
             nateeja.push('/');
@@ -1227,9 +1240,9 @@ pub fn damj_tajawuz(hali: Option<&str>, wahda: &str) -> String {
             continue;
         }
         let asmaa = munaqqa.split_once('=').map_or(munaqqa, |(asmaa, _)| asmaa);
-        let yakhussuna = asmaa.split(',').any(|ism| {
-            ism.trim().trim_start_matches('*').to_ascii_lowercase() == matlub
-        });
+        let yakhussuna = asmaa
+            .split(',')
+            .any(|ism| ism.trim().trim_start_matches('*').to_ascii_lowercase() == matlub);
         if !yakhussuna {
             mudkhalat.push(munaqqa.to_owned());
         }
@@ -1270,7 +1283,7 @@ pub fn damj_khiyarat(hali: Option<&str>, isnad: &str) -> String {
             } else {
                 format!("{qabl} {isnad} {RAMZ_AMR}{baad}")
             }
-        }
+        },
         None => format!("{isnad} {RAMZ_AMR} {munaqqa}"),
     }
 }
@@ -1289,7 +1302,9 @@ fn idadat_tahmil(
     tahmil: &TahmilMusbaq,
     masar_muhammil: &Path,
 ) -> Result<Vec<IdadMunaffadh>, KhataTathbeet> {
-    let Some(ism) = tahmil.mutaghayyir() else { return Ok(Vec::new()) };
+    let Some(ism) = tahmil.mutaghayyir() else {
+        return Ok(Vec::new());
+    };
 
     let (qeema_sabiqa, qeema) = match tahmil {
         TahmilMusbaq::WakeelWindows { .. } => return Ok(Vec::new()),
@@ -1311,7 +1326,7 @@ fn idadat_tahmil(
                 halat.tahmil_musbaq.clone(),
                 damj_tahmil(halat.tahmil_musbaq.as_deref(), nass),
             )
-        }
+        },
     };
 
     // Steam carries a per-game environment in its launch options field and
@@ -1331,7 +1346,9 @@ fn idadat_tahmil(
     }
 
     Ok(vec![IdadMunaffadh {
-        mahall: MahallIdad::MutaghayyirBeea { ism: ism.to_owned() },
+        mahall: MahallIdad::MutaghayyirBeea {
+            ism: ism.to_owned(),
+        },
         qeema_sabiqa,
         qeema_maktuba: qeema,
     }])
@@ -1357,7 +1374,9 @@ fn tahaqquq_manassa(
     }
     // Without the file's own path there is nothing to name and nothing to
     // claim would be overwritten, so the check is the caller's to enable.
-    let Some(malaf) = halat.malaf_idadat_manassa.as_ref() else { return Ok(()) };
+    let Some(malaf) = halat.malaf_idadat_manassa.as_ref() else {
+        return Ok(());
+    };
     manassa_mughlaqa(&ASMAA_STEAM, luba.masdar.ism_injilizi(), malaf)
 }
 
@@ -1543,7 +1562,7 @@ impl SlotMuhammil {
                     self.mawqi,
                     huwiya.wasf_injilizi()
                 ))
-            }
+            },
         }
     }
 
@@ -1569,7 +1588,7 @@ impl SlotMuhammil {
                     self.mawqi,
                     huwiya.wasf_arabi()
                 ))
-            }
+            },
         }
     }
 }
@@ -1624,7 +1643,11 @@ fn hal_slot(
         HalatSlot::Mutah
     };
 
-    Ok(SlotMuhammil { ism: mukawwin.ism_muhammil.clone(), mawqi, hala })
+    Ok(SlotMuhammil {
+        ism: mukawwin.ism_muhammil.clone(),
+        mawqi,
+        hala,
+    })
 }
 
 /// Refuses when the module name this framework's loader is published as is
@@ -1653,10 +1676,7 @@ fn hal_slot(
 ///
 /// [`KhataTathbeet::WakeelMashghul`] when the loader's own path is occupied by
 /// anything else, and whatever reading the directory raises.
-fn wakeel_qaim(
-    mawadi: &MawadiTarkib,
-    mukawwin: &MukawwinItar,
-) -> NatijatTathbeet<Vec<WakeelQaim>> {
+fn wakeel_qaim(mawadi: &MawadiTarkib, mukawwin: &MukawwinItar) -> NatijatTathbeet<Vec<WakeelQaim>> {
     let jidhr = mawadi.jidhr_muhammil()?.mutlaq(mawadi.jidhr_luba())?;
     let qaima = masah_huqn(&jidhr)?;
     // Re-read here rather than taken from the plan, deliberately: a mod may have
@@ -1664,7 +1684,9 @@ fn wakeel_qaim(
     // refusal that trusted a stale reading would write over it.
     let slot = hal_slot(mawadi, mukawwin, &qaima)?;
 
-    let HalatSlot::Mashghul { huwiya, hajm } = slot.hala else { return Ok(qaima) };
+    let HalatSlot::Mashghul { huwiya, hajm } = slot.hala else {
+        return Ok(qaima);
+    };
     Err(KhataTathbeet::WakeelMashghul {
         wakeel: slot.ism,
         masar: slot.mawqi.mutlaq(mawadi.jidhr_luba())?,
@@ -1711,9 +1733,14 @@ pub fn rakkib_itar(
 ) -> Result<NatijatTarkib, KhataTathbeet> {
     match &mukhattat.hajat {
         HajatItar::LaHaja(sabab) => Ok(NatijatTarkib::LaHaja(*sabab)),
-        HajatItar::Matlub(mukawwin) => {
-            rakkib_mukawwin(luba, halat, jidhr_makhzan, mukawwin, &mukhattat.mawadi, muthabbit)
-        }
+        HajatItar::Matlub(mukawwin) => rakkib_mukawwin(
+            luba,
+            halat,
+            jidhr_makhzan,
+            mukawwin,
+            &mukhattat.mawadi,
+            muthabbit,
+        ),
     }
 }
 
@@ -1770,7 +1797,11 @@ fn rakkib_mukawwin(
         let nisbi = mawadi.wajhat_malaf(mukawwin.tawzi, fi_makhzan);
         let mawqi = mawadi.wajha(&nisbi)?;
         let mutlaq = mawqi.mutlaq(mawadi.jidhr_luba())?;
-        wajhat.push(WajhatMalaf { nisbi, mawqi, mutlaq });
+        wajhat.push(WajhatMalaf {
+            nisbi,
+            mawqi,
+            mutlaq,
+        });
     }
 
     // A component whose loader is not in it deploys files that nothing will ever
@@ -1885,7 +1916,9 @@ impl TalabItlaq {
             Self::MutaghayyirBeea { ism, .. } => Some(if matches!(masdar, MasdarLuba::Steam(_)) {
                 khiyarat()
             } else {
-                MahallIdad::MutaghayyirBeea { ism: (*ism).to_owned() }
+                MahallIdad::MutaghayyirBeea {
+                    ism: (*ism).to_owned(),
+                }
             }),
             Self::TashgheelLawha { .. } => None,
         }
@@ -1897,13 +1930,13 @@ impl TalabItlaq {
         match self {
             Self::KhiyarTashghil { qeema, sabab } => {
                 format!("the game must be launched as `{qeema}` — {sabab}")
-            }
+            },
             Self::MutaghayyirBeea { ism, qeema, sabab } => {
                 format!("the game must start with {ism}={qeema} — {sabab}")
-            }
+            },
             Self::TashgheelLawha { sabab } => {
                 format!("the Taarib overlay attaches at launch — {sabab}")
-            }
+            },
         }
     }
 
@@ -1922,7 +1955,7 @@ impl TalabItlaq {
             Self::TashgheelLawha { .. } => {
                 "تُعرض العربية من طبقة تعريب الخارجية عند تشغيل اللعبة، دون تعديل اللعبة نفسها."
                     .to_owned()
-            }
+            },
         }
     }
 }
@@ -2025,7 +2058,9 @@ impl QararTabaqa {
         if taqreer.marfuda {
             return Err(KhataTathbeet::IdhnGhayrMutabiq);
         }
-        Ok(Self { tabaqa: taqreer.tabaqa })
+        Ok(Self {
+            tabaqa: taqreer.tabaqa,
+        })
     }
 
     /// The tier itself, for a report or a confirmation screen.
@@ -2186,9 +2221,9 @@ impl MalhuzatManassa {
     pub fn wasf_arabi(&self) -> String {
         let ism = &self.ism;
         match self.hala.sunduq() {
-            None => format!(
-                "{ism} يعمل الآن، وهو يعيد كتابة إعداداته عند إغلاقه. أغلقه قبل التثبيت."
-            ),
+            None => {
+                format!("{ism} يعمل الآن، وهو يعيد كتابة إعداداته عند إغلاقه. أغلقه قبل التثبيت.")
+            },
             Some(sunduq) => format!(
                 "هذه النسخة تعمل داخل {} ولا ترى إلا عمليّاتها، فلا يُعرف هل {ism} يعمل أم لا. \
                  سيرفض التثبيت بدل أن يعدّل ملفًّا قد يكتبه {ism} من ذاكرته.",
@@ -2206,7 +2241,9 @@ impl KhuttatTarkib {
     /// only where [`khutta`] already refused a report the safety layer refused.
     #[must_use]
     pub const fn qarar(&self) -> QararTabaqa {
-        QararTabaqa { tabaqa: self.tabaqa }
+        QararTabaqa {
+            tabaqa: self.tabaqa,
+        }
     }
 
     /// Whether the plan writes nothing at all into the game.
@@ -2229,14 +2266,20 @@ impl KhuttatTarkib {
     /// How many files the additive layer would add.
     #[must_use]
     pub fn adad_idafat(&self) -> usize {
-        self.mudkhalat.iter().filter(|m| matches!(m.naw, NawMudkhal::Idafa)).count()
+        self.mudkhalat
+            .iter()
+            .filter(|m| matches!(m.naw, NawMudkhal::Idafa))
+            .count()
     }
 
     /// How many files the game already has that the additive layer would
     /// modify, with their originals preserved first.
     #[must_use]
     pub fn adad_tadeelat(&self) -> usize {
-        self.mudkhalat.iter().filter(|m| matches!(m.naw, NawMudkhal::Tadeel)).count()
+        self.mudkhalat
+            .iter()
+            .filter(|m| matches!(m.naw, NawMudkhal::Tadeel))
+            .count()
     }
 
     /// Whether the deployment this plan describes will refuse over an occupied
@@ -2248,7 +2291,9 @@ impl KhuttatTarkib {
     /// which is the safe direction and the only one available.
     #[must_use]
     pub fn yarfud_al_wakeel(&self) -> bool {
-        self.slot_muhammil.as_ref().is_some_and(SlotMuhammil::yarfud)
+        self.slot_muhammil
+            .as_ref()
+            .is_some_and(SlotMuhammil::yarfud)
     }
 
     /// The note a plan that modifies the game's own files owes, in English.
@@ -2297,10 +2342,13 @@ impl KhuttatTarkib {
             )),
             (HajatItar::Matlub(mukawwin), None) => {
                 sutur.push(format!("framework: {}", mukawwin.wasf));
-            }
+            },
             (HajatItar::LaHaja(sabab), _) => {
-                sutur.push(format!("framework: none needed — {}", sabab.wasf_injilizi()));
-            }
+                sutur.push(format!(
+                    "framework: none needed — {}",
+                    sabab.wasf_injilizi()
+                ));
+            },
         }
         for mujallad in &self.mujalladat {
             sutur.push(format!("  directory: {}", mujallad.nisbi));
@@ -2313,7 +2361,9 @@ impl KhuttatTarkib {
             sutur.push(format!("  {fil}: {}", mudkhal.nisbi));
         }
         if let Some(khatt) = self.khatt_renpy.as_deref() {
-            sutur.push(format!("  font: {khatt}, registered in the generated Ren'Py settings"));
+            sutur.push(format!(
+                "  font: {khatt}, registered in the generated Ren'Py settings"
+            ));
         }
         for talab in &self.talabat {
             sutur.push(format!("  launch: {}", talab.wasf_injilizi()));
@@ -2321,8 +2371,10 @@ impl KhuttatTarkib {
         // Before the other notes, because it is the one that says the button
         // will not work. A reader who stops after the first note has read the
         // one that changes what they should do next.
-        if let Some(malhuza) =
-            self.slot_muhammil.as_ref().and_then(SlotMuhammil::malhuza_injiliziya)
+        if let Some(malhuza) = self
+            .slot_muhammil
+            .as_ref()
+            .and_then(SlotMuhammil::malhuza_injiliziya)
         {
             sutur.push(format!("  note: {malhuza}"));
         }
@@ -2361,10 +2413,10 @@ impl KhuttatTarkib {
             )),
             (HajatItar::Matlub(mukawwin), None) => {
                 sutur.push(format!("الإطار: {}", mukawwin.wasf_arabi));
-            }
+            },
             (HajatItar::LaHaja(sabab), _) => {
                 sutur.push(format!("الإطار: لا حاجة إليه — {}", sabab.wasf_arabi()));
-            }
+            },
         }
         for mujallad in &self.mujalladat {
             sutur.push(format!("  مجلّد يُنشأ: {}", mujallad.nisbi));
@@ -2382,7 +2434,10 @@ impl KhuttatTarkib {
         for talab in &self.talabat {
             sutur.push(format!("  عند الإطلاق: {}", talab.wasf_arabi()));
         }
-        if let Some(malhuza) = self.slot_muhammil.as_ref().and_then(SlotMuhammil::malhuza_arabiya)
+        if let Some(malhuza) = self
+            .slot_muhammil
+            .as_ref()
+            .and_then(SlotMuhammil::malhuza_arabiya)
         {
             sutur.push(format!("  ملحوظة: {malhuza}"));
         }
@@ -2516,7 +2571,8 @@ pub fn khutta(
     let mawadi = MawadiTarkib::min_ajzaa(
         jidhr_luba,
         mujallad_muhammil(luba)?,
-        qurs.as_ref().map(|(beea, qurs)| (beea.as_path(), qurs.as_path())),
+        qurs.as_ref()
+            .map(|(beea, qurs)| (beea.as_path(), qurs.as_path())),
     );
 
     let jidhr_muhammil = mawadi.jidhr_muhammil()?;
@@ -2565,7 +2621,7 @@ fn hajat_maa_tabaqa(
             } else {
                 HajatItar::LaHaja(SababLaHaja::DakhilAlRuqaa)
             }
-        }
+        },
         AilatMuharrik::RpgMakerVxAce => HajatItar::LaHaja(SababLaHaja::DakhilAlRuqaa),
         _ => hajat_itar(muharrik, nizam, beea),
     }
@@ -2621,22 +2677,32 @@ fn thunaiyat_unreal(
         // the opposite direction: an `engine/Binaries` would not be excluded and
         // the engine's own binaries would be offered as a target.
         if !madkhal.file_type().is_dir()
-            || !madkhal.file_name().to_string_lossy().eq_ignore_ascii_case("Binaries")
+            || !madkhal
+                .file_name()
+                .to_string_lossy()
+                .eq_ignore_ascii_case("Binaries")
         {
             continue;
         }
-        let Ok(nisbi) = madkhal.path().strip_prefix(jidhr_luba) else { continue };
-        if nisbi
-            .components()
-            .any(|juz| juz.as_os_str().to_string_lossy().eq_ignore_ascii_case("Engine"))
-        {
+        let Ok(nisbi) = madkhal.path().strip_prefix(jidhr_luba) else {
+            continue;
+        };
+        if nisbi.components().any(|juz| {
+            juz.as_os_str()
+                .to_string_lossy()
+                .eq_ignore_ascii_case("Engine")
+        }) {
             continue;
         }
-        let Some(nisbi_binaries) = nisbi_nass(nisbi) else { continue };
+        let Some(nisbi_binaries) = nisbi_nass(nisbi) else {
+            continue;
+        };
         // Listed rather than joined, and the *recorded* name is the directory's
         // own: a path built from the spelling in `asmaa` would not resolve on a
         // depot that spells it `win64`, which is the case this fold exists for.
-        let Ok(mudkhalat) = std::fs::read_dir(madkhal.path()) else { continue };
+        let Ok(mudkhalat) = std::fs::read_dir(madkhal.path()) else {
+            continue;
+        };
         for far in mudkhalat.take(4_096).flatten() {
             if !far.path().is_dir() {
                 continue;
@@ -2646,7 +2712,9 @@ fn thunaiyat_unreal(
                 continue;
             }
             let fihi_malaf = std::fs::read_dir(far.path()).is_ok_and(|mudkhalat| {
-                mudkhalat.filter_map(Result::ok).any(|malaf| malaf.path().is_file())
+                mudkhalat
+                    .filter_map(Result::ok)
+                    .any(|malaf| malaf.path().is_file())
             });
             murashahun.push((format!("{nisbi_binaries}/{ism_haqiqi}"), fihi_malaf));
         }
@@ -2682,16 +2750,13 @@ pub fn masar_muhammil_fi_makhzan(mukawwin: &MukawwinItar) -> String {
         TawziMukawwin::Wahid => mukawwin.ism_muhammil.clone(),
         TawziMukawwin::Munfasil => {
             format!("{MUJALLAD_MUHAMMIL}/{}", mukawwin.ism_muhammil)
-        }
+        },
     }
 }
 
 /// Proves a component is in the store, with its loader, before anything is
 /// promised on a confirmation screen.
-fn tahaqquq_mukawwin(
-    jidhr_makhzan: &Path,
-    mukawwin: &MukawwinItar,
-) -> NatijatTathbeet<()> {
+fn tahaqquq_mukawwin(jidhr_makhzan: &Path, mukawwin: &MukawwinItar) -> NatijatTathbeet<()> {
     let asmaa = asmaa_mukawwin(jidhr_makhzan, &mukawwin.ism)?;
     let matlub = masar_muhammil_fi_makhzan(mukawwin);
     if asmaa.iter().any(|ism| ism == &matlub) {
@@ -2715,13 +2780,12 @@ fn tahaqquq_mukawwin(
 /// component name does not join onto the store root; and the I/O variants when
 /// the store cannot be walked.
 pub fn asmaa_mukawwin(jidhr_makhzan: &Path, ism: &str) -> NatijatTathbeet<Vec<String>> {
-    let jidhr = masarat::dakhil(jidhr_makhzan, ism).map_err(|khata| {
-        KhataTathbeet::MasarKharij {
+    let jidhr =
+        masarat::dakhil(jidhr_makhzan, ism).map_err(|khata| KhataTathbeet::MasarKharij {
             masar: PathBuf::from(ism),
             jidhr: jidhr_makhzan.to_path_buf(),
             sabab: khata.injilizi,
-        }
-    })?;
+        })?;
     if !jidhr.is_dir() {
         return Err(KhataTathbeet::MukawwinMafqud {
             mukawwin: ism.to_owned(),
@@ -2736,7 +2800,9 @@ pub fn asmaa_mukawwin(jidhr_makhzan: &Path, ism: &str) -> NatijatTathbeet<Vec<St
     let mut majmu = 0_u64;
     for madkhal in WalkDir::new(&jidhr) {
         let madkhal = madkhal.map_err(|sabab| {
-            let masar = sabab.path().map_or_else(|| jidhr.clone(), Path::to_path_buf);
+            let masar = sabab
+                .path()
+                .map_or_else(|| jidhr.clone(), Path::to_path_buf);
             let sabab = sabab.into_io_error().unwrap_or_else(|| {
                 std::io::Error::other("the component store could not be walked")
             });
@@ -2749,7 +2815,10 @@ pub fn asmaa_mukawwin(jidhr_makhzan: &Path, ism: &str) -> NatijatTathbeet<Vec<St
             continue;
         }
         majmu = majmu.saturating_add(
-            madkhal.metadata().map(|bayanat| bayanat.len()).unwrap_or_default(),
+            madkhal
+                .metadata()
+                .map(|bayanat| bayanat.len())
+                .unwrap_or_default(),
         );
         if majmu > AQSA_HAJM_MUKAWWIN {
             return Err(KhataTathbeet::HajmMufrit {
@@ -2758,7 +2827,12 @@ pub fn asmaa_mukawwin(jidhr_makhzan: &Path, ism: &str) -> NatijatTathbeet<Vec<St
                 saqf: AQSA_HAJM_MUKAWWIN,
             });
         }
-        let Some(nisbi) = madkhal.path().strip_prefix(&jidhr).ok().and_then(nisbi_nass) else {
+        let Some(nisbi) = madkhal
+            .path()
+            .strip_prefix(&jidhr)
+            .ok()
+            .and_then(nisbi_nass)
+        else {
             return Err(KhataTathbeet::MukawwinMafqud {
                 mukawwin: ism.to_owned(),
                 masar: madkhal.path().to_path_buf(),
@@ -2791,7 +2865,11 @@ fn talab_tahmil(mukawwin: &MukawwinItar, mawadi: &MawadiTarkib) -> Option<TalabI
         }),
         TahmilMusbaq::LdPreload | TahmilMusbaq::DyldInsert => {
             let nisbi = mawadi.bijanib(&mukawwin.ism_muhammil);
-            if mukawwin.alamat.iter().any(|alama| alama.as_str() == "run_bepinex.sh") {
+            if mukawwin
+                .alamat
+                .iter()
+                .any(|alama| alama.as_str() == "run_bepinex.sh")
+            {
                 Some(TalabItlaq::KhiyarTashghil {
                     qeema: format!("sh ./{} {RAMZ_AMR}", mawadi.bijanib("run_bepinex.sh")),
                     sabab: "on this platform the loader is preloaded by the run script, which \
@@ -2810,7 +2888,7 @@ fn talab_tahmil(mukawwin: &MukawwinItar, mawadi: &MawadiTarkib) -> Option<TalabI
                             put into the process by the dynamic linker",
                 })
             }
-        }
+        },
     }
 }
 
@@ -2823,7 +2901,10 @@ fn talab_tahmil(mukawwin: &MukawwinItar, mawadi: &MawadiTarkib) -> Option<TalabI
 fn manassa_qayida() -> Option<MalhuzatManassa> {
     match halat_manassa(&ASMAA_STEAM) {
         HalatTashghil::LaTashtaghil => None,
-        hala => Some(MalhuzatManassa { ism: ISM_STEAM.to_owned(), hala }),
+        hala => Some(MalhuzatManassa {
+            ism: ISM_STEAM.to_owned(),
+            hala,
+        }),
     }
 }
 
@@ -2840,12 +2921,16 @@ fn mulhaqat_muharrik(
         AilatMuharrik::RpgMakerMz => rpg_maker(mawadi, jidhr_makhzan, "js", "mz", mukhattat),
         AilatMuharrik::Renpy => renpy(mawadi, jidhr_makhzan, mukhattat),
         AilatMuharrik::Godot => {
-            if muharrik.isdar.as_ref().is_some_and(|isdar| isdar.kabir == 3) {
+            if muharrik
+                .isdar
+                .as_ref()
+                .is_some_and(|isdar| isdar.kabir == 3)
+            {
                 godot_thalatha(muharrik, mawadi, mukhattat)
             } else {
                 Ok(())
             }
-        }
+        },
         // Nothing additive: each of these is reached from inside its process by
         // the module the framework step placed, and the proprietary native
         // engines — which load no plugin of any kind — are the clearest case of
@@ -2917,7 +3002,9 @@ fn rpg_maker(
         mawqi,
         nisbi,
         naw: NawMudkhal::Tadeel,
-        masdar: MasdarMudkhal::TasjeelIdafi { naw: NawTasjeel::PluginsJs },
+        masdar: MasdarMudkhal::TasjeelIdafi {
+            naw: NawTasjeel::PluginsJs,
+        },
     });
     Ok(())
 }
@@ -2994,13 +3081,19 @@ pub fn khatt_renpy(jidhr_makhzan: &Path) -> NatijatTathbeet<Option<String>> {
 fn ikhtar_khatt_renpy(asmaa: &[String]) -> Option<&str> {
     let mut mufaddal: Option<(usize, &str)> = None;
     for ism in asmaa {
-        let Some(dhayl) = ism.strip_prefix(MUJALLAD_KHATT_RENPY) else { continue };
+        let Some(dhayl) = ism.strip_prefix(MUJALLAD_KHATT_RENPY) else {
+            continue;
+        };
         if dhayl.contains('/') {
             continue;
         }
-        let lahiqa = Path::new(dhayl).extension().and_then(|lahiqa| lahiqa.to_str());
+        let lahiqa = Path::new(dhayl)
+            .extension()
+            .and_then(|lahiqa| lahiqa.to_str());
         if !lahiqa.is_some_and(|lahiqa| {
-            LAWAHIQ_KHATT.iter().any(|maqbul| lahiqa.eq_ignore_ascii_case(maqbul))
+            LAWAHIQ_KHATT
+                .iter()
+                .any(|maqbul| lahiqa.eq_ignore_ascii_case(maqbul))
         }) {
             continue;
         }
@@ -3027,7 +3120,9 @@ fn godot_thalatha(
     mawadi: &MawadiTarkib,
     mukhattat: &mut KhuttatTarkib,
 ) -> NatijatTathbeet<()> {
-    let HajatItar::Matlub(mukawwin) = &mukhattat.hajat else { return Ok(()) };
+    let HajatItar::Matlub(mukawwin) = &mukhattat.hajat else {
+        return Ok(());
+    };
     let nass = nass_gdnlib(&mukawwin.ism_muhammil, muharrik.mimariya);
 
     let gdnlib = mawadi.bijanib("taarib.gdnlib");
@@ -3045,15 +3140,20 @@ fn godot_thalatha(
     // decides whether this is an addition or a modification, and it is decided
     // again at write time — another tool may create or remove the file between
     // the confirmation screen and the button.
-    let idafi = mawadi
-        .bijanib(taarib_mustalahat::muharrik::asmaa_muharrik::TAJAWUZ_GODOT);
+    let idafi = mawadi.bijanib(taarib_mustalahat::muharrik::asmaa_muharrik::TAJAWUZ_GODOT);
     let mawqi = mawadi.wajha(&idafi)?;
     let mawjud = mawqi.mutlaq(mawadi.jidhr_luba())?.is_file();
     mukhattat.mudkhalat.push(MudkhalTarkib {
         mawqi,
         nisbi: idafi,
-        naw: if mawjud { NawMudkhal::Tadeel } else { NawMudkhal::Idafa },
-        masdar: MasdarMudkhal::TasjeelIdafi { naw: NawTasjeel::OverrideCfg },
+        naw: if mawjud {
+            NawMudkhal::Tadeel
+        } else {
+            NawMudkhal::Idafa
+        },
+        masdar: MasdarMudkhal::TasjeelIdafi {
+            naw: NawTasjeel::OverrideCfg,
+        },
     });
     Ok(())
 }
@@ -3075,13 +3175,24 @@ fn nass_gdnlib(ism_muhammil: &str, mimariya: Mimariya) -> String {
     };
     // Folded, because a component store built on a case-insensitive filesystem
     // can hand back `winhttp.DLL` for the same entry it stored as `winhttp.dll`.
-    let imtidad = Path::new(ism_muhammil).extension().and_then(|imt| imt.to_str());
+    let imtidad = Path::new(ism_muhammil)
+        .extension()
+        .and_then(|imt| imt.to_str());
     let (miftah, ism_wahda) = if imtidad.is_some_and(|imt| imt.eq_ignore_ascii_case("dll")) {
-        (format!("Windows.{ard}"), NizamTashghil::Windows.ism_maktaba(ASAS_GODOT))
+        (
+            format!("Windows.{ard}"),
+            NizamTashghil::Windows.ism_maktaba(ASAS_GODOT),
+        )
     } else if imtidad.is_some_and(|imt| imt.eq_ignore_ascii_case("dylib")) {
-        (format!("OSX.{ard}"), NizamTashghil::Mac.ism_maktaba(ASAS_GODOT))
+        (
+            format!("OSX.{ard}"),
+            NizamTashghil::Mac.ism_maktaba(ASAS_GODOT),
+        )
     } else {
-        (format!("X11.{ard}"), NizamTashghil::Linux.ism_maktaba(ASAS_GODOT))
+        (
+            format!("X11.{ard}"),
+            NizamTashghil::Linux.ism_maktaba(ASAS_GODOT),
+        )
     };
     // A split component puts everything that is not the loader under the
     // game's own Taarib directory, which is where the module lands.
@@ -3148,21 +3259,28 @@ pub fn nashr_mulhaqat(
     for mudkhal in &mukhattat.mudkhalat {
         let mutlaq = mudkhal.mawqi.mutlaq(jidhr_luba)?;
         match &mudkhal.masdar {
-            MasdarMudkhal::MinMakhzan { mukawwin, fi_makhzan } => {
+            MasdarMudkhal::MinMakhzan {
+                mukawwin,
+                fi_makhzan,
+            } => {
                 let bayt = bayt_min_makhzan(&mut makhzan, jidhr_makhzan, mukawwin, fi_makhzan)?;
                 iktub_aw_ansha(muthabbit, &mutlaq, &bayt, mudkhal.naw)?;
                 sajjil_munashar(&mut taqreer, mudkhal, &bayt);
-            }
+            },
             MasdarMudkhal::NassMuwallad { nass, .. } => {
                 iktub_aw_ansha(muthabbit, &mutlaq, nass.as_bytes(), mudkhal.naw)?;
                 sajjil_munashar(&mut taqreer, mudkhal, nass.as_bytes());
-            }
+            },
             MasdarMudkhal::TasjeelIdafi { naw } => {
                 // Whether the game has this file is decided now rather than
                 // trusted from plan time: a launcher update or another tool
                 // may have created or removed it since the plan was shown.
                 let mawjud = mutlaq.is_file();
-                let hali = if mawjud { Some(iqra_tasjil(&mutlaq)?) } else { None };
+                let hali = if mawjud {
+                    Some(iqra_tasjil(&mutlaq)?)
+                } else {
+                    None
+                };
                 let jadeed = match (naw, hali.as_deref()) {
                     (NawTasjeel::PluginsJs, Some(hali)) => damj_plugins_js(&mutlaq, hali)?,
                     (NawTasjeel::PluginsJs, None) => {
@@ -3175,21 +3293,23 @@ pub fn nashr_mulhaqat(
                                  now; nothing was written",
                             ),
                         });
-                    }
-                    (NawTasjeel::OverrideCfg, Some(hali)) => {
-                        damj_override_cfg(&mutlaq, hali)?
-                    }
+                    },
+                    (NawTasjeel::OverrideCfg, Some(hali)) => damj_override_cfg(&mutlaq, hali)?,
                     (NawTasjeel::OverrideCfg, None) => Some(nass_override_jadeed()),
                 };
                 match jadeed {
                     Some(nass) => {
-                        let naw = if mawjud { NawMudkhal::Tadeel } else { NawMudkhal::Idafa };
+                        let naw = if mawjud {
+                            NawMudkhal::Tadeel
+                        } else {
+                            NawMudkhal::Idafa
+                        };
                         iktub_aw_ansha(muthabbit, &mutlaq, nass.as_bytes(), naw)?;
                         sajjil_munashar_bi_naw(&mut taqreer, mudkhal, nass.as_bytes(), naw);
-                    }
+                    },
                     None => taqreer.mutakhatta.push(mudkhal.nisbi.clone()),
                 }
-            }
+            },
         }
     }
 
@@ -3257,8 +3377,7 @@ fn bayt_min_makhzan(
 /// Reads a loader registry the game owns, within the registry ceiling.
 fn iqra_tasjil(masar: &Path) -> NatijatTathbeet<String> {
     let amal = "reading a loader registry in order to register Taarib in it";
-    let bayanat = std::fs::metadata(masar)
-        .map_err(|sabab| min_khata_io(masar, amal, sabab))?;
+    let bayanat = std::fs::metadata(masar).map_err(|sabab| min_khata_io(masar, amal, sabab))?;
     if bayanat.len() > SAQF_HAJM_TASJIL {
         return Err(KhataTathbeet::HajmMufrit {
             haql: "loader registry",
@@ -3313,7 +3432,11 @@ fn damj_plugins_js(masar: &Path, hali: &str) -> NatijatTathbeet<Option<String>> 
     let mahdhuf = qabl.trim_end();
     // An empty array takes the entry alone; a populated one takes a comma
     // first, unless the last element already left a trailing one.
-    let fasil = if mahdhuf.ends_with('[') || mahdhuf.ends_with(',') { "" } else { "," };
+    let fasil = if mahdhuf.ends_with('[') || mahdhuf.ends_with(',') {
+        ""
+    } else {
+        ","
+    };
     Ok(Some(format!("{mahdhuf}{fasil}\n{MADKHAL_PLUGINS}\n{baad}")))
 }
 
@@ -3339,7 +3462,9 @@ fn damj_override_cfg(masar: &Path, hali: &str) -> NatijatTathbeet<Option<String>
             sutur.push(satr.to_owned());
             continue;
         }
-        let Some((qabl, baad)) = satr.rfind(']').and_then(|mawqi| satr.split_at_checked(mawqi))
+        let Some((qabl, baad)) = satr
+            .rfind(']')
+            .and_then(|mawqi| satr.split_at_checked(mawqi))
         else {
             return Err(KhataTathbeet::KhataMalaf {
                 masar: masar.to_path_buf(),
@@ -3352,7 +3477,11 @@ fn damj_override_cfg(masar: &Path, hali: &str) -> NatijatTathbeet<Option<String>
             });
         };
         let mahdhuf = qabl.trim_end();
-        let fasil = if mahdhuf.ends_with('[') || mahdhuf.ends_with(',') { "" } else { "," };
+        let fasil = if mahdhuf.ends_with('[') || mahdhuf.ends_with(',') {
+            ""
+        } else {
+            ","
+        };
         sutur.push(format!("{mahdhuf}{fasil} \"{MAWRID_GDNLIB}\" {baad}"));
         muharrar = true;
     }
@@ -3403,8 +3532,7 @@ pub fn nashr_bi_khutta(
 ) -> NatijatTathbeet<(NatijatTarkib, TaqreerMulhaqat)> {
     nashir.raqqi(IdhnNusus::min_khutta(mukhattat), Some(mukawwinat))?;
     let itar = rakkib_itar(mukhattat, luba, halat, mukawwinat, nashir.muthabbit())?;
-    let mulhaqat =
-        nashr_mulhaqat(mukhattat, &luba.jidhr, mukawwinat, nashir.muthabbit())?;
+    let mulhaqat = nashr_mulhaqat(mukhattat, &luba.jidhr, mukawwinat, nashir.muthabbit())?;
     Ok((itar, mulhaqat))
 }
 
@@ -3435,7 +3563,10 @@ mod ikhtibarat {
             mawqi: MawqiTarkib::DakhilLuba(WajhatLuba::jadeed(nisbi).expect("a valid destination")),
             nisbi: nisbi.to_owned(),
             naw,
-            masdar: MasdarMudkhal::NassMuwallad { nass: String::new(), wasf: "a test entry" },
+            masdar: MasdarMudkhal::NassMuwallad {
+                nass: String::new(),
+                wasf: "a test entry",
+            },
         }
     }
 
@@ -3462,7 +3593,10 @@ mod ikhtibarat {
     /// The sentence a person has to read before agreeing to a plan that edits
     /// files the store can put back.
     fn fihi_malhuzat_tahaqquq(khutta: &KhuttatTarkib) -> bool {
-        khutta.taqreer().iter().any(|satr| satr.contains("verifying this game's files"))
+        khutta
+            .taqreer()
+            .iter()
+            .any(|satr| satr.contains("verifying this game's files"))
     }
 
     #[test]
@@ -3568,7 +3702,10 @@ mod ikhtibarat {
     fn wajh_ghayr_musamma_yufaddal_ala_la_shay() {
         // A bundle that staged one Kufi face into the Ren'Py component meant to
         // ship it. Answering "no font" would be this module overruling the build.
-        let listing = asmaa(&["taarib/khutut/ReemKufi[wght].ttf", "taarib_renpy/__init__.py"]);
+        let listing = asmaa(&[
+            "taarib/khutut/ReemKufi[wght].ttf",
+            "taarib_renpy/__init__.py",
+        ]);
         assert_eq!(
             ikhtar_khatt_renpy(&listing),
             Some("taarib/khutut/ReemKufi[wght].ttf"),

@@ -42,8 +42,8 @@ pub use hawiya::{HawiyatMusahim, Jalsa, SalahiyatMalik};
 pub use irsal::{IdadatIrsal, MarhalatIrsal, NatijatIrsal, TalabIrsal, irsal};
 pub use khata::{KhataTaqdeem, NatijatTaqdeem};
 pub use muraja::{
-    IjraMuraja, MarjiMuraja, QararIaatimad, QaydMuraja, SababRafd, SijillMuraja, iaatimad,
-    urfud, utlub_taadil,
+    IjraMuraja, MarjiMuraja, QararIaatimad, QaydMuraja, SababRafd, SijillMuraja, iaatimad, urfud,
+    utlub_taadil,
 };
 pub use musawwada::{
     HalatTaqdeem, Musawwada, MusawwadaMutaadhira, QaydMusawwada, SijillMusawwadat,

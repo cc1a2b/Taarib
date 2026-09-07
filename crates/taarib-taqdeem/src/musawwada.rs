@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use taarib_mustalahat::bina::Basma;
 use taarib_mustalahat::luba::{LubaId, MasdarLuba};
 use taarib_mustalahat::nass::NassId;
-use taarib_mustalahat::ruqaa::{HalatRuqaa, RuqaaId, RuqaaRevision, RukhsaRuqaa, TareeqaTarjama};
+use taarib_mustalahat::ruqaa::{HalatRuqaa, RukhsaRuqaa, RuqaaId, RuqaaRevision, TareeqaTarjama};
 use taarib_mustalahat::taghtiya::Taghtiya;
 use taarib_tarqee::bawwaba::ShahadatBawwaba;
 use taarib_tarqee::bayan::BayanHuzma;
@@ -499,7 +499,9 @@ impl Musawwada {
         istirad: Vec<SijillIstirad>,
     ) -> NatijatTaqdeem<Self> {
         if istirad.is_empty() {
-            return Err(KhataTaqdeem::BayanNaqis { haql: "at least one import record" });
+            return Err(KhataTaqdeem::BayanNaqis {
+                haql: "at least one import record",
+            });
         }
         Self::min_bidaya(bidaya, istirad)
     }
@@ -511,7 +513,9 @@ impl Musawwada {
         matlub(&bidaya.sharh, "a description")?;
         matlub(&bidaya.waqt, "a timestamp")?;
         if bidaya.masar_huzma.as_os_str().is_empty() {
-            return Err(KhataTaqdeem::BayanNaqis { haql: "the compiled package" });
+            return Err(KhataTaqdeem::BayanNaqis {
+                haql: "the compiled package",
+            });
         }
         if bidaya.masadir.is_empty() {
             return Err(KhataTaqdeem::BayanNaqis {
@@ -520,7 +524,11 @@ impl Musawwada {
         }
 
         let bayan = serde_json::to_value(bidaya.bayan).map_err(|sabab| {
-            khata_malaf(&bidaya.masar_huzma, "recording the package manifest", sabab.into())
+            khata_malaf(
+                &bidaya.masar_huzma,
+                "recording the package manifest",
+                sabab.into(),
+            )
         })?;
 
         let hala = HalatTaqdeem::Musawwada;
@@ -708,15 +716,18 @@ impl Musawwada {
     /// Every import mapping still waiting on the contributor.
     #[must_use]
     pub fn irtibatat_muallaqa(&self) -> Vec<&IrtibatMuallaq> {
-        self.istirad.iter().flat_map(|sijill| sijill.muallaqa.iter()).collect()
+        self.istirad
+            .iter()
+            .flat_map(|sijill| sijill.muallaqa.iter())
+            .collect()
     }
 
     /// How many import mappings are still waiting.
     #[must_use]
     pub fn adad_irtibatat_muallaqa(&self) -> usize {
-        self.istirad
-            .iter()
-            .fold(0_usize, |majmu, sijill| majmu.saturating_add(sijill.muallaqa.len()))
+        self.istirad.iter().fold(0_usize, |majmu, sijill| {
+            majmu.saturating_add(sijill.muallaqa.len())
+        })
     }
 
     /// The edit handle, while the submission is still the contributor's.
@@ -736,13 +747,18 @@ impl Musawwada {
     /// state, the proof, an unresolved import mapping or the timestamp refused
     /// it.
     pub fn ursilat(self, ijtiyaz: &IjtiyazTaqdeem, waqt: &str) -> Result<Self, IntiqalMarfud> {
-        let ila = HalatTaqdeem::Muqaddama { waqt: waqt.to_owned() };
+        let ila = HalatTaqdeem::Muqaddama {
+            waqt: waqt.to_owned(),
+        };
         if !ijtiyaz.yakhuss(&self) {
             return Err(self.rafd(ila.ism(), SababManIntiqal::IjtiyazLaYakhussuha));
         }
         let muallaqa = self.adad_irtibatat_muallaqa();
         if muallaqa > 0 {
-            return Err(self.rafd(ila.ism(), SababManIntiqal::IrtibatMuallaq { adad: muallaqa }));
+            return Err(self.rafd(
+                ila.ism(),
+                SababManIntiqal::IrtibatMuallaq { adad: muallaqa },
+            ));
         }
         let masmuh = self.hala.qabila_lil_tahreer();
         self.hawwil(ila, waqt, masmuh)
@@ -756,7 +772,13 @@ impl Musawwada {
     /// timestamp is blank.
     pub fn futihat(self, waqt: &str) -> Result<Self, IntiqalMarfud> {
         let masmuh = matches!(self.hala, HalatTaqdeem::Muqaddama { .. });
-        self.hawwil(HalatTaqdeem::QaydMuraja { waqt: waqt.to_owned() }, waqt, masmuh)
+        self.hawwil(
+            HalatTaqdeem::QaydMuraja {
+                waqt: waqt.to_owned(),
+            },
+            waqt,
+            masmuh,
+        )
     }
 
     /// Returns it for revision, as the next revision of the same submission.
@@ -780,7 +802,9 @@ impl Musawwada {
             return Err(self.rafd(ila.ism(), SababManIntiqal::HalaGhayrMulaima));
         }
         if mulakhkhas.trim().is_empty() {
-            let sabab = SababManIntiqal::BayanNaqis { haql: "a written summary of the changes" };
+            let sabab = SababManIntiqal::BayanNaqis {
+                haql: "a written summary of the changes",
+            };
             return Err(self.rafd(ila.ism(), sabab));
         }
         // The bump precedes the record, so the entry names the revision the
@@ -797,7 +821,13 @@ impl Musawwada {
     /// is blank.
     pub fn wufiq_alayha(self, waqt: &str) -> Result<Self, IntiqalMarfud> {
         let masmuh = self.hala.fi_intizar_almalik();
-        self.hawwil(HalatTaqdeem::MawafaqYunshar { waqt: waqt.to_owned() }, waqt, masmuh)
+        self.hawwil(
+            HalatTaqdeem::MawafaqYunshar {
+                waqt: waqt.to_owned(),
+            },
+            waqt,
+            masmuh,
+        )
     }
 
     /// Records publication.
@@ -808,7 +838,10 @@ impl Musawwada {
     /// the timestamp is blank.
     pub fn nushirat(self, waqt: &str) -> Result<Self, IntiqalMarfud> {
         let masmuh = matches!(self.hala, HalatTaqdeem::MawafaqYunshar { .. });
-        let ila = HalatTaqdeem::Manshura { waqt: waqt.to_owned(), murajaa: self.murajaa };
+        let ila = HalatTaqdeem::Manshura {
+            waqt: waqt.to_owned(),
+            murajaa: self.murajaa,
+        };
         self.hawwil(ila, waqt, masmuh)
     }
 
@@ -819,12 +852,17 @@ impl Musawwada {
     /// The submission unchanged, when it is not with the owner, the reason is
     /// blank, or the timestamp is blank.
     pub fn rufidat(self, waqt: &str, sabab: &str) -> Result<Self, IntiqalMarfud> {
-        let ila = HalatTaqdeem::Marfuda { waqt: waqt.to_owned(), sabab: sabab.to_owned() };
+        let ila = HalatTaqdeem::Marfuda {
+            waqt: waqt.to_owned(),
+            sabab: sabab.to_owned(),
+        };
         if !self.hala.fi_intizar_almalik() {
             return Err(self.rafd(ila.ism(), SababManIntiqal::HalaGhayrMulaima));
         }
         if sabab.trim().is_empty() {
-            let naqis = SababManIntiqal::BayanNaqis { haql: "a written reason for the rejection" };
+            let naqis = SababManIntiqal::BayanNaqis {
+                haql: "a written reason for the rejection",
+            };
             return Err(self.rafd(ila.ism(), naqis));
         }
         self.hawwil(ila, waqt, true)
@@ -839,7 +877,13 @@ impl Musawwada {
     pub fn suhibat(self, waqt: &str) -> Result<Self, IntiqalMarfud> {
         let tunshar = matches!(self.hala, HalatTaqdeem::MawafaqYunshar { .. });
         let masmuh = !self.hala.nihaiya() && !tunshar;
-        self.hawwil(HalatTaqdeem::Mashuba { waqt: waqt.to_owned() }, waqt, masmuh)
+        self.hawwil(
+            HalatTaqdeem::Mashuba {
+                waqt: waqt.to_owned(),
+            },
+            waqt,
+            masmuh,
+        )
     }
 
     /// Records the owner revoking it after publication, which a written reason
@@ -850,12 +894,17 @@ impl Musawwada {
     /// The submission unchanged, when it is not published, the reason is
     /// blank, or the timestamp is blank.
     pub fn suhibat_min_almalik(self, waqt: &str, sabab: &str) -> Result<Self, IntiqalMarfud> {
-        let ila = HalatTaqdeem::Masbuba { waqt: waqt.to_owned(), sabab: sabab.to_owned() };
+        let ila = HalatTaqdeem::Masbuba {
+            waqt: waqt.to_owned(),
+            sabab: sabab.to_owned(),
+        };
         if !matches!(self.hala, HalatTaqdeem::Manshura { .. }) {
             return Err(self.rafd(ila.ism(), SababManIntiqal::HalaGhayrMulaima));
         }
         if sabab.trim().is_empty() {
-            let naqis = SababManIntiqal::BayanNaqis { haql: "a written reason for the revocation" };
+            let naqis = SababManIntiqal::BayanNaqis {
+                haql: "a written reason for the revocation",
+            };
             return Err(self.rafd(ila.ism(), naqis));
         }
         self.hawwil(ila, waqt, true)
@@ -871,7 +920,9 @@ impl Musawwada {
             return Err(self.rafd(ila.ism(), SababManIntiqal::HalaGhayrMulaima));
         }
         if waqt.trim().is_empty() {
-            let naqis = SababManIntiqal::BayanNaqis { haql: "a timestamp" };
+            let naqis = SababManIntiqal::BayanNaqis {
+                haql: "a timestamp",
+            };
             return Err(self.rafd(ila.ism(), naqis));
         }
         self.tareekh.push(QaydMusawwada {
@@ -885,7 +936,12 @@ impl Musawwada {
 
     fn rafd(self, ila: &'static str, sabab: SababManIntiqal) -> IntiqalMarfud {
         let min = self.hala.ism();
-        IntiqalMarfud { musawwada: Box::new(self), min, ila, sabab }
+        IntiqalMarfud {
+            musawwada: Box::new(self),
+            min,
+            ila,
+            sabab,
+        }
     }
 
     /// Where this draft is stored under the data root.
@@ -902,8 +958,8 @@ impl Musawwada {
     /// written by a build with another draft schema, or when it does not parse —
     /// which is a named failure and never a fresh empty draft.
     pub fn iqra(masar: &Path) -> NatijatTaqdeem<Self> {
-        let bayt = fs::read(masar)
-            .map_err(|sabab| khata_malaf(masar, "reading a saved draft", sabab))?;
+        let bayt =
+            fs::read(masar).map_err(|sabab| khata_malaf(masar, "reading a saved draft", sabab))?;
 
         let tarwisa: TarwisatMusawwada = serde_json::from_slice(&bayt).map_err(|sabab| {
             khata_malaf(masar, "reading the schema of a saved draft", sabab.into())
@@ -913,7 +969,11 @@ impl Musawwada {
                 std::io::ErrorKind::InvalidData,
                 format!("draft schema {} is not {ISDAR_MUSAWWADA}", tarwisa.isdar),
             );
-            return Err(khata_malaf(masar, "reading a draft from another build", sabab));
+            return Err(khata_malaf(
+                masar,
+                "reading a draft from another build",
+                sabab,
+            ));
         }
 
         serde_json::from_slice(&bayt)
@@ -979,8 +1039,11 @@ impl Musawwada {
         let qira = match fs::read_dir(&mujallad) {
             Ok(qira) => qira,
             Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(SijillMusawwadat { musawwadat: Vec::new(), mutaadhira: Vec::new() });
-            }
+                return Ok(SijillMusawwadat {
+                    musawwadat: Vec::new(),
+                    mutaadhira: Vec::new(),
+                });
+            },
             Err(sabab) => return Err(khata_malaf(&mujallad, "listing saved drafts", sabab)),
         };
 
@@ -989,8 +1052,8 @@ impl Musawwada {
         for madkhal in qira {
             // A directory entry that will not even yield its name belongs to the
             // listing, not to a draft: there is no path to attribute it to.
-            let madkhal = madkhal
-                .map_err(|sabab| khata_malaf(&mujallad, "listing saved drafts", sabab))?;
+            let madkhal =
+                madkhal.map_err(|sabab| khata_malaf(&mujallad, "listing saved drafts", sabab))?;
             let masar = madkhal.path();
             let lahiqa = masar.extension().and_then(|juz| juz.to_str());
             if lahiqa.is_none_or(|juz| juz != LAHIQAT_MUSAWWADA) {
@@ -1002,12 +1065,18 @@ impl Musawwada {
             }
         }
         musawwadat.sort_by(|awwal, thani| {
-            awwal.ansha.cmp(&thani.ansha).then_with(|| awwal.id.cmp(&thani.id))
+            awwal
+                .ansha
+                .cmp(&thani.ansha)
+                .then_with(|| awwal.id.cmp(&thani.id))
         });
         // `read_dir` promises no order, and a list of failures that reshuffles
         // between two calls reads as a different set of failures.
         mutaadhira.sort_by(|awwal, thani| awwal.masar.cmp(&thani.masar));
-        Ok(SijillMusawwadat { musawwadat, mutaadhira })
+        Ok(SijillMusawwadat {
+            musawwadat,
+            mutaadhira,
+        })
     }
 }
 
@@ -1038,7 +1107,11 @@ fn matlub(qeema: &str, haql: &'static str) -> NatijatTaqdeem<()> {
 }
 
 fn khata_malaf(masar: &Path, amal: &'static str, sabab: std::io::Error) -> KhataTaqdeem {
-    KhataTaqdeem::KhataMalaf { masar: masar.to_path_buf(), amal, sabab }
+    KhataTaqdeem::KhataMalaf {
+        masar: masar.to_path_buf(),
+        amal,
+        sabab,
+    }
 }
 
 fn kitaba(masar: &Path, bayt: &[u8]) -> NatijatTaqdeem<()> {

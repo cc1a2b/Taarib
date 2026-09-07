@@ -38,11 +38,20 @@ use taarib_tabaqa::talqeem::{KhiyaratTalqeem, Mulaqqim, SatrMulaqqam};
 use taarib_tabaqa::wajiha::{LawhatRasm, MustatilBiksel, QitaRasm, SighatSath, WasfSath};
 
 /// The surface every test builds against.
-const SATH: WasfSath =
-    WasfSath { ard: 1280, irtifa: 720, sigha: SighatSath::Rgba8, sirgb: true };
+const SATH: WasfSath = WasfSath {
+    ard: 1280,
+    irtifa: 720,
+    sigha: SighatSath::Rgba8,
+    sirgb: true,
+};
 
 /// A line of English a recognizer might have read, and where.
-const SUNDUQ: MustatilBiksel = MustatilBiksel { yasar: 200, aala: 480, ard: 420, irtifa: 22 };
+const SUNDUQ: MustatilBiksel = MustatilBiksel {
+    yasar: 200,
+    aala: 480,
+    ard: 420,
+    irtifa: 22,
+};
 
 /// The Arabic that replaces it, in logical order and ordinary Unicode.
 const ARABI: &str = "الطريق الشمالي مغلق حتى ذوبان الثلج.";
@@ -76,7 +85,10 @@ fn khutut() -> SilsilatKhutut {
     }
 
     let Some(masar) = masar else {
-        panic!("no Arabic font found at or above {}", env!("CARGO_MANIFEST_DIR"));
+        panic!(
+            "no Arabic font found at or above {}",
+            env!("CARGO_MANIFEST_DIR")
+        );
     };
     let Ok(bayt) = fs::read(&masar) else {
         panic!("{} could not be read", masar.display());
@@ -96,13 +108,17 @@ fn dufaa_satr() -> LawhatRasm {
         Ok(mulaqqim) => mulaqqim,
         Err(khata) => panic!("the feeder would not build: {khata}"),
     };
-    let sutur =
-        vec![SatrMulaqqam { nass: ARABI.to_owned(), mawdi: SUNDUQ, thiqa: 94 }];
+    let sutur = vec![SatrMulaqqam {
+        nass: ARABI.to_owned(),
+        mawdi: SUNDUQ,
+        thiqa: 94,
+    }];
     match mulaqqim.ibni(SATH, &sutur, &[]) {
         Ok(dufaa) => {
             let ihsaat = mulaqqim.ihsaat();
             assert_eq!(
-                ihsaat.ashkal_mafquda, 0,
+                ihsaat.ashkal_mafquda,
+                0,
                 "the atlas refused {} glyph(s); last reason: {}",
                 ihsaat.ashkal_mafquda,
                 ihsaat.akhir_radd.as_deref().unwrap_or("—")
@@ -115,12 +131,20 @@ fn dufaa_satr() -> LawhatRasm {
 
 /// The quads that sample the atlas.
 fn ashkal(dufaa: &LawhatRasm) -> Vec<&QitaRasm> {
-    dufaa.qitaat.iter().filter(|qita| qita.khareeta.is_some()).collect()
+    dufaa
+        .qitaat
+        .iter()
+        .filter(|qita| qita.khareeta.is_some())
+        .collect()
 }
 
 /// The quads that do not.
 fn alwah(dufaa: &LawhatRasm) -> Vec<&QitaRasm> {
-    dufaa.qitaat.iter().filter(|qita| qita.khareeta.is_none()).collect()
+    dufaa
+        .qitaat
+        .iter()
+        .filter(|qita| qita.khareeta.is_none())
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -141,14 +165,17 @@ fn lawha_madruba_musbaqan() {
         Ok(rgba) => rgba,
         Err(khata) => panic!("the page would not expand: {khata}"),
     };
-    assert_eq!(rgba.len(), taghtiya.len() * 4, "one texel must become four bytes");
+    assert_eq!(
+        rgba.len(),
+        taghtiya.len() * 4,
+        "one texel must become four bytes"
+    );
     for (fahras, mutawaqqa) in taghtiya.iter().enumerate() {
         let Some(texel) = rgba.get(fahras * 4..fahras * 4 + 4) else {
             panic!("texel {fahras} is missing from the expansion");
         };
         assert_eq!(
-            texel,
-            [*mutawaqqa; 4],
+            texel, [*mutawaqqa; 4],
             "texel {fahras} of coverage {mutawaqqa} expanded to {texel:?}; a premultiplied page \
              carries the coverage in all four channels"
         );
@@ -170,7 +197,12 @@ fn lawha_madruba_musbaqan() {
 fn lawh_yughatti_almustatil() {
     let dufaa = dufaa_satr();
     let alwah = alwah(&dufaa);
-    assert_eq!(alwah.len(), 1, "one translated line emits exactly one plate, got {}", alwah.len());
+    assert_eq!(
+        alwah.len(),
+        1,
+        "one translated line emits exactly one plate, got {}",
+        alwah.len()
+    );
     let Some(lawh) = alwah.first() else {
         panic!("the batch carried no plate");
     };
@@ -194,7 +226,10 @@ fn lawh_yughatti_almustatil() {
     );
 
     let ashkal = ashkal(&dufaa);
-    assert!(!ashkal.is_empty(), "the line produced no glyph quads at all");
+    assert!(
+        !ashkal.is_empty(),
+        "the line produced no glyph quads at all"
+    );
     for shakl in &ashkal {
         let (yasar, aala, yameen, asfal) = hudud(shakl);
         assert!(
@@ -210,7 +245,10 @@ fn lawh_yughatti_almustatil() {
     let Some(awwal) = dufaa.qitaat.first() else {
         panic!("the batch was empty");
     };
-    assert!(awwal.khareeta.is_none(), "the first quad must be the plate, not a glyph");
+    assert!(
+        awwal.khareeta.is_none(),
+        "the first quad must be the plate, not a glyph"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -229,10 +267,21 @@ fn lawh_yughatti_almustatil() {
 fn nass_arabi_yalzam_alyameen() {
     let dufaa = dufaa_satr();
     let ashkal = ashkal(&dufaa);
-    assert!(!ashkal.is_empty(), "the line produced no glyph quads at all");
+    assert!(
+        !ashkal.is_empty(),
+        "the line produced no glyph quads at all"
+    );
 
-    let aqsa = ashkal.iter().map(|qita| qita.mawdi.yasar + qita.mawdi.ard).max().unwrap_or(0);
-    let adna = ashkal.iter().map(|qita| qita.mawdi.yasar).min().unwrap_or(0);
+    let aqsa = ashkal
+        .iter()
+        .map(|qita| qita.mawdi.yasar + qita.mawdi.ard)
+        .max()
+        .unwrap_or(0);
+    let adna = ashkal
+        .iter()
+        .map(|qita| qita.mawdi.yasar)
+        .min()
+        .unwrap_or(0);
     let yameen_sunduq = SUNDUQ.yasar + SUNDUQ.ard;
 
     // Within a few pixels of the right edge: the last glyph's own right side

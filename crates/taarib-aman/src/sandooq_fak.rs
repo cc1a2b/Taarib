@@ -72,19 +72,21 @@ impl MadkhalHajr {
                         ));
                     }
                     ajza.push(nass);
-                }
-                Component::CurDir => {}
-                Component::ParentDir
-                | Component::RootDir
-                | Component::Prefix(_) => {
-                    return Err(KhataAman::MadkhalKharij { madkhal: khaam.to_owned() });
-                }
+                },
+                Component::CurDir => {},
+                Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                    return Err(KhataAman::MadkhalKharij {
+                        madkhal: khaam.to_owned(),
+                    });
+                },
             }
         }
         if ajza.is_empty() {
             return Err(mushawwah("the name resolves to the quarantine root itself"));
         }
-        Ok(Self { nisbi: ajza.join("/") })
+        Ok(Self {
+            nisbi: ajza.join("/"),
+        })
     }
 
     /// The normalized relative form, forward-slashed.
@@ -141,9 +143,28 @@ fn ism_jihaz(nass: &str) -> bool {
     let jidhr = nass.split('.').next().unwrap_or(nass);
     matches!(
         jidhr.to_ascii_uppercase().as_str(),
-        "CON" | "PRN" | "AUX" | "NUL"
-            | "COM1" | "COM2" | "COM3" | "COM4" | "COM5" | "COM6" | "COM7" | "COM8" | "COM9"
-            | "LPT1" | "LPT2" | "LPT3" | "LPT4" | "LPT5" | "LPT6" | "LPT7" | "LPT8" | "LPT9"
+        "CON"
+            | "PRN"
+            | "AUX"
+            | "NUL"
+            | "COM1"
+            | "COM2"
+            | "COM3"
+            | "COM4"
+            | "COM5"
+            | "COM6"
+            | "COM7"
+            | "COM8"
+            | "COM9"
+            | "LPT1"
+            | "LPT2"
+            | "LPT3"
+            | "LPT4"
+            | "LPT5"
+            | "LPT6"
+            | "LPT7"
+            | "LPT8"
+            | "LPT9"
     )
 }
 
@@ -189,9 +210,12 @@ impl MizaniyatHajr {
                 ),
             });
         }
-        let majmu = self.majmu.checked_add(hajm).ok_or_else(|| KhataAman::FakFashil {
-            sabab: "the total unpacked size overflowed".to_owned(),
-        })?;
+        let majmu = self
+            .majmu
+            .checked_add(hajm)
+            .ok_or_else(|| KhataAman::FakFashil {
+                sabab: "the total unpacked size overflowed".to_owned(),
+            })?;
         if majmu > AQSA_HAJM_KULLI {
             return Err(KhataAman::FakFashil {
                 sabab: format!(
@@ -293,8 +317,7 @@ fn tahaqquq_hawiya(bayt: &[u8]) -> NatijatAman<()> {
         });
     }
     Err(KhataAman::FakFashil {
-        sabab: "not a sealed .ruqaa container; its leading bytes are not the TRQ1 magic"
-            .to_owned(),
+        sabab: "not a sealed .ruqaa container; its leading bytes are not the TRQ1 magic".to_owned(),
     })
 }
 
@@ -453,9 +476,10 @@ pub fn fak_bayt_ila_hajr(bayt: &[u8], ism: &str, jidhr_hajr: &Path) -> NatijatAm
     sijill.sajjil(&madkhal)?;
 
     // The one join permitted for untrusted input: quarantine_root + validated relative.
-    let wijha = masarat::dakhil(jidhr_hajr, madkhal.nisbi()).map_err(|khata| {
-        KhataAman::FakFashil { sabab: format!("the quarantine destination was refused: {khata}") }
-    })?;
+    let wijha =
+        masarat::dakhil(jidhr_hajr, madkhal.nisbi()).map_err(|khata| KhataAman::FakFashil {
+            sabab: format!("the quarantine destination was refused: {khata}"),
+        })?;
 
     masarat::kitaba_dharra(&wijha, bayt).map_err(|khata| KhataAman::FakFashil {
         sabab: format!("the package could not be written into quarantine: {khata}"),
@@ -464,10 +488,16 @@ pub fn fak_bayt_ila_hajr(bayt: &[u8], ism: &str, jidhr_hajr: &Path) -> NatijatAm
     // Re-prove containment after the write: a symlink planted between join and write escapes it.
     let Ok(haqiqi) = masarat::tahaqquq_ihtiwa(jidhr_hajr, &wijha) else {
         drop(masarat::hadhf(&wijha));
-        return Err(KhataAman::MadkhalKharij { madkhal: madkhal.nisbi().to_owned() });
+        return Err(KhataAman::MadkhalKharij {
+            madkhal: madkhal.nisbi().to_owned(),
+        });
     };
 
-    let makhruj = MadkhalMakhruj { madkhal, hajm: tul(bayt.len()), mutlaq: haqiqi };
+    let makhruj = MadkhalMakhruj {
+        madkhal,
+        hajm: tul(bayt.len()),
+        mutlaq: haqiqi,
+    };
     Ok(MuhtawaHajr {
         jidhr: jidhr_hajr.to_path_buf(),
         hajm_kulli: mizan.majmu(),

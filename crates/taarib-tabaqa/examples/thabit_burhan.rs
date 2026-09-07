@@ -98,15 +98,30 @@ struct Satr {
 const SUTUR: &[Satr] = &[
     Satr {
         arabi: "الطريق الشمالي مغلق حتى ذوبان الثلج.",
-        sunduq: MustatilBiksel { yasar: 150, aala: 470, ard: 430, irtifa: 22 },
+        sunduq: MustatilBiksel {
+            yasar: 150,
+            aala: 470,
+            ard: 430,
+            irtifa: 22,
+        },
     },
     Satr {
         arabi: "اسلك الممر أسفل برج المراقبة القديم.",
-        sunduq: MustatilBiksel { yasar: 150, aala: 512, ard: 420, irtifa: 22 },
+        sunduq: MustatilBiksel {
+            yasar: 150,
+            aala: 512,
+            ard: 420,
+            irtifa: 22,
+        },
     },
     Satr {
         arabi: "سأنتظرك عند الجسر.",
-        sunduq: MustatilBiksel { yasar: 150, aala: 554, ard: 230, irtifa: 22 },
+        sunduq: MustatilBiksel {
+            yasar: 150,
+            aala: 554,
+            ard: 230,
+            irtifa: 22,
+        },
     },
 ];
 
@@ -126,21 +141,35 @@ fn main() -> Result<(), Box<dyn Error>> {
     // `sirgb: false` is not a default. It is the operational statement both
     // backends make: nothing in either pipeline will apply a transfer function
     // to what the overlay writes, so the overlay applies it itself.
-    let sath = WasfSath { ard: ARD, irtifa: IRTIFA, sigha: SighatSath::Bgra8, sirgb: false };
+    let sath = WasfSath {
+        ard: ARD,
+        irtifa: IRTIFA,
+        sigha: SighatSath::Bgra8,
+        sirgb: false,
+    };
 
     let mut lawha_tahakkum = LawhatTahakkum::jadeeda("برهان الخط الثابت");
     lawha_tahakkum.hala_mut().irfa();
     let ansur = lawha_tahakkum.bina(sath);
-    println!("control panel: {} elements from LawhatTahakkum::bina", ansur.len());
+    println!(
+        "control panel: {} elements from LawhatTahakkum::bina",
+        ansur.len()
+    );
 
     let mulaqqama: Vec<SatrMulaqqam> = SUTUR
         .iter()
-        .map(|satr| SatrMulaqqam { nass: satr.arabi.to_owned(), mawdi: satr.sunduq, thiqa: 94 })
+        .map(|satr| SatrMulaqqam {
+            nass: satr.arabi.to_owned(),
+            mawdi: satr.sunduq,
+            thiqa: 94,
+        })
         .collect();
 
     // -- the producer and the overlay -------------------------------------
     let mut mulaqqim = Mulaqqim::jadeed(khutut, KhiyaratTalqeem::iftiradiya())?;
-    let lahza = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |mudda| mudda.as_secs());
+    let lahza = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |mudda| mudda.as_secs());
     let iqrar = Iqrar::baad_ard(BasmatIfsah::hadhihi_al_bina(), lahza, "برهان الخط الثابت")?;
 
     let musattah = Arc::new(Mutex::new(itar));
@@ -151,7 +180,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let Some(sath_hayy) = tabaqa.sath() else {
-        return Err(Box::<dyn Error>::from("the overlay reported no live surface"));
+        return Err(Box::<dyn Error>::from(
+            "the overlay reported no live surface",
+        ));
     };
     let dufaa = mulaqqim.qaddim(&mut tabaqa, sath_hayy, &mulaqqama, &ansur, 0)?;
 
@@ -160,8 +191,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!(
         "quads {} ({} textured, {} solid) from {} lines and {} panel elements",
         dufaa.qitaat.len(),
-        dufaa.qitaat.iter().filter(|qita| qita.khareeta.is_some()).count(),
-        dufaa.qitaat.iter().filter(|qita| qita.khareeta.is_none()).count(),
+        dufaa
+            .qitaat
+            .iter()
+            .filter(|qita| qita.khareeta.is_some())
+            .count(),
+        dufaa
+            .qitaat
+            .iter()
+            .filter(|qita| qita.khareeta.is_none())
+            .count(),
         ihsaat.sutur,
         ihsaat.ansur
     );
@@ -229,7 +268,11 @@ impl ItarThabit {
     /// A black frame.
     fn jadeed(ard: u32, irtifa: u32) -> Self {
         let adad = (ard as usize) * (irtifa as usize) * 4;
-        Self { ard, irtifa, biksel: vec![0; adad] }
+        Self {
+            ard,
+            irtifa,
+            biksel: vec![0; adad],
+        }
     }
 
     /// The index of a pixel's first channel, when it is on the frame.
@@ -318,7 +361,10 @@ impl std::fmt::Debug for KhattafThabit {
         mukhraj
             .debug_struct("KhattafThabit")
             .field("sath", &self.sath)
-            .field("lawha", &self.lawha.as_ref().map(|(_, ard, irtifa)| (*ard, *irtifa)))
+            .field(
+                "lawha",
+                &self.lawha.as_ref().map(|(_, ard, irtifa)| (*ard, *irtifa)),
+            )
             .finish_non_exhaustive()
     }
 }
@@ -326,7 +372,11 @@ impl std::fmt::Debug for KhattafThabit {
 impl KhattafThabit {
     /// A backend over a frame buffer.
     const fn jadeed(itar: Arc<Mutex<ItarThabit>>, sath: WasfSath) -> Self {
-        Self { itar, sath, lawha: None }
+        Self {
+            itar,
+            sath,
+            lawha: None,
+        }
     }
 
     /// One texel of the uploaded page, nearest-sampled, as zero-to-one floats.
@@ -379,7 +429,9 @@ impl Khattaf for KhattafThabit {
         // The same length check both real backends make, for the same reason:
         // a page whose bytes do not match its declared size would put arbitrary
         // memory on screen.
-        let matlub = (ard as usize).saturating_mul(irtifa as usize).saturating_mul(4);
+        let matlub = (ard as usize)
+            .saturating_mul(irtifa as usize)
+            .saturating_mul(4);
         if bayt.len() != matlub {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "glyph atlas texture",
@@ -461,8 +513,7 @@ impl Khattaf for KhattafThabit {
                 irtifa: itar.irtifa,
             });
         }
-        let mut kharj =
-            Vec::with_capacity((mintaqa.ard as usize) * (mintaqa.irtifa as usize) * 4);
+        let mut kharj = Vec::with_capacity((mintaqa.ard as usize) * (mintaqa.irtifa as usize) * 4);
         for a in mintaqa.aala..mintaqa.aala + mintaqa.irtifa {
             for s in mintaqa.yasar..mintaqa.yasar + mintaqa.ard {
                 let Some(fahras) = itar.fahras(s, a) else {

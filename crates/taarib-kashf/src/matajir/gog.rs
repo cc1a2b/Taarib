@@ -111,8 +111,13 @@ const JADAWIL_TATHBEET: [&str; 2] = ["InstalledBaseProducts", "InstalledProducts
 const AAMIDA_MUARRIF: [&str; 4] = ["productId", "gameId", "gogId", "id"];
 
 /// Column names that may carry an installation path.
-const AAMIDA_MASAR: [&str; 5] =
-    ["installationPath", "installPath", "localPath", "location", "path"];
+const AAMIDA_MASAR: [&str; 5] = [
+    "installationPath",
+    "installPath",
+    "localPath",
+    "location",
+    "path",
+];
 
 /// Column names that may carry an installation timestamp.
 const AAMIDA_TARIKH: [&str; 3] = ["installationDate", "installDate", "date"];
@@ -202,8 +207,9 @@ impl Matjar for MatjarGog {
         // under cannot drift apart: `alaab_galaxy` resolves install paths
         // against that root, and reaching for the root separately would let a
         // future edit hand it a different one.
-        let qaida =
-            jidhr.as_ref().and_then(|jidhr| malaf_qaida(jidhr).map(|masar| (jidhr, masar)));
+        let qaida = jidhr
+            .as_ref()
+            .and_then(|jidhr| malaf_qaida(jidhr).map(|masar| (jidhr, masar)));
         let mustaqilla = tathbitat_mustaqilla();
         let jidhr_mawjud = jidhr.clone().filter(|masar| masar.is_dir());
         if qaida.is_none() && mustaqilla.is_empty() {
@@ -212,11 +218,14 @@ impl Matjar for MatjarGog {
             let Some(jidhr_mawjud) = jidhr_mawjud else {
                 return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
             };
-            let matlub = [jidhr_mawjud.join("storage").join(ISM_QAIDA), jidhr_mawjud.join(ISM_QAIDA)]
-                .iter()
-                .map(|masar| masar.display().to_string())
-                .collect::<Vec<String>>()
-                .join(", ");
+            let matlub = [
+                jidhr_mawjud.join("storage").join(ISM_QAIDA),
+                jidhr_mawjud.join(ISM_QAIDA),
+            ]
+            .iter()
+            .map(|masar| masar.display().to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
             return Ok(NatijatMatjar::naqisa(
                 MUARRIF,
                 Some(jidhr_mawjud),
@@ -232,14 +241,13 @@ impl Matjar for MatjarGog {
         let mut mawaqi: BTreeSet<String> = BTreeSet::new();
 
         if let Some((jidhr_qaida, masar_qaida)) = qaida.as_ref() {
-            let ittisal = iftah_qaida(masar_qaida).map_err(|tafsil| {
-                KhataKashf::TarwisatFahrasTalifa {
+            let ittisal =
+                iftah_qaida(masar_qaida).map_err(|tafsil| KhataKashf::TarwisatFahrasTalifa {
                     matjar: MUARRIF,
                     masar: masar_qaida.clone(),
                     tafsil,
                     mawdi: None,
-                }
-            })?;
+                })?;
             alaab_galaxy(
                 &ittisal,
                 jidhr_qaida,
@@ -251,11 +259,19 @@ impl Matjar for MatjarGog {
         }
 
         for tathbeet in mustaqilla {
-            damm_mustaqilla(&tathbeet, siyaq, &mut fahras, &mut mawaqi, &mut natija.tanbihat);
+            damm_mustaqilla(
+                &tathbeet,
+                siyaq,
+                &mut fahras,
+                &mut mawaqi,
+                &mut natija.tanbihat,
+            );
         }
 
         natija.alaab = fahras.into_values().collect();
-        natija.alaab.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
+        natija
+            .alaab
+            .sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
         natija.muddat = bidaya.elapsed();
         Ok(natija)
     }
@@ -286,9 +302,13 @@ impl Matjar for MatjarGog {
 /// The macOS layout is under the home directory and so always resolves.
 fn jidhr_tilqai(siyaq: &SiyaqFahs) -> Option<PathBuf> {
     match siyaq.nizam {
-        NizamTashghil::Windows => {
-            Some(siyaq.bayanat_barnamij.as_ref()?.join("GOG.com").join("Galaxy"))
-        },
+        NizamTashghil::Windows => Some(
+            siyaq
+                .bayanat_barnamij
+                .as_ref()?
+                .join("GOG.com")
+                .join("Galaxy"),
+        ),
         NizamTashghil::Mac | NizamTashghil::Linux => Some(
             siyaq
                 .manzil
@@ -379,15 +399,27 @@ fn rabt_qaida(masar: &Path) -> Option<String> {
 
 /// The column names of a table, or `None` when the table is not there.
 fn asmaa_aamida(ittisal: &Connection, jadwal: &str) -> Option<Vec<String>> {
-    let bayan = ittisal.prepare(&format!("SELECT * FROM \"{jadwal}\" LIMIT 0")).ok()?;
-    Some(bayan.column_names().into_iter().map(str::to_owned).collect())
+    let bayan = ittisal
+        .prepare(&format!("SELECT * FROM \"{jadwal}\" LIMIT 0"))
+        .ok()?;
+    Some(
+        bayan
+            .column_names()
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
+    )
 }
 
 /// The first candidate column name the table actually has.
 fn amud_mutah(asmaa: &[String], murashahat: &[&str]) -> Option<String> {
     murashahat
         .iter()
-        .find(|matlub| asmaa.iter().any(|mawjud| mawjud.eq_ignore_ascii_case(matlub)))
+        .find(|matlub| {
+            asmaa
+                .iter()
+                .any(|mawjud| mawjud.eq_ignore_ascii_case(matlub))
+        })
         .map(|matlub| (*matlub).to_owned())
 }
 
@@ -407,9 +439,9 @@ fn qeema_nass(saff: &Row<'_>, amud: &str) -> Option<String> {
 fn qeema_raqm(saff: &Row<'_>, amud: &str) -> Option<u64> {
     match saff.get_ref(amud).ok()? {
         ValueRef::Integer(raqm) => u64::try_from(raqm).ok(),
-        ValueRef::Text(bayt) => {
-            std::str::from_utf8(bayt).ok().and_then(|nass| nass.trim().parse::<u64>().ok())
-        },
+        ValueRef::Text(bayt) => std::str::from_utf8(bayt)
+            .ok()
+            .and_then(|nass| nass.trim().parse::<u64>().ok()),
         ValueRef::Real(_) | ValueRef::Blob(_) | ValueRef::Null => None,
     }
 }
@@ -451,9 +483,10 @@ fn tathbitat_galaxy(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec
         return Vec::new();
     };
 
-    let (Some(amud_muarrif), Some(amud_masar)) =
-        (amud_mutah(&asmaa, &AAMIDA_MUARRIF), amud_mutah(&asmaa, &AAMIDA_MASAR))
-    else {
+    let (Some(amud_muarrif), Some(amud_masar)) = (
+        amud_mutah(&asmaa, &AAMIDA_MUARRIF),
+        amud_mutah(&asmaa, &AAMIDA_MASAR),
+    ) else {
         tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             jadwal.to_owned(),
@@ -479,9 +512,10 @@ fn tathbitat_galaxy(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec
     loop {
         match sufuf.next() {
             Ok(Some(saff)) => {
-                let (Some(muarrif), Some(masar)) =
-                    (qeema_raqm(saff, &amud_muarrif), qeema_nass(saff, &amud_masar))
-                else {
+                let (Some(muarrif), Some(masar)) = (
+                    qeema_raqm(saff, &amud_muarrif),
+                    qeema_nass(saff, &amud_masar),
+                ) else {
                     continue;
                 };
                 tathbitat.push(TathbeetGalaxy {
@@ -491,7 +525,10 @@ fn tathbitat_galaxy(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec
                         .as_ref()
                         .and_then(|amud| qeema_nass(saff, amud))
                         .and_then(|qeema| waqt_maqbul(&qeema)),
-                    hajm: amud_hajm.as_ref().and_then(|amud| qeema_raqm(saff, amud)).unwrap_or(0),
+                    hajm: amud_hajm
+                        .as_ref()
+                        .and_then(|amud| qeema_raqm(saff, amud))
+                        .unwrap_or(0),
                     bina: amud_bina.as_ref().and_then(|amud| qeema_nass(saff, amud)),
                 });
             },
@@ -515,9 +552,10 @@ fn anawin_galaxy(ittisal: &Connection) -> BTreeMap<u64, String> {
     let Some(asmaa) = asmaa_aamida(ittisal, "LimitedDetails") else {
         return anawin;
     };
-    let (Some(amud_muarrif), Some(amud_unwan)) =
-        (amud_mutah(&asmaa, &["productId", "id"]), amud_mutah(&asmaa, &["title", "name"]))
-    else {
+    let (Some(amud_muarrif), Some(amud_unwan)) = (
+        amud_mutah(&asmaa, &["productId", "id"]),
+        amud_mutah(&asmaa, &["title", "name"]),
+    ) else {
         return anawin;
     };
     let Ok(mut bayan) = ittisal.prepare("SELECT * FROM \"LimitedDetails\"") else {
@@ -527,9 +565,10 @@ fn anawin_galaxy(ittisal: &Connection) -> BTreeMap<u64, String> {
         return anawin;
     };
     while let Ok(Some(saff)) = sufuf.next() {
-        if let (Some(muarrif), Some(unwan)) =
-            (qeema_raqm(saff, &amud_muarrif), qeema_nass(saff, &amud_unwan))
-        {
+        if let (Some(muarrif), Some(unwan)) = (
+            qeema_raqm(saff, &amud_muarrif),
+            qeema_nass(saff, &amud_unwan),
+        ) {
             let _ = anawin.insert(muarrif, unwan);
         }
     }
@@ -619,9 +658,10 @@ fn anwa_qita(ittisal: &Connection) -> BTreeMap<u64, String> {
     let Some(asmaa) = asmaa_aamida(ittisal, "GamePieceTypes") else {
         return anwa;
     };
-    let (Some(amud_muarrif), Some(amud_naw)) =
-        (amud_mutah(&asmaa, &["id"]), amud_mutah(&asmaa, &["type", "name"]))
-    else {
+    let (Some(amud_muarrif), Some(amud_naw)) = (
+        amud_mutah(&asmaa, &["id"]),
+        amud_mutah(&asmaa, &["type", "name"]),
+    ) else {
         return anwa;
     };
     let Ok(mut bayan) = ittisal.prepare("SELECT * FROM \"GamePieceTypes\"") else {
@@ -742,8 +782,10 @@ fn alaab_galaxy(
         }
 
         let bayan = bayan_goggame(&tathbeet.jidhr, Some(tathbeet.muarrif));
-        let mut simat: Vec<SimatLuba> =
-            qita.get(&tathbeet.muarrif).map(|zawj| zawj.1.clone()).unwrap_or_default();
+        let mut simat: Vec<SimatLuba> = qita
+            .get(&tathbeet.muarrif)
+            .map(|zawj| zawj.1.clone())
+            .unwrap_or_default();
         simat.dedup();
 
         let ism = bayan
@@ -873,7 +915,11 @@ fn tanfidhi_goggame(qeema: &Value) -> Option<String> {
         if !nass_haql(muhimma, "type").is_some_and(|naw| naw.eq_ignore_ascii_case("FileTask")) {
             continue;
         }
-        let rutba = if muhimma.get("isPrimary").and_then(Value::as_bool).unwrap_or(false) {
+        let rutba = if muhimma
+            .get("isPrimary")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+        {
             3
         } else if nass_haql(muhimma, "category")
             .is_some_and(|sinf| sinf.eq_ignore_ascii_case("game"))
@@ -1038,12 +1084,17 @@ fn suwar_mahalliya(jidhr_matjar: &Path, muarrif: u64) -> MasadirSuwar {
             .extension()
             .and_then(|imtidad| imtidad.to_str())
             .is_some_and(|imtidad| {
-                IMTIDADAT_SURA.iter().any(|maqbul| imtidad.eq_ignore_ascii_case(maqbul))
+                IMTIDADAT_SURA
+                    .iter()
+                    .any(|maqbul| imtidad.eq_ignore_ascii_case(maqbul))
             });
         if !sura_maqbula {
             continue;
         }
-        let Some(ism) = masar.file_name().and_then(|ism| ism.to_str()).map(str::to_lowercase)
+        let Some(ism) = masar
+            .file_name()
+            .and_then(|ism| ism.to_str())
+            .map(str::to_lowercase)
         else {
             continue;
         };
@@ -1111,7 +1162,11 @@ fn ism_min_mujallad(jidhr: &Path) -> Option<String> {
 fn muwahhad(masar: &Path, nizam: NizamTashghil) -> String {
     let nass = masar.to_string_lossy().replace('\\', "/");
     let nass = nass.trim_end_matches('/').to_owned();
-    if nizam.hassas_lil_ahruf() { nass } else { nass.to_lowercase() }
+    if nizam.hassas_lil_ahruf() {
+        nass
+    } else {
+        nass.to_lowercase()
+    }
 }
 
 /// Strips a byte order mark, which GOG's installer writes in front of some
@@ -1205,7 +1260,13 @@ mod sijill {
         // SAFETY: `ism_w` is a live, null-terminated wide string for the whole
         // call, `walid.0` is an open key, and `miftah` is a live out-parameter.
         let natija = unsafe {
-            RegOpenKeyExW(walid.0, PCWSTR(ism_w.as_ptr()), None, KEY_READ | ruya, &raw mut miftah)
+            RegOpenKeyExW(
+                walid.0,
+                PCWSTR(ism_w.as_ptr()),
+                None,
+                KEY_READ | ruya,
+                &raw mut miftah,
+            )
         };
         (natija == ERROR_SUCCESS).then_some(Miftah(miftah))
     }
@@ -1305,10 +1366,18 @@ mod sijill {
         if natija != ERROR_SUCCESS {
             return None;
         }
-        let adad_harfiyat = usize::try_from(hajm_mutah).ok()?.div_euclid(2).min(buffer.len());
+        let adad_harfiyat = usize::try_from(hajm_mutah)
+            .ok()?
+            .div_euclid(2)
+            .min(buffer.len());
         let harfiyat = buffer.get(..adad_harfiyat)?;
-        let tul = harfiyat.iter().position(|harf| *harf == 0).unwrap_or(harfiyat.len());
-        let nass = String::from_utf16_lossy(harfiyat.get(..tul)?).trim().to_owned();
+        let tul = harfiyat
+            .iter()
+            .position(|harf| *harf == 0)
+            .unwrap_or(harfiyat.len());
+        let nass = String::from_utf16_lossy(harfiyat.get(..tul)?)
+            .trim()
+            .to_owned();
         (!nass.is_empty()).then_some(nass)
     }
 
@@ -1330,14 +1399,10 @@ mod sijill {
                 let Some(miftah) = fath_farii(&walid, &ism, ruya) else {
                     continue;
                 };
-                let muarrif = ism
-                    .trim()
-                    .parse::<u64>()
-                    .ok()
-                    .or_else(|| {
-                        awwal_qeema(&miftah, &["gameID", "gameId", "productID"])
-                            .and_then(|qeema| qeema.trim().parse::<u64>().ok())
-                    });
+                let muarrif = ism.trim().parse::<u64>().ok().or_else(|| {
+                    awwal_qeema(&miftah, &["gameID", "gameId", "productID"])
+                        .and_then(|qeema| qeema.trim().parse::<u64>().ok())
+                });
                 let Some(muarrif) = muarrif else {
                     continue;
                 };

@@ -247,7 +247,9 @@ impl Katib {
     pub fn nass(&mut self, asl: &str, tarjama: &str) -> Result<HuwiyatNass, KhataRuqaa> {
         let miftah = miftah_min_nass(asl);
         if let Some(huwiya) = self.marajie.get(&miftah).copied() {
-            let sabiqa = self.tarajim.get(usize::try_from(huwiya.0).unwrap_or(usize::MAX));
+            let sabiqa = self
+                .tarajim
+                .get(usize::try_from(huwiya.0).unwrap_or(usize::MAX));
             if sabiqa.is_some_and(|sabiqa| sabiqa == tarjama) {
                 return Ok(huwiya);
             }
@@ -343,10 +345,9 @@ impl Katib {
     /// exceeds what the reader will accept, and [`KhataRuqaa::DaghtFashil`] when
     /// the encoder refuses a section.
     pub fn ikhtim(&self) -> Result<BaytMuhadhah, KhataRuqaa> {
-        let bayan = self
-            .bayan
-            .as_deref()
-            .ok_or(KhataRuqaa::QismMafqud { ism: NawQism::Bayan.ism() })?;
+        let bayan = self.bayan.as_deref().ok_or(KhataRuqaa::QismMafqud {
+            ism: NawQism::Bayan.ism(),
+        })?;
         if !self.safahat.is_empty() && self.alam & (ALAM_TAGHTIYA | ALAM_MASAFA) == 0 {
             return Err(KhataRuqaa::NamatGhayrMuarraf);
         }
@@ -383,7 +384,10 @@ impl Katib {
         let adad = self.mafatih.len();
         let mut tarteeb: Vec<u32> = (0..u32::try_from(adad).unwrap_or(u32::MAX)).collect();
         tarteeb.sort_by_key(|raqm| {
-            self.mafatih.get(usize::try_from(*raqm).unwrap_or(usize::MAX)).copied().unwrap_or(0)
+            self.mafatih
+                .get(usize::try_from(*raqm).unwrap_or(usize::MAX))
+                .copied()
+                .unwrap_or(0)
         });
 
         // A duplicate key survives to here only if two different source strings
@@ -391,7 +395,9 @@ impl Katib {
         // it is still refused, because the alternative is a patch where one of
         // the two strings is unreachable and nothing says which.
         for nafidha in tarteeb.windows(2) {
-            let (Some(awwal), Some(thani)) = (nafidha.first(), nafidha.get(1)) else { continue };
+            let (Some(awwal), Some(thani)) = (nafidha.first(), nafidha.get(1)) else {
+                continue;
+            };
             let a = self.miftah_raqm(*awwal);
             let b = self.miftah_raqm(*thani);
             if a == b {
@@ -415,18 +421,22 @@ impl Katib {
 
     /// One string's key, by handle number.
     fn miftah_raqm(&self, raqm: u32) -> u64 {
-        self.mafatih.get(usize::try_from(raqm).unwrap_or(usize::MAX)).copied().unwrap_or(0)
+        self.mafatih
+            .get(usize::try_from(raqm).unwrap_or(usize::MAX))
+            .copied()
+            .unwrap_or(0)
     }
 
     /// Resolves a handle to its final index.
     fn hall(fahras: &[u32], huwiya: HuwiyatNass) -> Result<u32, KhataRuqaa> {
-        fahras.get(usize::try_from(huwiya.0).unwrap_or(usize::MAX)).copied().ok_or_else(|| {
-            KhataRuqaa::FahrasKharij {
+        fahras
+            .get(usize::try_from(huwiya.0).unwrap_or(usize::MAX))
+            .copied()
+            .ok_or_else(|| KhataRuqaa::FahrasKharij {
                 haql: "string handle",
                 fahras: huwiya.0,
                 adad: u32::try_from(fahras.len()).unwrap_or(u32::MAX),
-            }
-        })
+            })
     }
 
     fn ibni_nusus(&self, fahras: &[u32]) -> Result<Vec<u8>, KhataRuqaa> {
@@ -437,21 +447,27 @@ impl Katib {
         let mut hawd: Vec<u8> = Vec::new();
         let mut mudkhal: HashMap<&str, MarjaNass> = HashMap::new();
         for raqm in 0..u32::try_from(adad).unwrap_or(u32::MAX) {
-            let makan = usize::try_from(Self::hall(fahras, HuwiyatNass(raqm))?)
-                .unwrap_or(usize::MAX);
+            let makan =
+                usize::try_from(Self::hall(fahras, HuwiyatNass(raqm))?).unwrap_or(usize::MAX);
             let tarjama = self
                 .tarajim
                 .get(usize::try_from(raqm).unwrap_or(usize::MAX))
                 .map_or("", String::as_str);
             let marja = adkhil_hawd(naw, &mut hawd, &mut mudkhal, tarjama)?;
             if let Some(khana) = sijillat.get_mut(makan) {
-                *khana = SijillNass { miftah: self.miftah_raqm(raqm), nass: marja };
+                *khana = SijillNass {
+                    miftah: self.miftah_raqm(raqm),
+                    nass: marja,
+                };
             }
         }
 
         let mut nitaqat: Vec<SijillNitaq> = Vec::with_capacity(self.nitaqat.len());
         for (huwiya, nitaq) in &self.nitaqat {
-            nitaqat.push(SijillNitaq { nass: Self::hall(fahras, *huwiya)?, ..*nitaq });
+            nitaqat.push(SijillNitaq {
+                nass: Self::hall(fahras, *huwiya)?,
+                ..*nitaq
+            });
         }
         nitaqat.sort_by_key(|nitaq| (nitaq.nass, nitaq.bidaya, nitaq.id));
 
@@ -492,7 +508,9 @@ impl Katib {
         murattaba.sort_by_key(|(nass, hajm_rubi, _)| (*nass, *hajm_rubi));
 
         for nafidha in murattaba.windows(2) {
-            let (Some(awwal), Some(thani)) = (nafidha.first(), nafidha.get(1)) else { continue };
+            let (Some(awwal), Some(thani)) = (nafidha.first(), nafidha.get(1)) else {
+                continue;
+            };
             if (awwal.0, awwal.1) == (thani.0, thani.1) {
                 return Err(KhataRuqaa::SijillGhayrMutabaq {
                     naw: naw.raqm(),
@@ -504,7 +522,9 @@ impl Katib {
         }
 
         for (nass, hajm_rubi, makan) in murattaba {
-            let Some(takhtit) = self.takhtitat.get(makan) else { continue };
+            let Some(takhtit) = self.takhtitat.get(makan) else {
+                continue;
+            };
             let awwal_harf = adad_u32(naw, "awwal_harf", huruf.len())?;
             let awwal_satr = adad_u32(naw, "awwal_satr", sutur.len())?;
             huruf.extend_from_slice(&takhtit.huruf);
@@ -526,8 +546,12 @@ impl Katib {
         let adad_huruf = adad_u32(naw, "adad_huruf", huruf.len())?;
         let adad_sutur = adad_u32(naw, "adad_sutur", sutur.len())?;
         let izahat_takhtitat = HAJM_TASDIR_KABIR_U32;
-        let izahat_huruf =
-            baad(naw, izahat_takhtitat, adad_takhtitat, size_of::<SijillTakhtit>())?;
+        let izahat_huruf = baad(
+            naw,
+            izahat_takhtitat,
+            adad_takhtitat,
+            size_of::<SijillTakhtit>(),
+        )?;
         let izahat_sutur = baad(naw, izahat_huruf, adad_huruf, size_of::<SijillHarf>())?;
 
         let tasdir = TarwisatTakhtit {
@@ -552,7 +576,9 @@ impl Katib {
         let mut murattaba = self.ashkal.clone();
         murattaba.sort_by_key(|(miftah, _)| miftah.raqm());
         for nafidha in murattaba.windows(2) {
-            let (Some(awwal), Some(thani)) = (nafidha.first(), nafidha.get(1)) else { continue };
+            let (Some(awwal), Some(thani)) = (nafidha.first(), nafidha.get(1)) else {
+                continue;
+            };
             if awwal.0.raqm() == thani.0.raqm() {
                 return Err(KhataRuqaa::SijillGhayrMutabaq {
                     naw: naw.raqm(),
@@ -563,14 +589,18 @@ impl Katib {
             }
         }
 
-        let mafatih: Vec<SijillMiftahShakl> =
-            murattaba.iter().map(|(miftah, _)| *miftah).collect();
+        let mafatih: Vec<SijillMiftahShakl> = murattaba.iter().map(|(miftah, _)| *miftah).collect();
         let mawadi: Vec<SijillMawdiShakl> = murattaba.iter().map(|(_, mawdi)| *mawdi).collect();
 
         let adad = adad_u32(naw, "adad", mafatih.len())?;
         let izahat_mafatih = HAJM_TASDIR_U32;
         let izahat_mawadi = baad(naw, izahat_mafatih, adad, size_of::<SijillMiftahShakl>())?;
-        let tasdir = TarwisatKhareeta { adad, izahat_mafatih, izahat_mawadi, mahjuz: 0 };
+        let tasdir = TarwisatKhareeta {
+            adad,
+            izahat_mafatih,
+            izahat_mawadi,
+            mahjuz: 0,
+        };
 
         let mut jism = Vec::with_capacity(HAJM_TASDIR);
         udfu(&mut jism, naw, bytemuck::bytes_of(&tasdir))?;
@@ -583,11 +613,16 @@ impl Katib {
         let naw = NawQism::Qiyud;
         let mut sijillat: Vec<SijillQayd> = Vec::with_capacity(self.qiyud.len());
         for (huwiya, qayd) in &self.qiyud {
-            sijillat.push(SijillQayd { nass: Self::hall(fahras, *huwiya)?, ..*qayd });
+            sijillat.push(SijillQayd {
+                nass: Self::hall(fahras, *huwiya)?,
+                ..*qayd
+            });
         }
         sijillat.sort_by_key(|qayd| qayd.nass);
         for nafidha in sijillat.windows(2) {
-            let (Some(awwal), Some(thani)) = (nafidha.first(), nafidha.get(1)) else { continue };
+            let (Some(awwal), Some(thani)) = (nafidha.first(), nafidha.get(1)) else {
+                continue;
+            };
             if awwal.nass == thani.nass {
                 return Err(KhataRuqaa::SijillGhayrMutabaq {
                     naw: naw.raqm(),
@@ -599,7 +634,11 @@ impl Katib {
         }
 
         let adad = adad_u32(naw, "adad", sijillat.len())?;
-        let tasdir = TarwisatQiyud { adad, izaha: HAJM_TASDIR_U32, mahjuz: 0 };
+        let tasdir = TarwisatQiyud {
+            adad,
+            izaha: HAJM_TASDIR_U32,
+            mahjuz: 0,
+        };
         let mut jism = Vec::with_capacity(HAJM_TASDIR);
         udfu(&mut jism, naw, bytemuck::bytes_of(&tasdir))?;
         udfu_sijillat(&mut jism, naw, &sijillat)?;
@@ -614,14 +653,14 @@ impl Katib {
 
         let mut sijillat: Vec<SijillSafha> = Vec::with_capacity(self.safahat.len());
         for safha in &self.safahat {
-            let madum = u32::from(safha.ard).checked_mul(u32::from(safha.irtifa)).ok_or(
-                KhataRuqaa::SafhaTalifa {
+            let madum = u32::from(safha.ard)
+                .checked_mul(u32::from(safha.irtifa))
+                .ok_or(KhataRuqaa::SafhaTalifa {
                     safha: adad_u32(naw, "safha", sijillat.len())?,
                     izaha: u64::from(izaha),
                     nihaya: u64::from(izaha),
                     tul: tul_u64(safha.bayt.len()),
-                },
-            )?;
+                })?;
             let tul = adad_u32(naw, "tul", safha.bayt.len())?;
             if madum != tul {
                 return Err(KhataRuqaa::SafhaTalifa {
@@ -638,14 +677,20 @@ impl Katib {
                 irtifa: safha.irtifa,
                 hashw: 0,
             });
-            izaha = izaha.checked_add(tul).ok_or_else(|| KhataRuqaa::HajmKhaamMufrit {
-                naw: naw.raqm(),
-                muallan: u64::MAX,
-                saqf: AQSA_QISM_KHAAM,
-            })?;
+            izaha = izaha
+                .checked_add(tul)
+                .ok_or_else(|| KhataRuqaa::HajmKhaamMufrit {
+                    naw: naw.raqm(),
+                    muallan: u64::MAX,
+                    saqf: AQSA_QISM_KHAAM,
+                })?;
         }
 
-        let tasdir = TarwisatLawha { adad_safahat, izahat_safahat, mahjuz: 0 };
+        let tasdir = TarwisatLawha {
+            adad_safahat,
+            izahat_safahat,
+            mahjuz: 0,
+        };
         let mut jism = Vec::with_capacity(HAJM_TASDIR);
         udfu(&mut jism, naw, bytemuck::bytes_of(&tasdir))?;
         udfu_sijillat(&mut jism, naw, &sijillat)?;
@@ -684,14 +729,24 @@ impl Katib {
                     qeema: u64::from(izahat_basmat),
                     hadd: u64::from(u32::MAX),
                 })?;
-            sijillat.push(SijillKhatt { ism, izahat_basma, fahras, alam: khatt.alam });
+            sijillat.push(SijillKhatt {
+                ism,
+                izahat_basma,
+                fahras,
+                alam: khatt.alam,
+            });
         }
         // The pool's offset was computed before its contents existed, which is
         // fine because both arrays before it are fixed size — but it has to be
         // re-checked against what the names actually came to.
         let tul_hawd = adad_u32(naw, "tul_hawd", hawd.len())?;
 
-        let tasdir = TarwisatKhatt { adad_khutut, izahat_khutut, izahat_hawd, tul_hawd };
+        let tasdir = TarwisatKhatt {
+            adad_khutut,
+            izahat_khutut,
+            izahat_hawd,
+            tul_hawd,
+        };
         let mut jism = Vec::with_capacity(HAJM_TASDIR);
         udfu(&mut jism, naw, bytemuck::bytes_of(&tasdir))?;
         udfu_sijillat(&mut jism, naw, &sijillat)?;
@@ -712,9 +767,11 @@ impl Katib {
         if naw.bila_daght() || khaam.is_empty() {
             return Ok((NawDaght::Bila, khaam.to_vec()));
         }
-        let madghut = zstd::bulk::compress(khaam, self.mustawa).map_err(|khata| {
-            KhataRuqaa::DaghtFashil { naw: naw.raqm(), tafsil: khata.to_string() }
-        })?;
+        let madghut =
+            zstd::bulk::compress(khaam, self.mustawa).map_err(|khata| KhataRuqaa::DaghtFashil {
+                naw: naw.raqm(),
+                tafsil: khata.to_string(),
+            })?;
         if madghut.len() < khaam.len() {
             Ok((NawDaght::Zstd, madghut))
         } else {
@@ -744,7 +801,9 @@ impl Katib {
         // is added here rather than being quietly exempt. A ceiling the writer
         // and the reader compute differently is a ceiling that eventually lets
         // through a file one of them refuses.
-        majmu_khaam = majmu_khaam.checked_add(tul_u64(HAJM_KUTLA)).ok_or(mufrit_majmu())?;
+        majmu_khaam = majmu_khaam
+            .checked_add(tul_u64(HAJM_KUTLA))
+            .ok_or(mufrit_majmu())?;
         if majmu_khaam > AQSA_MAJMU_KHAAM {
             return Err(KhataRuqaa::MajmuKhaamMufrit {
                 majmu: majmu_khaam,
@@ -756,7 +815,10 @@ impl Katib {
         let adad_aqsam = u32::try_from(adad)
             .ok()
             .filter(|adad| *adad <= AQSA_AQSAM)
-            .ok_or(KhataRuqaa::AdadAqsamGhayrSalih { adad: u32::MAX, aqsa: AQSA_AQSAM })?;
+            .ok_or(KhataRuqaa::AdadAqsamGhayrSalih {
+                adad: u32::MAX,
+                aqsa: AQSA_AQSAM,
+            })?;
         let mut izaha = tul_u64(HAJM_TARWISA)
             .checked_add(u64::from(adad_aqsam).saturating_mul(tul_u64(HAJM_MADKHAL)))
             .ok_or(mufrit_majmu())?;
@@ -766,7 +828,13 @@ impl Katib {
         for (naw, daght, bayt, tul_khaam) in makhzuna {
             izaha = muhadhah(izaha)?;
             let tul_makhzun = tul_u64(bayt.len());
-            madkhalat.push(MadkhalQism { naw, izaha, tul_makhzun, tul_khaam, daght });
+            madkhalat.push(MadkhalQism {
+                naw,
+                izaha,
+                tul_makhzun,
+                tul_khaam,
+                daght,
+            });
             jism.push((izaha, bayt));
             izaha = izaha.checked_add(tul_makhzun).ok_or(mufrit_majmu())?;
         }
@@ -779,9 +847,13 @@ impl Katib {
             tul_khaam: tul_u64(HAJM_KUTLA),
             daght: NawDaght::Bila,
         });
-        let hajm_kulli = izahat_tawqee.checked_add(tul_u64(HAJM_KUTLA)).ok_or(mufrit_majmu())?;
-        let siaa = hajm_usize(hajm_kulli)
-            .ok_or(KhataRuqaa::MajmuKhaamMufrit { majmu: hajm_kulli, saqf: AQSA_MAJMU_KHAAM })?;
+        let hajm_kulli = izahat_tawqee
+            .checked_add(tul_u64(HAJM_KUTLA))
+            .ok_or(mufrit_majmu())?;
+        let siaa = hajm_usize(hajm_kulli).ok_or(KhataRuqaa::MajmuKhaamMufrit {
+            majmu: hajm_kulli,
+            saqf: AQSA_MAJMU_KHAAM,
+        })?;
 
         let mut muhadhah_malaf = BaytMuhadhah::sifr(siaa);
         let malaf = muhadhah_malaf.bayt_mut();
@@ -789,11 +861,13 @@ impl Katib {
         for (fahras, madkhal) in madkhalat.iter().enumerate() {
             let bidaya = HAJM_TARWISA.saturating_add(fahras.saturating_mul(HAJM_MADKHAL));
             let nihaya = bidaya.saturating_add(HAJM_MADKHAL);
-            let nafidha = malaf.get_mut(bidaya..nihaya).ok_or_else(|| KhataRuqaa::MalafQaseer {
-                haql: "the section table",
-                tul: hajm_kulli,
-                matlub: tul_u64(nihaya),
-            })?;
+            let nafidha = malaf
+                .get_mut(bidaya..nihaya)
+                .ok_or_else(|| KhataRuqaa::MalafQaseer {
+                    haql: "the section table",
+                    tul: hajm_kulli,
+                    matlub: tul_u64(nihaya),
+                })?;
             madkhal.ila_bayt(nafidha)?;
         }
 
@@ -816,11 +890,13 @@ impl Katib {
             tul: hajm_kulli,
             matlub: izahat_tawqee,
         })?;
-        let muhtawa = malaf.get(HAJM_TARWISA..nihayat_muhtawa).ok_or(KhataRuqaa::MalafQaseer {
-            haql: "the hashed content",
-            tul: hajm_kulli,
-            matlub: izahat_tawqee,
-        })?;
+        let muhtawa = malaf
+            .get(HAJM_TARWISA..nihayat_muhtawa)
+            .ok_or(KhataRuqaa::MalafQaseer {
+                haql: "the hashed content",
+                tul: hajm_kulli,
+                matlub: izahat_tawqee,
+            })?;
         let basma = *blake3::hash(muhtawa).as_bytes();
 
         let tarwisa = Tarwisa {
@@ -830,11 +906,13 @@ impl Katib {
             hajm_kulli,
             basma,
         };
-        let ras = malaf.get_mut(..HAJM_TARWISA).ok_or_else(|| KhataRuqaa::MalafQaseer {
-            haql: "the header",
-            tul: hajm_kulli,
-            matlub: tul_u64(HAJM_TARWISA),
-        })?;
+        let ras = malaf
+            .get_mut(..HAJM_TARWISA)
+            .ok_or_else(|| KhataRuqaa::MalafQaseer {
+                haql: "the header",
+                tul: hajm_kulli,
+                matlub: tul_u64(HAJM_TARWISA),
+            })?;
         tarwisa.ila_bayt(ras)?;
 
         Ok(muhadhah_malaf)
@@ -870,22 +948,23 @@ pub fn khatm(
 ) -> Result<(), KhataRuqaa> {
     let tarwisa = Tarwisa::min_bayt(malaf)?;
     let jadwal = JadwalAqsam::min_bayt(malaf, &tarwisa)?;
-    let madkhal = jadwal
-        .qism(NawQism::Tawqee)
-        .ok_or(KhataRuqaa::QismMafqud { ism: NawQism::Tawqee.ism() })?;
+    let madkhal = jadwal.qism(NawQism::Tawqee).ok_or(KhataRuqaa::QismMafqud {
+        ism: NawQism::Tawqee.ism(),
+    })?;
 
     let nihayat_muhtawa =
         hajm_usize(jadwal.nihayat_muhtawa()).ok_or(KhataRuqaa::KutlatTawqeeTalifa {
             haql: "the block's offset does not fit this platform's address space",
         })?;
     let tul_malaf = tul_u64(malaf.len());
-    let muhtawa = malaf.get(HAJM_TARWISA..nihayat_muhtawa).ok_or_else(|| {
-        KhataRuqaa::MalafQaseer {
-            haql: "the hashed content",
-            tul: tul_malaf,
-            matlub: jadwal.nihayat_muhtawa(),
-        }
-    })?;
+    let muhtawa =
+        malaf
+            .get(HAJM_TARWISA..nihayat_muhtawa)
+            .ok_or_else(|| KhataRuqaa::MalafQaseer {
+                haql: "the hashed content",
+                tul: tul_malaf,
+                matlub: jadwal.nihayat_muhtawa(),
+            })?;
     let mahsuba = *blake3::hash(muhtawa).as_bytes();
     if mahsuba != tarwisa.basma {
         return Err(KhataRuqaa::BasmaGhayrMutabaqa {
@@ -898,24 +977,31 @@ pub fn khatm(
     let bidaya = hajm_usize(madkhal.izaha).ok_or(KhataRuqaa::KutlatTawqeeTalifa {
         haql: "the block's offset does not fit this platform's address space",
     })?;
-    let nihaya = bidaya.checked_add(HAJM_KUTLA).ok_or(KhataRuqaa::KutlatTawqeeTalifa {
-        haql: "the block's offset plus its length overflows",
-    })?;
+    let nihaya = bidaya
+        .checked_add(HAJM_KUTLA)
+        .ok_or(KhataRuqaa::KutlatTawqeeTalifa {
+            haql: "the block's offset plus its length overflows",
+        })?;
     // Read before the mutable borrow: the closure would have to hold `malaf`
     // shared while `get_mut` holds it uniquely.
     let tul_malaf = tul_u64(malaf.len());
-    let nafidha = malaf.get_mut(bidaya..nihaya).ok_or_else(|| KhataRuqaa::MalafQaseer {
-        haql: "the signature block",
-        tul: tul_malaf,
-        matlub: tul_u64(nihaya),
-    })?;
+    let nafidha = malaf
+        .get_mut(bidaya..nihaya)
+        .ok_or_else(|| KhataRuqaa::MalafQaseer {
+            haql: "the signature block",
+            tul: tul_malaf,
+            matlub: tul_u64(nihaya),
+        })?;
     kutla.ila_bayt(nafidha);
     Ok(())
 }
 
 /// The refusal for arithmetic that would exceed what a container may declare.
 const fn mufrit_majmu() -> KhataRuqaa {
-    KhataRuqaa::MajmuKhaamMufrit { majmu: u64::MAX, saqf: AQSA_MAJMU_KHAAM }
+    KhataRuqaa::MajmuKhaamMufrit {
+        majmu: u64::MAX,
+        saqf: AQSA_MAJMU_KHAAM,
+    }
 }
 
 /// The next sixteen-byte boundary at or after an offset.
@@ -924,7 +1010,9 @@ fn muhadhah(izaha: u64) -> Result<u64, KhataRuqaa> {
     if baqi == 0 {
         return Ok(izaha);
     }
-    izaha.checked_add(MUHADHAT_QISM - baqi).ok_or_else(mufrit_majmu)
+    izaha
+        .checked_add(MUHADHAT_QISM - baqi)
+        .ok_or_else(mufrit_majmu)
 }
 
 /// An offset plus a record array's extent, within one section.
@@ -936,7 +1024,9 @@ fn baad(naw: NawQism, izaha: u32, adad: u32, khatwa: usize) -> Result<u32, Khata
         hadd: u64::from(u32::MAX),
     };
     let khatwa = u32::try_from(khatwa).map_err(|_| talif())?;
-    adad.checked_mul(khatwa).and_then(|tul| izaha.checked_add(tul)).ok_or_else(talif)
+    adad.checked_mul(khatwa)
+        .and_then(|tul| izaha.checked_add(tul))
+        .ok_or_else(talif)
 }
 
 /// A count or a length as the `u32` the preambles store.
@@ -1006,13 +1096,12 @@ fn udfu_sijillat<T: Pod>(
     naw: NawQism,
     sijillat: &[T],
 ) -> Result<(), KhataRuqaa> {
-    let bayt: &[u8] = bytemuck::try_cast_slice(sijillat).map_err(|_| {
-        KhataRuqaa::MuhadhahaGhayrSaliha {
+    let bayt: &[u8] =
+        bytemuck::try_cast_slice(sijillat).map_err(|_| KhataRuqaa::MuhadhahaGhayrSaliha {
             naw: naw.raqm(),
             haql: "sijillat",
             izaha: tul_u64(jism.len()),
-        }
-    })?;
+        })?;
     udfu(jism, naw, bayt)
 }
 
@@ -1024,8 +1113,12 @@ fn unsakh(malaf: &mut [u8], izaha: u64, bayt: &[u8], hajm: u64) -> Result<(), Kh
         matlub,
     };
     let bidaya = hajm_usize(izaha).ok_or_else(|| qaseer(izaha))?;
-    let nihaya = bidaya.checked_add(bayt.len()).ok_or_else(|| qaseer(izaha))?;
-    let nafidha = malaf.get_mut(bidaya..nihaya).ok_or_else(|| qaseer(tul_u64(nihaya)))?;
+    let nihaya = bidaya
+        .checked_add(bayt.len())
+        .ok_or_else(|| qaseer(izaha))?;
+    let nafidha = malaf
+        .get_mut(bidaya..nihaya)
+        .ok_or_else(|| qaseer(tul_u64(nihaya)))?;
     nafidha.copy_from_slice(bayt);
     Ok(())
 }

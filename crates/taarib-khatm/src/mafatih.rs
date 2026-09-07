@@ -54,19 +54,22 @@ pub fn hat(ism: &str) -> Result<MiftahKhass, KhataKhatm> {
     let nassi = match madkhal(ism)?.get_password() {
         Ok(nassi) => nassi,
         Err(keyring::Error::NoEntry) => {
-            return Err(KhataKhatm::MiftahMafqud { ism: ism.to_owned() });
-        }
+            return Err(KhataKhatm::MiftahMafqud {
+                ism: ism.to_owned(),
+            });
+        },
         Err(khata) => {
             return Err(KhataKhatm::KhataMiftah {
                 amal: "read from the keychain",
                 sabab: khata.to_string(),
             });
-        }
+        },
     };
     let bayt = hex::decode(&nassi).map_err(|_| KhataKhatm::MaddaTalifa { tul: nassi.len() })?;
-    let bayt: [u8; 32] = bayt.as_slice().try_into().map_err(|_| KhataKhatm::MaddaTalifa {
-        tul: bayt.len(),
-    })?;
+    let bayt: [u8; 32] = bayt
+        .as_slice()
+        .try_into()
+        .map_err(|_| KhataKhatm::MaddaTalifa { tul: bayt.len() })?;
     Ok(MiftahKhass::min_bayt(&bayt))
 }
 

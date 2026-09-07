@@ -132,7 +132,13 @@ impl Shabaka {
                 saqf: u64::from(AQSA_ARD),
             });
         }
-        Ok(Self { hajm_khana, ard, aamida, sufuf, khanat })
+        Ok(Self {
+            hajm_khana,
+            ard,
+            aamida,
+            sufuf,
+            khanat,
+        })
     }
 
     /// Derives the grid a metrics table describes, and checks it against the
@@ -148,11 +154,7 @@ impl Shabaka {
     /// the TPL carries — which means the table and the texture were not produced
     /// from one another and nothing written from this grid would land where the
     /// game samples.
-    pub fn min_madakhil(
-        madakhil: &[(u32, u32)],
-        ard: u32,
-        irtifa: u32,
-    ) -> Result<Self, KhataBio4> {
+    pub fn min_madakhil(madakhil: &[(u32, u32)], ard: u32, irtifa: u32) -> Result<Self, KhataBio4> {
         let Some(&(hajm_khana, _)) = madakhil.first() else {
             return Err(KhataBio4::BunyaGhayrMutawaqqaa {
                 haql: "metrics table length",
@@ -230,7 +232,10 @@ impl Shabaka {
         }
         let amud = fahras.checked_rem(self.aamida)?;
         let satr = fahras.checked_div(self.aamida)?;
-        Some((amud.saturating_mul(self.hajm_khana), satr.saturating_mul(self.hajm_khana)))
+        Some((
+            amud.saturating_mul(self.hajm_khana),
+            satr.saturating_mul(self.hajm_khana),
+        ))
     }
 }
 

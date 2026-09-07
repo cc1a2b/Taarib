@@ -121,21 +121,24 @@ impl KhattMujammaa {
     /// [`KhataTarqee::KhattKharijMajmua`] when the font is not inside the
     /// directory, and [`KhataTarqee::KhataMalaf`] when it cannot be read to be
     /// fingerprinted.
-    pub fn min_majmua(
-        jidhr_khutut: &Path,
-        masar: &Path,
-        alam: u16,
-    ) -> Result<Self, KhataTarqee> {
-        let jidhr = jidhr_khutut.canonicalize().map_err(|sabab| KhataTarqee::KhataMalaf {
-            masar: jidhr_khutut.to_path_buf(),
-            sabab,
-        })?;
-        let kamil = masar.canonicalize().map_err(|sabab| KhataTarqee::KhataMalaf {
-            masar: masar.to_path_buf(),
-            sabab,
-        })?;
+    pub fn min_majmua(jidhr_khutut: &Path, masar: &Path, alam: u16) -> Result<Self, KhataTarqee> {
+        let jidhr = jidhr_khutut
+            .canonicalize()
+            .map_err(|sabab| KhataTarqee::KhataMalaf {
+                masar: jidhr_khutut.to_path_buf(),
+                sabab,
+            })?;
+        let kamil = masar
+            .canonicalize()
+            .map_err(|sabab| KhataTarqee::KhataMalaf {
+                masar: masar.to_path_buf(),
+                sabab,
+            })?;
         if !kamil.starts_with(&jidhr) {
-            return Err(KhataTarqee::KhattKharijMajmua { masar: kamil, jidhr });
+            return Err(KhataTarqee::KhattKharijMajmua {
+                masar: kamil,
+                jidhr,
+            });
         }
 
         let bayt = std::fs::read(&kamil).map_err(|sabab| KhataTarqee::KhataMalaf {
@@ -149,7 +152,12 @@ impl KhattMujammaa {
             .to_owned();
         let basma = Basma::min_bayt(*blake3::hash(&bayt).as_bytes());
 
-        Ok(Self { masar: kamil, ism, basma, alam })
+        Ok(Self {
+            masar: kamil,
+            ism,
+            basma,
+            alam,
+        })
     }
 
     /// The font's file name, as the installer will place it.
@@ -177,7 +185,11 @@ impl KhattMujammaa {
     /// the one on disk at install time is the one this patch was built against.
     #[must_use]
     pub fn sijill(&self) -> KhattMabni {
-        KhattMabni { ism: self.ism.clone(), basma: *self.basma.bayt(), alam: self.alam }
+        KhattMabni {
+            ism: self.ism.clone(),
+            basma: *self.basma.bayt(),
+            alam: self.alam,
+        }
     }
 }
 
@@ -205,7 +217,9 @@ pub fn rassim(
 ) -> Result<(Lawha, IthbatTawlid), KhataTarqee> {
     let misafa = KhiyaratMisafa::default();
     let lawha = Lawha::ibni(ashkal, silsila, khiyarat, misafa, namat).map_err(|khata| {
-        KhataTarqee::RasfFashil { sabab: khata.injilizi }
+        KhataTarqee::RasfFashil {
+            sabab: khata.injilizi,
+        }
     })?;
 
     let ithbat = IthbatTawlid {
@@ -253,7 +267,11 @@ impl SafhatMasmuha {
                 bayt: safha.bayt.clone(),
             })
             .collect();
-        Self { safahat, khareeta: lawha.khareeta.murattaba(), ithbat }
+        Self {
+            safahat,
+            khareeta: lawha.khareeta.murattaba(),
+            ithbat,
+        }
     }
 
     /// The pages, for the writer.
@@ -286,7 +304,13 @@ impl SafhatMasmuha {
     /// goes afterwards was never the question. It goes into
     /// [`MuhtawaMasmuh::Safahat`], which is what the certificate counts.
     #[must_use]
-    pub fn ikhrij(self) -> (Vec<SafhaMabniya>, Vec<(MiftahShakl, MawdiShakl)>, IthbatTawlid) {
+    pub fn ikhrij(
+        self,
+    ) -> (
+        Vec<SafhaMabniya>,
+        Vec<(MiftahShakl, MawdiShakl)>,
+        IthbatTawlid,
+    ) {
         (self.safahat, self.khareeta, self.ithbat)
     }
 }
@@ -423,7 +447,7 @@ impl ShahadatBawwaba {
                 MuhtawaMasmuh::Nass { .. } => shahada.nusus = shahada.nusus.saturating_add(1),
                 MuhtawaMasmuh::Takhtit(_) => {
                     shahada.takhtitat = shahada.takhtitat.saturating_add(1);
-                }
+                },
                 MuhtawaMasmuh::Safahat(safahat) => {
                     shahada.safahat = shahada.safahat.saturating_add(safahat.safahat().len());
                     for basma in safahat.ithbat().khutut() {
@@ -431,8 +455,8 @@ impl ShahadatBawwaba {
                             shahada.khutut.push(*basma);
                         }
                     }
-                }
-                MuhtawaMasmuh::Khatt(_) => {}
+                },
+                MuhtawaMasmuh::Khatt(_) => {},
                 MuhtawaMasmuh::Farq(_) => shahada.furuq = shahada.furuq.saturating_add(1),
             }
         }

@@ -67,7 +67,9 @@ impl MiftahKhass {
     /// Wraps 32 raw seed bytes.
     #[must_use]
     pub fn min_bayt(bayt: &[u8; 32]) -> Self {
-        Self { tawqee: SigningKey::from_bytes(bayt) }
+        Self {
+            tawqee: SigningKey::from_bytes(bayt),
+        }
     }
 
     /// The 32-byte seed.
@@ -79,7 +81,9 @@ impl MiftahKhass {
     /// The matching verifying key.
     #[must_use]
     pub fn aam(&self) -> MiftahAam {
-        MiftahAam { mafateeh: self.tawqee.verifying_key() }
+        MiftahAam {
+            mafateeh: self.tawqee.verifying_key(),
+        }
     }
 
     /// Signs a message.

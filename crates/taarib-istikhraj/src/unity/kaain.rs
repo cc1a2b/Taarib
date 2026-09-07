@@ -326,23 +326,31 @@ impl KhataKaain {
     pub fn ila_sabab(&self) -> SababRafd {
         match self {
             Self::BilaShajaratAnwa { naw } | Self::IsmMajhul { naw, .. } => {
-                SababRafd::BilaShajaratAnwa { naw_kaen: naw.clone(), adad: 1 }
-            }
-            Self::NawMarjiMajhul { ism } => {
-                SababRafd::BilaShajaratAnwa { naw_kaen: Some(ism.clone()), adad: 1 }
-            }
+                SababRafd::BilaShajaratAnwa {
+                    naw_kaen: naw.clone(),
+                    adad: 1,
+                }
+            },
+            Self::NawMarjiMajhul { ism } => SababRafd::BilaShajaratAnwa {
+                naw_kaen: Some(ism.clone()),
+                adad: 1,
+            },
             Self::TarmizGhayrMaruf { asl, .. } => SababRafd::SighaMajhula {
                 wujid: format!("a TextAsset (`{asl}`) in an undeclared non-UTF-8 encoding"),
             },
             Self::SijillMarajiGhayrMadum { isdar } => SababRafd::SighaMajhula {
                 wujid: format!("a Unity managed-reference registry of version {isdar}"),
             },
-            Self::TajawuzHadd { hadd, qeema, saqf } => {
-                SababRafd::TajawuzHadd { hadd: (*hadd).to_owned(), qeema: *qeema, saqf: *saqf }
-            }
+            Self::TajawuzHadd { hadd, qeema, saqf } => SababRafd::TajawuzHadd {
+                hadd: (*hadd).to_owned(),
+                qeema: *qeema,
+                saqf: *saqf,
+            },
             Self::HaqlTalif { .. } | Self::Qira(_) | Self::ShajaraShadha { .. } => {
-                SababRafd::Talif { sabab: self.to_string() }
-            }
+                SababRafd::Talif {
+                    sabab: self.to_string(),
+                }
+            },
         }
     }
 
@@ -506,9 +514,10 @@ impl QeemaHaql {
     #[must_use]
     pub fn haql(&self, ism: &str) -> Option<&Self> {
         match self {
-            Self::Sijil(huqul) => {
-                huqul.iter().find(|(mawjud, _)| mawjud == ism).map(|(_, qeema)| qeema)
-            }
+            Self::Sijil(huqul) => huqul
+                .iter()
+                .find(|(mawjud, _)| mawjud == ism)
+                .map(|(_, qeema)| qeema),
             _ => None,
         }
     }
@@ -576,7 +585,11 @@ impl<'s> SiyaqQira<'s> {
     /// reference's payload.
     #[must_use]
     pub const fn li_marji(self, shajara: &'s ShajaratAnwa) -> Self {
-        Self { shajara, anwa_marjiiya: self.anwa_marjiiya, jism_marji: true }
+        Self {
+            shajara,
+            anwa_marjiiya: self.anwa_marjiiya,
+            jism_marji: true,
+        }
     }
 }
 
@@ -598,10 +611,7 @@ impl<'s> SiyaqQira<'s> {
 /// `m_RefTypes` does not describe and
 /// [`KhataKaain::SijillMarajiGhayrMadum`] for a registry version this build
 /// does not read.
-pub fn iqra_kaain(
-    mulsal: &Mulsal<'_>,
-    madkhal: &MadkhalKaain,
-) -> Result<QeemaHaql, KhataKaain> {
+pub fn iqra_kaain(mulsal: &Mulsal<'_>, madkhal: &MadkhalKaain) -> Result<QeemaHaql, KhataKaain> {
     let naw = mulsal
         .naw_kaain(madkhal)
         .ok_or(KhataKaain::BilaShajaratAnwa { naw: None })?;
@@ -615,12 +625,19 @@ pub fn iqra_kaain(
         return Err(KhataKaain::BilaShajaratAnwa { naw: ism_naw });
     }
     if let Some((fahras, izaha)) = shajara.majhula() {
-        return Err(KhataKaain::IsmMajhul { naw: ism_naw, fahras, izaha });
+        return Err(KhataKaain::IsmMajhul {
+            naw: ism_naw,
+            fahras,
+            izaha,
+        });
     }
 
     let mut qari = mulsal.qari_kaain(madkhal)?;
-    let siyaq =
-        SiyaqQira { shajara, anwa_marjiiya: mulsal.anwa_marjiiya(), jism_marji: false };
+    let siyaq = SiyaqQira {
+        shajara,
+        anwa_marjiiya: mulsal.anwa_marjiiya(),
+        jism_marji: false,
+    };
     iqra_qeema(&siyaq, 0, &mut qari, 0)
 }
 
@@ -655,10 +672,16 @@ pub fn iqra_qeema(
     }
 
     let shajara = siyaq.shajara;
-    let uqda = shajara.uqad().get(fahras).ok_or_else(|| KhataKaain::ShajaraShadha {
-        naw: ism_jidhr(shajara),
-        sabab: format!("node {fahras} is past the end of a {}-node tree", shajara.uqad().len()),
-    })?;
+    let uqda = shajara
+        .uqad()
+        .get(fahras)
+        .ok_or_else(|| KhataKaain::ShajaraShadha {
+            naw: ism_jidhr(shajara),
+            sabab: format!(
+                "node {fahras} is past the end of a {}-node tree",
+                shajara.uqad().len()
+            ),
+        })?;
     let naw = uqda.naw.clone().ok_or_else(|| KhataKaain::IsmMajhul {
         naw: Some(ism_jidhr(shajara)),
         fahras: u32::try_from(fahras).unwrap_or(u32::MAX),
@@ -700,7 +723,7 @@ pub fn iqra_qeema(
                 azwaj.push((miftah, qeema));
             }
             QeemaHaql::Khareeta(azwaj)
-        }
+        },
         // The one node whose subtree does not describe its own bytes. See this
         // module's header: the payload's layout is in `m_RefTypes`, named by
         // three strings the entry writes immediately before it.
@@ -712,9 +735,12 @@ pub fn iqra_qeema(
             let adad = adad_mutakarrir(qari, "typeless data size", &ism)?;
             let bayt = qari
                 .iqra_bayt("typeless data", u64::from(adad))
-                .map_err(|sabab| KhataKaain::HaqlTalif { ism: ism.clone(), sabab })?;
+                .map_err(|sabab| KhataKaain::HaqlTalif {
+                    ism: ism.clone(),
+                    sabab,
+                })?;
             QeemaHaql::Bayt(bayt.to_vec())
-        }
+        },
         _ => {
             let ibn = fahras.saturating_add(1);
             let masfufa = shajara
@@ -722,18 +748,14 @@ pub fn iqra_qeema(
                 .get(ibn)
                 .is_some_and(|uqda| uqda.naw.as_deref() == Some("Array") || uqda.masfufa);
             if masfufa {
-                if shajara
-                    .uqad()
-                    .get(ibn)
-                    .is_some_and(UqdatShajara::yuhadhi)
-                {
+                if shajara.uqad().get(ibn).is_some_and(UqdatShajara::yuhadhi) {
                     yuhadhi = true;
                 }
                 iqra_masfufa(siyaq, fahras, qari, umq, &ism)?
             } else {
                 iqra_sijil(siyaq, fahras, qari, umq)?
             }
-        }
+        },
     };
 
     if yuhadhi {
@@ -749,23 +771,31 @@ pub fn iqra_qeema(
 /// array or a map, and there is no flag in the node that says which.
 fn qeema_basita(naw: &str, qari: &mut Qari<'_>) -> Option<Result<QeemaHaql, KhataQira>> {
     let natija = match naw {
-        "SInt8" => qari.iqra_i8("SInt8").map(|q| QeemaHaql::Sahih(i64::from(q))),
-        "UInt8" | "char" => qari.iqra_u8("UInt8").map(|q| QeemaHaql::Ghayr(u64::from(q))),
-        "short" | "SInt16" => qari.iqra_i16("SInt16").map(|q| QeemaHaql::Sahih(i64::from(q))),
-        "ushort" | "UInt16" | "unsigned short" => {
-            qari.iqra_u16("UInt16").map(|q| QeemaHaql::Ghayr(u64::from(q)))
-        }
-        "int" | "SInt32" => qari.iqra_i32("SInt32").map(|q| QeemaHaql::Sahih(i64::from(q))),
+        "SInt8" => qari
+            .iqra_i8("SInt8")
+            .map(|q| QeemaHaql::Sahih(i64::from(q))),
+        "UInt8" | "char" => qari
+            .iqra_u8("UInt8")
+            .map(|q| QeemaHaql::Ghayr(u64::from(q))),
+        "short" | "SInt16" => qari
+            .iqra_i16("SInt16")
+            .map(|q| QeemaHaql::Sahih(i64::from(q))),
+        "ushort" | "UInt16" | "unsigned short" => qari
+            .iqra_u16("UInt16")
+            .map(|q| QeemaHaql::Ghayr(u64::from(q))),
+        "int" | "SInt32" => qari
+            .iqra_i32("SInt32")
+            .map(|q| QeemaHaql::Sahih(i64::from(q))),
         // `Type*` is Unity's own name for a runtime type handle serialized as
         // four bytes. It is a scalar despite the name looking like a pointer,
         // and treating it as a struct would look for children it does not have.
-        "uint" | "UInt32" | "unsigned int" | "Type*" => {
-            qari.iqra_u32("UInt32").map(|q| QeemaHaql::Ghayr(u64::from(q)))
-        }
+        "uint" | "UInt32" | "unsigned int" | "Type*" => qari
+            .iqra_u32("UInt32")
+            .map(|q| QeemaHaql::Ghayr(u64::from(q))),
         "long long" | "SInt64" => qari.iqra_i64("SInt64").map(QeemaHaql::Sahih),
         "unsigned long long" | "UInt64" | "FileSize" => {
             qari.iqra_u64("UInt64").map(QeemaHaql::Ghayr)
-        }
+        },
         "float" => qari.iqra_f32("float").map(QeemaHaql::Ashri),
         "double" => qari.iqra_f64("double").map(QeemaHaql::AshriMuda),
         "bool" => qari.iqra_bool("bool").map(QeemaHaql::Mantiqi),
@@ -792,10 +822,13 @@ fn iqra_masfufa(
     // position is fixed by the format rather than searched for, because a search
     // that found the wrong node would read the wrong width per element.
     let bayanat = fahras.saturating_add(3);
-    let uqdat_bayanat = shajara.uqad().get(bayanat).ok_or_else(|| KhataKaain::ShajaraShadha {
-        naw: ism_jidhr(shajara),
-        sabab: format!("array field `{ism}` has no element node"),
-    })?;
+    let uqdat_bayanat = shajara
+        .uqad()
+        .get(bayanat)
+        .ok_or_else(|| KhataKaain::ShajaraShadha {
+            naw: ism_jidhr(shajara),
+            sabab: format!("array field `{ism}` has no element node"),
+        })?;
 
     let adad = adad_mutakarrir(qari, "array size", ism)?;
 
@@ -804,11 +837,17 @@ fn iqra_masfufa(
     // shortcut is byte-identical only when the element carries no align flag,
     // which Unity never sets on a byte element — so the flag is checked rather
     // than assumed.
-    let bayti = matches!(uqdat_bayanat.naw.as_deref(), Some("UInt8" | "SInt8" | "char"));
+    let bayti = matches!(
+        uqdat_bayanat.naw.as_deref(),
+        Some("UInt8" | "SInt8" | "char")
+    );
     if bayti && !uqdat_bayanat.yuhadhi() {
         let bayt = qari
             .iqra_bayt("byte array", u64::from(adad))
-            .map_err(|sabab| KhataKaain::HaqlTalif { ism: ism.to_owned(), sabab })?;
+            .map_err(|sabab| KhataKaain::HaqlTalif {
+                ism: ism.to_owned(),
+                sabab,
+            })?;
         return Ok(QeemaHaql::Bayt(bayt.to_vec()));
     }
 
@@ -838,18 +877,19 @@ fn iqra_sijil(
     // and the object is refused instead of read four bytes out.
     if nihaya <= fahras.saturating_add(1)
         && let Some(uqda) = shajara.uqad().get(fahras)
-            && uqda.hajm > 0 {
-                return Err(KhataKaain::ShajaraShadha {
-                    naw: ism_jidhr(shajara),
-                    sabab: format!(
-                        "field `{}` has type `{}`, which this build does not know how to \
+        && uqda.hajm > 0
+    {
+        return Err(KhataKaain::ShajaraShadha {
+            naw: ism_jidhr(shajara),
+            sabab: format!(
+                "field `{}` has type `{}`, which this build does not know how to \
                          read, no children to read instead, and a declared width of {} byte(s)",
-                        uqda.ism.as_deref().unwrap_or("(unnamed)"),
-                        uqda.naw_aw_faragh(),
-                        uqda.hajm
-                    ),
-                });
-            }
+                uqda.ism.as_deref().unwrap_or("(unnamed)"),
+                uqda.naw_aw_faragh(),
+                uqda.hajm
+            ),
+        });
+    }
 
     let mut huqul: Vec<(String, QeemaHaql)> = Vec::new();
     let mut i = fahras.saturating_add(1);
@@ -857,8 +897,7 @@ fn iqra_sijil(
         // A registry inside a managed reference's own tree describes bytes that
         // are not there. See [`SiyaqQira::jism_marji`].
         if siyaq.jism_marji
-            && shajara.uqad().get(i).and_then(|uqda| uqda.naw.as_deref())
-                == Some(NAW_SIJILL_MARAJI)
+            && shajara.uqad().get(i).and_then(|uqda| uqda.naw.as_deref()) == Some(NAW_SIJILL_MARAJI)
         {
             let baad = shajara.nihayat_farr(i);
             i = if baad > i { baad } else { i.saturating_add(1) };
@@ -941,7 +980,12 @@ fn iqra_sijill_maraji(
     // only its element is special, so the element node sits where it does for
     // every other array and is checked rather than assumed.
     let masfufa = uqdat_qaima.saturating_add(1);
-    if shajara.uqad().get(masfufa).and_then(|uqda| uqda.naw.as_deref()) != Some("Array") {
+    if shajara
+        .uqad()
+        .get(masfufa)
+        .and_then(|uqda| uqda.naw.as_deref())
+        != Some("Array")
+    {
         return Err(shadha("a `RefIds` whose second node is not `Array`"));
     }
     let unsur = uqdat_qaima.saturating_add(3);
@@ -959,8 +1003,14 @@ fn iqra_sijill_maraji(
     // other array-shaped field gets. Applied here because the vector is read
     // inline rather than through `iqra_masfufa`, and skipping it would leave the
     // cursor three bytes early for whatever follows the registry.
-    let yuhadhi = shajara.uqad().get(uqdat_qaima).is_some_and(UqdatShajara::yuhadhi)
-        || shajara.uqad().get(masfufa).is_some_and(UqdatShajara::yuhadhi);
+    let yuhadhi = shajara
+        .uqad()
+        .get(uqdat_qaima)
+        .is_some_and(UqdatShajara::yuhadhi)
+        || shajara
+            .uqad()
+            .get(masfufa)
+            .is_some_and(UqdatShajara::yuhadhi);
     if yuhadhi {
         qari.hadhi(4);
     }
@@ -994,34 +1044,62 @@ fn iqra_marji(
     let uqdat_bayanat = shajara
         .ibn(fahras, "data")
         .ok_or_else(|| shadha("a managed reference with no `data`"))?;
-    if shajara.uqad().get(uqdat_bayanat).and_then(|uqda| uqda.naw.as_deref())
+    if shajara
+        .uqad()
+        .get(uqdat_bayanat)
+        .and_then(|uqda| uqda.naw.as_deref())
         != Some(NAW_BAYANAT_MARJI)
     {
-        return Err(shadha("a managed reference whose `data` is not `ReferencedObjectData`"));
+        return Err(shadha(
+            "a managed reference whose `data` is not `ReferencedObjectData`",
+        ));
     }
 
     let rid = iqra_qeema(siyaq, uqdat_rid, qari, umq.saturating_add(1))?;
     let naw = iqra_qeema(siyaq, uqdat_naw, qari, umq.saturating_add(1))?;
-    let sanf = naw.haql("class").and_then(QeemaHaql::nass).unwrap_or_default().to_owned();
-    let nitaq = naw.haql("ns").and_then(QeemaHaql::nass).unwrap_or_default().to_owned();
-    let tajmee = naw.haql("asm").and_then(QeemaHaql::nass).unwrap_or_default().to_owned();
+    let sanf = naw
+        .haql("class")
+        .and_then(QeemaHaql::nass)
+        .unwrap_or_default()
+        .to_owned();
+    let nitaq = naw
+        .haql("ns")
+        .and_then(QeemaHaql::nass)
+        .unwrap_or_default()
+        .to_owned();
+    let tajmee = naw
+        .haql("asm")
+        .and_then(QeemaHaql::nass)
+        .unwrap_or_default()
+        .to_owned();
 
     // Three empty names is Unity's own way of writing a reference to nothing:
     // the entry exists so the `rid` resolves, and no payload follows it.
     let bayanat = if sanf.is_empty() && nitaq.is_empty() && tajmee.is_empty() {
         QeemaHaql::Sijil(Vec::new())
     } else {
-        let marjii = shajara_marji(siyaq.anwa_marjiiya, &sanf, &nitaq, &tajmee).ok_or_else(
-            || KhataKaain::NawMarjiMajhul { ism: ism_naw_marji(&nitaq, &sanf) },
-        )?;
+        let marjii =
+            shajara_marji(siyaq.anwa_marjiiya, &sanf, &nitaq, &tajmee).ok_or_else(|| {
+                KhataKaain::NawMarjiMajhul {
+                    ism: ism_naw_marji(&nitaq, &sanf),
+                }
+            })?;
         iqra_qeema(&siyaq.li_marji(marjii), 0, qari, umq.saturating_add(1))?
     };
-    if shajara.uqad().get(uqdat_bayanat).is_some_and(UqdatShajara::yuhadhi) {
+    if shajara
+        .uqad()
+        .get(uqdat_bayanat)
+        .is_some_and(UqdatShajara::yuhadhi)
+    {
         qari.hadhi(4);
     }
     // The element node's own flag, which `iqra_masfufa` would have applied for
     // an ordinary array element and which nothing else applies here.
-    if shajara.uqad().get(fahras).is_some_and(UqdatShajara::yuhadhi) {
+    if shajara
+        .uqad()
+        .get(fahras)
+        .is_some_and(UqdatShajara::yuhadhi)
+    {
         qari.hadhi(4);
     }
 
@@ -1055,7 +1133,11 @@ fn shajara_marji<'s>(
 
 /// A managed type's name for a refusal message.
 fn ism_naw_marji(nitaq: &str, sanf: &str) -> String {
-    if nitaq.is_empty() { sanf.to_owned() } else { format!("{nitaq}.{sanf}") }
+    if nitaq.is_empty() {
+        sanf.to_owned()
+    } else {
+        format!("{nitaq}.{sanf}")
+    }
 }
 
 /// The key and value node indices of a `map`.
@@ -1063,15 +1145,22 @@ fn ism_naw_marji(nitaq: &str, sanf: &str) -> String {
 /// `map → Array → { size, pair → { first, second } }`. Each hop is checked
 /// rather than assumed, because a tree that does not have this shape is one the
 /// reader would otherwise walk with the wrong element widths.
-fn huqul_khareeta(
-    shajara: &ShajaratAnwa,
-    fahras: usize,
-) -> Result<(usize, usize), KhataKaain> {
-    let shadha = |sabab: String| KhataKaain::ShajaraShadha { naw: ism_jidhr(shajara), sabab };
+fn huqul_khareeta(shajara: &ShajaratAnwa, fahras: usize) -> Result<(usize, usize), KhataKaain> {
+    let shadha = |sabab: String| KhataKaain::ShajaraShadha {
+        naw: ism_jidhr(shajara),
+        sabab,
+    };
 
     let masfufa = fahras.saturating_add(1);
-    if shajara.uqad().get(masfufa).and_then(|uqda| uqda.naw.as_deref()) != Some("Array") {
-        return Err(shadha("a `map` whose second node is not `Array`".to_owned()));
+    if shajara
+        .uqad()
+        .get(masfufa)
+        .and_then(|uqda| uqda.naw.as_deref())
+        != Some("Array")
+    {
+        return Err(shadha(
+            "a `map` whose second node is not `Array`".to_owned(),
+        ));
     }
     let zawj = fahras.saturating_add(3);
     let awwal = fahras.saturating_add(4);
@@ -1080,7 +1169,9 @@ fn huqul_khareeta(
     }
     let thani = shajara.nihayat_farr(awwal);
     if shajara.uqad().get(thani).is_none() {
-        return Err(shadha("a `map` with a key node and no value node".to_owned()));
+        return Err(shadha(
+            "a `map` with a key node and no value node".to_owned(),
+        ));
     }
     Ok((awwal, thani))
 }
@@ -1092,14 +1183,11 @@ fn huqul_khareeta(
 /// remaining length is a count that cannot be honoured whatever the element type
 /// is. Checking it here means a corrupt count is refused before a `Vec` is
 /// sized, rather than after the allocator has been asked for four gigabytes.
-fn adad_mutakarrir(
-    qari: &mut Qari<'_>,
-    haql: &'static str,
-    ism: &str,
-) -> Result<u32, KhataKaain> {
-    let khaam = qari
-        .iqra_i32(haql)
-        .map_err(|sabab| KhataKaain::HaqlTalif { ism: ism.to_owned(), sabab })?;
+fn adad_mutakarrir(qari: &mut Qari<'_>, haql: &'static str, ism: &str) -> Result<u32, KhataKaain> {
+    let khaam = qari.iqra_i32(haql).map_err(|sabab| KhataKaain::HaqlTalif {
+        ism: ism.to_owned(),
+        sabab,
+    })?;
     let adad = u32::try_from(khaam).map_err(|_| KhataKaain::TajawuzHadd {
         hadd: haql,
         qeema: u64::MAX,
@@ -1107,7 +1195,11 @@ fn adad_mutakarrir(
     })?;
     let baqi = qari.baqi();
     if u64::from(adad) > baqi {
-        return Err(KhataKaain::TajawuzHadd { hadd: haql, qeema: u64::from(adad), saqf: baqi });
+        return Err(KhataKaain::TajawuzHadd {
+            hadd: haql,
+            qeema: u64::from(adad),
+            saqf: baqi,
+        });
     }
     Ok(adad)
 }
@@ -1119,7 +1211,9 @@ fn adad_mutakarrir(
 /// container no game ships and avoids reserving a gigabyte on a number a corrupt
 /// file supplied.
 fn hajz_mabdai(adad: u32) -> usize {
-    usize::try_from(adad).unwrap_or(AQSA_HAJZ_ANASIR).min(AQSA_HAJZ_ANASIR)
+    usize::try_from(adad)
+        .unwrap_or(AQSA_HAJZ_ANASIR)
+        .min(AQSA_HAJZ_ANASIR)
 }
 
 /// The tree's root type name, for a message.
@@ -1209,26 +1303,35 @@ impl FahrasKaainat {
                 if let Some(ism) = qeema.haql("m_Name").and_then(QeemaHaql::nass) {
                     let _ = self.asma.insert(hawiya, ism.to_owned());
                 }
-            }
+            },
             SANF_TRANSFORM | SANF_RECTTRANSFORM => {
                 if let Some(kaain) = qeema.haql("m_GameObject").and_then(QeemaHaql::ishara)
-                    && kaain.mahalli() && !kaain.khali() {
-                        let _ = self.tahwil_ila_kaain.insert(hawiya, kaain.hawiya_masar);
-                        let _ = self.kaain_ila_tahwil.insert(kaain.hawiya_masar, hawiya);
-                    }
+                    && kaain.mahalli()
+                    && !kaain.khali()
+                {
+                    let _ = self.tahwil_ila_kaain.insert(hawiya, kaain.hawiya_masar);
+                    let _ = self.kaain_ila_tahwil.insert(kaain.hawiya_masar, hawiya);
+                }
                 if let Some(walid) = qeema.haql("m_Father").and_then(QeemaHaql::ishara)
-                    && walid.mahalli() && !walid.khali() {
-                        let _ = self.abu.insert(hawiya, walid.hawiya_masar);
-                    }
-            }
+                    && walid.mahalli()
+                    && !walid.khali()
+                {
+                    let _ = self.abu.insert(hawiya, walid.hawiya_masar);
+                }
+            },
             SANF_MONOSCRIPT => {
-                let ism = qeema.haql("m_ClassName").and_then(QeemaHaql::nass).unwrap_or("");
+                let ism = qeema
+                    .haql("m_ClassName")
+                    .and_then(QeemaHaql::nass)
+                    .unwrap_or("");
                 if !ism.is_empty() {
                     // The namespace is joined in because two packages ship a
                     // `LanguageSource` and only the namespace tells them apart,
                     // and the classifier reads this name.
-                    let nitaq =
-                        qeema.haql("m_Namespace").and_then(QeemaHaql::nass).unwrap_or("");
+                    let nitaq = qeema
+                        .haql("m_Namespace")
+                        .and_then(QeemaHaql::nass)
+                        .unwrap_or("");
                     let kamil = if nitaq.is_empty() {
                         ism.to_owned()
                     } else {
@@ -1236,8 +1339,8 @@ impl FahrasKaainat {
                     };
                     let _ = self.asma_scripts.insert(hawiya, kamil);
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
@@ -1370,7 +1473,7 @@ fn ijma_nusus(qeema: &QeemaHaql, masar: &mut String, khazina: &mut Vec<NassMahsu
                     jiwar: Vec::new(),
                 });
             }
-        }
+        },
         QeemaHaql::Sijil(huqul) => {
             for (ism, qeema) in huqul {
                 let tul = masar.len();
@@ -1381,7 +1484,7 @@ fn ijma_nusus(qeema: &QeemaHaql, masar: &mut String, khazina: &mut Vec<NassMahsu
                 ijma_nusus(qeema, masar, khazina, umq.saturating_add(1));
                 masar.truncate(tul);
             }
-        }
+        },
         QeemaHaql::Masfufa(anasir) => {
             for (fahras, unsur) in anasir.iter().enumerate() {
                 let tul = masar.len();
@@ -1395,12 +1498,13 @@ fn ijma_nusus(qeema: &QeemaHaql, masar: &mut String, khazina: &mut Vec<NassMahsu
                 // translation of dialogue worth anything. Attached here because
                 // this is the only place that knows the elements are siblings.
                 if unsur.nass().is_some()
-                    && let Some(mahsud) = khazina.get_mut(qabl) {
-                        mahsud.jiwar = jiwar_masfufa(anasir, fahras);
-                    }
+                    && let Some(mahsud) = khazina.get_mut(qabl)
+                {
+                    mahsud.jiwar = jiwar_masfufa(anasir, fahras);
+                }
                 masar.truncate(tul);
             }
-        }
+        },
         QeemaHaql::Khareeta(azwaj) => {
             for (fahras, (miftah, qeema)) in azwaj.iter().enumerate() {
                 let tul = masar.len();
@@ -1427,28 +1531,33 @@ fn ijma_nusus(qeema: &QeemaHaql, masar: &mut String, khazina: &mut Vec<NassMahsu
                 ijma_nusus(qeema, masar, khazina, umq.saturating_add(1));
                 masar.truncate(tul);
             }
-        }
+        },
         QeemaHaql::Sahih(_)
         | QeemaHaql::Ghayr(_)
         | QeemaHaql::Ashri(_)
         | QeemaHaql::AshriMuda(_)
         | QeemaHaql::Mantiqi(_)
-        | QeemaHaql::Bayt(_) => {}
+        | QeemaHaql::Bayt(_) => {},
     }
 }
 
 /// The lines around one element of a string array.
 fn jiwar_masfufa(anasir: &[QeemaHaql], fahras: usize) -> Vec<String> {
     let awwal = fahras.saturating_sub(AQSA_JIWAR);
-    let akhir = fahras.saturating_add(AQSA_JIWAR).saturating_add(1).min(anasir.len());
+    let akhir = fahras
+        .saturating_add(AQSA_JIWAR)
+        .saturating_add(1)
+        .min(anasir.len());
     let mut jiwar = Vec::new();
     let mut i = awwal;
     while i < akhir {
         if i != fahras
             && let Some(nass) = anasir.get(i).and_then(QeemaHaql::nass)
-                && !nass.trim().is_empty() && nass.len() <= AQSA_TUL_NASS {
-                    jiwar.push(nass.to_owned());
-                }
+            && !nass.trim().is_empty()
+            && nass.len() <= AQSA_TUL_NASS
+        {
+            jiwar.push(nass.to_owned());
+        }
         i = i.saturating_add(1);
     }
     jiwar
@@ -1477,9 +1586,10 @@ fn mutakallim_min_kaain(qeema: &QeemaHaql) -> Option<String> {
     ];
     for ism in HUQUL {
         if let Some(nass) = qeema.haql(ism).and_then(QeemaHaql::nass)
-            && !nass.trim().is_empty() {
-                return Some(nass.to_owned());
-            }
+            && !nass.trim().is_empty()
+        {
+            return Some(nass.to_owned());
+        }
     }
     None
 }
@@ -1496,19 +1606,25 @@ fn quyud_min_kaain(qeema: &QeemaHaql) -> QuyudNass {
     let mut quyud = QuyudNass::default();
 
     if let Some(hadd) = qeema.haql("m_CharacterLimit").and_then(QeemaHaql::sahih)
-        && hadd > 0 {
-            quyud.aqsa_ahruf = u32::try_from(hadd).ok();
-        }
+        && hadd > 0
+    {
+        quyud.aqsa_ahruf = u32::try_from(hadd).ok();
+    }
     for ism in ["m_fontSize", "m_FontSize", "m_fontSizeBase"] {
         if let Some(hajm) = qeema.haql(ism).and_then(QeemaHaql::ashri)
-            && hajm > 0.0 {
-                quyud.hajm_khatt = Some(hajm);
-                break;
-            }
+            && hajm > 0.0
+        {
+            quyud.hajm_khatt = Some(hajm);
+            break;
+        }
     }
     // TextMeshPro spells it `m_enableWordWrapping`; a `false` there is the
     // engine refusing to wrap, which is exactly what `satr_wahid` means.
-    for ism in ["m_enableWordWrapping", "m_EnableWordWrapping", "m_TextWrappingMode"] {
+    for ism in [
+        "m_enableWordWrapping",
+        "m_EnableWordWrapping",
+        "m_TextWrappingMode",
+    ] {
         if let Some(yalif) = qeema.haql(ism).and_then(QeemaHaql::mantiqi) {
             quyud.satr_wahid = !yalif;
             break;
@@ -1573,12 +1689,7 @@ impl Warsha<'_> {
     }
 
     /// Where a string sits, with the container names filled in.
-    fn mawqi(
-        &self,
-        mawqi: String,
-        haql: Option<String>,
-        miftah: Option<String>,
-    ) -> MawqiNass {
+    fn mawqi(&self, mawqi: String, haql: Option<String>, miftah: Option<String>) -> MawqiNass {
         MawqiNass {
             hawiya: self.hawiya.to_owned(),
             asl: self.asl.map(str::to_owned),
@@ -1599,11 +1710,7 @@ impl Warsha<'_> {
 /// on it, and emitting it separately would add one internal row per object in
 /// the scene for text that is not text.
 #[must_use]
-pub fn istakhrij_mulsal(
-    mulsal: &Mulsal<'_>,
-    hawiya: &str,
-    asl: Option<&str>,
-) -> HasilatMulsal {
+pub fn istakhrij_mulsal(mulsal: &Mulsal<'_>, hawiya: &str, asl: Option<&str>) -> HasilatMulsal {
     if !mulsal.ladayhi_shajarat_anwa() {
         // Only the classes that would have carried text are counted. Reporting
         // every object in the file would say "180 000 objects could not be read"
@@ -1613,9 +1720,7 @@ pub fn istakhrij_mulsal(
         let adad = mulsal
             .kaainat()
             .iter()
-            .filter(|madkhal| {
-                matches!(madkhal.sanf, SANF_TEXTASSET | SANF_MONOBEHAVIOUR)
-            })
+            .filter(|madkhal| matches!(madkhal.sanf, SANF_TEXTASSET | SANF_MONOBEHAVIOUR))
             .count();
         // A stripped tree over a file with no text-bearing object lost nothing:
         // there was no string in it to read with or without a layout. Calling
@@ -1632,7 +1737,10 @@ pub fn istakhrij_mulsal(
         }
         return HasilatMulsal {
             madakhil: Vec::new(),
-            marfudat: vec![SababRafd::BilaShajaratAnwa { naw_kaen: None, adad }],
+            marfudat: vec![SababRafd::BilaShajaratAnwa {
+                naw_kaen: None,
+                adad,
+            }],
             manqus: true,
         };
     }
@@ -1643,9 +1751,13 @@ pub fn istakhrij_mulsal(
     // — the `CAB-…` an external reference in another bundle spells out — and a
     // loose one by its path, which is reduced to its file name for the same
     // reason.
-    let mushtarak =
-        ijma_bayanat_mushtaraka(mulsal, &fahras, ism_malaf(asl.unwrap_or(hawiya)));
-    let mut warsha = Warsha { hawiya, asl, madakhil: Vec::new(), linat: Vec::new() };
+    let mushtarak = ijma_bayanat_mushtaraka(mulsal, &fahras, ism_malaf(asl.unwrap_or(hawiya)));
+    let mut warsha = Warsha {
+        hawiya,
+        asl,
+        madakhil: Vec::new(),
+        linat: Vec::new(),
+    };
     let mut naqisa: BTreeMap<Option<String>, usize> = BTreeMap::new();
 
     for madkhal in mulsal.kaainat() {
@@ -1653,14 +1765,15 @@ pub fn istakhrij_mulsal(
             SANF_TEXTASSET => istakhrij_nass_asl(mulsal, madkhal, &mut warsha),
             SANF_MONOBEHAVIOUR => {
                 istakhrij_suluk(mulsal, madkhal, &fahras, &mushtarak, &mut warsha)
-            }
+            },
             _ => continue,
         };
         if let Err(khata) = natija {
             if khata.bila_shajara() {
                 let miftah = match &khata {
-                    KhataKaain::BilaShajaratAnwa { naw }
-                    | KhataKaain::IsmMajhul { naw, .. } => naw.clone(),
+                    KhataKaain::BilaShajaratAnwa { naw } | KhataKaain::IsmMajhul { naw, .. } => {
+                        naw.clone()
+                    },
                     KhataKaain::NawMarjiMajhul { ism } => Some(ism.clone()),
                     _ => None,
                 };
@@ -1673,11 +1786,18 @@ pub fn istakhrij_mulsal(
 
     let mut marfudat: Vec<SababRafd> = naqisa
         .into_iter()
-        .map(|(naw, adad)| SababRafd::BilaShajaratAnwa { naw_kaen: naw, adad })
+        .map(|(naw, adad)| SababRafd::BilaShajaratAnwa {
+            naw_kaen: naw,
+            adad,
+        })
         .collect();
     marfudat.extend(warsha.linat);
 
-    HasilatMulsal { madakhil: warsha.madakhil, marfudat, manqus: fahras.manqus() }
+    HasilatMulsal {
+        madakhil: warsha.madakhil,
+        marfudat,
+        manqus: fahras.manqus(),
+    }
 }
 
 /// The class one `MonoBehaviour` is an instance of, decided without reading it.
@@ -1702,7 +1822,10 @@ fn ism_mukawwin(
     fahras: &FahrasKaainat,
 ) -> Option<String> {
     let naw = mulsal.naw_kaain(madkhal)?;
-    if let Some(ism) = naw.shajara.as_ref().and_then(|shajara| shajara.uqad().first())
+    if let Some(ism) = naw
+        .shajara
+        .as_ref()
+        .and_then(|shajara| shajara.uqad().first())
         .and_then(|uqda| uqda.naw.as_deref())
         && sath_akhir(ism) != "MonoBehaviour"
     {
@@ -1765,22 +1888,32 @@ fn istakhrij_nass_asl(
         return Err(KhataKaain::BilaShajaratAnwa { naw: ism_naw });
     }
     if let Some((fahras, izaha)) = shajara.majhula() {
-        return Err(KhataKaain::IsmMajhul { naw: ism_naw, fahras, izaha });
+        return Err(KhataKaain::IsmMajhul {
+            naw: ism_naw,
+            fahras,
+            izaha,
+        });
     }
 
     let mut qari = mulsal.qari_kaain(madkhal)?;
-    let siyaq =
-        SiyaqQira { shajara, anwa_marjiiya: mulsal.anwa_marjiiya(), jism_marji: false };
+    let siyaq = SiyaqQira {
+        shajara,
+        anwa_marjiiya: mulsal.anwa_marjiiya(),
+        jism_marji: false,
+    };
     let mut ism = String::new();
     let mut khaam: Option<Vec<u8>> = None;
 
     let nihaya = shajara.nihayat_farr(0);
     let mut i = 1_usize;
     while i < nihaya {
-        let uqda = shajara.uqad().get(i).ok_or_else(|| KhataKaain::ShajaraShadha {
-            naw: ism_jidhr(shajara),
-            sabab: format!("node {i} vanished mid-walk"),
-        })?;
+        let uqda = shajara
+            .uqad()
+            .get(i)
+            .ok_or_else(|| KhataKaain::ShajaraShadha {
+                naw: ism_jidhr(shajara),
+                sabab: format!("node {i} vanished mid-walk"),
+            })?;
         let ism_haql = uqda.ism.clone().unwrap_or_default();
         let bayti = ism_haql == "m_Script" && uqda.naw.as_deref() == Some("string");
         if bayti {
@@ -1792,9 +1925,10 @@ fn istakhrij_nass_asl(
         } else {
             let qeema = iqra_qeema(&siyaq, i, &mut qari, 1)?;
             if ism_haql == "m_Name"
-                && let Some(nass) = qeema.nass() {
-                    nass.clone_into(&mut ism);
-                }
+                && let Some(nass) = qeema.nass()
+            {
+                nass.clone_into(&mut ism);
+            }
         }
         let baad = shajara.nihayat_farr(i);
         i = if baad > i { baad } else { i.saturating_add(1) };
@@ -1840,7 +1974,11 @@ fn istakhrij_nass_asl(
         None => (bayt.as_slice(), "UTF-8"),
     };
     let nass = std::str::from_utf8(jism).map_err(|khata| KhataKaain::TarmizGhayrMaruf {
-        asl: if ism.is_empty() { "an unnamed TextAsset".to_owned() } else { ism.clone() },
+        asl: if ism.is_empty() {
+            "an unnamed TextAsset".to_owned()
+        } else {
+            ism.clone()
+        },
         mawqi: khata.valid_up_to(),
     })?;
     if nass.trim().is_empty() {
@@ -1865,9 +2003,10 @@ fn istakhrij_nass_asl(
 /// consumed here exactly as the decoding reader consumes it, because the cursor
 /// has to end in the same place either way.
 fn iqra_nass_khaam(qari: &mut Qari<'_>, ism: &'static str) -> Result<Vec<u8>, KhataKaain> {
-    let tul = qari
-        .iqra_i32(ism)
-        .map_err(|sabab| KhataKaain::HaqlTalif { ism: ism.to_owned(), sabab })?;
+    let tul = qari.iqra_i32(ism).map_err(|sabab| KhataKaain::HaqlTalif {
+        ism: ism.to_owned(),
+        sabab,
+    })?;
     let adad = u32::try_from(tul).map_err(|_| KhataKaain::TajawuzHadd {
         hadd: "raw string length",
         qeema: u64::MAX,
@@ -1883,7 +2022,10 @@ fn iqra_nass_khaam(qari: &mut Qari<'_>, ism: &'static str) -> Result<Vec<u8>, Kh
     }
     let bayt = qari
         .iqra_bayt(ism, u64::from(adad))
-        .map_err(|sabab| KhataKaain::HaqlTalif { ism: ism.to_owned(), sabab })?
+        .map_err(|sabab| KhataKaain::HaqlTalif {
+            ism: ism.to_owned(),
+            sabab,
+        })?
         .to_vec();
     qari.hadhi(4);
     Ok(bayt)
@@ -2013,7 +2155,10 @@ fn istakhrij_suluk(
             .bi_mutakallim(mutakallim.clone())
             .bi_jiwar(mahsud.jiwar)
             .bi_tarmiz(Some(TARMIZ_MULSAL.to_owned()));
-        let mut mudkhal = ansha_mudkhal(TalabMudkhal { quyud: quyud_hali, ..talab });
+        let mut mudkhal = ansha_mudkhal(TalabMudkhal {
+            quyud: quyud_hali,
+            ..talab
+        });
 
         // The speaker and the neighbouring lines belong to prose. Cleared once
         // the shared classifier has spoken, because a speaker name attached to a
@@ -2109,7 +2254,11 @@ thread_local! {
 /// `CAB-186b…` or `REPO_Data/sharedassets1.assets`. Reducing both to the bare
 /// name is what makes those two spellings the same key.
 fn ism_malaf(masar: &str) -> String {
-    masar.rsplit(['/', '\\']).next().unwrap_or(masar).to_ascii_lowercase()
+    masar
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(masar)
+        .to_ascii_lowercase()
 }
 
 /// Publishes one shared table under the file it was read from.
@@ -2154,7 +2303,9 @@ fn ijma_bayanat_mushtaraka(
         if madkhal.sanf != SANF_MONOBEHAVIOUR {
             continue;
         }
-        if ism_mukawwin(mulsal, madkhal, fahras).as_deref().map(sath_akhir)
+        if ism_mukawwin(mulsal, madkhal, fahras)
+            .as_deref()
+            .map(sath_akhir)
             != Some("SharedTableData")
         {
             continue;
@@ -2164,7 +2315,7 @@ fn ijma_bayanat_mushtaraka(
             Err(khata) => {
                 let _ = akhta.insert(madkhal.hawiya_masar, khata);
                 continue;
-            }
+            },
         };
         let ism_majmua = qeema
             .haql("m_TableCollectionName")
@@ -2186,7 +2337,10 @@ fn ijma_bayanat_mushtaraka(
         asjil_mushtarak(
             &malaf,
             madkhal.hawiya_masar,
-            BayanatMushtaraka { ism_majmua, mafateeh },
+            BayanatMushtaraka {
+                ism_majmua,
+                mafateeh,
+            },
         );
     }
     SiyaqTawtin { malaf, akhta }
@@ -2356,7 +2510,10 @@ fn istakhrij_masdar_lughat(qeema: &QeemaHaql, warsha: &mut Warsha<'_>) {
         if ism.trim().is_empty() {
             continue;
         }
-        let naw_mustalah = mustalah.haql("TermType").and_then(QeemaHaql::sahih).unwrap_or(0);
+        let naw_mustalah = mustalah
+            .haql("TermType")
+            .and_then(QeemaHaql::sahih)
+            .unwrap_or(0);
         let Some(lughat) = mustalah.haql("Languages").and_then(QeemaHaql::anasir) else {
             continue;
         };
@@ -2382,8 +2539,7 @@ fn istakhrij_masdar_lughat(qeema: &QeemaHaql, warsha: &mut Warsha<'_>) {
             }
 
             let mawqi = warsha.mawqi(mawqi_nass, Some(haql), Some(miftah));
-            let talab = TalabMudkhal::jadeed(mawqi, nass)
-                .bi_tarmiz(Some(TARMIZ_MULSAL.to_owned()));
+            let talab = TalabMudkhal::jadeed(mawqi, nass).bi_tarmiz(Some(TARMIZ_MULSAL.to_owned()));
             // I2 stores sprite, font and audio references in the same term
             // table as its text, and `TermType` says which. A non-zero type is
             // the container declaring that this row holds an asset name, which

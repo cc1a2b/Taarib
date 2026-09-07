@@ -175,26 +175,26 @@ impl Tafsir for KhataKashf {
                 "بيئة التوافق الخاصة بهذه اللعبة غير موجودة. شغّل اللعبة مرة واحدة ليعيد \
                  المتجر بناءها، ثم أعد الفحص."
                     .to_owned()
-            }
+            },
             Self::TaadhurTarjamatMasar { masar, .. } => {
                 format!("تعذّر تحويل المسار {masar} من داخل بيئة التوافق إلى مسار حقيقي.")
-            }
+            },
             Self::TaadhurQiraatSijillBeea { .. } => {
                 "تعذّرت قراءة سجلّ بيئة التوافق، ولا يمكن معرفة إعداداتها.".to_owned()
-            }
+            },
             Self::TaadhurJalbSura { .. } => {
                 "تعذّر جلب صورة اللعبة. ستظهر اللعبة بلون بديل حتى تتوفّر الصورة.".to_owned()
-            }
+            },
             Self::SuraGhayrSaliha { .. } => {
                 "صورة اللعبة بصيغة لا يمكن قراءتها، وسيُستخدم لون بديل.".to_owned()
-            }
+            },
             Self::LaYujadTanfidhi { jidhr } => format!(
                 "لا يوجد ملف تنفيذي داخل {}. اختر المجلد الذي يحتوي ملف تشغيل اللعبة.",
                 jidhr.display()
             ),
             Self::TaadhurMuraqaba { .. } => {
                 "تعذّرت مراقبة مجلد الألعاب للتغيّرات؛ سيُحدَّث الفحص عند طلبك فقط.".to_owned()
-            }
+            },
             Self::JidhrMuhaddadMafqud { matjar, masar } => format!(
                 "المسار الذي حدّدته لـ{matjar} غير موجود: {}. صحّحه في الإعدادات أو احذفه \
                  ليبحث تعريب عنه تلقائيًا.",
@@ -217,24 +217,24 @@ impl Tafsir for KhataKashf {
                 "This game's compatibility prefix does not exist. Run the game once so the \
                  launcher rebuilds it, then rescan."
                     .to_owned()
-            }
+            },
             Self::TaadhurTarjamatMasar { masar, .. } => {
                 format!("Cannot map {masar} from inside the compatibility prefix to a real path.")
-            }
+            },
             Self::TaadhurQiraatSijillBeea { .. } => {
                 "Cannot read the compatibility prefix registry, so its settings are unknown."
                     .to_owned()
-            }
+            },
             Self::TaadhurJalbSura { .. } => {
                 "Cannot fetch this game's artwork. It will show a placeholder colour until the \
                  image is available."
                     .to_owned()
-            }
+            },
             Self::SuraGhayrSaliha { .. } => {
                 "This game's artwork is in a format that cannot be decoded; a placeholder colour \
                  will be used."
                     .to_owned()
-            }
+            },
             Self::LaYujadTanfidhi { jidhr } => format!(
                 "No executable under {}. Choose the folder that contains the game's launcher.",
                 jidhr.display()
@@ -243,7 +243,7 @@ impl Tafsir for KhataKashf {
                 "Cannot watch the library folder for changes; the scan will refresh only when you \
                  ask it to."
                     .to_owned()
-            }
+            },
             Self::JidhrMuhaddadMafqud { matjar, masar } => format!(
                 "The {matjar} location you set does not exist: {}. Correct it in Settings, or \
                  clear it so Taarib finds the launcher itself.",
@@ -256,65 +256,74 @@ impl Tafsir for KhataKashf {
         match self {
             Self::TaadhurQiraatFahras { sabab, .. } => {
                 khutwa_io(sabab, MasarMatlub::MujalladManassa)
-            }
+            },
             Self::TarwisatFahrasTalifa { .. } | Self::TaadhurQiraatSijillBeea { .. } => {
                 Khutwa::FathTashkhis
-            }
+            },
             Self::BeeaMafquda { .. } => Khutwa::AadaFahsMaktaba,
             Self::TaadhurTarjamatMasar { .. } => Khutwa::FathTashkhis,
             Self::TaadhurJalbSura { .. } | Self::TaadhurMuraqaba { .. } => Khutwa::AadaMuhawala,
             Self::SuraGhayrSaliha { .. } => Khutwa::LaShay,
-            Self::LaYujadTanfidhi { .. } => {
-                Khutwa::IkhtiyarMasar { matlub: MasarMatlub::MujalladLuba }
-            }
-            Self::JidhrMuhaddadMafqud { .. } => {
-                Khutwa::FathIdadat { qism: QismIdadat::Manassat }
-            }
+            Self::LaYujadTanfidhi { .. } => Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MujalladLuba,
+            },
+            Self::JidhrMuhaddadMafqud { .. } => Khutwa::FathIdadat {
+                qism: QismIdadat::Manassat,
+            },
         }
     }
 
     fn siyaq(&self) -> BTreeMap<String, QeemaSiyaq> {
         let mut siyaq = BTreeMap::new();
         match self {
-            Self::TaadhurQiraatFahras { matjar, masar, sabab } => {
+            Self::TaadhurQiraatFahras {
+                matjar,
+                masar,
+                sabab,
+            } => {
                 let _ = siyaq.insert("matjar".to_owned(), QeemaSiyaq::Nass((*matjar).to_owned()));
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 siyaq.extend(siyaq_io(sabab));
-            }
-            Self::TarwisatFahrasTalifa { matjar, masar, tafsil, mawdi } => {
+            },
+            Self::TarwisatFahrasTalifa {
+                matjar,
+                masar,
+                tafsil,
+                mawdi,
+            } => {
                 let _ = siyaq.insert("matjar".to_owned(), QeemaSiyaq::Nass((*matjar).to_owned()));
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
                 if let Some(mawdi) = mawdi {
                     let _ = siyaq.insert("mawdi".to_owned(), QeemaSiyaq::Hajm(*mawdi));
                 }
-            }
+            },
             Self::BeeaMafquda { masar } => {
                 let _ = siyaq.insert("beea".to_owned(), QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
             Self::TaadhurTarjamatMasar { masar, beea } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(masar.clone()));
                 let _ = siyaq.insert("beea".to_owned(), QeemaSiyaq::Masar(beea.clone()));
-            }
+            },
             Self::TaadhurQiraatSijillBeea { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 siyaq.extend(siyaq_io(sabab));
-            }
+            },
             Self::TaadhurJalbSura { rabt, tafsil } | Self::SuraGhayrSaliha { rabt, tafsil } => {
                 let _ = siyaq.insert("rabt".to_owned(), QeemaSiyaq::Nass(rabt.clone()));
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::LaYujadTanfidhi { jidhr } => {
                 let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
-            }
+            },
             Self::TaadhurMuraqaba { masar, tafsil } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::JidhrMuhaddadMafqud { matjar, masar } => {
                 let _ = siyaq.insert("matjar".to_owned(), QeemaSiyaq::Nass((*matjar).to_owned()));
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
         }
         siyaq
     }

@@ -99,16 +99,17 @@ fn banni_pe(mumtadd: bool, asmaa: &[&str]) -> Vec<u8> {
     // The names go after the descriptors, which are twenty bytes each plus one
     // all-zero terminator.
     let mut izahat_ism = IZAHAT_USTUWANA
-        + u32::try_from(asmaa.len().saturating_add(1)).unwrap_or(0).saturating_mul(20);
+        + u32::try_from(asmaa.len().saturating_add(1))
+            .unwrap_or(0)
+            .saturating_mul(20);
     for (fahras, ism) in asmaa.iter().enumerate() {
-        let wasf = usize::try_from(IZAHAT_QISM + IZAHAT_USTUWANA).unwrap_or(0)
-            + fahras.saturating_mul(20);
+        let wasf =
+            usize::try_from(IZAHAT_QISM + IZAHAT_USTUWANA).unwrap_or(0) + fahras.saturating_mul(20);
         // The original-thunk and first-thunk fields only have to be non-zero,
         // because the terminator is an all-zero descriptor and this walk reads
         // the name and those two fields alone.
         bayt[wasf..wasf + 4].copy_from_slice(&(OINWAN_QISM + 0x0700).to_le_bytes());
-        bayt[wasf + 12..wasf + 16]
-            .copy_from_slice(&(OINWAN_QISM + izahat_ism).to_le_bytes());
+        bayt[wasf + 12..wasf + 16].copy_from_slice(&(OINWAN_QISM + izahat_ism).to_le_bytes());
         bayt[wasf + 16..wasf + 20].copy_from_slice(&(OINWAN_QISM + 0x0700).to_le_bytes());
 
         let mawdi = usize::try_from(IZAHAT_QISM + izahat_ism).unwrap_or(0);
@@ -178,10 +179,16 @@ fn yaqra_mustawradat_al_luba() {
             "{ism} imports one graphics module and must be reported as one API"
         );
         assert!(
-            taqrir.mustawradat.iter().any(|name| name.eq_ignore_ascii_case("d3d9.dll")),
+            taqrir
+                .mustawradat
+                .iter()
+                .any(|name| name.eq_ignore_ascii_case("d3d9.dll")),
             "{ism} must name the module it was recognised by"
         );
-        assert!(taqrir.yumkin(), "{ism} has a free proxy slot and must be installable");
+        assert!(
+            taqrir.yumkin(),
+            "{ism} has a free proxy slot and must be installable"
+        );
     }
     let _ = fs::remove_dir_all(&jidhr);
 }
@@ -195,14 +202,25 @@ fn yaqra_mustawradat_al_luba() {
 #[test]
 fn luba_bila_rusum_tunqas_wala_turfad() {
     let jidhr = mujallad("bila-rusum");
-    let masar = uktub(&jidhr, "luba.exe", &banni_pe(false, &["KERNEL32.dll", "USER32.dll"]));
+    let masar = uktub(
+        &jidhr,
+        "luba.exe",
+        &banni_pe(false, &["KERNEL32.dll", "USER32.dll"]),
+    );
     let taqrir = match istatli(&masar) {
         Ok(taqrir) => taqrir,
         Err(khata) => panic!("the executable would not be surveyed: {khata}"),
     };
     assert!(taqrir.wajihat.is_empty(), "no graphics module was imported");
-    assert_eq!(taqrir.hukm(), HukmQudra::Naqisa, "an unknown renderer narrows, it does not stop");
-    assert!(taqrir.yumkin(), "an unknown renderer must not stop an installation");
+    assert_eq!(
+        taqrir.hukm(),
+        HukmQudra::Naqisa,
+        "an unknown renderer narrows, it does not stop"
+    );
+    assert!(
+        taqrir.yumkin(),
+        "an unknown renderer must not stop an installation"
+    );
     let _ = fs::remove_dir_all(&jidhr);
 }
 
@@ -215,7 +233,10 @@ fn luba_bila_rusum_tunqas_wala_turfad() {
 fn malaf_ghayr_pe_yurfad() {
     let jidhr = mujallad("ghayr-pe");
     let masar = uktub(&jidhr, "luba.exe", b"this is not an executable at all");
-    assert!(istatli(&masar).is_err(), "a non-PE must be refused, not surveyed as empty");
+    assert!(
+        istatli(&masar).is_err(),
+        "a non-PE must be refused, not surveyed as empty"
+    );
     let _ = fs::remove_dir_all(&jidhr);
 }
 
@@ -241,7 +262,10 @@ fn yarfud_slot_maakhudh() {
         Err(khata) => panic!("the executable would not be surveyed: {khata}"),
     };
 
-    assert!(!taqrir.slot_mutah(), "{SLOT_TAARIB} is taken and must not be reported as free");
+    assert!(
+        !taqrir.slot_mutah(),
+        "{SLOT_TAARIB} is taken and must not be reported as free"
+    );
     assert!(
         matches!(taqrir.halat_slot(), HalatSlot::Mashghul { .. }),
         "a readable third-party file is 'taken', not 'unread': {:?}",
@@ -253,7 +277,10 @@ fn yarfud_slot_maakhudh() {
         HukmQudra::Mustaheela,
         "a taken {SLOT_TAARIB} must stop the installation outright"
     );
-    assert!(!taqrir.yumkin(), "the overlay must not be offered where its own slot is taken");
+    assert!(
+        !taqrir.yumkin(),
+        "the overlay must not be offered where its own slot is taken"
+    );
 
     let mustaheela = taqrir
         .asbab
@@ -267,7 +294,10 @@ fn yarfud_slot_maakhudh() {
         injilizi.contains(SLOT_TAARIB) && injilizi.contains("another product"),
         "the English reason must name the slot and say who has it: {injilizi}"
     );
-    assert!(!arabi.trim().is_empty(), "the refusal must be readable in Arabic too");
+    assert!(
+        !arabi.trim().is_empty(),
+        "the refusal must be readable in Arabic too"
+    );
     let _ = fs::remove_dir_all(&jidhr);
 }
 
@@ -289,19 +319,37 @@ fn wakeel_ghareeb_yudhkar_wala_yamnaa() {
         Err(khata) => panic!("the executable would not be surveyed: {khata}"),
     };
 
-    assert!(taqrir.slot_mutah(), "Taarib's own slot is free and must be reported so");
+    assert!(
+        taqrir.slot_mutah(),
+        "Taarib's own slot is free and must be reported so"
+    );
     assert_eq!(taqrir.halat_slot(), HalatSlot::Hurr);
-    assert!(taqrir.yumkin(), "a proxy Taarib does not use must not stop an installation");
-    assert_eq!(taqrir.ghurabaa().len(), 1, "the third-party proxy must be reported");
+    assert!(
+        taqrir.yumkin(),
+        "a proxy Taarib does not use must not stop an installation"
+    );
+    assert_eq!(
+        taqrir.ghurabaa().len(),
+        1,
+        "the third-party proxy must be reported"
+    );
     let Some(ghareeb) = taqrir.ghurabaa().first().copied() else {
         panic!("the third-party proxy was not reported");
     };
     assert_eq!(ghareeb.ism, "dinput8.dll");
-    assert_eq!(ghareeb.hajm, 4096, "the size is what lets a user recognise the product");
-    assert!(!ghareeb.taarib, "another product's proxy must not be mistaken for Taarib's");
+    assert_eq!(
+        ghareeb.hajm, 4096,
+        "the size is what lets a user recognise the product"
+    );
     assert!(
-        taqrir.asbab.iter().any(|sabab| sabab.injilizi.contains("never restores a function \
-             pointer it did not install")),
+        !ghareeb.taarib,
+        "another product's proxy must not be mistaken for Taarib's"
+    );
+    assert!(
+        taqrir.asbab.iter().any(|sabab| sabab.injilizi.contains(
+            "never restores a function \
+             pointer it did not install"
+        )),
         "the report must state the unhook rule the third-party hook makes load-bearing"
     );
     let _ = fs::remove_dir_all(&jidhr);
@@ -322,10 +370,16 @@ fn slot_taarib_nafsuh_laysa_taarudan() {
         Ok(taqrir) => taqrir,
         Err(khata) => panic!("the executable would not be surveyed: {khata}"),
     };
-    assert!(taqrir.slot_mutah(), "Taarib's own loader in Taarib's slot is a reinstall");
+    assert!(
+        taqrir.slot_mutah(),
+        "Taarib's own loader in Taarib's slot is a reinstall"
+    );
     assert_eq!(taqrir.halat_slot(), HalatSlot::Taarib);
     assert!(taqrir.yumkin(), "a reinstall must not be refused");
-    assert!(taqrir.ghurabaa().is_empty(), "Taarib's own loader is not a third party");
+    assert!(
+        taqrir.ghurabaa().is_empty(),
+        "Taarib's own loader is not a third party"
+    );
     let _ = fs::remove_dir_all(&jidhr);
 }
 
@@ -342,15 +396,37 @@ fn slot_taarib_nafsuh_laysa_taarudan() {
 /// refused rather than who owns the file.
 fn taakkad_slot_ghayr_maqru(taqrir: &TaqrirIstitlaa, matlub: &str) {
     let HalatSlot::GhayrMaqru { thughra } = taqrir.halat_slot() else {
-        panic!("an unread {SLOT_TAARIB} must answer as unread, not {:?}", taqrir.halat_slot());
+        panic!(
+            "an unread {SLOT_TAARIB} must answer as unread, not {:?}",
+            taqrir.halat_slot()
+        );
     };
     assert!(thughra.ism.eq_ignore_ascii_case(SLOT_TAARIB));
-    assert!(thughra.sabab.contains(matlub), "the gap must say what refused: {}", thughra.sabab);
-    assert!(!taqrir.slot_mutah(), "the fold of 'unread' is 'do not write'");
-    assert_eq!(taqrir.hukm(), HukmQudra::Majhula, "unread is neither taken nor free");
-    assert!(!taqrir.yumkin(), "Taarib does not write over a file it could not read");
-    assert!(taqrir.mashghula.iter().all(|slot| !slot.ism.eq_ignore_ascii_case(SLOT_TAARIB)),
-        "an unread slot must not also be listed as occupied");
+    assert!(
+        thughra.sabab.contains(matlub),
+        "the gap must say what refused: {}",
+        thughra.sabab
+    );
+    assert!(
+        !taqrir.slot_mutah(),
+        "the fold of 'unread' is 'do not write'"
+    );
+    assert_eq!(
+        taqrir.hukm(),
+        HukmQudra::Majhula,
+        "unread is neither taken nor free"
+    );
+    assert!(
+        !taqrir.yumkin(),
+        "Taarib does not write over a file it could not read"
+    );
+    assert!(
+        taqrir
+            .mashghula
+            .iter()
+            .all(|slot| !slot.ism.eq_ignore_ascii_case(SLOT_TAARIB)),
+        "an unread slot must not also be listed as occupied"
+    );
 
     let majhula: Vec<&str> = taqrir
         .asbab
@@ -358,21 +434,34 @@ fn taakkad_slot_ghayr_maqru(taqrir: &TaqrirIstitlaa, matlub: &str) {
         .filter(|sabab| sabab.hukm == HukmQudra::Majhula)
         .map(|sabab| sabab.injilizi.as_str())
         .collect();
-    assert_eq!(majhula.len(), 1, "one unread slot, one unanswered question: {majhula:?}");
+    assert_eq!(
+        majhula.len(),
+        1,
+        "one unread slot, one unanswered question: {majhula:?}"
+    );
     let Some(injilizi) = majhula.first() else {
         panic!("the unanswered question carried no sentence");
     };
-    assert!(injilizi.contains("could not read"), "the sentence names the gap: {injilizi}");
+    assert!(
+        injilizi.contains("could not read"),
+        "the sentence names the gap: {injilizi}"
+    );
     assert!(
         !injilizi.contains("taken by another product"),
         "the sentence must not assert a competitor it did not see: {injilizi}"
     );
     assert!(
-        !taqrir.asbab.iter().any(|sabab| sabab.injilizi.contains("none of the loader names")),
+        !taqrir
+            .asbab
+            .iter()
+            .any(|sabab| sabab.injilizi.contains("none of the loader names")),
         "the all-clear is a claim about every name and one was not read"
     );
     assert!(
-        taqrir.sutur().iter().any(|satr| satr.starts_with("unread:")),
+        taqrir
+            .sutur()
+            .iter()
+            .any(|satr| satr.starts_with("unread:")),
         "the bundle must lead with what was not read: {:?}",
         taqrir.sutur()
     );
@@ -382,7 +471,10 @@ fn taakkad_slot_ghayr_maqru(taqrir: &TaqrirIstitlaa, matlub: &str) {
         .find(|sabab| sabab.hukm == HukmQudra::Majhula)
         .map(|sabab| sabab.arabi.clone())
         .unwrap_or_default();
-    assert!(!arabi.trim().is_empty(), "the gap must be readable in Arabic too");
+    assert!(
+        !arabi.trim().is_empty(),
+        "the gap must be readable in Arabic too"
+    );
 }
 
 /// A `version.dll` past the size this survey will load is unread, not
@@ -423,7 +515,11 @@ fn slot_dakhm_ghayr_maqru_laysa_maakhudhan() {
 #[test]
 fn slot_rusum_ghayr_maqru_yunqis_wa_yusajjal() {
     let jidhr = mujallad("rusum-dakhm");
-    let masar = uktub(&jidhr, "luba.exe", &banni_pe(true, &["d3d11.dll", "dxgi.dll"]));
+    let masar = uktub(
+        &jidhr,
+        "luba.exe",
+        &banni_pe(true, &["d3d11.dll", "dxgi.dll"]),
+    );
     match fs::File::create(jidhr.join("dxgi.dll"))
         .and_then(|malaf| malaf.set_len(AQSA_MALAF.saturating_add(1)))
     {
@@ -435,14 +531,36 @@ fn slot_rusum_ghayr_maqru_yunqis_wa_yusajjal() {
         Ok(taqrir) => taqrir,
         Err(khata) => panic!("the executable would not be surveyed: {khata}"),
     };
-    assert_eq!(taqrir.halat_slot(), HalatSlot::Hurr, "Taarib's own slot is untouched");
-    assert!(taqrir.yumkin(), "an unread bystander does not stop an installation");
-    assert_eq!(taqrir.hukm(), HukmQudra::Naqisa, "the worst a graphics slot can be is a wrapper");
-    assert_eq!(taqrir.thughrat.len(), 1, "and the gap is on record");
-    assert!(taqrir.thughrat.first().is_some_and(|thughra| thughra.ism == "dxgi.dll"));
-    assert!(taqrir.ghurabaa().is_empty(), "an unread file is not reported as a known product");
+    assert_eq!(
+        taqrir.halat_slot(),
+        HalatSlot::Hurr,
+        "Taarib's own slot is untouched"
+    );
     assert!(
-        !taqrir.asbab.iter().any(|sabab| sabab.injilizi.contains("none of the loader names")),
+        taqrir.yumkin(),
+        "an unread bystander does not stop an installation"
+    );
+    assert_eq!(
+        taqrir.hukm(),
+        HukmQudra::Naqisa,
+        "the worst a graphics slot can be is a wrapper"
+    );
+    assert_eq!(taqrir.thughrat.len(), 1, "and the gap is on record");
+    assert!(
+        taqrir
+            .thughrat
+            .first()
+            .is_some_and(|thughra| thughra.ism == "dxgi.dll")
+    );
+    assert!(
+        taqrir.ghurabaa().is_empty(),
+        "an unread file is not reported as a known product"
+    );
+    assert!(
+        !taqrir
+            .asbab
+            .iter()
+            .any(|sabab| sabab.injilizi.contains("none of the loader names")),
         "the all-clear must not be said over an unread name"
     );
     let _ = fs::remove_dir_all(&jidhr);
@@ -482,7 +600,10 @@ fn slot_mamnu_ghayr_maqru_laysa_hurran() {
     let HalatSlot::GhayrMaqru { thughra } = taqrir.halat_slot() else {
         panic!("asserted above");
     };
-    assert!(thughra.hajm.is_some(), "the metadata was readable and its size is carried");
+    assert!(
+        thughra.hajm.is_some(),
+        "the metadata was readable and its size is carried"
+    );
 
     let _ = fs::set_permissions(&mamnu, fs::Permissions::from_mode(0o644));
     let _ = fs::remove_dir_all(&jidhr);
@@ -511,7 +632,10 @@ fn slot_bila_bayanat_ghayr_maqru_laysa_hurran() {
     let HalatSlot::GhayrMaqru { thughra } = taqrir.halat_slot() else {
         panic!("asserted above");
     };
-    assert_eq!(thughra.hajm, None, "no metadata, no size — and no invented one");
+    assert_eq!(
+        thughra.hajm, None,
+        "no metadata, no size — and no invented one"
+    );
     let _ = fs::remove_dir_all(&jidhr);
 }
 
@@ -541,8 +665,16 @@ fn wahda(basmat: &[&str]) -> Vec<u8> {
 #[test]
 fn ghilaf_alard_yunqis_wala_yamnaa_wa_yusamma() {
     let jidhr = mujallad("ghilaf-ard");
-    let masar = uktub(&jidhr, "luba.exe", &banni_pe(true, &["d3d11.dll", "dxgi.dll"]));
-    let _ = uktub(&jidhr, "dxgi.dll", &wahda(&["crosire", "ReShade", "reshade-shaders"]));
+    let masar = uktub(
+        &jidhr,
+        "luba.exe",
+        &banni_pe(true, &["d3d11.dll", "dxgi.dll"]),
+    );
+    let _ = uktub(
+        &jidhr,
+        "dxgi.dll",
+        &wahda(&["crosire", "ReShade", "reshade-shaders"]),
+    );
 
     let taqrir = match istatli(&masar) {
         Ok(taqrir) => taqrir,
@@ -551,13 +683,30 @@ fn ghilaf_alard_yunqis_wala_yamnaa_wa_yusamma() {
     let Some(slot) = taqrir.ghurabaa().first().copied() else {
         panic!("the presentation hook was not reported");
     };
-    assert_eq!(slot.muntaj, Some("ReShade"), "the product is named, not merely the slot");
-    assert!(taqrir.slot_mutah(), "ReShade does not hold the name Taarib uses");
-    assert!(taqrir.yumkin(), "a presentation hook narrows the overlay, it does not stop it");
+    assert_eq!(
+        slot.muntaj,
+        Some("ReShade"),
+        "the product is named, not merely the slot"
+    );
+    assert!(
+        taqrir.slot_mutah(),
+        "ReShade does not hold the name Taarib uses"
+    );
+    assert!(
+        taqrir.yumkin(),
+        "a presentation hook narrows the overlay, it does not stop it"
+    );
     assert_eq!(taqrir.hukm(), HukmQudra::Naqisa, "and the verdict says so");
-    let injilizi: String =
-        taqrir.asbab.iter().map(|sabab| sabab.injilizi.clone()).collect::<Vec<_>>().join("\n");
-    assert!(injilizi.contains("ReShade"), "the reason names it: {injilizi}");
+    let injilizi: String = taqrir
+        .asbab
+        .iter()
+        .map(|sabab| sabab.injilizi.clone())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(
+        injilizi.contains("ReShade"),
+        "the reason names it: {injilizi}"
+    );
     assert!(
         injilizi.contains("never called: no crash, no Arabic"),
         "and states the failure mode exactly: {injilizi}"
@@ -579,7 +728,11 @@ fn ghilaf_alard_yunqis_wala_yamnaa_wa_yusamma() {
 fn tabaqat_tarjama_la_tunqis() {
     let jidhr = mujallad("dxvk");
     let masar = uktub(&jidhr, "luba.exe", &banni_pe(true, &["d3d9.dll"]));
-    let _ = uktub(&jidhr, "d3d9.dll", &wahda(&["DXVK", "DxvkInstance", "zlib/libpng license"]));
+    let _ = uktub(
+        &jidhr,
+        "d3d9.dll",
+        &wahda(&["DXVK", "DxvkInstance", "zlib/libpng license"]),
+    );
 
     let taqrir = match istatli(&masar) {
         Ok(taqrir) => taqrir,
@@ -619,17 +772,33 @@ fn ism_mushtarak_la_yublagh_illa_muaarrafan() {
         taqrir.mashghula
     );
 
-    let _ = uktub(&jidhr, "xinput1_4.dll", &wahda(&["Alexander Blade", "asiloader"]));
+    let _ = uktub(
+        &jidhr,
+        "xinput1_4.dll",
+        &wahda(&["Alexander Blade", "asiloader"]),
+    );
     let taqrir = match istatli(&masar) {
         Ok(taqrir) => taqrir,
         Err(khata) => panic!("the executable would not be surveyed: {khata}"),
     };
-    let asmaa: Vec<&str> = taqrir.mashghula.iter().map(|slot| slot.ism.as_str()).collect();
-    assert_eq!(asmaa, vec!["xinput1_4.dll"], "identified, the same class of name is reported");
+    let asmaa: Vec<&str> = taqrir
+        .mashghula
+        .iter()
+        .map(|slot| slot.ism.as_str())
+        .collect();
+    assert_eq!(
+        asmaa,
+        vec!["xinput1_4.dll"],
+        "identified, the same class of name is reported"
+    );
     let Some(slot) = taqrir.ghurabaa().first().copied() else {
         panic!("the loader was not reported");
     };
     assert_eq!(slot.muntaj, Some("an ASI plugin loader"));
-    assert_eq!(taqrir.hukm(), HukmQudra::Kamila, "a plugin loader is not on the drawing path");
+    assert_eq!(
+        taqrir.hukm(),
+        HukmQudra::Kamila,
+        "a plugin loader is not on the drawing path"
+    );
     let _ = fs::remove_dir_all(&jidhr);
 }

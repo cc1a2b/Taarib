@@ -281,7 +281,10 @@ impl KhataTarqee {
     /// Whether this failure is the gate refusing content.
     #[must_use]
     pub const fn khalal_bawwaba(&self) -> bool {
-        matches!(self, Self::KhattKharijMajmua { .. } | Self::RasfFashil { .. })
+        matches!(
+            self,
+            Self::KhattKharijMajmua { .. } | Self::RasfFashil { .. }
+        )
     }
 }
 
@@ -327,7 +330,7 @@ impl Tafsir for KhataTarqee {
             // learns now instead of after submitting.
             Self::NasqMaksur { .. } | Self::TakhtitFashil { .. } | Self::BayanNaqis { .. } => {
                 Khutura::Tanbeeh
-            }
+            },
             _ => Khutura::Khatar,
         }
     }
@@ -338,50 +341,44 @@ impl Tafsir for KhataTarqee {
                 "طُلب بناء الحزمة بخطٍّ من خارج خطوط تعريب، ورُفض. لا تحتوي الحزم إلا على ما \
                  يولّده تعريب."
                     .to_owned()
-            }
+            },
             Self::RasfFashil { .. } => "تعذّر بناء أطلس الأشكال.".to_owned(),
             Self::NasqMaksur { adad, .. } => format!(
                 "في {adad} عبارة عناصر محفوظة مكسورة. لم تُبنَ الحزمة: عبارة تفقد عنصرًا \
                  محفوظًا تُعطّل مُنسّق اللعبة أمام اللاعب."
             ),
-            Self::TakhtitFashil { .. } => {
-                "تعذّر تخطيط إحدى العبارات، ولم تُبنَ الحزمة.".to_owned()
-            }
+            Self::TakhtitFashil { .. } => "تعذّر تخطيط إحدى العبارات، ولم تُبنَ الحزمة.".to_owned(),
             Self::IaatimadGhayrMashru { adad, .. } => format!(
                 "{adad} عبارة تدّعي الاعتماد دون مراجعة مسجّلة. رُفض البناء: الاعتماد شهادة \
                  إنسان قرأ النص."
             ),
             Self::BayanNaqis { haql } => {
                 format!("لا يمكن بناء الحزمة بدون ({haql}).")
-            }
+            },
             Self::MalafIrtibatMafqud { .. } => {
                 "أحد الملفات التي تربط الحزمة باللعبة غير موجود.".to_owned()
-            }
-            Self::BilaBina => {
-                "لا يسجّل المشروع إصدار بناءٍ لربط الحزمة به.".to_owned()
-            }
+            },
+            Self::BilaBina => "لا يسجّل المشروع إصدار بناءٍ لربط الحزمة به.".to_owned(),
             Self::IstiradFashil { .. } => "تعذّر استيراد الملف.".to_owned(),
             Self::SighatIstiradMajhula { .. } => {
                 "صيغة الملف ليست مما تستورده هذه النسخة.".to_owned()
-            }
+            },
             Self::KitabatHuzmaFashila { .. } => "تعذّرت كتابة حاوية الحزمة.".to_owned(),
             Self::SighatHuzmaGhayrMaduma { .. } => {
                 "الحزمة بصيغة لا تعرفها هذه النسخة، ولم تُقرأ جزئيًّا.".to_owned()
-            }
+            },
             Self::DawraGhayrMutabaqa { .. } => {
                 "لم تُقرأ الحزمة المكتوبة كما كُتبت، ولم تُسلَّم.".to_owned()
-            }
-            Self::KhatmFashil { .. } => {
-                "لا يختم هذا التوقيعُ هذه الحزمة، ورُفض ختمها به.".to_owned()
-            }
+            },
+            Self::KhatmFashil { .. } => "لا يختم هذا التوقيعُ هذه الحزمة، ورُفض ختمها به.".to_owned(),
             Self::KhataMalaf { .. } => "تعذّرت قراءة ملف أو الكتابة إليه.".to_owned(),
             Self::MasarGhayrSalih { sabab, .. } => match sabab {
                 SababMasar::GhayrUtf8 => {
                     "أحد مسارات اللعبة ليس بترميز UTF-8، ولا تُكتب البصمة بمسارٍ مُحوّل.".to_owned()
-                }
+                },
                 SababMasar::KharijAlJidhr => {
                     "تطلب وصفة البصمة ملفًّا خارج مجلّد اللعبة، ورُفضت.".to_owned()
-                }
+                },
             },
         }
     }
@@ -398,14 +395,16 @@ impl Tafsir for KhataTarqee {
             | Self::IaatimadGhayrMashru { .. }
             | Self::BayanNaqis { .. } => Khutwa::FathNusus,
             Self::KhattKharijMajmua { .. } | Self::RasfFashil { .. } => Khutwa::IadatTarkibIttar,
-            Self::MalafIrtibatMafqud { .. }
-            | Self::BilaBina
-            | Self::MasarGhayrSalih { .. } => Khutwa::TahaqquqSalamatLuba,
+            Self::MalafIrtibatMafqud { .. } | Self::BilaBina | Self::MasarGhayrSalih { .. } => {
+                Khutwa::TahaqquqSalamatLuba
+            },
             Self::SighatHuzmaGhayrMaduma { .. } => Khutwa::TahdithTaarib,
             Self::IstiradFashil { masar, .. } | Self::SighatIstiradMajhula { masar, .. } => {
                 let _ = masar;
-                Khutwa::IkhtiyarMasar { matlub: MasarMatlub::MalafRuqaa }
-            }
+                Khutwa::IkhtiyarMasar {
+                    matlub: MasarMatlub::MalafRuqaa,
+                }
+            },
             Self::KitabatHuzmaFashila { .. }
             | Self::DawraGhayrMutabaqa { .. }
             | Self::KhatmFashil { .. } => Khutwa::IblaghLilMusahim,
@@ -432,41 +431,40 @@ impl Tafsir for KhataTarqee {
             Self::KhattKharijMajmua { masar, jidhr } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("jidhr", QeemaSiyaq::Masar(jidhr.clone()));
-            }
+            },
             Self::RasfFashil { sabab }
             | Self::KitabatHuzmaFashila { sabab }
             | Self::KhatmFashil { sabab }
             | Self::DawraGhayrMutabaqa { sabab } => daa("sabab", QeemaSiyaq::Nass(sabab.clone())),
-            Self::NasqMaksur { adad, amthila }
-            | Self::IaatimadGhayrMashru { adad, amthila } => {
+            Self::NasqMaksur { adad, amthila } | Self::IaatimadGhayrMashru { adad, amthila } => {
                 daa("adad", QeemaSiyaq::Hajm(tul_u64(*adad)));
                 daa("amthila", QeemaSiyaq::Qaima(amthila.clone()));
-            }
+            },
             Self::TakhtitFashil { nass, hajm, sabab } => {
                 daa("nass", QeemaSiyaq::Nass(nass.clone()));
                 daa("hajm", QeemaSiyaq::Kasr(f64::from(*hajm)));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::BayanNaqis { haql } => daa("haql", QeemaSiyaq::Nass((*haql).to_owned())),
             Self::MalafIrtibatMafqud { masar } => daa("masar", QeemaSiyaq::Masar(masar.clone())),
             Self::MasarGhayrSalih { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.wasf().to_owned()));
-            }
+            },
             Self::IstiradFashil { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::SighatIstiradMajhula { masar, wujid } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("wujid", QeemaSiyaq::Nass(wujid.clone()));
-            }
+            },
             Self::SighatHuzmaGhayrMaduma { wujid, madum } => {
                 daa("wujid", QeemaSiyaq::Raqm(i64::from(*wujid)));
                 daa("madum", QeemaSiyaq::Raqm(i64::from(*madum)));
-            }
+            },
             // `BilaBina` carries no fields; `KhataMalaf` returned its own map above.
-            Self::BilaBina | Self::KhataMalaf { .. } => {}
+            Self::BilaBina | Self::KhataMalaf { .. } => {},
         }
         siyaq
     }

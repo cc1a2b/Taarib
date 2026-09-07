@@ -64,8 +64,7 @@ fn hammil() {
         }
         // SAFETY: `ISM_BIDAYA` is a NUL-terminated ASCII literal and `wahda` is
         // a handle `dlopen` just returned.
-        let bidaya =
-            unsafe { libc::dlsym(wahda, hamula::ISM_BIDAYA.as_ptr().cast::<c_char>()) };
+        let bidaya = unsafe { libc::dlsym(wahda, hamula::ISM_BIDAYA.as_ptr().cast::<c_char>()) };
         if !bidaya.is_null() {
             // SAFETY: every payload declares this entry as a no-argument
             // `extern "C"` function; a module exporting the name with another

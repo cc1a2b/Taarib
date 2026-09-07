@@ -81,7 +81,7 @@ impl Rafd {
                     nass.push_str(&daleel.arabi());
                 }
                 nass
-            }
+            },
             Self::FahsMatjarLamYajri { masar, sabab } => {
                 let mawdi = masar.as_ref().map_or_else(
                     || "لم يُعرف موضع تثبيت ستيم على هذا الجهاز".to_owned(),
@@ -92,7 +92,7 @@ impl Rafd {
                      تترك أثرًا في مجلّد اللعبة، فسكوت الفحص هنا ليس براءة. {mawdi}. لا يُثبَّت \
                      شيء قبل قراءة الفهرس."
                 )
-            }
+            },
             Self::MashHimayaLamYajri { jidhr } => format!(
                 "لم يُجرَ فحص مكافحة الغش على {} أصلًا. خلوّ قائمة الأدلّة هنا يعني أنّ أحدًا لم \
                  ينظر، لا أنّ اللعبة سليمة، والاثنان يبدوان سواءً. لا يُثبَّت شيء قبل إجراء الفحص.",
@@ -102,7 +102,7 @@ impl Rafd {
             Self::Mulgha { sabab } => format!("أُبطلت هذه الحزمة أو مفتاحها: {sabab}"),
             Self::ShabakaBilaIqrar(_) => {
                 "هذه لعبة متعدّدة اللاعبين؛ يلزم إقرارك بمخاطر التعديل قبل المتابعة.".to_owned()
-            }
+            },
         }
     }
 
@@ -121,7 +121,7 @@ impl Rafd {
                     nass.push_str(&daleel.injilizi());
                 }
                 nass
-            }
+            },
             Self::FahsMatjarLamYajri { masar, sabab } => {
                 let mawdi = masar.as_ref().map_or_else(
                     || "no Steam installation could be located on this machine".to_owned(),
@@ -132,7 +132,7 @@ impl Rafd {
                      catalogue and leaves nothing in the game folder, so silence here is not a \
                      clean result. {mawdi}. Nothing is installed until the catalogue is read."
                 )
-            }
+            },
             Self::MashHimayaLamYajri { jidhr } => format!(
                 "no anti-cheat scan has been run on {} at all. An empty evidence list here means \
                  nobody looked, not that the game is clean, and the two are indistinguishable. \
@@ -144,7 +144,7 @@ impl Rafd {
             Self::ShabakaBilaIqrar(_) => {
                 "this is a multiplayer game; the modification risk must be acknowledged first"
                     .to_owned()
-            }
+            },
         }
     }
 }
@@ -267,7 +267,9 @@ fn rafd_matjar(hala: &HalatMatjar) -> Option<Rafd> {
 fn mulgha(malaf: &MalafRuqaa, qaima: &QaimatSahb, basmat: &Basma) -> Option<String> {
     let miftah_tawqee = malaf.ruqaa().ok()?.tawqee().miftah;
     match huwiyat_ruqaa(malaf) {
-        Some(id) => qaima.fahs_ruqaa(id, basmat, &miftah_tawqee).map(str::to_owned),
+        Some(id) => qaima
+            .fahs_ruqaa(id, basmat, &miftah_tawqee)
+            .map(str::to_owned),
         None => qaima
             .mulgha_miftah(&miftah_tawqee)
             .or_else(|| qaima.mulgha_basma(basmat))
@@ -318,7 +320,10 @@ mod ikhtibarat {
     /// A game folder holding nothing any anti-cheat marker matches.
     fn ansha_luba(jidhr: &Path) -> Result<(), std::io::Error> {
         fs::create_dir_all(jidhr)?;
-        fs::write(jidhr.join("luba.txt"), b"no marker in this file matches anything")
+        fs::write(
+            jidhr.join("luba.txt"),
+            b"no marker in this file matches anything",
+        )
     }
 
     #[test]
@@ -334,7 +339,10 @@ mod ikhtibarat {
         assert!(!mahmiya(&ijmaa));
         assert_eq!(hala, HalatMatjar::GhayrMatlub);
         assert!(!hala.lam_yuqra());
-        assert!(rafd_matjar(&hala).is_none(), "a game with no Steam identity still installs");
+        assert!(
+            rafd_matjar(&hala).is_none(),
+            "a game with no Steam identity still installs"
+        );
         Ok(())
     }
 
@@ -350,7 +358,10 @@ mod ikhtibarat {
         assert!(!mahmiya(&ijmaa));
         assert_eq!(hala, HalatMatjar::Maqru);
         assert!(ijmaa.thughrat.is_empty(), "nothing was out of reach");
-        assert!(rafd_matjar(&hala).is_none(), "a catalogue that was read and said nothing passes");
+        assert!(
+            rafd_matjar(&hala).is_none(),
+            "a catalogue that was read and said nothing passes"
+        );
         Ok(())
     }
 
@@ -408,7 +419,10 @@ mod ikhtibarat {
         let (ijmaa, hala) = ifhas_himaya_bi_matjar(&jidhr_luba, Some(TATBEEQ), None);
         assert!(!mahmiya(&ijmaa));
         assert_eq!(hala, HalatMatjar::JidhrMajhul);
-        assert!(rafd_matjar(&hala).is_some(), "an unrunnable check is not a passed check");
+        assert!(
+            rafd_matjar(&hala).is_some(),
+            "an unrunnable check is not a passed check"
+        );
         Ok(())
     }
 
@@ -424,7 +438,11 @@ mod ikhtibarat {
         // rather than as a clean bill of health.
         let ijmaa = ifhas_himaya(&jidhr_luba, Some(TATBEEQ), Some(&matbu));
         assert_eq!(
-            ijmaa.thughrat.iter().map(|thughra| thughra.masar.clone()).collect::<Vec<_>>(),
+            ijmaa
+                .thughrat
+                .iter()
+                .map(|thughra| thughra.masar.clone())
+                .collect::<Vec<_>>(),
             vec![matbu.join("appcache").join("appinfo.vdf")]
         );
         Ok(())

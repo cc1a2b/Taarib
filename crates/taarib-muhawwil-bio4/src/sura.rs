@@ -72,7 +72,11 @@ impl LawhatAlwan {
         for (fahras, khana) in madakhil.iter_mut().enumerate() {
             let daraja = u16::try_from(fahras).unwrap_or(0);
             // Three bits of alpha over four bits of each channel, white.
-            let alfa = daraja.saturating_mul(7).saturating_add(7).checked_div(15).unwrap_or(0);
+            let alfa = daraja
+                .saturating_mul(7)
+                .saturating_add(7)
+                .checked_div(15)
+                .unwrap_or(0);
             *khana = alfa.min(7).saturating_mul(0x1000) | 0x0FFF;
         }
         Self { madakhil }
@@ -214,7 +218,11 @@ impl SuraMufakkaka {
             });
         }
         let hajm = usize::try_from(texel).unwrap_or(usize::MAX);
-        Ok(Self { ard, irtifa, bayt: vec![0u8; hajm] })
+        Ok(Self {
+            ard,
+            irtifa,
+            bayt: vec![0u8; hajm],
+        })
     }
 
     /// One texel, or [`None`] outside the image.
@@ -223,7 +231,9 @@ impl SuraMufakkaka {
         if s >= self.ard || a >= self.irtifa {
             return None;
         }
-        let fahras = u64::from(a).checked_mul(u64::from(self.ard))?.checked_add(u64::from(s))?;
+        let fahras = u64::from(a)
+            .checked_mul(u64::from(self.ard))?
+            .checked_add(u64::from(s))?;
         self.bayt.get(usize::try_from(fahras).ok()?).copied()
     }
 
@@ -238,7 +248,10 @@ impl SuraMufakkaka {
         let Some(fahras) = mawdi else {
             return;
         };
-        if let Some(makan) = usize::try_from(fahras).ok().and_then(|i| self.bayt.get_mut(i)) {
+        if let Some(makan) = usize::try_from(fahras)
+            .ok()
+            .and_then(|i| self.bayt.get_mut(i))
+        {
             *makan = qeema;
         }
     }
@@ -286,11 +299,13 @@ pub fn irsim_c4(sura: &SuraMufakkaka, lawhat: &LawhatAlwan) -> Result<Vec<u8>, K
             matlub,
         });
     }
-    let hajm = SighatSura::C4.hajm(sura.ard, sura.irtifa).ok_or(KhataBio4::HajmMufrit {
-        haql: "GX_TF_C4 payload",
-        qeema: matlub,
-        saqf: AQSA_TEXEL,
-    })?;
+    let hajm = SighatSura::C4
+        .hajm(sura.ard, sura.irtifa)
+        .ok_or(KhataBio4::HajmMufrit {
+            haql: "GX_TF_C4 payload",
+            qeema: matlub,
+            saqf: AQSA_TEXEL,
+        })?;
     let mut kharij = vec![0u8; usize::try_from(hajm).unwrap_or(usize::MAX)];
 
     let (kutla_ard, kutla_irtifa) = SighatSura::C4.kutla();
@@ -333,11 +348,13 @@ pub fn ifkak_c4(
     irtifa: u32,
     lawhat: &LawhatAlwan,
 ) -> Result<SuraMufakkaka, KhataBio4> {
-    let matlub = SighatSura::C4.hajm(ard, irtifa).ok_or_else(|| KhataBio4::HajmMufrit {
-        haql: "GX_TF_C4 payload",
-        qeema: u64::from(ard).saturating_mul(u64::from(irtifa)),
-        saqf: AQSA_TEXEL,
-    })?;
+    let matlub = SighatSura::C4
+        .hajm(ard, irtifa)
+        .ok_or_else(|| KhataBio4::HajmMufrit {
+            haql: "GX_TF_C4 payload",
+            qeema: u64::from(ard).saturating_mul(u64::from(irtifa)),
+            saqf: AQSA_TEXEL,
+        })?;
     if tul_u64(bayt.len()) != matlub {
         return Err(KhataBio4::HimlGhayrMutabaq {
             sigha: "GX_TF_C4",
@@ -388,5 +405,6 @@ pub fn ifkak_c4(
 /// requires and the game never samples; filling it with index zero rather than
 /// with the nearest texel keeps two encodings of the same image identical.
 fn ila_fahras(sura: &SuraMufakkaka, lawhat: &LawhatAlwan, s: u32, a: u32) -> u8 {
-    sura.texel(s, a).map_or(0, |taghtiya| lawhat.fahras_taghtiya(taghtiya))
+    sura.texel(s, a)
+        .map_or(0, |taghtiya| lawhat.fahras_taghtiya(taghtiya))
 }

@@ -72,8 +72,11 @@ use crate::khata::KhataKashf;
 const MUARRIF: &str = "heroic";
 
 /// Heroic runs on all three desktop systems, Linux first.
-const MANASSAT: [NizamTashghil; 3] =
-    [NizamTashghil::Linux, NizamTashghil::Windows, NizamTashghil::Mac];
+const MANASSAT: [NizamTashghil; 3] = [
+    NizamTashghil::Linux,
+    NizamTashghil::Windows,
+    NizamTashghil::Mac,
+];
 
 /// The Flatpak application id.
 const HAWIYAT_FLATPAK: &str = "com.heroicgameslauncher.hgl";
@@ -129,12 +132,20 @@ impl MatjarHeroic {
             },
             NizamTashghil::Windows => {
                 judhur.extend(
-                    siyaq.bayanat_mutajawwila.as_ref().map(|bayanat| bayanat.join("heroic")),
+                    siyaq
+                        .bayanat_mutajawwila
+                        .as_ref()
+                        .map(|bayanat| bayanat.join("heroic")),
                 );
             },
             NizamTashghil::Mac => {
-                judhur
-                    .push(siyaq.manzil.join("Library").join("Application Support").join("heroic"));
+                judhur.push(
+                    siyaq
+                        .manzil
+                        .join("Library")
+                        .join("Application Support")
+                        .join("heroic"),
+                );
             },
         }
         judhur
@@ -171,7 +182,9 @@ impl Matjar for MatjarHeroic {
         if let Some(tajawuz) = siyaq.manassat.heroic.as_ref() {
             return Some(tajawuz.clone());
         }
-        Self::judhur_muhtamala(siyaq).into_iter().find(|jidhr| Self::huwa_jidhr(jidhr))
+        Self::judhur_muhtamala(siyaq)
+            .into_iter()
+            .find(|jidhr| Self::huwa_jidhr(jidhr))
     }
 
     /// # Errors
@@ -232,7 +245,9 @@ impl Matjar for MatjarHeroic {
 /// The segments are module constants, never anything read from a file, so this
 /// is an ordinary join rather than a containment check.
 fn dam(jidhr: &Path, ajzaa: &[&str]) -> PathBuf {
-    ajzaa.iter().fold(jidhr.to_path_buf(), |masar, juz| masar.join(juz))
+    ajzaa
+        .iter()
+        .fold(jidhr.to_path_buf(), |masar, juz| masar.join(juz))
 }
 
 // ---------------------------------------------------------------------------
@@ -275,8 +290,7 @@ impl IdadLuba {
             isdar_wine: build.and_then(|build| nass_haql(build, "name")),
             naw_wine: build.and_then(|build| nass_haql(build, "type")),
             tanfidhi_badil: nass_haql(qeema, "targetExe"),
-            khiyarat: nass_haql(qeema, "launcherArgs")
-                .or_else(|| nass_haql(qeema, "otherOptions")),
+            khiyarat: nass_haql(qeema, "launcherArgs").or_else(|| nass_haql(qeema, "otherOptions")),
         }
     }
 
@@ -301,10 +315,16 @@ fn idadat_al_alaab(jidhr: &Path) -> BTreeMap<String, IdadLuba> {
 
     for madkhal in qaima.flatten() {
         let masar = madkhal.path();
-        if masar.extension().is_none_or(|imtidad| !imtidad.eq_ignore_ascii_case("json")) {
+        if masar
+            .extension()
+            .is_none_or(|imtidad| !imtidad.eq_ignore_ascii_case("json"))
+        {
             continue;
         }
-        let Some(ism) = masar.file_stem().map(|ism| ism.to_string_lossy().into_owned()) else {
+        let Some(ism) = masar
+            .file_stem()
+            .map(|ism| ism.to_string_lossy().into_owned())
+        else {
             continue;
         };
         let Some(qeema) = iqra_json(&masar) else {
@@ -393,7 +413,11 @@ fn beea_luba(
     };
 
     let isdar = idad.isdar_wine.clone().or(maktashaf);
-    if idad.naw_wine.as_deref().is_some_and(|naw| naw.eq_ignore_ascii_case("proton")) {
+    if idad
+        .naw_wine
+        .as_deref()
+        .is_some_and(|naw| naw.eq_ignore_ascii_case("proton"))
+    {
         BeeatTawafuq::Proton {
             isdar: isdar.unwrap_or_else(|| "Proton".to_owned()),
             beea,
@@ -502,9 +526,17 @@ fn luba_min_madkhal(
     nizam: NizamTashghil,
     tanbihat: &mut Vec<TanbihFahs>,
 ) -> LubaMuktashafa {
-    let idad = idadat.get(&madkhal.muarrif_idad).cloned().unwrap_or_default();
-    let beea =
-        beea_luba(&idad, madkhal.manassa.as_deref(), nizam, &madkhal.ism, tanbihat);
+    let idad = idadat
+        .get(&madkhal.muarrif_idad)
+        .cloned()
+        .unwrap_or_default();
+    let beea = beea_luba(
+        &idad,
+        madkhal.manassa.as_deref(),
+        nizam,
+        &madkhal.ism,
+        tanbihat,
+    );
 
     let mut simat = Vec::new();
     match &beea {
@@ -557,7 +589,9 @@ fn tanfidhi_dakhil(jidhr: &Path, nisbi: &str) -> Option<PathBuf> {
     }
     let murashah = Path::new(&munaqqa);
     let kamil = if murashah.is_absolute() {
-        murashah.starts_with(jidhr).then(|| murashah.to_path_buf())?
+        murashah
+            .starts_with(jidhr)
+            .then(|| murashah.to_path_buf())?
     } else {
         dakhil(jidhr, &munaqqa).ok()?
     };
@@ -766,7 +800,9 @@ fn jama_gog(
                     .or_else(|| nass_haql(sijill, "version")),
                 manassa: nass_haql(sijill, "platform"),
                 muktamila: true,
-                suwar: bitaqa.map(|bitaqa| bitaqa.suwar.clone()).unwrap_or_default(),
+                suwar: bitaqa
+                    .map(|bitaqa| bitaqa.suwar.clone())
+                    .unwrap_or_default(),
                 muarrif_idad: ism_tatbeeq,
             },
             idadat,

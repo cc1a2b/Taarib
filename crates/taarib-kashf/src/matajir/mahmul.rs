@@ -115,8 +115,11 @@ use crate::matajir::yadawi;
 const MUARRIF: &str = "mahmul";
 
 /// Scanning a folder works the same on every system.
-const MANASSAT: [NizamTashghil; 3] =
-    [NizamTashghil::Windows, NizamTashghil::Linux, NizamTashghil::Mac];
+const MANASSAT: [NizamTashghil; 3] = [
+    NizamTashghil::Windows,
+    NizamTashghil::Linux,
+    NizamTashghil::Mac,
+];
 
 /// How far below a nominated root the walk goes.
 ///
@@ -171,8 +174,12 @@ const ADNA_RUM_AAM: usize = 4;
 /// Not a blocklist of applications: three of these cannot contain a game by
 /// construction, and `node_modules` is the one directory on a developer's
 /// machine that reliably holds tens of thousands of files and no game at all.
-const ASMAA_MATWIYA: [&str; 4] =
-    ["node_modules", "$recycle.bin", "system volume information", "__macosx"];
+const ASMAA_MATWIYA: [&str; 4] = [
+    "node_modules",
+    "$recycle.bin",
+    "system volume information",
+    "__macosx",
+];
 
 /// Executable extensions the signature test will accept as a game's own binary.
 ///
@@ -252,7 +259,10 @@ impl MatjarMahmul {
     /// extra folders configured does no work at all.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { judhur: Vec::new(), masarat_mahjuza: Vec::new() }
+        Self {
+            judhur: Vec::new(),
+            masarat_mahjuza: Vec::new(),
+        }
     }
 
     /// Builds the adapter over extra scan roots.
@@ -262,7 +272,10 @@ impl MatjarMahmul {
     /// nothing still scans what the user configured.
     #[must_use]
     pub const fn bi_judhur(judhur: Vec<PathBuf>) -> Self {
-        Self { judhur, masarat_mahjuza: Vec::new() }
+        Self {
+            judhur,
+            masarat_mahjuza: Vec::new(),
+        }
     }
 
     /// Marks directories as already claimed by a launcher.
@@ -287,8 +300,11 @@ impl MatjarMahmul {
     /// is what makes the deduplication exact rather than heuristic.
     #[must_use]
     pub fn mahjuza_min_fahs(self, natija: &NatijatFahs) -> Self {
-        let masarat: Vec<PathBuf> =
-            natija.alaab().into_iter().map(|luba| luba.jidhr.clone()).collect();
+        let masarat: Vec<PathBuf> = natija
+            .alaab()
+            .into_iter()
+            .map(|luba| luba.jidhr.clone())
+            .collect();
         self.maa_mahjuza(masarat)
     }
 
@@ -311,7 +327,12 @@ impl MatjarMahmul {
     fn judhur_fahs(&self, siyaq: &SiyaqFahs) -> Vec<PathBuf> {
         let mut judhur: Vec<PathBuf> = Vec::new();
         let mut ruit: BTreeSet<String> = BTreeSet::new();
-        for masar in siyaq.manassat.mujalladat_idafiya.iter().chain(self.judhur.iter()) {
+        for masar in siyaq
+            .manassat
+            .mujalladat_idafiya
+            .iter()
+            .chain(self.judhur.iter())
+        {
             if ruit.insert(miftah_masar(masar, siyaq.nizam)) {
                 judhur.push(masar.clone());
             }
@@ -376,7 +397,9 @@ impl Matjar for MatjarMahmul {
     /// screen has somewhere to point. [`None`] means the user has nominated
     /// nothing, which is the default and is not a failure.
     fn mawqi(&self, siyaq: &SiyaqFahs) -> Option<PathBuf> {
-        self.judhur_fahs(siyaq).into_iter().find(|masar| masar.is_dir())
+        self.judhur_fahs(siyaq)
+            .into_iter()
+            .find(|masar| masar.is_dir())
     }
 
     /// # Errors
@@ -414,14 +437,19 @@ impl Matjar for MatjarMahmul {
             imsah_jidhr(&jidhr, siyaq.nizam, &mahjuza, &mut maruf, &mut natija);
         }
 
-        natija.alaab.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
+        natija
+            .alaab
+            .sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
         natija.muddat = bidaya.elapsed();
         Ok(natija)
     }
 
     fn judhur_muraqaba(&self, siyaq: &SiyaqFahs) -> Vec<PathBuf> {
-        let mut judhur: Vec<PathBuf> =
-            self.judhur_fahs(siyaq).into_iter().filter(|masar| masar.is_dir()).collect();
+        let mut judhur: Vec<PathBuf> = self
+            .judhur_fahs(siyaq)
+            .into_iter()
+            .filter(|masar| masar.is_dir())
+            .collect();
         judhur.sort();
         judhur.dedup();
         judhur
@@ -437,7 +465,11 @@ impl Matjar for MatjarMahmul {
 fn miftah_masar(masar: &Path, nizam: NizamTashghil) -> String {
     let nass = masar.to_string_lossy();
     let maqsus = nass.trim_end_matches(['/', '\\']);
-    if nizam.hassas_lil_ahruf() { maqsus.to_owned() } else { maqsus.to_lowercase() }
+    if nizam.hassas_lil_ahruf() {
+        maqsus.to_owned()
+    } else {
+        maqsus.to_lowercase()
+    }
 }
 
 /// Whether a path sits at or under any of a set of claimed directories.
@@ -446,7 +478,9 @@ fn miftah_masar(masar: &Path, nizam: NizamTashghil) -> String {
 /// entry, so the cost is the path's depth times a set lookup instead of the
 /// number of claimed roots.
 fn taht_ay(mafatih: &BTreeSet<String>, masar: &Path, nizam: NizamTashghil) -> bool {
-    masar.ancestors().any(|jadd| mafatih.contains(&miftah_masar(jadd, nizam)))
+    masar
+        .ancestors()
+        .any(|jadd| mafatih.contains(&miftah_masar(jadd, nizam)))
 }
 
 // ---------------------------------------------------------------------------
@@ -549,7 +583,10 @@ fn imsah_jidhr(
 
 /// Whether a directory is one the walk never descends into.
 fn matwi(masar: &Path) -> bool {
-    let Some(ism) = masar.file_name().map(|ism| ism.to_string_lossy().to_lowercase()) else {
+    let Some(ism) = masar
+        .file_name()
+        .map(|ism| ism.to_string_lossy().to_lowercase())
+    else {
         return true;
     };
     // A dot-directory is configuration, version control or a launcher's own
@@ -587,9 +624,7 @@ fn adif(
                 },
             }
         },
-        HukmMujallad::Rum { aila, adad, hajm } => {
-            bina_rum(mujallad, &aila, adad, hajm, nizam)
-        },
+        HukmMujallad::Rum { aila, adad, hajm } => bina_rum(mujallad, &aila, adad, hajm, nizam),
     };
 
     if maruf.insert(luba.masdar.muarrif()) {
@@ -623,9 +658,9 @@ fn bina_luba(
     nizam: NizamTashghil,
 ) -> Result<LubaMuktashafa, String> {
     let hadaf = tanfidhi.unwrap_or(mujallad);
-    let mut luba =
-        yadawi::luba_min_masar(hadaf, None, nizam).map_err(|khata| khata.injilizi)?;
-    luba.simat.push(SimatLuba::MuktashafaBilIstidlal(dalil.to_owned()));
+    let mut luba = yadawi::luba_min_masar(hadaf, None, nizam).map_err(|khata| khata.injilizi)?;
+    luba.simat
+        .push(SimatLuba::MuktashafaBilIstidlal(dalil.to_owned()));
     Ok(luba)
 }
 
@@ -644,8 +679,7 @@ fn bina_rum(
     hajm: u64,
     nizam: NizamTashghil,
 ) -> LubaMuktashafa {
-    let ism = yadawi::ism_min_mujallad(mujallad)
-        .unwrap_or_else(|| "Emulated titles".to_owned());
+    let ism = yadawi::ism_min_mujallad(mujallad).unwrap_or_else(|| "Emulated titles".to_owned());
 
     LubaMuktashafa {
         masdar: MasdarLuba::Yadawi(yadawi::muarrif_yadawi(mujallad, nizam)),
@@ -684,7 +718,11 @@ fn ghilaf_mujawir(mujallad: &Path) -> MasadirSuwar {
         .map(|ism| mujallad.join(ism))
         .find(|masar| masar.is_file())
         .map(MasdarSura::Malaf);
-    MasadirSuwar { ghilaf, batl: None, shiar: None }
+    MasadirSuwar {
+        ghilaf,
+        batl: None,
+        shiar: None,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -770,7 +808,11 @@ fn taht_matjar(mujallad: &Path, qaima: &QaimatMujallad) -> Option<&'static str> 
     // named by Steam, and no other program arranges a directory that way.
     let fi_steam = mujallad
         .parent()
-        .filter(|walid| walid.file_name().is_some_and(|ism| ism.eq_ignore_ascii_case("common")))
+        .filter(|walid| {
+            walid
+                .file_name()
+                .is_some_and(|ism| ism.eq_ignore_ascii_case("common"))
+        })
         .and_then(Path::parent)
         .and_then(Path::file_name)
         .is_some_and(|ism| ism.eq_ignore_ascii_case("steamapps"));
@@ -781,9 +823,10 @@ fn taht_matjar(mujallad: &Path, qaima: &QaimatMujallad) -> Option<&'static str> 
     // A Microsoft Store game lives under `WindowsApps`, where its files are not
     // even readable without an ACL change — and where the Xbox adapter reads it
     // out of the package manifest instead.
-    let fi_mutajar = mujallad
-        .ancestors()
-        .any(|jadd| jadd.file_name().is_some_and(|ism| ism.eq_ignore_ascii_case("WindowsApps")));
+    let fi_mutajar = mujallad.ancestors().any(|jadd| {
+        jadd.file_name()
+            .is_some_and(|ism| ism.eq_ignore_ascii_case("WindowsApps"))
+    });
     fi_mutajar.then_some("Microsoft Store")
 }
 
@@ -816,8 +859,12 @@ fn dalil_muharrik(mujallad: &Path, qaima: &QaimatMujallad) -> Option<(String, Op
 /// builds where the pairing does not line up because somebody renamed the
 /// executable after export.
 fn dalil_unity(mujallad: &Path, qaima: &QaimatMujallad) -> Option<(String, Option<PathBuf>)> {
-    const JIRAN: [&str; 4] =
-        ["unityplayer.dll", "unityplayer.so", "libunityplayer.so", "unityplayer.dylib"];
+    const JIRAN: [&str; 4] = [
+        "unityplayer.dll",
+        "unityplayer.so",
+        "libunityplayer.so",
+        "unityplayer.dylib",
+    ];
 
     for madkhal in qaima.malaffat() {
         if !IMTIDADAT_TANFIDH.contains(&madkhal.imtidad.as_str()) {
@@ -852,7 +899,10 @@ fn dalil_unreal(mujallad: &Path, qaima: &QaimatMujallad) -> Option<(String, Opti
         return Some((format!("Unreal Engine: {}/Binaries", muharrik.ism), None));
     }
     let pak = qaima.awwal_bi_imtidad("pak")?;
-    Some((format!("Unreal Engine: {} beside {}", pak.ism, muharrik.ism), None))
+    Some((
+        format!("Unreal Engine: {} beside {}", pak.ism, muharrik.ism),
+        None,
+    ))
 }
 
 /// Godot: a `.pck` pack file.
@@ -902,15 +952,22 @@ fn dalil_rpgmaker(mujallad: &Path, qaima: &QaimatMujallad) -> Option<(String, Op
     const ARSHIFAT: [&str; 3] = ["rgss3a", "rgss2a", "rgssad"];
     const IMTIDADAT: [&str; 3] = ["rvdata2", "rvdata", "rxdata"];
 
-    if let Some(arshif) =
-        ARSHIFAT.iter().find_map(|imtidad| qaima.awwal_bi_imtidad(imtidad))
+    if let Some(arshif) = ARSHIFAT
+        .iter()
+        .find_map(|imtidad| qaima.awwal_bi_imtidad(imtidad))
     {
-        let tanfidhi = qaima.tanfidhi_bi_jidhr_ism("game").map(|m| mujallad.join(&m.ism));
+        let tanfidhi = qaima
+            .tanfidhi_bi_jidhr_ism("game")
+            .map(|m| mujallad.join(&m.ism));
         return Some((format!("RPG Maker: {}", arshif.ism), tanfidhi));
     }
 
     if let Some(www) = qaima.mujallad_madkhal("www")
-        && mujallad.join(&www.ism).join("js").join("rpg_core.js").is_file()
+        && mujallad
+            .join(&www.ism)
+            .join("js")
+            .join("rpg_core.js")
+            .is_file()
     {
         return Some(("RPG Maker MV: www/js/rpg_core.js".to_owned(), None));
     }
@@ -925,7 +982,10 @@ fn dalil_rpgmaker(mujallad: &Path, qaima: &QaimatMujallad) -> Option<(String, Op
     let tanfidhi = qaima.tanfidhi_bi_jidhr_ism("game")?;
     let dakhili = imtidad_dakhil(&mujallad.join(&bayanat.ism), &IMTIDADAT)?;
     Some((
-        format!("RPG Maker: {} with {}/{}", tanfidhi.ism, bayanat.ism, dakhili),
+        format!(
+            "RPG Maker: {} with {}/{}",
+            tanfidhi.ism, bayanat.ism, dakhili
+        ),
         Some(mujallad.join(&tanfidhi.ism)),
     ))
 }
@@ -943,7 +1003,10 @@ fn dalil_rpgmaker(mujallad: &Path, qaima: &QaimatMujallad) -> Option<(String, Op
 /// shape the folder-name match was written for.
 fn dalil_renpy(mujallad: &Path, qaima: &QaimatMujallad) -> Option<(String, Option<PathBuf>)> {
     if let Some(mufassir) = qaima.mujallad_madkhal("renpy") {
-        return Some((format!("Ren'Py: a {} folder at the install root", mufassir.ism), None));
+        return Some((
+            format!("Ren'Py: a {} folder at the install root", mufassir.ism),
+            None,
+        ));
     }
     if let Some(arshif) = qaima.awwal_bi_imtidad("rpa") {
         return Some((format!("Ren'Py: {}", arshif.ism), None));
@@ -982,7 +1045,8 @@ fn dalil_electron(mujallad: &Path, qaima: &QaimatMujallad) -> Option<(String, Op
     }
     let mawarid = qaima.mujallad_madkhal("resources")?;
     let asar = mujallad.join(&mawarid.ism).join("app.asar");
-    asar.is_file().then(|| (format!("Electron: {}/app.asar", mawarid.ism), None))
+    asar.is_file()
+        .then(|| (format!("Electron: {}/app.asar", mawarid.ism), None))
 }
 
 /// The first file inside a directory with one of the given extensions.
@@ -994,13 +1058,16 @@ fn imtidad_dakhil(mujallad: &Path, imtidadat: &[&str]) -> Option<String> {
     let qaima = std::fs::read_dir(mujallad).ok()?;
     for madkhal in qaima.flatten().take(AQSA_MADAKHIL_MUJALLAD) {
         let masar = madkhal.path();
-        let Some(imtidad) =
-            masar.extension().map(|imtidad| imtidad.to_string_lossy().to_lowercase())
+        let Some(imtidad) = masar
+            .extension()
+            .map(|imtidad| imtidad.to_string_lossy().to_lowercase())
         else {
             continue;
         };
         if imtidadat.contains(&imtidad.as_str()) {
-            return masar.file_name().map(|ism| ism.to_string_lossy().into_owned());
+            return masar
+                .file_name()
+                .map(|ism| ism.to_string_lossy().into_owned());
         }
     }
     None
@@ -1166,12 +1233,16 @@ impl QaimatMujallad {
 
     /// Every file, in name order.
     fn malaffat(&self) -> impl Iterator<Item = &MadkhalMujallad> {
-        self.madakhil.iter().filter(|madkhal| !madkhal.huwa_mujallad)
+        self.madakhil
+            .iter()
+            .filter(|madkhal| !madkhal.huwa_mujallad)
     }
 
     /// Whether a file of this lowercased name is here.
     fn malaf(&self, ism: &str) -> bool {
-        self.madakhil.iter().any(|madkhal| !madkhal.huwa_mujallad && madkhal.saghir == ism)
+        self.madakhil
+            .iter()
+            .any(|madkhal| !madkhal.huwa_mujallad && madkhal.saghir == ism)
     }
 
     /// Whether a directory of this lowercased name is here.
@@ -1182,7 +1253,9 @@ impl QaimatMujallad {
     /// The directory entry of this lowercased name, for the messages that quote
     /// the name the filesystem actually spells.
     fn mujallad_madkhal(&self, ism: &str) -> Option<&MadkhalMujallad> {
-        self.madakhil.iter().find(|madkhal| madkhal.huwa_mujallad && madkhal.saghir == ism)
+        self.madakhil
+            .iter()
+            .find(|madkhal| madkhal.huwa_mujallad && madkhal.saghir == ism)
     }
 
     /// The first file with this lowercased extension.
@@ -1210,6 +1283,5 @@ impl QaimatMujallad {
 
 /// Whether an extension is one the ROM test counts.
 fn huwa_imtidad_rum(imtidad: &str) -> bool {
-    IMTIDADAT_RUM_AAMA.contains(&imtidad)
-        || AILAT_RUM.iter().any(|(mawjud, _)| *mawjud == imtidad)
+    IMTIDADAT_RUM_AAMA.contains(&imtidad) || AILAT_RUM.iter().any(|(mawjud, _)| *mawjud == imtidad)
 }

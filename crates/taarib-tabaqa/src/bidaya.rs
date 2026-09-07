@@ -67,6 +67,13 @@ use windows::Win32::Graphics::Direct3D::{
     D3D_DRIVER_TYPE_HARDWARE, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_11_0,
 };
 #[cfg(windows)]
+use windows::Win32::Graphics::Direct3D9::{
+    D3D_SDK_VERSION, D3DADAPTER_DEFAULT, D3DCREATE_FPU_PRESERVE, D3DCREATE_MULTITHREADED,
+    D3DCREATE_NOWINDOWCHANGES, D3DCREATE_SOFTWARE_VERTEXPROCESSING, D3DDEVTYPE_HAL, D3DFMT_UNKNOWN,
+    D3DPRESENT_PARAMETERS, D3DSWAPEFFECT_DISCARD, Direct3DCreate9, IDirect3DDevice9,
+    IDirect3DDevice9Ex,
+};
+#[cfg(windows)]
 use windows::Win32::Graphics::Direct3D11::{
     D3D11_CREATE_DEVICE_FLAG, D3D11_SDK_VERSION, D3D11CreateDeviceAndSwapChain, ID3D11Device,
 };
@@ -87,30 +94,22 @@ use windows::Win32::Graphics::Dxgi::{
     IDXGIFactory, IDXGISwapChain, IDXGISwapChain1, IDXGISwapChain3,
 };
 #[cfg(windows)]
-use windows::Win32::Graphics::Direct3D9::{
-    D3D_SDK_VERSION, D3DADAPTER_DEFAULT, D3DCREATE_FPU_PRESERVE, D3DCREATE_MULTITHREADED,
-    D3DCREATE_NOWINDOWCHANGES, D3DCREATE_SOFTWARE_VERTEXPROCESSING, D3DDEVTYPE_HAL,
-    D3DFMT_UNKNOWN, D3DPRESENT_PARAMETERS, D3DSWAPEFFECT_DISCARD, Direct3DCreate9,
-    IDirect3DDevice9, IDirect3DDevice9Ex,
-};
-#[cfg(windows)]
 use windows::core::{BOOL, HRESULT, Interface};
 
 #[cfg(windows)]
-use crate::d3d11::KhattafD3D11;
-#[cfg(windows)]
 use crate::d3d8::{KhattafD3D8, TarkeebD3D8};
+#[cfg(windows)]
+use crate::d3d9::KhattafD3D9;
 #[cfg(windows)]
 use crate::d3d10::KhattafD3D10;
 #[cfg(windows)]
-use crate::d3d9::KhattafD3D9;
+use crate::d3d11::KhattafD3D11;
 #[cfg(windows)]
 use crate::d3d12::KhattafD3D12;
 #[cfg(windows)]
 use crate::khataf::{
     KHANAT_ISTIAADA, KHANAT_ISTIAADA_MUMTADDA, KHANAT_PRESENT, KHANAT_PRESENT1, KHANAT_RESIZE,
-    KHANAT_TANFEEDH, KHANAT_TAQDEEM9, KHANAT_TAQDEEM_MUMTADD, NafidhaMuaqqata,
-    nafidha_muaqqata,
+    KHANAT_TANFEEDH, KHANAT_TAQDEEM_MUMTADD, KHANAT_TAQDEEM9, NafidhaMuaqqata, nafidha_muaqqata,
 };
 
 /// The log this payload appends to, beside the module itself.
@@ -225,7 +224,10 @@ fn ibda() {
     // second unhook would then write one thunk's saved original over the other.
     if DUIYA.swap(true, Ordering::AcqRel) {
         if let Some(mujallad) = mujallad_nafsi() {
-            sajjil(&mujallad, "declined: taarib_bidaya was called more than once");
+            sajjil(
+                &mujallad,
+                "declined: taarib_bidaya was called more than once",
+            );
         }
         return;
     }
@@ -337,7 +339,9 @@ fn ruqaa_mujawira(mujallad: &Path) -> Result<(MalafRuqaa, String), Radd> {
         .flatten()
         .map(|madkhal| madkhal.path())
         .filter(|masar| {
-            masar.extension().is_some_and(|lahiqa| lahiqa.eq_ignore_ascii_case(LAHIQAT_RUQAA))
+            masar
+                .extension()
+                .is_some_and(|lahiqa| lahiqa.eq_ignore_ascii_case(LAHIQAT_RUQAA))
                 && masar.is_file()
         })
         .collect();
@@ -354,15 +358,23 @@ fn ruqaa_mujawira(mujallad: &Path) -> Result<(MalafRuqaa, String), Radd> {
         )));
     };
 
-    let ism = masar
-        .file_name()
-        .map_or_else(|| masar.display().to_string(), |ism| ism.to_string_lossy().into_owned());
+    let ism = masar.file_name().map_or_else(
+        || masar.display().to_string(),
+        |ism| ism.to_string_lossy().into_owned(),
+    );
     let malaf = MalafRuqaa::iftah(masar).map_err(|khata| {
-        Radd::rafd(format!("{} is present and does not open as a patch: {khata}", masar.display()))
+        Radd::rafd(format!(
+            "{} is present and does not open as a patch: {khata}",
+            masar.display()
+        ))
     })?;
 
     let ziyada = masarat.len().saturating_sub(1);
-    let ism = if ziyada == 0 { ism } else { format!("{ism} ({ziyada} more beside it, unused)") };
+    let ism = if ziyada == 0 {
+        ism
+    } else {
+        format!("{ism} ({ziyada} more beside it, unused)")
+    };
     Ok((malaf, ism))
 }
 
@@ -445,7 +457,9 @@ fn iqrar_mahfuz(luba: &str) -> Result<Iqrar, Radd> {
     let lahza = u64::try_from(lahza.as_second()).unwrap_or(0);
 
     Iqrar::baad_ard(basma, lahza, luba).map_err(|khata| {
-        Radd::rafd(format!("the recorded acknowledgement was not accepted: {khata}"))
+        Radd::rafd(format!(
+            "the recorded acknowledgement was not accepted: {khata}"
+        ))
     })
 }
 
@@ -457,7 +471,9 @@ fn iqrar_mahfuz(luba: &str) -> Result<Iqrar, Radd> {
 /// is named by its own folder: `<game>/taarib/` answers `<game>`, and a payload
 /// deployed beside the executable answers that directory's name.
 fn ism_luba(mujallad: &Path) -> String {
-    let ism = mujallad.file_name().map(|ism| ism.to_string_lossy().into_owned());
+    let ism = mujallad
+        .file_name()
+        .map(|ism| ism.to_string_lossy().into_owned());
     match ism {
         Some(ism) if ism == MUJALLAD_TAARIB => mujallad
             .parent()
@@ -499,7 +515,9 @@ fn rakkib(mabni: &mut Tarkib) -> Result<(), Radd> {
 fn rakkib_gl(mabni: &mut Tarkib) -> Result<(), Radd> {
     let (wahda, ism_ramz) = RAMZ_TABDIL;
     let Some(qaida) = qaidat_wahda(wahda) else {
-        return Err(Radd::imtinaa(format!("{wahda} is no longer loaded in this process")));
+        return Err(Radd::imtinaa(format!(
+            "{wahda} is no longer loaded in this process"
+        )));
     };
 
     // SAFETY: `qaida` is the base `qaidat_wahda` just reported for a module the
@@ -515,7 +533,11 @@ fn rakkib_gl(mabni: &mut Tarkib) -> Result<(), Radd> {
     // convention for this platform, and it calls the original through
     // `ASL_TABDIL`, which is stored below before the detour can be reached.
     let masar = unsafe {
-        Masar::jadeed(hadaf.cast_const(), (thunk_tabdil as *const ()).cast::<c_void>(), ism_ramz)
+        Masar::jadeed(
+            hadaf.cast_const(),
+            (thunk_tabdil as *const ()).cast::<c_void>(),
+            ism_ramz,
+        )
     }
     .map_err(|khata| Radd::fashal(format!("{ism_ramz} could not be detoured: {khata}")))?;
 
@@ -694,9 +716,8 @@ fn silsila_d3d10(nafidha: &NafidhaMuaqqata) -> Result<IDXGISwapChain, Radd> {
         ))
     })?;
 
-    silsila.ok_or_else(|| {
-        Radd::fashal("D3D10 reported success and produced no swap chain".to_owned())
-    })
+    silsila
+        .ok_or_else(|| Radd::fashal("D3D10 reported success and produced no swap chain".to_owned()))
 }
 
 /// Replaces `Present` and `Reset` in a Direct3D 8 device's method table.
@@ -726,10 +747,8 @@ fn rakkib_d3d8(mabni: &mut Tarkib) -> Result<(), Radd> {
     // and not to the instance, and is therefore the game's own — is live.
     // `nida_taqdeem_8` and `nida_tasfir_8` are `fn` items in this module and
     // outlive any installation.
-    let tarkeeb = unsafe {
-        TarkeebD3D8::rakkib(muaqqat.jihaz(), nida_taqdeem_8, nida_tasfir_8)
-    }
-    .map_err(|khata| Radd::fashal(format!("IDirect3DDevice8: {khata}")))?;
+    let tarkeeb = unsafe { TarkeebD3D8::rakkib(muaqqat.jihaz(), nida_taqdeem_8, nida_tasfir_8) }
+        .map_err(|khata| Radd::fashal(format!("IDirect3DDevice8: {khata}")))?;
 
     mabni.thabit8 = Some(HirasatD3D8(tarkeeb));
     Ok(())
@@ -948,12 +967,18 @@ fn wasf_silsila(
         BufferDesc: DXGI_MODE_DESC {
             Width: 8,
             Height: 8,
-            RefreshRate: DXGI_RATIONAL { Numerator: 0, Denominator: 1 },
+            RefreshRate: DXGI_RATIONAL {
+                Numerator: 0,
+                Denominator: 1,
+            },
             Format: DXGI_FORMAT_R8G8B8A8_UNORM,
             ScanlineOrdering: DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
             Scaling: DXGI_MODE_SCALING_UNSPECIFIED,
         },
-        SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+        SampleDesc: DXGI_SAMPLE_DESC {
+            Count: 1,
+            Quality: 0,
+        },
         BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
         BufferCount: hawajiz,
         OutputWindow: nafidha.maqbad(),
@@ -995,9 +1020,8 @@ fn silsila_d3d11(nafidha: &NafidhaMuaqqata) -> Result<IDXGISwapChain, Radd> {
         ))
     })?;
 
-    silsila.ok_or_else(|| {
-        Radd::fashal("D3D11 reported success and produced no swap chain".to_owned())
-    })
+    silsila
+        .ok_or_else(|| Radd::fashal("D3D11 reported success and produced no swap chain".to_owned()))
 }
 
 /// A throwaway D3D12 device, queue and swap chain, for their method tables.
@@ -1013,10 +1037,16 @@ fn silsila_d3d12(
     // SAFETY: the out-parameter addresses a local initialised to `None`, and
     // `D3D12CreateDevice` writes through it only on success.
     unsafe { D3D12CreateDevice(None, D3D_FEATURE_LEVEL_11_0, &raw mut jihaz) }.map_err(
-        |khata| Radd::rafd(format!("a throwaway D3D12 device could not be created: {khata}")),
+        |khata| {
+            Radd::rafd(format!(
+                "a throwaway D3D12 device could not be created: {khata}"
+            ))
+        },
     )?;
     let Some(jihaz) = jihaz else {
-        return Err(Radd::fashal("D3D12 reported success and named no device".to_owned()));
+        return Err(Radd::fashal(
+            "D3D12 reported success and named no device".to_owned(),
+        ));
     };
 
     let wasf_saff = D3D12_COMMAND_QUEUE_DESC {
@@ -1029,7 +1059,9 @@ fn silsila_d3d12(
     // fully initialised local that outlives the call.
     let saff: ID3D12CommandQueue = unsafe { jihaz.CreateCommandQueue(&raw const wasf_saff) }
         .map_err(|khata| {
-            Radd::rafd(format!("a throwaway D3D12 command queue could not be created: {khata}"))
+            Radd::rafd(format!(
+                "a throwaway D3D12 command queue could not be created: {khata}"
+            ))
         })?;
 
     // SAFETY: `CreateDXGIFactory1` takes no arguments and returns an owned
@@ -1052,7 +1084,9 @@ fn silsila_d3d12(
             ))
         })?;
     let Some(silsila) = silsila else {
-        return Err(Radd::fashal("DXGI reported success and produced no swap chain".to_owned()));
+        return Err(Radd::fashal(
+            "DXGI reported success and produced no swap chain".to_owned(),
+        ));
     };
 
     // Refused here rather than at the first frame: the D3D12 backend is built
@@ -1235,7 +1269,9 @@ fn khattaf_d3d11(silsila: *mut c_void) -> Result<Option<Box<dyn Khattaf>>, Radd>
     // progress, so it points at a live instance the game owns for at least the
     // duration of that call, and the borrow taken here does not outlive it.
     let Some(wajiha) = (unsafe { IDXGISwapChain::from_raw_borrowed(&silsila) }) else {
-        return Err(Radd::fashal("the present hook was reached with a null swap chain"));
+        return Err(Radd::fashal(
+            "the present hook was reached with a null swap chain",
+        ));
     };
     let khattaf = KhattafD3D11::min_silsila(wajiha)
         .map_err(|khata| Radd::fashal(format!("the D3D11 backend could not be built: {khata}")))?;
@@ -1247,10 +1283,14 @@ fn khattaf_d3d11(silsila: *mut c_void) -> Result<Option<Box<dyn Khattaf>>, Radd>
 fn khattaf_d3d12(silsila: *mut c_void) -> Result<Option<Box<dyn Khattaf>>, Radd> {
     // SAFETY: as `khattaf_d3d11` — the `this` of a method call in progress.
     let Some(wajiha) = (unsafe { IDXGISwapChain::from_raw_borrowed(&silsila) }) else {
-        return Err(Radd::fashal("the present hook was reached with a null swap chain"));
+        return Err(Radd::fashal(
+            "the present hook was reached with a null swap chain",
+        ));
     };
     let silsila3 = wajiha.cast::<IDXGISwapChain3>().map_err(|khata| {
-        Radd::fashal(format!("the game's swap chain is not an IDXGISwapChain3: {khata}"))
+        Radd::fashal(format!(
+            "the game's swap chain is not an IDXGISwapChain3: {khata}"
+        ))
     })?;
 
     let hirasa = SAFF.lock();
@@ -1275,7 +1315,9 @@ fn khattaf_d3d9(mujallad: &Path, jihaz: *mut c_void) -> Result<Option<Box<dyn Kh
     // progress, so it points at a live device the game owns for at least the
     // duration of that call, and the borrow taken here does not outlive it.
     let Some(wajiha) = (unsafe { IDirect3DDevice9::from_raw_borrowed(&jihaz) }) else {
-        return Err(Radd::fashal("the present hook was reached with a null device"));
+        return Err(Radd::fashal(
+            "the present hook was reached with a null device",
+        ));
     };
     let khattaf = KhattafD3D9::min_jihaz(wajiha)
         .map_err(|khata| Radd::fashal(format!("the D3D9 backend could not be built: {khata}")))?;
@@ -1320,15 +1362,14 @@ fn khattaf_d3d9(mujallad: &Path, jihaz: *mut c_void) -> Result<Option<Box<dyn Kh
 /// up for the process lifetime over a game the eleventh backend would have
 /// drawn on with the hook already in place.
 #[cfg(windows)]
-fn khattaf_d3d10(
-    mujallad: &Path,
-    silsila: *mut c_void,
-) -> Result<Option<Box<dyn Khattaf>>, Radd> {
+fn khattaf_d3d10(mujallad: &Path, silsila: *mut c_void) -> Result<Option<Box<dyn Khattaf>>, Radd> {
     // SAFETY: `silsila` is the `this` of an `IDXGISwapChain` method call in
     // progress, so it points at a live instance the game owns for at least the
     // duration of that call, and the borrow taken here does not outlive it.
     let Some(wajiha) = (unsafe { IDXGISwapChain::from_raw_borrowed(&silsila) }) else {
-        return Err(Radd::fashal("the present hook was reached with a null swap chain"));
+        return Err(Radd::fashal(
+            "the present hook was reached with a null swap chain",
+        ));
     };
     for satr in crate::d3d10::qudra().sutur() {
         sajjil(mujallad, &format!("capability: {satr}"));
@@ -1337,10 +1378,15 @@ fn khattaf_d3d10(
         Ok(khattaf) => return Ok(Some(Box::new(khattaf))),
         Err(khata @ crate::khata::KhataTabaqa::ApiGhayrMadum { .. }) => khata,
         Err(khata) => {
-            return Err(Radd::fashal(format!("the D3D10 backend could not be built: {khata}")));
+            return Err(Radd::fashal(format!(
+                "the D3D10 backend could not be built: {khata}"
+            )));
         },
     };
-    sajjil(mujallad, &format!("capability: Direct3D 10: declined — {imtinaa}"));
+    sajjil(
+        mujallad,
+        &format!("capability: Direct3D 10: declined — {imtinaa}"),
+    );
 
     // SAFETY: `wajiha` is the live swap chain borrowed above, for the duration
     // of the same call. `GetDevice` is a QueryInterface for the requested IID
@@ -1513,11 +1559,7 @@ unsafe extern "system" fn thunk_taghyeer(
 /// queue the game submits on is the documented technique and the only one
 /// available.
 #[cfg(windows)]
-unsafe extern "system" fn thunk_tanfeedh(
-    saff: *mut c_void,
-    adad: u32,
-    qawaim: *const *mut c_void,
-) {
+unsafe extern "system" fn thunk_tanfeedh(saff: *mut c_void, adad: u32, qawaim: *const *mut c_void) {
     let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
     if !SAFF_JAHIZ.load(Ordering::Acquire) {
         let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
@@ -1652,10 +1694,7 @@ unsafe extern "system" fn thunk_taqdeem_mumtadd(
 /// recover its device, which is a game that never comes back rather than an
 /// overlay that stops drawing.
 #[cfg(windows)]
-unsafe extern "system" fn thunk_istiaada9(
-    jihaz: *mut c_void,
-    muallimat: *mut c_void,
-) -> HRESULT {
+unsafe extern "system" fn thunk_istiaada9(jihaz: *mut c_void, muallimat: *mut c_void) -> HRESULT {
     let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
     atliq_qabl_istiaada();
 
@@ -1944,17 +1983,26 @@ struct Radd {
 impl Radd {
     /// This is not that kind of game, or no patch is installed.
     fn imtinaa(sabab: impl Into<String>) -> Self {
-        Self { hala: HalatRadd::Imtinaa, sabab: sabab.into() }
+        Self {
+            hala: HalatRadd::Imtinaa,
+            sabab: sabab.into(),
+        }
     }
 
     /// Something is wrong that the user could fix.
     fn rafd(sabab: impl Into<String>) -> Self {
-        Self { hala: HalatRadd::Rafd, sabab: sabab.into() }
+        Self {
+            hala: HalatRadd::Rafd,
+            sabab: sabab.into(),
+        }
     }
 
     /// A hook or a read failed unexpectedly.
     fn fashal(sabab: impl Into<String>) -> Self {
-        Self { hala: HalatRadd::Fashal, sabab: sabab.into() }
+        Self {
+            hala: HalatRadd::Fashal,
+            sabab: sabab.into(),
+        }
     }
 
     /// The one line this refusal writes.
@@ -1979,7 +2027,11 @@ fn sajjil(mujallad: &Path, satr: &str) {
     if std::fs::metadata(&masar).is_ok_and(|bayan| bayan.len() > AQSA_SIJILL) {
         let _ = std::fs::remove_file(&masar);
     }
-    let Ok(mut malaf) = std::fs::OpenOptions::new().create(true).append(true).open(&masar) else {
+    let Ok(mut malaf) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&masar)
+    else {
         return;
     };
     let _ = writeln!(malaf, "tabaqa: {satr}");
@@ -2019,7 +2071,10 @@ pub fn bi_ruqaa<T>(amal: impl FnOnce(&MalafRuqaa) -> T) -> Option<T> {
 /// Whether the overlay has control of this process's frames.
 #[must_use]
 pub fn hal_bada() -> bool {
-    TARKIB.lock().as_ref().is_some_and(|mabni| mabni.tabaqa.is_some())
+    TARKIB
+        .lock()
+        .as_ref()
+        .is_some_and(|mabni| mabni.tabaqa.is_some())
 }
 
 /// Which graphics API this payload attached to, once it has attached to one.

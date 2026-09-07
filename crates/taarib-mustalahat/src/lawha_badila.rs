@@ -397,16 +397,26 @@ fn laff_bila_hadd(kalimat: &[&str], saa: usize) -> Vec<SatrUnwan> {
             haliy.push_str(kalima);
             continue;
         }
-        let mutawaqqa = haliy.chars().count().saturating_add(1).saturating_add(tul_kalima);
+        let mutawaqqa = haliy
+            .chars()
+            .count()
+            .saturating_add(1)
+            .saturating_add(tul_kalima);
         if mutawaqqa <= saa {
             haliy.push(' ');
         } else {
-            sutur.push(SatrUnwan { nass: std::mem::take(&mut haliy), maqsus: false });
+            sutur.push(SatrUnwan {
+                nass: std::mem::take(&mut haliy),
+                maqsus: false,
+            });
         }
         haliy.push_str(kalima);
     }
     if !haliy.is_empty() {
-        sutur.push(SatrUnwan { nass: haliy, maqsus: false });
+        sutur.push(SatrUnwan {
+            nass: haliy,
+            maqsus: false,
+        });
     }
     sutur
 }
@@ -431,7 +441,9 @@ fn basma_nass(nass: &str, milh: &[u8]) -> u64 {
     milh.iter()
         .chain(b"\0")
         .chain(nass.as_bytes())
-        .fold(BIDAYA, |basma, wahid| (basma ^ u64::from(*wahid)).wrapping_mul(ADAD_AWWALI))
+        .fold(BIDAYA, |basma, wahid| {
+            (basma ^ u64::from(*wahid)).wrapping_mul(ADAD_AWWALI)
+        })
 }
 
 /// One byte of a hash, taken from the high end.

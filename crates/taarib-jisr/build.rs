@@ -47,7 +47,7 @@ fn main() {
                  ({sabab}); the committed header is used as-is"
             );
             return;
-        }
+        },
     };
 
     // Render into memory first. Writing to a Vec cannot fail, which separates
@@ -66,7 +66,7 @@ fn main() {
     let natija = match masar.parent() {
         Some(mujallad) => {
             std::fs::create_dir_all(mujallad).and_then(|()| std::fs::write(&masar, &bayt))
-        }
+        },
         None => std::fs::write(&masar, &bayt),
     };
     if let Err(sabab) = natija {

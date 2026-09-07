@@ -451,7 +451,11 @@ impl JeelMawrid {
     /// How many reserved words follow the metadata offset.
     #[must_use]
     pub const fn adad_mahjuz(self) -> usize {
-        if self.bi_alam() { ADAD_MAHJUZ_HADITH } else { ADAD_MAHJUZ_QADEEM }
+        if self.bi_alam() {
+            ADAD_MAHJUZ_HADITH
+        } else {
+            ADAD_MAHJUZ_QADEEM
+        }
     }
 
     /// The class name of the hash-table form.
@@ -542,7 +546,9 @@ fn nass_min_tul(qari: &mut Qari<'_>, haql: &'static str, tul: u64) -> Result<Str
         // Trimming instead would mean a file that lies about its own lengths
         // still reads, with every field after it shifted by one byte and nothing
         // to say so.
-        return Err(talifa("a string whose declared length does not end in a NUL"));
+        return Err(talifa(
+            "a string whose declared length does not end in a NUL",
+        ));
     }
     qari.nass(jism)
 }
@@ -553,7 +559,11 @@ fn uktub_nass(katib: &mut Katib, haql: &'static str, nass: &str) -> Result<(), K
     let khaam = nass.as_bytes();
     let tul = tul_u64(khaam.len()).saturating_add(1);
     if tul > AQSA_TUL_HAQL {
-        return Err(KhataGodot::HajmMufrit { haql, qeema: tul, saqf: AQSA_TUL_HAQL });
+        return Err(KhataGodot::HajmMufrit {
+            haql,
+            qeema: tul,
+            saqf: AQSA_TUL_HAQL,
+        });
     }
     let muallan = u32::try_from(tul).map_err(|_| KhataGodot::HajmMufrit {
         haql,
@@ -692,7 +702,7 @@ impl Qeema {
             WASF_SAHIH_TAWIL => {
                 let khana = qari.iqra_masfufa::<8>("a 64-bit integer")?;
                 Ok(Self::SahihTawil(i64::from_le_bytes(khana)))
-            }
+            },
             WASF_NASS => Ok(Self::Nass(iqra_nass(qari, "a string property")?)),
             WASF_ISM_NASS => Ok(Self::IsmNass(iqra_nass(qari, "a string name property")?)),
             WASF_BAYT => {
@@ -706,18 +716,17 @@ impl Qeema {
                 let hashw = hashw_muhadhah(khaam.len(), MUHADHAT_BAYT);
                 qari.takhatta("a packed byte array's padding", tul_u64(hashw))?;
                 Ok(Self::Bayt(khaam))
-            }
+            },
             WASF_SAHIHAT => {
                 let haql = "a packed integer array's length";
                 let adad = u64::from(qari.iqra_u32(haql)?);
-                let matlub =
-                    tahaqquq_adad(ISM, haql, adad, AQSA_KALIMAT, 4, qari.baqi())?;
+                let matlub = tahaqquq_adad(ISM, haql, adad, AQSA_KALIMAT, 4, qari.baqi())?;
                 let mut kalimat = Vec::with_capacity(matlub);
                 for _ in 0..matlub {
                     kalimat.push(qari.iqra_i32("a packed integer array's element")?);
                 }
                 Ok(Self::Sahihat(kalimat))
-            }
+            },
             WASF_NUSUS => {
                 let haql = "a packed string array's length";
                 let adad = u64::from(qari.iqra_u32(haql)?);
@@ -727,7 +736,7 @@ impl Qeema {
                     nusus.push(iqra_nass(qari, "a packed string array's element")?);
                 }
                 Ok(Self::Nusus(nusus))
-            }
+            },
             WASF_QAMUS => {
                 let haql = "a dictionary's length";
                 let raas = qari.iqra_u32(haql)?;
@@ -742,7 +751,7 @@ impl Qeema {
                     azwaj.push((miftah, qeema));
                 }
                 Ok(Self::Qamus { musharak, azwaj })
-            }
+            },
             WASF_MASFUFA => {
                 let haql = "an array's length";
                 let raas = qari.iqra_u32(haql)?;
@@ -754,8 +763,10 @@ impl Qeema {
                     anasir.push(Self::iqra(qari, dakhil)?);
                 }
                 Ok(Self::Masfufa { musharak, anasir })
-            }
-            _ => Err(talifa("a property whose variant tag is outside what a translation holds")),
+            },
+            _ => Err(talifa(
+                "a property whose variant tag is outside what a translation holds",
+            )),
         }
     }
 
@@ -768,7 +779,7 @@ impl Qeema {
     pub fn uktub(&self, katib: &mut Katib) -> Result<(), KhataGodot> {
         katib.uktub_u32(self.wasf());
         match self {
-            Self::Faragh => {}
+            Self::Faragh => {},
             Self::Mantiqi(qeema) => katib.uktub_u32(u32::from(*qeema)),
             Self::Sahih(qeema) => katib.uktub_i32(*qeema),
             Self::SahihTawil(qeema) => katib.uktub_bayt(&qeema.to_le_bytes()),
@@ -778,34 +789,42 @@ impl Qeema {
                 katib.uktub_u32(tul_u32("a packed byte array", khaam.len())?);
                 katib.uktub_bayt(khaam);
                 katib.uktub_asfar(hashw_muhadhah(khaam.len(), MUHADHAT_BAYT));
-            }
+            },
             Self::Sahihat(kalimat) => {
                 katib.uktub_u32(tul_u32("a packed integer array", kalimat.len())?);
                 for kalima in kalimat {
                     katib.uktub_i32(*kalima);
                 }
-            }
+            },
             Self::Nusus(nusus) => {
                 katib.uktub_u32(tul_u32("a packed string array", nusus.len())?);
                 for nass in nusus {
                     uktub_nass(katib, "a packed string array's element", nass)?;
                 }
-            }
+            },
             Self::Qamus { musharak, azwaj } => {
                 let adad = tul_u32("a dictionary", azwaj.len())?;
-                katib.uktub_u32(if *musharak { adad | ALAM_MUSHARAK } else { adad });
+                katib.uktub_u32(if *musharak {
+                    adad | ALAM_MUSHARAK
+                } else {
+                    adad
+                });
                 for (miftah, qeema) in azwaj {
                     miftah.uktub(katib)?;
                     qeema.uktub(katib)?;
                 }
-            }
+            },
             Self::Masfufa { musharak, anasir } => {
                 let adad = tul_u32("an array", anasir.len())?;
-                katib.uktub_u32(if *musharak { adad | ALAM_MUSHARAK } else { adad });
+                katib.uktub_u32(if *musharak {
+                    adad | ALAM_MUSHARAK
+                } else {
+                    adad
+                });
                 for unsur in anasir {
                     unsur.uktub(katib)?;
                 }
-            }
+            },
         }
         Ok(())
     }
@@ -820,9 +839,17 @@ impl Qeema {
 fn tul_u32(haql: &'static str, tul: usize) -> Result<u32, KhataGodot> {
     let qeema = tul_u64(tul);
     if qeema > AQSA_KALIMAT {
-        return Err(KhataGodot::HajmMufrit { haql, qeema, saqf: AQSA_KALIMAT });
+        return Err(KhataGodot::HajmMufrit {
+            haql,
+            qeema,
+            saqf: AQSA_KALIMAT,
+        });
     }
-    u32::try_from(tul).map_err(|_| KhataGodot::HajmMufrit { haql, qeema, saqf: AQSA_KALIMAT })
+    u32::try_from(tul).map_err(|_| KhataGodot::HajmMufrit {
+        haql,
+        qeema,
+        saqf: AQSA_KALIMAT,
+    })
 }
 
 /// Expands a `RSCC` stream, returning the mode it used and the resource inside.
@@ -870,7 +897,9 @@ pub fn fukk_daght(bayt: &[u8]) -> Result<(u32, Vec<u8>), KhataGodot> {
     )?;
     let mut ahjam = Vec::with_capacity(matlub);
     for _ in 0..matlub {
-        ahjam.push(u64::from(qari.iqra_u32("a compressed block's stored size")?));
+        ahjam.push(u64::from(
+            qari.iqra_u32("a compressed block's stored size")?,
+        ));
     }
     let mut khaam = Vec::with_capacity(hajm_usize(majmu).unwrap_or(0));
     for hajm in ahjam {
@@ -886,7 +915,10 @@ pub fn fukk_daght(bayt: &[u8]) -> Result<(u32, Vec<u8>), KhataGodot> {
         khaam.extend_from_slice(&kutla);
     }
     if tul_u64(khaam.len()) != majmu {
-        return Err(KhataGodot::HajmGhayrMutabaq { muallan: majmu, fili: tul_u64(khaam.len()) });
+        return Err(KhataGodot::HajmGhayrMutabaq {
+            muallan: majmu,
+            fili: tul_u64(khaam.len()),
+        });
     }
     Ok((naw, khaam))
 }
@@ -906,19 +938,24 @@ fn fukk_kutla(naw: u32, shifra: &[u8], matlub: u64) -> Result<Vec<u8>, KhataGodo
             flate2::read::DeflateDecoder::new(shifra)
                 .take(matlub)
                 .read_to_end(&mut khaam)
-                .map_err(|sabab| KhataGodot::FakkFashil { tafsil: sabab.to_string() })?;
+                .map_err(|sabab| KhataGodot::FakkFashil {
+                    tafsil: sabab.to_string(),
+                })?;
             Ok(khaam)
-        }
+        },
         DAGHT_GZIP => {
             let mut khaam = Vec::with_capacity(siaa);
             flate2::read::GzDecoder::new(shifra)
                 .take(matlub)
                 .read_to_end(&mut khaam)
-                .map_err(|sabab| KhataGodot::FakkFashil { tafsil: sabab.to_string() })?;
+                .map_err(|sabab| KhataGodot::FakkFashil {
+                    tafsil: sabab.to_string(),
+                })?;
             Ok(khaam)
-        }
-        DAGHT_ZSTD => zstd::stream::decode_all(shifra)
-            .map_err(|sabab| KhataGodot::FakkFashil { tafsil: sabab.to_string() }),
+        },
+        DAGHT_ZSTD => zstd::stream::decode_all(shifra).map_err(|sabab| KhataGodot::FakkFashil {
+            tafsil: sabab.to_string(),
+        }),
         // [`DAGHT_FASTLZ`], [`DAGHT_BROTLI`], and anything the engine adds later.
         // Named by number rather than guessed at: an entry expanded with the
         // wrong algorithm is not a decode failure, it is plausible-looking bytes.
@@ -986,7 +1023,11 @@ impl GhilafMawrid {
     /// How many reserved words this version writes.
     #[must_use]
     pub const fn adad_mahjuz(&self) -> usize {
-        if self.bi_alam() { ADAD_MAHJUZ_HADITH } else { ADAD_MAHJUZ_QADEEM }
+        if self.bi_alam() {
+            ADAD_MAHJUZ_HADITH
+        } else {
+            ADAD_MAHJUZ_QADEEM
+        }
     }
 
     /// A minimal wrapper for a resource Taarib generates from nothing, for one
@@ -1027,7 +1068,11 @@ impl GhilafMawrid {
     /// version.
     #[must_use]
     pub const fn jeel(&self) -> JeelMawrid {
-        if self.bi_alam() { JeelMawrid::Rabi } else { JeelMawrid::Thalith }
+        if self.bi_alam() {
+            JeelMawrid::Rabi
+        } else {
+            JeelMawrid::Thalith
+        }
     }
 }
 
@@ -1048,7 +1093,11 @@ impl Khasiya {
     /// A property whose name will be written inline.
     #[must_use]
     pub fn jadeeda(ism: &str, qeema: Qeema) -> Self {
-        Self { ism: ism.to_owned(), qeema, fahras_ism: None }
+        Self {
+            ism: ism.to_owned(),
+            qeema,
+            fahras_ism: None,
+        }
     }
 
     /// The string map index the name was stored as, if it was stored as one.
@@ -1107,7 +1156,10 @@ impl MawridTarjama {
     /// One property's value by name.
     #[must_use]
     pub fn khasiya(&self, ism: &str) -> Option<&Qeema> {
-        self.khasais.iter().find(|khasiya| khasiya.ism == ism).map(|khasiya| &khasiya.qeema)
+        self.khasais
+            .iter()
+            .find(|khasiya| khasiya.ism == ism)
+            .map(|khasiya| &khasiya.qeema)
     }
 
     /// Replaces one property's value in place, leaving everything else alone.
@@ -1129,13 +1181,19 @@ impl MawridTarjama {
     /// Whether the class name is one of the two translation classes.
     #[must_use]
     pub fn tarjama(&self) -> bool {
-        matches!(self.naw_dakhili.as_str(), NAW_BASITA | NAW_MURAKKAZA | NAW_MURAKKAZA_QADEEM)
+        matches!(
+            self.naw_dakhili.as_str(),
+            NAW_BASITA | NAW_MURAKKAZA | NAW_MURAKKAZA_QADEEM
+        )
     }
 
     /// Whether the class is one of the hash table forms.
     #[must_use]
     pub fn murakkaza(&self) -> bool {
-        matches!(self.naw_dakhili.as_str(), NAW_MURAKKAZA | NAW_MURAKKAZA_QADEEM)
+        matches!(
+            self.naw_dakhili.as_str(),
+            NAW_MURAKKAZA | NAW_MURAKKAZA_QADEEM
+        )
     }
 
     /// Builds a resource around a class name and a property list, for one
@@ -1202,7 +1260,11 @@ impl MawridTarjama {
         let fahras = hajm_usize(u64::from(raas)).unwrap_or(usize::MAX);
         let hadd = tul_u64(hawd.len());
         let ism = hawd.get(fahras).cloned().ok_or_else(|| {
-            qari.talif("a property name outside the string map", u64::from(raas), hadd)
+            qari.talif(
+                "a property name outside the string map",
+                u64::from(raas),
+                hadd,
+            )
         })?;
         Ok((ism, Some(raas)))
     }
@@ -1237,7 +1299,9 @@ impl Mawrid for MawridTarjama {
             // another compressed stream would otherwise recurse until the stack
             // ran out, and no engine writes one.
             if khaam.get(..SIHR_RSRC.len()) != Some(SIHR_RSRC.as_slice()) {
-                return Err(KhataGodot::SihrGhayrMutabaq { masar: PathBuf::new() });
+                return Err(KhataGodot::SihrGhayrMutabaq {
+                    masar: PathBuf::new(),
+                });
             }
             let mut dakhil = Self::min_bayt(&khaam)?;
             dakhil.ghilaf.daght = Some(naw);
@@ -1245,13 +1309,19 @@ impl Mawrid for MawridTarjama {
         }
         let mut qari = Qari::jadeed(ISM, bayt);
         if qari.iqra_masfufa::<4>("the resource magic")? != SIHR_RSRC {
-            return Err(KhataGodot::SihrGhayrMutabaq { masar: PathBuf::new() });
+            return Err(KhataGodot::SihrGhayrMutabaq {
+                masar: PathBuf::new(),
+            });
         }
         if qari.iqra_u32("the endianness flag")? != 0 {
-            return Err(talifa("a big-endian resource, which this build does not read"));
+            return Err(talifa(
+                "a big-endian resource, which this build does not read",
+            ));
         }
         if qari.iqra_u32("the double-precision flag")? != 0 {
-            return Err(talifa("a resource whose reals are 64-bit, which widens every float"));
+            return Err(talifa(
+                "a resource whose reals are 64-bit, which widens every float",
+            ));
         }
         let muharrik = (
             qari.iqra_u32("the engine major version")?,
@@ -1259,7 +1329,10 @@ impl Mawrid for MawridTarjama {
         );
         let isdar = qari.iqra_u32("the resource format version")?;
         if isdar > ISDAR_SIGHA_AQSA {
-            return Err(KhataGodot::IsdarGhayrMadum { wujid: isdar, aqsa: ISDAR_SIGHA_AQSA });
+            return Err(KhataGodot::IsdarGhayrMadum {
+                wujid: isdar,
+                aqsa: ISDAR_SIGHA_AQSA,
+            });
         }
         let naw = iqra_nass(&mut qari, "the resource class name")?;
         let izahat_wasf = qari.iqra_u64("the import metadata offset")?;
@@ -1277,7 +1350,11 @@ impl Mawrid for MawridTarjama {
         } else {
             (0, 0, None)
         };
-        let adad_mahjuz = if bi_alam { ADAD_MAHJUZ_HADITH } else { ADAD_MAHJUZ_QADEEM };
+        let adad_mahjuz = if bi_alam {
+            ADAD_MAHJUZ_HADITH
+        } else {
+            ADAD_MAHJUZ_QADEEM
+        };
         let mut mahjuz = Vec::with_capacity(adad_mahjuz);
         for _ in 0..adad_mahjuz {
             mahjuz.push(qari.iqra_u32("a reserved resource word")?);
@@ -1317,7 +1394,9 @@ impl Mawrid for MawridTarjama {
             // A `.translation` is one resource in one file. Anything else is a
             // scene or a packed bundle, and rewriting one property of it through
             // a reader built for translations is how a game loses an asset.
-            return Err(talifa("a resource file that does not hold exactly one resource"));
+            return Err(talifa(
+                "a resource file that does not hold exactly one resource",
+            ));
         }
         let masar_dakhili = iqra_nass(&mut qari, "the internal resource's path")?;
         let izaha = qari.iqra_u64("the internal resource's offset")?;
@@ -1345,7 +1424,11 @@ impl Mawrid for MawridTarjama {
         for _ in 0..matlub {
             let (ism, fahras_ism) = Self::ism_khasiya(&mut qari, &ghilaf.hawd)?;
             let qeema = Qeema::iqra(&mut qari, 0)?;
-            khasais.push(Khasiya { ism, qeema, fahras_ism });
+            khasais.push(Khasiya {
+                ism,
+                qeema,
+                fahras_ism,
+            });
         }
 
         let khatima = bayt
@@ -1353,7 +1436,13 @@ impl Mawrid for MawridTarjama {
             .checked_sub(SIHR_RSRC.len())
             .and_then(|akhir| bayt.get(akhir..))
             == Some(SIHR_RSRC.as_slice());
-        Ok(Self { ghilaf, masar_dakhili, naw_dakhili, khasais, khatima })
+        Ok(Self {
+            ghilaf,
+            masar_dakhili,
+            naw_dakhili,
+            khasais,
+            khatima,
+        })
     }
 
     /// Writes the resource back out.
@@ -1405,7 +1494,10 @@ impl Mawrid for MawridTarjama {
         for nass in &ghilaf.hawd {
             uktub_nass(&mut katib, "a string map entry", nass)?;
         }
-        katib.uktub_u32(tul_u32("the external resource count", ghilaf.kharijiya.len())?);
+        katib.uktub_u32(tul_u32(
+            "the external resource count",
+            ghilaf.kharijiya.len(),
+        )?);
         for kharij in &ghilaf.kharijiya {
             uktub_nass(&mut katib, "an external resource's class", &kharij.naw)?;
             if let Some(muarrif) = kharij.muarrif {
@@ -1414,7 +1506,11 @@ impl Mawrid for MawridTarjama {
             uktub_nass(&mut katib, "an external resource's path", &kharij.masar)?;
         }
         katib.uktub_u32(1);
-        uktub_nass(&mut katib, "the internal resource's path", &self.masar_dakhili)?;
+        uktub_nass(
+            &mut katib,
+            "the internal resource's path",
+            &self.masar_dakhili,
+        )?;
         // Written as a placeholder and filled in once the tables are behind us,
         // because the offset is the length of everything above it.
         let makan = katib.mawqi();
@@ -1422,12 +1518,16 @@ impl Mawrid for MawridTarjama {
         let izaha = tul_u64(katib.mawqi());
         katib.uktub_u64_fi(ISM, "the internal resource's offset", makan, izaha)?;
 
-        uktub_nass(&mut katib, "the internal resource's class name", &self.naw_dakhili)?;
+        uktub_nass(
+            &mut katib,
+            "the internal resource's class name",
+            &self.naw_dakhili,
+        )?;
         katib.uktub_u32(tul_u32("the property count", self.khasais.len())?);
         for khasiya in &self.khasais {
             if let Some(fahras) = khasiya.fahras_ism {
-                let mawjud = hajm_usize(u64::from(fahras))
-                    .and_then(|fahras| ghilaf.hawd.get(fahras));
+                let mawjud =
+                    hajm_usize(u64::from(fahras)).and_then(|fahras| ghilaf.hawd.get(fahras));
                 if mawjud != Some(&khasiya.ism) {
                     return Err(talifa(
                         "a property name whose string map index does not hold it",
@@ -1482,13 +1582,13 @@ pub fn tahaqquq_awsaf(jeel: JeelMawrid, qeema: &Qeema, umq: u32) -> Result<(), K
                 tahaqquq_awsaf(jeel, miftah, dakhil)?;
                 tahaqquq_awsaf(jeel, dakhili, dakhil)?;
             }
-        }
+        },
         Qeema::Masfufa { anasir, .. } => {
             for unsur in anasir {
                 tahaqquq_awsaf(jeel, unsur, dakhil)?;
             }
-        }
-        _ => {}
+        },
+        _ => {},
     }
     Ok(())
 }
@@ -1565,9 +1665,35 @@ pub fn basma_godot(daala: u32, nass: &str) -> u32 {
 
 /// The primes Godot sizes a hash table from, in the engine's own order.
 const AWWALIYAT: [u32; 29] = [
-    5, 13, 23, 47, 97, 193, 389, 769, 1543, 3079, 6151, 12289, 24593, 49157, 98317, 196_613,
-    393_241, 786_433, 1_572_869, 3_145_739, 6_291_469, 12_582_917, 25_165_843, 50_331_653,
-    100_663_319, 201_326_611, 402_653_189, 805_306_457, 1_610_612_741,
+    5,
+    13,
+    23,
+    47,
+    97,
+    193,
+    389,
+    769,
+    1543,
+    3079,
+    6151,
+    12289,
+    24593,
+    49157,
+    98317,
+    196_613,
+    393_241,
+    786_433,
+    1_572_869,
+    3_145_739,
+    6_291_469,
+    12_582_917,
+    25_165_843,
+    50_331_653,
+    100_663_319,
+    201_326_611,
+    402_653_189,
+    805_306_457,
+    1_610_612_741,
 ];
 
 /// The first prime in the engine's table strictly greater than `adad`.
@@ -1617,7 +1743,11 @@ impl Tarjama {
     /// An empty translation for a locale, in the given shape.
     #[must_use]
     pub fn jadeeda(thaqafa: &str, shakl: ShaklRasail) -> Self {
-        Self { thaqafa: thaqafa.to_owned(), rasail: Vec::new(), shakl }
+        Self {
+            thaqafa: thaqafa.to_owned(),
+            rasail: Vec::new(),
+            shakl,
+        }
     }
 
     /// The locale this translation registers itself under.
@@ -1726,7 +1856,7 @@ impl Tarjama {
                     rasail.push((masdar.to_owned(), hadaf.to_owned()));
                 }
                 (rasail, ShaklRasail::Qamus)
-            }
+            },
             Qeema::Nusus(nusus) => {
                 if nusus.len() & 1 != 0 {
                     return Err(talifa("a flat message array with an odd number of entries"));
@@ -1738,12 +1868,18 @@ impl Tarjama {
                     rasail.push((masdar, hadaf));
                 }
                 (rasail, ShaklRasail::Masfufa)
-            }
+            },
             _ => {
-                return Err(talifa("a messages property that is neither a dictionary nor an array"));
-            }
+                return Err(talifa(
+                    "a messages property that is neither a dictionary nor an array",
+                ));
+            },
         };
-        Ok(Self { thaqafa, rasail, shakl })
+        Ok(Self {
+            thaqafa,
+            rasail,
+            shakl,
+        })
     }
 
     /// The `messages` property in one generation's shape.
@@ -1763,7 +1899,10 @@ impl Tarjama {
                     .rasail
                     .iter()
                     .map(|(masdar, hadaf)| {
-                        (Qeema::IsmNass(masdar.clone()), Qeema::IsmNass(hadaf.clone()))
+                        (
+                            Qeema::IsmNass(masdar.clone()),
+                            Qeema::IsmNass(hadaf.clone()),
+                        )
                     })
                     .collect(),
             },
@@ -1774,7 +1913,7 @@ impl Tarjama {
                     nusus.push(hadaf.clone());
                 }
                 Qeema::Nusus(nusus)
-            }
+            },
         }
     }
 
@@ -1788,8 +1927,7 @@ impl Tarjama {
     #[must_use]
     pub fn ila_mawrid(&self, jeel: JeelMawrid, muharrik: (u32, u32)) -> MawridTarjama {
         let mut mawrid = MawridTarjama::li_jeel(NAW_BASITA, muharrik, jeel, Vec::new());
-        mawrid.ghilaf.hawd =
-            vec![KHASIYAT_RASAIL.to_owned(), KHASIYAT_THAQAFA.to_owned()];
+        mawrid.ghilaf.hawd = vec![KHASIYAT_RASAIL.to_owned(), KHASIYAT_THAQAFA.to_owned()];
         mawrid.khasais = vec![
             Khasiya {
                 ism: KHASIYAT_RASAIL.to_owned(),
@@ -1907,12 +2045,16 @@ impl TarjamaMurakkaza {
 
     /// One word of the bucket array.
     fn kalima(&self, fahras: usize, haql: &'static str) -> Result<u32, KhataGodot> {
-        self.dilaa.get(fahras).copied().map(kalima_u32).ok_or_else(|| KhataGodot::HawiyaTalifa {
-            ism: ISM,
-            haql,
-            qeema: tul_u64(fahras),
-            hadd: tul_u64(self.dilaa.len()),
-        })
+        self.dilaa
+            .get(fahras)
+            .copied()
+            .map(kalima_u32)
+            .ok_or_else(|| KhataGodot::HawiyaTalifa {
+                ism: ISM,
+                haql,
+                qeema: tul_u64(fahras),
+                hadd: tul_u64(self.dilaa.len()),
+            })
     }
 
     /// Looks a source string up, exactly the way the engine does.
@@ -1960,7 +2102,9 @@ impl TarjamaMurakkaza {
             let asas = dalu
                 .checked_add(TUL_RAAS_DALU)
                 .and_then(|raas| {
-                    fahras.checked_mul(TUL_UNSUR_DALU).and_then(|zaha| raas.checked_add(zaha))
+                    fahras
+                        .checked_mul(TUL_UNSUR_DALU)
+                        .and_then(|zaha| raas.checked_add(zaha))
                 })
                 .ok_or_else(|| KhataGodot::HawiyaTalifa {
                     ism: ISM,
@@ -2044,11 +2188,12 @@ impl TarjamaMurakkaza {
             qeema: tul_u64(asl.rasail().len()),
             saqf: AQSA_RASAIL,
         })?;
-        let hajm = hajm_usize(u64::from(awwal_akbar(adad))).ok_or_else(|| KhataGodot::HajmMufrit {
-            haql: "the optimized translation's table length",
-            qeema: u64::from(awwal_akbar(adad)),
-            saqf: AQSA_KALIMAT,
-        })?;
+        let hajm =
+            hajm_usize(u64::from(awwal_akbar(adad))).ok_or_else(|| KhataGodot::HajmMufrit {
+                haql: "the optimized translation's table length",
+                qeema: u64::from(awwal_akbar(adad)),
+                saqf: AQSA_KALIMAT,
+            })?;
 
         let mut hawd: Vec<u8> = Vec::new();
         let mut mawaqi: Vec<(u32, u32)> = Vec::with_capacity(asl.rasail().len());
@@ -2100,7 +2245,10 @@ impl TarjamaMurakkaza {
             if let Some(makan) = jadwal.get_mut(khana) {
                 *makan = kalima_i32(mawqi);
             }
-            dilaa.push(kalima_i32(tul_u32("a bucket's element count", unsur.len())?));
+            dilaa.push(kalima_i32(tul_u32(
+                "a bucket's element count",
+                unsur.len(),
+            )?));
             dilaa.push(kalima_i32(daala));
             // The engine collects a bucket's elements in a `Map<uint32_t, int>`
             // keyed by the second-round hash and then walks it front to back, so
@@ -2112,7 +2260,10 @@ impl TarjamaMurakkaza {
             // one bucket are distinct, so the order is total.
             let mut anasir: Vec<(u32, u32, u32)> = Vec::with_capacity(unsur.len());
             for fahras in unsur {
-                let masdar = asl.rasail().get(*fahras).map_or("", |(masdar, _)| masdar.as_str());
+                let masdar = asl
+                    .rasail()
+                    .get(*fahras)
+                    .map_or("", |(masdar, _)| masdar.as_str());
                 let (izaha, tul) = mawaqi.get(*fahras).copied().unwrap_or((0, 0));
                 anasir.push((basma_godot(daala, masdar), izaha, tul));
             }
@@ -2133,7 +2284,12 @@ impl TarjamaMurakkaza {
                 });
             }
         }
-        Ok(Self { thaqafa: asl.thaqafa().to_owned(), jadwal, dilaa, hawd })
+        Ok(Self {
+            thaqafa: asl.thaqafa().to_owned(),
+            jadwal,
+            dilaa,
+            hawd,
+        })
     }
 
     /// Finds the smallest seed that separates every source in one bucket.
@@ -2144,7 +2300,10 @@ impl TarjamaMurakkaza {
             basmat.clear();
             let mut salih = true;
             for fahras in unsur {
-                let masdar = asl.rasail().get(*fahras).map_or("", |(masdar, _)| masdar.as_str());
+                let masdar = asl
+                    .rasail()
+                    .get(*fahras)
+                    .map_or("", |(masdar, _)| masdar.as_str());
                 let basma = basma_godot(daala, masdar);
                 if basmat.contains(&basma) {
                     salih = false;
@@ -2159,7 +2318,9 @@ impl TarjamaMurakkaza {
         }
         // No seed separates a string from itself, so this is not a search that
         // needed longer — it is a message list holding one source twice.
-        Err(talifa("two identical source strings in one bucket, which no seed separates"))
+        Err(talifa(
+            "two identical source strings in one bucket, which no seed separates",
+        ))
     }
 
     /// Reads an optimized translation out of a resource.
@@ -2193,7 +2354,12 @@ impl TarjamaMurakkaza {
             .and_then(Qeema::bayt)
             .ok_or_else(|| talifa("an optimized translation with no string pool"))?
             .to_vec();
-        Ok(Self { thaqafa, jadwal, dilaa, hawd })
+        Ok(Self {
+            thaqafa,
+            jadwal,
+            dilaa,
+            hawd,
+        })
     }
 
     /// Builds a fresh resource holding this table, for one generation.

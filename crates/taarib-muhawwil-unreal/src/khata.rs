@@ -320,82 +320,76 @@ impl Tafsir for KhataUnreal {
 
     fn arabi(&self) -> String {
         match self {
-            Self::KhataMalaf { .. } => {
-                "تعذّر فتح ملف من ملفات اللعبة أو الكتابة إليه.".to_owned()
-            }
+            Self::KhataMalaf { .. } => "تعذّر فتح ملف من ملفات اللعبة أو الكتابة إليه.".to_owned(),
             Self::MalafQaseer { .. } => {
                 "أحد ملفات الترجمة في اللعبة أقصر مما تعلنه ترويسته؛ يبدو أنه تالف.".to_owned()
-            }
+            },
             Self::HajmMufrit { .. } => {
                 "أحد ملفات اللعبة يعلن حجمًا أكبر بكثير مما تحتاجه أي لعبة حقيقية، ورُفض \
                  قبل حجز أي ذاكرة له."
                     .to_owned()
-            }
+            },
             Self::IsdarMajhul { .. } => {
                 "تعذّر تحديد إصدار محرّك أنريل لهذه اللعبة، فبعض التصحيحات الخاصة بالإصدار \
                  لن تُطبَّق."
                     .to_owned()
-            }
+            },
             Self::SihrGhayrMutabaq { .. } => {
                 "ملف لا يحمل العلامة التي تبدأ بها ملفات هذه الصيغة؛ إمّا أنه ليس منها وإمّا \
                  أنه تالف."
                     .to_owned()
-            }
+            },
             Self::IsdarGhayrMadum { .. } => {
                 "إصدار هذه الصيغة أحدث مما تقرؤه هذه النسخة من تعريب.".to_owned()
-            }
+            },
             Self::MawridTalif { .. } => {
                 "أحد موارد الترجمة في اللعبة يشير خارج حدوده؛ الملف تالف.".to_owned()
-            }
+            },
             Self::NassGhayrSalih { .. } => {
                 "أحد النصوص في موارد اللعبة ليس ترميزًا صالحًا، ورُفض بدل استبداله بمحارف \
                  بديلة تُقرأ كأنها ترجمة."
                     .to_owned()
-            }
+            },
             Self::PakMushaffar { .. } => {
                 "حاوية اللعبة مشفَّرة، ولم يُزوَّد تعريب بمفتاح فكّها.".to_owned()
-            }
-            Self::MiftahGhayrSalih { .. } => {
-                "المفتاح المُعطى لا يفكّ تشفير حاوية اللعبة.".to_owned()
-            }
+            },
+            Self::MiftahGhayrSalih { .. } => "المفتاح المُعطى لا يفكّ تشفير حاوية اللعبة.".to_owned(),
             Self::DaghtMajhul { .. } => {
                 "إحدى كتل الحاوية مضغوطة بطريقة لا يملك تعريب رخصة شحن فاكّها، ولم يجد فاكًّا \
                  في اللعبة نفسها."
                     .to_owned()
-            }
-            Self::FakkFashil { .. } => {
-                "تعذّر فكّ ضغط إحدى كتل حاوية اللعبة؛ الملف تالف.".to_owned()
-            }
+            },
+            Self::FakkFashil { .. } => "تعذّر فكّ ضغط إحدى كتل حاوية اللعبة؛ الملف تالف.".to_owned(),
             Self::HajmGhayrMutabaq { .. } => {
                 "إحدى الكتل أنتجت بعد فكّ الضغط حجمًا غير الذي أعلنته.".to_owned()
-            }
+            },
             Self::BasmaGhayrMutabaqa { .. } => {
                 "أحد مدخلات الحاوية لا يطابق بصمته المسجَّلة؛ الملف تغيّر أو تلف.".to_owned()
-            }
+            },
             Self::SlateGhayrMawjud { .. } => {
                 "تعذّر الوصول إلى نظام النصوص في اللعبة، فلن تُطبَّق تصحيحات التشكيل. النص \
                  العربي مثبَّت وسيظهر."
                     .to_owned()
-            }
+            },
             Self::KhatfFashil { .. } => {
                 "تعذّر تركيب أحد التصحيحات داخل اللعبة؛ يعمل الباقي.".to_owned()
-            }
+            },
             Self::TashghilFashil { .. } => {
                 "تعذّر تشغيل التشكيل الكامل في هذه اللعبة، وقد تظهر الحروف العربية غير \
                  متّصلة."
                     .to_owned()
-            }
+            },
             Self::KhattMarfud { .. } => {
                 "تعذّر تسجيل خطّ الرقعة في اللعبة، وستُرسم النصوص بخطّ اللعبة الأصلي.".to_owned()
-            }
+            },
             Self::AlamMarfud { .. } => {
                 "تعذّر تفعيل اللغة العربية في اللعبة تلقائيًا؛ قد تحتاج إلى اختيارها من قائمة \
                  اللغات."
                     .to_owned()
-            }
+            },
             Self::IdadatMarfuda { .. } => {
                 "تعذّرت الكتابة في ملف إعدادات اللعبة؛ جُرِّب مسار آخر.".to_owned()
-            }
+            },
         }
     }
 
@@ -403,7 +397,7 @@ impl Tafsir for KhataUnreal {
         match self {
             Self::KhataMalaf { masar, .. } => {
                 format!("{} could not be opened or written.", masar.display())
-            }
+            },
             Self::MalafQaseer { haql, tul, matlub } => format!(
                 "A localization file is truncated: {haql} needs {matlub} bytes and the file \
                  has {tul}."
@@ -421,12 +415,15 @@ impl Tafsir for KhataUnreal {
                  is corrupt.",
                 malaf.display()
             ),
-            Self::IsdarGhayrMadum { ism, wujid, aqsa } => format!(
-                "This {ism} is version {wujid} and this build reads up to {aqsa}."
-            ),
-            Self::MawridTalif { ism, haql, qeema, hadd } => format!(
-                "A {ism} resource is corrupt: {haql} is {qeema}, outside 0..{hadd}."
-            ),
+            Self::IsdarGhayrMadum { ism, wujid, aqsa } => {
+                format!("This {ism} is version {wujid} and this build reads up to {aqsa}.")
+            },
+            Self::MawridTalif {
+                ism,
+                haql,
+                qeema,
+                hadd,
+            } => format!("A {ism} resource is corrupt: {haql} is {qeema}, outside 0..{hadd}."),
             Self::NassGhayrSalih { fahras, mawqi } => format!(
                 "String {fahras} in the game's resources is not valid UTF-16 at code unit \
                  {mawqi}. It was refused rather than replaced with substitution characters \
@@ -447,10 +444,10 @@ impl Tafsir for KhataUnreal {
             ),
             Self::FakkFashil { ism, tafsil } => {
                 format!("A {ism} block could not be expanded: {tafsil}")
-            }
-            Self::HajmGhayrMutabaq { ism, muallan, fili } => format!(
-                "A {ism} block declared {muallan} bytes and produced {fili}."
-            ),
+            },
+            Self::HajmGhayrMutabaq { ism, muallan, fili } => {
+                format!("A {ism} block declared {muallan} bytes and produced {fili}.")
+            },
             Self::BasmaGhayrMutabaqa { ism, madkhal } => format!(
                 "{ism} entry \"{madkhal}\" does not match its recorded hash; the file changed \
                  or is damaged."
@@ -529,75 +526,80 @@ impl Tafsir for KhataUnreal {
         };
         match self {
             // Answered above, before the closure borrowed the map.
-            Self::KhataMalaf { .. } => {}
+            Self::KhataMalaf { .. } => {},
             Self::MalafQaseer { haql, tul, matlub } => {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("tul", QeemaSiyaq::Hajm(*tul));
                 daa("matlub", QeemaSiyaq::Hajm(*matlub));
-            }
+            },
             Self::HajmMufrit { haql, qeema, saqf } => {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("qeema", QeemaSiyaq::Hajm(*qeema));
                 daa("saqf", QeemaSiyaq::Hajm(*saqf));
-            }
+            },
             Self::IsdarMajhul { sabab }
             | Self::SlateGhayrMawjud { sabab }
             | Self::TashghilFashil { sabab }
             | Self::KhattMarfud { sabab }
             | Self::AlamMarfud { sabab } => {
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::SihrGhayrMutabaq { malaf, ism } => {
                 daa("malaf", QeemaSiyaq::Masar(malaf.clone()));
                 daa("sigha", QeemaSiyaq::Nass((*ism).to_owned()));
-            }
+            },
             Self::IsdarGhayrMadum { ism, wujid, aqsa } => {
                 daa("sigha", QeemaSiyaq::Nass((*ism).to_owned()));
                 daa("wujid", QeemaSiyaq::Raqm(i64::from(*wujid)));
                 daa("aqsa", QeemaSiyaq::Raqm(i64::from(*aqsa)));
-            }
-            Self::MawridTalif { ism, haql, qeema, hadd } => {
+            },
+            Self::MawridTalif {
+                ism,
+                haql,
+                qeema,
+                hadd,
+            } => {
                 daa("sigha", QeemaSiyaq::Nass((*ism).to_owned()));
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("qeema", QeemaSiyaq::Hajm(*qeema));
                 daa("hadd", QeemaSiyaq::Hajm(*hadd));
-            }
+            },
             Self::NassGhayrSalih { fahras, mawqi } => {
                 daa("fahras", QeemaSiyaq::Raqm(i64::from(*fahras)));
                 daa("mawqi", QeemaSiyaq::Raqm(i64::from(*mawqi)));
-            }
+            },
             Self::PakMushaffar { masar } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
             Self::MiftahGhayrSalih { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass((*sabab).to_owned()));
-            }
+            },
             Self::DaghtMajhul { ism, naw } => {
                 daa("sigha", QeemaSiyaq::Nass((*ism).to_owned()));
                 daa("daght", QeemaSiyaq::Nass(naw.clone()));
-            }
+            },
             Self::FakkFashil { ism, tafsil } => {
                 daa("sigha", QeemaSiyaq::Nass((*ism).to_owned()));
                 daa("tafsil", QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::HajmGhayrMutabaq { ism, muallan, fili } => {
                 daa("sigha", QeemaSiyaq::Nass((*ism).to_owned()));
                 daa("muallan", QeemaSiyaq::Hajm(*muallan));
                 daa("fili", QeemaSiyaq::Hajm(*fili));
-            }
+            },
             Self::BasmaGhayrMutabaqa { ism, madkhal } => {
                 daa("sigha", QeemaSiyaq::Nass((*ism).to_owned()));
                 daa("madkhal", QeemaSiyaq::Nass(madkhal.clone()));
-            }
+            },
             Self::KhatfFashil { hadaf, tafsil } => {
                 daa("hadaf", QeemaSiyaq::Nass((*hadaf).to_owned()));
                 daa("tafsil", QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::IdadatMarfuda { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
         }
         siyaq
     }

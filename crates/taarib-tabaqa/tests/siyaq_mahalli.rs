@@ -54,12 +54,20 @@ use taarib_tabaqa::wasil_tarjama::MutarjimMuzawwid;
 use taarib_tarjama::muzawwidun::{IdadatMuwafiqOpenAI, MuzawwidMuwafiqOpenAI};
 
 /// The surface the session positions against.
-const SATH: WasfSath =
-    WasfSath { ard: 1920, irtifa: 1080, sigha: SighatSath::Bgra8, sirgb: true };
+const SATH: WasfSath = WasfSath {
+    ard: 1920,
+    irtifa: 1080,
+    sigha: SighatSath::Bgra8,
+    sirgb: true,
+};
 
 /// The subtitle strip, in surface pixels.
-const SUNDUQ: MustatilBiksel =
-    MustatilBiksel { yasar: 400, aala: 900, ard: 1120, irtifa: 40 };
+const SUNDUQ: MustatilBiksel = MustatilBiksel {
+    yasar: 400,
+    aala: 900,
+    ard: 1120,
+    irtifa: 40,
+};
 
 /// The region the readings come from.
 const MINTAQA: MuarrifMintaqa = MuarrifMintaqa::min_raqm(1);
@@ -189,7 +197,10 @@ fn mawdi_faragh(khaam: &[u8]) -> Option<usize> {
 /// [`MasdarLuba::Yadawi`] because nothing here is a real game: the readings are
 /// constructed text and no title of any engine is installed on this machine.
 fn luba() -> LubaId {
-    LubaId::min_masdar(&MasdarLuba::Yadawi("taarib-siyaq-fixture".to_owned()), ISM_LUBA)
+    LubaId::min_masdar(
+        &MasdarLuba::Yadawi("taarib-siyaq-fixture".to_owned()),
+        ISM_LUBA,
+    )
 }
 
 /// The fixture's display name.
@@ -197,7 +208,12 @@ const ISM_LUBA: &str = "Synthetic Frames (a test fixture, not a game)";
 
 /// One recognized line in the subtitle strip.
 fn mulahaza(nass: &str) -> Vec<QiraaMulahaza> {
-    vec![QiraaMulahaza { nass: nass.to_owned(), mawdi: SUNDUQ, thiqa: 92, maqisa: true }]
+    vec![QiraaMulahaza {
+        nass: nass.to_owned(),
+        mawdi: SUNDUQ,
+        thiqa: 92,
+        maqisa: true,
+    }]
 }
 
 // ---------------------------------------------------------------------------
@@ -233,8 +249,11 @@ fn siyaq_yasil_ila_muzawwid_mahalli() {
         "the arm under test must be the local one"
     );
 
-    let khiyarat =
-        KhiyaratQissa { tasnif: TasnifNass::Hiwar, yasjil: false, ..KhiyaratQissa::iftiradiya() };
+    let khiyarat = KhiyaratQissa {
+        tasnif: TasnifNass::Hiwar,
+        yasjil: false,
+        ..KhiyaratQissa::iftiradiya()
+    };
     let mut qissa = Qissa::jadeeda(luba(), ISM_LUBA, khiyarat)
         .bi_mutarjim(Box::new(mutarjim))
         .bi_qari("synthetic");

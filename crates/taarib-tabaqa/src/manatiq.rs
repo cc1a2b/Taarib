@@ -105,9 +105,7 @@ pub const AQSA_FASILA_MILLI: u32 = 60_000;
 /// deleted. `sijill_qira` stores this number against every line it recorded, so
 /// reusing an identity would silently reattribute a deleted region's history to
 /// whatever was created next.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct MuarrifMintaqa(u64);
 
@@ -132,9 +130,7 @@ impl std::fmt::Display for MuarrifMintaqa {
 }
 
 /// When a region's contents are read and translated.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum QaidatTarjama {
     /// Poll on the interval, and translate only when the pixels changed.
@@ -188,18 +184,18 @@ impl QaidatTarjama {
                 "One capture per interval. The captured pixels are compared against the \
                  previous capture and recognition runs only when they differ, so a dialogue \
                  box sitting still costs a capture and nothing else."
-            }
+            },
             Self::IndaTalab => {
                 "Nothing at all until you press translate-now, then one capture, one \
                  recognition pass and one translation. A region on this rule does not appear \
                  in the frame budget between requests."
-            }
+            },
             Self::Mustamirra => {
                 "The expensive one: a capture, a recognition pass and a translation request \
                  every interval, whether the text changed or not, for as long as the game is \
                  running. Use it for a region whose pixels change constantly and whose text \
                  does not — a scrolling combat log — and expect it in the frame budget."
-            }
+            },
         }
     }
 
@@ -253,8 +249,13 @@ mod hifz_mustatil {
     where
         S: Serializer,
     {
-        Khaam { yasar: qeema.yasar, aala: qeema.aala, ard: qeema.ard, irtifa: qeema.irtifa }
-            .serialize(mukhraj)
+        Khaam {
+            yasar: qeema.yasar,
+            aala: qeema.aala,
+            ard: qeema.ard,
+            irtifa: qeema.irtifa,
+        }
+        .serialize(mukhraj)
     }
 
     pub(super) fn deserialize<'de, D>(madkhal: D) -> Result<MustatilNisbi, D::Error>
@@ -384,7 +385,11 @@ impl Mintaqa {
             "{} — {} — {}",
             self.ism,
             self.qaida.unwan(),
-            if self.mumakkana { "مفعّلة" } else { "موقوفة" }
+            if self.mumakkana {
+                "مفعّلة"
+            } else {
+                "موقوفة"
+            }
         )
     }
 }
@@ -457,16 +462,14 @@ impl NatijatMintaqa {
             Self::IsmFarigh => "لا يمكن ترك اسم المنطقة فارغًا.".to_owned(),
             Self::IsmTaweel { saqf } => {
                 format!("اسم المنطقة أطول من {saqf} حرفًا.")
-            }
+            },
             Self::IsmMakrur { sahib, ism } => {
                 format!("الاسم ({ism}) مستعمل بالفعل للمنطقة ({sahib}).")
-            }
-            Self::LaMisaha => {
-                "المستطيل بلا مساحة، ولن تُلتقط منه صورة. اسحب مسافة أكبر.".to_owned()
-            }
+            },
+            Self::LaMisaha => "المستطيل بلا مساحة، ولن تُلتقط منه صورة. اسحب مسافة أكبر.".to_owned(),
             Self::TajawuzSaqf { saqf } => {
                 format!("بلغ عدد المناطق حدّه الأقصى ({saqf}).")
-            }
+            },
             Self::GhayrMawjuda(muarrif) => format!("لا توجد منطقة بالمعرّف ({muarrif})."),
         }
     }
@@ -480,10 +483,8 @@ impl NatijatMintaqa {
             Self::IsmTaweel { saqf } => format!("a region name is at most {saqf} characters"),
             Self::IsmMakrur { sahib, ism } => {
                 format!("the name {ism} is already held by region {sahib}")
-            }
-            Self::LaMisaha => {
-                "the rectangle has no area and would capture nothing".to_owned()
-            }
+            },
+            Self::LaMisaha => "the rectangle has no area and would capture nothing".to_owned(),
             Self::TajawuzSaqf { saqf } => format!("this game already holds {saqf} regions"),
             Self::GhayrMawjuda(muarrif) => format!("no region {muarrif} is in this set"),
         }
@@ -500,7 +501,10 @@ impl NatijatMintaqa {
 /// which is fine — it is there for the Latin ones.
 #[must_use]
 pub fn wahhid_ism(ism: &str) -> String {
-    ism.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+    ism.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
 }
 
 /// One game's regions, as they are held in memory and written to disk.
@@ -607,7 +611,9 @@ impl MajmuatManatiq {
     /// One region by identity.
     #[must_use]
     pub fn mintaqa(&self, muarrif: MuarrifMintaqa) -> Option<&Mintaqa> {
-        self.manatiq.iter().find(|mintaqa| mintaqa.muarrif == muarrif)
+        self.manatiq
+            .iter()
+            .find(|mintaqa| mintaqa.muarrif == muarrif)
     }
 
     /// The interval a region with no override is polled at.
@@ -677,7 +683,7 @@ impl MajmuatManatiq {
             Some(mawqi) => {
                 let _ = self.manatiq.remove(mawqi);
                 NatijatMintaqa::Tammat(muarrif)
-            }
+            },
             None => NatijatMintaqa::GhayrMawjuda(muarrif),
         }
     }
@@ -691,11 +697,15 @@ impl MajmuatManatiq {
             return radd;
         }
         let munaqqah = ism.trim().to_owned();
-        match self.manatiq.iter_mut().find(|mintaqa| mintaqa.muarrif == muarrif) {
+        match self
+            .manatiq
+            .iter_mut()
+            .find(|mintaqa| mintaqa.muarrif == muarrif)
+        {
             Some(mintaqa) => {
                 mintaqa.ism = munaqqah;
                 NatijatMintaqa::Tammat(muarrif)
-            }
+            },
             None => NatijatMintaqa::GhayrMawjuda(muarrif),
         }
     }
@@ -709,33 +719,45 @@ impl MajmuatManatiq {
         if !mustatil.salih() {
             return NatijatMintaqa::LaMisaha;
         }
-        match self.manatiq.iter_mut().find(|mintaqa| mintaqa.muarrif == muarrif) {
+        match self
+            .manatiq
+            .iter_mut()
+            .find(|mintaqa| mintaqa.muarrif == muarrif)
+        {
             Some(mintaqa) => {
                 mintaqa.mustatil = mustatil;
                 NatijatMintaqa::Tammat(muarrif)
-            }
+            },
             None => NatijatMintaqa::GhayrMawjuda(muarrif),
         }
     }
 
     /// Turns a region on or off without deleting it.
     pub fn makkin(&mut self, muarrif: MuarrifMintaqa, mumakkana: bool) -> NatijatMintaqa {
-        match self.manatiq.iter_mut().find(|mintaqa| mintaqa.muarrif == muarrif) {
+        match self
+            .manatiq
+            .iter_mut()
+            .find(|mintaqa| mintaqa.muarrif == muarrif)
+        {
             Some(mintaqa) => {
                 mintaqa.mumakkana = mumakkana;
                 NatijatMintaqa::Tammat(muarrif)
-            }
+            },
             None => NatijatMintaqa::GhayrMawjuda(muarrif),
         }
     }
 
     /// Flips a region between on and off.
     pub fn baddil_tamkeen(&mut self, muarrif: MuarrifMintaqa) -> NatijatMintaqa {
-        match self.manatiq.iter_mut().find(|mintaqa| mintaqa.muarrif == muarrif) {
+        match self
+            .manatiq
+            .iter_mut()
+            .find(|mintaqa| mintaqa.muarrif == muarrif)
+        {
             Some(mintaqa) => {
                 mintaqa.mumakkana = !mintaqa.mumakkana;
                 NatijatMintaqa::Tammat(muarrif)
-            }
+            },
             None => NatijatMintaqa::GhayrMawjuda(muarrif),
         }
     }
@@ -746,11 +768,15 @@ impl MajmuatManatiq {
         muarrif: MuarrifMintaqa,
         qaida: QaidatTarjama,
     ) -> NatijatMintaqa {
-        match self.manatiq.iter_mut().find(|mintaqa| mintaqa.muarrif == muarrif) {
+        match self
+            .manatiq
+            .iter_mut()
+            .find(|mintaqa| mintaqa.muarrif == muarrif)
+        {
             Some(mintaqa) => {
                 mintaqa.qaida = qaida;
                 NatijatMintaqa::Tammat(muarrif)
-            }
+            },
             None => NatijatMintaqa::GhayrMawjuda(muarrif),
         }
     }
@@ -767,11 +793,15 @@ impl MajmuatManatiq {
         milli: Option<u32>,
     ) -> NatijatMintaqa {
         let mahdud = milli.map(|qeema| qeema.clamp(ADNA_FASILA_MILLI, AQSA_FASILA_MILLI));
-        match self.manatiq.iter_mut().find(|mintaqa| mintaqa.muarrif == muarrif) {
+        match self
+            .manatiq
+            .iter_mut()
+            .find(|mintaqa| mintaqa.muarrif == muarrif)
+        {
             Some(mintaqa) => {
                 mintaqa.fasila_milli = mahdud;
                 NatijatMintaqa::Tammat(muarrif)
-            }
+            },
             None => NatijatMintaqa::GhayrMawjuda(muarrif),
         }
     }
@@ -799,7 +829,9 @@ impl MajmuatManatiq {
     /// Where a region sits in the list.
     #[must_use]
     pub fn mawqi(&self, muarrif: MuarrifMintaqa) -> Option<usize> {
-        self.manatiq.iter().position(|mintaqa| mintaqa.muarrif == muarrif)
+        self.manatiq
+            .iter()
+            .position(|mintaqa| mintaqa.muarrif == muarrif)
     }
 
     /// Checks a proposed name, ignoring the region it is being applied to.
@@ -816,9 +848,7 @@ impl MajmuatManatiq {
         let miftah = wahhid_ism(munaqqah);
         self.manatiq
             .iter()
-            .find(|mintaqa| {
-                Some(mintaqa.muarrif) != nafsuha && wahhid_ism(&mintaqa.ism) == miftah
-            })
+            .find(|mintaqa| Some(mintaqa.muarrif) != nafsuha && wahhid_ism(&mintaqa.ism) == miftah)
             .map(|mintaqa| NatijatMintaqa::IsmMakrur {
                 sahib: mintaqa.muarrif,
                 ism: munaqqah.to_owned(),
@@ -882,8 +912,10 @@ impl MajmuatManatiq {
     /// dropping the fields this build cannot see and then writing them away on
     /// the next save.
     pub fn hammil(masar: &Path) -> Result<Self, KhataTabaqa> {
-        let bayt = std::fs::read(masar)
-            .map_err(|sabab| KhataTabaqa::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+        let bayt = std::fs::read(masar).map_err(|sabab| KhataTabaqa::KhataMalaf {
+            masar: masar.to_path_buf(),
+            sabab,
+        })?;
         let mut majmua = Self::min_bayt(masar, &bayt)?;
         majmua.tashih();
         Ok(majmua)
@@ -910,10 +942,13 @@ impl MajmuatManatiq {
             Ok(bayt) => bayt,
             Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
                 return Ok(Self::jadeeda(luba, ism_luba));
-            }
+            },
             Err(sabab) => {
-                return Err(KhataTabaqa::KhataMalaf { masar: masar.to_path_buf(), sabab });
-            }
+                return Err(KhataTabaqa::KhataMalaf {
+                    masar: masar.to_path_buf(),
+                    sabab,
+                });
+            },
         };
         let mut majmua = Self::min_bayt(masar, &bayt)?;
         if majmua.luba != luba {
@@ -996,8 +1031,10 @@ impl MajmuatManatiq {
                 continue;
             }
             if mintaqa.ism.trim().is_empty() {
-                mulahazat
-                    .push(format!("region {} was dropped: it has no name", mintaqa.muarrif));
+                mulahazat.push(format!(
+                    "region {} was dropped: it has no name",
+                    mintaqa.muarrif
+                ));
                 continue;
             }
             if !mintaqa.mustatil.salih() {
@@ -1045,7 +1082,10 @@ impl MajmuatManatiq {
             mahfuza.push(mintaqa);
         }
 
-        let aqsa = muarrifat.iter().next_back().map_or(0, |muarrif| muarrif.raqm());
+        let aqsa = muarrifat
+            .iter()
+            .next_back()
+            .map_or(0, |muarrif| muarrif.raqm());
         if self.talee <= aqsa {
             mulahazat.push(format!(
                 "the next identity was {} and a region already held {aqsa}; it was raised so \
@@ -1107,8 +1147,17 @@ impl NuqtaNisbiya {
     /// later comparison false.
     #[must_use]
     pub fn jadeeda(ufuqi: f32, raasi: f32) -> Self {
-        let sahih = |qeema: f32| if qeema.is_finite() { qeema.clamp(0.0, 1.0) } else { 0.0 };
-        Self { ufuqi: sahih(ufuqi), raasi: sahih(raasi) }
+        let sahih = |qeema: f32| {
+            if qeema.is_finite() {
+                qeema.clamp(0.0, 1.0)
+            } else {
+                0.0
+            }
+        };
+        Self {
+            ufuqi: sahih(ufuqi),
+            raasi: sahih(raasi),
+        }
     }
 
     /// Whether this point is inside a rectangle, edges included.
@@ -1414,13 +1463,21 @@ impl MuharrirManatiq {
 
     /// Changes the grip size, in pixels, with a floor of two.
     pub fn ihdud_miqbad(&mut self, biksel: f32) {
-        self.nisf_miqbad_biksel = if biksel.is_finite() && biksel > 2.0 { biksel } else { 2.0 };
+        self.nisf_miqbad_biksel = if biksel.is_finite() && biksel > 2.0 {
+            biksel
+        } else {
+            2.0
+        };
     }
 
     /// Changes the shortest usable side, normalized, with a floor of one
     /// ten-thousandth.
     pub fn ihdud_adna_dila(&mut self, dila: f32) {
-        self.adna_dila = if dila.is_finite() && dila > 0.0001 { dila } else { 0.0001 };
+        self.adna_dila = if dila.is_finite() && dila > 0.0001 {
+            dila
+        } else {
+            0.0001
+        };
     }
 
     /// Starts drawing a new region from this point.
@@ -1429,7 +1486,10 @@ impl MuharrirManatiq {
     /// when the editor is in add mode and an existing region under the pointer
     /// should be ignored.
     pub const fn bada_sahb(&mut self, nuqta: NuqtaNisbiya) {
-        self.wada = WadaMuharrir::Rasm { bidaya: nuqta, hali: nuqta };
+        self.wada = WadaMuharrir::Rasm {
+            bidaya: nuqta,
+            hali: nuqta,
+        };
     }
 
     /// Starts whichever drag this point implies, and reports which one.
@@ -1453,9 +1513,12 @@ impl MuharrirManatiq {
                     .mintaqa(isaba.hadaf)
                     .map_or(MustatilNisbi::KAAMIL, |mintaqa| mintaqa.mustatil);
                 match isaba.miqbad {
-                    Some(miqbad) => {
-                        WadaMuharrir::Tahjim { hadaf: isaba.hadaf, miqbad, asli, hali: nuqta }
-                    }
+                    Some(miqbad) => WadaMuharrir::Tahjim {
+                        hadaf: isaba.hadaf,
+                        miqbad,
+                        asli,
+                        hali: nuqta,
+                    },
                     None => WadaMuharrir::Naql {
                         hadaf: isaba.hadaf,
                         imsak: nuqta,
@@ -1463,8 +1526,11 @@ impl MuharrirManatiq {
                         hali: nuqta,
                     },
                 }
-            }
-            None => WadaMuharrir::Rasm { bidaya: nuqta, hali: nuqta },
+            },
+            None => WadaMuharrir::Rasm {
+                bidaya: nuqta,
+                hali: nuqta,
+            },
         };
         self.wada
     }
@@ -1496,7 +1562,10 @@ impl MuharrirManatiq {
                 }
             }
             if nuqta.dakhil(mintaqa.mustatil) {
-                return Some(IsabatMuharrir { hadaf: mintaqa.muarrif, miqbad: None });
+                return Some(IsabatMuharrir {
+                    hadaf: mintaqa.muarrif,
+                    miqbad: None,
+                });
             }
         }
         None
@@ -1528,7 +1597,7 @@ impl MuharrirManatiq {
     /// motion events unconditionally does not have to filter them.
     pub const fn harrik(&mut self, nuqta: NuqtaNisbiya) {
         match &mut self.wada {
-            WadaMuharrir::Khamil => {}
+            WadaMuharrir::Khamil => {},
             WadaMuharrir::Rasm { hali, .. }
             | WadaMuharrir::Naql { hali, .. }
             | WadaMuharrir::Tahjim { hali, .. } => *hali = nuqta,
@@ -1546,12 +1615,12 @@ impl MuharrirManatiq {
                 hali.ufuqi,
                 hali.raasi,
             )),
-            WadaMuharrir::Naql { imsak, asli, hali, .. } => {
-                Some(Self::mustatil_naql(asli, imsak, hali))
-            }
-            WadaMuharrir::Tahjim { miqbad, asli, hali, .. } => {
-                Some(Self::mustatil_tahjim(asli, miqbad, hali))
-            }
+            WadaMuharrir::Naql {
+                imsak, asli, hali, ..
+            } => Some(Self::mustatil_naql(asli, imsak, hali)),
+            WadaMuharrir::Tahjim {
+                miqbad, asli, hali, ..
+            } => Some(Self::mustatil_tahjim(asli, miqbad, hali)),
         }
     }
 
@@ -1579,12 +1648,8 @@ impl MuharrirManatiq {
         match wada {
             WadaMuharrir::Khamil => NatijatTahrir::LaShay,
             WadaMuharrir::Rasm { bidaya, hali } => {
-                let mustatil = MustatilNisbi::min_hudud(
-                    bidaya.ufuqi,
-                    bidaya.raasi,
-                    hali.ufuqi,
-                    hali.raasi,
-                );
+                let mustatil =
+                    MustatilNisbi::min_hudud(bidaya.ufuqi, bidaya.raasi, hali.ufuqi, hali.raasi);
                 if !mustatil.salih() {
                     return NatijatTahrir::Mulgha {
                         sabab: "the drag had no area, so no region was created",
@@ -1598,12 +1663,22 @@ impl MuharrirManatiq {
                     };
                 }
                 NatijatTahrir::Jadeeda(mustatil)
-            }
-            WadaMuharrir::Naql { hadaf, imsak, asli, hali } => NatijatTahrir::Munaqqala {
+            },
+            WadaMuharrir::Naql {
+                hadaf,
+                imsak,
+                asli,
+                hali,
+            } => NatijatTahrir::Munaqqala {
                 hadaf,
                 mustatil: Self::mustatil_naql(asli, imsak, hali),
             },
-            WadaMuharrir::Tahjim { hadaf, miqbad, asli, hali } => {
+            WadaMuharrir::Tahjim {
+                hadaf,
+                miqbad,
+                asli,
+                hali,
+            } => {
                 let mustatil = Self::mustatil_tahjim(asli, miqbad, hali);
                 if !mustatil.salih() || self.saghir(mustatil) {
                     return NatijatTahrir::Mulgha {
@@ -1612,7 +1687,7 @@ impl MuharrirManatiq {
                     };
                 }
                 NatijatTahrir::Muhajjama { hadaf, mustatil }
-            }
+            },
         }
     }
 
@@ -1637,7 +1712,12 @@ impl MuharrirManatiq {
         let saqf_raasi = (1.0 - asli.irtifa).max(0.0);
         let yasar = (asli.yasar + (hali.ufuqi - imsak.ufuqi)).clamp(0.0, saqf_ufuqi);
         let aala = (asli.aala + (hali.raasi - imsak.raasi)).clamp(0.0, saqf_raasi);
-        MustatilNisbi { yasar, aala, ard: asli.ard, irtifa: asli.irtifa }
+        MustatilNisbi {
+            yasar,
+            aala,
+            ard: asli.ard,
+            irtifa: asli.irtifa,
+        }
     }
 
     /// A region with the edges one grip owns moved to the pointer.
@@ -1646,11 +1726,7 @@ impl MuharrirManatiq {
     /// dragging the left grip past the right one flips the rectangle instead of
     /// producing a negative width — the behaviour a player expects from every
     /// other rectangle tool they have used.
-    fn mustatil_tahjim(
-        asli: MustatilNisbi,
-        miqbad: Miqbad,
-        hali: NuqtaNisbiya,
-    ) -> MustatilNisbi {
+    fn mustatil_tahjim(asli: MustatilNisbi, miqbad: Miqbad, hali: NuqtaNisbiya) -> MustatilNisbi {
         let mut yasar = asli.yasar;
         let mut yameen = asli.yasar + asli.ard;
         let mut aala = asli.aala;
@@ -1907,7 +1983,11 @@ impl IktishafTilqai {
 
     /// Changes how far two rectangles may differ and still match.
     pub const fn ihdud_tasamuh(&mut self, tasamuh: f32) {
-        self.tasamuh = if tasamuh.is_finite() { tasamuh.clamp(0.0, 0.25) } else { self.tasamuh };
+        self.tasamuh = if tasamuh.is_finite() {
+            tasamuh.clamp(0.0, 0.25)
+        } else {
+            self.tasamuh
+        };
     }
 
     /// Changes the stability a block must reach to be proposed, with a floor of
@@ -1965,7 +2045,7 @@ impl IktishafTilqai {
                         murashshah.marrat = murashshah.marrat.saturating_add(1);
                         murashshah.jeel_akhir = jeel;
                     }
-                }
+                },
                 None => self.adif_murashshah(nisbi, jeel),
             }
         }
@@ -1987,19 +2067,17 @@ impl IktishafTilqai {
                 .murashshahat
                 .iter()
                 .enumerate()
-                .filter(|(_, murashshah)| {
-                    murashshah.jeel_akhir != jeel && murashshah.thabat <= 1
-                })
+                .filter(|(_, murashshah)| murashshah.jeel_akhir != jeel && murashshah.thabat <= 1)
                 .min_by_key(|(_, murashshah)| (murashshah.thabat, murashshah.jeel_akhir))
                 .map(|(mawqi, _)| mawqi);
             match daeef {
                 Some(mawqi) if mawqi < self.murashshahat.len() => {
                     let _ = self.murashshahat.remove(mawqi);
-                }
+                },
                 _ => {
                     self.muhmala = self.muhmala.saturating_add(1);
                     return;
-                }
+                },
             }
         }
         self.murashshahat.push(Murashshah {

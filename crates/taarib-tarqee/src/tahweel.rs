@@ -101,7 +101,7 @@ pub fn nitaq(masdar: &NitaqNasq) -> SijillNitaq {
                 lawn = muhallal;
                 alam |= ALAM_NITAQ_LAWN;
             }
-        }
+        },
         NawNasq::Ghaliz => alam |= ALAM_NITAQ_ASWAD,
         NawNasq::Maail => alam |= ALAM_NITAQ_MAAIL,
         NawNasq::Hajm { qeema } => {
@@ -112,7 +112,7 @@ pub fn nitaq(masdar: &NitaqNasq) -> SijillNitaq {
             if *qeema > 0.0 {
                 hajm = *qeema;
             }
-        }
+        },
         NawNasq::Sura { .. } => alam |= ALAM_NITAQ_SURA | ALAM_NITAQ_DHARRA,
         NawNasq::Mawdi { .. } => alam |= ALAM_NITAQ_DHARRA,
         // Underline, strikethrough, hard breaks, typewriter pauses, no-parse
@@ -127,10 +127,18 @@ pub fn nitaq(masdar: &NitaqNasq) -> SijillNitaq {
         | NawNasq::Satr
         | NawNasq::Tawaqquf { .. }
         | NawNasq::BilaTahleel
-        | NawNasq::Muhadhaha { .. } => {}
+        | NawNasq::Muhadhaha { .. } => {},
     }
 
-    SijillNitaq { nass: 0, bidaya: masdar.bidaya, tul: masdar.tul, lawn, hajm, id: masdar.id, alam }
+    SijillNitaq {
+        nass: 0,
+        bidaya: masdar.bidaya,
+        tul: masdar.tul,
+        lawn,
+        hajm,
+        id: masdar.id,
+        alam,
+    }
 }
 
 /// Parses a colour the engine wrote, or answers [`None`].

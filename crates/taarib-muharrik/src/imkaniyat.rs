@@ -226,8 +226,10 @@ pub mod alamat {
     /// [`super::jahiziya`] treats them alike — the alternative is a game whose
     /// `renpy/__init__.py` was unreadable silently losing a verdict the probe
     /// did in fact reach.
-    pub const TASHKEEL_RENPY: &[&str] =
-        &["shapes and reorders Arabic itself", "the engine can shape Arabic itself"];
+    pub const TASHKEEL_RENPY: &[&str] = &[
+        "shapes and reorders Arabic itself",
+        "the engine can shape Arabic itself",
+    ];
 
     /// A Ren'Py build with no shaper of its own.
     ///
@@ -236,20 +238,27 @@ pub mod alamat {
     /// all produces neither marker, and that is a third answer rather than this
     /// one. Conflating the two would report "the engine cannot shape" about a
     /// game nothing was learned about.
-    pub const BILA_TASHKEEL_RENPY: &[&str] =
-        &["the engine has no shaper and Arabic has to be laid out", "or earlier and has no shaper"];
+    pub const BILA_TASHKEEL_RENPY: &[&str] = &[
+        "the engine has no shaper and Arabic has to be laid out",
+        "or earlier and has no shaper",
+    ];
 }
 
 /// Builds a limitation from its two sentences.
 fn hadd(arabi: impl Into<String>, injilizi: impl Into<String>) -> Hadd {
-    Hadd { arabi: arabi.into(), injilizi: injilizi.into() }
+    Hadd {
+        arabi: arabi.into(),
+        injilizi: injilizi.into(),
+    }
 }
 
 /// Whether any observation mentions any of `ibarat`, in its description or its
 /// location.
 fn shuhida(muharrik: &Muharrik, ibarat: &[&str]) -> bool {
-    let matlub: Vec<String> =
-        ibarat.iter().map(|ibara| ibara.to_ascii_lowercase().replace('\\', "/")).collect();
+    let matlub: Vec<String> = ibarat
+        .iter()
+        .map(|ibara| ibara.to_ascii_lowercase().replace('\\', "/"))
+        .collect();
     muharrik.dalail.iter().any(|daleel| {
         let wasf = daleel.wasf.to_ascii_lowercase().replace('\\', "/");
         let mawqi = daleel
@@ -257,7 +266,9 @@ fn shuhida(muharrik: &Muharrik, ibarat: &[&str]) -> bool {
             .as_ref()
             .map(|mawqi| mawqi.to_ascii_lowercase().replace('\\', "/"))
             .unwrap_or_default();
-        matlub.iter().any(|ibara| wasf.contains(ibara) || mawqi.contains(ibara))
+        matlub
+            .iter()
+            .any(|ibara| wasf.contains(ibara) || mawqi.contains(ibara))
     })
 }
 
@@ -276,10 +287,10 @@ fn ladayh(muharrik: &Muharrik, itar: ItarNusus) -> bool {
 /// drawing text over Godot 4 works, while switching on shaping that Godot 3
 /// does not have does not.
 fn godot_arbaa(muharrik: &Muharrik) -> bool {
-    muharrik
-        .isdar
-        .as_ref()
-        .map_or_else(|| shuhida(muharrik, alamat::KHADIM_NUSUS), |isdar| isdar.kabir >= 4)
+    muharrik.isdar.as_ref().map_or_else(
+        || shuhida(muharrik, alamat::KHADIM_NUSUS),
+        |isdar| isdar.kabir >= 4,
+    )
 }
 
 /// Whether this Ren'Py build joins and reorders Arabic on its own.
@@ -490,10 +501,8 @@ const fn khazinat_nusus(aila: AilatMuharrik) -> Option<(&'static str, &'static s
 /// gains an arm of its own, and this function is where the reviewer will look
 /// for the ones that have not.
 fn tabaqa_khassa(aila: AilatMuharrik) -> (Tabaqa, String, String) {
-    let (ayn_arabi, ayn_injilizi) = khazinat_nusus(aila).unwrap_or((
-        "داخل ملفّات المحرّك نفسها",
-        "inside the engine's own files",
-    ));
+    let (ayn_arabi, ayn_injilizi) = khazinat_nusus(aila)
+        .unwrap_or(("داخل ملفّات المحرّك نفسها", "inside the engine's own files"));
     let ism = aila.ism();
     (
         Tabaqa::TarjamaFawqiya,
@@ -645,11 +654,15 @@ pub fn jahiziya(muharrik: &Muharrik) -> (JahiziyatTashghil, Option<Hadd>) {
         AilatMuharrik::Unreal => (JahiziyatTashghil::Ghaiba, naqs_unreal()),
         AilatMuharrik::Godot => (
             JahiziyatTashghil::Ghaiba,
-            if godot_arbaa(muharrik) { naqs_godot_arbaa() } else { naqs_godot_thalith() },
+            if godot_arbaa(muharrik) {
+                naqs_godot_arbaa()
+            } else {
+                naqs_godot_thalith()
+            },
         ),
         AilatMuharrik::RpgMakerMv | AilatMuharrik::RpgMakerMz => {
             (JahiziyatTashghil::Ghaiba, naqs_rpg_maker())
-        }
+        },
         AilatMuharrik::RpgMakerVxAce => (JahiziyatTashghil::Ghaiba, naqs_vx_ace()),
         AilatMuharrik::Renpy => jahiziyat_renpy(muharrik),
         AilatMuharrik::GameMaker => (JahiziyatTashghil::Ghaiba, naqs_gamemaker()),
@@ -660,9 +673,7 @@ pub fn jahiziya(muharrik: &Muharrik) -> (JahiziyatTashghil, Option<Hadd>) {
         | AilatMuharrik::Alchemy
         | AilatMuharrik::Dantelion
         | AilatMuharrik::Rage
-        | AilatMuharrik::Snowdrop => {
-            (JahiziyatTashghil::Ghaiba, naqs_khassa(muharrik.aila))
-        }
+        | AilatMuharrik::Snowdrop => (JahiziyatTashghil::Ghaiba, naqs_khassa(muharrik.aila)),
         AilatMuharrik::Majhul => (JahiziyatTashghil::Ghaiba, naqs_tabaqa()),
     };
     // A finished tier has nothing to warn about, and `TaqreerImkaniyat::naqs`
@@ -1160,10 +1171,8 @@ fn naqs_tabaqa() -> Hadd {
 /// Arabized" and "this engine has not been Arabized yet" — the first is false
 /// and the second is a thing an update changes.
 fn naqs_khassa(aila: AilatMuharrik) -> Hadd {
-    let (ayn_arabi, ayn_injilizi) = khazinat_nusus(aila).unwrap_or((
-        "داخل ملفّات المحرّك نفسها",
-        "inside the engine's own files",
-    ));
+    let (ayn_arabi, ayn_injilizi) = khazinat_nusus(aila)
+        .unwrap_or(("داخل ملفّات المحرّك نفسها", "inside the engine's own files"));
     let ism = aila.ism();
     hadd(
         format!(
@@ -1231,7 +1240,7 @@ pub fn hudud(muharrik: &Muharrik, tabaqa: Tabaqa) -> Vec<Hadd> {
             }
             hudud.push(hadd_suwar());
             hudud.push(hadd_sawt());
-        }
+        },
     }
     hudud_thiqa(muharrik, &mut hudud);
     hudud
@@ -1262,7 +1271,7 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
                  surfaces inside the scene may stay unshaped, because it does not pass \
                  through the same text system.",
             ));
-        }
+        },
         AilatMuharrik::Godot => {
             if ladayh(muharrik, ItarNusus::GodotRichText) {
                 hudud.push(hadd(
@@ -1275,7 +1284,7 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
                      direction differs.",
                 ));
             }
-        }
+        },
         AilatMuharrik::RpgMakerMv | AilatMuharrik::RpgMakerMz => {
             hudud.push(hadd(
                 "الرسائل التي تبنيها اللعبة من قطع صغيرة أثناء اللعب — اسم عنصر داخل \
@@ -1293,7 +1302,7 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
                  the message windows may be out of Taarib's reach, and their text will \
                  stay in the original language.",
             ));
-        }
+        },
         AilatMuharrik::RpgMakerVxAce => {
             hudud.push(hadd(
                 "يرسم RPG Maker VX Ace نصوصه بخط النظام داخل نوافذ ثابتة العرض. سيلفّ \
@@ -1303,7 +1312,7 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
                  windows. Taarib wraps the Arabic lines to fit them, and some windows \
                  may need one line more than the original.",
             ));
-        }
+        },
         AilatMuharrik::Renpy => {
             hudud.push(hadd(
                 "النصوص المكتوبة داخل شيفرة بايثون بدل ملفات الحوار لا يلتقطها نظام \
@@ -1312,7 +1321,7 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
                  picked up by Ren'Py's own translation system, and is captured while \
                  you play instead.",
             ));
-        }
+        },
         AilatMuharrik::GameMaker => {
             hudud.push(hadd(
                 "يرسم GameMaker النصوص من صفحات حروف جاهزة داخل ملف بياناته، وسيولّد \
@@ -1323,7 +1332,7 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
                  Characters the font you choose does not cover will not be drawn at \
                  all, so choose a complete Arabic font.",
             ));
-        }
+        },
         AilatMuharrik::Electron => {
             hudud.push(hadd(
                 "تُعاد حزمة اللعبة بناءً بعد التعديل، فيحتاج التثبيت مساحة حرة بحجم \
@@ -1336,7 +1345,7 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
             if ladayh(muharrik, ItarNusus::Canvas) {
                 hudud.push(hadd_canvas());
             }
-        }
+        },
         AilatMuharrik::Bio4 => {
             hudud.push(hadd(
                 "خطوط هذه اللعبة صفحات حروف مرسومة مسبقًا داخل ملفاتها، وسيولّد تعريب صفحات \
@@ -1349,7 +1358,7 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
                  font. The number of cells in a page is fixed by what the game shipped, so \
                  not every Arabic letter shape may fit on a given screen.",
             ));
-        }
+        },
         // The six in-house engines are here with the unrecognised family and
         // for the same structural reason: this function is only reached at tier
         // 1 and tier 2, [`tabaqa_khassa`] puts every one of them at tier 3, and
@@ -1363,7 +1372,7 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
         | AilatMuharrik::Dantelion
         | AilatMuharrik::Rage
         | AilatMuharrik::Snowdrop
-        | AilatMuharrik::Majhul => {}
+        | AilatMuharrik::Majhul => {},
     }
     if muharrik.aila != AilatMuharrik::Electron && ladayh(muharrik, ItarNusus::Canvas) {
         hudud.push(hadd_canvas());
@@ -1664,11 +1673,7 @@ fn hadd_tawafuq(tabaqa: &str) -> Hadd {
 /// everything the player reads is correctly shaped Arabic, and a verdict of
 /// [`JahiziyatTashghil::Naqisa`] is the report saying a named part of it is not.
 #[must_use]
-pub fn jawda(
-    muharrik: &Muharrik,
-    tabaqa: Tabaqa,
-    jahiziya: JahiziyatTashghil,
-) -> JawdaMutawaqqaa {
+pub fn jawda(muharrik: &Muharrik, tabaqa: Tabaqa, jahiziya: JahiziyatTashghil) -> JawdaMutawaqqaa {
     if !jahiziya.tasil() {
         return JawdaMutawaqqaa::Mahduda;
     }
@@ -1695,9 +1700,7 @@ pub fn jawda(
     if tabaqa == Tabaqa::RasmMubashir {
         jawda = jawda.max(JawdaMutawaqqaa::Jayida);
     }
-    if muharrik.aila == AilatMuharrik::Unity
-        && muharrik.khalfiya == KhalfiyaBarmajiya::Majhula
-    {
+    if muharrik.aila == AilatMuharrik::Unity && muharrik.khalfiya == KhalfiyaBarmajiya::Majhula {
         jawda = jawda.max(JawdaMutawaqqaa::Maqbula);
     }
     if shuhida(muharrik, alamat::MITA_MAJHULA) {
@@ -1706,9 +1709,7 @@ pub fn jawda(
     if shuhida(muharrik, alamat::TASHFEER) {
         jawda = jawda.max(JawdaMutawaqqaa::Maqbula);
     }
-    if muharrik.aila == AilatMuharrik::Unreal
-        && shuhida(muharrik, alamat::NUSUS_DAKHIL_HAWIYA)
-    {
+    if muharrik.aila == AilatMuharrik::Unreal && shuhida(muharrik, alamat::NUSUS_DAKHIL_HAWIYA) {
         jawda = jawda.max(JawdaMutawaqqaa::Jayida);
     }
     if muharrik.thiqa < HADD_THIQA_MUNKHAFIDA {
@@ -1728,46 +1729,43 @@ fn jawda_min_itarat(muharrik: &Muharrik) -> JawdaMutawaqqaa {
             } else {
                 JawdaMutawaqqaa::Maqbula
             }
-        }
+        },
         AilatMuharrik::Unreal => {
             if ladayh(muharrik, ItarNusus::Slate) {
                 JawdaMutawaqqaa::Mumtaza
             } else {
                 JawdaMutawaqqaa::Maqbula
             }
-        }
+        },
         AilatMuharrik::Godot => {
-            if ladayh(muharrik, ItarNusus::GodotLabel)
-                || ladayh(muharrik, ItarNusus::GodotRichText)
+            if ladayh(muharrik, ItarNusus::GodotLabel) || ladayh(muharrik, ItarNusus::GodotRichText)
             {
                 JawdaMutawaqqaa::Mumtaza
             } else {
                 JawdaMutawaqqaa::Maqbula
             }
-        }
-        AilatMuharrik::RpgMakerMv
-        | AilatMuharrik::RpgMakerMz
-        | AilatMuharrik::RpgMakerVxAce => {
+        },
+        AilatMuharrik::RpgMakerMv | AilatMuharrik::RpgMakerMz | AilatMuharrik::RpgMakerVxAce => {
             if ladayh(muharrik, ItarNusus::NafidhatRpg) {
                 JawdaMutawaqqaa::Mumtaza
             } else {
                 JawdaMutawaqqaa::Jayida
             }
-        }
+        },
         AilatMuharrik::Renpy => {
             if ladayh(muharrik, ItarNusus::NassRenpy) {
                 JawdaMutawaqqaa::Mumtaza
             } else {
                 JawdaMutawaqqaa::Jayida
             }
-        }
+        },
         AilatMuharrik::Electron => {
             if ladayh(muharrik, ItarNusus::Dom) {
                 JawdaMutawaqqaa::Mumtaza
             } else {
                 JawdaMutawaqqaa::Maqbula
             }
-        }
+        },
         // The two engines that draw text from glyph pages baked into their own
         // data rather than from a font, and the only two whose answer does not
         // depend on which text systems were found. Neither can be excellent and
@@ -1940,7 +1938,10 @@ pub fn taqreer(muharrik: Muharrik, simat: &[SimatLuba], waqt: String) -> Taqreer
     let jawda = jawda(&muharrik, tabaqa, jahiziya);
 
     let mut hudud = hudud(&muharrik, tabaqa);
-    if simat.iter().any(|sima| matches!(sima, SimatLuba::JamaiOnline)) {
+    if simat
+        .iter()
+        .any(|sima| matches!(sima, SimatLuba::JamaiOnline))
+    {
         hudud.insert(0, hadd_jamai());
     }
     if let Some(wasf) = tabaqat_tawafuq(simat) {
@@ -2041,9 +2042,10 @@ mod ikhtibarat {
 
     /// The two sentences, for the assertions about wording.
     fn jumlatan(muharrik: &Muharrik) -> (String, String) {
-        jahiziya(muharrik)
-            .1
-            .map_or_else(|| (String::new(), String::new()), |naqs| (naqs.arabi, naqs.injilizi))
+        jahiziya(muharrik).1.map_or_else(
+            || (String::new(), String::new()),
+            |naqs| (naqs.arabi, naqs.injilizi),
+        )
     }
 
     // -----------------------------------------------------------------------
@@ -2070,7 +2072,7 @@ mod ikhtibarat {
                             naqs.is_none(),
                             "{aila:?}/{khalfiya:?} promises a finished tier and still warns"
                         );
-                    }
+                    },
                     JahiziyatTashghil::Naqisa | JahiziyatTashghil::Ghaiba => {
                         let hadd = naqs.unwrap_or_else(|| hadd("", ""));
                         assert!(
@@ -2081,7 +2083,7 @@ mod ikhtibarat {
                             !hadd.injilizi.trim().is_empty(),
                             "{aila:?}/{khalfiya:?} has no English sentence"
                         );
-                    }
+                    },
                 }
             }
         }
@@ -2108,7 +2110,10 @@ mod ikhtibarat {
     fn al_mukammala_la_tahmil_naqsan() {
         let renpy = bi_isdar(AilatMuharrik::Renpy, 8, 1, 3);
         assert_eq!(hukm(&renpy), JahiziyatTashghil::Mukammala);
-        assert!(jahiziya(&renpy).1.is_none(), "a finished tier must carry no gap sentence");
+        assert!(
+            jahiziya(&renpy).1.is_none(),
+            "a finished tier must carry no gap sentence"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -2122,9 +2127,11 @@ mod ikhtibarat {
     #[test]
     fn unity_ghaiba_ala_alkhalfiyatayn() {
         let mut jumal: Vec<String> = Vec::new();
-        for khalfiya in
-            [KhalfiyaBarmajiya::Mono, KhalfiyaBarmajiya::Il2cpp, KhalfiyaBarmajiya::Majhula]
-        {
+        for khalfiya in [
+            KhalfiyaBarmajiya::Mono,
+            KhalfiyaBarmajiya::Il2cpp,
+            KhalfiyaBarmajiya::Majhula,
+        ] {
             let mut asas = muharrik(AilatMuharrik::Unity);
             asas.khalfiya = khalfiya;
             assert_eq!(hukm(&asas), JahiziyatTashghil::Ghaiba, "{khalfiya:?}");
@@ -2140,7 +2147,10 @@ mod ikhtibarat {
     /// no container carrying Arabic is ever put into a game.
     #[test]
     fn unreal_ghaiba() {
-        assert_eq!(hukm(&muharrik(AilatMuharrik::Unreal)), JahiziyatTashghil::Ghaiba);
+        assert_eq!(
+            hukm(&muharrik(AilatMuharrik::Unreal)),
+            JahiziyatTashghil::Ghaiba
+        );
     }
 
     /// Godot 3 and Godot 4 stop for different reasons and say so differently.
@@ -2161,7 +2171,10 @@ mod ikhtibarat {
         for aila in [AilatMuharrik::RpgMakerMv, AilatMuharrik::RpgMakerMz] {
             assert_eq!(hukm(&muharrik(aila)), JahiziyatTashghil::Ghaiba, "{aila:?}");
         }
-        assert_eq!(hukm(&muharrik(AilatMuharrik::RpgMakerVxAce)), JahiziyatTashghil::Ghaiba);
+        assert_eq!(
+            hukm(&muharrik(AilatMuharrik::RpgMakerVxAce)),
+            JahiziyatTashghil::Ghaiba
+        );
     }
 
     /// GameMaker: the string pool is rewritten and the glyph pages are not, so
@@ -2171,7 +2184,10 @@ mod ikhtibarat {
     fn gamemaker_ghaiba_wa_tasil_kadhib() {
         let asas = muharrik(AilatMuharrik::GameMaker);
         assert_eq!(hukm(&asas), JahiziyatTashghil::Ghaiba);
-        assert!(!hukm(&asas).tasil(), "a GameMaker run would blank the game's own text");
+        assert!(
+            !hukm(&asas).tasil(),
+            "a GameMaker run would blank the game's own text"
+        );
         let (arabi, injilizi) = jumlatan(&asas);
         assert!(arabi.contains("صفحات الحروف"), "{arabi}");
         assert!(injilizi.contains("glyph pages"), "{injilizi}");
@@ -2182,13 +2198,19 @@ mod ikhtibarat {
     /// into an unchanged game.
     #[test]
     fn electron_ghaiba() {
-        assert_eq!(hukm(&muharrik(AilatMuharrik::Electron)), JahiziyatTashghil::Ghaiba);
+        assert_eq!(
+            hukm(&muharrik(AilatMuharrik::Electron)),
+            JahiziyatTashghil::Ghaiba
+        );
     }
 
     /// The overlay, which is every unrecognised engine.
     #[test]
     fn tabaqa_ghaiba() {
-        assert_eq!(hukm(&muharrik(AilatMuharrik::Majhul)), JahiziyatTashghil::Ghaiba);
+        assert_eq!(
+            hukm(&muharrik(AilatMuharrik::Majhul)),
+            JahiziyatTashghil::Ghaiba
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -2202,7 +2224,11 @@ mod ikhtibarat {
     fn renpy_yashkul_fahuwa_mukammala() {
         for (kabir, sagheer) in [(7, 4), (7, 8), (8, 0), (8, 3)] {
             let asas = bi_isdar(AilatMuharrik::Renpy, kabir, sagheer, 0);
-            assert_eq!(hukm(&asas), JahiziyatTashghil::Mukammala, "Ren'Py {kabir}.{sagheer}");
+            assert_eq!(
+                hukm(&asas),
+                JahiziyatTashghil::Mukammala,
+                "Ren'Py {kabir}.{sagheer}"
+            );
         }
     }
 
@@ -2213,7 +2239,11 @@ mod ikhtibarat {
     fn renpy_bila_tashkeel_fahuwa_ghaiba() {
         for (kabir, sagheer) in [(7, 3), (7, 0), (6, 99)] {
             let asas = bi_isdar(AilatMuharrik::Renpy, kabir, sagheer, 0);
-            assert_eq!(hukm(&asas), JahiziyatTashghil::Ghaiba, "Ren'Py {kabir}.{sagheer}");
+            assert_eq!(
+                hukm(&asas),
+                JahiziyatTashghil::Ghaiba,
+                "Ren'Py {kabir}.{sagheer}"
+            );
         }
     }
 
@@ -2270,12 +2300,21 @@ mod ikhtibarat {
         for wasf in yashkul {
             let asas = bi_daleel(AilatMuharrik::Renpy, wasf);
             assert!(shuhida(&asas, alamat::TASHKEEL_RENPY), "unmatched: {wasf}");
-            assert!(!shuhida(&asas, alamat::BILA_TASHKEEL_RENPY), "cross-matched: {wasf}");
+            assert!(
+                !shuhida(&asas, alamat::BILA_TASHKEEL_RENPY),
+                "cross-matched: {wasf}"
+            );
         }
         for wasf in la_yashkul {
             let asas = bi_daleel(AilatMuharrik::Renpy, wasf);
-            assert!(shuhida(&asas, alamat::BILA_TASHKEEL_RENPY), "unmatched: {wasf}");
-            assert!(!shuhida(&asas, alamat::TASHKEEL_RENPY), "cross-matched: {wasf}");
+            assert!(
+                shuhida(&asas, alamat::BILA_TASHKEEL_RENPY),
+                "unmatched: {wasf}"
+            );
+            assert!(
+                !shuhida(&asas, alamat::TASHKEEL_RENPY),
+                "cross-matched: {wasf}"
+            );
         }
     }
 

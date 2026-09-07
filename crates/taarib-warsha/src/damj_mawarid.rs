@@ -61,17 +61,15 @@ fn satr_janib(natija: &mut String, unwan: &str, mustalah: &MustalahMasrad) {
     match &mustalah.mulahaza {
         Some(mulahaza) => {
             let _ = writeln!(natija, " — ملاحظة | note: {mulahaza}");
-        }
+        },
         None => {
             let _ = writeln!(natija);
-        }
+        },
     }
 }
 
 /// Counts of what the glossary merge did.
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TaqreerMasrad {
     /// Terms both copies carried with the same approved form.
     pub mutatabiqa: usize,
@@ -165,13 +163,22 @@ impl DamjMasrad {
         hasim: &MusahimId,
         lahza: u64,
     ) -> NatijatWarsha<(Masrad, Vec<HasmMustalah>)> {
-        let maruf: BTreeSet<&str> =
-            self.nizaat.iter().map(|nizaa| nizaa.miftah.as_str()).collect();
-        if qararat.keys().any(|miftah| !maruf.contains(miftah.as_str())) {
+        let maruf: BTreeSet<&str> = self
+            .nizaat
+            .iter()
+            .map(|nizaa| nizaa.miftah.as_str())
+            .collect();
+        if qararat
+            .keys()
+            .any(|miftah| !maruf.contains(miftah.as_str()))
+        {
             return Err(KhataWarsha::QararBilaNizaa);
         }
-        let muallaq =
-            self.nizaat.iter().filter(|n| !qararat.contains_key(&n.miftah)).count();
+        let muallaq = self
+            .nizaat
+            .iter()
+            .filter(|n| !qararat.contains_key(&n.miftah))
+            .count();
         if muallaq > 0 {
             return Err(KhataWarsha::NizaatMuallaqa { adad: muallaq });
         }
@@ -197,7 +204,7 @@ impl DamjMasrad {
                         la_yutarjam: miftah_muwahhad(nass) == nizaa.miftah,
                     };
                     (thalith, None, nizaa.hum)
-                }
+                },
             };
             if !mustalah.salih() {
                 return Err(KhataWarsha::Mawrid {
@@ -265,7 +272,7 @@ pub fn idmij_masrad(ana: &Masrad, hum: &Masrad) -> DamjMasrad {
             None => {
                 taqreer.munfarida = taqreer.munfarida.saturating_add(1);
                 let _ = muttafaq.insert(miftah, mustalah_hum.clone());
-            }
+            },
             Some(mustalah_ana) => {
                 let arabi_ana = miftah_muwahhad(&mustalah_ana.arabi);
                 let arabi_hum = miftah_muwahhad(&mustalah_hum.arabi);
@@ -283,7 +290,7 @@ pub fn idmij_masrad(ana: &Masrad, hum: &Masrad) -> DamjMasrad {
                         hum: mustalah_hum.clone(),
                     });
                 }
-            }
+            },
         }
     }
 
@@ -295,7 +302,11 @@ pub fn idmij_masrad(ana: &Masrad, hum: &Masrad) -> DamjMasrad {
     nizaat.sort_by(|awwal, thani| awwal.miftah.cmp(&thani.miftah));
     taqreer.nizaat = nizaat.len();
 
-    DamjMasrad { muttafaq, nizaat, taqreer }
+    DamjMasrad {
+        muttafaq,
+        nizaat,
+        taqreer,
+    }
 }
 
 /// How many records one page of a memory merge reads.
@@ -306,9 +317,7 @@ pub fn idmij_masrad(ana: &Masrad, hum: &Masrad) -> DamjMasrad {
 pub const HAJM_SAFHA_DAMJ: u32 = 256;
 
 /// Counts of what a memory merge did.
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TaqreerDamjDhakira {
     /// Records read from the source memory.
     pub zurat: u64,
@@ -344,16 +353,15 @@ pub struct TaqreerDamjDhakira {
 /// [`KhataWarsha::Mawrid`] when reading a page from the source or
 /// re-recording a pair into the target fails, carrying the memory's own
 /// explanation.
-pub fn idmij_dhakira(
-    hadaf: &mut Dhakira,
-    masdar: &Dhakira,
-) -> NatijatWarsha<TaqreerDamjDhakira> {
+pub fn idmij_dhakira(hadaf: &mut Dhakira, masdar: &Dhakira) -> NatijatWarsha<TaqreerDamjDhakira> {
     let hadd_safha = usize::try_from(HAJM_SAFHA_DAMJ).unwrap_or(usize::MAX);
     let mut taqreer = TaqreerDamjDhakira::default();
     let mut baad: Option<QaydId> = None;
 
     loop {
-        let safha = masdar.safha(baad, HAJM_SAFHA_DAMJ).map_err(|khata| mawrid(&khata))?;
+        let safha = masdar
+            .safha(baad, HAJM_SAFHA_DAMJ)
+            .map_err(|khata| mawrid(&khata))?;
         let Some(akhir) = safha.last() else {
             return Ok(taqreer);
         };
@@ -361,13 +369,13 @@ pub fn idmij_dhakira(
 
         for qayd in &safha {
             taqreer.zurat = taqreer.zurat.saturating_add(1);
-            if miftah_muwahhad(&qayd.masdar).is_empty()
-                || miftah_muwahhad(&qayd.hadaf).is_empty()
-            {
+            if miftah_muwahhad(&qayd.masdar).is_empty() || miftah_muwahhad(&qayd.hadaf).is_empty() {
                 // sajjil skips an unlookupable pair silently; visited, not stored.
                 continue;
             }
-            hadaf.sajjil(&qayd_lil_tasjil(qayd)).map_err(|khata| mawrid(&khata))?;
+            hadaf
+                .sajjil(&qayd_lil_tasjil(qayd))
+                .map_err(|khata| mawrid(&khata))?;
             taqreer.sujjilat = taqreer.sujjilat.saturating_add(1);
         }
 
@@ -402,10 +410,13 @@ pub(crate) fn qayd_lil_tasjil(qayd: &QaydDhakira) -> QaydJadid {
 /// review nobody performed.
 pub(crate) fn asl_amin(qayd: &QaydDhakira) -> AslQayd {
     match qayd.asl.naw {
-        NawAsl::Bashari => AslQayd::Bashari { musahim: qayd.asl.musahim.clone() },
-        NawAsl::Aali => {
-            AslQayd::AaliFaqat { muzawwid: qayd.asl.muzawwid.clone(), thiqa: qayd.thiqa }
-        }
+        NawAsl::Bashari => AslQayd::Bashari {
+            musahim: qayd.asl.musahim.clone(),
+        },
+        NawAsl::Aali => AslQayd::AaliFaqat {
+            muzawwid: qayd.asl.muzawwid.clone(),
+            thiqa: qayd.thiqa,
+        },
         NawAsl::Mulahaza => AslQayd::Mulahaza {
             qari: qayd.asl.qari.clone(),
             muzawwid: qayd.asl.muzawwid.clone(),
@@ -416,5 +427,7 @@ pub(crate) fn asl_amin(qayd: &QaydDhakira) -> AslQayd {
 
 /// The memory's or glossary's own refusal, wrapped as this crate's.
 fn mawrid(khata: &KhataTarjama) -> KhataWarsha {
-    KhataWarsha::Mawrid { sabab: khata.injilizi() }
+    KhataWarsha::Mawrid {
+        sabab: khata.injilizi(),
+    }
 }

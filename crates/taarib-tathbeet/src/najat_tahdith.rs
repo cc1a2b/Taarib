@@ -10,9 +10,7 @@ use taarib_usus::khata::{Khutwa, Tafsir as _};
 
 use crate::bayan::{NawTathbeet, Tathbeet, waqt_alaan};
 use crate::khata::{KhataTathbeet, NatijatTathbeet, min_khata_io};
-use crate::tahaqquq::{
-    HalatMalaf, NatijatTahaqquq, SababInhiraf, TaqreerTahaqquq, tahaqquq_luba,
-};
+use crate::tahaqquq::{HalatMalaf, NatijatTahaqquq, SababInhiraf, TaqreerTahaqquq, tahaqquq_luba};
 use crate::taraju::{RadIdad, SiyasatIstiada, TaqreerIstiada, istiada_nass, istiada_sawt};
 
 /// A string table keyed by stable identity, for counting what a re-match would migrate.
@@ -26,7 +24,9 @@ impl JadwalNusus {
     /// Builds a table from identity–text pairs; a later pair replaces an earlier one.
     #[must_use]
     pub fn min_azwaj<I: IntoIterator<Item = (String, String)>>(azwaj: I) -> Self {
-        Self { nusus: azwaj.into_iter().collect() }
+        Self {
+            nusus: azwaj.into_iter().collect(),
+        }
     }
 
     /// How many identities the table holds.
@@ -59,12 +59,17 @@ impl IhsaHijra {
     /// Counts by exact identity and byte-identical text; nothing is fuzzy-matched.
     #[must_use]
     pub fn ihsab(qadeem: &JadwalNusus, jadeed: &JadwalNusus) -> Self {
-        let mut ihsa = Self { thabita: 0, mutaghayyira: 0, jadida: 0, dhahiba: 0 };
+        let mut ihsa = Self {
+            thabita: 0,
+            mutaghayyira: 0,
+            jadida: 0,
+            dhahiba: 0,
+        };
         for (huwiya, nass) in &qadeem.nusus {
             match jadeed.nusus.get(huwiya) {
                 Some(hali) if hali == nass => {
                     ihsa.thabita = ihsa.thabita.saturating_add(1);
-                }
+                },
                 Some(_) => ihsa.mutaghayyira = ihsa.mutaghayyira.saturating_add(1),
                 None => ihsa.dhahiba = ihsa.dhahiba.saturating_add(1),
             }
@@ -80,13 +85,17 @@ impl IhsaHijra {
     /// How many identities the patch's table held in total.
     #[must_use]
     pub const fn majmu_qadeem(&self) -> usize {
-        self.thabita.saturating_add(self.mutaghayyira).saturating_add(self.dhahiba)
+        self.thabita
+            .saturating_add(self.mutaghayyira)
+            .saturating_add(self.dhahiba)
     }
 
     /// How many identities the new build's table holds in total.
     #[must_use]
     pub const fn majmu_jadeed(&self) -> usize {
-        self.thabita.saturating_add(self.mutaghayyira).saturating_add(self.jadida)
+        self.thabita
+            .saturating_add(self.mutaghayyira)
+            .saturating_add(self.jadida)
     }
 
     /// The counts as one English line.
@@ -205,7 +214,7 @@ impl SababGhayrMahsum {
             Self::BasmaMulawwatha { .. } => {
                 "بعض حاويات بصمة البناء ما زالت تحمل ما كتبه تعريب وبعضها لا مرجع له، فلا \
                  يمكن إعادة حساب البصمة دون تخمين، ولن يخمّن تعريب."
-            }
+            },
         }
     }
 
@@ -219,7 +228,7 @@ impl SababGhayrMahsum {
                 "Some fingerprint containers still hold the patch's own bytes and the rest \
                  have nothing to be checked against, so the build fingerprint cannot be \
                  recomputed without guessing — and Taarib will not guess."
-            }
+            },
         }
     }
 }
@@ -295,23 +304,22 @@ impl MasirRuqaa {
                     "لم يمسّ التحديث أيّ حاوية نصوص مرقّعة؛ الترجمة ما زالت في مكانها ولا \
                      شيء يلزم فعله."
                         .to_owned()
-                }
+                },
                 DaleelTatbaq::Basma(taqdeer) => {
                     if matches!(taqdeer.hukm.sabab, SababMutabaqa::MuarrifWaBasma) {
-                        "رقم البناء وبصمة النصوص متطابقان؛ لم يتغيّر شيء تحت الرقعة."
-                            .to_owned()
+                        "رقم البناء وبصمة النصوص متطابقان؛ لم يتغيّر شيء تحت الرقعة.".to_owned()
                     } else {
                         "تغيّر رقم البناء ولم تتغيّر ملفات النصوص؛ الرقعة تنطبق على البناء \
                          الجديد كما هي."
                             .to_owned()
                     }
-                }
+                },
             },
             Self::NassTaghayyar { .. } => {
                 "تغيّرت ملفات النصوص في البناء الجديد فلا تنطبق الرقعة كما هي. تُعرض إعادة \
                  المطابقة مع البناء الجديد، ولا يُخمَّن أيّ تطابق."
                     .to_owned()
-            }
+            },
             Self::LaTatbaq { istiada } => match istiada {
                 Ok(taqreer) => format!(
                     "ملفات مسجّلة للرقعة لم تعد موجودة على القرص فلا يمكن تطبيقها. أُعيدت \
@@ -329,7 +337,7 @@ impl MasirRuqaa {
                  الرقعة فوقها من تلقاء نفسه: إمّا إعادة المطابقة ثم التثبيت، وإمّا الإزالة \
                  واستعادة ما بقي."
                     .to_owned()
-            }
+            },
             Self::GhayrMahsum { sabab } => sabab.arabi().to_owned(),
         }
     }
@@ -343,7 +351,7 @@ impl MasirRuqaa {
                     "The update did not touch any patched text container; the translation is \
                      still in place and nothing needs doing."
                         .to_owned()
-                }
+                },
                 DaleelTatbaq::Basma(taqdeer) => {
                     if matches!(taqdeer.hukm.sabab, SababMutabaqa::MuarrifWaBasma) {
                         "The build id and the text fingerprint both match; nothing moved \
@@ -354,13 +362,13 @@ impl MasirRuqaa {
                          the new build exactly as it is."
                             .to_owned()
                     }
-                }
+                },
             },
             Self::NassTaghayyar { .. } => {
                 "The new build's text files changed, so the patch no longer applies as it \
                  is. Re-matching against the new build is offered; no match is guessed."
                     .to_owned()
-            }
+            },
             Self::LaTatbaq { istiada } => match istiada {
                 Ok(taqreer) => format!(
                     "Paths the patch recorded are no longer on disk, so it cannot apply. The \
@@ -379,7 +387,7 @@ impl MasirRuqaa {
                  reapply the patch over files the launcher just replaced: either re-match \
                  and reinstall, or uninstall and restore what remains."
                     .to_owned()
-            }
+            },
             Self::GhayrMahsum { sabab } => sabab.injilizi().to_owned(),
         }
     }
@@ -389,9 +397,7 @@ impl MasirRuqaa {
     pub fn khutwa(&self) -> Khutwa {
         match self {
             Self::Tatbaq { .. } => Khutwa::LaShay,
-            Self::NassTaghayyar { .. } | Self::TabdeelMatjar { .. } => {
-                Khutwa::IadatMutabaqaBina
-            }
+            Self::NassTaghayyar { .. } | Self::TabdeelMatjar { .. } => Khutwa::IadatMutabaqaBina,
             Self::LaTatbaq { istiada } => match istiada {
                 Ok(_) => Khutwa::TahaqquqSalamatLuba,
                 Err(khata) => khata.khutwa(),
@@ -410,7 +416,7 @@ impl MasirRuqaa {
         match self {
             Self::TabdeelMatjar { .. } => {
                 vec![Khutwa::IadatMutabaqaBina, Khutwa::IlghaTathbeet]
-            }
+            },
             _ => vec![self.khutwa()],
         }
     }
@@ -510,7 +516,7 @@ impl TaqreerNajat {
                         self.tahaqquq.adad_mustaad
                     ));
                 }
-            }
+            },
             MasirRuqaa::NassTaghayyar { daleel, hijra } => {
                 match daleel {
                     DaleelTaghayyur::Basma(taqdeer) => sutur.extend(taqdeer.sutur()),
@@ -519,20 +525,20 @@ impl TaqreerNajat {
                             "  {} is named by the fingerprint recipe and is not on disk",
                             masar.display()
                         ));
-                    }
+                    },
                 }
                 match hijra {
                     Some(ihsa) => {
                         sutur.push(format!("  {}", ihsa.satr_arabi()));
                         sutur.push(format!("  {}", ihsa.satr()));
-                    }
+                    },
                     None => sutur.push(
                         "  no comparison inputs were provided, so migration counts are not \
                          available"
                             .to_owned(),
                     ),
                 }
-            }
+            },
             MasirRuqaa::LaTatbaq { istiada } => {
                 for (masar, hala) in &self.tahaqquq.halat {
                     if matches!(hala, HalatMalaf::Mafqud | HalatMalaf::MujalladMafqud) {
@@ -544,9 +550,9 @@ impl TaqreerNajat {
                     Err(khata) => {
                         sutur.push(format!("  الاستعادة فشلت: {}", khata.arabi()));
                         sutur.push(format!("  the restore failed: {}", khata.injilizi()));
-                    }
+                    },
                 }
-            }
+            },
             MasirRuqaa::TabdeelMatjar { taqdeer } => {
                 if let SababInhiraf::Matjar { adad, .. } = self.tahaqquq.sabab {
                     sutur.push(format!(
@@ -582,19 +588,17 @@ impl TaqreerNajat {
                                     .to_owned(),
                             );
                         }
-                    }
+                    },
                     None => sutur.push(
                         "  the new build's fingerprint was not recomputed: part of the \
                          recipe still holds the patch's bytes"
                             .to_owned(),
                     ),
                 }
-                sutur.push(
-                    "  الخياران: إعادة المطابقة ثم التثبيت، أو الإزالة والاستعادة".to_owned(),
-                );
+                sutur.push("  الخياران: إعادة المطابقة ثم التثبيت، أو الإزالة والاستعادة".to_owned());
                 sutur
                     .push("  offered: re-match and reinstall, or uninstall and restore".to_owned());
-            }
+            },
             MasirRuqaa::GhayrMahsum { sabab } => {
                 sutur.push(format!("  undecided as: {}", sabab.ism()));
                 if let SababGhayrMahsum::BasmaMulawwatha { mutabiqa, kull } = sabab {
@@ -606,7 +610,7 @@ impl TaqreerNajat {
                 if let SababInhiraf::GhayrMuakkad { sabab: tafsil, .. } = self.tahaqquq.sabab {
                     sutur.push(format!("  undecided because {tafsil}"));
                 }
-            }
+            },
         }
 
         sutur
@@ -628,10 +632,7 @@ impl TaqreerNajat {
 /// the package's fingerprint recipe names no files. A restore that fails is not
 /// an error here: it is carried inside [`MasirRuqaa::LaTatbaq`], because the
 /// classification stands whatever the restore then managed.
-pub fn fahs_najat(
-    talab: &TalabNajat<'_>,
-    radd: &mut dyn RadIdad,
-) -> NatijatTathbeet<TaqreerNajat> {
+pub fn fahs_najat(talab: &TalabNajat<'_>, radd: &mut dyn RadIdad) -> NatijatTathbeet<TaqreerNajat> {
     let tathbeet = Tathbeet::istanif(talab.jidhr_luba, talab.jidhr_nusakh, talab.naw)?;
     let basma_tathbeet = tathbeet.bayan().basma_bina;
     drop(tathbeet);
@@ -656,7 +657,9 @@ fn sannif(
     radd: &mut dyn RadIdad,
 ) -> NatijatTathbeet<MasirRuqaa> {
     match tahaqquq.natija() {
-        NatijatTahaqquq::Naqis => Ok(MasirRuqaa::LaTatbaq { istiada: istaid(talab, radd) }),
+        NatijatTahaqquq::Naqis => Ok(MasirRuqaa::LaTatbaq {
+            istiada: istaid(talab, radd),
+        }),
         NatijatTahaqquq::MustabdalMinAlmatjar => Ok(MasirRuqaa::TabdeelMatjar {
             taqdeer: taqdeer_bad_altabdeel(talab, tahaqquq),
         }),
@@ -672,15 +675,14 @@ fn sannif(
 
 /// Decides between "still applies", "text changed" and "not recomputable" for
 /// an installation whose patched files are all intact.
-fn sannif_salim(
-    talab: &TalabNajat<'_>,
-    tahaqquq: &TaqreerTahaqquq,
-) -> NatijatTathbeet<MasirRuqaa> {
+fn sannif_salim(talab: &TalabNajat<'_>, tahaqquq: &TaqreerTahaqquq) -> NatijatTathbeet<MasirRuqaa> {
     let kull = talab.irtibat.mukhattat.adad();
     let mutabiqa = adad_mutabiq(&talab.irtibat.mukhattat, &tahaqquq.halat);
 
     if kull > 0 && mutabiqa == kull {
-        return Ok(MasirRuqaa::Tatbaq { daleel: DaleelTatbaq::TarqeeSalim });
+        return Ok(MasirRuqaa::Tatbaq {
+            daleel: DaleelTatbaq::TarqeeSalim,
+        });
     }
     if mutabiqa > 0 {
         // A recipe file still holding Taarib's write makes any current-disk
@@ -696,8 +698,10 @@ fn sannif_salim(
             let taqdeer = TaqdeerBina { bina, hukm };
             match hukm.sabab {
                 SababMutabaqa::MuarrifWaBasma | SababMutabaqa::BasmaFaqat => {
-                    Ok(MasirRuqaa::Tatbaq { daleel: DaleelTatbaq::Basma(taqdeer) })
-                }
+                    Ok(MasirRuqaa::Tatbaq {
+                        daleel: DaleelTatbaq::Basma(taqdeer),
+                    })
+                },
                 SababMutabaqa::MuarrifBilaBasma
                 | SababMutabaqa::DakhilNitaq
                 | SababMutabaqa::BilaTatabuq => Ok(MasirRuqaa::NassTaghayyar {
@@ -705,7 +709,7 @@ fn sannif_salim(
                     hijra: hijrat(talab),
                 }),
             }
-        }
+        },
         Err(KhataTarqee::MalafIrtibatMafqud { masar }) => Ok(MasirRuqaa::NassTaghayyar {
             daleel: DaleelTaghayyur::HawiyaMafquda { masar },
             hijra: hijrat(talab),
@@ -732,23 +736,21 @@ fn taqdeer_bad_altabdeel(
         MasdarBina::Ihsab { manassa } => manassa.clone(),
     };
     let (basma, adad) = talab.irtibat.mukhattat.ihsab(talab.jidhr_luba).ok()?;
-    let bina = BinaId { manassa, basma, adad_malaffat: adad, waqt: waqt_alaan() };
+    let bina = BinaId {
+        manassa,
+        basma,
+        adad_malaffat: adad,
+        waqt: waqt_alaan(),
+    };
     let hukm = talab.irtibat.ihkum(&bina);
     Some(TaqdeerBina { bina, hukm })
 }
 
 /// Restores the checked installation through the one restore path this crate has.
-fn istaid(
-    talab: &TalabNajat<'_>,
-    radd: &mut dyn RadIdad,
-) -> NatijatTathbeet<TaqreerIstiada> {
+fn istaid(talab: &TalabNajat<'_>, radd: &mut dyn RadIdad) -> NatijatTathbeet<TaqreerIstiada> {
     match talab.naw {
-        NawTathbeet::Nass => {
-            istiada_nass(talab.jidhr_luba, talab.jidhr_nusakh, talab.siyasa, radd)
-        }
-        NawTathbeet::Sawt => {
-            istiada_sawt(talab.jidhr_luba, talab.jidhr_nusakh, talab.siyasa, radd)
-        }
+        NawTathbeet::Nass => istiada_nass(talab.jidhr_luba, talab.jidhr_nusakh, talab.siyasa, radd),
+        NawTathbeet::Sawt => istiada_sawt(talab.jidhr_luba, talab.jidhr_nusakh, talab.siyasa, radd),
     }
 }
 
@@ -768,7 +770,7 @@ fn bina_hali(
                 adad_malaffat: adad,
                 waqt: waqt_alaan(),
             })
-        }
+        },
     }
 }
 
@@ -794,7 +796,7 @@ fn min_khata_tarqee(jidhr_luba: &Path, khata: KhataTarqee) -> KhataTathbeet {
     match khata {
         KhataTarqee::KhataMalaf { masar, sabab } => {
             min_khata_io(&masar, "recomputing the build fingerprint", sabab)
-        }
+        },
         KhataTarqee::BayanNaqis { haql } => KhataTathbeet::TawafuqMarfud {
             hukm: format!("the package's fingerprint recipe needs {haql} and names none"),
             yumkin_bi_iqrar: false,

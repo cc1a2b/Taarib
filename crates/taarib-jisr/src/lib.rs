@@ -110,7 +110,9 @@ pub use crate::anwa::{
     TaaribQiyasatKhatt, TaaribSafha, TaaribSatr, TaaribSifa, TaaribSilsila, TaaribSiyaq,
     TaaribTalab, TaaribTaqreerTajawuz,
 };
-pub use crate::awamir::{TAARIB_ABI_KABIR, TAARIB_ABI_SAGHEER, TaaribIhsaatKhazina, TaaribIltiqatFn};
+pub use crate::awamir::{
+    TAARIB_ABI_KABIR, TAARIB_ABI_SAGHEER, TaaribIhsaatKhazina, TaaribIltiqatFn,
+};
 pub use crate::hayat::{QanatIltiqat, Siyaq, TaaribRaddIltiqat};
 pub use crate::khazina::{IhsaatKhazina, Khazina, MiftahTakhtit};
 

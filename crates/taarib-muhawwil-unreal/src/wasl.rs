@@ -39,8 +39,9 @@ use std::ffi::{CString, c_void};
 use std::sync::OnceLock;
 
 use crate::khata::KhataUnreal;
-use crate::slate::{Unwan, WaslSlate, dalla_min_jadwal, ramz_itanium, unwan_ramz_raisi,
-    unwan_ramz_wahda};
+use crate::slate::{
+    Unwan, WaslSlate, dalla_min_jadwal, ramz_itanium, unwan_ramz_raisi, unwan_ramz_wahda,
+};
 use crate::tashghil::Musaddir;
 
 /// The modules that export `IConsoleManager` when anything does.
@@ -159,7 +160,11 @@ pub struct MasfufatNass {
 
 impl Default for MasfufatNass {
     fn default() -> Self {
-        Self { bayanat: std::ptr::null_mut(), adad: 0, siaa: 0 }
+        Self {
+            bayanat: std::ptr::null_mut(),
+            adad: 0,
+            siaa: 0,
+        }
     }
 }
 
@@ -231,7 +236,11 @@ impl WaslAwamir {
     }
 
     const fn min_unwan(unwan: Unwan, faharis: Option<FaharisAwamir>) -> Self {
-        Self { mudir: Some(unwan), faharis, sabab: String::new() }
+        Self {
+            mudir: Some(unwan),
+            faharis,
+            sabab: String::new(),
+        }
     }
 
     /// Whether the console manager itself was found, regardless of whether this
@@ -250,7 +259,9 @@ impl WaslAwamir {
     /// The live `IConsoleManager`, called through its exported accessor.
     fn mudir_hayy(&self) -> Result<*mut c_void, KhataUnreal> {
         let Some(unwan) = self.mudir else {
-            return Err(KhataUnreal::SlateGhayrMawjud { sabab: self.sabab.clone() });
+            return Err(KhataUnreal::SlateGhayrMawjud {
+                sabab: self.sabab.clone(),
+            });
         };
         // SAFETY: `unwan` came from a symbol lookup for `IConsoleManager::Get`,
         // whose C++ signature is `IConsoleManager&()` — a static member with no
@@ -301,9 +312,7 @@ impl WaslAwamir {
 
         if kaain.is_null() {
             return Err(KhataUnreal::TashghilFashil {
-                sabab: format!(
-                    "this build registers no console variable named \"{miftah}\""
-                ),
+                sabab: format!("this build registers no console variable named \"{miftah}\""),
             });
         }
         Ok(kaain)
@@ -317,7 +326,9 @@ impl Musaddir for WaslAwamir {
 
     fn daa(&self, miftah: &str, qeema: &str) -> Result<(), KhataUnreal> {
         let Some(faharis) = self.faharis else {
-            return Err(KhataUnreal::SlateGhayrMawjud { sabab: self.sabab.clone() });
+            return Err(KhataUnreal::SlateGhayrMawjud {
+                sabab: self.sabab.clone(),
+            });
         };
         let mutaghayyir = self.jid(miftah)?;
         let nass = utf16(qeema);
@@ -346,7 +357,9 @@ impl Musaddir for WaslAwamir {
 
     fn iqra(&self, miftah: &str) -> Result<String, KhataUnreal> {
         let Some(faharis) = self.faharis else {
-            return Err(KhataUnreal::SlateGhayrMawjud { sabab: self.sabab.clone() });
+            return Err(KhataUnreal::SlateGhayrMawjud {
+                sabab: self.sabab.clone(),
+            });
         };
         let mutaghayyir = self.jid(miftah)?;
         let mut makhraj = MasfufatNass::default();
@@ -418,7 +431,10 @@ fn nass_min_masfufa(masfufa: &MasfufatNass) -> Result<String, KhataUnreal> {
     // `AQSA_WAHDAT`. The slice is read and copied out before this function
     // returns, and nothing in this crate frees or mutates the buffer.
     let wahdat = unsafe { std::slice::from_raw_parts(masfufa.bayanat, adad) };
-    String::from_utf16(wahdat).map_err(|_| KhataUnreal::NassGhayrSalih { fahras: 0, mawqi: 0 })
+    String::from_utf16(wahdat).map_err(|_| KhataUnreal::NassGhayrSalih {
+        fahras: 0,
+        mawqi: 0,
+    })
 }
 
 /// The process-wide console binding, resolved once.

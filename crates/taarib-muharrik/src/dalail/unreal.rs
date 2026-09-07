@@ -321,8 +321,12 @@ const HAJM_ISDAR_BINA: usize = 4096;
 /// `file_length - distance`, so the smallest entry is 44 and not 40 — see the
 /// module documentation for the arithmetic and for what going four bytes short
 /// costs.
-const MAWADI_TAWQI_PAK: [(u64, &[u32]); 4] =
-    [(44, &[1, 2, 3, 4, 5, 6, 7]), (172, &[8]), (204, &[8, 10, 11]), (205, &[9])];
+const MAWADI_TAWQI_PAK: [(u64, &[u32]); 4] = [
+    (44, &[1, 2, 3, 4, 5, 6, 7]),
+    (172, &[8]),
+    (204, &[8, 10, 11]),
+    (205, &[9]),
+];
 
 /// The shortest distance from the end of a pak at which a magic can begin.
 ///
@@ -482,7 +486,9 @@ struct Mizaniya {
 impl Mizaniya {
     /// A fresh budget of [`AQSA_MADAKHIL`] entries.
     const fn jadeeda() -> Self {
-        Self { mutabaqqi: AQSA_MADAKHIL }
+        Self {
+            mutabaqqi: AQSA_MADAKHIL,
+        }
     }
 
     /// Lists one directory, spending from the budget.
@@ -496,19 +502,29 @@ impl Mizaniya {
         if self.mutabaqqi == 0 {
             return natija;
         }
-        let Ok(qira) = std::fs::read_dir(masar) else { return natija };
+        let Ok(qira) = std::fs::read_dir(masar) else {
+            return natija;
+        };
         for madkhal in qira {
             if self.mutabaqqi == 0 {
                 break;
             }
             self.mutabaqqi = self.mutabaqqi.saturating_sub(1);
             let Ok(madkhal) = madkhal else { continue };
-            let Ok(naw) = madkhal.file_type() else { continue };
+            let Ok(naw) = madkhal.file_type() else {
+                continue;
+            };
             if naw.is_symlink() {
                 continue;
             }
-            let Some(ism) = madkhal.file_name().to_str().map(str::to_owned) else { continue };
-            natija.push(Madkhal { ism, masar: madkhal.path(), mujallad: naw.is_dir() });
+            let Some(ism) = madkhal.file_name().to_str().map(str::to_owned) else {
+                continue;
+            };
+            natija.push(Madkhal {
+                ism,
+                masar: madkhal.path(),
+                mujallad: naw.is_dir(),
+            });
         }
         natija
     }
@@ -630,12 +646,12 @@ impl DhaylPak {
         let nuskha = u32_min(dhayl, mawdi.checked_add(4)?)?;
         match nusakh {
             Some(masmuha) if !masmuha.contains(&nuskha) => return None,
-            Some(_) => {}
+            Some(_) => {},
             None => {
                 if nuskha == 0 || nuskha > AQSA_NUSKHAT_MAQBULA {
                     return None;
                 }
-            }
+            },
         }
 
         let mawdi_fahras = u64_min(dhayl, mawdi.checked_add(8)?)?;
@@ -651,11 +667,15 @@ impl DhaylPak {
             return None;
         }
 
-        let mushaffar = mawdi.checked_sub(1).and_then(|mawdi| dhayl.get(mawdi)).is_some_and(
-            |bayt| *bayt != 0 && nuskha >= 4,
-        );
-        let muarrif_miftah =
-            if nuskha >= 7 { Self::muarrif_miftah(dhayl, mawdi) } else { None };
+        let mushaffar = mawdi
+            .checked_sub(1)
+            .and_then(|mawdi| dhayl.get(mawdi))
+            .is_some_and(|bayt| *bayt != 0 && nuskha >= 4);
+        let muarrif_miftah = if nuskha >= 7 {
+            Self::muarrif_miftah(dhayl, mawdi)
+        } else {
+            None
+        };
         let khanat_dagt = match izaha {
             172 => KHANAT_ARBA,
             204 | 205 => KHANAT_KHAMS,
@@ -775,22 +795,61 @@ impl MadaIsdar {
 /// entitled to a capability report.
 const fn mada_min_pak(nuskha: u32, khanat: usize) -> MadaIsdar {
     match nuskha {
-        1 => MadaIsdar { adna: (4, 0), aqsa: (4, 0) },
-        2 => MadaIsdar { adna: (4, 0), aqsa: (4, 2) },
-        3 => MadaIsdar { adna: (4, 3), aqsa: (4, 15) },
-        4 => MadaIsdar { adna: (4, 16), aqsa: (4, 16) },
-        5 => MadaIsdar { adna: (4, 17), aqsa: (4, 19) },
-        6 => MadaIsdar { adna: (4, 20), aqsa: (4, 20) },
-        7 => MadaIsdar { adna: (4, 21), aqsa: (4, 21) },
-        8 if khanat == 4 => MadaIsdar { adna: (4, 22), aqsa: (4, 22) },
-        8 => MadaIsdar { adna: (4, 23), aqsa: (4, 24) },
-        9 => MadaIsdar { adna: (4, 25), aqsa: (4, 25) },
-        10 => MadaIsdar { adna: (4, 26), aqsa: (4, 26) },
+        1 => MadaIsdar {
+            adna: (4, 0),
+            aqsa: (4, 0),
+        },
+        2 => MadaIsdar {
+            adna: (4, 0),
+            aqsa: (4, 2),
+        },
+        3 => MadaIsdar {
+            adna: (4, 3),
+            aqsa: (4, 15),
+        },
+        4 => MadaIsdar {
+            adna: (4, 16),
+            aqsa: (4, 16),
+        },
+        5 => MadaIsdar {
+            adna: (4, 17),
+            aqsa: (4, 19),
+        },
+        6 => MadaIsdar {
+            adna: (4, 20),
+            aqsa: (4, 20),
+        },
+        7 => MadaIsdar {
+            adna: (4, 21),
+            aqsa: (4, 21),
+        },
+        8 if khanat == 4 => MadaIsdar {
+            adna: (4, 22),
+            aqsa: (4, 22),
+        },
+        8 => MadaIsdar {
+            adna: (4, 23),
+            aqsa: (4, 24),
+        },
+        9 => MadaIsdar {
+            adna: (4, 25),
+            aqsa: (4, 25),
+        },
+        10 => MadaIsdar {
+            adna: (4, 26),
+            aqsa: (4, 26),
+        },
         // Version 11 is the one that cannot be narrowed: 4.27 wrote it, and so
         // does every UE5 release this build knows of. The range deliberately
         // spans two majors so that `isdar` refuses to name one.
-        11 => MadaIsdar { adna: (4, 27), aqsa: (5, 99) },
-        _ => MadaIsdar { adna: (5, 0), aqsa: (5, 99) },
+        11 => MadaIsdar {
+            adna: (4, 27),
+            aqsa: (5, 99),
+        },
+        _ => MadaIsdar {
+            adna: (5, 0),
+            aqsa: (5, 99),
+        },
     }
 }
 
@@ -888,7 +947,11 @@ impl IsdarBina {
     /// Which generation this version belongs to.
     #[must_use]
     pub const fn jeel(self) -> JeelUnreal {
-        if self.kabir >= 5 { JeelUnreal::Khamis } else { JeelUnreal::Rabi }
+        if self.kabir >= 5 {
+            JeelUnreal::Khamis
+        } else {
+            JeelUnreal::Rabi
+        }
     }
 }
 
@@ -1001,14 +1064,38 @@ impl TarwisatUtoc {
     #[must_use]
     pub const fn mada(&self) -> MadaIsdar {
         match self.nuskha {
-            1 => MadaIsdar { adna: (4, 25), aqsa: (4, 26) },
-            2 => MadaIsdar { adna: (4, 26), aqsa: (5, 0) },
-            3 => MadaIsdar { adna: (5, 0), aqsa: (5, 0) },
-            4 | 5 => MadaIsdar { adna: (5, 0), aqsa: (5, 2) },
-            6 => MadaIsdar { adna: (5, 3), aqsa: (5, 3) },
-            7 => MadaIsdar { adna: (5, 4), aqsa: (5, 4) },
-            8 => MadaIsdar { adna: (5, 5), aqsa: (5, 5) },
-            _ => MadaIsdar { adna: (5, 5), aqsa: (5, 99) },
+            1 => MadaIsdar {
+                adna: (4, 25),
+                aqsa: (4, 26),
+            },
+            2 => MadaIsdar {
+                adna: (4, 26),
+                aqsa: (5, 0),
+            },
+            3 => MadaIsdar {
+                adna: (5, 0),
+                aqsa: (5, 0),
+            },
+            4 | 5 => MadaIsdar {
+                adna: (5, 0),
+                aqsa: (5, 2),
+            },
+            6 => MadaIsdar {
+                adna: (5, 3),
+                aqsa: (5, 3),
+            },
+            7 => MadaIsdar {
+                adna: (5, 4),
+                aqsa: (5, 4),
+            },
+            8 => MadaIsdar {
+                adna: (5, 5),
+                aqsa: (5, 5),
+            },
+            _ => MadaIsdar {
+                adna: (5, 5),
+                aqsa: (5, 99),
+            },
         }
     }
 
@@ -1153,11 +1240,7 @@ fn tafahhus_binya(jidhr: &Path, mizaniya: &mut Mizaniya) -> BinyaUnreal {
 /// The second test exists for games shipped without a pak — a cooked loose
 /// build, which is rare in a store but common in a demo — and it is deliberately
 /// second, because `Content/Paks` is the thing Phase 8 actually writes into.
-fn mujallad_mashru(
-    jidhr: &Path,
-    madakhil: &[Madkhal],
-    mizaniya: &mut Mizaniya,
-) -> Option<PathBuf> {
+fn mujallad_mashru(jidhr: &Path, madakhil: &[Madkhal], mizaniya: &mut Mizaniya) -> Option<PathBuf> {
     let mut tabaqa: Vec<PathBuf> = madakhil
         .iter()
         .filter(|madkhal| madkhal.mujallad && !madkhal.ism.eq_ignore_ascii_case("Engine"))
@@ -1165,18 +1248,15 @@ fn mujallad_mashru(
         .collect();
 
     for _ in 0..UMQ_BAHTH_MASHRU {
-        if let Some(mawjud) =
-            tabaqa.iter().find(|masar| mujallad_haqiqi(&masar.join("Content").join("Paks")))
+        if let Some(mawjud) = tabaqa
+            .iter()
+            .find(|masar| mujallad_haqiqi(&masar.join("Content").join("Paks")))
         {
             return Some(mawjud.clone());
         }
-        if let Some(mawjud) = tabaqa
-            .iter()
-            .find(|masar| {
-                mujallad_haqiqi(&masar.join("Binaries"))
-                    && mujallad_haqiqi(&masar.join("Content"))
-            })
-        {
+        if let Some(mawjud) = tabaqa.iter().find(|masar| {
+            mujallad_haqiqi(&masar.join("Binaries")) && mujallad_haqiqi(&masar.join("Content"))
+        }) {
             return Some(mawjud.clone());
         }
         // Nothing at this level. Descend one, which is what a store wrapper
@@ -1298,10 +1378,7 @@ struct TanfidhiMashru {
 /// carry that platform's executable extension, and it has to be at least
 /// [`AQALL_HAJM_TANFIDH`]. A file whose stem matches the project directory wins
 /// a tie, then the largest wins.
-fn tanfidhi_shipping(
-    mujallad_mashru: &Path,
-    mizaniya: &mut Mizaniya,
-) -> Option<TanfidhiMashru> {
+fn tanfidhi_shipping(mujallad_mashru: &Path, mizaniya: &mut Mizaniya) -> Option<TanfidhiMashru> {
     let binaryat = mujallad_mashru.join("Binaries");
     if !mujallad_haqiqi(&binaryat) {
         return None;
@@ -1319,10 +1396,16 @@ fn tanfidhi_shipping(
         }
     }
 
-    let ism_mashru = mujallad_mashru.file_name().and_then(std::ffi::OsStr::to_str);
+    let ism_mashru = mujallad_mashru
+        .file_name()
+        .and_then(std::ffi::OsStr::to_str);
     for (mujallad, mimariya, lahiqa) in &manassat {
         if let Some(masar) = akbar_tanfidhi(mujallad, lahiqa, ism_mashru, mizaniya) {
-            return Some(TanfidhiMashru { masar, mimariya: *mimariya, bi_lahiqa: false });
+            return Some(TanfidhiMashru {
+                masar,
+                mimariya: *mimariya,
+                bi_lahiqa: false,
+            });
         }
     }
     None
@@ -1383,15 +1466,23 @@ fn akbar_tanfidhi(
         // `symlink_metadata`, not `metadata`: the entry is already known not to
         // be a link, and not following one keeps a link planted in the game
         // directory from deciding the answer with somebody else's file size.
-        let Ok(bayanat) = std::fs::symlink_metadata(&madkhal.masar) else { continue };
+        let Ok(bayanat) = std::fs::symlink_metadata(&madkhal.masar) else {
+            continue;
+        };
         let hajm = bayanat.len();
         if hajm < AQALL_HAJM_TANFIDH {
             continue;
         }
-        let jidhr_ism = madkhal.ism.rsplit_once('.').map_or(madkhal.ism.as_str(), |(qabl, _)| qabl);
+        let jidhr_ism = madkhal
+            .ism
+            .rsplit_once('.')
+            .map_or(madkhal.ism.as_str(), |(qabl, _)| qabl);
         let yutabiq = ism_mashru.is_some_and(|mashru| jidhr_ism.eq_ignore_ascii_case(mashru));
         let murashah = (yutabiq, hajm, madkhal.masar);
-        if afdal.as_ref().is_none_or(|mawjud| (mawjud.0, mawjud.1) < (murashah.0, murashah.1)) {
+        if afdal
+            .as_ref()
+            .is_none_or(|mawjud| (mawjud.0, mawjud.1) < (murashah.0, murashah.1))
+        {
             afdal = Some(murashah);
         }
     }
@@ -1496,7 +1587,10 @@ impl FahisUnreal {
 
 /// A path relative to the game root, as the evidence trail records it.
 fn nisbi(jidhr: &Path, masar: &Path) -> Option<String> {
-    masar.strip_prefix(jidhr).ok().map(|nisbi| nisbi.display().to_string())
+    masar
+        .strip_prefix(jidhr)
+        .ok()
+        .map(|nisbi| nisbi.display().to_string())
 }
 
 impl Fahis for FahisUnreal {
@@ -1513,7 +1607,10 @@ impl Fahis for FahisUnreal {
     /// evidence, and the correct report is what *was* seen.
     fn ifhas(&self, siyaq: &SiyaqFahs<'_>) -> Natija<HasilatFahs> {
         if !siyaq.jidhr.is_dir() {
-            return Err(KhataMuharrik::JidhrMafqud { jidhr: siyaq.jidhr.to_path_buf() }.into());
+            return Err(KhataMuharrik::JidhrMafqud {
+                jidhr: siyaq.jidhr.to_path_buf(),
+            }
+            .into());
         }
 
         let mut hasila = HasilatFahs::la_shay();
@@ -1647,7 +1744,9 @@ fn qira_paks(
 ) -> Option<DhaylPak> {
     let mut maqru: Option<DhaylPak> = None;
     for masar in paks.iter().take(AQSA_HAWIYAT) {
-        let Some(dhayl) = DhaylPak::iqra(masar) else { continue };
+        let Some(dhayl) = DhaylPak::iqra(masar) else {
+            continue;
+        };
         let mawqi = nisbi(jidhr, masar);
         hasila.sajjil_aila(
             AilatMuharrik::Unreal,
@@ -1729,7 +1828,9 @@ fn qira_paks(
 fn qira_utocs(jidhr: &Path, binya: &BinyaUnreal, hasila: &mut HasilatFahs) -> Option<TarwisatUtoc> {
     let mut maqru: Option<TarwisatUtoc> = None;
     for masar in binya.utocs.iter().take(AQSA_HAWIYAT) {
-        let Some(tarwisa) = TarwisatUtoc::iqra(masar) else { continue };
+        let Some(tarwisa) = TarwisatUtoc::iqra(masar) else {
+            continue;
+        };
         let mawqi = nisbi(jidhr, masar);
         hasila.sajjil_aila(
             AilatMuharrik::Unreal,
@@ -1792,7 +1893,10 @@ fn qira_utocs(jidhr: &Path, binya: &BinyaUnreal, hasila: &mut HasilatFahs) -> Op
         hasila.sajjil_aila(
             AilatMuharrik::Unreal,
             NawDaleel::BinyatMujallad,
-            format!("{} .ucas data container(s) beside the table of contents", binya.adad_ucas),
+            format!(
+                "{} .ucas data container(s) beside the table of contents",
+                binya.adad_ucas
+            ),
             None,
             60,
         );
@@ -1877,7 +1981,7 @@ fn istinbat_isdar(
                 if hasila.isdar.is_none() {
                     hasila.isdar = Some(isdar);
                 }
-            }
+            },
             None => hasila.sajjil(
                 NawDaleel::TarwisatHawiya,
                 format!(
@@ -1925,7 +2029,10 @@ fn istinbat_isdar(
 /// promises nothing.
 fn taqreer_taarib(jidhr: &Path, binya: &BinyaUnreal, hasila: &mut HasilatFahs) {
     if binya.adad_locres > 0 {
-        let mawqi = binya.mujallad_taarib.as_deref().and_then(|masar| nisbi(jidhr, masar));
+        let mawqi = binya
+            .mujallad_taarib
+            .as_deref()
+            .and_then(|masar| nisbi(jidhr, masar));
         hasila.sajjil_aila(
             AilatMuharrik::Unreal,
             NawDaleel::BayanatMudmaja,

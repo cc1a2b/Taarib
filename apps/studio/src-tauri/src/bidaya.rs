@@ -91,7 +91,11 @@ pub(crate) fn jahhiz(masarat: &Masarat) -> Vec<TahdheerBidaya> {
     let mut tahdheerat = Vec::new();
     for (ramz, masar) in mujalladat {
         if let Err(sabab) = fs::create_dir_all(&masar) {
-            tahdheerat.push(TahdheerBidaya { ramz, masar, sabab: sabab.to_string() });
+            tahdheerat.push(TahdheerBidaya {
+                ramz,
+                masar,
+                sabab: sabab.to_string(),
+            });
         }
     }
 
@@ -127,11 +131,13 @@ pub(crate) fn jahhiz(masarat: &Masarat) -> Vec<TahdheerBidaya> {
 #[must_use]
 pub(crate) fn jahhiz_ruqaa(masarat: &Masarat) -> Option<TahdheerBidaya> {
     let masar = masarat.ruqaa();
-    fs::create_dir_all(&masar).err().map(|sabab| TahdheerBidaya {
-        ramz: "ruqaa",
-        masar,
-        sabab: sabab.to_string(),
-    })
+    fs::create_dir_all(&masar)
+        .err()
+        .map(|sabab| TahdheerBidaya {
+            ramz: "ruqaa",
+            masar,
+            sabab: sabab.to_string(),
+        })
 }
 
 /// Writes each startup warning to the log, exactly once, as an Arabic sentence carrying the

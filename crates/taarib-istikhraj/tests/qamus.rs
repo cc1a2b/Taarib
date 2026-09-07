@@ -71,8 +71,7 @@ use taarib_istikhraj::qamus::{
 use taarib_istikhraj::rafd::SababRafd;
 
 /// Where the eight dictionaries live in a default Steam install on this machine.
-const MASAR_MUTAWAQQA: &str =
-    "/mnt/f/SteamLibrary/steamapps/common/Resident Evil 4/BIO4/text";
+const MASAR_MUTAWAQQA: &str = "/mnt/f/SteamLibrary/steamapps/common/Resident Evil 4/BIO4/text";
 
 /// The environment variable that overrides it.
 const MUTAGHAYYIR: &str = "TAARIB_QAMUS_RE4";
@@ -90,29 +89,29 @@ const ADAD_MASHGHUL: usize = 335;
 ///
 /// The comment on each line is the English string in the bucket it lands on.
 const MIFATIH: [(&str, u32); 23] = [
-    ("text_0", 0xb167_ab3a),                    // "0"
-    ("text_f1", 0x7b82_44f1),                   // "F1"
-    ("text_esc", 0xde73_e3f2),                  // "ESCAPE"
-    ("text_end", 0xbf7b_1a4d),                  // "END"
-    ("text_back", 0x0b78_17a4),                 // "Back"
-    ("text_action", 0x33c9_56e3),               // "Action"
-    ("text_enter", 0x0212_5bcb),                // "ENTER"
-    ("text_delete", 0x4e17_a6f6),               // "DELETE"
-    ("text_disable", 0xba31_e6ac),              // "OFF"
-    ("text_enable", 0x87a5_1243),               // "ON"
-    ("text_capslock", 0x14e7_f92b),             // "CAPS LOCK"
-    ("text_backspace", 0x1e2f_8074),            // "BACKSPACE"
-    ("text_cancel_loading", 0x6750_e135),       // "Cancel loading?…"
-    ("text_aiming_mode", 0x71f3_dbbc),          // "AIMING MODE"
-    ("text_button_config", 0xd26e_b38e),        // "BUTTON CONFIGURATION"
-    ("text_exit_tooltip", 0x6974_9a87),         // "Exit current menu."
-    ("text_continue_point", 0xd9da_b0c8),       // "RETRY FROM A CHECKPOINT"
-    ("text_antyaliasing", 0x7227_e80f),         // "ANTI-ALIASING"
-    ("text_brightness_adjust", 0x1744_3020),    // "BRIGHTNESS ADJUST"
-    ("text_controller_setup", 0x7baa_10c7),     // "CONTROLLER SETUP"
+    ("text_0", 0xb167_ab3a),                     // "0"
+    ("text_f1", 0x7b82_44f1),                    // "F1"
+    ("text_esc", 0xde73_e3f2),                   // "ESCAPE"
+    ("text_end", 0xbf7b_1a4d),                   // "END"
+    ("text_back", 0x0b78_17a4),                  // "Back"
+    ("text_action", 0x33c9_56e3),                // "Action"
+    ("text_enter", 0x0212_5bcb),                 // "ENTER"
+    ("text_delete", 0x4e17_a6f6),                // "DELETE"
+    ("text_disable", 0xba31_e6ac),               // "OFF"
+    ("text_enable", 0x87a5_1243),                // "ON"
+    ("text_capslock", 0x14e7_f92b),              // "CAPS LOCK"
+    ("text_backspace", 0x1e2f_8074),             // "BACKSPACE"
+    ("text_cancel_loading", 0x6750_e135),        // "Cancel loading?…"
+    ("text_aiming_mode", 0x71f3_dbbc),           // "AIMING MODE"
+    ("text_button_config", 0xd26e_b38e),         // "BUTTON CONFIGURATION"
+    ("text_exit_tooltip", 0x6974_9a87),          // "Exit current menu."
+    ("text_continue_point", 0xd9da_b0c8),        // "RETRY FROM A CHECKPOINT"
+    ("text_antyaliasing", 0x7227_e80f),          // "ANTI-ALIASING"
+    ("text_brightness_adjust", 0x1744_3020),     // "BRIGHTNESS ADJUST"
+    ("text_controller_setup", 0x7baa_10c7),      // "CONTROLLER SETUP"
     ("text_confirm_reset_default", 0xd8a0_2af3), // "Are you sure?"
-    ("text_camera_lr", 0x9c1a_c6c2),            // "Camera Left/Right"
-    ("text_camera_ud", 0xf3ce_da8b),            // "Camera Up/Down"
+    ("text_camera_lr", 0x9c1a_c6c2),             // "Camera Left/Right"
+    ("text_camera_ud", 0xf3ce_da8b),             // "Camera Up/Down"
 ];
 
 /// The eight files, and what each one holds.
@@ -186,15 +185,24 @@ fn basmat_al_miftah_al_farigh_hiya_al_bidhra() {
 
 #[test]
 fn halat_al_ahruf_juz_min_al_miftah() {
-    assert_ne!(basmat_miftah("text_f12", BIDHRA), basmat_miftah("TEXT_F12", BIDHRA));
-    assert_ne!(basmat_miftah("text_f12", BIDHRA), basmat_miftah("Text_F12", BIDHRA));
+    assert_ne!(
+        basmat_miftah("text_f12", BIDHRA),
+        basmat_miftah("TEXT_F12", BIDHRA)
+    );
+    assert_ne!(
+        basmat_miftah("text_f12", BIDHRA),
+        basmat_miftah("Text_F12", BIDHRA)
+    );
 }
 
 #[test]
 fn al_khatima_laysat_juzan_min_al_miftah() {
     // Feeding the terminator moves every hash, so a build that started doing it
     // would produce a dictionary the game finds nothing in.
-    assert_ne!(basmat_miftah("text_f12\0", BIDHRA), basmat_miftah("text_f12", BIDHRA));
+    assert_ne!(
+        basmat_miftah("text_f12\0", BIDHRA),
+        basmat_miftah("text_f12", BIDHRA)
+    );
 }
 
 #[test]
@@ -202,20 +210,28 @@ fn al_bidhra_min_al_malaf_la_min_thabit() {
     // Two seeds, two hashes for one key. A reader that hardcoded the seed would
     // agree with the shipped files and disagree with anything else built the
     // same way.
-    assert_ne!(basmat_miftah("text_f12", BIDHRA), basmat_miftah("text_f12", 0));
+    assert_ne!(
+        basmat_miftah("text_f12", BIDHRA),
+        basmat_miftah("text_f12", 0)
+    );
 }
 
 #[test]
 fn al_bina_yadau_al_jadwal_fi_makanihi() {
-    let madakhil: Vec<(u32, Option<&[u8]>)> =
-        MIFATIH.iter().map(|(_, basma)| (*basma, Some(b"x".as_slice()))).collect();
+    let madakhil: Vec<(u32, Option<&[u8]>)> = MIFATIH
+        .iter()
+        .map(|(_, basma)| (*basma, Some(b"x".as_slice())))
+        .collect();
     let qamus = Qamus::ibni(BIDHRA, &madakhil).expect("a 23-bucket dictionary fits every ceiling");
     let bayt = qamus.uktub();
 
     // `0x0c + 7 + 1 == 0x14`. The header's own pointer is the smallest instance
     // of the format's one-byte bias, and the shipped files all store 7 here.
     assert_eq!(&bayt[0..4], b"DICT");
-    assert_eq!(u32::from_le_bytes(bayt[4..8].try_into().unwrap()), ISDAR_MADUM);
+    assert_eq!(
+        u32::from_le_bytes(bayt[4..8].try_into().unwrap()),
+        ISDAR_MADUM
+    );
     assert_eq!(u32::from_le_bytes(bayt[8..12].try_into().unwrap()), BIDHRA);
     assert_eq!(u32::from_le_bytes(bayt[12..16].try_into().unwrap()), 7);
     assert_eq!(u32::from_le_bytes(bayt[16..20].try_into().unwrap()), 23);
@@ -252,8 +268,11 @@ fn dawrat_bina_wa_kitaba_wa_qira() {
 
 #[test]
 fn al_muashir_al_farigh_yabqa_farighan() {
-    let madakhil: Vec<(u32, Option<&[u8]>)> =
-        vec![(0x1111_1111, Some(b"a".as_slice())), (0, None), (0x2222_2222, Some(b"b".as_slice()))];
+    let madakhil: Vec<(u32, Option<&[u8]>)> = vec![
+        (0x1111_1111, Some(b"a".as_slice())),
+        (0, None),
+        (0x2222_2222, Some(b"b".as_slice())),
+    ];
     let qamus = Qamus::ibni(BIDHRA, &madakhil).expect("three buckets fit every ceiling");
     assert_eq!(qamus.madakhil()[1].izaha(), 0);
     assert_eq!(qamus.madakhil()[1].mawqi(), None);
@@ -329,7 +348,11 @@ fn kull_khana_tuqra_bil_bunya() {
         let mashghul = qamus.madakhil().iter().filter(|m| m.mashghul()).count();
         assert_eq!(mashghul, ADAD_MASHGHUL, "{ism}");
 
-        let bi_muashir = qamus.madakhil().iter().filter(|m| m.mawqi().is_some()).count();
+        let bi_muashir = qamus
+            .madakhil()
+            .iter()
+            .filter(|m| m.mawqi().is_some())
+            .count();
         assert_eq!(bi_muashir, muashirat, "{ism}");
 
         // Every pointer resolves, and every resolved string is terminated. The
@@ -364,7 +387,10 @@ fn dawrat_kitaba_mutabiqa_bil_bayt() {
         let qamus = Qamus::iqra(&bayt).unwrap_or_else(|sabab| panic!("{ism}: {sabab:?}"));
         let maktub = qamus.uktub();
         assert_eq!(maktub.len(), bayt.len(), "{ism}: length");
-        assert!(maktub == bayt, "{ism}: an untouched round trip changed bytes");
+        assert!(
+            maktub == bayt,
+            "{ism}: an untouched round trip changed bytes"
+        );
     }
 }
 
@@ -376,8 +402,11 @@ fn ibni_yuidu_bina_malaffat_capcom_al_sitta() {
     for ism in ASLIYA {
         let bayt = bayt_malaf(&mujallad, ism);
         let qamus = Qamus::iqra(&bayt).unwrap_or_else(|sabab| panic!("{ism}: {sabab:?}"));
-        let madakhil: Vec<(u32, Option<&[u8]>)> =
-            qamus.madakhil().iter().map(|m| (m.basma(), qamus.bayt(*m))).collect();
+        let madakhil: Vec<(u32, Option<&[u8]>)> = qamus
+            .madakhil()
+            .iter()
+            .map(|m| (m.basma(), qamus.bayt(*m)))
+            .collect();
         let mabni = Qamus::ibni(qamus.bidhra(), &madakhil)
             .unwrap_or_else(|sabab| panic!("{ism}: {sabab:?}"));
         assert!(
@@ -395,8 +424,11 @@ fn ibni_la_yuidu_bina_al_malaffayn_al_sinniyayn() {
     for ism in MUAADA {
         let bayt = bayt_malaf(&mujallad, ism);
         let qamus = Qamus::iqra(&bayt).unwrap_or_else(|sabab| panic!("{ism}: {sabab:?}"));
-        let madakhil: Vec<(u32, Option<&[u8]>)> =
-            qamus.madakhil().iter().map(|m| (m.basma(), qamus.bayt(*m))).collect();
+        let madakhil: Vec<(u32, Option<&[u8]>)> = qamus
+            .madakhil()
+            .iter()
+            .map(|m| (m.basma(), qamus.bayt(*m)))
+            .collect();
         let mabni = Qamus::ibni(qamus.bidhra(), &madakhil)
             .unwrap_or_else(|sabab| panic!("{ism}: {sabab:?}"));
         // Pinned as a difference rather than left to be discovered: these two
@@ -409,7 +441,10 @@ fn ibni_la_yuidu_bina_al_malaffayn_al_sinniyayn() {
             "{ism}: this file now rebuilds exactly, so the module header's account of how it \
              differs from Capcom's six is out of date"
         );
-        assert!(qamus.uktub() == bayt, "{ism}: an untouched round trip changed bytes");
+        assert!(
+            qamus.uktub() == bayt,
+            "{ism}: an untouched round trip changed bytes"
+        );
     }
 }
 
@@ -437,11 +472,23 @@ fn al_bahth_yujib_kama_tujib_al_luba() {
     for (ism, mutawaqqa) in TASHGHIL {
         let bayt = bayt_malaf(&mujallad, ism);
         let qamus = Qamus::iqra(&bayt).unwrap_or_else(|sabab| panic!("{ism}: {sabab:?}"));
-        assert_eq!(qamus.abhath("text_enable"), Some(mutawaqqa.as_bytes()), "{ism}");
+        assert_eq!(
+            qamus.abhath("text_enable"),
+            Some(mutawaqqa.as_bytes()),
+            "{ism}"
+        );
         assert_eq!(qamus.abhath("text_f12"), Some(b"F12".as_slice()), "{ism}");
         // Both of the shipped lookup's refusals.
-        assert_eq!(qamus.abhath(""), None, "{ism}: the empty key hashes to the seed");
-        assert_eq!(qamus.abhath("text_f12 "), None, "{ism}: a key that is not in the file");
+        assert_eq!(
+            qamus.abhath(""),
+            None,
+            "{ism}: the empty key hashes to the seed"
+        );
+        assert_eq!(
+            qamus.abhath("text_f12 "),
+            None,
+            "{ism}: a key that is not in the file"
+        );
     }
 }
 
@@ -487,7 +534,10 @@ fn istikhraj_al_mujallad_yaqra_sitta_wa_yarfud_ithnayn() {
     // identity, so eight translations of one key are eight rows and not one.
     assert_eq!(jadwal.adad(), mutawaqqa);
 
-    let bi_miftah_muharrik = jadwal.madakhil().filter(|m| m.mawqi.min_almuharrik()).count();
+    let bi_miftah_muharrik = jadwal
+        .madakhil()
+        .filter(|m| m.mawqi.min_almuharrik())
+        .count();
     assert_eq!(
         bi_miftah_muharrik,
         jadwal.adad(),

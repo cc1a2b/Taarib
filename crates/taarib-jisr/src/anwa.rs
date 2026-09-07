@@ -626,7 +626,9 @@ pub const fn arqam_min_raqm(raqm: u32) -> SiyasatArqam {
 #[must_use]
 pub fn tajawuz_min_raqm(raqm: u32, hajm_adna: f32) -> SiyasatTajawuz {
     match raqm {
-        1 => SiyasatTajawuz::Taqlis { adna: if hajm_adna > 0.0 { hajm_adna } else { 8.0 } },
+        1 => SiyasatTajawuz::Taqlis {
+            adna: if hajm_adna > 0.0 { hajm_adna } else { 8.0 },
+        },
         2 => SiyasatTajawuz::Ikhtisar,
         _ => SiyasatTajawuz::Ballagh,
     }

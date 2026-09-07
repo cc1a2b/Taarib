@@ -33,13 +33,9 @@ use taarib_khatm::MiftahKhass;
 use taarib_mustalahat::luba::{LubaId, MasdarLuba};
 use taarib_mustalahat::musahim::MusahimId;
 use taarib_mustalahat::nass::TasnifNass;
-use taarib_tarjama::dhakira::{
-    AslQayd, Dhakira, NawAsl, QaydJadid, ThiqatQira, miftah_muwahhad,
-};
+use taarib_tarjama::dhakira::{AslQayd, Dhakira, NawAsl, QaydJadid, ThiqatQira, miftah_muwahhad};
 use taarib_tarjama::mulahazat::{DhakiratTabaqa, MulahazaTabaqa};
-use taarib_warsha::mushtaraka::{
-    self, IqraratMusharaka, KhiyaratMusharaka, TahdheerMusharaka,
-};
+use taarib_warsha::mushtaraka::{self, IqraratMusharaka, KhiyaratMusharaka, TahdheerMusharaka};
 
 /// ELDEN RING, as this machine's Steam library identifies it.
 const APPID_ELDEN: u32 = 1_245_620;
@@ -78,7 +74,10 @@ impl MutarjimMahalli {
 
     fn tarjim(&mut self, nass: &str) -> String {
         self.nida = self.nida.saturating_add(1);
-        self.jadwal.get(nass).cloned().unwrap_or_else(|| format!("[{nass}]"))
+        self.jadwal
+            .get(nass)
+            .cloned()
+            .unwrap_or_else(|| format!("[{nass}]"))
     }
 }
 
@@ -91,7 +90,10 @@ fn azwaj() -> Vec<(&'static str, &'static str)> {
         ("Save and Quit", "احفظ واخرج"),
         ("Are you sure?", "هل أنت متأكد؟"),
         ("The old road north is closed", "الطريق القديم شمالًا مغلق"),
-        ("Restore your flask at a site of grace", "املأ قارورتك عند موضع نعمة"),
+        (
+            "Restore your flask at a site of grace",
+            "املأ قارورتك عند موضع نعمة",
+        ),
         ("Inventory is full", "الحقيبة ممتلئة"),
         ("Loading", "جارٍ التحميل"),
     ]
@@ -155,7 +157,7 @@ fn ishghal(
             .bi_mintaqa("شريط الحوار")
             .bi_muharrikayn(Some(QARI.to_owned()), Some(MUZAWWID.to_owned()));
         match tabaqa.sajjil(&mulahaza) {
-            Ok(true) => {}
+            Ok(true) => {},
             Ok(false) => panic!("a fixture line was rejected as unusable: {satr}"),
             Err(khata) => panic!("the memory refused a write: {khata}"),
         }
@@ -204,7 +206,8 @@ fn satr_maqru_marratan_thaniya_la_yukallif_shayan() {
 
     let mumayyaza = adad(azwaj().len());
     assert_eq!(
-        mutarjim.nida, mumayyaza,
+        mutarjim.nida,
+        mumayyaza,
         "{} readings of {mumayyaza} distinct lines cost {} translations",
         sutur.len(),
         mutarjim.nida
@@ -238,7 +241,11 @@ fn tashghil_thani_lil_luba_nafsiha_la_yukallif_shayan() {
     let mut mutarjim = MutarjimMahalli::jadeed(&azwaj());
     ishghal(&mut tabaqa, &mut mutarjim, &sutur, ThiqatQira::maqisa(92));
 
-    assert_eq!(mutarjim.nida, 0, "the second run paid for {} lines", mutarjim.nida);
+    assert_eq!(
+        mutarjim.nida, 0,
+        "the second run paid for {} lines",
+        mutarjim.nida
+    );
     assert_eq!(tabaqa.ihsaat().tarjamat_madfua(), 0);
     assert_eq!(
         tabaqa.ihsaat().isabat_dhakira,
@@ -258,7 +265,12 @@ fn dhakirat_laaib_akhar_tuzawwid_asturan_lam_tura() {
     // Player one walks past every line.
     let mut awwal = jalsa(dalil_awwal.path(), luba, "ELDEN RING");
     let mut mutarjim_awwal = MutarjimMahalli::jadeed(&azwaj());
-    ishghal(&mut awwal, &mut mutarjim_awwal, &jalsa_qira(), ThiqatQira::maqisa(92));
+    ishghal(
+        &mut awwal,
+        &mut mutarjim_awwal,
+        &jalsa_qira(),
+        ThiqatQira::maqisa(92),
+    );
     assert_eq!(mutarjim_awwal.nida, adad(azwaj().len()));
 
     // Player two has only ever seen the save prompt.
@@ -274,15 +286,21 @@ fn dhakirat_laaib_akhar_tuzawwid_asturan_lam_tura() {
 
     // Player one shares, having been shown exactly what leaves.
     let khass = miftah(7);
-    let musawwada =
-        match mushtaraka::ijma(awwal.dhakira(), luba, "ELDEN RING", KhiyaratMusharaka::iftiradiya())
-        {
-            Ok(musawwada) => musawwada,
-            Err(khata) => panic!("gathering refused: {khata}"),
-        };
+    let musawwada = match mushtaraka::ijma(
+        awwal.dhakira(),
+        luba,
+        "ELDEN RING",
+        KhiyaratMusharaka::iftiradiya(),
+    ) {
+        Ok(musawwada) => musawwada,
+        Err(khata) => panic!("gathering refused: {khata}"),
+    };
     assert_eq!(musawwada.adad(), azwaj().len());
     assert_eq!(musawwada.adad_maqis(), azwaj().len());
-    assert_eq!(musawwada.tahdheerat(), vec![TahdheerMusharaka::MuhtawaShakhsi]);
+    assert_eq!(
+        musawwada.tahdheerat(),
+        vec![TahdheerMusharaka::MuhtawaShakhsi]
+    );
 
     let mut iqrarat = IqraratMusharaka::jadeeda();
     iqrarat.aqirr(TahdheerMusharaka::MuhtawaShakhsi);
@@ -321,12 +339,17 @@ fn dhakirat_laaib_akhar_tuzawwid_asturan_lam_tura() {
     assert_eq!(taqreer.talifa, 0);
 
     // Now player two plays the whole game and pays nothing.
-    let mut thani =
-        DhakiratTabaqa::jadeeda(dhakira_thani, luba).bi_ism_luba("ELDEN RING");
+    let mut thani = DhakiratTabaqa::jadeeda(dhakira_thani, luba).bi_ism_luba("ELDEN RING");
     let mut mutarjim_thani = MutarjimMahalli::jadeed(&azwaj());
-    ishghal(&mut thani, &mut mutarjim_thani, &jalsa_qira(), ThiqatQira::maqisa(88));
+    ishghal(
+        &mut thani,
+        &mut mutarjim_thani,
+        &jalsa_qira(),
+        ThiqatQira::maqisa(88),
+    );
     assert_eq!(
-        mutarjim_thani.nida, 0,
+        mutarjim_thani.nida,
+        0,
         "the importing machine still paid for {} line(s): {}",
         mutarjim_thani.nida,
         thani.ihsaat().wasf()
@@ -341,10 +364,10 @@ fn dhakirat_laaib_akhar_tuzawwid_asturan_lam_tura() {
         taarib_tarjama::mulahazat::RaddTabaqa::Jahiza { naw, thiqa, .. } => {
             assert_eq!(naw, NawAsl::Mulahaza);
             assert_eq!(thiqa, ThiqatQira::maqisa(92));
-        }
+        },
         taarib_tarjama::mulahazat::RaddTabaqa::Majhula => {
             panic!("the imported line came back unknown");
-        }
+        },
     }
 }
 
@@ -356,7 +379,12 @@ fn al_hissa_makhtuma_bil_luba() {
     let luba = luba_elden();
     let mut tabaqa = jalsa(dalil.path(), luba, "ELDEN RING");
     let mut mutarjim = MutarjimMahalli::jadeed(&azwaj());
-    ishghal(&mut tabaqa, &mut mutarjim, &jalsa_qira(), ThiqatQira::maqisa(92));
+    ishghal(
+        &mut tabaqa,
+        &mut mutarjim,
+        &jalsa_qira(),
+        ThiqatQira::maqisa(92),
+    );
 
     let dhakira = tabaqa.ila_dhakira();
     let musawwada = match mushtaraka::ijma(
@@ -368,7 +396,11 @@ fn al_hissa_makhtuma_bil_luba() {
         Ok(musawwada) => musawwada,
         Err(khata) => panic!("gathering refused: {khata}"),
     };
-    assert_eq!(musawwada.adad(), 0, "another game's readings leaked into the share");
+    assert_eq!(
+        musawwada.adad(),
+        0,
+        "another game's readings leaked into the share"
+    );
     assert!(musawwada.tahdheerat().is_empty());
 
     let khass = miftah(9);
@@ -409,7 +441,9 @@ fn al_mulahaza_la_tuzih_nassan_rajaahu_insan() {
         siyaq: None,
         nasq_masdar: Vec::new(),
         nasq_hadaf: Vec::new(),
-        asl: AslQayd::Bashari { musahim: Some(musahim) },
+        asl: AslQayd::Bashari {
+            musahim: Some(musahim),
+        },
     }) {
         panic!("the reviewed pair would not store: {khata}");
     }
@@ -435,7 +469,10 @@ fn al_mulahaza_la_tuzih_nassan_rajaahu_insan() {
         Ok(None) => panic!("the memory lost the pair"),
         Err(khata) => panic!("the lookup refused: {khata}"),
     };
-    assert_eq!(tatbiq.qayd.hadaf, bashari, "a reading outranked reviewed text");
+    assert_eq!(
+        tatbiq.qayd.hadaf, bashari,
+        "a reading outranked reviewed text"
+    );
     assert_eq!(tatbiq.naw(), NawAsl::Bashari);
 }
 
@@ -449,9 +486,8 @@ fn al_daraja_tartaqi_wa_la_tanzil() {
 
     let injilizi = "Inventory is full";
     let arabi = "الحقيبة ممتلئة";
-    let mulahaza =
-        MulahazaTabaqa::jadeeda(injilizi, arabi, luba, ThiqatQira::maqisa(71))
-            .bi_tasnif(TasnifNass::Nizam);
+    let mulahaza = MulahazaTabaqa::jadeeda(injilizi, arabi, luba, ThiqatQira::maqisa(71))
+        .bi_tasnif(TasnifNass::Nizam);
     if let Err(khata) = dhakira.sajjil(&mulahaza.ila_qayd()) {
         panic!("the reading would not store: {khata}");
     }
@@ -462,7 +498,9 @@ fn al_daraja_tartaqi_wa_la_tanzil() {
     };
     // The same pair, now reviewed by a person, in a project.
     let mut qayd = mulahaza.ila_qayd();
-    qayd.asl = AslQayd::Bashari { musahim: Some(musahim) };
+    qayd.asl = AslQayd::Bashari {
+        musahim: Some(musahim),
+    };
     if let Err(khata) = dhakira.sajjil(&qayd) {
         panic!("the review would not store: {khata}");
     }
@@ -487,7 +525,11 @@ fn al_daraja_tartaqi_wa_la_tanzil() {
         Ok(None) => panic!("the memory lost the pair"),
         Err(khata) => panic!("the lookup refused: {khata}"),
     };
-    assert_eq!(baad_qira.naw(), NawAsl::Bashari, "a reading demoted a review");
+    assert_eq!(
+        baad_qira.naw(),
+        NawAsl::Bashari,
+        "a reading demoted a review"
+    );
     assert!(baad_qira.qayd.asl.muraja_bashariya);
 }
 
@@ -550,12 +592,20 @@ fn ghayr_al_maqisa_tustathna_bil_iftirad() {
     ishghal(&mut tabaqa, &mut mutarjim, &jalsa_qira(), ThiqatQira::Ghayr);
 
     let dhakira = tabaqa.ila_dhakira();
-    let iftiradi =
-        match mushtaraka::ijma(&dhakira, luba, "Hollow Knight", KhiyaratMusharaka::iftiradiya()) {
-            Ok(musawwada) => musawwada,
-            Err(khata) => panic!("gathering refused: {khata}"),
-        };
-    assert_eq!(iftiradi.adad(), 0, "unmeasured readings were shared by default");
+    let iftiradi = match mushtaraka::ijma(
+        &dhakira,
+        luba,
+        "Hollow Knight",
+        KhiyaratMusharaka::iftiradiya(),
+    ) {
+        Ok(musawwada) => musawwada,
+        Err(khata) => panic!("gathering refused: {khata}"),
+    };
+    assert_eq!(
+        iftiradi.adad(),
+        0,
+        "unmeasured readings were shared by default"
+    );
 
     let khiyarat = KhiyaratMusharaka::iftiradiya().maa_ghayr_maqisa();
     let mawsa = match mushtaraka::ijma(&dhakira, luba, "Hollow Knight", khiyarat) {
@@ -566,13 +616,19 @@ fn ghayr_al_maqisa_tustathna_bil_iftirad() {
     assert_eq!(mawsa.adad_maqis(), 0);
     assert_eq!(
         mawsa.tahdheerat(),
-        vec![TahdheerMusharaka::MuhtawaShakhsi, TahdheerMusharaka::LamTuqas]
+        vec![
+            TahdheerMusharaka::MuhtawaShakhsi,
+            TahdheerMusharaka::LamTuqas
+        ]
     );
 
     // Acknowledging only one of the two is not consent.
     let mut naqisa = IqraratMusharaka::jadeeda();
     naqisa.aqirr(TahdheerMusharaka::MuhtawaShakhsi);
-    assert!(mawsa.idhn(&naqisa).is_err(), "a permit was minted with a warning outstanding");
+    assert!(
+        mawsa.idhn(&naqisa).is_err(),
+        "a permit was minted with a warning outstanding"
+    );
 }
 
 /// Nothing leaves without consent, and a permit cannot be spent on a
@@ -583,14 +639,22 @@ fn la_tughadir_bayanat_bila_idhn_mutabiq() {
     let luba = luba_elden();
     let mut tabaqa = jalsa(dalil.path(), luba, "ELDEN RING");
     let mut mutarjim = MutarjimMahalli::jadeed(&azwaj());
-    ishghal(&mut tabaqa, &mut mutarjim, &["Save and Quit"], ThiqatQira::maqisa(90));
+    ishghal(
+        &mut tabaqa,
+        &mut mutarjim,
+        &["Save and Quit"],
+        ThiqatQira::maqisa(90),
+    );
 
-    let saghira =
-        match mushtaraka::ijma(tabaqa.dhakira(), luba, "ELDEN RING", KhiyaratMusharaka::iftiradiya())
-        {
-            Ok(musawwada) => musawwada,
-            Err(khata) => panic!("gathering refused: {khata}"),
-        };
+    let saghira = match mushtaraka::ijma(
+        tabaqa.dhakira(),
+        luba,
+        "ELDEN RING",
+        KhiyaratMusharaka::iftiradiya(),
+    ) {
+        Ok(musawwada) => musawwada,
+        Err(khata) => panic!("gathering refused: {khata}"),
+    };
     assert_eq!(saghira.adad(), 1);
     // No acknowledgement at all: the screen-content warning is outstanding.
     assert!(saghira.idhn(&IqraratMusharaka::jadeeda()).is_err());
@@ -603,13 +667,21 @@ fn la_tughadir_bayanat_bila_idhn_mutabiq() {
     };
 
     // The player keeps playing and the pile grows under the permit.
-    ishghal(&mut tabaqa, &mut mutarjim, &jalsa_qira(), ThiqatQira::maqisa(90));
-    let kabira =
-        match mushtaraka::ijma(tabaqa.dhakira(), luba, "ELDEN RING", KhiyaratMusharaka::iftiradiya())
-        {
-            Ok(musawwada) => musawwada,
-            Err(khata) => panic!("gathering refused: {khata}"),
-        };
+    ishghal(
+        &mut tabaqa,
+        &mut mutarjim,
+        &jalsa_qira(),
+        ThiqatQira::maqisa(90),
+    );
+    let kabira = match mushtaraka::ijma(
+        tabaqa.dhakira(),
+        luba,
+        "ELDEN RING",
+        KhiyaratMusharaka::iftiradiya(),
+    ) {
+        Ok(musawwada) => musawwada,
+        Err(khata) => panic!("gathering refused: {khata}"),
+    };
     assert_eq!(kabira.adad(), azwaj().len());
     assert_ne!(kabira.basma(), saghira.basma());
 
@@ -650,11 +722,20 @@ fn al_hissa_la_tahmil_illa_al_mulahazat() {
     };
 
     let sufuf = [
-        asas("Continue", "متابعة", AslQayd::Bashari { musahim: Some(musahim) }),
+        asas(
+            "Continue",
+            "متابعة",
+            AslQayd::Bashari {
+                musahim: Some(musahim),
+            },
+        ),
         asas(
             "New Game",
             "لعبة جديدة",
-            AslQayd::AaliFaqat { muzawwid: Some(MUZAWWID.to_owned()), thiqa: Some(0.9) },
+            AslQayd::AaliFaqat {
+                muzawwid: Some(MUZAWWID.to_owned()),
+                thiqa: Some(0.9),
+            },
         ),
         asas(
             "Settings",
@@ -672,18 +753,44 @@ fn al_hissa_la_tahmil_illa_al_mulahazat() {
         }
     }
 
-    let musawwada =
-        match mushtaraka::ijma(&dhakira, luba, "ELDEN RING", KhiyaratMusharaka::iftiradiya()) {
-            Ok(musawwada) => musawwada,
-            Err(khata) => panic!("gathering refused: {khata}"),
-        };
-    assert_eq!(musawwada.adad(), 1, "the share carried more than the readings");
-    assert_eq!(musawwada.qayyid().first().map(|q| q.asl.as_str()), Some("Settings"));
+    let musawwada = match mushtaraka::ijma(
+        &dhakira,
+        luba,
+        "ELDEN RING",
+        KhiyaratMusharaka::iftiradiya(),
+    ) {
+        Ok(musawwada) => musawwada,
+        Err(khata) => panic!("gathering refused: {khata}"),
+    };
+    assert_eq!(
+        musawwada.adad(),
+        1,
+        "the share carried more than the readings"
+    );
+    assert_eq!(
+        musawwada.qayyid().first().map(|q| q.asl.as_str()),
+        Some("Settings")
+    );
 
     // And the memory really did hold all three.
-    assert_eq!(dhakira.adad_luba(&luba.to_string(), NawAsl::Bashari).unwrap_or(0), 1);
-    assert_eq!(dhakira.adad_luba(&luba.to_string(), NawAsl::Aali).unwrap_or(0), 1);
-    assert_eq!(dhakira.adad_luba(&luba.to_string(), NawAsl::Mulahaza).unwrap_or(0), 1);
+    assert_eq!(
+        dhakira
+            .adad_luba(&luba.to_string(), NawAsl::Bashari)
+            .unwrap_or(0),
+        1
+    );
+    assert_eq!(
+        dhakira
+            .adad_luba(&luba.to_string(), NawAsl::Aali)
+            .unwrap_or(0),
+        1
+    );
+    assert_eq!(
+        dhakira
+            .adad_luba(&luba.to_string(), NawAsl::Mulahaza)
+            .unwrap_or(0),
+        1
+    );
 }
 
 /// Imported readings land as readings, whatever the importing machine does
@@ -696,7 +803,12 @@ fn al_mustawrad_yabqa_mulahaza() {
 
     let mut awwal = jalsa(dalil_awwal.path(), luba, "ELDEN RING");
     let mut mutarjim = MutarjimMahalli::jadeed(&azwaj());
-    ishghal(&mut awwal, &mut mutarjim, &jalsa_qira(), ThiqatQira::maqisa(92));
+    ishghal(
+        &mut awwal,
+        &mut mutarjim,
+        &jalsa_qira(),
+        ThiqatQira::maqisa(92),
+    );
 
     let khass = miftah(11);
     let bayt = saddir_kamil(awwal.dhakira(), luba, &khass);
@@ -710,10 +822,22 @@ fn al_mustawrad_yabqa_mulahaza() {
         panic!("the merge refused: {khata}");
     }
 
-    assert_eq!(thani.adad_luba(&luba.to_string(), NawAsl::Bashari).unwrap_or(9), 0);
-    assert_eq!(thani.adad_luba(&luba.to_string(), NawAsl::Aali).unwrap_or(9), 0);
     assert_eq!(
-        thani.adad_luba(&luba.to_string(), NawAsl::Mulahaza).unwrap_or(0),
+        thani
+            .adad_luba(&luba.to_string(), NawAsl::Bashari)
+            .unwrap_or(9),
+        0
+    );
+    assert_eq!(
+        thani
+            .adad_luba(&luba.to_string(), NawAsl::Aali)
+            .unwrap_or(9),
+        0
+    );
+    assert_eq!(
+        thani
+            .adad_luba(&luba.to_string(), NawAsl::Mulahaza)
+            .unwrap_or(0),
         adad(azwaj().len())
     );
 
@@ -723,7 +847,7 @@ fn al_mustawrad_yabqa_mulahaza() {
         Ok(Some(tatbiq)) => {
             assert_eq!(tatbiq.naw(), NawAsl::Mulahaza);
             assert_eq!(tatbiq.qayd.asl.mushahadat, 1);
-        }
+        },
         Ok(None) => panic!("an imported line is missing"),
         Err(khata) => panic!("the lookup refused: {khata}"),
     }
@@ -737,7 +861,12 @@ fn hissa_muabbatha_turfad() {
     let luba = luba_elden();
     let mut tabaqa = jalsa(dalil.path(), luba, "ELDEN RING");
     let mut mutarjim = MutarjimMahalli::jadeed(&azwaj());
-    ishghal(&mut tabaqa, &mut mutarjim, &jalsa_qira(), ThiqatQira::maqisa(92));
+    ishghal(
+        &mut tabaqa,
+        &mut mutarjim,
+        &jalsa_qira(),
+        ThiqatQira::maqisa(92),
+    );
 
     let khass = miftah(13);
     let bayt = saddir_kamil(tabaqa.dhakira(), luba, &khass);
@@ -766,7 +895,10 @@ fn hissa_muabbatha_turfad() {
     };
     let tarwisa = String::from_utf8_lossy(bayt.get(..fasl).unwrap_or_default()).to_string();
     let matlub = format!("\"adad\":{}", azwaj().len());
-    assert!(tarwisa.contains(&matlub), "the header does not read as expected: {tarwisa}");
+    assert!(
+        tarwisa.contains(&matlub),
+        "the header does not read as expected: {tarwisa}"
+    );
     let mut mazur = tarwisa.replacen(&matlub, "\"adad\":9", 1).into_bytes();
     mazur.extend_from_slice(bayt.get(fasl..).unwrap_or_default());
     assert_ne!(mazur, bayt);
@@ -888,11 +1020,15 @@ fn dhakirat_isdar_awwal_turaqqa_bila_taghyeer_asl() {
     // Nothing from a schema-1 memory is shareable, because nothing in one is
     // an observation.
     let luba = luba_elden();
-    let musawwada =
-        match mushtaraka::ijma(&dhakira, luba, "ELDEN RING", KhiyaratMusharaka::iftiradiya()) {
-            Ok(musawwada) => musawwada,
-            Err(khata) => panic!("gathering refused: {khata}"),
-        };
+    let musawwada = match mushtaraka::ijma(
+        &dhakira,
+        luba,
+        "ELDEN RING",
+        KhiyaratMusharaka::iftiradiya(),
+    ) {
+        Ok(musawwada) => musawwada,
+        Err(khata) => panic!("gathering refused: {khata}"),
+    };
     assert_eq!(musawwada.adad(), 0);
 }
 
@@ -900,7 +1036,10 @@ fn dhakirat_isdar_awwal_turaqqa_bila_taghyeer_asl() {
 /// only in case or spacing costs nothing the second time either.
 #[test]
 fn al_takrar_yuqas_bil_miftah_al_muwahhad() {
-    assert_eq!(miftah_muwahhad("Save  and Quit "), miftah_muwahhad("save and quit"));
+    assert_eq!(
+        miftah_muwahhad("Save  and Quit "),
+        miftah_muwahhad("save and quit")
+    );
 
     let dalil = muajjal();
     let mut tabaqa = jalsa(dalil.path(), luba_elden(), "ELDEN RING");
@@ -911,5 +1050,9 @@ fn al_takrar_yuqas_bil_miftah_al_muwahhad() {
         &["Save and Quit", "SAVE AND QUIT", "Save  and  Quit"],
         ThiqatQira::maqisa(80),
     );
-    assert_eq!(mutarjim.nida, 1, "three renderings of one line cost {}", mutarjim.nida);
+    assert_eq!(
+        mutarjim.nida, 1,
+        "three renderings of one line cost {}",
+        mutarjim.nida
+    );
 }

@@ -156,15 +156,14 @@ impl MukhbirTaqaddum {
     /// Delivers one report, ignoring a receiver that has gone away.
     pub fn ballagh(&self, taqaddum: Taqaddum) {
         match self {
-            Self::Samit => {}
+            Self::Samit => {},
             Self::Qanat(mursil) => {
                 let _ = mursil.send(taqaddum);
-            }
+            },
             Self::Nida(nida) => nida(taqaddum),
         }
     }
 }
-
 
 impl fmt::Debug for MukhbirTaqaddum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -173,7 +172,9 @@ impl fmt::Debug for MukhbirTaqaddum {
             Self::Qanat(_) => "Qanat",
             Self::Nida(_) => "Nida",
         };
-        f.debug_struct("MukhbirTaqaddum").field("naw", &naw).finish()
+        f.debug_struct("MukhbirTaqaddum")
+            .field("naw", &naw)
+            .finish()
     }
 }
 
@@ -248,14 +249,21 @@ impl SijillJuzii {
     ///
     /// [`KhataMustawda::KhataMalaf`] when it cannot be written.
     pub async fn uktub(&self, masar: &Path) -> NatijatMustawda<()> {
-        let bayt = serde_json::to_vec(self).map_err(|sabab| {
-            khata_malaf(masar, AMAL_KITABA, std::io::Error::other(sabab))
-        })?;
+        let bayt = serde_json::to_vec(self)
+            .map_err(|sabab| khata_malaf(masar, AMAL_KITABA, std::io::Error::other(sabab)))?;
         let wijha = masar.to_path_buf();
         match tokio::task::spawn_blocking(move || kitaba_dharra(&wijha, &bayt)).await {
             Ok(Ok(())) => Ok(()),
-            Ok(Err(khata)) => Err(khata_malaf(masar, AMAL_KITABA, std::io::Error::other(khata))),
-            Err(khata) => Err(khata_malaf(masar, AMAL_KITABA, std::io::Error::other(khata))),
+            Ok(Err(khata)) => Err(khata_malaf(
+                masar,
+                AMAL_KITABA,
+                std::io::Error::other(khata),
+            )),
+            Err(khata) => Err(khata_malaf(
+                masar,
+                AMAL_KITABA,
+                std::io::Error::other(khata),
+            )),
         }
     }
 }
@@ -279,7 +287,12 @@ impl TalabTanzeel {
         basma: Basma,
         hadaf: impl Into<PathBuf>,
     ) -> Self {
-        Self { rawabit, hajm, basma, hadaf: hadaf.into() }
+        Self {
+            rawabit,
+            hajm,
+            basma,
+            hadaf: hadaf.into(),
+        }
     }
 
     /// The request one patch listing describes.
@@ -313,10 +326,7 @@ impl TalabTanzeel {
     /// which is the argument for listing shares in the index at all rather
     /// than building a second way to move bytes.
     #[must_use]
-    pub fn min_dhakira(
-        mulakhkhas: &MulakhkhasDhakira,
-        hadaf: impl Into<PathBuf>,
-    ) -> Self {
+    pub fn min_dhakira(mulakhkhas: &MulakhkhasDhakira, hadaf: impl Into<PathBuf>) -> Self {
         Self::jadeed(
             rawabit(&mulakhkhas.rabt, mulakhkhas.rabt_mira.as_deref()),
             mulakhkhas.hajm,
@@ -388,7 +398,12 @@ struct Muraqib<'a> {
 
 impl<'a> Muraqib<'a> {
     const fn jadeed(mukhbir: &'a MukhbirTaqaddum, majmu: u64) -> Self {
-        Self { mukhbir, majmu, akhir: 0, marhala: None }
+        Self {
+            mukhbir,
+            majmu,
+            akhir: 0,
+            marhala: None,
+        }
     }
 
     fn ballagh(&mut self, manqul: u64, marhala: MarhalatTanzeel) {
@@ -402,7 +417,11 @@ impl<'a> Muraqib<'a> {
     fn hatman(&mut self, manqul: u64, marhala: MarhalatTanzeel) {
         self.akhir = manqul;
         self.marhala = Some(marhala);
-        self.mukhbir.ballagh(Taqaddum { manqul, majmu: self.majmu, marhala });
+        self.mukhbir.ballagh(Taqaddum {
+            manqul,
+            majmu: self.majmu,
+            marhala,
+        });
     }
 }
 
@@ -528,11 +547,11 @@ pub async fn nazzil(
             Ok(()) => {
                 tamma(talab, mukhbir);
                 return Ok(talab.hadaf.clone());
-            }
+            },
             Err(khata) if yatakarrar(&khata) => {
                 tracing::warn!(rabt = rabt.as_str(), sabab = %khata, "a download source failed");
                 akhir = Some(khata);
-            }
+            },
             Err(khata) => return Err(khata),
         }
     }
@@ -605,7 +624,7 @@ async fn min_masdar(
             Muhawala::IadatBidaya => {
                 nazzif_hurr(talab).await?;
                 istinaf = false;
-            }
+            },
         }
     }
     Err(KhataMustawda::TanzeelFashil {
@@ -623,7 +642,11 @@ async fn naql(
     istinaf: bool,
 ) -> NatijatMustawda<Muhawala> {
     let juz = talab.masar_juz();
-    let bidaya = if istinaf { nuqtat_istinaf(talab).await? } else { 0 };
+    let bidaya = if istinaf {
+        nuqtat_istinaf(talab).await?
+    } else {
+        0
+    };
     akkid_misaha(talab, bidaya).await?;
 
     // `identity`: a range offset must name the byte that is hashed and written.
@@ -645,16 +668,19 @@ async fn naql(
     let hala = radd.status();
     let mustanaf = match hala {
         StatusCode::PARTIAL_CONTENT if bidaya > 0 => {
-            let qeema = radd.headers().get(CONTENT_RANGE).and_then(|qeema| qeema.to_str().ok());
+            let qeema = radd
+                .headers()
+                .get(CONTENT_RANGE)
+                .and_then(|qeema| qeema.to_str().ok());
             match qeema.and_then(bidayat_nitaq) {
                 Some((awwal, kull))
                     if awwal == bidaya && kull.is_none_or(|majmu| majmu == talab.hajm) =>
                 {
                     true
-                }
+                },
                 _ => return Ok(Muhawala::IadatBidaya),
             }
-        }
+        },
         // A 200 to a range request is the whole file; appending it corrupts.
         StatusCode::OK => false,
         StatusCode::RANGE_NOT_SATISFIABLE => return Ok(Muhawala::IadatBidaya),
@@ -663,27 +689,43 @@ async fn naql(
                 rabt: rabt.to_owned(),
                 ramz: hala.as_u16(),
             });
-        }
+        },
     };
 
     let mabda = if mustanaf { bidaya } else { 0 };
-    if radd.content_length().is_some_and(|tul| tul > talab.hajm.saturating_sub(mabda)) {
-        return Err(KhataMustawda::HajmMufrit { muallan: talab.hajm });
+    if radd
+        .content_length()
+        .is_some_and(|tul| tul > talab.hajm.saturating_sub(mabda))
+    {
+        return Err(KhataMustawda::HajmMufrit {
+            muallan: talab.hajm,
+        });
     }
 
     let mut muraqib = Muraqib::jadeed(mukhbir, talab.hajm);
     let mut hashi = blake3::Hasher::new();
     if mustanaf {
-        let maqru =
-            basmat_juzii(&juz, bidaya, &mut hashi, &mut muraqib, MarhalatTanzeel::Istinaf).await?;
+        let maqru = basmat_juzii(
+            &juz,
+            bidaya,
+            &mut hashi,
+            &mut muraqib,
+            MarhalatTanzeel::Istinaf,
+        )
+        .await?;
         if maqru != bidaya {
             return Ok(Muhawala::IadatBidaya);
         }
     }
 
-    let mut malaf =
-        if mustanaf { fath_ilhaq(&juz, bidaya).await? } else { fath_jadeed(&juz).await? };
-    SijillJuzii::min_talab(talab, rabt).uktub(&talab.masar_sijill()).await?;
+    let mut malaf = if mustanaf {
+        fath_ilhaq(&juz, bidaya).await?
+    } else {
+        fath_jadeed(&juz).await?
+    };
+    SijillJuzii::min_talab(talab, rabt)
+        .uktub(&talab.masar_sijill())
+        .await?;
 
     let mut manqul = mabda;
     muraqib.hatman(manqul, MarhalatTanzeel::Naql);
@@ -693,18 +735,20 @@ async fn naql(
             Ok(Ok(None)) => break,
             Ok(Err(sabab)) => {
                 return Err(inqita(&mut malaf, rabt, &sabab.to_string()).await);
-            }
+            },
             Err(_) => {
                 let sabab = format!("stalled for {} seconds", MUHLAT_QITA.as_secs());
                 return Err(inqita(&mut malaf, rabt, &sabab).await);
-            }
+            },
         };
 
         manqul = manqul.saturating_add(u64::try_from(qita.len()).unwrap_or(u64::MAX));
         if manqul > talab.hajm {
             drop(malaf);
             nazzif_hurr(talab).await?;
-            return Err(KhataMustawda::HajmMufrit { muallan: talab.hajm });
+            return Err(KhataMustawda::HajmMufrit {
+                muallan: talab.hajm,
+            });
         }
         hashi.update(&qita);
         malaf
@@ -747,7 +791,7 @@ async fn nuqtat_istinaf(talab: &TalabTanzeel) -> NatijatMustawda<u64> {
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
             hadhf(&talab.masar_sijill()).await?;
             return Ok(0);
-        }
+        },
         Err(sabab) => return Err(khata_malaf(&juz, AMAL_QIRA, sabab)),
     };
     if !bayanat.is_file() || bayanat.len() >= talab.hajm {
@@ -761,9 +805,15 @@ async fn nuqtat_istinaf(talab: &TalabTanzeel) -> NatijatMustawda<u64> {
 /// bytes a partial file already holds against the declared size and a tenth of
 /// headroom. Skipped when no mounted disk can be matched to the destination.
 async fn akkid_misaha(talab: &TalabTanzeel, mahjuz: u64) -> NatijatMustawda<()> {
-    let Some(walid) = talab.hadaf.parent() else { return Ok(()) };
-    let Ok(walid) = tokio::fs::canonicalize(walid).await else { return Ok(()) };
-    let Some(mutah) = misaha_mutaha(&walid) else { return Ok(()) };
+    let Some(walid) = talab.hadaf.parent() else {
+        return Ok(());
+    };
+    let Ok(walid) = tokio::fs::canonicalize(walid).await else {
+        return Ok(());
+    };
+    let Some(mutah) = misaha_mutaha(&walid) else {
+        return Ok(());
+    };
 
     #[expect(
         clippy::integer_division,
@@ -774,7 +824,11 @@ async fn akkid_misaha(talab: &TalabTanzeel, mahjuz: u64) -> NatijatMustawda<()> 
     if mutah >= matlub {
         return Ok(());
     }
-    Err(KhataMustawda::MisahaGhayrKafiya { matlub, mutah, masar: talab.hadaf.clone() })
+    Err(KhataMustawda::MisahaGhayrKafiya {
+        matlub,
+        mutah,
+        masar: talab.hadaf.clone(),
+    })
 }
 
 /// Free bytes on the mounted filesystem whose mount point is the longest
@@ -793,11 +847,14 @@ fn misaha_mutaha(masar: &Path) -> Option<u64> {
 /// The path with a Windows verbatim prefix removed, so it compares against the
 /// mount points the platform reports.
 fn bila_badiya_harfiya(masar: &Path) -> PathBuf {
-    let Some(nass) = masar.to_str() else { return masar.to_path_buf() };
+    let Some(nass) = masar.to_str() else {
+        return masar.to_path_buf();
+    };
     if let Some(baqi) = nass.strip_prefix(r"\\?\UNC\") {
         return PathBuf::from(format!(r"\\{baqi}"));
     }
-    nass.strip_prefix(r"\\?\").map_or_else(|| masar.to_path_buf(), PathBuf::from)
+    nass.strip_prefix(r"\\?\")
+        .map_or_else(|| masar.to_path_buf(), PathBuf::from)
 }
 
 /// Whether the destination already holds this exact package.
@@ -806,7 +863,7 @@ async fn hadaf_muwaththaq(
     mukhbir: &MukhbirTaqaddum,
 ) -> NatijatMustawda<bool> {
     match tokio::fs::metadata(&talab.hadaf).await {
-        Ok(bayanat) if bayanat.is_file() && bayanat.len() == talab.hajm => {}
+        Ok(bayanat) if bayanat.is_file() && bayanat.len() == talab.hajm => {},
         Ok(_) => return Ok(false),
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => return Ok(false),
         Err(sabab) => return Err(khata_malaf(&talab.hadaf, AMAL_QIRA, sabab)),
@@ -835,7 +892,7 @@ async fn juz_kamil(talab: &TalabTanzeel, mukhbir: &MukhbirTaqaddum) -> NatijatMu
         return Ok(false);
     }
     match tokio::fs::metadata(&juz).await {
-        Ok(bayanat) if bayanat.is_file() && bayanat.len() == talab.hajm => {}
+        Ok(bayanat) if bayanat.is_file() && bayanat.len() == talab.hajm => {},
         Ok(_) => return Ok(false),
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => return Ok(false),
         Err(sabab) => return Err(khata_malaf(&juz, AMAL_QIRA, sabab)),
@@ -843,13 +900,24 @@ async fn juz_kamil(talab: &TalabTanzeel, mukhbir: &MukhbirTaqaddum) -> NatijatMu
 
     let mut muraqib = Muraqib::jadeed(mukhbir, talab.hajm);
     let mut hashi = blake3::Hasher::new();
-    let maqru =
-        basmat_juzii(&juz, talab.hajm, &mut hashi, &mut muraqib, MarhalatTanzeel::Tahaqquq).await?;
+    let maqru = basmat_juzii(
+        &juz,
+        talab.hajm,
+        &mut hashi,
+        &mut muraqib,
+        MarhalatTanzeel::Tahaqquq,
+    )
+    .await?;
     if maqru != talab.hajm {
         nazzif_hurr(talab).await?;
         return Ok(false);
     }
-    akkid_wa_anhi(talab, Basma::min_bayt(*hashi.finalize().as_bytes()), &sijill.rabt).await?;
+    akkid_wa_anhi(
+        talab,
+        Basma::min_bayt(*hashi.finalize().as_bytes()),
+        &sijill.rabt,
+    )
+    .await?;
     Ok(true)
 }
 
@@ -888,7 +956,9 @@ async fn basmat_juzii(
         let matlub = usize::try_from(hadd.saturating_sub(maqru))
             .unwrap_or(usize::MAX)
             .min(HAJM_MAHFAZA);
-        let Some(nafidha) = mahfaza.get_mut(..matlub) else { break };
+        let Some(nafidha) = mahfaza.get_mut(..matlub) else {
+            break;
+        };
         let adad = malaf
             .read(nafidha)
             .await
@@ -896,7 +966,9 @@ async fn basmat_juzii(
         if adad == 0 {
             break;
         }
-        let Some(qism) = nafidha.get(..adad) else { break };
+        let Some(qism) = nafidha.get(..adad) else {
+            break;
+        };
         hashi.update(qism);
         maqru = maqru.saturating_add(u64::try_from(adad).unwrap_or(0));
         muraqib.ballagh(maqru, marhala);
@@ -949,7 +1021,10 @@ async fn aghliq(malaf: &mut File, juz: &Path) -> NatijatMustawda<()> {
 async fn inqita(malaf: &mut File, rabt: &str, sabab: &str) -> KhataMustawda {
     let _ = malaf.flush().await;
     let _ = malaf.sync_all().await;
-    KhataMustawda::TanzeelFashil { rabt: rabt.to_owned(), sabab: sabab.to_owned() }
+    KhataMustawda::TanzeelFashil {
+        rabt: rabt.to_owned(),
+        sabab: sabab.to_owned(),
+    }
 }
 
 /// Reports the last state a caller sees.
@@ -979,7 +1054,11 @@ async fn hadhf(masar: &Path) -> NatijatMustawda<()> {
 }
 
 fn khata_malaf(masar: &Path, amal: &'static str, sabab: std::io::Error) -> KhataMustawda {
-    KhataMustawda::KhataMalaf { masar: masar.to_path_buf(), amal, sabab }
+    KhataMustawda::KhataMalaf {
+        masar: masar.to_path_buf(),
+        amal,
+        sabab,
+    }
 }
 
 /// The primary source followed by its mirror, skipping an absent mirror.
@@ -1004,10 +1083,14 @@ fn rabt_amin(rabt: &str) -> bool {
     if rabt.len() <= "https://".len() || rabt.len() > HADD_TUL_RABT {
         return false;
     }
-    if rabt.bytes().any(|bayt| bayt.is_ascii_control() || bayt == b' ') {
+    if rabt
+        .bytes()
+        .any(|bayt| bayt.is_ascii_control() || bayt == b' ')
+    {
         return false;
     }
-    rabt.get(.."https://".len()).is_some_and(|badiya| badiya.eq_ignore_ascii_case("https://"))
+    rabt.get(.."https://".len())
+        .is_some_and(|badiya| badiya.eq_ignore_ascii_case("https://"))
 }
 
 /// The first byte and the total length a `Content-Range` header states.

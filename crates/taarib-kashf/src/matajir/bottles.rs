@@ -221,7 +221,9 @@ impl Matjar for MatjarBottles {
     }
 
     fn mawqi(&self, siyaq: &SiyaqFahs) -> Option<PathBuf> {
-        judhur_muhtamala(siyaq).into_iter().find(|jidhr| jidhr.join(MUJALLAD_QANANI).is_dir())
+        judhur_muhtamala(siyaq)
+            .into_iter()
+            .find(|jidhr| jidhr.join(MUJALLAD_QANANI).is_dir())
     }
 
     /// # Errors
@@ -371,7 +373,11 @@ fn jama_qinnina(jidhr: &Path, natija: &mut NatijatMatjar) {
 
     let ism_qinnina = wathiqa
         .nass(&["Name"])
-        .or_else(|| jidhr.file_name().map(|ism| ism.to_string_lossy().into_owned()))
+        .or_else(|| {
+            jidhr
+                .file_name()
+                .map(|ism| ism.to_string_lossy().into_owned())
+        })
         .unwrap_or_else(|| "Bottle".to_owned());
 
     // A bottle's configuration is written when the bottle is created and the
@@ -520,7 +526,9 @@ impl IdadQinnina {
         // build is only the fallback — but it is a real fallback: a bottle whose
         // runner was uninstalled keeps the name of a build that is no longer
         // there, and the prefix itself still records what made it.
-        let maktashaf = crate::beea::hal_beea(jidhr).ok().and_then(|maalumat| maalumat.isdar_wine);
+        let maktashaf = crate::beea::hal_beea(jidhr)
+            .ok()
+            .and_then(|maalumat| maalumat.isdar_wine);
         let isdar = musajjal.or(maktashaf);
 
         // Bottles installs Proton builds alongside its Wine ones and runs them
@@ -529,8 +537,9 @@ impl IdadQinnina {
         // rule — Bottles writes none of Proton's marker files into the prefix —
         // but the distinction matters to Phase 15, which injects differently
         // under the two, so the name is trusted for this one question.
-        let proton =
-            isdar.as_deref().is_some_and(|ism| ism.to_ascii_lowercase().contains("proton"));
+        let proton = isdar
+            .as_deref()
+            .is_some_and(|ism| ism.to_ascii_lowercase().contains("proton"));
 
         let beea = if proton {
             BeeatTawafuq::Proton {
@@ -538,7 +547,10 @@ impl IdadQinnina {
                 beea: jidhr.to_path_buf(),
             }
         } else {
-            BeeatTawafuq::Wine { isdar: isdar.clone(), beea: jidhr.to_path_buf() }
+            BeeatTawafuq::Wine {
+                isdar: isdar.clone(),
+                beea: jidhr.to_path_buf(),
+            }
         };
 
         let wasf = wasf_tawafuq(wathiqa, isdar.as_deref());
@@ -553,7 +565,9 @@ impl IdadQinnina {
             // removed or reconfigured — so it is a true upper bound on when this
             // entry last changed, which is what it is reported as. It is not,
             // and is not claimed to be, when the game itself was updated.
-            tahdith: wathiqa.nass(&["Update_Date"]).and_then(|nass| waqt_mahalli(&nass)),
+            tahdith: wathiqa
+                .nass(&["Update_Date"])
+                .and_then(|nass| waqt_mahalli(&nass)),
         }
     }
 }
@@ -622,7 +636,10 @@ fn wasf_tawafuq(wathiqa: &WathiqatYaml, isdar: Option<&str>) -> String {
 /// costs a word in a description rather than a path.
 fn mufaal(wathiqa: &WathiqatYaml, miftah: &str) -> bool {
     wathiqa.nass(&["Parameters", miftah]).is_some_and(|qeema| {
-        matches!(qeema.to_ascii_lowercase().as_str(), "true" | "yes" | "on" | "1")
+        matches!(
+            qeema.to_ascii_lowercase().as_str(),
+            "true" | "yes" | "on" | "1"
+        )
     })
 }
 
@@ -683,8 +700,7 @@ fn luba_min_barnamaj(
         return None;
     };
 
-    let Some(jidhr) = mujallad_barnamaj(&idad.jidhr, mujallad_windows.as_deref(), &tanfidhi)
-    else {
+    let Some(jidhr) = mujallad_barnamaj(&idad.jidhr, mujallad_windows.as_deref(), &tanfidhi) else {
         tanbihat.push(TanbihFahs::jadeed(
             MUARRIF,
             tanfidhi.display().to_string(),
@@ -819,7 +835,10 @@ fn sinf_ghayr_luba(tanfidhi: &Path, ism: &str) -> Option<&'static str> {
     if ASMAA_LAYSAT_ALAAB.contains(&jidhr_ism.as_str()) {
         return Some("a Windows or Wine utility rather than a game");
     }
-    if BIDAYAT_LAYSAT_ALAAB.iter().any(|bidaya| jidhr_ism.starts_with(bidaya)) {
+    if BIDAYAT_LAYSAT_ALAAB
+        .iter()
+        .any(|bidaya| jidhr_ism.starts_with(bidaya))
+    {
         return Some("a redistributable runtime installer rather than a game");
     }
     None
@@ -839,7 +858,11 @@ fn suwar_barnamaj(barnamaj: &QeemaYaml) -> MasadirSuwar {
         let masar = PathBuf::from(ayqona.trim());
         (masar.is_absolute() && masar.is_file()).then_some(MasdarSura::Malaf(masar))
     });
-    MasadirSuwar { ghilaf: None, batl: None, shiar }
+    MasadirSuwar {
+        ghilaf: None,
+        batl: None,
+        shiar,
+    }
 }
 
 #[cfg(test)]
@@ -879,7 +902,11 @@ mod ikhtibarat {
     #[test]
     fn al_khazina_al_iftiradiya_taht_al_manzil() -> NatijatIkhtibar {
         let masrah = tempfile::tempdir()?;
-        let iftiradi = masrah.path().join(".local").join("share").join(MUJALLAD_BOTTLES);
+        let iftiradi = masrah
+            .path()
+            .join(".local")
+            .join("share")
+            .join(MUJALLAD_BOTTLES);
         fs::create_dir_all(iftiradi.join(MUJALLAD_QANANI))?;
 
         // The unset case: the context carries the home-relative default, and the

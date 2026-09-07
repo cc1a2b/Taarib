@@ -128,7 +128,11 @@ impl MakhzanMuaqqat {
         let adad = matlub.clamp(ADNA_MAKHAZIN, AQSA_MAKHAZIN);
         let mut baqiya = Vec::new();
         baqiya.resize_with(adad.saturating_sub(1), TakhtitNass::default);
-        Self { awwal: TakhtitNass::default(), baqiya, dawr: 0 }
+        Self {
+            awwal: TakhtitNass::default(),
+            baqiya,
+            dawr: 0,
+        }
     }
 
     /// The buffer under the cursor, emptied and ready to lay out into.
@@ -173,8 +177,11 @@ impl MakhzanMuaqqat {
     /// grow-and-retry step of the capacity negotiation being the case that
     /// matters most, since it happens on every buffer's first frame.
     pub const fn dawwir(&mut self) {
-        self.dawr =
-            if self.dawr >= self.baqiya.len() { 0 } else { self.dawr.saturating_add(1) };
+        self.dawr = if self.dawr >= self.baqiya.len() {
+            0
+        } else {
+            self.dawr.saturating_add(1)
+        };
     }
 
     /// How many buffers the pool holds.
@@ -326,9 +333,7 @@ pub unsafe fn iktub_takhtit(
     if makhzan.siaat_huruf < adad_huruf || makhzan.siaat_sutur < adad_sutur {
         return sajjil_ramz(TAARIB_SIAT_QASIRA);
     }
-    if (adad_huruf > 0 && makhzan.huruf.is_null())
-        || (adad_sutur > 0 && makhzan.sutur.is_null())
-    {
+    if (adad_huruf > 0 && makhzan.huruf.is_null()) || (adad_sutur > 0 && makhzan.sutur.is_null()) {
         return sajjil_ramz(TAARIB_MUASHIR_BATIL);
     }
 

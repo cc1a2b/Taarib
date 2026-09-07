@@ -344,7 +344,9 @@ pub fn khazina(masarat: &Masarat) -> Natija<KhaziantSuwar> {
 /// artwork was never fetched.
 #[must_use]
 pub fn masar_sura(khazina: &KhaziantSuwar, miftah: &str) -> Option<String> {
-    khazina.mahalli(miftah).map(|masar| masar.to_string_lossy().into_owned())
+    khazina
+        .mahalli(miftah)
+        .map(|masar| masar.to_string_lossy().into_owned())
 }
 
 /// Every game's stored artwork keys, in two reads.
@@ -361,7 +363,10 @@ pub fn masar_sura(khazina: &KhaziantSuwar, miftah: &str) -> Option<String> {
 pub fn suwar_makhzuna(makhzan: &Makhzan) -> BTreeMap<LubaId, SuwarLuba> {
     let mut natija = BTreeMap::new();
     for mukhfiya in [false, true] {
-        let talab = TalabMaktaba { mukhfiya, ..TalabMaktaba::default() };
+        let talab = TalabMaktaba {
+            mukhfiya,
+            ..TalabMaktaba::default()
+        };
         match makhzan.bil_qira(|ittisal| SijillAlaab::jadeed(ittisal).qaima(&talab)) {
             Ok(sufuf) => {
                 for luba in sufuf {
@@ -384,8 +389,14 @@ pub fn suwar_makhzuna(makhzan: &Makhzan) -> BTreeMap<LubaId, SuwarLuba> {
 #[must_use]
 pub fn ghilaf_makhzun(khazina: &KhaziantSuwar, suwar: &SuwarLuba) -> GhilafMakhzun {
     GhilafMakhzun {
-        ghilaf: suwar.ghilaf.as_deref().and_then(|miftah| masar_sura(khazina, miftah)),
-        batl: suwar.batl.as_deref().and_then(|miftah| masar_sura(khazina, miftah)),
+        ghilaf: suwar
+            .ghilaf
+            .as_deref()
+            .and_then(|miftah| masar_sura(khazina, miftah)),
+        batl: suwar
+            .batl
+            .as_deref()
+            .and_then(|miftah| masar_sura(khazina, miftah)),
         lawn: suwar.lawn,
     }
 }
@@ -414,7 +425,10 @@ fn talab_bila_shiar_baeed(masadir: &MasadirSuwar) -> MasadirSuwar {
     MasadirSuwar {
         ghilaf: masadir.ghilaf.clone(),
         batl: masadir.batl.clone(),
-        shiar: masadir.shiar.clone().filter(|masdar| matches!(masdar, MasdarSura::Malaf(_))),
+        shiar: masadir
+            .shiar
+            .clone()
+            .filter(|masdar| matches!(masdar, MasdarSura::Malaf(_))),
     }
 }
 
@@ -441,9 +455,17 @@ fn ijma_hasila(
 ) -> HasilatLuba {
     let mut sujill = Vec::new();
     let khanat = [
-        (NAW_GHILAF, suwar.ghilaf.as_deref(), talab.masadir.ghilaf.as_ref()),
+        (
+            NAW_GHILAF,
+            suwar.ghilaf.as_deref(),
+            talab.masadir.ghilaf.as_ref(),
+        ),
         (NAW_BATL, suwar.batl.as_deref(), talab.masadir.batl.as_ref()),
-        (NAW_SHIAR, suwar.shiar.as_deref(), talab.masadir.shiar.as_ref()),
+        (
+            NAW_SHIAR,
+            suwar.shiar.as_deref(),
+            talab.masadir.shiar.as_ref(),
+        ),
     ];
 
     // Two entries for three slots, in the order above: the interface is handed
@@ -453,7 +475,9 @@ fn ijma_hasila(
     let mut masarat: [Option<String>; 2] = [None, None];
     for (fahras, (naw, miftah, masdar)) in khanat.into_iter().enumerate() {
         let Some(miftah) = miftah else { continue };
-        let Some(masar) = khazina.mahalli(miftah) else { continue };
+        let Some(masar) = khazina.mahalli(miftah) else {
+            continue;
+        };
         sujill.push(SuratMukhzana {
             miftah: miftah.to_owned(),
             naw: naw.to_owned(),
@@ -475,7 +499,12 @@ fn ijma_hasila(
     let [ghilaf, batl] = masarat;
     HasilatLuba {
         id,
-        hie: GhilafHie { muarrif: id.to_string(), ghilaf, batl, lawn: suwar.lawn },
+        hie: GhilafHie {
+            muarrif: id.to_string(),
+            ghilaf,
+            batl,
+            lawn: suwar.lawn,
+        },
         suwar,
         sujill,
     }

@@ -354,10 +354,7 @@ pub fn fann_min_tathbeet(jidhr: &Path, tanfidhi: Option<&Path>) -> Vec<MurashahS
 /// test in this crate and it lives in `silsila`, because two tests that agreed
 /// today would disagree the first time either was tuned.
 #[must_use]
-pub fn murashahat_fann(
-    jidhr: &Path,
-    tanfidhi: Option<&Path>,
-) -> Vec<(NawSura, Vec<MurashahSura>)> {
+pub fn murashahat_fann(jidhr: &Path, tanfidhi: Option<&Path>) -> Vec<(NawSura, Vec<MurashahSura>)> {
     let mut ghilaf = Vec::new();
     let mut batl = Vec::new();
     let mut shiar = Vec::new();
@@ -373,7 +370,11 @@ pub fn murashahat_fann(
         }
     }
 
-    vec![(NawSura::Ghilaf, ghilaf), (NawSura::Batl, batl), (NawSura::Shiar, shiar)]
+    vec![
+        (NawSura::Ghilaf, ghilaf),
+        (NawSura::Batl, batl),
+        (NawSura::Shiar, shiar),
+    ]
 }
 
 /// Which picture a candidate's shape makes it.
@@ -395,9 +396,9 @@ fn naw_min_abaad(ard: u32, irtifa: u32) -> NawSura {
 
 /// A candidate's pixel count, for the sort.
 fn masaha(murashah: &MurashahSura) -> u64 {
-    murashah
-        .abaad
-        .map_or(0, |(ard, irtifa)| u64::from(ard).saturating_mul(u64::from(irtifa)))
+    murashah.abaad.map_or(0, |(ard, irtifa)| {
+        u64::from(ard).saturating_mul(u64::from(irtifa))
+    })
 }
 
 /// Appends candidates, skipping paths already gathered and honouring the
@@ -465,7 +466,9 @@ fn murashahat_marasi(jidhr: &Path, hasad: &HasadMasah) -> Vec<(PathBuf, String)>
     // the player-settings splash inside `globalgamemanagers` is not, and see
     // the module header for why it stays closed.
     for marsa in &hasad.bayanat {
-        for masar in mudakhalat(marsa, |ism| ism.starts_with("splash") && imtidad_maqbul(ism)) {
+        for masar in mudakhalat(marsa, |ism| {
+            ism.starts_with("splash") && imtidad_maqbul(ism)
+        }) {
             let wasf = format!("Unity splash: {}", nisbi(jidhr, &masar));
             murashahat.push((masar, wasf));
         }
@@ -575,8 +578,9 @@ fn murashahat_godot(jidhr: &Path, hasad: &HasadMasah) -> Vec<(PathBuf, String)> 
             // The group first, then anywhere, because Godot 3 and Godot 4 do
             // not agree about which `[application]` sub-path the boot splash
             // lives under and both spellings appear in the wild.
-            let Some(khaam) =
-                malaf.qeema(MAQTA_GODOT, miftah).or_else(|| malaf.qeema_ay(miftah))
+            let Some(khaam) = malaf
+                .qeema(MAQTA_GODOT, miftah)
+                .or_else(|| malaf.qeema_ay(miftah))
             else {
                 continue;
             };
@@ -736,8 +740,9 @@ fn imsah(jidhr: &Path) -> HasadMasah {
         if hasad.malafat.len() >= HADD_MUJAMMAA {
             continue;
         }
-        if let Some((_, wasm)) =
-            ASMAA_MUHIMMA.iter().find(|(matlub, _)| *matlub == saghir.as_str())
+        if let Some((_, wasm)) = ASMAA_MUHIMMA
+            .iter()
+            .find(|(matlub, _)| *matlub == saghir.as_str())
         {
             let wasf = format!("{wasm}: {}", nisbi(jidhr, masar));
             hasad.malafat.push((masar.to_path_buf(), wasf));
@@ -760,7 +765,9 @@ fn qabil_lil_nuzul(mudkhal: &walkdir::DirEntry) -> bool {
     let Some(ism) = mudkhal.file_name().to_str() else {
         return true;
     };
-    !MUJALLADAT_MUSTATHNAT.iter().any(|mahjub| ism.eq_ignore_ascii_case(mahjub))
+    !MUJALLADAT_MUSTATHNAT
+        .iter()
+        .any(|mahjub| ism.eq_ignore_ascii_case(mahjub))
 }
 
 /// Records an anchor, up to the per-kind cap.
@@ -799,8 +806,7 @@ fn abaad_malaf(masar: &Path) -> Option<(u32, u32)> {
     };
 
     let biksilat = u64::from(ard).saturating_mul(u64::from(irtifa));
-    if ard == 0 || irtifa == 0 || ard > HADD_BUD || irtifa > HADD_BUD || biksilat > HADD_BIKSILAT
-    {
+    if ard == 0 || irtifa == 0 || ard > HADD_BUD || irtifa > HADD_BUD || biksilat > HADD_BIKSILAT {
         tracing::debug!(
             masar = %masar.display(),
             ard,
@@ -834,12 +840,17 @@ fn iqra_nass_bi_hadd(masar: &Path, hadd: u64) -> Option<String> {
 
 /// A file's extension, lowercased.
 fn imtidad_saghir(masar: &Path) -> Option<String> {
-    masar.extension().and_then(OsStr::to_str).map(str::to_ascii_lowercase)
+    masar
+        .extension()
+        .and_then(OsStr::to_str)
+        .map(str::to_ascii_lowercase)
 }
 
 /// Whether a file name carries a given extension, in any case.
 fn imtidad_huwa(ism: &str, imtidad: &str) -> bool {
-    Path::new(ism).extension().is_some_and(|mawjud| mawjud.eq_ignore_ascii_case(imtidad))
+    Path::new(ism)
+        .extension()
+        .is_some_and(|mawjud| mawjud.eq_ignore_ascii_case(imtidad))
 }
 
 /// Whether a lowercased file name ends in an extension this crate can measure.
@@ -894,7 +905,11 @@ fn mudakhalat(mujallad: &Path, mustahiq: impl Fn(&str) -> bool) -> Vec<PathBuf> 
 /// Falls back to the whole path when the candidate is somehow outside the root,
 /// which is better than a description that silently loses where the file was.
 fn nisbi(jidhr: &Path, masar: &Path) -> String {
-    masar.strip_prefix(jidhr).unwrap_or(masar).display().to_string()
+    masar
+        .strip_prefix(jidhr)
+        .unwrap_or(masar)
+        .display()
+        .to_string()
 }
 
 /// Unwraps a `project.godot` value.

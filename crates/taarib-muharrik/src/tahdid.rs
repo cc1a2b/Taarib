@@ -357,8 +357,11 @@ pub fn thiqa(jami: &JamiHasilat, aila: AilatMuharrik) -> u8 {
         (asas_majhul(jami), 0)
     } else {
         let Some(aqwa) = daimun.first() else { return 0 };
-        let musanidun: u16 =
-            daimun.iter().skip(1).map(|wazn| musahamat_shahid(*wazn)).sum::<u16>();
+        let musanidun: u16 = daimun
+            .iter()
+            .skip(1)
+            .map(|wazn| musahamat_shahid(*wazn))
+            .sum::<u16>();
         (u16::from(*aqwa), musanidun.min(SAQF_TAADUD))
     };
 
@@ -374,7 +377,11 @@ pub fn thiqa(jami: &JamiHasilat, aila: AilatMuharrik) -> u8 {
         .sum::<u16>()
         .min(SAQF_TAARUD);
 
-    let saqf = if aila == AilatMuharrik::Majhul { SAQF_MAJHUL } else { SAQF_THIQA };
+    let saqf = if aila == AilatMuharrik::Majhul {
+        SAQF_MAJHUL
+    } else {
+        SAQF_THIQA
+    };
     let qeema = asas.saturating_add(taadud).saturating_sub(uqubat).min(saqf);
     u8::try_from(qeema).unwrap_or(100)
 }
@@ -400,9 +407,17 @@ pub fn taarud(jami: &JamiHasilat) -> Option<TaarudDalail> {
     if let Some(mudkhal) = mudkhal_faiz {
         ailat.push(*mudkhal);
     }
-    ailat.extend(murashshahun.iter().filter(|(aila, _)| Some(*aila) != faiz).copied());
+    ailat.extend(
+        murashshahun
+            .iter()
+            .filter(|(aila, _)| Some(*aila) != faiz)
+            .copied(),
+    );
 
-    Some(TaarudDalail { sabab: sabab_taarud(jami, &murashshahun, faiz, ghilaf), ailat })
+    Some(TaarudDalail {
+        sabab: sabab_taarud(jami, &murashshahun, faiz, ghilaf),
+        ailat,
+    })
 }
 
 /// Whether this identification was made over a packaging shell that resolution
@@ -414,7 +429,10 @@ pub fn taarud(jami: &JamiHasilat) -> Option<TaarudDalail> {
 /// unwrapped one is not.
 #[must_use]
 pub fn maghlufa(muharrik: &Muharrik) -> bool {
-    muharrik.dalail.iter().any(|daleel| daleel.wasf.starts_with(WASF_GHILAF))
+    muharrik
+        .dalail
+        .iter()
+        .any(|daleel| daleel.wasf.starts_with(WASF_GHILAF))
 }
 
 /// Whether resolution had to choose between claims about different engines.
@@ -423,7 +441,10 @@ pub fn maghlufa(muharrik: &Muharrik) -> bool {
 /// a report loaded back out of the store months later.
 #[must_use]
 pub fn mutaarid(muharrik: &Muharrik) -> bool {
-    muharrik.dalail.iter().any(|daleel| daleel.wasf.starts_with(WASF_TAARUD))
+    muharrik
+        .dalail
+        .iter()
+        .any(|daleel| daleel.wasf.starts_with(WASF_TAARUD))
 }
 
 /// Every family a detector named, strongest first, with `Majhul` removed.
@@ -432,7 +453,10 @@ pub fn mutaarid(muharrik: &Muharrik) -> bool {
 /// concluding, which [`crate::fahs`] forbids, so it is dropped here rather than
 /// allowed to compete.
 fn murashshahun(jami: &JamiHasilat) -> Vec<(AilatMuharrik, u8)> {
-    jami.ailat().into_iter().filter(|(aila, _)| *aila != AilatMuharrik::Majhul).collect()
+    jami.ailat()
+        .into_iter()
+        .filter(|(aila, _)| *aila != AilatMuharrik::Majhul)
+        .collect()
 }
 
 /// The strongest observation of each detector that named `aila`, strongest
@@ -468,10 +492,18 @@ fn hajm_daim(jami: &JamiHasilat, aila: AilatMuharrik) -> u32 {
 /// How much was examined, for a game no detector could name.
 fn asas_majhul(jami: &JamiHasilat) -> u16 {
     let mut asas = ASAS_MAJHUL;
-    if jami.hasilat.iter().any(|(_, hasila)| hasila.mimariya.is_some()) {
+    if jami
+        .hasilat
+        .iter()
+        .any(|(_, hasila)| hasila.mimariya.is_some())
+    {
         asas = asas.saturating_add(ZIYADAT_TANFIDHI);
     }
-    if jami.rusum().iter().any(|wajiha| *wajiha != WajihaRusum::Majhula) {
+    if jami
+        .rusum()
+        .iter()
+        .any(|wajiha| *wajiha != WajihaRusum::Majhula)
+    {
         asas = asas.saturating_add(ZIYADAT_RUSUM);
     }
 
@@ -491,12 +523,12 @@ fn asas_majhul(jami: &JamiHasilat) -> u16 {
 /// there.
 fn ghilaf_hawla_dakhil(jami: &JamiHasilat) -> Option<u8> {
     let murashshahun = murashshahun(jami);
-    let (_, wazn) = murashshahun.iter().find(|(aila, _)| *aila == AilatMuharrik::Electron)?;
+    let (_, wazn) = murashshahun
+        .iter()
+        .find(|(aila, _)| *aila == AilatMuharrik::Electron)?;
     let lahu_dakhil = murashshahun
         .iter()
-        .any(|(aila, quwwa)| {
-            *aila != AilatMuharrik::Electron && *quwwa >= HADD_ADNA_LIL_TABANNI
-        });
+        .any(|(aila, quwwa)| *aila != AilatMuharrik::Electron && *quwwa >= HADD_ADNA_LIL_TABANNI);
     lahu_dakhil.then_some(*wazn)
 }
 
@@ -572,7 +604,11 @@ fn sabab_taarud(
     ghilaf: Option<u8>,
 ) -> String {
     let Some(mukhtar) = faiz else {
-        let aqwa = murashshahun.iter().map(|(_, wazn)| *wazn).max().unwrap_or(0);
+        let aqwa = murashshahun
+            .iter()
+            .map(|(_, wazn)| *wazn)
+            .max()
+            .unwrap_or(0);
         return format!(
             "nothing adopted: the strongest claim for any engine is {aqwa}, below the \
              floor of {HADD_ADNA_LIL_TABANNI} at which a claim becomes a conclusion. The \
@@ -684,7 +720,11 @@ pub fn hall(jami: &JamiHasilat) -> Muharrik {
         isdar: isdar_min(&daimun),
         khalfiya: khalfiya_min(aila, &daimun, &hiyad),
         itarat: itarat_min(&daimun, &hiyad, &ghilafiyun),
-        rusum: jami.rusum().into_iter().filter(|wajiha| *wajiha != WajihaRusum::Majhula).collect(),
+        rusum: jami
+            .rusum()
+            .into_iter()
+            .filter(|wajiha| *wajiha != WajihaRusum::Majhula)
+            .collect(),
         mimariya: mimariya_min(&daimun, jami),
         thiqa: thiqa(jami, aila),
         dalail: dalail_min(jami, aila, mukhtar, ghilaf, &murashshahun),
@@ -709,8 +749,14 @@ pub fn hall(jami: &JamiHasilat) -> Muharrik {
 fn isdar_min(daimun: &[&HasilatFahs]) -> Option<IsdarMuharrik> {
     let mut afdal: Option<((bool, u8, u8), &IsdarMuharrik)> = None;
     for hasila in daimun {
-        let Some(isdar) = hasila.isdar.as_ref() else { continue };
-        let miftah = (!mushtaqq(isdar), hujjiyat_isdar(hasila, isdar), hasila.aqwa());
+        let Some(isdar) = hasila.isdar.as_ref() else {
+            continue;
+        };
+        let miftah = (
+            !mushtaqq(isdar),
+            hujjiyat_isdar(hasila, isdar),
+            hasila.aqwa(),
+        );
         if afdal.is_none_or(|(sabiq, _)| miftah > sabiq) {
             afdal = Some((miftah, isdar));
         }
@@ -738,7 +784,13 @@ fn hujjiyat_isdar(hasila: &HasilatFahs, isdar: &IsdarMuharrik) -> u8 {
         .filter(|daleel| daleel.wasf.contains(&isdar.khaam))
         .map(|daleel| hujjiyat_masdar(daleel.naw))
         .max()
-        .or_else(|| hasila.dalail.iter().map(|daleel| hujjiyat_masdar(daleel.naw)).max())
+        .or_else(|| {
+            hasila
+                .dalail
+                .iter()
+                .map(|daleel| hujjiyat_masdar(daleel.naw))
+                .max()
+        })
         .unwrap_or(0)
 }
 
@@ -777,8 +829,11 @@ fn khalfiya_min(
 const fn khalfiya_tunasib(aila: AilatMuharrik, khalfiya: KhalfiyaBarmajiya) -> bool {
     match aila {
         AilatMuharrik::Unity => {
-            matches!(khalfiya, KhalfiyaBarmajiya::Mono | KhalfiyaBarmajiya::Il2cpp)
-        }
+            matches!(
+                khalfiya,
+                KhalfiyaBarmajiya::Mono | KhalfiyaBarmajiya::Il2cpp
+            )
+        },
         AilatMuharrik::Unreal => matches!(khalfiya, KhalfiyaBarmajiya::UnrealNative),
         AilatMuharrik::Godot => matches!(
             khalfiya,
@@ -788,7 +843,7 @@ const fn khalfiya_tunasib(aila: AilatMuharrik, khalfiya: KhalfiyaBarmajiya) -> b
         ),
         AilatMuharrik::RpgMakerMv | AilatMuharrik::RpgMakerMz | AilatMuharrik::Electron => {
             matches!(khalfiya, KhalfiyaBarmajiya::JavaScript)
-        }
+        },
         AilatMuharrik::RpgMakerVxAce => matches!(khalfiya, KhalfiyaBarmajiya::Ruby),
         AilatMuharrik::Renpy => matches!(khalfiya, KhalfiyaBarmajiya::Python),
         AilatMuharrik::GameMaker => matches!(khalfiya, KhalfiyaBarmajiya::GameMakerVm),
@@ -824,7 +879,7 @@ const fn khalfiya_bunyawiya(aila: AilatMuharrik) -> Option<KhalfiyaBarmajiya> {
         AilatMuharrik::Unreal => Some(KhalfiyaBarmajiya::UnrealNative),
         AilatMuharrik::RpgMakerMv | AilatMuharrik::RpgMakerMz | AilatMuharrik::Electron => {
             Some(KhalfiyaBarmajiya::JavaScript)
-        }
+        },
         AilatMuharrik::RpgMakerVxAce => Some(KhalfiyaBarmajiya::Ruby),
         AilatMuharrik::Renpy => Some(KhalfiyaBarmajiya::Python),
         AilatMuharrik::GameMaker => Some(KhalfiyaBarmajiya::GameMakerVm),
@@ -930,7 +985,12 @@ fn dalail_min(
                 aila_akhar.ism()
             )
         };
-        dalail.push(Daleel { naw: NawDaleel::BinyatMujallad, wasf, mawqi: None, wazn: *wazn });
+        dalail.push(Daleel {
+            naw: NawDaleel::BinyatMujallad,
+            wasf,
+            mawqi: None,
+            wazn: *wazn,
+        });
     }
 
     dalail.sort_by_key(|daleel| Reverse(daleel.wazn));

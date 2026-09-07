@@ -4,10 +4,10 @@ use std::path::PathBuf;
 
 use taarib_tahdith::bayan::{BayanTahdith, MadkhalTahdith};
 use taarib_tahdith::{ihlil, intiqa, jalb, tabdil};
+use taarib_usus::ISDAR;
 use taarib_usus::idadat::{Idadat, MakhzanIdadat};
 use taarib_usus::khata::{Khata, Natija};
 use taarib_usus::masarat::Masarat;
-use taarib_usus::ISDAR;
 
 use std::sync::Arc;
 
@@ -66,7 +66,8 @@ async fn ijlib_bayan(idadat: &Idadat) -> Natija<BayanTahdith> {
 
     // The same anchor that verifies a patch verifies the channel: a release
     // client cannot be updated by anything the owner did not sign.
-    ihlil(&matn, tawqee.trim(), &taarib_khatm::MIRSAT_MALIK).map_err(|khata| Khata::min_tafsir(&khata))
+    ihlil(&matn, tawqee.trim(), &taarib_khatm::MIRSAT_MALIK)
+        .map_err(|khata| Khata::min_tafsir(&khata))
 }
 
 /// One transport failure, as the update crate names it.
@@ -95,7 +96,8 @@ pub async fn tahaqquq_tahdith(
     let bayan = ijlib_bayan(&idadat).await?;
     let qanat = qanat_nassiya(&idadat);
 
-    let Some(madkhal) = intiqa(&bayan, hadaf_hali(), &qanat, ISDAR).map_err(|khata| Khata::min_tafsir(&khata))?
+    let Some(madkhal) =
+        intiqa(&bayan, hadaf_hali(), &qanat, ISDAR).map_err(|khata| Khata::min_tafsir(&khata))?
     else {
         return Ok(None);
     };
@@ -140,11 +142,14 @@ pub async fn nazzil_tahdith(
 
     let sandooq = masarat.sandooq();
     taarib_usus::masarat::insha_mujallad(&sandooq)?;
-    let malaf = jalb::ijlib(madkhal, &sandooq).await.map_err(|khata| Khata::min_tafsir(&khata))?;
+    let malaf = jalb::ijlib(madkhal, &sandooq)
+        .await
+        .map_err(|khata| Khata::min_tafsir(&khata))?;
 
     let tanfidhi = masar_tanfidhi()?;
     let tareeqa = tabdil::istadill(&tanfidhi);
-    let khutta = tabdil::khattit(tareeqa, &tanfidhi, &malaf).map_err(|khata| Khata::min_tafsir(&khata))?;
+    let khutta =
+        tabdil::khattit(tareeqa, &tanfidhi, &malaf).map_err(|khata| Khata::min_tafsir(&khata))?;
 
     if khutta.tareeqa == tabdil::TareeqatTabdil::Nsis {
         // The installer replaces a running executable, so it is run at exit

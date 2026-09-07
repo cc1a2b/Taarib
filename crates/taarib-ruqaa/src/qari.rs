@@ -48,9 +48,8 @@ use bytemuck::Pod;
 use crate::aqsam::{MadkhalQism, NawDaght, NawQism};
 use crate::jadawil::{
     HAJM_TASDIR, HAJM_TASDIR_KABIR, MarjaNass, SijillHarf, SijillKhatt, SijillMawdiShakl,
-    SijillMiftahShakl, SijillNass, SijillNitaq, SijillQayd, SijillSafha, SijillSatr,
-    SijillTakhtit, TarwisatKhareeta, TarwisatKhatt, TarwisatLawha, TarwisatNusus, TarwisatQiyud,
-    TarwisatTakhtit,
+    SijillMiftahShakl, SijillNass, SijillNitaq, SijillQayd, SijillSafha, SijillSatr, SijillTakhtit,
+    TarwisatKhareeta, TarwisatKhatt, TarwisatLawha, TarwisatNusus, TarwisatQiyud, TarwisatTakhtit,
 };
 use crate::khata::KhataRuqaa;
 use crate::muhadhah::BaytMuhadhah;
@@ -134,7 +133,12 @@ impl<'a> Ruqaa<'a> {
         let jadwal = JadwalAqsam::min_bayt(bayt, &tarwisa)?;
         tahaqquq_basma(bayt, &tarwisa, &jadwal)?;
         let tawqee = iqra_tawqee(bayt, &jadwal)?;
-        Ok(Self { bayt, tarwisa, jadwal, tawqee })
+        Ok(Self {
+            bayt,
+            tarwisa,
+            jadwal,
+            tawqee,
+        })
     }
 
     /// The header.
@@ -196,8 +200,10 @@ impl<'a> Ruqaa<'a> {
     /// it promised — the check that turns a decompression bomb into a refusal
     /// rather than an exhausted machine.
     pub fn qism(&self, naw: NawQism) -> Result<BayanatQism<'a>, KhataRuqaa> {
-        let madkhal =
-            self.jadwal.qism(naw).ok_or_else(|| KhataRuqaa::QismMafqud { ism: naw.ism() })?;
+        let madkhal = self
+            .jadwal
+            .qism(naw)
+            .ok_or_else(|| KhataRuqaa::QismMafqud { ism: naw.ism() })?;
         let makhzun = shariha(self.bayt, &madkhal)?;
         match madkhal.daght {
             NawDaght::Bila => Ok(BayanatQism::Muarra(makhzun)),
@@ -234,8 +240,9 @@ impl<'a> Ruqaa<'a> {
     /// not JSON.
     pub fn bayan_json(&self) -> Result<serde_json::Value, KhataRuqaa> {
         let bayanat = self.bayan()?;
-        serde_json::from_slice(bayanat.bayt())
-            .map_err(|khata| KhataRuqaa::BayanTalif { tafsil: khata.to_string() })
+        serde_json::from_slice(bayanat.bayt()).map_err(|khata| KhataRuqaa::BayanTalif {
+            tafsil: khata.to_string(),
+        })
     }
 }
 
@@ -274,12 +281,17 @@ impl MalafRuqaa {
     /// write access to the patch directory — who, having write access to the
     /// patch directory, has already won.
     pub fn iftah(masar: &std::path::Path) -> Result<Self, KhataRuqaa> {
-        let malaf = std::fs::File::open(masar)
-            .map_err(|sabab| KhataRuqaa::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+        let malaf = std::fs::File::open(masar).map_err(|sabab| KhataRuqaa::KhataMalaf {
+            masar: masar.to_path_buf(),
+            sabab,
+        })?;
         // SAFETY: see the section above. The mapping is read-only, and the file
         // is one this product wrote and does not rewrite in place.
-        let khareeta = unsafe { memmap2::Mmap::map(&malaf) }
-            .map_err(|sabab| KhataRuqaa::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+        let khareeta =
+            unsafe { memmap2::Mmap::map(&malaf) }.map_err(|sabab| KhataRuqaa::KhataMalaf {
+                masar: masar.to_path_buf(),
+                sabab,
+            })?;
         // Validated here rather than on demand so that a malformed patch is
         // refused at open, where the caller still has the path to name in the
         // message.
@@ -354,8 +366,10 @@ impl JadwalNusus<'_> {
     /// tables are keyed by.
     #[must_use]
     pub fn jid(&self, miftah: u64) -> Option<(u32, &SijillNass)> {
-        let fahras =
-            self.sijillat.binary_search_by(|sijill| sijill.miftah.cmp(&miftah)).ok()?;
+        let fahras = self
+            .sijillat
+            .binary_search_by(|sijill| sijill.miftah.cmp(&miftah))
+            .ok()?;
         let sijill = self.sijillat.get(fahras)?;
         Some((u32::try_from(fahras).ok()?, sijill))
     }
@@ -383,7 +397,11 @@ impl JadwalNusus<'_> {
 #[must_use]
 pub fn miftah_min_nass(nass: &str) -> u64 {
     let basma = blake3::hash(nass.as_bytes());
-    let awwal: [u8; 8] = basma.as_bytes().first_chunk::<8>().copied().unwrap_or([0; 8]);
+    let awwal: [u8; 8] = basma
+        .as_bytes()
+        .first_chunk::<8>()
+        .copied()
+        .unwrap_or([0; 8]);
     u64::from_le_bytes(awwal)
 }
 
@@ -402,16 +420,37 @@ pub fn nusus(bayt: &[u8]) -> Result<JadwalNusus<'_>, KhataRuqaa> {
     let tasdir: TarwisatNusus = iqra_tasdir(naw, bayt, HAJM_TASDIR_KABIR)?;
     tasdir.tahaqquq(tul_qism)?;
 
-    let sijillat: &[SijillNass] =
-        qass_masfufa(naw, bayt, "izahat_nusus", tasdir.izahat_nusus, tasdir.adad_nusus)?;
-    let nitaqat: &[SijillNitaq] =
-        qass_masfufa(naw, bayt, "izahat_nitaqat", tasdir.izahat_nitaqat, tasdir.adad_nitaqat)?;
-    let hawd = qass_bayt(naw, bayt, "izahat_hawd", tasdir.izahat_hawd, tasdir.tul_hawd)?;
+    let sijillat: &[SijillNass] = qass_masfufa(
+        naw,
+        bayt,
+        "izahat_nusus",
+        tasdir.izahat_nusus,
+        tasdir.adad_nusus,
+    )?;
+    let nitaqat: &[SijillNitaq] = qass_masfufa(
+        naw,
+        bayt,
+        "izahat_nitaqat",
+        tasdir.izahat_nitaqat,
+        tasdir.adad_nitaqat,
+    )?;
+    let hawd = qass_bayt(
+        naw,
+        bayt,
+        "izahat_hawd",
+        tasdir.izahat_hawd,
+        tasdir.tul_hawd,
+    )?;
 
     tahaqquq_tarteeb(naw, sijillat.len(), |i| sijillat.get(i).map(|s| s.miftah))?;
     tahaqquq_tarteeb_ghayr_hasir(naw, nitaqat.len(), |i| nitaqat.get(i).map(|n| n.nass))?;
 
-    Ok(JadwalNusus { tasdir, sijillat, nitaqat, hawd })
+    Ok(JadwalNusus {
+        tasdir,
+        sijillat,
+        nitaqat,
+        hawd,
+    })
 }
 
 /// The three arrays of the precomputed layout section.
@@ -445,7 +484,10 @@ impl JadwalTakhtit<'_> {
     #[must_use]
     pub fn jid(&self, nass: u32, hajm_rubi: u16) -> Option<&SijillTakhtit> {
         let matlub = (nass, hajm_rubi);
-        let fahras = self.ruus.binary_search_by(|ras| ras.miftah().cmp(&matlub)).ok()?;
+        let fahras = self
+            .ruus
+            .binary_search_by(|ras| ras.miftah().cmp(&matlub))
+            .ok()?;
         self.ruus.get(fahras)
     }
 
@@ -492,10 +534,20 @@ pub fn takhtit(bayt: &[u8]) -> Result<JadwalTakhtit<'_>, KhataRuqaa> {
         tasdir.izahat_takhtitat,
         tasdir.adad_takhtitat,
     )?;
-    let huruf: &[SijillHarf] =
-        qass_masfufa(naw, bayt, "izahat_huruf", tasdir.izahat_huruf, tasdir.adad_huruf)?;
-    let sutur: &[SijillSatr] =
-        qass_masfufa(naw, bayt, "izahat_sutur", tasdir.izahat_sutur, tasdir.adad_sutur)?;
+    let huruf: &[SijillHarf] = qass_masfufa(
+        naw,
+        bayt,
+        "izahat_huruf",
+        tasdir.izahat_huruf,
+        tasdir.adad_huruf,
+    )?;
+    let sutur: &[SijillSatr] = qass_masfufa(
+        naw,
+        bayt,
+        "izahat_sutur",
+        tasdir.izahat_sutur,
+        tasdir.adad_sutur,
+    )?;
 
     tahaqquq_tarteeb(naw, ruus.len(), |i| ruus.get(i).map(SijillTakhtit::miftah))?;
 
@@ -509,7 +561,12 @@ pub fn takhtit(bayt: &[u8]) -> Result<JadwalTakhtit<'_>, KhataRuqaa> {
         tahaqquq_nitaq("layout's line", ras.awwal_satr, ras.adad_sutur, adad_sutur)?;
     }
 
-    Ok(JadwalTakhtit { tasdir, ruus, huruf, sutur })
+    Ok(JadwalTakhtit {
+        tasdir,
+        ruus,
+        huruf,
+        sutur,
+    })
 }
 
 /// The glyph map: keys and positions, parallel.
@@ -538,8 +595,10 @@ impl JadwalKhareeta<'_> {
     #[must_use]
     pub fn jid(&self, miftah: SijillMiftahShakl) -> Option<&SijillMawdiShakl> {
         let matlub = miftah.raqm();
-        let fahras =
-            self.mafatih.binary_search_by(|mawjud| mawjud.raqm().cmp(&matlub)).ok()?;
+        let fahras = self
+            .mafatih
+            .binary_search_by(|mawjud| mawjud.raqm().cmp(&matlub))
+            .ok()?;
         self.mawadi.get(fahras)
     }
 }
@@ -559,14 +618,30 @@ pub fn khareeta(bayt: &[u8]) -> Result<JadwalKhareeta<'_>, KhataRuqaa> {
     let tasdir: TarwisatKhareeta = iqra_tasdir(naw, bayt, HAJM_TASDIR)?;
     tasdir.tahaqquq(tul_qism)?;
 
-    let mafatih: &[SijillMiftahShakl] =
-        qass_masfufa(naw, bayt, "izahat_mafatih", tasdir.izahat_mafatih, tasdir.adad)?;
-    let mawadi: &[SijillMawdiShakl] =
-        qass_masfufa(naw, bayt, "izahat_mawadi", tasdir.izahat_mawadi, tasdir.adad)?;
+    let mafatih: &[SijillMiftahShakl] = qass_masfufa(
+        naw,
+        bayt,
+        "izahat_mafatih",
+        tasdir.izahat_mafatih,
+        tasdir.adad,
+    )?;
+    let mawadi: &[SijillMawdiShakl] = qass_masfufa(
+        naw,
+        bayt,
+        "izahat_mawadi",
+        tasdir.izahat_mawadi,
+        tasdir.adad,
+    )?;
 
-    tahaqquq_tarteeb(naw, mafatih.len(), |i| mafatih.get(i).copied().map(SijillMiftahShakl::raqm))?;
+    tahaqquq_tarteeb(naw, mafatih.len(), |i| {
+        mafatih.get(i).copied().map(SijillMiftahShakl::raqm)
+    })?;
 
-    Ok(JadwalKhareeta { tasdir, mafatih, mawadi })
+    Ok(JadwalKhareeta {
+        tasdir,
+        mafatih,
+        mawadi,
+    })
 }
 
 /// The constraints and reflow hints.
@@ -588,7 +663,10 @@ impl JadwalQiyud<'_> {
     /// The constraint recorded for one string, if there is one.
     #[must_use]
     pub fn jid(&self, nass: u32) -> Option<&SijillQayd> {
-        let fahras = self.sijillat.binary_search_by(|qayd| qayd.nass.cmp(&nass)).ok()?;
+        let fahras = self
+            .sijillat
+            .binary_search_by(|qayd| qayd.nass.cmp(&nass))
+            .ok()?;
         self.sijillat.get(fahras)
     }
 }
@@ -605,9 +683,10 @@ pub fn qiyud(bayt: &[u8]) -> Result<JadwalQiyud<'_>, KhataRuqaa> {
     let tasdir: TarwisatQiyud = iqra_tasdir(naw, bayt, HAJM_TASDIR)?;
     tasdir.tahaqquq(tul_qism)?;
 
-    let sijillat: &[SijillQayd] =
-        qass_masfufa(naw, bayt, "izaha", tasdir.izaha, tasdir.adad)?;
-    tahaqquq_tarteeb(naw, sijillat.len(), |i| sijillat.get(i).map(|qayd| qayd.nass))?;
+    let sijillat: &[SijillQayd] = qass_masfufa(naw, bayt, "izaha", tasdir.izaha, tasdir.adad)?;
+    tahaqquq_tarteeb(naw, sijillat.len(), |i| {
+        sijillat.get(i).map(|qayd| qayd.nass)
+    })?;
 
     Ok(JadwalQiyud { tasdir, sijillat })
 }
@@ -656,15 +735,24 @@ pub fn lawha(bayt: &[u8]) -> Result<JadwalLawha<'_>, KhataRuqaa> {
     let tasdir: TarwisatLawha = iqra_tasdir(naw, bayt, HAJM_TASDIR)?;
     tasdir.tahaqquq(tul_qism)?;
 
-    let safahat: &[SijillSafha] =
-        qass_masfufa(naw, bayt, "izahat_safahat", tasdir.izahat_safahat, tasdir.adad_safahat)?;
+    let safahat: &[SijillSafha] = qass_masfufa(
+        naw,
+        bayt,
+        "izahat_safahat",
+        tasdir.izahat_safahat,
+        tasdir.adad_safahat,
+    )?;
 
     for (fahras, sijill) in safahat.iter().enumerate() {
         let raqm = u32::try_from(fahras).unwrap_or(u32::MAX);
         let izaha = u64::from(sijill.izaha);
         let nihaya = izaha.saturating_add(u64::from(sijill.tul));
-        let talifa =
-            || KhataRuqaa::SafhaTalifa { safha: raqm, izaha, nihaya, tul: tul_qism };
+        let talifa = || KhataRuqaa::SafhaTalifa {
+            safha: raqm,
+            izaha,
+            nihaya,
+            tul: tul_qism,
+        };
 
         // The byte count must equal the dimensions. A page that disagrees with
         // itself uploads a texture whose rows are shifted against the rectangles
@@ -678,7 +766,11 @@ pub fn lawha(bayt: &[u8]) -> Result<JadwalLawha<'_>, KhataRuqaa> {
         }
     }
 
-    Ok(JadwalLawha { tasdir, safahat, bayt })
+    Ok(JadwalLawha {
+        tasdir,
+        safahat,
+        bayt,
+    })
 }
 
 /// The font chain the patch declares.
@@ -731,19 +823,31 @@ pub fn khatt(bayt: &[u8]) -> Result<JadwalKhatt<'_>, KhataRuqaa> {
     let tasdir: TarwisatKhatt = iqra_tasdir(naw, bayt, HAJM_TASDIR)?;
     tasdir.tahaqquq(tul_qism)?;
 
-    let sijillat: &[SijillKhatt] =
-        qass_masfufa(naw, bayt, "izahat_khutut", tasdir.izahat_khutut, tasdir.adad_khutut)?;
-    let hawd = qass_bayt(naw, bayt, "izahat_hawd", tasdir.izahat_hawd, tasdir.tul_hawd)?;
+    let sijillat: &[SijillKhatt] = qass_masfufa(
+        naw,
+        bayt,
+        "izahat_khutut",
+        tasdir.izahat_khutut,
+        tasdir.adad_khutut,
+    )?;
+    let hawd = qass_bayt(
+        naw,
+        bayt,
+        "izahat_hawd",
+        tasdir.izahat_hawd,
+        tasdir.tul_hawd,
+    )?;
 
     let adad = u32::try_from(sijillat.len()).unwrap_or(u32::MAX);
     for sijill in sijillat {
-        let nihaya = u64::from(sijill.izahat_basma).checked_add(32).ok_or(
-            KhataRuqaa::FahrasKharij {
-                haql: "font record's content hash",
-                fahras: sijill.izahat_basma,
-                adad,
-            },
-        )?;
+        let nihaya =
+            u64::from(sijill.izahat_basma)
+                .checked_add(32)
+                .ok_or(KhataRuqaa::FahrasKharij {
+                    haql: "font record's content hash",
+                    fahras: sijill.izahat_basma,
+                    adad,
+                })?;
         if nihaya > tul_qism {
             return Err(KhataRuqaa::FahrasKharij {
                 haql: "font record's content hash",
@@ -753,7 +857,12 @@ pub fn khatt(bayt: &[u8]) -> Result<JadwalKhatt<'_>, KhataRuqaa> {
         }
     }
 
-    Ok(JadwalKhatt { tasdir, sijillat, hawd, bayt })
+    Ok(JadwalKhatt {
+        tasdir,
+        sijillat,
+        hawd,
+        bayt,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -775,7 +884,10 @@ pub fn takhtit_wahid<'a>(
     let harf_nihaya = harf_bidaya.checked_add(usize::try_from(ras.adad_huruf).ok()?)?;
     let satr_bidaya = usize::try_from(ras.awwal_satr).ok()?;
     let satr_nihaya = satr_bidaya.checked_add(usize::try_from(ras.adad_sutur).ok()?)?;
-    Some((huruf.get(harf_bidaya..harf_nihaya)?, sutur.get(satr_bidaya..satr_nihaya)?))
+    Some((
+        huruf.get(harf_bidaya..harf_nihaya)?,
+        sutur.get(satr_bidaya..satr_nihaya)?,
+    ))
 }
 
 /// The style spans belonging to one string.
@@ -803,8 +915,11 @@ fn shariha<'a>(bayt: &'a [u8], madkhal: &MadkhalQism) -> Result<&'a [u8], KhataR
     };
     let bidaya = hajm_usize(madkhal.izaha).ok_or_else(|| kharij("izaha", madkhal.izaha))?;
     let tul = hajm_usize(madkhal.tul_makhzun).ok_or_else(|| kharij("tul", madkhal.tul_makhzun))?;
-    let nihaya = bidaya.checked_add(tul).ok_or_else(|| kharij("tul", madkhal.tul_makhzun))?;
-    bayt.get(bidaya..nihaya).ok_or_else(|| kharij("izaha", madkhal.izaha))
+    let nihaya = bidaya
+        .checked_add(tul)
+        .ok_or_else(|| kharij("tul", madkhal.tul_makhzun))?;
+    bayt.get(bidaya..nihaya)
+        .ok_or_else(|| kharij("izaha", madkhal.izaha))
 }
 
 /// A section's preamble, cast in place.
@@ -815,13 +930,13 @@ fn iqra_tasdir<T: Pod>(naw: NawQism, bayt: &[u8], hajm: usize) -> Result<T, Khat
         qeema: tul_u64(bayt.len()),
         hadd: tul_u64(hajm),
     })?;
-    bytemuck::try_from_bytes::<T>(khana).copied().map_err(|_| {
-        KhataRuqaa::MuhadhahaGhayrSaliha {
+    bytemuck::try_from_bytes::<T>(khana)
+        .copied()
+        .map_err(|_| KhataRuqaa::MuhadhahaGhayrSaliha {
             naw: naw.raqm(),
             haql: "tasdir",
             izaha: 0,
-        }
-    })
+        })
 }
 
 /// One array of a section, cast in place.
@@ -839,16 +954,24 @@ fn qass_masfufa<'a, T: Pod>(
     adad: u32,
 ) -> Result<&'a [T], KhataRuqaa> {
     let raqm = naw.raqm();
-    let talif =
-        |qeema: u64| KhataRuqaa::JadwalTalif { naw: raqm, haql, qeema, hadd: tul_u64(bayt.len()) };
+    let talif = |qeema: u64| KhataRuqaa::JadwalTalif {
+        naw: raqm,
+        haql,
+        qeema,
+        hadd: tul_u64(bayt.len()),
+    };
 
     let bidaya = usize::try_from(izaha).map_err(|_| talif(u64::from(izaha)))?;
     let tul = usize::try_from(adad)
         .ok()
         .and_then(|adad| adad.checked_mul(size_of::<T>()))
         .ok_or_else(|| talif(u64::from(adad)))?;
-    let nihaya = bidaya.checked_add(tul).ok_or_else(|| talif(u64::from(adad)))?;
-    let khaam = bayt.get(bidaya..nihaya).ok_or_else(|| talif(u64::from(izaha)))?;
+    let nihaya = bidaya
+        .checked_add(tul)
+        .ok_or_else(|| talif(u64::from(adad)))?;
+    let khaam = bayt
+        .get(bidaya..nihaya)
+        .ok_or_else(|| talif(u64::from(izaha)))?;
     bytemuck::try_cast_slice(khaam).map_err(|_| KhataRuqaa::MuhadhahaGhayrSaliha {
         naw: raqm,
         haql,
@@ -865,13 +988,20 @@ fn qass_bayt<'a>(
     tul: u32,
 ) -> Result<&'a [u8], KhataRuqaa> {
     let raqm = naw.raqm();
-    let talif =
-        |qeema: u64| KhataRuqaa::JadwalTalif { naw: raqm, haql, qeema, hadd: tul_u64(bayt.len()) };
+    let talif = |qeema: u64| KhataRuqaa::JadwalTalif {
+        naw: raqm,
+        haql,
+        qeema,
+        hadd: tul_u64(bayt.len()),
+    };
 
     let bidaya = usize::try_from(izaha).map_err(|_| talif(u64::from(izaha)))?;
     let mada = usize::try_from(tul).map_err(|_| talif(u64::from(tul)))?;
-    let nihaya = bidaya.checked_add(mada).ok_or_else(|| talif(u64::from(tul)))?;
-    bayt.get(bidaya..nihaya).ok_or_else(|| talif(u64::from(izaha)))
+    let nihaya = bidaya
+        .checked_add(mada)
+        .ok_or_else(|| talif(u64::from(tul)))?;
+    bayt.get(bidaya..nihaya)
+        .ok_or_else(|| talif(u64::from(izaha)))
 }
 
 /// Refuses an array that is not strictly ascending on its sort key.
@@ -927,17 +1057,18 @@ fn tahaqquq_tarteeb_ghayr_hasir<K: Ord>(
 }
 
 /// Refuses a run that is not entirely inside the array it indexes.
-fn tahaqquq_nitaq(
-    haql: &'static str,
-    awwal: u32,
-    adad: u32,
-    kull: u32,
-) -> Result<(), KhataRuqaa> {
-    let nihaya = awwal
-        .checked_add(adad)
-        .ok_or(KhataRuqaa::FahrasKharij { haql, fahras: awwal, adad: kull })?;
+fn tahaqquq_nitaq(haql: &'static str, awwal: u32, adad: u32, kull: u32) -> Result<(), KhataRuqaa> {
+    let nihaya = awwal.checked_add(adad).ok_or(KhataRuqaa::FahrasKharij {
+        haql,
+        fahras: awwal,
+        adad: kull,
+    })?;
     if nihaya > kull {
-        return Err(KhataRuqaa::FahrasKharij { haql, fahras: nihaya, adad: kull });
+        return Err(KhataRuqaa::FahrasKharij {
+            haql,
+            fahras: nihaya,
+            adad: kull,
+        });
     }
     Ok(())
 }
@@ -948,21 +1079,19 @@ fn tahaqquq_nitaq(
 /// end of the file. Hashing to the end would make the hash depend on the
 /// signature, which is signed over the hash, and sealing a package would be
 /// impossible without recomputing what it committed to.
-fn tahaqquq_basma(
-    bayt: &[u8],
-    tarwisa: &Tarwisa,
-    jadwal: &JadwalAqsam,
-) -> Result<(), KhataRuqaa> {
+fn tahaqquq_basma(bayt: &[u8], tarwisa: &Tarwisa, jadwal: &JadwalAqsam) -> Result<(), KhataRuqaa> {
     let nihaya = hajm_usize(jadwal.nihayat_muhtawa()).ok_or_else(|| KhataRuqaa::MalafQaseer {
         haql: "nihayat_muhtawa",
         tul: tul_u64(bayt.len()),
         matlub: jadwal.nihayat_muhtawa(),
     })?;
-    let jism = bayt.get(HAJM_TARWISA..nihaya).ok_or_else(|| KhataRuqaa::MalafQaseer {
-        haql: "muhtawa",
-        tul: tul_u64(bayt.len()),
-        matlub: jadwal.nihayat_muhtawa(),
-    })?;
+    let jism = bayt
+        .get(HAJM_TARWISA..nihaya)
+        .ok_or_else(|| KhataRuqaa::MalafQaseer {
+            haql: "muhtawa",
+            tul: tul_u64(bayt.len()),
+            matlub: jadwal.nihayat_muhtawa(),
+        })?;
     let mahsuba = blake3::hash(jism);
     if mahsuba.as_bytes() == &tarwisa.basma {
         Ok(())
@@ -976,9 +1105,9 @@ fn tahaqquq_basma(
 
 /// Reads the signature block out of its section.
 fn iqra_tawqee(bayt: &[u8], jadwal: &JadwalAqsam) -> Result<KutlatTawqee, KhataRuqaa> {
-    let madkhal = jadwal
-        .qism(NawQism::Tawqee)
-        .ok_or(KhataRuqaa::QismMafqud { ism: NawQism::Tawqee.ism() })?;
+    let madkhal = jadwal.qism(NawQism::Tawqee).ok_or(KhataRuqaa::QismMafqud {
+        ism: NawQism::Tawqee.ism(),
+    })?;
     let kutla = shariha(bayt, &madkhal)?;
     KutlatTawqee::min_bayt(kutla)
 }
@@ -1003,8 +1132,12 @@ fn fukk(naw: NawQism, makhzun: &[u8], tul_khaam: u64) -> Result<BaytMuhadhah, Kh
     // check below turns a frame that expands to less than it promised into a
     // refusal rather than a table read over uninitialised zeros.
     let mut mafkuk = BaytMuhadhah::sifr(siaa);
-    let fili = zstd::bulk::decompress_to_buffer(makhzun, mafkuk.bayt_mut())
-        .map_err(|khata| KhataRuqaa::FakkFashil { naw: naw.raqm(), tafsil: khata.to_string() })?;
+    let fili = zstd::bulk::decompress_to_buffer(makhzun, mafkuk.bayt_mut()).map_err(|khata| {
+        KhataRuqaa::FakkFashil {
+            naw: naw.raqm(),
+            tafsil: khata.to_string(),
+        }
+    })?;
 
     if tul_u64(fili) == tul_khaam {
         Ok(mafkuk)

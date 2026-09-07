@@ -73,8 +73,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use taarib_muhawwil_unreal::khata::KhataUnreal;
-use taarib_muhawwil_unreal::mawarid::jadwal::JadwalNusus as JadwalUnreal;
 use taarib_muhawwil_unreal::mawarid::iostore::HawiyatIoStore;
+use taarib_muhawwil_unreal::mawarid::jadwal::JadwalNusus as JadwalUnreal;
 use taarib_muhawwil_unreal::mawarid::locmeta::MawridLocmeta;
 use taarib_muhawwil_unreal::mawarid::locres::{MadkhalLocres, MarjaTarjama, MawridLocres};
 use taarib_muhawwil_unreal::mawarid::pak::HawiyatPak;
@@ -158,7 +158,10 @@ enum QararHizma {
 impl MizaniyatHizam {
     /// A budget for a container whose candidate packages come to `jumla` bytes.
     const fn jadeeda(jumla: u64) -> Self {
-        Self { mutabaqqi: AQSA_MASH_HIZAM, jumla }
+        Self {
+            mutabaqqi: AQSA_MASH_HIZAM,
+            jumla,
+        }
     }
 
     /// Decides one candidate from its expanded size alone, and charges for it.
@@ -167,7 +170,11 @@ impl MizaniyatHizam {
             return QararHizma::Tawaqquf;
         }
         self.mutabaqqi = self.mutabaqqi.saturating_sub(tul);
-        if tul > AQSA_HIZMA { QararHizma::Tajawuz } else { QararHizma::Iqra }
+        if tul > AQSA_HIZMA {
+            QararHizma::Tajawuz
+        } else {
+            QararHizma::Iqra
+        }
     }
 
     /// The refusal a stopped search records.
@@ -226,16 +233,20 @@ pub fn istakhrij(jidhr: &Path) -> (JadwalNusus, TaqreerRafd) {
         match qira_malaf(masar) {
             Ok(bayt) => {
                 sajjil_locmeta(&mut taqreer, &mut muallana, &hawiya, None, &hawiya, &bayt);
-            }
+            },
             Err(khata) => {
                 taqreer.sajjil(hawiya, None, sabab_min_khata(&khata, NawMadkhal::Bayanat));
-            }
+            },
         }
     }
 
     // The loose `.locres` paths, in the same spelling `sajjil_locres` will derive
     // the target and culture from, so the two agree on what is on disk.
-    let asma_res: Vec<String> = masarat.locres.iter().map(|masar| nisbi(jidhr, masar)).collect();
+    let asma_res: Vec<String> = masarat
+        .locres
+        .iter()
+        .map(|masar| nisbi(jidhr, masar))
+        .collect();
     let asliya = wafiq_thaqafat(
         &muallana,
         &thaqafat_mawjuda(&asma_res),
@@ -246,15 +257,23 @@ pub fn istakhrij(jidhr: &Path) -> (JadwalNusus, TaqreerRafd) {
     for (masar, hawiya) in masarat.locres.iter().zip(&asma_res) {
         match qira_malaf(masar) {
             Ok(bayt) => {
-                sajjil_locres(&mut jadwal, &mut taqreer, hawiya, None, hawiya, &bayt, &asliya);
-            }
+                sajjil_locres(
+                    &mut jadwal,
+                    &mut taqreer,
+                    hawiya,
+                    None,
+                    hawiya,
+                    &bayt,
+                    &asliya,
+                );
+            },
             Err(khata) => {
                 taqreer.sajjil(
                     hawiya.clone(),
                     None,
                     sabab_min_khata(&khata, NawMadkhal::Nass),
                 );
-            }
+            },
         }
     }
 
@@ -278,7 +297,11 @@ pub fn istakhrij(jidhr: &Path) -> (JadwalNusus, TaqreerRafd) {
     for masar in &masarat.hizam {
         let hawiya = nisbi(jidhr, masar);
         if !sajjil_hizma_ala_qurs(&mut jadwal, &mut taqreer, &hawiya, masar, &mut mizaniya) {
-            taqreer.sajjil("the game's loose packages".to_owned(), None, mizaniya.rafd());
+            taqreer.sajjil(
+                "the game's loose packages".to_owned(),
+                None,
+                mizaniya.rafd(),
+            );
             break;
         }
     }
@@ -315,7 +338,9 @@ pub fn iqra_thaqafat(jidhr: &Path) -> Vec<BayanThaqafat> {
 
     for masar in &masarat.pak {
         let hawiya = nisbi(jidhr, masar);
-        let Ok(qari) = HawiyatPak::iftah(masar, None) else { continue };
+        let Ok(qari) = HawiyatPak::iftah(masar, None) else {
+            continue;
+        };
         let dakhili: Vec<String> = qari.masarat_locmeta().map(str::to_owned).collect();
         for asl in dakhili {
             if let Ok(bayt) = qari.iqra_masar(&asl)
@@ -328,9 +353,13 @@ pub fn iqra_thaqafat(jidhr: &Path) -> Vec<BayanThaqafat> {
 
     for masar in &masarat.utoc {
         let hawiya = nisbi(jidhr, masar);
-        let Ok(qari) = HawiyatIoStore::iftah(masar, None) else { continue };
-        let dakhili: Vec<String> =
-            qari.masarat_locmeta().map(|(masar_dakhili, _)| masar_dakhili.to_owned()).collect();
+        let Ok(qari) = HawiyatIoStore::iftah(masar, None) else {
+            continue;
+        };
+        let dakhili: Vec<String> = qari
+            .masarat_locmeta()
+            .map(|(masar_dakhili, _)| masar_dakhili.to_owned())
+            .collect();
         for asl in dakhili {
             if let Ok(bayt) = qari.iqra_masar(&asl)
                 && let Ok(mawrid) = MawridLocmeta::min_bayt(&bayt)
@@ -382,7 +411,7 @@ fn masarat_lil_mash(jidhr: &Path) -> MasaratUnreal {
             "uasset" => masarat.hizam.push(masar),
             "pak" => masarat.pak.push(masar),
             "utoc" => masarat.utoc.push(masar),
-            _ => {}
+            _ => {},
         }
     }
 
@@ -412,7 +441,7 @@ fn min_hawiyat_pak(
         Err(khata) => {
             taqreer.sajjil(hawiya, None, sabab_min_khata(&khata, NawMadkhal::Nass));
             return;
-        }
+        },
     };
 
     let masarat_meta: Vec<String> = qari.masarat_locmeta().map(str::to_owned).collect();
@@ -452,15 +481,22 @@ fn min_hawiyat_pak(
     for asl in &masarat_meta {
         match qari.iqra_masar(asl) {
             Ok(bayt) => {
-                sajjil_locmeta(taqreer, &mut muallana, &hawiya, Some(asl.clone()), asl, &bayt);
-            }
+                sajjil_locmeta(
+                    taqreer,
+                    &mut muallana,
+                    &hawiya,
+                    Some(asl.clone()),
+                    asl,
+                    &bayt,
+                );
+            },
             Err(khata) => {
                 taqreer.sajjil(
                     hawiya.clone(),
                     Some(asl.clone()),
                     sabab_min_khata(&khata, NawMadkhal::Bayanat),
                 );
-            }
+            },
         }
     }
     let asliya = wafiq_thaqafat(&muallana, &thaqafat_mawjuda(&masarat_res), &hawiya, taqreer);
@@ -477,18 +513,21 @@ fn min_hawiyat_pak(
                     &bayt,
                     &asliya,
                 );
-            }
+            },
             Err(khata) => {
                 taqreer.sajjil(
                     hawiya.clone(),
                     Some(asl.clone()),
                     sabab_min_khata(&khata, NawMadkhal::Nass),
                 );
-            }
+            },
         }
     }
 
-    let jumla = masarat_hizam.iter().map(|(_, tul)| *tul).fold(0_u64, u64::saturating_add);
+    let jumla = masarat_hizam
+        .iter()
+        .map(|(_, tul)| *tul)
+        .fold(0_u64, u64::saturating_add);
     let mut mizaniya = MizaniyatHizam::jadeeda(jumla);
     // Packages the reader refused are folded per reason rather than dropped:
     // a container whose only text is in string tables and whose payloads are
@@ -499,19 +538,19 @@ fn min_hawiyat_pak(
     let mut bila_jadwal = 0_usize;
     for (asl, tul) in &masarat_hizam {
         match mizaniya.qarrir(*tul) {
-            QararHizma::Iqra => {}
+            QararHizma::Iqra => {},
             QararHizma::Tajawuz => continue,
             QararHizma::Tawaqquf => {
                 taqreer.sajjil(hawiya.clone(), None, mizaniya.rafd());
                 break;
-            }
+            },
         }
         match qari.iqra_masar(asl) {
             Ok(bayt) => {
                 if !sajjil_jadwal(jadwal, taqreer, &hawiya, Some(asl), &bayt) {
                     bila_jadwal = bila_jadwal.saturating_add(1);
                 }
-            }
+            },
             Err(khata) => mujammi.sajjil(asl.clone(), sabab_min_khata(&khata, NawMadkhal::Nass)),
         }
     }
@@ -533,13 +572,17 @@ fn min_hawiyat_iostore(
         Err(khata) => {
             taqreer.sajjil(hawiya, None, sabab_min_khata(&khata, NawMadkhal::Nass));
             return;
-        }
+        },
     };
 
-    let masarat_meta: Vec<String> =
-        qari.masarat_locmeta().map(|(dakhili, _)| dakhili.to_owned()).collect();
-    let masarat_res: Vec<String> =
-        qari.masarat_locres().map(|(dakhili, _)| dakhili.to_owned()).collect();
+    let masarat_meta: Vec<String> = qari
+        .masarat_locmeta()
+        .map(|(dakhili, _)| dakhili.to_owned())
+        .collect();
+    let masarat_res: Vec<String> = qari
+        .masarat_locres()
+        .map(|(dakhili, _)| dakhili.to_owned())
+        .collect();
     // The chunk's length in the container's uncompressed address space, which is
     // the size the reader will produce. Taken from the offset table beside the
     // path, for the reason [`MizaniyatHizam`] gives.
@@ -551,7 +594,9 @@ fn min_hawiyat_iostore(
         .masarat()
         .filter(|(dakhili, _)| hizma_murashaha(dakhili))
         .filter_map(|(dakhili, fahras)| {
-            let mawqi = usize::try_from(fahras).ok().and_then(|fahras| mawaqi.get(fahras))?;
+            let mawqi = usize::try_from(fahras)
+                .ok()
+                .and_then(|fahras| mawaqi.get(fahras))?;
             Some((dakhili.to_owned(), mawqi.tul))
         })
         .collect();
@@ -578,15 +623,22 @@ fn min_hawiyat_iostore(
     for asl in &masarat_meta {
         match qari.iqra_masar(asl) {
             Ok(bayt) => {
-                sajjil_locmeta(taqreer, &mut muallana, &hawiya, Some(asl.clone()), asl, &bayt);
-            }
+                sajjil_locmeta(
+                    taqreer,
+                    &mut muallana,
+                    &hawiya,
+                    Some(asl.clone()),
+                    asl,
+                    &bayt,
+                );
+            },
             Err(khata) => {
                 taqreer.sajjil(
                     hawiya.clone(),
                     Some(asl.clone()),
                     sabab_min_khata(&khata, NawMadkhal::Bayanat),
                 );
-            }
+            },
         }
     }
     let asliya = wafiq_thaqafat(&muallana, &thaqafat_mawjuda(&masarat_res), &hawiya, taqreer);
@@ -603,39 +655,42 @@ fn min_hawiyat_iostore(
                     &bayt,
                     &asliya,
                 );
-            }
+            },
             Err(khata) => {
                 taqreer.sajjil(
                     hawiya.clone(),
                     Some(asl.clone()),
                     sabab_min_khata(&khata, NawMadkhal::Nass),
                 );
-            }
+            },
         }
     }
 
     // A cooked IoStore chunk carries the package header and its exports
     // together, so the whole chunk goes to the raw locator rather than being
     // split into a package and a sibling export block the way a loose asset is.
-    let jumla = masarat_hizam.iter().map(|(_, tul)| *tul).fold(0_u64, u64::saturating_add);
+    let jumla = masarat_hizam
+        .iter()
+        .map(|(_, tul)| *tul)
+        .fold(0_u64, u64::saturating_add);
     let mut mizaniya = MizaniyatHizam::jadeeda(jumla);
     let mut mujammi = MujammiRafd::jadeed(hawiya.clone());
     let mut bila_jadwal = 0_usize;
     for (asl, tul) in &masarat_hizam {
         match mizaniya.qarrir(*tul) {
-            QararHizma::Iqra => {}
+            QararHizma::Iqra => {},
             QararHizma::Tajawuz => continue,
             QararHizma::Tawaqquf => {
                 taqreer.sajjil(hawiya.clone(), None, mizaniya.rafd());
                 break;
-            }
+            },
         }
         match qari.iqra_masar(asl) {
             Ok(bayt) => {
                 if !sajjil_jadwal(jadwal, taqreer, &hawiya, Some(asl), &bayt) {
                     bila_jadwal = bila_jadwal.saturating_add(1);
                 }
-            }
+            },
             Err(khata) => mujammi.sajjil(asl.clone(), sabab_min_khata(&khata, NawMadkhal::Nass)),
         }
     }
@@ -678,7 +733,7 @@ fn sajjil_locmeta(
                 sabab_min_khata(&khata, NawMadkhal::Bayanat),
             );
             return;
-        }
+        },
     };
 
     let thaqafa = mawrid.thaqafa_asliya().to_owned();
@@ -711,7 +766,9 @@ fn sajjil_locmeta(
 fn thaqafat_mawjuda(masarat: &[String]) -> BTreeMap<String, BTreeSet<String>> {
     let mut mawjuda: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for masar in masarat {
-        let (Some(dalil), Some(thaqafa)) = hadaf_wa_thaqafa(masar) else { continue };
+        let (Some(dalil), Some(thaqafa)) = hadaf_wa_thaqafa(masar) else {
+            continue;
+        };
         let _ = mawjuda.entry(dalil).or_default().insert(thaqafa);
     }
     mawjuda
@@ -777,7 +834,7 @@ fn wafiq_thaqafat(
                     ),
                 );
                 let _ = mahlula.insert(dalil.clone(), badil);
-            }
+            },
             None => taqreer.sajjil_qira(
                 hawiya.to_owned(),
                 0,
@@ -850,9 +907,13 @@ fn sajjil_locres(
     let mawrid = match MawridLocres::min_bayt(bayt) {
         Ok(mawrid) => mawrid,
         Err(khata) => {
-            taqreer.sajjil(hawiya.to_owned(), asl, sabab_min_khata(&khata, NawMadkhal::Nass));
+            taqreer.sajjil(
+                hawiya.to_owned(),
+                asl,
+                sabab_min_khata(&khata, NawMadkhal::Nass),
+            );
             return;
-        }
+        },
     };
 
     let (dalil, thaqafa) = hadaf_wa_thaqafa(masar_dakhili);
@@ -966,25 +1027,33 @@ fn sajjil_hizma_ala_qurs(
 ) -> bool {
     // The size decides before the read, exactly as it does inside a container:
     // a package over the ceiling is charged and never opened.
-    let Ok(bayanat) = std::fs::metadata(masar) else { return true };
+    let Ok(bayanat) = std::fs::metadata(masar) else {
+        return true;
+    };
     match mizaniya.qarrir(bayanat.len()) {
-        QararHizma::Iqra => {}
+        QararHizma::Iqra => {},
         QararHizma::Tajawuz => return true,
         QararHizma::Tawaqquf => return false,
     }
-    let Ok(bayt) = qira_malaf(masar) else { return true };
+    let Ok(bayt) = qira_malaf(masar) else {
+        return true;
+    };
     if sajjil_jadwal(jadwal, taqreer, hawiya, None, &bayt) {
         return true;
     }
 
     let sahib = masar.with_extension("uexp");
-    let Ok(bayanat) = std::fs::metadata(&sahib) else { return true };
+    let Ok(bayanat) = std::fs::metadata(&sahib) else {
+        return true;
+    };
     match mizaniya.qarrir(bayanat.len()) {
-        QararHizma::Iqra => {}
+        QararHizma::Iqra => {},
         QararHizma::Tajawuz => return true,
         QararHizma::Tawaqquf => return false,
     }
-    let Ok(bayt) = qira_malaf(&sahib) else { return true };
+    let Ok(bayt) = qira_malaf(&sahib) else {
+        return true;
+    };
     let _ = sajjil_jadwal(jadwal, taqreer, hawiya, None, &bayt);
     true
 }
@@ -1137,7 +1206,8 @@ fn nass_muqni(nass: &str) -> bool {
     if nass.trim().is_empty() {
         return false;
     }
-    nass.chars().all(|harf| !harf.is_control() || matches!(harf, '\t' | '\n' | '\r'))
+    nass.chars()
+        .all(|harf| !harf.is_control() || matches!(harf, '\t' | '\n' | '\r'))
 }
 
 /// The encoding a `.locres` entry's string was stored in.
@@ -1152,7 +1222,7 @@ fn tarmiz_madkhal(mawrid: &MawridLocres, madkhal: &MadkhalLocres) -> Option<Stri
         MarjaTarjama::Fahras(fahras) => {
             let khana = usize::try_from(*fahras).ok()?;
             mawrid.hawd().get(khana)?.nass().tarmiz()
-        }
+        },
     };
     tarmiz_min_naw(naw)
 }
@@ -1180,7 +1250,11 @@ fn hadaf_wa_thaqafa(masar: &str) -> (Option<String>, Option<String>) {
     let mut ajza: Vec<&str> = munkhafid.split('/').filter(|juz| !juz.is_empty()).collect();
     let _ = ajza.pop();
     let thaqafa = ajza.pop().map(str::to_owned);
-    let dalil = if ajza.is_empty() { None } else { Some(ajza.join("/")) };
+    let dalil = if ajza.is_empty() {
+        None
+    } else {
+        Some(ajza.join("/"))
+    };
     (dalil, thaqafa)
 }
 
@@ -1189,7 +1263,11 @@ fn dalil_hadaf(masar: &str) -> Option<String> {
     let munkhafid = masar.replace('\\', "/").to_ascii_lowercase();
     let mut ajza: Vec<&str> = munkhafid.split('/').filter(|juz| !juz.is_empty()).collect();
     let _ = ajza.pop();
-    if ajza.is_empty() { None } else { Some(ajza.join("/")) }
+    if ajza.is_empty() {
+        None
+    } else {
+        Some(ajza.join("/"))
+    }
 }
 
 /// A path relative to the game's root, with forward slashes on every platform.
@@ -1208,8 +1286,10 @@ fn nisbi(jidhr: &Path, masar: &Path) -> String {
 
 /// Reads a whole file, naming the path in whatever went wrong.
 fn qira_malaf(masar: &Path) -> Result<Vec<u8>, KhataUnreal> {
-    std::fs::read(masar)
-        .map_err(|sabab| KhataUnreal::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    std::fs::read(masar).map_err(|sabab| KhataUnreal::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 /// What kind of member a refusal is about.
@@ -1251,24 +1331,26 @@ enum NawMadkhal {
 /// cannot read it and offers capture, a remedy that does work for text.
 fn sabab_min_khata(khata: &KhataUnreal, naw: NawMadkhal) -> SababRafd {
     match khata {
-        KhataUnreal::KhataMalaf { sabab, .. } => {
-            SababRafd::TaadhurQira { sabab: sabab.to_string() }
-        }
+        KhataUnreal::KhataMalaf { sabab, .. } => SababRafd::TaadhurQira {
+            sabab: sabab.to_string(),
+        },
         KhataUnreal::PakMushaffar { .. } => SababRafd::Mushaffar {
             wasf: "AES-256, and no key was supplied — Taarib does not go looking for one"
                 .to_owned(),
         },
-        KhataUnreal::MiftahGhayrSalih { sabab, .. } => {
-            SababRafd::Mushaffar { wasf: (*sabab).to_owned() }
-        }
+        KhataUnreal::MiftahGhayrSalih { sabab, .. } => SababRafd::Mushaffar {
+            wasf: (*sabab).to_owned(),
+        },
         KhataUnreal::IsdarGhayrMadum { ism, wujid, aqsa } => SababRafd::IsdarGhayrMadum {
             sigha: (*ism).to_owned(),
             wujid: wujid.to_string(),
             madum: format!("up to and including {aqsa}"),
         },
-        KhataUnreal::HajmMufrit { haql, qeema, saqf } => {
-            SababRafd::TajawuzHadd { hadd: (*haql).to_owned(), qeema: *qeema, saqf: *saqf }
-        }
+        KhataUnreal::HajmMufrit { haql, qeema, saqf } => SababRafd::TajawuzHadd {
+            hadd: (*haql).to_owned(),
+            qeema: *qeema,
+            saqf: *saqf,
+        },
         KhataUnreal::SihrGhayrMutabaq { ism, .. } => ghayr_maqru(
             naw,
             ism,
@@ -1302,7 +1384,9 @@ fn sabab_min_khata(khata: &KhataUnreal, naw: NawMadkhal) -> SababRafd {
                 "\"{madkhal}\" does not match the hash the container itself recorded over it"
             ),
         },
-        akhar => SababRafd::Talif { sabab: akhar.to_string() },
+        akhar => SababRafd::Talif {
+            sabab: akhar.to_string(),
+        },
     }
 }
 

@@ -157,13 +157,17 @@ impl MarjaIsm {
     /// The name-map index, for a caller that has the name map.
     #[must_use]
     pub fn fahras(self) -> u32 {
-        self.0.first_chunk::<4>().map_or(0, |khana| u32::from_le_bytes(*khana))
+        self.0
+            .first_chunk::<4>()
+            .map_or(0, |khana| u32::from_le_bytes(*khana))
     }
 
     /// The instance number Unreal appends to a repeated name.
     #[must_use]
     pub fn raqm(self) -> u32 {
-        self.0.last_chunk::<4>().map_or(0, |khana| u32::from_le_bytes(*khana))
+        self.0
+            .last_chunk::<4>()
+            .map_or(0, |khana| u32::from_le_bytes(*khana))
     }
 }
 
@@ -178,7 +182,10 @@ impl SijillJadwal {
     /// A new row.
     #[must_use]
     pub fn jadeed(miftah: &str, asl: &str) -> Self {
-        Self { miftah: NassMukhazzan::jadeed(miftah), asl: NassMukhazzan::jadeed(asl) }
+        Self {
+            miftah: NassMukhazzan::jadeed(miftah),
+            asl: NassMukhazzan::jadeed(asl),
+        }
     }
 
     /// The row's key, which with the table id identifies the string.
@@ -258,7 +265,11 @@ impl Mawrid for JadwalNusus {
             katib.uktub_nass(ISM, "a row's key", &saff.miftah)?;
             katib.uktub_nass(ISM, "a row's source string", &saff.asl)?;
         }
-        katib.uktub_i32(adad_khana("adad_bayanat", self.bayanat.len(), AQSA_BAYANAT)?);
+        katib.uktub_i32(adad_khana(
+            "adad_bayanat",
+            self.bayanat.len(),
+            AQSA_BAYANAT,
+        )?);
         for sijill in &self.bayanat {
             katib.uktub_nass(ISM, "a metadata row's key", &sijill.miftah)?;
             katib.uktub_i32(adad_khana("adad_qeyam", sijill.qeyam.len(), AQSA_QEYAM)?);
@@ -303,7 +314,10 @@ impl JadwalNusus {
     /// The source string for a key.
     #[must_use]
     pub fn asl(&self, miftah: &str) -> Option<&str> {
-        self.sufuf.iter().find(|saff| saff.miftah() == miftah).map(SijillJadwal::asl)
+        self.sufuf
+            .iter()
+            .find(|saff| saff.miftah() == miftah)
+            .map(SijillJadwal::asl)
     }
 
     /// Replaces one row's source string, returning whether the row was there.
@@ -313,7 +327,11 @@ impl JadwalNusus {
     /// would change the payload's length, which is the one thing that stops it
     /// being spliced back.
     pub fn istabdil(&mut self, miftah: &str, asl: &str) -> bool {
-        let Some(saff) = self.sufuf.iter_mut().find(|saff| saff.miftah.nass() == miftah) else {
+        let Some(saff) = self
+            .sufuf
+            .iter_mut()
+            .find(|saff| saff.miftah.nass() == miftah)
+        else {
             return false;
         };
         saff.asl.ghayyir(asl);
@@ -391,7 +409,10 @@ impl JadwalNusus {
     /// `.uexp`'s bytes to [`JadwalNusus::jid_fi_kutla`] instead.
     pub fn min_uasset(bayt: &[u8]) -> Result<MawqiJadwal, KhataUnreal> {
         if bayt.get(..SIHR_HIZMA.len()) != Some(SIHR_HIZMA.as_slice()) {
-            return Err(KhataUnreal::SihrGhayrMutabaq { malaf: PathBuf::new(), ism: ISM });
+            return Err(KhataUnreal::SihrGhayrMutabaq {
+                malaf: PathBuf::new(),
+                ism: ISM,
+            });
         }
         Self::jid_fi_kutla(bayt)
     }
@@ -483,18 +504,23 @@ impl MawqiJadwal {
                 hadd: tul_u64(self.tul),
             });
         }
-        let nihaya = self.izaha.checked_add(self.tul).ok_or_else(|| KhataUnreal::MawridTalif {
-            ism: ISM,
-            haql: "the payload's recorded span",
-            qeema: tul_u64(self.izaha),
-            hadd: tul_u64(bayt.len()),
-        })?;
-        let qabl = bayt.get(..self.izaha).ok_or_else(|| KhataUnreal::MawridTalif {
-            ism: ISM,
-            haql: "the payload's recorded span",
-            qeema: tul_u64(self.izaha),
-            hadd: tul_u64(bayt.len()),
-        })?;
+        let nihaya = self
+            .izaha
+            .checked_add(self.tul)
+            .ok_or_else(|| KhataUnreal::MawridTalif {
+                ism: ISM,
+                haql: "the payload's recorded span",
+                qeema: tul_u64(self.izaha),
+                hadd: tul_u64(bayt.len()),
+            })?;
+        let qabl = bayt
+            .get(..self.izaha)
+            .ok_or_else(|| KhataUnreal::MawridTalif {
+                ism: ISM,
+                haql: "the payload's recorded span",
+                qeema: tul_u64(self.izaha),
+                hadd: tul_u64(bayt.len()),
+            })?;
         let baad = bayt.get(nihaya..).ok_or_else(|| KhataUnreal::MawridTalif {
             ism: ISM,
             haql: "the payload's recorded span",
@@ -574,7 +600,11 @@ fn min_qari(qari: &mut Qari<'_>) -> Result<JadwalNusus, KhataUnreal> {
         bayanat.push(SijillBayanat { miftah, qeyam });
     }
 
-    Ok(JadwalNusus { muarrif, sufuf, bayanat })
+    Ok(JadwalNusus {
+        muarrif,
+        sufuf,
+        bayanat,
+    })
 }
 
 /// The cheap test a candidate offset has to pass before it is parsed.
@@ -599,7 +629,9 @@ fn murashshah(bayt: &[u8], izaha: usize) -> bool {
         let akhir = bidaya.saturating_add(wahdat).saturating_sub(1);
         return bayt.get(akhir) == Some(&0);
     }
-    let akhir = bidaya.saturating_add(wahdat.saturating_mul(2)).saturating_sub(2);
+    let akhir = bidaya
+        .saturating_add(wahdat.saturating_mul(2))
+        .saturating_sub(2);
     bayt.get(akhir..akhir.saturating_add(2))
         .is_some_and(|zawj| zawj.iter().all(|wahda| *wahda == 0))
 }
@@ -617,11 +649,18 @@ fn jarrib(bayt: &[u8], izaha: usize) -> Option<MawqiJadwal> {
     if jadwal.sufuf.is_empty() {
         return None;
     }
-    Some(MawqiJadwal { izaha, tul: qari.mawqi(), jadwal })
+    Some(MawqiJadwal {
+        izaha,
+        tul: qari.mawqi(),
+        jadwal,
+    })
 }
 
 /// A count as the `i32` the format writes, refused when it does not fit.
 fn adad_khana(haql: &'static str, adad: usize, saqf: u64) -> Result<i32, KhataUnreal> {
-    i32::try_from(adad)
-        .map_err(|_| KhataUnreal::HajmMufrit { haql, qeema: tul_u64(adad), saqf })
+    i32::try_from(adad).map_err(|_| KhataUnreal::HajmMufrit {
+        haql,
+        qeema: tul_u64(adad),
+        saqf,
+    })
 }

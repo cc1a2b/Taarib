@@ -93,8 +93,14 @@ pub enum Qudra {
 
 /// Every capability, in the order a maintainer reads them: offline first,
 /// because that is the order they run in.
-pub const QUDRAT: [Qudra; 6] =
-    [Qudra::Qiraa, Qudra::Kitaba, Qudra::Tashghil, Qudra::Khatt, Qudra::Alam, Qudra::Qiyas];
+pub const QUDRAT: [Qudra; 6] = [
+    Qudra::Qiraa,
+    Qudra::Kitaba,
+    Qudra::Tashghil,
+    Qudra::Khatt,
+    Qudra::Alam,
+    Qudra::Qiyas,
+];
 
 impl Qudra {
     /// A stable machine name, for logs and the diagnostics bundle.
@@ -197,8 +203,12 @@ pub const fn hala(qudra: Qudra) -> HalatQudra {
         // With no bootstrap there is no offline caller either: the installer
         // writes the patch and never touches `Engine.ini`.
         Qudra::Tashghil => {
-            if hamula_mabniya() { HalatQudra::Amila } else { HalatQudra::Ghaiba }
-        }
+            if hamula_mabniya() {
+                HalatQudra::Amila
+            } else {
+                HalatQudra::Ghaiba
+            }
+        },
         // `Khatt::sajjil` and `Alam::faal` have no caller anywhere — not in the
         // installer, and not in the bootstrap either.
         Qudra::Khatt | Qudra::Alam => HalatQudra::Mahjuba,
@@ -248,7 +258,7 @@ pub const fn bayan(qudra: Qudra) -> BayanQudra {
                      writes nothing into the game's configuration.",
                 )
             }
-        }
+        },
         Qudra::Khatt => (
             "تسجيل خطّ الرقعة في نظام الخطوط مكتمل، ولا يستدعيه شيء — لا المثبِّت ولا \
              نقطة البدء.",
@@ -271,7 +281,12 @@ pub const fn bayan(qudra: Qudra) -> BayanQudra {
              detour at the wrong one breaks a player's game.",
         ),
     };
-    BayanQudra { qudra, hala, arabi, injilizi }
+    BayanQudra {
+        qudra,
+        hala,
+        arabi,
+        injilizi,
+    }
 }
 
 /// Every capability, in [`QUDRAT`] order.

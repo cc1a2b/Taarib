@@ -172,7 +172,10 @@ impl HalatMalaf {
     /// Whether this state means the patch is still in place and undamaged.
     #[must_use]
     pub const fn salim(self) -> bool {
-        matches!(self, Self::Mutabiq | Self::GhayrMuhaqqaq | Self::MujalladMawjud)
+        matches!(
+            self,
+            Self::Mutabiq | Self::GhayrMuhaqqaq | Self::MujalladMawjud
+        )
     }
 
     /// Whether this state means the file changed underneath the patch.
@@ -306,19 +309,19 @@ impl NatijatTahaqquq {
             Self::MustabdalMinAlmatjar => {
                 "حدّث المتجر اللعبة وأعاد كتابة ملفات كان تعريب قد رقّعها. أعد المطابقة مع \
                  البناء الجديد لإرجاع الترجمة."
-            }
+            },
             Self::TaghyeerMustakhdim => {
                 "تغيّر ملف كان تعريب قد رقّعه، ولا يبدو أن المتجر هو من غيّره. إعادة التثبيت \
                  فوقه ستطمس تغييرك وتحفظه على أنه الأصل؛ الإزالة والإرجاع أسلم."
-            }
+            },
             Self::GhayrMuakkad => {
                 "تغيّرت ملفات مرقّعة ولم يتّضح سبب التغيير. لن يخمّن تعريب: كل من الحلّين \
                  يُتلف شيئًا إن كان التشخيص خاطئًا."
-            }
+            },
             Self::Naqis => {
                 "ملفات مسجّلة في بيان التثبيت لم تعد موجودة على القرص. تحقّق من سلامة ملفات \
                  اللعبة من متجرها."
-            }
+            },
         }
     }
 
@@ -330,20 +333,20 @@ impl NatijatTahaqquq {
             Self::MustabdalMinAlmatjar => {
                 "The store updated this game and rewrote files Taarib had patched. Re-match \
                  the patch against the new build to bring the translation back."
-            }
+            },
             Self::TaghyeerMustakhdim => {
                 "A file Taarib had patched has changed, and it does not look like the store \
                  did it. Reinstalling over it would overwrite that change and preserve it as \
                  though it were the original file — uninstall and restore instead."
-            }
+            },
             Self::GhayrMuakkad => {
                 "Patched files have changed and the cause was not established. Taarib will \
                  not guess: each remedy destroys something if the diagnosis is wrong."
-            }
+            },
             Self::Naqis => {
                 "Paths recorded in the installation manifest are no longer on disk. Verify \
                  the game's files through its launcher."
-            }
+            },
         }
     }
 }
@@ -474,7 +477,9 @@ impl NatijatFahsLuba {
     #[must_use]
     pub fn salim(&self) -> bool {
         let salim = |natija: &Option<NatijatTathbeet<TaqreerTahaqquq>>| {
-            natija.as_ref().is_none_or(|n| n.as_ref().is_ok_and(TaqreerTahaqquq::salim))
+            natija
+                .as_ref()
+                .is_none_or(|n| n.as_ref().is_ok_and(TaqreerTahaqquq::salim))
         };
         salim(&self.nass) && salim(&self.sawt)
     }
@@ -516,7 +521,10 @@ impl TaqreerFahs {
     /// How many games need something done.
     #[must_use]
     pub fn adad_yahtaj(&self) -> usize {
-        self.alaab.iter().filter(|luba| luba.wujidat() && !luba.salim()).count()
+        self.alaab
+            .iter()
+            .filter(|luba| luba.wujidat() && !luba.salim())
+            .count()
     }
 
     /// Every game that needs something, with the action to offer for it.
@@ -550,10 +558,12 @@ impl TaqreerFahs {
             self.adad_yahtaj()
         )];
         for luba in &self.alaab {
-            for (naw, natija) in [(NawTathbeet::Nass, &luba.nass), (NawTathbeet::Sawt, &luba.sawt)]
-            {
+            for (naw, natija) in [
+                (NawTathbeet::Nass, &luba.nass),
+                (NawTathbeet::Sawt, &luba.sawt),
+            ] {
                 match natija {
-                    None => {}
+                    None => {},
                     Some(Ok(taqreer)) => sutur.extend(taqreer.taqreer()),
                     Some(Err(khata)) => sutur.push(format!(
                         "{} [{}] could not be verified: {}",
@@ -670,14 +680,14 @@ fn ifhas(
         match hala {
             HalatMalaf::Munharif { .. } => {
                 taqreer.adad_munharif = taqreer.adad_munharif.saturating_add(1);
-            }
+            },
             HalatMalaf::Mafqud | HalatMalaf::MujalladMafqud => {
                 taqreer.adad_mafqud = taqreer.adad_mafqud.saturating_add(1);
-            }
+            },
             HalatMalaf::Ustuidat => {
                 taqreer.adad_mustaad = taqreer.adad_mustaad.saturating_add(1);
-            }
-            HalatMalaf::Mutabiq | HalatMalaf::GhayrMuhaqqaq | HalatMalaf::MujalladMawjud => {}
+            },
+            HalatMalaf::Mutabiq | HalatMalaf::GhayrMuhaqqaq | HalatMalaf::MujalladMawjud => {},
         }
         let _ = taqreer.halat.insert(masar.clone(), hala);
     }
@@ -752,12 +762,19 @@ fn ihsa_zaida(bayan: &BayanTathbeet, jidhr_luba: &Path) -> Vec<String> {
         if !matches!(sijill.naw, NawTaghyeer::MujalladMudaf) {
             continue;
         }
-        let Ok(mutlaq) = dakhil_aw_khata(jidhr_luba, masar) else { continue };
-        for madkhal in walkdir::WalkDir::new(&mutlaq).into_iter().filter_map(Result::ok) {
+        let Ok(mutlaq) = dakhil_aw_khata(jidhr_luba, masar) else {
+            continue;
+        };
+        for madkhal in walkdir::WalkDir::new(&mutlaq)
+            .into_iter()
+            .filter_map(Result::ok)
+        {
             if !madkhal.file_type().is_file() {
                 continue;
             }
-            let Some(nisbi) = nisbi_min(jidhr_luba, madkhal.path()) else { continue };
+            let Some(nisbi) = nisbi_min(jidhr_luba, madkhal.path()) else {
+                continue;
+            };
             if !bayan.sijillat.contains_key(&nisbi) {
                 zaida.push(nisbi);
             }
@@ -784,7 +801,9 @@ fn nasib(bayan: &BayanTathbeet, halat: &BTreeMap<String, HalatMalaf>) -> SababIn
     let mut adad = 0_usize;
 
     for hala in halat.values() {
-        let HalatMalaf::Munharif { waqt, .. } = hala else { continue };
+        let HalatMalaf::Munharif { waqt, .. } = hala else {
+            continue;
+        };
         adad = adad.saturating_add(1);
         match waqt {
             Some(waqt) => awqat.push(waqt.thawani),
@@ -835,13 +854,19 @@ fn nasib(bayan: &BayanTathbeet, halat: &BTreeMap<String, HalatMalaf>) -> SababIn
     let idafat_salima = halat
         .iter()
         .filter(|(masar, _)| {
-            bayan.sijillat.get(*masar).is_some_and(|s| matches!(s.naw, NawTaghyeer::Idafa))
+            bayan
+                .sijillat
+                .get(*masar)
+                .is_some_and(|s| matches!(s.naw, NawTaghyeer::Idafa))
         })
         .all(|(_, hala)| hala.salim());
 
     if akbar >= ADNA_MAJMUAA {
         if idafat_salima {
-            return SababInhiraf::Matjar { adad: akbar, bidaya };
+            return SababInhiraf::Matjar {
+                adad: akbar,
+                bidaya,
+            };
         }
         return SababInhiraf::GhayrMuakkad {
             adad,
@@ -927,12 +952,13 @@ pub fn hajm_nusakh_luba(jidhr_nusakh: &Path) -> NatijatTathbeet<u64> {
             continue;
         }
         let masar_bayan = jidhr_nusakh.join(naw.ism_bayan());
-        let bayan: BayanTathbeet = taarib_usus::mukhattat::iqra_malaf(&masar_bayan).map_err(
-            |khata| KhataTathbeet::BayanTalif {
-                masar: masar_bayan.clone(),
-                sabab: khata.injilizi,
-            },
-        )?;
+        let bayan: BayanTathbeet =
+            taarib_usus::mukhattat::iqra_malaf(&masar_bayan).map_err(|khata| {
+                KhataTathbeet::BayanTalif {
+                    masar: masar_bayan.clone(),
+                    sabab: khata.injilizi,
+                }
+            })?;
         majmu = majmu.saturating_add(bayan.hajm_nusakh());
     }
     Ok(majmu)
@@ -962,8 +988,7 @@ pub fn tahaqquq_nusakh(
     let mut akhta = Vec::new();
 
     for (masar, sijill) in &tathbeet.bayan().sijillat {
-        let (Some(miftah), Some(muallana)) = (sijill.nuskha.as_deref(), sijill.basma_asliya)
-        else {
+        let (Some(miftah), Some(muallana)) = (sijill.nuskha.as_deref(), sijill.basma_asliya) else {
             continue;
         };
         let mutlaq = match dakhil_aw_khata(jidhr_luba, masar) {
@@ -971,7 +996,7 @@ pub fn tahaqquq_nusakh(
             Err(khata) => {
                 akhta.push(khata);
                 continue;
-            }
+            },
         };
         match tathbeet.iqra_nuskha(miftah, &mutlaq) {
             Err(khata) => akhta.push(khata),
@@ -985,7 +1010,7 @@ pub fn tahaqquq_nusakh(
                         mahsuba: mahsuba.to_string(),
                     });
                 }
-            }
+            },
         }
     }
 

@@ -211,7 +211,9 @@ impl Matjar for MatjarEpic {
 
         idaf_min_qaimat_altathbeet(&jidhr, siyaq, &asmaa, &mut mawaqi, &mut natija);
 
-        natija.alaab.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
+        natija
+            .alaab
+            .sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
         natija.muddat = bidaya.elapsed();
         Ok(natija)
     }
@@ -244,9 +246,10 @@ impl Matjar for MatjarEpic {
 /// or prefix-mounted layout looks like.
 fn jidhr_tilqai(siyaq: &SiyaqFahs) -> Option<PathBuf> {
     match siyaq.nizam {
-        NizamTashghil::Windows => {
-            siyaq.bayanat_barnamij.as_ref().map(|bayanat| bayanat.join("Epic"))
-        },
+        NizamTashghil::Windows => siyaq
+            .bayanat_barnamij
+            .as_ref()
+            .map(|bayanat| bayanat.join("Epic")),
         NizamTashghil::Mac | NizamTashghil::Linux => Some(PathBuf::from(JIDHR_MAC)),
     }
 }
@@ -260,7 +263,10 @@ fn murashahat_bayanat(jidhr: &Path) -> [PathBuf; 4] {
         jidhr.to_path_buf(),
         jidhr.join("Manifests"),
         jidhr.join("Data").join("Manifests"),
-        jidhr.join("EpicGamesLauncher").join("Data").join("Manifests"),
+        jidhr
+            .join("EpicGamesLauncher")
+            .join("Data")
+            .join("Manifests"),
     ]
 }
 
@@ -268,9 +274,9 @@ fn murashahat_bayanat(jidhr: &Path) -> [PathBuf; 4] {
 /// none of the four shapes is there — which the caller reports as a catalogue
 /// that could not be read, never as a launcher that is not installed.
 fn mujallad_bayanat(jidhr: &Path) -> Option<PathBuf> {
-    murashahat_bayanat(jidhr).into_iter().find(|masar| {
-        masar.is_dir() && (masar.ends_with("Manifests") || fih_bayan(masar))
-    })
+    murashahat_bayanat(jidhr)
+        .into_iter()
+        .find(|masar| masar.is_dir() && (masar.ends_with("Manifests") || fih_bayan(masar)))
 }
 
 /// Reads every `.item` manifest in the directory into the result.
@@ -375,13 +381,17 @@ fn fih_bayan(mujallad: &Path) -> bool {
     let Ok(qaima) = std::fs::read_dir(mujallad) else {
         return false;
     };
-    qaima.flatten().any(|madkhal| imtidad_hua(&madkhal.path(), "item"))
+    qaima
+        .flatten()
+        .any(|madkhal| imtidad_hua(&madkhal.path(), "item"))
 }
 
 /// The cross-check list, when it is where the launcher puts it.
 fn malaf_qaimat_altathbeet(jidhr: &Path) -> Option<PathBuf> {
     let murashahat = [
-        jidhr.join("UnrealEngineLauncher").join("LauncherInstalled.dat"),
+        jidhr
+            .join("UnrealEngineLauncher")
+            .join("LauncherInstalled.dat"),
         jidhr.join("LauncherInstalled.dat"),
         jidhr
             .parent()
@@ -404,12 +414,11 @@ fn malaffat_bayan(mujallad: &Path, matjar: &'static str) -> Natija<Vec<PathBuf>>
         masar: mujallad.to_path_buf(),
         sabab,
     })?;
-    let mut malaffat: Vec<PathBuf> =
-        qaima
-            .flatten()
-            .map(|madkhal| madkhal.path())
-            .filter(|masar| imtidad_hua(masar, "item"))
-            .collect();
+    let mut malaffat: Vec<PathBuf> = qaima
+        .flatten()
+        .map(|madkhal| madkhal.path())
+        .filter(|masar| imtidad_hua(masar, "item"))
+        .collect();
     malaffat.sort();
     Ok(malaffat)
 }
@@ -632,15 +641,18 @@ fn sawab_haql(qeema: &Value, miftah: &str) -> Option<bool> {
 
 /// A string array field, empty when the field is absent or is not an array.
 fn qaimat_nusus(qeema: &Value, miftah: &str) -> Vec<String> {
-    qeema.get(miftah).and_then(Value::as_array).map_or_else(Vec::new, |qaima| {
-        qaima
-            .iter()
-            .filter_map(Value::as_str)
-            .map(str::trim)
-            .filter(|nass| !nass.is_empty())
-            .map(str::to_owned)
-            .collect()
-    })
+    qeema
+        .get(miftah)
+        .and_then(Value::as_array)
+        .map_or_else(Vec::new, |qaima| {
+            qaima
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|nass| !nass.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
 }
 
 /// Joins a launcher-supplied relative path onto an install root through the
@@ -672,7 +684,11 @@ fn imtidad_hua(masar: &Path, imtidad: &str) -> bool {
 fn muwahhad(masar: &Path, nizam: NizamTashghil) -> String {
     let nass = masar.to_string_lossy().replace('\\', "/");
     let nass = nass.trim_end_matches('/').to_owned();
-    if nizam.hassas_lil_ahruf() { nass } else { nass.to_lowercase() }
+    if nizam.hassas_lil_ahruf() {
+        nass
+    } else {
+        nass.to_lowercase()
+    }
 }
 
 /// Strips a byte order mark, which several launcher versions write in front of
@@ -704,7 +720,10 @@ mod ikhtibarat {
         let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
         siyaq.bayanat_barnamij = Some(bayanat.clone());
         assert_eq!(jidhr_tilqai(&siyaq), Some(bayanat.join("Epic")));
-        assert_eq!(MatjarEpic::jadeed().mawqi(&siyaq), Some(bayanat.join("Epic")));
+        assert_eq!(
+            MatjarEpic::jadeed().mawqi(&siyaq),
+            Some(bayanat.join("Epic"))
+        );
         Ok(())
     }
 
@@ -734,8 +753,8 @@ mod ikhtibarat {
     /// back above `idaf_min_qaimat_altathbeet` fails the second assertion;
     /// returning `ghayr_mutah` again fails the first.
     #[test]
-    fn jidhr_bila_manifests_naqis_la_ghayr_muthabbat_wa_yaqra_qaimat_altathbeet()
-    -> NatijatIkhtibar {
+    fn jidhr_bila_manifests_naqis_la_ghayr_muthabbat_wa_yaqra_qaimat_altathbeet() -> NatijatIkhtibar
+    {
         let masrah = tempfile::tempdir()?;
         let bayanat = masrah.path().join("ProgramData");
         let jidhr = bayanat.join("Epic");
@@ -744,7 +763,9 @@ mod ikhtibarat {
         fs::create_dir_all(&mujallad_luba)?;
         fs::create_dir_all(jidhr.join("UnrealEngineLauncher"))?;
         fs::write(
-            jidhr.join("UnrealEngineLauncher").join("LauncherInstalled.dat"),
+            jidhr
+                .join("UnrealEngineLauncher")
+                .join("LauncherInstalled.dat"),
             format!(
                 r#"{{"InstallationList":[{{"InstallLocation":{},"AppName":"Fortnite","ItemId":"abc123"}}]}}"#,
                 serde_json::to_string(&mujallad_luba.to_string_lossy())?
@@ -768,7 +789,10 @@ mod ikhtibarat {
 
         // The cross-check list ran and recovered the game the manifests lost.
         assert_eq!(natija.alaab.len(), 1);
-        let luba = natija.alaab.first().ok_or("the cross-check list added nothing")?;
+        let luba = natija
+            .alaab
+            .first()
+            .ok_or("the cross-check list added nothing")?;
         assert_eq!(luba.ism, "Fortnite");
         assert!(matches!(&luba.masdar, MasdarLuba::Epic(id) if id == "abc123"));
         Ok(())

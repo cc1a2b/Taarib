@@ -50,10 +50,10 @@ use taarib_mustalahat::muharrik::{
 use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
 use taarib_tathbeet::bayan::{NawTathbeet, TarifLuba, Tathbeet};
 use taarib_tathbeet::khata::KhataTathbeet;
+use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass};
 use taarib_tathbeet::tarkib::{
     HalatIdadat, HalatSlot, KhuttatTarkib, LubaMuhallala, NatijatTarkib, khutta, rakkib_itar,
 };
-use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass};
 use taarib_tathbeet::wukala;
 use taarib_usus::manassa::{BeeatTawafuq, Mimariya, NizamTashghil};
 
@@ -71,8 +71,11 @@ const RE4_TWEAKS: [(&str, usize); 5] = [
 ];
 
 /// The game's own files beside them.
-const LUBA_NAFSUHA: [(&str, usize); 3] =
-    [("bio4.exe", 9_139_840), ("steam_api.dll", 106_408), ("steam_appid.txt", 6)];
+const LUBA_NAFSUHA: [(&str, usize); 3] = [
+    ("bio4.exe", 9_139_840),
+    ("steam_api.dll", 106_408),
+    ("steam_appid.txt", 6),
+];
 
 /// The largest fixture body written, so the test stays fast and the proof stays
 /// about names and bytes rather than about volume.
@@ -89,7 +92,9 @@ fn iktub(masar: &Path, hajm: usize) {
     }
     let tul = hajm.min(AQSA_JISM);
     let ism = masar.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    let badhra = ism.bytes().fold(17_u8, |akk, bayt| akk.wrapping_mul(31).wrapping_add(bayt));
+    let badhra = ism
+        .bytes()
+        .fold(17_u8, |akk, bayt| akk.wrapping_mul(31).wrapping_add(bayt));
     let jism: Vec<u8> = (0..tul)
         .map(|mawdi| badhra.wrapping_add(u8::try_from(mawdi % 251).unwrap_or(0)))
         .collect();
@@ -106,8 +111,7 @@ fn iktub(masar: &Path, hajm: usize) {
 fn iktub_bi_basma(masar: &Path, basma: &str) {
     iktub(masar, AQSA_JISM);
     let mut jism = fs::read(masar).expect("the fixture just written");
-    let utf16: Vec<u8> =
-        basma.encode_utf16().flat_map(u16::to_le_bytes).collect();
+    let utf16: Vec<u8> = basma.encode_utf16().flat_map(u16::to_le_bytes).collect();
     // Centred so the mark is nowhere near either end, which is where a reader
     // that only sniffed a prefix or a suffix would find it by accident.
     #[expect(
@@ -295,8 +299,11 @@ fn taarib_yathbut_bijanib_re4_tweaks_wa_yusammih() {
 
     // The disclosure. An install into a game that already has a mod in it is a
     // different thing to agree to, and this is where the report says so.
-    let mujawir: Vec<&str> =
-        munaffadh.huqn_mujawir.iter().map(|wakeel| wakeel.ism.as_str()).collect();
+    let mujawir: Vec<&str> = munaffadh
+        .huqn_mujawir
+        .iter()
+        .map(|wakeel| wakeel.ism.as_str())
+        .collect();
     assert_eq!(mujawir, vec!["dinput8.dll", "winmm.dll"]);
     let dinput = munaffadh.huqn_mujawir.first().expect("the first neighbour");
     assert_eq!(
@@ -305,8 +312,14 @@ fn taarib_yathbut_bijanib_re4_tweaks_wa_yusammih() {
         "the proxy's settings and its log are named after the slot, and the report says so"
     );
     let sutur = NatijatTarkib::Nushira(munaffadh).taqreer().join("\n");
-    assert!(sutur.contains("dinput8.dll"), "the install report names it:\n{sutur}");
-    assert!(sutur.contains("did not touch it"), "and says what Taarib did about it");
+    assert!(
+        sutur.contains("dinput8.dll"),
+        "the install report names it:\n{sutur}"
+    );
+    assert!(
+        sutur.contains("did not touch it"),
+        "and says what Taarib did about it"
+    );
 }
 
 /// Puts Ultimate ASI Loader in the one slot Taarib needs.
@@ -360,21 +373,37 @@ fn alkhutta_tunbi_bil_rafd_qabl_an_yuwafiq_ahad() {
     // The remedy, before the failure rather than after it. An ASI loader needs
     // no slot from Taarib at all, and saying so is the difference between a
     // screen that blocks somebody and one that tells them what to do next.
-    let satr = slot.malhuza_injiliziya().expect("an occupied slot has something to say");
+    let satr = slot
+        .malhuza_injiliziya()
+        .expect("an occupied slot has something to say");
     assert!(satr.contains("will refuse"), "{satr}");
-    assert!(satr.contains("Ultimate ASI Loader"), "the evidence travels with it: {satr}");
-    assert!(satr.contains("loads every `.asi` beside it"), "and the door it leaves open: {satr}");
+    assert!(
+        satr.contains("Ultimate ASI Loader"),
+        "the evidence travels with it: {satr}"
+    );
+    assert!(
+        satr.contains("loads every `.asi` beside it"),
+        "and the door it leaves open: {satr}"
+    );
 
-    let arabi = slot.malhuza_arabiya().expect("and it says it in Arabic too");
+    let arabi = slot
+        .malhuza_arabiya()
+        .expect("and it says it in Arabic too");
     assert!(arabi.contains("سيرفض"), "{arabi}");
-    assert!(arabi.contains("مُحمِّل إضافات ASI"), "the identity is Arabic in Arabic: {arabi}");
+    assert!(
+        arabi.contains("مُحمِّل إضافات ASI"),
+        "the identity is Arabic in Arabic: {arabi}"
+    );
 
     // Both report renderings carry it, which is what reaches a screen that
     // shows the plan's own text verbatim.
     let injilizi = mukhattat.taqreer().join("\n");
     assert!(injilizi.contains("this install will refuse"), "{injilizi}");
     let taqreer_arabi = mukhattat.taqreer_arabi().join("\n");
-    assert!(taqreer_arabi.contains("سيرفض هذا التثبيت"), "{taqreer_arabi}");
+    assert!(
+        taqreer_arabi.contains("سيرفض هذا التثبيت"),
+        "{taqreer_arabi}"
+    );
     assert_eq!(
         mukhattat.taqreer().len(),
         mukhattat.taqreer_arabi().len(),
@@ -407,12 +436,18 @@ fn muhammil_taarib_fi_slotihi_iadat_tathbeet_la_tasadum() {
 
     let muhallala = luba_muhallala(&luba);
     let mukhattat = khutta_li(&muhallala, &makhzan);
-    let slot = mukhattat.slot_muhammil.as_ref().expect("the plan knows its slot");
+    let slot = mukhattat
+        .slot_muhammil
+        .as_ref()
+        .expect("the plan knows its slot");
     assert!(
         matches!(slot.hala, HalatSlot::Taarib { .. }),
         "Taarib's own loader is recognised as Taarib's: {slot:?}"
     );
-    assert!(!mukhattat.yarfud_al_wakeel(), "so nothing about it stops the install");
+    assert!(
+        !mukhattat.yarfud_al_wakeel(),
+        "so nothing about it stops the install"
+    );
     let satr = slot.malhuza_injiliziya().expect("it is still worth a line");
     assert!(satr.contains("reinstall"), "{satr}");
 
@@ -466,7 +501,13 @@ fn wakeel_mashghul_yarfud_bil_ism_wala_yaktub_shayan() {
     .expect_err("two loaders cannot share one slot, so the install refuses");
 
     match &khata {
-        KhataTathbeet::WakeelMashghul { wakeel, masar, hajm, jiran, huwiya } => {
+        KhataTathbeet::WakeelMashghul {
+            wakeel,
+            masar,
+            hajm,
+            jiran,
+            huwiya,
+        } => {
             assert_eq!(wakeel, "version.dll");
             assert_eq!(masar, &luba.join("version.dll"));
             assert_eq!(*hajm, u64::try_from(AQSA_JISM).expect("a small constant"));
@@ -490,7 +531,7 @@ fn wakeel_mashghul_yarfud_bil_ism_wala_yaktub_shayan() {
                 jiran.iter().any(|satr| satr.contains("dinput8.dll")),
                 "the refusal names the other loaders beside it: {jiran:?}"
             );
-        }
+        },
         akhar => panic!("expected WakeelMashghul, got {akhar:?}"),
     }
 
@@ -514,7 +555,10 @@ fn wakeel_mashghul_yarfud_bil_ism_wala_yaktub_shayan() {
     );
     let arabi = taarib_usus::khata::Tafsir::arabi(&khata);
     assert!(arabi.contains("لم يُكتب شيء"));
-    assert!(arabi.contains("مُحمِّل إضافات ASI"), "the identity is Arabic in Arabic: {arabi}");
+    assert!(
+        arabi.contains("مُحمِّل إضافات ASI"),
+        "the identity is Arabic in Arabic: {arabi}"
+    );
 
     assert_eq!(
         basmat_shajara(&luba),
@@ -536,7 +580,12 @@ fn ilgha_altathbeet_la_yamiss_milk_almod_alakhar() {
 
     let qabl = basmat_shajara(&luba);
     let milk_qabl = milk_almod(&qabl);
-    assert_eq!(milk_qabl.len(), 6, "the other mod owns six files: {:?}", milk_qabl.keys());
+    assert_eq!(
+        milk_qabl.len(),
+        6,
+        "the other mod owns six files: {:?}",
+        milk_qabl.keys()
+    );
 
     {
         let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
@@ -553,7 +602,10 @@ fn ilgha_altathbeet_la_yamiss_milk_almod_alakhar() {
         assert!(matches!(natija, NatijatTarkib::Nushira(_)));
     }
 
-    assert!(luba.join("version.dll").is_file(), "Taarib's loader is in the game");
+    assert!(
+        luba.join("version.dll").is_file(),
+        "Taarib's loader is in the game"
+    );
 
     let taqreer = istiada_nass(&luba, &nusakh, SiyasatIstiada::Muhafiza, &mut RadLaShay)
         .expect("the uninstall completes");
@@ -564,7 +616,10 @@ fn ilgha_altathbeet_la_yamiss_milk_almod_alakhar() {
 
     // Taarib's own work is gone.
     assert!(!luba.join("version.dll").exists(), "the loader came out");
-    assert!(!luba.join("taarib").exists(), "and so did the directory it created");
+    assert!(
+        !luba.join("taarib").exists(),
+        "and so did the directory it created"
+    );
 
     // And the other mod is byte-for-byte what it was — not merely present, and
     // not merely the right length.
@@ -575,7 +630,10 @@ fn ilgha_altathbeet_la_yamiss_milk_almod_alakhar() {
         "every file re4_tweaks owns is exactly the bytes it was before the install"
     );
     // Nothing else moved either: the game's own files, and the mod's, together.
-    assert_eq!(baad, qabl, "the directory is exactly what it was before Taarib touched it");
+    assert_eq!(
+        baad, qabl,
+        "the directory is exactly what it was before Taarib touched it"
+    );
 
     // The mod's directories are still directories, not casualties of the
     // deepest-first empty-directory sweep.
@@ -596,7 +654,10 @@ fn insakh(min: &Path, ila: &Path) {
     fs::create_dir_all(ila).expect("the destination directory");
     for madkhal in walkdir::WalkDir::new(min).sort_by_file_name() {
         let madkhal = madkhal.expect("walking the source tree");
-        let nisbi = madkhal.path().strip_prefix(min).expect("every entry is under the root");
+        let nisbi = madkhal
+            .path()
+            .strip_prefix(min)
+            .expect("every entry is under the root");
         if nisbi.as_os_str().is_empty() {
             continue;
         }
@@ -630,7 +691,11 @@ fn ala_mujallad_haqiqi_in_wujid() {
         return;
     };
     let masdar = PathBuf::from(masdar);
-    assert!(masdar.is_dir(), "{MUTAGHAYYIR_HAQIQI} must name a directory: {}", masdar.display());
+    assert!(
+        masdar.is_dir(),
+        "{MUTAGHAYYIR_HAQIQI} must name a directory: {}",
+        masdar.display()
+    );
 
     let dalil = tempfile::tempdir().expect("a temporary directory");
     let luba = dalil.path().join("luba");
@@ -667,7 +732,10 @@ fn ala_mujallad_haqiqi_in_wujid() {
 
     match natija {
         Ok(NatijatTarkib::Nushira(munaffadh)) => {
-            eprintln!("installed: {}", NatijatTarkib::Nushira(munaffadh).taqreer().join("\n"));
+            eprintln!(
+                "installed: {}",
+                NatijatTarkib::Nushira(munaffadh).taqreer().join("\n")
+            );
             drop(tathbeet);
             let taqreer = istiada_nass(&luba, &nusakh, SiyasatIstiada::Muhafiza, &mut RadLaShay)
                 .expect("the uninstall completes");
@@ -678,15 +746,18 @@ fn ala_mujallad_haqiqi_in_wujid() {
                 "every byte of the real game directory, third-party mod included, is what it \
                  was before the install"
             );
-        }
+        },
         Ok(akhar) => panic!("expected a deployment, got {akhar:?}"),
         Err(khata) => {
             // A refusal is also a correct outcome for a real directory — it is
             // the outcome when Taarib's own slot is taken — but it must have
             // changed nothing.
-            assert!(matches!(khata, KhataTathbeet::WakeelMashghul { .. }), "{khata:?}");
+            assert!(
+                matches!(khata, KhataTathbeet::WakeelMashghul { .. }),
+                "{khata:?}"
+            );
             assert_eq!(basmat_shajara(&luba), qabl, "a refusal writes nothing");
-        }
+        },
     }
 }
 
@@ -722,7 +793,11 @@ fn yusammi_alwukala_alhaqiqiyeen_in_wujidu() {
         return;
     };
     let jidhr = PathBuf::from(jidhr);
-    assert!(jidhr.is_dir(), "{MUTAGHAYYIR_MASAH} must name a directory: {}", jidhr.display());
+    assert!(
+        jidhr.is_dir(),
+        "{MUTAGHAYYIR_MASAH} must name a directory: {}",
+        jidhr.display()
+    );
 
     let mut wujida = 0_usize;
     for madkhal in fs::read_dir(&jidhr).expect("listing the directory") {
@@ -739,5 +814,8 @@ fn yusammi_alwukala_alhaqiqiyeen_in_wujidu() {
             );
         }
     }
-    assert!(wujida > 0, "the directory offered held no loader slots at all");
+    assert!(
+        wujida > 0,
+        "the directory offered held no loader slots at all"
+    );
 }

@@ -297,16 +297,19 @@ fn qass<'a>(
     tul: usize,
     haql: &'static str,
 ) -> Result<&'a [u8], KhataUnreal> {
-    let nihaya = izaha.checked_add(tul).ok_or_else(|| KhataUnreal::MalafQaseer {
-        haql,
-        tul: tul_u64(bayt.len()),
-        matlub: u64::MAX,
-    })?;
-    bayt.get(izaha..nihaya).ok_or_else(|| KhataUnreal::MalafQaseer {
-        haql,
-        tul: tul_u64(bayt.len()),
-        matlub: tul_u64(nihaya),
-    })
+    let nihaya = izaha
+        .checked_add(tul)
+        .ok_or_else(|| KhataUnreal::MalafQaseer {
+            haql,
+            tul: tul_u64(bayt.len()),
+            matlub: u64::MAX,
+        })?;
+    bayt.get(izaha..nihaya)
+        .ok_or_else(|| KhataUnreal::MalafQaseer {
+            haql,
+            tul: tul_u64(bayt.len()),
+            matlub: tul_u64(nihaya),
+        })
 }
 
 /// The byte span an array of `adad` records of `hajm` bytes occupies.
@@ -318,7 +321,11 @@ fn mada(adad: u32, hajm: usize, haql: &'static str, saqf: u64) -> Result<usize, 
     usize::try_from(adad)
         .ok()
         .and_then(|adad| adad.checked_mul(hajm))
-        .ok_or_else(|| KhataUnreal::HajmMufrit { haql, qeema: u64::from(adad), saqf })
+        .ok_or_else(|| KhataUnreal::HajmMufrit {
+            haql,
+            qeema: u64::from(adad),
+            saqf,
+        })
 }
 
 /// Refuses a declared count above its ceiling, before it is used for anything.
@@ -335,7 +342,12 @@ fn saqf_adad(qeema: u32, saqf: u32, haql: &'static str) -> Result<(), KhataUnrea
 
 /// A refusal naming a field of the container that is inconsistent with itself.
 const fn talif(haql: &'static str, qeema: u64, hadd: u64) -> KhataUnreal {
-    KhataUnreal::MawridTalif { ism: ISM, haql, qeema, hadd }
+    KhataUnreal::MawridTalif {
+        ism: ISM,
+        haql,
+        qeema,
+        hadd,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -660,14 +672,21 @@ impl TarwisatIoStore {
 
         let sihr: [u8; 16] = iqra_masfufa(bayt, 0).ok_or_else(|| naqis("the .utoc magic"))?;
         if sihr != SIHR {
-            return Err(KhataUnreal::SihrGhayrMutabaq { malaf: masar.to_path_buf(), ism: ISM });
+            return Err(KhataUnreal::SihrGhayrMutabaq {
+                malaf: masar.to_path_buf(),
+                ism: ISM,
+            });
         }
 
         let isdar = IsdarIoStore::min_raqm(iqra_u8(bayt, 16).ok_or_else(|| naqis("the version"))?)?;
 
         let hajm_tarwisa = iqra_u32(bayt, 20).ok_or_else(|| naqis("the header size"))?;
         if hajm_tarwisa != u32::try_from(HAJM_TARWISA).unwrap_or(u32::MAX) {
-            return Err(talif("the header size", u64::from(hajm_tarwisa), tul_u64(HAJM_TARWISA)));
+            return Err(talif(
+                "the header size",
+                u64::from(hajm_tarwisa),
+                tul_u64(HAJM_TARWISA),
+            ));
         }
 
         let adad_ajza = iqra_u32(bayt, 24).ok_or_else(|| naqis("the chunk count"))?;
@@ -707,9 +726,21 @@ impl TarwisatIoStore {
 
         saqf_adad(adad_ajza, AQSA_AJZA, "the chunk count")?;
         saqf_adad(adad_kutal, AQSA_KUTAL, "the compression block count")?;
-        saqf_adad(adad_asma_daght, AQSA_ASMA_DAGHT, "the compression method count")?;
-        saqf_adad(tul_ism_daght, AQSA_TUL_ISM_DAGHT, "the compression method name length")?;
-        saqf_adad(hajm_kutlat_daght, AQSA_KUTLA_KHAAM, "the compression block size")?;
+        saqf_adad(
+            adad_asma_daght,
+            AQSA_ASMA_DAGHT,
+            "the compression method count",
+        )?;
+        saqf_adad(
+            tul_ism_daght,
+            AQSA_TUL_ISM_DAGHT,
+            "the compression method name length",
+        )?;
+        saqf_adad(
+            hajm_kutlat_daght,
+            AQSA_KUTLA_KHAAM,
+            "the compression block size",
+        )?;
 
         // A named method table with a zero-width name is a table of nothing, and
         // every block index into it would resolve to an empty string that no
@@ -738,13 +769,21 @@ impl TarwisatIoStore {
             0
         };
         let adad_bila_basma = if isdar.yahwi_faid() {
-            saqf_adad(adad_bila_basma, AQSA_AJZA, "the perfect-hash overflow count")?;
+            saqf_adad(
+                adad_bila_basma,
+                AQSA_AJZA,
+                "the perfect-hash overflow count",
+            )?;
             adad_bila_basma
         } else {
             0
         };
         let hajm_fahras_dalil = if isdar.yahwi_dalil() && alam.mufahras() {
-            saqf_adad(hajm_fahras_dalil, AQSA_FAHRAS_DALIL, "the directory index size")?;
+            saqf_adad(
+                hajm_fahras_dalil,
+                AQSA_FAHRAS_DALIL,
+                "the directory index size",
+            )?;
             hajm_fahras_dalil
         } else {
             0
@@ -903,7 +942,11 @@ impl MuarrifJuz {
         let [m0, m1, m2, m3, m4, m5, m6, m7, f0, f1, _hashw, naw] = khana;
         let muarrif = u64::from_le_bytes([m0, m1, m2, m3, m4, m5, m6, m7]);
         let fahras = u16::from_be_bytes([f0, f1]);
-        Self { muarrif, fahras, naw: NawJuz::min_raqm(naw) }
+        Self {
+            muarrif,
+            fahras,
+            naw: NawJuz::min_raqm(naw),
+        }
     }
 
     /// The twelve bytes the container stores, byte order included.
@@ -1050,7 +1093,12 @@ impl MadkhalKutlatDaght {
         // Three little-endian bytes, then one zero: the 24-bit mask, likewise.
         let hajm_madghut = u32::from_le_bytes([m0, m1, m2, 0]);
         let hajm_khaam = u32::from_le_bytes([k0, k1, k2, 0]);
-        Self { izaha, hajm_madghut, hajm_khaam, fahras_daght: daght }
+        Self {
+            izaha,
+            hajm_madghut,
+            hajm_khaam,
+            fahras_daght: daght,
+        }
     }
 
     /// One past the last stored byte, or [`None`] when the sum overflows.
@@ -1207,18 +1255,24 @@ fn iqra_nass(bayt: &[u8], mawqi: &mut usize, haql: &'static str) -> Result<Strin
             .map_err(|_| talif(haql, tul_u64(bila_sifr.len()), u64::from(AQSA_TUL_NASS)));
     }
 
-    let adad = adad.checked_neg().and_then(|adad| u32::try_from(adad).ok()).ok_or_else(|| {
-        talif(haql, u64::from(AQSA_TUL_NASS), u64::from(AQSA_TUL_NASS))
-    })?;
+    let adad = adad
+        .checked_neg()
+        .and_then(|adad| u32::try_from(adad).ok())
+        .ok_or_else(|| talif(haql, u64::from(AQSA_TUL_NASS), u64::from(AQSA_TUL_NASS)))?;
     saqf_adad(adad, AQSA_TUL_NASS, haql)?;
     let tul = mada(adad, 2, haql, u64::from(AQSA_TUL_NASS))?;
     let khana = qass(bayt, *mawqi, tul, haql)?;
     *mawqi = mawqi.saturating_add(tul);
     let wahdat: Vec<u16> = khana
         .chunks_exact(2)
-        .filter_map(|zawj| zawj.first_chunk::<2>().map(|zawj| u16::from_le_bytes(*zawj)))
+        .filter_map(|zawj| {
+            zawj.first_chunk::<2>()
+                .map(|zawj| u16::from_le_bytes(*zawj))
+        })
         .collect();
-    let bila_sifr = wahdat.split_last().map_or(wahdat.as_slice(), |(_, bidaya)| bidaya);
+    let bila_sifr = wahdat
+        .split_last()
+        .map_or(wahdat.as_slice(), |(_, bidaya)| bidaya);
     char::decode_utf16(bila_sifr.iter().copied())
         .collect::<Result<String, _>>()
         .map_err(|_| talif(haql, tul_u64(bila_sifr.len()), u64::from(AQSA_TUL_NASS)))
@@ -1277,8 +1331,12 @@ impl FahrasDalil {
         let mut mawqi = 0usize;
         let nuqtat_wasl = iqra_nass(bayt, &mut mawqi, "the directory index mount point")?;
 
-        let adad_madakhil =
-            iqra_adad(bayt, &mut mawqi, "the directory entry count", AQSA_MADAKHIL_DALIL)?;
+        let adad_madakhil = iqra_adad(
+            bayt,
+            &mut mawqi,
+            "the directory entry count",
+            AQSA_MADAKHIL_DALIL,
+        )?;
         let mada_madakhil = mada(
             adad_madakhil,
             HAJM_MADKHAL_DALIL,
@@ -1321,13 +1379,12 @@ impl FahrasDalil {
         // million strings it does not carry, and reserving for all of them before
         // reading the first would let a forty-byte header claim a gibibyte.
         let mut hawd = Vec::new();
-        hawd.try_reserve(usize::try_from(adad_hawd.min(4096)).unwrap_or(0)).map_err(|_| {
-            KhataUnreal::HajmMufrit {
+        hawd.try_reserve(usize::try_from(adad_hawd.min(4096)).unwrap_or(0))
+            .map_err(|_| KhataUnreal::HajmMufrit {
                 haql: "the string pool",
                 qeema: u64::from(adad_hawd),
                 saqf: u64::from(AQSA_HAWD),
-            }
-        })?;
+            })?;
         for _ in 0..adad_hawd {
             hawd.push(iqra_nass(bayt, &mut mawqi, "a directory index string")?);
         }
@@ -1341,8 +1398,16 @@ impl FahrasDalil {
         let adad_malafat_fili = u32::try_from(malafat.len()).unwrap_or(u32::MAX);
         for madkhal in &madakhil {
             tahaqquq_fahras(madkhal.ism, adad_hawd_fili, "a directory name index")?;
-            tahaqquq_fahras(madkhal.awwal_ibn, adad_madakhil_fili, "a child directory index")?;
-            tahaqquq_fahras(madkhal.shaqiq, adad_madakhil_fili, "a sibling directory index")?;
+            tahaqquq_fahras(
+                madkhal.awwal_ibn,
+                adad_madakhil_fili,
+                "a child directory index",
+            )?;
+            tahaqquq_fahras(
+                madkhal.shaqiq,
+                adad_madakhil_fili,
+                "a sibling directory index",
+            )?;
             tahaqquq_fahras(madkhal.awwal_malaf, adad_malafat_fili, "a first file index")?;
         }
         for madkhal in &malafat {
@@ -1358,7 +1423,13 @@ impl FahrasDalil {
         }
 
         let masarat = imshi(&madakhil, &malafat, &hawd)?;
-        Ok(Self { nuqtat_wasl, madakhil, malafat, hawd, masarat })
+        Ok(Self {
+            nuqtat_wasl,
+            madakhil,
+            malafat,
+            hawd,
+            masarat,
+        })
     }
 
     /// The chunk index a container-relative path resolves to.
@@ -1369,7 +1440,9 @@ impl FahrasDalil {
 
     /// Every path in the container, with the chunk index it resolves to.
     pub fn kull(&self) -> impl Iterator<Item = (&str, u32)> + '_ {
-        self.masarat.iter().map(|(masar, fahras)| (masar.as_str(), *fahras))
+        self.masarat
+            .iter()
+            .map(|(masar, fahras)| (masar.as_str(), *fahras))
     }
 }
 
@@ -1383,7 +1456,11 @@ fn tahaqquq_fahras(fahras: u32, adad: u32, haql: &'static str) -> Result<(), Kha
 
 /// The refusal a tree walk that exceeded its step budget produces.
 fn dawra(khatawat: usize, mizaniya: usize) -> KhataUnreal {
-    talif("the directory tree walk", tul_u64(khatawat), tul_u64(mizaniya))
+    talif(
+        "the directory tree walk",
+        tul_u64(khatawat),
+        tul_u64(mizaniya),
+    )
 }
 
 /// Walks the first-child / next-sibling tree into a flat path map.
@@ -1554,14 +1631,15 @@ fn fukk_daght(
                 });
             }
             Ok(makhzun.to_vec())
-        }
+        },
         TareeqatDaght::Zstd => {
             let mut mafkuk = vec![0u8; siaa];
-            let fili = zstd::bulk::decompress_to_buffer(makhzun, &mut mafkuk)
-                .map_err(|khata| KhataUnreal::FakkFashil {
+            let fili = zstd::bulk::decompress_to_buffer(makhzun, &mut mafkuk).map_err(|khata| {
+                KhataUnreal::FakkFashil {
                     ism: ISM,
                     tafsil: khata.to_string(),
-                })?;
+                }
+            })?;
             if fili != siaa {
                 return Err(KhataUnreal::HajmGhayrMutabaq {
                     ism: ISM,
@@ -1570,7 +1648,7 @@ fn fukk_daght(
                 });
             }
             Ok(mafkuk)
-        }
+        },
         TareeqatDaght::Zlib => {
             let mut mafkuk = vec![0u8; siaa];
             let mut jihaz = flate2::Decompress::new(true);
@@ -1589,10 +1667,11 @@ fn fukk_daght(
                 });
             }
             Ok(mafkuk)
-        }
-        TareeqatDaght::Oodle | TareeqatDaght::Majhula(_) => {
-            Err(KhataUnreal::DaghtMajhul { ism: ISM, naw: tareeqa.ism() })
-        }
+        },
+        TareeqatDaght::Oodle | TareeqatDaght::Majhula(_) => Err(KhataUnreal::DaghtMajhul {
+            ism: ISM,
+            naw: tareeqa.ism(),
+        }),
     }
 }
 
@@ -1663,7 +1742,9 @@ impl JadwalMuhtawayat {
     ) -> Result<Self, KhataUnreal> {
         let tarwisa = TarwisatIoStore::min_bayt(bayt, masar)?;
         if tarwisa.alam.mushaffar() && miftah.is_none() {
-            return Err(KhataUnreal::PakMushaffar { masar: masar.to_path_buf() });
+            return Err(KhataUnreal::PakMushaffar {
+                masar: masar.to_path_buf(),
+            });
         }
 
         let mut mawqi = HAJM_TARWISA;
@@ -1740,7 +1821,9 @@ impl JadwalMuhtawayat {
         let kutal: Vec<MadkhalKutlatDaght> = khana
             .chunks_exact(HAJM_MADKHAL_KUTLA)
             .filter_map(|sijill| {
-                sijill.first_chunk::<12>().map(|q| MadkhalKutlatDaght::min_bayt(*q))
+                sijill
+                    .first_chunk::<12>()
+                    .map(|q| MadkhalKutlatDaght::min_bayt(*q))
             })
             .collect();
 
@@ -1777,15 +1860,21 @@ impl JadwalMuhtawayat {
             })?;
             saqf_adad(hajm_basma, AQSA_HAJM_BASMA, "the signature digest size")?;
             if hajm_basma == 0 {
-                return Err(talif("the signature digest size", 0, u64::from(AQSA_HAJM_BASMA)));
+                return Err(talif(
+                    "the signature digest size",
+                    0,
+                    u64::from(AQSA_HAJM_BASMA),
+                ));
             }
             mawqi = mawqi.saturating_add(4);
             let tawqee = hajm_usize(u64::from(hajm_basma)).unwrap_or(usize::MAX);
-            let ithnan = tawqee.checked_mul(2).ok_or_else(|| KhataUnreal::HajmMufrit {
-                haql: "the signature block",
-                qeema: u64::from(hajm_basma),
-                saqf: u64::from(AQSA_HAJM_BASMA),
-            })?;
+            let ithnan = tawqee
+                .checked_mul(2)
+                .ok_or_else(|| KhataUnreal::HajmMufrit {
+                    haql: "the signature block",
+                    qeema: u64::from(hajm_basma),
+                    saqf: u64::from(AQSA_HAJM_BASMA),
+                })?;
             let _ = qass(bayt, mawqi, ithnan, "the signature block")?;
             mawqi = mawqi.saturating_add(ithnan);
             let span = mada(
@@ -1811,8 +1900,9 @@ impl JadwalMuhtawayat {
             mawqi = mawqi.saturating_add(span);
             let mut mafkuk = khana.to_vec();
             if tarwisa.alam.mushaffar() {
-                let miftah = miftah
-                    .ok_or_else(|| KhataUnreal::PakMushaffar { masar: masar.to_path_buf() })?;
+                let miftah = miftah.ok_or_else(|| KhataUnreal::PakMushaffar {
+                    masar: masar.to_path_buf(),
+                })?;
                 fukk_tashfeer(&mut mafkuk, miftah, masar)?;
             }
             // A directory index that does not parse after decryption is almost
@@ -1831,7 +1921,7 @@ impl JadwalMuhtawayat {
                         });
                     }
                     return Err(khata);
-                }
+                },
             }
         } else {
             None
@@ -1957,7 +2047,10 @@ impl JadwalMuhtawayat {
         if musajjala == mahsuba {
             Ok(())
         } else {
-            Err(KhataUnreal::BasmaGhayrMutabaqa { ism: ISM, madkhal: madkhal.to_owned() })
+            Err(KhataUnreal::BasmaGhayrMutabaqa {
+                ism: ISM,
+                madkhal: madkhal.to_owned(),
+            })
         }
     }
 
@@ -2068,12 +2161,17 @@ impl MalafatUcas {
         let mut kharait = Vec::new();
         for qitaa in 0..adad_qitaat.max(1) {
             let masar = masar_qitaa(masar_utoc, qitaa);
-            let malaf = std::fs::File::open(&masar)
-                .map_err(|sabab| KhataUnreal::KhataMalaf { masar: masar.clone(), sabab })?;
+            let malaf = std::fs::File::open(&masar).map_err(|sabab| KhataUnreal::KhataMalaf {
+                masar: masar.clone(),
+                sabab,
+            })?;
             // SAFETY: see this type's documentation. The mapping is read-only and
             // the file is one this product opens and never writes.
-            let khareeta = unsafe { memmap2::Mmap::map(&malaf) }
-                .map_err(|sabab| KhataUnreal::KhataMalaf { masar: masar.clone(), sabab })?;
+            let khareeta =
+                unsafe { memmap2::Mmap::map(&malaf) }.map_err(|sabab| KhataUnreal::KhataMalaf {
+                    masar: masar.clone(),
+                    sabab,
+                })?;
             masarat.push(masar);
             kharait.push(khareeta);
         }
@@ -2094,26 +2192,33 @@ impl QariNitaq for MalafatUcas {
 
     fn iqra_nitaq(&self, qitaa: u32, izaha: u64, hadaf: &mut [u8]) -> Result<(), KhataUnreal> {
         let fahras = hajm_usize(u64::from(qitaa)).unwrap_or(usize::MAX);
-        let khareeta = self.kharait.get(fahras).ok_or_else(|| KhataUnreal::MalafQaseer {
-            haql: "a .ucas partition that the .utoc names",
-            tul: tul_u64(self.kharait.len()),
-            matlub: u64::from(qitaa).saturating_add(1),
-        })?;
+        let khareeta = self
+            .kharait
+            .get(fahras)
+            .ok_or_else(|| KhataUnreal::MalafQaseer {
+                haql: "a .ucas partition that the .utoc names",
+                tul: tul_u64(self.kharait.len()),
+                matlub: u64::from(qitaa).saturating_add(1),
+            })?;
         let bidaya = hajm_usize(izaha).ok_or_else(|| KhataUnreal::MalafQaseer {
             haql: "a .ucas block offset",
             tul: tul_u64(khareeta.len()),
             matlub: izaha,
         })?;
-        let nihaya = bidaya.checked_add(hadaf.len()).ok_or_else(|| KhataUnreal::MalafQaseer {
-            haql: "a .ucas block",
-            tul: tul_u64(khareeta.len()),
-            matlub: u64::MAX,
-        })?;
-        let khana = khareeta.get(bidaya..nihaya).ok_or_else(|| KhataUnreal::MalafQaseer {
-            haql: "a .ucas block",
-            tul: tul_u64(khareeta.len()),
-            matlub: tul_u64(nihaya),
-        })?;
+        let nihaya = bidaya
+            .checked_add(hadaf.len())
+            .ok_or_else(|| KhataUnreal::MalafQaseer {
+                haql: "a .ucas block",
+                tul: tul_u64(khareeta.len()),
+                matlub: u64::MAX,
+            })?;
+        let khana = khareeta
+            .get(bidaya..nihaya)
+            .ok_or_else(|| KhataUnreal::MalafQaseer {
+                haql: "a .ucas block",
+                tul: tul_u64(khareeta.len()),
+                matlub: tul_u64(nihaya),
+            })?;
         hadaf.copy_from_slice(khana);
         Ok(())
     }
@@ -2146,26 +2251,33 @@ impl QariNitaq for BaytUcas<'_> {
 
     fn iqra_nitaq(&self, qitaa: u32, izaha: u64, hadaf: &mut [u8]) -> Result<(), KhataUnreal> {
         let fahras = hajm_usize(u64::from(qitaa)).unwrap_or(usize::MAX);
-        let khana = self.qitaat.get(fahras).ok_or_else(|| KhataUnreal::MalafQaseer {
-            haql: "a .ucas partition that the .utoc names",
-            tul: tul_u64(self.qitaat.len()),
-            matlub: u64::from(qitaa).saturating_add(1),
-        })?;
+        let khana = self
+            .qitaat
+            .get(fahras)
+            .ok_or_else(|| KhataUnreal::MalafQaseer {
+                haql: "a .ucas partition that the .utoc names",
+                tul: tul_u64(self.qitaat.len()),
+                matlub: u64::from(qitaa).saturating_add(1),
+            })?;
         let bidaya = hajm_usize(izaha).ok_or_else(|| KhataUnreal::MalafQaseer {
             haql: "a .ucas block offset",
             tul: tul_u64(khana.len()),
             matlub: izaha,
         })?;
-        let nihaya = bidaya.checked_add(hadaf.len()).ok_or_else(|| KhataUnreal::MalafQaseer {
-            haql: "a .ucas block",
-            tul: tul_u64(khana.len()),
-            matlub: u64::MAX,
-        })?;
-        let nitaq = khana.get(bidaya..nihaya).ok_or_else(|| KhataUnreal::MalafQaseer {
-            haql: "a .ucas block",
-            tul: tul_u64(khana.len()),
-            matlub: tul_u64(nihaya),
-        })?;
+        let nihaya = bidaya
+            .checked_add(hadaf.len())
+            .ok_or_else(|| KhataUnreal::MalafQaseer {
+                haql: "a .ucas block",
+                tul: tul_u64(khana.len()),
+                matlub: u64::MAX,
+            })?;
+        let nitaq = khana
+            .get(bidaya..nihaya)
+            .ok_or_else(|| KhataUnreal::MalafQaseer {
+                haql: "a .ucas block",
+                tul: tul_u64(khana.len()),
+                matlub: tul_u64(nihaya),
+            })?;
         hadaf.copy_from_slice(nitaq);
         Ok(())
     }
@@ -2208,11 +2320,18 @@ impl HawiyatIoStore<MalafatUcas> {
     /// cannot be read or mapped, and otherwise whatever
     /// [`JadwalMuhtawayat::min_bayt`] refuses.
     pub fn iftah(masar_utoc: &Path, miftah: Option<[u8; 32]>) -> Result<Self, KhataUnreal> {
-        let bayt = std::fs::read(masar_utoc)
-            .map_err(|sabab| KhataUnreal::KhataMalaf { masar: masar_utoc.to_path_buf(), sabab })?;
+        let bayt = std::fs::read(masar_utoc).map_err(|sabab| KhataUnreal::KhataMalaf {
+            masar: masar_utoc.to_path_buf(),
+            sabab,
+        })?;
         let jadwal = JadwalMuhtawayat::min_bayt(&bayt, masar_utoc, miftah.as_ref())?;
         let masdar = MalafatUcas::iftah(masar_utoc, jadwal.tarwisa().adad_qitaat)?;
-        Ok(Self { masar: masar_utoc.to_path_buf(), jadwal, masdar, miftah })
+        Ok(Self {
+            masar: masar_utoc.to_path_buf(),
+            jadwal,
+            masdar,
+            miftah,
+        })
     }
 }
 
@@ -2234,9 +2353,18 @@ impl<Q: QariNitaq> HawiyatIoStore<Q> {
         let matlub = jadwal.tarwisa().adad_qitaat;
         let mutah = masdar.adad_qitaat();
         if mutah < matlub {
-            return Err(talif("the .ucas partition count", u64::from(mutah), u64::from(matlub)));
+            return Err(talif(
+                "the .ucas partition count",
+                u64::from(mutah),
+                u64::from(matlub),
+            ));
         }
-        Ok(Self { masar, jadwal, masdar, miftah })
+        Ok(Self {
+            masar,
+            jadwal,
+            masdar,
+            miftah,
+        })
     }
 
     /// The `.utoc` path this container was opened from.
@@ -2293,7 +2421,8 @@ impl<Q: QariNitaq> HawiyatIoStore<Q> {
 
     /// Every metadata file in the container, beside the resources they describe.
     pub fn masarat_locmeta(&self) -> impl Iterator<Item = (&str, u32)> + '_ {
-        self.masarat().filter(|(masar, _)| masar.to_ascii_lowercase().ends_with(".locmeta"))
+        self.masarat()
+            .filter(|(masar, _)| masar.to_ascii_lowercase().ends_with(".locmeta"))
     }
 
     /// Reads one chunk by its index in the table of contents.
@@ -2328,7 +2457,11 @@ impl<Q: QariNitaq> HawiyatIoStore<Q> {
     /// the partition it was placed in.
     pub fn iqra_juz(&self, fahras: usize) -> Result<Vec<u8>, KhataUnreal> {
         let mawqi = *self.jadwal.mawaqi().get(fahras).ok_or_else(|| {
-            talif("a chunk index", tul_u64(fahras), tul_u64(self.jadwal.mawaqi().len()))
+            talif(
+                "a chunk index",
+                tul_u64(fahras),
+                tul_u64(self.jadwal.mawaqi().len()),
+            )
         })?;
         if mawqi.tul > AQSA_JUZ {
             return Err(KhataUnreal::HajmMufrit {
@@ -2337,7 +2470,9 @@ impl<Q: QariNitaq> HawiyatIoStore<Q> {
                 saqf: AQSA_JUZ,
             });
         }
-        let nihaya = mawqi.nihaya().ok_or_else(|| talif("a chunk's extent", mawqi.tul, AQSA_JUZ))?;
+        let nihaya = mawqi
+            .nihaya()
+            .ok_or_else(|| talif("a chunk's extent", mawqi.tul, AQSA_JUZ))?;
         if mawqi.tul == 0 {
             return Ok(Vec::new());
         }
@@ -2354,7 +2489,11 @@ impl<Q: QariNitaq> HawiyatIoStore<Q> {
         let awwal = hajm_usize(awwal).ok_or_else(|| talif("a chunk's first block", awwal, 0))?;
         let akhir = hajm_usize(akhir).ok_or_else(|| talif("a chunk's last block", akhir, 0))?;
         let kutal = self.jadwal.kutal().get(awwal..akhir).ok_or_else(|| {
-            talif("a chunk's block range", tul_u64(akhir), tul_u64(self.jadwal.kutal().len()))
+            talif(
+                "a chunk's block range",
+                tul_u64(akhir),
+                tul_u64(self.jadwal.kutal().len()),
+            )
         })?;
 
         let siaa = hajm_usize(mawqi.tul).ok_or(KhataUnreal::HajmMufrit {
@@ -2363,11 +2502,13 @@ impl<Q: QariNitaq> HawiyatIoStore<Q> {
             saqf: AQSA_JUZ,
         })?;
         let mut majmu: Vec<u8> = Vec::new();
-        majmu.try_reserve(siaa).map_err(|_| KhataUnreal::HajmMufrit {
-            haql: "a chunk's length",
-            qeema: mawqi.tul,
-            saqf: AQSA_JUZ,
-        })?;
+        majmu
+            .try_reserve(siaa)
+            .map_err(|_| KhataUnreal::HajmMufrit {
+                haql: "a chunk's length",
+                qeema: mawqi.tul,
+                saqf: AQSA_JUZ,
+            })?;
 
         for kutla in kutal {
             let mut khaam = self.iqra_kutla(kutla)?;
@@ -2386,7 +2527,8 @@ impl<Q: QariNitaq> HawiyatIoStore<Q> {
             }
         }
 
-        let bidaya = hajm_usize(dakhil).ok_or_else(|| talif("a chunk's block offset", dakhil, 0))?;
+        let bidaya =
+            hajm_usize(dakhil).ok_or_else(|| talif("a chunk's block offset", dakhil, 0))?;
         let khatam = bidaya
             .checked_add(siaa)
             .ok_or_else(|| talif("a chunk's extent", mawqi.tul, tul_u64(majmu.len())))?;
@@ -2435,7 +2577,13 @@ impl<Q: QariNitaq> HawiyatIoStore<Q> {
         // incomplete and decrypt it into noise.
         let mutlub = if self.jadwal.tarwisa().alam.mushaffar() {
             ila_ala(u64::from(kutla.hajm_madghut), tul_u64(HAJM_KUTLAT_TASHFEER)).ok_or_else(
-                || talif("a compression block's stored size", u64::from(kutla.hajm_madghut), 0),
+                || {
+                    talif(
+                        "a compression block's stored size",
+                        u64::from(kutla.hajm_madghut),
+                        0,
+                    )
+                },
             )?
         } else {
             u64::from(kutla.hajm_madghut)
@@ -2453,16 +2601,20 @@ impl<Q: QariNitaq> HawiyatIoStore<Q> {
             let miftah = self
                 .miftah
                 .as_ref()
-                .ok_or_else(|| KhataUnreal::PakMushaffar { masar: self.masar.clone() })?;
+                .ok_or_else(|| KhataUnreal::PakMushaffar {
+                    masar: self.masar.clone(),
+                })?;
             fukk_tashfeer(&mut makhzun, miftah, &self.masar)?;
         }
 
         let hadd = hajm_usize(u64::from(kutla.hajm_madghut)).unwrap_or(0);
-        let makhzun = makhzun.get(..hadd).ok_or_else(|| KhataUnreal::MalafQaseer {
-            haql: "a compression block",
-            tul: tul_u64(siaa),
-            matlub: u64::from(kutla.hajm_madghut),
-        })?;
+        let makhzun = makhzun
+            .get(..hadd)
+            .ok_or_else(|| KhataUnreal::MalafQaseer {
+                haql: "a compression block",
+                tul: tul_u64(siaa),
+                matlub: u64::from(kutla.hajm_madghut),
+            })?;
 
         let tareeqa = self.jadwal.tareeqa(kutla);
         fukk_daght(&tareeqa, makhzun, kutla.hajm_khaam)

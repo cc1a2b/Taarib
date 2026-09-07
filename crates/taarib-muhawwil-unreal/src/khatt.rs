@@ -98,8 +98,9 @@ pub const AQSA_HAJM_KHATT: u64 = 64 * 1024 * 1024;
 /// Cooked Unreal assets and containers, every one of them. The list exists so
 /// that "this module cannot be pointed at the game's font asset" is a check and
 /// not a promise.
-pub const LAWAHIQ_MAMNUA: [&str; 8] =
-    ["uasset", "uexp", "ubulk", "umap", "upk", "pak", "utoc", "ucas"];
+pub const LAWAHIQ_MAMNUA: [&str; 8] = [
+    "uasset", "uexp", "ubulk", "umap", "upk", "pak", "utoc", "ucas",
+];
 
 /// The codepoint ranges the Arabic sub-font claims, inclusive on both ends.
 ///
@@ -144,7 +145,14 @@ impl NitaqHuruf {
     /// empty range that claims nothing.
     #[must_use]
     pub const fn jadeed(awwal: u32, akhir: u32) -> Self {
-        if awwal <= akhir { Self { awwal, akhir } } else { Self { awwal: akhir, akhir: awwal } }
+        if awwal <= akhir {
+            Self { awwal, akhir }
+        } else {
+            Self {
+                awwal: akhir,
+                akhir: awwal,
+            }
+        }
     }
 
     /// Whether a codepoint falls in this range.
@@ -245,10 +253,13 @@ pub fn masar_masmuh(masar: &Path) -> bool {
     if masar.to_str().is_none() {
         return false;
     }
-    masar.extension().and_then(|lahiqa| lahiqa.to_str()).is_none_or(|lahiqa| {
-        let saghira = lahiqa.to_ascii_lowercase();
-        !LAWAHIQ_MAMNUA.contains(&saghira.as_str())
-    })
+    masar
+        .extension()
+        .and_then(|lahiqa| lahiqa.to_str())
+        .is_none_or(|lahiqa| {
+            let saghira = lahiqa.to_ascii_lowercase();
+            !LAWAHIQ_MAMNUA.contains(&saghira.as_str())
+        })
 }
 
 // ---------------------------------------------------------------------------
@@ -296,7 +307,12 @@ impl FaraiKhatt {
     /// There is deliberately no variant of this that takes a path.
     #[must_use]
     pub fn jadeed(ism: impl Into<String>, bayt: Arc<[u8]>) -> Self {
-        Self { ism: ism.into(), bayt, nitaqat: Vec::new(), thaqafat: Vec::new() }
+        Self {
+            ism: ism.into(),
+            bayt,
+            nitaqat: Vec::new(),
+            thaqafat: Vec::new(),
+        }
     }
 
     /// Builds the Arabic sub-font: the Arabic ranges, claimed for every culture.
@@ -307,7 +323,12 @@ impl FaraiKhatt {
     /// unshaped for every player who did not switch language.
     #[must_use]
     pub fn arabi(ism: impl Into<String>, bayt: Arc<[u8]>) -> Self {
-        Self { ism: ism.into(), bayt, nitaqat: nitaqat_arabiya(), thaqafat: Vec::new() }
+        Self {
+            ism: ism.into(),
+            bayt,
+            nitaqat: nitaqat_arabiya(),
+            thaqafat: Vec::new(),
+        }
     }
 
     /// Restricts this sub-font to a set of ranges.
@@ -410,7 +431,11 @@ impl KhattMurakkab {
         let asasi = FaraiKhatt::jadeed("taarib-asasi", asasi);
         let arabi = FaraiKhatt::arabi("taarib-arabi", arabi);
         let irtida = vec![arabi.ism.clone()];
-        let murakkab = Self { asasi, farai: vec![arabi], irtida };
+        let murakkab = Self {
+            asasi,
+            farai: vec![arabi],
+            irtida,
+        };
         murakkab.tahaqquq()?;
         Ok(murakkab)
     }
@@ -425,7 +450,11 @@ impl KhattMurakkab {
         farai: Vec<FaraiKhatt>,
         irtida: Vec<String>,
     ) -> Result<Self, KhataUnreal> {
-        let murakkab = Self { asasi, farai, irtida };
+        let murakkab = Self {
+            asasi,
+            farai,
+            irtida,
+        };
         murakkab.tahaqquq()?;
         Ok(murakkab)
     }
@@ -679,7 +708,7 @@ impl Khatt {
                          next launch and cannot be confirmed from this one"
                     ),
                 );
-            }
+            },
             Err(khata) => sijill.sajjil(Rutba::Idadat, false, khata.to_string()),
         }
 
@@ -703,7 +732,7 @@ impl Khatt {
                             self.asalib.len()
                         ),
                     );
-                }
+                },
                 Err(khata) => sijill.sajjil(Rutba::Haqn, false, khata.to_string()),
             }
         }
@@ -718,7 +747,9 @@ impl Khatt {
         if shay_najah {
             Ok(sijill)
         } else {
-            Err(KhataUnreal::KhattMarfud { sabab: sijill.sabab() })
+            Err(KhataUnreal::KhattMarfud {
+                sabab: sijill.sabab(),
+            })
         }
     }
 

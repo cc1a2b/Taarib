@@ -139,7 +139,10 @@ pub fn basma_malaf(masar: &Path) -> Result<Basma, KhataNusus> {
     let mut hashib = blake3::Hasher::new();
     hashib
         .update_mmap(masar)
-        .map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+        .map_err(|sabab| KhataNusus::KhataMalaf {
+            masar: masar.to_path_buf(),
+            sabab,
+        })?;
     Ok(Basma::min_bayt(*hashib.finalize().as_bytes()))
 }
 
@@ -283,7 +286,7 @@ impl SijillHifz {
                          a restore could not be verified even if it succeeded",
                     ));
                 }
-            }
+            },
             NawTaghyeer::Idafa | NawTaghyeer::MujalladMudaf => {
                 if self.kan_mawjudan {
                     return Err(khalal(
@@ -298,13 +301,15 @@ impl SijillHifz {
                          to restore",
                     ));
                 }
-            }
+            },
         }
 
         if matches!(self.naw, NawTaghyeer::MujalladMudaf)
             && (self.hajm_asli.is_some() || self.basma_maktuba.is_some())
         {
-            return Err(khalal("recorded as a directory and also as having contents"));
+            return Err(khalal(
+                "recorded as a directory and also as having contents",
+            ));
         }
 
         Ok(())
@@ -391,7 +396,10 @@ impl BayanHifz {
     /// How many lines are still waiting to be undone.
     #[must_use]
     pub fn mutabaqqi(&self) -> usize {
-        self.sijillat.values().filter(|sijill| !sijill.istiada_tammat).count()
+        self.sijillat
+            .values()
+            .filter(|sijill| !sijill.istiada_tammat)
+            .count()
     }
 
     /// Whether every line has been undone and verified.
@@ -465,19 +473,28 @@ impl TalabTaghyeer {
     /// A request to modify an existing file.
     #[must_use]
     pub fn tadeel(masar: impl Into<String>) -> Self {
-        Self { masar: masar.into(), naw: NawTaghyeer::Tadeel }
+        Self {
+            masar: masar.into(),
+            naw: NawTaghyeer::Tadeel,
+        }
     }
 
     /// A request to add a file the game does not have.
     #[must_use]
     pub fn idafa(masar: impl Into<String>) -> Self {
-        Self { masar: masar.into(), naw: NawTaghyeer::Idafa }
+        Self {
+            masar: masar.into(),
+            naw: NawTaghyeer::Idafa,
+        }
     }
 
     /// A request to create a directory for additions.
     #[must_use]
     pub fn mujallad(masar: impl Into<String>) -> Self {
-        Self { masar: masar.into(), naw: NawTaghyeer::MujalladMudaf }
+        Self {
+            masar: masar.into(),
+            naw: NawTaghyeer::MujalladMudaf,
+        }
     }
 }
 
@@ -559,11 +576,17 @@ impl KhuttatHifz {
             self.hajm_nusakh
         ));
         for khutwa in &self.khutuwat {
-            let hajm = khutwa.hajm.map_or_else(|| "-".to_owned(), |qeema| qeema.to_string());
+            let hajm = khutwa
+                .hajm
+                .map_or_else(|| "-".to_owned(), |qeema| qeema.to_string());
             sutur.push(match &khutwa.mulahaza {
                 Some(mulahaza) => {
-                    format!("  {} [{}] {hajm} -- {mulahaza}", khutwa.masar, khutwa.naw.ism())
-                }
+                    format!(
+                        "  {} [{}] {hajm} -- {mulahaza}",
+                        khutwa.masar,
+                        khutwa.naw.ism()
+                    )
+                },
                 None => format!("  {} [{}] {hajm}", khutwa.masar, khutwa.naw.ism()),
             });
         }
@@ -608,7 +631,10 @@ pub fn khutta(jidhr_luba: &Path, matlub: &[TalabTaghyeer]) -> Result<KhuttatHifz
         let kamil = dakhil_aw_khata(jidhr_luba, &talab.masar)?;
         let bayanat = fs::metadata(&kamil).ok();
         let mawjud = bayanat.is_some();
-        let hajm = bayanat.as_ref().filter(|b| b.is_file()).map(fs::Metadata::len);
+        let hajm = bayanat
+            .as_ref()
+            .filter(|b| b.is_file())
+            .map(fs::Metadata::len);
 
         let mut mulahaza = None;
         let mut hajm_nuskha = 0;
@@ -622,7 +648,7 @@ pub fn khutta(jidhr_luba: &Path, matlub: &[TalabTaghyeer]) -> Result<KhuttatHifz
                             "{qeema} bytes, above the {AQSA_HAJM_NUSKHA}-byte ceiling on what \
                              this build will preserve; installing would be refused"
                         ));
-                    }
+                    },
                     Some(qeema) => hajm_nuskha = qeema,
                     None if mawjud => {
                         mulahaza = Some(
@@ -630,16 +656,16 @@ pub fn khutta(jidhr_luba: &Path, matlub: &[TalabTaghyeer]) -> Result<KhuttatHifz
                              preserved as a file"
                                 .to_owned(),
                         );
-                    }
+                    },
                     None => {
                         mulahaza = Some(
                             "nothing is at this path, so there is no original to preserve; \
                              this would be an addition, not a modification"
                                 .to_owned(),
                         );
-                    }
+                    },
                 }
-            }
+            },
             NawTaghyeer::Idafa => {
                 khutta.adad_idafa = khutta.adad_idafa.saturating_add(1);
                 if mawjud {
@@ -649,7 +675,7 @@ pub fn khutta(jidhr_luba: &Path, matlub: &[TalabTaghyeer]) -> Result<KhuttatHifz
                             .to_owned(),
                     );
                 }
-            }
+            },
             NawTaghyeer::MujalladMudaf => {
                 khutta.adad_mujallad = khutta.adad_mujallad.saturating_add(1);
                 if mawjud {
@@ -659,7 +685,7 @@ pub fn khutta(jidhr_luba: &Path, matlub: &[TalabTaghyeer]) -> Result<KhuttatHifz
                             .to_owned(),
                     );
                 }
-            }
+            },
         }
 
         if mulahaza.is_some() {
@@ -756,9 +782,11 @@ impl Hifz {
     /// undoing part of it.
     pub fn istanif(jidhr_luba: &Path, jidhr_nusakh: &Path) -> Result<Self, KhataNusus> {
         let masar_bayan = jidhr_nusakh.join(ISM_BAYAN);
-        let bayan: BayanHifz = mukhattat::iqra_malaf(&masar_bayan).map_err(|khata| {
-            KhataNusus::NuskhaMafquda { masar: masar_bayan.clone(), sabab: khata.injilizi }
-        })?;
+        let bayan: BayanHifz =
+            mukhattat::iqra_malaf(&masar_bayan).map_err(|khata| KhataNusus::NuskhaMafquda {
+                masar: masar_bayan.clone(),
+                sabab: khata.injilizi,
+            })?;
         bayan.tahaqquq()?;
 
         Ok(Self {
@@ -841,7 +869,11 @@ impl Hifz {
                 });
             }
             let naw = mawjud.naw;
-            return Ok(HarisKitaba { hifz: self, masar, naw });
+            return Ok(HarisKitaba {
+                hifz: self,
+                masar,
+                naw,
+            });
         }
 
         let bayanat = fs::metadata(&mutlaq).ok();
@@ -849,16 +881,19 @@ impl Hifz {
             // Nothing there: this is an addition, and an addition has no
             // original. Recording it as one would mean writing an empty file
             // over the game on uninstall.
-            return self.sajjil_wa_ihris(masar, SijillHifz {
-                masar: String::new(),
-                naw: NawTaghyeer::Idafa,
-                kan_mawjudan: false,
-                hajm_asli: None,
-                basma_asliya: None,
-                nuskha: None,
-                basma_maktuba: None,
-                istiada_tammat: false,
-            });
+            return self.sajjil_wa_ihris(
+                masar,
+                SijillHifz {
+                    masar: String::new(),
+                    naw: NawTaghyeer::Idafa,
+                    kan_mawjudan: false,
+                    hajm_asli: None,
+                    basma_asliya: None,
+                    nuskha: None,
+                    basma_maktuba: None,
+                    istiada_tammat: false,
+                },
+            );
         };
 
         if !bayanat.is_file() {
@@ -888,31 +923,41 @@ impl Hifz {
         let miftah = miftah_nuskha(&masar);
         let masar_nuskha = self.mujallad_asl.join(&miftah);
         masarat::kitaba_dharra(&masar_nuskha, &asli).map_err(|khata| {
-            KhataNusus::NuskhaMafquda { masar: mutlaq.clone(), sabab: khata.injilizi }
+            KhataNusus::NuskhaMafquda {
+                masar: mutlaq.clone(),
+                sabab: khata.injilizi,
+            }
         })?;
 
         // Read the copy back before trusting it. A backup that was written to a
         // failing disk, a full volume, or a filesystem that silently truncated it
         // is worth nothing, and the only moment it can be caught cheaply is now,
         // while the real original is still on disk and untouched.
-        let murtajaa = masarat::qira(&masar_nuskha).map_err(|khata| {
-            KhataNusus::NuskhaMafquda { masar: masar_nuskha.clone(), sabab: khata.injilizi }
+        let murtajaa = masarat::qira(&masar_nuskha).map_err(|khata| KhataNusus::NuskhaMafquda {
+            masar: masar_nuskha.clone(),
+            sabab: khata.injilizi,
         })?;
         let farq = adad_ikhtilaf(&asli, &murtajaa);
         if farq > 0 {
-            return Err(KhataNusus::DawraGhayrMutabaqa { sigha: "backup copy", adad: farq });
+            return Err(KhataNusus::DawraGhayrMutabaqa {
+                sigha: "backup copy",
+                adad: farq,
+            });
         }
 
-        self.sajjil_wa_ihris(masar, SijillHifz {
-            masar: String::new(),
-            naw: NawTaghyeer::Tadeel,
-            kan_mawjudan: true,
-            hajm_asli: Some(hajm),
-            basma_asliya: Some(basma_asliya),
-            nuskha: Some(miftah),
-            basma_maktuba: None,
-            istiada_tammat: false,
-        })
+        self.sajjil_wa_ihris(
+            masar,
+            SijillHifz {
+                masar: String::new(),
+                naw: NawTaghyeer::Tadeel,
+                kan_mawjudan: true,
+                hajm_asli: Some(hajm),
+                basma_asliya: Some(basma_asliya),
+                nuskha: Some(miftah),
+                basma_maktuba: None,
+                istiada_tammat: false,
+            },
+        )
     }
 
     /// Records an addition and returns the permission to write it.
@@ -943,7 +988,11 @@ impl Hifz {
         if let Some(mawjud) = self.bayan.sijillat.get(&masar) {
             let naw = mawjud.naw;
             if matches!(naw, NawTaghyeer::Idafa) {
-                return Ok(HarisKitaba { hifz: self, masar, naw });
+                return Ok(HarisKitaba {
+                    hifz: self,
+                    masar,
+                    naw,
+                });
             }
             return Err(KhataNusus::NuskhaMafquda {
                 masar: mutlaq,
@@ -964,16 +1013,19 @@ impl Hifz {
             });
         }
 
-        self.sajjil_wa_ihris(masar, SijillHifz {
-            masar: String::new(),
-            naw: NawTaghyeer::Idafa,
-            kan_mawjudan: false,
-            hajm_asli: None,
-            basma_asliya: None,
-            nuskha: None,
-            basma_maktuba: None,
-            istiada_tammat: false,
-        })
+        self.sajjil_wa_ihris(
+            masar,
+            SijillHifz {
+                masar: String::new(),
+                naw: NawTaghyeer::Idafa,
+                kan_mawjudan: false,
+                hajm_asli: None,
+                basma_asliya: None,
+                nuskha: None,
+                basma_maktuba: None,
+                istiada_tammat: false,
+            },
+        )
     }
 
     /// Creates a directory for additions and records it so uninstall can remove
@@ -999,16 +1051,19 @@ impl Hifz {
         }
 
         insha_aw_khata(&mutlaq)?;
-        let _ = self.bayan.sijillat.insert(masar.clone(), SijillHifz {
-            masar,
-            naw: NawTaghyeer::MujalladMudaf,
-            kan_mawjudan: false,
-            hajm_asli: None,
-            basma_asliya: None,
-            nuskha: None,
-            basma_maktuba: None,
-            istiada_tammat: false,
-        });
+        let _ = self.bayan.sijillat.insert(
+            masar.clone(),
+            SijillHifz {
+                masar,
+                naw: NawTaghyeer::MujalladMudaf,
+                kan_mawjudan: false,
+                hajm_asli: None,
+                basma_asliya: None,
+                nuskha: None,
+                basma_maktuba: None,
+                istiada_tammat: false,
+            },
+        );
         self.iktub_bayan()?;
         Ok(true)
     }
@@ -1028,7 +1083,11 @@ impl Hifz {
         let naw = sijill.naw;
         let _ = self.bayan.sijillat.insert(masar.clone(), sijill);
         self.iktub_bayan()?;
-        Ok(HarisKitaba { hifz: self, masar, naw })
+        Ok(HarisKitaba {
+            hifz: self,
+            masar,
+            naw,
+        })
     }
 
     /// Writes the manifest atomically, through the shared mechanism.
@@ -1337,9 +1396,12 @@ impl Hafiz for Hifz {
                 sijill.istiada_tammat = true;
                 self.iktub_bayan()?;
                 Ok(true)
-            }
+            },
             Err(sabab) if sabab.kind() == std::io::ErrorKind::DirectoryNotEmpty => Ok(false),
-            Err(sabab) => Err(KhataNusus::KhataMalaf { masar: mutlaq, sabab }),
+            Err(sabab) => Err(KhataNusus::KhataMalaf {
+                masar: mutlaq,
+                sabab,
+            }),
         }
     }
 }
@@ -1604,7 +1666,9 @@ impl Hifz {
         masar: &str,
         taqreer: &mut TaqreerIstiada,
     ) -> Result<(), KhataNusus> {
-        let Some(sijill) = self.bayan.sijillat.get(masar) else { return Ok(()) };
+        let Some(sijill) = self.bayan.sijillat.get(masar) else {
+            return Ok(());
+        };
         if sijill.istiada_tammat {
             return Ok(());
         }
@@ -1624,17 +1688,14 @@ impl Hifz {
                     });
                 };
                 let masar_nuskha = self.mujallad_asl.join(&miftah);
-                let asli = masarat::qira(&masar_nuskha).map_err(|khata| {
-                    KhataNusus::NuskhaMafquda {
+                let asli =
+                    masarat::qira(&masar_nuskha).map_err(|khata| KhataNusus::NuskhaMafquda {
                         masar: masar_nuskha.clone(),
                         sabab: khata.injilizi,
-                    }
-                })?;
-                masarat::kitaba_dharra(&mutlaq, &asli).map_err(|khata| {
-                    KhataNusus::KhataMalaf {
-                        masar: mutlaq.clone(),
-                        sabab: std::io::Error::other(khata.injilizi),
-                    }
+                    })?;
+                masarat::kitaba_dharra(&mutlaq, &asli).map_err(|khata| KhataNusus::KhataMalaf {
+                    masar: mutlaq.clone(),
+                    sabab: std::io::Error::other(khata.injilizi),
                 })?;
 
                 // Re-read what actually landed, rather than trusting the write.
@@ -1647,14 +1708,14 @@ impl Hifz {
                     });
                 }
                 taqreer.mustaada = taqreer.mustaada.saturating_add(1);
-            }
+            },
             NawTaghyeer::Idafa => {
                 masarat::hadhf(&mutlaq).map_err(|khata| KhataNusus::KhataMalaf {
                     masar: mutlaq.clone(),
                     sabab: std::io::Error::other(khata.injilizi),
                 })?;
                 taqreer.mahdhufa = taqreer.mahdhufa.saturating_add(1);
-            }
+            },
             NawTaghyeer::MujalladMudaf => return Ok(()),
         }
 
@@ -1670,7 +1731,9 @@ impl Hifz {
         masar: &str,
         taqreer: &mut TaqreerIstiada,
     ) -> Result<(), KhataNusus> {
-        let Some(sijill) = self.bayan.sijillat.get(masar) else { return Ok(()) };
+        let Some(sijill) = self.bayan.sijillat.get(masar) else {
+            return Ok(());
+        };
         if sijill.istiada_tammat || !matches!(sijill.naw, NawTaghyeer::MujalladMudaf) {
             return Ok(());
         }
@@ -1722,7 +1785,11 @@ impl Hifz {
         for (masar, sijill) in &self.bayan.sijillat {
             let mutlaq = dakhil_aw_khata(&self.jidhr_luba, masar)?;
             let hala = if matches!(sijill.naw, NawTaghyeer::MujalladMudaf) {
-                if mutlaq.is_dir() { HalatMalaf::Mutabiq } else { HalatMalaf::Mafqud }
+                if mutlaq.is_dir() {
+                    HalatMalaf::Mutabiq
+                } else {
+                    HalatMalaf::Mafqud
+                }
             } else if mutlaq.is_file() {
                 let mahsuba = basma_malaf(&mutlaq)?;
                 match sijill.basma_maktuba {
@@ -1734,7 +1801,7 @@ impl Hifz {
                         } else {
                             HalatMalaf::Munharif { muallana, mahsuba }
                         }
-                    }
+                    },
                 }
             } else {
                 HalatMalaf::Mafqud
@@ -1743,14 +1810,14 @@ impl Hifz {
             match hala {
                 HalatMalaf::Munharif { .. } => {
                     taqreer.adad_munharif = taqreer.adad_munharif.saturating_add(1);
-                }
+                },
                 HalatMalaf::Mafqud => {
                     taqreer.adad_mafqud = taqreer.adad_mafqud.saturating_add(1);
-                }
+                },
                 HalatMalaf::Ustuidat => {
                     taqreer.adad_mustaad = taqreer.adad_mustaad.saturating_add(1);
-                }
-                HalatMalaf::Mutabiq | HalatMalaf::GhayrMuhaqqaq => {}
+                },
+                HalatMalaf::Mutabiq | HalatMalaf::GhayrMuhaqqaq => {},
             }
             let _ = taqreer.halat.insert(masar.clone(), hala);
         }
@@ -1760,11 +1827,16 @@ impl Hifz {
                 continue;
             }
             let mutlaq = dakhil_aw_khata(&self.jidhr_luba, masar)?;
-            for madkhal in walkdir::WalkDir::new(&mutlaq).into_iter().filter_map(Result::ok) {
+            for madkhal in walkdir::WalkDir::new(&mutlaq)
+                .into_iter()
+                .filter_map(Result::ok)
+            {
                 if !madkhal.file_type().is_file() {
                     continue;
                 }
-                let Some(nisbi) = nisbi_min(&self.jidhr_luba, madkhal.path()) else { continue };
+                let Some(nisbi) = nisbi_min(&self.jidhr_luba, madkhal.path()) else {
+                    continue;
+                };
                 if !self.bayan.sijillat.contains_key(&nisbi) {
                     taqreer.zaida.push(nisbi);
                 }
@@ -1812,7 +1884,10 @@ fn masar_muwahhad(nisbi: &str) -> String {
 fn dakhil_aw_khata(jidhr: &Path, nisbi: &str) -> Result<PathBuf, KhataNusus> {
     masarat::dakhil(jidhr, nisbi).map_err(|khata| KhataNusus::NuskhaMafquda {
         masar: jidhr.to_path_buf(),
-        sabab: format!("{nisbi} is not a path inside the game's folder: {}", khata.injilizi),
+        sabab: format!(
+            "{nisbi} is not a path inside the game's folder: {}",
+            khata.injilizi
+        ),
     })
 }
 
@@ -1859,7 +1934,11 @@ fn miftah_nuskha(masar: &str) -> String {
 /// How many bytes two buffers disagree about, counting a length difference as a
 /// disagreement for every byte one of them does not have.
 fn adad_ikhtilaf(awwal: &[u8], thani: &[u8]) -> u64 {
-    let mushtarak = awwal.iter().zip(thani.iter()).filter(|(a, b)| a != b).count();
+    let mushtarak = awwal
+        .iter()
+        .zip(thani.iter())
+        .filter(|(a, b)| a != b)
+        .count();
     tul_u64(mushtarak).saturating_add(tul_u64(awwal.len().abs_diff(thani.len())))
 }
 
@@ -1869,7 +1948,9 @@ fn nisbi_min(jidhr: &Path, masar: &Path) -> Option<String> {
     let baqi = masar.strip_prefix(jidhr).ok()?;
     let mut nateeja = String::new();
     for juz in baqi.components() {
-        let std::path::Component::Normal(ism) = juz else { return None };
+        let std::path::Component::Normal(ism) = juz else {
+            return None;
+        };
         let nass = ism.to_str()?;
         if !nateeja.is_empty() {
             nateeja.push('/');

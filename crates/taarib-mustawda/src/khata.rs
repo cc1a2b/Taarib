@@ -4,8 +4,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use taarib_usus::khata::{
-    Khutura, Khutwa, MasarMatlub, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam, khutwa_io,
-    siyaq_io,
+    Khutura, Khutwa, MasarMatlub, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam, khutwa_io, siyaq_io,
 };
 use taarib_usus::khata_min;
 
@@ -172,31 +171,24 @@ impl Tafsir for KhataMustawda {
             Self::LaMasdar { .. } => {
                 "تعذّر الوصول إلى أيّ مصدر للمستودع. تعمل تعريب دون اتصال بما هو محفوظ لديك."
                     .to_owned()
-            }
+            },
             Self::IstijabaFashila { .. } => "ردّ المستودع بما لا يمكن قراءته.".to_owned(),
-            Self::BayanTalif { .. } => {
-                "بيان المستودع غير مقروء بهذه النسخة؛ حدِّث تعريب.".to_owned()
-            }
+            Self::BayanTalif { .. } => "بيان المستودع غير مقروء بهذه النسخة؛ حدِّث تعريب.".to_owned(),
             Self::TasalsulLilkhalf { .. } => {
-                "عُرض بيان أقدم من المحفوظ لديك، ورُفض: قد يكون إرجاعًا مقصودًا لإخفاء إبطال."
-                    .to_owned()
-            }
-            Self::ShareehaMajhula { .. } => {
-                "وصلت شريحة فهرس لا يذكرها البيان، ولم تُقرأ.".to_owned()
-            }
+                "عُرض بيان أقدم من المحفوظ لديك، ورُفض: قد يكون إرجاعًا مقصودًا لإخفاء إبطال.".to_owned()
+            },
+            Self::ShareehaMajhula { .. } => "وصلت شريحة فهرس لا يذكرها البيان، ولم تُقرأ.".to_owned(),
             Self::BasmaGhayrMutabaqa { .. } => {
                 "بصمة شريحة الفهرس لا تطابق ما يعلنه البيان، ولم يُقرأ منها شيء.".to_owned()
-            }
+            },
             Self::ShareehaTalifa { .. } => "تعذّرت قراءة شريحة فهرس بعد التحقق منها.".to_owned(),
             Self::TanzeelGhayrMutabiq { .. } => {
                 "بصمة الحزمة المنزّلة لا تطابق المعلنة، ولم تُثبَّت.".to_owned()
-            }
+            },
             Self::TanzeelFashil { .. } => {
                 "تعذّر إكمال التنزيل. يمكن استئنافه من حيث توقّف.".to_owned()
-            }
-            Self::HajmMufrit { .. } => {
-                "تجاوز التنزيل الحجم المعلن له، وأُوقف.".to_owned()
-            }
+            },
+            Self::HajmMufrit { .. } => "تجاوز التنزيل الحجم المعلن له، وأُوقف.".to_owned(),
             Self::KhataMalaf { .. } => "تعذّرت قراءة ملف محلّي أو الكتابة إليه.".to_owned(),
             Self::LaMutabaqa => "لا توجد رقعة تطابق نسخة لعبتك الحالية.".to_owned(),
             Self::MisahaGhayrKafiya { matlub, mutah, .. } => format!(
@@ -215,19 +207,19 @@ impl Tafsir for KhataMustawda {
         match self {
             Self::LaMasdar { .. } | Self::IstijabaFashila { .. } | Self::TanzeelFashil { .. } => {
                 Khutwa::AadaMuhawala
-            }
+            },
             Self::BayanTalif { .. } => Khutwa::TahdithTaarib,
             Self::TasalsulLilkhalf { .. }
             | Self::BasmaGhayrMutabaqa { .. }
             | Self::TanzeelGhayrMutabiq { .. } => Khutwa::IblaghLilMalik,
             Self::ShareehaMajhula { .. }
             | Self::ShareehaTalifa { .. }
-            | Self::HajmMufrit { .. } => {
-                Khutwa::FathTashkhis
-            }
+            | Self::HajmMufrit { .. } => Khutwa::FathTashkhis,
             Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladManassa),
             Self::LaMutabaqa => Khutwa::LaShay,
-            Self::MisahaGhayrKafiya { .. } => Khutwa::FathIdadat { qism: QismIdadat::Takhzin },
+            Self::MisahaGhayrKafiya { .. } => Khutwa::FathIdadat {
+                qism: QismIdadat::Takhzin,
+            },
         }
     }
 
@@ -244,42 +236,55 @@ impl Tafsir for KhataMustawda {
             let _ = siyaq.insert(miftah.to_owned(), qeema);
         };
         match self {
-            Self::KhataMalaf { .. } | Self::LaMutabaqa => {}
-            Self::LaMasdar { sabab }
-            | Self::BayanTalif { sabab } => daa("sabab", QeemaSiyaq::Nass(sabab.clone())),
+            Self::KhataMalaf { .. } | Self::LaMutabaqa => {},
+            Self::LaMasdar { sabab } | Self::BayanTalif { sabab } => {
+                daa("sabab", QeemaSiyaq::Nass(sabab.clone()))
+            },
             Self::IstijabaFashila { rabt, ramz } => {
                 daa("rabt", QeemaSiyaq::Nass(rabt.clone()));
                 daa("ramz", QeemaSiyaq::Raqm(i64::from(*ramz)));
-            }
+            },
             Self::TasalsulLilkhalf { wujid, mukhazzan } => {
                 daa("wujid", QeemaSiyaq::Hajm(*wujid));
                 daa("mukhazzan", QeemaSiyaq::Hajm(*mukhazzan));
-            }
+            },
             Self::ShareehaMajhula { raqm } => daa("raqm", QeemaSiyaq::Raqm(i64::from(*raqm))),
-            Self::BasmaGhayrMutabaqa { raqm, muallana, mahsuba } => {
+            Self::BasmaGhayrMutabaqa {
+                raqm,
+                muallana,
+                mahsuba,
+            } => {
                 daa("raqm", QeemaSiyaq::Raqm(i64::from(*raqm)));
                 daa("muallana", QeemaSiyaq::Nass(muallana.clone()));
                 daa("mahsuba", QeemaSiyaq::Nass(mahsuba.clone()));
-            }
+            },
             Self::ShareehaTalifa { raqm, sabab } => {
                 daa("raqm", QeemaSiyaq::Raqm(i64::from(*raqm)));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
-            Self::TanzeelGhayrMutabiq { rabt, muallana, mahsuba } => {
+            },
+            Self::TanzeelGhayrMutabiq {
+                rabt,
+                muallana,
+                mahsuba,
+            } => {
                 daa("rabt", QeemaSiyaq::Nass(rabt.clone()));
                 daa("muallana", QeemaSiyaq::Nass(muallana.clone()));
                 daa("mahsuba", QeemaSiyaq::Nass(mahsuba.clone()));
-            }
+            },
             Self::TanzeelFashil { rabt, sabab } => {
                 daa("rabt", QeemaSiyaq::Nass(rabt.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::HajmMufrit { muallan } => daa("muallan", QeemaSiyaq::Hajm(*muallan)),
-            Self::MisahaGhayrKafiya { matlub, mutah, masar } => {
+            Self::MisahaGhayrKafiya {
+                matlub,
+                mutah,
+                masar,
+            } => {
                 daa("matlub", QeemaSiyaq::Hajm(*matlub));
                 daa("mutah", QeemaSiyaq::Hajm(*mutah));
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
         }
         siyaq
     }

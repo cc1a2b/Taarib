@@ -135,7 +135,10 @@ fn the_fold_is_not_a_truncation() {
     let matwi = tayy_basma(kamil);
     let maqtu = u32::try_from(kamil & 0xFFFF_FFFF).unwrap_or(0);
     assert_ne!(matwi, maqtu);
-    assert_eq!(matwi, 0x8f71_6c33, "the stored hash for \"ToggleInventory\"");
+    assert_eq!(
+        matwi, 0x8f71_6c33,
+        "the stored hash for \"ToggleInventory\""
+    );
 }
 
 #[test]
@@ -144,7 +147,10 @@ fn get_type_hash_is_the_engines_arithmetic() {
     assert_eq!(tayy_basma(0), 0);
     assert_eq!(tayy_basma(1), 1);
     assert_eq!(tayy_basma(1 << 32), 23);
-    assert_eq!(tayy_basma(0xFFFF_FFFF_0000_0000), 0xFFFF_FFFFu32.wrapping_mul(23));
+    assert_eq!(
+        tayy_basma(0xFFFF_FFFF_0000_0000),
+        0xFFFF_FFFFu32.wrapping_mul(23)
+    );
 }
 
 #[test]
@@ -162,7 +168,10 @@ fn the_source_fingerprint_is_the_engines_crc() {
     assert_eq!(basmat_asl("Close"), 0x7f06_4a25);
     // Version 2 hashes its keys with the same function, un-folded and
     // un-lowercased.
-    assert_eq!(basmat_miftah(IsdarLocres::Muhassan, "Back"), Some(0x44d1_6ff1));
+    assert_eq!(
+        basmat_miftah(IsdarLocres::Muhassan, "Back"),
+        Some(0x44d1_6ff1)
+    );
 }
 
 #[test]
@@ -182,7 +191,11 @@ fn crc_feeds_four_bytes_per_code_unit() {
 fn bi_khana(bayt: u8, basma: u32) -> u32 {
     let mut hali = basma ^ u32::from(bayt);
     for _ in 0..8 {
-        hali = if hali & 1 == 0 { hali >> 1 } else { (hali >> 1) ^ 0xEDB8_8320 };
+        hali = if hali & 1 == 0 {
+            hali >> 1
+        } else {
+            (hali >> 1) ^ 0xEDB8_8320
+        };
     }
     hali
 }
@@ -198,24 +211,36 @@ fn an_authored_resource_carries_hashes_the_engine_would_look_up() {
 
     assert_eq!(mawrid.basmat_mutabaqa(), Some(true));
 
-    let Ok(bayt) = mawrid.ila_bayt() else { panic!("the resource would not serialize") };
+    let Ok(bayt) = mawrid.ila_bayt() else {
+        panic!("the resource would not serialize")
+    };
     let Ok(thani) = MawridLocres::min_bayt(&bayt) else {
         panic!("a resource this build wrote would not read back")
     };
-    assert_eq!(thani, mawrid, "a resource this build wrote must read back as itself");
+    assert_eq!(
+        thani, mawrid,
+        "a resource this build wrote must read back as itself"
+    );
     assert_eq!(thani.ila_bayt().ok().as_deref(), Some(bayt.as_slice()));
 
     // The stored hashes are the engine's, not this build's private opinion.
-    let Some(madkhal) = thani.jid("", "Back") else { panic!("the entry is not there") };
+    let Some(madkhal) = thani.jid("", "Back") else {
+        panic!("the entry is not there")
+    };
     assert_eq!(madkhal.basma(), Some(0x25ea_2e6c));
     assert_eq!(madkhal.basmat_asl(), 0x44d1_6ff1);
     assert_eq!(thani.tarjama("", "Back"), Some("رجوع"));
     // The unnamed namespace: hashed to zero, as every shipped file spells it.
-    assert_eq!(thani.fadaat().first().map(FadaaLocres::basma), Some(Some(0)));
+    assert_eq!(
+        thani.fadaat().first().map(FadaaLocres::basma),
+        Some(Some(0))
+    );
 
     // Arabic goes in as ordinary Unicode and is stored UTF-16, which is the
     // encoding Unreal picks for anything that is not pure ASCII.
-    let Some(nass) = thani.hawd().first() else { panic!("the string array is empty") };
+    let Some(nass) = thani.hawd().first() else {
+        panic!("the string array is empty")
+    };
     assert_eq!(nass.nass().tarmiz(), TarmizNass::Utf16);
     assert_eq!(nass.nass().nass(), "رجوع");
 }

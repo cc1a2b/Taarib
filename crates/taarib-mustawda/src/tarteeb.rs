@@ -33,7 +33,10 @@ pub struct KhiyaratTarteeb {
 
 impl Default for KhiyaratTarteeb {
     fn default() -> Self {
-        Self { hadd_jayyid: HADD_TAQYEEM_JAYYID, adna_taqyeemat: ADNA_TAQYEEMAT }
+        Self {
+            hadd_jayyid: HADD_TAQYEEM_JAYYID,
+            adna_taqyeemat: ADNA_TAQYEEMAT,
+        }
     }
 }
 
@@ -71,7 +74,9 @@ impl FiatTaqyeem {
     /// Classifies an average and the number of ratings behind it.
     #[must_use]
     pub fn jadeeda(mutawassit: Option<f32>, adad: u32, khiyarat: KhiyaratTarteeb) -> Self {
-        let Some(mutawassit) = mutawassit else { return Self::LamYuqayyam };
+        let Some(mutawassit) = mutawassit else {
+            return Self::LamYuqayyam;
+        };
         // a non-finite average is not a rating, and is never rendered as one
         if !mutawassit.is_finite() || adad == 0 {
             return Self::LamYuqayyam;
@@ -118,10 +123,10 @@ impl FiatTaqyeem {
         match self {
             Self::Jayyid { mutawassit, adad } | Self::Daeef { mutawassit, adad } => {
                 format!("{mutawassit:.1} من ٥ ({adad} تقييمًا)")
-            }
+            },
             Self::AdillaQaleela { mutawassit, adad } => {
                 format!("{mutawassit:.1} من ٥ ({adad} تقييمًا فقط — عدد قليل)")
-            }
+            },
             Self::LamYuqayyam => "لم تُقيَّم بعد".to_owned(),
         }
     }
@@ -132,10 +137,10 @@ impl FiatTaqyeem {
         match self {
             Self::Jayyid { mutawassit, adad } | Self::Daeef { mutawassit, adad } => {
                 format!("{mutawassit:.1} of 5 from {adad} ratings")
-            }
+            },
             Self::AdillaQaleela { mutawassit, adad } => {
                 format!("{mutawassit:.1} of 5 from only {adad} ratings")
-            }
+            },
             Self::LamYuqayyam => "Not rated yet".to_owned(),
         }
     }
@@ -161,7 +166,11 @@ impl MudkhalTarteeb {
         mutabaqa: MutabaqaBina,
         sabab: Option<String>,
     ) -> Self {
-        Self { ruqaa, mutabaqa, sabab }
+        Self {
+            ruqaa,
+            mutabaqa,
+            sabab,
+        }
     }
 
     /// Whether the client will install this at all.
@@ -242,7 +251,7 @@ fn qarin_taghtiya(awwal: &Taghtiya, thani: &Taghtiya) -> Ordering {
 
 fn qarin_taqyeem(awwal: FiatTaqyeem, thani: FiatTaqyeem) -> Ordering {
     match awwal.rutba().cmp(&thani.rutba()) {
-        Ordering::Equal => {}
+        Ordering::Equal => {},
         ghayr => return ghayr,
     }
     // the neutral band mixes unrated with thinly rated: ordering them would invent a score
@@ -258,7 +267,10 @@ fn qarin_taqyeem(awwal: FiatTaqyeem, thani: FiatTaqyeem) -> Ordering {
 }
 
 fn qarin_waqt(awwal: &str, thani: &str) -> Ordering {
-    match (awwal.parse::<Timestamp>().ok(), thani.parse::<Timestamp>().ok()) {
+    match (
+        awwal.parse::<Timestamp>().ok(),
+        thani.parse::<Timestamp>().ok(),
+    ) {
         (Some(lahza_awwal), Some(lahza_thani)) => lahza_thani.cmp(&lahza_awwal),
         (Some(_), None) => Ordering::Less,
         (None, Some(_)) => Ordering::Greater,
@@ -387,17 +399,24 @@ impl MuqaranatRuqaa {
     /// How many of them the client will install.
     #[must_use]
     pub fn adad_mutawafiq(&self) -> usize {
-        self.mudkhalat.iter().filter(|farq| farq.qabila_lil_tathbeet()).count()
+        self.mudkhalat
+            .iter()
+            .filter(|farq| farq.qabila_lil_tathbeet())
+            .count()
     }
 
     /// The rows the client will install, in ranked order.
     pub fn mutawafiqa(&self) -> impl Iterator<Item = &FarqMudkhal> {
-        self.mudkhalat.iter().filter(|farq| farq.qabila_lil_tathbeet())
+        self.mudkhalat
+            .iter()
+            .filter(|farq| farq.qabila_lil_tathbeet())
     }
 
     /// The rows the client will not install, each keeping its reason.
     pub fn ghayr_mutawafiqa(&self) -> impl Iterator<Item = &FarqMudkhal> {
-        self.mudkhalat.iter().filter(|farq| !farq.qabila_lil_tathbeet())
+        self.mudkhalat
+            .iter()
+            .filter(|farq| !farq.qabila_lil_tathbeet())
     }
 
     /// Which columns actually differ across the set, so a screen can highlight
@@ -405,7 +424,9 @@ impl MuqaranatRuqaa {
     #[must_use]
     pub fn tabayun(&self) -> BTreeSet<HaqlMuqarana> {
         let mut huqul = BTreeSet::new();
-        let Some(asas) = self.mudkhalat.first() else { return huqul };
+        let Some(asas) = self.mudkhalat.first() else {
+            return huqul;
+        };
         for farq in self.mudkhalat.iter().skip(1) {
             let mut daa = |haql: HaqlMuqarana, mukhtalif: bool| {
                 if mukhtalif {

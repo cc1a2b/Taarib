@@ -209,9 +209,6 @@ pub mod d3d8;
 pub mod d3d10;
 
 pub use crate::khata::KhataTabaqa;
-pub use crate::sidq::{
-    BasmatIfsah, ISM_MALAF_IQRAR, Iqrar, NASS_IFSAH_ARABI, NASS_IFSAH_INJILIZI,
-};
 pub use crate::mutarjim::{
     DhakiraJalsa, DhakiraJalsaMushtaraka, DhakiraTabaqa, MutarjimTabaqa, QaydTabaqa, RaddSatr,
     TalabSatr,
@@ -219,13 +216,14 @@ pub use crate::mutarjim::{
 pub use crate::qissa::{
     HalatDaf, HalatKhayt, KhaytQissa, KhiyaratQissa, LaqtaTarjama, Munassiq, Qissa,
 };
+pub use crate::sidq::{BasmatIfsah, ISM_MALAF_IQRAR, Iqrar, NASS_IFSAH_ARABI, NASS_IFSAH_INJILIZI};
 pub use crate::talqeem::{IhsaatTalqeem, KhiyaratTalqeem, Mulaqqim, SatrMulaqqam};
 pub use crate::tatabbu::{HalatSatr, MuarrifSatr, Mutatabbi, QiraaMulahaza, SiyasatIstiqrar};
-pub use crate::watira::{MunazzimWatira, TaghyeerWatira};
 pub use crate::wajiha::{
     HalatTabaqa, Khattaf, LawhatRasm, MeezaniyatItar, MustatilBiksel, MustatilNisbi, QitaRasm,
     SighatSath, Tabaqa, WajihatRusum, WasfSath,
 };
+pub use crate::watira::{MunazzimWatira, TaghyeerWatira};
 
 /// The directory, under the platform's data directory, that holds this tier's
 /// per-game state.

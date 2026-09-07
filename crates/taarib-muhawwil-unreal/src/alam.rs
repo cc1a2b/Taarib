@@ -184,7 +184,11 @@ pub fn silsilat_irtida(wasm: &str) -> Vec<String> {
 /// The primary language subtag of a culture name, lowercased.
 #[must_use]
 pub fn lugha_wasm(wasm: &str) -> String {
-    wasm.trim().split(['-', '_']).next().unwrap_or("").to_ascii_lowercase()
+    wasm.trim()
+        .split(['-', '_'])
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase()
 }
 
 /// Which spelling of Arabic to use, given what the game already advertises.
@@ -326,10 +330,15 @@ impl Alam {
         }
         let mut khiyarat = vec![
             format!("-culture={}", self.wasm),
-            format!("-ini:Engine:[{QISM_TADWEEL}]:{MIFTAH_THAQAFA}={}", self.wasm),
+            format!(
+                "-ini:Engine:[{QISM_TADWEEL}]:{MIFTAH_THAQAFA}={}",
+                self.wasm
+            ),
         ];
         for masar in &self.masarat {
-            khiyarat.push(format!("-ini:Engine:[{QISM_TADWEEL}]:{MIFTAH_MASARAT}={masar}"));
+            khiyarat.push(format!(
+                "-ini:Engine:[{QISM_TADWEEL}]:{MIFTAH_MASARAT}={masar}"
+            ));
         }
         khiyarat
     }
@@ -398,11 +407,11 @@ impl Alam {
                     ),
                 );
                 true
-            }
+            },
             Err(khata) => {
                 sijill.sajjil(Rutba::Idadat, false, khata.to_string());
                 false
-            }
+            },
         };
 
         let khiyarat = self.rutbat_satr();
@@ -412,14 +421,23 @@ impl Alam {
             format!("{} launch options offered to the installer", khiyarat.len()),
         );
 
-        let mut hala =
-            if madruja(matah) { HalatQaima::Madruja } else { HalatQaima::Mutajawaza };
+        let mut hala = if madruja(matah) {
+            HalatQaima::Madruja
+        } else {
+            HalatQaima::Mutajawaza
+        };
 
         let Some(musaddir) = musaddir else {
             if idadat_najahat {
-                return Ok(NatijatAlam { wasm: self.wasm.clone(), sijill, hala });
+                return Ok(NatijatAlam {
+                    wasm: self.wasm.clone(),
+                    sijill,
+                    hala,
+                });
             }
-            return Err(KhataUnreal::AlamMarfud { sabab: sijill.sabab() });
+            return Err(KhataUnreal::AlamMarfud {
+                sabab: sijill.sabab(),
+            });
         };
 
         // Already Arabic? Then nothing goes into the process. The whole point of
@@ -436,12 +454,16 @@ impl Alam {
                         self.wasm
                     ),
                 );
-                return Ok(NatijatAlam { wasm: self.wasm.clone(), sijill, hala });
-            }
-            Ok(false) => {}
+                return Ok(NatijatAlam {
+                    wasm: self.wasm.clone(),
+                    sijill,
+                    hala,
+                });
+            },
+            Ok(false) => {},
             Err(khata) => {
                 tracing::debug!(sabab = %khata, "the active culture could not be read back");
-            }
+            },
         }
 
         match self.rutbat_haqn(musaddir) {
@@ -464,14 +486,20 @@ impl Alam {
                             .to_owned()
                     },
                 );
-            }
+            },
             Err(khata) => sijill.sajjil(Rutba::Haqn, false, khata.to_string()),
         }
 
         if sijill.muakkad() || idadat_najahat || hala == HalatQaima::Tuktab {
-            Ok(NatijatAlam { wasm: self.wasm.clone(), sijill, hala })
+            Ok(NatijatAlam {
+                wasm: self.wasm.clone(),
+                sijill,
+                hala,
+            })
         } else {
-            Err(KhataUnreal::AlamMarfud { sabab: sijill.sabab() })
+            Err(KhataUnreal::AlamMarfud {
+                sabab: sijill.sabab(),
+            })
         }
     }
 

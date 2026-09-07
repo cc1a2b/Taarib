@@ -286,7 +286,11 @@ fn crc_bayt(basma: u32, wahda: u8) -> u32 {
     let mut basma = basma ^ u32::from(wahda);
     let mut bit = 0u8;
     while bit < 8 {
-        basma = if basma & 1 == 0 { basma >> 1 } else { (basma >> 1) ^ 0xEDB8_8320 };
+        basma = if basma & 1 == 0 {
+            basma >> 1
+        } else {
+            (basma >> 1) ^ 0xEDB8_8320
+        };
         bit = bit.saturating_add(1);
     }
     basma
@@ -400,7 +404,11 @@ const KMUL: u64 = 0x9ddf_ea08_eb38_2d69;
 pub fn basmat_madina(bayt: &[u8]) -> u64 {
     let tul = bayt.len();
     if tul <= 32 {
-        return if tul <= 16 { madina_0_ila_16(bayt) } else { madina_17_ila_32(bayt) };
+        return if tul <= 16 {
+            madina_0_ila_16(bayt)
+        } else {
+            madina_17_ila_32(bayt)
+        };
     }
     if tul <= 64 {
         return madina_33_ila_64(bayt);
@@ -408,8 +416,8 @@ pub fn basmat_madina(bayt: &[u8]) -> u64 {
 
     let tul64 = tul_u64(tul);
     let mut x = jalb64(bayt, tul.saturating_sub(40));
-    let mut y = jalb64(bayt, tul.saturating_sub(16))
-        .wrapping_add(jalb64(bayt, tul.saturating_sub(56)));
+    let mut y =
+        jalb64(bayt, tul.saturating_sub(16)).wrapping_add(jalb64(bayt, tul.saturating_sub(56)));
     let mut z = madina_16(
         jalb64(bayt, tul.saturating_sub(48)).wrapping_add(tul64),
         jalb64(bayt, tul.saturating_sub(24)),
@@ -431,12 +439,15 @@ pub fn basmat_madina(bayt: &[u8]) -> u64 {
         )
         .wrapping_mul(K1);
         y = daur(
-            y.wrapping_add(v.1).wrapping_add(jalb64(bayt, mawqi.saturating_add(48))),
+            y.wrapping_add(v.1)
+                .wrapping_add(jalb64(bayt, mawqi.saturating_add(48))),
             42,
         )
         .wrapping_mul(K1);
         x ^= w.1;
-        y = y.wrapping_add(v.0).wrapping_add(jalb64(bayt, mawqi.saturating_add(40)));
+        y = y
+            .wrapping_add(v.0)
+            .wrapping_add(jalb64(bayt, mawqi.saturating_add(40)));
         z = daur(z.wrapping_add(w.0), 33).wrapping_mul(K1);
         v = daeef_min_bayt(bayt, mawqi, v.1.wrapping_mul(K1), x.wrapping_add(w.0));
         w = daeef_min_bayt(
@@ -450,7 +461,9 @@ pub fn basmat_madina(bayt: &[u8]) -> u64 {
         baqi = baqi.saturating_sub(64);
     }
     madina_16(
-        madina_16(v.0, w.0).wrapping_add(khalt(y).wrapping_mul(K1)).wrapping_add(z),
+        madina_16(v.0, w.0)
+            .wrapping_add(khalt(y).wrapping_mul(K1))
+            .wrapping_add(z),
         madina_16(v.1, w.1).wrapping_add(x),
     )
 }
@@ -521,7 +534,9 @@ fn madina_0_ila_16(bayt: &[u8]) -> u64 {
         let b = bayt.get(tul >> 1).copied().unwrap_or(0);
         let c = bayt.get(tul.saturating_sub(1)).copied().unwrap_or(0);
         let y = u32::from(a).wrapping_add(u32::from(b) << 8);
-        let z = u32::try_from(tul).unwrap_or(u32::MAX).wrapping_add(u32::from(c) << 2);
+        let z = u32::try_from(tul)
+            .unwrap_or(u32::MAX)
+            .wrapping_add(u32::from(c) << 2);
         let makhlut = u64::from(y).wrapping_mul(K2) ^ u64::from(z).wrapping_mul(K0);
         return khalt(makhlut).wrapping_mul(K2);
     }
@@ -537,7 +552,9 @@ fn madina_17_ila_32(bayt: &[u8]) -> u64 {
     let c = jalb64(bayt, tul.saturating_sub(8)).wrapping_mul(mudaaf);
     let d = jalb64(bayt, tul.saturating_sub(16)).wrapping_mul(K2);
     madina_16_bi(
-        daur(a.wrapping_add(b), 43).wrapping_add(daur(c, 30)).wrapping_add(d),
+        daur(a.wrapping_add(b), 43)
+            .wrapping_add(daur(c, 30))
+            .wrapping_add(d),
         a.wrapping_add(daur(b.wrapping_add(K2), 18)).wrapping_add(c),
         mudaaf,
     )
@@ -561,10 +578,13 @@ fn madina_33_ila_64(bayt: &[u8]) -> u64 {
     let f = jalb64(bayt, 24).wrapping_mul(9);
     let g = jalb64(bayt, tul.saturating_sub(8));
     let h = jalb64(bayt, tul.saturating_sub(16)).wrapping_mul(mudaaf);
-    let u = daur(a.wrapping_add(g), 43)
-        .wrapping_add(daur(b, 30).wrapping_add(c).wrapping_mul(9));
+    let u = daur(a.wrapping_add(g), 43).wrapping_add(daur(b, 30).wrapping_add(c).wrapping_mul(9));
     let v = (a.wrapping_add(g) ^ d).wrapping_add(f).wrapping_add(1);
-    let w = u.wrapping_add(v).wrapping_mul(mudaaf).swap_bytes().wrapping_add(h);
+    let w = u
+        .wrapping_add(v)
+        .wrapping_mul(mudaaf)
+        .swap_bytes()
+        .wrapping_add(h);
     let x = daur(e.wrapping_add(f), 42).wrapping_add(c);
     let y = v
         .wrapping_add(w)
@@ -573,9 +593,17 @@ fn madina_33_ila_64(bayt: &[u8]) -> u64 {
         .wrapping_add(g)
         .wrapping_mul(mudaaf);
     let z = e.wrapping_add(f).wrapping_add(c);
-    let a2 = x.wrapping_add(z).wrapping_mul(mudaaf).wrapping_add(y).swap_bytes().wrapping_add(b);
+    let a2 = x
+        .wrapping_add(z)
+        .wrapping_mul(mudaaf)
+        .wrapping_add(y)
+        .swap_bytes()
+        .wrapping_add(b);
     let b2 = khalt(
-        z.wrapping_add(a2).wrapping_mul(mudaaf).wrapping_add(d).wrapping_add(h),
+        z.wrapping_add(a2)
+            .wrapping_mul(mudaaf)
+            .wrapping_add(d)
+            .wrapping_add(h),
     )
     .wrapping_mul(mudaaf);
     b2.wrapping_add(x)
@@ -755,14 +783,19 @@ impl Mawrid for MawridLocres {
             None
         };
 
-        let adad_madakhil =
-            if isdar.yahwi_basmat() { Some(qari.iqra_u32("adad_madakhil")?) } else { None };
+        let adad_madakhil = if isdar.yahwi_basmat() {
+            Some(qari.iqra_u32("adad_madakhil")?)
+        } else {
+            None
+        };
 
         let muallan = u64::from(qari.iqra_u32("adad_fadaat")?);
-        let aqall =
-            if isdar.yahwi_basmat() { AQALL_FADAA } else { AQALL_FADAA_BILA_BASMA };
-        let adad =
-            tahaqquq_adad(ISM, "adad_fadaat", muallan, AQSA_FADAAT, aqall, qari.baqi())?;
+        let aqall = if isdar.yahwi_basmat() {
+            AQALL_FADAA
+        } else {
+            AQALL_FADAA_BILA_BASMA
+        };
+        let adad = tahaqquq_adad(ISM, "adad_fadaat", muallan, AQSA_FADAAT, aqall, qari.baqi())?;
 
         let mut fadaat = Vec::with_capacity(adad);
         let mut majmu = 0u64;
@@ -786,13 +819,22 @@ impl Mawrid for MawridLocres {
                 // it, and it also proves the offset is inside the file without a
                 // second bounds check written somewhere else.
                 let mada = izaha.saturating_sub(nihayat_jadwal);
-                let fajwa = qari.iqra_bayt("the gap before the string array", mada)?.to_vec();
+                let fajwa = qari
+                    .iqra_bayt("the gap before the string array", mada)?
+                    .to_vec();
                 (iqra_hawd(&mut qari, isdar)?, fajwa)
-            }
+            },
         };
 
         let dhayl = qari.baqiya().to_vec();
-        let mut mawrid = Self { isdar, adad_madakhil, fadaat, hawd, fajwa, dhayl };
+        let mut mawrid = Self {
+            isdar,
+            adad_madakhil,
+            fadaat,
+            hawd,
+            fajwa,
+            dhayl,
+        };
         mawrid.tahaqquq_faharis()?;
         Ok(mawrid)
     }
@@ -832,7 +874,7 @@ impl Mawrid for MawridLocres {
                 match &madkhal.tarjama {
                     MarjaTarjama::Mudmaj(nass) => {
                         katib.uktub_nass(ISM, "an entry's translation", nass)?;
-                    }
+                    },
                     MarjaTarjama::Fahras(fahras) => {
                         katib.uktub_i32(i32::try_from(*fahras).map_err(|_| {
                             KhataUnreal::HajmMufrit {
@@ -841,7 +883,7 @@ impl Mawrid for MawridLocres {
                                 saqf: AQSA_NUSUS,
                             }
                         })?);
-                    }
+                    },
                 }
             }
         }
@@ -955,14 +997,17 @@ impl MawridLocres {
     /// How many entries this resource actually holds.
     #[must_use]
     pub fn adad_madakhil(&self) -> u64 {
-        self.fadaat.iter().map(|fadaa| tul_u64(fadaa.madakhil.len())).sum()
+        self.fadaat
+            .iter()
+            .map(|fadaa| tul_u64(fadaa.madakhil.len()))
+            .sum()
     }
 
     /// Every entry, with the namespace it sits under.
     pub fn madakhil(&self) -> impl Iterator<Item = (&FadaaLocres, &MadkhalLocres)> + '_ {
-        self.fadaat.iter().flat_map(|fadaa| {
-            fadaa.madakhil.iter().map(move |madkhal| (fadaa, madkhal))
-        })
+        self.fadaat
+            .iter()
+            .flat_map(|fadaa| fadaa.madakhil.iter().map(move |madkhal| (fadaa, madkhal)))
     }
 
     /// The translation an entry carries, wherever it is stored.
@@ -970,16 +1015,13 @@ impl MawridLocres {
     // The two arms borrow from different places — an inline string from the
     // entry, a pooled one from the container — so the answer lives only as
     // long as both do.
-    pub fn nass_madkhal<'a>(
-        &'a self,
-        madkhal: &'a MadkhalLocres,
-    ) -> Option<&'a str> {
+    pub fn nass_madkhal<'a>(&'a self, madkhal: &'a MadkhalLocres) -> Option<&'a str> {
         match &madkhal.tarjama {
             MarjaTarjama::Mudmaj(nass) => Some(nass.nass()),
             MarjaTarjama::Fahras(fahras) => {
                 let khana = usize::try_from(*fahras).ok()?;
                 Some(self.hawd.get(khana)?.nass.nass())
-            }
+            },
         }
     }
 
@@ -1013,12 +1055,7 @@ impl MawridLocres {
     /// [`KhataUnreal::HajmMufrit`] when appending would take the string array
     /// past [`AQSA_NUSUS`], and [`KhataUnreal::MawridTalif`] when an entry's
     /// stored index does not fit a `usize` on this target.
-    pub fn istabdil(
-        &mut self,
-        fadaa: &str,
-        miftah: &str,
-        nass: &str,
-    ) -> Result<bool, KhataUnreal> {
+    pub fn istabdil(&mut self, fadaa: &str, miftah: &str, nass: &str) -> Result<bool, KhataUnreal> {
         let Some((mawqi_fadaa, mawqi_madkhal)) = self.mawqi_madkhal(fadaa, miftah) else {
             return Ok(false);
         };
@@ -1051,11 +1088,13 @@ impl MawridLocres {
                     }
                     MarjaTarjama::Fahras(fahras)
                 }
-            }
+            },
         };
 
-        if let Some(madkhal) =
-            self.fadaat.get_mut(mawqi_fadaa).and_then(|fadaa| fadaa.madakhil.get_mut(mawqi_madkhal))
+        if let Some(madkhal) = self
+            .fadaat
+            .get_mut(mawqi_fadaa)
+            .and_then(|fadaa| fadaa.madakhil.get_mut(mawqi_madkhal))
         {
             madkhal.tarjama = jadeed;
         }
@@ -1106,7 +1145,9 @@ impl MawridLocres {
             tarjama: marja,
         };
 
-        let mawqi_fadaa = if let Some(mawqi) = self.mawqi_fadaa(fadaa) { mawqi } else {
+        let mawqi_fadaa = if let Some(mawqi) = self.mawqi_fadaa(fadaa) {
+            mawqi
+        } else {
             if tul_u64(self.fadaat.len()) >= AQSA_FADAAT {
                 return Err(KhataUnreal::HajmMufrit {
                     haql: "adad_fadaat",
@@ -1122,7 +1163,9 @@ impl MawridLocres {
             self.fadaat.len().saturating_sub(1)
         };
 
-        let Some(hadaf) = self.fadaat.get_mut(mawqi_fadaa) else { return Ok(()) };
+        let Some(hadaf) = self.fadaat.get_mut(mawqi_fadaa) else {
+            return Ok(());
+        };
         if tul_u64(hadaf.madakhil.len()) >= AQSA_MADAKHIL_FADAA {
             return Err(KhataUnreal::HajmMufrit {
                 haql: "a namespace's entry count",
@@ -1207,7 +1250,11 @@ impl MawridLocres {
         }
         self.hawd.push(NassHawd {
             nass: NassMukhazzan::jadeed(nass),
-            adad_marja: if self.isdar.yahwi_basmat() { Some(1) } else { None },
+            adad_marja: if self.isdar.yahwi_basmat() {
+                Some(1)
+            } else {
+                None
+            },
             marja_fili: 1,
         });
         u32::try_from(makan).map_err(|_| KhataUnreal::HajmMufrit {
@@ -1219,7 +1266,9 @@ impl MawridLocres {
 
     /// Where a namespace sits, by name.
     fn mawqi_fadaa(&self, fadaa: &str) -> Option<usize> {
-        self.fadaat.iter().position(|mawjud| mawjud.ism.nass() == fadaa)
+        self.fadaat
+            .iter()
+            .position(|mawjud| mawjud.ism.nass() == fadaa)
     }
 
     /// Where an entry sits, by namespace and key.
@@ -1238,7 +1287,10 @@ impl MawridLocres {
     /// sequence of reallocations.
     fn siaa_mutawaqqaa(&self) -> usize {
         let madakhil = usize::try_from(self.adad_madakhil()).unwrap_or(0);
-        madakhil.saturating_mul(48).saturating_add(self.hawd.len().saturating_mul(48)).max(64)
+        madakhil
+            .saturating_mul(48)
+            .saturating_add(self.hawd.len().saturating_mul(48))
+            .max(64)
     }
 
     /// Proves every entry's string index is inside the array, and counts how
@@ -1252,7 +1304,9 @@ impl MawridLocres {
         let mut adaad = vec![0u32; self.hawd.len()];
         for fadaa in &self.fadaat {
             for madkhal in &fadaa.madakhil {
-                let MarjaTarjama::Fahras(fahras) = &madkhal.tarjama else { continue };
+                let MarjaTarjama::Fahras(fahras) = &madkhal.tarjama else {
+                    continue;
+                };
                 let fahras = *fahras;
                 let khana = usize::try_from(fahras)
                     .ok()
@@ -1313,12 +1367,18 @@ fn iqra_fadaa(
     isdar: IsdarLocres,
     majmu: &mut u64,
 ) -> Result<FadaaLocres, KhataUnreal> {
-    let basma =
-        if isdar.yahwi_basmat() { Some(qari.iqra_u32("a namespace hash")?) } else { None };
+    let basma = if isdar.yahwi_basmat() {
+        Some(qari.iqra_u32("a namespace hash")?)
+    } else {
+        None
+    };
     let ism = qari.iqra_nass("a namespace")?;
     let muallan = u64::from(qari.iqra_u32("a namespace's entry count")?);
-    let aqall =
-        if isdar.yahwi_basmat() { AQALL_MADKHAL } else { AQALL_MADKHAL_BILA_BASMA };
+    let aqall = if isdar.yahwi_basmat() {
+        AQALL_MADKHAL
+    } else {
+        AQALL_MADKHAL_BILA_BASMA
+    };
     let adad = tahaqquq_adad(
         ISM,
         "a namespace's entry count",
@@ -1343,35 +1403,52 @@ fn iqra_fadaa(
     for _ in 0..adad {
         madakhil.push(iqra_madkhal(qari, isdar)?);
     }
-    Ok(FadaaLocres { ism, basma, madakhil })
+    Ok(FadaaLocres {
+        ism,
+        basma,
+        madakhil,
+    })
 }
 
 /// One entry.
 fn iqra_madkhal(qari: &mut Qari<'_>, isdar: IsdarLocres) -> Result<MadkhalLocres, KhataUnreal> {
-    let basma =
-        if isdar.yahwi_basmat() { Some(qari.iqra_u32("an entry's key hash")?) } else { None };
+    let basma = if isdar.yahwi_basmat() {
+        Some(qari.iqra_u32("an entry's key hash")?)
+    } else {
+        None
+    };
     let miftah = qari.iqra_nass("an entry's key")?;
     let basmat_asl = qari.iqra_u32("an entry's source hash")?;
     let tarjama = if isdar.yahwi_hawd() {
         let muallan = qari.iqra_i32("an entry's string index")?;
-        MarjaTarjama::Fahras(u32::try_from(muallan).map_err(|_| KhataUnreal::MawridTalif {
-            ism: ISM,
-            haql: "an entry's string index",
-            qeema: u64::from(muallan.unsigned_abs()),
-            hadd: AQSA_NUSUS,
-        })?)
+        MarjaTarjama::Fahras(
+            u32::try_from(muallan).map_err(|_| KhataUnreal::MawridTalif {
+                ism: ISM,
+                haql: "an entry's string index",
+                qeema: u64::from(muallan.unsigned_abs()),
+                hadd: AQSA_NUSUS,
+            })?,
+        )
     } else {
         MarjaTarjama::Mudmaj(qari.iqra_nass("an entry's translation")?)
     };
-    Ok(MadkhalLocres { miftah, basma, basmat_asl, tarjama })
+    Ok(MadkhalLocres {
+        miftah,
+        basma,
+        basmat_asl,
+        tarjama,
+    })
 }
 
 /// The string array, with its reference counts where the version has them.
 fn iqra_hawd(qari: &mut Qari<'_>, isdar: IsdarLocres) -> Result<Vec<NassHawd>, KhataUnreal> {
     let muallan = qari.iqra_i32("the string array's count")?;
     let adad_muallan = adad_musir(ISM, "the string array's count", muallan)?;
-    let aqall =
-        if isdar.yahwi_basmat() { AQALL_NASS_HAWD } else { AQALL_NASS_HAWD_BILA_MARJA };
+    let aqall = if isdar.yahwi_basmat() {
+        AQALL_NASS_HAWD
+    } else {
+        AQALL_NASS_HAWD_BILA_MARJA
+    };
     let adad = tahaqquq_adad(
         ISM,
         "the string array's count",
@@ -1388,13 +1465,20 @@ fn iqra_hawd(qari: &mut Qari<'_>, isdar: IsdarLocres) -> Result<Vec<NassHawd>, K
         } else {
             None
         };
-        hawd.push(NassHawd { nass, adad_marja, marja_fili: 0 });
+        hawd.push(NassHawd {
+            nass,
+            adad_marja,
+            marja_fili: 0,
+        });
     }
     Ok(hawd)
 }
 
 /// A count as the `u32` the format writes, refused when it does not fit.
 fn adad_khana(haql: &'static str, adad: usize, saqf: u64) -> Result<u32, KhataUnreal> {
-    u32::try_from(adad)
-        .map_err(|_| KhataUnreal::HajmMufrit { haql, qeema: tul_u64(adad), saqf })
+    u32::try_from(adad).map_err(|_| KhataUnreal::HajmMufrit {
+        haql,
+        qeema: tul_u64(adad),
+        saqf,
+    })
 }

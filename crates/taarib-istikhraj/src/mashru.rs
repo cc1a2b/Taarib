@@ -165,11 +165,13 @@ impl DhuMukhattat for Mashru {
         // seen would corrupt it silently, and the corruption would surface
         // after they shipped. Refusing costs them an update prompt, which is
         // the cheaper of the two by a wide margin.
-        Err(taarib_usus::khata::Khata::from(KhataIstikhraj::MukhattatGhayrMafhum {
-            masar: PathBuf::from(MALAF_MASHRU),
-            wujid: min,
-            madum: ISDAR_MUKHATTAT,
-        }))
+        Err(taarib_usus::khata::Khata::from(
+            KhataIstikhraj::MukhattatGhayrMafhum {
+                masar: PathBuf::from(MALAF_MASHRU),
+                wujid: min,
+                madum: ISDAR_MUKHATTAT,
+            },
+        ))
     }
 }
 
@@ -200,11 +202,9 @@ impl MashruMaftuh {
         bayan: BayanIstikhraj,
         waqt: String,
     ) -> Result<Self, KhataIstikhraj> {
-        masarat::insha_mujallad(&jidhr).map_err(|khata| {
-            KhataIstikhraj::TaadhurKitabatMashru {
-                masar: jidhr.clone(),
-                sabab: khata.injilizi,
-            }
+        masarat::insha_mujallad(&jidhr).map_err(|khata| KhataIstikhraj::TaadhurKitabatMashru {
+            masar: jidhr.clone(),
+            sabab: khata.injilizi,
         })?;
 
         let rasm = Mashru {
@@ -216,7 +216,11 @@ impl MashruMaftuh {
             waqt_insha: waqt.clone(),
             waqt_tabdeel: waqt,
         };
-        let maftuh = Self { jidhr, rasm, dufa: Vec::with_capacity(HAJM_DUFA) };
+        let maftuh = Self {
+            jidhr,
+            rasm,
+            dufa: Vec::with_capacity(HAJM_DUFA),
+        };
         maftuh.iktub_rasm()?;
         Ok(maftuh)
     }
@@ -230,9 +234,16 @@ impl MashruMaftuh {
     pub fn iftah(jidhr: PathBuf) -> Result<Self, KhataIstikhraj> {
         let masar = jidhr.join(MALAF_MASHRU);
         let rasm: Mashru = mukhattat::iqra_malaf(&masar).map_err(|khata| {
-            KhataIstikhraj::TaadhurKitabatMashru { masar, sabab: khata.injilizi }
+            KhataIstikhraj::TaadhurKitabatMashru {
+                masar,
+                sabab: khata.injilizi,
+            }
         })?;
-        Ok(Self { jidhr, rasm, dufa: Vec::with_capacity(HAJM_DUFA) })
+        Ok(Self {
+            jidhr,
+            rasm,
+            dufa: Vec::with_capacity(HAJM_DUFA),
+        })
     }
 
     /// Replaces the whole string table atomically.
@@ -261,7 +272,10 @@ impl MashruMaftuh {
             bayt.push(b'\n');
         }
         masarat::kitaba_dharra(&masar, &bayt).map_err(|khata| {
-            KhataIstikhraj::TaadhurKitabatMashru { masar, sabab: khata.injilizi }
+            KhataIstikhraj::TaadhurKitabatMashru {
+                masar,
+                sabab: khata.injilizi,
+            }
         })?;
         self.dufa.clear();
         self.rasm.adad = madakhil.len();
@@ -316,13 +330,13 @@ impl MashruMaftuh {
                 Ok(satr) => {
                     nass.push_str(&satr);
                     nass.push('\n');
-                }
+                },
                 Err(sabab) => {
                     return Err(KhataIstikhraj::TaadhurKitabatMashru {
                         masar,
                         sabab: sabab.to_string(),
                     });
-                }
+                },
             }
         }
 
@@ -347,11 +361,16 @@ impl MashruMaftuh {
     /// Writes the header atomically.
     fn iktub_rasm(&self) -> Result<(), KhataIstikhraj> {
         let masar = self.jidhr.join(MALAF_MASHRU);
-        let bayt = mukhattat::iktub(&self.rasm).map_err(|khata| {
-            KhataIstikhraj::TaadhurKitabatMashru { masar: masar.clone(), sabab: khata.injilizi }
-        })?;
+        let bayt =
+            mukhattat::iktub(&self.rasm).map_err(|khata| KhataIstikhraj::TaadhurKitabatMashru {
+                masar: masar.clone(),
+                sabab: khata.injilizi,
+            })?;
         masarat::kitaba_dharra(&masar, &bayt).map_err(|khata| {
-            KhataIstikhraj::TaadhurKitabatMashru { masar, sabab: khata.injilizi }
+            KhataIstikhraj::TaadhurKitabatMashru {
+                masar,
+                sabab: khata.injilizi,
+            }
         })
     }
 
@@ -372,8 +391,9 @@ impl MashruMaftuh {
         if !masar.is_file() {
             return Ok((Vec::new(), 0));
         }
-        let bayt = std::fs::read(&masar).map_err(|sabab| {
-            KhataIstikhraj::TaadhurKitabatMashru { masar, sabab: sabab.to_string() }
+        let bayt = std::fs::read(&masar).map_err(|sabab| KhataIstikhraj::TaadhurKitabatMashru {
+            masar,
+            sabab: sabab.to_string(),
         })?;
 
         let mut madakhil = Vec::new();
@@ -385,9 +405,10 @@ impl MashruMaftuh {
             if satr.is_empty() {
                 continue;
             }
-            match std::str::from_utf8(satr).ok().and_then(|nass| {
-                serde_json::from_str::<MudkhalNass>(nass).ok()
-            }) {
+            match std::str::from_utf8(satr)
+                .ok()
+                .and_then(|nass| serde_json::from_str::<MudkhalNass>(nass).ok())
+            {
                 Some(mudkhal) => madakhil.push(mudkhal),
                 None => talifa = talifa.saturating_add(1),
             }
@@ -414,10 +435,12 @@ fn ilhaq(masar: &Path, bayt: &[u8]) -> Result<(), KhataIstikhraj> {
             masar: masar.to_path_buf(),
             sabab: sabab.to_string(),
         })?;
-    malaf.write_all(bayt).map_err(|sabab| KhataIstikhraj::TaadhurKitabatMashru {
-        masar: masar.to_path_buf(),
-        sabab: sabab.to_string(),
-    })
+    malaf
+        .write_all(bayt)
+        .map_err(|sabab| KhataIstikhraj::TaadhurKitabatMashru {
+            masar: masar.to_path_buf(),
+            sabab: sabab.to_string(),
+        })
 }
 
 /// What a re-extraction did to an existing project.
@@ -481,8 +504,10 @@ pub fn hajir(
     farq: &FarqJadwal,
     lahza: u64,
 ) -> (Vec<MudkhalNass>, Vec<MudkhalNass>, TaqreerHijra) {
-    let mut sabiq: BTreeMap<NassId, MudkhalNass> =
-        qadeem.into_iter().map(|mudkhal| (mudkhal.id, mudkhal)).collect();
+    let mut sabiq: BTreeMap<NassId, MudkhalNass> = qadeem
+        .into_iter()
+        .map(|mudkhal| (mudkhal.id, mudkhal))
+        .collect();
     let mut taqreer = TaqreerHijra::default();
 
     let mut hali: Vec<MudkhalNass> = Vec::with_capacity(jadeed.adad());
@@ -516,15 +541,17 @@ pub fn hajir(
                         // The source text moved under a surviving identity, so
                         // the old Arabic may or may not still be right. Flagged
                         // rather than cleared — see this function's doc.
-                        mudkhal.muraja.tlub_muraja(None, lahza, Some(
-                            "the source text changed in this build".to_owned(),
-                        ));
+                        mudkhal.muraja.tlub_muraja(
+                            None,
+                            lahza,
+                            Some("the source text changed in this build".to_owned()),
+                        );
                         taqreer.mughayyara = taqreer.mughayyara.saturating_add(1);
                     } else {
                         taqreer.muhajjara = taqreer.muhajjara.saturating_add(1);
                     }
                 }
-            }
+            },
             None => taqreer.jadeeda = taqreer.jadeeda.saturating_add(1),
         }
         hali.push(mudkhal);

@@ -23,16 +23,16 @@ use taarib_taqdeem::bawwaba::{
     BandFahs, FahsHasim, HalatBand, Iqrarat, MudkhalatBawwaba, QaimatFahs, SatrFahs, Tahdheer,
 };
 use taarib_taqdeem::hawiya::{HawiyatMusahim, SalahiyatMalik};
-use taarib_taqdeem::muraja::{
-    MarjiMuraja, MulakhkhasTaadil, SababRafd, SijillMuraja as SijillMurajaMalik, allaq,
-    iaatimad, ishab, urfud, utlub_taadil,
-};
-use taarib_taqdeem::musawwada::{BidayatMusawwada, Musawwada, masar_musawwada};
 use taarib_taqdeem::irsal::{
     IdadatIrsal, IdadatMustawda, IdadatTawthiq, MUHLAT_TALAB, QalabRabt, TalabIrsal, TalabJihaz,
     akmil_tawthiq, bina_amil, hat_ramz, ibda_tawthiq, irsal, khzin_ramz, mulakhkhas,
     wasf_talab_damj,
 };
+use taarib_taqdeem::muraja::{
+    MarjiMuraja, MulakhkhasTaadil, SababRafd, SijillMuraja as SijillMurajaMalik, allaq, iaatimad,
+    ishab, urfud, utlub_taadil,
+};
+use taarib_taqdeem::musawwada::{BidayatMusawwada, Musawwada, masar_musawwada};
 use taarib_taqdeem::nashr::waqqi;
 use taarib_taqdeem::sandooq::BeeatSandooq;
 use taarib_taqdeem::taaliq::{NassTaaliq, Taaliq, TaaliqId};
@@ -44,10 +44,10 @@ use taarib_tarqee::fuhusat::{MudkhalatFahs, WasfHuzma, ijri as ijri_fuhus};
 use taarib_tarqee::irtibat::IrtibatBina;
 use taarib_tarqee::mujammi::{MudkhalatTajmee, ijmaa};
 use taarib_tarqee::tahdid_maqasat::IktishafMaqasat;
+use taarib_tarqee::takhtit::KhiyaratTasbeeq;
 use taarib_tarqee::taqrir_tajawuz::{
     HalatQiyasTajawuz, MulakhkhasTajawuz, NawAdamAltahaqquq, ShiddatTajawuz, TaqrirTajawuz,
 };
-use taarib_tarqee::takhtit::KhiyaratTasbeeq;
 use taarib_tathbeet::bayan::waqt_alaan;
 use taarib_usus::idadat::MakhzanIdadat;
 use taarib_usus::khata::{
@@ -518,7 +518,10 @@ fn masar_talab_json(masarat: &Masarat, ruqaa: RuqaaId, murajaa: u32) -> PathBuf 
 }
 
 fn masar_iqrarat(masarat: &Masarat, ruqaa: RuqaaId) -> PathBuf {
-    masarat.jidhr_bayanat().join("taqdeem").join(format!("iqrarat-{ruqaa}.json"))
+    masarat
+        .jidhr_bayanat()
+        .join("taqdeem")
+        .join(format!("iqrarat-{ruqaa}.json"))
 }
 
 fn mujallad_manshurat(masarat: &Masarat) -> PathBuf {
@@ -541,8 +544,11 @@ struct MalafHawiya {
 pub(crate) fn hawiyati(masarat: &Masarat) -> Natija<(MusahimId, String, Option<String>)> {
     let musahim = muharrir_mahalli(masarat)?;
     let malaf: MalafHawiya = crate::warsha_awamir::iqra_janibi(&masar_hawiya(masarat))?;
-    let ism =
-        if malaf.ism.trim().is_empty() { musahim.mukhtasar() } else { malaf.ism.clone() };
+    let ism = if malaf.ism.trim().is_empty() {
+        musahim.mukhtasar()
+    } else {
+        malaf.ism.clone()
+    };
     Ok((musahim, ism, malaf.itimad))
 }
 
@@ -557,8 +563,8 @@ pub(crate) fn miftah_musahim() -> Natija<MiftahKhass> {
 
 /// The owner authority, or the refusal a contributor session gets.
 fn salahiyat_malik() -> Natija<(SalahiyatMalik, MiftahKhass)> {
-    let khass = taarib_khatm::malik::hat_malik()
-        .map_err(|_| Khata::from(KhataTaqdeemAmr::MalikFaqat))?;
+    let khass =
+        taarib_khatm::malik::hat_malik().map_err(|_| Khata::from(KhataTaqdeemAmr::MalikFaqat))?;
     let salahiya = SalahiyatMalik::bi_miftah(&khass, &MIRSAT_MALIK.miftah)
         .ok_or_else(|| Khata::from(KhataTaqdeemAmr::MalikFaqat))?;
     Ok((salahiya, khass))
@@ -601,8 +607,12 @@ fn ihfaz_musawwada(masarat: &Masarat, musawwada: &Musawwada) -> Natija<()> {
 }
 
 fn musawwada_bil_ruqaa(masarat: &Masarat, ruqaa: &str) -> Natija<Musawwada> {
-    let id: RuqaaId = serde_json::from_value(serde_json::Value::String(ruqaa.to_owned()))
-        .map_err(|_| Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud { ruqaa: ruqaa.to_owned() }))?;
+    let id: RuqaaId =
+        serde_json::from_value(serde_json::Value::String(ruqaa.to_owned())).map_err(|_| {
+            Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud {
+                ruqaa: ruqaa.to_owned(),
+            })
+        })?;
     let masar = masar_musawwada(masarat.jidhr_bayanat(), id);
     if !masar.is_file() {
         return Err(Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud {
@@ -622,7 +632,9 @@ const fn slug_tahdheer(tahdheer: Tahdheer) -> &'static str {
 }
 
 fn tahdheer_min_slug(slug: &str) -> Option<Tahdheer> {
-    Tahdheer::KULL.into_iter().find(|tahdheer| slug_tahdheer(*tahdheer) == slug)
+    Tahdheer::KULL
+        .into_iter()
+        .find(|tahdheer| slug_tahdheer(*tahdheer) == slug)
 }
 
 const fn slug_hasim(fahs: FahsHasim) -> &'static str {
@@ -697,13 +709,21 @@ fn halat_satr_tajawuz(satr: &SatrFahs, tajawuz: &TaqrirTajawuz) -> HalatSatrHie 
     let (tafsil_arabi, tafsil_injilizi) = wasf_qiyas(tajawuz);
     let hala_qiyas = tajawuz.hala();
     let (hala, hala_arabi, hala_injilizi) = match (satr.hala, hala_qiyas) {
-        (HalatBand::Ijtaz, HalatQiyasTajawuz::Juzi) => {
-            (HALA_MAQIS_JUZI, hala_qiyas.wasf_arabi(), hala_qiyas.wasf_injilizi())
-        }
-        (HalatBand::Ijtaz, HalatQiyasTajawuz::LamYuqas | HalatQiyasTajawuz::Farigh) => {
-            (HALA_GHAYR_MAQIS, hala_qiyas.wasf_arabi(), hala_qiyas.wasf_injilizi())
-        }
-        (hala, _) => (slug_hala_band(hala), hala.wasf_arabi(), hala.wasf_injilizi()),
+        (HalatBand::Ijtaz, HalatQiyasTajawuz::Juzi) => (
+            HALA_MAQIS_JUZI,
+            hala_qiyas.wasf_arabi(),
+            hala_qiyas.wasf_injilizi(),
+        ),
+        (HalatBand::Ijtaz, HalatQiyasTajawuz::LamYuqas | HalatQiyasTajawuz::Farigh) => (
+            HALA_GHAYR_MAQIS,
+            hala_qiyas.wasf_arabi(),
+            hala_qiyas.wasf_injilizi(),
+        ),
+        (hala, _) => (
+            slug_hala_band(hala),
+            hala.wasf_arabi(),
+            hala.wasf_injilizi(),
+        ),
     };
     HalatSatrHie {
         hala: hala.to_owned(),
@@ -741,7 +761,11 @@ fn satr_fahs_hie(satr: &SatrFahs, tajawuz: &TaqrirTajawuz) -> SatrFahsHie {
 /// The checklist on the wire, with the overflow row read against its report.
 fn qaimat_hie(qaima: &QaimatFahs, tajawuz: &TaqrirTajawuz) -> QaimatFahsHie {
     QaimatFahsHie {
-        sutur: qaima.sutur().iter().map(|satr| satr_fahs_hie(satr, tajawuz)).collect(),
+        sutur: qaima
+            .sutur()
+            .iter()
+            .map(|satr| satr_fahs_hie(satr, tajawuz))
+            .collect(),
         jahiza: qaima.jahiza(),
     }
 }
@@ -762,12 +786,17 @@ fn aghlab_sabab(mulakhkhas: &MulakhkhasTajawuz) -> Option<NawAdamAltahaqquq> {
 fn wasf_qiyas(tajawuz: &TaqrirTajawuz) -> (String, String) {
     let mulakhkhas = &tajawuz.mulakhkhas;
     let sabab = aghlab_sabab(mulakhkhas);
-    let sabab_arabi =
-        sabab.map_or_else(String::new, |naw| format!(" أغلب الأسباب: {}", naw.wasf_arabi()));
-    let sabab_injilizi = sabab
-        .map_or_else(String::new, |naw| format!(" Most common cause: {}", naw.wasf_injilizi()));
+    let sabab_arabi = sabab.map_or_else(String::new, |naw| {
+        format!(" أغلب الأسباب: {}", naw.wasf_arabi())
+    });
+    let sabab_injilizi = sabab.map_or_else(String::new, |naw| {
+        format!(" Most common cause: {}", naw.wasf_injilizi())
+    });
     let qass_arabi = if tajawuz.ghayr_muqallam {
-        format!(" القائمة أدناه تعرض أوّل {} منها.", tajawuz.ghayr_qabil_lil_tahaqquq.len())
+        format!(
+            " القائمة أدناه تعرض أوّل {} منها.",
+            tajawuz.ghayr_qabil_lil_tahaqquq.len()
+        )
     } else {
         String::new()
     };
@@ -944,7 +973,9 @@ fn uktub_iqrarat(masarat: &Masarat, ruqaa: RuqaaId, iqrarat: &Iqrarat) -> Natija
 fn nusus_mashru(masarat: &Masarat, id: LubaId) -> Natija<(MashruMaftuh, Vec<MudkhalNass>)> {
     let jidhr = masarat.mashari().join(id.to_string());
     if !jidhr.join(taarib_istikhraj::mashru::MALAF_MASHRU).is_file() {
-        return Err(Khata::from(KhataTaqdeemAmr::MashruGhayrMawjud { ism: id.to_string() }));
+        return Err(Khata::from(KhataTaqdeemAmr::MashruGhayrMawjud {
+            ism: id.to_string(),
+        }));
     }
     let mashru = MashruMaftuh::iftah(jidhr).map_err(Khata::from)?;
     let (sufuf, _talifa) = mashru.iqra_nusus().map_err(Khata::from)?;
@@ -989,7 +1020,11 @@ fn qaimat_lil(masarat: &Masarat, musawwada: &Musawwada) -> Natija<QaimatFahs> {
 }
 
 fn nisbat_taghtiya(majmu: u32, mutarjam: u32) -> f64 {
-    if majmu == 0 { 0.0 } else { f64::from(mutarjam) / f64::from(majmu) }
+    if majmu == 0 {
+        0.0
+    } else {
+        f64::from(mutarjam) / f64::from(majmu)
+    }
 }
 
 fn intiqalat(musawwada: &Musawwada) -> Vec<IntiqalHie> {
@@ -997,7 +1032,11 @@ fn intiqalat(musawwada: &Musawwada) -> Vec<IntiqalHie> {
     let mut natija = Vec::with_capacity(musawwada.tareekh().len());
     for qayd in musawwada.tareekh() {
         let ila = qayd.ila.ism().to_owned();
-        natija.push(IntiqalHie { min: sabiq.clone(), ila: ila.clone(), waqt: qayd.waqt.clone() });
+        natija.push(IntiqalHie {
+            min: sabiq.clone(),
+            ila: ila.clone(),
+            waqt: qayd.waqt.clone(),
+        });
         sabiq = ila;
     }
     natija
@@ -1046,7 +1085,9 @@ fn khutut_lil_tajmee(masarat: &Masarat) -> Natija<(SilsilatKhutut, Vec<KhattMuja
 
     let mut azwaj: Vec<(PathBuf, Arc<MawridKhatt>)> = Vec::new();
     for masar in masarat_khutut {
-        let Ok(bayt) = std::fs::read(&masar) else { continue };
+        let Ok(bayt) = std::fs::read(&masar) else {
+            continue;
+        };
         let bayt = Arc::new(bayt);
         let mawrid = MawridKhatt::jadeed(Arc::clone(&bayt), 0)
             .or_else(|_| MawridKhatt::jadeed_latini(bayt, 0));
@@ -1076,7 +1117,9 @@ fn khutut_lil_tajmee(masarat: &Masarat) -> Natija<(SilsilatKhutut, Vec<KhattMuja
     }
     let silsila = SilsilatKhutut::jadeeda(azwaj.into_iter().map(|(_, mawrid)| mawrid).collect())
         .map_err(|khata| {
-            Khata::from(KhataTaqdeemAmr::KhututNaqisa { sabab: khata.to_string() })
+            Khata::from(KhataTaqdeemAmr::KhututNaqisa {
+                sabab: khata.to_string(),
+            })
         })?;
     Ok((silsila, khutut))
 }
@@ -1094,7 +1137,7 @@ fn rukhsa_min_slug(slug: &str, ism: Option<&str>) -> Natija<RukhsaRuqaa> {
             return Err(Khata::from(KhataTaqdeemAmr::RukhsaMajhula {
                 rukhsa: slug.to_owned(),
             }));
-        }
+        },
     })
 }
 
@@ -1107,7 +1150,7 @@ fn tareeqa_min_slug(slug: &str) -> Natija<TareeqaTarjama> {
             return Err(Khata::from(KhataTaqdeemAmr::TareeqaMajhula {
                 tareeqa: slug.to_owned(),
             }));
-        }
+        },
     })
 }
 
@@ -1144,7 +1187,9 @@ fn sijill_malik(masarat: &Masarat) -> Natija<SijillMurajaMalik> {
 }
 
 fn uktub_sijill_malik(masarat: &Masarat, sijill: &SijillMurajaMalik) -> Natija<()> {
-    sijill.uktub(&masar_sijill_malik(masarat)).map_err(Khata::from)
+    sijill
+        .uktub(&masar_sijill_malik(masarat))
+        .map_err(Khata::from)
 }
 
 fn satr_sijill_hie(qayd: &taarib_taqdeem::muraja::QaydMuraja) -> SatrSijillHie {
@@ -1171,7 +1216,11 @@ fn taaliqat_muraja(masarat: &Masarat) -> Natija<BTreeMap<String, Vec<Taaliq>>> {
 #[specta::specta]
 pub async fn jalsati(masarat: tauri::State<'_, Masarat>) -> Result<JalsaHie, Khata> {
     let (musahim, ism, _itimad) = hawiyati(&masarat)?;
-    Ok(JalsaHie { malik: malik_bi_muhla().await, musahim: musahim.mukhtasar(), ism })
+    Ok(JalsaHie {
+        malik: malik_bi_muhla().await,
+        musahim: musahim.mukhtasar(),
+        ism,
+    })
 }
 
 /// How long the owner-key probe may take before the answer is "not the owner".
@@ -1194,14 +1243,14 @@ async fn malik_bi_muhla() -> bool {
         Ok(Err(sabab)) => {
             tracing::warn!(%sabab, "the owner-key probe did not finish");
             false
-        }
+        },
         Err(_) => {
             tracing::warn!(
                 thawani = MUHLAT_MALIK.as_secs(),
                 "the keychain did not answer in time; continuing as a contributor session"
             );
             false
-        }
+        },
     }
 }
 
@@ -1222,7 +1271,10 @@ pub fn musawwadat_luba(
         return Ok(None);
     };
     let qaima = qaimat_lil(&masarat, &musawwada)?;
-    Ok(Some(musawwada_hie(&musawwada, qaimat_hie(&qaima, musawwada.tajawuz()))))
+    Ok(Some(musawwada_hie(
+        &musawwada,
+        qaimat_hie(&qaima, musawwada.tajawuz()),
+    )))
 }
 
 /// Compiles the project into a package and starts or replaces the draft.
@@ -1263,7 +1315,11 @@ pub fn jahhiz_taqdeem(
 
     let taqreer = makhzan
         .bil_qira(|ittisal| SijillMuharrik::jadeed(ittisal).wahid(id))?
-        .ok_or_else(|| Khata::from(KhataTaqdeemAmr::MuharrikMajhul { ism: luba.ism.clone() }))?;
+        .ok_or_else(|| {
+            Khata::from(KhataTaqdeemAmr::MuharrikMajhul {
+                ism: luba.ism.clone(),
+            })
+        })?;
 
     let sabiq = musawwadat_lil_luba(&masarat, id)?;
     let (ruqaa_id, murajaa) = match &sabiq {
@@ -1274,12 +1330,12 @@ pub fn jahhiz_taqdeem(
                 qadeema.murajaa()
             };
             (qadeema.id(), raqm)
-        }
+        },
         Some(qadeema) if !qadeema.hala().nihaiya() => {
             return Err(Khata::from(KhataTaqdeemAmr::TaqdeemMuallaq {
                 ruqaa: qadeema.id().to_string(),
             }));
-        }
+        },
         _ => (RuqaaId::jadeeda(), RuqaaRevision::AWWAL),
     };
 
@@ -1301,8 +1357,8 @@ pub fn jahhiz_taqdeem(
     iktishaf.sajjil_fahs(&taqreer);
     let maqasat = iktishaf.ahsi(&sufuf);
 
-    let irtibat = IrtibatBina::min_bayan(&mashru.rasm().bayan, &khutut, None)
-        .map_err(Khata::from)?;
+    let irtibat =
+        IrtibatBina::min_bayan(&mashru.rasm().bayan, &khutut, None).map_err(Khata::from)?;
     let taghtiya = taarib_tarqee::taghtiya_ruqaa::ihsib_taghtiya(&sufuf, None, None);
     // The overflow report is not built here. The compiler measures it from the
     // layouts it ships, so the draft's copy is the package's own.
@@ -1348,17 +1404,23 @@ pub fn jahhiz_taqdeem(
         tawqee: [0; 64],
     };
     kutla.tawqee = khass.waqqi(&kutla.risala(&basma_dakhil));
-    huzma.akhtim(&kutla, &MudaqqiqEd25519).map_err(Khata::from)?;
+    huzma
+        .akhtim(&kutla, &MudaqqiqEd25519)
+        .map_err(Khata::from)?;
 
     let mujallad = mujallad_huzam(&masarat);
     taarib_usus::masarat::insha_mujallad(&mujallad)?;
-    let masar_huzma =
-        mujallad.join(format!("{ruqaa_id}-r{}.ruqaa", murajaa.qeema()));
+    let masar_huzma = mujallad.join(format!("{ruqaa_id}-r{}.ruqaa", murajaa.qeema()));
     kitaba_dharra(&masar_huzma, huzma.bayt.bayt())?;
     let basmat_huzma = Basma::min_bayt(*blake3::hash(huzma.bayt.bayt()).as_bytes());
     let hajm_huzma = u64::try_from(huzma.hajm()).unwrap_or(u64::MAX);
 
-    let hawiya_musahim = HawiyatMusahim { musahim, ism, itimad, miftah: khass.aam().bayt() };
+    let hawiya_musahim = HawiyatMusahim {
+        musahim,
+        ism,
+        itimad,
+        miftah: khass.aam().bayt(),
+    };
     // The registry record and the pull-request body are written now, while the
     // live manifest exists; the transport later sends them as data.
     let record = mulakhkhas(
@@ -1369,18 +1431,37 @@ pub fn jahhiz_taqdeem(
         String::new(),
         String::new(),
     );
-    let matn_talab =
-        wasf_talab_damj(&huzma.bayan, &hawiya_musahim, &record, &sharh, Some(&taghyeerat));
+    let matn_talab = wasf_talab_damj(
+        &huzma.bayan,
+        &hawiya_musahim,
+        &record,
+        &sharh,
+        Some(&taghyeerat),
+    );
     crate::warsha_awamir::uktub_janibi(
         &masar_talab_json(&masarat, ruqaa_id, murajaa.qeema()),
-        &MalafTalab { record, matn: matn_talab, ism_luba: luba.ism.clone() },
+        &MalafTalab {
+            record,
+            matn: matn_talab,
+            ism_luba: luba.ism.clone(),
+        },
     )?;
 
     let bidaya = BidayatMusawwada {
         bayan: &huzma.bayan,
         luba: id,
-        masadir: luba.masadir.iter().map(|wahid| wahid.asl().clone()).collect(),
-        basmat_asliya: mashru.rasm().bayan.turuq.iter().filter_map(|t| t.basma).collect(),
+        masadir: luba
+            .masadir
+            .iter()
+            .map(|wahid| wahid.asl().clone())
+            .collect(),
+        basmat_asliya: mashru
+            .rasm()
+            .bayan
+            .turuq
+            .iter()
+            .filter_map(|t| t.basma)
+            .collect(),
         masar_huzma,
         basmat_huzma,
         hajm_huzma,
@@ -1393,7 +1474,10 @@ pub fn jahhiz_taqdeem(
     ihfaz_musawwada(&masarat, &musawwada)?;
 
     let qaima = qaimat_lil(&masarat, &musawwada)?;
-    Ok(musawwada_hie(&musawwada, qaimat_hie(&qaima, musawwada.tajawuz())))
+    Ok(musawwada_hie(
+        &musawwada,
+        qaimat_hie(&qaima, musawwada.tajawuz()),
+    ))
 }
 
 /// Acknowledges one warning, or withdraws the acknowledgement.
@@ -1414,7 +1498,9 @@ pub fn aqirr_tahdheer(
     let _harasa = qufl.0.blocking_lock();
     let id = huwiya(muarrif)?;
     let musawwada = musawwadat_lil_luba(&masarat, id)?.ok_or_else(|| {
-        Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud { ruqaa: id.to_string() })
+        Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud {
+            ruqaa: id.to_string(),
+        })
     })?;
     let Some(band) = tahdheer_min_slug(&tahdheer) else {
         return Err(Khata::from(KhataTaqdeemAmr::TahdheerMajhul { tahdheer }));
@@ -1427,7 +1513,10 @@ pub fn aqirr_tahdheer(
     }
     uktub_iqrarat(&masarat, musawwada.id(), &iqrarat)?;
     let qaima = qaimat_lil(&masarat, &musawwada)?;
-    Ok(musawwada_hie(&musawwada, qaimat_hie(&qaima, musawwada.tajawuz())))
+    Ok(musawwada_hie(
+        &musawwada,
+        qaimat_hie(&qaima, musawwada.tajawuz()),
+    ))
 }
 
 fn idadat_tawthiq(muarrif_amil: &str) -> IdadatTawthiq {
@@ -1456,12 +1545,12 @@ fn mustawda_min_rasmi(rasmi: &str, rabt_tajheez: &str) -> Natija<IdadatMustawda>
             if !malik.is_empty() && !mustawda.is_empty() && !mustawda.contains('/') =>
         {
             (malik.to_owned(), mustawda.to_owned())
-        }
+        },
         _ => {
             return Err(Khata::from(KhataTaqdeemAmr::MustawdaGhayrMafhum {
                 rasmi: rasmi.to_owned(),
             }));
-        }
+        },
     };
     let rabt_git = format!("https://github.com/{malik}/{mustawda}.git");
     Ok(IdadatMustawda {
@@ -1470,12 +1559,8 @@ fn mustawda_min_rasmi(rasmi: &str, rabt_tajheez: &str) -> Natija<IdadatMustawda>
         far_asasi: "main".to_owned(),
         bidayat_far: "taqdeem".to_owned(),
         rabt_git,
-        qalab_git_shawka: QalabRabt::jadeed(
-            "https://github.com/{malik_shawka}/{mustawda}.git",
-        ),
-        qalab_shawkati: QalabRabt::jadeed(
-            "https://api.github.com/repos/{malik_shawka}/{mustawda}",
-        ),
+        qalab_git_shawka: QalabRabt::jadeed("https://github.com/{malik_shawka}/{mustawda}.git"),
+        qalab_shawkati: QalabRabt::jadeed("https://api.github.com/repos/{malik_shawka}/{mustawda}"),
         qalab_shawka: QalabRabt::jadeed("https://api.github.com/repos/{malik}/{mustawda}/forks"),
         qalab_tajheez: QalabRabt::jadeed(rabt_tajheez),
         qalab_talab_damj: QalabRabt::jadeed(
@@ -1497,8 +1582,11 @@ pub async fn abda_tawthiq_taqdeem(
     jihaz: tauri::State<'_, JihazMuallaq>,
 ) -> Result<TalabJihazHie, Khata> {
     let hali = idadat.hali();
-    let Some(muarrif_amil) =
-        hali.masadir.muarrif_amil.as_deref().filter(|nass| !nass.trim().is_empty())
+    let Some(muarrif_amil) = hali
+        .masadir
+        .muarrif_amil
+        .as_deref()
+        .filter(|nass| !nass.trim().is_empty())
     else {
         return Err(Khata::from(KhataTaqdeemAmr::IrsalGhayrMuhayya {
             naqis: "muarrif_amil",
@@ -1554,7 +1642,9 @@ pub async fn sallim_taqdeem(
     let _harasa = qufl.0.lock().await;
     let id = huwiya(muarrif)?;
     let musawwada = musawwadat_lil_luba(&masarat, id)?.ok_or_else(|| {
-        Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud { ruqaa: id.to_string() })
+        Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud {
+            ruqaa: id.to_string(),
+        })
     })?;
 
     let (mashru, sufuf) = nusus_mashru(&masarat, id)?;
@@ -1655,15 +1745,14 @@ pub async fn sallim_taqdeem(
         } else {
             // The guard is released inside this block: it is `!Send`, and the
             // token exchange below is awaited.
-            let muallaq = {
-                jihaz.0.lock().take()
-            };
+            let muallaq = { jihaz.0.lock().take() };
             let Some(talab_jihaz) = muallaq else {
                 return Err(Khata::from(KhataTaqdeemAmr::TawthiqNaqis));
             };
             let amil = bina_amil(MUHLAT_TALAB).map_err(Khata::from)?;
-            let ramz =
-                akmil_tawthiq(&amil, &tawthiq, &talab_jihaz).await.map_err(Khata::from)?;
+            let ramz = akmil_tawthiq(&amil, &tawthiq, &talab_jihaz)
+                .await
+                .map_err(Khata::from)?;
             khzin_ramz("taqdeem", &ramz).map_err(Khata::from)?;
             ramz
         };
@@ -1679,7 +1768,9 @@ pub async fn sallim_taqdeem(
             crate::warsha_awamir::iqra_janibi_matlub(&masar)?
         };
         let bayt = std::fs::read(&masar_huzma).map_err(|_| {
-            Khata::from(KhataTaqdeemAmr::HuzmaMafquda { masar: masar_huzma.clone() })
+            Khata::from(KhataTaqdeemAmr::HuzmaMafquda {
+                masar: masar_huzma.clone(),
+            })
         })?;
         let (musahim_hali, ism_hali, itimad_hali) = hawiyati(&masarat)?;
         let hawiya = HawiyatMusahim {
@@ -1712,7 +1803,12 @@ pub async fn sallim_taqdeem(
         None
     };
 
-    Ok(IrsalHie { ruqaa, murajaa, rabt_talab_damj, basma })
+    Ok(IrsalHie {
+        ruqaa,
+        murajaa,
+        rabt_talab_damj,
+        basma,
+    })
 }
 
 /// Every submission of mine, newest first, each with its trail.
@@ -1754,9 +1850,7 @@ pub fn musahamati(masarat: tauri::State<'_, Masarat>) -> Result<Vec<MusahamaHie>
 /// [`KhataWarshaAmr::MalafTalif`] when the board file exists and does not read.
 #[tauri::command]
 #[specta::specta]
-pub fn lawhat_talabat(
-    masarat: tauri::State<'_, Masarat>,
-) -> Result<LawhatTalabatHie, Khata> {
+pub fn lawhat_talabat(masarat: tauri::State<'_, Masarat>) -> Result<LawhatTalabatHie, Khata> {
     let lawha: LawhatTalabat = crate::warsha_awamir::iqra_janibi(&masar_talabat(&masarat))?;
     Ok(LawhatTalabatHie {
         sufuf: lawha
@@ -1766,7 +1860,11 @@ pub fn lawhat_talabat(
                 muarrif: talabat.luba.to_string(),
                 ism_luba: talabat.ism_luba.clone(),
                 adad: crate::warsha_awamir::adad_u32(talabat.talab()),
-                akhir_waqt: talabat.talabat.values().map(|talab| talab.waqt.clone()).max(),
+                akhir_waqt: talabat
+                    .talabat
+                    .values()
+                    .map(|talab| talab.waqt.clone())
+                    .max(),
             })
             .collect(),
     })
@@ -1798,11 +1896,12 @@ pub fn utlub_tarjama(
     if let Some(hukm) = crate::luba_awamir::hukm_mukhazzan(id)
         && hukm.hala().yatakallam_arabi()
     {
-        return Err(Khata::from(KhataTaqdeemAmr::LughaRasmiyaMawjuda { ism: luba.ism }));
+        return Err(Khata::from(KhataTaqdeemAmr::LughaRasmiyaMawjuda {
+            ism: luba.ism,
+        }));
     }
     let (musahim, _ism, _itimad) = hawiyati(&masarat)?;
-    let mut lawha: LawhatTalabat =
-        crate::warsha_awamir::iqra_janibi(&masar_talabat(&masarat))?;
+    let mut lawha: LawhatTalabat = crate::warsha_awamir::iqra_janibi(&masar_talabat(&masarat))?;
     let _ = lawha.utlub(TalabTarjama::jadeed(
         id,
         luba.ism,
@@ -1821,10 +1920,7 @@ pub fn utlub_tarjama(
 /// [`KhataWarshaAmr::MalafTalif`] when the board file exists and does not read.
 #[tauri::command]
 #[specta::specta]
-pub fn adad_talabat(
-    muarrif: String,
-    masarat: tauri::State<'_, Masarat>,
-) -> Result<u32, Khata> {
+pub fn adad_talabat(muarrif: String, masarat: tauri::State<'_, Masarat>) -> Result<u32, Khata> {
     let id = huwiya(muarrif)?;
     let lawha: LawhatTalabat = crate::warsha_awamir::iqra_janibi(&masar_talabat(&masarat))?;
     Ok(crate::warsha_awamir::adad_u32(lawha.talab(id)))
@@ -1900,7 +1996,12 @@ pub fn tabur_muraja(masarat: tauri::State<'_, Masarat>) -> Result<TaburHie, Khat
         sufuf.push(madkhal);
     }
 
-    let murattaba = tabur(&salahiya, &sufuf, &MurashshihTabur::maftuh(), TarteebTabur::default());
+    let murattaba = tabur(
+        &salahiya,
+        &sufuf,
+        &MurashshihTabur::maftuh(),
+        TarteebTabur::default(),
+    );
     let ihsaat: IhsaTabur = ihsa(&salahiya, &murattaba);
 
     Ok(TaburHie {
@@ -1963,10 +2064,13 @@ pub fn tafasil_muraja(
         ihfaz_musawwada(&masarat, &musawwada)?;
     }
 
-    let qaima = qaimat_lil(&masarat, &musawwada)
-        .map_or(QaimatFahsHie { sutur: Vec::new(), jahiza: false }, |qaima| {
-            qaimat_hie(&qaima, musawwada.tajawuz())
-        });
+    let qaima = qaimat_lil(&masarat, &musawwada).map_or(
+        QaimatFahsHie {
+            sutur: Vec::new(),
+            jahiza: false,
+        },
+        |qaima| qaimat_hie(&qaima, musawwada.tajawuz()),
+    );
 
     let sufuf: Vec<SafHuzmaHie> = match nusus_mashru(&masarat, musawwada.luba()) {
         Ok((_mashru, madakhil)) => madakhil
@@ -1990,7 +2094,11 @@ pub fn tafasil_muraja(
         .unwrap_or_default();
 
     let sijill = sijill_malik(&masarat)?;
-    let quyud = sijill.li_ruqaa(musawwada.id()).into_iter().map(satr_sijill_hie).collect();
+    let quyud = sijill
+        .li_ruqaa(musawwada.id())
+        .into_iter()
+        .map(satr_sijill_hie)
+        .collect();
 
     Ok(TafasilMurajaHie {
         sumaa: sumaa_hie(&sumaa_li(&masarat, &musawwada.musahim().musahim)?),
@@ -2032,9 +2140,8 @@ pub fn allaq_muraja(
     };
     let mawdi: Option<NassId> = match nass {
         Some(khaam) => Some(
-            serde_json::from_value(serde_json::Value::String(khaam.clone())).map_err(|_| {
-                Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud { ruqaa: khaam })
-            })?,
+            serde_json::from_value(serde_json::Value::String(khaam.clone()))
+                .map_err(|_| Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud { ruqaa: khaam }))?,
         ),
         None => None,
     };
@@ -2099,13 +2206,14 @@ pub fn qarrir_muraja(
                 return Err(Khata::from(KhataTaqdeemAmr::SababFarigh));
             };
             let qayd = utlub_taadil(&salahiya, &marji, mulakhkhas, Vec::new(), waqt.clone());
-            let baada =
-                musawwada.tulib_taadil(&waqt, &sabab, Vec::new()).map_err(intiqal)?;
+            let baada = musawwada
+                .tulib_taadil(&waqt, &sabab, Vec::new())
+                .map_err(intiqal)?;
             haddith_sumaa(&masarat, &baada.musahim().musahim, |sumaa| {
                 sumaa.tulib_taadil = sumaa.tulib_taadil.saturating_add(1);
             })?;
             (qayd, baada)
-        }
+        },
         "rafd" => {
             let maktub = SababRafd::jadeed(sabab.clone()).map_err(Khata::from)?;
             let qayd = urfud(&salahiya, &marji, maktub, waqt.clone());
@@ -2114,7 +2222,7 @@ pub fn qarrir_muraja(
                 sumaa.marfuda = sumaa.marfuda.saturating_add(1);
             })?;
             (qayd, baada)
-        }
+        },
         "sahb" => {
             let sabab_nass = sabab.clone();
             let maktub = SababRafd::jadeed(sabab).map_err(Khata::from)?;
@@ -2122,20 +2230,20 @@ pub fn qarrir_muraja(
             let mut fahras: Vec<MulakhkhasRuqaa> =
                 crate::warsha_awamir::iqra_janibi(&masar_fahras_manshurat(&masarat))?;
             fahras.retain(|mulakhkhas| {
-                !(mulakhkhas.id == musawwada.id()
-                    && mulakhkhas.murajaa == musawwada.murajaa())
+                !(mulakhkhas.id == musawwada.id() && mulakhkhas.murajaa == musawwada.murajaa())
             });
             crate::warsha_awamir::uktub_janibi(&masar_fahras_manshurat(&masarat), &fahras)?;
             haddith_sumaa(&masarat, &musawwada.musahim().musahim, |sumaa| {
                 sumaa.masbuba = sumaa.masbuba.saturating_add(1);
             })?;
-            let baada =
-                musawwada.suhibat_min_almalik(&waqt, &sabab_nass).map_err(intiqal)?;
+            let baada = musawwada
+                .suhibat_min_almalik(&waqt, &sabab_nass)
+                .map_err(intiqal)?;
             (qayd, baada)
-        }
+        },
         _ => {
             return Err(Khata::from(KhataTaqdeemAmr::IjraMajhul { ijra }));
-        }
+        },
     };
 
     let mut sijill = sijill_malik(&masarat)?;
@@ -2143,10 +2251,13 @@ pub fn qarrir_muraja(
     uktub_sijill_malik(&masarat, &sijill)?;
     ihfaz_musawwada(&masarat, &baada)?;
 
-    let qaima = qaimat_lil(&masarat, &baada)
-        .map_or(QaimatFahsHie { sutur: Vec::new(), jahiza: false }, |qaima| {
-            qaimat_hie(&qaima, baada.tajawuz())
-        });
+    let qaima = qaimat_lil(&masarat, &baada).map_or(
+        QaimatFahsHie {
+            sutur: Vec::new(),
+            jahiza: false,
+        },
+        |qaima| qaimat_hie(&qaima, baada.tajawuz()),
+    );
     Ok(musawwada_hie(&baada, qaima))
 }
 
@@ -2235,8 +2346,7 @@ pub fn iaatimad_muraja(
     });
     crate::warsha_awamir::uktub_janibi(&masar_fahras_manshurat(&masarat), &fahras)?;
 
-    let mut lawha: LawhatTalabat =
-        crate::warsha_awamir::iqra_janibi(&masar_talabat(&masarat))?;
+    let mut lawha: LawhatTalabat = crate::warsha_awamir::iqra_janibi(&masar_talabat(&masarat))?;
     let _ = lawha.ughliq(musawwada.luba(), musawwada.id());
     crate::warsha_awamir::uktub_janibi(&masar_talabat(&masarat), &lawha)?;
 
@@ -2265,16 +2375,17 @@ pub fn iaatimad_muraja(
     sijill.alhiq(qayd);
     uktub_sijill_malik(&masarat, &sijill)?;
 
-    let qaima = qaimat_lil(&masarat, &manshura)
-        .map_or(QaimatFahsHie { sutur: Vec::new(), jahiza: false }, |qaima| {
-            qaimat_hie(&qaima, manshura.tajawuz())
-        });
+    let qaima = qaimat_lil(&masarat, &manshura).map_or(
+        QaimatFahsHie {
+            sutur: Vec::new(),
+            jahiza: false,
+        },
+        |qaima| qaimat_hie(&qaima, manshura.tajawuz()),
+    );
     Ok(musawwada_hie(&manshura, qaima))
 }
 
-fn khalfiya_min_bayan(
-    musawwada: &Musawwada,
-) -> taarib_mustalahat::muharrik::KhalfiyaBarmajiya {
+fn khalfiya_min_bayan(musawwada: &Musawwada) -> taarib_mustalahat::muharrik::KhalfiyaBarmajiya {
     musawwada
         .bayan()
         .get("muharrik")
@@ -2301,9 +2412,7 @@ fn tabaqa_min_bayan(musawwada: &Musawwada) -> taarib_mustalahat::muharrik::Tabaq
 /// [`KhataTaqdeemAmr::MalikFaqat`] without the owner key.
 #[tauri::command]
 #[specta::specta]
-pub fn sijill_muraja_kull(
-    masarat: tauri::State<'_, Masarat>,
-) -> Result<Vec<SatrSijillHie>, Khata> {
+pub fn sijill_muraja_kull(masarat: tauri::State<'_, Masarat>) -> Result<Vec<SatrSijillHie>, Khata> {
     let (_salahiya, _khass) = salahiyat_malik()?;
     let sijill = sijill_malik(&masarat)?;
     let mut quyud: Vec<SatrSijillHie> = sijill.quyud().iter().map(satr_sijill_hie).collect();
@@ -2321,24 +2430,32 @@ fn insakh_lil_sandooq(min: &Path, ila: &Path) -> Natija<u64> {
     let mut rukam = vec![min.to_path_buf()];
     while let Some(mujallad) = rukam.pop() {
         let qaima = std::fs::read_dir(&mujallad).map_err(|sabab| {
-            Khata::from(KhataTaqdeemAmr::SandooqNaqis { sabab: sabab.to_string() })
+            Khata::from(KhataTaqdeemAmr::SandooqNaqis {
+                sabab: sabab.to_string(),
+            })
         })?;
         for dakhla in qaima.flatten() {
             let masar = dakhla.path();
             let naw = dakhla.file_type().map_err(|sabab| {
-                Khata::from(KhataTaqdeemAmr::SandooqNaqis { sabab: sabab.to_string() })
+                Khata::from(KhataTaqdeemAmr::SandooqNaqis {
+                    sabab: sabab.to_string(),
+                })
             })?;
             // A link could reach outside the game tree; the copy refuses to follow.
             if naw.is_symlink() {
                 continue;
             }
             let nisbi = masar.strip_prefix(min).map_err(|sabab| {
-                Khata::from(KhataTaqdeemAmr::SandooqNaqis { sabab: sabab.to_string() })
+                Khata::from(KhataTaqdeemAmr::SandooqNaqis {
+                    sabab: sabab.to_string(),
+                })
             })?;
             let hadaf = ila.join(nisbi);
             if naw.is_dir() {
                 std::fs::create_dir_all(&hadaf).map_err(|sabab| {
-                    Khata::from(KhataTaqdeemAmr::SandooqNaqis { sabab: sabab.to_string() })
+                    Khata::from(KhataTaqdeemAmr::SandooqNaqis {
+                        sabab: sabab.to_string(),
+                    })
                 })?;
                 rukam.push(masar);
             } else {
@@ -2390,7 +2507,10 @@ fn tanfidhi_sandooq(luba: &Luba, jidhr_sandooq: &Path) -> Natija<PathBuf> {
 /// would otherwise reach a verdict with half its evidence unread.
 #[tauri::command]
 #[specta::specta]
-#[expect(clippy::too_many_lines, reason = "the real install recipe, sandbox-rooted")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "the real install recipe, sandbox-rooted"
+)]
 pub fn sandooq_thabbit(
     ruqaa: String,
     muarrif: String,
@@ -2409,8 +2529,8 @@ pub fn sandooq_thabbit(
     let hali = idadat.hali();
     let musawwada = musawwada_bil_ruqaa(&masarat, &ruqaa)?;
 
-    let beea = BeeatSandooq::hayyi(&salahiya, &masarat.sandooq(), musawwada.id())
-        .map_err(Khata::from)?;
+    let beea =
+        BeeatSandooq::hayyi(&salahiya, &masarat.sandooq(), musawwada.id()).map_err(Khata::from)?;
     let manqula = insakh_lil_sandooq(&luba.jidhr, beea.jidhr_luba())?;
     let _ = manqula;
 
@@ -2420,36 +2540,58 @@ pub fn sandooq_thabbit(
         .ruqaa()
         .and_then(|qari_ruqaa| qari_ruqaa.bayan_json())
         .map_err(Khata::from)?;
-    let irtibat: IrtibatBina =
-        serde_json::from_value(bayan.get("irtibat").cloned().unwrap_or_default()).map_err(
-            |sabab| Khata::from(KhataTaqdeemAmr::SandooqNaqis { sabab: sabab.to_string() }),
-        )?;
+    let irtibat: IrtibatBina = serde_json::from_value(
+        bayan.get("irtibat").cloned().unwrap_or_default(),
+    )
+    .map_err(|sabab| {
+        Khata::from(KhataTaqdeemAmr::SandooqNaqis {
+            sabab: sabab.to_string(),
+        })
+    })?;
 
     let taqreer = makhzan
         .bil_qira(|ittisal| SijillMuharrik::jadeed(ittisal).wahid(id))?
-        .ok_or_else(|| Khata::from(KhataTaqdeemAmr::MuharrikMajhul { ism: luba.ism.clone() }))?;
+        .ok_or_else(|| {
+            Khata::from(KhataTaqdeemAmr::MuharrikMajhul {
+                ism: luba.ism.clone(),
+            })
+        })?;
     let bina = makhzan
         .bil_qira(|ittisal| SijillBina::jadeed(ittisal).haliya(id))?
-        .ok_or_else(|| Khata::from(KhataTaqdeemAmr::MuharrikMajhul { ism: luba.ism.clone() }))?;
+        .ok_or_else(|| {
+            Khata::from(KhataTaqdeemAmr::MuharrikMajhul {
+                ism: luba.ism.clone(),
+            })
+        })?;
 
     let tanfidhi = tanfidhi_sandooq(&luba, beea.jidhr_luba())?;
-    let ism_tanfidhi =
-        tanfidhi.file_name().and_then(|s| s.to_str()).unwrap_or_default().to_owned();
+    let ism_tanfidhi = tanfidhi
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default()
+        .to_owned();
 
     // The same list, the same state and the same refusal the real install
     // reads: a review that cleared a check the registry never made is a review
     // of something else.
     let qaima = crate::tathbeet_awamir::qaimat_sahb_lil_bawwaba(&masarat, &hali)?;
     let sijill_iqrar = taarib_aman::iqrar::iqra(
-        &masarat.jidhr_bayanat().join(crate::tathbeet_awamir::ISM_MALAF_IQRAR),
+        &masarat
+            .jidhr_bayanat()
+            .join(crate::tathbeet_awamir::ISM_MALAF_IQRAR),
     )?;
 
     let bayt_ruqaa = std::fs::read(&malaf_huzma).map_err(|_| {
-        Khata::from(KhataTaqdeemAmr::HuzmaMafquda { masar: malaf_huzma.clone() })
+        Khata::from(KhataTaqdeemAmr::HuzmaMafquda {
+            masar: malaf_huzma.clone(),
+        })
     })?;
     let wajha = WajhatLuba::dakhil_taarib(&format!("{}.ruqaa", musawwada.id()))
         .map_err(|q| Khata::min_tafsir(&q))?;
-    let muhtawa = vec![WadaMuhtawa { wajha, bayt: bayt_ruqaa }];
+    let muhtawa = vec![WadaMuhtawa {
+        wajha,
+        bayt: bayt_ruqaa,
+    }];
 
     let Some(masdar) = luba.masadir.first().cloned() else {
         return Err(Khata::from(KhataTaqdeemAmr::SandooqNaqis {
@@ -2565,14 +2707,16 @@ pub fn sandooq_atliq(
     let id = huwiya(muarrif)?;
     let luba = ijlib_luba(&makhzan, id)?;
     let musawwada = musawwada_bil_ruqaa(&masarat, &ruqaa)?;
-    let beea = BeeatSandooq::hayyi(&salahiya, &masarat.sandooq(), musawwada.id())
-        .map_err(Khata::from)?;
+    let beea =
+        BeeatSandooq::hayyi(&salahiya, &masarat.sandooq(), musawwada.id()).map_err(Khata::from)?;
     let tanfidhi = tanfidhi_sandooq(&luba, beea.jidhr_luba())?;
     let _ = std::process::Command::new(&tanfidhi)
         .current_dir(beea.jidhr_luba())
         .spawn()
         .map_err(|sabab| {
-            Khata::from(KhataTaqdeemAmr::SandooqNaqis { sabab: sabab.to_string() })
+            Khata::from(KhataTaqdeemAmr::SandooqNaqis {
+                sabab: sabab.to_string(),
+            })
         })?;
     Ok(true)
 }
@@ -2585,14 +2729,11 @@ pub fn sandooq_atliq(
 /// restore or the removal raise.
 #[tauri::command]
 #[specta::specta]
-pub fn sandooq_imsah(
-    ruqaa: String,
-    masarat: tauri::State<'_, Masarat>,
-) -> Result<bool, Khata> {
+pub fn sandooq_imsah(ruqaa: String, masarat: tauri::State<'_, Masarat>) -> Result<bool, Khata> {
     let (salahiya, _khass) = salahiyat_malik()?;
     let musawwada = musawwada_bil_ruqaa(&masarat, &ruqaa)?;
-    let beea = BeeatSandooq::hayyi(&salahiya, &masarat.sandooq(), musawwada.id())
-        .map_err(Khata::from)?;
+    let beea =
+        BeeatSandooq::hayyi(&salahiya, &masarat.sandooq(), musawwada.id()).map_err(Khata::from)?;
     let (_mustaada, _mutabaqqi) = beea.istaid().map_err(Khata::from)?;
     beea.imsah().map_err(Khata::from)?;
     Ok(true)
@@ -2812,21 +2953,16 @@ impl Tafsir for KhataTaqdeemAmr {
 
     fn arabi(&self) -> String {
         match self {
-            Self::MalikFaqat => {
-                "هذه الشاشة تتطلب مفتاح المالك، وهذه الجلسة لا تحمله.".to_owned()
-            }
-            Self::TaqdeemGhayrMawjud { .. } => {
-                "لا تقديم بهذا المعرّف على هذا الجهاز.".to_owned()
-            }
+            Self::MalikFaqat => "هذه الشاشة تتطلب مفتاح المالك، وهذه الجلسة لا تحمله.".to_owned(),
+            Self::TaqdeemGhayrMawjud { .. } => "لا تقديم بهذا المعرّف على هذا الجهاز.".to_owned(),
             Self::MashruGhayrMawjud { .. } => {
-                "لا مشروع ترجمة لهذه اللعبة بعد. ابدأ الترجمة من شاشة اللعبة أولًا."
-                    .to_owned()
-            }
+                "لا مشروع ترجمة لهذه اللعبة بعد. ابدأ الترجمة من شاشة اللعبة أولًا.".to_owned()
+            },
             Self::TaqdeemMuallaq { .. } => {
                 "تقديمك السابق ما زال عند المالك؛ انتظر رده أو اسحب التقديم قبل \
                  تجهيز نسخة جديدة."
                     .to_owned()
-            }
+            },
             Self::MuharrikMajhul { ism } => format!(
                 "لا تقرير محرّك مسجّلًا للعبة {ism}. افتح شاشة اللعبة ليُفحص محرّكها ثم \
                  عد."
@@ -2835,29 +2971,27 @@ impl Tafsir for KhataTaqdeemAmr {
                 "لا خط عربي صالح في مجلد خطوط تعريب، ولا حزمة بلا خط. أضف خطًا من \
                  الإعدادات."
                     .to_owned()
-            }
+            },
             Self::RukhsaMajhula { rukhsa } => {
                 format!("«{rukhsa}» ليست رخصة يعرفها هذا الإصدار.")
-            }
+            },
             Self::TareeqaMajhula { tareeqa } => {
                 format!("«{tareeqa}» ليست طريقة ترجمة يعرفها هذا الإصدار.")
-            }
+            },
             Self::TahdheerMajhul { tahdheer } => {
                 format!("«{tahdheer}» ليس تحذيرًا تُصدره بوابة التقديم.")
-            }
+            },
             Self::IjraMajhul { ijra } => {
                 format!("«{ijra}» ليس إجراء مراجعة تقدّمه هذه الشاشة.")
-            }
+            },
             Self::IntiqalMarfudAmr { min, ila } => format!(
                 "لا يمكن نقل التقديم من حالة «{min}» إلى «{ila}»؛ الحالة الحالية لا \
                  تسمح بذلك."
             ),
-            Self::SababFarigh => {
-                "هذا الإجراء يتطلب سببًا مكتوبًا، ولم يُكتب شيء.".to_owned()
-            }
+            Self::SababFarigh => "هذا الإجراء يتطلب سببًا مكتوبًا، ولم يُكتب شيء.".to_owned(),
             Self::SandooqNaqis { sabab } => {
                 format!("تعذّر تشغيل صندوق التحقق: {sabab}")
-            }
+            },
             Self::HuzmaMafquda { masar } => format!(
                 "ملف الحزمة لم يعد في {}. أعد تجهيز التقديم لتُبنى الحزمة من جديد.",
                 masar.display()
@@ -2874,18 +3008,18 @@ impl Tafsir for KhataTaqdeemAmr {
                 "لا تفويض جهاز جاريًا ولا رمز وصول محفوظًا. ابدأ تفويض الجهاز أولًا ثم أعد \
                  التسليم."
                     .to_owned()
-            }
+            },
             Self::TalabNaqis => {
                 "مادة طلب الدمج غير موجودة بجانب الحزمة؛ بُنيت الحزمة بإصدار أقدم. أعد تجهيز \
                  التقديم ثم سلّم."
                     .to_owned()
-            }
+            },
             Self::LughaRasmiyaMawjuda { ism } => {
                 format!(
                     "{ism} تصدر بعربية رسمية من ناشرها، فلا يُفتح لها طلب ترجمة. الطلب دعوة \
                      لمتطوّعين ينفقون أمسياتهم على عمل ترجمه محترفون بالفعل."
                 )
-            }
+            },
             Self::MiftahMusahimMulgha { sabab } => format!(
                 "أبطل المستودع مفتاح التوقيع الذي تُوقَّع به مساهماتك: {sabab}. لا يُقبل تقديم \
                  موقّع بمفتاح مُبطَل، ولم يُرسل شيء. تواصل مع مالك المستودع لتسوية الأمر \
@@ -2902,12 +3036,11 @@ impl Tafsir for KhataTaqdeemAmr {
     fn injilizi(&self) -> String {
         match self {
             Self::MalikFaqat => {
-                "This screen requires the owner key, and this session does not hold it."
-                    .to_owned()
-            }
+                "This screen requires the owner key, and this session does not hold it.".to_owned()
+            },
             Self::TaqdeemGhayrMawjud { ruqaa } => {
                 format!("{ruqaa} is not a submission on this machine.")
-            }
+            },
             Self::MashruGhayrMawjud { ism } => format!(
                 "No translation project exists for {ism} yet. Start translating from the \
                  game screen first."
@@ -2926,23 +3059,23 @@ impl Tafsir for KhataTaqdeemAmr {
             ),
             Self::RukhsaMajhula { rukhsa } => {
                 format!("\"{rukhsa}\" is not a licence identifier this build knows.")
-            }
+            },
             Self::TareeqaMajhula { tareeqa } => {
                 format!("\"{tareeqa}\" is not a translation method this build knows.")
-            }
+            },
             Self::TahdheerMajhul { tahdheer } => {
                 format!("\"{tahdheer}\" is not a warning this gate raises.")
-            }
+            },
             Self::IjraMajhul { ijra } => {
                 format!("\"{ijra}\" is not a review action this console offers.")
-            }
+            },
             Self::IntiqalMarfudAmr { min, ila } => format!(
                 "The submission cannot move from \"{min}\" to \"{ila}\"; its current \
                  state does not allow it."
             ),
             Self::SababFarigh => {
                 "This action requires a written reason, and none was written.".to_owned()
-            }
+            },
             Self::SandooqNaqis { sabab } => format!("The verification sandbox failed: {sabab}"),
             Self::HuzmaMafquda { masar } => format!(
                 "The package at {} is gone. Prepare the submission again to rebuild it.",
@@ -2961,19 +3094,19 @@ impl Tafsir for KhataTaqdeemAmr {
                 "No device authorization is in flight and no access token is stored. Start \
                  device authorization first, then submit again."
                     .to_owned()
-            }
+            },
             Self::TalabNaqis => {
                 "The pull-request material beside the package is missing; the package was \
                  built by an older build. Prepare the submission again, then submit."
                     .to_owned()
-            }
+            },
             Self::LughaRasmiyaMawjuda { ism } => {
                 format!(
                     "{ism} already ships official Arabic from its publisher, so no translation \
                      request is opened for it. A request asks volunteers to spend their evenings \
                      on work professionals have already done."
                 )
-            }
+            },
             Self::MiftahMusahimMulgha { sabab } => format!(
                 "The registry has revoked the signing key your contributions are signed with: \
                  {sabab}. A submission signed with a revoked key is not accepted, and nothing \
@@ -2993,7 +3126,9 @@ impl Tafsir for KhataTaqdeemAmr {
             Self::MalikFaqat => Khutwa::ManhSalahiya,
             Self::MashruGhayrMawjud { .. } => Khutwa::FathNusus,
             Self::MuharrikMajhul { .. } => Khutwa::AadaFahsMuharrik,
-            Self::KhututNaqisa { .. } => Khutwa::FathIdadat { qism: QismIdadat::Khutut },
+            Self::KhututNaqisa { .. } => Khutwa::FathIdadat {
+                qism: QismIdadat::Khutut,
+            },
             Self::TaqdeemGhayrMawjud { .. }
             | Self::TaqdeemMuallaq { .. }
             | Self::RukhsaMajhula { .. }
@@ -3012,8 +3147,10 @@ impl Tafsir for KhataTaqdeemAmr {
             // the contributor's own next submission, which its sentence names.
             Self::LughaRasmiyaMawjuda { .. } | Self::TaqdeemMulgha { .. } => Khutwa::LaShay,
             Self::IrsalGhayrMuhayya { .. } | Self::MustawdaGhayrMafhum { .. } => {
-                Khutwa::FathIdadat { qism: QismIdadat::Masadir }
-            }
+                Khutwa::FathIdadat {
+                    qism: QismIdadat::Masadir,
+                }
+            },
             // A revoked key is the owner's to reissue, so the way out is the
             // owner rather than anything on this machine.
             Self::MiftahMusahimMulgha { .. } => Khutwa::IblaghLilMalik,
@@ -3025,54 +3162,48 @@ impl Tafsir for KhataTaqdeemAmr {
         match self {
             Self::TaqdeemGhayrMawjud { ruqaa } | Self::TaqdeemMuallaq { ruqaa } => {
                 let _ = siyaq.insert("ruqaa".to_owned(), QeemaSiyaq::Nass(ruqaa.clone()));
-            }
+            },
             Self::MashruGhayrMawjud { ism } | Self::MuharrikMajhul { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-            }
+            },
             Self::KhututNaqisa { sabab }
             | Self::SandooqNaqis { sabab }
             | Self::MiftahMusahimMulgha { sabab } => {
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::RukhsaMajhula { rukhsa } => {
                 let _ = siyaq.insert("rukhsa".to_owned(), QeemaSiyaq::Nass(rukhsa.clone()));
-            }
+            },
             Self::TareeqaMajhula { tareeqa } => {
-                let _ =
-                    siyaq.insert("tareeqa".to_owned(), QeemaSiyaq::Nass(tareeqa.clone()));
-            }
+                let _ = siyaq.insert("tareeqa".to_owned(), QeemaSiyaq::Nass(tareeqa.clone()));
+            },
             Self::TahdheerMajhul { tahdheer } => {
-                let _ =
-                    siyaq.insert("tahdheer".to_owned(), QeemaSiyaq::Nass(tahdheer.clone()));
-            }
+                let _ = siyaq.insert("tahdheer".to_owned(), QeemaSiyaq::Nass(tahdheer.clone()));
+            },
             Self::IjraMajhul { ijra } => {
                 let _ = siyaq.insert("ijra".to_owned(), QeemaSiyaq::Nass(ijra.clone()));
-            }
+            },
             Self::IntiqalMarfudAmr { min, ila } => {
                 let _ = siyaq.insert("min".to_owned(), QeemaSiyaq::Nass(min.clone()));
                 let _ = siyaq.insert("ila".to_owned(), QeemaSiyaq::Nass(ila.clone()));
-            }
+            },
             Self::HuzmaMafquda { masar } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
             Self::IrsalGhayrMuhayya { naqis } => {
-                let _ = siyaq
-                    .insert("naqis".to_owned(), QeemaSiyaq::Nass((*naqis).to_owned()));
-            }
+                let _ = siyaq.insert("naqis".to_owned(), QeemaSiyaq::Nass((*naqis).to_owned()));
+            },
             Self::MustawdaGhayrMafhum { rasmi } => {
                 let _ = siyaq.insert("rasmi".to_owned(), QeemaSiyaq::Nass(rasmi.clone()));
-            }
-            Self::MalikFaqat
-            | Self::SababFarigh
-            | Self::TawthiqNaqis
-            | Self::TalabNaqis => {}
+            },
+            Self::MalikFaqat | Self::SababFarigh | Self::TawthiqNaqis | Self::TalabNaqis => {},
             Self::LughaRasmiyaMawjuda { ism } => {
                 let _ = siyaq.insert("luba".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-            }
+            },
             Self::TaqdeemMulgha { ruqaa, sabab } => {
                 let _ = siyaq.insert("ruqaa".to_owned(), QeemaSiyaq::Nass(ruqaa.clone()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
         }
         siyaq
     }
@@ -3169,8 +3300,10 @@ mod ikhtibarat_tajawuz {
         mudkhal: &MudkhalNass,
     ) -> NatijatIkhtibar<TakhtitNass> {
         let hadaf = mudkhal.hadaf.as_deref().ok_or("a translated fixture")?;
-        let khiyarat =
-            KhiyaratTakhtit { satr_wahid: mudkhal.quyud.satr_wahid, ..KhiyaratTakhtit::default() };
+        let khiyarat = KhiyaratTakhtit {
+            satr_wahid: mudkhal.quyud.satr_wahid,
+            ..KhiyaratTakhtit::default()
+        };
         let takhtit = saff
             .khattit(&TalabTakhtit {
                 nass: hadaf,
@@ -3235,10 +3368,15 @@ mod ikhtibarat_tajawuz {
         assert_eq!(qiyas.mutajawiz, 1);
         assert_eq!(qiyas.ghayr_mutahaqqaq, 1);
         assert_eq!(qiyas.nusus_ghayr_mutahaqqaqa, 1);
-        let Some(sabab) = qiyas.asbab.first() else { return Err("a cause is listed".into()) };
+        let Some(sabab) = qiyas.asbab.first() else {
+            return Err("a cause is listed".into());
+        };
         assert_eq!(sabab.miftah, "bila_ard_mutah");
         assert_eq!(sabab.adad, 1);
-        assert!(!sabab.ilaj_injilizi.is_empty(), "a known cause carries its remedy");
+        assert!(
+            !sabab.ilaj_injilizi.is_empty(),
+            "a known cause carries its remedy"
+        );
         assert!(
             qiyas.wasf_injilizi.contains("could not be verified"),
             "the sentence leads with what was not measured: {}",
@@ -3246,15 +3384,32 @@ mod ikhtibarat_tajawuz {
         );
 
         let mutajawiz = tajawuz_hie(&taqrir);
-        assert_eq!(mutajawiz.len(), 1, "one string overran; the one that fitted is not listed");
-        let Some(satr) = mutajawiz.first() else { return Err("the overrun row".into()) };
+        assert_eq!(
+            mutajawiz.len(),
+            1,
+            "one string overran; the one that fitted is not listed"
+        );
+        let Some(satr) = mutajawiz.first() else {
+            return Err("the overrun row".into());
+        };
         assert_eq!(satr.nass, LA_YASA);
-        assert!(satr.ard > satr.mutah, "{}px of shaped Arabic in {}px", satr.ard, satr.mutah);
-        assert!(matches!(satr.shidda.as_str(), "shadid" | "qati"), "{}", satr.shidda);
+        assert!(
+            satr.ard > satr.mutah,
+            "{}px of shaped Arabic in {}px",
+            satr.ard,
+            satr.mutah
+        );
+        assert!(
+            matches!(satr.shidda.as_str(), "shadid" | "qati"),
+            "{}",
+            satr.shidda
+        );
 
         let ghayr = ghayr_maqis_hie(&taqrir);
         assert_eq!(ghayr.len(), 1);
-        let Some(satr) = ghayr.first() else { return Err("the unmeasured row".into()) };
+        let Some(satr) = ghayr.first() else {
+            return Err("the unmeasured row".into());
+        };
         assert_eq!(satr.nass, BILA_ARD);
         assert_eq!(satr.sabab, "bila_ard_mutah");
         Ok(())
@@ -3278,18 +3433,27 @@ mod ikhtibarat_tajawuz {
         let hie_juzi = satr_fahs_hie(&satr, &juzi);
         let hie_lam_yuqas = satr_fahs_hie(&satr, &lam_yuqas);
 
-        assert_eq!(hie_kamil.hala, "ijtaz", "measured clean is the only green check");
+        assert_eq!(
+            hie_kamil.hala, "ijtaz",
+            "measured clean is the only green check"
+        );
         assert_eq!(hie_juzi.hala, HALA_MAQIS_JUZI);
         assert_eq!(hie_lam_yuqas.hala, HALA_GHAYR_MAQIS);
         assert_ne!(hie_kamil.hala_arabi, hie_lam_yuqas.hala_arabi);
         assert_ne!(hie_kamil.hala_injilizi, hie_lam_yuqas.hala_injilizi);
         assert_ne!(hie_juzi.tafsil_injilizi, hie_kamil.tafsil_injilizi);
         assert!(
-            hie_lam_yuqas.tafsil_injilizi.starts_with("No overflow was measured"),
+            hie_lam_yuqas
+                .tafsil_injilizi
+                .starts_with("No overflow was measured"),
             "{}",
             hie_lam_yuqas.tafsil_injilizi
         );
-        assert!(hie_kamil.tafsil_injilizi.contains("Every one of 1 measurement(s)"));
+        assert!(
+            hie_kamil
+                .tafsil_injilizi
+                .contains("Every one of 1 measurement(s)")
+        );
         for hie in [&hie_kamil, &hie_juzi, &hie_lam_yuqas] {
             assert!(!hie.hasim, "an unmeasured project is told, not blocked");
             assert_eq!(hie.band, "tajawuz_katheer");
@@ -3314,9 +3478,15 @@ mod ikhtibarat_tajawuz {
     #[test]
     fn al_tahdheer_alqaim_yabqa() -> NatijatIkhtibar {
         let lam_yuqas = taqrir(&[mudkhal("Options", BILA_ARD, None)])?;
-        let satr = SatrFahs { hala: HalatBand::YantazirIqrar, ..satr_ijtaz() };
+        let satr = SatrFahs {
+            hala: HalatBand::YantazirIqrar,
+            ..satr_ijtaz()
+        };
         let hie = satr_fahs_hie(&satr, &lam_yuqas);
-        assert_eq!(hie.hala, "yantazir_iqrar", "the acknowledgement path is not overridden");
+        assert_eq!(
+            hie.hala, "yantazir_iqrar",
+            "the acknowledgement path is not overridden"
+        );
         assert!(hie.tafsil_injilizi.contains("could not be verified"));
         Ok(())
     }
@@ -3345,14 +3515,22 @@ mod ikhtibarat_tajawuz {
     #[test]
     fn sabab_majhul_la_yusagh_bi_sabab_akhar() {
         let mut mulakhkhas = MulakhkhasTajawuz::default();
-        let _ = mulakhkhas.hasab_sabab.insert("min_bina_ajdad".to_owned(), 3);
-        let _ = mulakhkhas.hasab_sabab.insert("bila_ard_mutah".to_owned(), 1);
+        let _ = mulakhkhas
+            .hasab_sabab
+            .insert("min_bina_ajdad".to_owned(), 3);
+        let _ = mulakhkhas
+            .hasab_sabab
+            .insert("bila_ard_mutah".to_owned(), 1);
         let asbab = asbab_qiyas_hie(&mulakhkhas);
         assert_eq!(asbab.len(), 2);
         let Some(awwal) = asbab.first() else { return };
         assert_eq!(awwal.miftah, "min_bina_ajdad", "most common first");
         assert_eq!(awwal.wasf_injilizi, "min_bina_ajdad");
         assert!(awwal.ilaj_injilizi.is_empty());
-        assert_eq!(aghlab_sabab(&mulakhkhas), None, "an unknown cause is not worded");
+        assert_eq!(
+            aghlab_sabab(&mulakhkhas),
+            None,
+            "an unknown cause is not worded"
+        );
     }
 }

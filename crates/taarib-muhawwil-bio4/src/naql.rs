@@ -144,25 +144,42 @@ impl MiftahKhanaBio4 {
     /// A key for a bare glyph.
     #[must_use]
     pub const fn jadeed(khatt: u8, hajm_rubi: u16, muarrif: u32) -> Self {
-        Self { khatt, hajm_rubi, muarrif, alama: None }
+        Self {
+            khatt,
+            hajm_rubi,
+            muarrif,
+            alama: None,
+        }
     }
 
     /// The key for one shaped glyph at one size.
     #[must_use]
     pub const fn min_harf(harf: &Harf, hajm_rubi: u16) -> Self {
-        Self { khatt: harf.khatt, hajm_rubi, muarrif: harf.muarrif, alama: None }
+        Self {
+            khatt: harf.khatt,
+            hajm_rubi,
+            muarrif: harf.muarrif,
+            alama: None,
+        }
     }
 
     /// The same cell with a mark composed into it.
     #[must_use]
     pub const fn bi_alama(self, alama: u32) -> Self {
-        Self { alama: Some(alama), ..self }
+        Self {
+            alama: Some(alama),
+            ..self
+        }
     }
 }
 
 impl fmt::Display for MiftahKhanaBio4 {
     fn fmt(&self, matbaa: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(matbaa, "font {} glyph {} at {}q", self.khatt, self.muarrif, self.hajm_rubi)?;
+        write!(
+            matbaa,
+            "font {} glyph {} at {}q",
+            self.khatt, self.muarrif, self.hajm_rubi
+        )?;
         match self.alama {
             Some(alama) => write!(matbaa, " with mark {alama}"),
             None => Ok(()),
@@ -247,7 +264,10 @@ impl TawzeeKhanatBio4 {
     /// needs including the reserved blank.
     #[must_use]
     pub fn madaa(&self) -> u32 {
-        self.aks.keys().next_back().map_or(AWWAL_KHANA, |akhir| akhir.saturating_add(1))
+        self.aks
+            .keys()
+            .next_back()
+            .map_or(AWWAL_KHANA, |akhir| akhir.saturating_add(1))
     }
 }
 
@@ -383,16 +403,18 @@ impl NaqlBio4 {
                 }
                 wujidat = true;
                 miftah = miftah.bi_alama(alama.muarrif);
-                let izaha =
-                    IzahatAlama { s: ila_sahih(alama.s - harf.s), a: ila_sahih(alama.a - harf.a) };
+                let izaha = IzahatAlama {
+                    s: ila_sahih(alama.s - harf.s),
+                    a: ila_sahih(alama.a - harf.a),
+                };
                 match self.izahat.get(&miftah) {
                     Some(mawjud) if *mawjud != izaha => {
                         self.alamat_mutanaziaa = self.alamat_mutanaziaa.saturating_add(1);
-                    }
-                    Some(_) => {}
+                    },
+                    Some(_) => {},
                     None => {
                         let _ = self.izahat.insert(miftah, izaha);
-                    }
+                    },
                 }
             }
             satr.push(miftah);
@@ -402,7 +424,10 @@ impl NaqlBio4 {
         // compose them into and they are counted rather than dropped quietly.
         for alama in &takhtit.huruf {
             if alama.alama
-                && !takhtit.huruf.iter().any(|harf| !harf.alama && harf.anqud == alama.anqud)
+                && !takhtit
+                    .huruf
+                    .iter()
+                    .any(|harf| !harf.alama && harf.anqud == alama.anqud)
             {
                 self.alamat_mafquda = self.alamat_mafquda.saturating_add(1);
             }
@@ -450,12 +475,17 @@ impl NaqlBio4 {
             .unwrap_or(u32::MAX)
             .saturating_add(AWWAL_KHANA);
         if matlub > self.saa {
-            return Err(KhataBio4::KhanatNafida { matlub, mutah: self.saa });
+            return Err(KhataBio4::KhanatNafida {
+                matlub,
+                mutah: self.saa,
+            });
         }
 
         let mut tawzee = TawzeeKhanatBio4::default();
         for (fahras, miftah) in self.hawd.iter().enumerate() {
-            let khana = u32::try_from(fahras).unwrap_or(u32::MAX).saturating_add(AWWAL_KHANA);
+            let khana = u32::try_from(fahras)
+                .unwrap_or(u32::MAX)
+                .saturating_add(AWWAL_KHANA);
             let _ = tawzee.tawzee.insert(*miftah, khana);
             let _ = tawzee.aks.insert(khana, *miftah);
         }

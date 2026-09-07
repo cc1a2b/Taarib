@@ -11,9 +11,7 @@ use taarib_mustalahat::luba::LubaId;
 use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_tathbeet::bayan::TarifLuba;
 use taarib_tathbeet::khata::KhataTathbeet;
-use taarib_tathbeet::masar_tathbeet::{
-    NatijatTathbeetKamil, TalabTathbeet, WadaMuhtawa, thabbit,
-};
+use taarib_tathbeet::masar_tathbeet::{NatijatTathbeetKamil, TalabTathbeet, WadaMuhtawa, thabbit};
 use taarib_tathbeet::nusus::Nashir;
 
 use crate::khata::KhataMustawda;
@@ -278,7 +276,9 @@ where
 fn khata_hajr(khata: &taarib_aman::KhataAman) -> KhataMustawda {
     use taarib_usus::khata::Tafsir as _;
     KhataMustawda::TanzeelFashil {
-        rabt: khata.masar().map_or_else(String::new, |m| m.display().to_string()),
+        rabt: khata
+            .masar()
+            .map_or_else(String::new, |m| m.display().to_string()),
         sabab: khata.injilizi(),
     }
 }

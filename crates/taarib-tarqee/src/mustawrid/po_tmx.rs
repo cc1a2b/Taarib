@@ -76,7 +76,7 @@ use std::path::Path;
 use quick_xml::events::{BytesStart, Event};
 
 use super::xliff::{
-    QariXml, ism_mahalli, iqra_jidhr, iqra_muhtawa, qari_jadeed, rafd_doctype, rafd_wahda,
+    QariXml, iqra_jidhr, iqra_muhtawa, ism_mahalli, qari_jadeed, rafd_doctype, rafd_wahda,
     satr_hali, sifa, tahaqquq_wathiqa, tajawaz,
 };
 use super::{
@@ -161,7 +161,9 @@ impl MudkhalPo {
 
     /// Whether gettext marked this entry as unconfirmed.
     fn muallam(&self) -> bool {
-        self.alamat.iter().any(|alam| alam.eq_ignore_ascii_case("fuzzy"))
+        self.alamat
+            .iter()
+            .any(|alam| alam.eq_ignore_ascii_case("fuzzy"))
     }
 
     /// Appends a raw quoted run to whichever field is open.
@@ -173,15 +175,15 @@ impl MudkhalPo {
             AkhirHaql::Tarjama => self.tarjama.get_or_insert_with(String::new).push_str(khaam),
             AkhirHaql::Sura(fahras) => {
                 self.suwar.entry(fahras).or_default().push_str(khaam);
-            }
+            },
             AkhirHaql::Sabiq => {
                 if let Some(akhir) = self.sabiq.last_mut() {
                     akhir.push_str(khaam);
                 } else {
                     self.sabiq.push(khaam.to_owned());
                 }
-            }
-            AkhirHaql::LaShay => {}
+            },
+            AkhirHaql::LaShay => {},
         }
     }
 }
@@ -278,13 +280,13 @@ fn taliq_po(hali: &mut MudkhalPo, baqi: &str, akhir: &mut AkhirHaql) {
             if !matn.is_empty() {
                 hali.mulahazat.push(matn.to_owned());
             }
-        }
+        },
         Some(':') => {
             let matn = baqi.get(1..).unwrap_or_default();
             for marja in matn.split_whitespace() {
                 hali.maraji.push(marja.to_owned());
             }
-        }
+        },
         Some(',') => {
             let matn = baqi.get(1..).unwrap_or_default();
             for alam in matn.split(',') {
@@ -293,18 +295,18 @@ fn taliq_po(hali: &mut MudkhalPo, baqi: &str, akhir: &mut AkhirHaql) {
                     hali.alamat.push(alam.to_owned());
                 }
             }
-        }
+        },
         Some('|') => {
             let matn = baqi.get(1..).unwrap_or_default().trim();
             hali.sabiq.push(iqtibasat(matn));
             *akhir = AkhirHaql::Sabiq;
-        }
+        },
         _ => {
             let matn = baqi.trim();
             if !matn.is_empty() {
                 hali.mulahazat.push(matn.to_owned());
             }
-        }
+        },
     }
 }
 
@@ -408,7 +410,7 @@ pub fn fukk_hurub_c(khaam: &str) -> String {
                     adad = adad.saturating_add(1);
                 }
                 daa_raqmi(&mut natija, qeema, adad, 'x');
-            }
+            },
             Some(bidaya @ '0'..='7') => {
                 let mut qeema = bidaya.to_digit(8).unwrap_or(0);
                 let mut adad = 1_usize;
@@ -421,11 +423,11 @@ pub fn fukk_hurub_c(khaam: &str) -> String {
                     adad = adad.saturating_add(1);
                 }
                 daa_raqmi(&mut natija, qeema, adad, 'o');
-            }
+            },
             Some(akhar) => {
                 natija.push('\\');
                 natija.push(akhar);
-            }
+            },
         }
     }
     natija
@@ -450,7 +452,7 @@ fn daa_raqmi(natija: &mut String, qeema: u32, adad: usize, naw: char) {
             } else {
                 let _ = write!(natija, "\\{qeema:o}");
             }
-        }
+        },
     }
 }
 
@@ -499,9 +501,14 @@ fn banni_po(
     if let (Some(suwar), Some(taabeer)) = (suwar_muallana, taabeer.as_deref())
         && suwar == SUWAR_JAMA_ARABIYA
     {
-        let musawwa: String = taabeer.chars().filter(|harf| !harf.is_whitespace()).collect();
-        let mutawaqqa: String =
-            TAABEER_JAMA_ARABI.chars().filter(|harf| !harf.is_whitespace()).collect();
+        let musawwa: String = taabeer
+            .chars()
+            .filter(|harf| !harf.is_whitespace())
+            .collect();
+        let mutawaqqa: String = TAABEER_JAMA_ARABI
+            .chars()
+            .filter(|harf| !harf.is_whitespace())
+            .collect();
         if musawwa.trim_end_matches(';') != mutawaqqa {
             milaff.tanbihat.push(format!(
                 "Plural-Forms declares six forms with the expression {taabeer}, which is not the \
@@ -523,7 +530,9 @@ fn banni_po(
         let warid = MudkhalWarid::jadeed(satr.clone(), None, raqm);
         milaff.marfuda.push(MudkhalMarfud {
             warid,
-            sabab: SababRafd::SatrGhayrMafhum { juz: satr.chars().take(80).collect() },
+            sabab: SababRafd::SatrGhayrMafhum {
+                juz: satr.chars().take(80).collect(),
+            },
         });
     }
 
@@ -564,7 +573,11 @@ fn min_mudkhal_po(
     saqf: HalatWarid,
     suwar_muallana: Option<usize>,
 ) -> (MudkhalWarid, Option<SababRafd>) {
-    let masdar = mudkhal.muarrif.as_deref().map(fukk_hurub_c).unwrap_or_default();
+    let masdar = mudkhal
+        .muarrif
+        .as_deref()
+        .map(fukk_hurub_c)
+        .unwrap_or_default();
     let siyaq = mudkhal.siyaq.as_deref().map(fukk_hurub_c);
     let mufrad = mudkhal.tarjama.as_deref().map(fukk_hurub_c);
 
@@ -579,7 +592,9 @@ fn min_mudkhal_po(
         warid.hala_khaam = Some(format!("#, {}", mudkhal.alamat.join(", ")));
     }
     for sabiq in &mudkhal.sabiq {
-        warid.mulahazat.push(format!("previously: {}", fukk_hurub_c(sabiq)));
+        warid
+            .mulahazat
+            .push(format!("previously: {}", fukk_hurub_c(sabiq)));
     }
 
     if mudkhal.mahjur {
@@ -619,7 +634,10 @@ fn jama_po(
         return (warid, Some(SababRafd::SighatJamaMajhula));
     };
     if muallan != SUWAR_JAMA_ARABIYA {
-        return (warid, Some(SababRafd::SuwarJamaGhayrArabiya { adad: muallan }));
+        return (
+            warid,
+            Some(SababRafd::SuwarJamaGhayrArabiya { adad: muallan }),
+        );
     }
     if let Some(aqsa) = mudkhal.suwar.keys().max()
         && *aqsa >= SUWAR_JAMA_ARABIYA
@@ -628,15 +646,26 @@ fn jama_po(
         // itself and there is no index to map that onto.
         return (
             warid,
-            Some(SababRafd::SuwarJamaGhayrArabiya { adad: aqsa.saturating_add(1) }),
+            Some(SababRafd::SuwarJamaGhayrArabiya {
+                adad: aqsa.saturating_add(1),
+            }),
         );
     }
 
     let mut suwar = Vec::with_capacity(SUWAR_JAMA_ARABIYA);
     for fahras in 0..SUWAR_JAMA_ARABIYA {
-        let Some(fia) = FiatJama::min_fahras(fahras) else { continue };
-        let nass = mudkhal.suwar.get(&fahras).map(String::as_str).map(fukk_hurub_c);
-        suwar.push(SuratJama { fia, nass: nass.unwrap_or_default() });
+        let Some(fia) = FiatJama::min_fahras(fahras) else {
+            continue;
+        };
+        let nass = mudkhal
+            .suwar
+            .get(&fahras)
+            .map(String::as_str)
+            .map(fukk_hurub_c);
+        suwar.push(SuratJama {
+            fia,
+            nass: nass.unwrap_or_default(),
+        });
     }
 
     // The `other` form is the entry's single target, offered as the proposal's
@@ -650,7 +679,10 @@ fn jama_po(
     let adad_mamlua = suwar.iter().filter(|sura| !sura.nass.is_empty()).count();
 
     warid.hadaf = Some(ghayr);
-    warid.naw = NawWarid::Jama { asl_jama: asl_jama.to_owned(), suwar };
+    warid.naw = NawWarid::Jama {
+        asl_jama: asl_jama.to_owned(),
+        suwar,
+    };
     warid.mulahazat.push(format!("msgid_plural: {asl_jama}"));
 
     if adad_mamlua == 0 {
@@ -667,8 +699,15 @@ fn tarwisat_po(matn: &str) -> BTreeMap<String, String> {
     let mut tarwisa = BTreeMap::new();
     for satr in matn.lines() {
         let Some(fasl) = satr.find(':') else { continue };
-        let miftah = satr.get(..fasl).unwrap_or_default().trim().to_ascii_lowercase();
-        let qeema = satr.get(fasl.saturating_add(1)..).unwrap_or_default().trim();
+        let miftah = satr
+            .get(..fasl)
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase();
+        let qeema = satr
+            .get(fasl.saturating_add(1)..)
+            .unwrap_or_default()
+            .trim();
         if !miftah.is_empty() {
             let _ = tarwisa.insert(miftah, qeema.to_owned());
         }
@@ -683,13 +722,18 @@ fn tarwisat_po(matn: &str) -> BTreeMap<String, String> {
 /// read `nplurals=6` as an expression.
 #[must_use]
 pub fn sighat_jama(qeema: Option<&str>) -> (Option<usize>, Option<String>) {
-    let Some(qeema) = qeema else { return (None, None) };
+    let Some(qeema) = qeema else {
+        return (None, None);
+    };
     let mut adad = None;
     let mut taabeer = None;
     for juz in qeema.split(';') {
         let mahdhub = juz.trim();
         if let Some(baqi) = mahdhub.strip_prefix("nplurals") {
-            adad = baqi.trim_start().strip_prefix('=').and_then(|raqm| raqm.trim().parse().ok());
+            adad = baqi
+                .trim_start()
+                .strip_prefix('=')
+                .and_then(|raqm| raqm.trim().parse().ok());
         } else if let Some(baqi) = mahdhub.strip_prefix("plural") {
             taabeer = baqi
                 .trim_start()
@@ -734,7 +778,10 @@ pub fn iqra_tmx(
     nass: &str,
     khiyarat: &IstiradKhiyarat,
 ) -> Result<MilaffWarid, KhataTarqee> {
-    let rafd = |sabab: String| KhataTarqee::IstiradFashil { masar: masar.to_path_buf(), sabab };
+    let rafd = |sabab: String| KhataTarqee::IstiradFashil {
+        masar: masar.to_path_buf(),
+        sabab,
+    };
     tahaqquq_wathiqa(nass).map_err(rafd)?;
     let astur = FahrasAstur::jadeed(nass);
     let mut qari = qari_jadeed(nass);
@@ -770,7 +817,7 @@ pub fn iqra_tmx(
                         milaff.tanbihat.push(format!("created by {adat}"));
                     }
                     tajawaz(&mut qari, "header").map_err(rafd)?;
-                }
+                },
                 "tu" => {
                     let wahda = iqra_tu(&mut qari, &marka).map_err(rafd)?;
                     let mustanad = wahda
@@ -797,8 +844,8 @@ pub fn iqra_tmx(
                         Some(sabab) => milaff.marfuda.push(MudkhalMarfud { warid, sabab }),
                         None => milaff.madakhil.push(warid),
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             },
             // A self-closing `<header/>` carries its whole content in its
             // attributes and has no end tag to read up to. Handled apart from
@@ -811,13 +858,15 @@ pub fn iqra_tmx(
                         milaff.tanbihat.push(format!("created by {adat}"));
                     }
                 }
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd(rafd_doctype())),
             Ok(Event::Eof) => break,
-            Ok(_) => {}
+            Ok(_) => {},
             Err(khata) => {
-                return Err(rafd(format!("the document is not well-formed XML: {khata}")));
-            }
+                return Err(rafd(format!(
+                    "the document is not well-formed XML: {khata}"
+                )));
+            },
         }
     }
 
@@ -835,7 +884,9 @@ pub fn iqra_tmx(
             khiyarat.ramz_lugha
         ));
     } else if let Some((ramz, adad)) = arabiyat.iter().next() {
-        milaff.tanbihat.push(format!("Arabic taken from {ramz} in {adad} unit(s)"));
+        milaff
+            .tanbihat
+            .push(format!("Arabic taken from {ramz} in {adad} unit(s)"));
     }
     if muzdawija > 0 {
         milaff.tanbihat.push(format!(
@@ -886,33 +937,34 @@ fn iqra_tu(qari: &mut QariXml<'_>, marka: &BytesStart<'_>) -> Result<TuWarid, St
                     let naw = sifa(&dakhili, "type").unwrap_or_else(|| "prop".to_owned());
                     let muhtawa = iqra_muhtawa(qari, "prop", &[])?;
                     if !muhtawa.nass.trim().is_empty() {
-                        wahda.mulahazat.push(format!("{naw}={}", muhtawa.nass.trim()));
+                        wahda
+                            .mulahazat
+                            .push(format!("{naw}={}", muhtawa.nass.trim()));
                     }
-                }
+                },
                 "note" => {
                     let muhtawa = iqra_muhtawa(qari, "note", &[])?;
                     if !muhtawa.nass.trim().is_empty() {
                         wahda.mulahazat.push(muhtawa.nass.trim().to_owned());
                     }
-                }
+                },
                 "tuv" => {
                     // `xml:lang` in 1.4 and a bare `lang` in 1.1. `sifa` matches
                     // on the local name, so one lookup finds either.
                     let ramz = sifa(&dakhili, "lang").unwrap_or_default();
                     wahda.tuwuv.push(iqra_tuv(qari, ramz)?);
-                }
-                _ => {}
+                },
+                _ => {},
             },
             Ok(Event::End(nihaya)) => {
-                let ism =
-                    nihaya.local_name().as_ref().to_ascii_lowercase();
+                let ism = nihaya.local_name().as_ref().to_ascii_lowercase();
                 if ism == "tu" {
                     return Ok(wahda);
                 }
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd_doctype()),
             Ok(Event::Eof) => return Err("the document ended inside a <tu>".to_owned()),
-            Ok(_) => {}
+            Ok(_) => {},
             Err(khata) => return Err(format!("the document is not well-formed XML: {khata}")),
         }
     }
@@ -924,7 +976,12 @@ fn iqra_tu(qari: &mut QariXml<'_>, marka: &BytesStart<'_>) -> Result<TuWarid, St
 ///
 /// As [`iqra_muhtawa`].
 fn iqra_tuv(qari: &mut QariXml<'_>, ramz: String) -> Result<TuvWarid, String> {
-    let mut tuv = TuvWarid { ramz, nass: String::new(), dharrat: Vec::new(), azwaj: 0 };
+    let mut tuv = TuvWarid {
+        ramz,
+        nass: String::new(),
+        dharrat: Vec::new(),
+        azwaj: 0,
+    };
     loop {
         match qari.read_event() {
             Ok(Event::Start(dakhili)) => match ism_mahalli(&dakhili).as_str() {
@@ -933,26 +990,25 @@ fn iqra_tuv(qari: &mut QariXml<'_>, ramz: String) -> Result<TuvWarid, String> {
                     tuv.nass = muhtawa.nass;
                     tuv.dharrat = muhtawa.dharrat;
                     tuv.azwaj = muhtawa.azwaj.len();
-                }
+                },
                 "prop" => tajawaz(qari, "prop")?,
                 "note" => tajawaz(qari, "note")?,
-                _ => {}
+                _ => {},
             },
             Ok(Event::Empty(dakhili)) => {
                 if ism_mahalli(&dakhili) == "seg" {
                     tuv.nass = String::new();
                 }
-            }
+            },
             Ok(Event::End(nihaya)) => {
-                let ism =
-                    nihaya.local_name().as_ref().to_ascii_lowercase();
+                let ism = nihaya.local_name().as_ref().to_ascii_lowercase();
                 if ism == "tuv" {
                     return Ok(tuv);
                 }
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd_doctype()),
             Ok(Event::Eof) => return Err("the document ended inside a <tuv>".to_owned()),
-            Ok(_) => {}
+            Ok(_) => {},
             Err(khata) => return Err(format!("the document is not well-formed XML: {khata}")),
         }
     }
@@ -966,7 +1022,11 @@ fn wasf_asl_tu(marka: &BytesStart<'_>) -> Option<String> {
             ajza.push(format!("{ism}={qeema}"));
         }
     }
-    if ajza.is_empty() { None } else { Some(ajza.join(" ")) }
+    if ajza.is_empty() {
+        None
+    } else {
+        Some(ajza.join(" "))
+    }
 }
 
 /// Chooses a source and an Arabic target out of one unit.
@@ -1019,7 +1079,10 @@ fn min_tu(
         })
         .map(|(_, tuv)| tuv.clone());
 
-    let masdar = masdar_tuv.as_ref().map(|tuv| tuv.nass.clone()).unwrap_or_default();
+    let masdar = masdar_tuv
+        .as_ref()
+        .map(|tuv| tuv.nass.clone())
+        .unwrap_or_default();
     let Some((_, arabi)) = mukhtar else {
         let mut warid = MudkhalWarid::jadeed(masdar, None, satr);
         warid.miftah.clone_from(&wahda.muarrif);
@@ -1033,17 +1096,25 @@ fn min_tu(
     warid.mulahazat = wahda.mulahazat;
     warid.hala = saqf;
     warid.hala_khaam = wahda.wasf_asl;
-    warid.dharrat_masdar =
-        masdar_tuv.as_ref().map(|tuv| tuv.dharrat.clone()).unwrap_or_default();
+    warid.dharrat_masdar = masdar_tuv
+        .as_ref()
+        .map(|tuv| tuv.dharrat.clone())
+        .unwrap_or_default();
     warid.dharrat_hadaf.clone_from(&arabi.dharrat);
-    warid.mulahazat.push(format!("Arabic taken from xml:lang={}", arabi.ramz));
+    warid
+        .mulahazat
+        .push(format!("Arabic taken from xml:lang={}", arabi.ramz));
 
-    let ukhra: Vec<&String> = arabiyat.iter().filter(|ramz| **ramz != arabi.ramz).collect();
+    let ukhra: Vec<&String> = arabiyat
+        .iter()
+        .filter(|ramz| **ramz != arabi.ramz)
+        .collect();
     if !ukhra.is_empty() {
         let asmaa: Vec<String> = ukhra.iter().map(|ramz| (*ramz).clone()).collect();
-        warid
-            .mulahazat
-            .push(format!("also carried Arabic segments in {}", asmaa.join(", ")));
+        warid.mulahazat.push(format!(
+            "also carried Arabic segments in {}",
+            asmaa.join(", ")
+        ));
     }
     if let Some(masdar_tuv) = masdar_tuv.as_ref()
         && masdar_tuv.azwaj > arabi.azwaj

@@ -90,7 +90,10 @@ struct MukhattatKhaam {
 
 impl From<MukhattatBasma> for MukhattatKhaam {
     fn from(mukhattat: MukhattatBasma) -> Self {
-        Self { isdar: ISDAR_MUKHATTAT, hawiyat: mukhattat.hawiyat }
+        Self {
+            isdar: ISDAR_MUKHATTAT,
+            hawiyat: mukhattat.hawiyat,
+        }
     }
 }
 
@@ -126,7 +129,9 @@ impl MukhattatBasma {
         for khaam in masarat {
             farida.insert(tabi_masar(khaam)?);
         }
-        Ok(Self { hawiyat: farida.into_iter().collect() })
+        Ok(Self {
+            hawiyat: farida.into_iter().collect(),
+        })
     }
 
     /// Builds the recipe the extraction report implies.
@@ -188,7 +193,9 @@ impl MukhattatBasma {
     /// [`KhataTarqee::KhataMalaf`] when one cannot be read.
     pub fn ihsab(&self, jidhr: &Path) -> Result<(Basma, u32), KhataTarqee> {
         if self.hawiyat.is_empty() {
-            return Err(KhataTarqee::BayanNaqis { haql: "at least one file to fingerprint" });
+            return Err(KhataTarqee::BayanNaqis {
+                haql: "at least one file to fingerprint",
+            });
         }
 
         let mut hashi = blake3::Hasher::new();
@@ -199,9 +206,14 @@ impl MukhattatBasma {
             let kamil = jidhr.join(nisbi);
             let bayanat = std::fs::metadata(&kamil).map_err(|sabab| {
                 if sabab.kind() == std::io::ErrorKind::NotFound {
-                    KhataTarqee::MalafIrtibatMafqud { masar: kamil.clone() }
+                    KhataTarqee::MalafIrtibatMafqud {
+                        masar: kamil.clone(),
+                    }
                 } else {
-                    KhataTarqee::KhataMalaf { masar: kamil.clone(), sabab }
+                    KhataTarqee::KhataMalaf {
+                        masar: kamil.clone(),
+                        sabab,
+                    }
                 }
             })?;
             if !bayanat.is_file() {
@@ -213,7 +225,10 @@ impl MukhattatBasma {
             hashi.update(&bayanat.len().to_le_bytes());
             hashi
                 .update_mmap_rayon(&kamil)
-                .map_err(|sabab| KhataTarqee::KhataMalaf { masar: kamil.clone(), sabab })?;
+                .map_err(|sabab| KhataTarqee::KhataMalaf {
+                    masar: kamil.clone(),
+                    sabab,
+                })?;
         }
 
         let adad = u32::try_from(self.hawiyat.len()).unwrap_or(u32::MAX);
@@ -248,13 +263,13 @@ fn tabi_masar(khaam: &str) -> Result<String, KhataTarqee> {
                     });
                 };
                 ajza.push(nass);
-            }
+            },
             // `./` is meaningless here and dropping it is not a repair: it
             // names the same file either way. Everything else is a way out.
-            Component::CurDir => {}
+            Component::CurDir => {},
             Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
                 return Err(kharij(khaam));
-            }
+            },
         }
     }
     if ajza.is_empty() {
@@ -287,7 +302,9 @@ impl NitaqBina {
     /// parsed some other way.
     #[must_use]
     pub fn yashmal(self, manassa: &str) -> bool {
-        manassa.parse::<u64>().is_ok_and(|raqm| raqm >= self.adna && raqm <= self.aqsa)
+        manassa
+            .parse::<u64>()
+            .is_ok_and(|raqm| raqm >= self.adna && raqm <= self.aqsa)
     }
 }
 
@@ -312,7 +329,11 @@ impl BasmatKhatt {
     /// The record for a font that passed the gate.
     #[must_use]
     pub fn min_mujammaa(khatt: &KhattMujammaa) -> Self {
-        Self { ism: khatt.ism().to_owned(), basma: khatt.basma(), alam: 0 }
+        Self {
+            ism: khatt.ism().to_owned(),
+            basma: khatt.basma(),
+            alam: 0,
+        }
     }
 }
 
@@ -395,7 +416,10 @@ impl IrtibatBina {
             SababMutabaqa::BilaTatabuq
         };
 
-        HukmIrtibat { sabab, naqis: mawjud.adad_malaffat < self.adad_malaffat }
+        HukmIrtibat {
+            sabab,
+            naqis: mawjud.adad_malaffat < self.adad_malaffat,
+        }
     }
 }
 

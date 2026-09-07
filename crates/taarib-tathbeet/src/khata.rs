@@ -64,8 +64,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use taarib_usus::khata::{
-    Khutura, Khutwa, MasarMatlub, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam, khutwa_io,
-    siyaq_io,
+    Khutura, Khutwa, MasarMatlub, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam, khutwa_io, siyaq_io,
 };
 use taarib_usus::khata_min;
 use taarib_usus::manassa::Sunduq;
@@ -600,9 +599,11 @@ impl KhataTathbeet {
     #[must_use]
     pub fn bi_amaliya(self, ism: impl Into<String>) -> Self {
         match self {
-            Self::MalafMaqful { masar, sabab, .. } => {
-                Self::MalafMaqful { masar, amaliya: Some(ism.into()), sabab }
-            }
+            Self::MalafMaqful { masar, sabab, .. } => Self::MalafMaqful {
+                masar,
+                amaliya: Some(ism.into()),
+                sabab,
+            },
             akhar => akhar,
         }
     }
@@ -633,12 +634,13 @@ impl KhataTathbeet {
             | Self::MukawwinMafqud { masar, .. }
             | Self::MukawwinNaqis { masar, .. }
             | Self::WakeelMashghul { masar, .. } => Some(masar),
-            Self::LubaTashtaghil { tanfidhi, .. }
-            | Self::HalatLubaMajhula { tanfidhi, .. } => Some(tanfidhi),
+            Self::LubaTashtaghil { tanfidhi, .. } | Self::HalatLubaMajhula { tanfidhi, .. } => {
+                Some(tanfidhi)
+            },
             Self::BeeaMafquda { jidhr, .. } => Some(jidhr),
             Self::MunassaTaamal { malaf, .. } | Self::HalatManassaMajhula { malaf, .. } => {
                 Some(malaf)
-            }
+            },
             Self::HajmMufrit { .. }
             | Self::IdadGhayrMustaad { .. }
             | Self::IdadGhayrMunaffadh { .. }
@@ -663,9 +665,9 @@ impl KhataTathbeet {
     #[must_use]
     pub fn qabil_lil_iada(&self) -> bool {
         match self {
-            Self::MalafMaqful { .. }
-            | Self::LubaTashtaghil { .. }
-            | Self::MunassaTaamal { .. } => true,
+            Self::MalafMaqful { .. } | Self::LubaTashtaghil { .. } | Self::MunassaTaamal { .. } => {
+                true
+            },
             Self::IstiadaNaqisa { sabab, .. } => sabab.qabil_lil_iada(),
             _ => false,
         }
@@ -735,7 +737,7 @@ impl Tafsir for KhataTathbeet {
         match self {
             Self::KhataMalaf { .. } => {
                 "تعذّر فتح ملف من ملفات اللعبة أو النسخ الاحتياطية أو الكتابة إليه.".to_owned()
-            }
+            },
             Self::MalafMaqful { amaliya, .. } => match amaliya {
                 Some(ism) => format!(
                     "الملف مفتوح من قبل «{ism}»، ولا يمكن الكتابة إليه ما دام كذلك. أغلق \
@@ -749,73 +751,70 @@ impl Tafsir for KhataTathbeet {
                 "رفض النظام الوصول إلى الملف. مجلّد اللعبة يحتاج صلاحية لا يملكها تعريب \
                  حاليًا."
                     .to_owned()
-            }
+            },
             Self::MasarKharij { .. } => {
                 "أحد المسارات المسجّلة يشير خارج مجلّد اللعبة، ولا يكتب تعريب خارجه. لم \
                  يُنفَّذ شيء من هذا البيان."
                     .to_owned()
-            }
+            },
             Self::SijillMafqud { .. } => {
-                "طُلب تعديل ملف لا يسجّله بيان التثبيت. لا يمسّ تعريب ملفًا لم يحفظه أوّلًا."
-                    .to_owned()
-            }
+                "طُلب تعديل ملف لا يسجّله بيان التثبيت. لا يمسّ تعريب ملفًا لم يحفظه أوّلًا.".to_owned()
+            },
             Self::BayanTalif { .. } => {
-                "بيان التثبيت غير متّسق مع نفسه، فلا يمكن الاعتماد عليه لإرجاع أي ملف."
-                    .to_owned()
-            }
+                "بيان التثبيت غير متّسق مع نفسه، فلا يمكن الاعتماد عليه لإرجاع أي ملف.".to_owned()
+            },
             Self::BayanMawjud { .. } => {
-                "يوجد بيان تثبيت آخر في هذا المجلّد. لن تُخلط نسخ تثبيتين في مكان واحد."
-                    .to_owned()
-            }
+                "يوجد بيان تثبيت آخر في هذا المجلّد. لن تُخلط نسخ تثبيتين في مكان واحد.".to_owned()
+            },
             Self::IsdarBayanMajhul { .. } => {
                 "كُتب بيان التثبيت بإصدار أحدث من تعريب. حدِّث البرنامج؛ قراءته بهذا الإصدار \
                  قد تُتلف سجلّ ما عُدِّل في لعبتك."
                     .to_owned()
-            }
+            },
             Self::HajmMufrit { .. } => {
                 "أحد الملفات يعلن حجمًا أكبر مما تحفظه هذه النسخة، ورُفض قبل حجز أي ذاكرة له."
                     .to_owned()
-            }
+            },
             Self::DaghtFashil { ittijah, .. } => match ittijah {
                 IttijahDaght::Daght => {
                     "تعذّر ضغط النسخة الأصلية قبل حفظها؛ غالبًا لا توجد مساحة كافية على \
                      القرص."
                         .to_owned()
-                }
+                },
                 IttijahDaght::Fakk => {
                     "تعذّر فكّ ضغط النسخة الأصلية المحفوظة؛ الملف المحفوظ تالف.".to_owned()
-                }
+                },
             },
             Self::NuskhaMafquda { .. } => {
                 "النسخة الأصلية المسجّلة لهذا الملف غير موجودة. تحقّق من سلامة ملفات اللعبة \
                  من متجرها لاستعادة الملف الأصلي."
                     .to_owned()
-            }
+            },
             Self::NuskhaTalifa { .. } => {
                 "النسخة الأصلية المحفوظة لا تطابق بصمتها المسجّلة، فلن تُكتب فوق ملف اللعبة. \
                  تحقّق من سلامة ملفات اللعبة من متجرها."
                     .to_owned()
-            }
+            },
             Self::MalafMustabdal { .. } => {
                 "تغيّر هذا الملف منذ أن كتبه تعريب — يبدو أن المتجر حدّث اللعبة. إرجاع النسخة \
                  القديمة فوقه سيُرجع اللعبة إلى بناء أقدم، فأُوقف."
                     .to_owned()
-            }
+            },
             Self::IstiadaGhayrMutabaqa { .. } => {
                 "أُعيد الملف الأصلي ولم تطابق بصمته ما سُجِّل له. لم تكتمل الإزالة، ولن يُقال \
                  إنها اكتملت."
                     .to_owned()
-            }
+            },
             Self::SalahiyatGhayrMustaada { .. } => {
                 "أُعيد محتوى الملف ولم تُعَد صلاحياته الأصلية. الملف بمحتوى صحيح وصلاحيات \
                  خاطئة ليس ملفًا مستعادًا."
                     .to_owned()
-            }
+            },
             Self::IdadGhayrMustaad { .. } => {
                 "تعذّر إرجاع أحد إعدادات التشغيل إلى قيمته السابقة. الإعداد إعدادك، ولا يتركه \
                  تعريب معدَّلًا في صمت."
                     .to_owned()
-            }
+            },
             Self::IdadGhayrMunaffadh { mahall, .. } => format!(
                 "تعذّر ضبط إعداد التشغيل ({mahall})، وبدونه لا تُحمَّل ملفات تعريب في اللعبة \
                  أصلًا. أُوقف التثبيت بدل أن يُقال إنه نجح واللعبة تعمل كما كانت."
@@ -832,24 +831,24 @@ impl Tafsir for KhataTathbeet {
                 sunduq.ism_arabi()
             ),
             Self::RuqaaMarfuda { .. } => {
-                "فشل التحقق من الحزمة، ولم يُكتب منها شيء. لا تُثبَّت حزمة لا تجتاز التحقق."
-                    .to_owned()
-            }
+                "فشل التحقق من الحزمة، ولم يُكتب منها شيء. لا تُثبَّت حزمة لا تجتاز التحقق.".to_owned()
+            },
             Self::NususMarfuda { .. } => {
                 "تعذّر ترقيع هذه اللعبة عبر بيانات محرّكها نفسه، ولم يُمسّ منها شيء. اللعبة \
                  كما كانت تمامًا."
                     .to_owned()
-            }
-            Self::TawafuqMarfud { yumkin_bi_iqrar, .. } => {
+            },
+            Self::TawafuqMarfud {
+                yumkin_bi_iqrar, ..
+            } => {
                 if *yumkin_bi_iqrar {
                     "الحزمة متوافقة تقريبًا مع نسختك، وتثبيتها يحتاج إقرارك بما قد لا يعمل. \
                      لم يُكتب شيء بعد."
                         .to_owned()
                 } else {
-                    "الحزمة لا تطابق نسخة اللعبة المثبَّتة، ورُفض تثبيتها. لم يُكتب شيء."
-                        .to_owned()
+                    "الحزمة لا تطابق نسخة اللعبة المثبَّتة، ورُفض تثبيتها. لم يُكتب شيء.".to_owned()
                 }
-            }
+            },
             Self::MukawwinMafqud { mukawwin, .. } => format!(
                 "أحد مكوّنات الإطار ({mukawwin}) غير موجود في مخزن مكوّنات تعريب. هذه النسخة \
                  ناقصة؛ أعد تثبيت تعريب."
@@ -858,7 +857,13 @@ impl Tafsir for KhataTathbeet {
                 "أحد مكوّنات الإطار ({mukawwin}) في المخزن بحجم غير الحجم المُعلَن. النسخ إلى \
                  المخزن لم يكتمل؛ أعد تثبيت تعريب."
             ),
-            Self::WakeelMashghul { wakeel, masar, jiran, huwiya, .. } => {
+            Self::WakeelMashghul {
+                wakeel,
+                masar,
+                jiran,
+                huwiya,
+                ..
+            } => {
                 let mawdi = masar.display();
                 let maa = if jiran.is_empty() {
                     String::new()
@@ -878,27 +883,34 @@ impl Tafsir for KhataTathbeet {
                      ووكيل باسم لا يُطلب تثبيتٌ ينجح ولا يفعل شيئًا.{bab} أزل التعديل الآخر \
                      أو غيّر اسم ملفه إن أردت تثبيت تعريب في هذه اللعبة."
                 )
-            }
+            },
             Self::IdhnGhayrMutabiq => {
                 "إذن الأمان المقدَّم يخصّ لعبة أو حزمة أخرى، ورُفض التثبيت به.".to_owned()
-            }
+            },
             Self::BeeaMafquda { .. } => {
                 "بيئة التوافق التي تشغَّل اللعبة من خلالها غير موجودة أو غير صالحة. شغِّل \
                  اللعبة مرة واحدة من منصّتها لتُنشأ البيئة، ثم أعد المحاولة."
                     .to_owned()
-            }
+            },
             Self::MunassaTaamal { manassa, .. } => format!(
                 "{manassa} يعمل الآن ويعيد كتابة إعداداته عند إغلاقه، فأي تعديل يُكتب الآن \
                  يُمحى. أغلقه ثم أعد المحاولة."
             ),
-            Self::HalatManassaMajhula { sunduq, manassa, .. } => format!(
+            Self::HalatManassaMajhula {
+                sunduq, manassa, ..
+            } => format!(
                 "تعريب يعمل داخل {} ولا يرى إلا عمليّاته هو، فتعذّر عليه معرفة هل {manassa} \
                  يعمل الآن أم لا. لم يُمسّ ملف الإعدادات: {manassa} يعيد كتابته من الذاكرة \
                  عند إغلاقه، فأي تعديل يُكتب وهو يعمل يُمحى. شغِّل تعريب على الجهاز نفسه لا \
                  داخل صندوق عزل (نسخة AppImage).",
                 sunduq.ism_arabi()
             ),
-            Self::IstiadaNaqisa { munjaz, mutabaqqi, sabab, .. } => format!(
+            Self::IstiadaNaqisa {
+                munjaz,
+                mutabaqqi,
+                sabab,
+                ..
+            } => format!(
                 "أُعيد {munjaz} ملفًا وبقي {} لم يُعَد بعد. لم تكتمل الإزالة. {} أصلح السبب ثم \
                  أعد التشغيل: تستأنف الإزالة من حيث توقّفت ولا تبدأ من جديد.",
                 mutabaqqi.len(),
@@ -910,8 +922,11 @@ impl Tafsir for KhataTathbeet {
     fn injilizi(&self) -> String {
         match self {
             Self::KhataMalaf { masar, amal, .. } => {
-                format!("{} could not be read or written while {amal}.", masar.display())
-            }
+                format!(
+                    "{} could not be read or written while {amal}.",
+                    masar.display()
+                )
+            },
             Self::MalafMaqful { masar, amaliya, .. } => match amaliya {
                 Some(ism) => format!(
                     "{} is held open by {ism} and cannot be written while it runs. Close it \
@@ -929,7 +944,11 @@ impl Tafsir for KhataTathbeet {
                  lock: retrying will not help until it is granted.",
                 masar.display()
             ),
-            Self::MasarKharij { masar, jidhr, sabab } => format!(
+            Self::MasarKharij {
+                masar,
+                jidhr,
+                sabab,
+            } => format!(
                 "{} is not inside {}: {sabab}. Nothing in this manifest was acted on.",
                 masar.display(),
                 jidhr.display()
@@ -950,7 +969,11 @@ impl Tafsir for KhataTathbeet {
                  first one's originals.",
                 masar.display()
             ),
-            Self::IsdarBayanMajhul { masar, mawjud, madum } => format!(
+            Self::IsdarBayanMajhul {
+                masar,
+                mawjud,
+                madum,
+            } => format!(
                 "{} is schema {mawjud} and this build reads {madum}. It was refused rather \
                  than partially read: a partial read would drop the fields it cannot see and \
                  write them away at the next save, destroying the record of a patch that is \
@@ -961,29 +984,50 @@ impl Tafsir for KhataTathbeet {
                 "{haql} declares {qeema} bytes, above the {saqf} this build will preserve. It \
                  was refused before any memory was reserved for it."
             ),
-            Self::DaghtFashil { masar, ittijah, tafsil } => {
+            Self::DaghtFashil {
+                masar,
+                ittijah,
+                tafsil,
+            } => {
                 format!("{}: {} failed: {tafsil}", masar.display(), ittijah.ism())
-            }
-            Self::NuskhaMafquda { masar, miftah, jidhr_nusakh } => format!(
+            },
+            Self::NuskhaMafquda {
+                masar,
+                miftah,
+                jidhr_nusakh,
+            } => format!(
                 "The backup of {} is missing: {miftah} is not in {}. Taarib has nothing to \
                  write back. Verifying the game's files through its launcher will restore the \
                  original.",
                 masar.display(),
                 jidhr_nusakh.display()
             ),
-            Self::NuskhaTalifa { masar, miftah, muallana, mahsuba } => format!(
+            Self::NuskhaTalifa {
+                masar,
+                miftah,
+                muallana,
+                mahsuba,
+            } => format!(
                 "The backup of {} ({miftah}) hashes to {mahsuba}, not the recorded {muallana}. \
                  It was not written into the game: replacing a patched file with a corrupt one \
                  is worse than leaving the patch in place.",
                 masar.display()
             ),
-            Self::MalafMustabdal { masar, muallana, mahsuba } => format!(
+            Self::MalafMustabdal {
+                masar,
+                muallana,
+                mahsuba,
+            } => format!(
                 "{} hashes to {mahsuba}, not the {muallana} Taarib wrote. The store has \
                  replaced it since the patch was installed, so restoring the older original \
                  over it would downgrade a file the launcher just updated.",
                 masar.display()
             ),
-            Self::IstiadaGhayrMutabaqa { masar, muallana, mahsuba } => format!(
+            Self::IstiadaGhayrMutabaqa {
+                masar,
+                muallana,
+                mahsuba,
+            } => format!(
                 "{} was restored and hashes to {mahsuba}, not the recorded {muallana}. The \
                  uninstall did not complete and will not be reported as though it had.",
                 masar.display()
@@ -994,7 +1038,11 @@ impl Tafsir for KhataTathbeet {
                  restored.",
                 masar.display()
             ),
-            Self::IdadGhayrMustaad { muarrif, mahall, sabab } => format!(
+            Self::IdadGhayrMustaad {
+                muarrif,
+                mahall,
+                sabab,
+            } => format!(
                 "The previous value of {muarrif} in {mahall} could not be restored: {sabab}"
             ),
             Self::IdadGhayrMunaffadh { mahall, sabab } => format!(
@@ -1025,7 +1073,10 @@ impl Tafsir for KhataTathbeet {
                  as it was: {sabab}",
                 masar.display()
             ),
-            Self::TawafuqMarfud { hukm, yumkin_bi_iqrar } => {
+            Self::TawafuqMarfud {
+                hukm,
+                yumkin_bi_iqrar,
+            } => {
                 if *yumkin_bi_iqrar {
                     format!(
                         "The package is only approximately compatible ({hukm}) and installing \
@@ -1035,27 +1086,40 @@ impl Tafsir for KhataTathbeet {
                 } else {
                     format!("The package does not apply to this build ({hukm}) and was refused.")
                 }
-            }
+            },
             Self::MukawwinMafqud { mukawwin, masar } => format!(
                 "The framework component {mukawwin} is not in the component store at {}. This \
                  build is incomplete; reinstall Taarib.",
                 masar.display()
             ),
-            Self::MukawwinNaqis { mukawwin, muallan, mawjud, .. } => format!(
+            Self::MukawwinNaqis {
+                mukawwin,
+                muallan,
+                mawjud,
+                ..
+            } => format!(
                 "The framework component {mukawwin} is in the store at {mawjud} byte(s) where \
                  the manifest declares {muallan}. The copy into the store did not finish; \
                  reinstall Taarib."
             ),
-            Self::WakeelMashghul { wakeel, masar, hajm, jiran, huwiya } => {
+            Self::WakeelMashghul {
+                wakeel,
+                masar,
+                hajm,
+                jiran,
+                huwiya,
+            } => {
                 let maa = if jiran.is_empty() {
                     String::new()
                 } else {
                     format!(" Also in use beside it: {}.", jiran.join(", "))
                 };
-                let bab = huwiya.aila().and_then(crate::wukala::AilatWakeel::tasalsul).map_or_else(
-                    String::new,
-                    |bab| format!(" That product does have a way in: {bab}."),
-                );
+                let bab = huwiya
+                    .aila()
+                    .and_then(crate::wukala::AilatWakeel::tasalsul)
+                    .map_or_else(String::new, |bab| {
+                        format!(" That product does have a way in: {bab}.")
+                    });
                 format!(
                     "The game directory already holds a {wakeel} ({}, {hajm} byte(s)) — {} — \
                      which is the same name Taarib's own loader is published as. Windows loads \
@@ -1068,12 +1132,12 @@ impl Tafsir for KhataTathbeet {
                     masar.display(),
                     huwiya.wasf_injilizi()
                 )
-            }
+            },
             Self::IdhnGhayrMutabiq => {
                 "The safety authorisation covers a different game or package, so the install \
                  was refused. This is a defect in the caller, not something you did."
                     .to_owned()
-            }
+            },
             Self::BeeaMafquda { jidhr, sabab } => format!(
                 "The compatibility prefix at {} cannot be used: {sabab}. Run the game once \
                  from its launcher so the prefix is created, then try again.",
@@ -1084,7 +1148,11 @@ impl Tafsir for KhataTathbeet {
                  made now would be silently erased. Close it and try again.",
                 malaf.display()
             ),
-            Self::HalatManassaMajhula { sunduq, manassa, malaf } => format!(
+            Self::HalatManassaMajhula {
+                sunduq,
+                manassa,
+                malaf,
+            } => format!(
                 "Taarib is running inside {} and can only see its own processes, so it cannot \
                  tell whether {manassa} is running. {} was left exactly as it was: {manassa} \
                  rewrites it from memory when it exits, so an edit made while it runs is \
@@ -1094,7 +1162,12 @@ impl Tafsir for KhataTathbeet {
                 sunduq.ism(),
                 malaf.display()
             ),
-            Self::IstiadaNaqisa { luba, munjaz, mutabaqqi, sabab } => format!(
+            Self::IstiadaNaqisa {
+                luba,
+                munjaz,
+                mutabaqqi,
+                sabab,
+            } => format!(
                 "{luba}: {munjaz} path(s) restored and verified, {} still modified. The \
                  uninstall did not complete. {} Fix that and run the uninstall again — it \
                  resumes at the first unfinished path rather than starting over. Still \
@@ -1116,9 +1189,9 @@ impl Tafsir for KhataTathbeet {
             // Transient by nature: something is holding the file, or something
             // is running over it, and the user is the one who can let go. Close
             // it, then press the same button.
-            Self::MalafMaqful { .. }
-            | Self::LubaTashtaghil { .. }
-            | Self::MunassaTaamal { .. } => Khutwa::AadaMuhawala,
+            Self::MalafMaqful { .. } | Self::LubaTashtaghil { .. } | Self::MunassaTaamal { .. } => {
+                Khutwa::AadaMuhawala
+            },
 
             // The opposite of the three above: nothing the user does on this
             // machine changes the answer, because the sandbox will hand this
@@ -1142,7 +1215,7 @@ impl Tafsir for KhataTathbeet {
 
             Self::SalahiyaMarfuda { .. } | Self::SalahiyatGhayrMustaada { .. } => {
                 Khutwa::ManhSalahiya
-            }
+            },
 
             // The launcher is the only thing on the machine that still holds an
             // authoritative copy of the game's own files. For a missing backup,
@@ -1162,9 +1235,9 @@ impl Tafsir for KhataTathbeet {
                 IttijahDaght::Fakk => Khutwa::TahaqquqSalamatLuba,
             },
 
-            Self::IdadGhayrMustaad { .. } | Self::IdadGhayrMunaffadh { .. } => {
-                Khutwa::FathIdadat { qism: QismIdadat::Manassat }
-            }
+            Self::IdadGhayrMustaad { .. } | Self::IdadGhayrMunaffadh { .. } => Khutwa::FathIdadat {
+                qism: QismIdadat::Manassat,
+            },
 
             Self::IsdarBayanMajhul { .. }
             | Self::MukawwinMafqud { .. }
@@ -1177,7 +1250,7 @@ impl Tafsir for KhataTathbeet {
             // to see.
             Self::MasarKharij { .. } | Self::BayanTalif { .. } | Self::IdhnGhayrMutabiq => {
                 Khutwa::IblaghLilMalik
-            }
+            },
 
             // The way to finish a partial restore is to clear whatever stopped
             // it and press the same button again, so the action is the inner
@@ -1194,7 +1267,7 @@ impl Tafsir for KhataTathbeet {
 
             Self::SijillMafqud { .. } | Self::BayanMawjud { .. } | Self::HajmMufrit { .. } => {
                 Khutwa::FathTashkhis
-            }
+            },
         }
     }
 
@@ -1214,31 +1287,39 @@ impl Tafsir for KhataTathbeet {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("amal".to_owned(), QeemaSiyaq::Nass((*amal).to_owned()));
                 return siyaq;
-            }
-            Self::MalafMaqful { masar, amaliya, sabab } => {
+            },
+            Self::MalafMaqful {
+                masar,
+                amaliya,
+                sabab,
+            } => {
                 let mut siyaq = siyaq_io(sabab);
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 if let Some(ism) = amaliya {
                     let _ = siyaq.insert("amaliya".to_owned(), QeemaSiyaq::Nass(ism.clone()));
                 }
                 return siyaq;
-            }
-            Self::IstiadaNaqisa { luba, munjaz, mutabaqqi, sabab } => {
+            },
+            Self::IstiadaNaqisa {
+                luba,
+                munjaz,
+                mutabaqqi,
+                sabab,
+            } => {
                 let mut siyaq = BTreeMap::new();
                 for (miftah, qeema) in sabab.siyaq() {
                     let _ = siyaq.insert(format!("sabab.{miftah}"), qeema);
                 }
                 let _ = siyaq.insert("luba".to_owned(), QeemaSiyaq::Nass(luba.clone()));
                 let _ = siyaq.insert("munjaz".to_owned(), QeemaSiyaq::Hajm(tul_u64(*munjaz)));
-                let _ = siyaq
-                    .insert("mutabaqqi".to_owned(), QeemaSiyaq::Qaima(mutabaqqi.clone()));
+                let _ = siyaq.insert("mutabaqqi".to_owned(), QeemaSiyaq::Qaima(mutabaqqi.clone()));
                 let _ = siyaq.insert(
                     "sabab.ramz".to_owned(),
                     QeemaSiyaq::Nass(sabab.ramz().to_string()),
                 );
                 return siyaq;
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         let mut siyaq = BTreeMap::new();
@@ -1252,110 +1333,164 @@ impl Tafsir for KhataTathbeet {
             | Self::MalafMaqful { .. }
             | Self::SalahiyaMarfuda { .. }
             | Self::IstiadaNaqisa { .. }
-            | Self::IdhnGhayrMutabiq => {}
-            Self::MasarKharij { masar, jidhr, sabab } => {
+            | Self::IdhnGhayrMutabiq => {},
+            Self::MasarKharij {
+                masar,
+                jidhr,
+                sabab,
+            } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("jidhr", QeemaSiyaq::Masar(jidhr.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::SijillMafqud { masar, bayan } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("bayan", QeemaSiyaq::Masar(bayan.clone()));
-            }
+            },
             Self::BayanTalif { masar, sabab }
             | Self::SalahiyatGhayrMustaada { masar, sabab }
             | Self::RuqaaMarfuda { masar, sabab }
             | Self::NususMarfuda { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::BayanMawjud { masar, huwiya } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("huwiya", QeemaSiyaq::Nass(huwiya.clone()));
-            }
-            Self::IsdarBayanMajhul { masar, mawjud, madum } => {
+            },
+            Self::IsdarBayanMajhul {
+                masar,
+                mawjud,
+                madum,
+            } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("mawjud", QeemaSiyaq::Raqm(i64::from(*mawjud)));
                 daa("madum", QeemaSiyaq::Raqm(i64::from(*madum)));
-            }
+            },
             Self::HajmMufrit { haql, qeema, saqf } => {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("qeema", QeemaSiyaq::Hajm(*qeema));
                 daa("saqf", QeemaSiyaq::Hajm(*saqf));
-            }
-            Self::DaghtFashil { masar, ittijah, tafsil } => {
+            },
+            Self::DaghtFashil {
+                masar,
+                ittijah,
+                tafsil,
+            } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("ittijah", QeemaSiyaq::Nass(ittijah.ism().to_owned()));
                 daa("tafsil", QeemaSiyaq::Nass(tafsil.clone()));
-            }
-            Self::NuskhaMafquda { masar, miftah, jidhr_nusakh } => {
+            },
+            Self::NuskhaMafquda {
+                masar,
+                miftah,
+                jidhr_nusakh,
+            } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("miftah", QeemaSiyaq::Nass(miftah.clone()));
                 daa("jidhr_nusakh", QeemaSiyaq::Masar(jidhr_nusakh.clone()));
-            }
-            Self::NuskhaTalifa { masar, miftah, muallana, mahsuba } => {
+            },
+            Self::NuskhaTalifa {
+                masar,
+                miftah,
+                muallana,
+                mahsuba,
+            } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("miftah", QeemaSiyaq::Nass(miftah.clone()));
                 daa("muallana", QeemaSiyaq::Nass(muallana.clone()));
                 daa("mahsuba", QeemaSiyaq::Nass(mahsuba.clone()));
+            },
+            Self::MalafMustabdal {
+                masar,
+                muallana,
+                mahsuba,
             }
-            Self::MalafMustabdal { masar, muallana, mahsuba }
-            | Self::IstiadaGhayrMutabaqa { masar, muallana, mahsuba } => {
+            | Self::IstiadaGhayrMutabaqa {
+                masar,
+                muallana,
+                mahsuba,
+            } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("muallana", QeemaSiyaq::Nass(muallana.clone()));
                 daa("mahsuba", QeemaSiyaq::Nass(mahsuba.clone()));
-            }
-            Self::IdadGhayrMustaad { muarrif, mahall, sabab } => {
+            },
+            Self::IdadGhayrMustaad {
+                muarrif,
+                mahall,
+                sabab,
+            } => {
                 daa("muarrif", QeemaSiyaq::Nass(muarrif.clone()));
                 daa("mahall", QeemaSiyaq::Nass(mahall.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::IdadGhayrMunaffadh { mahall, sabab } => {
                 daa("mahall", QeemaSiyaq::Nass(mahall.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::HalatLubaMajhula { sunduq, tanfidhi } => {
                 daa("sunduq", QeemaSiyaq::Nass(sunduq.ism().to_owned()));
                 daa("tanfidhi", QeemaSiyaq::Masar(tanfidhi.clone()));
-            }
-            Self::HalatManassaMajhula { sunduq, manassa, malaf } => {
+            },
+            Self::HalatManassaMajhula {
+                sunduq,
+                manassa,
+                malaf,
+            } => {
                 daa("sunduq", QeemaSiyaq::Nass(sunduq.ism().to_owned()));
                 daa("manassa", QeemaSiyaq::Nass(manassa.clone()));
                 daa("malaf", QeemaSiyaq::Masar(malaf.clone()));
-            }
+            },
             Self::LubaTashtaghil { amaliya, tanfidhi } => {
                 daa("amaliya", QeemaSiyaq::Nass(amaliya.clone()));
                 daa("tanfidhi", QeemaSiyaq::Masar(tanfidhi.clone()));
-            }
-            Self::TawafuqMarfud { hukm, yumkin_bi_iqrar } => {
+            },
+            Self::TawafuqMarfud {
+                hukm,
+                yumkin_bi_iqrar,
+            } => {
                 daa("hukm", QeemaSiyaq::Nass(hukm.clone()));
-                daa("yumkin_bi_iqrar", QeemaSiyaq::Nass(yumkin_bi_iqrar.to_string()));
-            }
+                daa(
+                    "yumkin_bi_iqrar",
+                    QeemaSiyaq::Nass(yumkin_bi_iqrar.to_string()),
+                );
+            },
             Self::MukawwinMafqud { mukawwin, masar } => {
                 daa("mukawwin", QeemaSiyaq::Nass(mukawwin.clone()));
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
-            }
-            Self::MukawwinNaqis { mukawwin, masar, muallan, mawjud } => {
+            },
+            Self::MukawwinNaqis {
+                mukawwin,
+                masar,
+                muallan,
+                mawjud,
+            } => {
                 daa("mukawwin", QeemaSiyaq::Nass(mukawwin.clone()));
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("muallan", QeemaSiyaq::Nass(muallan.to_string()));
                 daa("mawjud", QeemaSiyaq::Nass(mawjud.to_string()));
-            }
-            Self::WakeelMashghul { wakeel, masar, hajm, jiran, huwiya } => {
+            },
+            Self::WakeelMashghul {
+                wakeel,
+                masar,
+                hajm,
+                jiran,
+                huwiya,
+            } => {
                 daa("wakeel", QeemaSiyaq::Nass(wakeel.clone()));
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("hajm", QeemaSiyaq::Hajm(*hajm));
                 daa("jiran", QeemaSiyaq::Qaima(jiran.clone()));
                 daa("huwiya", QeemaSiyaq::Nass(huwiya.wasf_injilizi()));
-            }
+            },
             Self::BeeaMafquda { jidhr, sabab } => {
                 daa("jidhr", QeemaSiyaq::Masar(jidhr.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::MunassaTaamal { manassa, malaf } => {
                 daa("manassa", QeemaSiyaq::Nass(manassa.clone()));
                 daa("malaf", QeemaSiyaq::Masar(malaf.clone()));
-            }
+            },
         }
         siyaq
     }
@@ -1391,9 +1526,17 @@ pub fn min_khata_io(masar: &Path, amal: &'static str, sabab: std::io::Error) -> 
     if sabab.kind() == std::io::ErrorKind::PermissionDenied
         || sabab.kind() == std::io::ErrorKind::ReadOnlyFilesystem
     {
-        return KhataTathbeet::SalahiyaMarfuda { masar: masar.to_path_buf(), amal, sabab };
+        return KhataTathbeet::SalahiyaMarfuda {
+            masar: masar.to_path_buf(),
+            amal,
+            sabab,
+        };
     }
-    KhataTathbeet::KhataMalaf { masar: masar.to_path_buf(), amal, sabab }
+    KhataTathbeet::KhataMalaf {
+        masar: masar.to_path_buf(),
+        amal,
+        sabab,
+    }
 }
 
 /// Whether an I/O failure is another process holding the file.

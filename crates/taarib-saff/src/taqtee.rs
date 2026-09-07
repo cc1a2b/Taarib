@@ -90,7 +90,10 @@ pub fn furas_qat(nass: &str, lugha: LughaNass) -> Vec<FursatQat> {
         if hadd == 0 {
             continue;
         }
-        furas.push(FursatQat { mawqi: ila32(hadd), ilzami: ilzami_qabl(nass, hadd) });
+        furas.push(FursatQat {
+            mawqi: ila32(hadd),
+            ilzami: ilzami_qabl(nass, hadd),
+        });
     }
     furas
 }
@@ -110,7 +113,10 @@ pub fn hudud_anaqid(nass: &str) -> Vec<u32> {
     if nass.is_empty() {
         return Vec::new();
     }
-    GraphemeClusterSegmenter::new().segment_str(nass).map(ila32).collect()
+    GraphemeClusterSegmenter::new()
+        .segment_str(nass)
+        .map(ila32)
+        .collect()
 }
 
 /// The word boundaries of the text, in byte offsets, including the offsets at
@@ -210,8 +216,8 @@ pub fn qat_idtirari(nass: &str) -> Vec<u32> {
                     let _ = huruf.next();
                     nihaya += 1;
                 }
-            }
-            '\u{000A}' | '\u{000B}' | '\u{000C}' | '\u{0085}' | '\u{2028}' | '\u{2029}' => {}
+            },
+            '\u{000A}' | '\u{000B}' | '\u{000C}' | '\u{0085}' | '\u{2028}' | '\u{2029}' => {},
             _ => continue,
         }
         mawadi.push(ila32(nihaya));
@@ -266,7 +272,9 @@ fn ilzami_qabl(nass: &str, hadd: usize) -> bool {
         // pair is one break, and the segmenter does not offer a boundary between
         // the two halves of it, but a caller that computed this offset some other
         // way still gets the right answer here.
-        '\u{000D}' => !nass.get(hadd..).is_some_and(|baad| baad.starts_with('\u{000A}')),
+        '\u{000D}' => !nass
+            .get(hadd..)
+            .is_some_and(|baad| baad.starts_with('\u{000A}')),
         _ => false,
     }
 }

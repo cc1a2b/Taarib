@@ -255,7 +255,12 @@ impl TaaribNitaq {
     #[must_use]
     pub fn jadeed(id: u16, bidaya: u32, tul: u32) -> Self {
         Self {
-            nitaq: NitaqUslub { id, bidaya, tul, uslub: Uslub::default() },
+            nitaq: NitaqUslub {
+                id,
+                bidaya,
+                tul,
+                uslub: Uslub::default(),
+            },
         }
     }
 
@@ -362,7 +367,12 @@ impl TaaribNitaq {
     /// own reference — the RPG Maker plugin puts the icon index from `\I[n]`
     /// here — and comes back untouched on the glyphless span in the output.
     pub fn dharra(&mut self, ard: f32, irtifa: f32, asas: f32, marja: u32) {
-        self.nitaq.uslub.dharra = Some(dakhili::Dharra { ard, irtifa, asas, marja });
+        self.nitaq.uslub.dharra = Some(dakhili::Dharra {
+            ard,
+            irtifa,
+            asas,
+            marja,
+        });
     }
 }
 

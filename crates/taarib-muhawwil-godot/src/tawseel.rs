@@ -209,7 +209,10 @@ impl MawdiTarjama {
         for juz in munaddaf.split(['/', '\\']).filter(|juz| !juz.is_empty()) {
             mutlaq.push(juz);
         }
-        Ok(Self { mutlaq, marja: format!("user://{munaddaf}") })
+        Ok(Self {
+            mutlaq,
+            marja: format!("user://{munaddaf}"),
+        })
     }
 
     /// A location named by its absolute path on disk.
@@ -244,7 +247,10 @@ impl MawdiTarjama {
                 ),
             });
         };
-        Ok(Self { mutlaq: masar.to_path_buf(), marja: marja.to_owned() })
+        Ok(Self {
+            mutlaq: masar.to_path_buf(),
+            marja: marja.to_owned(),
+        })
     }
 
     /// Where the file is written.
@@ -334,16 +340,15 @@ pub struct SijillTawseel {
 
 impl SijillTawseel {
     /// Records a rung.
-    pub fn sajjil(
-        &mut self,
-        rutba: RutbatThalith,
-        muakkada: bool,
-        mulahaza: impl Into<String>,
-    ) {
+    pub fn sajjil(&mut self, rutba: RutbatThalith, muakkada: bool, mulahaza: impl Into<String>) {
         if muakkada && self.nafidha.is_none() {
             self.nafidha = Some(rutba);
         }
-        self.rutab.push(NatijatRutbaThalith { rutba, muakkada, mulahaza: mulahaza.into() });
+        self.rutab.push(NatijatRutbaThalith {
+            rutba,
+            muakkada,
+            mulahaza: mulahaza.into(),
+        });
     }
 
     /// Whether any rung was established.
@@ -362,7 +367,12 @@ impl SijillTawseel {
             .iter()
             .map(|natija| {
                 let rutba = natija.rutba;
-                format!("rung {} ({}): {}", rutba.raqm(), rutba.ism(), natija.mulahaza)
+                format!(
+                    "rung {} ({}): {}",
+                    rutba.raqm(),
+                    rutba.ism(),
+                    natija.mulahaza
+                )
             })
             .collect::<Vec<_>>()
             .join("; ")
@@ -440,11 +450,7 @@ impl TawseelThalith {
     /// is available is the caller's answer and not this module's guess. The
     /// translation list has no default — see [`TarjamatLuba`].
     #[must_use]
-    pub fn jadeed(
-        tajawuz: MalafTajawuz,
-        mawdi: MawdiTarjama,
-        tarjamat_luba: TarjamatLuba,
-    ) -> Self {
+    pub fn jadeed(tajawuz: MalafTajawuz, mawdi: MawdiTarjama, tarjamat_luba: TarjamatLuba) -> Self {
         Self {
             tajawuz,
             mawdi,
@@ -612,7 +618,10 @@ impl TawseelThalith {
         if let Some(tarjamat) = self.qaimat_tarjamat()
             && !tarjamat.is_empty()
         {
-            madakhil.push(MadkhalIdad::jadeed(MIFTAH_TARJAMAT, QeemaIdad::Qaima(tarjamat)));
+            madakhil.push(MadkhalIdad::jadeed(
+                MIFTAH_TARJAMAT,
+                QeemaIdad::Qaima(tarjamat),
+            ));
         }
         if !self.wasm.trim().is_empty() {
             madakhil.push(MadkhalIdad::jadeed(
@@ -625,10 +634,16 @@ impl TawseelThalith {
             ));
         }
         if let Some(khatt) = self.khatt.as_ref() {
-            madakhil.push(MadkhalIdad::jadeed(MIFTAH_KHATT_SIMA, QeemaIdad::Nass(khatt.clone())));
+            madakhil.push(MadkhalIdad::jadeed(
+                MIFTAH_KHATT_SIMA,
+                QeemaIdad::Nass(khatt.clone()),
+            ));
         }
         if let Some(mufradat) = self.qaimat_mufradat() {
-            madakhil.push(MadkhalIdad::jadeed(MIFTAH_MUFRADAT, QeemaIdad::Qaima(mufradat)));
+            madakhil.push(MadkhalIdad::jadeed(
+                MIFTAH_MUFRADAT,
+                QeemaIdad::Qaima(mufradat),
+            ));
         }
         madakhil
     }
@@ -660,8 +675,7 @@ impl TawseelThalith {
         let mut tarjama = asl.clone();
         tarjama.dhaa_thaqafa(&self.wasm);
         let bayt = if self.murakkaza {
-            TarjamaMurakkaza::min_tarjama(&tarjama)?
-                .ila_bayt(JeelMawrid::Thalith, self.muharrik)?
+            TarjamaMurakkaza::min_tarjama(&tarjama)?.ila_bayt(JeelMawrid::Thalith, self.muharrik)?
         } else {
             tarjama.ila_bayt(JeelMawrid::Thalith, self.muharrik)?
         };
@@ -699,7 +713,11 @@ impl TawseelThalith {
             })?;
         }
         masarat::kitaba_dharra(masar, &bayt).map_err(|khata| KhataGodot::ImtidadMarfud {
-            sabab: format!("{} could not be written: {}", masar.display(), khata.li_sijill()),
+            sabab: format!(
+                "{} could not be written: {}",
+                masar.display(),
+                khata.li_sijill()
+            ),
         })?;
         Ok(tul_u64(bayt.len()))
     }
@@ -740,8 +758,12 @@ impl TawseelThalith {
     /// this crate round-trips against engine-written resources.
     fn tahaqquq_mawrid(&self) -> Result<usize, String> {
         let masar = self.mawdi.mutlaq_masar();
-        let bayt = std::fs::read(masar).map_err(|sabab| format!("{} could not be read back: {sabab}", masar.display()))?;
-        let asl = self.tarjama.as_ref().ok_or_else(|| "no translation was supplied".to_owned())?;
+        let bayt = std::fs::read(masar)
+            .map_err(|sabab| format!("{} could not be read back: {sabab}", masar.display()))?;
+        let asl = self
+            .tarjama
+            .as_ref()
+            .ok_or_else(|| "no translation was supplied".to_owned())?;
         let awwal = asl.rasail().first();
         if self.murakkaza {
             let jadwal = TarjamaMurakkaza::min_bayt(&bayt)
@@ -755,13 +777,13 @@ impl TawseelThalith {
             }
             if let Some((masdar, hadaf)) = awwal {
                 match jadwal.ibhath(masdar) {
-                    Ok(Some(wujid)) if &wujid == hadaf => {}
+                    Ok(Some(wujid)) if &wujid == hadaf => {},
                     Ok(other) => {
                         return Err(format!(
                             "the written hash table answers {other:?} for the patch's first \
                              source string, and the engine's lookup is this one"
                         ));
-                    }
+                    },
                     Err(khata) => return Err(format!("the written hash table refused: {khata}")),
                 }
             }
@@ -867,7 +889,9 @@ impl TawseelThalith {
         if natija.wusul() {
             Ok(natija)
         } else {
-            Err(KhataGodot::ImtidadMarfud { sabab: sabab_shamil(&natija) })
+            Err(KhataGodot::ImtidadMarfud {
+                sabab: sabab_shamil(&natija),
+            })
         }
     }
 
@@ -889,36 +913,40 @@ impl TawseelThalith {
                  whole list, so naming the patch's translation would take away every language \
                  the game ships with"
             );
-            natija.mawrid.sajjil(RutbatThalith::Idadat, false, mulahaza.clone());
-            natija.thaqafa.sajjil(RutbatThalith::Idadat, false, mulahaza);
+            natija
+                .mawrid
+                .sajjil(RutbatThalith::Idadat, false, mulahaza.clone());
+            natija
+                .thaqafa
+                .sajjil(RutbatThalith::Idadat, false, mulahaza);
             return;
         }
 
         let kutiba = match self.rutbat_mawrid() {
-            Ok(hajm) => {
-                match self.tahaqquq_mawrid() {
-                    Ok(adad) => {
-                        natija.mawrid.sajjil(
-                            RutbatThalith::Idadat,
-                            true,
-                            format!(
-                                "{adad} message(s) written to {masar_mawrid} as {hajm} bytes \
+            Ok(hajm) => match self.tahaqquq_mawrid() {
+                Ok(adad) => {
+                    natija.mawrid.sajjil(
+                        RutbatThalith::Idadat,
+                        true,
+                        format!(
+                            "{adad} message(s) written to {masar_mawrid} as {hajm} bytes \
                                  of Godot 3 resource, read back and confirmed to answer with \
                                  the patch's own translation"
-                            ),
-                        );
-                        true
-                    }
-                    Err(sabab) => {
-                        natija.mawrid.sajjil(RutbatThalith::Idadat, false, sabab);
-                        false
-                    }
-                }
-            }
+                        ),
+                    );
+                    true
+                },
+                Err(sabab) => {
+                    natija.mawrid.sajjil(RutbatThalith::Idadat, false, sabab);
+                    false
+                },
+            },
             Err(khata) => {
-                natija.mawrid.sajjil(RutbatThalith::Idadat, false, khata.to_string());
+                natija
+                    .mawrid
+                    .sajjil(RutbatThalith::Idadat, false, khata.to_string());
                 false
-            }
+            },
         };
 
         if kutiba {
@@ -935,8 +963,10 @@ impl TawseelThalith {
                     ),
                 ),
                 Err(khata) => {
-                    natija.thaqafa.sajjil(RutbatThalith::Idadat, false, khata.to_string());
-                }
+                    natija
+                        .thaqafa
+                        .sajjil(RutbatThalith::Idadat, false, khata.to_string());
+                },
             }
         } else {
             // The override is not written when the resource it would name did
@@ -979,8 +1009,11 @@ impl TawseelThalith {
             Ok(()) => true,
             Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => false,
             Err(sabab) => {
-                return Err(KhataGodot::KhataMalaf { masar: masar.to_path_buf(), sabab });
-            }
+                return Err(KhataGodot::KhataMalaf {
+                    masar: masar.to_path_buf(),
+                    sabab,
+                });
+            },
         };
         Ok((tajawuz, mawrid))
     }

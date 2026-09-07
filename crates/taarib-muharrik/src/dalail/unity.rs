@@ -192,7 +192,11 @@ use crate::khata::KhataMuharrik;
 /// costs a page fault worth noticing. It is written against [`HAJM_TARWISA`]
 /// rather than beside it, so the crate-wide ceiling is enforced by
 /// construction and not by a comment that can go stale.
-const HAJM_TARWISA_HAWIYA: usize = if HAJM_TARWISA < 4 * 1024 { HAJM_TARWISA } else { 4 * 1024 };
+const HAJM_TARWISA_HAWIYA: usize = if HAJM_TARWISA < 4 * 1024 {
+    HAJM_TARWISA
+} else {
+    4 * 1024
+};
 
 /// Bytes taken from the front of `global-metadata.dat`.
 ///
@@ -417,7 +421,10 @@ impl Fahis for FahisUnity {
 
     fn ifhas(&self, siyaq: &SiyaqFahs<'_>) -> Natija<HasilatFahs> {
         if !siyaq.jidhr.exists() {
-            return Err(KhataMuharrik::JidhrMafqud { jidhr: siyaq.jidhr.to_path_buf() }.into());
+            return Err(KhataMuharrik::JidhrMafqud {
+                jidhr: siyaq.jidhr.to_path_buf(),
+            }
+            .into());
         }
 
         let mut hasila = HasilatFahs::la_shay();
@@ -500,14 +507,17 @@ fn mawqi_bayanat(
         return Ok(Some(bayanat));
     }
 
-    let jidhr = fahras_mujallad(siyaq.jidhr).map_err(|sabab| KhataMuharrik::TaadhurQiraatJidhr {
-        jidhr: siyaq.jidhr.to_path_buf(),
-        sabab,
-    })?;
+    let jidhr =
+        fahras_mujallad(siyaq.jidhr).map_err(|sabab| KhataMuharrik::TaadhurQiraatJidhr {
+            jidhr: siyaq.jidhr.to_path_buf(),
+            sabab,
+        })?;
 
     let murashahat = jidhr.mujalladat_bi_lahiqa("_data");
     if let Some(mukhtar) = ikhtar_bayanat(&murashahat, siyaq.ism) {
-        let Some(bayanat) = jarrib_bayanat(siyaq, mukhtar) else { return Ok(None) };
+        let Some(bayanat) = jarrib_bayanat(siyaq, mukhtar) else {
+            return Ok(None);
+        };
         sajjil_bayanat(&bayanat, hasila);
         if murashahat.len() > 1 {
             hasila.sajjil(
@@ -544,7 +554,10 @@ fn jarrib_bayanat(siyaq: &SiyaqFahs<'_>, nisbi: &str) -> Option<MujalladBayanat>
         return None;
     }
     let mahtawa = fahras_mujallad(&masar).unwrap_or_default();
-    Some(MujalladBayanat { nisbi: nisbi.to_owned(), fahras: mahtawa })
+    Some(MujalladBayanat {
+        nisbi: nisbi.to_owned(),
+        fahras: mahtawa,
+    })
 }
 
 /// Picks between several `*_Data` directories under one root.
@@ -558,7 +571,9 @@ fn ikhtar_bayanat<'a>(murashahat: &[&'a str], ism: &str) -> Option<&'a str> {
     if !matlub.is_empty() {
         for murashah in murashahat {
             let hadd = murashah.len().saturating_sub("_data".len());
-            let Some(bidaya) = murashah.get(..hadd) else { continue };
+            let Some(bidaya) = murashah.get(..hadd) else {
+                continue;
+            };
             if mubassat(bidaya) == matlub {
                 return Some(murashah);
             }
@@ -570,7 +585,10 @@ fn ikhtar_bayanat<'a>(murashahat: &[&'a str], ism: &str) -> Option<&'a str> {
 /// A name reduced to its ASCII alphanumerics in lower case, so that
 /// `My Game_Data` and `MyGame.exe` compare equal.
 fn mubassat(ism: &str) -> String {
-    ism.chars().filter(char::is_ascii_alphanumeric).map(|harf| harf.to_ascii_lowercase()).collect()
+    ism.chars()
+        .filter(char::is_ascii_alphanumeric)
+        .map(|harf| harf.to_ascii_lowercase())
+        .collect()
 }
 
 /// Names the player binary that goes with a data directory, when discovery did
@@ -692,11 +710,19 @@ struct QiraatHawiya {
 /// still recorded verbatim and the next container is tried.
 fn isdar(siyaq: &SiyaqFahs<'_>, bayanat: &MujalladBayanat, hasila: &mut HasilatFahs) {
     for ism in HAWIYAT {
-        let Some(haqiqi) = bayanat.fahras.malaf(ism) else { continue };
+        let Some(haqiqi) = bayanat.fahras.malaf(ism) else {
+            continue;
+        };
         let nisbi = bayanat.tahta(haqiqi);
-        let Ok(masar) = siyaq.dakhil(&nisbi) else { continue };
-        let Some(nafidha) = iqra_nafidha(&masar, 0, HAJM_TARWISA_HAWIYA) else { continue };
-        let Some(qiraa) = iqra_hawiya(&masar, &nafidha) else { continue };
+        let Ok(masar) = siyaq.dakhil(&nisbi) else {
+            continue;
+        };
+        let Some(nafidha) = iqra_nafidha(&masar, 0, HAJM_TARWISA_HAWIYA) else {
+            continue;
+        };
+        let Some(qiraa) = iqra_hawiya(&masar, &nafidha) else {
+            continue;
+        };
 
         let Some(khaam) = qiraa.khaam.as_deref().filter(|nass| yushbih_isdar(nass)) else {
             let dhayl = qiraa.khaam.as_deref().map_or_else(String::new, |nass| {
@@ -705,7 +731,10 @@ fn isdar(siyaq: &SiyaqFahs<'_>, bayanat: &MujalladBayanat, hasila: &mut HasilatF
             hasila.sajjil_aila(
                 AilatMuharrik::Unity,
                 NawDaleel::TarwisatHawiya,
-                format!("{}, with no engine version behind its header{dhayl}", qiraa.wasf),
+                format!(
+                    "{}, with no engine version behind its header{dhayl}",
+                    qiraa.wasf
+                ),
                 Some(nisbi),
                 WAZN_TAWQI_HAWIYA,
             );
@@ -721,9 +750,16 @@ fn isdar(siyaq: &SiyaqFahs<'_>, bayanat: &MujalladBayanat, hasila: &mut HasilatF
         hasila.sajjil_aila(
             AilatMuharrik::Unity,
             NawDaleel::BayanatMudmaja,
-            format!("engine version `{khaam}` in the header of a {}{tanbih}", qiraa.wasf),
+            format!(
+                "engine version `{khaam}` in the header of a {}{tanbih}",
+                qiraa.wasf
+            ),
             Some(nisbi),
-            if qiraa.mustanbat { WAZN_TAWQI_HAWIYA } else { WAZN_ISDAR_HAWIYA },
+            if qiraa.mustanbat {
+                WAZN_TAWQI_HAWIYA
+            } else {
+                WAZN_ISDAR_HAWIYA
+            },
         );
 
         if let Some(mufassal) = hallil_isdar(khaam) {
@@ -788,30 +824,48 @@ fn iqra_serialized(masar: &Path, nafidha: &[u8]) -> Option<QiraatHawiya> {
             return None;
         }
         let khaam = nass_muntahi(nafidha, 0x30, AQSA_ISDAR);
-        return Some(QiraatHawiya { wasf, khaam, mustanbat: false });
+        return Some(QiraatHawiya {
+            wasf,
+            khaam,
+            mustanbat: false,
+        });
     }
 
     if hajm_malaf == 0 || hajm_bayanat > hajm_malaf || izahat_bayanat > hajm_malaf {
         return None;
     }
     if sigha < 7 {
-        return Some(QiraatHawiya { wasf, khaam: None, mustanbat: false });
+        return Some(QiraatHawiya {
+            wasf,
+            khaam: None,
+            mustanbat: false,
+        });
     }
     if sigha >= 9 {
         if nafidha.get(0x10).copied()? > 1 {
             return None;
         }
         let khaam = nass_muntahi(nafidha, 0x14, AQSA_ISDAR);
-        return Some(QiraatHawiya { wasf, khaam, mustanbat: false });
+        return Some(QiraatHawiya {
+            wasf,
+            khaam,
+            mustanbat: false,
+        });
     }
 
     // Formats 7 and 8 keep their metadata at the end of the file, behind the
     // single endianness byte. One more bounded read, at a computed offset that
     // the checks above have already confined to inside the file.
-    let izaha = u64::from(hajm_malaf).checked_sub(u64::from(hajm_bayanat))?.checked_add(1)?;
+    let izaha = u64::from(hajm_malaf)
+        .checked_sub(u64::from(hajm_bayanat))?
+        .checked_add(1)?;
     let dhayl = iqra_nafidha(masar, izaha, AQSA_ISDAR.saturating_add(1))?;
     let khaam = nass_muntahi(&dhayl, 0, AQSA_ISDAR);
-    Some(QiraatHawiya { wasf, khaam, mustanbat: true })
+    Some(QiraatHawiya {
+        wasf,
+        khaam,
+        mustanbat: true,
+    })
 }
 
 /// Reads a `UnityFS`-family bundle header.
@@ -843,7 +897,11 @@ fn iqra_hazma(nafidha: &[u8]) -> Option<QiraatHawiya> {
     } else {
         None
     };
-    Some(QiraatHawiya { wasf, khaam, mustanbat: false })
+    Some(QiraatHawiya {
+        wasf,
+        khaam,
+        mustanbat: false,
+    })
 }
 
 /// Whether a run of printable ASCII is shaped like a Unity version at all.
@@ -910,8 +968,12 @@ const SIHR_BAYANAT: u32 = 0xFAB1_1BAF;
 /// `GameAssembly` is Unity's desktop naming on all three; `libil2cpp` is the
 /// Android and embedded spelling, kept because a game directory copied off a
 /// device is still a game directory somebody will point Taarib at.
-const MAKTABAT_IL2CPP: &[&str] =
-    &["GameAssembly.dll", "GameAssembly.so", "GameAssembly.dylib", "libil2cpp.so"];
+const MAKTABAT_IL2CPP: &[&str] = &[
+    "GameAssembly.dll",
+    "GameAssembly.so",
+    "GameAssembly.dylib",
+    "libil2cpp.so",
+];
 
 /// What was found where `global-metadata.dat` should be.
 #[derive(Debug)]
@@ -1028,7 +1090,7 @@ fn khalfiya(
         ),
         (true, false) => hasila.khalfiya = Some(KhalfiyaBarmajiya::Il2cpp),
         (false, true) => hasila.khalfiya = Some(KhalfiyaBarmajiya::Mono),
-        (false, false) => {}
+        (false, false) => {},
     }
 
     qiraa
@@ -1074,7 +1136,7 @@ fn sajjil_bayanat_il2cpp(
             );
             qiraa.bayanat = Some(tarwisa);
             WAZN_SIHR_BAYANAT
-        }
+        },
         HalatBayanat::Mubhama { sihr } => {
             hasila.sajjil_aila(
                 AilatMuharrik::Unity,
@@ -1090,7 +1152,7 @@ fn sajjil_bayanat_il2cpp(
                 WAZN_BAYANAT_MUBHAMA,
             );
             WAZN_BAYANAT_MUBHAMA
-        }
+        },
         HalatBayanat::Mughlaqa => {
             hasila.sajjil_aila(
                 AilatMuharrik::Unity,
@@ -1100,7 +1162,7 @@ fn sajjil_bayanat_il2cpp(
                 WAZN_BAYANAT_MUBHAMA,
             );
             WAZN_BAYANAT_MUBHAMA
-        }
+        },
     }
 }
 
@@ -1117,7 +1179,10 @@ fn sajjil_mono(
         hasila.sajjil_aila(
             AilatMuharrik::Unity,
             NawDaleel::BinyatMujallad,
-            format!("Mono runtime directory `{}` {}", mawqi.ism, mawqi.wasf_mawdi),
+            format!(
+                "Mono runtime directory `{}` {}",
+                mawqi.ism, mawqi.wasf_mawdi
+            ),
             Some(mawqi.nisbi),
             WAZN_MONO_BLEEDING,
         );
@@ -1201,7 +1266,9 @@ fn mawqi_mono(siyaq: &SiyaqFahs<'_>, bayanat: &MujalladBayanat) -> Option<MawqiM
 
     let (nisbi_mujawir, mujawir) = mujawir_bayanat(siyaq, bayanat)?;
     for ism in MUJALLADAT_MONO {
-        let Some(haqiqi) = mujawir.mujallad(ism) else { continue };
+        let Some(haqiqi) = mujawir.mujallad(ism) else {
+            continue;
+        };
         let nisbi = if nisbi_mujawir.is_empty() {
             haqiqi.to_owned()
         } else {
@@ -1224,7 +1291,10 @@ fn mawqi_mono(siyaq: &SiyaqFahs<'_>, bayanat: &MujalladBayanat) -> Option<MawqiM
 /// a name found here: the caller builds a string for the evidence trail and
 /// never a path to read, so containment is not weakened by the shortcut.
 fn mujawir_bayanat(siyaq: &SiyaqFahs<'_>, bayanat: &MujalladBayanat) -> Option<(String, Fahras)> {
-    let nisbi = bayanat.nisbi.rsplit_once('/').map_or("", |(bidaya, _)| bidaya);
+    let nisbi = bayanat
+        .nisbi
+        .rsplit_once('/')
+        .map_or("", |(bidaya, _)| bidaya);
     let masar = if nisbi.is_empty() {
         siyaq.jidhr.to_path_buf()
     } else {
@@ -1259,7 +1329,13 @@ fn halat_bayanat(nisbi: String, masar: PathBuf) -> HalatBayanat {
     let tul = tul_malaf(&masar).unwrap_or(0);
     let iqtibasat = mintaqa(&nafidha, 0x10, tul);
     let asmaa = mintaqa(&nafidha, 0x18, tul);
-    HalatBayanat::Maqrua(TarwisatBayanat { nisbi, masar, isdar, asmaa, iqtibasat })
+    HalatBayanat::Maqrua(TarwisatBayanat {
+        nisbi,
+        masar,
+        isdar,
+        asmaa,
+        iqtibasat,
+    })
 }
 
 /// One `(offset, size)` pair out of the metadata header, accepted only when it
@@ -1402,7 +1478,9 @@ fn anzimat_nusus(siyaq: &SiyaqFahs<'_>, qiraa: &QiraatKhalfiya, hasila: &mut Has
 fn mujammaat_nusus(nisbi_mudara: &str, mudara: &Fahras, hasila: &mut HasilatFahs) {
     for alama in ALAMAT {
         for juz in alama.mujammaat {
-            let Some(haqiqi) = mudara.malafat_bi_juz(juz).first().copied() else { continue };
+            let Some(haqiqi) = mudara.malafat_bi_juz(juz).first().copied() else {
+                continue;
+            };
             hasila.daa_itar(alama.itar);
             hasila.sajjil(
                 NawDaleel::BinyatMujallad,
@@ -1492,7 +1570,11 @@ fn ibarat_matluba(hasila: &HasilatFahs, bi_sifr: bool) -> Vec<IbaraMatluba> {
             // chunks, so a needle longer than that could straddle a boundary
             // and be missed. Refusing it is honest; silently missing it is not.
             if bayt.len() <= TADAKHUL_QITA {
-                ibarat.push(IbaraMatluba { bayt, ism: naw, raqm });
+                ibarat.push(IbaraMatluba {
+                    bayt,
+                    ism: naw,
+                    raqm,
+                });
             }
         }
     }
@@ -1518,7 +1600,9 @@ fn sajjil_masah(
         if !natija.wujida.get(mawqi).copied().unwrap_or(false) {
             continue;
         }
-        let Some(alama) = ALAMAT.get(ibara.raqm) else { continue };
+        let Some(alama) = ALAMAT.get(ibara.raqm) else {
+            continue;
+        };
         let tahaffuz = if masdar.yusammi {
             String::new()
         } else {
@@ -1528,7 +1612,10 @@ fn sajjil_masah(
         };
         hasila.sajjil(
             NawDaleel::TawqiThunai,
-            format!("`{}` in {}, pointing at {}{tahaffuz}", ibara.ism, masdar.wasf, alama.ism),
+            format!(
+                "`{}` in {}, pointing at {}{tahaffuz}",
+                ibara.ism, masdar.wasf, alama.ism
+            ),
             Some(masdar.nisbi.to_owned()),
             masdar.wazn,
         );
@@ -1564,7 +1651,9 @@ fn kawm_asmaa(tarwisa: &TarwisatBayanat, hasila: &mut HasilatFahs) {
         return;
     }
     let hadd = hajm.min(HAJM_MASAH);
-    let Some(natija) = masah(&tarwisa.masar, izaha, hadd, &ibarat) else { return };
+    let Some(natija) = masah(&tarwisa.masar, izaha, hadd, &ibarat) else {
+        return;
+    };
 
     let masdar = MasdarMasah {
         wasf: "the IL2CPP identifier heap",
@@ -1597,13 +1686,17 @@ fn kawm_asmaa(tarwisa: &TarwisatBayanat, hasila: &mut HasilatFahs) {
 /// bounded scan and because on a heavily stripped build it is occasionally the
 /// only thing left, and it is weighted so that it can never decide anything.
 fn kawm_iqtibasat(tarwisa: &TarwisatBayanat, hasila: &mut HasilatFahs) {
-    let Some((izaha, hajm)) = tarwisa.iqtibasat else { return };
+    let Some((izaha, hajm)) = tarwisa.iqtibasat else {
+        return;
+    };
     let ibarat = ibarat_matluba(hasila, false);
     if ibarat.is_empty() {
         return;
     }
     let hadd = hajm.min(HAJM_MASAH);
-    let Some(natija) = masah(&tarwisa.masar, izaha, hadd, &ibarat) else { return };
+    let Some(natija) = masah(&tarwisa.masar, izaha, hadd, &ibarat) else {
+        return;
+    };
     let masdar = MasdarMasah {
         wasf: "the game's own C# string literals",
         nisbi: &tarwisa.nisbi,
@@ -1633,17 +1726,27 @@ fn masah_mujamma(
     mudara: &Fahras,
     hasila: &mut HasilatFahs,
 ) {
-    let Some(haqiqi) = mudara.malaf("assembly-csharp.dll") else { return };
+    let Some(haqiqi) = mudara.malaf("assembly-csharp.dll") else {
+        return;
+    };
     let nisbi = format!("{nisbi_mudara}/{haqiqi}");
-    let Ok(masar) = siyaq.dakhil(&nisbi) else { return };
+    let Ok(masar) = siyaq.dakhil(&nisbi) else {
+        return;
+    };
 
     let ibarat = ibarat_matluba(hasila, true);
     if ibarat.is_empty() {
         return;
     }
     let tul = tul_malaf(&masar).unwrap_or(0);
-    let hadd = if tul == 0 { HAJM_MASAH } else { tul.min(HAJM_MASAH) };
-    let Some(natija) = masah(&masar, 0, hadd, &ibarat) else { return };
+    let hadd = if tul == 0 {
+        HAJM_MASAH
+    } else {
+        tul.min(HAJM_MASAH)
+    };
+    let Some(natija) = masah(&masar, 0, hadd, &ibarat) else {
+        return;
+    };
 
     let masdar = MasdarMasah {
         wasf: "the game's own managed assembly",
@@ -1707,8 +1810,12 @@ fn qarain(siyaq: &SiyaqFahs<'_>, bayanat: &MujalladBayanat, hasila: &mut Hasilat
         if let Ok(masar) = siyaq.dakhil(&nisbi)
             && let Some(nass) = iqra_nass(&masar)
         {
-            let mutaalliqa: Vec<&str> =
-                nass.lines().map(str::trim).filter(|satr| yahummu_khalfiya(satr)).take(4).collect();
+            let mutaalliqa: Vec<&str> = nass
+                .lines()
+                .map(str::trim)
+                .filter(|satr| yahummu_khalfiya(satr))
+                .take(4)
+                .collect();
             let dhayl = if mutaalliqa.is_empty() {
                 String::new()
             } else {
@@ -1781,16 +1888,26 @@ fn mawarid(siyaq: &SiyaqFahs<'_>, bayanat: &MujalladBayanat, hasila: &mut Hasila
         }
     }
 
-    let Some(haqiqi) = bayanat.fahras.malaf("resources.assets") else { return };
+    let Some(haqiqi) = bayanat.fahras.malaf("resources.assets") else {
+        return;
+    };
     let nisbi = bayanat.tahta(haqiqi);
-    let Ok(masar) = siyaq.dakhil(&nisbi) else { return };
+    let Ok(masar) = siyaq.dakhil(&nisbi) else {
+        return;
+    };
     let ibarat = ibarat_matluba(hasila, false);
     if ibarat.is_empty() {
         return;
     }
     let tul = tul_malaf(&masar).unwrap_or(0);
-    let hadd = if tul == 0 { HAJM_MASAH } else { tul.min(HAJM_MASAH) };
-    let Some(natija) = masah(&masar, 0, hadd, &ibarat) else { return };
+    let hadd = if tul == 0 {
+        HAJM_MASAH
+    } else {
+        tul.min(HAJM_MASAH)
+    };
+    let Some(natija) = masah(&masar, 0, hadd, &ibarat) else {
+        return;
+    };
     let masdar = MasdarMasah {
         wasf: "the player's serialized resource container",
         nisbi: &nisbi,
@@ -1882,13 +1999,17 @@ fn fahras_mujallad(masar: &Path) -> Result<Fahras, std::io::Error> {
         let mujallad = match madkhal.file_type() {
             Ok(naw) if naw.is_symlink() => {
                 fs::metadata(madkhal.path()).is_ok_and(|wasf| wasf.is_dir())
-            }
+            },
             Ok(naw) => naw.is_dir(),
             Err(_) => false,
         };
         madakhil.push((ism.to_ascii_lowercase(), ism.to_owned(), mujallad));
     }
-    Ok(Fahras { madakhil, maqru: true, qutia })
+    Ok(Fahras {
+        madakhil,
+        maqru: true,
+        qutia,
+    })
 }
 
 /// Resolves a chain of names under the data directory, case-insensitively.
@@ -1906,12 +2027,20 @@ fn masar_tahta(
     let mut nisbi = bayanat.nisbi.clone();
     let mut mahtawa: Option<Fahras> = None;
     for juz in awail {
-        let haqiqi = mahtawa.as_ref().unwrap_or(&bayanat.fahras).mujallad(juz)?.to_owned();
+        let haqiqi = mahtawa
+            .as_ref()
+            .unwrap_or(&bayanat.fahras)
+            .mujallad(juz)?
+            .to_owned();
         nisbi = format!("{nisbi}/{haqiqi}");
         let masar = siyaq.dakhil(&nisbi).ok()?;
         mahtawa = Some(fahras_mujallad(&masar).ok()?);
     }
-    let haqiqi = mahtawa.as_ref().unwrap_or(&bayanat.fahras).malaf(akhir)?.to_owned();
+    let haqiqi = mahtawa
+        .as_ref()
+        .unwrap_or(&bayanat.fahras)
+        .malaf(akhir)?
+        .to_owned();
     let nisbi = format!("{nisbi}/{haqiqi}");
     let masar = siyaq.dakhil(&nisbi).ok()?;
     Some((nisbi, masar))
@@ -1946,7 +2075,10 @@ fn iqra_nafidha(masar: &Path, izaha: u64, hadd: usize) -> Option<Vec<u8>> {
         return None;
     }
     let mut bayt = Vec::new();
-    let _ = malaf.take(u64::try_from(hadd).ok()?).read_to_end(&mut bayt).ok()?;
+    let _ = malaf
+        .take(u64::try_from(hadd).ok()?)
+        .read_to_end(&mut bayt)
+        .ok()?;
     Some(bayt)
 }
 
@@ -2043,7 +2175,7 @@ fn iqra_kamil(malaf: &mut File, hissa: &mut [u8]) -> Option<usize> {
         match malaf.read(baqi) {
             Ok(0) => break,
             Ok(adad) => kulli = kulli.checked_add(adad)?,
-            Err(khata) if khata.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(khata) if khata.kind() == std::io::ErrorKind::Interrupted => {},
             Err(_) => return None,
         }
     }

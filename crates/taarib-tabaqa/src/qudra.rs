@@ -153,19 +153,31 @@ impl SababQudra {
     /// A finding that costs nothing.
     #[must_use]
     pub fn kamila(arabi: impl Into<String>, injilizi: impl Into<String>) -> Self {
-        Self { hukm: HukmQudra::Kamila, arabi: arabi.into(), injilizi: injilizi.into() }
+        Self {
+            hukm: HukmQudra::Kamila,
+            arabi: arabi.into(),
+            injilizi: injilizi.into(),
+        }
     }
 
     /// A finding that narrows what the overlay will do.
     #[must_use]
     pub fn naqisa(arabi: impl Into<String>, injilizi: impl Into<String>) -> Self {
-        Self { hukm: HukmQudra::Naqisa, arabi: arabi.into(), injilizi: injilizi.into() }
+        Self {
+            hukm: HukmQudra::Naqisa,
+            arabi: arabi.into(),
+            injilizi: injilizi.into(),
+        }
     }
 
     /// A finding that stops the overlay.
     #[must_use]
     pub fn mustaheela(arabi: impl Into<String>, injilizi: impl Into<String>) -> Self {
-        Self { hukm: HukmQudra::Mustaheela, arabi: arabi.into(), injilizi: injilizi.into() }
+        Self {
+            hukm: HukmQudra::Mustaheela,
+            arabi: arabi.into(),
+            injilizi: injilizi.into(),
+        }
     }
 
     /// A question that could stop the overlay, asked and not answered.
@@ -175,7 +187,11 @@ impl SababQudra {
     /// reaches for this rather than for [`SababQudra::naqisa`].
     #[must_use]
     pub fn majhula(arabi: impl Into<String>, injilizi: impl Into<String>) -> Self {
-        Self { hukm: HukmQudra::Majhula, arabi: arabi.into(), injilizi: injilizi.into() }
+        Self {
+            hukm: HukmQudra::Majhula,
+            arabi: arabi.into(),
+            injilizi: injilizi.into(),
+        }
     }
 }
 
@@ -210,7 +226,7 @@ impl MilShasha {
             Self::KhilalAlJihaz => {
                 "the overlay draws into the frame the game is about to present, so exclusive \
                  fullscreen is composed over exactly as windowed mode is"
-            }
+            },
             Self::LaShay => "this platform has no drawable for the overlay to compose into",
         }
     }
@@ -222,7 +238,7 @@ impl MilShasha {
             Self::KhilalAlJihaz => {
                 "تُرسم الطبقة داخل الإطار الذي توشك اللعبة على عرضه، فوضع ملء الشاشة الحصري \
                  يُعامَل كوضع النافذة تمامًا."
-            }
+            },
             Self::LaShay => "لا يوجد سطح رسم على هذه المنصة تُركَّب عليه الطبقة.",
         }
     }
@@ -243,7 +259,11 @@ impl QudratTarkeeb {
     /// A report with no findings yet.
     #[must_use]
     pub const fn jadeeda(wajiha: WajihatRusum, mil_shasha: MilShasha) -> Self {
-        Self { wajiha, mil_shasha, asbab: Vec::new() }
+        Self {
+            wajiha,
+            mil_shasha,
+            asbab: Vec::new(),
+        }
     }
 
     /// Adds a finding.
@@ -262,7 +282,11 @@ impl QudratTarkeeb {
     /// never what an unasked question looks like.
     #[must_use]
     pub fn hukm(&self) -> HukmQudra {
-        self.asbab.iter().map(|sabab| sabab.hukm).max().unwrap_or(HukmQudra::Kamila)
+        self.asbab
+            .iter()
+            .map(|sabab| sabab.hukm)
+            .max()
+            .unwrap_or(HukmQudra::Kamila)
     }
 
     /// Whether the overlay may be offered for this API here.
@@ -274,7 +298,9 @@ impl QudratTarkeeb {
     /// The questions this report could not answer, for an interface that has
     /// to say what it does not know before it says what it does.
     pub fn majhulat(&self) -> impl Iterator<Item = &SababQudra> {
-        self.asbab.iter().filter(|sabab| sabab.hukm == HukmQudra::Majhula)
+        self.asbab
+            .iter()
+            .filter(|sabab| sabab.hukm == HukmQudra::Majhula)
     }
 
     /// Every finding at or above a verdict, for an interface that shows only

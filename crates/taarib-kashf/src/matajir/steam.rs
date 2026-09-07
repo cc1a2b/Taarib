@@ -216,9 +216,13 @@ fn murashahat(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
             // the machine on which that coincides with a Windows installed off
             // `C:` is exactly the machine a hardcoded drive letter would send
             // to a folder that does not exist.
-            murashahat
-                .extend(siyaq.mujalladat_baramij.iter().map(|mujallad| mujallad.join("Steam")));
-        }
+            murashahat.extend(
+                siyaq
+                    .mujalladat_baramij
+                    .iter()
+                    .map(|mujallad| mujallad.join("Steam")),
+            );
+        },
         NizamTashghil::Linux => {
             murashahat.push(siyaq.manzil.join(".steam").join("steam"));
             murashahat.push(siyaq.manzil.join(".local").join("share").join("Steam"));
@@ -245,12 +249,16 @@ fn murashahat(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
                         .join("Steam"),
                 );
             }
-        }
+        },
         NizamTashghil::Mac => {
             murashahat.push(
-                siyaq.manzil.join("Library").join("Application Support").join("Steam"),
+                siyaq
+                    .manzil
+                    .join("Library")
+                    .join("Application Support")
+                    .join("Steam"),
             );
-        }
+        },
     }
     murashahat
 }
@@ -268,7 +276,11 @@ fn murashahat_sijill() -> Vec<PathBuf> {
 
     [
         (HKEY_CURRENT_USER, r"Software\Valve\Steam", "SteamPath"),
-        (HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam", "InstallPath"),
+        (
+            HKEY_LOCAL_MACHINE,
+            r"SOFTWARE\WOW6432Node\Valve\Steam",
+            "InstallPath",
+        ),
         (HKEY_LOCAL_MACHINE, r"SOFTWARE\Valve\Steam", "InstallPath"),
     ]
     .into_iter()
@@ -306,7 +318,15 @@ fn qeemat_sijill(
     // of the call, and `hajm` is a live out-parameter of the required width.
     // Passing no data pointer is the documented way to ask for the size only.
     let hala = unsafe {
-        RegGetValueW(jidhr, &miftah_w, &qeema_w, RRF_RT_REG_SZ, None, None, Some(&raw mut hajm))
+        RegGetValueW(
+            jidhr,
+            &miftah_w,
+            &qeema_w,
+            RRF_RT_REG_SZ,
+            None,
+            None,
+            Some(&raw mut hajm),
+        )
     };
     if hala != ERROR_SUCCESS || hajm == 0 {
         return None;
@@ -332,9 +352,16 @@ fn qeemat_sijill(
         return None;
     }
 
-    let tul = mihfaza.iter().position(|wahda| *wahda == 0).unwrap_or(mihfaza.len());
+    let tul = mihfaza
+        .iter()
+        .position(|wahda| *wahda == 0)
+        .unwrap_or(mihfaza.len());
     let nass = String::from_utf16(mihfaza.get(..tul)?).ok()?;
-    if nass.is_empty() { None } else { Some(PathBuf::from(nass)) }
+    if nass.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(nass))
+    }
 }
 
 /// Resolves every Steam root on this machine, distinguishing "not installed"
@@ -492,10 +519,22 @@ pub fn maktabat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<MaktabatSte
             return;
         };
         maruf.push(muwahhad);
-        maktabat.push(MaktabatSteam { jidhr: jidhr_maktaba, steamapps, laqab, alaab });
+        maktabat.push(MaktabatSteam {
+            jidhr: jidhr_maktaba,
+            steamapps,
+            laqab,
+            alaab,
+        });
     };
 
-    adif(jidhr.to_path_buf(), None, Vec::new(), &mut maktabat, &mut maruf, tanbihat);
+    adif(
+        jidhr.to_path_buf(),
+        None,
+        Vec::new(),
+        &mut maktabat,
+        &mut maruf,
+        tanbihat,
+    );
 
     let mut fahras = None;
     for murashah in [
@@ -508,7 +547,9 @@ pub fn maktabat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<MaktabatSte
             break;
         }
     }
-    let Some(masar_fahras) = fahras else { return maktabat };
+    let Some(masar_fahras) = fahras else {
+        return maktabat;
+    };
 
     let shajara = match iqra_vdf(&masar_fahras) {
         Ok(shajara) => shajara,
@@ -521,7 +562,7 @@ pub fn maktabat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<MaktabatSte
                 khata.injilizi,
             ));
             return maktabat;
-        }
+        },
     };
 
     // The root key is `libraryfolders` on every client that writes the current
@@ -529,7 +570,9 @@ pub fn maktabat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<MaktabatSte
     // path covers both. A file with neither is read as if its root were the
     // list, which is what a hand-trimmed file looks like.
     let qaima = shajara.bi_masar(&["libraryfolders"]).unwrap_or(&shajara);
-    let Some(abna) = qaima.kain() else { return maktabat };
+    let Some(abna) = qaima.kain() else {
+        return maktabat;
+    };
 
     for (miftah, qeema) in abna {
         if miftah.parse::<u32>().is_err() {
@@ -559,10 +602,17 @@ pub fn maktabat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<MaktabatSte
                     .filter_map(|(app, _)| app.parse::<u32>().ok())
                     .collect();
                 (masar.to_owned(), laqab, alaab)
-            }
+            },
             QeemaVdf::Raqm(_) | QeemaVdf::Kabir(_) => continue,
         };
-        adif(PathBuf::from(masar), laqab, alaab, &mut maktabat, &mut maruf, tanbihat);
+        adif(
+            PathBuf::from(masar),
+            laqab,
+            alaab,
+            &mut maktabat,
+            &mut maruf,
+            tanbihat,
+        );
     }
 
     maktabat
@@ -745,10 +795,7 @@ impl MaalumatApp {
     /// kept.
     #[must_use]
     pub const fn khali(&self) -> bool {
-        self.naw.is_none()
-            && self.ism.is_none()
-            && self.simat.is_empty()
-            && self.tanfidhi.is_none()
+        self.naw.is_none() && self.ism.is_none() && self.simat.is_empty() && self.tanfidhi.is_none()
     }
 }
 
@@ -785,7 +832,7 @@ pub fn fahras_appinfo(
                 format!("cannot read Steam's app metadata cache: {:?}", sabab.kind()),
             ));
             return fahras;
-        }
+        },
     };
 
     let mut talifa: usize = 0;
@@ -798,7 +845,7 @@ pub fn fahras_appinfo(
             if !maalumat.khali() {
                 let _ = fahras.insert(madkhal.app, maalumat);
             }
-        }
+        },
         Err(_) => talifa += 1,
     });
 
@@ -845,7 +892,9 @@ pub fn maalumat_app(bayanat: &QeemaVdf, nizam: NizamTashghil) -> MaalumatApp {
 
     let mut online = false;
     let mut mahalli = false;
-    for (miftah, qeema) in bayanat.kain_bi_masar(&["appinfo", "common", "category"]).unwrap_or(&[])
+    for (miftah, qeema) in bayanat
+        .kain_bi_masar(&["appinfo", "common", "category"])
+        .unwrap_or(&[])
     {
         // Steam writes these as `category_36` with a value of 1. A value that
         // is present but zero means the category was cleared, so both halves
@@ -853,7 +902,10 @@ pub fn maalumat_app(bayanat: &QeemaVdf, nizam: NizamTashghil) -> MaalumatApp {
         if qeema.raqm().unwrap_or(1) == 0 {
             continue;
         }
-        let Some(raqm) = miftah.rsplit('_').next().and_then(|raqm| raqm.parse::<u32>().ok())
+        let Some(raqm) = miftah
+            .rsplit('_')
+            .next()
+            .and_then(|raqm| raqm.parse::<u32>().ok())
         else {
             continue;
         };
@@ -893,11 +945,17 @@ pub fn maalumat_app(bayanat: &QeemaVdf, nizam: NizamTashghil) -> MaalumatApp {
 /// scan of the install directory.
 fn himaya_muhtamala(bayanat: &QeemaVdf) -> Option<String> {
     let mut mawadd: Vec<&str> = Vec::new();
-    for (_, ittifaq) in bayanat.kain_bi_masar(&["appinfo", "common", "eulas"]).unwrap_or(&[]) {
+    for (_, ittifaq) in bayanat
+        .kain_bi_masar(&["appinfo", "common", "eulas"])
+        .unwrap_or(&[])
+    {
         mawadd.extend(ittifaq.nass_bi_masar(&["name"]));
         mawadd.extend(ittifaq.nass_bi_masar(&["id"]));
     }
-    for (_, madkhal) in bayanat.kain_bi_masar(&["appinfo", "config", "launch"]).unwrap_or(&[]) {
+    for (_, madkhal) in bayanat
+        .kain_bi_masar(&["appinfo", "config", "launch"])
+        .unwrap_or(&[])
+    {
         mawadd.extend(madkhal.nass_bi_masar(&["executable"]));
     }
 
@@ -950,17 +1008,26 @@ fn ikhtar_tashghil(
     let hadha = ism_nizam(nizam);
     let mut madakhil: Vec<MadkhalTashghil<'_>> = Vec::new();
 
-    for (miftah, madkhal) in bayanat.kain_bi_masar(&["appinfo", "config", "launch"]).unwrap_or(&[])
+    for (miftah, madkhal) in bayanat
+        .kain_bi_masar(&["appinfo", "config", "launch"])
+        .unwrap_or(&[])
     {
-        let Some(tanfidhi) =
-            madkhal.nass_bi_masar(&["executable"]).filter(|tanfidhi| !tanfidhi.is_empty())
+        let Some(tanfidhi) = madkhal
+            .nass_bi_masar(&["executable"])
+            .filter(|tanfidhi| !tanfidhi.is_empty())
         else {
             continue;
         };
-        let qaima = madkhal.nass_bi_masar(&["config", "oslist"]).unwrap_or("").to_ascii_lowercase();
+        let qaima = madkhal
+            .nass_bi_masar(&["config", "oslist"])
+            .unwrap_or("")
+            .to_ascii_lowercase();
         let li_hadha =
             qaima.is_empty() || qaima.split(',').map(str::trim).any(|wahid| wahid == hadha);
-        let li_windows = qaima.split(',').map(str::trim).any(|wahid| wahid == "windows");
+        let li_windows = qaima
+            .split(',')
+            .map(str::trim)
+            .any(|wahid| wahid == "windows");
         madakhil.push(MadkhalTashghil {
             tarteeb: miftah.parse::<u32>().unwrap_or(u32::MAX),
             tanfidhi,
@@ -969,7 +1036,10 @@ fn ikhtar_tashghil(
                 .filter(|muaamalat| !muaamalat.is_empty()),
             li_hadha,
             li_windows,
-            aam: madkhal.nass_bi_masar(&["config", "betakey"]).unwrap_or("").is_empty(),
+            aam: madkhal
+                .nass_bi_masar(&["config", "betakey"])
+                .unwrap_or("")
+                .is_empty(),
         });
     }
     madakhil.sort_by_key(|madkhal| madkhal.tarteeb);
@@ -978,17 +1048,24 @@ fn ikhtar_tashghil(
         .iter()
         .find(|madkhal| madkhal.li_hadha && madkhal.aam)
         .or_else(|| madakhil.iter().find(|madkhal| madkhal.li_hadha))
-        .or_else(|| madakhil.iter().find(|madkhal| madkhal.li_windows && madkhal.aam))
+        .or_else(|| {
+            madakhil
+                .iter()
+                .find(|madkhal| madkhal.li_windows && madkhal.aam)
+        })
         .or_else(|| madakhil.iter().find(|madkhal| madkhal.li_windows))
         .or_else(|| madakhil.first())?;
 
     // A game that declares no `oslist` at all and ships a `.exe` is a Windows
     // game whose store entry predates the field, and there are thousands of
     // them.
-    let windows =
-        mukhtar.li_windows || mukhtar.tanfidhi.to_ascii_lowercase().ends_with(".exe");
+    let windows = mukhtar.li_windows || mukhtar.tanfidhi.to_ascii_lowercase().ends_with(".exe");
 
-    Some((mukhtar.tanfidhi.to_owned(), mukhtar.muaamalat.map(str::to_owned), windows))
+    Some((
+        mukhtar.tanfidhi.to_owned(),
+        mukhtar.muaamalat.map(str::to_owned),
+        windows,
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -1018,7 +1095,7 @@ pub fn kharitat_tawafuq(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> BTreeMa
                 khata.injilizi,
             ));
             return kharita;
-        }
+        },
     };
 
     // The client has spelled this path `Valve` and `valve` in different builds,
@@ -1034,8 +1111,13 @@ pub fn kharitat_tawafuq(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> BTreeMa
     };
 
     for (miftah, madkhal) in mapping.kain().unwrap_or(&[]) {
-        let Ok(app) = miftah.parse::<u32>() else { continue };
-        let Some(ism) = madkhal.nass_bi_masar(&["name"]).filter(|ism| !ism.is_empty()) else {
+        let Ok(app) = miftah.parse::<u32>() else {
+            continue;
+        };
+        let Some(ism) = madkhal
+            .nass_bi_masar(&["name"])
+            .filter(|ism| !ism.is_empty())
+        else {
             continue;
         };
         let _ = kharita.insert(app, ism.to_owned());
@@ -1084,14 +1166,19 @@ impl MustakhdimSteam {
 pub fn mustakhdimun(jidhr: &Path) -> Vec<MustakhdimSteam> {
     let mut mustakhdimun: Vec<MustakhdimSteam> = Vec::new();
     let bayanat = jidhr.join("userdata");
-    let Ok(mudkhalat) = std::fs::read_dir(&bayanat) else { return mustakhdimun };
+    let Ok(mudkhalat) = std::fs::read_dir(&bayanat) else {
+        return mustakhdimun;
+    };
 
     for madkhal in mudkhalat.flatten() {
         let masar = madkhal.path();
         if !masar.is_dir() {
             continue;
         }
-        let Some(Ok(raqm)) = masar.file_name().and_then(|ism| ism.to_str()).map(str::parse::<u32>)
+        let Some(Ok(raqm)) = masar
+            .file_name()
+            .and_then(|ism| ism.to_str())
+            .map(str::parse::<u32>)
         else {
             continue;
         };
@@ -1122,8 +1209,12 @@ pub fn mustakhdimun(jidhr: &Path) -> Vec<MustakhdimSteam> {
     if let Ok(shajara) = iqra_vdf(&masar_dukhul) {
         let qaima = shajara.bi_masar(&["users"]).unwrap_or(&shajara);
         for (huwiya, hisab) in qaima.kain().unwrap_or(&[]) {
-            let Ok(kamila) = huwiya.parse::<u64>() else { continue };
-            let Ok(raqm) = u32::try_from(kamila.saturating_sub(ASAS_HUWIYA)) else { continue };
+            let Ok(kamila) = huwiya.parse::<u64>() else {
+                continue;
+            };
+            let Ok(raqm) = u32::try_from(kamila.saturating_sub(ASAS_HUWIYA)) else {
+                continue;
+            };
             let Some(mustakhdim) = mustakhdimun.iter_mut().find(|wahid| wahid.raqm == raqm) else {
                 continue;
             };
@@ -1186,20 +1277,18 @@ pub fn khiyarat_mustakhdimin(
                     khata.injilizi.clone(),
                 ));
                 continue;
-            }
+            },
         };
-        let Some(alaab) = shajara.bi_masar(&[
-            "UserLocalConfigStore",
-            "Software",
-            "Valve",
-            "Steam",
-            "apps",
-        ]) else {
+        let Some(alaab) =
+            shajara.bi_masar(&["UserLocalConfigStore", "Software", "Valve", "Steam", "apps"])
+        else {
             continue;
         };
 
         for (miftah, madkhal) in alaab.kain().unwrap_or(&[]) {
-            let Ok(app) = miftah.parse::<u32>() else { continue };
+            let Ok(app) = miftah.parse::<u32>() else {
+                continue;
+            };
             let wahid = KhiyaratApp {
                 khiyarat: madkhal
                     .nass_bi_masar(&["LaunchOptions"])
@@ -1290,7 +1379,11 @@ fn crc32(bayt: &[u8]) -> u32 {
     for wahid in bayt {
         qeema ^= u32::from(*wahid);
         for _ in 0..8 {
-            qeema = if qeema & 1 == 1 { (qeema >> 1) ^ 0xEDB8_8320 } else { qeema >> 1 };
+            qeema = if qeema & 1 == 1 {
+                (qeema >> 1) ^ 0xEDB8_8320
+            } else {
+                qeema >> 1
+            };
         }
     }
     !qeema
@@ -1329,12 +1422,16 @@ pub fn iqra_ikhtisarat(
                     khata.injilizi.clone(),
                 ));
                 continue;
-            }
+            },
         };
         let qaima = shajara.bi_masar(&["shortcuts"]).unwrap_or(&shajara);
 
         for (fahras, madkhal) in qaima.kain().unwrap_or(&[]) {
-            let ism = madkhal.nass_bi_masar(&["AppName"]).unwrap_or("").trim().to_owned();
+            let ism = madkhal
+                .nass_bi_masar(&["AppName"])
+                .unwrap_or("")
+                .trim()
+                .to_owned();
             let tanfidhi_khaam = madkhal.nass_bi_masar(&["Exe"]).unwrap_or("");
             let flatpak = madkhal
                 .nass_bi_masar(&["FlatpakAppID"])
@@ -1398,12 +1495,18 @@ pub fn iqra_ikhtisarat(
 
 /// Wraps a path as an artwork source when the file is actually there.
 fn sura_mahalliya(masar: PathBuf) -> Option<MasdarSura> {
-    if masar.is_file() { Some(MasdarSura::Malaf(masar)) } else { None }
+    if masar.is_file() {
+        Some(MasdarSura::Malaf(masar))
+    } else {
+        None
+    }
 }
 
 /// The first of these names that exists in this directory.
 fn awwal_mawjud<I: AsRef<Path>>(mujallad: &Path, asmaa: &[I]) -> Option<MasdarSura> {
-    asmaa.iter().find_map(|ism| sura_mahalliya(mujallad.join(ism)))
+    asmaa
+        .iter()
+        .find_map(|ism| sura_mahalliya(mujallad.join(ism)))
 }
 
 /// Fills an artwork slot, but only if it is still empty and only by running the
@@ -1430,13 +1533,19 @@ fn awwal_bi_badiya(mujallad: &Path, badiyat: &[&str]) -> Option<MasdarSura> {
             let Some(imtidad) = masar.extension().and_then(|imtidad| imtidad.to_str()) else {
                 return false;
             };
-            if !matches!(imtidad.to_ascii_lowercase().as_str(), "jpg" | "jpeg" | "png" | "webp") {
+            if !matches!(
+                imtidad.to_ascii_lowercase().as_str(),
+                "jpg" | "jpeg" | "png" | "webp"
+            ) {
                 return false;
             }
-            masar.file_name().and_then(|ism| ism.to_str()).is_some_and(|ism| {
-                let saghir = ism.to_ascii_lowercase();
-                badiyat.iter().any(|badiya| saghir.starts_with(badiya))
-            })
+            masar
+                .file_name()
+                .and_then(|ism| ism.to_str())
+                .is_some_and(|ism| {
+                    let saghir = ism.to_ascii_lowercase();
+                    badiyat.iter().any(|badiya| saghir.starts_with(badiya))
+                })
         })
         .collect();
     murashahat.sort();
@@ -1482,7 +1591,10 @@ pub fn suwar_app(
             )
         });
         imla(&mut suwar.shiar, || {
-            awwal_mawjud(&shabaka, &[format!("{app}_logo.png"), format!("{app}_logo.jpg")])
+            awwal_mawjud(
+                &shabaka,
+                &[format!("{app}_logo.png"), format!("{app}_logo.jpg")],
+            )
         });
     }
 
@@ -1494,10 +1606,15 @@ pub fn suwar_app(
         imla(&mut suwar.batl, || {
             awwal_mawjud(
                 &makhzan,
-                &[format!("{app}_library_hero.jpg"), format!("{app}_header.jpg")],
+                &[
+                    format!("{app}_library_hero.jpg"),
+                    format!("{app}_header.jpg"),
+                ],
             )
         });
-        imla(&mut suwar.shiar, || awwal_mawjud(&makhzan, &[format!("{app}_logo.png")]));
+        imla(&mut suwar.shiar, || {
+            awwal_mawjud(&makhzan, &[format!("{app}_logo.png")])
+        });
 
         let khass = makhzan.join(app.to_string());
         if khass.is_dir() {
@@ -1518,10 +1635,14 @@ pub fn suwar_app(
 
     if fi_al_matjar {
         imla(&mut suwar.ghilaf, || {
-            Some(MasdarSura::Rabt(format!("{RABT_SUWAR}/{app}/library_600x900.jpg")))
+            Some(MasdarSura::Rabt(format!(
+                "{RABT_SUWAR}/{app}/library_600x900.jpg"
+            )))
         });
         imla(&mut suwar.batl, || {
-            Some(MasdarSura::Rabt(format!("{RABT_SUWAR}/{app}/library_hero.jpg")))
+            Some(MasdarSura::Rabt(format!(
+                "{RABT_SUWAR}/{app}/library_hero.jpg"
+            )))
         });
         imla(&mut suwar.shiar, || {
             Some(MasdarSura::Rabt(format!("{RABT_SUWAR}/{app}/logo.png")))
@@ -1569,23 +1690,25 @@ fn beeat_app(
         // Proton writes `<unix time> <build name>` into this file when it
         // creates or upgrades the prefix, and it is the only record of which
         // build the files inside were actually made by.
-        isdar = std::fs::read_to_string(bayanat.join("version")).ok().and_then(|nass| {
-            nass.split_whitespace()
+        isdar = std::fs::read_to_string(bayanat.join("version"))
+            .ok()
+            .and_then(|nass| {
+                nass.split_whitespace()
                 .last()
                 // A file holding only the timestamp names no build, and the
                 // timestamp is not a version anybody could act on.
                 .filter(|wasm| !wasm.chars().all(|harf| harf.is_ascii_digit()))
                 .map(str::to_owned)
-        });
+            });
     }
 
     match crate::beea::hal_beea(&beea) {
-        Ok(maalumat) => {
-            BeeatTawafuq::Proton {
-                isdar: isdar.or(maalumat.isdar_wine).unwrap_or_else(|| "Proton".to_owned()),
-                beea: maalumat.jidhr,
-            }
-        }
+        Ok(maalumat) => BeeatTawafuq::Proton {
+            isdar: isdar
+                .or(maalumat.isdar_wine)
+                .unwrap_or_else(|| "Proton".to_owned()),
+            beea: maalumat.jidhr,
+        },
         Err(khata) => {
             // The prefix is there and the game does run through it, so the
             // environment is reported. What is lost is the drive map, and the
@@ -1599,7 +1722,7 @@ fn beeat_app(
                 isdar: isdar.unwrap_or_else(|| "Proton".to_owned()),
                 beea,
             }
-        }
+        },
     }
 }
 
@@ -1644,10 +1767,16 @@ fn waqt_rfc3339(thawani: i64) -> Option<String> {
     let fi_as_sana = fi_al_ahd - (365 * sana_fi_al_ahd + sana_fi_al_ahd / 4 - sana_fi_al_ahd / 100);
     let shahr_muzah = (5 * fi_as_sana + 2) / 153;
     let yawm = fi_as_sana - (153 * shahr_muzah + 2) / 5 + 1;
-    let shahr = if shahr_muzah < 10 { shahr_muzah + 3 } else { shahr_muzah - 9 };
+    let shahr = if shahr_muzah < 10 {
+        shahr_muzah + 3
+    } else {
+        shahr_muzah - 9
+    };
     let sana = if shahr <= 2 { sana + 1 } else { sana };
 
-    Some(format!("{sana:04}-{shahr:02}-{yawm:02}T{saa:02}:{daqiqa:02}:{thaniya:02}Z"))
+    Some(format!(
+        "{sana:04}-{shahr:02}-{yawm:02}T{saa:02}:{daqiqa:02}:{thaniya:02}Z"
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -1709,7 +1838,7 @@ fn luba_min_bayan(
                 khata.injilizi,
             ));
             return None;
-        }
+        },
     };
 
     if !jidhr_luba.is_dir() {
@@ -1729,18 +1858,20 @@ fn luba_min_bayan(
 
     let beea = beeat_app(maktaba, bayan.app, &siyaq.adaat, siyaq.nizam, tanbihat);
 
-    let mut simat = maalumat.map(|maalumat| maalumat.simat.clone()).unwrap_or_default();
+    let mut simat = maalumat
+        .map(|maalumat| maalumat.simat.clone())
+        .unwrap_or_default();
     match &beea {
         BeeatTawafuq::Proton { isdar, .. } => {
             simat.push(SimatLuba::TabaqatTawafuq(isdar.clone()));
-        }
+        },
         BeeatTawafuq::Asli | BeeatTawafuq::Wine { .. } | BeeatTawafuq::Rosetta => {
             if maalumat.is_some_and(|maalumat| maalumat.tawafuq_matlub)
                 && let Some(ada) = siyaq.adaat.get(&bayan.app).or_else(|| siyaq.adaat.get(&0))
             {
                 simat.push(SimatLuba::TabaqatTawafuq(ada.clone()));
             }
-        }
+        },
     }
 
     // Steam writes launch executables with Windows separators even in the
@@ -1797,9 +1928,7 @@ fn luba_min_ikhtisar(
 ) -> Option<LubaMuktashafa> {
     if !ikhtisar.jidhr.is_dir() {
         let sabab = ikhtisar.flatpak.as_ref().map_or_else(
-            || {
-                "this non-Steam shortcut points at a folder that is not there".to_owned()
-            },
+            || "this non-Steam shortcut points at a folder that is not there".to_owned(),
             |muarrif| {
                 format!(
                     "this non-Steam shortcut runs the Flatpak application {muarrif} and records no \
@@ -1814,8 +1943,13 @@ fn luba_min_ikhtisar(
     let mut beea = BeeatTawafuq::Asli;
     if siyaq.nizam == NizamTashghil::Linux {
         for maktaba in maktabat {
-            let muhtamal =
-                beeat_app(maktaba, ikhtisar.muarrif, &siyaq.adaat, siyaq.nizam, tanbihat);
+            let muhtamal = beeat_app(
+                maktaba,
+                ikhtisar.muarrif,
+                &siyaq.adaat,
+                siyaq.nizam,
+                tanbihat,
+            );
             if matches!(muhtamal, BeeatTawafuq::Proton { .. }) {
                 beea = muhtamal;
                 break;
@@ -1875,12 +2009,14 @@ fn bayanat_maktaba(
                 format!("cannot list this Steam library: {:?}", sabab.kind()),
             ));
             return bayanat;
-        }
+        },
     };
 
     for madkhal in mudkhalat.flatten() {
         let masar = madkhal.path();
-        let Some(ism) = masar.file_name().and_then(|ism| ism.to_str()) else { continue };
+        let Some(ism) = masar.file_name().and_then(|ism| ism.to_str()) else {
+            continue;
+        };
         let saghir = ism.to_ascii_lowercase();
         let imtidad_acf = Path::new(&saghir)
             .extension()
@@ -1915,7 +2051,11 @@ impl Matjar for MatjarSteam {
     }
 
     fn manassat_maduma(&self) -> &'static [NizamTashghil] {
-        &[NizamTashghil::Windows, NizamTashghil::Linux, NizamTashghil::Mac]
+        &[
+            NizamTashghil::Windows,
+            NizamTashghil::Linux,
+            NizamTashghil::Mac,
+        ]
     }
 
     /// Where Steam is.
@@ -1929,7 +2069,9 @@ impl Matjar for MatjarSteam {
         if let Some(tajawuz) = siyaq.manassat.steam.as_ref() {
             return Some(tajawuz.clone());
         }
-        murashahat(siyaq).into_iter().find(|murashah| jidhr_salih(murashah))
+        murashahat(siyaq)
+            .into_iter()
+            .find(|murashah| jidhr_salih(murashah))
     }
 
     fn ifhas(&self, siyaq: &SiyaqFahs) -> Natija<NatijatMatjar> {
@@ -2002,9 +2144,12 @@ impl Matjar for MatjarSteam {
 
         let mut alaab: Vec<LubaMuktashafa> = Vec::with_capacity(bayanat.len());
         for (fahras, masar, bayan) in &bayanat {
-            let Some(maktaba) = maktabat.get(*fahras) else { continue };
-            let Some(siyaq_steam) =
-                jidhr_maktaba.get(*fahras).and_then(|fahras_jidhr| siyaqat.get(*fahras_jidhr))
+            let Some(maktaba) = maktabat.get(*fahras) else {
+                continue;
+            };
+            let Some(siyaq_steam) = jidhr_maktaba
+                .get(*fahras)
+                .and_then(|fahras_jidhr| siyaqat.get(*fahras_jidhr))
             else {
                 continue;
             };
@@ -2052,19 +2197,27 @@ impl Matjar for MatjarSteam {
     }
 
     fn judhur_muraqaba(&self, siyaq: &SiyaqFahs) -> Vec<PathBuf> {
-        let Ok(judhur_steam) = hall_judhur(siyaq) else { return Vec::new() };
+        let Ok(judhur_steam) = hall_judhur(siyaq) else {
+            return Vec::new();
+        };
         let mut mahmal: Vec<TanbihFahs> = Vec::new();
         let mut judhur: Vec<PathBuf> = Vec::new();
 
         for jidhr in &judhur_steam {
             judhur.extend(
-                maktabat(jidhr, &mut mahmal).into_iter().map(|maktaba| maktaba.steamapps),
+                maktabat(jidhr, &mut mahmal)
+                    .into_iter()
+                    .map(|maktaba| maktaba.steamapps),
             );
             // The config directory carries the compatibility tool mapping, and
             // each account's directory carries its launch options and its
             // shortcuts — all three change without any manifest changing.
             judhur.push(jidhr.join("config"));
-            judhur.extend(mustakhdimun(jidhr).into_iter().map(|mustakhdim| mustakhdim.tahyia()));
+            judhur.extend(
+                mustakhdimun(jidhr)
+                    .into_iter()
+                    .map(|mustakhdim| mustakhdim.tahyia()),
+            );
         }
 
         judhur.retain(|masar| masar.is_dir());
@@ -2073,7 +2226,6 @@ impl Matjar for MatjarSteam {
         judhur
     }
 }
-
 
 #[cfg(test)]
 mod ikhtibarat {
@@ -2112,7 +2264,12 @@ mod ikhtibarat {
     }
 
     fn jidhr_hawiya(manzil: &Path) -> PathBuf {
-        manzil.join(".var").join("app").join("com.valvesoftware.Steam").join("data").join("Steam")
+        manzil
+            .join(".var")
+            .join("app")
+            .join("com.valvesoftware.Steam")
+            .join("data")
+            .join("Steam")
     }
 
     #[test]
@@ -2150,7 +2307,11 @@ mod ikhtibarat {
         ansha_jidhr(&hawiya, 400, "Portal")?;
 
         let judhur = hall_judhur(&siyaq(manzil.path()))?;
-        assert_eq!(judhur.len(), 2, "the native and the Flatpak root are both Steam roots");
+        assert_eq!(
+            judhur.len(),
+            2,
+            "the native and the Flatpak root are both Steam roots"
+        );
 
         let natija = MatjarSteam.ifhas(&siyaq(manzil.path()))?;
         let mut asmaa: Vec<&str> = natija.alaab.iter().map(|luba| luba.ism.as_str()).collect();
@@ -2181,7 +2342,11 @@ mod ikhtibarat {
         )?;
 
         let natija = MatjarSteam.ifhas(&siyaq(manzil.path()))?;
-        assert_eq!(natija.alaab.len(), 1, "one game, however many clients list its library");
+        assert_eq!(
+            natija.alaab.len(),
+            1,
+            "one game, however many clients list its library"
+        );
         Ok(())
     }
 
@@ -2225,8 +2390,10 @@ mod ikhtibarat {
             PathBuf::from(r"D:\Program Files"),
         ];
         let murashahat = murashahat(&siyaq_windows(manzil.path(), &baramij));
-        let mutawaqqa: Vec<PathBuf> =
-            baramij.iter().map(|mujallad| mujallad.join("Steam")).collect();
+        let mutawaqqa: Vec<PathBuf> = baramij
+            .iter()
+            .map(|mujallad| mujallad.join("Steam"))
+            .collect();
 
         // Everything past the registry's own answers, compared whole rather
         // than by suffix: a literal `C:\Program Files\Steam` left beside these

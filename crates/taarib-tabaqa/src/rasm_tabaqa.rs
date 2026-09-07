@@ -404,11 +404,17 @@ fn qita_lawh(
     // `qalam_s` alone put the plate at the left of the box while the glyphs were
     // drawn at the right, which is a plate covering the wrong half of the
     // original text.
-    let (bidaya, nihaya) = takhtit.sutur.iter().fold((f32::MAX, f32::MIN), |(adna, aqsa), satr| {
-        (adna.min(satr.bidaya), aqsa.max(satr.bidaya + satr.ard))
-    });
-    let (bidaya, nihaya) =
-        if bidaya <= nihaya { (bidaya, nihaya) } else { (0.0, takhtit.ard) };
+    let (bidaya, nihaya) = takhtit
+        .sutur
+        .iter()
+        .fold((f32::MAX, f32::MIN), |(adna, aqsa), satr| {
+            (adna.min(satr.bidaya), aqsa.max(satr.bidaya + satr.ard))
+        });
+    let (bidaya, nihaya) = if bidaya <= nihaya {
+        (bidaya, nihaya)
+    } else {
+        (0.0, takhtit.ard)
+    };
 
     let lil_nass = MustatilBiksel {
         yasar: ila_biksel(qalam_s + bidaya - hamish),
@@ -429,13 +435,25 @@ fn qita_lawh(
 /// of them over the same pixels is that colour applied twice — a darker band
 /// wherever they overlap, which is exactly where the text is.
 const fn ittihad(awwal: MustatilBiksel, thani: MustatilBiksel) -> MustatilBiksel {
-    let yasar = if awwal.yasar < thani.yasar { awwal.yasar } else { thani.yasar };
-    let aala = if awwal.aala < thani.aala { awwal.aala } else { thani.aala };
+    let yasar = if awwal.yasar < thani.yasar {
+        awwal.yasar
+    } else {
+        thani.yasar
+    };
+    let aala = if awwal.aala < thani.aala {
+        awwal.aala
+    } else {
+        thani.aala
+    };
     let yameen_a = awwal.yasar.saturating_add(awwal.ard);
     let yameen_b = thani.yasar.saturating_add(thani.ard);
     let asfal_a = awwal.aala.saturating_add(awwal.irtifa);
     let asfal_b = thani.aala.saturating_add(thani.irtifa);
-    let yameen = if yameen_a > yameen_b { yameen_a } else { yameen_b };
+    let yameen = if yameen_a > yameen_b {
+        yameen_a
+    } else {
+        yameen_b
+    };
     let asfal = if asfal_a > asfal_b { asfal_a } else { asfal_b };
     MustatilBiksel {
         yasar,
@@ -456,7 +474,11 @@ const fn ittihad(awwal: MustatilBiksel, thani: MustatilBiksel) -> MustatilBiksel
 #[must_use]
 pub fn qita_musmata(nisbi: MustatilNisbi, sath: WasfSath, lawn: [u8; 4]) -> Option<QitaRasm> {
     let mawdi = nisbi.fi_bikselat(sath.ard, sath.irtifa)?;
-    Some(QitaRasm { mawdi, khareeta: None, lawn: AlwanTabaqa::ila_khatti(lawn) })
+    Some(QitaRasm {
+        mawdi,
+        khareeta: None,
+        lawn: AlwanTabaqa::ila_khatti(lawn),
+    })
 }
 
 /// A hollow rectangle as four solid edges.
@@ -485,7 +507,10 @@ pub fn qitaat_itar(
     // translucent outline are visibly darker squares at each corner, which is a
     // defect a reviewer would have to look for and a player would see at once.
     qitaat.push(QitaRasm {
-        mawdi: MustatilBiksel { irtifa: sumk, ..mawdi },
+        mawdi: MustatilBiksel {
+            irtifa: sumk,
+            ..mawdi
+        },
         khareeta: None,
         lawn: khatti,
     });
@@ -501,7 +526,12 @@ pub fn qitaat_itar(
     if dakhil_irtifa > 0 {
         let aala = mawdi.aala.saturating_add(sumk);
         qitaat.push(QitaRasm {
-            mawdi: MustatilBiksel { aala, ard: sumk, irtifa: dakhil_irtifa, ..mawdi },
+            mawdi: MustatilBiksel {
+                aala,
+                ard: sumk,
+                irtifa: dakhil_irtifa,
+                ..mawdi
+            },
             khareeta: None,
             lawn: khatti,
         });
@@ -536,7 +566,10 @@ impl BaniDufa {
     /// A builder for one surface.
     #[must_use]
     pub const fn jadeed(sath: WasfSath) -> Self {
-        Self { sath, qitaat: Vec::new() }
+        Self {
+            sath,
+            qitaat: Vec::new(),
+        }
     }
 
     /// The surface this batch is being built for.
@@ -582,7 +615,10 @@ impl BaniDufa {
                     && qita.mawdi.aala < irtifa
             })
             .collect();
-        LawhatRasm { qitaat, sath: self.sath }
+        LawhatRasm {
+            qitaat,
+            sath: self.sath,
+        }
     }
 }
 

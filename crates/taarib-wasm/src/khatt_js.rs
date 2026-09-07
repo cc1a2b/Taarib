@@ -105,7 +105,9 @@ impl TaaribKhatt {
     /// and the next action as properties.
     pub fn min_bayt(bayt: Vec<u8>, fahras: u32) -> Result<Self, JsValue> {
         let mawrid = khata_js::min_natija(MawridKhatt::jadeed(Arc::new(bayt), fahras))?;
-        Ok(Self { khatt: Arc::new(mawrid) })
+        Ok(Self {
+            khatt: Arc::new(mawrid),
+        })
     }
 
     /// Loads a font from bytes without the Arabic check.
@@ -121,7 +123,9 @@ impl TaaribKhatt {
     /// index is past the end of a collection.
     pub fn min_bayt_latini(bayt: Vec<u8>, fahras: u32) -> Result<Self, JsValue> {
         let mawrid = khata_js::min_natija(MawridKhatt::jadeed_latini(Arc::new(bayt), fahras))?;
-        Ok(Self { khatt: Arc::new(mawrid) })
+        Ok(Self {
+            khatt: Arc::new(mawrid),
+        })
     }
 
     /// The family name, preferring the typographic family the designer meant
@@ -167,7 +171,9 @@ impl TaaribKhatt {
     /// out of `GSUB` during shaping. An empty string is covered by nothing.
     #[must_use]
     pub fn yughatti(&self, harf: &str) -> bool {
-        harf.chars().next().is_some_and(|awwal| self.khatt.yughatti(awwal))
+        harf.chars()
+            .next()
+            .is_some_and(|awwal| self.khatt.yughatti(awwal))
     }
 
     /// A second handle to the same font — a reference count, not a second
@@ -178,7 +184,9 @@ impl TaaribKhatt {
     /// chain a clone and keeps the original.
     #[must_use]
     pub fn istinsakh(&self) -> Self {
-        Self { khatt: Arc::clone(&self.khatt) }
+        Self {
+            khatt: Arc::clone(&self.khatt),
+        }
     }
 }
 
@@ -236,6 +244,8 @@ impl TaaribSilsila {
     /// end.
     #[must_use]
     pub fn aila(&self, fahras: u8) -> Option<String> {
-        self.silsila.khatt(fahras).map(|khatt| khatt.aila().to_owned())
+        self.silsila
+            .khatt(fahras)
+            .map(|khatt| khatt.aila().to_owned())
     }
 }

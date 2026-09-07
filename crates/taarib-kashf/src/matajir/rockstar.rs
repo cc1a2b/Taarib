@@ -151,9 +151,18 @@ const ASMAA_MUSTATHNAA: [&str; 7] = [
 /// it is what the launcher itself runs, and running the raw binary instead
 /// skips the entitlement check and produces a game that closes on startup.
 const TANFIDHIYAT: [(&str, &[&str]); 13] = [
-    ("grandtheftautov", &["PlayGTAV.exe", "GTA5.exe", "GTAVLauncher.exe"]),
-    ("grandtheftautovenhanced", &["PlayGTAV.exe", "GTA5_Enhanced.exe", "GTA5.exe"]),
-    ("grandtheftautoiv", &["PlayGTAIV.exe", "GTAIV.exe", "LaunchGTAIV.exe"]),
+    (
+        "grandtheftautov",
+        &["PlayGTAV.exe", "GTA5.exe", "GTAVLauncher.exe"],
+    ),
+    (
+        "grandtheftautovenhanced",
+        &["PlayGTAV.exe", "GTA5_Enhanced.exe", "GTA5.exe"],
+    ),
+    (
+        "grandtheftautoiv",
+        &["PlayGTAIV.exe", "GTAIV.exe", "LaunchGTAIV.exe"],
+    ),
     (
         "grandtheftautoiiidefinitiveedition",
         &["Gameface/Binaries/Win64/LibertyCity.exe", "PlayGTAIII.exe"],
@@ -191,8 +200,10 @@ const JAMAI_ONLINE: [&str; 6] = [
 /// Enhanced release carries it too. Naming it here lets the interface warn
 /// before the user clicks; Phase 16 still refuses on its own evidence, and this
 /// only makes the refusal immediate.
-const HIMAYAT: [(&str, &str); 2] =
-    [("grandtheftautov", "BattlEye"), ("grandtheftautovenhanced", "BattlEye")];
+const HIMAYAT: [(&str, &str); 2] = [
+    ("grandtheftautov", "BattlEye"),
+    ("grandtheftautovenhanced", "BattlEye"),
+];
 
 /// How many files are examined at an install root when the executable table
 /// does not know the title.
@@ -293,7 +304,11 @@ impl Matjar for MatjarRockstar {
             // folder that exists is still the user saying the launcher is here,
             // which `mawqi` honours; so this answers "installed, unreadable"
             // rather than contradicting it with "not installed".
-            let tajawuz = siyaq.manassat.rockstar.clone().filter(|masar| masar.is_dir());
+            let tajawuz = siyaq
+                .manassat
+                .rockstar
+                .clone()
+                .filter(|masar| masar.is_dir());
             let Some(tajawuz) = tajawuz else {
                 return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
             };
@@ -307,8 +322,7 @@ impl Matjar for MatjarRockstar {
             ));
         }
 
-        let mut natija =
-            NatijatMatjar::muthabbat(MUARRIF, mushghil.filter(|masar| masar.is_dir()));
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, mushghil.filter(|masar| masar.is_dir()));
 
         let mut fahras: BTreeMap<u32, LubaMuktashafa> = BTreeMap::new();
         for madkhal in madakhil {
@@ -319,7 +333,9 @@ impl Matjar for MatjarRockstar {
         }
 
         natija.alaab = fahras.into_values().collect();
-        natija.alaab.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
+        natija
+            .alaab
+            .sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
         natija.muddat = bidaya.elapsed();
         Ok(natija)
     }
@@ -714,7 +730,10 @@ fn tanfidhi_mustanbat(jidhr: &Path, nizam: NizamTashghil) -> Option<PathBuf> {
         if !mutabiq {
             continue;
         }
-        let Some(ism) = masar.file_stem().and_then(|ism| ism.to_str()).map(str::to_lowercase)
+        let Some(ism) = masar
+            .file_stem()
+            .and_then(|ism| ism.to_str())
+            .map(str::to_lowercase)
         else {
             continue;
         };
@@ -762,7 +781,11 @@ fn masar_dakhili(jidhr: &Path, nisbi: &str) -> Option<PathBuf> {
 fn muwahhad(masar: &Path, nizam: NizamTashghil) -> String {
     let nass = masar.to_string_lossy().replace('\\', "/");
     let nass = nass.trim_end_matches('/').to_owned();
-    if nizam.hassas_lil_ahruf() { nass } else { nass.to_lowercase() }
+    if nizam.hassas_lil_ahruf() {
+        nass
+    } else {
+        nass.to_lowercase()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -788,8 +811,12 @@ mod sijill {
     const ISM_MUSHGHIL: &str = "Launcher";
 
     /// Value names that may carry an installation directory, best first.
-    const QEEM_MASAR: [&str; 4] =
-        ["InstallFolder", "InstallLocation", "InstallDir", "Install Folder"];
+    const QEEM_MASAR: [&str; 4] = [
+        "InstallFolder",
+        "InstallLocation",
+        "InstallDir",
+        "Install Folder",
+    ];
 
     /// Value names that may carry a version string.
     const QEEM_ISDAR: [&str; 4] = ["Version", "PatchVersion", "InstalledVersion", "GameVersion"];
@@ -822,11 +849,31 @@ mod sijill {
     /// per-user key that must not win.
     fn masarat() -> [(HKEY, &'static str, REG_SAM_FLAGS); 5] {
         [
-            (HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Rockstar Games", KEY_WOW64_64KEY),
-            (HKEY_LOCAL_MACHINE, r"SOFTWARE\Rockstar Games", KEY_WOW64_32KEY),
-            (HKEY_LOCAL_MACHINE, r"SOFTWARE\Rockstar Games", KEY_WOW64_64KEY),
-            (HKEY_CURRENT_USER, r"Software\WOW6432Node\Rockstar Games", KEY_WOW64_64KEY),
-            (HKEY_CURRENT_USER, r"Software\Rockstar Games", KEY_WOW64_64KEY),
+            (
+                HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\WOW6432Node\Rockstar Games",
+                KEY_WOW64_64KEY,
+            ),
+            (
+                HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Rockstar Games",
+                KEY_WOW64_32KEY,
+            ),
+            (
+                HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Rockstar Games",
+                KEY_WOW64_64KEY,
+            ),
+            (
+                HKEY_CURRENT_USER,
+                r"Software\WOW6432Node\Rockstar Games",
+                KEY_WOW64_64KEY,
+            ),
+            (
+                HKEY_CURRENT_USER,
+                r"Software\Rockstar Games",
+                KEY_WOW64_64KEY,
+            ),
         ]
     }
 
@@ -877,7 +924,13 @@ mod sijill {
         // SAFETY: `ism_w` is a live, null-terminated wide string for the whole
         // call, `walid.0` is an open key, and `miftah` is a live out-parameter.
         let natija = unsafe {
-            RegOpenKeyExW(walid.0, PCWSTR(ism_w.as_ptr()), None, KEY_READ | ruya, &raw mut miftah)
+            RegOpenKeyExW(
+                walid.0,
+                PCWSTR(ism_w.as_ptr()),
+                None,
+                KEY_READ | ruya,
+                &raw mut miftah,
+            )
         };
         (natija == ERROR_SUCCESS).then_some(Miftah(miftah))
     }
@@ -993,8 +1046,13 @@ mod sijill {
             .filter_map(|juz| <[u8; 2]>::try_from(juz).ok())
             .map(u16::from_le_bytes)
             .collect();
-        let tul = harfiyat.iter().position(|harf| *harf == 0).unwrap_or(harfiyat.len());
-        let nass = String::from_utf16_lossy(harfiyat.get(..tul)?).trim().to_owned();
+        let tul = harfiyat
+            .iter()
+            .position(|harf| *harf == 0)
+            .unwrap_or(harfiyat.len());
+        let nass = String::from_utf16_lossy(harfiyat.get(..tul)?)
+            .trim()
+            .to_owned();
         (!nass.is_empty()).then_some(nass)
     }
 
@@ -1003,7 +1061,9 @@ mod sijill {
     fn qeema_raqm(miftah: &Miftah, ism: &str) -> Option<u32> {
         let (naw, bayt) = qeema_khaam(miftah, ism)?;
         if naw == REG_DWORD {
-            let arbaa = bayt.get(..4).and_then(|juz| <[u8; 4]>::try_from(juz).ok())?;
+            let arbaa = bayt
+                .get(..4)
+                .and_then(|juz| <[u8; 4]>::try_from(juz).ok())?;
             return Some(u32::from_le_bytes(arbaa));
         }
         qeema_nass(miftah, ism)?.trim().parse::<u32>().ok()

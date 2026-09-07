@@ -188,7 +188,9 @@ impl Matjar for MatjarBattleNet {
         if let Some(tajawuz) = siyaq.manassat.battlenet.as_ref() {
             return Some(tajawuz.clone());
         }
-        Self::judhur_muhtamala(siyaq).into_iter().find(|jidhr| fahras_fih(jidhr).is_file())
+        Self::judhur_muhtamala(siyaq)
+            .into_iter()
+            .find(|jidhr| fahras_fih(jidhr).is_file())
     }
 
     /// # Errors
@@ -329,7 +331,10 @@ struct KhataBrutu {
 
 impl KhataBrutu {
     fn jadeed(mawdi: usize, tafsil: impl Into<String>) -> Self {
-        Self { mawdi: u64::try_from(mawdi).unwrap_or(u64::MAX), tafsil: tafsil.into() }
+        Self {
+            mawdi: u64::try_from(mawdi).unwrap_or(u64::MAX),
+            tafsil: tafsil.into(),
+        }
     }
 }
 
@@ -358,7 +363,10 @@ impl NawHaql {
                 mawdi,
                 "protobuf group markers (wire types 3 and 4) are not used by product.db",
             )),
-            akhar => Err(KhataBrutu::jadeed(mawdi, format!("unknown protobuf wire type {akhar}"))),
+            akhar => Err(KhataBrutu::jadeed(
+                mawdi,
+                format!("unknown protobuf wire type {akhar}"),
+            )),
         }
     }
 }
@@ -389,7 +397,10 @@ impl<'a> QariBrutu<'a> {
         let mut izaha: u32 = 0u32;
         for _ in 0..AQSA_TUL_VARINT {
             let Some(bayt) = self.bayt.get(self.mawdi).copied() else {
-                return Err(KhataBrutu::jadeed(bidaya, "file ends in the middle of a varint"));
+                return Err(KhataBrutu::jadeed(
+                    bidaya,
+                    "file ends in the middle of a varint",
+                ));
             };
             self.mawdi = self.mawdi.saturating_add(1);
             let juz = u64::from(bayt & 0x7F);
@@ -402,7 +413,10 @@ impl<'a> QariBrutu<'a> {
             }
             izaha = izaha.saturating_add(7);
         }
-        Err(KhataBrutu::jadeed(bidaya, "varint runs past ten bytes without terminating"))
+        Err(KhataBrutu::jadeed(
+            bidaya,
+            "varint runs past ten bytes without terminating",
+        ))
     }
 
     /// Reads a field tag: the field number and its wire type.
@@ -413,7 +427,10 @@ impl<'a> QariBrutu<'a> {
         let raqm = u32::try_from(tag >> 3)
             .map_err(|_| KhataBrutu::jadeed(bidaya, "protobuf field number exceeds 32 bits"))?;
         if raqm == 0 {
-            return Err(KhataBrutu::jadeed(bidaya, "protobuf field number 0 is not valid"));
+            return Err(KhataBrutu::jadeed(
+                bidaya,
+                "protobuf field number 0 is not valid",
+            ));
         }
         Ok((raqm, naw))
     }
@@ -651,7 +668,13 @@ fn iqra_maalumat_bina(nass: &str) -> Option<MaalumatBina> {
     let tarwisa: Vec<String> = sutur
         .next()?
         .split('|')
-        .map(|amud| amud.split('!').next().unwrap_or(amud).trim().to_ascii_lowercase())
+        .map(|amud| {
+            amud.split('!')
+                .next()
+                .unwrap_or(amud)
+                .trim()
+                .to_ascii_lowercase()
+        })
         .collect();
 
     let mut awwal: Option<MaalumatBina> = None;
@@ -722,9 +745,10 @@ fn luba_min_sijill(
         .as_ref()
         .and_then(|maalumat| maalumat.far.clone())
         .or_else(|| sijill.far.clone());
-    if let (Some(min_bina), Some(min_brutu)) =
-        (bina.as_ref().and_then(|maalumat| maalumat.far.as_ref()), sijill.far.as_ref())
-        && min_bina != min_brutu
+    if let (Some(min_bina), Some(min_brutu)) = (
+        bina.as_ref().and_then(|maalumat| maalumat.far.as_ref()),
+        sijill.far.as_ref(),
+    ) && min_bina != min_brutu
     {
         tanbihat.push(TanbihFahs::jadeed(
             MUARRIF,
@@ -743,7 +767,9 @@ fn luba_min_sijill(
 
     let mut simat = Vec::new();
     if RUMUZ_GHAYR_LUBA.contains(&ramz.as_str()) {
-        simat.push(SimatLuba::LaysatLuba("Battle.net client component".to_owned()));
+        simat.push(SimatLuba::LaysatLuba(
+            "Battle.net client component".to_owned(),
+        ));
     }
 
     // The tag column carries the platform and locale of the installed build —
@@ -752,13 +778,16 @@ fn luba_min_sijill(
     // identifier rather than becoming a trait, because it describes the build,
     // not the game.
     let wusum = bina.as_ref().and_then(|maalumat| maalumat.wusum.clone());
-    let bina_manassa =
-        match (bina.as_ref().and_then(|maalumat| maalumat.isdar.clone()), far.as_ref(), wusum) {
-            (Some(isdar), Some(far), Some(wusum)) => Some(format!("{far}:{isdar}:{wusum}")),
-            (Some(isdar), Some(far), None) => Some(format!("{far}:{isdar}")),
-            (Some(isdar), None, _) => Some(isdar),
-            (None, _, _) => None,
-        };
+    let bina_manassa = match (
+        bina.as_ref().and_then(|maalumat| maalumat.isdar.clone()),
+        far.as_ref(),
+        wusum,
+    ) {
+        (Some(isdar), Some(far), Some(wusum)) => Some(format!("{far}:{isdar}:{wusum}")),
+        (Some(isdar), Some(far), None) => Some(format!("{far}:{isdar}")),
+        (Some(isdar), None, _) => Some(isdar),
+        (None, _, _) => None,
+    };
 
     Some(LubaMuktashafa {
         masdar: MasdarLuba::BattleNet(ramz),
@@ -821,7 +850,10 @@ mod ikhtibarat {
         // macOS keeps the Agent at a fixed absolute path and consults no
         // variable at all, so it is unaffected by the field being absent.
         let mac = SiyaqFahs::lil_ikhtibar(NizamTashghil::Mac, masrah.path());
-        assert_eq!(MatjarBattleNet::judhur_muhtamala(&mac), vec![PathBuf::from(JIDHR_MAC)]);
+        assert_eq!(
+            MatjarBattleNet::judhur_muhtamala(&mac),
+            vec![PathBuf::from(JIDHR_MAC)]
+        );
         Ok(())
     }
 

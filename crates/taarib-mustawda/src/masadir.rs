@@ -60,7 +60,10 @@ const AMAL_HALL: &str = "resolving a path inside a local registry source";
 
 /// The `User-Agent` every request carries.
 fn wakil() -> String {
-    format!("Taarib/{} (+https://github.com/cc1a2b/taarib)", taarib_usus::ISDAR)
+    format!(
+        "Taarib/{} (+https://github.com/cc1a2b/taarib)",
+        taarib_usus::ISDAR
+    )
 }
 
 /// The repository path of one shard: `sharaih/{raqm:02x}.json`.
@@ -171,10 +174,10 @@ impl MasdarMustawda {
         match self {
             Self::Shabaka { jidhr } | Self::Mira { jidhr } => {
                 jalb_shabaki(amil, jidhr, nisbi).await
-            }
+            },
             Self::MujalladMahalli { jidhr } | Self::MushtarakShabaki { jidhr } => {
                 jalb_min_qurs(jidhr, nisbi).await
-            }
+            },
         }
     }
 }
@@ -192,7 +195,10 @@ impl SilsilatMasadir {
     /// Builds a chain that tries `masadir` in the order given.
     #[must_use]
     pub fn jadida(masadir: Vec<MasdarMustawda>) -> Self {
-        Self { masadir, amil: OnceCell::new() }
+        Self {
+            masadir,
+            amil: OnceCell::new(),
+        }
     }
 
     /// Builds a chain of one source.
@@ -219,7 +225,10 @@ impl SilsilatMasadir {
         // Cannot fail: the cell was created one line above and nothing else can
         // reach it yet, so there is no race and no previous value to reject.
         let _ = khazina.set(amil);
-        Self { masadir, amil: khazina }
+        Self {
+            masadir,
+            amil: khazina,
+        }
     }
 
     /// The sources, in the order they are tried.
@@ -263,7 +272,7 @@ impl SilsilatMasadir {
                         Ok(amil) => jalb_shabaki(amil, jidhr, nisbi).await,
                         Err(khata) => Err(khata),
                     }
-                }
+                },
                 MasdarMustawda::MujalladMahalli { jidhr }
                 | MasdarMustawda::MushtarakShabaki { jidhr } => jalb_min_qurs(jidhr, nisbi).await,
             };
@@ -272,11 +281,11 @@ impl SilsilatMasadir {
                 Ok(bayt) => {
                     tracing::debug!(masdar = %wasf, nisbi, hajm = bayt.len(), "source answered");
                     return Ok((bayt, wasf));
-                }
+                },
                 Err(khata) => {
                     tracing::debug!(masdar = %wasf, nisbi, khata = %khata, "source refused");
                     akhir = format!("{wasf}: {khata}");
-                }
+                },
             }
         }
 
@@ -320,7 +329,9 @@ pub async fn qira_mahdouda(masar: &Path) -> NatijatMustawda<Vec<u8>> {
         )));
     }
     if bayanat.len() > HADD_HAJM_ISTIJABA {
-        return Err(KhataMustawda::HajmMufrit { muallan: HADD_HAJM_ISTIJABA });
+        return Err(KhataMustawda::HajmMufrit {
+            muallan: HADD_HAJM_ISTIJABA,
+        });
     }
 
     let saa = usize::try_from(bayanat.len()).unwrap_or(0);
@@ -329,7 +340,9 @@ pub async fn qira_mahdouda(masar: &Path) -> NatijatMustawda<Vec<u8>> {
     let _ = mahdud.read_to_end(&mut bayt).await.map_err(khata_malaf)?;
 
     if u64::try_from(bayt.len()).unwrap_or(u64::MAX) > HADD_HAJM_ISTIJABA {
-        return Err(KhataMustawda::HajmMufrit { muallan: HADD_HAJM_ISTIJABA });
+        return Err(KhataMustawda::HajmMufrit {
+            muallan: HADD_HAJM_ISTIJABA,
+        });
     }
     Ok(bayt)
 }
@@ -343,30 +356,47 @@ async fn jalb_shabaki(
     let rabt = rabt_kamil(jidhr, nisbi)?;
     let nass = rabt.to_string();
 
-    let mut radd = amil.get(rabt).send().await.map_err(|khata| KhataMustawda::TanzeelFashil {
-        rabt: nass.clone(),
-        sabab: khata.to_string(),
-    })?;
+    let mut radd = amil
+        .get(rabt)
+        .send()
+        .await
+        .map_err(|khata| KhataMustawda::TanzeelFashil {
+            rabt: nass.clone(),
+            sabab: khata.to_string(),
+        })?;
 
     let hala = radd.status();
     if !hala.is_success() {
-        return Err(KhataMustawda::IstijabaFashila { rabt: nass, ramz: hala.as_u16() });
+        return Err(KhataMustawda::IstijabaFashila {
+            rabt: nass,
+            ramz: hala.as_u16(),
+        });
     }
-    if radd.content_length().is_some_and(|muallan| muallan > HADD_HAJM_ISTIJABA) {
-        return Err(KhataMustawda::HajmMufrit { muallan: HADD_HAJM_ISTIJABA });
+    if radd
+        .content_length()
+        .is_some_and(|muallan| muallan > HADD_HAJM_ISTIJABA)
+    {
+        return Err(KhataMustawda::HajmMufrit {
+            muallan: HADD_HAJM_ISTIJABA,
+        });
     }
 
     let mut bayt: Vec<u8> = Vec::new();
     loop {
-        let qita = radd.chunk().await.map_err(|khata| KhataMustawda::TanzeelFashil {
-            rabt: nass.clone(),
-            sabab: khata.to_string(),
-        })?;
+        let qita = radd
+            .chunk()
+            .await
+            .map_err(|khata| KhataMustawda::TanzeelFashil {
+                rabt: nass.clone(),
+                sabab: khata.to_string(),
+            })?;
         let Some(qita) = qita else { break };
 
         let majmu = u64::try_from(bayt.len().saturating_add(qita.len())).unwrap_or(u64::MAX);
         if majmu > HADD_HAJM_ISTIJABA {
-            return Err(KhataMustawda::HajmMufrit { muallan: HADD_HAJM_ISTIJABA });
+            return Err(KhataMustawda::HajmMufrit {
+                muallan: HADD_HAJM_ISTIJABA,
+            });
         }
         bayt.extend_from_slice(&qita);
     }

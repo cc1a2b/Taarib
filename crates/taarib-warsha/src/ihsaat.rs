@@ -14,8 +14,7 @@ use taarib_mustalahat::ruqaa::TareeqaTarjama;
 /// string's method is optional: work done before a method was recorded is
 /// still work, and folding it into any real method would misstate all three.
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
-    serde::Serialize, serde::Deserialize,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum TareeqaIhsa {
@@ -31,8 +30,12 @@ pub enum TareeqaIhsa {
 
 impl TareeqaIhsa {
     /// Every bucket, in the order the rendered table walks them.
-    pub const KUL: [Self; 4] =
-        [Self::Bashariya, Self::AaliyaThumBashariya, Self::AaliyaFaqat, Self::GhayrMusajjala];
+    pub const KUL: [Self; 4] = [
+        Self::Bashariya,
+        Self::AaliyaThumBashariya,
+        Self::AaliyaFaqat,
+        Self::GhayrMusajjala,
+    ];
 
     /// The bucket a string's recorded method lands in.
     #[must_use]
@@ -73,9 +76,7 @@ impl TareeqaIhsa {
 /// Every number is a count of recorded transitions, so a string a person
 /// drafted twice counts twice: the credit line credits work done, and the
 /// history is the record of the work.
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AdadAamal {
     /// Transitions into [`HalatMuraja::Musawwada`] — drafts and edits.
     pub tarjamat: u64,
@@ -107,11 +108,9 @@ impl AdadAamal {
             HalatMuraja::Muakkada => {
                 self.murajaat = self.murajaat.saturating_add(1);
                 self.iatimadat = self.iatimadat.saturating_add(1);
-            }
+            },
             HalatMuraja::Marfuda => self.murajaat = self.murajaat.saturating_add(1),
-            HalatMuraja::LamTutarjam
-            | HalatMuraja::TarjamaAaliya
-            | HalatMuraja::LilMuraja => {}
+            HalatMuraja::LamTutarjam | HalatMuraja::TarjamaAaliya | HalatMuraja::LilMuraja => {},
         }
     }
 
@@ -124,21 +123,19 @@ impl AdadAamal {
         match ila {
             HalatMuraja::TarjamaAaliya | HalatMuraja::Musawwada => {
                 self.tarjamat = self.tarjamat.saturating_add(1);
-            }
+            },
             HalatMuraja::Muakkada => {
                 self.murajaat = self.murajaat.saturating_add(1);
                 self.iatimadat = self.iatimadat.saturating_add(1);
-            }
+            },
             HalatMuraja::Marfuda => self.murajaat = self.murajaat.saturating_add(1),
-            HalatMuraja::LamTutarjam | HalatMuraja::LilMuraja => {}
+            HalatMuraja::LamTutarjam | HalatMuraja::LilMuraja => {},
         }
     }
 }
 
 /// One contributor's counts, split across the four method buckets.
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct MasfufatTareeqa {
     /// Counts on strings recorded as fully human work.
     pub bashariya: AdadAamal,
@@ -347,7 +344,7 @@ pub fn ihsib(nusus: &[MudkhalNass]) -> IhsaatMashru {
                         .entry(musahim.clone())
                         .or_insert_with(|| IhsaatMusahim::jadeed(musahim.clone()))
                         .sajjil(tareeqa, intiqal.ila, intiqal.lahza);
-                }
+                },
                 None => aali.li_mut(tareeqa).adif_aali(intiqal.ila),
             }
         }

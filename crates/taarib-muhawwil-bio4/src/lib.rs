@@ -75,7 +75,7 @@ pub mod shabaka;
 pub mod sura;
 pub mod tibl;
 
-pub use crate::bina::{KhiyaratBina, KhattMabni, TaqreerBina};
+pub use crate::bina::{KhattMabni, KhiyaratBina, TaqreerBina};
 pub use crate::hizma::{DDS_SIHR, Hizma, HuwiyatHizma};
 pub use crate::kharita::{JADAWIL, JadwalKharita, RUMUZ_LATINI};
 pub use crate::khata::KhataBio4;

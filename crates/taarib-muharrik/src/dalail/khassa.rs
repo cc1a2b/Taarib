@@ -425,8 +425,9 @@ const MUJALLAD_LUBA_DANTELION: &str = "game";
 /// where every string in the game lives and the second is the engine's own
 /// parameter tables, and a directory holding both is this engine's layout rather
 /// than a folder somebody named after a game.
-const MUJALLADAT_DANTELION: &[&str] =
-    &["msg", "param", "paramdef", "mtd", "chr", "menu", "facegen", "parts", "map"];
+const MUJALLADAT_DANTELION: &[&str] = &[
+    "msg", "param", "paramdef", "mtd", "chr", "menu", "facegen", "parts", "map",
+];
 
 /// The directories a container scan will descend into, folded to lower case.
 const MUJALLADAT_MASH_DANTELION: &[&str] = &["msg", "chr", "menu", "facegen", "parts", "map"];
@@ -830,9 +831,15 @@ impl Fahras {
 
     /// One entry of this directory, as a candidate the caller can open.
     fn wasal(&self, ism: &str) -> Murashah {
-        let nisbi =
-            if self.nisbi.is_empty() { ism.to_owned() } else { format!("{}/{ism}", self.nisbi) };
-        Murashah { nisbi, masar: self.masar.join(ism) }
+        let nisbi = if self.nisbi.is_empty() {
+            ism.to_owned()
+        } else {
+            format!("{}/{ism}", self.nisbi)
+        };
+        Murashah {
+            nisbi,
+            masar: self.masar.join(ism),
+        }
     }
 }
 
@@ -866,7 +873,9 @@ fn fahras(siyaq: &SiyaqFahs<'_>, nisbi: &str) -> Fahras {
         masar: masar.clone(),
         nisbi: nisbi.to_owned(),
     };
-    let Ok(madakhil) = fs::read_dir(&masar) else { return fahras };
+    let Ok(madakhil) = fs::read_dir(&masar) else {
+        return fahras;
+    };
     for (adad, madkhal) in madakhil.enumerate() {
         if adad >= AQSA_MADAKHIL_MUJALLAD {
             break;
@@ -875,7 +884,9 @@ fn fahras(siyaq: &SiyaqFahs<'_>, nisbi: &str) -> Fahras {
         let khaam = madkhal.file_name();
         let Some(ism) = khaam.to_str() else { continue };
         let mujallad = huwa_mujallad(&madkhal);
-        fahras.madakhil.push((ism.to_ascii_lowercase(), ism.to_owned(), mujallad));
+        fahras
+            .madakhil
+            .push((ism.to_ascii_lowercase(), ism.to_owned(), mujallad));
     }
     fahras
 }
@@ -918,7 +929,8 @@ fn raqm32_kabir(qita: &[u8], izaha: usize) -> Option<u32> {
 
 /// Whether the four bytes at `izaha` are exactly `sihr`.
 fn sihr_fi(qita: &[u8], izaha: usize, sihr: [u8; 4]) -> bool {
-    qita.get(izaha..izaha.saturating_add(4)).is_some_and(|nafidha| nafidha == sihr)
+    qita.get(izaha..izaha.saturating_add(4))
+        .is_some_and(|nafidha| nafidha == sihr)
 }
 
 /// Whether `kawm` holds `ibra` anywhere, and where.
@@ -969,7 +981,10 @@ fn alama_fi_qism(masar: &Path, ism_qism: &[u8], alama: &[u8]) -> Option<u64> {
         let baqi = hadd.saturating_sub(maqru);
         let mut qita: Vec<u8> = Vec::new();
         let hissa = baqi.min(1024 * 1024);
-        let _ = (&mut malaf).take(u64::try_from(hissa).ok()?).read_to_end(&mut qita).ok()?;
+        let _ = (&mut malaf)
+            .take(u64::try_from(hissa).ok()?)
+            .read_to_end(&mut qita)
+            .ok()?;
         if qita.is_empty() {
             return None;
         }
@@ -1033,12 +1048,7 @@ fn hallil_isdar(khaam: &str) -> Option<IsdarMuharrik> {
 /// six detectors make the same observation about a different studio and the
 /// sentence has to say the same thing every time: this names who made the game,
 /// not what it was made with.
-fn sharikat_mutabiqa(
-    bayan: &BayanTanfidhi,
-    nisbi: &str,
-    ibra: &str,
-    hasila: &mut HasilatFahs,
-) {
+fn sharikat_mutabiqa(bayan: &BayanTanfidhi, nisbi: &str, ibra: &str, hasila: &mut HasilatFahs) {
     // Both fields, not the first that has a value. DARK SOULS: REMASTERED is
     // why: its `CompanyName` is the publisher, `NAMCO BANDAI Games Inc.`, and
     // the studio that wrote the engine appears only in `LegalCopyright`. A
@@ -1091,7 +1101,9 @@ fn isdar_ghayr_muharrik(khaam: &str, nisbi: &str, sabab: &str, hasila: &mut Hasi
 fn akbar_tanfidhi(fahras: &Fahras) -> Option<Murashah> {
     let mut afdal: Option<(u64, Murashah)> = None;
     for murashah in fahras.malaffat(&["exe"], AQSA_MADAKHIL_MUJALLAD) {
-        let Some(tul) = tul_malaf(&murashah.masar) else { continue };
+        let Some(tul) = tul_malaf(&murashah.masar) else {
+            continue;
+        };
         if afdal.as_ref().is_none_or(|(akbar, _)| tul > *akbar) {
             afdal = Some((tul, murashah));
         }
@@ -1108,7 +1120,10 @@ fn jidhr(siyaq: &SiyaqFahs<'_>) -> Natija<Fahras> {
     if siyaq.jidhr.exists() {
         Ok(fahras(siyaq, ""))
     } else {
-        Err(KhataMuharrik::JidhrMafqud { jidhr: siyaq.jidhr.to_path_buf() }.into())
+        Err(KhataMuharrik::JidhrMafqud {
+            jidhr: siyaq.jidhr.to_path_buf(),
+        }
+        .into())
     }
 }
 
@@ -1142,7 +1157,9 @@ impl Fahis for FahisFrostbite {
 
         ism_frostbite(&mukawwinat, &mut hasila);
         for far in [MUJALLAD_BAYANAT_FROSTBITE, MUJALLAD_TARQEE_FROSTBITE] {
-            let Some(fahras) = fahras_faree(siyaq, &jidhr, far) else { continue };
+            let Some(fahras) = fahras_faree(siyaq, &jidhr, far) else {
+                continue;
+            };
             tawqi_toc(siyaq, &fahras, &mut hasila);
         }
         if let Some(bayanat) = bayanat.as_ref() {
@@ -1174,8 +1191,12 @@ fn mukawwinat_frostbite(jidhr: &Fahras) -> Vec<Murashah> {
 /// first module it found would answer on which one the filesystem listed first.
 fn ism_frostbite(mukawwinat: &[Murashah], hasila: &mut HasilatFahs) {
     for murashah in mukawwinat {
-        let Some(bayan) = bayan_tanfidhi(&murashah.masar) else { continue };
-        let Some(ism) = bayan.ism_muntaj.as_deref() else { continue };
+        let Some(bayan) = bayan_tanfidhi(&murashah.masar) else {
+            continue;
+        };
+        let Some(ism) = bayan.ism_muntaj.as_deref() else {
+            continue;
+        };
         if !ism.eq_ignore_ascii_case(ISM_FROSTBITE) {
             continue;
         }
@@ -1218,7 +1239,11 @@ fn ism_frostbite(mukawwinat: &[Murashah], hasila: &mut HasilatFahs) {
 
 /// Reads the tables of contents under a data or patch directory.
 fn tawqi_toc(siyaq: &SiyaqFahs<'_>, bayanat: &Fahras, hasila: &mut HasilatFahs) {
-    if hasila.dalail.iter().any(|daleel| daleel.wazn == WAZN_SIHR_TOC) {
+    if hasila
+        .dalail
+        .iter()
+        .any(|daleel| daleel.wazn == WAZN_SIHR_TOC)
+    {
         return;
     }
     let mut murashahun = bayanat.malaffat(&["toc"], HISSAT_SINF);
@@ -1234,7 +1259,9 @@ fn tawqi_toc(siyaq: &SiyaqFahs<'_>, bayanat: &Fahras, hasila: &mut HasilatFahs) 
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(sinf) = tarwisat_toc(&nafidha) else { continue };
+        let Some(sinf) = tarwisat_toc(&nafidha) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Frostbite,
             NawDaleel::TarwisatHawiya,
@@ -1322,11 +1349,20 @@ impl Fahis for FahisBlackSpace {
 
 /// Reads the executables beside the game until one names the engine.
 fn ism_blackspace(siyaq: &SiyaqFahs<'_>, jidhr: &Fahras, hasila: &mut HasilatFahs) {
-    let Some(bin) = fahras_faree(siyaq, jidhr, MUJALLAD_TANFIDH_BLACKSPACE) else { return };
+    let Some(bin) = fahras_faree(siyaq, jidhr, MUJALLAD_TANFIDH_BLACKSPACE) else {
+        return;
+    };
     for murashah in bin.malaffat(&["exe"], AQSA_MULAFFAT_ISDAR) {
-        let Some(bayan) = bayan_tanfidhi(&murashah.masar) else { continue };
-        let Some(ism) = bayan.ism_muntaj.as_deref() else { continue };
-        if !ism.to_ascii_uppercase().contains(&ISM_BLACKSPACE.to_ascii_uppercase()) {
+        let Some(bayan) = bayan_tanfidhi(&murashah.masar) else {
+            continue;
+        };
+        let Some(ism) = bayan.ism_muntaj.as_deref() else {
+            continue;
+        };
+        if !ism
+            .to_ascii_uppercase()
+            .contains(&ISM_BLACKSPACE.to_ascii_uppercase())
+        {
             continue;
         }
         if let Some(mimariya) = bayan.mimariya {
@@ -1378,7 +1414,9 @@ fn hawiyat_blackspace(siyaq: &SiyaqFahs<'_>, jidhr: &Fahras, hasila: &mut Hasila
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(adad) = tarwisat_pamt(&nafidha) else { continue };
+        let Some(adad) = tarwisat_pamt(&nafidha) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::BlackSpace,
             NawDaleel::TarwisatHawiya,
@@ -1507,7 +1545,9 @@ fn igz(jidhr: &Fahras, hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(isdar) = sihr_wa_isdar(&nafidha, SIHR_IGZ) else { continue };
+        let Some(isdar) = sihr_wa_isdar(&nafidha, SIHR_IGZ) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Alchemy,
             NawDaleel::TarwisatHawiya,
@@ -1536,7 +1576,9 @@ fn iga(arshif: &Fahras, hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(isdar) = sihr_wa_isdar(&nafidha, SIHR_IGA) else { continue };
+        let Some(isdar) = sihr_wa_isdar(&nafidha, SIHR_IGA) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Alchemy,
             NawDaleel::TarwisatHawiya,
@@ -1577,10 +1619,17 @@ fn sihr_wa_isdar(nafidha: &[u8], sihr: [u8; 4]) -> Option<u32> {
 
 /// The engine's bootstrap file, read as text and only as far as its two markers.
 fn iqla_alchemy(jidhr: &Fahras, hasila: &mut HasilatFahs) {
-    let Some(haqiqi) = jidhr.malaf(MALAF_IQLA_ALCHEMY) else { return };
+    let Some(haqiqi) = jidhr.malaf(MALAF_IQLA_ALCHEMY) else {
+        return;
+    };
     let murashah = jidhr.wasal(haqiqi);
-    let Some(bayt) = iqra_nafidha(&murashah.masar, 0, HAJM_IQLA_ALCHEMY) else { return };
-    if !IBARAT_IQLA_ALCHEMY.iter().all(|ibra| mawdi(&bayt, ibra.as_bytes()).is_some()) {
+    let Some(bayt) = iqra_nafidha(&murashah.masar, 0, HAJM_IQLA_ALCHEMY) else {
+        return;
+    };
+    if !IBARAT_IQLA_ALCHEMY
+        .iter()
+        .all(|ibra| mawdi(&bayt, ibra.as_bytes()).is_some())
+    {
         return;
     }
     hasila.sajjil(
@@ -1655,7 +1704,9 @@ fn hawiyat_dantelion(siyaq: &SiyaqFahs<'_>, qaida: &Fahras, hasila: &mut Hasilat
         if murashahun.len() >= HISSAT_SINF && arshifat.len() >= HISSAT_SINF && nusus.is_some() {
             break;
         }
-        let Some(faree) = fahras_faree(siyaq, qaida, ism) else { continue };
+        let Some(faree) = fahras_faree(siyaq, qaida, ism) else {
+            continue;
+        };
         murashahun.extend(faree.malaffat(&["dcx"], HISSAT_SINF));
         arshifat.extend(faree.malaffat(&["fgbnd", "tpfbdt", "bnd"], HISSAT_SINF));
         // One more level, and only under the directory the strings live in:
@@ -1705,7 +1756,9 @@ fn dcx(murashahun: &[Murashah], hasila: &mut HasilatFahs) -> bool {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(daght) = tarwisat_dcx(&nafidha) else { continue };
+        let Some(daght) = tarwisat_dcx(&nafidha) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Dantelion,
             NawDaleel::TarwisatHawiya,
@@ -1746,7 +1799,9 @@ fn bnd(murashahun: &[Murashah], hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some((sihr, isdar)) = tarwisat_bnd(&nafidha) else { continue };
+        let Some((sihr, isdar)) = tarwisat_bnd(&nafidha) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Dantelion,
             NawDaleel::TarwisatHawiya,
@@ -1792,8 +1847,11 @@ fn binyat_dantelion(qaida: &Fahras, hasila: &mut HasilatFahs) {
         );
     }
 
-    let mawjuda: Vec<&str> =
-        MUJALLADAT_DANTELION.iter().filter(|ism| qaida.mujallad(ism).is_some()).copied().collect();
+    let mawjuda: Vec<&str> = MUJALLADAT_DANTELION
+        .iter()
+        .filter(|ism| qaida.mujallad(ism).is_some())
+        .copied()
+        .collect();
     if mawjuda.len() < 4 {
         return;
     }
@@ -1813,7 +1871,9 @@ fn binyat_dantelion(qaida: &Fahras, hasila: &mut HasilatFahs) {
 /// Reads the engine's own name out of the executable, and the studio's out of
 /// its version resource.
 fn tanfidhi_dantelion(qaida: &Fahras, hasila: &mut HasilatFahs) {
-    let Some(murashah) = akbar_tanfidhi(qaida) else { return };
+    let Some(murashah) = akbar_tanfidhi(qaida) else {
+        return;
+    };
     if let Some(bayan) = bayan_tanfidhi(&murashah.masar) {
         if let Some(mimariya) = bayan.mimariya {
             hasila.mimariya = Some(mimariya);
@@ -1885,7 +1945,9 @@ fn rpf(jidhr: &Fahras, hasila: &mut HasilatFahs) -> bool {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some((adad, qina)) = tarwisat_rpf(&nafidha) else { continue };
+        let Some((adad, qina)) = tarwisat_rpf(&nafidha) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Rage,
             NawDaleel::TarwisatHawiya,
@@ -1920,7 +1982,12 @@ fn tarwisat_rpf(nafidha: &[u8]) -> Option<(u32, u32)> {
 /// The startup list and the archive cache, neither understood past its tag.
 fn hawiyat_saghira_rage(jidhr: &Fahras, hasila: &mut HasilatFahs) {
     for (ism, sihr, wazn, wasf) in [
-        (MALAF_RGL, SIHR_RGL, WAZN_SIHR_RGL, "the list this engine reads at startup"),
+        (
+            MALAF_RGL,
+            SIHR_RGL,
+            WAZN_SIHR_RGL,
+            "the list this engine reads at startup",
+        ),
         (
             MALAF_CACHE_RPF,
             SIHR_CACHE_RPF,
@@ -1928,7 +1995,9 @@ fn hawiyat_saghira_rage(jidhr: &Fahras, hasila: &mut HasilatFahs) {
             "the index cache the engine keeps beside its archives",
         ),
     ] {
-        let Some(haqiqi) = jidhr.malaf(ism) else { continue };
+        let Some(haqiqi) = jidhr.malaf(ism) else {
+            continue;
+        };
         let murashah = jidhr.wasal(haqiqi);
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
@@ -1952,7 +2021,9 @@ fn hawiyat_saghira_rage(jidhr: &Fahras, hasila: &mut HasilatFahs) {
 
 /// Reads the engine's own subsystem tag out of the executable.
 fn tanfidhi_rage(jidhr: &Fahras, hasila: &mut HasilatFahs) {
-    let Some(murashah) = akbar_tanfidhi(jidhr) else { return };
+    let Some(murashah) = akbar_tanfidhi(jidhr) else {
+        return;
+    };
     if let Some(bayan) = bayan_tanfidhi(&murashah.masar) {
         if let Some(mimariya) = bayan.mimariya {
             hasila.mimariya = Some(mimariya);
@@ -1969,7 +2040,9 @@ fn tanfidhi_rage(jidhr: &Fahras, hasila: &mut HasilatFahs) {
         }
     }
 
-    let Some(mawdi) = alama_fi_qism(&murashah.masar, b".rdata", ALAMAT_RAGE) else { return };
+    let Some(mawdi) = alama_fi_qism(&murashah.masar, b".rdata", ALAMAT_RAGE) else {
+        return;
+    };
     hasila.sajjil_aila(
         AilatMuharrik::Rage,
         NawDaleel::TawqiThunai,
@@ -2001,7 +2074,9 @@ impl Fahis for FahisSnowdrop {
     fn ifhas(&self, siyaq: &SiyaqFahs<'_>) -> Natija<HasilatFahs> {
         let jidhr = jidhr(siyaq)?;
         let mut hasila = HasilatFahs::la_shay();
-        let Some(bayanat) = judhur_sdf(siyaq, &jidhr) else { return Ok(hasila) };
+        let Some(bayanat) = judhur_sdf(siyaq, &jidhr) else {
+            return Ok(hasila);
+        };
 
         sdftoc(&bayanat, &mut hasila);
         sdfdata(&bayanat, &mut hasila);
@@ -2087,8 +2162,12 @@ fn sdftoc(bayanat: &Fahras, hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_TOC) else {
             continue;
         };
-        let Some(isdar) = sihr_wa_isdar_sdf(&nafidha, SIHR_SDFTOC) else { continue };
-        let Some(mawdi) = mawdi(&nafidha, ALAMAT_MASSIVE) else { continue };
+        let Some(isdar) = sihr_wa_isdar_sdf(&nafidha, SIHR_SDFTOC) else {
+            continue;
+        };
+        let Some(mawdi) = mawdi(&nafidha, ALAMAT_MASSIVE) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Snowdrop,
             NawDaleel::TarwisatHawiya,
@@ -2112,7 +2191,9 @@ fn sdfdata(bayanat: &Fahras, hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(isdar) = sihr_wa_isdar_sdf(&nafidha, SIHR_SDFDATA) else { continue };
+        let Some(isdar) = sihr_wa_isdar_sdf(&nafidha, SIHR_SDFDATA) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Snowdrop,
             NawDaleel::TarwisatHawiya,
@@ -2210,36 +2291,35 @@ mod ikhtibarat {
 
     /// `FC 26/Data/layout.toc`. All 87 tables in that install open the same way.
     const TARWISAT_TOC: [u8; 16] = [
-        0x00, 0xD1, 0xCE, 0x01, 0x00, 0x00, 0x00, 0x00, 0x12, 0xAD, 0xA6, 0x5E, 0x5B, 0x32,
-        0x64, 0xF6,
+        0x00, 0xD1, 0xCE, 0x01, 0x00, 0x00, 0x00, 0x00, 0x12, 0xAD, 0xA6, 0x5E, 0x5B, 0x32, 0x64,
+        0xF6,
     ];
 
     /// `Crimson Desert/0000/0.pamt`, whose constant sits at offset eight.
     const TARWISAT_PAMT: [u8; 16] = [
-        0x40, 0x3D, 0xE6, 0x54, 0x24, 0x00, 0x00, 0x00, 0x32, 0x02, 0x0E, 0x61, 0x00, 0x00,
-        0x00, 0x00,
+        0x40, 0x3D, 0xE6, 0x54, 0x24, 0x00, 0x00, 0x00, 0x32, 0x02, 0x0E, 0x61, 0x00, 0x00, 0x00,
+        0x00,
     ];
 
     /// `Crimson Desert/0000/0.paz`, one of the 44 that really are archives.
     const TARWISAT_PAZ: [u8; 16] = [
-        0x50, 0x41, 0x52, 0x20, 0x02, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00,
+        0x50, 0x41, 0x52, 0x20, 0x02, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,
     ];
 
     /// `Crimson Desert/meta/0.paver`, in full. The file is ten bytes long.
-    const TARWISAT_PAVER: [u8; 10] =
-        [0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0xCB, 0x5F, 0x1E, 0xA3];
+    const TARWISAT_PAVER: [u8; 10] = [0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0xCB, 0x5F, 0x1E, 0xA3];
 
     /// `Crash Bandicoot - N Sane Trilogy/MemoryConfiguration.igz`.
     const TARWISAT_IGZ: [u8; 16] = [
-        0x01, 0x5A, 0x47, 0x49, 0x0A, 0x00, 0x00, 0x00, 0x60, 0x3C, 0x5A, 0xBD, 0x06, 0x00,
-        0x00, 0x00,
+        0x01, 0x5A, 0x47, 0x49, 0x0A, 0x00, 0x00, 0x00, 0x60, 0x3C, 0x5A, 0xBD, 0x06, 0x00, 0x00,
+        0x00,
     ];
 
     /// `Crash Bandicoot - N Sane Trilogy/archives/4ktextures_crash1.pak`.
     const TARWISAT_IGA: [u8; 16] = [
-        0x49, 0x47, 0x41, 0x1A, 0x0B, 0x00, 0x00, 0x00, 0x72, 0x0B, 0x00, 0x00, 0x23, 0x00,
-        0x00, 0x00,
+        0x49, 0x47, 0x41, 0x1A, 0x0B, 0x00, 0x00, 0x00, 0x72, 0x0B, 0x00, 0x00, 0x23, 0x00, 0x00,
+        0x00,
     ];
 
     /// `Crash Bandicoot - N Sane Trilogy/build.xml`, in full.
@@ -2251,59 +2331,57 @@ mod ikhtibarat {
     /// `DARK SOULS REMASTERED/msg/ENGLISH/item.msgbnd.dcx`, header and both
     /// sub-blocks. All 4 576 `.dcx` files in that install share these 24 bytes.
     const TARWISAT_DCX: [u8; 44] = [
-        0x44, 0x43, 0x58, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00,
-        0x00, 0x24, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x2C, 0x44, 0x43, 0x53, 0x00,
-        0x00, 0x2F, 0x80, 0xA0, 0x00, 0x05, 0x48, 0x57, 0x44, 0x43, 0x50, 0x00, 0x44, 0x46,
-        0x4C, 0x54,
+        0x44, 0x43, 0x58, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00,
+        0x24, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x2C, 0x44, 0x43, 0x53, 0x00, 0x00, 0x2F,
+        0x80, 0xA0, 0x00, 0x05, 0x48, 0x57, 0x44, 0x43, 0x50, 0x00, 0x44, 0x46, 0x4C, 0x54,
     ];
 
     /// `ELDEN RING/Game/Data2.bdt` — the same header shape with every value
     /// different, which is why the check resolves the offsets rather than
     /// comparing bytes.
     const TARWISAT_DCX_KRAK: [u8; 44] = [
-        0x44, 0x43, 0x58, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00,
-        0x00, 0x24, 0x00, 0x00, 0x00, 0x44, 0x00, 0x00, 0x00, 0x4C, 0x44, 0x43, 0x53, 0x00,
-        0x00, 0x05, 0x3E, 0x02, 0x00, 0x04, 0x1E, 0xF4, 0x44, 0x43, 0x50, 0x00, 0x4B, 0x52,
-        0x41, 0x4B,
+        0x44, 0x43, 0x58, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00,
+        0x24, 0x00, 0x00, 0x00, 0x44, 0x00, 0x00, 0x00, 0x4C, 0x44, 0x43, 0x53, 0x00, 0x00, 0x05,
+        0x3E, 0x02, 0x00, 0x04, 0x1E, 0xF4, 0x44, 0x43, 0x50, 0x00, 0x4B, 0x52, 0x41, 0x4B,
     ];
 
     /// `DARK SOULS REMASTERED/facegen/FaceGen.fgbnd`.
     const TARWISAT_BND: [u8; 16] = [
-        0x42, 0x4E, 0x44, 0x33, 0x30, 0x39, 0x47, 0x31, 0x37, 0x58, 0x35, 0x31, 0x74, 0x00,
-        0x00, 0x00,
+        0x42, 0x4E, 0x44, 0x33, 0x30, 0x39, 0x47, 0x31, 0x37, 0x58, 0x35, 0x31, 0x74, 0x00, 0x00,
+        0x00,
     ];
 
     /// `Grand Theft Auto V Enhanced/common.rpf`.
     const TARWISAT_RPF: [u8; 16] = [
-        0x37, 0x46, 0x50, 0x52, 0xC1, 0x02, 0x00, 0x00, 0xD0, 0x2F, 0x00, 0x00, 0xFF, 0xFF,
-        0xEF, 0x0F,
+        0x37, 0x46, 0x50, 0x52, 0xC1, 0x02, 0x00, 0x00, 0xD0, 0x2F, 0x00, 0x00, 0xFF, 0xFF, 0xEF,
+        0x0F,
     ];
 
     /// `Grand Theft Auto V Enhanced/title.rgl`.
     const TARWISAT_RGL: [u8; 16] = [
-        0x52, 0x47, 0x4C, 0x4D, 0x01, 0x00, 0x00, 0x00, 0x10, 0x08, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00,
+        0x52, 0x47, 0x4C, 0x4D, 0x01, 0x00, 0x00, 0x00, 0x10, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,
     ];
 
     /// `Grand Theft Auto V Enhanced/rpf.cache`.
     const TARWISAT_CACHE: [u8; 16] = [
-        0x48, 0x53, 0x48, 0x52, 0x0D, 0x00, 0x86, 0x04, 0x86, 0xFA, 0xA7, 0x44, 0x30, 0xEA,
-        0x81, 0x11,
+        0x48, 0x53, 0x48, 0x52, 0x0D, 0x00, 0x86, 0x04, 0x86, 0xFA, 0xA7, 0x44, 0x30, 0xEA, 0x81,
+        0x11,
     ];
 
     /// `AFOP/rogue/sdf/pc/data/sdf.sdftoc`, as far as the studio name inside it.
     const TARWISAT_SDFTOC: [u8; 60] = [
-        0x57, 0x45, 0x53, 0x54, 0x29, 0x00, 0x00, 0x00, 0xC9, 0x4E, 0x03, 0x07, 0x32, 0x05,
-        0x90, 0x03, 0x00, 0x00, 0x00, 0x00, 0x88, 0x13, 0x00, 0x00, 0xF8, 0x03, 0x00, 0x00,
-        0x0F, 0x00, 0x00, 0x00, 0x58, 0x5B, 0x7E, 0x00, 0xEA, 0x07, 0x03, 0x00, 0x0F, 0x00,
-        0x13, 0x00, 0x1E, 0x00, 0x28, 0x00, 0x6D, 0x61, 0x73, 0x73, 0x69, 0x76, 0x65, 0x00,
-        0x52, 0x46, 0x85, 0xC8,
+        0x57, 0x45, 0x53, 0x54, 0x29, 0x00, 0x00, 0x00, 0xC9, 0x4E, 0x03, 0x07, 0x32, 0x05, 0x90,
+        0x03, 0x00, 0x00, 0x00, 0x00, 0x88, 0x13, 0x00, 0x00, 0xF8, 0x03, 0x00, 0x00, 0x0F, 0x00,
+        0x00, 0x00, 0x58, 0x5B, 0x7E, 0x00, 0xEA, 0x07, 0x03, 0x00, 0x0F, 0x00, 0x13, 0x00, 0x1E,
+        0x00, 0x28, 0x00, 0x6D, 0x61, 0x73, 0x73, 0x69, 0x76, 0x65, 0x00, 0x52, 0x46, 0x85, 0xC8,
     ];
 
     /// `AFOP/rogue/sdf/pc/data/sdf-A-0000.sdfdata`. All 1 380 chunks open with
     /// these eight bytes.
-    const TARWISAT_SDFDATA: [u8; 12] =
-        [0x42, 0x45, 0x52, 0x47, 0x29, 0x00, 0x00, 0x00, 0x8C, 0x0A, 0x00, 0x04];
+    const TARWISAT_SDFDATA: [u8; 12] = [
+        0x42, 0x45, 0x52, 0x47, 0x29, 0x00, 0x00, 0x00, 0x8C, 0x0A, 0x00, 0x04,
+    ];
 
     // -----------------------------------------------------------------------
     // Helpers
@@ -2311,8 +2389,11 @@ mod ikhtibarat {
 
     /// Decodes a hex fixture, dropping anything that is not a hex digit.
     fn min_sitteen(nass: &str) -> Vec<u8> {
-        let arqam: Vec<u8> =
-            nass.bytes().filter(u8::is_ascii_hexdigit).map(qeemat_raqm).collect();
+        let arqam: Vec<u8> = nass
+            .bytes()
+            .filter(u8::is_ascii_hexdigit)
+            .map(qeemat_raqm)
+            .collect();
         arqam
             .chunks_exact(2)
             .filter_map(|zawj| match zawj {
@@ -2376,12 +2457,17 @@ mod ikhtibarat {
             nizam: NizamTashghil::Windows,
             beea: &beea,
         };
-        fahis.ifhas(&siyaq).unwrap_or_else(|_| HasilatFahs::la_shay())
+        fahis
+            .ifhas(&siyaq)
+            .unwrap_or_else(|_| HasilatFahs::la_shay())
     }
 
     /// Runs every detector in this module and returns what each one found.
     fn ifhas_kul(jidhr: &Path) -> Vec<(&'static str, HasilatFahs)> {
-        jamee().iter().map(|fahis| (fahis.ism(), ifhas(fahis.as_ref(), jidhr))).collect()
+        jamee()
+            .iter()
+            .map(|fahis| (fahis.ism(), ifhas(fahis.as_ref(), jidhr)))
+            .collect()
     }
 
     /// The strongest observation whose description contains `ibara`.
@@ -2408,15 +2494,27 @@ mod ikhtibarat {
         )?;
         // The sibling with no version resource at all, which is why the
         // detector reads more than one module.
-        iktub(jidhr, "Engine.Render.Core2.PlatformVulkan.dll", &pe_bi_qismayn(b"", b""))?;
+        iktub(
+            jidhr,
+            "Engine.Render.Core2.PlatformVulkan.dll",
+            &pe_bi_qismayn(b"", b""),
+        )?;
         iktub(jidhr, "Data/layout.toc", &mamdud(&TARWISAT_TOC, 85_050))?;
-        iktub(jidhr, "Data/Win32/careersba.toc", &mamdud(&TARWISAT_TOC, 502_458))?;
+        iktub(
+            jidhr,
+            "Data/Win32/careersba.toc",
+            &mamdud(&TARWISAT_TOC, 502_458),
+        )?;
         Ok(())
     }
 
     /// Crimson Desert Enhanced's shape.
     fn luba_blackspace(jidhr: &Path) -> std::io::Result<()> {
-        iktub(jidhr, "bin64/pers.exe", &pe_bi_qismayn(b"", &min_sitteen(MAWARID_BLACKSPACE)))?;
+        iktub(
+            jidhr,
+            "bin64/pers.exe",
+            &pe_bi_qismayn(b"", &min_sitteen(MAWARID_BLACKSPACE)),
+        )?;
         iktub(jidhr, "0000/0.pamt", &mamdud(&TARWISAT_PAMT, 7_124_186))?;
         iktub(jidhr, "0000/0.paz", &mamdud(&TARWISAT_PAZ, 4096))?;
         iktub(jidhr, "0001/0.paz", &mamdud(&TARWISAT_PAZ, 4096))?;
@@ -2426,8 +2524,16 @@ mod ikhtibarat {
 
     /// Crash Bandicoot N. Sane Trilogy's shape.
     fn luba_alchemy(jidhr: &Path) -> std::io::Result<()> {
-        iktub(jidhr, "MemoryConfiguration.igz", &mamdud(&TARWISAT_IGZ, 5188))?;
-        iktub(jidhr, "archives/4ktextures_crash1.pak", &mamdud(&TARWISAT_IGA, 4096))?;
+        iktub(
+            jidhr,
+            "MemoryConfiguration.igz",
+            &mamdud(&TARWISAT_IGZ, 5188),
+        )?;
+        iktub(
+            jidhr,
+            "archives/4ktextures_crash1.pak",
+            &mamdud(&TARWISAT_IGA, 4096),
+        )?;
         iktub(jidhr, "build.xml", IQLA_ALCHEMY)?;
         Ok(())
     }
@@ -2437,9 +2543,16 @@ mod ikhtibarat {
         iktub(
             jidhr,
             "DarkSoulsRemastered.exe",
-            &pe_bi_qismayn(b"N:\\FRPG\\Source\\Dantelion2\\dist\\Include\\dantelion2/Core", b""),
+            &pe_bi_qismayn(
+                b"N:\\FRPG\\Source\\Dantelion2\\dist\\Include\\dantelion2/Core",
+                b"",
+            ),
         )?;
-        iktub(jidhr, "msg/ENGLISH/item.msgbnd.dcx", &mamdud(&TARWISAT_DCX, 346_275))?;
+        iktub(
+            jidhr,
+            "msg/ENGLISH/item.msgbnd.dcx",
+            &mamdud(&TARWISAT_DCX, 346_275),
+        )?;
         iktub(jidhr, "facegen/FaceGen.fgbnd", &mamdud(&TARWISAT_BND, 4096))?;
         for ism in ["param", "paramdef", "mtd", "chr", "menu"] {
             fs::create_dir_all(jidhr.join(ism))?;
@@ -2450,12 +2563,19 @@ mod ikhtibarat {
     /// ELDEN RING's shape — the newer generation, one directory down.
     fn luba_dantelion_jadeeda(jidhr: &Path) -> std::io::Result<()> {
         iktub(jidhr, "Game/Data2.bdt", &mamdud(&TARWISAT_DCX_KRAK, 8192))?;
-        iktub(jidhr, "Game/Data2.bhd", &mamdud(&[0x80, 0xCC, 0x7A, 0xEE], 4096))?;
+        iktub(
+            jidhr,
+            "Game/Data2.bhd",
+            &mamdud(&[0x80, 0xCC, 0x7A, 0xEE], 4096),
+        )?;
         iktub(jidhr, "Game/regulation.bin", &mamdud(&[0x00], 4096))?;
         iktub(
             jidhr,
             "Game/eldenring.exe",
-            &pe_bi_qismayn(b"W:\\GR\\RootBranch\\Source\\Library\\Dantelion2\\dist", b""),
+            &pe_bi_qismayn(
+                b"W:\\GR\\RootBranch\\Source\\Library\\Dantelion2\\dist",
+                b"",
+            ),
         )?;
         Ok(())
     }
@@ -2465,7 +2585,11 @@ mod ikhtibarat {
         iktub(jidhr, "common.rpf", &mamdud(&TARWISAT_RPF, 37_796))?;
         iktub(jidhr, "title.rgl", &mamdud(&TARWISAT_RGL, 2144))?;
         iktub(jidhr, "rpf.cache", &mamdud(&TARWISAT_CACHE, 4096))?;
-        iktub(jidhr, "GTA5_Enhanced.exe", &pe_bi_qismayn(b"[RAGE] netKxThrPool %u", b""))?;
+        iktub(
+            jidhr,
+            "GTA5_Enhanced.exe",
+            &pe_bi_qismayn(b"[RAGE] netKxThrPool %u", b""),
+        )?;
         Ok(())
     }
 
@@ -2473,9 +2597,21 @@ mod ikhtibarat {
     /// protector on the real one leaves a reader nothing and this module reads
     /// none.
     fn luba_snowdrop(jidhr: &Path) -> std::io::Result<()> {
-        iktub(jidhr, "rogue/sdf/pc/data/sdf.sdftoc", &mamdud(&TARWISAT_SDFTOC, 8192))?;
-        iktub(jidhr, "rogue/sdf/pc/data/sdf-A-0000.sdfdata", &mamdud(&TARWISAT_SDFDATA, 4096))?;
-        iktub(jidhr, "rogue/sdf/pc/data/sdf-A-0000.sdfdata.hash", &mamdud(&[0x09], 76))?;
+        iktub(
+            jidhr,
+            "rogue/sdf/pc/data/sdf.sdftoc",
+            &mamdud(&TARWISAT_SDFTOC, 8192),
+        )?;
+        iktub(
+            jidhr,
+            "rogue/sdf/pc/data/sdf-A-0000.sdfdata",
+            &mamdud(&TARWISAT_SDFDATA, 4096),
+        )?;
+        iktub(
+            jidhr,
+            "rogue/sdf/pc/data/sdf-A-0000.sdfdata.hash",
+            &mamdud(&[0x09], 76),
+        )?;
         Ok(())
     }
 
@@ -2489,13 +2625,43 @@ mod ikhtibarat {
     /// Every install this module recognises, with the family and the strongest
     /// weight each one must produce.
     const AL_ALAAB: [SafLuba; 7] = [
-        ("frostbite", luba_frostbite, AilatMuharrik::Frostbite, WAZN_ISM_FROSTBITE),
-        ("blackspace", luba_blackspace, AilatMuharrik::BlackSpace, WAZN_ISM_BLACKSPACE),
-        ("alchemy", luba_alchemy, AilatMuharrik::Alchemy, WAZN_SIHR_IG),
-        ("dantelion", luba_dantelion_qadeema, AilatMuharrik::Dantelion, WAZN_TARWISAT_DCX),
-        ("dantelion", luba_dantelion_jadeeda, AilatMuharrik::Dantelion, WAZN_TARWISAT_DCX),
+        (
+            "frostbite",
+            luba_frostbite,
+            AilatMuharrik::Frostbite,
+            WAZN_ISM_FROSTBITE,
+        ),
+        (
+            "blackspace",
+            luba_blackspace,
+            AilatMuharrik::BlackSpace,
+            WAZN_ISM_BLACKSPACE,
+        ),
+        (
+            "alchemy",
+            luba_alchemy,
+            AilatMuharrik::Alchemy,
+            WAZN_SIHR_IG,
+        ),
+        (
+            "dantelion",
+            luba_dantelion_qadeema,
+            AilatMuharrik::Dantelion,
+            WAZN_TARWISAT_DCX,
+        ),
+        (
+            "dantelion",
+            luba_dantelion_jadeeda,
+            AilatMuharrik::Dantelion,
+            WAZN_TARWISAT_DCX,
+        ),
         ("rage", luba_rage, AilatMuharrik::Rage, WAZN_SIHR_RPF),
-        ("snowdrop", luba_snowdrop, AilatMuharrik::Snowdrop, WAZN_TARWISAT_SDFTOC),
+        (
+            "snowdrop",
+            luba_snowdrop,
+            AilatMuharrik::Snowdrop,
+            WAZN_TARWISAT_SDFTOC,
+        ),
     ];
 
     /// Every shipped shape answers its own engine, at the strength of its own
@@ -2556,7 +2722,11 @@ mod ikhtibarat {
         iktub(jidhr, "UnityPlayer.dll", b"MZ")?;
         iktub(jidhr, "hollow_knight_Data/globalgamemanagers", b"\0\0\0\0")?;
         fs::create_dir_all(jidhr.join("MonoBleedingEdge"))?;
-        iktub(jidhr, "Atlas/Content/Paks/Atlas-WindowsNoEditor.pak", b"\0\0\0\0")?;
+        iktub(
+            jidhr,
+            "Atlas/Content/Paks/Atlas-WindowsNoEditor.pak",
+            b"\0\0\0\0",
+        )?;
         iktub(jidhr, "Atlas/Binaries/Win64/Atlas.exe", b"MZ")?;
         iktub(jidhr, "Engine/Build/Build.version", b"{}")?;
         iktub(jidhr, "game.pck", b"GDPC")?;
@@ -2592,7 +2762,11 @@ mod ikhtibarat {
             beea: &beea,
         };
         for fahis in jamee() {
-            assert!(fahis.ifhas(&siyaq).is_err(), "{} accepted a missing root", fahis.ism());
+            assert!(
+                fahis.ifhas(&siyaq).is_err(),
+                "{} accepted a missing root",
+                fahis.ism()
+            );
         }
         Ok(())
     }
@@ -2651,7 +2825,10 @@ mod ikhtibarat {
                 vec![
                     ("not an Unreal pak", WAZN_SIHR_IG),
                     ("this engine's `IGZ` tag", WAZN_SIHR_IG),
-                    ("where this engine keeps every archive", WAZN_MUJALLAD_ARSHIF),
+                    (
+                        "where this engine keeps every archive",
+                        WAZN_MUJALLAD_ARSHIF,
+                    ),
                     ("the file this engine reads at startup", WAZN_IQLA_ALCHEMY),
                 ],
             ),
@@ -2672,7 +2849,10 @@ mod ikhtibarat {
                 vec![
                     ("`DCX\\0` compression wrapper", WAZN_TARWISAT_DCX),
                     ("`Dantelion2` appears", WAZN_ALAMAT_DANTELION),
-                    ("archive pairs beside `regulation.bin`", WAZN_BINYA_DANTELION_ARSHIF),
+                    (
+                        "archive pairs beside `regulation.bin`",
+                        WAZN_BINYA_DANTELION_ARSHIF,
+                    ),
                 ],
             ),
             (
@@ -2689,7 +2869,10 @@ mod ikhtibarat {
                 "snowdrop",
                 luba_snowdrop,
                 vec![
-                    ("table of contents: `WEST` at offset zero", WAZN_TARWISAT_SDFTOC),
+                    (
+                        "table of contents: `WEST` at offset zero",
+                        WAZN_TARWISAT_SDFTOC,
+                    ),
                     ("content chunk opening `BERG`", WAZN_SIHR_SDFDATA),
                 ],
             ),
@@ -2757,14 +2940,30 @@ mod ikhtibarat {
     fn imtidad_bila_tarwisa_yurfad() -> std::io::Result<()> {
         let masrah = tempfile::tempdir()?;
         let jidhr = masrah.path();
-        iktub(jidhr, "Data/layout.toc", b"\\contentsline {chapter}{Preface}{1}\n")?;
+        iktub(
+            jidhr,
+            "Data/layout.toc",
+            b"\\contentsline {chapter}{Preface}{1}\n",
+        )?;
         iktub(jidhr, "archives/level.pak", b"PACK\x0c\x00\x00\x00")?;
         iktub(jidhr, "map.igz", b"<?xml version=\"1.0\"?>")?;
         iktub(jidhr, "0000/0.pamt", &mamdud(&[0x00; 16], 4096))?;
         iktub(jidhr, "meta/0.paver", b"not ten bytes at all")?;
-        iktub(jidhr, "msg/ENGLISH/item.dcx", b"DCX\0\xff\xff\xff\xff\xff\xff\xff\xff")?;
-        iktub(jidhr, "common.rpf", b"7FPR\x01\x00\x00\x00\x00\x00\x00\x00dead")?;
-        iktub(jidhr, "rogue/sdf/pc/data/x.sdftoc", b"WEST\x29\x00\x00\x00 no studio here")?;
+        iktub(
+            jidhr,
+            "msg/ENGLISH/item.dcx",
+            b"DCX\0\xff\xff\xff\xff\xff\xff\xff\xff",
+        )?;
+        iktub(
+            jidhr,
+            "common.rpf",
+            b"7FPR\x01\x00\x00\x00\x00\x00\x00\x00dead",
+        )?;
+        iktub(
+            jidhr,
+            "rogue/sdf/pc/data/x.sdftoc",
+            b"WEST\x29\x00\x00\x00 no studio here",
+        )?;
         fs::create_dir_all(jidhr.join("param"))?;
 
         for (fahis, hasila) in ifhas_kul(jidhr) {
@@ -2794,7 +2993,11 @@ mod ikhtibarat {
             let ism = format!("rogue/sdf/pc/data/sdf-A-{raqm:04}.sdfdata");
             iktub(jidhr, &ism, &mamdud(&TARWISAT_SDFDATA, 64))?;
         }
-        iktub(jidhr, "rogue/sdf/pc/data/sdf.sdftoc", &mamdud(&TARWISAT_SDFTOC, 8192))?;
+        iktub(
+            jidhr,
+            "rogue/sdf/pc/data/sdf.sdftoc",
+            &mamdud(&TARWISAT_SDFTOC, 8192),
+        )?;
         let hasila = ifhas(&FahisSnowdrop::jadeed(), jidhr);
 
         assert_eq!(hasila.aila, Some(AilatMuharrik::Snowdrop));
@@ -2819,7 +3022,10 @@ mod ikhtibarat {
         if let Some(bayt) = kadhib.get_mut(15) {
             *bayt = 0x20;
         }
-        assert!(tarwisat_dcx(&kadhib).is_none(), "an offset that misses `DCP` is not a header");
+        assert!(
+            tarwisat_dcx(&kadhib).is_none(),
+            "an offset that misses `DCP` is not a header"
+        );
     }
 
     /// An `RPF7` with an encryption tag nobody ships is refused.
@@ -2866,15 +3072,38 @@ mod ikhtibarat {
     #[test]
     fn qeema_faragha_tuqra_ka_ghiyab() {
         let mawarid = min_sitteen(MAWARID_FROSTBITE);
-        assert_eq!(qeemat_mawrid(&mawarid, "ProductName").as_deref(), Some("Frostbite"));
-        assert_eq!(qeemat_mawrid(&mawarid, "ProductVersion").as_deref(), Some("2.42.5"));
-        assert_eq!(qeemat_mawrid(&mawarid, "CompanyName").as_deref(), Some("Electronic Arts"));
-        assert_eq!(qeemat_mawrid(&mawarid, "InternalName"), None, "an empty value is absent");
+        assert_eq!(
+            qeemat_mawrid(&mawarid, "ProductName").as_deref(),
+            Some("Frostbite")
+        );
+        assert_eq!(
+            qeemat_mawrid(&mawarid, "ProductVersion").as_deref(),
+            Some("2.42.5")
+        );
+        assert_eq!(
+            qeemat_mawrid(&mawarid, "CompanyName").as_deref(),
+            Some("Electronic Arts")
+        );
+        assert_eq!(
+            qeemat_mawrid(&mawarid, "InternalName"),
+            None,
+            "an empty value is absent"
+        );
 
         let pearl = min_sitteen(MAWARID_BLACKSPACE);
-        assert_eq!(qeemat_mawrid(&pearl, "ProductName").as_deref(), Some("BlackSpace version"));
-        assert_eq!(qeemat_mawrid(&pearl, "LegalCopyright").as_deref(), Some("Pearlabyss Corp"));
-        assert_eq!(qeemat_mawrid(&pearl, "CompanyName"), None, "an empty value is absent");
+        assert_eq!(
+            qeemat_mawrid(&pearl, "ProductName").as_deref(),
+            Some("BlackSpace version")
+        );
+        assert_eq!(
+            qeemat_mawrid(&pearl, "LegalCopyright").as_deref(),
+            Some("Pearlabyss Corp")
+        );
+        assert_eq!(
+            qeemat_mawrid(&pearl, "CompanyName"),
+            None,
+            "an empty value is absent"
+        );
     }
 
     /// A version is parsed only where the engine published one, and never out of
@@ -2891,7 +3120,10 @@ mod ikhtibarat {
         });
         assert_eq!((isdar.kabir, isdar.sagheer, isdar.tasheeh), (2, 42, 5));
         assert_eq!(isdar.khaam, "2.42.5");
-        assert!(!isdar.mushtaqq, "this one was read off the engine's own module");
+        assert!(
+            !isdar.mushtaqq,
+            "this one was read off the engine's own module"
+        );
 
         let bila_isdar: [(&str, BinaLuba); 5] = [
             ("blackspace", luba_blackspace),
@@ -2901,7 +3133,10 @@ mod ikhtibarat {
             ("snowdrop", luba_snowdrop),
         ];
         for (ism, bina) in bila_isdar {
-            assert!(wahid(ism, bina)?.isdar.is_none(), "{ism} invented a version");
+            assert!(
+                wahid(ism, bina)?.isdar.is_none(),
+                "{ism} invented a version"
+            );
         }
 
         // And the parser itself refuses anything whose first component is not a
@@ -2957,11 +3192,16 @@ mod ikhtibarat {
             assert!(taqreer.anzimat_qabila.is_empty(), "{ism}");
             assert_eq!(taqreer.isdar_fahs, crate::imkaniyat::ISDAR_FAHS);
 
-            let naqs = taqreer.naqs.unwrap_or_else(|| taarib_mustalahat::muharrik::Hadd {
-                arabi: String::new(),
-                injilizi: String::new(),
-            });
-            assert!(naqs.injilizi.contains(aila.ism()), "{ism}: the gap must name the engine");
+            let naqs = taqreer
+                .naqs
+                .unwrap_or_else(|| taarib_mustalahat::muharrik::Hadd {
+                    arabi: String::new(),
+                    injilizi: String::new(),
+                });
+            assert!(
+                naqs.injilizi.contains(aila.ism()),
+                "{ism}: the gap must name the engine"
+            );
             assert!(
                 taqreer.sabab_injilizi.contains(aila.ism()),
                 "{ism}: the tier's reason must name the engine"

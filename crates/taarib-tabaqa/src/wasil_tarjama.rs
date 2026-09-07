@@ -281,28 +281,26 @@ impl DhakiraTabaqa for DhakiraMushtarakaTabaqa {
     }
 
     fn sajjil(&self, qayd: &QaydTabaqaSajjil<'_>) -> Result<(), KhataTabaqa> {
-        let thiqa = qayd
-            .thiqa
-            .map_or(ThiqatQira::Ghayr, ThiqatQira::maqisa);
-        let mut mulahaza =
-            MulahazaTabaqa::jadeeda(qayd.asl, qayd.arabi, qayd.luba, thiqa)
-                .bi_tasnif(self.tasnif)
-                .bi_muharrikayn(
-                    qayd.qari.map(str::to_owned),
-                    qayd.muzawwid.map(str::to_owned),
-                );
+        let thiqa = qayd.thiqa.map_or(ThiqatQira::Ghayr, ThiqatQira::maqisa);
+        let mut mulahaza = MulahazaTabaqa::jadeeda(qayd.asl, qayd.arabi, qayd.luba, thiqa)
+            .bi_tasnif(self.tasnif)
+            .bi_muharrikayn(
+                qayd.qari.map(str::to_owned),
+                qayd.muzawwid.map(str::to_owned),
+            );
         if let Some(ism) = qayd.ism_luba {
             mulahaza = mulahaza.bi_ism_luba(ism);
         }
         if let Some(mintaqa) = qayd.mintaqa {
             mulahaza = mulahaza.bi_mintaqa(mintaqa);
         }
-        let _ = self.dhakira.sajjil(&mulahaza).map_err(|khata| {
-            KhataTabaqa::MawridFashil {
+        let _ = self
+            .dhakira
+            .sajjil(&mulahaza)
+            .map_err(|khata| KhataTabaqa::MawridFashil {
                 mawrid: "shared translation memory",
                 sabab: khata.to_string(),
-            }
-        })?;
+            })?;
         Ok(())
     }
 

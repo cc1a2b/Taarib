@@ -52,7 +52,8 @@ pub fn istadill(masar_tanfidhi: &Path) -> TareeqatTabdil {
         return TareeqatTabdil::AppImage;
     }
     if masar_tanfidhi.ancestors().any(|jidd| {
-        jidd.extension().is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("app"))
+        jidd.extension()
+            .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("app"))
     }) {
         return TareeqatTabdil::HuzmatMac;
     }
@@ -87,8 +88,7 @@ impl KhuttatTabdil {
     /// installer keeps the per-user location it already recorded.
     #[must_use]
     pub fn amr_nsis(&self) -> Option<(PathBuf, Vec<String>)> {
-        (self.tareeqa == TareeqatTabdil::Nsis)
-            .then(|| (self.masdar.clone(), vec!["/S".to_owned()]))
+        (self.tareeqa == TareeqatTabdil::Nsis).then(|| (self.masdar.clone(), vec!["/S".to_owned()]))
     }
 }
 
@@ -118,16 +118,16 @@ pub fn khattit(
 
     let hadaf = match tareeqa {
         TareeqatTabdil::AppImage => masar_appimage(masar_tanfidhi),
-        TareeqatTabdil::HuzmatMac => jidhr_huzma(masar_tanfidhi).ok_or_else(|| {
-            KhataTahdith::KhataMalaf {
+        TareeqatTabdil::HuzmatMac => {
+            jidhr_huzma(masar_tanfidhi).ok_or_else(|| KhataTahdith::KhataMalaf {
                 masar: masar_tanfidhi.to_path_buf(),
                 amal: "locating the .app bundle around the running binary",
                 sabab: std::io::Error::new(
                     std::io::ErrorKind::NotFound,
                     "no .app ancestor, so there is no bundle to replace",
                 ),
-            }
-        })?,
+            })?
+        },
         TareeqatTabdil::Nsis | TareeqatTabdil::Mudar => masar_tanfidhi.to_path_buf(),
     };
 
@@ -182,11 +182,11 @@ pub fn naffidh(khutta: &KhuttatTabdil) -> NatijatTahdith<()> {
                 .map_err(|sabab| khata(&jadeed, "staging the new version beside the old", sabab))?;
             ihfaz_tanfidh(&jadeed)?;
             sinkhrin_malaf(&jadeed)?;
-        }
+        },
         TareeqatTabdil::HuzmatMac => {
             std::fs::rename(&khutta.masdar, &jadeed)
                 .map_err(|sabab| khata(&jadeed, "staging the new bundle beside the old", sabab))?;
-        }
+        },
         // Refused before this function is reached: an NSIS installer and a
         // package manager both replace the application themselves, and neither
         // is swapped by renaming a file. Returning the refusal again rather
@@ -201,7 +201,7 @@ pub fn naffidh(khutta: &KhuttatTabdil) -> NatijatTahdith<()> {
                     "this build is replaced by its installer or package manager, not by a swap",
                 ),
             });
-        }
+        },
     }
 
     let walid = khutta.hadaf.parent().unwrap_or_else(|| Path::new("."));
@@ -214,7 +214,11 @@ pub fn naffidh(khutta: &KhuttatTabdil) -> NatijatTahdith<()> {
     if let Err(sabab) = std::fs::rename(&jadeed, &khutta.hadaf) {
         // The destination is empty and the old version is one rename away.
         let _ = std::fs::rename(&khutta.sabiq, &khutta.hadaf);
-        return Err(khata(&khutta.hadaf, "putting the new version in place", sabab));
+        return Err(khata(
+            &khutta.hadaf,
+            "putting the new version in place",
+            sabab,
+        ));
     }
     sinkhrin_mujallad(walid)?;
     Ok(())
@@ -294,21 +298,25 @@ fn salih_lil_itlaq(tareeqa: TareeqatTabdil, hadaf: &Path) -> bool {
         TareeqatTabdil::HuzmatMac => {
             let muhtawa = hadaf.join("Contents");
             let bayan = muhtawa.join("Info.plist");
-            let ghayr_farigh = std::fs::metadata(&bayan)
-                .is_ok_and(|wasf| wasf.is_file() && wasf.len() > 0);
+            let ghayr_farigh =
+                std::fs::metadata(&bayan).is_ok_and(|wasf| wasf.is_file() && wasf.len() > 0);
             ghayr_farigh && fihi_tanfidhi(&muhtawa.join("MacOS"))
-        }
+        },
         TareeqatTabdil::AppImage | TareeqatTabdil::Nsis | TareeqatTabdil::Mudar => {
             std::fs::metadata(hadaf).is_ok_and(|wasf| wasf.is_file() && wasf.len() > 0)
-        }
+        },
     }
 }
 
 /// Whether a directory holds at least one non-empty regular file.
 fn fihi_tanfidhi(mujallad: &Path) -> bool {
-    let Ok(qaima) = std::fs::read_dir(mujallad) else { return false };
+    let Ok(qaima) = std::fs::read_dir(mujallad) else {
+        return false;
+    };
     qaima.flatten().any(|madkhal| {
-        madkhal.metadata().is_ok_and(|wasf| wasf.is_file() && wasf.len() > 0)
+        madkhal
+            .metadata()
+            .is_ok_and(|wasf| wasf.is_file() && wasf.len() > 0)
     })
 }
 
@@ -317,7 +325,8 @@ fn jidhr_huzma(masar_tanfidhi: &Path) -> Option<PathBuf> {
     masar_tanfidhi
         .ancestors()
         .find(|jidd| {
-            jidd.extension().is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("app"))
+            jidd.extension()
+                .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("app"))
         })
         .map(Path::to_path_buf)
 }
@@ -331,11 +340,16 @@ fn bi_imtidad(masar: &Path, imtidad: &str) -> PathBuf {
 
 /// Refuses a swap whose source and destination are on different filesystems.
 fn akkid_nafs_alnizam(masdar: &Path, hadaf: &Path) -> NatijatTahdith<()> {
-    let Some(walid_masdar) = masdar.parent() else { return Ok(()) };
-    let Some(walid_hadaf) = hadaf.parent() else { return Ok(()) };
-    let (Ok(awwal), Ok(thani)) =
-        (std::fs::canonicalize(walid_masdar), std::fs::canonicalize(walid_hadaf))
-    else {
+    let Some(walid_masdar) = masdar.parent() else {
+        return Ok(());
+    };
+    let Some(walid_hadaf) = hadaf.parent() else {
+        return Ok(());
+    };
+    let (Ok(awwal), Ok(thani)) = (
+        std::fs::canonicalize(walid_masdar),
+        std::fs::canonicalize(walid_hadaf),
+    ) else {
         return Ok(());
     };
     if nafs_aljihaz(&awwal, &thani) {
@@ -368,9 +382,7 @@ fn nafs_aljihaz(awwal: &Path, thani: &Path) -> bool {
 fn nafs_aljihaz(awwal: &Path, thani: &Path) -> bool {
     use std::path::Component;
     let badiya = |masar: &Path| match masar.components().next() {
-        Some(Component::Prefix(bad)) => {
-            Some(bad.as_os_str().to_string_lossy().to_lowercase())
-        }
+        Some(Component::Prefix(bad)) => Some(bad.as_os_str().to_string_lossy().to_lowercase()),
         _ => None,
     };
     match (badiya(awwal), badiya(thani)) {
@@ -393,7 +405,10 @@ fn ihfaz_tanfidh(masar: &Path) -> NatijatTahdith<()> {
 
 /// Nothing to carry: Windows decides executability by extension.
 #[cfg(not(unix))]
-#[expect(clippy::unnecessary_wraps, reason = "one signature across both platforms")]
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "one signature across both platforms"
+)]
 fn ihfaz_tanfidh(_masar: &Path) -> NatijatTahdith<()> {
     Ok(())
 }
@@ -402,7 +417,9 @@ fn ihfaz_tanfidh(_masar: &Path) -> NatijatTahdith<()> {
 fn sinkhrin_malaf(masar: &Path) -> NatijatTahdith<()> {
     let malaf = std::fs::File::open(masar)
         .map_err(|sabab| khata(masar, "opening the new version to flush it", sabab))?;
-    malaf.sync_all().map_err(|sabab| khata(masar, "flushing the new version", sabab))
+    malaf
+        .sync_all()
+        .map_err(|sabab| khata(masar, "flushing the new version", sabab))
 }
 
 /// Flushes a directory entry, so a rename survives a power loss.
@@ -410,12 +427,17 @@ fn sinkhrin_malaf(masar: &Path) -> NatijatTahdith<()> {
 fn sinkhrin_mujallad(masar: &Path) -> NatijatTahdith<()> {
     let mujallad = std::fs::File::open(masar)
         .map_err(|sabab| khata(masar, "opening the directory to flush it", sabab))?;
-    mujallad.sync_all().map_err(|sabab| khata(masar, "flushing the directory", sabab))
+    mujallad
+        .sync_all()
+        .map_err(|sabab| khata(masar, "flushing the directory", sabab))
 }
 
 /// Windows offers no directory handle to flush; the rename is already ordered.
 #[cfg(not(unix))]
-#[expect(clippy::unnecessary_wraps, reason = "one signature across both platforms")]
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "one signature across both platforms"
+)]
 fn sinkhrin_mujallad(_masar: &Path) -> NatijatTahdith<()> {
     Ok(())
 }
@@ -440,5 +462,9 @@ fn izal(masar: &Path) -> std::io::Result<()> {
 
 /// One local-file failure, named.
 fn khata(masar: &Path, amal: &'static str, sabab: std::io::Error) -> KhataTahdith {
-    KhataTahdith::KhataMalaf { masar: masar.to_path_buf(), amal, sabab }
+    KhataTahdith::KhataMalaf {
+        masar: masar.to_path_buf(),
+        amal,
+        sabab,
+    }
 }

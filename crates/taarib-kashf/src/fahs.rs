@@ -178,7 +178,10 @@ impl LubaMuktashafa {
     /// Whether this entry looks like a game rather than a tool or a runtime.
     #[must_use]
     pub fn hiya_luba(&self) -> bool {
-        !self.simat.iter().any(|sima| matches!(sima, SimatLuba::LaysatLuba(_)))
+        !self
+            .simat
+            .iter()
+            .any(|sima| matches!(sima, SimatLuba::LaysatLuba(_)))
     }
 
     /// The evidence that admitted a heuristically discovered game, when it was
@@ -267,7 +270,12 @@ impl TanbihFahs {
         mawdi: impl Into<String>,
         sabab: impl Into<String>,
     ) -> Self {
-        Self { matjar, mawdi: mawdi.into(), sabab: sabab.into(), naw: NawTanbih::Madkhal }
+        Self {
+            matjar,
+            mawdi: mawdi.into(),
+            sabab: sabab.into(),
+            naw: NawTanbih::Madkhal,
+        }
     }
 
     /// A warning that a source of entries could not be read end to end, so the
@@ -283,7 +291,12 @@ impl TanbihFahs {
         mawdi: impl Into<String>,
         sabab: impl Into<String>,
     ) -> Self {
-        Self { matjar, mawdi: mawdi.into(), sabab: sabab.into(), naw: NawTanbih::Fahras }
+        Self {
+            matjar,
+            mawdi: mawdi.into(),
+            sabab: sabab.into(),
+            naw: NawTanbih::Fahras,
+        }
     }
 
     /// Whether games may exist that the scan did not see because of this.
@@ -394,7 +407,9 @@ impl NatijatMatjar {
         sabab: impl Into<String>,
     ) -> Self {
         let mut natija = Self::muthabbat(matjar, jidhr_matjar);
-        natija.tanbihat.push(TanbihFahs::fahras(matjar, mawdi, sabab));
+        natija
+            .tanbihat
+            .push(TanbihFahs::fahras(matjar, mawdi, sabab));
         natija
     }
 
@@ -650,7 +665,10 @@ impl NatijatFahs {
     /// Every game found, across every launcher.
     #[must_use]
     pub fn alaab(&self) -> Vec<&LubaMuktashafa> {
-        self.matajir.iter().flat_map(|natija| natija.alaab.iter()).collect()
+        self.matajir
+            .iter()
+            .flat_map(|natija| natija.alaab.iter())
+            .collect()
     }
 
     /// How many games were found.
@@ -662,7 +680,10 @@ impl NatijatFahs {
     /// Every warning, across every launcher.
     #[must_use]
     pub fn tanbihat(&self) -> Vec<&TanbihFahs> {
-        self.matajir.iter().flat_map(|natija| natija.tanbihat.iter()).collect()
+        self.matajir
+            .iter()
+            .flat_map(|natija| natija.tanbihat.iter())
+            .collect()
     }
 
     /// The launchers that were found installed, whether or not their catalogue
@@ -695,18 +716,25 @@ mod ikhtibarat {
     /// The three verdicts, from the two facts that produce them.
     #[test]
     fn al_hala_tushtaqq_min_al_tathbeet_wa_naw_al_tanbihat() {
-        assert_eq!(NatijatMatjar::ghayr_mutah("epic").hala(), HalatFahsMatjar::GhayrMuthabbat);
+        assert_eq!(
+            NatijatMatjar::ghayr_mutah("epic").hala(),
+            HalatFahsMatjar::GhayrMuthabbat
+        );
 
         let mut natija = NatijatMatjar::muthabbat("epic", Some(PathBuf::from("/epic")));
         assert_eq!(natija.hala(), HalatFahsMatjar::Tamma);
 
         // One entry that would not parse leaves the verdict alone: everything
         // else in the catalogue was read, and a missing game is really missing.
-        natija.tanbihat.push(TanbihFahs::jadeed("epic", "a.item", "not JSON"));
+        natija
+            .tanbihat
+            .push(TanbihFahs::jadeed("epic", "a.item", "not JSON"));
         assert_eq!(natija.hala(), HalatFahsMatjar::Tamma);
 
         // A source that could not be read does not.
-        natija.tanbihat.push(TanbihFahs::fahras("epic", "Manifests", "not there"));
+        natija
+            .tanbihat
+            .push(TanbihFahs::fahras("epic", "Manifests", "not there"));
         assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
     }
 

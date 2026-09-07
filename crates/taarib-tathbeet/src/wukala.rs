@@ -98,25 +98,8 @@ use std::path::Path;
 /// four is not a name that proves a mod, whatever the membership rule says in
 /// principle.
 pub const WUKALA_NIZAM: [&str; 20] = [
-    "d3d8",
-    "d3d9",
-    "d3d10",
-    "d3d11",
-    "d3d12",
-    "dciman32",
-    "ddraw",
-    "dinput",
-    "dinput8",
-    "dsound",
-    "dxgi",
-    "iphlpapi",
-    "msacm32",
-    "opengl32",
-    "version",
-    "winhttp",
-    "wininet",
-    "winmm",
-    "ws2_32",
+    "d3d8", "d3d9", "d3d10", "d3d11", "d3d12", "dciman32", "ddraw", "dinput", "dinput8", "dsound",
+    "dxgi", "iphlpapi", "msacm32", "opengl32", "version", "winhttp", "wininet", "winmm", "ws2_32",
     "wsock32",
 ];
 
@@ -168,16 +151,7 @@ const LAWAHIQ_RAFIQ: [&str; 5] = ["ini", "log", "cfg", "toml", "json"];
 /// one product owns its shape outright, as ReShade and ENBSeries do, the
 /// variant is that product.
 #[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum AilatWakeel {
@@ -212,16 +186,7 @@ pub enum AilatWakeel {
 /// This is the field the whole presentation-hook question turns on, and the
 /// three answers are genuinely different rather than shades of one risk.
 #[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum TariqatKhatf {
@@ -347,7 +312,7 @@ impl AilatWakeel {
         match self {
             Self::MuhammilAsi => {
                 Some("وهو يحمّل كل ملف asi. بجانبه، فالإضافة لا تحتاج اسمًا خاصًّا بها.")
-            }
+            },
             Self::ReShade => Some(
                 "واضبط EnableProxyLibrary=1 وProxyLibrary=<ملف> في قسم [PROXY] من ReShade.ini يحمّله بعده.",
             ),
@@ -357,9 +322,9 @@ impl AilatWakeel {
             Self::SpecialK => Some(
                 "وأضف قسم [Import.<اسم>] فيه Filename= وWhen=Lazy إلى إعداداته يحمّل الوحدة بنفسه.",
             ),
-            Self::Doorstop => Some(
-                "وهو يحمّل الأصل المُزاح إن سُمّي <الاسم>_alt.dll، وهذا في مصدره لا في توثيقه.",
-            ),
+            Self::Doorstop => {
+                Some("وهو يحمّل الأصل المُزاح إن سُمّي <الاسم>_alt.dll، وهذا في مصدره لا في توثيقه.")
+            },
             Self::Dxvk | Self::D3d8to9 | Self::Re4Tweaks | Self::Taarib => None,
         }
     }
@@ -466,7 +431,12 @@ static TAWAQEE: &[TawqeeWakeel] = &[
         // `ReShade32.dll`/`ReShade64.dll` is what its version resource carries
         // as `OriginalFilename` whatever name it was installed under, which is
         // the one string that survives a rename.
-        basmat: &["ReShade", "reshade-shaders", "EffectSearchPaths", "ReShade64.dll"],
+        basmat: &[
+            "ReShade",
+            "reshade-shaders",
+            "EffectSearchPaths",
+            "ReShade64.dll",
+        ],
     },
     TawqeeWakeel {
         aila: AilatWakeel::Enb,
@@ -483,11 +453,18 @@ static TAWAQEE: &[TawqeeWakeel] = &[
             // on disk.
             RafiqWakeel::Ism("d3dcompiler_46e.dll"),
         ],
-        basmat: &["ENBSeries", "enbseries.ini", "enblocal.ini", "Boris Vorontsov"],
+        basmat: &[
+            "ENBSeries",
+            "enbseries.ini",
+            "enblocal.ini",
+            "Boris Vorontsov",
+        ],
     },
     TawqeeWakeel {
         aila: AilatWakeel::SpecialK,
-        slotat: &["d3d8", "d3d9", "d3d11", "ddraw", "dinput8", "dxgi", "opengl32"],
+        slotat: &[
+            "d3d8", "d3d9", "d3d11", "ddraw", "dinput8", "dxgi", "opengl32",
+        ],
         rifaq: &[
             RafiqWakeel::Ism("SpecialK.ini"),
             RafiqWakeel::Ism("SpecialK64.dll"),
@@ -523,7 +500,10 @@ static TAWAQEE: &[TawqeeWakeel] = &[
     TawqeeWakeel {
         aila: AilatWakeel::Dxvk,
         slotat: &["d3d8", "d3d9", "d3d10", "d3d11", "dxgi"],
-        rifaq: &[RafiqWakeel::Ism("dxvk.conf"), RafiqWakeel::Imtidad("dxvk-cache")],
+        rifaq: &[
+            RafiqWakeel::Ism("dxvk.conf"),
+            RafiqWakeel::Imtidad("dxvk-cache"),
+        ],
         // `DXVK` is its `CompanyName` and the copyright line is its
         // `LegalCopyright`; both are in the version resource of all five
         // modules it ships.
@@ -554,7 +534,10 @@ static TAWAQEE: &[TawqeeWakeel] = &[
         // of the same string from inside a game process; the two are separate
         // because a crate loaded into somebody's address space must not depend
         // on the installer, and they must not disagree.
-        rifaq: &[RafiqWakeel::Ism("mudkhal.sijill"), RafiqWakeel::Ism("taarib.sijill")],
+        rifaq: &[
+            RafiqWakeel::Ism("mudkhal.sijill"),
+            RafiqWakeel::Ism("taarib.sijill"),
+        ],
         basmat: &["mudkhal.sijill"],
     },
 ];
@@ -573,9 +556,7 @@ const ALAMAT_HAZM: [&str; 2] = ["UPX0", "UPX1"];
 /// shown *before* they agree to an install, which means it crosses into the
 /// Studio's command layer; a hand-written projection of four plain fields would
 /// be a second place for the same four fields to drift.
-#[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct WakeelQaim {
     /// The file's name exactly as it is on disk, which is not necessarily the
     /// spelling [`WUKALA_NIZAM`] uses: Windows filesystems are case-insensitive
@@ -606,15 +587,7 @@ pub struct WakeelQaim {
 /// "ReShade is installed here" is entitled to ask how that was known, and
 /// because a wrong answer is only debuggable if the evidence travels with it.
 #[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case", tag = "naw", content = "qeema")]
 pub enum DalilWakeel {
@@ -646,15 +619,7 @@ impl DalilWakeel {
 
 /// Whose loader a slot holds.
 #[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case", tag = "hala")]
 pub enum HuwiyatWakeel {
@@ -707,14 +672,13 @@ impl HuwiyatWakeel {
     pub fn wasf_injilizi(&self) -> String {
         match self {
             Self::Maaruf { aila, adilla } => {
-                let kayf: Vec<String> =
-                    adilla.iter().map(DalilWakeel::wasf_injilizi).collect();
+                let kayf: Vec<String> = adilla.iter().map(DalilWakeel::wasf_injilizi).collect();
                 if kayf.is_empty() {
                     aila.ism().to_owned()
                 } else {
                     format!("{}, from {}", aila.ism(), kayf.join(" and "))
                 }
-            }
+            },
             Self::Multabis { murashshahun } => format!(
                 "either {} — the evidence fits both equally and Taarib will not guess",
                 murashshahun
@@ -725,7 +689,7 @@ impl HuwiyatWakeel {
             ),
             Self::Majhul { mahzum: true } => {
                 "an unidentified proxy, packed, so nothing can be read out of it".to_owned()
-            }
+            },
             Self::Majhul { mahzum: false } => "an unidentified proxy".to_owned(),
         }
     }
@@ -741,7 +705,7 @@ impl HuwiyatWakeel {
                 } else {
                     format!("{}، عُرف من {}", aila.ism_arabi(), kayf.join(" و"))
                 }
-            }
+            },
             Self::Multabis { murashshahun } => format!(
                 "إمّا {} — والدليل يحتملهما معًا، ولا يخمّن تعريب",
                 murashshahun
@@ -752,7 +716,7 @@ impl HuwiyatWakeel {
             ),
             Self::Majhul { mahzum: true } => {
                 "وكيل غير معروف، وهو مضغوط فلا يمكن قراءة شيء منه".to_owned()
-            }
+            },
             Self::Majhul { mahzum: false } => "وكيل غير معروف".to_owned(),
         }
     }
@@ -784,7 +748,11 @@ impl WakeelQaim {
         if self.rifaq.is_empty() {
             format!("{} ({hajm} بايت) — {huwiya}", self.ism)
         } else {
-            format!("{} ({hajm} بايت، ومعه {}) — {huwiya}", self.ism, self.rifaq.join("، "))
+            format!(
+                "{} ({hajm} بايت، ومعه {}) — {huwiya}",
+                self.ism,
+                self.rifaq.join("، ")
+            )
         }
     }
 }
@@ -800,7 +768,9 @@ pub fn wakeel_nizam(ism: &str) -> Option<&'static str> {
     if !imtidad.eq_ignore_ascii_case("dll") {
         return None;
     }
-    WUKALA_NIZAM.into_iter().find(|maaruf| asas.eq_ignore_ascii_case(maaruf))
+    WUKALA_NIZAM
+        .into_iter()
+        .find(|maaruf| asas.eq_ignore_ascii_case(maaruf))
 }
 
 /// Whether a file name occupies one of the slots in [`WUKALA_MUSHTARAKA`].
@@ -813,7 +783,9 @@ pub fn wakeel_mushtarak(ism: &str) -> Option<&'static str> {
     if !imtidad.eq_ignore_ascii_case("dll") {
         return None;
     }
-    WUKALA_MUSHTARAKA.into_iter().find(|maaruf| asas.eq_ignore_ascii_case(maaruf))
+    WUKALA_MUSHTARAKA
+        .into_iter()
+        .find(|maaruf| asas.eq_ignore_ascii_case(maaruf))
 }
 
 /// Every loader slot in use in one directory, sorted by slot name.
@@ -842,7 +814,9 @@ pub fn masah(mujallad: &Path) -> std::io::Result<Vec<WakeelQaim>> {
     let mut mujalladat: Vec<String> = Vec::new();
     for madkhal in qira {
         let madkhal = madkhal?;
-        let Ok(naw) = madkhal.file_type() else { continue };
+        let Ok(naw) = madkhal.file_type() else {
+            continue;
+        };
         let Some(ism) = madkhal.file_name().to_str().map(ToOwned::to_owned) else {
             continue;
         };
@@ -937,7 +911,12 @@ pub fn tashkhis(
 ) -> HuwiyatWakeel {
     let murashshahun: Vec<&TawqeeWakeel> = TAWAQEE
         .iter()
-        .filter(|tawqee| tawqee.slotat.iter().any(|slot| slot.eq_ignore_ascii_case(wakeel)))
+        .filter(|tawqee| {
+            tawqee
+                .slotat
+                .iter()
+                .any(|slot| slot.eq_ignore_ascii_case(wakeel))
+        })
         .collect();
     if murashshahun.is_empty() {
         return HuwiyatWakeel::Majhul { mahzum: false };
@@ -993,8 +972,7 @@ pub fn tashkhis(
     {
         return HuwiyatWakeel::Maaruf { aila, adilla };
     }
-    let mut murashshahun: Vec<AilatWakeel> =
-        fayizun.into_iter().map(|(aila, _)| aila).collect();
+    let mut murashshahun: Vec<AilatWakeel> = fayizun.into_iter().map(|(aila, _)| aila).collect();
     murashshahun.sort_unstable();
     HuwiyatWakeel::Multabis { murashshahun }
 }
@@ -1033,7 +1011,9 @@ pub fn tashkhis(
 /// it. Naming the product is what makes that sentence writable.
 #[must_use]
 pub fn shaghil_slot<'a>(qaima: &'a [WakeelQaim], wakeel: &str) -> Option<&'a WakeelQaim> {
-    qaima.iter().find(|qaim| qaim.ism.eq_ignore_ascii_case(wakeel))
+    qaima
+        .iter()
+        .find(|qaim| qaim.ism.eq_ignore_ascii_case(wakeel))
 }
 
 /// The companions of one product that are actually in this directory.
@@ -1057,27 +1037,27 @@ fn rifaq_mawjuda(
                     .iter()
                     .chain(mujalladat.iter())
                     .find(|mawjud| {
-                        mawjud.eq_ignore_ascii_case(matlub)
+                        mawjud.eq_ignore_ascii_case(matlub) && !mawjud.eq_ignore_ascii_case(ism)
+                    })
+                    .cloned();
+                if let Some(mawjud) = mawjud {
+                    wujidat.push(DalilWakeel::Rafiq(mawjud));
+                }
+            },
+            RafiqWakeel::Imtidad(matlub) => {
+                let mawjud = asmaa
+                    .iter()
+                    .find(|mawjud| {
+                        mawjud
+                            .rsplit_once('.')
+                            .is_some_and(|(_, imtidad)| imtidad.eq_ignore_ascii_case(matlub))
                             && !mawjud.eq_ignore_ascii_case(ism)
                     })
                     .cloned();
                 if let Some(mawjud) = mawjud {
                     wujidat.push(DalilWakeel::Rafiq(mawjud));
                 }
-            }
-            RafiqWakeel::Imtidad(matlub) => {
-                let mawjud = asmaa
-                    .iter()
-                    .find(|mawjud| {
-                        mawjud.rsplit_once('.').is_some_and(|(_, imtidad)| {
-                            imtidad.eq_ignore_ascii_case(matlub)
-                        }) && !mawjud.eq_ignore_ascii_case(ism)
-                    })
-                    .cloned();
-                if let Some(mawjud) = mawjud {
-                    wujidat.push(DalilWakeel::Rafiq(mawjud));
-                }
-            }
+            },
         }
     }
     wujidat
@@ -1090,7 +1070,9 @@ fn rifaq_bi_asas(asmaa: &[String], wakeel: &str) -> Vec<String> {
         .filter(|ism| {
             ism.rsplit_once('.').is_some_and(|(asas, imtidad)| {
                 asas.eq_ignore_ascii_case(wakeel)
-                    && LAWAHIQ_RAFIQ.iter().any(|maqbul| imtidad.eq_ignore_ascii_case(maqbul))
+                    && LAWAHIQ_RAFIQ
+                        .iter()
+                        .any(|maqbul| imtidad.eq_ignore_ascii_case(maqbul))
             })
         })
         .cloned()
@@ -1123,15 +1105,24 @@ fn basmat_fi_malaf(masar: &Path, basmat: &[&'static str]) -> Vec<&'static str> {
     if basmat.is_empty() {
         return wujidat;
     }
-    let Ok(bayan) = std::fs::metadata(masar) else { return wujidat };
+    let Ok(bayan) = std::fs::metadata(masar) else {
+        return wujidat;
+    };
     if !bayan.is_file() || bayan.len() > AQSA_MASH {
         return wujidat;
     }
-    let Ok(malaf) = std::fs::File::open(masar) else { return wujidat };
+    let Ok(malaf) = std::fs::File::open(masar) else {
+        return wujidat;
+    };
 
     // Twice the longest mark, because the UTF-16 form of a mark is twice as
     // long as the ASCII one and either may straddle the boundary.
-    let tadakhul = basmat.iter().map(|basma| basma.len()).max().unwrap_or(0).saturating_mul(2);
+    let tadakhul = basmat
+        .iter()
+        .map(|basma| basma.len())
+        .max()
+        .unwrap_or(0)
+        .saturating_mul(2);
     let mut qari = std::io::BufReader::new(malaf);
     let mut mukhazzan: Vec<u8> = Vec::with_capacity(HAJM_QITA.saturating_add(tadakhul));
     let mut qita = vec![0_u8; HAJM_QITA];
@@ -1173,7 +1164,8 @@ fn yahwi_ascii(kawm: &[u8], basma: &[u8]) -> bool {
     if basma.is_empty() || kawm.len() < basma.len() {
         return false;
     }
-    kawm.windows(basma.len()).any(|nafidha| nafidha.eq_ignore_ascii_case(basma))
+    kawm.windows(basma.len())
+        .any(|nafidha| nafidha.eq_ignore_ascii_case(basma))
 }
 
 /// The same, for the UTF-16 a Windows version resource stores its strings in.
@@ -1188,7 +1180,9 @@ fn yahwi_utf16(kawm: &[u8], basma: &[u8]) -> bool {
     kawm.windows(tul).any(|nafidha| {
         basma.iter().enumerate().all(|(fahras, harf)| {
             let mawdi = fahras.saturating_mul(2);
-            nafidha.get(mawdi).is_some_and(|bayt| bayt.eq_ignore_ascii_case(harf))
+            nafidha
+                .get(mawdi)
+                .is_some_and(|bayt| bayt.eq_ignore_ascii_case(harf))
                 && nafidha.get(mawdi.saturating_add(1)) == Some(&0)
         })
     })
@@ -1249,8 +1243,14 @@ mod ikhtibarat {
         let qaima = masah(muaqqat.path()).expect("the survey");
         assert_eq!(aila(&qaima, "dxgi.dll"), Some(AilatWakeel::ReShade));
         let satr = wajid(&qaima, "dxgi.dll").wasf_injilizi();
-        assert!(satr.contains("ReShade"), "the report names the product: {satr}");
-        assert!(satr.contains("the string"), "and says what proved it: {satr}");
+        assert!(
+            satr.contains("ReShade"),
+            "the report names the product: {satr}"
+        );
+        assert!(
+            satr.contains("the string"),
+            "and says what proved it: {satr}"
+        );
     }
 
     #[test]
@@ -1275,8 +1275,7 @@ mod ikhtibarat {
         // point that decides, and this is the case the scoring exists for.
         let muaqqat = tempfile::tempdir().expect("a scratch directory");
         wahda(muaqqat.path(), "dxgi.dll", &["ReShade", "SpecialK"]);
-        fs::write(muaqqat.path().join("SpecialK.ini"), b"[SpecialK.System]")
-            .expect("its settings");
+        fs::write(muaqqat.path().join("SpecialK.ini"), b"[SpecialK.System]").expect("its settings");
 
         let qaima = masah(muaqqat.path()).expect("the survey");
         assert_eq!(
@@ -1315,7 +1314,11 @@ mod ikhtibarat {
         // installed as `dinput8`, and the slot guard is what stops a real
         // string from producing a false product.
         let muaqqat = tempfile::tempdir().expect("a scratch directory");
-        wahda(muaqqat.path(), "dinput8.dll", &["DxvkInstance", "re4_tweaks"]);
+        wahda(
+            muaqqat.path(),
+            "dinput8.dll",
+            &["DxvkInstance", "re4_tweaks"],
+        );
 
         let qaima = masah(muaqqat.path()).expect("the survey");
         assert_eq!(aila(&qaima, "dinput8.dll"), Some(AilatWakeel::Re4Tweaks));
@@ -1342,11 +1345,17 @@ mod ikhtibarat {
         fs::write(muaqqat.path().join("NativeTrainer.asi"), b"x").expect("a plugin");
         let qaima = masah(muaqqat.path()).expect("the survey");
         assert_eq!(
-            qaima.iter().map(|qaim| qaim.ism.as_str()).collect::<Vec<_>>(),
+            qaima
+                .iter()
+                .map(|qaim| qaim.ism.as_str())
+                .collect::<Vec<_>>(),
             vec!["xinput1_4.dll"],
             "identified, the same class of name is a mod and is reported"
         );
-        assert_eq!(aila(&qaima, "xinput1_4.dll"), Some(AilatWakeel::MuhammilAsi));
+        assert_eq!(
+            aila(&qaima, "xinput1_4.dll"),
+            Some(AilatWakeel::MuhammilAsi)
+        );
     }
 
     #[test]
@@ -1363,7 +1372,11 @@ mod ikhtibarat {
             wajid(&qaima, "winmm.dll").huwiya,
             HuwiyatWakeel::Majhul { mahzum: true }
         );
-        assert!(wajid(&qaima, "winmm.dll").wasf_injilizi().contains("packed"));
+        assert!(
+            wajid(&qaima, "winmm.dll")
+                .wasf_injilizi()
+                .contains("packed")
+        );
     }
 
     #[test]
@@ -1401,14 +1414,24 @@ mod ikhtibarat {
     #[test]
     fn wakeel_majhul_yublagh_bilism_walhajm() {
         let muaqqat = tempfile::tempdir().expect("a scratch directory");
-        wahda(muaqqat.path(), "dsound.dll", &["something nobody has heard of"]);
+        wahda(
+            muaqqat.path(),
+            "dsound.dll",
+            &["something nobody has heard of"],
+        );
 
         let qaima = masah(muaqqat.path()).expect("the survey");
         let qaim = wajid(&qaima, "dsound.dll");
         assert_eq!(qaim.huwiya, HuwiyatWakeel::Majhul { mahzum: false });
         let satr = qaim.wasf_injilizi();
-        assert!(satr.contains("dsound.dll") && satr.contains("1024 byte"), "{satr}");
-        assert!(satr.contains("unidentified proxy"), "named as unidentified, not guessed: {satr}");
+        assert!(
+            satr.contains("dsound.dll") && satr.contains("1024 byte"),
+            "{satr}"
+        );
+        assert!(
+            satr.contains("unidentified proxy"),
+            "named as unidentified, not guessed: {satr}"
+        );
     }
 
     /// The layout of `Resident Evil 4`'s `Bin32/` on the machine this was
@@ -1449,7 +1472,11 @@ mod ikhtibarat {
             "vcruntime140.dll",
             "binkw32.dll",
         ] {
-            assert_eq!(wakeel_nizam(barii), None, "{barii} is a game's own file, not a slot");
+            assert_eq!(
+                wakeel_nizam(barii),
+                None,
+                "{barii} is a game's own file, not a slot"
+            );
         }
         // Not a module at all.
         assert_eq!(wakeel_nizam("dinput8.ini"), None);

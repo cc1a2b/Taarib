@@ -110,22 +110,26 @@ impl BayanMustawda {
     /// build reads, and [`KhataMustawda::TasalsulLilkhalf`] when `tasalsul` is
     /// below `mukhazzan`.
     pub fn min_bayt(bayt: &[u8], mukhazzan: Option<u64>) -> Result<Self, KhataMustawda> {
-        let bayan: Self = serde_json::from_slice(bayt).map_err(|khata| {
-            KhataMustawda::BayanTalif { sabab: khata.to_string() }
-        })?;
+        let bayan: Self =
+            serde_json::from_slice(bayt).map_err(|khata| KhataMustawda::BayanTalif {
+                sabab: khata.to_string(),
+            })?;
         if bayan.isdar != ISDAR_BAYAN {
             return Err(KhataMustawda::BayanTalif {
-                sabab: format!("manifest schema {} is not the {ISDAR_BAYAN} this build reads",
-                    bayan.isdar),
+                sabab: format!(
+                    "manifest schema {} is not the {ISDAR_BAYAN} this build reads",
+                    bayan.isdar
+                ),
             });
         }
         if let Some(sabiq) = mukhazzan
-            && bayan.tasalsul < sabiq {
-                return Err(KhataMustawda::TasalsulLilkhalf {
-                    wujid: bayan.tasalsul,
-                    mukhazzan: sabiq,
-                });
-            }
+            && bayan.tasalsul < sabiq
+        {
+            return Err(KhataMustawda::TasalsulLilkhalf {
+                wujid: bayan.tasalsul,
+                mukhazzan: sabiq,
+            });
+        }
         Ok(bayan)
     }
 }
@@ -258,11 +262,7 @@ impl ShareehaMuwaththaqa {
     /// for `raqm`, [`KhataMustawda::BasmaGhayrMutabaqa`] when the bytes hash to
     /// something else, and [`KhataMustawda::ShareehaTalifa`] when verified bytes
     /// do not parse.
-    pub fn min_bayt(
-        raqm: u16,
-        bayt: &[u8],
-        bayan: &BayanMustawda,
-    ) -> Result<Self, KhataMustawda> {
+    pub fn min_bayt(raqm: u16, bayt: &[u8], bayan: &BayanMustawda) -> Result<Self, KhataMustawda> {
         let muallana = bayan
             .basmat_shareeha(raqm)
             .ok_or(KhataMustawda::ShareehaMajhula { raqm })?;
@@ -274,10 +274,16 @@ impl ShareehaMuwaththaqa {
                 mahsuba: mahsuba.to_string(),
             });
         }
-        let muhtawa = serde_json::from_slice(bayt).map_err(|khata| {
-            KhataMustawda::ShareehaTalifa { raqm, sabab: khata.to_string() }
-        })?;
-        Ok(Self { raqm, basma: mahsuba, muhtawa })
+        let muhtawa =
+            serde_json::from_slice(bayt).map_err(|khata| KhataMustawda::ShareehaTalifa {
+                raqm,
+                sabab: khata.to_string(),
+            })?;
+        Ok(Self {
+            raqm,
+            basma: mahsuba,
+            muhtawa,
+        })
     }
 
     /// Which shard this is.

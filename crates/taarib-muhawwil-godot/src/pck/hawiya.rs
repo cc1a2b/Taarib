@@ -479,7 +479,9 @@ impl MadkhalHawiya {
     /// not carry one.
     #[must_use]
     pub fn masar_nisbi(&self) -> &str {
-        self.masar.strip_prefix(BIDAYAT_MASAR).unwrap_or(&self.masar)
+        self.masar
+            .strip_prefix(BIDAYAT_MASAR)
+            .unwrap_or(&self.masar)
     }
 
     /// The stored path length, padding included.
@@ -491,7 +493,9 @@ impl MadkhalHawiya {
     /// How many bytes this entry occupies in the index.
     #[must_use]
     pub fn hajm_fi_al_fahras(&self, isdar: IsdarHawiya) -> u64 {
-        isdar.aqall_madkhal().saturating_add(u64::from(self.tul_masar_makhzun))
+        isdar
+            .aqall_madkhal()
+            .saturating_add(u64::from(self.tul_masar_makhzun))
     }
 }
 
@@ -567,13 +571,18 @@ impl ItarMushaffar {
                 saqf: AQSA_MADKHAL,
             });
         }
-        let tul_shifra = ila_kutla(tul).ok_or_else(|| {
-            qari.talif("an encrypted run's ciphertext length", tul, AQSA_MADKHAL)
-        })?;
+        let tul_shifra = ila_kutla(tul)
+            .ok_or_else(|| qari.talif("an encrypted run's ciphertext length", tul, AQSA_MADKHAL))?;
         // Bounded here rather than at decryption time so that a frame naming
         // more ciphertext than exists is refused while it is still just a frame.
         let _ = qari.iqra_bayt("an encrypted run's ciphertext", tul_shifra)?;
-        Ok(Self { basma, tul, muttajih, izahat_shifra: HAJM_ITAR_TASHFEER, tul_shifra })
+        Ok(Self {
+            basma,
+            tul,
+            muttajih,
+            izahat_shifra: HAJM_ITAR_TASHFEER,
+            tul_shifra,
+        })
     }
 
     /// The ciphertext itself, given the run the frame introduces.
@@ -640,14 +649,19 @@ impl Fahras {
         // is deliberate: a decoder handed the NULs produces a String with
         // embedded NULs, which compares unequal to the path the engine asks for
         // and fails a lookup that should have succeeded.
-        let bila_hashw = khaam.iter().rposition(|wahid| *wahid != 0).map_or(0, |akhir| {
-            akhir.saturating_add(1)
-        });
+        let bila_hashw = khaam
+            .iter()
+            .rposition(|wahid| *wahid != 0)
+            .map_or(0, |akhir| akhir.saturating_add(1));
         let masar = qari.nass(khaam.get(..bila_hashw).unwrap_or(&[]))?;
         let izaha = qari.iqra_u64("an entry's offset")?;
         let hajm = qari.iqra_u64("an entry's size")?;
         let basma = qari.iqra_masfufa::<16>("an entry's digest")?;
-        let alam = if isdar.bi_qaida() { qari.iqra_u32("an entry's flags")? } else { 0 };
+        let alam = if isdar.bi_qaida() {
+            qari.iqra_u32("an entry's flags")?
+        } else {
+            0
+        };
         // Checked here so that no later arithmetic on this entry can wrap. The
         // *containment* check — does this run actually lie inside the package —
         // belongs to `Hawiya`, which is the only thing that knows how long the
@@ -655,7 +669,14 @@ impl Fahras {
         if izaha.checked_add(hajm).is_none() {
             return Err(qari.talif("an entry whose offset plus size overflows", izaha, u64::MAX));
         }
-        Ok(MadkhalHawiya { masar, izaha, hajm, basma, alam, tul_masar_makhzun })
+        Ok(MadkhalHawiya {
+            masar,
+            izaha,
+            hajm,
+            basma,
+            alam,
+            tul_masar_makhzun,
+        })
     }
 }
 
@@ -694,18 +715,25 @@ impl Mawrid for Fahras {
         let mut qari = Qari::jadeed(ISM, bayt);
         let sihr = qari.iqra_masfufa::<4>("the package magic")?;
         if sihr != SIHR {
-            return Err(KhataGodot::SihrGhayrMutabaq { masar: PathBuf::new() });
+            return Err(KhataGodot::SihrGhayrMutabaq {
+                masar: PathBuf::new(),
+            });
         }
         let raqm = qari.iqra_u32("the pack format version")?;
-        let isdar = IsdarHawiya::min_raqm(raqm)
-            .ok_or(KhataGodot::IsdarGhayrMadum { wujid: raqm, aqsa: ISDAR_AQSA })?;
+        let isdar = IsdarHawiya::min_raqm(raqm).ok_or(KhataGodot::IsdarGhayrMadum {
+            wujid: raqm,
+            aqsa: ISDAR_AQSA,
+        })?;
         let muharrik = (
             qari.iqra_u32("the engine major version")?,
             qari.iqra_u32("the engine minor version")?,
             qari.iqra_u32("the engine patch version")?,
         );
         let (alam, qaida) = if isdar.bi_qaida() {
-            (qari.iqra_u32("the pack flags")?, qari.iqra_u64("the file base")?)
+            (
+                qari.iqra_u32("the pack flags")?,
+                qari.iqra_u64("the file base")?,
+            )
         } else {
             (0, 0)
         };
@@ -714,14 +742,22 @@ impl Mawrid for Fahras {
             *kalima = qari.iqra_u32("a reserved header word")?;
         }
         let adad = qari.iqra_u32("the entry count")?;
-        let tarwisa = TarwisatHawiya { isdar, muharrik, alam, qaida, mahjuz };
+        let tarwisa = TarwisatHawiya {
+            isdar,
+            muharrik,
+            alam,
+            qaida,
+            mahjuz,
+        };
 
         if tarwisa.fahras_mushaffar() {
             // Validated and then refused. Reading the frame proves the package
             // really is an encrypted one rather than a corrupt one, so the user
             // is told "supply the key" instead of "this file is damaged".
             let _ = ItarMushaffar::min_bayt(qari.baqiya())?;
-            return Err(KhataGodot::PckMushaffar { masar: PathBuf::new() });
+            return Err(KhataGodot::PckMushaffar {
+                masar: PathBuf::new(),
+            });
         }
 
         let matlub = tahaqquq_adad(
@@ -736,7 +772,11 @@ impl Mawrid for Fahras {
         for _ in 0..matlub {
             madakhil.push(Self::madkhal(&mut qari, isdar)?);
         }
-        Ok(Self { tarwisa, madakhil, tul: tul_u64(qari.mawqi()) })
+        Ok(Self {
+            tarwisa,
+            madakhil,
+            tul: tul_u64(qari.mawqi()),
+        })
     }
 
     /// Writes the header and the index back out.
@@ -860,18 +900,24 @@ pub fn ijad_bidaya(bayt: &[u8]) -> Result<(u64, bool), KhataGodot> {
     let masafa = qari.iqra_u64("the embedded package's distance")?;
     let sihr = qari.iqra_masfufa::<4>("the trailing magic")?;
     if sihr != SIHR {
-        return Err(KhataGodot::SihrGhayrMutabaq { masar: PathBuf::new() });
+        return Err(KhataGodot::SihrGhayrMutabaq {
+            masar: PathBuf::new(),
+        });
     }
-    let bidaya = izahat_dhayl.checked_sub(masafa).ok_or(KhataGodot::HawiyaTalifa {
-        ism: ISM,
-        haql: "the embedded package's distance, which reaches before the file begins",
-        qeema: masafa,
-        hadd: izahat_dhayl,
-    })?;
+    let bidaya = izahat_dhayl
+        .checked_sub(masafa)
+        .ok_or(KhataGodot::HawiyaTalifa {
+            ism: ISM,
+            haql: "the embedded package's distance, which reaches before the file begins",
+            qeema: masafa,
+            hadd: izahat_dhayl,
+        })?;
     qari.iqfiz("the embedded package's start", bidaya)?;
     let mukarrar = qari.iqra_masfufa::<4>("the embedded package's magic")?;
     if mukarrar != SIHR {
-        return Err(KhataGodot::SihrGhayrMutabaq { masar: PathBuf::new() });
+        return Err(KhataGodot::SihrGhayrMutabaq {
+            masar: PathBuf::new(),
+        });
     }
     Ok((bidaya, true))
 }
@@ -918,7 +964,12 @@ impl Hawiya {
             hadd: tul_u64(bayt.len()),
         })?;
         let fahras = Fahras::min_bayt(hawiya)?;
-        let natija = Self { fahras, bidaya, mudmaj, tul: tul_u64(bayt.len()) };
+        let natija = Self {
+            fahras,
+            bidaya,
+            mudmaj,
+            tul: tul_u64(bayt.len()),
+        };
         for madkhal in natija.fahras.madakhil() {
             let _ = natija.mada(madkhal)?;
         }
@@ -972,7 +1023,9 @@ impl Hawiya {
     /// The entry for an exact `res://` path, if the package holds it.
     #[must_use]
     pub fn madkhal(&self, masar: &str) -> Option<&MadkhalHawiya> {
-        self.madakhil().iter().find(|madkhal| madkhal.masar == masar)
+        self.madakhil()
+            .iter()
+            .find(|madkhal| madkhal.masar == masar)
     }
 
     /// Where an entry's stored bytes begin and end in the container.
@@ -982,15 +1035,18 @@ impl Hawiya {
     /// [`KhataGodot::HawiyaTalifa`] when the range overflows or reaches past the
     /// end of the container.
     pub fn mada(&self, madkhal: &MadkhalHawiya) -> Result<(u64, u64), KhataGodot> {
-        let bidaya = self.izahat_asas().checked_add(madkhal.izaha).ok_or(
-            KhataGodot::HawiyaTalifa {
-                ism: ISM,
-                haql: "an entry offset that overflows the container",
-                qeema: madkhal.izaha,
-                hadd: self.tul,
-            },
-        )?;
-        let nihaya = bidaya.checked_add(madkhal.hajm).filter(|nihaya| *nihaya <= self.tul);
+        let bidaya =
+            self.izahat_asas()
+                .checked_add(madkhal.izaha)
+                .ok_or(KhataGodot::HawiyaTalifa {
+                    ism: ISM,
+                    haql: "an entry offset that overflows the container",
+                    qeema: madkhal.izaha,
+                    hadd: self.tul,
+                })?;
+        let nihaya = bidaya
+            .checked_add(madkhal.hajm)
+            .filter(|nihaya| *nihaya <= self.tul);
         let nihaya = nihaya.ok_or_else(|| KhataGodot::HawiyaTalifa {
             ism: ISM,
             haql: "an entry that reaches past the end of the container",
@@ -1017,13 +1073,14 @@ impl Hawiya {
         let akhir = hajm_usize(nihaya);
         match (awwal, akhir) {
             (Some(awwal), Some(akhir)) => {
-                bayt.get(awwal..akhir).ok_or_else(|| KhataGodot::HawiyaTalifa {
-                    ism: ISM,
-                    haql: "an entry that reaches past the end of the container",
-                    qeema: nihaya,
-                    hadd: tul_u64(bayt.len()),
-                })
-            }
+                bayt.get(awwal..akhir)
+                    .ok_or_else(|| KhataGodot::HawiyaTalifa {
+                        ism: ISM,
+                        haql: "an entry that reaches past the end of the container",
+                        qeema: nihaya,
+                        hadd: tul_u64(bayt.len()),
+                    })
+            },
             _ => Err(KhataGodot::HawiyaTalifa {
                 ism: ISM,
                 haql: "an entry whose range does not fit this platform's addresses",
@@ -1075,7 +1132,9 @@ impl Hawiya {
         let makhzun = self.bayt_madkhal(bayt, madkhal)?;
         let wadih = if madkhal.mushaffar() {
             let itar = ItarMushaffar::min_bayt(makhzun)?;
-            let miftah = miftah.ok_or(KhataGodot::PckMushaffar { masar: PathBuf::new() })?;
+            let miftah = miftah.ok_or(KhataGodot::PckMushaffar {
+                masar: PathBuf::new(),
+            })?;
             let wadih = fukk_tashfeer(miftah, &itar, itar.shifra(makhzun)?)?;
             if tul_u64(wadih.len()) != itar.tul || basma_md5(&wadih) != itar.basma {
                 return Err(KhataGodot::MiftahGhayrSalih {
@@ -1089,7 +1148,9 @@ impl Hawiya {
             makhzun.to_vec()
         };
         if madkhal.bi_basma() && basma_md5(&wadih) != madkhal.basma {
-            return Err(KhataGodot::BasmaGhayrMutabaqa { madkhal: madkhal.masar.clone() });
+            return Err(KhataGodot::BasmaGhayrMutabaqa {
+                madkhal: madkhal.masar.clone(),
+            });
         }
         Ok(wadih)
     }
@@ -1107,12 +1168,14 @@ impl Hawiya {
         masar: &str,
         miftah: Option<&[u8; HAJM_MIFTAH]>,
     ) -> Result<Vec<u8>, KhataGodot> {
-        let madkhal = self.madkhal(masar).ok_or_else(|| KhataGodot::HawiyaTalifa {
-            ism: ISM,
-            haql: "a path this package does not hold",
-            qeema: tul_u64(masar.len()),
-            hadd: tul_u64(self.madakhil().len()),
-        })?;
+        let madkhal = self
+            .madkhal(masar)
+            .ok_or_else(|| KhataGodot::HawiyaTalifa {
+                ism: ISM,
+                haql: "a path this package does not hold",
+                qeema: tul_u64(masar.len()),
+                hadd: tul_u64(self.madakhil().len()),
+            })?;
         self.istakhrij(bayt, madkhal, miftah)
     }
 }
@@ -1184,12 +1247,12 @@ pub fn fukk_tashfeer(
     // read a zero byte as a padding length and refuse every correct package.
     // The returned slice is the whole buffer, so it is discarded and the
     // buffer is trimmed to the stated length instead.
-    mufakkik.decrypt_padded_mut::<NoPadding>(&mut hajz).map_err(|_| {
-        KhataGodot::MiftahGhayrSalih {
+    mufakkik
+        .decrypt_padded_mut::<NoPadding>(&mut hajz)
+        .map_err(|_| KhataGodot::MiftahGhayrSalih {
             masar: PathBuf::new(),
             sabab: "the ciphertext could not be decrypted with the supplied key",
-        }
-    })?;
+        })?;
     hajz.truncate(siaa);
 
     // The caller compares this against both the frame's digest and the index's,
@@ -1223,9 +1286,12 @@ impl HawiyaMaftuha {
     /// the path filled into the refusals that could not name it.
     pub fn iftah(masar: &Path) -> Result<Self, KhataGodot> {
         let khareeta = iftah_khareeta(masar)?;
-        let hawiya =
-            Hawiya::min_bayt(&khareeta).map_err(|khata| sammi_masar(khata, masar))?;
-        Ok(Self { masar: masar.to_path_buf(), khareeta, hawiya })
+        let hawiya = Hawiya::min_bayt(&khareeta).map_err(|khata| sammi_masar(khata, masar))?;
+        Ok(Self {
+            masar: masar.to_path_buf(),
+            khareeta,
+            hawiya,
+        })
     }
 
     /// Where the package was opened from.
@@ -1279,7 +1345,11 @@ const fn hashw_u64(tul: u64, muhadhah: u64) -> u64 {
         return 0;
     }
     let zaid = tul & qinaa;
-    if zaid == 0 { 0 } else { muhadhah.saturating_sub(zaid) }
+    if zaid == 0 {
+        0
+    } else {
+        muhadhah.saturating_sub(zaid)
+    }
 }
 
 /// Builds the additive patch package.
@@ -1352,7 +1422,11 @@ impl BinaHawiya {
                 hadd: tul_u64(BIDAYAT_MASAR.len()),
             });
         }
-        if self.madakhil.iter().any(|(mawjud, _)| mawjud.as_str() == masar) {
+        if self
+            .madakhil
+            .iter()
+            .any(|(mawjud, _)| mawjud.as_str() == masar)
+        {
             // Two entries at one path is a package whose meaning depends on
             // which one the engine happens to reach first. Refused while it is
             // still a mistake in the patch's own manifest.
@@ -1454,13 +1528,13 @@ impl BinaHawiya {
                     qeema: u64::MAX,
                     saqf: AQSA_HAWIYA_MAKTUBA,
                 })?;
-            mawqi = baad.checked_add(hashw_u64(baad, self.muhadhah)).ok_or(
-                KhataGodot::HajmMufrit {
-                    haql: "the patch package's total size",
-                    qeema: u64::MAX,
-                    saqf: AQSA_HAWIYA_MAKTUBA,
-                },
-            )?;
+            mawqi =
+                baad.checked_add(hashw_u64(baad, self.muhadhah))
+                    .ok_or(KhataGodot::HajmMufrit {
+                        haql: "the patch package's total size",
+                        qeema: u64::MAX,
+                        saqf: AQSA_HAWIYA_MAKTUBA,
+                    })?;
         }
         if mawqi > AQSA_HAWIYA_MAKTUBA {
             return Err(KhataGodot::HajmMufrit {
@@ -1477,7 +1551,11 @@ impl BinaHawiya {
             qaida,
             mahjuz: [0u32; ADAD_MAHJUZ],
         };
-        let fahras = Fahras { tarwisa, madakhil, tul: tul_fahras };
+        let fahras = Fahras {
+            tarwisa,
+            madakhil,
+            tul: tul_fahras,
+        };
         let mut katib = Katib::bi_siaa(hajm_usize(mawqi).unwrap_or(0));
         katib.uktub_bayt(&fahras.ila_bayt()?);
         let muhadhah = hajm_usize(self.muhadhah).unwrap_or(1);

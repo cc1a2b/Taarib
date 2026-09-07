@@ -315,7 +315,11 @@ fn ahruf_al_aqrass() -> Vec<char> {
     // volumes are mounted, which the filter below handles as an empty list.
     let qinaa = unsafe { windows::Win32::Storage::FileSystem::GetLogicalDrives() };
     (0u32..26)
-        .filter(|raqm| qinaa.checked_shr(*raqm).is_some_and(|munzah| munzah & 1 == 1))
+        .filter(|raqm| {
+            qinaa
+                .checked_shr(*raqm)
+                .is_some_and(|munzah| munzah & 1 == 1)
+        })
         .filter_map(|raqm| char::from_u32(u32::from(b'A').saturating_add(raqm)))
         .collect()
 }
@@ -341,7 +345,10 @@ struct KhataGamingRoot {
 
 impl KhataGamingRoot {
     fn jadeed(mawdi: usize, tafsil: impl Into<String>) -> Self {
-        Self { mawdi, tafsil: tafsil.into() }
+        Self {
+            mawdi,
+            tafsil: tafsil.into(),
+        }
     }
 }
 
@@ -429,9 +436,9 @@ fn mujalladat_gaming_root(jidhr_qurs: &Path, tanbihat: &mut Vec<TanbihFahs>) -> 
 /// inside the magic, inside a code unit, or before a terminator — returns the
 /// offset it failed at instead of reading past the end.
 fn masarat_min_gaming_root(bayt: &[u8]) -> Result<Vec<String>, KhataGamingRoot> {
-    let sihr = bayt
-        .get(..SIHR_GAMING_ROOT.len())
-        .ok_or_else(|| KhataGamingRoot::jadeed(0, "file is shorter than the four-byte signature"))?;
+    let sihr = bayt.get(..SIHR_GAMING_ROOT.len()).ok_or_else(|| {
+        KhataGamingRoot::jadeed(0, "file is shorter than the four-byte signature")
+    })?;
     if sihr != SIHR_GAMING_ROOT {
         return Err(KhataGamingRoot::jadeed(
             0,
@@ -475,9 +482,7 @@ fn masarat_min_gaming_root(bayt: &[u8]) -> Result<Vec<String>, KhataGamingRoot> 
         }
         let nass = char::decode_utf16(wahdat.iter().copied())
             .collect::<Result<String, _>>()
-            .map_err(|_| {
-                KhataGamingRoot::jadeed(bidaya, "folder name is not valid UTF-16")
-            })?;
+            .map_err(|_| KhataGamingRoot::jadeed(bidaya, "folder name is not valid UTF-16"))?;
         masarat.push(nass);
     }
     Ok(masarat)
@@ -598,7 +603,9 @@ struct BayanRuzma {
 impl BayanRuzma {
     /// Whether the manifest declares any capability by that name.
     fn laha_qudra(&self, ism: &str) -> bool {
-        self.qudurat.iter().any(|qudra| qudra.eq_ignore_ascii_case(ism))
+        self.qudurat
+            .iter()
+            .any(|qudra| qudra.eq_ignore_ascii_case(ism))
     }
 
     /// The application entry whose executable is most likely to be the game.
@@ -611,7 +618,10 @@ impl BayanRuzma {
         self.tatbiqat
             .iter()
             .find(|tatbeeq| {
-                tatbeeq.tanfidhi.as_deref().is_some_and(|ism| !huwa_shim(ism))
+                tatbeeq
+                    .tanfidhi
+                    .as_deref()
+                    .is_some_and(|ism| !huwa_shim(ism))
             })
             .or_else(|| self.tatbiqat.first())
     }
@@ -694,9 +704,7 @@ fn hallil_bayan(nass: &str) -> Result<BayanRuzma, String> {
             Ok(quick_xml::events::Event::End(marka)) => {
                 let ism = ism_mahalli(marka.local_name().as_ref());
                 let qeema = std::mem::take(&mut madad).trim().to_owned();
-                if fi_khasais
-                    && !qeema.is_empty()
-                    && amud_khasais.as_deref() == Some(ism.as_str())
+                if fi_khasais && !qeema.is_empty() && amud_khasais.as_deref() == Some(ism.as_str())
                 {
                     match ism.as_str() {
                         "DisplayName" => bayan.ism_azhar = Some(qeema),
@@ -722,9 +730,11 @@ fn hallil_bayan(nass: &str) -> Result<BayanRuzma, String> {
     }
 
     if bayan.ism_huwiya.is_none() {
-        return Err("the package manifest declares no <Identity Name>, so the package has no \
+        return Err(
+            "the package manifest declares no <Identity Name>, so the package has no \
                     family name and cannot be identified"
-            .to_owned());
+                .to_owned(),
+        );
     }
     Ok(bayan)
 }
@@ -969,7 +979,10 @@ fn muarrif_nashir(nashir: &str) -> String {
 /// something every later stage would have to be taught to reject.
 fn harf_qaeda32(qeema: u64) -> char {
     let [.., fihris] = (qeema & QINAA_HARF).to_be_bytes();
-    HURUF_MUARRIF_NASHIR.chars().nth(usize::from(fihris)).unwrap_or('0')
+    HURUF_MUARRIF_NASHIR
+        .chars()
+        .nth(usize::from(fihris))
+        .unwrap_or('0')
 }
 
 /// The directory names worth testing as a package full name: the package
@@ -977,11 +990,16 @@ fn harf_qaeda32(qeema: u64) -> char {
 /// install, its parent.
 fn asmaa_mujalladat(masar: &Path) -> Vec<String> {
     let mut asmaa = Vec::new();
-    if let Some(ism) = masar.file_name().map(|ism| ism.to_string_lossy().into_owned()) {
+    if let Some(ism) = masar
+        .file_name()
+        .map(|ism| ism.to_string_lossy().into_owned())
+    {
         asmaa.push(ism);
     }
-    if let Some(ism) =
-        masar.parent().and_then(Path::file_name).map(|ism| ism.to_string_lossy().into_owned())
+    if let Some(ism) = masar
+        .parent()
+        .and_then(Path::file_name)
+        .map(|ism| ism.to_string_lossy().into_owned())
     {
         asmaa.push(ism);
     }
@@ -1005,7 +1023,9 @@ fn muarrif_nashir_min_ism_kamil(ism_kamil: &str, ism_huwiya: &str) -> Option<Str
     }
     let akhir = ism_kamil.rsplit('_').next()?;
     if akhir.len() != TUL_MUARRIF_NASHIR
-        || !akhir.chars().all(|harf| HURUF_MUARRIF_NASHIR.contains(harf))
+        || !akhir
+            .chars()
+            .all(|harf| HURUF_MUARRIF_NASHIR.contains(harf))
     {
         return None;
     }
@@ -1024,7 +1044,11 @@ fn luba_min_ruzma(masar: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Option<LubaMu
     let bayan = match iqra_bayan(&masar.join(ISM_BAYAN)) {
         Ok(bayan) => bayan,
         Err(sabab) => {
-            tanbihat.push(TanbihFahs::jadeed(MUARRIF, masar.display().to_string(), sabab));
+            tanbihat.push(TanbihFahs::jadeed(
+                MUARRIF,
+                masar.display().to_string(),
+                sabab,
+            ));
             return None;
         },
     };
@@ -1119,12 +1143,16 @@ fn ism_azhar(masar: &Path, bayan: &BayanRuzma, tatbeeq: &TatbeeqRuzma) -> String
     }
     // `Content` names the layout, not the game, so its parent is the title.
     let mut mujallad = masar;
-    if mujallad.file_name().is_some_and(|ism| ism.eq_ignore_ascii_case("Content"))
+    if mujallad
+        .file_name()
+        .is_some_and(|ism| ism.eq_ignore_ascii_case("Content"))
         && let Some(walid) = mujallad.parent()
     {
         mujallad = walid;
     }
-    if let Some(ism) = mujallad.file_name().map(|ism| ism.to_string_lossy().into_owned())
+    if let Some(ism) = mujallad
+        .file_name()
+        .map(|ism| ism.to_string_lossy().into_owned())
         && !ism.contains('_')
     {
         return ism;
@@ -1145,7 +1173,9 @@ fn ghayr_luba(bayan: &BayanRuzma) -> bool {
     bayan.ism_huwiya.as_deref().is_some_and(|huwiya| {
         BIDAYAT_GHAYR_LUBA.iter().any(|bidaya| {
             huwiya.len() >= bidaya.len()
-                && huwiya.get(..bidaya.len()).is_some_and(|juz| juz.eq_ignore_ascii_case(bidaya))
+                && huwiya
+                    .get(..bidaya.len())
+                    .is_some_and(|juz| juz.eq_ignore_ascii_case(bidaya))
         })
     })
 }
@@ -1161,12 +1191,12 @@ fn dalil_hawiya(bayan: &BayanRuzma, tatbeeq: &TatbeeqRuzma) -> Option<String> {
     let mut dalail: Vec<&str> = Vec::new();
 
     let thiqa_kamila = bayan.laha_qudra("runFullTrust")
-        || bayan
-            .tatbiqat
-            .iter()
-            .any(|wahid| wahid.madkhal.as_deref().is_some_and(|madkhal| {
-                madkhal.eq_ignore_ascii_case("Windows.FullTrustApplication")
-            }))
+        || bayan.tatbiqat.iter().any(|wahid| {
+            wahid
+                .madkhal
+                .as_deref()
+                .is_some_and(|madkhal| madkhal.eq_ignore_ascii_case("Windows.FullTrustApplication"))
+        })
         || bayan
             .imtidadat
             .iter()
@@ -1236,7 +1266,9 @@ fn hall_shiar(jidhr: &Path, nisbi: &str) -> Option<PathBuf> {
 
     let mujallad = mubashir.parent()?;
     let jidhr_ism = mubashir.file_stem()?.to_string_lossy().into_owned();
-    let imtidad = mubashir.extension().map(|q| q.to_string_lossy().into_owned())?;
+    let imtidad = mubashir
+        .extension()
+        .map(|q| q.to_string_lossy().into_owned())?;
     let bidaya = format!("{jidhr_ism}.");
     let nihaya = format!(".{imtidad}");
 
@@ -1295,7 +1327,10 @@ mod ikhtibarat {
         // list, and the right answer to either question asked of it.
         let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
         siyaq.mujalladat_baramij = vec![baramij.clone()];
-        assert_eq!(mujallad_windows_apps(&siyaq), Some(baramij.join("WindowsApps")));
+        assert_eq!(
+            mujallad_windows_apps(&siyaq),
+            Some(baramij.join("WindowsApps"))
+        );
         assert_eq!(siyaq.mujallad_baramij_x86(), siyaq.mujallad_baramij_asli());
         Ok(())
     }

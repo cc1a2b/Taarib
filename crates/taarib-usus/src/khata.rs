@@ -406,7 +406,10 @@ impl Mawqi {
     #[track_caller]
     fn hali() -> Self {
         let l = Location::caller();
-        Self { malaf: l.file().to_owned(), satr: l.line() }
+        Self {
+            malaf: l.file().to_owned(),
+            satr: l.line(),
+        }
     }
 }
 
@@ -554,8 +557,11 @@ impl Khata {
         use std::fmt::Write as _;
 
         let badiya = "  ".repeat(umq);
-        let _ =
-            writeln!(out, "{badiya}{} [{:?}] {}", self.ramz, self.khutura, self.injilizi);
+        let _ = writeln!(
+            out,
+            "{badiya}{} [{:?}] {}",
+            self.ramz, self.khutura, self.injilizi
+        );
         let _ = writeln!(out, "{badiya}  ar: {}", self.arabi);
         if let Some(m) = &self.mawqi {
             let _ = writeln!(out, "{badiya}  at: {m}");
@@ -592,7 +598,9 @@ impl fmt::Display for Khata {
 
 impl std::error::Error for Khata {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.sabab.as_ref().map(|s| -> &(dyn std::error::Error + 'static) { s.as_ref() })
+        self.sabab
+            .as_ref()
+            .map(|s| -> &(dyn std::error::Error + 'static) { s.as_ref() })
     }
 }
 
@@ -667,7 +675,10 @@ macro_rules! khata_min {
 #[must_use]
 pub fn siyaq_io(khata: &std::io::Error) -> BTreeMap<String, QeemaSiyaq> {
     let mut siyaq = BTreeMap::new();
-    let _ = siyaq.insert("io".to_owned(), QeemaSiyaq::Nass(format!("{:?}", khata.kind())));
+    let _ = siyaq.insert(
+        "io".to_owned(),
+        QeemaSiyaq::Nass(format!("{:?}", khata.kind())),
+    );
     if let Some(raw) = khata.raw_os_error() {
         let _ = siyaq.insert("os".to_owned(), QeemaSiyaq::Raqm(i64::from(raw)));
     }

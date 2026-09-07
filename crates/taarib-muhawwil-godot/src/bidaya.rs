@@ -212,7 +212,10 @@ fn sajjil(mujallad: &Path, hala: HalatBidaya, satr: &str) -> HalatBidaya {
     if std::fs::metadata(&masar).is_ok_and(|bayan| bayan.len() > AQSA_SIJILL) {
         let _ = std::fs::remove_file(&masar);
     }
-    let Ok(mut malaf) = std::fs::OpenOptions::new().create(true).append(true).open(&masar)
+    let Ok(mut malaf) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&masar)
     else {
         return hala;
     };
@@ -554,7 +557,9 @@ impl WaslGdnative {
     /// path inside somebody's game.
     pub fn balligh(self, nass: &str) {
         let Some(daala) = self.balligh else { return };
-        let Ok(risala) = CString::new(nass) else { return };
+        let Ok(risala) = CString::new(nass) else {
+            return;
+        };
         let maktaba = self.maktaba.map_or(core::ptr::null(), Unwan::muashir);
         // SAFETY: `daala` is the `report_loading_error` Godot itself put in the
         // init options, whose C signature is
@@ -1238,7 +1243,11 @@ fn sallim(mujallad: &Path) -> HalatBidaya {
         wasl.balligh(satr);
         return sajjil(
             mujallad,
-            if wusul { HalatBidaya::Naqisa } else { HalatBidaya::Mumtania },
+            if wusul {
+                HalatBidaya::Naqisa
+            } else {
+                HalatBidaya::Mumtania
+            },
             satr,
         );
     }

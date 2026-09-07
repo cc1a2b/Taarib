@@ -122,14 +122,20 @@ impl Hizma {
     pub fn min_bayt(bayt: &[u8]) -> Result<Self, KhataBio4> {
         let tul = tul_u64(bayt.len());
         if tul > AQSA_HIZMA {
-            return Err(KhataBio4::HajmMufrit { haql: ".pack", qeema: tul, saqf: AQSA_HIZMA });
+            return Err(KhataBio4::HajmMufrit {
+                haql: ".pack",
+                qeema: tul,
+                saqf: AQSA_HIZMA,
+            });
         }
-        let tarwis = bayt.get(..TUL_TARWIS).ok_or_else(|| KhataBio4::MalafQaseer {
-            haql: ".pack header",
-            mawqi: 0,
-            tul,
-            matlub: tul_u64(TUL_TARWIS),
-        })?;
+        let tarwis = bayt
+            .get(..TUL_TARWIS)
+            .ok_or_else(|| KhataBio4::MalafQaseer {
+                haql: ".pack header",
+                mawqi: 0,
+                tul,
+                matlub: tul_u64(TUL_TARWIS),
+            })?;
 
         let hawiya = HuwiyatHizma(quad(tarwis, 0)?);
         let adad = kalima(tarwis, 4)?;
@@ -169,7 +175,10 @@ impl Hizma {
             });
         }
         let hajm = usize::try_from(tul_himl).unwrap_or(usize::MAX);
-        Ok(Self { hawiya, himl: himl.get(..hajm).unwrap_or(himl).to_vec() })
+        Ok(Self {
+            hawiya,
+            himl: himl.get(..hajm).unwrap_or(himl).to_vec(),
+        })
     }
 
     /// Serialises the pack.
@@ -186,7 +195,11 @@ impl Hizma {
     pub fn ila_bayt(&self) -> Result<Vec<u8>, KhataBio4> {
         let tul = tul_u64(self.himl.len()).saturating_add(tul_u64(TUL_TARWIS));
         if tul > AQSA_HIZMA {
-            return Err(KhataBio4::HajmMufrit { haql: ".pack", qeema: tul, saqf: AQSA_HIZMA });
+            return Err(KhataBio4::HajmMufrit {
+                haql: ".pack",
+                qeema: tul,
+                saqf: AQSA_HIZMA,
+            });
         }
         let tul_himl = u32::try_from(self.himl.len()).unwrap_or(u32::MAX);
         let mut kharij = vec![0u8; TUL_TARWIS];
@@ -194,7 +207,11 @@ impl Hizma {
         daa(&mut kharij, 4, &1u32.to_le_bytes());
         daa(&mut kharij, 8, &MAWDI_JADWAL.to_le_bytes());
         daa(&mut kharij, MAWDI_JADWAL, &tul_himl.to_le_bytes());
-        daa(&mut kharij, MAWDI_JADWAL.saturating_add(4), &u32::MAX.to_le_bytes());
+        daa(
+            &mut kharij,
+            MAWDI_JADWAL.saturating_add(4),
+            &u32::MAX.to_le_bytes(),
+        );
         daa(&mut kharij, MAWDI_JADWAL.saturating_add(8), &self.hawiya.0);
         kharij.extend_from_slice(&self.himl);
         Ok(kharij)
@@ -219,12 +236,14 @@ impl Hizma {
 /// [`KhataBio4::HimlGhayrMutabaq`] when the texel blocks run out before the
 /// declared dimensions are covered.
 pub fn ifkak_dds(bayt: &[u8]) -> Result<SuraMufakkaka, KhataBio4> {
-    let tarwis = bayt.get(..TUL_TARWIS_DDS).ok_or_else(|| KhataBio4::MalafQaseer {
-        haql: "DDS header",
-        mawqi: 0,
-        tul: tul_u64(bayt.len()),
-        matlub: tul_u64(TUL_TARWIS_DDS),
-    })?;
+    let tarwis = bayt
+        .get(..TUL_TARWIS_DDS)
+        .ok_or_else(|| KhataBio4::MalafQaseer {
+            haql: "DDS header",
+            mawqi: 0,
+            tul: tul_u64(bayt.len()),
+            matlub: tul_u64(TUL_TARWIS_DDS),
+        })?;
     if tarwis.get(..4) != Some(&DDS_SIHR[..]) {
         return Err(KhataBio4::BunyaGhayrMutawaqqaa {
             haql: "DDS magic",
@@ -261,7 +280,9 @@ pub fn ifkak_dds(bayt: &[u8]) -> Result<SuraMufakkaka, KhataBio4> {
 
     let kutal_s = kutal(ard);
     let kutal_a = kutal(irtifa);
-    let matlub = u64::from(kutal_s).saturating_mul(u64::from(kutal_a)).saturating_mul(16);
+    let matlub = u64::from(kutal_s)
+        .saturating_mul(u64::from(kutal_a))
+        .saturating_mul(16);
     let himl = bayt.get(TUL_TARWIS_DDS..).unwrap_or(&[]);
     if tul_u64(himl.len()) < matlub {
         return Err(KhataBio4::HimlGhayrMutabaq {
@@ -284,7 +305,12 @@ pub fn ifkak_dds(bayt: &[u8]) -> Result<SuraMufakkaka, KhataBio4> {
             let Some(kutla) = himl.get(bidaya..bidaya.saturating_add(16)) else {
                 continue;
             };
-            ifkak_kutlat_alfa(kutla, &mut sura, amud.saturating_mul(4), satr.saturating_mul(4));
+            ifkak_kutlat_alfa(
+                kutla,
+                &mut sura,
+                amud.saturating_mul(4),
+                satr.saturating_mul(4),
+            );
         }
     }
     Ok(sura)
@@ -311,9 +337,15 @@ pub fn irsim_dds(sura: &SuraMufakkaka) -> Result<Vec<u8>, KhataBio4> {
     }
     let kutal_s = kutal(sura.ard);
     let kutal_a = kutal(sura.irtifa);
-    let hajm = u64::from(kutal_s).saturating_mul(u64::from(kutal_a)).saturating_mul(16);
+    let hajm = u64::from(kutal_s)
+        .saturating_mul(u64::from(kutal_a))
+        .saturating_mul(16);
     if hajm > AQSA_HIZMA {
-        return Err(KhataBio4::HajmMufrit { haql: "DXT5 payload", qeema: hajm, saqf: AQSA_HIZMA });
+        return Err(KhataBio4::HajmMufrit {
+            haql: "DXT5 payload",
+            qeema: hajm,
+            saqf: AQSA_HIZMA,
+        });
     }
 
     let saa = TUL_TARWIS_DDS.saturating_add(usize::try_from(hajm).unwrap_or(0));
@@ -326,7 +358,11 @@ pub fn irsim_dds(sura: &SuraMufakkaka) -> Result<Vec<u8>, KhataBio4> {
     daa(&mut tarwis, 4, &0x0008_1007u32.to_le_bytes());
     daa(&mut tarwis, 8, &sura.irtifa.to_le_bytes());
     daa(&mut tarwis, 12, &sura.ard.to_le_bytes());
-    daa(&mut tarwis, 16, &u32::try_from(hajm).unwrap_or(u32::MAX).to_le_bytes());
+    daa(
+        &mut tarwis,
+        16,
+        &u32::try_from(hajm).unwrap_or(u32::MAX).to_le_bytes(),
+    );
     daa(&mut tarwis, 72, &32u32.to_le_bytes());
     daa(&mut tarwis, 76, &4u32.to_le_bytes());
     daa(&mut tarwis, 80, b"DXT5");
@@ -410,7 +446,9 @@ fn irsim_kutla(sura: &SuraMufakkaka, s: u32, a: u32) -> [u8; 16] {
         let amud = u32::try_from(texel.checked_rem(4).unwrap_or(0)).unwrap_or(0);
         let satr = u32::try_from(texel.checked_div(4).unwrap_or(0)).unwrap_or(0);
         if let Some(makan) = qeem.get_mut(texel) {
-            *makan = sura.texel(s.saturating_add(amud), a.saturating_add(satr)).unwrap_or(0);
+            *makan = sura
+                .texel(s.saturating_add(amud), a.saturating_add(satr))
+                .unwrap_or(0);
         }
     }
     let aqsa = qeem.iter().copied().max().unwrap_or(0);
@@ -475,8 +513,14 @@ fn aqrab(sullam: &[u8], qeema: u8) -> u8 {
 
 /// An eight-bit grey as an `RGB565` word.
 fn ramadi(qeema: u8) -> u16 {
-    let khams = u16::from(qeema).saturating_mul(31).saturating_add(127).checked_div(255);
-    let sitt = u16::from(qeema).saturating_mul(63).saturating_add(127).checked_div(255);
+    let khams = u16::from(qeema)
+        .saturating_mul(31)
+        .saturating_add(127)
+        .checked_div(255);
+    let sitt = u16::from(qeema)
+        .saturating_mul(63)
+        .saturating_add(127)
+        .checked_div(255);
     let khams = khams.unwrap_or(0).min(31);
     let sitt = sitt.unwrap_or(0).min(63);
     khams.saturating_mul(0x0800) | sitt.saturating_mul(0x0020) | khams
@@ -505,12 +549,14 @@ fn kalima(bayt: &[u8], mawqi: u32) -> Result<u32, KhataBio4> {
 fn quad(bayt: &[u8], mawqi: u32) -> Result<[u8; 4], KhataBio4> {
     let bidaya = usize::try_from(mawqi).unwrap_or(usize::MAX);
     let nihaya = bidaya.saturating_add(4);
-    let qita = bayt.get(bidaya..nihaya).ok_or_else(|| KhataBio4::MalafQaseer {
-        haql: "header word",
-        mawqi: u64::from(mawqi),
-        tul: tul_u64(bayt.len()),
-        matlub: u64::from(mawqi).saturating_add(4),
-    })?;
+    let qita = bayt
+        .get(bidaya..nihaya)
+        .ok_or_else(|| KhataBio4::MalafQaseer {
+            haql: "header word",
+            mawqi: u64::from(mawqi),
+            tul: tul_u64(bayt.len()),
+            matlub: u64::from(mawqi).saturating_add(4),
+        })?;
     let mut kalima = [0u8; 4];
     kalima.copy_from_slice(qita);
     Ok(kalima)

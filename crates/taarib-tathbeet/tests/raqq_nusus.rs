@@ -68,7 +68,10 @@ fn ibni_renpy(jidhr: &Path) {
         fs::create_dir_all(masar.parent().expect("a parent")).expect("a fixture directory");
         fs::write(&masar, muhtawa).expect("a fixture file");
     };
-    iktub("renpy/__init__.py", "version_tuple = (8, 3, 4, vc_version)\n");
+    iktub(
+        "renpy/__init__.py",
+        "version_tuple = (8, 3, 4, vc_version)\n",
+    );
     iktub("renpy/text/hbfont.so", "\u{7f}ELF");
     iktub("lib/py3-linux-x86_64/libharfbuzz.so.0", "\u{7f}ELF");
     iktub("lib/py3-linux-x86_64/libfribidi.so.0", "\u{7f}ELF");
@@ -96,7 +99,9 @@ fn ibni_renpy(jidhr: &Path) {
 fn ibni_ruqaa(masar: &Path) {
     let mut katib = Katib::jadeed();
     let _ = katib.bayan(br#"{"isdar":1}"#);
-    let _ = katib.nass("Hello, traveller.", MARHABAN).expect("a string record");
+    let _ = katib
+        .nass("Hello, traveller.", MARHABAN)
+        .expect("a string record");
     let _ = katib.nass("Start Game", IBDA).expect("a string record");
     let bayt = katib.ikhtim().expect("a sealed package");
     fs::write(masar, bayt.bayt()).expect("writing the package");
@@ -143,7 +148,10 @@ fn raqq_nusus_yasil_min_alruqaa_ila_almalaf() {
         .expect("an adapter that applies to this directory");
 
     assert_eq!(taqreer.aila.ism(), "Ren'Py");
-    assert_eq!(taqreer.nusus, 2, "both strings in the package were placed: {taqreer:?}");
+    assert_eq!(
+        taqreer.nusus, 2,
+        "both strings in the package were placed: {taqreer:?}"
+    );
 
     let hiwar = fs::read_to_string(luba.join("game/tl/arabic/taarib_mustalahat.rpy"))
         .expect("the generated interface strings");
@@ -161,7 +169,9 @@ fn raqq_nusus_yasil_min_alruqaa_ila_almalaf() {
     // them and an uninstall is a delete rather than a search.
     let bayan = tathbeet.bayan();
     assert!(
-        bayan.sijillat().any(|sijill| sijill.masar.ends_with("taarib_mustalahat.rpy")),
+        bayan
+            .sijillat()
+            .any(|sijill| sijill.masar.ends_with("taarib_mustalahat.rpy")),
         "every file this write produced is in the installation manifest"
     );
     assert!(
@@ -197,13 +207,19 @@ fn ibni_makhzan(jidhr: &Path) {
         fs::create_dir_all(masar.parent().expect("a parent")).expect("a store directory");
         fs::write(&masar, muhtawa).expect("a store file");
     };
-    iktub("taarib_renpy/__init__.py", b"def rakkib(gamedir):\n    pass\n");
+    iktub(
+        "taarib_renpy/__init__.py",
+        b"def rakkib(gamedir):\n    pass\n",
+    );
     // The first four bytes of a TrueType file. The installer never parses a
     // face — it copies bytes and names the path — but a fixture that is not
     // even framed like a font would be a fixture pretending to be one.
     iktub(&format!("taarib/khutut/{WAJH}"), b"\x00\x01\x00\x00");
     // The license travels with the face, and must not be mistaken for one.
-    iktub("taarib/khutut/OFL.txt", b"Copyright (c) The Noto Project Authors\n");
+    iktub(
+        "taarib/khutut/OFL.txt",
+        b"Copyright (c) The Noto Project Authors\n",
+    );
 }
 
 /// The Ren'Py game as the installer resolved it.
@@ -274,12 +290,20 @@ fn khatt_renpy_yusajjal_qabl_nashrih_wa_yujad_baadah() {
     // value the deployment will place, and the rest of this test is the claim
     // that those are the same file — now by construction, because there is one
     // answer rather than two functions agreeing.
-    let mukhattat = tarkib::khutta(&imkaniyat(), &luba_muhallala(&luba), &makhzan)
-        .expect("a deployment plan");
-    let khatt = mukhattat.khatt_renpy.clone().expect("the component ships a face");
-    assert_eq!(khatt, KHATT_FI_ALLUBA, "the name is the path inside `game/`, verbatim");
+    let mukhattat =
+        tarkib::khutta(&imkaniyat(), &luba_muhallala(&luba), &makhzan).expect("a deployment plan");
+    let khatt = mukhattat
+        .khatt_renpy
+        .clone()
+        .expect("the component ships a face");
     assert_eq!(
-        tarkib::khatt_renpy(&makhzan).expect("the store lists").as_deref(),
+        khatt, KHATT_FI_ALLUBA,
+        "the name is the path inside `game/`, verbatim"
+    );
+    assert_eq!(
+        tarkib::khatt_renpy(&makhzan)
+            .expect("the store lists")
+            .as_deref(),
         Some(khatt.as_str()),
         "and the store, asked directly, still gives the same answer the plan took"
     );
@@ -300,7 +324,10 @@ fn khatt_renpy_yusajjal_qabl_nashrih_wa_yujad_baadah() {
     .expect("an adapter that applies to this directory");
     assert_eq!(taqreer.aila.ism(), "Ren'Py");
     assert!(
-        taqreer.mulahazat.iter().all(|satr| !satr.contains("no Arabic font was supplied")),
+        taqreer
+            .mulahazat
+            .iter()
+            .all(|satr| !satr.contains("no Arabic font was supplied")),
         "a store that ships a face must not be reported as one that does not: {:?}",
         taqreer.mulahazat
     );
@@ -324,13 +351,23 @@ fn khatt_renpy_yusajjal_qabl_nashrih_wa_yujad_baadah() {
 
     // Step two: the deployment of that same plan, through the same recorder.
     assert!(
-        mukhattat.mudkhalat.iter().any(|mudkhal| mudkhal.nisbi == format!("game/{khatt}")),
+        mukhattat
+            .mudkhalat
+            .iter()
+            .any(|mudkhal| mudkhal.nisbi == format!("game/{khatt}")),
         "and plans to add it: {:?}",
-        mukhattat.mudkhalat.iter().map(|mudkhal| &mudkhal.nisbi).collect::<Vec<_>>()
+        mukhattat
+            .mudkhalat
+            .iter()
+            .map(|mudkhal| &mudkhal.nisbi)
+            .collect::<Vec<_>>()
     );
     let munashar = tarkib::nashr_mulhaqat(&mukhattat, &luba, &makhzan, &mut tathbeet)
         .expect("the additive layer deploys");
-    assert!(munashar.mutakhatta.is_empty(), "nothing was skipped: {munashar:?}");
+    assert!(
+        munashar.mutakhatta.is_empty(),
+        "nothing was skipped: {munashar:?}"
+    );
 
     // The question the whole change exists to answer.
     let mutlaq = luba.join("game").join(&khatt);

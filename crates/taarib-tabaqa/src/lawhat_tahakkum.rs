@@ -64,7 +64,7 @@ use crate::manatiq::{MajmuatManatiq, MuarrifMintaqa, QaidatTarjama};
 use crate::qissa::HalatKhayt;
 use crate::sidq::{self, BasmatIfsah, NASS_IFSAH_ARABI};
 use crate::sijill_qira::{MadkhalQira, MuarrifMadkhal, TaqreerSijill};
-use crate::wajiha::{HalatTabaqa, MeezaniyatItar, MustatilNisbi, WasfSath, WajihatRusum};
+use crate::wajiha::{HalatTabaqa, MeezaniyatItar, MustatilNisbi, WajihatRusum, WasfSath};
 
 /// The file the keyboard bindings are stored in.
 pub const ISM_MALAF_IKHTISARAT: &str = "ikhtisarat.json";
@@ -74,9 +74,7 @@ pub const ISM_MALAF_IKHTISARAT: &str = "ikhtisarat.json";
 /// One flat list rather than a tree of menus. A player looking for "turn it
 /// off" while a boss is on screen should not be navigating, and every entry
 /// here has a chord that reaches it from anywhere.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Amr {
     /// Turn the overlay's drawing on or off.
@@ -165,40 +163,40 @@ impl Amr {
             Self::Tabdeel => {
                 "Stops the overlay drawing and stops it capturing. The hooks stay installed, \
                  so turning it back on is immediate."
-            }
+            },
             Self::TarjimAlan => {
                 "Captures, reads and translates every enabled region on this frame, whatever \
                  their rules say. This is the one action that ignores the rate limit, so it \
                  costs one full pass over every region at once."
-            }
+            },
             Self::TahrirManatiq => {
                 "Opens the region editor: draw a new region, drag one to move it, drag a \
                  corner to resize it. The game keeps running underneath."
-            }
+            },
             Self::ArdSijill => {
                 "Shows every line that was read and translated this session, so a line that \
                  left the screen before you finished reading it can be read again."
-            }
+            },
             Self::ZidAtaama => "Makes the panel more opaque, in steps of five percent.",
             Self::AnqisAtaama => {
                 "Makes the panel more transparent, in steps of five percent, down to a floor \
                  that keeps it visible — a panel faded to nothing still swallows the keys \
                  you type at it."
-            }
+            },
             Self::ZidHajmKhat => "Enlarges the panel's own text. Does not affect the overlay.",
             Self::AnqisHajmKhat => "Shrinks the panel's own text. Does not affect the overlay.",
             Self::Iqaf => {
                 "Stands the overlay down without unhooking it, for a cutscene or a fight \
                  where the frame cost matters more than the text."
-            }
+            },
             Self::ArdIfsah => {
                 "Shows the tier-3 disclosure again, in full and unchanged, whenever you want \
                  to read what this method actually costs."
-            }
+            },
             Self::Ighlaq => {
                 "Closes the panel and gives every key back to the game. The overlay keeps \
                  doing whatever it was doing."
-            }
+            },
         }
     }
 
@@ -397,7 +395,11 @@ impl RamzMiftah {
     /// outside the keyboard page this build handles.
     #[must_use]
     pub const fn min_hid(usage: u16) -> Self {
-        if usage > Self::AQSA { Self::LA_SHAY } else { Self(usage) }
+        if usage > Self::AQSA {
+            Self::LA_SHAY
+        } else {
+            Self(usage)
+        }
     }
 
     /// The raw usage identifier.
@@ -424,12 +426,11 @@ impl RamzMiftah {
             usage @ 0x04..=0x1D => {
                 let huruf = b"abcdefghijklmnopqrstuvwxyz";
                 let mawqi = usize::from(usage - 0x04);
-                huruf
-                    .get(mawqi)
-                    .map_or_else(|| format!("HID {usage:#04x}"), |harf| {
-                        char::from(harf.to_ascii_uppercase()).to_string()
-                    })
-            }
+                huruf.get(mawqi).map_or_else(
+                    || format!("HID {usage:#04x}"),
+                    |harf| char::from(harf.to_ascii_uppercase()).to_string(),
+                )
+            },
             usage @ 0x1E..=0x26 => format!("{}", usage - 0x1D),
             0x27 => "0".to_owned(),
             0x28 => "Enter".to_owned(),
@@ -489,7 +490,10 @@ impl Watar {
     /// keys discarded.
     #[must_use]
     pub const fn min_khaam(bitat: u8, usage: u16) -> Self {
-        Self { muaddilat: Muaddil::min_bitat(bitat), miftah: RamzMiftah::min_hid(usage) }
+        Self {
+            muaddilat: Muaddil::min_bitat(bitat),
+            miftah: RamzMiftah::min_hid(usage),
+        }
     }
 
     /// Whether this chord can be bound to anything.
@@ -546,8 +550,12 @@ impl NatijatRabt {
             Self::Rubita => "تمّ الربط.".to_owned(),
             Self::WatarKhali => "لا يمكن ربط مفاتيح التعديل وحدها؛ اختر مفتاحًا معها.".to_owned(),
             Self::Tanazu { sahib, watar } => {
-                format!("الاختصار ({}) مرتبط بالفعل بـ({}).", watar.ism(), sahib.unwan())
-            }
+                format!(
+                    "الاختصار ({}) مرتبط بالفعل بـ({}).",
+                    watar.ism(),
+                    sahib.unwan()
+                )
+            },
         }
     }
 
@@ -559,7 +567,7 @@ impl NatijatRabt {
             Self::WatarKhali => "a chord needs a key, not modifiers alone".to_owned(),
             Self::Tanazu { sahib, watar } => {
                 format!("{} is already bound to {}", watar.ism(), sahib.ism())
-            }
+            },
         }
     }
 }
@@ -597,7 +605,10 @@ impl Ikhtisarat {
     /// deliberately unbound it.
     #[must_use]
     pub fn watar(&self, amr: Amr) -> Watar {
-        self.rubut.get(&amr).copied().unwrap_or_else(|| amr.iftiradi())
+        self.rubut
+            .get(&amr)
+            .copied()
+            .unwrap_or_else(|| amr.iftiradi())
     }
 
     /// Every binding, in command order.
@@ -615,7 +626,9 @@ impl Ikhtisarat {
         if !watar.salih() {
             return None;
         }
-        Amr::jamee().into_iter().find(|amr| self.watar(*amr) == watar)
+        Amr::jamee()
+            .into_iter()
+            .find(|amr| self.watar(*amr) == watar)
     }
 
     /// Which command holds a chord, ignoring one command's own row.
@@ -713,10 +726,13 @@ impl Ikhtisarat {
             Ok(bayt) => bayt,
             Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
                 return Ok(Self::iftiradiya());
-            }
+            },
             Err(sabab) => {
-                return Err(KhataTabaqa::KhataMalaf { masar: masar.to_path_buf(), sabab });
-            }
+                return Err(KhataTabaqa::KhataMalaf {
+                    masar: masar.to_path_buf(),
+                    sabab,
+                });
+            },
         };
         let ghalat = |sabab: String| KhataTabaqa::MalafGhayrMafhum {
             masar: masar.to_path_buf(),
@@ -814,7 +830,13 @@ impl SafhatLawha {
     /// Every page, in tab order.
     #[must_use]
     pub const fn jamee() -> [Self; 5] {
-        [Self::Raisiya, Self::Manatiq, Self::Sijill, Self::Meezaniya, Self::Ifsah]
+        [
+            Self::Raisiya,
+            Self::Manatiq,
+            Self::Sijill,
+            Self::Meezaniya,
+            Self::Ifsah,
+        ]
     }
 
     /// The name used in a log line.
@@ -1069,14 +1091,22 @@ impl HalatLawha {
     /// Raises the opacity by one step.
     pub const fn zid_ataama(&mut self) -> u8 {
         let khaam = self.ataama.saturating_add(Self::KHUTWAT_ATAAMA);
-        self.ataama = if khaam > Self::AQSA_ATAAMA { Self::AQSA_ATAAMA } else { khaam };
+        self.ataama = if khaam > Self::AQSA_ATAAMA {
+            Self::AQSA_ATAAMA
+        } else {
+            khaam
+        };
         self.ataama
     }
 
     /// Lowers the opacity by one step, never past the floor.
     pub const fn anqis_ataama(&mut self) -> u8 {
         let khaam = self.ataama.saturating_sub(Self::KHUTWAT_ATAAMA);
-        self.ataama = if khaam < Self::ADNA_ATAAMA { Self::ADNA_ATAAMA } else { khaam };
+        self.ataama = if khaam < Self::ADNA_ATAAMA {
+            Self::ADNA_ATAAMA
+        } else {
+            khaam
+        };
         self.ataama
     }
 
@@ -1094,14 +1124,22 @@ impl HalatLawha {
     /// Enlarges the panel's text by one step.
     pub const fn zid_khat(&mut self) -> u16 {
         let khaam = self.miqyas_khat.saturating_add(Self::KHUTWAT_MIQYAS);
-        self.miqyas_khat = if khaam > Self::AQSA_MIQYAS { Self::AQSA_MIQYAS } else { khaam };
+        self.miqyas_khat = if khaam > Self::AQSA_MIQYAS {
+            Self::AQSA_MIQYAS
+        } else {
+            khaam
+        };
         self.miqyas_khat
     }
 
     /// Shrinks the panel's text by one step.
     pub const fn anqis_khat(&mut self) -> u16 {
         let khaam = self.miqyas_khat.saturating_sub(Self::KHUTWAT_MIQYAS);
-        self.miqyas_khat = if khaam < Self::ADNA_MIQYAS { Self::ADNA_MIQYAS } else { khaam };
+        self.miqyas_khat = if khaam < Self::ADNA_MIQYAS {
+            Self::ADNA_MIQYAS
+        } else {
+            khaam
+        };
         self.miqyas_khat
     }
 
@@ -1131,17 +1169,17 @@ impl HalatLawha {
                 self.irfa();
                 self.ruh_ila(SafhatLawha::Manatiq);
                 AtharAmr::Intaqalat(SafhatLawha::Manatiq)
-            }
+            },
             Amr::ArdSijill => {
                 self.irfa();
                 self.ruh_ila(SafhatLawha::Sijill);
                 AtharAmr::Intaqalat(SafhatLawha::Sijill)
-            }
+            },
             Amr::ArdIfsah => {
                 self.irfa();
                 self.ruh_ila(SafhatLawha::Ifsah);
                 AtharAmr::Intaqalat(SafhatLawha::Ifsah)
-            }
+            },
             Amr::ZidAtaama => AtharAmr::TaghayyarAtaama(self.zid_ataama()),
             Amr::AnqisAtaama => AtharAmr::TaghayyarAtaama(self.anqis_ataama()),
             Amr::ZidHajmKhat => AtharAmr::TaghayyarKhat(self.zid_khat()),
@@ -1149,7 +1187,7 @@ impl HalatLawha {
             Amr::Ighlaq => {
                 self.akhfi();
                 AtharAmr::Ughliqat
-            }
+            },
         }
     }
 }
@@ -1168,7 +1206,11 @@ const fn madaa_f32(qeema: u32) -> f32 {
 /// One sRGB channel as a linear value.
 fn khatti(qanat: u8) -> f32 {
     let nisbi = f32::from(qanat) / 255.0;
-    if nisbi <= 0.040_45 { nisbi / 12.92 } else { ((nisbi + 0.055) / 1.055).powf(2.4) }
+    if nisbi <= 0.040_45 {
+        nisbi / 12.92
+    } else {
+        ((nisbi + 0.055) / 1.055).powf(2.4)
+    }
 }
 
 /// A theme colour written as sRGB, delivered as premultiplied linear RGBA.
@@ -1183,8 +1225,17 @@ fn khatti(qanat: u8) -> f32 {
 /// step looks right. See [`crate::wajiha::WasfSath::sirgb`].
 #[must_use]
 pub fn lawn_min_srgb(ahmar: u8, akhdar: u8, azraq: u8, shafafiya: f32) -> [f32; 4] {
-    let alfa = if shafafiya.is_finite() { shafafiya.clamp(0.0, 1.0) } else { 1.0 };
-    [khatti(ahmar) * alfa, khatti(akhdar) * alfa, khatti(azraq) * alfa, alfa]
+    let alfa = if shafafiya.is_finite() {
+        shafafiya.clamp(0.0, 1.0)
+    } else {
+        1.0
+    };
+    [
+        khatti(ahmar) * alfa,
+        khatti(akhdar) * alfa,
+        khatti(azraq) * alfa,
+        alfa,
+    ]
 }
 
 /// A premultiplied colour faded by an opacity percentage.
@@ -1256,7 +1307,10 @@ impl DawrAnsur {
     /// Whether this role's element normally carries a string.
     #[must_use]
     pub const fn yahmil_nassan(self) -> bool {
-        matches!(self, Self::Tarwisa | Self::Wasm | Self::Qeema | Self::Zir | Self::Ibraz)
+        matches!(
+            self,
+            Self::Tarwisa | Self::Wasm | Self::Qeema | Self::Zir | Self::Ibraz
+        )
     }
 }
 
@@ -1377,7 +1431,11 @@ impl SatrMintaqa {
             "{} — {} — {}",
             self.ism,
             self.qaida.unwan(),
-            if self.mumakkana { "مفعّلة" } else { "موقوفة" }
+            if self.mumakkana {
+                "مفعّلة"
+            } else {
+                "موقوفة"
+            }
         )
     }
 }
@@ -1682,12 +1740,16 @@ impl LawhatTahakkum {
         // Anchored to the right edge. The product is Arabic-first and its
         // reading order starts there, so the panel starts there too.
         let yasar = (1.0 - ard_lawha - hashiya_u).max(0.0);
-        let lawha =
-            MustatilNisbi { yasar, aala: hashiya_r, ard: ard_lawha, irtifa: irtifa_lawha };
+        let lawha = MustatilNisbi {
+            yasar,
+            aala: hashiya_r,
+            ard: ard_lawha,
+            irtifa: irtifa_lawha,
+        };
         ansur.push(AnsurLawha::zukhrufi(lawha, DawrAnsur::Khalfiya, ataama));
 
-        let irtifa_saf = ((Self::IRTIFA_SAF_BIKSEL * self.hala.miqyas()) / irtifa_px)
-            .clamp(0.001, irtifa_lawha);
+        let irtifa_saf =
+            ((Self::IRTIFA_SAF_BIKSEL * self.hala.miqyas()) / irtifa_px).clamp(0.001, irtifa_lawha);
         let fajwa = (Self::FAJWA_BIKSEL / irtifa_px).min(irtifa_saf);
         let mut takhtit = Takhtit {
             yasar: yasar + dakhil_u,
@@ -1699,10 +1761,20 @@ impl LawhatTahakkum {
         };
 
         if let Some(saf) = takhtit.saf(1.4) {
-            ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Tarwisa, self.unwan_tarwisa(), ataama));
+            ansur.push(AnsurLawha::bi_nass(
+                saf,
+                DawrAnsur::Tarwisa,
+                self.unwan_tarwisa(),
+                ataama,
+            ));
         }
         if let Some(saf) = takhtit.saf(1.0) {
-            ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, self.satr_hala(), ataama));
+            ansur.push(AnsurLawha::bi_nass(
+                saf,
+                DawrAnsur::Qeema,
+                self.satr_hala(),
+                ataama,
+            ));
         }
         self.bina_alsina(&mut takhtit, &mut ansur, ataama);
         if let Some(saf) = takhtit.saf(0.25) {
@@ -1752,7 +1824,10 @@ impl LawhatTahakkum {
         } else {
             ""
         };
-        format!("الطبقة: {} · الواجهة: {wajiha}{qiraa}", unwan_hala(self.hala_tabaqa))
+        format!(
+            "الطبقة: {} · الواجهة: {wajiha}{qiraa}",
+            unwan_hala(self.hala_tabaqa)
+        )
     }
 
     /// The short word for the worker's state, for the main page's row.
@@ -1767,7 +1842,11 @@ impl LawhatTahakkum {
 
     /// The footer's text: how to close the panel.
     fn satr_dhayl(&self) -> String {
-        format!("{} — {}", Amr::Ighlaq.unwan(), self.ikhtisarat.watar(Amr::Ighlaq).ism())
+        format!(
+            "{} — {}",
+            Amr::Ighlaq.unwan(),
+            self.ikhtisarat.watar(Amr::Ighlaq).ism()
+        )
     }
 
     /// The tab strip, laid out right to left.
@@ -1778,8 +1857,11 @@ impl LawhatTahakkum {
         let ard_lisan = saf.ard / Self::ADAD_SAFAHAT;
         let mut yasar = saf.yasar + saf.ard - ard_lisan;
         for safha in SafhatLawha::jamee() {
-            let dawr =
-                if safha == self.hala.safha() { DawrAnsur::Ibraz } else { DawrAnsur::Zir };
+            let dawr = if safha == self.hala.safha() {
+                DawrAnsur::Ibraz
+            } else {
+                DawrAnsur::Zir
+            };
             let mustatil = MustatilNisbi {
                 yasar: yasar.max(saf.yasar),
                 aala: saf.aala,
@@ -1848,7 +1930,9 @@ impl LawhatTahakkum {
             takhtit,
             ansur,
             "السجلّ",
-            &self.taqreer.map_or_else(|| "—".to_owned(), |taqreer| taqreer.unwan()),
+            &self
+                .taqreer
+                .map_or_else(|| "—".to_owned(), |taqreer| taqreer.unwan()),
             ataama,
         );
         // The short form only. The honest, unabridged sentence lives on the
@@ -1884,7 +1968,12 @@ impl LawhatTahakkum {
         if let Some(khayt @ HalatKhayt::Mutawaqqifa { .. }) = self.khayt.as_ref()
             && let Some(saf) = takhtit.saf(2.0)
         {
-            ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, khayt.wasf_arabi(), ataama));
+            ansur.push(AnsurLawha::bi_nass(
+                saf,
+                DawrAnsur::Qeema,
+                khayt.wasf_arabi(),
+                ataama,
+            ));
         }
 
         if let Some(saf) = takhtit.saf(0.25) {
@@ -1962,7 +2051,11 @@ impl LawhatTahakkum {
             let Some(mustatil) = takhtit.saf(1.0) else {
                 break;
             };
-            let dawr = if satr.mumakkana { DawrAnsur::Qeema } else { DawrAnsur::Wasm };
+            let dawr = if satr.mumakkana {
+                DawrAnsur::Qeema
+            } else {
+                DawrAnsur::Wasm
+            };
             ansur.push(
                 AnsurLawha::bi_nass(mustatil, dawr, satr.nass(), ataama)
                     .ila(HadafAnsur::Mintaqa(satr.muarrif)),
@@ -1992,8 +2085,11 @@ impl LawhatTahakkum {
             // colour rather than hidden. A history that only listed finished
             // translations would be missing exactly the lines a player opened it
             // to ask about.
-            let dawr =
-                if madkhal.tarjuma_wasalat() { DawrAnsur::Qeema } else { DawrAnsur::Wasm };
+            let dawr = if madkhal.tarjuma_wasalat() {
+                DawrAnsur::Qeema
+            } else {
+                DawrAnsur::Wasm
+            };
             ansur.push(
                 AnsurLawha::bi_nass(mustatil, dawr, madkhal.satr(), ataama)
                     .ila(HadafAnsur::Madkhal(madkhal.muarrif)),
@@ -2016,7 +2112,12 @@ impl LawhatTahakkum {
         // is reproduced here exactly — not rounded, not abbreviated, and not
         // reworded into something that sounds better.
         if let Some(saf) = takhtit.saf(2.0) {
-            ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, self.meezaniya.wasf(), ataama));
+            ansur.push(AnsurLawha::bi_nass(
+                saf,
+                DawrAnsur::Qeema,
+                self.meezaniya.wasf(),
+                ataama,
+            ));
         }
         if let Some(saf) = takhtit.saf(0.25) {
             ansur.push(AnsurLawha::zukhrufi(saf, DawrAnsur::Fasil, ataama));
@@ -2031,10 +2132,20 @@ impl LawhatTahakkum {
         }
         for qaida in QaidatTarjama::jamee() {
             if let Some(saf) = takhtit.saf(1.0) {
-                ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Ibraz, qaida.unwan(), ataama));
+                ansur.push(AnsurLawha::bi_nass(
+                    saf,
+                    DawrAnsur::Ibraz,
+                    qaida.unwan(),
+                    ataama,
+                ));
             }
             if let Some(saf) = takhtit.saf(2.0) {
-                ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, qaida.wasf(), ataama));
+                ansur.push(AnsurLawha::bi_nass(
+                    saf,
+                    DawrAnsur::Qeema,
+                    qaida.wasf(),
+                    ataama,
+                ));
             }
         }
         if let Some(taqreer) = self.taqreer {
@@ -2042,7 +2153,12 @@ impl LawhatTahakkum {
                 ansur.push(AnsurLawha::zukhrufi(saf, DawrAnsur::Fasil, ataama));
             }
             if let Some(saf) = takhtit.saf(1.5) {
-                ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, taqreer.wasf(), ataama));
+                ansur.push(AnsurLawha::bi_nass(
+                    saf,
+                    DawrAnsur::Qeema,
+                    taqreer.wasf(),
+                    ataama,
+                ));
             }
         }
         // Verbatim, as the budget is: the worker's own sentence about its last
@@ -2052,10 +2168,20 @@ impl LawhatTahakkum {
                 ansur.push(AnsurLawha::zukhrufi(saf, DawrAnsur::Fasil, ataama));
             }
             if let Some(saf) = takhtit.saf(1.0) {
-                ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Wasm, "حالة القراءة:", ataama));
+                ansur.push(AnsurLawha::bi_nass(
+                    saf,
+                    DawrAnsur::Wasm,
+                    "حالة القراءة:",
+                    ataama,
+                ));
             }
             if let Some(saf) = takhtit.saf(2.0) {
-                ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, khayt.wasf_arabi(), ataama));
+                ansur.push(AnsurLawha::bi_nass(
+                    saf,
+                    DawrAnsur::Qeema,
+                    khayt.wasf_arabi(),
+                    ataama,
+                ));
             }
         }
     }
@@ -2081,7 +2207,12 @@ impl LawhatTahakkum {
             let Some(mustatil) = takhtit.saf(1.0) else {
                 break;
             };
-            ansur.push(AnsurLawha::bi_nass(mustatil, DawrAnsur::Qeema, satr, ataama));
+            ansur.push(AnsurLawha::bi_nass(
+                mustatil,
+                DawrAnsur::Qeema,
+                satr,
+                ataama,
+            ));
         }
     }
 }

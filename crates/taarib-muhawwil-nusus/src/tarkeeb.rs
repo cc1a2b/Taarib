@@ -222,7 +222,12 @@ pub(crate) fn ibn_bila_hala(jidhr: &Path, ism: &str) -> Option<PathBuf> {
         .ok()?
         .take(4_096)
         .flatten()
-        .find(|madkhal| madkhal.file_name().to_string_lossy().eq_ignore_ascii_case(ism))
+        .find(|madkhal| {
+            madkhal
+                .file_name()
+                .to_string_lossy()
+                .eq_ignore_ascii_case(ism)
+        })
         .map(|madkhal| madkhal.path())
 }
 
@@ -252,7 +257,10 @@ pub(crate) fn ibn_bila_hala(jidhr: &Path, ism: &str) -> Option<PathBuf> {
 pub(crate) fn masar_bila_hala(jidhr: &Path, nisbi: &str) -> PathBuf {
     let mut mabni = jidhr.to_path_buf();
     let mut mafqud = false;
-    for juz in nisbi.split(['/', '\\']).filter(|juz| !juz.is_empty() && *juz != ".") {
+    for juz in nisbi
+        .split(['/', '\\'])
+        .filter(|juz| !juz.is_empty() && *juz != ".")
+    {
         if mafqud {
             mabni.push(juz);
             continue;
@@ -347,7 +355,11 @@ pub fn rakkib_luba(
     let Some((hadaf, aila)) = ayn_hadaf(jidhr) else {
         return Ok(None);
     };
-    let siyaq = SiyaqTabaqa { jidhr, tanfidhi: None, aila };
+    let siyaq = SiyaqTabaqa {
+        jidhr,
+        tanfidhi: None,
+        aila,
+    };
     let mifhas: &dyn Mifhas = match hadaf {
         HadafNusus::RpgMakerJs => &rpgmaker::MifhasRpgMaker,
         HadafNusus::RenPy => &renpy::MifhasRenPy,
@@ -364,7 +376,7 @@ pub fn rakkib_luba(
                         carry"
                     .to_owned(),
             });
-        }
+        },
     };
 
     let (natija, imtina) = match hukm(&siyaq, hadaf, mifhas.adilla(&siyaq)?) {
@@ -393,12 +405,12 @@ pub fn rakkib_luba(
         HadafNusus::RpgMakerJs => rakkib_rpgmaker(jidhr, mutarjim, hafiz, &mut taqreer)?,
         HadafNusus::RenPy => {
             rakkib_renpy(jidhr, mutarjim, mawarid, matlub()?, hafiz, &mut taqreer)?;
-        }
+        },
         HadafNusus::GameMaker => rakkib_gamemaker(jidhr, mutarjim, hafiz, &mut taqreer)?,
         HadafNusus::Ghilaf => {
             rakkib_ghilaf(jidhr, mutarjim, mawarid, matlub()?, hafiz, &mut taqreer)?;
-        }
-        HadafNusus::VxAce => {}
+        },
+        HadafNusus::VxAce => {},
     }
     Ok(Some(taqreer))
 }
@@ -543,7 +555,9 @@ fn rakkib_renpy(
         ));
     }
 
-    taqreer.masarat.extend(renpy::iktub_idad(hafiz, jidhr, &idad)?);
+    taqreer
+        .masarat
+        .extend(renpy::iktub_idad(hafiz, jidhr, &idad)?);
     let (masar_mustalahat, adad_mustalahat, matruka_mustalahat) =
         renpy::iktub_mustalahat(hafiz, jidhr, &sijillat, mutarjim)?;
     let (masar_hiwar, adad_hiwar, matruka_hiwar) =
@@ -553,8 +567,9 @@ fn rakkib_renpy(
 
     taqreer.malaffat = taqreer.masarat.len();
     taqreer.nusus = adad_mustalahat.saturating_add(adad_hiwar);
-    taqreer.matruka =
-        taqreer.matruka.saturating_add(matruka_mustalahat.saturating_add(matruka_hiwar));
+    taqreer.matruka = taqreer
+        .matruka
+        .saturating_add(matruka_mustalahat.saturating_add(matruka_hiwar));
     Ok(())
 }
 
@@ -681,8 +696,11 @@ fn masarat_renpy(jidhr: &Path) -> Vec<(PathBuf, String, String)> {
         if imtidad != "rpy" && imtidad != "rpyc" {
             continue;
         }
-        let masdar =
-            masar.strip_prefix(jidhr).unwrap_or(masar).to_string_lossy().replace('\\', "/");
+        let masdar = masar
+            .strip_prefix(jidhr)
+            .unwrap_or(masar)
+            .to_string_lossy()
+            .replace('\\', "/");
         masarat.push((masar.to_path_buf(), masdar, imtidad));
     }
     masarat.sort();
@@ -719,8 +737,10 @@ fn rakkib_gamemaker(
     let Some(masar) = gamemaker::MifhasGameMaker::hawiya(jidhr) else {
         return Ok(());
     };
-    let bayt = fs::read(&masar)
-        .map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.clone(), sabab })?;
+    let bayt = fs::read(&masar).map_err(|sabab| KhataNusus::KhataMalaf {
+        masar: masar.clone(),
+        sabab,
+    })?;
     let hawiya = gamemaker::HawiyatGameMaker::min_bayt(bayt, &masar)?;
 
     // Collected before the converter borrows the container: the pool is read
@@ -798,12 +818,14 @@ fn rakkib_ghilaf(
         match mutarjim.tarjim(&nass.nass) {
             Some(badeel) => {
                 let _ = jadwal.insert(nass.nass.clone(), badeel.to_owned());
-            }
+            },
             None => taqreer.matruka = taqreer.matruka.saturating_add(1),
         }
     }
     for (masdar, sabab) in &hasad.matruka {
-        taqreer.mulahazat.push(format!("{masdar} was not read for strings: {sabab}"));
+        taqreer
+            .mulahazat
+            .push(format!("{masdar} was not read for strings: {sabab}"));
     }
 
     let adad = jadwal.len();

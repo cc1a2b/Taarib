@@ -311,7 +311,10 @@ impl KhataTabaqa {
     /// at. See [`crate::qissa::KhaytQissa`].
     #[must_use]
     pub const fn yunhi_al_qiraa(&self) -> bool {
-        matches!(self, Self::QariGhayrMutah { .. } | Self::NamudhajFashil { .. })
+        matches!(
+            self,
+            Self::QariGhayrMutah { .. } | Self::NamudhajFashil { .. }
+        )
     }
 }
 
@@ -382,7 +385,7 @@ impl Tafsir for KhataTabaqa {
 
             Self::KhataMalaf { .. } | Self::MalafGhayrMafhum { .. } | Self::HajmMufrit { .. } => {
                 Khutura::Khatar
-            }
+            },
         }
     }
 
@@ -390,81 +393,77 @@ impl Tafsir for KhataTabaqa {
         match self {
             Self::ApiGhayrMadum { api } => {
                 format!("واجهة الرسوميات ({api}) غير مدعومة في هذه النسخة من تعريب.")
-            }
+            },
             Self::ApiGhayrMawjud { .. } => {
                 "لم يُعثر على واجهة رسوميات مدعومة في هذه اللعبة. قد تكون اللعبة لم تُنشئ \
                  عارضها بعد؛ جرّب مرة أخرى بعد ظهور الصورة."
                     .to_owned()
-            }
+            },
             Self::MaktabaMafquda { maktaba, .. } => {
                 format!("المكتبة {maktaba} غير محمّلة في اللعبة، أو لا تصدّر ما تحتاجه الطبقة.")
-            }
+            },
             Self::JadwalGhayrMawjud { .. } => {
                 "تعذّر الوصول إلى جدول دوال العارض، ولا يمكن تركيب الطبقة بدونه.".to_owned()
-            }
+            },
             Self::KhatfFashil { .. } => {
-                "تعذّر تركيب الطبقة على مسار العرض. اللعبة تعمل كما هي ولم يُغيَّر فيها شيء."
-                    .to_owned()
-            }
+                "تعذّر تركيب الطبقة على مسار العرض. اللعبة تعمل كما هي ولم يُغيَّر فيها شيء.".to_owned()
+            },
             Self::FakkKhatfFashil { .. } => {
                 "تعذّر إزالة الطبقة من اللعبة أثناء تشغيلها. أغلق اللعبة وأعد تشغيلها لإزالتها \
                  تمامًا."
                     .to_owned()
-            }
+            },
             Self::HimayaGhayrQabila { .. } => {
                 "رفض النظام السماح بالكتابة في ذاكرة اللعبة، وقد يكون ذلك بسبب نظام حماية \
                  مضاد للعبث."
                     .to_owned()
-            }
+            },
             Self::MawridFashil { .. } => {
                 "تعذّر إنشاء موارد الرسم التي تحتاجها الطبقة على كرت الشاشة.".to_owned()
-            }
+            },
             Self::SathTaghayyar { .. } => {
                 "تغيّرت دقة الشاشة أو وضع العرض، وتُعاد تهيئة الطبقة.".to_owned()
-            }
+            },
             Self::HalaGhayrMustaada { .. } => {
                 "تعذّر إرجاع حالة العارض كما كانت بعد الرسم، وأُوقفت الطبقة فورًا حمايةً \
                  للعبة. أعد تشغيل اللعبة."
                     .to_owned()
-            }
+            },
             Self::TahrirGhayrMutabaq { .. } => {
                 "لم تتطابق بداية الدالة المُعاد توجيهها مع ما قُرئ منها، وأُلغي التركيب قبل \
                  تفعيله."
                     .to_owned()
-            }
+            },
             Self::QariGhayrMutah { .. } => {
                 "لا يوجد محرّك قراءة نصوص متاح على هذا الجهاز، ولا يمكن للطبقة قراءة ما على \
                  الشاشة بدونه."
                     .to_owned()
-            }
+            },
             Self::NamudhajFashil { .. } => {
                 "تعذّر تحميل نموذج قراءة النصوص. قد يكون ملفه ناقصًا أو تالفًا.".to_owned()
-            }
+            },
             Self::LaNassMaqru { mintaqa, .. } => {
                 format!("لم يُقرأ نص واضح في المنطقة ({mintaqa}).")
-            }
+            },
             Self::SighaGhayrMaduma { sigha } => {
                 format!("صيغة الصورة التي تعرضها اللعبة ({sigha}) غير مدعومة للقراءة.")
-            }
-            Self::IltiqatFashil { .. } => {
-                "تعذّر التقاط صورة الإطار من كرت الشاشة.".to_owned()
-            }
+            },
+            Self::IltiqatFashil { .. } => "تعذّر التقاط صورة الإطار من كرت الشاشة.".to_owned(),
             Self::MintaqaKharij { mintaqa, .. } => {
                 format!("المنطقة ({mintaqa}) تقع خارج حدود الشاشة الحالية.")
-            }
+            },
             Self::IfsahMafqud => {
                 "لا يمكن تفعيل الطبقة قبل عرض شرحها على المستخدم والموافقة عليه.".to_owned()
-            }
+            },
             Self::KhataMalaf { .. } => {
                 "تعذّر قراءة أحد ملفات إعدادات الطبقة أو الكتابة إليه.".to_owned()
-            }
+            },
             Self::MalafGhayrMafhum { .. } => {
                 "أحد ملفات إعدادات الطبقة ليس بالصيغة التي تعرفها هذه النسخة.".to_owned()
-            }
+            },
             Self::HajmMufrit { .. } => {
-                "طُلب حجز حجم أكبر مما تسمح به هذه النسخة، ورُفض الطلب قبل حجز أي ذاكرة."
-                    .to_owned()
-            }
+                "طُلب حجز حجم أكبر مما تسمح به هذه النسخة، ورُفض الطلب قبل حجز أي ذاكرة.".to_owned()
+            },
         }
     }
 
@@ -513,7 +512,7 @@ impl Tafsir for KhataTabaqa {
             // something the user can fix by choosing a different path.
             Self::MalafGhayrMafhum { .. } | Self::IfsahMafqud | Self::HajmMufrit { .. } => {
                 Khutwa::IblaghLilMusahim
-            }
+            },
         }
     }
 
@@ -539,62 +538,70 @@ impl Tafsir for KhataTabaqa {
             Self::MaktabaMafquda { maktaba, ramz } => {
                 daa("maktaba", QeemaSiyaq::Nass(maktaba.clone()));
                 daa("ramz", QeemaSiyaq::Nass(ramz.clone()));
-            }
+            },
             Self::JadwalGhayrMawjud { wajiha, sabab } => {
                 daa("wajiha", QeemaSiyaq::Nass(wajiha.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::KhatfFashil { mawdi, sabab } | Self::FakkKhatfFashil { mawdi, sabab } => {
                 daa("mawdi", QeemaSiyaq::Nass(mawdi.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::HimayaGhayrQabila { oinwan, tul } => {
                 daa("oinwan", QeemaSiyaq::Hajm(*oinwan));
                 daa("tul", QeemaSiyaq::Hajm(tul_u64(*tul)));
-            }
+            },
             Self::MawridFashil { mawrid, sabab } => {
                 daa("mawrid", QeemaSiyaq::Nass((*mawrid).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::SathTaghayyar { sabab }
             | Self::QariGhayrMutah { sabab }
             | Self::IltiqatFashil { sabab } => daa("sabab", QeemaSiyaq::Nass(sabab.clone())),
             Self::HalaGhayrMustaada { hala, sabab } => {
                 daa("hala", QeemaSiyaq::Nass((*hala).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::TahrirGhayrMutabaq { mawdi, adad } => {
                 daa("mawdi", QeemaSiyaq::Nass(mawdi.clone()));
                 daa("adad", QeemaSiyaq::Hajm(tul_u64(*adad)));
-            }
+            },
             Self::NamudhajFashil { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::LaNassMaqru { mintaqa, thiqa } => {
                 daa("mintaqa", QeemaSiyaq::Nass(mintaqa.clone()));
                 if let Some(qeema) = thiqa {
                     daa("thiqa", QeemaSiyaq::Raqm(i64::from(*qeema)));
                 }
-            }
+            },
             Self::SighaGhayrMaduma { sigha } => daa("sigha", QeemaSiyaq::Nass(sigha.clone())),
-            Self::MintaqaKharij { mintaqa, ard, irtifa } => {
+            Self::MintaqaKharij {
+                mintaqa,
+                ard,
+                irtifa,
+            } => {
                 daa("mintaqa", QeemaSiyaq::Nass(mintaqa.clone()));
                 daa("ard", QeemaSiyaq::Hajm(u64::from(*ard)));
                 daa("irtifa", QeemaSiyaq::Hajm(u64::from(*irtifa)));
-            }
-            Self::MalafGhayrMafhum { masar, sigha, sabab } => {
+            },
+            Self::MalafGhayrMafhum {
+                masar,
+                sigha,
+                sabab,
+            } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sigha", QeemaSiyaq::Nass((*sigha).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::HajmMufrit { haql, qeema, saqf } => {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("qeema", QeemaSiyaq::Hajm(*qeema));
                 daa("saqf", QeemaSiyaq::Hajm(*saqf));
-            }
+            },
             // Handled above, and carries nothing beyond its own existence.
-            Self::KhataMalaf { .. } | Self::IfsahMafqud => {}
+            Self::KhataMalaf { .. } | Self::IfsahMafqud => {},
         }
         siyaq
     }

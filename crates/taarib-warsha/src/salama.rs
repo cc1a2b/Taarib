@@ -64,7 +64,7 @@ impl SababTalaf {
         match self {
             Self::Tarmiz => {
                 "not valid UTF-8, which is what an append cut mid-write leaves behind".to_owned()
-            }
+            },
             Self::Sigha { sabab } => format!("not a readable row: {sabab}"),
         }
     }
@@ -146,14 +146,14 @@ pub fn iqra_nusus(mashru: &MashruMaftuh) -> NatijatWarsha<QiraatNusus> {
         Ok(bayan) => bayan,
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
             return Ok(QiraatNusus::default());
-        }
+        },
         Err(sabab) => {
             return Err(KhataWarsha::KhataMalaf {
                 masar,
                 amal: "reading the project strings",
                 sabab,
             });
-        }
+        },
     };
     if !bayan.is_file() {
         return Err(KhataWarsha::KhataMalaf {
@@ -168,7 +168,12 @@ pub fn iqra_nusus(mashru: &MashruMaftuh) -> NatijatWarsha<QiraatNusus> {
         sabab,
     })?;
     let (sufuf, talifa) = hallil_jsonl(&bayt);
-    Ok(QiraatNusus { sufuf, talifa, mawjud: true, hajm: bayan.len() })
+    Ok(QiraatNusus {
+        sufuf,
+        talifa,
+        mawjud: true,
+        hajm: bayan.len(),
+    })
 }
 
 /// Splits JSON Lines into the rows that read and the lines that did not.
@@ -195,8 +200,14 @@ pub fn hallil_jsonl(bayt: &[u8]) -> (Vec<MudkhalNass>, Vec<SatrTalif>) {
         match serde_json::from_str::<MudkhalNass>(nass) {
             Ok(mudkhal) => sufuf.push(mudkhal),
             Err(sabab) => {
-                talifa.push(satr_talif(raqm, satr, SababTalaf::Sigha { sabab: sabab.to_string() }));
-            }
+                talifa.push(satr_talif(
+                    raqm,
+                    satr,
+                    SababTalaf::Sigha {
+                        sabab: sabab.to_string(),
+                    },
+                ));
+            },
         }
     }
     (sufuf, talifa)
@@ -313,14 +324,14 @@ pub fn anqidh(mashru: &mut MashruMaftuh, waqt: &str) -> NatijatWarsha<TaqreerInq
         Ok(bayt) => bayt,
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
             return Err(KhataWarsha::LaTalaf);
-        }
+        },
         Err(sabab) => {
             return Err(KhataWarsha::KhataMalaf {
                 masar,
                 amal: "reading the project strings before setting damaged rows aside",
                 sabab,
             });
-        }
+        },
     };
     let (sufuf, talifa) = hallil_jsonl(&bayt);
     if talifa.is_empty() {
@@ -360,15 +371,25 @@ pub fn anqidh(mashru: &mut MashruMaftuh, waqt: &str) -> NatijatWarsha<TaqreerInq
         najin: sufuf.len(),
         talifa: talifa.clone(),
     };
-    let bayt_taqreer = serde_json::to_vec_pretty(&malaf)
-        .map_err(|sabab| KhataWarsha::Mawrid { sabab: sabab.to_string() })?;
+    let bayt_taqreer = serde_json::to_vec_pretty(&malaf).map_err(|sabab| KhataWarsha::Mawrid {
+        sabab: sabab.to_string(),
+    })?;
     masarat::kitaba_dharra(&taqreer, &bayt_taqreer).map_err(min_usus)?;
 
     mashru
         .uktub_kul(&sufuf, waqt.to_owned())
-        .map_err(|khata| KhataWarsha::Mawrid { sabab: khata.to_string() })?;
+        .map_err(|khata| KhataWarsha::Mawrid {
+            sabab: khata.to_string(),
+        })?;
 
-    Ok(TaqreerInqadh { mahfudh, marfud, taqreer, najin: sufuf.len(), talifa, basma })
+    Ok(TaqreerInqadh {
+        mahfudh,
+        marfud,
+        taqreer,
+        najin: sufuf.len(),
+        talifa,
+        basma,
+    })
 }
 
 /// Three names beside the project that do not exist yet, stamped with the
@@ -400,17 +421,24 @@ fn asma_inqadh(jidhr: &Path, waqt: &str) -> NatijatWarsha<(PathBuf, PathBuf, Pat
 /// is dropped, so `2026-09-06T10:00:00Z` becomes `20260906T100000Z`.
 fn wasm_waqt(waqt: &str) -> String {
     let wasm: String = waqt.chars().filter(char::is_ascii_alphanumeric).collect();
-    if wasm.is_empty() { "0".to_owned() } else { wasm }
+    if wasm.is_empty() {
+        "0".to_owned()
+    } else {
+        wasm
+    }
 }
 
 fn ism_malaf(masar: &Path) -> String {
-    masar
-        .file_name()
-        .map_or_else(|| masar.display().to_string(), |ism| ism.to_string_lossy().into_owned())
+    masar.file_name().map_or_else(
+        || masar.display().to_string(),
+        |ism| ism.to_string_lossy().into_owned(),
+    )
 }
 
 fn min_usus(khata: taarib_usus::khata::Khata) -> KhataWarsha {
-    KhataWarsha::Mawrid { sabab: khata.injilizi }
+    KhataWarsha::Mawrid {
+        sabab: khata.injilizi,
+    }
 }
 
 #[cfg(test)]
@@ -427,7 +455,10 @@ mod ikhtibarat {
             haql_nassi(satr, "id").as_deref(),
             Some("\"0f3c6a1e-2b4d-5e6f-8a9b-0c1d2e3f4a5b\"")
         );
-        assert_eq!(haql_nassi(satr, "masdar").as_deref(), Some(r#""Press \"A\" now""#));
+        assert_eq!(
+            haql_nassi(satr, "masdar").as_deref(),
+            Some(r#""Press \"A\" now""#)
+        );
         assert_eq!(haql_nassi(satr, "hadaf"), None);
     }
 
@@ -464,7 +495,13 @@ mod ikhtibarat {
         assert!(sufuf.is_empty());
         let arqam: Vec<usize> = talifa.iter().map(|satr| satr.raqm).collect();
         assert_eq!(arqam, vec![3, 4]);
-        assert!(matches!(talifa.first().map(|satr| &satr.sabab), Some(SababTalaf::Sigha { .. })));
-        assert_eq!(talifa.get(1).map(|satr| &satr.sabab), Some(&SababTalaf::Tarmiz));
+        assert!(matches!(
+            talifa.first().map(|satr| &satr.sabab),
+            Some(SababTalaf::Sigha { .. })
+        ));
+        assert_eq!(
+            talifa.get(1).map(|satr| &satr.sabab),
+            Some(&SababTalaf::Tarmiz)
+        );
     }
 }

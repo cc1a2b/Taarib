@@ -179,10 +179,19 @@ pub const KHANAT_TAQDEEM_MUMTADD: usize = 119 + 2;
 // arithmetic — and the two must agree, because the prose is what a reviewer
 // checks against the headers and the arithmetic is what the process executes.
 const _: () = {
-    assert!(KHANAT_TAQDEEM9 == 17, "IDirect3DDevice9::Present is slot 17");
+    assert!(
+        KHANAT_TAQDEEM9 == 17,
+        "IDirect3DDevice9::Present is slot 17"
+    );
     assert!(KHANAT_ISTIAADA == 16, "IDirect3DDevice9::Reset is slot 16");
-    assert!(KHANAT_TAQDEEM_MUMTADD == 121, "IDirect3DDevice9Ex::PresentEx is slot 121");
-    assert!(KHANAT_ISTIAADA_MUMTADDA == 132, "IDirect3DDevice9Ex::ResetEx is slot 132");
+    assert!(
+        KHANAT_TAQDEEM_MUMTADD == 121,
+        "IDirect3DDevice9Ex::PresentEx is slot 121"
+    );
+    assert!(
+        KHANAT_ISTIAADA_MUMTADDA == 132,
+        "IDirect3DDevice9Ex::ResetEx is slot 132"
+    );
 };
 
 /// One replaced vtable entry, and everything needed to put it back.
@@ -337,8 +346,11 @@ pub fn nafidha_muaqqata() -> Result<NafidhaMuaqqata, KhataTabaqa> {
     // Built before the window, so that a failed `CreateWindowExW` still drops a
     // guard that unregisters the class. Assigning the handle afterwards is what
     // makes the failing path and the succeeding path share one cleanup.
-    let mut nafidha =
-        NafidhaMuaqqata { maqbad: HWND(std::ptr::null_mut()), sanf, wahda };
+    let mut nafidha = NafidhaMuaqqata {
+        maqbad: HWND(std::ptr::null_mut()),
+        sanf,
+        wahda,
+    };
 
     // SAFETY: the class atom was just registered against `wahda`, the style is a
     // plain overlapped window that is never shown, and every pointer argument is
@@ -364,7 +376,7 @@ pub fn nafidha_muaqqata() -> Result<NafidhaMuaqqata, KhataTabaqa> {
         Ok(maqbad) if !maqbad.is_invalid() => {
             nafidha.maqbad = maqbad;
             Ok(nafidha)
-        }
+        },
         Ok(_) | Err(_) => Err(KhataTabaqa::JadwalGhayrMawjud {
             wajiha: "IDXGISwapChain".to_owned(),
             sabab: "a hidden window could not be created; this process may have no window station"
@@ -406,7 +418,11 @@ impl Khataf {
     /// An empty hook set for an API.
     #[must_use]
     pub const fn jadeed(wajiha: WajihatRusum) -> Self {
-        Self { wajiha, khanat: Vec::new(), athar: Vec::new() }
+        Self {
+            wajiha,
+            khanat: Vec::new(),
+            athar: Vec::new(),
+        }
     }
 
     /// Which API these hooks are on.
@@ -476,7 +492,12 @@ impl Khataf {
         iktub_khana(mawdi, badil, asli)?;
 
         self.athar.push(format!("hooked {ism} at slot {khana}"));
-        self.khanat.push(KhanaMakhtufa { khana: mawdi, asli, badil, ism });
+        self.khanat.push(KhanaMakhtufa {
+            khana: mawdi,
+            asli,
+            badil,
+            ism,
+        });
         Ok(asli)
     }
 
@@ -511,7 +532,10 @@ impl Khataf {
                      overlay hooked it after Taarib did and unhooking Taarib now would break it",
                     sijill.ism
                 ));
-                self.athar.push(format!("{} left in place: hooked by something else", sijill.ism));
+                self.athar.push(format!(
+                    "{} left in place: hooked by something else",
+                    sijill.ism
+                ));
                 continue;
             }
 
@@ -673,7 +697,10 @@ impl HirasatKitaba {
                 tul: size_of::<*mut c_void>(),
             });
         }
-        Ok(Self { bidaya: bidaya as *mut c_void, tul })
+        Ok(Self {
+            bidaya: bidaya as *mut c_void,
+            tul,
+        })
     }
 }
 

@@ -38,10 +38,10 @@ use core::mem::offset_of;
 
 use taarib_tabaqa::khata::KhataTabaqa;
 use taarib_tabaqa::khataf::{
-    KHANAT_ISTIAADA, KHANAT_ISTIAADA_MUMTADDA, KHANAT_TAQDEEM9, KHANAT_TAQDEEM_MUMTADD, Khataf,
+    KHANAT_ISTIAADA, KHANAT_ISTIAADA_MUMTADDA, KHANAT_TAQDEEM_MUMTADD, KHANAT_TAQDEEM9, Khataf,
 };
 use taarib_tabaqa::wajiha::WajihatRusum;
-use windows::Win32::Graphics::Direct3D9::{IDirect3DDevice9Ex_Vtbl, IDirect3DDevice9_Vtbl};
+use windows::Win32::Graphics::Direct3D9::{IDirect3DDevice9_Vtbl, IDirect3DDevice9Ex_Vtbl};
 
 /// How many entries the stub table has.
 ///
@@ -86,9 +86,18 @@ fn al_thalatha_anawin_mukhtalifa() {
         thunk_wahmi as *const () as usize,
         thunk_ghareeb as *const () as usize,
     ];
-    assert_ne!(anawin[0], anawin[1], "the original and Taarib's thunk folded onto one address");
-    assert_ne!(anawin[1], anawin[2], "Taarib's thunk and the third party's folded onto one");
-    assert_ne!(anawin[0], anawin[2], "the original and the third party's thunk folded onto one");
+    assert_ne!(
+        anawin[0], anawin[1],
+        "the original and Taarib's thunk folded onto one address"
+    );
+    assert_ne!(
+        anawin[1], anawin[2],
+        "Taarib's thunk and the third party's folded onto one"
+    );
+    assert_ne!(
+        anawin[0], anawin[2],
+        "the original and the third party's thunk folded onto one"
+    );
 }
 
 /// A method table of [`ADAD_KHANAT`] entries, every one of them [`asl_wahmi`].
@@ -199,7 +208,11 @@ fn yakhtif_wa_yafukk() {
         Ok(()) => {},
         Err(khata) => panic!("the hooks would not come out: {khata}"),
     }
-    assert_eq!(khataf.adad(), 0, "no slot may remain recorded after a clean removal");
+    assert_eq!(
+        khataf.adad(),
+        0,
+        "no slot may remain recorded after a clean removal"
+    );
     for khana in [KHANAT_TAQDEEM9, KHANAT_ISTIAADA] {
         assert_eq!(
             jadwal.get(khana).copied(),

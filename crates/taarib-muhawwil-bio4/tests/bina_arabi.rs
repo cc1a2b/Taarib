@@ -77,7 +77,10 @@ fn khutut() -> SilsilatKhutut {
     }
 
     let Some(masar) = masar else {
-        panic!("no Arabic font found at or above {}", env!("CARGO_MANIFEST_DIR"));
+        panic!(
+            "no Arabic font found at or above {}",
+            env!("CARGO_MANIFEST_DIR")
+        );
     };
     let bayt = fs::read(&masar).unwrap_or_else(|_| panic!("{} unreadable", masar.display()));
     let khatt = MawridKhatt::jadeed(Arc::new(bayt), 0)
@@ -92,7 +95,10 @@ fn shabaka_asliya() -> Shabaka {
 
 /// Layout options: one line, no wrapping, direction from the text itself.
 fn khiyarat_takhtit() -> KhiyaratTakhtit {
-    KhiyaratTakhtit { satr_wahid: true, ..KhiyaratTakhtit::default() }
+    KhiyaratTakhtit {
+        satr_wahid: true,
+        ..KhiyaratTakhtit::default()
+    }
 }
 
 /// Builds a font from `nusus` against the standard grid.
@@ -103,7 +109,12 @@ fn ibni_ayina(nusus: &[&str]) -> taarib_muhawwil_bio4::bina::KhattMabni {
         nusus,
         &khutut,
         &takhtit,
-        KhiyaratBina { hajm: HAJM, asas: ASAS, hizma: HIZMA, asli: shabaka_asliya() },
+        KhiyaratBina {
+            hajm: HAJM,
+            asas: ASAS,
+            hizma: HIZMA,
+            asli: shabaka_asliya(),
+        },
     )
     .unwrap_or_else(|khata| panic!("the font would not build: {khata}"))
 }
@@ -117,23 +128,44 @@ fn alkhatt_almabni_yadur_wa_yuattid_shabakatah() {
         "احفظ اللعبة الآن؟",
     ]);
 
-    let bayt = mabni.khatt.ila_bayt().expect("a built .fnt should serialise");
+    let bayt = mabni
+        .khatt
+        .ila_bayt()
+        .expect("a built .fnt should serialise");
     let thani = KhattBio4::min_bayt(&bayt).expect("and parse back");
-    assert_eq!(thani.ila_bayt().unwrap(), bayt, "a built .fnt must round-trip byte for byte");
+    assert_eq!(
+        thani.ila_bayt().unwrap(),
+        bayt,
+        "a built .fnt must round-trip byte for byte"
+    );
 
-    thani.tibl.tahaqquq_khatt().expect("what is written is C4 through an RGB5A3 palette");
-    let shabaka = thani.shabaka().expect("the grid law must hold on what this crate writes");
+    thani
+        .tibl
+        .tahaqquq_khatt()
+        .expect("what is written is C4 through an RGB5A3 palette");
+    let shabaka = thani
+        .shabaka()
+        .expect("the grid law must hold on what this crate writes");
     assert_eq!(shabaka.hajm_khana(), HAJM_KHANA);
     assert_eq!(shabaka.ard(), ARD);
-    assert_eq!((mabni.sura.ard, mabni.sura.irtifa), (shabaka.ard(), shabaka.irtifa()));
+    assert_eq!(
+        (mabni.sura.ard, mabni.sura.irtifa),
+        (shabaka.ard(), shabaka.irtifa())
+    );
 
-    assert!(mabni.taqreer.ashkal > 20, "four sentences of Arabic need more than twenty cells");
+    assert!(
+        mabni.taqreer.ashkal > 20,
+        "four sentences of Arabic need more than twenty cells"
+    );
     assert_eq!(
         mabni.taqreer.khanat_mustaamala,
         mabni.taqreer.ashkal + 1,
         "the cells are the glyphs plus the reserved blank"
     );
-    assert!(mabni.sura.bayt.iter().any(|texel| *texel > 0), "the atlas must have ink in it");
+    assert!(
+        mabni.sura.bayt.iter().any(|texel| *texel > 0),
+        "the atlas must have ink in it"
+    );
 
     let hadd = u8::try_from(HAJM_KHANA).unwrap();
     for (fahras, madkhal) in thani.madakhil.iter().enumerate() {
@@ -156,11 +188,19 @@ fn lam_alif_khana_wahida() {
         );
     }
     // Four different lam-alef ligatures, so four different cells.
-    let khanat: Vec<u32> = mabni.nusus.iter().filter_map(|n| n.khanat().first().copied()).collect();
+    let khanat: Vec<u32> = mabni
+        .nusus
+        .iter()
+        .filter_map(|n| n.khanat().first().copied())
+        .collect();
     let mut farida = khanat.clone();
     farida.sort_unstable();
     farida.dedup();
-    assert_eq!(farida.len(), khanat.len(), "the four lam-alef forms are four distinct glyphs");
+    assert_eq!(
+        farida.len(),
+        khanat.len(),
+        "the four lam-alef forms are four distinct glyphs"
+    );
 }
 
 #[test]
@@ -190,11 +230,22 @@ fn ashkal_alwasl_arbaa_khanat_mukhtalifa() {
 fn attashkeel_yandamij_fi_khanat_alharf() {
     let mabni = ibni_ayina(&["بَ", "بُ", "بِ", "ب"]);
     for (fahras, nass) in mabni.nusus.iter().enumerate() {
-        assert_eq!(nass.tul(), 1, "line {fahras} is one letter and must be one cell");
+        assert_eq!(
+            nass.tul(),
+            1,
+            "line {fahras} is one letter and must be one cell"
+        );
     }
-    assert_eq!(mabni.taqreer.alamat_mafquda, 0, "every mark had a base to compose into");
+    assert_eq!(
+        mabni.taqreer.alamat_mafquda, 0,
+        "every mark had a base to compose into"
+    );
 
-    let khanat: Vec<u32> = mabni.nusus.iter().filter_map(|n| n.khanat().first().copied()).collect();
+    let khanat: Vec<u32> = mabni
+        .nusus
+        .iter()
+        .filter_map(|n| n.khanat().first().copied())
+        .collect();
     let mut farida = khanat.clone();
     farida.sort_unstable();
     farida.dedup();
@@ -210,9 +261,15 @@ fn attashkeel_yandamij_fi_khanat_alharf() {
     let maa = *khanat.first().expect("the fatha line");
     let miftah_bila = mabni.tawzee.miftah(bila).expect("a key behind every cell");
     let miftah_maa = mabni.tawzee.miftah(maa).expect("a key behind every cell");
-    assert_eq!(miftah_bila.muarrif, miftah_maa.muarrif, "the same beh underneath both");
+    assert_eq!(
+        miftah_bila.muarrif, miftah_maa.muarrif,
+        "the same beh underneath both"
+    );
     assert!(miftah_bila.alama.is_none());
-    assert!(miftah_maa.alama.is_some(), "the fatha is part of the cell's key");
+    assert!(
+        miftah_maa.alama.is_some(),
+        "the fatha is part of the cell's key"
+    );
 }
 
 #[test]
@@ -258,7 +315,12 @@ fn shabaka_daiqa_marfuda() {
         &["اضغط الزر للمتابعة والاستمرار في اللعب"],
         &khutut,
         &takhtit,
-        KhiyaratBina { hajm: HAJM, asas: ASAS, hizma: HIZMA, asli: daiqa },
+        KhiyaratBina {
+            hajm: HAJM,
+            asas: ASAS,
+            hizma: HIZMA,
+            asli: daiqa,
+        },
     );
     assert!(
         natija.is_err(),

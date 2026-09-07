@@ -221,7 +221,9 @@ pub const AQSA_HAJZ_MABDAI: usize = 65_536;
 /// the allocation happens before a single byte of the table has been validated.
 #[must_use]
 pub fn hajz_mahdud(adad: u32) -> usize {
-    usize::try_from(adad).unwrap_or(AQSA_HAJZ_MABDAI).min(AQSA_HAJZ_MABDAI)
+    usize::try_from(adad)
+        .unwrap_or(AQSA_HAJZ_MABDAI)
+        .min(AQSA_HAJZ_MABDAI)
 }
 
 // ---------------------------------------------------------------------------
@@ -351,7 +353,12 @@ impl KhataQira {
     /// A short read for `haql`, given what was available and what was wanted.
     #[must_use]
     fn qaseer(sigha: &'static str, haql: &'static str, mutah: usize, matlub: u64) -> Self {
-        Self::MalafQaseer { sigha, haql, matlub, mutah: tul_u64(mutah) }
+        Self::MalafQaseer {
+            sigha,
+            haql,
+            matlub,
+            mutah: tul_u64(mutah),
+        }
     }
 }
 
@@ -414,7 +421,11 @@ impl Nihaya {
     /// misread header rather than a third byte order, and the caller checks it.
     #[must_use]
     pub const fn min_bayt(qeema: u8) -> Self {
-        if qeema == 0 { Self::Sagheer } else { Self::Kabeer }
+        if qeema == 0 {
+            Self::Sagheer
+        } else {
+            Self::Kabeer
+        }
     }
 }
 
@@ -452,7 +463,13 @@ impl<'a> Qari<'a> {
     /// big-endian up to the byte that says what the rest of it is.
     #[must_use]
     pub const fn jadeed(sigha: &'static str, bayt: &'a [u8]) -> Self {
-        Self { sigha, bayt, asas: 0, mawqi: 0, nihaya: Nihaya::Kabeer }
+        Self {
+            sigha,
+            bayt,
+            asas: 0,
+            mawqi: 0,
+            nihaya: Nihaya::Kabeer,
+        }
     }
 
     /// A cursor over a slice that begins at absolute offset `asas` in its file.
@@ -467,7 +484,13 @@ impl<'a> Qari<'a> {
         asas: usize,
         nihaya: Nihaya,
     ) -> Self {
-        Self { sigha, bayt, asas, mawqi: 0, nihaya }
+        Self {
+            sigha,
+            bayt,
+            asas,
+            mawqi: 0,
+            nihaya,
+        }
     }
 
     /// Reads the rest of this cursor in the given byte order.
@@ -521,13 +544,13 @@ impl<'a> Qari<'a> {
     /// distinction matters to whoever reads the message.
     pub fn iqfiz(&mut self, haql: &'static str, izaha: u64) -> Result<(), KhataQira> {
         let tul = self.bayt.len();
-        let mawqi = hajm_usize(izaha).filter(|mawqi| *mawqi <= tul).ok_or_else(|| {
-            KhataQira::HaqlTalif {
+        let mawqi = hajm_usize(izaha)
+            .filter(|mawqi| *mawqi <= tul)
+            .ok_or_else(|| KhataQira::HaqlTalif {
                 sigha: self.sigha,
                 haql,
                 sabab: format!("offset {izaha} is outside a {tul}-byte container"),
-            }
-        })?;
+            })?;
         self.mawqi = mawqi;
         Ok(())
     }
@@ -577,8 +600,8 @@ impl<'a> Qari<'a> {
     pub fn iqra_bayt(&mut self, haql: &'static str, adad: u64) -> Result<&'a [u8], KhataQira> {
         let bayt = self.bayt;
         let mutah = bayt.len().saturating_sub(self.mawqi);
-        let mada = hajm_usize(adad)
-            .ok_or_else(|| KhataQira::qaseer(self.sigha, haql, mutah, adad))?;
+        let mada =
+            hajm_usize(adad).ok_or_else(|| KhataQira::qaseer(self.sigha, haql, mutah, adad))?;
         let nihaya = self
             .mawqi
             .checked_add(mada)
@@ -762,13 +785,14 @@ impl<'a> Qari<'a> {
         let baqiya = self.bayt.get(self.mawqi..).unwrap_or(&[]);
         let mada = baqiya.len().min(AQSA_TUL_ISM);
         let nitaq = baqiya.get(..mada).unwrap_or(&[]);
-        let tul = nitaq.iter().position(|bayt| *bayt == 0).ok_or_else(|| {
-            KhataQira::HaqlTalif {
+        let tul = nitaq
+            .iter()
+            .position(|bayt| *bayt == 0)
+            .ok_or_else(|| KhataQira::HaqlTalif {
                 sigha: self.sigha,
                 haql,
                 sabab: format!("no NUL terminator within {AQSA_TUL_ISM} bytes"),
-            }
-        })?;
+            })?;
         let khana = nitaq.get(..tul).unwrap_or(&[]);
         let nass = self.ila_nass(haql, khana)?;
         self.mawqi = self.mawqi.saturating_add(tul).saturating_add(1);
@@ -813,9 +837,13 @@ impl<'a> Qari<'a> {
     /// because "field `m_Name` is not valid UTF-8 at byte 7" is a thing a person
     /// can go and look at and "invalid UTF-8" is not.
     fn ila_nass(&self, haql: &'static str, khana: &[u8]) -> Result<String, KhataQira> {
-        std::str::from_utf8(khana).map(str::to_owned).map_err(|khata| {
-            KhataQira::NassGhayrSalih { sigha: self.sigha, haql, mawqi: khata.valid_up_to() }
-        })
+        std::str::from_utf8(khana)
+            .map(str::to_owned)
+            .map_err(|khata| KhataQira::NassGhayrSalih {
+                sigha: self.sigha,
+                haql,
+                mawqi: khata.valid_up_to(),
+            })
     }
 }
 
@@ -1258,8 +1286,13 @@ impl Huzma {
             qari.iqra_bayt("blocks-info table", u64::from(hajm_madghut))?
         };
 
-        let maftuh =
-            fukk_daght(rayat.namat_daght(), 0, madghut, u64::from(hajm_maftuh), AQSA_DALIL)?;
+        let maftuh = fukk_daght(
+            rayat.namat_daght(),
+            0,
+            madghut,
+            u64::from(hajm_maftuh),
+            AQSA_DALIL,
+        )?;
 
         let (kutal, uqad) = Self::iqra_dalil(&maftuh)?;
 
@@ -1294,8 +1327,12 @@ impl Huzma {
         // refuse containers the engine loads.
         dalil.takhatta("uncompressed-data hash", 16)?;
 
-        let adad_kutal =
-            tahaqquq_adad(SIGHA_HUZMA, "block count", dalil.iqra_i32("block count")?, AQSA_KUTAL)?;
+        let adad_kutal = tahaqquq_adad(
+            SIGHA_HUZMA,
+            "block count",
+            dalil.iqra_i32("block count")?,
+            AQSA_KUTAL,
+        )?;
         let mut kutal = Vec::with_capacity(hajz_mahdud(adad_kutal));
         for _ in 0..adad_kutal {
             kutal.push(KutlaHuzma {
@@ -1305,8 +1342,12 @@ impl Huzma {
             });
         }
 
-        let adad_uqad =
-            tahaqquq_adad(SIGHA_HUZMA, "node count", dalil.iqra_i32("node count")?, AQSA_UQAD)?;
+        let adad_uqad = tahaqquq_adad(
+            SIGHA_HUZMA,
+            "node count",
+            dalil.iqra_i32("node count")?,
+            AQSA_UQAD,
+        )?;
         let mut uqad = Vec::with_capacity(hajz_mahdud(adad_uqad));
         for _ in 0..adad_uqad {
             uqad.push(UqdatHuzma {
@@ -1419,8 +1460,12 @@ impl Huzma {
         // are relative to the payload's own start — which is why the whole
         // payload is kept and the offsets are not rebased.
         let mut dalil = Qari::jadeed(SIGHA_HUZMA, &bayanat);
-        let adad_uqad =
-            tahaqquq_adad(SIGHA_HUZMA, "node count", dalil.iqra_i32("node count")?, AQSA_UQAD)?;
+        let adad_uqad = tahaqquq_adad(
+            SIGHA_HUZMA,
+            "node count",
+            dalil.iqra_i32("node count")?,
+            AQSA_UQAD,
+        )?;
         let mut uqad = Vec::with_capacity(hajz_mahdud(adad_uqad));
         for _ in 0..adad_uqad {
             let masar = dalil.iqra_nass_munahi("node path")?;
@@ -1504,11 +1549,16 @@ pub fn fukk_daght(
                 });
             }
             Ok(madghut.to_vec())
-        }
+        },
         NamatDaght::Lz4 | NamatDaght::Lz4hc => {
             let mut maftuh = vec![0_u8; mada];
             let kutib = lz4_flex::block::decompress_into(madghut, &mut maftuh).map_err(|_| {
-                KhataQira::DaghtTalif { namat: namat.ism(), fahras, wujid: 0, mutawaqqa }
+                KhataQira::DaghtTalif {
+                    namat: namat.ism(),
+                    fahras,
+                    wujid: 0,
+                    mutawaqqa,
+                }
             })?;
             if tul_u64(kutib) != mutawaqqa {
                 return Err(KhataQira::DaghtTalif {
@@ -1519,7 +1569,7 @@ pub fn fukk_daght(
                 });
             }
             Ok(maftuh)
-        }
+        },
         NamatDaght::Lzma => Err(KhataQira::SighaMajhula {
             wujid: "an LZMA-compressed Unity bundle block".to_owned(),
         }),
@@ -1702,9 +1752,13 @@ fn ism_min_izaha(izaha: u32, hajz: &[u8]) -> Option<String> {
         let mada = baqiya.len().min(AQSA_TUL_ISM);
         let nitaq = baqiya.get(..mada)?;
         let tul = nitaq.iter().position(|bayt| *bayt == 0)?;
-        return std::str::from_utf8(nitaq.get(..tul)?).ok().map(str::to_owned);
+        return std::str::from_utf8(nitaq.get(..tul)?)
+            .ok()
+            .map(str::to_owned);
     }
-    kharitat_asma().get(&(izaha & 0x7FFF_FFFF)).map(|ism| (*ism).to_owned())
+    kharitat_asma()
+        .get(&(izaha & 0x7FFF_FFFF))
+        .map(|ism| (*ism).to_owned())
 }
 
 // ---------------------------------------------------------------------------
@@ -1855,9 +1909,7 @@ impl ShajaratAnwa {
         let mut i = fahras.saturating_add(1);
         while i < nihaya {
             let uqda = self.uqad.get(i)?;
-            if uqda.mustawa == mustawa.saturating_add(1)
-                && uqda.ism.as_deref() == Some(ism)
-            {
+            if uqda.mustawa == mustawa.saturating_add(1) && uqda.ism.as_deref() == Some(ism) {
                 return Some(i);
             }
             i = i.saturating_add(1);
@@ -1910,9 +1962,9 @@ impl NawMulsal {
     /// these bytes is not in this file.
     #[must_use]
     pub fn maqru(&self) -> bool {
-        self.shajara.as_ref().is_some_and(|shajara| {
-            !shajara.khali() && shajara.majhula().is_none()
-        })
+        self.shajara
+            .as_ref()
+            .is_some_and(|shajara| !shajara.khali() && shajara.majhula().is_none())
     }
 }
 
@@ -2106,24 +2158,46 @@ impl<'a> Mulsal<'a> {
         }
 
         qari.ittajih(nihaya);
-        let isdar_muharrik =
-            if isdar >= 7 { qari.iqra_nass_munahi("unity version")? } else { String::new() };
-        let minassa = if isdar >= 8 { qari.iqra_i32("target platform")? } else { 0 };
-        let shajarat_anwa_muftaala =
-            if isdar >= 13 { qari.iqra_bool("type tree enabled")? } else { true };
+        let isdar_muharrik = if isdar >= 7 {
+            qari.iqra_nass_munahi("unity version")?
+        } else {
+            String::new()
+        };
+        let minassa = if isdar >= 8 {
+            qari.iqra_i32("target platform")?
+        } else {
+            0
+        };
+        let shajarat_anwa_muftaala = if isdar >= 13 {
+            qari.iqra_bool("type tree enabled")?
+        } else {
+            true
+        };
 
-        let adad_anwa =
-            tahaqquq_adad(SIGHA_MULSAL, "type count", qari.iqra_i32("type count")?, AQSA_ANWA)?;
+        let adad_anwa = tahaqquq_adad(
+            SIGHA_MULSAL,
+            "type count",
+            qari.iqra_i32("type count")?,
+            AQSA_ANWA,
+        )?;
         let mut anwa = Vec::with_capacity(hajz_mahdud(adad_anwa));
         for _ in 0..adad_anwa {
-            anwa.push(iqra_naw(&mut qari, isdar, shajarat_anwa_muftaala, QaimatAnwa::Asliya)?);
+            anwa.push(iqra_naw(
+                &mut qari,
+                isdar,
+                shajarat_anwa_muftaala,
+                QaimatAnwa::Asliya,
+            )?);
         }
 
         // Formats 7 through 13 carry a flag saying whether path ids are 64-bit.
         // Reading the flag and then reading a 32-bit id anyway is how a reader
         // ends up one object table behind for the whole file.
-        let hawiyat_kabeera =
-            if (7..14).contains(&isdar) { qari.iqra_i32("big id enabled")? != 0 } else { false };
+        let hawiyat_kabeera = if (7..14).contains(&isdar) {
+            qari.iqra_i32("big id enabled")? != 0
+        } else {
+            false
+        };
 
         let adad_kaainat = tahaqquq_adad(
             SIGHA_MULSAL,
@@ -2159,7 +2233,10 @@ impl<'a> Mulsal<'a> {
                     qari.hadhi(4);
                     qari.iqra_i64("script path id")?
                 };
-                scripts.push(MarjaScript { fahras_malaf, hawiya_masar });
+                scripts.push(MarjaScript {
+                    fahras_malaf,
+                    hawiya_masar,
+                });
             }
         }
 
@@ -2169,8 +2246,7 @@ impl<'a> Mulsal<'a> {
             qari.iqra_i32("external count")?,
             AQSA_KHARIJIYAT,
         )?;
-        let mut kharijiyat =
-            Vec::with_capacity(hajz_mahdud(adad_kharijiyat));
+        let mut kharijiyat = Vec::with_capacity(hajz_mahdud(adad_kharijiyat));
         for _ in 0..adad_kharijiyat {
             let masar_muaqqat = if isdar >= 6 {
                 qari.iqra_nass_munahi("external placeholder")?
@@ -2178,12 +2254,20 @@ impl<'a> Mulsal<'a> {
                 String::new()
             };
             let (muarrif, naw) = if isdar >= 5 {
-                (qari.iqra_masfufa::<16>("external guid")?, qari.iqra_i32("external type")?)
+                (
+                    qari.iqra_masfufa::<16>("external guid")?,
+                    qari.iqra_i32("external type")?,
+                )
             } else {
                 ([0_u8; 16], 0)
             };
             let masar = qari.iqra_nass_munahi("external path")?;
-            kharijiyat.push(MarjaKhariji { masar_muaqqat, muarrif, naw, masar });
+            kharijiyat.push(MarjaKhariji {
+                masar_muaqqat,
+                muarrif,
+                naw,
+                masar,
+            });
         }
 
         let mut anwa_marjiiya = Vec::new();
@@ -2365,17 +2449,19 @@ impl<'a> Mulsal<'a> {
     /// the file — a corrupt object table rather than a short read, since the
     /// table said where the bytes were and they are not there.
     pub fn qari_kaain(&self, madkhal: &MadkhalKaain) -> Result<Qari<'a>, KhataQira> {
-        let (khana, asas) = self.bayt_kaain(madkhal).ok_or_else(|| KhataQira::HaqlTalif {
-            sigha: SIGHA_MULSAL,
-            haql: "object byte range",
-            sabab: format!(
-                "object {} claims {} byte(s) at {} in a {}-byte file",
-                madkhal.hawiya_masar,
-                madkhal.hajm,
-                madkhal.bidaya,
-                self.bayt.len()
-            ),
-        })?;
+        let (khana, asas) = self
+            .bayt_kaain(madkhal)
+            .ok_or_else(|| KhataQira::HaqlTalif {
+                sigha: SIGHA_MULSAL,
+                haql: "object byte range",
+                sabab: format!(
+                    "object {} claims {} byte(s) at {} in a {}-byte file",
+                    madkhal.hawiya_masar,
+                    madkhal.hajm,
+                    madkhal.bidaya,
+                    self.bayt.len()
+                ),
+            })?;
         Ok(Qari::jadeed_bi_asas(SIGHA_MULSAL, khana, asas, self.nihaya))
     }
 }
@@ -2403,8 +2489,16 @@ fn iqra_naw(
     qaima: QaimatAnwa,
 ) -> Result<NawMulsal, KhataQira> {
     let sanf = qari.iqra_i32("type class id")?;
-    let mahdhuf = if isdar >= 16 { qari.iqra_bool("type stripped")? } else { false };
-    let fahras_script = if isdar >= 17 { qari.iqra_i16("type script index")? } else { -1 };
+    let mahdhuf = if isdar >= 16 {
+        qari.iqra_bool("type stripped")?
+    } else {
+        false
+    };
+    let fahras_script = if isdar >= 17 {
+        qari.iqra_i16("type script index")?
+    } else {
+        -1
+    };
 
     let mut bassmat_script = None;
     let bassmat_naw = if isdar >= 13 {
@@ -2491,10 +2585,7 @@ struct UqdaKhaam {
 }
 
 /// The flat type tree: a node array, then one string buffer they index.
-fn iqra_shajara_musattaha(
-    qari: &mut Qari<'_>,
-    isdar: u32,
-) -> Result<ShajaratAnwa, KhataQira> {
+fn iqra_shajara_musattaha(qari: &mut Qari<'_>, isdar: u32) -> Result<ShajaratAnwa, KhataQira> {
     let adad = tahaqquq_adad(
         SIGHA_MULSAL,
         "type tree node count",
@@ -2561,13 +2652,13 @@ fn iqra_shajara_musattaha(
 /// [`crate::unity::kaain`] has one shape to walk. The level field carries the
 /// nesting that the recursion expressed structurally, which is exactly the
 /// transformation Unity itself made when it changed the format.
-fn iqra_shajara_mutakarrira(
-    qari: &mut Qari<'_>,
-    isdar: u32,
-) -> Result<ShajaratAnwa, KhataQira> {
+fn iqra_shajara_mutakarrira(qari: &mut Qari<'_>, isdar: u32) -> Result<ShajaratAnwa, KhataQira> {
     let mut uqad = Vec::new();
     iqra_uqda_mutakarrira(qari, isdar, 0, &mut uqad)?;
-    Ok(ShajaratAnwa { uqad, majhula: None })
+    Ok(ShajaratAnwa {
+        uqad,
+        majhula: None,
+    })
 }
 
 /// One node of the recursive tree and everything under it.
@@ -2601,11 +2692,18 @@ fn iqra_uqda_mutakarrira(
     // Format 3 dropped the index and the meta flag entirely. Reading them anyway
     // consumes eight bytes that belong to the next node's type name, and the
     // name that comes out is a fragment that resolves to nothing.
-    let fahras = if isdar == 3 { -1 } else { qari.iqra_i32("type tree node index")? };
+    let fahras = if isdar == 3 {
+        -1
+    } else {
+        qari.iqra_i32("type tree node index")?
+    };
     let rayat_naw = qari.iqra_i32("type tree node type flags")?;
     let isdar_uqda = qari.iqra_i32("type tree node version")?;
-    let rayat_bayanat =
-        if isdar == 3 { 0 } else { qari.iqra_i32("type tree node meta flag")? };
+    let rayat_bayanat = if isdar == 3 {
+        0
+    } else {
+        qari.iqra_i32("type tree node meta flag")?
+    };
 
     uqad.push(UqdatShajara {
         isdar: u16::try_from(isdar_uqda).unwrap_or(0),
@@ -2666,11 +2764,13 @@ fn iqra_madkhal_kaain(
         u64::from(qari.iqra_u32("object byte start")?)
     };
     let bidaya =
-        bidaya_nisbiya.checked_add(izahat_bayanat).ok_or_else(|| KhataQira::TajawuzHadd {
-            hadd: "object byte start",
-            qeema: bidaya_nisbiya,
-            saqf: u64::MAX.saturating_sub(izahat_bayanat),
-        })?;
+        bidaya_nisbiya
+            .checked_add(izahat_bayanat)
+            .ok_or_else(|| KhataQira::TajawuzHadd {
+                hadd: "object byte start",
+                qeema: bidaya_nisbiya,
+                saqf: u64::MAX.saturating_sub(izahat_bayanat),
+            })?;
 
     let hajm = qari.iqra_u32("object byte size")?;
     let fahras_naw = qari.iqra_i32("object type id")?;
@@ -2693,10 +2793,20 @@ fn iqra_madkhal_kaain(
     if (11..=17).contains(&isdar) {
         let _ = qari.iqra_i16("object script type index")?;
     }
-    let mahdhuf =
-        if isdar == 15 || isdar == 16 { qari.iqra_u8("object stripped")? != 0 } else { false };
+    let mahdhuf = if isdar == 15 || isdar == 16 {
+        qari.iqra_u8("object stripped")? != 0
+    } else {
+        false
+    };
 
-    Ok(MadkhalKaain { hawiya_masar, bidaya, hajm, fahras_naw, sanf, mahdhuf })
+    Ok(MadkhalKaain {
+        hawiya_masar,
+        bidaya,
+        hajm,
+        fahras_naw,
+        sanf,
+        mahdhuf,
+    })
 }
 
 // ---------------------------------------------------------------------------

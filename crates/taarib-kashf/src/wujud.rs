@@ -138,13 +138,13 @@ pub fn ihkum(talab: &TalabWujud<'_>) -> HukmWujud {
             return HukmWujud::ghaiba(SababGhiyab::MujalladMafqud {
                 masar: talab.jidhr.to_path_buf(),
             });
-        }
+        },
         Err(sabab) => {
             return HukmWujud::ghaiba(SababGhiyab::MujalladMamnu {
                 masar: talab.jidhr.to_path_buf(),
                 sabab: sabab.to_string(),
             });
-        }
+        },
     };
     if !bayanat.is_dir() {
         return HukmWujud::ghaiba(SababGhiyab::MujalladMafqud {
@@ -162,7 +162,7 @@ pub fn ihkum(talab: &TalabWujud<'_>) -> HukmWujud {
                 masar: talab.jidhr.to_path_buf(),
                 sabab: sabab.to_string(),
             });
-        }
+        },
     };
     if hajm_awwali < ADNA_HAJM_TATHBEET {
         return HukmWujud::ghaiba(SababGhiyab::TathbeetNaqis {
@@ -188,16 +188,15 @@ pub fn ihkum(talab: &TalabWujud<'_>) -> HukmWujud {
 
     match std::fs::metadata(&masar_tanfidhi) {
         Ok(bayanat) if bayanat.is_file() => {
-            let mukhalafa =
-                qarin_shahid(&masar_tanfidhi, &bayanat, talab.shahid, &mut mulahazat);
+            let mukhalafa = qarin_shahid(&masar_tanfidhi, &bayanat, talab.shahid, &mut mulahazat);
             if let Some(sabab) = mukhalafa {
                 return HukmWujud::ghaiba(sabab);
             }
             HukmWujud::hadira(Some(masar_tanfidhi), Some(hajm_awwali), mulahazat)
-        }
-        Ok(_) | Err(_) => {
-            HukmWujud::ghaiba(SababGhiyab::TanfidhiMafqud { masar: masar_tanfidhi })
-        }
+        },
+        Ok(_) | Err(_) => HukmWujud::ghaiba(SababGhiyab::TanfidhiMafqud {
+            masar: masar_tanfidhi,
+        }),
     }
 }
 
@@ -214,7 +213,9 @@ fn hall_tanfidhi(
     };
 
     if !beea.is_dir() {
-        return Err(SababGhiyab::BeeaMafquda { masar: beea.to_path_buf() });
+        return Err(SababGhiyab::BeeaMafquda {
+            masar: beea.to_path_buf(),
+        });
     }
 
     let Some(masar_windows) = talab.masar_windows else {
@@ -233,7 +234,7 @@ fn hall_tanfidhi(
                 beea.display()
             ));
             Ok(Some(masar))
-        }
+        },
         None => Err(SababGhiyab::TanfidhiKharijBeea {
             beea: beea.to_path_buf(),
             masar_windows: masar_windows.to_owned(),
@@ -332,7 +333,12 @@ fn qarin_shahid(
 /// epoch — which is what a corrupt timestamp looks like and is not worth
 /// modelling as a negative number nothing else in this product can consume.
 fn waqt_thawani(bayanat: &std::fs::Metadata) -> Option<u64> {
-    bayanat.modified().ok()?.duration_since(UNIX_EPOCH).ok().map(|q| q.as_secs())
+    bayanat
+        .modified()
+        .ok()?
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|q| q.as_secs())
 }
 
 /// Whether the volume holding a path is reachable, and why not when it is not.
@@ -348,9 +354,13 @@ fn ghiyab_al_hajm(jidhr: &Path) -> Option<SababGhiyab> {
         return None;
     }
     if shabakiy(jidhr) {
-        Some(SababGhiyab::ShabakaGhayrMutaha { masar: jidhr.to_path_buf() })
+        Some(SababGhiyab::ShabakaGhayrMutaha {
+            masar: jidhr.to_path_buf(),
+        })
     } else {
-        Some(SababGhiyab::QursGhayrMuttasil { qurs: qurs.display().to_string() })
+        Some(SababGhiyab::QursGhayrMuttasil {
+            qurs: qurs.display().to_string(),
+        })
     }
 }
 
@@ -386,7 +396,9 @@ pub fn jidhr_al_hajm(masar: &Path) -> Option<PathBuf> {
         }
         let mut jidhr = PathBuf::from("/");
         let thani = ajza.next()?;
-        let Component::Normal(ism) = thani else { return None };
+        let Component::Normal(ism) = thani else {
+            return None;
+        };
         // Only the conventional mount parents. `/home` and `/usr` are always
         // present, and treating them as volumes would make every ordinary
         // install look like it lived on removable media.
@@ -399,10 +411,14 @@ pub fn jidhr_al_hajm(masar: &Path) -> Option<PathBuf> {
         // `/run/media/<user>/<label>` is what udisks produces, so one more
         // component is taken when the first is `run`.
         if ism_nass == "run" {
-            let Some(Component::Normal(thalith)) = ajza.next() else { return Some(jidhr) };
+            let Some(Component::Normal(thalith)) = ajza.next() else {
+                return Some(jidhr);
+            };
             jidhr.push(thalith);
         }
-        let Some(Component::Normal(rabi)) = ajza.next() else { return Some(jidhr) };
+        let Some(Component::Normal(rabi)) = ajza.next() else {
+            return Some(jidhr);
+        };
         jidhr.push(rabi);
         Some(jidhr)
     }
@@ -444,7 +460,9 @@ pub fn hajm_tathbeet(jidhr: &Path) -> std::io::Result<u64> {
         if adad > AQSA_MADAKHIL_ISTITLA {
             break;
         }
-        let Ok(naw) = madkhal.file_type() else { continue };
+        let Ok(naw) = madkhal.file_type() else {
+            continue;
+        };
         if naw.is_file() {
             if let Ok(bayanat) = madkhal.metadata() {
                 majmu = majmu.saturating_add(bayanat.len());
@@ -457,7 +475,9 @@ pub fn hajm_tathbeet(jidhr: &Path) -> std::io::Result<u64> {
         if !naw.is_dir() {
             continue;
         }
-        let Ok(dakhil) = std::fs::read_dir(madkhal.path()) else { continue };
+        let Ok(dakhil) = std::fs::read_dir(madkhal.path()) else {
+            continue;
+        };
         for wahid in dakhil {
             let Ok(wahid) = wahid else { continue };
             adad = adad.saturating_add(1);
@@ -498,7 +518,9 @@ impl SijillWujud {
     /// An empty record.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { ahkam: BTreeMap::new() }
+        Self {
+            ahkam: BTreeMap::new(),
+        }
     }
 
     /// Records a verdict.
@@ -528,7 +550,10 @@ impl SijillWujud {
         let mut majmuat: BTreeMap<FiatGhiyab, Vec<(&str, &SababGhiyab)>> = BTreeMap::new();
         for (muarrif, hukm) in &self.ahkam {
             if let Some(sabab) = hukm.ghiyab.as_ref() {
-                majmuat.entry(sabab.fia()).or_default().push((muarrif.as_str(), sabab));
+                majmuat
+                    .entry(sabab.fia())
+                    .or_default()
+                    .push((muarrif.as_str(), sabab));
             }
         }
         majmuat
@@ -568,7 +593,11 @@ impl SijillWujud {
         let ghaiba = self.ghaiba();
         let mut ajza = vec![format!("{} present", self.adad_hadir())];
         for (fia, alaab) in &ghaiba {
-            ajza.push(format!("{} {}", alaab.len(), fia.unwan_injilizi().to_lowercase()));
+            ajza.push(format!(
+                "{} {}",
+                alaab.len(),
+                fia.unwan_injilizi().to_lowercase()
+            ));
         }
         ajza.join(", ")
     }
@@ -582,5 +611,7 @@ impl SijillWujud {
 /// battery died rather than a case worth an error path.
 #[must_use]
 pub fn lahza_al_aan() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |q| q.as_secs())
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |q| q.as_secs())
 }

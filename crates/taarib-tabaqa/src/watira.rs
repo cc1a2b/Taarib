@@ -137,13 +137,21 @@ impl TaghyeerWatira {
     #[must_use]
     pub fn satr(self) -> String {
         match self {
-            Self::Tadahwur { min_mikro, ila_mikro, daraja } => format!(
+            Self::Tadahwur {
+                min_mikro,
+                ila_mikro,
+                daraja,
+            } => format!(
                 "refresh degraded from {:.2}/s to {:.2}/s (step {daraja}) after sustained \
                  over-budget frames",
                 fi_thania(min_mikro),
                 fi_thania(ila_mikro)
             ),
-            Self::Taafi { min_mikro, ila_mikro, daraja } => format!(
+            Self::Taafi {
+                min_mikro,
+                ila_mikro,
+                daraja,
+            } => format!(
                 "refresh recovered from {:.2}/s to {:.2}/s ({daraja} step(s) still in force)",
                 fi_thania(min_mikro),
                 fi_thania(ila_mikro)

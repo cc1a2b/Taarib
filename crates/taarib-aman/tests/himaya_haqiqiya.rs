@@ -60,8 +60,10 @@ const MAKTABAT: [&str; 3] = [
 ];
 
 /// Where the Steam *client* is, which is the only place `appinfo.vdf` lives.
-const JUDHUR_STEAM: [&str; 2] =
-    ["/mnt/d/Program Files (x86)/Steam", "D:/Program Files (x86)/Steam"];
+const JUDHUR_STEAM: [&str; 2] = [
+    "/mnt/d/Program Files (x86)/Steam",
+    "D:/Program Files (x86)/Steam",
+];
 
 /// One installed game, its Steam identifier, and what the gate must say.
 struct HalatLuba {
@@ -76,7 +78,11 @@ struct HalatLuba {
 /// The seventeen games installed on the machine this was written against.
 const HALAT: &[HalatLuba] = &[
     // --- protected: the gate must refuse all three ---------------------------
-    HalatLuba { mujallad: "FC 26", appid: 3_405_690, mutawaqqa: &[NawHimaya::EaJavelin] },
+    HalatLuba {
+        mujallad: "FC 26",
+        appid: 3_405_690,
+        mutawaqqa: &[NawHimaya::EaJavelin],
+    },
     HalatLuba {
         mujallad: "ELDEN RING",
         appid: 1_245_620,
@@ -88,20 +94,76 @@ const HALAT: &[HalatLuba] = &[
         mutawaqqa: &[NawHimaya::BattlEye],
     },
     // --- unprotected: none of these may become a false positive --------------
-    HalatLuba { mujallad: "AFOP", appid: 2_840_770, mutawaqqa: &[] },
-    HalatLuba { mujallad: "Among Us", appid: 945_360, mutawaqqa: &[] },
-    HalatLuba { mujallad: "ChainedTogether", appid: 2_567_870, mutawaqqa: &[] },
-    HalatLuba { mujallad: "Crash Bandicoot - N Sane Trilogy", appid: 731_490, mutawaqqa: &[] },
-    HalatLuba { mujallad: "Crimson Desert", appid: 3_321_460, mutawaqqa: &[] },
-    HalatLuba { mujallad: "DARK SOULS REMASTERED", appid: 570_940, mutawaqqa: &[] },
-    HalatLuba { mujallad: "Gang Beasts", appid: 285_900, mutawaqqa: &[] },
-    HalatLuba { mujallad: "Hollow Knight", appid: 367_520, mutawaqqa: &[] },
-    HalatLuba { mujallad: "Little Nightmares", appid: 424_840, mutawaqqa: &[] },
-    HalatLuba { mujallad: "Little Nightmares Enhanced Edition", appid: 2_149_010, mutawaqqa: &[] },
-    HalatLuba { mujallad: "MECCHA CHAMELEON", appid: 4_704_690, mutawaqqa: &[] },
-    HalatLuba { mujallad: "REPO", appid: 3_241_660, mutawaqqa: &[] },
-    HalatLuba { mujallad: "Resident Evil 4", appid: 254_700, mutawaqqa: &[] },
-    HalatLuba { mujallad: "Tangles", appid: 2_784_980, mutawaqqa: &[] },
+    HalatLuba {
+        mujallad: "AFOP",
+        appid: 2_840_770,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "Among Us",
+        appid: 945_360,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "ChainedTogether",
+        appid: 2_567_870,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "Crash Bandicoot - N Sane Trilogy",
+        appid: 731_490,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "Crimson Desert",
+        appid: 3_321_460,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "DARK SOULS REMASTERED",
+        appid: 570_940,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "Gang Beasts",
+        appid: 285_900,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "Hollow Knight",
+        appid: 367_520,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "Little Nightmares",
+        appid: 424_840,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "Little Nightmares Enhanced Edition",
+        appid: 2_149_010,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "MECCHA CHAMELEON",
+        appid: 4_704_690,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "REPO",
+        appid: 3_241_660,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "Resident Evil 4",
+        appid: 254_700,
+        mutawaqqa: &[],
+    },
+    HalatLuba {
+        mujallad: "Tangles",
+        appid: 2_784_980,
+        mutawaqqa: &[],
+    },
 ];
 
 /// The library root, from the environment first and then the candidates.
@@ -116,7 +178,10 @@ fn maktaba() -> Option<PathBuf> {
             return Some(masar);
         }
     }
-    let wujid = MAKTABAT.into_iter().map(PathBuf::from).find(|masar| masar.is_dir());
+    let wujid = MAKTABAT
+        .into_iter()
+        .map(PathBuf::from)
+        .find(|masar| masar.is_dir());
     assert!(
         !(wujid.is_none() && std::env::var_os("TAARIB_MAKTABA_ILZAM").is_some()),
         "TAARIB_MAKTABA_ILZAM is set and no Steam library was found; point TAARIB_MAKTABA at a \
@@ -158,13 +223,25 @@ fn fahs_al_malaffat_wahdahu_yusammi_al_mahmiya_wa_yubqi_al_baqiya_nadhifa() {
             hala.mutawaqqa,
             "{}: {:#?}",
             hala.mujallad,
-            ijmaa.adilla.iter().map(DaleelHimaya::injilizi).collect::<Vec<_>>()
+            ijmaa
+                .adilla
+                .iter()
+                .map(DaleelHimaya::injilizi)
+                .collect::<Vec<_>>()
         );
-        assert_eq!(mahmiya(&ijmaa), !hala.mutawaqqa.is_empty(), "{}", hala.mujallad);
+        assert_eq!(
+            mahmiya(&ijmaa),
+            !hala.mutawaqqa.is_empty(),
+            "{}",
+            hala.mujallad
+        );
         assert!(!ijmaa.mabtur, "{} was too large to walk", hala.mujallad);
         adad = adad.saturating_add(1);
     }
-    assert!(adad >= 3, "only {adad} of the expected game folders were present");
+    assert!(
+        adad >= 3,
+        "only {adad} of the expected game folders were present"
+    );
 }
 
 #[test]
@@ -178,20 +255,28 @@ fn javelin_fi_fc26_yusamma_wa_yushar_ila_mawdiihi() {
     }
 
     let (ijmaa, _) = ifhas_himaya_bi_matjar(&masar, None, None);
-    assert!(mahmiya(&ijmaa), "FC 26 ships a kernel-mode anti-cheat and must be refused");
+    assert!(
+        mahmiya(&ijmaa),
+        "FC 26 ships a kernel-mode anti-cheat and must be refused"
+    );
     assert_eq!(ijmaa.anwa(), [NawHimaya::EaJavelin]);
 
     // The user is shown a path, so every piece of evidence must carry one that
     // is really under the game and really exists.
     for daleel in &ijmaa.adilla {
-        let mawdi = daleel.masar.as_deref().unwrap_or_else(|| {
-            panic!("a file-scan detection with no path: {}", daleel.injilizi())
-        });
+        let mawdi = daleel
+            .masar
+            .as_deref()
+            .unwrap_or_else(|| panic!("a file-scan detection with no path: {}", daleel.injilizi()));
         assert!(mawdi.starts_with(&masar), "{mawdi:?} is outside {masar:?}");
         assert!(mawdi.exists(), "{mawdi:?} was named and is not there");
     }
 
-    let ayunn: Vec<&str> = ijmaa.adilla.iter().map(|daleel| daleel.ayn.as_str()).collect();
+    let ayunn: Vec<&str> = ijmaa
+        .adilla
+        .iter()
+        .map(|daleel| daleel.ayn.as_str())
+        .collect();
     for matlub in [
         "EAAntiCheat.GameServiceLauncher.exe",
         "EAAntiCheat.GameServiceLauncher.dll",
@@ -199,7 +284,10 @@ fn javelin_fi_fc26_yusamma_wa_yushar_ila_mawdiihi() {
         "EAAntiCheat.cfg",
         "EAJavelinInstaller_installscript.vdf",
     ] {
-        assert!(ayunn.iter().any(|ayn| ayn.contains(matlub)), "{matlub} missing from {ayunn:?}");
+        assert!(
+            ayunn.iter().any(|ayn| ayn.contains(matlub)),
+            "{matlub} missing from {ayunn:?}"
+        );
     }
 }
 
@@ -230,7 +318,11 @@ fn maa_fahras_al_matjar_tabqa_al_ahkam_kama_hiya() {
         // A game with no anti-cheat in its files and none in the catalogue is
         // the case the whole product depends on staying installable.
         if hala.mutawaqqa.is_empty() && !ijmaa.anwa().contains(&NawHimaya::GhayrMusamma) {
-            assert!(!mahmiya(&ijmaa), "{} became a false positive", hala.mujallad);
+            assert!(
+                !mahmiya(&ijmaa),
+                "{} became a false positive",
+                hala.mujallad
+            );
         }
     }
 }
@@ -256,6 +348,10 @@ fn ramz_tawafuq_steam_yaltaqit_gta_v() {
     assert!(
         ijmaa.anwa().contains(&NawHimaya::GhayrMusamma),
         "{:#?}",
-        ijmaa.adilla.iter().map(DaleelHimaya::injilizi).collect::<Vec<_>>()
+        ijmaa
+            .adilla
+            .iter()
+            .map(DaleelHimaya::injilizi)
+            .collect::<Vec<_>>()
     );
 }

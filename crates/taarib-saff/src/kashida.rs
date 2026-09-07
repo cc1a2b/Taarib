@@ -166,7 +166,11 @@ impl NatijatDabt {
     /// The outcome of absorbing nothing, which is what every refusal returns.
     #[must_use]
     pub const fn la_shay(fadl: f32) -> Self {
-        Self { muwazza: 0.0, mutabaqqi: fadl, adad_mawadi: 0 }
+        Self {
+            muwazza: 0.0,
+            mutabaqqi: fadl,
+            adad_mawadi: 0,
+        }
     }
 
     /// Whether the whole surplus was absorbed.
@@ -227,7 +231,7 @@ pub fn dubt_satr(
         NamatDabt::Masafat => Ok(mudd_bil_masafat(nass, maqati, fadl)),
         NamatDabt::Kashida => {
             mudd_bil_kashida(nass, maqati, fadl, makhzan, khutut, nitaqat, khiyarat)
-        }
+        },
         NamatDabt::KashidaThummaMasafat => {
             let bil_madd =
                 mudd_bil_kashida(nass, maqati, fadl, makhzan, khutut, nitaqat, khiyarat)?;
@@ -245,7 +249,7 @@ pub fn dubt_satr(
                 mutabaqqi: bil_masafat.mutabaqqi,
                 adad_mawadi: bil_madd.adad_mawadi.saturating_add(bil_masafat.adad_mawadi),
             })
-        }
+        },
     }
 }
 
@@ -289,8 +293,12 @@ pub fn mudd_bil_masafat(nass: &str, maqati: &mut [MaqtaMashkul], fadl: f32) -> N
     let mut muwazza = 0.0_f32;
     let mut adad: u32 = 0;
     for (fahras_maqta, fahras_harf) in &mawadi {
-        let Some(maqta) = maqati.get_mut(*fahras_maqta) else { continue };
-        let Some(harf) = maqta.huruf.get_mut(*fahras_harf) else { continue };
+        let Some(maqta) = maqati.get_mut(*fahras_maqta) else {
+            continue;
+        };
+        let Some(harf) = maqta.huruf.get_mut(*fahras_harf) else {
+            continue;
+        };
         harf.taqaddum_s += hissa;
         muwazza += hissa;
         adad = adad.saturating_add(1);
@@ -302,7 +310,11 @@ pub fn mudd_bil_masafat(nass: &str, maqati: &mut [MaqtaMashkul], fadl: f32) -> N
         }
     }
 
-    NatijatDabt { muwazza, mutabaqqi: (fadl - muwazza).max(0.0), adad_mawadi: adad }
+    NatijatDabt {
+        muwazza,
+        mutabaqqi: (fadl - muwazza).max(0.0),
+        adad_mawadi: adad,
+    }
 }
 
 /// The line's expandable spaces, as `(run index, glyph index)` pairs.
@@ -464,12 +476,16 @@ fn mawadi_assatr(nass: &str, maqati: &[MaqtaMashkul]) -> Vec<MawdiMadd> {
             continue;
         }
         for (fahras_harf, rutba) in maqta.mawadi_kashida() {
-            let Some(harf) = maqta.huruf.get(fahras_harf) else { continue };
+            let Some(harf) = maqta.huruf.get(fahras_harf) else {
+                continue;
+            };
             let mawqi = mawqi_alidkhal(maqta, fahras_harf, harf.anqud);
             if mawqi <= maqta.asl.nitaq.start || mawqi >= maqta.asl.nitaq.end {
                 continue;
             }
-            let Ok(fahras_bayt) = usize::try_from(mawqi) else { continue };
+            let Ok(fahras_bayt) = usize::try_from(mawqi) else {
+                continue;
+            };
             if !nass.is_char_boundary(fahras_bayt) {
                 continue;
             }
@@ -571,7 +587,9 @@ fn wazzi(mawadi: &mut [MawdiMadd], fadl: f32) -> f32 {
         let mut bidaya = 0_usize;
 
         while bidaya < mawadi.len() {
-            let Some(rutba) = mawadi.get(bidaya).map(|mawdi| mawdi.rutba) else { break };
+            let Some(rutba) = mawadi.get(bidaya).map(|mawdi| mawdi.rutba) else {
+                break;
+            };
             let mut nihaya = bidaya.saturating_add(1);
             while mawadi.get(nihaya).is_some_and(|mawdi| mawdi.rutba == rutba) {
                 nihaya = nihaya.saturating_add(1);
@@ -627,7 +645,9 @@ fn wazzi_ala_majmua(majmua: &mut [MawdiMadd], mutabaqqi: &mut f32) -> bool {
 
         let mut akhadha = 0.0_f32;
         for fahras in &munfatih {
-            let Some(mawdi) = majmua.get_mut(*fahras) else { continue };
+            let Some(mawdi) = majmua.get_mut(*fahras) else {
+                continue;
+            };
             let qadr = hissa.min(mawdi.mutabaqqi());
             if qadr <= 0.0 {
                 continue;
@@ -761,9 +781,9 @@ fn mudd_bil_kashida(
             afdal = Some((maqati.to_vec(), ziyada, adad));
             break;
         }
-        let ahsan = afdal.as_ref().is_none_or(|(_, sabiq, _)| {
-            (ziyada - fadl).abs() < (*sabiq - fadl).abs()
-        });
+        let ahsan = afdal
+            .as_ref()
+            .is_none_or(|(_, sabiq, _)| (ziyada - fadl).abs() < (*sabiq - fadl).abs());
         if ahsan {
             afdal = Some((maqati.to_vec(), ziyada, adad));
         }
@@ -991,16 +1011,21 @@ fn khiyarat_almadd(
 /// mean refusing to justify a line over a question that does not affect whether
 /// it can be drawn.
 fn yadum_almadd(khatt: &MawridKhatt) -> bool {
-    let Ok(font) = khatt.khatt() else { return false };
+    let Ok(font) = khatt.khatt() else {
+        return false;
+    };
     if font.table_data(WASM_JSTF).is_some() {
         return true;
     }
     let Ok(gsub) = font.gsub() else { return false };
-    let Ok(qaima) = gsub.feature_list() else { return false };
-    qaima
-        .feature_records()
-        .iter()
-        .any(|sifa| WUSUM_MADD.iter().any(|wasm| sifa.feature_tag() == Tag::new(wasm)))
+    let Ok(qaima) = gsub.feature_list() else {
+        return false;
+    };
+    qaima.feature_records().iter().any(|sifa| {
+        WUSUM_MADD
+            .iter()
+            .any(|wasm| sifa.feature_tag() == Tag::new(wasm))
+    })
 }
 
 /// Applies a set of insertions to the line and reshapes everything they touch.
@@ -1046,15 +1071,15 @@ fn tabiq_alidkhalat(
     let mut fahaaris: Vec<usize> = Vec::new();
     let mut manqula: Vec<MaqtaMantiqi> = Vec::new();
     for (fahras, maqta) in asl.iter().enumerate() {
-        let yamass = idkhalat.iter().any(|(mawqi, _)| {
-            *mawqi > maqta.asl.nitaq.start && *mawqi < maqta.asl.nitaq.end
-        });
+        let yamass = idkhalat
+            .iter()
+            .any(|(mawqi, _)| *mawqi > maqta.asl.nitaq.start && *mawqi < maqta.asl.nitaq.end);
         if !yamass {
             continue;
         }
         let mut manqul = maqta.asl.clone();
-        manqul.nitaq = ila_amam(idkhalat, maqta.asl.nitaq.start)
-            ..ila_amam(idkhalat, maqta.asl.nitaq.end);
+        manqul.nitaq =
+            ila_amam(idkhalat, maqta.asl.nitaq.start)..ila_amam(idkhalat, maqta.asl.nitaq.end);
         fahaaris.push(fahras);
         manqula.push(manqul);
     }
@@ -1066,14 +1091,8 @@ fn tabiq_alidkhalat(
     // variable-font weight span was shaped with that weight as a variation
     // coordinate, and reshaping it without one would return the bold word to
     // regular the moment the line justified.
-    let mashkula = shakkil_maqati_bi_asalib(
-        &nass_mamdud,
-        &manqula,
-        nitaqat,
-        khutut,
-        khiyarat,
-        makhzan,
-    )?;
+    let mashkula =
+        shakkil_maqati_bi_asalib(&nass_mamdud, &manqula, nitaqat, khutut, khiyarat, makhzan)?;
 
     for (fahras, mut jadeed) in fahaaris.into_iter().zip(mashkula) {
         let (Some(hadaf), Some(asli)) = (maqati.get_mut(fahras), asl.get(fahras)) else {
@@ -1112,7 +1131,9 @@ fn nass_bil_madd(nass: &str, idkhalat: &[(u32, u32)]) -> String {
     let mut sabiq: usize = 0;
 
     for (mawqi, adad) in idkhalat {
-        let Ok(hadd) = usize::try_from(*mawqi) else { continue };
+        let Ok(hadd) = usize::try_from(*mawqi) else {
+            continue;
+        };
         if hadd < sabiq || hadd > nass.len() || !nass.is_char_boundary(hadd) {
             continue;
         }

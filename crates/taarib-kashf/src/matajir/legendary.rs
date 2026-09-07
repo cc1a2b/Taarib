@@ -132,8 +132,11 @@ const MUARRIF: &str = "legendary";
 /// legendary is a Python program and runs wherever Python does. Its Linux use is
 /// what motivates this adapter, but a macOS user running it under `CrossOver`
 /// and a Windows user who prefers a command line both exist.
-const MANASSAT: [NizamTashghil; 3] =
-    [NizamTashghil::Linux, NizamTashghil::Windows, NizamTashghil::Mac];
+const MANASSAT: [NizamTashghil; 3] = [
+    NizamTashghil::Linux,
+    NizamTashghil::Windows,
+    NizamTashghil::Mac,
+];
 
 /// legendary's own override of where its configuration lives.
 const MUTAGHAYYIR_JIDHR: &str = "LEGENDARY_CONFIG_PATH";
@@ -169,11 +172,19 @@ const QISM_IFTIRADI: &str = "default";
 const HADD_BAYANAT: usize = 4096;
 
 /// The `keyImages` type that is the vertical cover, most preferred first.
-const ANWA_GHILAF: [&str; 3] = ["DieselGameBoxTall", "DieselStoreFrontTall", "OfferImageTall"];
+const ANWA_GHILAF: [&str; 3] = [
+    "DieselGameBoxTall",
+    "DieselStoreFrontTall",
+    "OfferImageTall",
+];
 
 /// The `keyImages` type that is the wide banner, most preferred first.
-const ANWA_BATL: [&str; 4] =
-    ["DieselGameBox", "DieselGameBoxWide", "DieselStoreFrontWide", "OfferImageWide"];
+const ANWA_BATL: [&str; 4] = [
+    "DieselGameBox",
+    "DieselGameBoxWide",
+    "DieselStoreFrontWide",
+    "OfferImageWide",
+];
 
 /// The `keyImages` type that is the overlaid logo, most preferred first.
 ///
@@ -201,8 +212,7 @@ impl MatjarLegendary {
     /// and never changed a setting has the reverse. Requiring both would report
     /// legendary as absent for both of them.
     fn huwa_jidhr(jidhr: &Path) -> bool {
-        jidhr.is_dir()
-            && (jidhr.join(ISM_MUTHABBAT).is_file() || jidhr.join(ISM_IDADAT).is_file())
+        jidhr.is_dir() && (jidhr.join(ISM_MUTHABBAT).is_file() || jidhr.join(ISM_IDADAT).is_file())
     }
 }
 
@@ -224,7 +234,9 @@ impl Matjar for MatjarLegendary {
     }
 
     fn mawqi(&self, siyaq: &SiyaqFahs) -> Option<PathBuf> {
-        judhur_muhtamala(siyaq).into_iter().find(|jidhr| Self::huwa_jidhr(jidhr))
+        judhur_muhtamala(siyaq)
+            .into_iter()
+            .find(|jidhr| Self::huwa_jidhr(jidhr))
     }
 
     /// # Errors
@@ -269,9 +281,7 @@ impl Matjar for MatjarLegendary {
             return Err(KhataKashf::TaadhurQiraatFahras {
                 matjar: MUARRIF,
                 masar: masar_muthabbat,
-                sabab: std::io::Error::other(
-                    "the installed-games file could not be read as JSON",
-                ),
+                sabab: std::io::Error::other("the installed-games file could not be read as JSON"),
             }
             .into());
         };
@@ -292,8 +302,11 @@ impl Matjar for MatjarLegendary {
         let heroic = IdadHeroic::iqra(&jidhr);
         let suwar = bayanat_epic(&jidhr.join(MUJALLAD_BAYANAT));
 
-        let siyaq_legendary =
-            SiyaqLegendary { nizam: siyaq.nizam, idadat: &idadat, heroic: &heroic };
+        let siyaq_legendary = SiyaqLegendary {
+            nizam: siyaq.nizam,
+            idadat: &idadat,
+            heroic: &heroic,
+        };
         for (miftah, sijill) in madakhil {
             if let Some(luba) = luba_min_sijill(
                 miftah,
@@ -382,7 +395,10 @@ fn judhur_muhtamala(siyaq: &SiyaqFahs) -> Vec<PathBuf> {
     let mut judhur: Vec<PathBuf> = Vec::with_capacity(murashahat.len());
     for murashah in murashahat {
         let heroic_dakhili = std::ffi::OsStr::new(MUJALLAD_HEROIC_LEGENDARY);
-        if murashah.components().any(|juz| juz.as_os_str() == heroic_dakhili) {
+        if murashah
+            .components()
+            .any(|juz| juz.as_os_str() == heroic_dakhili)
+        {
             continue;
         }
         if !judhur.contains(&murashah) {
@@ -526,7 +542,9 @@ impl IdadIni {
                 .find(|(mawjud, _)| mawjud.to_ascii_lowercase() == qism_saghir)
                 .map(|(_, qeem)| qeem)
         })?;
-        qeem.get(matlub.as_str()).map(String::as_str).filter(|qeema| !qeema.trim().is_empty())
+        qeem.get(matlub.as_str())
+            .map(String::as_str)
+            .filter(|qeema| !qeema.trim().is_empty())
     }
 }
 
@@ -575,10 +593,15 @@ impl IdadHeroic {
         if let Ok(qaima) = std::fs::read_dir(jidhr.join("GamesConfig")) {
             for madkhal in qaima.take(HADD_BAYANAT).flatten() {
                 let masar = madkhal.path();
-                if masar.extension().is_none_or(|imtidad| !imtidad.eq_ignore_ascii_case("json")) {
+                if masar
+                    .extension()
+                    .is_none_or(|imtidad| !imtidad.eq_ignore_ascii_case("json"))
+                {
                     continue;
                 }
-                let Some(ism) = masar.file_stem().map(|ism| ism.to_string_lossy().into_owned())
+                let Some(ism) = masar
+                    .file_stem()
+                    .map(|ism| ism.to_string_lossy().into_owned())
                 else {
                     continue;
                 };
@@ -593,9 +616,10 @@ impl IdadHeroic {
                     .get(&ism)
                     .and_then(|dakhili| nass_haql(dakhili, "winePrefix"))
                     .or_else(|| {
-                        qeema.as_object()?.values().find_map(|dakhili| {
-                            nass_haql(dakhili, "winePrefix")
-                        })
+                        qeema
+                            .as_object()?
+                            .values()
+                            .find_map(|dakhili| nass_haql(dakhili, "winePrefix"))
                     });
                 if let Some(beea) = mukhtar {
                     let _ = beeat.insert(ism, PathBuf::from(beea));
@@ -608,7 +632,10 @@ impl IdadHeroic {
 
     /// The prefix Heroic records for one app name, then its default.
     fn beea(&self, ism_tatbeeq: &str) -> Option<PathBuf> {
-        self.beeat.get(ism_tatbeeq).cloned().or_else(|| self.iftiradi.clone())
+        self.beeat
+            .get(ism_tatbeeq)
+            .cloned()
+            .or_else(|| self.iftiradi.clone())
     }
 }
 
@@ -631,18 +658,30 @@ struct SiyaqLegendary<'a> {
 fn beea_lil_tatbeeq(ism_tatbeeq: &str, siyaq: &SiyaqLegendary<'_>) -> Option<PathBuf> {
     let qism_beea = format!("{ism_tatbeeq}.env");
     let murashahat = [
-        siyaq.idadat.qeema(&qism_beea, "wineprefix").map(PathBuf::from),
-        siyaq.idadat.qeema(ism_tatbeeq, "wine_prefix").map(PathBuf::from),
+        siyaq
+            .idadat
+            .qeema(&qism_beea, "wineprefix")
+            .map(PathBuf::from),
+        siyaq
+            .idadat
+            .qeema(ism_tatbeeq, "wine_prefix")
+            .map(PathBuf::from),
         siyaq.heroic.beea(ism_tatbeeq),
         siyaq
             .idadat
             .qeema(&format!("{QISM_IFTIRADI}.env"), "wineprefix")
             .map(PathBuf::from),
-        siyaq.idadat.qeema(QISM_IFTIRADI, "wine_prefix").map(PathBuf::from),
+        siyaq
+            .idadat
+            .qeema(QISM_IFTIRADI, "wine_prefix")
+            .map(PathBuf::from),
         masar_min_beea("LEGENDARY_WINE_PREFIX"),
         masar_min_beea("WINEPREFIX"),
     ];
-    murashahat.into_iter().flatten().find(|masar| masar.is_dir())
+    murashahat
+        .into_iter()
+        .flatten()
+        .find(|masar| masar.is_dir())
 }
 
 /// The Wine build legendary is configured to use, when its executable names one.
@@ -729,11 +768,16 @@ fn beea_luba(
 
     match crate::beea::naw_beea(&masar_beea) {
         BeeatTawafuq::Proton { isdar, beea } => BeeatTawafuq::Proton {
-            isdar: if isdar == "Proton" { isdar_muallan.unwrap_or(isdar) } else { isdar },
+            isdar: if isdar == "Proton" {
+                isdar_muallan.unwrap_or(isdar)
+            } else {
+                isdar
+            },
             beea,
         },
-        BeeatTawafuq::Wine { isdar, beea } => {
-            BeeatTawafuq::Wine { isdar: isdar.or(isdar_muallan), beea }
+        BeeatTawafuq::Wine { isdar, beea } => BeeatTawafuq::Wine {
+            isdar: isdar.or(isdar_muallan),
+            beea,
         },
         // `naw_beea` answers `Asli` for a path that is not a populated prefix,
         // which here means the directory is recorded and empty rather than that
@@ -802,7 +846,10 @@ impl BitaqatEpic {
     /// Epic's metadata is thin would be the wrong way to be wrong.
     fn hiya_luba(&self) -> bool {
         self.fiat.is_empty()
-            || self.fiat.iter().any(|fia| fia == "games" || fia.starts_with("games/"))
+            || self
+                .fiat
+                .iter()
+                .any(|fia| fia == "games" || fia.starts_with("games/"))
     }
 }
 
@@ -824,15 +871,20 @@ fn bayanat_epic(mujallad: &Path) -> BTreeMap<String, BitaqatEpic> {
 
     for madkhal in qaima.take(HADD_BAYANAT).flatten() {
         let masar = madkhal.path();
-        if masar.extension().is_none_or(|imtidad| !imtidad.eq_ignore_ascii_case("json")) {
+        if masar
+            .extension()
+            .is_none_or(|imtidad| !imtidad.eq_ignore_ascii_case("json"))
+        {
             continue;
         }
         let Some(qeema) = iqra_json(&masar) else {
             continue;
         };
-        let Some(ism) = nass_haql(&qeema, "app_name")
-            .or_else(|| masar.file_stem().map(|ism| ism.to_string_lossy().into_owned()))
-        else {
+        let Some(ism) = nass_haql(&qeema, "app_name").or_else(|| {
+            masar
+                .file_stem()
+                .map(|ism| ism.to_string_lossy().into_owned())
+        }) else {
             continue;
         };
 
@@ -992,8 +1044,7 @@ fn luba_min_sijill(
         masdar: MasdarLuba::Legendary(Box::new(MasdarLuba::Epic(ism_tatbeeq.clone()))),
         hala_matjar: None,
         ism: unwan,
-        tanfidhi: nass_haql(sijill, "executable")
-            .and_then(|nisbi| tanfidhi_dakhil(&jidhr, &nisbi)),
+        tanfidhi: nass_haql(sijill, "executable").and_then(|nisbi| tanfidhi_dakhil(&jidhr, &nisbi)),
         jidhr,
         hajm: raqm_haql(sijill, "install_size").unwrap_or(0),
         // Epic's build version string, which is what its own patch metadata keys
@@ -1008,7 +1059,9 @@ fn luba_min_sijill(
         // legendary tracks no play times at all.
         akhir_laab: None,
         beea,
-        suwar: bitaqa.map(|bitaqa| bitaqa.suwar.clone()).unwrap_or_default(),
+        suwar: bitaqa
+            .map(|bitaqa| bitaqa.suwar.clone())
+            .unwrap_or_default(),
         // `start_params` is what the *user* set in config.ini, and it is the only
         // thing this field may carry. The manifest's own `launch_parameters` are
         // Epic's arguments for the game and are supplied by whatever launches it;
@@ -1040,7 +1093,9 @@ fn tanfidhi_dakhil(jidhr: &Path, nisbi: &str) -> Option<PathBuf> {
     }
     let murashah = Path::new(&munaqqa);
     let kamil = if murashah.is_absolute() {
-        murashah.starts_with(jidhr).then(|| murashah.to_path_buf())?
+        murashah
+            .starts_with(jidhr)
+            .then(|| murashah.to_path_buf())?
     } else {
         dakhil(jidhr, &munaqqa).ok()?
     };
@@ -1106,7 +1161,10 @@ mod ikhtibarat {
         siyaq.khazina_idadat = khazina.clone();
 
         let judhur = judhur_muhtamala(&siyaq);
-        assert!(judhur.contains(&khazina.join(MUJALLAD_LEGENDARY)), "{judhur:?}");
+        assert!(
+            judhur.contains(&khazina.join(MUJALLAD_LEGENDARY)),
+            "{judhur:?}"
+        );
         // The hardcoded `~/.config/legendary` is still probed beside it:
         // legendary uses that path on every platform whatever XDG says.
         assert!(

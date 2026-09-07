@@ -42,9 +42,8 @@ pub struct MirsatThiqa {
 /// nothing signed under it may reach a user: a release client names and
 /// refuses this key specifically rather than treating it as merely unknown.
 pub const MIFTAH_TATWIR: [u8; 32] = [
-    0xe4, 0x26, 0x0a, 0x5f, 0x02, 0x02, 0x9a, 0x64, 0xb6, 0xa4, 0x1a, 0x31, 0xa5, 0xdb, 0x53,
-    0xe0, 0xaf, 0x74, 0xd6, 0x11, 0x01, 0x22, 0xd9, 0xa3, 0x52, 0xa7, 0x21, 0xa2, 0x43, 0x8b,
-    0x4c, 0xea,
+    0xe4, 0x26, 0x0a, 0x5f, 0x02, 0x02, 0x9a, 0x64, 0xb6, 0xa4, 0x1a, 0x31, 0xa5, 0xdb, 0x53, 0xe0,
+    0xaf, 0x74, 0xd6, 0x11, 0x01, 0x22, 0xd9, 0xa3, 0x52, 0xa7, 0x21, 0xa2, 0x43, 0x8b, 0x4c, 0xea,
 ];
 
 /// The value of one hexadecimal digit.
@@ -73,7 +72,10 @@ const fn qeemat_khana(harf: u8) -> u8 {
 )]
 const fn fakk_sittashari(nassi: &str) -> [u8; 32] {
     let mut khaam = nassi.as_bytes();
-    assert!(khaam.len() == 64, "TAARIB_MIFTAH_ISDAR must be exactly 64 hexadecimal characters");
+    assert!(
+        khaam.len() == 64,
+        "TAARIB_MIFTAH_ISDAR must be exactly 64 hexadecimal characters"
+    );
     let mut bayt = [0u8; 32];
     let mut ayn = 0;
     while let Some((&[aala, adna], baqi)) = khaam.split_first_chunk::<2>() {
@@ -121,9 +123,15 @@ pub const MIRSAT_MALIK: MirsatThiqa = match option_env!("TAARIB_MIFTAH_ISDAR") {
             !nafs_almiftah(&miftah, &MIFTAH_TATWIR),
             "a release build cannot anchor to the committed development key"
         );
-        MirsatThiqa { miftah, hawiya: HawiyatThiqa::Isdar }
-    }
-    None => MirsatThiqa { miftah: MIFTAH_TATWIR, hawiya: HawiyatThiqa::Tatwir },
+        MirsatThiqa {
+            miftah,
+            hawiya: HawiyatThiqa::Isdar,
+        }
+    },
+    None => MirsatThiqa {
+        miftah: MIFTAH_TATWIR,
+        hawiya: HawiyatThiqa::Tatwir,
+    },
 };
 
 // The release pipeline builds with this feature on, so a forgotten injection

@@ -36,7 +36,9 @@ impl SalahiyatMalik {
         // The signature is checked as well as the key equality: a key whose
         // public half matches but which cannot sign is not a usable owner key.
         let tawqee = khass.waqqi(TAHADDI);
-        aam.tahaqquq(TAHADDI, &tawqee).then_some(Self { miftah_aam: *miftah_malik })
+        aam.tahaqquq(TAHADDI, &tawqee).then_some(Self {
+            miftah_aam: *miftah_malik,
+        })
     }
 
     /// The owner's public key, for recording provenance.

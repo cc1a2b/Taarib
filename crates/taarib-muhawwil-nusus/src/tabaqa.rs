@@ -111,17 +111,17 @@ impl Rutba {
                 "This game's engine shapes Arabic correctly on its own. Taarib supplies the \
                  font and the translation and changes nothing else, so the text behaves \
                  exactly like the game's own — selectable, searchable and copyable."
-            }
+            },
             Self::Tasheeh => {
                 "This game's engine shapes Arabic but lays it out left to right. Taarib \
                  corrects the direction, wrapping and alignment and leaves the shaping to the \
                  engine, so the text stays real text."
-            }
+            },
             Self::Istila => {
                 "This game's engine cannot shape Arabic, so Taarib draws the text itself. It \
                  will look correct and it will NOT be selectable, searchable or copyable \
                  inside the game."
-            }
+            },
         }
     }
 
@@ -133,15 +133,15 @@ impl Rutba {
                 "محرّك هذه اللعبة يشكّل العربية تشكيلًا صحيحًا بنفسه. يزوّده تعريب بالخطّ \
                  والترجمة ولا يغيّر شيئًا آخر، فيبقى النصّ نصًّا حقيقيًا: يُحدَّد ويُبحث فيه \
                  ويُنسخ."
-            }
+            },
             Self::Tasheeh => {
                 "محرّك هذه اللعبة يشكّل العربية لكنه يخطئ في اتجاهها. يصحّح تعريب الاتجاه \
                  والالتفاف والمحاذاة ويترك التشكيل للمحرّك، فيبقى النصّ نصًّا حقيقيًا."
-            }
+            },
             Self::Istila => {
                 "محرّك هذه اللعبة لا يستطيع تشكيل العربية، فيرسم تعريب النصّ بنفسه. سيظهر \
                  صحيحًا، ولن يكون قابلًا للتحديد أو البحث أو النسخ داخل اللعبة."
-            }
+            },
         }
     }
 }
@@ -345,7 +345,9 @@ pub fn hukm(
     let mut awwal = (Rutba::Idad, 0u32);
     let mut thani = 0u32;
     for (khana, majmu) in mizan.iter().enumerate() {
-        let Some(rutba) = rutba_min_khana(khana) else { continue };
+        let Some(rutba) = rutba_min_khana(khana) else {
+            continue;
+        };
         if *majmu > awwal.1 {
             thani = awwal.1;
             awwal = (rutba, *majmu);

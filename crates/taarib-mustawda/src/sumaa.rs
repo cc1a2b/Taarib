@@ -48,8 +48,9 @@ impl AdadMuraja {
     /// Folds another set of counts into this one.
     pub const fn damm(&mut self, akhar: &Self) {
         self.manshura = self.manshura.saturating_add(akhar.manshura);
-        self.qubila_bila_taadil =
-            self.qubila_bila_taadil.saturating_add(akhar.qubila_bila_taadil);
+        self.qubila_bila_taadil = self
+            .qubila_bila_taadil
+            .saturating_add(akhar.qubila_bila_taadil);
         self.tulib_taadil = self.tulib_taadil.saturating_add(akhar.tulib_taadil);
         self.marfuda = self.marfuda.saturating_add(akhar.marfuda);
         self.masbuba = self.masbuba.saturating_add(akhar.masbuba);
@@ -70,7 +71,10 @@ impl TaqyeemManshur {
     /// Reads the aggregate off a registry listing.
     #[must_use]
     pub const fn min_mulakhkhas(ruqaa: &MulakhkhasRuqaa) -> Self {
-        Self { mutawassit: ruqaa.taqyeem, adad: ruqaa.adad_taqyeemat }
+        Self {
+            mutawassit: ruqaa.taqyeem,
+            adad: ruqaa.adad_taqyeemat,
+        }
     }
 
     /// The average and its count, when the pair is usable.
@@ -89,13 +93,13 @@ impl TaqyeemManshur {
 /// Returns `None` for the average when no patch carries a usable rating, and
 /// never substitutes a zero for one.
 #[must_use]
-pub fn jami_taqyeemat(
-    taqyeemat: impl IntoIterator<Item = TaqyeemManshur>,
-) -> (Option<f32>, u32) {
+pub fn jami_taqyeemat(taqyeemat: impl IntoIterator<Item = TaqyeemManshur>) -> (Option<f32>, u32) {
     let mut majmu = 0.0_f64;
     let mut adad = 0_u32;
     for taqyeem in taqyeemat {
-        let Some((mutawassit, adad_ruqaa)) = taqyeem.salih() else { continue };
+        let Some((mutawassit, adad_ruqaa)) = taqyeem.salih() else {
+            continue;
+        };
         majmu = f64::from(mutawassit).mul_add(f64::from(adad_ruqaa), majmu);
         adad = adad.saturating_add(adad_ruqaa);
     }
@@ -108,10 +112,7 @@ pub fn jami_taqyeemat(
 /// Builds a reputation record from caller-supplied counts and rating
 /// aggregates.
 #[must_use]
-pub fn ijma(
-    adad: &AdadMuraja,
-    taqyeemat: impl IntoIterator<Item = TaqyeemManshur>,
-) -> Sumaa {
+pub fn ijma(adad: &AdadMuraja, taqyeemat: impl IntoIterator<Item = TaqyeemManshur>) -> Sumaa {
     let (mutawassit_taqyeem, adad_taqyeemat) = jami_taqyeemat(taqyeemat);
     Sumaa {
         ruqaa_manshura: adad.manshura,
@@ -148,7 +149,10 @@ pub fn taqyeemat_lil_musahim<'a>(
 /// How many published listings a contributor has in a set.
 #[must_use]
 pub fn manshura_lil_musahim(musahim: &MusahimId, ruqaa: &[MulakhkhasRuqaa]) -> u32 {
-    let adad = ruqaa.iter().filter(|wahida| &wahida.musahim == musahim).count();
+    let adad = ruqaa
+        .iter()
+        .filter(|wahida| &wahida.musahim == musahim)
+        .count();
     u32::try_from(adad).unwrap_or(u32::MAX)
 }
 
@@ -230,7 +234,10 @@ impl TahdheerSahb {
                 self.min_manshura,
                 nisba * 100.0
             ),
-            None => format!("{} published patches were revoked after release.", self.adad),
+            None => format!(
+                "{} published patches were revoked after release.",
+                self.adad
+            ),
         }
     }
 }
@@ -261,16 +268,16 @@ impl MulakhkhasSumaa {
         } else {
             HalatSumaa::Mustaqirra
         };
-        Self { musahim, hala, sumaa }
+        Self {
+            musahim,
+            hala,
+            sumaa,
+        }
     }
 
     /// Aggregates counts and listings, then classifies the result.
     #[must_use]
-    pub fn min_muraja(
-        musahim: MusahimId,
-        adad: &AdadMuraja,
-        ruqaa: &[MulakhkhasRuqaa],
-    ) -> Self {
+    pub fn min_muraja(musahim: MusahimId, adad: &AdadMuraja, ruqaa: &[MulakhkhasRuqaa]) -> Self {
         let sumaa = ijma_min_mulakhkhasat(&musahim, adad, ruqaa);
         Self::jadeed(musahim, sumaa)
     }
@@ -332,9 +339,8 @@ impl MulakhkhasSumaa {
         Some(TahdheerSahb {
             adad: self.sumaa.masbuba,
             min_manshura: manshura,
-            nisba: (manshura > 0).then(|| {
-                ila_f32(f64::from(self.sumaa.masbuba) / f64::from(manshura))
-            }),
+            nisba: (manshura > 0)
+                .then(|| ila_f32(f64::from(self.sumaa.masbuba) / f64::from(manshura))),
         })
     }
 
@@ -371,7 +377,7 @@ impl MulakhkhasSumaa {
             Some(tahdheer) => {
                 satr.push_str("، و");
                 satr.push_str(&tahdheer.satr_arabi());
-            }
+            },
             None => satr.push('.'),
         }
         if self.hala == HalatSumaa::Mubtadi {
@@ -413,7 +419,7 @@ impl MulakhkhasSumaa {
             Some(tahdheer) => {
                 satr.push_str(". ");
                 satr.push_str(&tahdheer.satr_injilizi());
-            }
+            },
             None => satr.push('.'),
         }
         if self.hala == HalatSumaa::Mubtadi {

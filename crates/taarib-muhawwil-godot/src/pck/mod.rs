@@ -184,7 +184,12 @@ impl<'a> Qari<'a> {
     /// A cursor at the start of `bayt`, refusing in the name of format `ism`.
     #[must_use]
     pub const fn jadeed(ism: &'static str, bayt: &'a [u8]) -> Self {
-        Self { ism, bayt, mawqi: 0, fahras: 0 }
+        Self {
+            ism,
+            bayt,
+            mawqi: 0,
+            fahras: 0,
+        }
     }
 
     /// The format this cursor refuses in the name of.
@@ -236,9 +241,14 @@ impl<'a> Qari<'a> {
     /// read — the distinction matters to whoever reads the message.
     pub fn iqfiz(&mut self, haql: &'static str, izaha: u64) -> Result<(), KhataGodot> {
         let tul = self.bayt.len();
-        let mawqi = hajm_usize(izaha).filter(|mawqi| *mawqi <= tul).ok_or_else(|| {
-            KhataGodot::HawiyaTalifa { ism: self.ism, haql, qeema: izaha, hadd: tul_u64(tul) }
-        })?;
+        let mawqi = hajm_usize(izaha)
+            .filter(|mawqi| *mawqi <= tul)
+            .ok_or_else(|| KhataGodot::HawiyaTalifa {
+                ism: self.ism,
+                haql,
+                qeema: izaha,
+                hadd: tul_u64(tul),
+            })?;
         self.mawqi = mawqi;
         Ok(())
     }
@@ -264,9 +274,13 @@ impl<'a> Qari<'a> {
         let bayt = self.bayt;
         let matlub = tul_u64(self.mawqi).saturating_add(adad);
         let mada = hajm_usize(adad).ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
-        let nihaya =
-            self.mawqi.checked_add(mada).ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
-        let khana = bayt.get(self.mawqi..nihaya).ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
+        let nihaya = self
+            .mawqi
+            .checked_add(mada)
+            .ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
+        let khana = bayt
+            .get(self.mawqi..nihaya)
+            .ok_or_else(|| qaseer(haql, bayt.len(), matlub))?;
         self.mawqi = nihaya;
         Ok(khana)
     }
@@ -383,7 +397,12 @@ impl Qari<'_> {
     /// should name the same format the cursor names.
     #[must_use]
     pub const fn talif(&self, haql: &'static str, qeema: u64, hadd: u64) -> KhataGodot {
-        KhataGodot::HawiyaTalifa { ism: self.ism, haql, qeema, hadd }
+        KhataGodot::HawiyaTalifa {
+            ism: self.ism,
+            haql,
+            qeema,
+            hadd,
+        }
     }
 }
 
@@ -411,7 +430,9 @@ impl Katib {
     /// reason to ask the allocator for a gigabyte before the first byte exists.
     #[must_use]
     pub fn bi_siaa(siaa: usize) -> Self {
-        Self { bayt: Vec::with_capacity(siaa.min(AQSA_HAJZ)) }
+        Self {
+            bayt: Vec::with_capacity(siaa.min(AQSA_HAJZ)),
+        }
     }
 
     /// How many bytes have been written.
@@ -486,7 +507,9 @@ impl Katib {
         qeema: u32,
     ) -> Result<(), KhataGodot> {
         let hadd = tul_u64(self.bayt.len());
-        let nihaya = izaha.checked_add(4).ok_or_else(|| talif_izaha(ism, haql, izaha, hadd))?;
+        let nihaya = izaha
+            .checked_add(4)
+            .ok_or_else(|| talif_izaha(ism, haql, izaha, hadd))?;
         let khana = self
             .bayt
             .get_mut(izaha..nihaya)
@@ -509,7 +532,9 @@ impl Katib {
         qeema: u64,
     ) -> Result<(), KhataGodot> {
         let hadd = tul_u64(self.bayt.len());
-        let nihaya = izaha.checked_add(8).ok_or_else(|| talif_izaha(ism, haql, izaha, hadd))?;
+        let nihaya = izaha
+            .checked_add(8)
+            .ok_or_else(|| talif_izaha(ism, haql, izaha, hadd))?;
         let khana = self
             .bayt
             .get_mut(izaha..nihaya)
@@ -561,15 +586,30 @@ pub fn tahaqquq_adad(
     baqi: u64,
 ) -> Result<usize, KhataGodot> {
     if adad > saqf {
-        return Err(KhataGodot::HajmMufrit { haql, qeema: adad, saqf });
+        return Err(KhataGodot::HajmMufrit {
+            haql,
+            qeema: adad,
+            saqf,
+        });
     }
-    let matlub = adad
-        .checked_mul(aqall)
-        .ok_or(KhataGodot::HajmMufrit { haql, qeema: adad, saqf })?;
+    let matlub = adad.checked_mul(aqall).ok_or(KhataGodot::HajmMufrit {
+        haql,
+        qeema: adad,
+        saqf,
+    })?;
     if matlub > baqi {
-        return Err(KhataGodot::HawiyaTalifa { ism, haql, qeema: adad, hadd: baqi });
+        return Err(KhataGodot::HawiyaTalifa {
+            ism,
+            haql,
+            qeema: adad,
+            hadd: baqi,
+        });
     }
-    hajm_usize(adad).ok_or(KhataGodot::HajmMufrit { haql, qeema: adad, saqf })
+    hajm_usize(adad).ok_or(KhataGodot::HajmMufrit {
+        haql,
+        qeema: adad,
+        saqf,
+    })
 }
 
 /// Refuses a declared byte length above [`AQSA_TUL_HAQL`], before the bytes are
@@ -580,7 +620,11 @@ pub fn tahaqquq_adad(
 /// [`KhataGodot::HajmMufrit`] naming `haql`.
 pub const fn tahaqquq_tul(haql: &'static str, adad: u64) -> Result<(), KhataGodot> {
     if adad > AQSA_TUL_HAQL {
-        return Err(KhataGodot::HajmMufrit { haql, qeema: adad, saqf: AQSA_TUL_HAQL });
+        return Err(KhataGodot::HajmMufrit {
+            haql,
+            qeema: adad,
+            saqf: AQSA_TUL_HAQL,
+        });
     }
     Ok(())
 }
@@ -614,8 +658,10 @@ pub const fn hashw_muhadhah(tul: usize, muhadhah: usize) -> usize {
 /// and [`KhataGodot::HajmMufrit`] when the file is larger than [`AQSA_MALAF`] —
 /// checked against the directory entry's size, before the read.
 pub fn iqra_malaf(masar: &Path) -> Result<Vec<u8>, KhataGodot> {
-    let bayanat = std::fs::metadata(masar)
-        .map_err(|sabab| KhataGodot::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+    let bayanat = std::fs::metadata(masar).map_err(|sabab| KhataGodot::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })?;
     if bayanat.len() > AQSA_MALAF {
         return Err(KhataGodot::HajmMufrit {
             haql: "the file's own length",
@@ -623,8 +669,10 @@ pub fn iqra_malaf(masar: &Path) -> Result<Vec<u8>, KhataGodot> {
             saqf: AQSA_MALAF,
         });
     }
-    std::fs::read(masar)
-        .map_err(|sabab| KhataGodot::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    std::fs::read(masar).map_err(|sabab| KhataGodot::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 /// Writes a whole file.
@@ -639,8 +687,10 @@ pub fn iqra_malaf(masar: &Path) -> Result<Vec<u8>, KhataGodot> {
 ///
 /// [`KhataGodot::KhataMalaf`] naming the path.
 pub fn uktub_malaf(masar: &Path, bayt: &[u8]) -> Result<(), KhataGodot> {
-    std::fs::write(masar, bayt)
-        .map_err(|sabab| KhataGodot::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    std::fs::write(masar, bayt).map_err(|sabab| KhataGodot::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 /// Maps a package read-only.
@@ -662,11 +712,14 @@ pub fn uktub_malaf(masar: &Path, bayt: &[u8]) -> Result<(), KhataGodot> {
 /// mapped, and [`KhataGodot::HajmMufrit`] when the file is larger than
 /// [`AQSA_HAWIYA`].
 pub fn iftah_khareeta(masar: &Path) -> Result<memmap2::Mmap, KhataGodot> {
-    let malaf = std::fs::File::open(masar)
-        .map_err(|sabab| KhataGodot::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
-    let bayanat = malaf
-        .metadata()
-        .map_err(|sabab| KhataGodot::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+    let malaf = std::fs::File::open(masar).map_err(|sabab| KhataGodot::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })?;
+    let bayanat = malaf.metadata().map_err(|sabab| KhataGodot::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })?;
     if bayanat.len() > AQSA_HAWIYA {
         return Err(KhataGodot::HajmMufrit {
             haql: "the package's own length",
@@ -684,7 +737,10 @@ pub fn iftah_khareeta(masar: &Path) -> Result<memmap2::Mmap, KhataGodot> {
     // address space to look at its first few hundred kilobytes, is the worse
     // risk of the two.
     let khareeta = unsafe { memmap2::Mmap::map(&malaf) };
-    khareeta.map_err(|sabab| KhataGodot::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    khareeta.map_err(|sabab| KhataGodot::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 /// Fills a path into a refusal raised by a reader that had no path to name.
@@ -697,27 +753,37 @@ pub fn iftah_khareeta(masar: &Path) -> Result<memmap2::Mmap, KhataGodot> {
 #[must_use]
 pub fn sammi_masar(khata: KhataGodot, masar: &Path) -> KhataGodot {
     match khata {
-        KhataGodot::SihrGhayrMutabaq { .. } => {
-            KhataGodot::SihrGhayrMutabaq { masar: masar.to_path_buf() }
-        }
-        KhataGodot::PckMushaffar { .. } => {
-            KhataGodot::PckMushaffar { masar: masar.to_path_buf() }
-        }
-        KhataGodot::MiftahGhayrSalih { sabab, .. } => {
-            KhataGodot::MiftahGhayrSalih { masar: masar.to_path_buf(), sabab }
-        }
+        KhataGodot::SihrGhayrMutabaq { .. } => KhataGodot::SihrGhayrMutabaq {
+            masar: masar.to_path_buf(),
+        },
+        KhataGodot::PckMushaffar { .. } => KhataGodot::PckMushaffar {
+            masar: masar.to_path_buf(),
+        },
+        KhataGodot::MiftahGhayrSalih { sabab, .. } => KhataGodot::MiftahGhayrSalih {
+            masar: masar.to_path_buf(),
+            sabab,
+        },
         akhar => akhar,
     }
 }
 
 /// The refusal for an offset that is not inside what has already been written.
 fn talif_izaha(ism: &'static str, haql: &'static str, izaha: usize, hadd: u64) -> KhataGodot {
-    KhataGodot::HawiyaTalifa { ism, haql, qeema: tul_u64(izaha), hadd }
+    KhataGodot::HawiyaTalifa {
+        ism,
+        haql,
+        qeema: tul_u64(izaha),
+        hadd,
+    }
 }
 
 /// The short-file refusal, in one spelling for the whole module.
 fn qaseer(haql: &'static str, tul: usize, matlub: u64) -> KhataGodot {
-    KhataGodot::MalafQaseer { haql, tul: tul_u64(tul), matlub }
+    KhataGodot::MalafQaseer {
+        haql,
+        tul: tul_u64(tul),
+        matlub,
+    }
 }
 
 /// The four words MD5 starts from, RFC 1321 section 3.3.
@@ -737,22 +803,70 @@ const DAWWARAT_MD5: [u32; 64] = [
 /// would make a checksum depend on the platform's libm rounding, which is a
 /// difference of one bit in one constant and a completely different digest.
 const THAWABIT_MD5: [u32; 64] = [
-    0xd76a_a478, 0xe8c7_b756, 0x2420_70db, 0xc1bd_ceee, //
-    0xf57c_0faf, 0x4787_c62a, 0xa830_4613, 0xfd46_9501, //
-    0x6980_98d8, 0x8b44_f7af, 0xffff_5bb1, 0x895c_d7be, //
-    0x6b90_1122, 0xfd98_7193, 0xa679_438e, 0x49b4_0821, //
-    0xf61e_2562, 0xc040_b340, 0x265e_5a51, 0xe9b6_c7aa, //
-    0xd62f_105d, 0x0244_1453, 0xd8a1_e681, 0xe7d3_fbc8, //
-    0x21e1_cde6, 0xc337_07d6, 0xf4d5_0d87, 0x455a_14ed, //
-    0xa9e3_e905, 0xfcef_a3f8, 0x676f_02d9, 0x8d2a_4c8a, //
-    0xfffa_3942, 0x8771_f681, 0x6d9d_6122, 0xfde5_380c, //
-    0xa4be_ea44, 0x4bde_cfa9, 0xf6bb_4b60, 0xbebf_bc70, //
-    0x289b_7ec6, 0xeaa1_27fa, 0xd4ef_3085, 0x0488_1d05, //
-    0xd9d4_d039, 0xe6db_99e5, 0x1fa2_7cf8, 0xc4ac_5665, //
-    0xf429_2244, 0x432a_ff97, 0xab94_23a7, 0xfc93_a039, //
-    0x655b_59c3, 0x8f0c_cc92, 0xffef_f47d, 0x8584_5dd1, //
-    0x6fa8_7e4f, 0xfe2c_e6e0, 0xa301_4314, 0x4e08_11a1, //
-    0xf753_7e82, 0xbd3a_f235, 0x2ad7_d2bb, 0xeb86_d391,
+    0xd76a_a478,
+    0xe8c7_b756,
+    0x2420_70db,
+    0xc1bd_ceee, //
+    0xf57c_0faf,
+    0x4787_c62a,
+    0xa830_4613,
+    0xfd46_9501, //
+    0x6980_98d8,
+    0x8b44_f7af,
+    0xffff_5bb1,
+    0x895c_d7be, //
+    0x6b90_1122,
+    0xfd98_7193,
+    0xa679_438e,
+    0x49b4_0821, //
+    0xf61e_2562,
+    0xc040_b340,
+    0x265e_5a51,
+    0xe9b6_c7aa, //
+    0xd62f_105d,
+    0x0244_1453,
+    0xd8a1_e681,
+    0xe7d3_fbc8, //
+    0x21e1_cde6,
+    0xc337_07d6,
+    0xf4d5_0d87,
+    0x455a_14ed, //
+    0xa9e3_e905,
+    0xfcef_a3f8,
+    0x676f_02d9,
+    0x8d2a_4c8a, //
+    0xfffa_3942,
+    0x8771_f681,
+    0x6d9d_6122,
+    0xfde5_380c, //
+    0xa4be_ea44,
+    0x4bde_cfa9,
+    0xf6bb_4b60,
+    0xbebf_bc70, //
+    0x289b_7ec6,
+    0xeaa1_27fa,
+    0xd4ef_3085,
+    0x0488_1d05, //
+    0xd9d4_d039,
+    0xe6db_99e5,
+    0x1fa2_7cf8,
+    0xc4ac_5665, //
+    0xf429_2244,
+    0x432a_ff97,
+    0xab94_23a7,
+    0xfc93_a039, //
+    0x655b_59c3,
+    0x8f0c_cc92,
+    0xffef_f47d,
+    0x8584_5dd1, //
+    0x6fa8_7e4f,
+    0xfe2c_e6e0,
+    0xa301_4314,
+    0x4e08_11a1, //
+    0xf753_7e82,
+    0xbd3a_f235,
+    0x2ad7_d2bb,
+    0xeb86_d391,
 ];
 
 /// MD5, RFC 1321, implemented here rather than pulled in.
@@ -790,7 +904,12 @@ impl HasibMd5 {
     /// A fresh digest state.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { halat: BIDAYAT_MD5, tul: 0, mahjuz: [0; 64], fi_al_mahjuz: 0 }
+        Self {
+            halat: BIDAYAT_MD5,
+            tul: 0,
+            mahjuz: [0; 64],
+            fi_al_mahjuz: 0,
+        }
     }
 
     /// Feeds more bytes in.
@@ -801,9 +920,10 @@ impl HasibMd5 {
             let naqis = 64usize.saturating_sub(self.fi_al_mahjuz);
             let akhdh = naqis.min(baqi.len());
             let nihaya = self.fi_al_mahjuz.saturating_add(akhdh);
-            if let (Some(hadaf), Some(masdar)) =
-                (self.mahjuz.get_mut(self.fi_al_mahjuz..nihaya), baqi.get(..akhdh))
-            {
+            if let (Some(hadaf), Some(masdar)) = (
+                self.mahjuz.get_mut(self.fi_al_mahjuz..nihaya),
+                baqi.get(..akhdh),
+            ) {
                 hadaf.copy_from_slice(masdar);
             }
             self.fi_al_mahjuz = nihaya;
@@ -874,7 +994,10 @@ impl HasibMd5 {
             // `mod 16` gives, and the workspace denies the operator.
             let (daala, fahras) = match khatwa {
                 0..16 => ((ba & jim) | (!ba & dal), khatwa),
-                16..32 => ((dal & ba) | (!dal & jim), khatwa.wrapping_mul(5).wrapping_add(1) & 15),
+                16..32 => (
+                    (dal & ba) | (!dal & jim),
+                    khatwa.wrapping_mul(5).wrapping_add(1) & 15,
+                ),
                 32..48 => (ba ^ jim ^ dal, khatwa.wrapping_mul(3).wrapping_add(5) & 15),
                 _ => (jim ^ (ba | !dal), khatwa.wrapping_mul(7) & 15),
             };

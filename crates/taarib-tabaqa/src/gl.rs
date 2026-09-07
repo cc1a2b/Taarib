@@ -485,7 +485,11 @@ fn iftah_masdar() -> Result<MasdarDawall, KhataTabaqa> {
         None
     };
 
-    Ok(MasdarDawall { maktaba, ism: ISM, mustakhrij })
+    Ok(MasdarDawall {
+        maktaba,
+        ism: ISM,
+        mustakhrij,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -614,7 +618,11 @@ fn iftah_masdar() -> Result<MasdarDawall, KhataTabaqa> {
                 break;
             }
         }
-        return Ok(MasdarDawall { maktaba, ism, mustakhrij });
+        return Ok(MasdarDawall {
+            maktaba,
+            ism,
+            mustakhrij,
+        });
     }
 
     Err(KhataTabaqa::MaktabaMafquda {
@@ -890,7 +898,9 @@ impl DawallGl {
     fn iqra_isdar(&self) -> (u32, u32) {
         let nass = self.nass(GL_VERSION);
         let mut raqmiya = nass.split(|harf: char| !harf.is_ascii_digit());
-        let kabir = raqmiya.find(|juz: &&str| !juz.is_empty()).and_then(|juz| juz.parse().ok());
+        let kabir = raqmiya
+            .find(|juz: &&str| !juz.is_empty())
+            .and_then(|juz| juz.parse().ok());
         let sagheer = raqmiya.next().and_then(|juz| juz.parse().ok());
         match (kabir, sagheer) {
             (Some(kabir), Some(sagheer)) => (kabir, sagheer),
@@ -1607,7 +1617,10 @@ impl KhattafGl {
     /// inputs.
     #[must_use]
     pub fn bi_dawall(dawall: DawallGl) -> Self {
-        let athar = vec![format!("OpenGL {}.{}: {}", dawall.isdar.0, dawall.isdar.1, dawall.wasf)];
+        let athar = vec![format!(
+            "OpenGL {}.{}: {}",
+            dawall.isdar.0, dawall.isdar.1, dawall.wasf
+        )];
         Self {
             dawall,
             barnamij: 0,
@@ -1653,7 +1666,11 @@ impl KhattafGl {
     /// hook has the `HDC`, the `GLXDrawable` or the `EGLSurface` and can ask the
     /// window system directly; when it does, that answer wins.
     pub const fn hadith_qiyas(&mut self, ard: u32, irtifa: u32) {
-        self.qiyas_mubarmaj = if ard == 0 || irtifa == 0 { None } else { Some((ard, irtifa)) };
+        self.qiyas_mubarmaj = if ard == 0 || irtifa == 0 {
+            None
+        } else {
+            Some((ard, irtifa))
+        };
     }
 
     /// Records which context the object names belong to.
@@ -1745,9 +1762,10 @@ impl KhattafGl {
                        framebuffer, colour-mask and polygon state",
                 sabab,
             }),
-            RaddFasad::Mawrid => {
-                Err(KhataTabaqa::MawridFashil { mawrid: "an OpenGL object", sabab })
-            }
+            RaddFasad::Mawrid => Err(KhataTabaqa::MawridFashil {
+                mawrid: "an OpenGL object",
+                sabab,
+            }),
             RaddFasad::Iltiqat => Err(KhataTabaqa::IltiqatFashil { sabab }),
         }
     }
@@ -1833,12 +1851,7 @@ impl KhattafGl {
     /// maintainer is the error string in a bug report. "The vertex shader would
     /// not compile" is unactionable; `0:14(23): error: no matching function for
     /// call to 'texture'` names the line.
-    fn ibni_shifra(
-        &self,
-        naw: Adad,
-        masdar: &str,
-        ism: &'static str,
-    ) -> Result<Adad, KhataTabaqa> {
+    fn ibni_shifra(&self, naw: Adad, masdar: &str, ism: &'static str) -> Result<Adad, KhataTabaqa> {
         // SAFETY: `glCreateShader` takes a stage name and returns a name or
         // zero; it reads and writes no memory of ours.
         let shifra = unsafe { (self.dawall.create_shader)(naw) };
@@ -1885,7 +1898,10 @@ impl KhattafGl {
             } else {
                 sijill
             };
-            return Err(KhataTabaqa::MawridFashil { mawrid: ism, sabab: sijill });
+            return Err(KhataTabaqa::MawridFashil {
+                mawrid: ism,
+                sabab: sijill,
+            });
         }
         Ok(shifra)
     }
@@ -1906,7 +1922,7 @@ impl KhattafGl {
                 // attached to anything, and has not been deleted.
                 unsafe { (self.dawall.delete_shader)(raas) };
                 return Err(khata);
-            }
+            },
         };
 
         // SAFETY: `glCreateProgram` takes nothing and returns a name or zero.
@@ -2160,7 +2176,11 @@ impl KhattafGl {
         self.faharis.reserve(lawha.qitaat.len().saturating_mul(6));
 
         for qita in &lawha.qitaat {
-            let QitaRasm { mawdi, khareeta, lawn } = *qita;
+            let QitaRasm {
+                mawdi,
+                khareeta,
+                lawn,
+            } = *qita;
             if mawdi.ard == 0 || mawdi.irtifa == 0 {
                 continue;
             }
@@ -2283,7 +2303,10 @@ impl KhattafGl {
         let Some(manfath_irtifa) = qeema_sahih_min_adad(sath.irtifa) else {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "viewport",
-                sabab: format!("a surface {} pixels tall does not fit a GLsizei", sath.irtifa),
+                sabab: format!(
+                    "a surface {} pixels tall does not fit a GLsizei",
+                    sath.irtifa
+                ),
             });
         };
         let isqat = isqat_mustawi(sath.ard, sath.irtifa);
@@ -2478,15 +2501,17 @@ impl KhattafGl {
         };
 
         let bayt_biksel = usize::try_from(SighatSath::Rgba8.bayt_lil_biksel()).unwrap_or(4);
-        let Some(satr_bayt) =
-            usize::try_from(mintaqa.ard).ok().and_then(|ard| ard.checked_mul(bayt_biksel))
+        let Some(satr_bayt) = usize::try_from(mintaqa.ard)
+            .ok()
+            .and_then(|ard| ard.checked_mul(bayt_biksel))
         else {
             return Err(KhataTabaqa::IltiqatFashil {
                 sabab: "a row of the region does not fit in memory on this target".to_owned(),
             });
         };
-        let Some(tul) =
-            usize::try_from(mintaqa.irtifa).ok().and_then(|irtifa| satr_bayt.checked_mul(irtifa))
+        let Some(tul) = usize::try_from(mintaqa.irtifa)
+            .ok()
+            .and_then(|irtifa| satr_bayt.checked_mul(irtifa))
         else {
             return Err(KhataTabaqa::IltiqatFashil {
                 sabab: "the region does not fit in memory on this target".to_owned(),
@@ -2495,8 +2520,12 @@ impl KhattafGl {
 
         // SAFETY: `GL_PACK_ALIGNMENT` and `GL_READ_BUFFER` are single-valued
         // pixel-store and framebuffer states.
-        let (muhadhat_sabiqa, mahfazat_qira) =
-            unsafe { (self.dawall.sahih(GL_PACK_ALIGNMENT), self.dawall.sahih(GL_READ_BUFFER)) };
+        let (muhadhat_sabiqa, mahfazat_qira) = unsafe {
+            (
+                self.dawall.sahih(GL_PACK_ALIGNMENT),
+                self.dawall.sahih(GL_READ_BUFFER),
+            )
+        };
 
         let mut khaam = vec![0u8; tul];
         // SAFETY: the read framebuffer is bound to zero and its back buffer
@@ -2609,7 +2638,9 @@ impl Khattaf for KhattafGl {
         // viewport table.
         let [_, _, manfath_ard, manfath_irtifa] = unsafe { self.dawall.sahih_arbaa(GL_VIEWPORT) };
 
-        let (ard, irtifa) = if let Some(qiyas) = self.qiyas_mubarmaj { qiyas } else {
+        let (ard, irtifa) = if let Some(qiyas) = self.qiyas_mubarmaj {
+            qiyas
+        } else {
             let ard = u32::try_from(manfath_ard).unwrap_or(0);
             let irtifa = u32::try_from(manfath_irtifa).unwrap_or(0);
             (ard, irtifa)
@@ -2646,7 +2677,10 @@ impl Khattaf for KhattafGl {
     fn hayyi(&mut self, sath: WasfSath) -> Result<(), KhataTabaqa> {
         if sath.ard == 0 || sath.irtifa == 0 {
             return Err(KhataTabaqa::SathTaghayyar {
-                sabab: format!("a {}×{} surface has no pixels to draw on", sath.ard, sath.irtifa),
+                sabab: format!(
+                    "a {}×{} surface has no pixels to draw on",
+                    sath.ard, sath.irtifa
+                ),
             });
         }
 
@@ -2673,12 +2707,16 @@ impl Khattaf for KhattafGl {
                         "surface {}×{}{}",
                         sath.ard,
                         sath.irtifa,
-                        if sath.sirgb { ", GL_FRAMEBUFFER_SRGB enabled" } else { "" }
+                        if sath.sirgb {
+                            ", GL_FRAMEBUFFER_SRGB enabled"
+                        } else {
+                            ""
+                        }
                     ));
                 }
                 self.sath = Some(sath);
                 Ok(())
-            }
+            },
             Err(khata) => {
                 // A half-built backend is torn down here rather than left for
                 // the next frame to trip over: `ibni_tarteeb` can fail after
@@ -2686,7 +2724,7 @@ impl Khattaf for KhattafGl {
                 // is a state the draw path has no branch for.
                 self.atlif();
                 Err(khata)
-            }
+            },
         }
     }
 
@@ -2733,7 +2771,9 @@ impl Khattaf for KhattafGl {
             });
         }
 
-        self.bi_hifz_hala(RaddFasad::Mawrid, |hadha| hadha.arfa_nasij(bayt, ard, irtifa))
+        self.bi_hifz_hala(RaddFasad::Mawrid, |hadha| {
+            hadha.arfa_nasij(bayt, ard, irtifa)
+        })
     }
 
     /// Saves the context, draws, restores the context, and audits the restore.
@@ -2791,7 +2831,10 @@ impl Khattaf for KhattafGl {
     fn iltaqit(&mut self, mintaqa: MustatilBiksel) -> Result<Vec<u8>, KhataTabaqa> {
         let sath = Khattaf::sath(self)?;
         let wasf = || {
-            format!("{}×{} at {},{}", mintaqa.ard, mintaqa.irtifa, mintaqa.yasar, mintaqa.aala)
+            format!(
+                "{}×{} at {},{}",
+                mintaqa.ard, mintaqa.irtifa, mintaqa.yasar, mintaqa.aala
+            )
         };
         if mintaqa.ard == 0 || mintaqa.irtifa == 0 {
             return Err(KhataTabaqa::MintaqaKharij {
@@ -2803,17 +2846,19 @@ impl Khattaf for KhattafGl {
         let yameen = mintaqa.yasar.checked_add(mintaqa.ard);
         let asfal = mintaqa.aala.checked_add(mintaqa.irtifa);
         match (yameen, asfal) {
-            (Some(yameen), Some(asfal)) if yameen <= sath.ard && asfal <= sath.irtifa => {}
+            (Some(yameen), Some(asfal)) if yameen <= sath.ard && asfal <= sath.irtifa => {},
             _ => {
                 return Err(KhataTabaqa::MintaqaKharij {
                     mintaqa: wasf(),
                     ard: sath.ard,
                     irtifa: sath.irtifa,
                 });
-            }
+            },
         }
 
-        self.bi_hifz_hala(RaddFasad::Iltiqat, |hadha| hadha.iqra_bikselat(mintaqa, sath))
+        self.bi_hifz_hala(RaddFasad::Iltiqat, |hadha| {
+            hadha.iqra_bikselat(mintaqa, sath)
+        })
     }
 
     /// Releases everything, and says so if the driver complained on the way out.
@@ -2837,7 +2882,8 @@ impl Khattaf for KhattafGl {
         self.atlif();
         let baqi = self.dawall.ifragh();
         if baqi == GL_NO_ERROR {
-            self.athar.push("released every OpenGL object the overlay created".to_owned());
+            self.athar
+                .push("released every OpenGL object the overlay created".to_owned());
             return Ok(());
         }
         let sabab = format!(
@@ -2846,6 +2892,9 @@ impl Khattaf for KhattafGl {
             self.dawall.wasf
         );
         self.athar.push(sabab.clone());
-        Err(KhataTabaqa::MawridFashil { mawrid: "the overlay's OpenGL objects", sabab })
+        Err(KhataTabaqa::MawridFashil {
+            mawrid: "the overlay's OpenGL objects",
+            sabab,
+        })
     }
 }

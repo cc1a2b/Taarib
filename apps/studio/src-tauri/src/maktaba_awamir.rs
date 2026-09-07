@@ -115,7 +115,12 @@ pub struct FahsAkhirHie {
 fn asmaa(matajir: &[Box<dyn Matjar>]) -> BTreeMap<&'static str, (&'static str, &'static str)> {
     matajir
         .iter()
-        .map(|matjar| (matjar.muarrif(), (matjar.ism_arabi(), matjar.ism_injilizi())))
+        .map(|matjar| {
+            (
+                matjar.muarrif(),
+                (matjar.ism_arabi(), matjar.ism_injilizi()),
+            )
+        })
         .collect()
 }
 
@@ -175,7 +180,8 @@ fn satr(
     // build wrote — keeps its identifier as its name rather than vanishing.
     let (ism_arabi, ism_injilizi) = asmaa.get(muarrif).copied().unwrap_or((muarrif, muarrif));
     let adad_tanbihat = u32::try_from(tanbihat.len()).unwrap_or(u32::MAX);
-    let (wasf_arabi, wasf_injilizi) = wasf(ism_arabi, ism_injilizi, hala, adad_alaab, adad_tanbihat);
+    let (wasf_arabi, wasf_injilizi) =
+        wasf(ism_arabi, ism_injilizi, hala, adad_alaab, adad_tanbihat);
     MatjarMaktabaHie {
         muarrif: muarrif.to_owned(),
         ism_arabi: ism_arabi.to_owned(),
@@ -203,7 +209,10 @@ pub fn matajir_hie(matajir: &[Box<dyn Matjar>], natija: &NatijatFahs) -> Vec<Mat
                 &asmaa,
                 wahid.matjar,
                 HalatMatjarHie::min_hala(wahid.hala()),
-                wahid.jidhr_matjar.as_ref().map(|jidhr| jidhr.to_string_lossy().into_owned()),
+                wahid
+                    .jidhr_matjar
+                    .as_ref()
+                    .map(|jidhr| jidhr.to_string_lossy().into_owned()),
                 u32::try_from(wahid.alaab.len()).unwrap_or(u32::MAX),
                 wahid
                     .tanbihat
@@ -233,18 +242,25 @@ fn matajir_hie_min_makhzan(
     let asmaa = asmaa(matajir);
     let mut bil_aila: BTreeMap<&str, Vec<TanbihFahsHie>> = BTreeMap::new();
     for tanbih in tanbihat {
-        bil_aila.entry(tanbih.aila.as_str()).or_default().push(TanbihFahsHie {
-            mawdi: tanbih.mawdi.clone(),
-            sabab: tanbih.sabab.clone(),
-            yukhfi_alaab: None,
-        });
+        bil_aila
+            .entry(tanbih.aila.as_str())
+            .or_default()
+            .push(TanbihFahsHie {
+                mawdi: tanbih.mawdi.clone(),
+                sabab: tanbih.sabab.clone(),
+                yukhfi_alaab: None,
+            });
     }
 
     let mut murattaba: Vec<&MatjarMukhzan> = Vec::with_capacity(sufuf.len());
     for matjar in matajir {
         murattaba.extend(sufuf.iter().filter(|saf| saf.aila == matjar.muarrif()));
     }
-    murattaba.extend(sufuf.iter().filter(|saf| !asmaa.contains_key(saf.aila.as_str())));
+    murattaba.extend(
+        sufuf
+            .iter()
+            .filter(|saf| !asmaa.contains_key(saf.aila.as_str())),
+    );
 
     murattaba
         .into_iter()
@@ -396,7 +412,11 @@ mod ikhtibarat {
         assert!(tanbihat.is_empty());
 
         let mut tamma = NatijatMatjar::muthabbat("xbox", Some(PathBuf::from("/WindowsApps")));
-        tamma.tanbihat.push(TanbihFahs::jadeed("xbox", "/WindowsApps", "Windows denies listing"));
+        tamma.tanbihat.push(TanbihFahs::jadeed(
+            "xbox",
+            "/WindowsApps",
+            "Windows denies listing",
+        ));
         let (saf, tanbihat) = mukhzan_min_natija(&tamma);
         assert!(saf.mawjud);
         assert!(saf.najah, "one named entry does not unmake a complete read");
@@ -410,8 +430,12 @@ mod ikhtibarat {
             }]
         );
 
-        let naqisa =
-            NatijatMatjar::naqisa("epic", Some(PathBuf::from("/Epic")), "/Epic", "no Manifests");
+        let naqisa = NatijatMatjar::naqisa(
+            "epic",
+            Some(PathBuf::from("/Epic")),
+            "/Epic",
+            "no Manifests",
+        );
         let (saf, tanbihat) = mukhzan_min_natija(&naqisa);
         assert!(saf.mawjud);
         assert!(!saf.najah, "an unread catalogue must not authorise a sweep");
@@ -423,8 +447,12 @@ mod ikhtibarat {
     #[test]
     fn al_wajiha_taqra_al_ismayn_wa_al_wasfayn_wa_al_tanbihat() -> NatijatIkhtibar {
         let kashif = taarib_kashf::Kashif::jadeed();
-        let mut naqisa =
-            NatijatMatjar::naqisa("epic", Some(PathBuf::from("/Epic")), "/Epic", "no Manifests");
+        let mut naqisa = NatijatMatjar::naqisa(
+            "epic",
+            Some(PathBuf::from("/Epic")),
+            "/Epic",
+            "no Manifests",
+        );
         naqisa.muddat = Duration::from_millis(7);
         let natija = NatijatFahs {
             matajir: vec![
@@ -437,8 +465,10 @@ mod ikhtibarat {
 
         let sufuf = matajir_hie(kashif.matajir(), &natija);
         assert_eq!(sufuf.len(), 3);
-        let epic =
-            sufuf.iter().find(|saf| saf.muarrif == "epic").ok_or("the Epic row is missing")?;
+        let epic = sufuf
+            .iter()
+            .find(|saf| saf.muarrif == "epic")
+            .ok_or("the Epic row is missing")?;
         assert_eq!(epic.hala, HalatMatjarHie::Naqisa);
         assert_eq!(epic.ism_injilizi, "Epic Games");
         assert_eq!(epic.ism_arabi, "إيبك");
@@ -447,12 +477,24 @@ mod ikhtibarat {
         assert!(epic.wasf_injilizi.starts_with("Epic Games: installed, but"));
         assert!(epic.wasf_arabi.starts_with("إيبك: مثبَّت، لكن"));
         assert_eq!(epic.tanbihat.len(), 1);
-        assert_eq!(epic.tanbihat.first().map(|tanbih| tanbih.sabab.as_str()), Some("no Manifests"));
-        assert_eq!(epic.tanbihat.first().and_then(|tanbih| tanbih.yukhfi_alaab), Some(true));
+        assert_eq!(
+            epic.tanbihat.first().map(|tanbih| tanbih.sabab.as_str()),
+            Some("no Manifests")
+        );
+        assert_eq!(
+            epic.tanbihat.first().and_then(|tanbih| tanbih.yukhfi_alaab),
+            Some(true)
+        );
 
-        let gog = sufuf.iter().find(|saf| saf.muarrif == "gog").ok_or("the GOG row is missing")?;
+        let gog = sufuf
+            .iter()
+            .find(|saf| saf.muarrif == "gog")
+            .ok_or("the GOG row is missing")?;
         assert_eq!(gog.hala, HalatMatjarHie::GhayrMuthabbat);
-        assert!(gog.wasf_injilizi.ends_with("not installed on this machine."));
+        assert!(
+            gog.wasf_injilizi
+                .ends_with("not installed on this machine.")
+        );
         Ok(())
     }
 
@@ -490,10 +532,16 @@ mod ikhtibarat {
         let asmaa: Vec<&str> = hie.iter().map(|saf| saf.muarrif.as_str()).collect();
         assert_eq!(asmaa, ["steam", "xbox"], "adapter order, not the store's");
 
-        let xbox = hie.iter().find(|saf| saf.muarrif == "xbox").ok_or("the Xbox row is missing")?;
+        let xbox = hie
+            .iter()
+            .find(|saf| saf.muarrif == "xbox")
+            .ok_or("the Xbox row is missing")?;
         assert_eq!(xbox.hala, HalatMatjarHie::Naqisa);
         assert_eq!(xbox.tanbihat.len(), 1);
-        assert_eq!(xbox.tanbihat.first().and_then(|tanbih| tanbih.yukhfi_alaab), None);
+        assert_eq!(
+            xbox.tanbihat.first().and_then(|tanbih| tanbih.yukhfi_alaab),
+            None
+        );
         assert!(xbox.jidhr.is_none());
         Ok(())
     }

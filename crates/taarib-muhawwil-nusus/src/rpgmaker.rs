@@ -226,7 +226,9 @@ impl BunyatMashru {
     pub fn iktashif(jidhr: &Path) -> Result<Self, KhataNusus> {
         let mut afdal: Option<Self> = None;
         for asas in QAWAID {
-            let Some(isdar) = isdar_taht(jidhr, asas) else { continue };
+            let Some(isdar) = isdar_taht(jidhr, asas) else {
+                continue;
+            };
             let manshur = !yujad_malaf_mashru(&masar_asas(jidhr, asas));
             let murashah = Self {
                 jidhr: jidhr.to_path_buf(),
@@ -237,7 +239,10 @@ impl BunyatMashru {
             // A deeper prefix wins: a project inside `resources/app/www` is a
             // repack whose outer directory also happens to hold a `js`, and the
             // inner one is the project the runtime actually loads.
-            if afdal.as_ref().is_none_or(|sabiq| murashah.asas.len() > sabiq.asas.len()) {
+            if afdal
+                .as_ref()
+                .is_none_or(|sabiq| murashah.asas.len() > sabiq.asas.len())
+            {
                 afdal = Some(murashah);
             }
         }
@@ -372,8 +377,10 @@ fn yujad_malaf_mashru(asl: &Path) -> bool {
 /// [`KhataNusus::HajmMufrit`] when the file is larger than `saqf`, and
 /// [`KhataNusus::KhataMalaf`] when it cannot be opened or read.
 pub fn iqra_malaf(masar: &Path, saqf: u64) -> Result<Vec<u8>, KhataNusus> {
-    let bayanat = fs::metadata(masar)
-        .map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+    let bayanat = fs::metadata(masar).map_err(|sabab| KhataNusus::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })?;
     if bayanat.len() > saqf {
         return Err(KhataNusus::HajmMufrit {
             haql: "file length",
@@ -381,7 +388,10 @@ pub fn iqra_malaf(masar: &Path, saqf: u64) -> Result<Vec<u8>, KhataNusus> {
             saqf,
         });
     }
-    fs::read(masar).map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab })
+    fs::read(masar).map_err(|sabab| KhataNusus::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    })
 }
 
 /// Decodes a game file's bytes as UTF-8, tolerating a byte-order mark.
@@ -568,7 +578,7 @@ impl Masih<'_> {
                         self.miftah()?;
                         continue;
                     }
-                }
+                },
                 Some(b'[') => {
                     self.iftah(&mut kadas, false)?;
                     self.faragh();
@@ -578,7 +588,7 @@ impl Masih<'_> {
                     } else {
                         continue;
                     }
-                }
+                },
                 Some(b'"') => {
                     let (qeema, bidaya, nihaya) = self.nass_harfi()?;
                     if self.mawaqi.len() >= AQSA_NUSUS {
@@ -594,7 +604,7 @@ impl Masih<'_> {
                         nihaya,
                         qeema,
                     });
-                }
+                },
                 Some(_) => self.qeema_basita()?,
             }
 
@@ -615,15 +625,15 @@ impl Masih<'_> {
                             self.tali_fahras();
                         }
                         break;
-                    }
+                    },
                     Some(b'}') if kaen => {
                         self.taqaddam();
                         self.aghliq(&mut kadas);
-                    }
+                    },
                     Some(b']') if !kaen => {
                         self.taqaddam();
                         self.aghliq(&mut kadas);
-                    }
+                    },
                     Some(_) => return Err(self.bunya("a comma or a closing bracket")),
                     None => return Err(self.naqis("a closing bracket")),
                 }
@@ -702,8 +712,8 @@ impl Masih<'_> {
         while matches!(
             self.hali(),
             Some(
-                b'-' | b'+' | b'.' | b'e' | b'E' | b'0'..=b'9' | b't' | b'r' | b'u' | b'f'
-                    | b'a' | b'l' | b's' | b'n'
+                b'-' | b'+' | b'.' | b'e' | b'E' | b'0'
+                    ..=b'9' | b't' | b'r' | b'u' | b'f' | b'a' | b'l' | b's' | b'n'
             )
         ) {
             self.taqaddam();
@@ -736,16 +746,16 @@ impl Masih<'_> {
                 b'"' => {
                     self.taqaddam();
                     break;
-                }
+                },
                 b'\\' => {
                     self.taqaddam();
                     self.mahrab(&mut mabni)?;
-                }
+                },
                 0x00..=0x1F => return Err(self.bunya("an escaped control character")),
                 _ => {
                     mabni.push(harf);
                     self.taqaddam();
-                }
+                },
             }
         }
         let qeema = String::from_utf8(mabni).map_err(|khata| KhataNusus::NassGhayrSalih {
@@ -866,7 +876,7 @@ pub fn iqtibas_json(nass: &str) -> String {
             '\u{0C}' => makhtut.push_str("\\f"),
             _ if u32::from(harf) < 0x20 => {
                 let _ = write!(makhtut, "\\u{:04x}", u32::from(harf));
-            }
+            },
             _ => makhtut.push(harf),
         }
     }
@@ -972,9 +982,13 @@ pub fn tahaqquq_dawra(asl: &str, jadeed: &str, tabdilat: &[Tabdil]) -> Result<()
     let mut sabiq_asl = 0_usize;
     let mut sabiq_jadeed = 0_usize;
     for tabdil in tarteeb {
-        let Some(bayn) = jadeed.get(sabiq_jadeed..) else { break };
+        let Some(bayn) = jadeed.get(sabiq_jadeed..) else {
+            break;
+        };
         let tul_bayn = tabdil.bidaya.saturating_sub(sabiq_asl);
-        let Some(nusukh) = bayn.get(..tul_bayn) else { break };
+        let Some(nusukh) = bayn.get(..tul_bayn) else {
+            break;
+        };
         muaad.push_str(nusukh);
         if let Some(asli) = asl.get(tabdil.bidaya..tabdil.nihaya) {
             muaad.push_str(asli);
@@ -992,7 +1006,10 @@ pub fn tahaqquq_dawra(asl: &str, jadeed: &str, tabdilat: &[Tabdil]) -> Result<()
         return Ok(());
     }
     let mukhtalif = farq_bayt(asl.as_bytes(), muaad.as_bytes());
-    Err(KhataNusus::DawraGhayrMutabaqa { sigha: SIGHA, adad: mukhtalif })
+    Err(KhataNusus::DawraGhayrMutabaqa {
+        sigha: SIGHA,
+        adad: mukhtalif,
+    })
 }
 
 /// How many byte positions two buffers disagree on, counting a length
@@ -1114,7 +1131,10 @@ impl NawHarf {
     /// reordering has moved it to the other end of the line.
     #[must_use]
     pub const fn mumtadd(self) -> bool {
-        matches!(self, Self::Lawn | Self::Takbir | Self::Tasgheer | Self::Fawri | Self::Tadrijee)
+        matches!(
+            self,
+            Self::Lawn | Self::Takbir | Self::Tasgheer | Self::Fawri | Self::Tadrijee
+        )
     }
 
     /// Which family of extent this code belongs to, for closing a span.
@@ -1228,7 +1248,9 @@ pub fn iqsim_hurub(khaam: &str) -> NassMuqassam {
     let mut i = 0_usize;
 
     while let Some(baqi) = khaam.get(i..) {
-        let Some(harf) = baqi.chars().next() else { break };
+        let Some(harf) = baqi.chars().next() else {
+            break;
+        };
         if harf != '\\' {
             naqi.push(harf);
             i = i.saturating_add(harf.len_utf8());
@@ -1243,7 +1265,11 @@ pub fn iqsim_hurub(khaam: &str) -> NassMuqassam {
         let muqawwas = |naw: NawHarf| -> Option<(NawHarf, usize, Option<u32>)> {
             let baad_ramz = bad.get(ramz.len_utf8()..).unwrap_or_default();
             let (qeema, akal) = arqam_muqawwasa(baad_ramz)?;
-            Some((naw, 1_usize.saturating_add(ramz.len_utf8()).saturating_add(akal), Some(qeema)))
+            Some((
+                naw,
+                1_usize.saturating_add(ramz.len_utf8()).saturating_add(akal),
+                Some(qeema),
+            ))
         };
         let mufrad = |naw: NawHarf| -> Option<(NawHarf, usize, Option<u32>)> {
             Some((naw, 1_usize.saturating_add(ramz.len_utf8()), None))
@@ -1330,10 +1356,14 @@ fn arqam_muqawwasa(nass: &str) -> Option<(u32, usize)> {
 /// closed only by its own, because a colour change in the middle of an enlarged
 /// run does not end the enlargement.
 fn imtidad(nitaqat: &mut [NitaqHurub], tul_naqi: usize) {
-    let mawaqi: Vec<(usize, Option<u8>)> =
-        nitaqat.iter().map(|nitaq| (nitaq.mawqi, nitaq.naw.ailat_imtidad())).collect();
+    let mawaqi: Vec<(usize, Option<u8>)> = nitaqat
+        .iter()
+        .map(|nitaq| (nitaq.mawqi, nitaq.naw.ailat_imtidad()))
+        .collect();
     for (khana, nitaq) in nitaqat.iter_mut().enumerate() {
-        let Some(aila) = nitaq.naw.ailat_imtidad() else { continue };
+        let Some(aila) = nitaq.naw.ailat_imtidad() else {
+            continue;
+        };
         let baad = khana.saturating_add(1);
         let nihaya = mawaqi
             .iter()
@@ -1428,8 +1458,11 @@ impl SijillNusus {
     /// The records that came from one file, in document order.
     #[must_use]
     pub fn li_malaf(&self, malaf: &str) -> Vec<&MadkhalNusus> {
-        let mut mukhtara: Vec<&MadkhalNusus> =
-            self.madakhil.iter().filter(|madkhal| madkhal.malaf == malaf).collect();
+        let mut mukhtara: Vec<&MadkhalNusus> = self
+            .madakhil
+            .iter()
+            .filter(|madkhal| madkhal.malaf == malaf)
+            .collect();
         mukhtara.sort_by_key(|madkhal| madkhal.bidaya);
         mukhtara
     }
@@ -1486,20 +1519,31 @@ pub fn huwiya(malaf: &str, masar: &str, naqi: &str) -> String {
 static QAWAID_BAYANAT: [(&str, &[&str]); 8] = [
     ("Actors.json", &["name", "nickname", "profile"]),
     ("Classes.json", &["name"]),
-    ("Skills.json", &["name", "description", "message1", "message2"]),
+    (
+        "Skills.json",
+        &["name", "description", "message1", "message2"],
+    ),
     ("Items.json", &["name", "description"]),
     ("Weapons.json", &["name", "description"]),
     ("Armors.json", &["name", "description"]),
     ("Enemies.json", &["name"]),
-    ("States.json", &["name", "message1", "message2", "message3", "message4"]),
+    (
+        "States.json",
+        &["name", "message1", "message2", "message3", "message4"],
+    ),
 ];
 
 /// The `System.json` arrays whose entries name things the player reads.
 ///
 /// `switches` and `variables` are absent: they are the editor's own names for
 /// its bookkeeping slots and are never drawn on a screen.
-const MASFUFAT_NIZAM: [&str; 5] =
-    ["armorTypes", "elements", "equipTypes", "skillTypes", "weaponTypes"];
+const MASFUFAT_NIZAM: [&str; 5] = [
+    "armorTypes",
+    "elements",
+    "equipTypes",
+    "skillTypes",
+    "weaponTypes",
+];
 
 /// Reads every translatable string out of a project.
 ///
@@ -1521,8 +1565,10 @@ const MASFUFAT_NIZAM: [&str; 5] =
 pub fn istakhrij(bunya: &BunyatMashru) -> Result<SijillNusus, KhataNusus> {
     let mut sijill = SijillNusus::default();
     let bayanat = bunya.bayanat();
-    let qaima = fs::read_dir(&bayanat)
-        .map_err(|sabab| KhataNusus::KhataMalaf { masar: bayanat.clone(), sabab })?;
+    let qaima = fs::read_dir(&bayanat).map_err(|sabab| KhataNusus::KhataMalaf {
+        masar: bayanat.clone(),
+        sabab,
+    })?;
 
     let mut asmaa: Vec<String> = Vec::new();
     for madkhal in qaima.take(AQSA_MADAKHIL).flatten() {
@@ -1598,8 +1644,12 @@ enum Sinf {
 /// repacks this crate exists to survive lower-case whole trees at a time.
 fn ism_khareeta(ism: &str) -> bool {
     let saghir = ism.to_ascii_lowercase();
-    let Some(baqi) = saghir.strip_prefix("map") else { return false };
-    let Some(raqm) = baqi.strip_suffix(".json") else { return false };
+    let Some(baqi) = saghir.strip_prefix("map") else {
+        return false;
+    };
+    let Some(raqm) = baqi.strip_suffix(".json") else {
+        return false;
+    };
     !raqm.is_empty() && raqm.bytes().all(|bayt| bayt.is_ascii_digit())
 }
 
@@ -1614,14 +1664,18 @@ fn istakhrij_malaf(
     let bayt = iqra_malaf(&masar, AQSA_MALAF)?;
     let (khaam, _) = nass_min_bayt(&bayt, nisbi)?;
     let fahras = fahras_mawaqi(imsah_nusus(&khaam, nisbi)?);
-    let jidhr: Value = serde_json::from_str(&khaam).map_err(|khata| {
-        KhataNusus::BunyaGhayrMutawaqqaa {
+    let jidhr: Value =
+        serde_json::from_str(&khaam).map_err(|khata| KhataNusus::BunyaGhayrMutawaqqaa {
             malaf: nisbi.to_owned(),
             haql: format!("the document does not parse: {khata}"),
-        }
-    })?;
+        })?;
 
-    let mut jami = Jami { sijill: &mut *sijill, fahras, malaf: nisbi, izaha: 0 };
+    let mut jami = Jami {
+        sijill: &mut *sijill,
+        fahras,
+        malaf: nisbi,
+        izaha: 0,
+    };
     match sinf {
         Sinf::Khareeta => jami.khareeta(&jidhr),
         Sinf::AhdathAmma => jami.ahdath_amma(&jidhr),
@@ -1629,7 +1683,12 @@ fn istakhrij_malaf(
         Sinf::Nizam => jami.nizam(&jidhr),
         Sinf::Qaeda(huqul) => jami.qaeda(&jidhr, huqul),
     }
-    if jami.sijill.madakhil.iter().any(|madkhal| madkhal.malaf == nisbi) {
+    if jami
+        .sijill
+        .madakhil
+        .iter()
+        .any(|madkhal| madkhal.malaf == nisbi)
+    {
         let _ = sijill.malaffat.insert(nisbi.to_owned());
     }
     Ok(())
@@ -1660,7 +1719,9 @@ impl Jami<'_> {
     /// message line is a blank line in a window, and offering it for
     /// translation wastes a translator's attention on a string that has none.
     fn daa(&mut self, masar: &str, naw: NawMadkhal) {
-        let Some(mawqi) = self.fahras.get(masar) else { return };
+        let Some(mawqi) = self.fahras.get(masar) else {
+            return;
+        };
         if mawqi.qeema.trim().is_empty() {
             return;
         }
@@ -1693,9 +1754,13 @@ impl Jami<'_> {
     /// turns the developer's own event editor into a bilingual mess the next
     /// time they open it.
     fn qaima_awamir(&mut self, qaima: &Value, asas: &str) {
-        let Some(awamir) = qaima.as_array() else { return };
+        let Some(awamir) = qaima.as_array() else {
+            return;
+        };
         for (khana, amr) in awamir.iter().enumerate() {
-            let Some(ramz) = amr.get("code").and_then(Value::as_i64) else { continue };
+            let Some(ramz) = amr.get("code").and_then(Value::as_i64) else {
+                continue;
+            };
             let barametr = amr.get("parameters");
             let asl = format!("{asas}/{khana}/parameters");
             match ramz {
@@ -1726,11 +1791,17 @@ impl Jami<'_> {
     /// One map: its display name and every event page's command list.
     fn khareeta(&mut self, jidhr: &Value) {
         self.daa("/displayName", NawMadkhal::IsmKhareeta);
-        let Some(ahdath) = jidhr.get("events").and_then(Value::as_array) else { return };
+        let Some(ahdath) = jidhr.get("events").and_then(Value::as_array) else {
+            return;
+        };
         for (khana, hadath) in ahdath.iter().enumerate() {
-            let Some(safahat) = hadath.get("pages").and_then(Value::as_array) else { continue };
+            let Some(safahat) = hadath.get("pages").and_then(Value::as_array) else {
+                continue;
+            };
             for (safha, warqa) in safahat.iter().enumerate() {
-                let Some(qaima) = warqa.get("list") else { continue };
+                let Some(qaima) = warqa.get("list") else {
+                    continue;
+                };
                 let asas = format!("/events/{khana}/pages/{safha}/list");
                 self.qaima_awamir(qaima, &asas);
             }
@@ -1739,20 +1810,30 @@ impl Jami<'_> {
 
     /// `CommonEvents.json`: an array whose first entry is null.
     fn ahdath_amma(&mut self, jidhr: &Value) {
-        let Some(sufuf) = jidhr.as_array() else { return };
+        let Some(sufuf) = jidhr.as_array() else {
+            return;
+        };
         for (khana, saf) in sufuf.iter().enumerate() {
-            let Some(qaima) = saf.get("list") else { continue };
+            let Some(qaima) = saf.get("list") else {
+                continue;
+            };
             self.qaima_awamir(qaima, &format!("/{khana}/list"));
         }
     }
 
     /// `Troops.json`: one command list per page of each troop.
     fn firaq(&mut self, jidhr: &Value) {
-        let Some(sufuf) = jidhr.as_array() else { return };
+        let Some(sufuf) = jidhr.as_array() else {
+            return;
+        };
         for (khana, saf) in sufuf.iter().enumerate() {
-            let Some(safahat) = saf.get("pages").and_then(Value::as_array) else { continue };
+            let Some(safahat) = saf.get("pages").and_then(Value::as_array) else {
+                continue;
+            };
             for (safha, warqa) in safahat.iter().enumerate() {
-                let Some(qaima) = warqa.get("list") else { continue };
+                let Some(qaima) = warqa.get("list") else {
+                    continue;
+                };
                 self.qaima_awamir(qaima, &format!("/{khana}/pages/{safha}/list"));
             }
         }
@@ -1760,7 +1841,9 @@ impl Jami<'_> {
 
     /// A database table: the named fields of every row that has them.
     fn qaeda(&mut self, jidhr: &Value, huqul: &[&str]) {
-        let Some(sufuf) = jidhr.as_array() else { return };
+        let Some(sufuf) = jidhr.as_array() else {
+            return;
+        };
         for (khana, saf) in sufuf.iter().enumerate() {
             for haql in huqul {
                 if saf.get(*haql).is_some_and(Value::is_string) {
@@ -1777,15 +1860,21 @@ impl Jami<'_> {
         self.daa("/currencyUnit", NawMadkhal::MustalahNizam);
 
         for ism in MASFUFAT_NIZAM {
-            let Some(masfufa) = jidhr.get(ism).and_then(Value::as_array) else { continue };
+            let Some(masfufa) = jidhr.get(ism).and_then(Value::as_array) else {
+                continue;
+            };
             for (khana, _) in masfufa.iter().enumerate() {
                 self.daa(&format!("/{ism}/{khana}"), NawMadkhal::MustalahNizam);
             }
         }
 
-        let Some(mustalahat) = jidhr.get("terms") else { return };
+        let Some(mustalahat) = jidhr.get("terms") else {
+            return;
+        };
         for ism in ["basic", "commands", "params"] {
-            let Some(masfufa) = mustalahat.get(ism).and_then(Value::as_array) else { continue };
+            let Some(masfufa) = mustalahat.get(ism).and_then(Value::as_array) else {
+                continue;
+            };
             for (khana, _) in masfufa.iter().enumerate() {
                 self.daa(&format!("/terms/{ism}/{khana}"), NawMadkhal::MustalahNizam);
             }
@@ -1797,7 +1886,10 @@ impl Jami<'_> {
         if let Some(rasail) = mustalahat.get("messages").and_then(Value::as_object) {
             for (miftah, qeema) in rasail {
                 if qeema.is_string() {
-                    self.daa(&format!("/terms/messages/{miftah}"), NawMadkhal::MustalahNizam);
+                    self.daa(
+                        &format!("/terms/messages/{miftah}"),
+                        NawMadkhal::MustalahNizam,
+                    );
                 }
             }
         }
@@ -1870,8 +1962,8 @@ fn nihayat_masfufa(khaam: &str, bidaya: usize) -> Option<usize> {
                     if umq == 0 {
                         return Some(i.saturating_add(1));
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
         i = i.saturating_add(1);
@@ -1919,7 +2011,10 @@ pub fn nass_wajih(miftah: &str, qeema: &str) -> bool {
     if munaqqa.parse::<f64>().is_ok() {
         return false;
     }
-    if matches!(munaqqa.to_ascii_lowercase().as_str(), "true" | "false" | "null") {
+    if matches!(
+        munaqqa.to_ascii_lowercase().as_str(),
+        "true" | "false" | "null"
+    ) {
         return false;
     }
     if munaqqa.starts_with('[') || munaqqa.starts_with('{') {
@@ -1930,7 +2025,10 @@ pub fn nass_wajih(miftah: &str, qeema: &str) -> bool {
         return false;
     }
     let munkhafid = munaqqa.to_ascii_lowercase();
-    if LAWAHIQ_MAWARID.iter().any(|lahiqa| munkhafid.ends_with(lahiqa)) {
+    if LAWAHIQ_MAWARID
+        .iter()
+        .any(|lahiqa| munkhafid.ends_with(lahiqa))
+    {
         return false;
     }
     if !bila_faragh || !munaqqa.is_ascii() {
@@ -1940,7 +2038,9 @@ pub fn nass_wajih(miftah: &str, qeema: &str) -> bool {
         return true;
     }
     let miftah_munkhafid = miftah.to_ascii_lowercase();
-    ALFAZ_NASS.iter().any(|lafz| miftah_munkhafid.contains(lafz))
+    ALFAZ_NASS
+        .iter()
+        .any(|lafz| miftah_munkhafid.contains(lafz))
 }
 
 /// Reads the user-facing plugin parameters out of `js/plugins.js`.
@@ -1972,14 +2072,18 @@ pub fn istakhrij_mulhaqat(
     let Some(masfufa) = khaam.get(bidaya..nihaya) else {
         return Ok(());
     };
-    let jidhr: Value = serde_json::from_str(masfufa).map_err(|khata| {
-        KhataNusus::BunyaGhayrMutawaqqaa {
+    let jidhr: Value =
+        serde_json::from_str(masfufa).map_err(|khata| KhataNusus::BunyaGhayrMutawaqqaa {
             malaf: nisbi.to_owned(),
             haql: format!("the $plugins array is not valid JSON: {khata}"),
-        }
-    })?;
+        })?;
     let fahras = fahras_mawaqi(imsah_nusus(masfufa, nisbi)?);
-    let mut jami = Jami { sijill: &mut *sijill, fahras, malaf: nisbi, izaha: bidaya };
+    let mut jami = Jami {
+        sijill: &mut *sijill,
+        fahras,
+        malaf: nisbi,
+        izaha: bidaya,
+    };
 
     if let Some(madakhil) = jidhr.as_array() {
         for (khana, madkhal) in madakhil.iter().enumerate() {
@@ -2052,16 +2156,24 @@ pub fn iqra_tashfeer(bunya: &BunyatMashru) -> Result<TashfeerMawarid, KhataNusus
     let masar = bunya.malaf(nisbi);
     let bayt = iqra_malaf(&masar, AQSA_MALAF)?;
     let (khaam, _) = nass_min_bayt(&bayt, nisbi)?;
-    let jidhr: Value = serde_json::from_str(&khaam).map_err(|khata| {
-        KhataNusus::BunyaGhayrMutawaqqaa {
+    let jidhr: Value =
+        serde_json::from_str(&khaam).map_err(|khata| KhataNusus::BunyaGhayrMutawaqqaa {
             malaf: nisbi.to_owned(),
             haql: format!("the document does not parse: {khata}"),
-        }
-    })?;
+        })?;
 
-    let suwar = jidhr.get("hasEncryptedImages").and_then(Value::as_bool).unwrap_or(false);
-    let aswat = jidhr.get("hasEncryptedAudio").and_then(Value::as_bool).unwrap_or(false);
-    let miftah = jidhr.get("encryptionKey").and_then(Value::as_str).and_then(miftah_min_nass);
+    let suwar = jidhr
+        .get("hasEncryptedImages")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let aswat = jidhr
+        .get("hasEncryptedAudio")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let miftah = jidhr
+        .get("encryptionKey")
+        .and_then(Value::as_str)
+        .and_then(miftah_min_nass);
 
     if (suwar || aswat) && miftah.is_none() {
         return Err(KhataNusus::MiftahMafqud {
@@ -2071,7 +2183,11 @@ pub fn iqra_tashfeer(bunya: &BunyatMashru) -> Result<TashfeerMawarid, KhataNusus
                 .to_owned(),
         });
     }
-    Ok(TashfeerMawarid { miftah, suwar, aswat })
+    Ok(TashfeerMawarid {
+        miftah,
+        suwar,
+        aswat,
+    })
 }
 
 /// Reads the thirty-two hexadecimal digits `System.json` publishes as sixteen
@@ -2137,7 +2253,9 @@ pub fn fukk_tashfeer(bayt: &[u8], miftah: [u8; 16], masar: &Path) -> Result<Vec<
             *bayt_hali ^= *qinaa;
         }
     }
-    let maruf = TAWAQI_MAWARID.iter().any(|tawqee| maftuh.starts_with(tawqee))
+    let maruf = TAWAQI_MAWARID
+        .iter()
+        .any(|tawqee| maftuh.starts_with(tawqee))
         || maftuh.get(4..8) == Some(b"ftyp");
     if !maruf {
         return Err(KhataNusus::MiftahGhayrSalih {
@@ -2226,8 +2344,16 @@ const HURUB_LAZIMA: [NawHarf; 5] = [
 pub fn tahaqquq_hurub(madkhal: &MadkhalNusus, badeel: &str) -> Result<(), KhataNusus> {
     let jadeed = iqsim_hurub(badeel);
     for naw in HURUB_LAZIMA {
-        let asl = madkhal.nitaqat.iter().filter(|nitaq| nitaq.naw == naw).count();
-        let baad = jadeed.nitaqat.iter().filter(|nitaq| nitaq.naw == naw).count();
+        let asl = madkhal
+            .nitaqat
+            .iter()
+            .filter(|nitaq| nitaq.naw == naw)
+            .count();
+        let baad = jadeed
+            .nitaqat
+            .iter()
+            .filter(|nitaq| nitaq.naw == naw)
+            .count();
         if asl != baad {
             return Err(KhataNusus::BunyaGhayrMutawaqqaa {
                 malaf: madkhal.malaf.clone(),
@@ -2282,7 +2408,9 @@ pub fn rakkib(
             // editor's escaping choices are its own — `\/` and `é` are
             // both ordinary in these files — and a literal comparison would
             // reject a file that has not changed at all.
-            let asli = khaam.get(madkhal.bidaya..madkhal.nihaya).unwrap_or_default();
+            let asli = khaam
+                .get(madkhal.bidaya..madkhal.nihaya)
+                .unwrap_or_default();
             let mutabiq = imsah_nusus(asli, nisbi)
                 .ok()
                 .and_then(|mawaqi| mawaqi.into_iter().next())
@@ -2388,7 +2516,15 @@ impl IdadatMulhaq {
         zawj("arqam", &self.arqam.to_string(), false);
         zawj("tashkeel", &self.tashkeel.to_string(), false);
         zawj("dabt", &self.dabt.to_string(), false);
-        zawj("nawafidhYameen", if self.nawafidh_yameen { "true" } else { "false" }, false);
+        zawj(
+            "nawafidhYameen",
+            if self.nawafidh_yameen {
+                "true"
+            } else {
+                "false"
+            },
+            false,
+        );
         makhtut.push('}');
         makhtut
     }
@@ -2463,7 +2599,8 @@ fn ism_amin(ism: &str) -> bool {
     if ism.starts_with('/') || ism.starts_with('.') || ism.contains('\\') || ism.contains(':') {
         return false;
     }
-    ism.split('/').all(|juz| !juz.is_empty() && juz != "." && juz != "..")
+    ism.split('/')
+        .all(|juz| !juz.is_empty() && juz != "." && juz != "..")
 }
 
 /// Appends the plugin's entry to `$plugins`, leaving every other byte alone.
@@ -2487,12 +2624,11 @@ pub fn sajjil_mulhaq(
             sabab: "the $plugins array is not on a character boundary".to_owned(),
         });
     };
-    let madakhil: Value = serde_json::from_str(masfufa).map_err(|khata| {
-        KhataNusus::HimlMarfud {
+    let madakhil: Value =
+        serde_json::from_str(masfufa).map_err(|khata| KhataNusus::HimlMarfud {
             alia: nisbi,
             sabab: format!("the $plugins array is not valid JSON: {khata}"),
-        }
-    })?;
+        })?;
     let musajjal = madakhil.as_array().is_some_and(|qaima| {
         qaima
             .iter()
@@ -2534,8 +2670,7 @@ pub fn sajjil_mulhaq(
 }
 
 /// What the plugin manager shows beside the entry.
-const WASF_MULHAQ: &str =
-    "تعريب — Arabic text for RPG Maker MV and MZ. Installed by Taarib; remove this entry \
+const WASF_MULHAQ: &str = "تعريب — Arabic text for RPG Maker MV and MZ. Installed by Taarib; remove this entry \
      and js/plugins/taarib.js to uninstall.";
 
 // ---------------------------------------------------------------------------
@@ -2566,12 +2701,17 @@ impl Mifhas for MifhasRpgMaker {
     }
 
     fn yantabiq(&self, siyaq: &SiyaqTabaqa<'_>) -> bool {
-        if matches!(siyaq.aila, AilatMuharrik::RpgMakerMv | AilatMuharrik::RpgMakerMz) {
+        if matches!(
+            siyaq.aila,
+            AilatMuharrik::RpgMakerMv | AilatMuharrik::RpgMakerMz
+        ) {
             return true;
         }
         // Four metadata queries at most, and no file is opened. Cheap enough to
         // run on every game, which is what the trait requires.
-        QAWAID.iter().any(|asas| isdar_taht(siyaq.jidhr, asas).is_some())
+        QAWAID
+            .iter()
+            .any(|asas| isdar_taht(siyaq.jidhr, asas).is_some())
     }
 
     fn adilla(&self, siyaq: &SiyaqTabaqa<'_>) -> Result<Vec<Dalil>, KhataNusus> {
@@ -2583,8 +2723,16 @@ impl Mifhas for MifhasRpgMaker {
             format!(
                 "{}, {}, project at {}",
                 bunya.isdar().ism(),
-                if bunya.manshur() { "deployed" } else { "an editor project folder" },
-                if bunya.asas().is_empty() { "the game root" } else { bunya.asas() }
+                if bunya.manshur() {
+                    "deployed"
+                } else {
+                    "an editor project folder"
+                },
+                if bunya.asas().is_empty() {
+                    "the game root"
+                } else {
+                    bunya.asas()
+                }
             ),
         ));
 
@@ -2628,9 +2776,15 @@ pub fn tabaqat(siyaq: &SiyaqTabaqa<'_>) -> Result<Hukm, KhataNusus> {
 /// `Swiftshader/` would be a probe stating something untrue about a directory it
 /// had just read, and that is worse than the five extra listings it avoids.
 fn jeel_chromium(jidhr: &Path, adilla: &mut Vec<Dalil>) {
-    const HADEETHA: [&str; 3] =
-        ["vk_swiftshader.dll", "vk_swiftshader_icd.json", "libvk_swiftshader.so"];
-    if let Some(ism) = HADEETHA.iter().find(|ism| masar_bila_hala(jidhr, ism).is_file()) {
+    const HADEETHA: [&str; 3] = [
+        "vk_swiftshader.dll",
+        "vk_swiftshader_icd.json",
+        "libvk_swiftshader.so",
+    ];
+    if let Some(ism) = HADEETHA
+        .iter()
+        .find(|ism| masar_bila_hala(jidhr, ism).is_file())
+    {
         adilla.push(Dalil::jadeed(
             format!("nusus:rpgmaker/{ism}"),
             "the shell is Chromium 90 or newer, whose canvas fillText shapes Arabic and \
@@ -2716,7 +2870,9 @@ fn mulhaqat_tatajawaz(bunya: &BunyatMashru, adilla: &mut Vec<Dalil>) -> bool {
     let mut nuqta: Vec<String> = Vec::new();
     for ism in asmaa.iter().take(AQSA_MULHAQAT) {
         let masar = bunya.malaf(&format!("js/plugins/{ism}.js"));
-        let Some(nass) = iqra_muhaddad(&masar, AQSA_BARMAJI) else { continue };
+        let Some(nass) = iqra_muhaddad(&masar, AQSA_BARMAJI) else {
+            continue;
+        };
         if SILSILA.iter().any(|alama| nass.contains(alama)) {
             maqtua.push(ism.clone());
         }
@@ -2824,7 +2980,7 @@ fn silsilat_nass(bunya: &BunyatMashru, maqtua: bool, adilla: &mut Vec<Dalil>) {
                     25,
                 ));
             }
-        }
+        },
         None => adilla.push(Dalil::siyaq(
             format!("nusus:rpgmaker/{nisbi}"),
             "the window core script could not be read, so the engine's own text chain is \
@@ -2861,16 +3017,29 @@ fn khatt_muallan(bunya: &BunyatMashru, adilla: &mut Vec<Dalil>) {
         return;
     };
     let mutaqaddim = jidhr.get("advanced");
-    let ism = mutaqaddim.and_then(|kutla| kutla.get("mainFontFilename")).and_then(Value::as_str);
-    let hajm = mutaqaddim.and_then(|kutla| kutla.get("fontSize")).and_then(Value::as_i64);
+    let ism = mutaqaddim
+        .and_then(|kutla| kutla.get("mainFontFilename"))
+        .and_then(Value::as_str);
+    let hajm = mutaqaddim
+        .and_then(|kutla| kutla.get("fontSize"))
+        .and_then(Value::as_i64);
     if let Some(malaf) = ism {
         adilla.push(Dalil::siyaq(
             "nusus:rpgmaker/data/System.json",
-            format!("the runtime loads {malaf} at size {}", hajm.unwrap_or_default()),
+            format!(
+                "the runtime loads {malaf} at size {}",
+                hajm.unwrap_or_default()
+            ),
         ));
     }
-    let suwar = jidhr.get("hasEncryptedImages").and_then(Value::as_bool).unwrap_or(false);
-    let aswat = jidhr.get("hasEncryptedAudio").and_then(Value::as_bool).unwrap_or(false);
+    let suwar = jidhr
+        .get("hasEncryptedImages")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let aswat = jidhr
+        .get("hasEncryptedAudio")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     if suwar || aswat {
         adilla.push(Dalil::siyaq(
             "nusus:rpgmaker/data/System.json",

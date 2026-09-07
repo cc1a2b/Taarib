@@ -233,17 +233,20 @@ impl Matjar for MatjarUbisoft {
 
         let mut natija = NatijatMatjar::muthabbat(MUARRIF, jidhr.clone());
 
-        let manatiq = jidhr.as_ref().map_or_else(Vec::new, |jidhr| {
-            match manatiq_tashkeelat(jidhr) {
-                Ok(manatiq) => manatiq,
-                Err(tanbih) => {
-                    natija.tanbihat.push(tanbih);
-                    Vec::new()
-                },
-            }
-        });
+        let manatiq =
+            jidhr
+                .as_ref()
+                .map_or_else(Vec::new, |jidhr| match manatiq_tashkeelat(jidhr) {
+                    Ok(manatiq) => manatiq,
+                    Err(tanbih) => {
+                        natija.tanbihat.push(tanbih);
+                        Vec::new()
+                    },
+                });
         let usul = jidhr.as_ref().map(|jidhr| {
-            MASAR_USUL.iter().fold(jidhr.clone(), |mabni, juz| mabni.join(juz))
+            MASAR_USUL
+                .iter()
+                .fold(jidhr.clone(), |mabni, juz| mabni.join(juz))
         });
 
         let mut maruf: BTreeSet<u32> = BTreeSet::new();
@@ -275,11 +278,11 @@ impl Matjar for MatjarUbisoft {
                 .or_else(|| ism_min_mujallad(&tathbeet.jidhr))
                 .unwrap_or_else(|| format!("Ubisoft {}", tathbeet.muarrif));
 
-            let tanfidhi = sijill
-                .as_ref()
-                .and_then(|sijill| sijill.tanfidhiyat.iter().find_map(|nisbi| {
+            let tanfidhi = sijill.as_ref().and_then(|sijill| {
+                sijill.tanfidhiyat.iter().find_map(|nisbi| {
                     masar_dakhili(&tathbeet.jidhr, nisbi).filter(|masar| masar.is_file())
-                }));
+                })
+            });
 
             let simat = sijill.as_ref().map_or_else(Vec::new, |sijill| {
                 sijill
@@ -318,7 +321,9 @@ impl Matjar for MatjarUbisoft {
             });
         }
 
-        natija.alaab.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
+        natija
+            .alaab
+            .sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
         natija.muddat = bidaya.elapsed();
         Ok(natija)
     }
@@ -327,8 +332,12 @@ impl Matjar for MatjarUbisoft {
         if !MANASSAT.contains(&siyaq.nizam) {
             return Vec::new();
         }
-        let Some(jidhr) =
-            siyaq.manassat.ubisoft.clone().or_else(jidhr_musajjal).or_else(|| jidhr_taqleedi(siyaq))
+        let Some(jidhr) = siyaq
+            .manassat
+            .ubisoft
+            .clone()
+            .or_else(jidhr_musajjal)
+            .or_else(|| jidhr_taqleedi(siyaq))
         else {
             return Vec::new();
         };
@@ -337,10 +346,13 @@ impl Matjar for MatjarUbisoft {
         // proxy: the launcher rewrites `configurations` as part of installing,
         // so a change there is the signal that the registry changed too. The
         // default games directory is watched as well, for the same reason.
-        [jidhr.join("cache").join("configuration"), jidhr.join("games")]
-            .into_iter()
-            .filter(|masar| masar.is_dir())
-            .collect()
+        [
+            jidhr.join("cache").join("configuration"),
+            jidhr.join("games"),
+        ]
+        .into_iter()
+        .filter(|masar| masar.is_dir())
+        .collect()
     }
 }
 
@@ -370,7 +382,10 @@ fn jidhr_musajjal() -> Option<PathBuf> {
 /// for both widths of Windows, rather than the `C:\Program Files (x86)` literal
 /// this used to fall back to on a machine whose Windows is not on `C:`.
 fn jidhr_taqleedi(siyaq: &SiyaqFahs) -> Option<PathBuf> {
-    let masar = siyaq.mujallad_baramij_x86()?.join("Ubisoft").join("Ubisoft Game Launcher");
+    let masar = siyaq
+        .mujallad_baramij_x86()?
+        .join("Ubisoft")
+        .join("Ubisoft Game Launcher");
     masar.is_dir().then_some(masar)
 }
 
@@ -429,7 +444,9 @@ struct SijillTashkeel {
 /// claims to be, or unreadable. None of those is fatal: without it every game
 /// simply takes its install directory's name.
 fn manatiq_tashkeelat(jidhr: &Path) -> Result<Vec<String>, TanbihFahs> {
-    let masar = MASAR_TASHKEELAT.iter().fold(jidhr.to_path_buf(), |mabni, juz| mabni.join(juz));
+    let masar = MASAR_TASHKEELAT
+        .iter()
+        .fold(jidhr.to_path_buf(), |mabni, juz| mabni.join(juz));
     if !masar.is_file() {
         return Ok(Vec::new());
     }
@@ -444,8 +461,9 @@ fn manatiq_tashkeelat(jidhr: &Path) -> Result<Vec<String>, TanbihFahs> {
             ),
         ));
     }
-    let bayt = qira(&masar)
-        .map_err(|khata| TanbihFahs::jadeed(MUARRIF, masar.display().to_string(), khata.injilizi))?;
+    let bayt = qira(&masar).map_err(|khata| {
+        TanbihFahs::jadeed(MUARRIF, masar.display().to_string(), khata.injilizi)
+    })?;
     Ok(manatiq_nass(&bayt))
 }
 
@@ -486,7 +504,10 @@ fn sijill_luba(manatiq: &[String], muarrif: u32) -> Option<SijillTashkeel> {
         format!("Installs/{muarrif}/"),
     ];
     for mintaqa in manatiq {
-        let Some(mawqi) = mirasat.iter().find_map(|mirsat| mintaqa.find(mirsat.as_str())) else {
+        let Some(mawqi) = mirasat
+            .iter()
+            .find_map(|mirsat| mintaqa.find(mirsat.as_str()))
+        else {
             continue;
         };
         let Some(nafitha) = nafitha_hawl(mintaqa, mawqi) else {
@@ -561,9 +582,8 @@ fn iqra_sijill(nafitha: &str) -> SijillTashkeel {
         sijill.unwan = qeema_awwal("display_name").or_else(|| qeema_awwal("title"));
     }
 
-    sijill.idafa = qeema_awwal("is_ulc").is_some_and(|qeema| {
-        matches!(qeema.to_ascii_lowercase().as_str(), "yes" | "true" | "1")
-    });
+    sijill.idafa = qeema_awwal("is_ulc")
+        .is_some_and(|qeema| matches!(qeema.to_ascii_lowercase().as_str(), "yes" | "true" | "1"));
 
     let mut himayat: BTreeSet<String> = BTreeSet::new();
     for (miftah, qeema) in &azwaj {
@@ -573,8 +593,12 @@ fn iqra_sijill(nafitha: &str) -> SijillTashkeel {
                 let _ = himayat.insert(ism.to_owned());
             }
         }
-        if qeema.rsplit_once('.').is_some_and(|(_, imtidad)| imtidad.eq_ignore_ascii_case("exe"))
-            && !TANFIDHIYAT_MUSTABADA.iter().any(|mustabad| munkhafid.contains(*mustabad))
+        if qeema
+            .rsplit_once('.')
+            .is_some_and(|(_, imtidad)| imtidad.eq_ignore_ascii_case("exe"))
+            && !TANFIDHIYAT_MUSTABADA
+                .iter()
+                .any(|mustabad| munkhafid.contains(*mustabad))
         {
             // `relative` and `path` are the keys the executable lives under in
             // every shape of this file seen; anything else ending in `.exe` is
@@ -629,7 +653,11 @@ fn bila_iqtibas(qeema: &str) -> String {
     let mukhaffaf = munazzam
         .strip_prefix('"')
         .and_then(|baqi| baqi.strip_suffix('"'))
-        .or_else(|| munazzam.strip_prefix('\'').and_then(|baqi| baqi.strip_suffix('\'')))
+        .or_else(|| {
+            munazzam
+                .strip_prefix('\'')
+                .and_then(|baqi| baqi.strip_suffix('\''))
+        })
         .unwrap_or(munazzam);
     mukhaffaf.trim().to_owned()
 }
@@ -648,7 +676,9 @@ fn suwar_mahalliya(usul: &Path, sijill: &SijillTashkeel) -> MasadirSuwar {
             .extension()
             .and_then(|imtidad| imtidad.to_str())
             .is_some_and(|imtidad| {
-                IMTIDADAT_SURA.iter().any(|maqbul| imtidad.eq_ignore_ascii_case(maqbul))
+                IMTIDADAT_SURA
+                    .iter()
+                    .any(|maqbul| imtidad.eq_ignore_ascii_case(maqbul))
             });
         if !maqbula {
             continue;
@@ -666,7 +696,7 @@ fn suwar_mahalliya(usul: &Path, sijill: &SijillTashkeel) -> MasadirSuwar {
             DawrSura::Batl if suwar.batl.is_none() => suwar.batl = Some(MasdarSura::Malaf(masar)),
             DawrSura::Shiar if suwar.shiar.is_none() => {
                 suwar.shiar = Some(MasdarSura::Malaf(masar));
-            }
+            },
             DawrSura::Ghilaf | DawrSura::Batl | DawrSura::Shiar => {},
         }
     }
@@ -773,7 +803,13 @@ mod sijill {
         // SAFETY: `ism_w` is a live, null-terminated wide string for the whole
         // call, `walid.0` is an open key, and `miftah` is a live out-parameter.
         let natija = unsafe {
-            RegOpenKeyExW(walid.0, PCWSTR(ism_w.as_ptr()), None, KEY_READ | ruya, &raw mut miftah)
+            RegOpenKeyExW(
+                walid.0,
+                PCWSTR(ism_w.as_ptr()),
+                None,
+                KEY_READ | ruya,
+                &raw mut miftah,
+            )
         };
         (natija == ERROR_SUCCESS).then_some(Miftah(miftah))
     }
@@ -873,10 +909,18 @@ mod sijill {
         if natija != ERROR_SUCCESS {
             return None;
         }
-        let adad_harfiyat = usize::try_from(hajm_mutah).ok()?.div_euclid(2).min(buffer.len());
+        let adad_harfiyat = usize::try_from(hajm_mutah)
+            .ok()?
+            .div_euclid(2)
+            .min(buffer.len());
         let harfiyat = buffer.get(..adad_harfiyat)?;
-        let tul = harfiyat.iter().position(|harf| *harf == 0).unwrap_or(harfiyat.len());
-        let nass = String::from_utf16_lossy(harfiyat.get(..tul)?).trim().to_owned();
+        let tul = harfiyat
+            .iter()
+            .position(|harf| *harf == 0)
+            .unwrap_or(harfiyat.len());
+        let nass = String::from_utf16_lossy(harfiyat.get(..tul)?)
+            .trim()
+            .to_owned();
         (!nass.is_empty()).then_some(nass)
     }
 

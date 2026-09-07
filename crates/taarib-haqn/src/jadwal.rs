@@ -31,7 +31,11 @@ impl KhatfJadwal {
     /// An empty hook set, named for the log and the diagnostics bundle.
     #[must_use]
     pub const fn jadeed(ism: String) -> Self {
-        Self { ism, khanat: Vec::new(), athar: Vec::new() }
+        Self {
+            ism,
+            khanat: Vec::new(),
+            athar: Vec::new(),
+        }
     }
 
     /// What this set hooks, as the log names it.
@@ -98,7 +102,12 @@ impl KhatfJadwal {
         unsafe { iktub_muashir(mawdi, badil, asli, ism) }?;
 
         self.athar.push(format!("hooked {ism} at slot {khana}"));
-        self.khanat.push(KhanaMakhtufa { khana: mawdi, asli, badil, ism });
+        self.khanat.push(KhanaMakhtufa {
+            khana: mawdi,
+            asli,
+            badil,
+            ism,
+        });
         Ok(asli)
     }
 
@@ -131,8 +140,10 @@ impl KhatfJadwal {
                      hooked it afterwards and restoring now would break it",
                     sijill.ism
                 ));
-                self.athar
-                    .push(format!("{} left in place: hooked by something else", sijill.ism));
+                self.athar.push(format!(
+                    "{} left in place: hooked by something else",
+                    sijill.ism
+                ));
                 continue;
             }
 
@@ -146,7 +157,10 @@ impl KhatfJadwal {
         if aalik.is_empty() {
             return Ok(());
         }
-        Err(KhataHaqn::FakkKhatfFashil { mawdi: self.ism.clone(), sabab: aalik.join("; ") })
+        Err(KhataHaqn::FakkKhatfFashil {
+            mawdi: self.ism.clone(),
+            sabab: aalik.join("; "),
+        })
     }
 }
 

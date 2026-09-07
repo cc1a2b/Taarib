@@ -62,7 +62,10 @@ fn khutut() -> SilsilatKhutut {
         dalil = jidhr.parent();
     }
     let Some(masar) = masar else {
-        panic!("no Arabic font found at or above {}", env!("CARGO_MANIFEST_DIR"));
+        panic!(
+            "no Arabic font found at or above {}",
+            env!("CARGO_MANIFEST_DIR")
+        );
     };
     let bayt = fs::read(&masar).unwrap_or_else(|_| panic!("{} unreadable", masar.display()));
     let khatt = MawridKhatt::jadeed(Arc::new(bayt), 0)
@@ -92,7 +95,9 @@ fn ikhtibar_al_safha_maqsusa_ila_imtidad_al_rasf() {
     let khiyarat = KhiyaratRasf::default();
     let mabniya = lawha(khiyarat);
 
-    let Some(safha) = mabniya.safahat.first() else { panic!("the atlas has a page") };
+    let Some(safha) = mabniya.safahat.first() else {
+        panic!("the atlas has a page")
+    };
     assert!(
         safha.irtifa < khiyarat.aqsa_irtifa,
         "two dozen glyphs at {HAJM}px filled {} of the {} rows the page was opened at",
@@ -136,17 +141,29 @@ fn ikhtibar_bayt_al_safha_tusawi_al_mustatil_al_maqsus() {
 #[test]
 fn ikhtibar_al_abaad_al_musajjala_tatbaa_al_qass() {
     let mabniya = lawha(KhiyaratRasf::default());
-    let Some(safha) = mabniya.safahat.first() else { panic!("the atlas has a page") };
-    assert_eq!(mabniya.khareeta.abaad_safha(0), Some((safha.ard, safha.irtifa)));
+    let Some(safha) = mabniya.safahat.first() else {
+        panic!("the atlas has a page")
+    };
+    assert_eq!(
+        mabniya.khareeta.abaad_safha(0),
+        Some((safha.ard, safha.irtifa))
+    );
 
     let mafatih = mabniya.khareeta.mafatih();
-    let Some(miftah) = mafatih.first() else { panic!("the map holds a glyph") };
-    let Some(mawdi) = mabniya.khareeta.mawdi(*miftah) else { panic!("the glyph has a place") };
+    let Some(miftah) = mafatih.first() else {
+        panic!("the map holds a glyph")
+    };
+    let Some(mawdi) = mabniya.khareeta.mawdi(*miftah) else {
+        panic!("the glyph has a place")
+    };
     let Some(ihdathiyat) = mabniya.khareeta.ihdathiyat(mawdi) else {
         panic!("the glyph's page has a recorded size")
     };
     for qeema in [ihdathiyat.s0, ihdathiyat.a0, ihdathiyat.s1, ihdathiyat.a1] {
-        assert!((0.0..=1.0).contains(&qeema), "a texture coordinate outside the page: {qeema}");
+        assert!(
+            (0.0..=1.0).contains(&qeema),
+            "a texture coordinate outside the page: {qeema}"
+        );
     }
 }
 
@@ -156,11 +173,20 @@ fn ikhtibar_al_abaad_al_musajjala_tatbaa_al_qass() {
 fn ikhtibar_al_namat_al_muhafiz_yudawwir_wa_yaqusu() {
     let khiyarat = KhiyaratRasf::muhafiz();
     let mabniya = lawha(khiyarat);
-    let Some(safha) = mabniya.safahat.first() else { panic!("the atlas has a page") };
+    let Some(safha) = mabniya.safahat.first() else {
+        panic!("the atlas has a page")
+    };
 
-    assert!(safha.irtifa.is_power_of_two(), "{} is not a power of two", safha.irtifa);
+    assert!(
+        safha.irtifa.is_power_of_two(),
+        "{} is not a power of two",
+        safha.irtifa
+    );
     assert!(safha.irtifa < khiyarat.aqsa_irtifa);
-    assert_eq!(safha.bayt.len(), usize::from(safha.ard) * usize::from(safha.irtifa));
+    assert_eq!(
+        safha.bayt.len(),
+        usize::from(safha.ard) * usize::from(safha.irtifa)
+    );
 }
 
 /// A compiled atlas crosses into the glyph transport, page sizes and all.
@@ -174,11 +200,19 @@ fn ikhtibar_jisr_al_lawha_ila_al_naql() {
         mabniya.khareeta.adad_safahat(),
         "every page came across"
     );
-    assert_eq!(jahiza.adad(), mabniya.khareeta.adad(), "every glyph came across");
+    assert_eq!(
+        jahiza.adad(),
+        mabniya.khareeta.adad(),
+        "every glyph came across"
+    );
 
     for (miftah, mawdi) in mabniya.khareeta.murattaba() {
         let khana = MiftahKhana::min_miftah_shakl(miftah);
-        assert_eq!(jahiza.mawdi(khana), Some(mawdi), "{khana} kept its rectangle");
+        assert_eq!(
+            jahiza.mawdi(khana),
+            Some(mawdi),
+            "{khana} kept its rectangle"
+        );
         assert_eq!(
             jahiza.qiyas_safha(mawdi.safha),
             mabniya.khareeta.abaad_safha(mawdi.safha),
@@ -204,7 +238,11 @@ fn ikhtibar_al_jisr_yarfud_takrar_al_miftah() {
         NamatSafha::Taghtiya,
     )
     .expect("two buckets of one glyph pack");
-    assert_eq!(mabniya.khareeta.adad(), 2, "the compiled atlas really does hold both");
+    assert_eq!(
+        mabniya.khareeta.adad(),
+        2,
+        "the compiled atlas really does hold both"
+    );
 
     let khata = LawhaJahiza::min_lawha(&mabniya)
         .expect_err("two images for one transport key is a refusal");

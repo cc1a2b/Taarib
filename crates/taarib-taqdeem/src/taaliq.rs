@@ -136,7 +136,16 @@ impl Taaliq {
         murajaa: RuqaaRevision,
         waqt: String,
     ) -> Self {
-        Self { id, mawdi, kaatib, miftah_malik: None, matn, murajaa, waqt, muhall: false }
+        Self {
+            id,
+            mawdi,
+            kaatib,
+            miftah_malik: None,
+            matn,
+            murajaa,
+            waqt,
+            muhall: false,
+        }
     }
 
     /// Its identity within the thread.
@@ -233,7 +242,11 @@ impl TaaliqatMusawwada {
     /// An empty thread for one submission.
     #[must_use]
     pub const fn jadeeda(ruqaa: RuqaaId) -> Self {
-        Self { ruqaa, taaliqat: Vec::new(), talia: 1 }
+        Self {
+            ruqaa,
+            taaliqat: Vec::new(),
+            talia: 1,
+        }
     }
 
     /// The submission these comments belong to.
@@ -288,38 +301,56 @@ impl TaaliqatMusawwada {
     /// workspace shows beside that string.
     #[must_use]
     pub fn bi_nass(&self, nass: NassId) -> Vec<&Taaliq> {
-        self.taaliqat.iter().filter(|taaliq| taaliq.mawdi() == Some(nass)).collect()
+        self.taaliqat
+            .iter()
+            .filter(|taaliq| taaliq.mawdi() == Some(nass))
+            .collect()
     }
 
     /// Every comment about the submission as a whole.
     #[must_use]
     pub fn ala_almusawwada(&self) -> Vec<&Taaliq> {
-        self.taaliqat.iter().filter(|taaliq| !taaliq.murtabit()).collect()
+        self.taaliqat
+            .iter()
+            .filter(|taaliq| !taaliq.murtabit())
+            .collect()
     }
 
     /// Every comment written against one revision.
     #[must_use]
     pub fn bi_murajaa(&self, murajaa: RuqaaRevision) -> Vec<&Taaliq> {
-        self.taaliqat.iter().filter(|taaliq| taaliq.murajaa() == murajaa).collect()
+        self.taaliqat
+            .iter()
+            .filter(|taaliq| taaliq.murajaa() == murajaa)
+            .collect()
     }
 
     /// Every comment written after `murajaa`, for the "new since last revision"
     /// pass of a second review.
     #[must_use]
     pub fn baad(&self, murajaa: RuqaaRevision) -> Vec<&Taaliq> {
-        self.taaliqat.iter().filter(|taaliq| taaliq.baad(murajaa)).collect()
+        self.taaliqat
+            .iter()
+            .filter(|taaliq| taaliq.baad(murajaa))
+            .collect()
     }
 
     /// How many anchored comments are still unresolved.
     #[must_use]
     pub fn adad_muallaq(&self) -> usize {
-        self.taaliqat.iter().filter(|taaliq| taaliq.murtabit() && !taaliq.muhall()).count()
+        self.taaliqat
+            .iter()
+            .filter(|taaliq| taaliq.murtabit() && !taaliq.muhall())
+            .count()
     }
 
     /// How many comments of any kind are still unresolved.
     #[must_use]
     pub fn adad_muallaq_kulli(&self) -> usize {
-        self.taaliqat.iter().filter(|taaliq| !taaliq.muhall()).count()
+        self.taaliqat
+            .iter()
+            .filter(|taaliq| !taaliq.muhall())
+            .count()
     }
 
     /// The strings that still carry an unresolved comment.
@@ -391,7 +422,10 @@ impl TaaliqatMusawwada {
     /// The thread of one revision.
     #[must_use]
     pub fn khayt(&self, murajaa: RuqaaRevision) -> KhaytMurajaa<'_> {
-        KhaytMurajaa { murajaa, taaliqat: self.bi_murajaa(murajaa) }
+        KhaytMurajaa {
+            murajaa,
+            taaliqat: self.bi_murajaa(murajaa),
+        }
     }
 }
 
@@ -424,19 +458,30 @@ impl<'a> KhaytMurajaa<'a> {
     /// How many anchored comments in it are unresolved.
     #[must_use]
     pub fn adad_muallaq(&self) -> usize {
-        self.taaliqat.iter().filter(|taaliq| taaliq.murtabit() && !taaliq.muhall()).count()
+        self.taaliqat
+            .iter()
+            .filter(|taaliq| taaliq.murtabit() && !taaliq.muhall())
+            .count()
     }
 
     /// The comments the owner wrote.
     #[must_use]
     pub fn min_almalik(&self) -> Vec<&'a Taaliq> {
-        self.taaliqat.iter().filter(|taaliq| taaliq.min_almalik()).copied().collect()
+        self.taaliqat
+            .iter()
+            .filter(|taaliq| taaliq.min_almalik())
+            .copied()
+            .collect()
     }
 
     /// The comments the contributor wrote.
     #[must_use]
     pub fn min_almusahim(&self) -> Vec<&'a Taaliq> {
-        self.taaliqat.iter().filter(|taaliq| !taaliq.min_almalik()).copied().collect()
+        self.taaliqat
+            .iter()
+            .filter(|taaliq| !taaliq.min_almalik())
+            .copied()
+            .collect()
     }
 
     /// The thread's header line, in Arabic.

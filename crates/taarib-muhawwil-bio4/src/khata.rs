@@ -221,7 +221,7 @@ impl Tafsir for KhataBio4 {
         match self {
             Self::KhanatNafida { .. } | Self::ShaklAkbarMinKhana { .. } => {
                 Khutwa::IkhtiyarKhattAakhar
-            }
+            },
             Self::MalafQaseer { .. }
             | Self::SihrGhayrMutabaq { .. }
             | Self::BunyaGhayrMutawaqqaa { .. }
@@ -230,7 +230,7 @@ impl Tafsir for KhataBio4 {
             | Self::HimlGhayrMutabaq { .. } => Khutwa::TahaqquqSalamatLuba,
             Self::SighatSuraGhayrMaduma { .. } | Self::SighatLawnGhayrMaduma { .. } => {
                 Khutwa::TahdithTaarib
-            }
+            },
             Self::QiyasatMarfuda { .. } => Khutwa::FathTashkhis,
         }
     }
@@ -239,32 +239,31 @@ impl Tafsir for KhataBio4 {
         match self {
             Self::MalafQaseer { .. } => {
                 "أحد ملفات خطوط اللعبة أقصر مما تعلنه ترويسته؛ يبدو أنه تالف أو ناقص.".to_owned()
-            }
+            },
             Self::SihrGhayrMutabaq { .. } => {
                 "ملف خطٍّ لا يحمل العلامة التي تبدأ بها ملفات هذه الصيغة.".to_owned()
-            }
+            },
             Self::BunyaGhayrMutawaqqaa { .. } => {
                 "بنية ملف الخطّ لا تطابق ما تفهمه هذه النسخة من تعريب.".to_owned()
-            }
+            },
             Self::SighatSuraGhayrMaduma { .. } | Self::SighatLawnGhayrMaduma { .. } => {
                 "ملف الخطّ يستعمل صيغة صورة لا تدعمها هذه النسخة من تعريب.".to_owned()
-            }
+            },
             Self::ShabakaGhayrMutasiqa { .. } => {
                 "شبكة خانات الخطّ لا تنتج الارتفاع الذي يعلنه الملف؛ رُفض قبل الكتابة.".to_owned()
-            }
+            },
             Self::KhanatNafida { .. } => {
                 "أشكال العربية المطلوبة أكثر من الخانات التي يتيحها خطّ اللعبة.".to_owned()
-            }
+            },
             Self::ShaklAkbarMinKhana { .. } => {
                 "أحد الأشكال أكبر من خانة واحدة في شبكة خطّ اللعبة.".to_owned()
-            }
+            },
             Self::HajmMufrit { .. } => {
-                "ملف الخطّ يعلن حجمًا أكبر مما يقبله هذا البناء، ورُفض قبل حجز أي ذاكرة له."
-                    .to_owned()
-            }
+                "ملف الخطّ يعلن حجمًا أكبر مما يقبله هذا البناء، ورُفض قبل حجز أي ذاكرة له.".to_owned()
+            },
             Self::HimlGhayrMutabaq { .. } => {
                 "طول بيانات الصورة لا يوافق أبعادها ولا صيغتها.".to_owned()
-            }
+            },
             Self::QiyasatMarfuda { .. } => "قياسات الخطّ المطلوبة غير صالحة.".to_owned(),
         }
     }
@@ -279,25 +278,30 @@ impl Tafsir for KhataBio4 {
             let _ = siyaq.insert(miftah.to_owned(), qeema);
         };
         match self {
-            Self::MalafQaseer { haql, mawqi, tul, matlub } => {
+            Self::MalafQaseer {
+                haql,
+                mawqi,
+                tul,
+                matlub,
+            } => {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("mawqi", QeemaSiyaq::Hajm(*mawqi));
                 daa("tul", QeemaSiyaq::Hajm(*tul));
                 daa("matlub", QeemaSiyaq::Hajm(*matlub));
-            }
+            },
             Self::SihrGhayrMutabaq { wujid } => {
                 daa("wujid", QeemaSiyaq::Hajm(u64::from(*wujid)));
-            }
+            },
             Self::BunyaGhayrMutawaqqaa { haql, qeema, sabab } => {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("qeema", QeemaSiyaq::Hajm(*qeema));
                 daa("sabab", QeemaSiyaq::Nass((*sabab).to_owned()));
-            }
+            },
             Self::SighatSuraGhayrMaduma { raqm, ism }
             | Self::SighatLawnGhayrMaduma { raqm, ism } => {
                 daa("raqm", QeemaSiyaq::Hajm(u64::from(*raqm)));
                 daa("ism", QeemaSiyaq::Nass((*ism).to_owned()));
-            }
+            },
             Self::ShabakaGhayrMutasiqa {
                 hajm_khana,
                 aamida,
@@ -308,35 +312,50 @@ impl Tafsir for KhataBio4 {
                 daa("hajm_khana", QeemaSiyaq::Hajm(u64::from(*hajm_khana)));
                 daa("aamida", QeemaSiyaq::Hajm(u64::from(*aamida)));
                 daa("khanat", QeemaSiyaq::Hajm(u64::from(*khanat)));
-                daa("irtifa_muallan", QeemaSiyaq::Hajm(u64::from(*irtifa_muallan)));
+                daa(
+                    "irtifa_muallan",
+                    QeemaSiyaq::Hajm(u64::from(*irtifa_muallan)),
+                );
                 daa("irtifa_mahsub", QeemaSiyaq::Hajm(u64::from(*irtifa_mahsub)));
-            }
+            },
             Self::KhanatNafida { matlub, mutah } => {
                 daa("matlub", QeemaSiyaq::Hajm(u64::from(*matlub)));
                 daa("mutah", QeemaSiyaq::Hajm(u64::from(*mutah)));
-            }
-            Self::ShaklAkbarMinKhana { khatt, muarrif, ard, irtifa, hajm_khana } => {
+            },
+            Self::ShaklAkbarMinKhana {
+                khatt,
+                muarrif,
+                ard,
+                irtifa,
+                hajm_khana,
+            } => {
                 daa("khatt", QeemaSiyaq::Hajm(u64::from(*khatt)));
                 daa("muarrif", QeemaSiyaq::Hajm(u64::from(*muarrif)));
                 daa("ard", QeemaSiyaq::Hajm(u64::from(*ard)));
                 daa("irtifa", QeemaSiyaq::Hajm(u64::from(*irtifa)));
                 daa("hajm_khana", QeemaSiyaq::Hajm(u64::from(*hajm_khana)));
-            }
+            },
             Self::HajmMufrit { haql, qeema, saqf } => {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("qeema", QeemaSiyaq::Hajm(*qeema));
                 daa("saqf", QeemaSiyaq::Hajm(*saqf));
-            }
-            Self::HimlGhayrMutabaq { sigha, ard, irtifa, tul, matlub } => {
+            },
+            Self::HimlGhayrMutabaq {
+                sigha,
+                ard,
+                irtifa,
+                tul,
+                matlub,
+            } => {
                 daa("sigha", QeemaSiyaq::Nass((*sigha).to_owned()));
                 daa("ard", QeemaSiyaq::Hajm(u64::from(*ard)));
                 daa("irtifa", QeemaSiyaq::Hajm(u64::from(*irtifa)));
                 daa("tul", QeemaSiyaq::Hajm(*tul));
                 daa("matlub", QeemaSiyaq::Hajm(*matlub));
-            }
+            },
             Self::QiyasatMarfuda { sabab } => {
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
         }
         siyaq
     }

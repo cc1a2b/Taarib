@@ -48,12 +48,10 @@ use taarib_muhawwil_godot::pck::Mawrid as _;
 use taarib_muhawwil_godot::pck::hawiya::{Hawiya, ISDAR_AWWAL, IsdarHawiya};
 use taarib_muhawwil_godot::pck::tarjama::{
     ISDAR_SIGHA_THALITH, JeelMawrid, Khasiya, MawridTarjama, NAW_BASITA, NAW_MURAKKAZA,
-    NAW_MURAKKAZA_QADEEM, Qeema, ShaklRasail, Tarjama, TarjamaMurakkaza, THABIT_BASMA,
-    basma_godot,
+    NAW_MURAKKAZA_QADEEM, Qeema, ShaklRasail, THABIT_BASMA, Tarjama, TarjamaMurakkaza, basma_godot,
 };
 use taarib_muhawwil_godot::tawseel::{
-    MIFTAH_TARJAMAT, MIFTAH_THAQAFA_IHTIYAT, MIFTAH_THAQAFA_IKHTIBAR, MawdiTarjama,
-    TawseelThalith,
+    MIFTAH_TARJAMAT, MIFTAH_THAQAFA_IHTIYAT, MIFTAH_THAQAFA_IKHTIBAR, MawdiTarjama, TawseelThalith,
 };
 
 // ---------------------------------------------------------------------------
@@ -97,14 +95,32 @@ fn mawrid_basit_yadur_bila_taghyeer() {
     let Ok(mawrid) = MawridTarjama::min_bayt(MAWRID_BASIT) else {
         panic!("Godot 3.6's own Translation resource did not read");
     };
-    assert_eq!(mawrid.ghilaf().isdar, ISDAR_SIGHA_THALITH, "the engine wrote format 3");
-    assert_eq!(mawrid.ghilaf().muharrik, (3, 6), "the engine recorded its own version");
-    assert_eq!(mawrid.ghilaf().mahjuz.len(), 14, "format 3 carries fourteen reserved words");
+    assert_eq!(
+        mawrid.ghilaf().isdar,
+        ISDAR_SIGHA_THALITH,
+        "the engine wrote format 3"
+    );
+    assert_eq!(
+        mawrid.ghilaf().muharrik,
+        (3, 6),
+        "the engine recorded its own version"
+    );
+    assert_eq!(
+        mawrid.ghilaf().mahjuz.len(),
+        14,
+        "format 3 carries fourteen reserved words"
+    );
     assert_eq!(mawrid.naw(), NAW_BASITA);
     assert_eq!(mawrid.ghilaf().jeel(), JeelMawrid::Thalith);
 
-    let Ok(kutiba) = mawrid.ila_bayt() else { panic!("the resource did not write back") };
-    assert_eq!(kutiba.as_slice(), MAWRID_BASIT, "the round trip is not byte-identical");
+    let Ok(kutiba) = mawrid.ila_bayt() else {
+        panic!("the resource did not write back")
+    };
+    assert_eq!(
+        kutiba.as_slice(),
+        MAWRID_BASIT,
+        "the round trip is not byte-identical"
+    );
 }
 
 /// The same, for the hash-table form.
@@ -113,12 +129,22 @@ fn mawrid_murakkaz_yadur_bila_taghyeer() {
     let Ok(mawrid) = MawridTarjama::min_bayt(MAWRID_MURAKKAZ) else {
         panic!("Godot 3.6's own PHashTranslation resource did not read");
     };
-    assert_eq!(mawrid.naw(), NAW_MURAKKAZA_QADEEM, "Godot 3 calls it PHashTranslation");
+    assert_eq!(
+        mawrid.naw(),
+        NAW_MURAKKAZA_QADEEM,
+        "Godot 3 calls it PHashTranslation"
+    );
     assert!(mawrid.murakkaza());
     assert_eq!(mawrid.ghilaf().isdar, ISDAR_SIGHA_THALITH);
 
-    let Ok(kutiba) = mawrid.ila_bayt() else { panic!("the resource did not write back") };
-    assert_eq!(kutiba.as_slice(), MAWRID_MURAKKAZ, "the round trip is not byte-identical");
+    let Ok(kutiba) = mawrid.ila_bayt() else {
+        panic!("the resource did not write back")
+    };
+    assert_eq!(
+        kutiba.as_slice(),
+        MAWRID_MURAKKAZ,
+        "the round trip is not byte-identical"
+    );
 }
 
 /// Godot 3 stores `Translation::messages` as a flat `PoolStringArray`.
@@ -137,11 +163,17 @@ fn rasail_thalitha_masfufa_musattaha() {
     };
     assert_eq!(nusus.len(), RASAIL.len() * 2, "source and target alternate");
 
-    let Ok(tarjama) = Tarjama::min_mawrid(&mawrid) else { panic!("the messages did not read") };
+    let Ok(tarjama) = Tarjama::min_mawrid(&mawrid) else {
+        panic!("the messages did not read")
+    };
     assert_eq!(tarjama.shakl(), ShaklRasail::Masfufa);
     assert_eq!(tarjama.thaqafa(), "ar");
     for (masdar, hadaf) in RASAIL {
-        assert_eq!(tarjama.ibhath(masdar), Some(hadaf), "{masdar} did not resolve");
+        assert_eq!(
+            tarjama.ibhath(masdar),
+            Some(hadaf),
+            "{masdar} did not resolve"
+        );
     }
 }
 
@@ -214,7 +246,9 @@ fn basma_tutabiq_jadwal_al_muharrik() {
 /// so what is asserted is the property the engine actually depends on.
 #[test]
 fn murakkaza_muwallada_tujib() {
-    let Ok(asl) = Tarjama::min_bayt(MAWRID_BASIT) else { panic!("the fixture did not read") };
+    let Ok(asl) = Tarjama::min_bayt(MAWRID_BASIT) else {
+        panic!("the fixture did not read")
+    };
     let Ok(jadwal) = TarjamaMurakkaza::min_tarjama(&asl) else {
         panic!("the hash table did not generate");
     };
@@ -226,7 +260,10 @@ fn murakkaza_muwallada_tujib() {
         );
     }
     assert!(
-        matches!(jadwal.ibhath("a string that is not in this table"), Ok(None)),
+        matches!(
+            jadwal.ibhath("a string that is not in this table"),
+            Ok(None)
+        ),
         "a miss is a miss and not an error"
     );
 }
@@ -241,8 +278,12 @@ fn murakkaza_muwallada_tujib() {
 /// rather than through this crate's own reader, so that a reader and a writer
 /// that agreed on a wrong offset could not both pass.
 fn sighat_mawrid(bayt: &[u8]) -> u32 {
-    let Some(khana) = bayt.get(20..24) else { panic!("the written resource has no header") };
-    let Ok(arbaa) = <[u8; 4]>::try_from(khana) else { panic!("four bytes are four bytes") };
+    let Some(khana) = bayt.get(20..24) else {
+        panic!("the written resource has no header")
+    };
+    let Ok(arbaa) = <[u8; 4]>::try_from(khana) else {
+        panic!("four bytes are four bytes")
+    };
     u32::from_le_bytes(arbaa)
 }
 
@@ -264,7 +305,9 @@ fn tarjama_thalitha_bi_sighat_thalitha() {
     };
     assert_eq!(sighat_mawrid(&bayt), ISDAR_SIGHA_THALITH);
 
-    let Ok(mawrid) = MawridTarjama::min_bayt(&bayt) else { panic!("it did not read back") };
+    let Ok(mawrid) = MawridTarjama::min_bayt(&bayt) else {
+        panic!("it did not read back")
+    };
     assert_eq!(mawrid.naw(), NAW_BASITA);
     assert_eq!(mawrid.ghilaf().mahjuz.len(), 14);
     assert_eq!(mawrid.ghilaf().muharrik, (3, 0));
@@ -279,7 +322,9 @@ fn tarjama_thalitha_bi_sighat_thalitha() {
     };
     assert_eq!(nusus.len(), RASAIL.len() * 2);
 
-    let Ok(qari) = Tarjama::min_mawrid(&mawrid) else { panic!("the messages did not read") };
+    let Ok(qari) = Tarjama::min_mawrid(&mawrid) else {
+        panic!("the messages did not read")
+    };
     for (masdar, hadaf) in RASAIL {
         assert_eq!(qari.ibhath(masdar), Some(hadaf));
     }
@@ -297,9 +342,14 @@ fn tarjama_rabia_tabqa_qamusan() {
         panic!("the Godot 4 resource did not write");
     };
     assert_eq!(sighat_mawrid(&bayt), 4);
-    let Ok(mawrid) = MawridTarjama::min_bayt(&bayt) else { panic!("it did not read back") };
+    let Ok(mawrid) = MawridTarjama::min_bayt(&bayt) else {
+        panic!("it did not read back")
+    };
     assert_eq!(mawrid.ghilaf().mahjuz.len(), 11);
-    assert!(matches!(mawrid.khasiya("messages"), Some(Qeema::Qamus { .. })));
+    assert!(matches!(
+        mawrid.khasiya("messages"),
+        Some(Qeema::Qamus { .. })
+    ));
 }
 
 /// The hash-table form written for Godot 3 is called `PHashTranslation`.
@@ -309,7 +359,9 @@ fn tarjama_rabia_tabqa_qamusan() {
 /// whose class the engine could not find.
 #[test]
 fn murakkaza_thalitha_tusamma_phash() {
-    let Ok(asl) = Tarjama::min_bayt(MAWRID_BASIT) else { panic!("the fixture did not read") };
+    let Ok(asl) = Tarjama::min_bayt(MAWRID_BASIT) else {
+        panic!("the fixture did not read")
+    };
     let Ok(jadwal) = TarjamaMurakkaza::min_tarjama(&asl) else {
         panic!("the hash table did not generate");
     };
@@ -318,13 +370,17 @@ fn murakkaza_thalitha_tusamma_phash() {
         panic!("the Godot 3 hash table did not write");
     };
     assert_eq!(sighat_mawrid(&thalith), ISDAR_SIGHA_THALITH);
-    let Ok(mawrid) = MawridTarjama::min_bayt(&thalith) else { panic!("it did not read back") };
+    let Ok(mawrid) = MawridTarjama::min_bayt(&thalith) else {
+        panic!("it did not read back")
+    };
     assert_eq!(mawrid.naw(), NAW_MURAKKAZA_QADEEM);
 
     let Ok(rabi) = jadwal.ila_bayt(JeelMawrid::Rabi, (4, 3)) else {
         panic!("the Godot 4 hash table did not write");
     };
-    let Ok(mawrid) = MawridTarjama::min_bayt(&rabi) else { panic!("it did not read back") };
+    let Ok(mawrid) = MawridTarjama::min_bayt(&rabi) else {
+        panic!("it did not read back")
+    };
     assert_eq!(mawrid.naw(), NAW_MURAKKAZA);
 }
 
@@ -344,7 +400,10 @@ fn wasf_rabi_marfud_fi_sighat_thalitha() {
     );
 
     let rabi = MawridTarjama::li_jeel(NAW_BASITA, (4, 3), JeelMawrid::Rabi, khasais);
-    assert!(rabi.ila_bayt().is_ok(), "the same value is ordinary on Godot 4");
+    assert!(
+        rabi.ila_bayt().is_ok(),
+        "the same value is ordinary on Godot 4"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -354,27 +413,46 @@ fn wasf_rabi_marfud_fi_sighat_thalitha() {
 /// A real PCK v1 reads, its index round-trips, and its entries verify.
 #[test]
 fn hazmat_al_muharrik_tuqra_wa_tadur() {
-    let Ok(hawiya) = Hawiya::min_bayt(HAZMA) else { panic!("the engine's own pack did not read") };
+    let Ok(hawiya) = Hawiya::min_bayt(HAZMA) else {
+        panic!("the engine's own pack did not read")
+    };
     let tarwisa = hawiya.tarwisa();
     assert_eq!(tarwisa.isdar, IsdarHawiya::Awwal, "Godot 3 writes PCK v1");
     assert_eq!(tarwisa.isdar.raqm(), ISDAR_AWWAL);
     assert_eq!(tarwisa.muharrik, (3, 6, 0));
-    assert_eq!(tarwisa.qaida, 0, "version 1 has no file base and measures from the package");
+    assert_eq!(
+        tarwisa.qaida, 0,
+        "version 1 has no file base and measures from the package"
+    );
     assert!(!tarwisa.fahras_mushaffar());
-    assert!(!hawiya.mudmaj(), "this one is a loose pack, not appended to an executable");
+    assert!(
+        !hawiya.mudmaj(),
+        "this one is a loose pack, not appended to an executable"
+    );
     assert_eq!(hawiya.madakhil().len(), 4);
 
-    let Ok(kutiba) = hawiya.fahras().ila_bayt() else { panic!("the index did not write back") };
-    let Some(asli) = usize::try_from(hawiya.fahras().tul()).ok().and_then(|tul| HAZMA.get(..tul))
+    let Ok(kutiba) = hawiya.fahras().ila_bayt() else {
+        panic!("the index did not write back")
+    };
+    let Some(asli) = usize::try_from(hawiya.fahras().tul())
+        .ok()
+        .and_then(|tul| HAZMA.get(..tul))
     else {
         panic!("the index length is outside the file it was read from");
     };
-    assert_eq!(kutiba.as_slice(), asli, "the index round trip is not byte-identical");
+    assert_eq!(
+        kutiba.as_slice(),
+        asli,
+        "the index round trip is not byte-identical"
+    );
 
     // Extraction verifies each entry against the MD5 the engine recorded, so a
     // successful read is also a checksum match.
     for madkhal in hawiya.madakhil() {
-        assert!(madkhal.bi_basma(), "the engine records a digest for every entry");
+        assert!(
+            madkhal.bi_basma(),
+            "the engine records a digest for every entry"
+        );
         let Ok(bayt) = hawiya.istakhrij(HAZMA, madkhal, None) else {
             panic!("{} did not extract", madkhal.masar);
         };
@@ -395,7 +473,11 @@ fn hazmat_al_muharrik_tuqra_wa_tadur() {
 fn mujallad_ikhtibar(ism: &str) -> PathBuf {
     let masar = std::env::temp_dir().join(format!("taarib-godot3-{ism}"));
     let _ = std::fs::remove_dir_all(&masar);
-    assert!(std::fs::create_dir_all(&masar).is_ok(), "{} could not be created", masar.display());
+    assert!(
+        std::fs::create_dir_all(&masar).is_ok(),
+        "{} could not be created",
+        masar.display()
+    );
     masar
 }
 
@@ -424,28 +506,47 @@ fn tawseel_yaktub_ma_yaqrauhu_godot() {
     let jidhr = mujallad_ikhtibar("tawseel");
     let tawseel = tawseel_ikhtibar(&jidhr);
 
-    let Ok(natija) = tawseel.hayyi() else { panic!("the delivery installed nothing") };
+    let Ok(natija) = tawseel.hayyi() else {
+        panic!("the delivery installed nothing")
+    };
     assert!(natija.wusul(), "the translated text must reach the game");
-    assert!(natija.mawrid.muakkad(), "the resource rung must be confirmed");
-    assert!(natija.thaqafa.muakkad(), "the locale rung must be confirmed");
+    assert!(
+        natija.mawrid.muakkad(),
+        "the resource rung must be confirmed"
+    );
+    assert!(
+        natija.thaqafa.muakkad(),
+        "the locale rung must be confirmed"
+    );
     assert!(
         !natija.rasm.muakkad(),
         "no takeover was declared, so the shaping concern must report unmet — a delivery \
          that claimed the text was legible would be the report this whole module exists to \
          avoid"
     );
-    assert!(!natija.muakkad(), "delivery alone is not the Godot 3 path complete");
+    assert!(
+        !natija.muakkad(),
+        "delivery alone is not the Godot 3 path complete"
+    );
 
     // The resource is a Godot 3 one, at the place the setting names, holding
     // the Arabic.
     let masar = tawseel.mawdi().mutlaq_masar();
     assert!(masar.is_file(), "{} was not written", masar.display());
-    let Ok(bayt) = std::fs::read(masar) else { panic!("the written resource did not read") };
+    let Ok(bayt) = std::fs::read(masar) else {
+        panic!("the written resource did not read")
+    };
     assert_eq!(sighat_mawrid(&bayt), ISDAR_SIGHA_THALITH);
-    let Ok(qari) = Tarjama::min_bayt(&bayt) else { panic!("the written resource did not parse") };
+    let Ok(qari) = Tarjama::min_bayt(&bayt) else {
+        panic!("the written resource did not parse")
+    };
     assert_eq!(qari.thaqafa(), "ar");
     for (masdar, hadaf) in RASAIL {
-        assert_eq!(qari.ibhath(masdar), Some(hadaf), "{masdar} is not in the delivered file");
+        assert_eq!(
+            qari.ibhath(masdar),
+            Some(hadaf),
+            "{masdar} is not in the delivered file"
+        );
     }
 
     // The override is in Godot 3's namespace and Godot 3's spelling, and it
@@ -453,9 +554,15 @@ fn tawseel_yaktub_ma_yaqrauhu_godot() {
     let Ok(nass) = std::fs::read_to_string(tawseel.tajawuz().masar()) else {
         panic!("the override was not written");
     };
-    assert!(nass.starts_with("; taarib:tajawuz"), "the marker identifies the file as ours");
-    assert!(nass.contains("[locale]"), "Godot 3's settings live under locale/, not under \
-                                        internationalization/");
+    assert!(
+        nass.starts_with("; taarib:tajawuz"),
+        "the marker identifies the file as ours"
+    );
+    assert!(
+        nass.contains("[locale]"),
+        "Godot 3's settings live under locale/, not under \
+                                        internationalization/"
+    );
     assert!(nass.contains("test=\"ar\""));
     assert!(nass.contains("fallback=\"ar\""));
     assert!(
@@ -464,13 +571,24 @@ fn tawseel_yaktub_ma_yaqrauhu_godot() {
          translation list the game starts without"
     );
     assert!(!nass.contains("PackedStringArray("));
-    assert!(nass.contains("res://locale/en.translation"), "the game's own entry must survive");
-    assert!(nass.contains("user://taarib/ar.translation"), "the patch's entry must be there");
+    assert!(
+        nass.contains("res://locale/en.translation"),
+        "the game's own entry must survive"
+    );
+    assert!(
+        nass.contains("user://taarib/ar.translation"),
+        "the patch's entry must be there"
+    );
     assert!(!nass.contains("internationalization/"));
 
     // Uninstalling is deleting the two files it wrote.
-    let Ok((tajawuz, mawrid)) = tawseel.tarajua() else { panic!("the uninstall refused") };
-    assert!(tajawuz && mawrid, "both files were Taarib's and both must go");
+    let Ok((tajawuz, mawrid)) = tawseel.tarajua() else {
+        panic!("the uninstall refused")
+    };
+    assert!(
+        tajawuz && mawrid,
+        "both files were Taarib's and both must go"
+    );
     assert!(!tawseel.tajawuz().masar().exists());
     assert!(!masar.exists());
     let _ = std::fs::remove_dir_all(&jidhr);
@@ -481,8 +599,13 @@ fn tawseel_yaktub_ma_yaqrauhu_godot() {
 fn tawseel_maa_istila_yuakkid_al_rasm() {
     let jidhr = mujallad_ikhtibar("istila");
     let tawseel = tawseel_ikhtibar(&jidhr).bi_istila(true);
-    let Ok(natija) = tawseel.hayyi() else { panic!("the delivery installed nothing") };
-    assert!(natija.muakkad(), "delivery plus takeover is the Godot 3 path complete");
+    let Ok(natija) = tawseel.hayyi() else {
+        panic!("the delivery installed nothing")
+    };
+    assert!(
+        natija.muakkad(),
+        "delivery plus takeover is the Godot 3 path complete"
+    );
     assert!(natija.rasm.muakkad());
     let _ = std::fs::remove_dir_all(&jidhr);
 }
@@ -525,7 +648,11 @@ fn qaima_bi_lahjat_kull_jeel() {
         MIFTAH_TARJAMAT,
         QeemaIdad::Qaima(vec!["user://taarib/ar.translation".to_owned()]),
     );
-    assert_eq!(madkhal.qism(), "locale", "Godot splits a setting path at the first slash");
+    assert_eq!(
+        madkhal.qism(),
+        "locale",
+        "Godot splits a setting path at the first slash"
+    );
     assert_eq!(madkhal.miftah_qism(), "translations");
     assert!(madkhal.satr_bi(Lahja::Thalith).contains("PoolStringArray("));
     assert!(madkhal.satr_bi(Lahja::Rabi).contains("PackedStringArray("));
@@ -540,7 +667,10 @@ fn qaima_bi_lahjat_kull_jeel() {
 fn qeema_khabitha_la_taftah_bab_al_idadat() {
     let khabith = QeemaIdad::Nass("a\"b\nc/test=\"x".to_owned());
     let nass = khabith.nass_idad_bi(Lahja::Thalith);
-    assert!(!nass.contains('\n'), "a raw newline would start a second key");
+    assert!(
+        !nass.contains('\n'),
+        "a raw newline would start a second key"
+    );
     assert!(!nass.contains('\r'));
     assert!(nass.starts_with('"') && nass.ends_with('"'));
 

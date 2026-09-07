@@ -131,9 +131,9 @@ impl Tafsir for KhataHaqn {
             Self::MasarGhayrQabil { .. } => "تعذّر بناء معبر آمن إلى دالة في اللعبة، فبدايتها لا \
                  تُنقل بأمان. تُترك هذه الدالة كما هي وتعمل اللعبة بلا تعريب لهذا الجزء."
                 .to_owned(),
-            Self::IstiradMafqud { wahda, ism, .. } => format!(
-                "لا تستورد الوحدة الدالة {ism} من {wahda}، فلا موضع لاعتراضها. لم يُعدَّل شيء."
-            ),
+            Self::IstiradMafqud { wahda, ism, .. } => {
+                format!("لا تستورد الوحدة الدالة {ism} من {wahda}، فلا موضع لاعتراضها. لم يُعدَّل شيء.")
+            },
             Self::RaasGhayrMafhum { .. } => "ترويسة وحدة اللعبة ليست بالشكل الذي يقرؤه تعريب، \
                  فلا يمكن تحديد جدول استيرادها. لم يُعدَّل شيء."
                 .to_owned(),
@@ -162,34 +162,37 @@ impl Tafsir for KhataHaqn {
             Self::HimayaGhayrQabila { oinwan, tul } => {
                 // Addresses are unsigned and the context field is signed; the
                 // hex rendering in the sentence is the authority either way.
-                let _ = siyaq
-                    .insert("oinwan".to_owned(), QeemaSiyaq::Nass(format!("0x{oinwan:x}")));
-                let _ = siyaq
-                    .insert("tul".to_owned(), QeemaSiyaq::Hajm(u64::try_from(*tul).unwrap_or(0)));
-            }
+                let _ = siyaq.insert(
+                    "oinwan".to_owned(),
+                    QeemaSiyaq::Nass(format!("0x{oinwan:x}")),
+                );
+                let _ = siyaq.insert(
+                    "tul".to_owned(),
+                    QeemaSiyaq::Hajm(u64::try_from(*tul).unwrap_or(0)),
+                );
+            },
             Self::KhatfFashil { mawdi, .. }
             | Self::KitabaMuhmala { mawdi }
             | Self::FakkKhatfFashil { mawdi, .. } => {
                 let _ = siyaq.insert("mawdi".to_owned(), QeemaSiyaq::Nass(mawdi.clone()));
-            }
+            },
             Self::MasarGhayrQabil { oinwan, .. } => {
-                let _ = siyaq
-                    .insert("oinwan".to_owned(), QeemaSiyaq::Nass(format!("0x{oinwan:x}")));
-            }
+                let _ = siyaq.insert(
+                    "oinwan".to_owned(),
+                    QeemaSiyaq::Nass(format!("0x{oinwan:x}")),
+                );
+            },
             Self::IstiradMafqud { wahda, ism, qaida } => {
                 let _ = siyaq.insert("wahda".to_owned(), QeemaSiyaq::Nass(wahda.clone()));
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-                let _ = siyaq
-                    .insert("qaida".to_owned(), QeemaSiyaq::Nass(format!("0x{qaida:x}")));
-            }
+                let _ = siyaq.insert("qaida".to_owned(), QeemaSiyaq::Nass(format!("0x{qaida:x}")));
+            },
             Self::RaasGhayrMafhum { qaida, .. } => {
-                let _ = siyaq
-                    .insert("qaida".to_owned(), QeemaSiyaq::Nass(format!("0x{qaida:x}")));
-            }
+                let _ = siyaq.insert("qaida".to_owned(), QeemaSiyaq::Nass(format!("0x{qaida:x}")));
+            },
             Self::GhayrMutahaHuna { amal } => {
-                let _ =
-                    siyaq.insert("amal".to_owned(), QeemaSiyaq::Nass((*amal).to_owned()));
-            }
+                let _ = siyaq.insert("amal".to_owned(), QeemaSiyaq::Nass((*amal).to_owned()));
+            },
         }
         siyaq
     }

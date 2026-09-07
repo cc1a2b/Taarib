@@ -172,7 +172,10 @@ impl NawQism {
     /// and [`NawQism::Tawqee`] is a single fixed block.
     #[must_use]
     pub const fn jadwal_pod(self) -> bool {
-        matches!(self, Self::Nusus | Self::Takhtit | Self::Khareeta | Self::Qiyud)
+        matches!(
+            self,
+            Self::Nusus | Self::Takhtit | Self::Khareeta | Self::Qiyud
+        )
     }
 
     /// Whether the format forbids this section from being compressed.
@@ -291,7 +294,13 @@ impl MadkhalQism {
                 fili: tul_makhzun,
             });
         }
-        Ok(Self { naw, izaha, tul_makhzun, tul_khaam, daght })
+        Ok(Self {
+            naw,
+            izaha,
+            tul_makhzun,
+            tul_khaam,
+            daght,
+        })
     }
 
     /// Writes the entry into a thirty-two byte window.

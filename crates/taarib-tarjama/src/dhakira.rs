@@ -229,7 +229,7 @@ pub fn wahhid_arabi(nass: &str) -> String {
         match harf {
             // Tashkeel (fathatan through sukun, plus the dagger alef) is
             // vocalisation and tatweel is layout; neither is language.
-            '\u{064B}'..='\u{0652}' | '\u{0670}' | '\u{0640}' => {}
+            '\u{064B}'..='\u{0652}' | '\u{0670}' | '\u{0640}' => {},
             // Alef with hamza above/below, madda, or wasla.
             '\u{0623}' | '\u{0625}' | '\u{0622}' | '\u{0671}' => natija.push('\u{0627}'),
             // Ta marbuta reads as ha at a match boundary.
@@ -271,7 +271,7 @@ pub fn wahhid_latini(nass: &str) -> String {
                 for saghir in harf.to_lowercase() {
                     natija.push(saghir);
                 }
-            }
+            },
         }
     }
     natija
@@ -352,9 +352,7 @@ pub fn miftah_muwahhad(nass: &str) -> String {
 /// for the classic reason) or a `total_cmp` incantation someone eventually
 /// forgets. Per-mille keeps a decimal place more than the interface shows,
 /// costs nothing, and makes every comparison exact.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "wajiha", derive(specta::Type))]
 #[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
 #[serde(transparent)]
@@ -367,7 +365,11 @@ impl Tashabuh {
     /// Wraps a per-mille value, clamped to the meaningful range.
     #[must_use]
     pub const fn min_alf(qeema: u16) -> Self {
-        if qeema > 1000 { Self(1000) } else { Self(qeema) }
+        if qeema > 1000 {
+            Self(1000)
+        } else {
+            Self(qeema)
+        }
     }
 
     /// The value, per-mille.
@@ -561,7 +563,9 @@ impl ThiqatQira {
     /// A measured reading, clamped to the range the engines report in.
     #[must_use]
     pub const fn maqisa(mia: u8) -> Self {
-        Self::Maqisa { mia: if mia > 100 { 100 } else { mia } }
+        Self::Maqisa {
+            mia: if mia > 100 { 100 } else { mia },
+        }
     }
 
     /// The number, when there is one.
@@ -770,7 +774,7 @@ impl AslQayd {
             HalatMuraja::TarjamaAaliya => Some(Self::AaliFaqat { muzawwid, thiqa }),
             HalatMuraja::Musawwada | HalatMuraja::LilMuraja | HalatMuraja::Muakkada => {
                 Some(Self::Bashari { musahim })
-            }
+            },
         }
     }
 
@@ -848,12 +852,16 @@ impl BayanatAsl {
         match asl {
             AslQayd::Bashari { musahim } => {
                 bayanat.musahim = musahim.as_ref().map(|m| m.nass().to_owned());
-            }
+            },
             AslQayd::AaliFaqat { muzawwid, thiqa } => {
                 bayanat.muzawwid.clone_from(muzawwid);
                 bayanat.thiqa = thiqa.map(f64::from);
-            }
-            AslQayd::Mulahaza { qari, muzawwid, thiqa } => {
+            },
+            AslQayd::Mulahaza {
+                qari,
+                muzawwid,
+                thiqa,
+            } => {
                 bayanat.qari.clone_from(qari);
                 bayanat.muzawwid.clone_from(muzawwid);
                 bayanat.mushahadat = 1;
@@ -861,7 +869,7 @@ impl BayanatAsl {
                     bayanat.thiqa_qira = Some(i64::from(mia));
                     bayanat.thiqa_maqisa = 1;
                 }
-            }
+            },
         }
         bayanat
     }
@@ -929,9 +937,7 @@ pub struct MasdarDhakira {
 /// A row id, and deliberately nothing grander: memory records are per-machine
 /// and never cross a wire, so a UUID would be ceremony. It is a newtype so a
 /// call site cannot hand a `NassId`-shaped number where a memory row belongs.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "wajiha", derive(specta::Type))]
 #[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
 #[serde(transparent)]
@@ -1037,7 +1043,12 @@ impl<'a> TalabDhakira<'a> {
     /// A request with the default suggestion budget.
     #[must_use]
     pub const fn jadeed(masdar: &'a str, tasnif: TasnifNass) -> Self {
-        Self { masdar, tasnif, luba: None, hadd: AQSA_IQTIRAHAT }
+        Self {
+            masdar,
+            tasnif,
+            luba: None,
+            hadd: AQSA_IQTIRAHAT,
+        }
     }
 
     /// Names the current game, enabling the same-game bonus.
@@ -1371,7 +1382,11 @@ CREATE TABLE thulathi (
 CREATE INDEX thulathi_bil_miftah ON thulathi (miftah);";
 
 /// Migration 1, named.
-const AL_ASAS: HijraDhakira = HijraDhakira { raqm: 1, ism: "al-asas", jumal: HIJRA_1 };
+const AL_ASAS: HijraDhakira = HijraDhakira {
+    raqm: 1,
+    ism: "al-asas",
+    jumal: HIJRA_1,
+};
 
 /// Migration 2 — the third provenance kind, and what a reading knows.
 ///
@@ -1425,8 +1440,11 @@ CREATE INDEX qayd_bil_miftah ON qayd (
     marrat DESC);";
 
 /// Migration 2, named.
-const AL_MULAHAZA: HijraDhakira =
-    HijraDhakira { raqm: 2, ism: "al-mulahaza", jumal: HIJRA_2 };
+const AL_MULAHAZA: HijraDhakira = HijraDhakira {
+    raqm: 2,
+    ism: "al-mulahaza",
+    jumal: HIJRA_2,
+};
 
 /// Every migration this build defines, ascending.
 ///
@@ -1478,7 +1496,9 @@ impl fmt::Debug for Dhakira {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // The connection's own Debug would print nothing useful; the path is
         // the identity that matters in a log line.
-        f.debug_struct("Dhakira").field("masar", &self.masar).finish_non_exhaustive()
+        f.debug_struct("Dhakira")
+            .field("masar", &self.masar)
+            .finish_non_exhaustive()
     }
 }
 
@@ -1526,7 +1546,10 @@ impl Dhakira {
             })?;
         ittisal.set_prepared_statement_cache_capacity(SAAT_JUMAL);
 
-        let mut dhakira = Self { ittisal, masar: masar.to_path_buf() };
+        let mut dhakira = Self {
+            ittisal,
+            masar: masar.to_path_buf(),
+        };
         dhakira.tahaqquq_namat_sijill();
         dhakira.tahaqquq_malaf_ajnabi()?;
         dhakira.rahhil()?;
@@ -1547,9 +1570,10 @@ impl Dhakira {
     /// one that is occasionally slow.
     fn tahaqquq_namat_sijill(&self) {
         let namat: Result<String, rusqlite::Error> =
-            self.ittisal.query_row("PRAGMA journal_mode", [], |saf| saf.get(0));
+            self.ittisal
+                .query_row("PRAGMA journal_mode", [], |saf| saf.get(0));
         match namat {
-            Ok(qeema) if qeema.eq_ignore_ascii_case("wal") => {}
+            Ok(qeema) if qeema.eq_ignore_ascii_case("wal") => {},
             Ok(qeema) => tracing::warn!(
                 namat = %qeema,
                 masar = %self.masar.display(),
@@ -1646,8 +1670,7 @@ impl Dhakira {
 
         let mut natija = Vec::new();
         for saf in sufuf {
-            let (raqm, basma) =
-                saf.map_err(|q| self.khata_jumla("read", "hijrat_dhakira", &q))?;
+            let (raqm, basma) = saf.map_err(|q| self.khata_jumla("read", "hijrat_dhakira", &q))?;
             natija.push((u32::try_from(raqm).unwrap_or(u32::MAX), basma));
         }
         Ok(natija)
@@ -1856,7 +1879,9 @@ impl Dhakira {
             .optional()
             .map_err(|q| khata("select", "miftah_bahth", q))?;
 
-        let miftah_id = if let Some(id) = mawjud { id } else {
+        let miftah_id = if let Some(id) = mawjud {
+            id
+        } else {
             let tul = i64::try_from(miftah.chars().count()).unwrap_or(i64::MAX);
             let _ = muamala
                 .prepare_cached("INSERT INTO miftah_bahth (miftah, tul) VALUES (?1, ?2)")
@@ -1866,9 +1891,7 @@ impl Dhakira {
             let id = muamala.last_insert_rowid();
 
             let mut idkhal = muamala
-                .prepare_cached(
-                    "INSERT OR IGNORE INTO thulathi (juz, miftah) VALUES (?1, ?2)",
-                )
+                .prepare_cached("INSERT OR IGNORE INTO thulathi (juz, miftah) VALUES (?1, ?2)")
                 .map_err(|q| khata("prepare insert", "thulathi", q))?;
             for juz in thulathiyat_miftah(&miftah) {
                 let _ = idkhal
@@ -1879,9 +1902,7 @@ impl Dhakira {
         };
 
         let _ = muamala
-            .prepare_cached(
-                JUMLA_TASJIL,
-            )
+            .prepare_cached(JUMLA_TASJIL)
             .map_err(|q| khata("prepare upsert", "qayd", q))?
             .execute(params![
                 miftah_id,
@@ -1934,7 +1955,10 @@ impl Dhakira {
     pub fn ibhath(&self, talab: &TalabDhakira<'_>) -> Result<HasadDhakira, KhataTarjama> {
         let miftah = miftah_muwahhad(talab.masdar);
         if miftah.is_empty() {
-            return Ok(HasadDhakira { tatbiq: None, iqtirahat: Vec::new() });
+            return Ok(HasadDhakira {
+                tatbiq: None,
+                iqtirahat: Vec::new(),
+            });
         }
 
         // Stage 1: the exact key. The first row is the application — the
@@ -1944,8 +1968,9 @@ impl Dhakira {
         // become perfect-similarity suggestions.
         let mut tamma = self.sufuf_miftah_nassi(&miftah)?.into_iter();
         let tatbiq = tamma.next().map(|qayd| TatbiqDhakira { qayd });
-        let mut iqtirahat: Vec<IqtirahDhakira> =
-            tamma.map(|qayd| ila_iqtirah(qayd, Tashabuh::TAMM, talab)).collect();
+        let mut iqtirahat: Vec<IqtirahDhakira> = tamma
+            .map(|qayd| ila_iqtirah(qayd, Tashabuh::TAMM, talab))
+            .collect();
 
         // Stages 2 and 3: the near neighbourhood.
         for (miftah_id, tashabuh) in self.mafatih_qariba(&miftah)? {
@@ -1959,8 +1984,16 @@ impl Dhakira {
         // cannot outrank a machine 85% — trust affects which of two equals
         // is shown first, not how similar a sentence claims to be.
         iqtirahat.sort_by(|awwal, thani| {
-            (thani.nuqat, thani.qayd.asl.muraja_bashariya, thani.qayd.marrat)
-                .cmp(&(awwal.nuqat, awwal.qayd.asl.muraja_bashariya, awwal.qayd.marrat))
+            (
+                thani.nuqat,
+                thani.qayd.asl.muraja_bashariya,
+                thani.qayd.marrat,
+            )
+                .cmp(&(
+                    awwal.nuqat,
+                    awwal.qayd.asl.muraja_bashariya,
+                    awwal.qayd.marrat,
+                ))
         });
         iqtirahat.truncate(usize::try_from(talab.hadd).unwrap_or(usize::MAX));
 
@@ -2123,7 +2156,10 @@ impl Dhakira {
             .prepare_cached(JUMLA_SUFUF_NASSI)
             .map_err(|q| self.khata_jumla("prepare", "qayd", &q))?;
         let sufuf = jumla
-            .query_map(params![miftah, i64::from(HADD_SUFUF_MIFTAH)], KhaamQayd::min_saf)
+            .query_map(
+                params![miftah, i64::from(HADD_SUFUF_MIFTAH)],
+                KhaamQayd::min_saf,
+            )
             .map_err(|q| self.khata_jumla("query", "qayd", &q))?;
         self.ijma_sufuf(sufuf)
     }
@@ -2135,7 +2171,10 @@ impl Dhakira {
             .prepare_cached(JUMLA_SUFUF_RAQAMI)
             .map_err(|q| self.khata_jumla("prepare", "qayd", &q))?;
         let sufuf = jumla
-            .query_map(params![miftah_id, i64::from(HADD_SUFUF_MIFTAH)], KhaamQayd::min_saf)
+            .query_map(
+                params![miftah_id, i64::from(HADD_SUFUF_MIFTAH)],
+                KhaamQayd::min_saf,
+            )
             .map_err(|q| self.khata_jumla("query", "qayd", &q))?;
         self.ijma_sufuf(sufuf)
     }
@@ -2240,27 +2279,39 @@ impl Dhakira {
         // tie-breaker so equal-distance candidates do not reorder between
         // runs on the whim of GROUP BY.
         murashshahun.sort_by(|awwal, thani| {
-            (thani.1, thani.2).cmp(&(awwal.1, awwal.2)).then(awwal.0.cmp(&thani.0))
+            (thani.1, thani.2)
+                .cmp(&(awwal.1, awwal.2))
+                .then(awwal.0.cmp(&thani.0))
         });
         murashshahun.truncate(HADD_MAFATIH_QARIBA);
-        Ok(murashshahun.into_iter().map(|(id, tashabuh, _)| (id, tashabuh)).collect())
+        Ok(murashshahun
+            .into_iter()
+            .map(|(id, tashabuh, _)| (id, tashabuh))
+            .collect())
     }
-
 }
 
 /// Dresses a decoded row as a suggestion, scored against the request.
-fn ila_iqtirah(
-    qayd: QaydDhakira,
-    tashabuh: Tashabuh,
-    talab: &TalabDhakira<'_>,
-) -> IqtirahDhakira {
+fn ila_iqtirah(qayd: QaydDhakira, tashabuh: Tashabuh, talab: &TalabDhakira<'_>) -> IqtirahDhakira {
     let nafs_tasnif = qayd.tasnif == talab.tasnif;
     let nafs_luba = match (talab.luba, qayd.asl.luba.as_deref()) {
         (Some(matlub), Some(makhzun)) => matlub == makhzun,
         _ => false,
     };
-    let nuqat = nuqat_iqtirah(tashabuh, TawafuqIqtirah { nafs_tasnif, nafs_luba });
-    IqtirahDhakira { qayd, tashabuh, nafs_tasnif, nafs_luba, nuqat }
+    let nuqat = nuqat_iqtirah(
+        tashabuh,
+        TawafuqIqtirah {
+            nafs_tasnif,
+            nafs_luba,
+        },
+    );
+    IqtirahDhakira {
+        qayd,
+        tashabuh,
+        nafs_tasnif,
+        nafs_luba,
+        nuqat,
+    }
 }
 
 /// The write statement: one pair in, or one re-confirmation folded into the
@@ -2504,7 +2555,10 @@ impl KhaamQayd {
         if naw.bashari() != (self.muraja_bashariya != 0) {
             return Err(khata_saf(
                 "daraja_asl",
-                &format!("{} beside muraja_bashariya {}", self.daraja_asl, self.muraja_bashariya),
+                &format!(
+                    "{} beside muraja_bashariya {}",
+                    self.daraja_asl, self.muraja_bashariya
+                ),
             ));
         }
 
@@ -2519,7 +2573,7 @@ impl KhaamQayd {
                     "thiqa_qira",
                     &format!("{mia:?} beside thiqa_maqisa {maqisa}"),
                 ));
-            }
+            },
         };
 
         let musahim = match self.musahim {

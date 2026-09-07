@@ -197,7 +197,10 @@ impl Mawrid for MawridLocmeta {
         if sihr != SIHR {
             // No path here on purpose: this reader was handed bytes, not a
             // file. `min_malaf` fills the name in when it has one.
-            return Err(KhataUnreal::SihrGhayrMutabaq { malaf: PathBuf::new(), ism: ISM });
+            return Err(KhataUnreal::SihrGhayrMutabaq {
+                malaf: PathBuf::new(),
+                ism: ISM,
+            });
         }
         let raqm = qari.iqra_u8("the version byte")?;
         let isdar = IsdarLocmeta::min_raqm(raqm).ok_or_else(|| KhataUnreal::IsdarGhayrMadum {
@@ -230,7 +233,13 @@ impl Mawrid for MawridLocmeta {
         };
 
         let dhayl = qari.baqiya().to_vec();
-        Ok(Self { isdar, thaqafa_asliya, masar_asli, thaqafat, dhayl })
+        Ok(Self {
+            isdar,
+            thaqafa_asliya,
+            masar_asli,
+            thaqafat,
+            dhayl,
+        })
     }
 
     fn ila_bayt(&self) -> Result<Vec<u8>, KhataUnreal> {
@@ -241,12 +250,10 @@ impl Mawrid for MawridLocmeta {
         katib.uktub_nass(ISM, "the native culture", &self.thaqafa_asliya)?;
         katib.uktub_nass(ISM, "the native locres path", &self.masar_asli)?;
         if self.isdar.yahwi_thaqafat() {
-            let adad = i32::try_from(self.thaqafat.len()).map_err(|_| {
-                KhataUnreal::HajmMufrit {
-                    haql: "the compiled culture count",
-                    qeema: tul_u64(self.thaqafat.len()),
-                    saqf: AQSA_THAQAFAT,
-                }
+            let adad = i32::try_from(self.thaqafat.len()).map_err(|_| KhataUnreal::HajmMufrit {
+                haql: "the compiled culture count",
+                qeema: tul_u64(self.thaqafat.len()),
+                saqf: AQSA_THAQAFAT,
             })?;
             katib.uktub_i32(adad);
             for thaqafa in &self.thaqafat {
@@ -344,7 +351,9 @@ impl MawridLocmeta {
     /// the first would give the engine two entries for one language.
     #[must_use]
     pub fn yahwi_thaqafa(&self, thaqafa: &str) -> bool {
-        self.thaqafat.iter().any(|mawjud| mawjud.nass().eq_ignore_ascii_case(thaqafa))
+        self.thaqafat
+            .iter()
+            .any(|mawjud| mawjud.nass().eq_ignore_ascii_case(thaqafa))
     }
 
     /// The bytes after the last field, preserved verbatim. Empty in every file
@@ -416,7 +425,8 @@ impl MawridLocmeta {
     /// user can delete.
     pub fn ihdhif_thaqafa(&mut self, thaqafa: &str) -> bool {
         let qabl = self.thaqafat.len();
-        self.thaqafat.retain(|mawjud| !mawjud.nass().eq_ignore_ascii_case(thaqafa));
+        self.thaqafat
+            .retain(|mawjud| !mawjud.nass().eq_ignore_ascii_case(thaqafa));
         self.thaqafat.len() != qabl
     }
 }

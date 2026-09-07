@@ -184,7 +184,12 @@ impl QiraaMulahaza {
     /// An observation from a recognized line and its box on the surface.
     #[must_use]
     pub fn min_maqru(maqru: &SatrMaqru, mawdi: MustatilBiksel) -> Self {
-        Self { nass: maqru.nass.clone(), mawdi, thiqa: maqru.thiqa, maqisa: maqru.maqisa }
+        Self {
+            nass: maqru.nass.clone(),
+            mawdi,
+            thiqa: maqru.thiqa,
+            maqisa: maqru.maqisa,
+        }
     }
 }
 
@@ -647,7 +652,7 @@ impl Mutatabbi {
             };
             match damm(satr, mulahaza, lahza_mikro, self.siyasa.adna_bidaya) {
                 AtharDamm::Nama => self.ihsaat.numuwwat = self.ihsaat.numuwwat.saturating_add(1),
-                AtharDamm::Thabat | AtharDamm::Taghayyar => {}
+                AtharDamm::Thabat | AtharDamm::Taghayyar => {},
             }
             self.ihsaat.tatabuqat = self.ihsaat.tatabuqat.saturating_add(1);
         }
@@ -884,8 +889,16 @@ fn damm(
     // translated and then grew is a longer sentence, and the Arabic already in
     // hand is a translation of the first half of it.
     satr.ursilat = false;
-    satr.hala = if nama { HalatSatr::Yanmu } else { HalatSatr::Yataghayyar };
-    if nama { AtharDamm::Nama } else { AtharDamm::Taghayyar }
+    satr.hala = if nama {
+        HalatSatr::Yanmu
+    } else {
+        HalatSatr::Yataghayyar
+    };
+    if nama {
+        AtharDamm::Nama
+    } else {
+        AtharDamm::Taghayyar
+    }
 }
 
 /// How well an observation matches a live line, zero to one.
@@ -893,11 +906,7 @@ fn damm(
 /// Prefix growth short-circuits to one: a reveal in progress is the same line
 /// with certainty, and letting the score decide would end the line the moment
 /// the reveal had added more than a sixth of its final length in one poll.
-fn darjat_tatabuq(
-    satr: &SatrMutatabba,
-    mulahaza: &QiraaMulahaza,
-    adna_bidaya: usize,
-) -> f32 {
+fn darjat_tatabuq(satr: &SatrMutatabba, mulahaza: &QiraaMulahaza, adna_bidaya: usize) -> f32 {
     if yanmu(&satr.nass, &mulahaza.nass, adna_bidaya) {
         return 1.0;
     }

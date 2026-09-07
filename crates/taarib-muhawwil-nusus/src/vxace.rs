@@ -161,8 +161,14 @@ pub const ISDAR_SILSILA: [u8; 2] = [4, 8];
 // ---------------------------------------------------------------------------
 
 /// Files that mean the game runs on an mkxp or mkxp-z runtime.
-const ALAMAT_MKXP: [&str; 6] =
-    ["mkxp.json", "mkxp-z.json", "mkxp.conf", "mkxp-z.exe", "libmkxp-z.so", "mkxp-z"];
+const ALAMAT_MKXP: [&str; 6] = [
+    "mkxp.json",
+    "mkxp-z.json",
+    "mkxp.conf",
+    "mkxp-z.exe",
+    "libmkxp-z.so",
+    "mkxp-z",
+];
 
 /// The RGSS3 runtime libraries the official player ships.
 const ALAMAT_RGSS3: [&str; 4] = ["rgss300.dll", "rgss301.dll", "rgss302.dll", "rgss3.dll"];
@@ -210,7 +216,10 @@ fn asmaa_mujallad(masar: &Path) -> Vec<String> {
         .flatten()
         .filter_map(|madkhal| {
             let ism = madkhal.file_name().into_string().ok()?;
-            madkhal.file_type().is_ok_and(|naw| naw.is_file()).then(|| ism.to_lowercase())
+            madkhal
+                .file_type()
+                .is_ok_and(|naw| naw.is_file())
+                .then(|| ism.to_lowercase())
         })
         .collect()
 }
@@ -297,12 +306,8 @@ impl Mifhas for MifhasVxAce {
         let mut adilla: Vec<Dalil> = Vec::new();
         let makan = amakin(jidhr);
 
-        let mkxp = ibhath(&makan, jidhr, |ism| {
-            ALAMAT_MKXP.contains(&ism)
-        });
-        let rasmi = ibhath(&makan, jidhr, |ism| {
-            ALAMAT_RGSS3.contains(&ism)
-        });
+        let mkxp = ibhath(&makan, jidhr, |ism| ALAMAT_MKXP.contains(&ism));
+        let rasmi = ibhath(&makan, jidhr, |ism| ALAMAT_RGSS3.contains(&ism));
         let maktaba = ibhath(&makan, jidhr, |ism| {
             QITA_HARFBUZZ.iter().any(|juz| ism.contains(juz))
         });
@@ -336,8 +341,7 @@ impl Mifhas for MifhasVxAce {
                             "this game runs on an mkxp runtime and ships no HarfBuzz library \
                              ({}), so its FreeType path positions one glyph per character \
                              with no joining",
-                            freetype
-                                .unwrap_or_else(|| "no FreeType either".to_owned())
+                            freetype.unwrap_or_else(|| "no FreeType either".to_owned())
                         ),
                         Some(Rutba::Istila),
                         WAZN_MKXP_BILA,
@@ -350,7 +354,7 @@ impl Mifhas for MifhasVxAce {
                          what loads, so the RGSS3 library is not what draws the text",
                     ));
                 }
-            }
+            },
             Muharrik::Rasmi => {
                 let ism = rasmi.unwrap_or_else(|| "RGSS3".to_owned());
                 adilla.push(Dalil::jadeed(
@@ -361,7 +365,7 @@ impl Mifhas for MifhasVxAce {
                     Some(Rutba::Istila),
                     WAZN_RGSS3,
                 ));
-            }
+            },
             Muharrik::Majhul => adilla.push(Dalil::siyaq(
                 "runtime",
                 "no runtime library was found beside the game, so which text stack will \
@@ -374,7 +378,11 @@ impl Mifhas for MifhasVxAce {
         if let Some(tanfidhi) = siyaq.tanfidhi {
             adilla.push(Dalil::siyaq(
                 "executable",
-                tanfidhi.strip_prefix(jidhr).unwrap_or(tanfidhi).to_string_lossy().into_owned(),
+                tanfidhi
+                    .strip_prefix(jidhr)
+                    .unwrap_or(tanfidhi)
+                    .to_string_lossy()
+                    .into_owned(),
             ));
         }
         adilla.push(Dalil::siyaq("engine family", siyaq.aila.ism()));
@@ -399,7 +407,11 @@ fn adillat_ini(jidhr: &Path, muharrik: Muharrik) -> Vec<Dalil> {
     };
     let nass = String::from_utf8_lossy(&bayt);
     if let Some(maktaba) = qeemat_ini(&nass, "Library") {
-        let ism = maktaba.rsplit(['\\', '/']).next().unwrap_or(&maktaba).to_owned();
+        let ism = maktaba
+            .rsplit(['\\', '/'])
+            .next()
+            .unwrap_or(&maktaba)
+            .to_owned();
         let kabira = ism.to_ascii_uppercase();
         if kabira.starts_with("RGSS3") && muharrik == Muharrik::Rasmi {
             adilla.push(Dalil::jadeed(
@@ -428,7 +440,10 @@ fn adillat_bayanat(jidhr: &Path) -> Vec<Dalil> {
         ));
     }
     let bayanat = masar_bila_hala(jidhr, "Data");
-    let adad = asmaa_mujallad(&bayanat).iter().filter(|ism| ism.ends_with(".rvdata2")).count();
+    let adad = asmaa_mujallad(&bayanat)
+        .iter()
+        .filter(|ism| ism.ends_with(".rvdata2"))
+        .count();
     if adad > 0 {
         adilla.push(Dalil::siyaq("Data", format!("{adad} loose .rvdata2 files")));
     }
@@ -566,18 +581,28 @@ pub struct Hawiya {
 
 /// An I/O failure, carrying the path that produced it.
 fn khata_malaf(masar: &Path, sabab: std::io::Error) -> KhataNusus {
-    KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab }
+    KhataNusus::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    }
 }
 
 /// A field in a container that points outside it.
 const fn hawiya_talifa(haql: &'static str, qeema: u64, hadd: u64) -> KhataNusus {
-    KhataNusus::HawiyaTalifa { sigha: SIGHA_RGSS, haql, qeema, hadd }
+    KhataNusus::HawiyaTalifa {
+        sigha: SIGHA_RGSS,
+        haql,
+        qeema,
+        hadd,
+    }
 }
 
 /// A little-endian `u32` at an offset, bounds-checked.
 fn u32_le(bayt: &[u8], izaha: usize) -> Option<u32> {
     let nihaya = izaha.checked_add(4)?;
-    bayt.get(izaha..nihaya).and_then(|juz| <[u8; 4]>::try_from(juz).ok()).map(u32::from_le_bytes)
+    bayt.get(izaha..nihaya)
+        .and_then(|juz| <[u8; 4]>::try_from(juz).ok())
+        .map(u32::from_le_bytes)
 }
 
 impl Hawiya {
@@ -642,7 +667,13 @@ impl Hawiya {
         let miftah = miftah_min_badhra(badhra);
 
         let (madakhil, nihayat_fahras) = Self::iqra_fahras(&bayt, miftah, tul_malaf)?;
-        Ok(Self { masar: masar.to_path_buf(), badhra, miftah, nihayat_fahras, madakhil })
+        Ok(Self {
+            masar: masar.to_path_buf(),
+            badhra,
+            miftah,
+            nihayat_fahras,
+            madakhil,
+        })
     }
 
     /// Walks the obfuscated file table.
@@ -663,7 +694,9 @@ impl Hawiya {
             };
             let izaha = u32_le(bayt, mawqi)
                 .map(|khaam| khaam ^ miftah)
-                .ok_or_else(|| qaseer("a table entry's offset", tul_u64(mawqi.saturating_add(4))))?;
+                .ok_or_else(|| {
+                    qaseer("a table entry's offset", tul_u64(mawqi.saturating_add(4)))
+                })?;
             if izaha == 0 {
                 mawqi = mawqi.saturating_add(4);
                 break;
@@ -677,7 +710,10 @@ impl Hawiya {
             let tul_ism = u32_le(bayt, mawqi.saturating_add(12))
                 .map(|khaam| khaam ^ miftah)
                 .ok_or_else(|| {
-                    qaseer("a table entry's name length", tul_u64(mawqi.saturating_add(16)))
+                    qaseer(
+                        "a table entry's name length",
+                        tul_u64(mawqi.saturating_add(16)),
+                    )
                 })?;
             if tul_ism > AQSA_TUL_ISM {
                 return Err(KhataNusus::HajmMufrit {
@@ -754,8 +790,10 @@ impl Hawiya {
         }
         let mut malaf =
             fs::File::open(&self.masar).map_err(|sabab| khata_malaf(&self.masar, sabab))?;
-        let tul_malaf =
-            malaf.metadata().map_err(|sabab| khata_malaf(&self.masar, sabab))?.len();
+        let tul_malaf = malaf
+            .metadata()
+            .map_err(|sabab| khata_malaf(&self.masar, sabab))?
+            .len();
         let nihaya = madkhal
             .izaha
             .checked_add(madkhal.tul)
@@ -767,7 +805,9 @@ impl Hawiya {
             .seek(SeekFrom::Start(madkhal.izaha))
             .map_err(|sabab| khata_malaf(&self.masar, sabab))?;
         let mut bayt = vec![0_u8; hajm_usize(madkhal.tul).unwrap_or(0)];
-        malaf.read_exact(&mut bayt).map_err(|sabab| khata_malaf(&self.masar, sabab))?;
+        malaf
+            .read_exact(&mut bayt)
+            .map_err(|sabab| khata_malaf(&self.masar, sabab))?;
         ashfir(&mut bayt, madkhal.miftah);
         Ok(bayt)
     }
@@ -951,7 +991,7 @@ pub fn uktub_hawiya(
                     });
                 };
                 hawiya.istakhrij(madkhal)?
-            }
+            },
         };
         ashfir(&mut bayt, *miftah_udw);
         makhraj.extend_from_slice(&bayt);
@@ -979,9 +1019,8 @@ pub fn dawra_hawiya(hadaf: &Path, mutawaqqa: &[(String, MasdarUdw)]) -> Result<(
     let hawiya = Hawiya::iqra(hadaf)?;
     let mut mukhtalif: u64 = 0;
     if hawiya.madakhil().len() != mutawaqqa.len() {
-        mukhtalif = mukhtalif.saturating_add(
-            tul_u64(hawiya.madakhil().len().abs_diff(mutawaqqa.len())),
-        );
+        mukhtalif =
+            mukhtalif.saturating_add(tul_u64(hawiya.madakhil().len().abs_diff(mutawaqqa.len())));
     }
     for ((masar_udw, mansha), madkhal) in mutawaqqa.iter().zip(hawiya.madakhil().iter()) {
         if &madkhal.masar != masar_udw || madkhal.tul != mansha.tul() {
@@ -989,7 +1028,10 @@ pub fn dawra_hawiya(hadaf: &Path, mutawaqqa: &[(String, MasdarUdw)]) -> Result<(
         }
     }
     if mukhtalif > 0 {
-        return Err(KhataNusus::DawraGhayrMutabaqa { sigha: SIGHA_RGSS, adad: mukhtalif });
+        return Err(KhataNusus::DawraGhayrMutabaqa {
+            sigha: SIGHA_RGSS,
+            adad: mukhtalif,
+        });
     }
     Ok(())
 }
@@ -1233,7 +1275,7 @@ impl Silsila {
                 Tarmiz::Utf8 | Tarmiz::Ascii => core::str::from_utf8(bayt).ok(),
                 Tarmiz::Musamma(ism) if ism.eq_ignore_ascii_case("UTF-8") => {
                     core::str::from_utf8(bayt).ok()
-                }
+                },
                 _ => None,
             },
             _ => None,
@@ -1264,7 +1306,10 @@ impl Silsila {
         let (Uqda::Kaain { sifat, .. } | Uqda::Bunya { sifat, .. }) = self.uqda(muashir)? else {
             return None;
         };
-        sifat.iter().find(|(ramz, _)| self.ramz(*ramz) == Some(ism)).map(|(_, qeema)| *qeema)
+        sifat
+            .iter()
+            .find(|(ramz, _)| self.ramz(*ramz) == Some(ism))
+            .map(|(_, qeema)| *qeema)
     }
 
     /// A hash's value for a symbol key.
@@ -1406,7 +1451,9 @@ impl<'a> Qari<'a> {
         let salib = ishara < 0;
         let adad = usize::try_from(ishara.unsigned_abs()).unwrap_or(0);
         if adad > 8 {
-            return Err(bunya_ghayr("an integer declares more bytes than one can hold"));
+            return Err(bunya_ghayr(
+                "an integer declares more bytes than one can hold",
+            ));
         }
         let juz = self.nitaq(haql, adad)?;
         let mut qeema: i64 = if salib { -1 } else { 0 };
@@ -1423,8 +1470,7 @@ impl<'a> Qari<'a> {
     /// A length field, refused before it is used to reserve anything.
     fn tul(&mut self, haql: &'static str, saqf: u64) -> Result<usize, KhataNusus> {
         let khaam = self.raqm(haql)?;
-        let qeema = u64::try_from(khaam)
-            .map_err(|_| bunya_ghayr("a length field is negative"))?;
+        let qeema = u64::try_from(khaam).map_err(|_| bunya_ghayr("a length field is negative"))?;
         if qeema > saqf {
             return Err(KhataNusus::HajmMufrit { haql, qeema, saqf });
         }
@@ -1535,11 +1581,7 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
 }
 
 /// Reads one value, resolving both of Ruby's tables into handles.
-fn iqra_qeema(
-    ala: &mut AlatQiraa,
-    qari: &mut Qari<'_>,
-    umq: u32,
-) -> Result<Muashir, KhataNusus> {
+fn iqra_qeema(ala: &mut AlatQiraa, qari: &mut Qari<'_>, umq: u32) -> Result<Muashir, KhataNusus> {
     if umq > AQSA_UMQ {
         return Err(KhataNusus::HajmMufrit {
             haql: "Marshal nesting depth",
@@ -1556,7 +1598,7 @@ fn iqra_qeema(
         b'i' => {
             let qeema = qari.raqm("a Fixnum")?;
             ala.adhif(Uqda::Sahih(qeema))
-        }
+        },
 
         // `@` and `;` are the two link tables, and both resolve to the handle
         // that was entered rather than to a copy of it. That is the whole
@@ -1565,59 +1607,75 @@ fn iqra_qeema(
             let fahras = qari.raqm("an object back-reference")?;
             let khana = usize::try_from(fahras)
                 .map_err(|_| bunya_ghayr("an object back-reference is negative"))?;
-            ala.wasla.get(khana).copied().ok_or_else(|| KhataNusus::HawiyaTalifa {
-                sigha: SIGHA_SILSILA,
-                haql: "an object back-reference",
-                qeema: tul_u64(khana),
-                hadd: tul_u64(ala.wasla.len()),
-            })
-        }
+            ala.wasla
+                .get(khana)
+                .copied()
+                .ok_or_else(|| KhataNusus::HawiyaTalifa {
+                    sigha: SIGHA_SILSILA,
+                    haql: "an object back-reference",
+                    qeema: tul_u64(khana),
+                    hadd: tul_u64(ala.wasla.len()),
+                })
+        },
         b';' => {
             let fahras = qari.raqm("a symbol back-reference")?;
             let khana = usize::try_from(fahras)
                 .map_err(|_| bunya_ghayr("a symbol back-reference is negative"))?;
-            ala.rumuz.get(khana).copied().ok_or_else(|| KhataNusus::HawiyaTalifa {
-                sigha: SIGHA_SILSILA,
-                haql: "a symbol back-reference",
-                qeema: tul_u64(khana),
-                hadd: tul_u64(ala.rumuz.len()),
-            })
-        }
+            ala.rumuz
+                .get(khana)
+                .copied()
+                .ok_or_else(|| KhataNusus::HawiyaTalifa {
+                    sigha: SIGHA_SILSILA,
+                    haql: "a symbol back-reference",
+                    qeema: tul_u64(khana),
+                    hadd: tul_u64(ala.rumuz.len()),
+                })
+        },
         b':' => {
             let tul = qari.tul("a symbol's length", u64::from(AQSA_TUL_ISM))?;
             let ism = qari.nitaq("a symbol", tul)?.to_vec();
             let muashir = ala.adhif(Uqda::Ramz(ism))?;
             ala.rumuz.push(muashir);
             Ok(muashir)
-        }
+        },
 
         b'"' => {
             let tul = qari.tul("a string's length", AQSA_SILSILA)?;
             let jism = qari.nitaq("a string", tul)?.to_vec();
-            ala.adhif_marja(Uqda::Nass { bayt: jism, tarmiz: Tarmiz::Thunai })
-        }
+            ala.adhif_marja(Uqda::Nass {
+                bayt: jism,
+                tarmiz: Tarmiz::Thunai,
+            })
+        },
         b'f' => {
             let tul = qari.tul("a float's length", 256)?;
             let jism = qari.nitaq("a float", tul)?.to_vec();
             ala.adhif_marja(Uqda::Ashari(jism))
-        }
+        },
         b'l' => {
             let ishara = qari.wahid("a Bignum's sign")?;
             let kalimat = qari.tul("a Bignum's word count", AQSA_SILSILA)?;
             let jism = qari.nitaq("a Bignum", kalimat.saturating_mul(2))?.to_vec();
             ala.adhif_marja(Uqda::Kabir { ishara, adad: jism })
-        }
+        },
         b'/' => {
             let tul = qari.tul("a Regexp's length", AQSA_SILSILA)?;
             let jism = qari.nitaq("a Regexp", tul)?.to_vec();
             let khiyarat = qari.wahid("a Regexp's options")?;
-            ala.adhif_marja(Uqda::Namat { bayt: jism, khiyarat })
-        }
+            ala.adhif_marja(Uqda::Namat {
+                bayt: jism,
+                khiyarat,
+            })
+        },
         b'c' | b'm' => {
             let tul = qari.tul("a class name's length", u64::from(AQSA_TUL_ISM))?;
             let ism = qari.nitaq("a class name", tul)?.to_vec();
-            ala.adhif_marja(if naw == b'c' { Uqda::Sanf(ism) } else { Uqda::Wahda(ism) })
-        }
+            ala.adhif_marja(if naw == b'c' {
+                Uqda::Sanf(ism)
+            } else {
+                Uqda::Wahda(ism)
+            })
+        },
 
         b'[' => {
             let adad = qari.tul("an array's length", tul_u64(AQSA_KAINAT))?;
@@ -1628,29 +1686,40 @@ fn iqra_qeema(
             }
             ala.haddith(muashir, Uqda::Masfufa(anasir))?;
             Ok(muashir)
-        }
+        },
         b'{' | b'}' => {
             let adad = qari.tul("a hash's length", tul_u64(AQSA_KAINAT))?;
-            let muashir =
-                ala.adhif_marja(Uqda::Kharita { azwaj: Vec::new(), tilqai: None })?;
+            let muashir = ala.adhif_marja(Uqda::Kharita {
+                azwaj: Vec::new(),
+                tilqai: None,
+            })?;
             let mut azwaj = Vec::with_capacity(adad.min(1024));
             for _ in 0..adad {
                 let miftah = iqra_qeema(ala, qari, taht)?;
                 let qeema = iqra_qeema(ala, qari, taht)?;
                 azwaj.push((miftah, qeema));
             }
-            let tilqai =
-                if naw == b'}' { Some(iqra_qeema(ala, qari, taht)?) } else { None };
+            let tilqai = if naw == b'}' {
+                Some(iqra_qeema(ala, qari, taht)?)
+            } else {
+                None
+            };
             ala.haddith(muashir, Uqda::Kharita { azwaj, tilqai })?;
             Ok(muashir)
-        }
+        },
         b'o' | b'S' => {
             let sanf = iqra_qeema(ala, qari, taht)?;
             let adad = qari.tul("an object's field count", tul_u64(AQSA_KAINAT))?;
             let hayakil = if naw == b'o' {
-                Uqda::Kaain { sanf, sifat: Vec::new() }
+                Uqda::Kaain {
+                    sanf,
+                    sifat: Vec::new(),
+                }
             } else {
-                Uqda::Bunya { sanf, sifat: Vec::new() }
+                Uqda::Bunya {
+                    sanf,
+                    sifat: Vec::new(),
+                }
             };
             let muashir = ala.adhif_marja(hayakil)?;
             let mut sifat = Vec::with_capacity(adad.min(256));
@@ -1668,20 +1737,23 @@ fn iqra_qeema(
                 },
             )?;
             Ok(muashir)
-        }
+        },
         b'u' => {
             let sanf = iqra_qeema(ala, qari, taht)?;
             let tul = qari.tul("a dumped object's payload", AQSA_SILSILA)?;
             let himl = qari.nitaq("a dumped object's payload", tul)?.to_vec();
             ala.adhif_marja(Uqda::Marfu { sanf, himl })
-        }
+        },
         b'U' => {
             let sanf = iqra_qeema(ala, qari, taht)?;
-            let muashir = ala.adhif_marja(Uqda::MarfuQeema { sanf, qeema: Muashir(0) })?;
+            let muashir = ala.adhif_marja(Uqda::MarfuQeema {
+                sanf,
+                qeema: Muashir(0),
+            })?;
             let qeema = iqra_qeema(ala, qari, taht)?;
             ala.haddith(muashir, Uqda::MarfuQeema { sanf, qeema })?;
             Ok(muashir)
-        }
+        },
 
         // The three decorations. None of them creates an object of its own, so
         // none of them enters the link table — the value they wrap does.
@@ -1696,19 +1768,19 @@ fn iqra_qeema(
             }
             imtass_tarmiz(ala, jism, sifat);
             Ok(jism)
-        }
+        },
         b'e' => {
             let wahda = iqra_qeema(ala, qari, taht)?;
             let jism = iqra_qeema(ala, qari, taht)?;
             ala.tamdid.entry(jism.raqm()).or_default().push(wahda);
             Ok(jism)
-        }
+        },
         b'C' => {
             let sanf = iqra_qeema(ala, qari, taht)?;
             let jism = iqra_qeema(ala, qari, taht)?;
             let _ = ala.sanf_asli.insert(jism.raqm(), sanf);
             Ok(jism)
-        }
+        },
 
         b'd' => Err(bunya_ghayr(
             "a Data value: it names a C extension's own layout, no VX Ace project \
@@ -1717,7 +1789,9 @@ fn iqra_qeema(
         b'M' => Err(bunya_ghayr(
             "an old-style Module value, which Ruby itself has not written since 1.8",
         )),
-        _ => Err(bunya_ghayr(&format!("an unknown Marshal type byte {naw:#04x}"))),
+        _ => Err(bunya_ghayr(&format!(
+            "an unknown Marshal type byte {naw:#04x}"
+        ))),
     }
 }
 
@@ -1748,18 +1822,22 @@ fn imtass_tarmiz(ala: &mut AlatQiraa, jism: Muashir, sifat: Vec<(Muashir, Muashi
             Some(Uqda::Ramz(bayt)) => core::str::from_utf8(bayt).unwrap_or_default().to_owned(),
             _ => String::new(),
         };
-        let mahmul = ala.uqad.get(usize::try_from(qeema.0).unwrap_or(usize::MAX)).cloned();
+        let mahmul = ala
+            .uqad
+            .get(usize::try_from(qeema.0).unwrap_or(usize::MAX))
+            .cloned();
         match (ramz.as_str(), mahmul) {
             ("E", Some(Uqda::Sawab(true))) => tarmiz = Tarmiz::Utf8,
             ("E", Some(Uqda::Sawab(false))) => tarmiz = Tarmiz::Ascii,
             ("encoding", Some(Uqda::Nass { bayt, .. })) => {
                 tarmiz = Tarmiz::Musamma(String::from_utf8_lossy(&bayt).into_owned());
-            }
+            },
             _ => baqi.push((ism, qeema)),
         }
     }
-    if let Some(Uqda::Nass { tarmiz: hadaf, .. }) =
-        ala.uqad.get_mut(usize::try_from(jism.0).unwrap_or(usize::MAX))
+    if let Some(Uqda::Nass { tarmiz: hadaf, .. }) = ala
+        .uqad
+        .get_mut(usize::try_from(jism.0).unwrap_or(usize::MAX))
     {
         *hadaf = tarmiz;
     }
@@ -1919,7 +1997,9 @@ fn uktub_qeema(
     umq: u32,
 ) -> Result<(), KhataNusus> {
     if umq > AQSA_UMQ {
-        return Err(bunya_ghayr("a value nests deeper than this writer will emit"));
+        return Err(bunya_ghayr(
+            "a value nests deeper than this writer will emit",
+        ));
     }
     let uqda = silsila
         .uqda(muashir)
@@ -1932,21 +2012,21 @@ fn uktub_qeema(
         Uqda::Ramz(ism) => {
             uktub_ramz(kharj, ism, katib);
             return Ok(());
-        }
+        },
         Uqda::Faragh => {
             kharj.push(b'0');
             return Ok(());
-        }
+        },
         Uqda::Sawab(qeema) => {
             kharj.push(if *qeema { b'T' } else { b'F' });
             return Ok(());
-        }
+        },
         Uqda::Sahih(qeema) => {
             kharj.push(b'i');
             uktub_raqm(kharj, *qeema);
             return Ok(());
-        }
-        _ => {}
+        },
+        _ => {},
     }
 
     if let Some(fahras) = katib.wasla.get(&muashir.raqm()).copied() {
@@ -1976,11 +2056,11 @@ fn uktub_qeema(
         Uqda::Nass { bayt, .. } => {
             kharj.push(b'"');
             uktub_bayt(kharj, bayt);
-        }
+        },
         Uqda::Ashari(bayt) => {
             kharj.push(b'f');
             uktub_bayt(kharj, bayt);
-        }
+        },
         Uqda::Kabir { ishara, adad } => {
             kharj.push(b'l');
             kharj.push(*ishara);
@@ -1990,27 +2070,27 @@ fn uktub_qeema(
             // never is — but a shift also says out loud that the unit is words.
             uktub_raqm(kharj, i64::try_from(adad.len() >> 1).unwrap_or(0));
             kharj.extend_from_slice(adad);
-        }
+        },
         Uqda::Namat { bayt, khiyarat } => {
             kharj.push(b'/');
             uktub_bayt(kharj, bayt);
             kharj.push(*khiyarat);
-        }
+        },
         Uqda::Sanf(ism) => {
             kharj.push(b'c');
             uktub_bayt(kharj, ism);
-        }
+        },
         Uqda::Wahda(ism) => {
             kharj.push(b'm');
             uktub_bayt(kharj, ism);
-        }
+        },
         Uqda::Masfufa(anasir) => {
             kharj.push(b'[');
             uktub_raqm(kharj, i64::try_from(anasir.len()).unwrap_or(i64::MAX));
             for udw in anasir {
                 uktub_qeema(silsila, *udw, kharj, katib, taht)?;
             }
-        }
+        },
         Uqda::Kharita { azwaj, tilqai } => {
             kharj.push(if tilqai.is_some() { b'}' } else { b'{' });
             uktub_raqm(kharj, i64::try_from(azwaj.len()).unwrap_or(i64::MAX));
@@ -2021,28 +2101,32 @@ fn uktub_qeema(
             if let Some(asl) = tilqai {
                 uktub_qeema(silsila, *asl, kharj, katib, taht)?;
             }
-        }
+        },
         Uqda::Kaain { sanf, sifat: huqul } | Uqda::Bunya { sanf, sifat: huqul } => {
-            kharj.push(if matches!(uqda, Uqda::Kaain { .. }) { b'o' } else { b'S' });
+            kharj.push(if matches!(uqda, Uqda::Kaain { .. }) {
+                b'o'
+            } else {
+                b'S'
+            });
             uktub_qeema(silsila, *sanf, kharj, katib, taht)?;
             uktub_raqm(kharj, i64::try_from(huqul.len()).unwrap_or(i64::MAX));
             for (ism, qeema) in huqul {
                 uktub_qeema(silsila, *ism, kharj, katib, taht)?;
                 uktub_qeema(silsila, *qeema, kharj, katib, taht)?;
             }
-        }
+        },
         Uqda::Marfu { sanf, himl } => {
             kharj.push(b'u');
             uktub_qeema(silsila, *sanf, kharj, katib, taht)?;
             uktub_bayt(kharj, himl);
-        }
+        },
         Uqda::MarfuQeema { sanf, qeema } => {
             kharj.push(b'U');
             uktub_qeema(silsila, *sanf, kharj, katib, taht)?;
             uktub_qeema(silsila, *qeema, kharj, katib, taht)?;
-        }
+        },
         // Handled above, before the object table was consulted.
-        Uqda::Ramz(_) | Uqda::Faragh | Uqda::Sawab(_) | Uqda::Sahih(_) => {}
+        Uqda::Ramz(_) | Uqda::Faragh | Uqda::Sawab(_) | Uqda::Sahih(_) => {},
     }
 
     if adad_sifat > 0 {
@@ -2051,11 +2135,11 @@ fn uktub_qeema(
             Some(Tarmiz::Utf8) => {
                 uktub_ramz(kharj, b"E", katib);
                 kharj.push(b'T');
-            }
+            },
             Some(Tarmiz::Ascii) => {
                 uktub_ramz(kharj, b"E", katib);
                 kharj.push(b'F');
-            }
+            },
             Some(Tarmiz::Musamma(ism)) => {
                 uktub_ramz(kharj, b"encoding", katib);
                 // The name is a String, and Ruby enters it in the object table
@@ -2064,8 +2148,8 @@ fn uktub_qeema(
                 katib.sajjil_bila_maqbad();
                 kharj.push(b'"');
                 uktub_bayt(kharj, ism.as_bytes());
-            }
-            Some(Tarmiz::Thunai) | None => {}
+            },
+            Some(Tarmiz::Thunai) | None => {},
         }
         for (ism, qeema) in sifat {
             uktub_qeema(silsila, *ism, kharj, katib, taht)?;
@@ -2101,7 +2185,10 @@ pub fn dawra_mutabaqa(asli: &[u8], silsila: &Silsila) -> Result<(), KhataNusus> 
             mukhtalif = mukhtalif.saturating_add(1);
         }
     }
-    Err(KhataNusus::DawraGhayrMutabaqa { sigha: SIGHA_SILSILA, adad: mukhtalif })
+    Err(KhataNusus::DawraGhayrMutabaqa {
+        sigha: SIGHA_SILSILA,
+        adad: mukhtalif,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -2149,7 +2236,10 @@ pub fn iqra_qaimat_nusus(silsila: &Silsila) -> Result<Vec<MadkhalNass>, KhataNus
         let Some(huqul) = silsila.anasir(*band) else {
             return Err(bunya_ghayr("a script list entry is not an array"));
         };
-        let muarrif = huqul.first().and_then(|udw| silsila.sahih(*udw)).unwrap_or(0);
+        let muarrif = huqul
+            .first()
+            .and_then(|udw| silsila.sahih(*udw))
+            .unwrap_or(0);
         let ism = huqul
             .get(1)
             .and_then(|udw| match silsila.uqda(*udw) {
@@ -2159,7 +2249,11 @@ pub fn iqra_qaimat_nusus(silsila: &Silsila) -> Result<Vec<MadkhalNass>, KhataNus
             .unwrap_or_default();
         let madghut = match huqul.get(2).and_then(|udw| silsila.uqda(*udw)) {
             Some(Uqda::Nass { bayt, .. }) => bayt.clone(),
-            _ => return Err(bunya_ghayr("a script list entry carries no deflated source")),
+            _ => {
+                return Err(bunya_ghayr(
+                    "a script list entry carries no deflated source",
+                ));
+            },
         };
         let khaam = fukk_zlib(madghut.as_slice(), AQSA_NASS_RUBY)?;
         let masdar = String::from_utf8(khaam).map_err(|khata| KhataNusus::NassGhayrSalih {
@@ -2167,7 +2261,12 @@ pub fn iqra_qaimat_nusus(silsila: &Silsila) -> Result<Vec<MadkhalNass>, KhataNus
             tarmiz: "UTF-8",
             mawqi: tul_u64(khata.utf8_error().valid_up_to()),
         })?;
-        qaima.push(MadkhalNass { muarrif, ism, masdar, tarteeb });
+        qaima.push(MadkhalNass {
+            muarrif,
+            ism,
+            masdar,
+            tarteeb,
+        });
     }
     Ok(qaima)
 }
@@ -2197,12 +2296,13 @@ fn fukk_zlib(masdar: impl std::io::Read, saqf: u64) -> Result<Vec<u8>, KhataNusu
 fn udghut_zlib(khaam: &[u8]) -> Result<Vec<u8>, KhataNusus> {
     use std::io::Write as _;
 
-    let mut daght =
-        flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
-    daght.write_all(khaam).map_err(|sabab| KhataNusus::FakkFashil {
-        sigha: "Scripts.rvdata2",
-        tafsil: sabab.to_string(),
-    })?;
+    let mut daght = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    daght
+        .write_all(khaam)
+        .map_err(|sabab| KhataNusus::FakkFashil {
+            sigha: "Scripts.rvdata2",
+            tafsil: sabab.to_string(),
+        })?;
     daght.finish().map_err(|sabab| KhataNusus::FakkFashil {
         sigha: "Scripts.rvdata2",
         tafsil: sabab.to_string(),
@@ -2257,12 +2357,16 @@ impl Silsila {
         let tarmiz_ism = self.tarmiz_ism_awwal();
         let madghut = udghut_zlib(masdar.as_bytes())?;
         let muarrif = self.adhif(Uqda::Sahih(muarrif_nass(ism)))?;
-        let ism_uqda =
-            self.adhif(Uqda::Nass { bayt: ism.as_bytes().to_vec(), tarmiz: tarmiz_ism })?;
+        let ism_uqda = self.adhif(Uqda::Nass {
+            bayt: ism.as_bytes().to_vec(),
+            tarmiz: tarmiz_ism,
+        })?;
         // The deflated source is binary and carries no encoding declaration,
         // exactly as the engine writes it: `Zlib::Inflate.inflate` takes bytes.
-        let masdar_uqda =
-            self.adhif(Uqda::Nass { bayt: madghut, tarmiz: Tarmiz::Thunai })?;
+        let masdar_uqda = self.adhif(Uqda::Nass {
+            bayt: madghut,
+            tarmiz: Tarmiz::Thunai,
+        })?;
         let saf = self.adhif(Uqda::Masfufa(vec![muarrif, ism_uqda, masdar_uqda]))?;
 
         let jidhr = self.jidhr();
@@ -2369,12 +2473,18 @@ pub fn muarrif_nass(ism: &str) -> i64 {
 const HUQUL_NASS: [(&str, &[&str]); 12] = [
     ("RPG::Actor", &["@name", "@nickname", "@description"]),
     ("RPG::Class", &["@name"]),
-    ("RPG::Skill", &["@name", "@description", "@message1", "@message2"]),
+    (
+        "RPG::Skill",
+        &["@name", "@description", "@message1", "@message2"],
+    ),
     ("RPG::Item", &["@name", "@description"]),
     ("RPG::Weapon", &["@name", "@description"]),
     ("RPG::Armor", &["@name", "@description"]),
     ("RPG::Enemy", &["@name"]),
-    ("RPG::State", &["@name", "@message1", "@message2", "@message3", "@message4"]),
+    (
+        "RPG::State",
+        &["@name", "@message1", "@message2", "@message3", "@message4"],
+    ),
     ("RPG::Troop", &["@name"]),
     ("RPG::CommonEvent", &["@name"]),
     ("RPG::Map", &["@display_name"]),
@@ -2387,7 +2497,10 @@ const HUQUL_QAIMA: [(&str, &[&str]); 2] = [
         "RPG::System",
         &["@elements", "@skill_types", "@weapon_types", "@armor_types"],
     ),
-    ("RPG::System::Terms", &["@basic", "@params", "@etypes", "@commands"]),
+    (
+        "RPG::System::Terms",
+        &["@basic", "@params", "@etypes", "@commands"],
+    ),
 ];
 
 /// Instance variables of `RPG::System` holding one string.
@@ -2430,7 +2543,8 @@ pub struct MustalahVxAce {
 
 /// Whether a string is worth offering to a translator at all.
 fn yustahaqq(nass: &str) -> bool {
-    nass.chars().any(|harf| !harf.is_whitespace() && !harf.is_ascii_punctuation())
+    nass.chars()
+        .any(|harf| !harf.is_whitespace() && !harf.is_ascii_punctuation())
 }
 
 /// Collects every translatable string in one decoded data file.
@@ -2516,11 +2630,15 @@ fn iltiqat_amr(
     muashir: Muashir,
     adhif: &mut impl FnMut(Muashir, &str, String, Option<i64>),
 ) {
-    let Some(ramz) = silsila.sifa(muashir, "@code").and_then(|udw| silsila.sahih(udw)) else {
+    let Some(ramz) = silsila
+        .sifa(muashir, "@code")
+        .and_then(|udw| silsila.sahih(udw))
+    else {
         return;
     };
-    let Some(muamalat) =
-        silsila.sifa(muashir, "@parameters").and_then(|udw| silsila.anasir(udw))
+    let Some(muamalat) = silsila
+        .sifa(muashir, "@parameters")
+        .and_then(|udw| silsila.anasir(udw))
     else {
         return;
     };
@@ -2627,7 +2745,10 @@ impl IdadVxAce {
     #[must_use]
     pub fn nass(&self) -> String {
         let munaqqa = |qeema: &str| -> String {
-            qeema.chars().filter(|harf| !harf.is_control() && *harf != '=').collect()
+            qeema
+                .chars()
+                .filter(|harf| !harf.is_control() && *harf != '=')
+                .collect()
         };
         let mut nass = String::with_capacity(256);
         nass.push_str("# taarib:generated — settings for the injected VX Ace script.\n");
@@ -2676,7 +2797,10 @@ pub fn ayn_nusus(jidhr: &Path) -> Option<MawqiNusus> {
     }
     let masar = masar_bila_hala(jidhr, ISM_HAWIYA);
     if masar.is_file() {
-        return Some(MawqiNusus::Hawiya { masar, udw: "Data/Scripts.rvdata2".to_owned() });
+        return Some(MawqiNusus::Hawiya {
+            masar,
+            udw: "Data/Scripts.rvdata2".to_owned(),
+        });
     }
     None
 }
@@ -2756,15 +2880,16 @@ pub fn rakkib(
             maktub.push(masar_idad);
             hafiz.iktub(&masar, &uktub_silsila(&silsila)?)?;
             maktub.push(masar);
-        }
+        },
         MawqiNusus::Hawiya { masar, udw } => {
             let hawiya = Hawiya::iqra(&masar)?;
-            let madkhal = hawiya.madkhal(&udw).cloned().ok_or_else(|| {
-                KhataNusus::HimlMarfud {
+            let madkhal = hawiya
+                .madkhal(&udw)
+                .cloned()
+                .ok_or_else(|| KhataNusus::HimlMarfud {
                     alia: "the VX Ace script list",
                     sabab: format!("{ISM_HAWIYA} carries no {udw}"),
-                }
-            })?;
+                })?;
             let asli = hawiya.istakhrij(&madkhal)?;
             let mut silsila = iqra_silsila(&asli)?;
             dawra_mutabaqa(&asli, &silsila)?;
@@ -2788,7 +2913,7 @@ pub fn rakkib(
             uktub_hawiya(hafiz, &masar, Some(&hawiya), &aada, hawiya.badhra)?;
             dawra_hawiya(&masar, &aada)?;
             maktub.push(masar);
-        }
+        },
     }
     Ok(maktub)
 }
@@ -2827,7 +2952,7 @@ pub fn izal(hafiz: &mut dyn Hafiz, jidhr: &Path) -> Result<Vec<PathBuf>, KhataNu
             }
             hafiz.iktub(&masar, &uktub_silsila(&silsila)?)?;
             muzala.push(masar);
-        }
+        },
         MawqiNusus::Hawiya { masar, udw } => {
             let hawiya = Hawiya::iqra(&masar)?;
             let Some(madkhal) = hawiya.madkhal(&udw).cloned() else {
@@ -2850,7 +2975,7 @@ pub fn izal(hafiz: &mut dyn Hafiz, jidhr: &Path) -> Result<Vec<PathBuf>, KhataNu
             uktub_hawiya(hafiz, &masar, Some(&hawiya), &aada, hawiya.badhra)?;
             dawra_hawiya(&masar, &aada)?;
             muzala.push(masar);
-        }
+        },
     }
     Ok(muzala)
 }

@@ -338,7 +338,9 @@ fn sunduq_linux() -> Option<Sunduq> {
 /// the three ways this product could ever be packaged into one.
 #[must_use]
 pub fn ruyat_amaliyat() -> RuyatAmaliyat {
-    fi_sunduq().map_or(RuyatAmaliyat::Kamila, |sunduq| RuyatAmaliyat::Maazula { sunduq })
+    fi_sunduq().map_or(RuyatAmaliyat::Kamila, |sunduq| RuyatAmaliyat::Maazula {
+        sunduq,
+    })
 }
 
 /// Whether an executable is running — including "that cannot be known here".
@@ -482,11 +484,11 @@ pub fn masaha_mutaha(masar: &Path) -> Natija<u64> {
         let mut mutah = 0u64;
         // SAFETY: `nass` is a live null-terminated wide string for the lifetime of
         // the call, and `mutah` is a live out-parameter of the required width.
-        let natija = unsafe {
-            GetDiskFreeSpaceExW(&nass, Some(&raw mut mutah), None, None)
-        };
+        let natija = unsafe { GetDiskFreeSpaceExW(&nass, Some(&raw mut mutah), None, None) };
         natija.map(|()| mutah).map_err(|_| {
-            Khata::min_tafsir(&KhataManassa::TaadhurQiyasMasaha { masar: masar.to_path_buf() })
+            Khata::min_tafsir(&KhataManassa::TaadhurQiyasMasaha {
+                masar: masar.to_path_buf(),
+            })
         })
     }
     #[cfg(unix)]
@@ -495,7 +497,9 @@ pub fn masaha_mutaha(masar: &Path) -> Natija<u64> {
         use std::os::unix::ffi::OsStrExt as _;
 
         let nass = CString::new(masar.as_os_str().as_bytes()).map_err(|_| {
-            Khata::min_tafsir(&KhataManassa::TaadhurQiyasMasaha { masar: masar.to_path_buf() })
+            Khata::min_tafsir(&KhataManassa::TaadhurQiyasMasaha {
+                masar: masar.to_path_buf(),
+            })
         })?;
         // SAFETY: statvfs is a plain-old-data struct of integers, for which an
         // all-zero bit pattern is a valid value; the call overwrites it entirely.
@@ -664,7 +668,7 @@ fn halat_hajm_windows(masar: &Path) -> HalatHajm {
                     masar.display()
                 ),
             };
-        }
+        },
     };
     let mut jidhr = PathBuf::from(badia.as_os_str());
     jidhr.push(std::path::MAIN_SEPARATOR_STR);
@@ -694,16 +698,23 @@ fn halat_hajm_unix(masar: &Path) -> HalatHajm {
                 return HalatHajm::Majhul {
                     sabab: format!("the mount table {MASAR_MOUNTINFO} could not be read: {sabab}"),
                 };
-            }
+            },
         };
-        ihkum_hajm(masar, &jadwal, ilanat_fstab, |jidhr| std::fs::metadata(jidhr).map(|_| ()))
+        ihkum_hajm(masar, &jadwal, ilanat_fstab, |jidhr| {
+            std::fs::metadata(jidhr).map(|_| ())
+        })
     }
     #[cfg(target_os = "macos")]
     {
         // Everything outside `/Volumes` is the boot volume or a firmlink onto
         // its data half, both of which are mounted for as long as the system
         // is up — so the conventions are the whole answer here.
-        ihkum_hajm(masar, &[], || Ok(Vec::new()), |jidhr| std::fs::metadata(jidhr).map(|_| ()))
+        ihkum_hajm(
+            masar,
+            &[],
+            || Ok(Vec::new()),
+            |jidhr| std::fs::metadata(jidhr).map(|_| ()),
+        )
     }
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
@@ -783,9 +794,10 @@ fn ihkum_hajm(
 
     match ilanat() {
         Ok(ilanat) => match atwal_tarkeeb(&ilanat, masar) {
-            Some(ilan) if ilan.masar != Path::new("/") => {
-                HalatHajm::GhayrMuttasil { jidhr: ilan.masar.clone(), shabaki: ilan.shabaki }
-            }
+            Some(ilan) if ilan.masar != Path::new("/") => HalatHajm::GhayrMuttasil {
+                jidhr: ilan.masar.clone(),
+                shabaki: ilan.shabaki,
+            },
             _ => HalatHajm::JidhrAlNizam,
         },
         Err(sabab) => HalatHajm::Majhul {
@@ -872,15 +884,21 @@ fn jidhr_taqlidi(masar: &Path) -> Option<PathBuf> {
     let mut jidhr = PathBuf::from("/");
     jidhr.push(walid);
     if walid_nass == "run" {
-        let Some(Component::Normal(thani)) = ajza.next() else { return None };
+        let Some(Component::Normal(thani)) = ajza.next() else {
+            return None;
+        };
         if thani != "media" {
             return None;
         }
         jidhr.push(thani);
-        let Some(Component::Normal(mustakhdim)) = ajza.next() else { return None };
+        let Some(Component::Normal(mustakhdim)) = ajza.next() else {
+            return None;
+        };
         jidhr.push(mustakhdim);
     }
-    let Some(Component::Normal(ism)) = ajza.next() else { return None };
+    let Some(Component::Normal(ism)) = ajza.next() else {
+        return None;
+    };
     jidhr.push(ism);
     Some(jidhr)
 }
@@ -993,7 +1011,10 @@ fn ifham_fstab(nass: &str) -> Vec<Tarkeeb> {
                 return None;
             }
             let naw = huqul.next().unwrap_or("");
-            Some(Tarkeeb { masar: PathBuf::from(masar), shabaki: ANWA_SHABAKIYA.contains(&naw) })
+            Some(Tarkeeb {
+                masar: PathBuf::from(masar),
+                shabaki: ANWA_SHABAKIYA.contains(&naw),
+            })
         })
         .collect()
 }
@@ -1017,7 +1038,7 @@ fn fukk_tahreeb(nass: &str) -> String {
                 Some(raqm) if raqm.is_digit(8) => {
                     arqam.push(*raqm);
                     let _ = ahruf.next();
-                }
+                },
                 _ => break,
             }
         }
@@ -1073,11 +1094,15 @@ pub fn mimariyat_malaf(masar: &Path) -> Natija<Mimariya> {
             0xFEED_FACE | 0xCEFA_EDFE => return Ok(Mimariya::X86),
             0xFEED_FACF | 0xCFFA_EDFE => {
                 let naw = u32le(&bayt, 4).unwrap_or(0);
-                return Ok(if naw == 0x0100_000C { Mimariya::Aarch64 } else { Mimariya::X8664 });
-            }
+                return Ok(if naw == 0x0100_000C {
+                    Mimariya::Aarch64
+                } else {
+                    Mimariya::X8664
+                });
+            },
             // Universal binaries store their slices big-endian regardless of host.
             0xCAFE_BABE | 0xBEBA_FECA => return Ok(Mimariya::hali()),
-            _ => {}
+            _ => {},
         }
     }
 
@@ -1098,7 +1123,9 @@ pub fn mimariyat_malaf(masar: &Path) -> Natija<Mimariya> {
         }
     }
 
-    Err(Khata::min_tafsir(&KhataManassa::LaysaTanfidhiyan { masar: masar.to_path_buf() }))
+    Err(Khata::min_tafsir(&KhataManassa::LaysaTanfidhiyan {
+        masar: masar.to_path_buf(),
+    }))
 }
 
 fn u16le(bayt: &[u8], mawqi: usize) -> Option<u16> {
@@ -1170,45 +1197,52 @@ impl Tafsir for KhataManassa {
                 masar.display()
             ),
             Self::LaysaTanfidhiyan { masar } => {
-                format!("الملف {} ليس ملفًا تنفيذيًا، ولا يمكن فحصه كلعبة.", masar.display())
-            }
+                format!(
+                    "الملف {} ليس ملفًا تنفيذيًا، ولا يمكن فحصه كلعبة.",
+                    masar.display()
+                )
+            },
             Self::MimariyaMajhula { masar, .. } => format!(
                 "الملف {} مبني لمعمارية لا يدعمها تعريب، ولا يمكن الحقن فيه.",
                 masar.display()
             ),
             Self::TaadhurFathAmaliya { raqm, .. } => {
                 format!("تعذّر الوصول إلى العملية رقم {raqm}. قد تكون محمية أو أُغلقت.")
-            }
+            },
         }
     }
 
     fn injilizi(&self) -> String {
         match self {
             Self::TaadhurQiyasMasaha { masar } => {
-                format!("Cannot read free space on the volume holding {}.", masar.display())
-            }
+                format!(
+                    "Cannot read free space on the volume holding {}.",
+                    masar.display()
+                )
+            },
             Self::LaysaTanfidhiyan { masar } => {
-                format!("{} is not an executable and cannot be probed as a game.", masar.display())
-            }
+                format!(
+                    "{} is not an executable and cannot be probed as a game.",
+                    masar.display()
+                )
+            },
             Self::MimariyaMajhula { masar, jihaz } => format!(
                 "{} is built for machine type {jihaz:#06x}, which Taarib cannot inject into.",
                 masar.display()
             ),
             Self::TaadhurFathAmaliya { raqm, .. } => {
                 format!("Cannot access process {raqm}. It may be protected or already closed.")
-            }
+            },
         }
     }
 
     fn khutwa(&self) -> Khutwa {
         match self {
             Self::TaadhurQiyasMasaha { .. } => Khutwa::AadaMuhawala,
-            Self::LaysaTanfidhiyan { .. } | Self::MimariyaMajhula { .. } => {
-                Khutwa::IkhtiyarMasar { matlub: MasarMatlub::MalafTanfidhi }
-            }
-            Self::TaadhurFathAmaliya { sabab, .. } => {
-                khutwa_io(sabab, MasarMatlub::MalafTanfidhi)
-            }
+            Self::LaysaTanfidhiyan { .. } | Self::MimariyaMajhula { .. } => Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MalafTanfidhi,
+            },
+            Self::TaadhurFathAmaliya { sabab, .. } => khutwa_io(sabab, MasarMatlub::MalafTanfidhi),
         }
     }
 
@@ -1217,15 +1251,15 @@ impl Tafsir for KhataManassa {
         match self {
             Self::TaadhurQiyasMasaha { masar } | Self::LaysaTanfidhiyan { masar } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
             Self::MimariyaMajhula { masar, jihaz } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("jihaz".to_owned(), QeemaSiyaq::Raqm(i64::from(*jihaz)));
-            }
+            },
             Self::TaadhurFathAmaliya { raqm, sabab } => {
                 let _ = siyaq.insert("amaliya".to_owned(), QeemaSiyaq::Raqm(i64::from(*raqm)));
                 siyaq.extend(siyaq_io(sabab));
-            }
+            },
         }
         siyaq
     }
@@ -1236,8 +1270,7 @@ khata_min!(KhataManassa);
 #[cfg(test)]
 mod ikhtibarat {
     use super::{
-        HalatTashghil, RuyatAmaliyat, Sunduq, fi_sunduq, halat_tashghil, ruyat_amaliyat,
-        tashtaghil,
+        HalatTashghil, RuyatAmaliyat, Sunduq, fi_sunduq, halat_tashghil, ruyat_amaliyat, tashtaghil,
     };
 
     // A name no process can carry: `/` is the one byte a file name cannot hold.
@@ -1258,13 +1291,25 @@ mod ikhtibarat {
     fn al_hala_al_thalitha_tamnaa() {
         assert!(HalatTashghil::Tashtaghil.yamnaa());
         assert!(!HalatTashghil::LaTashtaghil.yamnaa());
-        assert!(HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Flatpak }.yamnaa());
-        assert!(HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Hawiya }.yamnaa());
+        assert!(
+            HalatTashghil::GhayrMaaruf {
+                sunduq: Sunduq::Flatpak
+            }
+            .yamnaa()
+        );
+        assert!(
+            HalatTashghil::GhayrMaaruf {
+                sunduq: Sunduq::Hawiya
+            }
+            .yamnaa()
+        );
     }
 
     #[test]
     fn sunduq_yuraffiq_nafsahu_bil_hala() {
-        let hala = HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Flatpak };
+        let hala = HalatTashghil::GhayrMaaruf {
+            sunduq: Sunduq::Flatpak,
+        };
         assert_eq!(hala.sunduq(), Some(Sunduq::Flatpak));
         assert_eq!(HalatTashghil::LaTashtaghil.sunduq(), None);
         assert_eq!(HalatTashghil::Tashtaghil.sunduq(), None);
@@ -1295,7 +1340,7 @@ mod ikhtibarat {
             RuyatAmaliyat::Kamila => assert_eq!(hala, HalatTashghil::LaTashtaghil),
             RuyatAmaliyat::Maazula { sunduq } => {
                 assert_eq!(hala, HalatTashghil::GhayrMaaruf { sunduq });
-            }
+            },
         }
     }
 
@@ -1313,10 +1358,27 @@ mod ikhtibarat {
     #[test]
     fn al_hukm_min_al_ghiyab_yahtaj_ittisalan_muthbatan() {
         let jidhr = PathBuf::from("/games");
-        assert!(HalatHajm::Muttasil { jidhr: jidhr.clone(), shabaki: false }.yasmah_bil_hukm());
+        assert!(
+            HalatHajm::Muttasil {
+                jidhr: jidhr.clone(),
+                shabaki: false
+            }
+            .yasmah_bil_hukm()
+        );
         assert!(HalatHajm::JidhrAlNizam.yasmah_bil_hukm());
-        assert!(!HalatHajm::GhayrMuttasil { jidhr, shabaki: false }.yasmah_bil_hukm());
-        assert!(!HalatHajm::Majhul { sabab: "no table".to_owned() }.yasmah_bil_hukm());
+        assert!(
+            !HalatHajm::GhayrMuttasil {
+                jidhr,
+                shabaki: false
+            }
+            .yasmah_bil_hukm()
+        );
+        assert!(
+            !HalatHajm::Majhul {
+                sabab: "no table".to_owned()
+            }
+            .yasmah_bil_hukm()
+        );
     }
 
     /// A path that is reachable by construction is never called unreachable
@@ -1349,7 +1411,10 @@ mod ikhtibarat {
         use super::super::{HalatHajm, Tarkeeb, atwal_tarkeeb, ihkum_hajm, jidhr_taqlidi};
 
         fn tarkeeb(masar: &str) -> Tarkeeb {
-            Tarkeeb { masar: PathBuf::from(masar), shabaki: false }
+            Tarkeeb {
+                masar: PathBuf::from(masar),
+                shabaki: false,
+            }
         }
 
         fn jidhr_faqat() -> Vec<Tarkeeb> {
@@ -1395,7 +1460,10 @@ mod ikhtibarat {
                 tarkeeb("/tmp/.X11-unix"),
             ];
             let aamaq = atwal_tarkeeb(&jadwal, Path::new("/mnt/wslg/distro/etc/fstab"));
-            assert_eq!(aamaq.map(|t| t.masar.as_path()), Some(Path::new("/mnt/wslg/distro")));
+            assert_eq!(
+                aamaq.map(|t| t.masar.as_path()),
+                Some(Path::new("/mnt/wslg/distro"))
+            );
             // A string prefix is not a path prefix: `/mnt/wslg` must not cover
             // `/mnt/wslgames`, and `/tmp/.X11-unix` must not cover `/tmp/x`.
             let jidhr = atwal_tarkeeb(&jadwal, Path::new("/mnt/wslgames/x"));
@@ -1408,9 +1476,15 @@ mod ikhtibarat {
         #[test]
         fn al_judhur_al_taqlidiya() {
             let hal = |masar: &str| jidhr_taqlidi(Path::new(masar));
-            assert_eq!(hal("/media/games/Steam/x"), Some(PathBuf::from("/media/games")));
+            assert_eq!(
+                hal("/media/games/Steam/x"),
+                Some(PathBuf::from("/media/games"))
+            );
             assert_eq!(hal("/mnt/library/x"), Some(PathBuf::from("/mnt/library")));
-            assert_eq!(hal("/Volumes/External/x"), Some(PathBuf::from("/Volumes/External")));
+            assert_eq!(
+                hal("/Volumes/External/x"),
+                Some(PathBuf::from("/Volumes/External"))
+            );
             assert_eq!(
                 hal("/run/media/hassan/Games/x"),
                 Some(PathBuf::from("/run/media/hassan/Games"))
@@ -1428,13 +1502,19 @@ mod ikhtibarat {
             let masar = Path::new("/games/Steam/steamapps/common/ELDEN RING");
             assert_eq!(
                 ihkum_hajm(masar, &jadwal, bila_ilanat, mawjud),
-                HalatHajm::Muttasil { jidhr: PathBuf::from("/games"), shabaki: false }
+                HalatHajm::Muttasil {
+                    jidhr: PathBuf::from("/games"),
+                    shabaki: false
+                }
             );
             // Mounted a moment ago and gone now: the table is stale, the probe
             // is not.
             assert_eq!(
                 ihkum_hajm(masar, &jadwal, bila_ilanat, ghaib),
-                HalatHajm::GhayrMuttasil { jidhr: PathBuf::from("/games"), shabaki: false }
+                HalatHajm::GhayrMuttasil {
+                    jidhr: PathBuf::from("/games"),
+                    shabaki: false
+                }
             );
             // Something answered, and it was not "absent".
             assert!(matches!(
@@ -1457,7 +1537,10 @@ mod ikhtibarat {
             };
             assert_eq!(
                 ihkum_hajm(masar, &jidhr_faqat(), ilanat, ijhas),
-                HalatHajm::GhayrMuttasil { jidhr: PathBuf::from("/games"), shabaki: false }
+                HalatHajm::GhayrMuttasil {
+                    jidhr: PathBuf::from("/games"),
+                    shabaki: false
+                }
             );
             assert_eq!(musta.get(), 0, "a declared, unmounted volume is not probed");
         }
@@ -1504,7 +1587,10 @@ mod ikhtibarat {
             let muallan = || Ok(vec![tarkeeb("/mnt/library")]);
             assert_eq!(
                 ihkum_hajm(masar, &jidhr_faqat(), muallan, mawjud),
-                HalatHajm::GhayrMuttasil { jidhr: PathBuf::from("/mnt/library"), shabaki: false }
+                HalatHajm::GhayrMuttasil {
+                    jidhr: PathBuf::from("/mnt/library"),
+                    shabaki: false
+                }
             );
             // Declared deeper than the conventional root: still the declared one.
             let aamaq = || Ok(vec![tarkeeb("/mnt/library/Steam")]);
@@ -1525,10 +1611,18 @@ mod ikhtibarat {
 
         #[test]
         fn al_ilan_al_shabaki_yahmil_wasfahu() {
-            let ilanat = || Ok(vec![Tarkeeb { masar: PathBuf::from("/games"), shabaki: true }]);
+            let ilanat = || {
+                Ok(vec![Tarkeeb {
+                    masar: PathBuf::from("/games"),
+                    shabaki: true,
+                }])
+            };
             assert_eq!(
                 ihkum_hajm(Path::new("/games/x"), &jidhr_faqat(), ilanat, ghaib),
-                HalatHajm::GhayrMuttasil { jidhr: PathBuf::from("/games"), shabaki: true }
+                HalatHajm::GhayrMuttasil {
+                    jidhr: PathBuf::from("/games"),
+                    shabaki: true
+                }
             );
         }
     }
@@ -1541,7 +1635,10 @@ mod ikhtibarat {
 
         #[test]
         fn fakk_al_tahreeb() {
-            assert_eq!(fukk_tahreeb(r"/media/user/My\040Games"), "/media/user/My Games");
+            assert_eq!(
+                fukk_tahreeb(r"/media/user/My\040Games"),
+                "/media/user/My Games"
+            );
             assert_eq!(fukk_tahreeb(r"C:\134"), r"C:\");
             assert_eq!(fukk_tahreeb(r"a\011b\012c"), "a\tb\nc");
             // Not an escape: kept as written, digits and all.

@@ -166,7 +166,10 @@ pub struct IdadatIkhtisarat {
 
 impl Default for IdadatIkhtisarat {
     fn default() -> Self {
-        Self { lawha: "ctrl+k".to_owned(), taraju: "ctrl+z".to_owned() }
+        Self {
+            lawha: "ctrl+k".to_owned(),
+            taraju: "ctrl+z".to_owned(),
+        }
     }
 }
 
@@ -307,7 +310,11 @@ pub struct IdadatTakhzin {
 
 impl Default for IdadatTakhzin {
     fn default() -> Self {
-        Self { jidhr_ruqaa: None, hadd_makhbaa_mb: 2048, ibqa_nusakh: true }
+        Self {
+            jidhr_ruqaa: None,
+            hadd_makhbaa_mb: 2048,
+            ibqa_nusakh: true,
+        }
     }
 }
 
@@ -443,7 +450,9 @@ impl IdadatMuzawwidin {
         self.iftiradi
             .as_ref()
             .and_then(|ism| {
-                self.qaima.iter().find(|tarif| &tarif.muarrif == ism && tarif.mufaal)
+                self.qaima
+                    .iter()
+                    .find(|tarif| &tarif.muarrif == ism && tarif.mufaal)
             })
             .or_else(|| self.qaima.iter().find(|tarif| tarif.mufaal))
     }
@@ -511,18 +520,18 @@ impl HalatMuzawwidin {
                 "لا مزوّد ترجمة آلية مضبوط على هذا الجهاز. تثبيت الرقع المنشورة يعمل كما هو \
                  — فهي مترجَمة سلفًا ولا تمرّ بمزوّد — أمّا ترجمة نصّ جديد فلا تبدأ حتى تضيف \
                  مزوّدًا في الإعدادات ← المزوّدون."
-            }
+            },
             Self::Muattala => {
                 "كلّ المزوّدين المضبوطين على هذا الجهاز معطَّلون. تثبيت الرقع المنشورة يعمل \
                  كما هو، أمّا ترجمة نصّ جديد فلا تبدأ حتى تفعّل أحدهم في الإعدادات ← \
                  المزوّدون."
-            }
+            },
             Self::Mukhtar => "المزوّد الافتراضي مفعّل، وهو الذي تستخدمه أيّ ترجمة جديدة.",
             Self::Badeel => {
                 "المزوّد المحدَّد افتراضيًّا غير مفعّل أو لم يعد في القائمة، فستستخدم الترجمة \
                  الجديدة أوّل مزوّد مفعّل بدلًا منه — وهو المزوّد الذي ستُحتسب تكلفته. راجع \
                  «افتراضي» في الإعدادات ← المزوّدون إن لم يكن هذا ما تقصده."
-            }
+            },
         }
     }
 
@@ -535,21 +544,21 @@ impl HalatMuzawwidin {
                  published patches still works — they are already translated and never reach \
                  a provider — but translating new text does not start until you add one in \
                  Settings, under Providers."
-            }
+            },
             Self::Muattala => {
                 "Every provider configured on this machine is switched off. Installing \
                  published patches still works, but translating new text does not start \
                  until you enable one in Settings, under Providers."
-            }
+            },
             Self::Mukhtar => {
                 "The default provider is enabled, and it is the one any new translation uses."
-            }
+            },
             Self::Badeel => {
                 "The provider marked as the default is switched off or is no longer in the \
                  list, so a new translation uses the first enabled provider instead — and \
                  that is the one being charged for. Check which provider is marked default \
                  in Settings, Providers, if that is not what you meant."
-            }
+            },
         }
     }
 
@@ -622,7 +631,11 @@ pub struct IdadatTahdith {
 
 impl Default for IdadatTahdith {
     fn default() -> Self {
-        Self { tilqai: false, qanat: QanatTahdith::Mustaqirr, fahs_ind_bad: true }
+        Self {
+            tilqai: false,
+            qanat: QanatTahdith::Mustaqirr,
+            fahs_ind_bad: true,
+        }
     }
 }
 
@@ -656,7 +669,11 @@ pub struct IdadatTashkhis {
 
 impl Default for IdadatTashkhis {
     fn default() -> Self {
-        Self { mustawa: MustawaSijill::Maluma, ayyam_hifz: 14, hadd_hajm_mb: 256 }
+        Self {
+            mustawa: MustawaSijill::Maluma,
+            ayyam_hifz: 14,
+            hadd_hajm_mb: 256,
+        }
     }
 }
 
@@ -922,7 +939,9 @@ fn tabaqat_beea(asas: Idadat) -> Natija<Idadat> {
     }
 
     let mut qeema = serde_json::to_value(&asas).map_err(|q| {
-        Khata::min_tafsir(&KhataIdadat::TaadhurTahweel { tafsil: q.to_string() })
+        Khata::min_tafsir(&KhataIdadat::TaadhurTahweel {
+            tafsil: q.to_string(),
+        })
     })?;
 
     for (miftah, nass) in mutaghayyirat {
@@ -939,31 +958,35 @@ fn tabaqat_beea(asas: Idadat) -> Natija<Idadat> {
         daa_fi_masar(&mut qeema, &masar, mahmul, &miftah)?;
     }
 
-    serde_json::from_value(qeema)
-        .map_err(|q| Khata::min_tafsir(&KhataIdadat::TaadhurTahweel { tafsil: q.to_string() }))
+    serde_json::from_value(qeema).map_err(|q| {
+        Khata::min_tafsir(&KhataIdadat::TaadhurTahweel {
+            tafsil: q.to_string(),
+        })
+    })
 }
 
-fn daa_fi_masar(
-    hadaf: &mut Value,
-    masar: &[String],
-    qeema: Value,
-    asl: &str,
-) -> Natija<()> {
+fn daa_fi_masar(hadaf: &mut Value, masar: &[String], qeema: Value, asl: &str) -> Natija<()> {
     let Some((awwal, baqi)) = masar.split_first() else {
         return Ok(());
     };
     let Some(kain) = hadaf.as_object_mut() else {
-        return Err(Khata::min_tafsir(&KhataIdadat::TajawuzMajhul { miftah: asl.to_owned() }));
+        return Err(Khata::min_tafsir(&KhataIdadat::TajawuzMajhul {
+            miftah: asl.to_owned(),
+        }));
     };
     if baqi.is_empty() {
         if !kain.contains_key(awwal) {
-            return Err(Khata::min_tafsir(&KhataIdadat::TajawuzMajhul { miftah: asl.to_owned() }));
+            return Err(Khata::min_tafsir(&KhataIdadat::TajawuzMajhul {
+                miftah: asl.to_owned(),
+            }));
         }
         let _ = kain.insert(awwal.clone(), qeema);
         return Ok(());
     }
     let Some(dakhili) = kain.get_mut(awwal) else {
-        return Err(Khata::min_tafsir(&KhataIdadat::TajawuzMajhul { miftah: asl.to_owned() }));
+        return Err(Khata::min_tafsir(&KhataIdadat::TajawuzMajhul {
+            miftah: asl.to_owned(),
+        }));
     };
     daa_fi_masar(dakhili, baqi, qeema, asl)
 }
@@ -1001,10 +1024,10 @@ impl Tafsir for KhataIdadat {
         match self {
             Self::TajawuzMajhul { miftah } => {
                 format!("متغيّر البيئة {miftah} يشير إلى إعداد غير موجود، ولم يُطبَّق.")
-            }
+            },
             Self::TaadhurTahweel { .. } => {
                 "ملف الإعدادات لا يطابق الشكل المتوقّع، ولم يُحمَّل حفاظًا على ما فيه.".to_owned()
-            }
+            },
         }
     }
 
@@ -1012,15 +1035,17 @@ impl Tafsir for KhataIdadat {
         match self {
             Self::TajawuzMajhul { miftah } => {
                 format!("Environment variable {miftah} names a setting that does not exist.")
-            }
+            },
             Self::TaadhurTahweel { tafsil } => {
                 format!("The settings file does not match its expected shape: {tafsil}")
-            }
+            },
         }
     }
 
     fn khutwa(&self) -> Khutwa {
-        Khutwa::FathIdadat { qism: QismIdadat::Tashkhis }
+        Khutwa::FathIdadat {
+            qism: QismIdadat::Tashkhis,
+        }
     }
 
     fn siyaq(&self) -> BTreeMap<String, QeemaSiyaq> {
@@ -1028,10 +1053,10 @@ impl Tafsir for KhataIdadat {
         match self {
             Self::TajawuzMajhul { miftah } => {
                 let _ = siyaq.insert("miftah".to_owned(), QeemaSiyaq::Nass(miftah.clone()));
-            }
+            },
             Self::TaadhurTahweel { tafsil } => {
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
         }
         siyaq
     }
@@ -1077,7 +1102,10 @@ mod ikhtibarat {
         };
         assert_eq!(muzawwidun.hala(), HalatMuzawwidin::Muattala);
         assert_eq!(muzawwidun.muntakhab(), None);
-        assert_ne!(HalatMuzawwidin::Muattala.arabi(), HalatMuzawwidin::Faragh.arabi());
+        assert_ne!(
+            HalatMuzawwidin::Muattala.arabi(),
+            HalatMuzawwidin::Faragh.arabi()
+        );
         assert_ne!(
             HalatMuzawwidin::Muattala.injilizi(),
             HalatMuzawwidin::Faragh.injilizi()
@@ -1148,7 +1176,10 @@ mod ikhtibarat {
         // The half a bare "no provider configured" leaves out, and the half the
         // reader came for: installing a published patch reaches no provider.
         for hala in [HalatMuzawwidin::Faragh, HalatMuzawwidin::Muattala] {
-            assert!(hala.injilizi().contains("Installing published patches still works"));
+            assert!(
+                hala.injilizi()
+                    .contains("Installing published patches still works")
+            );
             assert!(hala.arabi().contains("تثبيت الرقع المنشورة يعمل"));
         }
     }

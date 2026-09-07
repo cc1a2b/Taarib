@@ -151,9 +151,7 @@ impl Tafsir for KhataIstikhraj {
             // The string is still extracted; this is a note on it.
             Self::NasqTalif { .. } => Khutura::Tanbeeh,
             // A contributor's work is at stake.
-            Self::TaadhurKitabatMashru { .. } | Self::MukhattatGhayrMafhum { .. } => {
-                Khutura::Fadih
-            }
+            Self::TaadhurKitabatMashru { .. } | Self::MukhattatGhayrMafhum { .. } => Khutura::Fadih,
             _ => Khutura::Khatar,
         }
     }
@@ -162,35 +160,31 @@ impl Tafsir for KhataIstikhraj {
         match self {
             Self::JidhrMafqud { .. } => {
                 "تعذّر الوصول إلى مجلّد اللعبة. قد تكون نُقلت أو حُذفت.".to_owned()
-            }
+            },
             Self::MuharrikGhayrMadum { aila } => format!(
                 "لا يستطيع تعريب استخراج النصوص من محرّك ({aila}) بعد. تبقى الطبقة العامة \
                  متاحة لهذه اللعبة."
             ),
             Self::MuharrikMajhul { .. } => {
-                "تعذّر التعرّف على محرّك هذه اللعبة، ولا يمكن اختيار طريقة استخراج بدونه."
-                    .to_owned()
-            }
+                "تعذّر التعرّف على محرّك هذه اللعبة، ولا يمكن اختيار طريقة استخراج بدونه.".to_owned()
+            },
             Self::HajmMufrit { .. } => {
                 "تعلن إحدى حاويات اللعبة حجمًا أكبر مما تسمح به هذه النسخة، ورُفضت قبل حجز أي \
                  ذاكرة."
                     .to_owned()
-            }
+            },
             Self::NasqTalif { .. } => {
-                "تعذّر تحليل الوسوم داخل أحد النصوص، واستُخرج النص كما هو دون فصل وسومه."
-                    .to_owned()
-            }
+                "تعذّر تحليل الوسوم داخل أحد النصوص، واستُخرج النص كما هو دون فصل وسومه.".to_owned()
+            },
             Self::TaadhurKitabatMashru { .. } => {
                 "تعذّرت كتابة مشروع الترجمة على القرص، ولم يُحفظ شيء.".to_owned()
-            }
+            },
             Self::MukhattatGhayrMafhum { .. } => {
                 "مشروع الترجمة محفوظ بصيغة لا تعرفها هذه النسخة. لم يُفتح ولم يُعدَّل، حفاظًا \
                  على عمل صاحبه."
                     .to_owned()
-            }
-            Self::KhataIltiqat { .. } => {
-                "تعذّر استخدام ملف جلسة الالتقاط.".to_owned()
-            }
+            },
+            Self::KhataIltiqat { .. } => "تعذّر استخدام ملف جلسة الالتقاط.".to_owned(),
         }
     }
 
@@ -233,23 +227,26 @@ impl Tafsir for KhataIstikhraj {
                 daa("haql", QeemaSiyaq::Nass((*haql).to_owned()));
                 daa("qeema", QeemaSiyaq::Hajm(*qeema));
                 daa("saqf", QeemaSiyaq::Hajm(*saqf));
-            }
+            },
             Self::NasqTalif { nass, sabab } => {
                 daa("nass", QeemaSiyaq::Nass(nass.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
-            Self::TaadhurKitabatMashru { masar, sabab }
-            | Self::KhataIltiqat { masar, sabab } => {
+            },
+            Self::TaadhurKitabatMashru { masar, sabab } | Self::KhataIltiqat { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
-            }
-            Self::MukhattatGhayrMafhum { masar, wujid, madum } => {
+            },
+            Self::MukhattatGhayrMafhum {
+                masar,
+                wujid,
+                madum,
+            } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("wujid", QeemaSiyaq::Raqm(i64::from(*wujid)));
                 daa("madum", QeemaSiyaq::Raqm(i64::from(*madum)));
-            }
+            },
             // Handled above.
-            Self::JidhrMafqud { .. } => {}
+            Self::JidhrMafqud { .. } => {},
         }
         siyaq
     }

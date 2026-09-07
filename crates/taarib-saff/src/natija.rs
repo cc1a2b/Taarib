@@ -123,7 +123,11 @@ impl TaqreerTajawuz {
     /// forty pixels over a subtitle is invisible.
     #[must_use]
     pub fn nisba(&self) -> f32 {
-        if self.ard_mutah <= 0.0 { 0.0 } else { self.zaid() / self.ard_mutah }
+        if self.ard_mutah <= 0.0 {
+            0.0
+        } else {
+            self.zaid() / self.ard_mutah
+        }
     }
 
     /// Whether the text also ran past the height it was given.
@@ -203,14 +207,21 @@ impl TakhtitNass {
     /// The layout's bounding box.
     #[must_use]
     pub const fn mustatil(&self) -> MustatilNass {
-        MustatilNass { s: 0.0, a: 0.0, ard: self.ard, irtifa: self.irtifa }
+        MustatilNass {
+            s: 0.0,
+            a: 0.0,
+            ard: self.ard,
+            irtifa: self.irtifa,
+        }
     }
 
     /// The line containing a logical byte offset, for mapping a cursor or a
     /// search hit back to where it is drawn.
     #[must_use]
     pub fn satr_ind(&self, mawqi: u32) -> Option<&SatrMansuq> {
-        self.sutur.iter().find(|satr| mawqi >= satr.mantiqi.start && mawqi < satr.mantiqi.end)
+        self.sutur
+            .iter()
+            .find(|satr| mawqi >= satr.mantiqi.start && mawqi < satr.mantiqi.end)
     }
 
     /// The visual position of a logical byte offset — where a caret goes.
@@ -308,8 +319,11 @@ impl TakhtitNass {
     /// actually produced, never from a guessed range of characters.
     #[must_use]
     pub fn ashkal(&self) -> Vec<(u8, u32)> {
-        let mut ashkal: Vec<(u8, u32)> =
-            self.huruf.iter().map(|harf| (harf.khatt, harf.muarrif)).collect();
+        let mut ashkal: Vec<(u8, u32)> = self
+            .huruf
+            .iter()
+            .map(|harf| (harf.khatt, harf.muarrif))
+            .collect();
         ashkal.sort_unstable();
         ashkal.dedup();
         ashkal

@@ -224,9 +224,14 @@ struct MadkhalJidhr {
 fn qaimat_jidhr(jidhr: &Path) -> Natija<Vec<MadkhalJidhr>> {
     let qaima = std::fs::read_dir(jidhr).map_err(|sabab| {
         if sabab.kind() == std::io::ErrorKind::NotFound {
-            KhataMuharrik::JidhrMafqud { jidhr: jidhr.to_path_buf() }
+            KhataMuharrik::JidhrMafqud {
+                jidhr: jidhr.to_path_buf(),
+            }
         } else {
-            KhataMuharrik::TaadhurQiraatJidhr { jidhr: jidhr.to_path_buf(), sabab }
+            KhataMuharrik::TaadhurQiraatJidhr {
+                jidhr: jidhr.to_path_buf(),
+                sabab,
+            }
         }
     })?;
 
@@ -271,7 +276,10 @@ fn hall_tanfidhi(siyaq: &SiyaqFahs<'_>, judhur: &[MadkhalJidhr]) -> Option<PathB
                     if imtidad.is_empty() {
                         akhar.ism == jidhr_ism
                     } else {
-                        akhar.ism.strip_prefix(jidhr_ism).and_then(|baqi| baqi.strip_prefix('.'))
+                        akhar
+                            .ism
+                            .strip_prefix(jidhr_ism)
+                            .and_then(|baqi| baqi.strip_prefix('.'))
                             == Some(*imtidad)
                     }
                 })
@@ -394,7 +402,8 @@ struct Hasad {
 impl Hasad {
     /// Records an observation that names no engine.
     fn sajjil(&mut self, wasf: impl Into<String>, mawqi: Option<String>, wazn: u8) {
-        self.hasila.sajjil(NawDaleel::TawqiThunai, wasf, mawqi, wazn);
+        self.hasila
+            .sajjil(NawDaleel::TawqiThunai, wasf, mawqi, wazn);
     }
 
     /// Records an observation and the engine family it names.
@@ -557,7 +566,11 @@ fn iqra(jidhr: &Path, masar: &Path, raisi: bool, hasad: &mut Hasad) {
 
 /// A path as the evidence trail names it: relative to the game's root.
 fn nisbi(jidhr: &Path, masar: &Path) -> String {
-    masar.strip_prefix(jidhr).unwrap_or(masar).to_string_lossy().into_owned()
+    masar
+        .strip_prefix(jidhr)
+        .unwrap_or(masar)
+        .to_string_lossy()
+        .into_owned()
 }
 
 /// The architecture, from the header `object` already parsed.
@@ -645,8 +658,7 @@ const AQSAM_HIMAYA: &[(&str, &str)] = &[
 /// PE first, then ELF, then the two Mach-O sections that matter. The order is
 /// the order the budget is spent in, and it is the order these appear in real
 /// images.
-pub const AQSAM_THAWABIT: &[&str] =
-    &[".rdata", ".rodata", ".data.rel.ro", "__const", "__cstring"];
+pub const AQSAM_THAWABIT: &[&str] = &[".rdata", ".rodata", ".data.rel.ro", "__const", "__cstring"];
 
 /// Reports the section names that mean something, which is almost none of them.
 ///
@@ -1046,8 +1058,11 @@ fn mustawradat(kaen: &Kaen<'_>, ism: &str, hasad: &mut Hasad) {
         }
         let malaf = kamil.rsplit(['/', '\\']).next().unwrap_or(&kamil);
         for dalala in DALALAT {
-            let mutabiq =
-                if dalala.juzi { kamil.contains(dalala.ibra) } else { malaf == dalala.ibra };
+            let mutabiq = if dalala.juzi {
+                kamil.contains(dalala.ibra)
+            } else {
+                malaf == dalala.ibra
+            };
             if !mutabiq || ruyat.contains(&dalala.ibra) {
                 continue;
             }
@@ -1146,7 +1161,9 @@ fn musaddarat(kaen: &Kaen<'_>, ism: &str, hasad: &mut Hasad) {
         // An export identified only by ordinal carries no name, and every
         // signal here is a name — nothing to match, so nothing to weigh.
         let ism_wa_raqm = musaddar.name();
-        let Some(ism_khaam) = ism_wa_raqm.name() else { continue };
+        let Some(ism_khaam) = ism_wa_raqm.name() else {
+            continue;
+        };
         let Ok(ism_ramz) = std::str::from_utf8(ism_khaam) else {
             continue;
         };
@@ -1357,8 +1374,11 @@ fn nusus<'a>(kaen: &Kaen<'a>, bayt: &'a [u8], ism: &str, hasad: &mut Hasad) {
             continue;
         };
 
-        let dhayl =
-            if basma.isdar { dhayl_nass(nafidha, mawqi, AQSA_DHAYL) } else { String::new() };
+        let dhayl = if basma.isdar {
+            dhayl_nass(nafidha, mawqi, AQSA_DHAYL)
+        } else {
+            String::new()
+        };
         let wasf = if dhayl.is_empty() {
             format!("{ism} contains \"{}\": {}", basma.ibra, basma.wasf)
         } else {
@@ -1405,7 +1425,10 @@ fn nawafidh<'a>(kaen: &Kaen<'a>, bayt: &'a [u8]) -> Vec<&'a [u8]> {
         let Ok(ism) = qism.name() else {
             continue;
         };
-        if !AQSAM_THAWABIT.iter().any(|matlub| ism.eq_ignore_ascii_case(matlub)) {
+        if !AQSAM_THAWABIT
+            .iter()
+            .any(|matlub| ism.eq_ignore_ascii_case(matlub))
+        {
             continue;
         }
         let Ok(bayanat) = qism.data() else {
@@ -1499,7 +1522,10 @@ fn awail_basmat() -> [bool; 256] {
 fn yutabiq(nafidha: &[u8], mawdi: usize, ibra: &str) -> Option<MawqiBasma> {
     let nihaya = mawdi.checked_add(ibra.len())?;
     if nafidha.get(mawdi..nihaya) == Some(ibra.as_bytes()) {
-        return Some(MawqiBasma { bad: nihaya, thunai: false });
+        return Some(MawqiBasma {
+            bad: nihaya,
+            thunai: false,
+        });
     }
 
     let mut wasee = mawdi;
@@ -1509,7 +1535,10 @@ fn yutabiq(nafidha: &[u8], mawdi: usize, ibra: &str) -> Option<MawqiBasma> {
         }
         wasee = wasee.checked_add(2)?;
     }
-    Some(MawqiBasma { bad: wasee, thunai: true })
+    Some(MawqiBasma {
+        bad: wasee,
+        thunai: true,
+    })
 }
 
 /// One character at a byte offset, in the encoding a match was found in.
@@ -1550,9 +1579,21 @@ fn dhayl_nass(nafidha: &[u8], mawqi: MawqiBasma, aqsa: usize) -> String {
 fn isdar_min_nass(dhayl: &str, khaam: String) -> Option<IsdarMuharrik> {
     let mut ajzaa = dhayl.split(|ramz: char| !ramz.is_ascii_digit());
     let kabir = ajzaa.next()?.parse::<u16>().ok()?;
-    let sagheer = ajzaa.next().and_then(|juz| juz.parse::<u16>().ok()).unwrap_or(0);
-    let tasheeh = ajzaa.next().and_then(|juz| juz.parse::<u16>().ok()).unwrap_or(0);
-    Some(IsdarMuharrik { kabir, sagheer, tasheeh, khaam, mushtaqq: false })
+    let sagheer = ajzaa
+        .next()
+        .and_then(|juz| juz.parse::<u16>().ok())
+        .unwrap_or(0);
+    let tasheeh = ajzaa
+        .next()
+        .and_then(|juz| juz.parse::<u16>().ok())
+        .unwrap_or(0);
+    Some(IsdarMuharrik {
+        kabir,
+        sagheer,
+        tasheeh,
+        khaam,
+        mushtaqq: false,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -1614,7 +1655,9 @@ fn basmat_unity(nafidha: &[u8]) -> Option<String> {
             }
             // A stamp never starts in the middle of a longer number, so a digit
             // or a dot immediately before it disqualifies the position.
-            let qabl = mawdi.checked_sub(khatwa).and_then(|sabiq| harf(nafidha, sabiq, thunai));
+            let qabl = mawdi
+                .checked_sub(khatwa)
+                .and_then(|sabiq| harf(nafidha, sabiq, thunai));
             if qabl.is_some_and(|sabiq| sabiq.is_ascii_digit() || sabiq == b'.') {
                 continue;
             }
@@ -1660,7 +1703,10 @@ fn iqra_basmat_unity(nafidha: &[u8], bidaya: usize, thunai: bool) -> Option<Stri
     }
     let (tanqih, _) = raqm(nafidha, mawdi.checked_add(khatwa)?, thunai, 2)?;
 
-    Some(format!("{kabir}.{sagheer}.{tasheeh}{}{tanqih}", char::from(naw)))
+    Some(format!(
+        "{kabir}.{sagheer}.{tasheeh}{}{tanqih}",
+        char::from(naw)
+    ))
 }
 
 /// Whether a major version is one Unity has ever shipped.
@@ -1730,7 +1776,10 @@ fn dhayl_godot(bayt: &[u8], ism: &str, hasad: &mut Hasad) {
     if dhayl.get(8..) != Some(SIHR_DHAYL.as_slice()) {
         return;
     }
-    let Some(hajm) = dhayl.get(..8).and_then(|thamania| <[u8; 8]>::try_from(thamania).ok()) else {
+    let Some(hajm) = dhayl
+        .get(..8)
+        .and_then(|thamania| <[u8; 8]>::try_from(thamania).ok())
+    else {
         return;
     };
     // A pack cannot be zero bytes and cannot be longer than the file it is

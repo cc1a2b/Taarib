@@ -309,26 +309,27 @@ impl AlamJawda {
             ),
             Self::NassLatiniMutabaqqi { adad } => {
                 format!("بقيت {adad} كلمة لاتينية داخل الترجمة.")
-            }
-            Self::MustalahMukhtalif { mustalah, mutawaqqa } => {
+            },
+            Self::MustalahMukhtalif {
+                mustalah,
+                mutawaqqa,
+            } => {
                 format!("المصطلح «{mustalah}» تُرجم بغير المعتمد في المسرد: «{mutawaqqa}».")
-            }
+            },
             Self::NasqMaksur { mafqud } => {
                 format!("عناصر ناقصة أو تالفة في الترجمة: {}.", mafqud.join("، "))
-            }
+            },
             Self::ThiqaMunkhafida { qeema } => {
                 format!("ثقة الترجمة الآلية منخفضة ({:.0}٪).", qeema * 100.0)
-            }
+            },
             Self::NisbaShadha { nisba } => {
                 format!("طول الترجمة غير متناسب مع الأصل (النسبة {nisba:.1}).")
-            }
+            },
             Self::Farigh => "النص الأصلي غير فارغ والترجمة فارغة.".to_owned(),
             Self::TarjamaMutanaqida { .. } => {
                 "نص أصلي مطابق تُرجم بصيغة مختلفة في موضع آخر.".to_owned()
-            }
-            Self::AaliyaBilaMuraja => {
-                "ترجمة آلية لم يقرأها إنسان بعد.".to_owned()
-            }
+            },
+            Self::AaliyaBilaMuraja => "ترجمة آلية لم يقرأها إنسان بعد.".to_owned(),
         }
     }
 
@@ -341,29 +342,36 @@ impl AlamJawda {
             ),
             Self::NassLatiniMutabaqqi { adad } => {
                 format!("{adad} Latin words remain inside the translation.")
-            }
-            Self::MustalahMukhtalif { mustalah, mutawaqqa } => format!(
+            },
+            Self::MustalahMukhtalif {
+                mustalah,
+                mutawaqqa,
+            } => format!(
                 "The term \"{mustalah}\" was not translated as the glossary requires: \
                  \"{mutawaqqa}\"."
             ),
             Self::NasqMaksur { mafqud } => {
-                format!("Missing or damaged elements in the translation: {}.", mafqud.join(", "))
-            }
+                format!(
+                    "Missing or damaged elements in the translation: {}.",
+                    mafqud.join(", ")
+                )
+            },
             Self::ThiqaMunkhafida { qeema } => {
-                format!("Machine translation confidence is low ({:.0}%).", qeema * 100.0)
-            }
+                format!(
+                    "Machine translation confidence is low ({:.0}%).",
+                    qeema * 100.0
+                )
+            },
             Self::NisbaShadha { nisba } => {
                 format!(
                     "Translation length is out of proportion with the source (ratio {nisba:.1})."
                 )
-            }
+            },
             Self::Farigh => "The source is not empty but the translation is.".to_owned(),
             Self::TarjamaMutanaqida { .. } => {
                 "An identical source string was translated differently elsewhere.".to_owned()
-            }
-            Self::AaliyaBilaMuraja => {
-                "Machine-translated and not yet read by a human.".to_owned()
-            }
+            },
+            Self::AaliyaBilaMuraja => "Machine-translated and not yet read by a human.".to_owned(),
         }
     }
 }
@@ -606,7 +614,9 @@ impl MudkhalNass {
     /// Whether anything blocks this string from shipping.
     #[must_use]
     pub fn yamnaa_alnashr(&self) -> bool {
-        self.alamat.iter().any(|q| matches!(q.khutura(), Khutura::Fadih))
+        self.alamat
+            .iter()
+            .any(|q| matches!(q.khutura(), Khutura::Fadih))
     }
 
     /// The atoms that must appear, unchanged, in any translation of this string.

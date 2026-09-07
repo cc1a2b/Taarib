@@ -67,10 +67,10 @@ use serde::de::DeserializeOwned;
 use taarib_mustalahat::bina::{Basma, BinaId, MutabaqaBina};
 use taarib_mustalahat::luba::{LawnBariz, Luba, LubaId, MasdarLuba, SuwarLuba};
 use taarib_mustalahat::muharrik::{Tabaqa, TaqreerImkaniyat};
-use taarib_mustalahat::musahim::{Musahim, MusahimId, Sumaa};
 use taarib_mustalahat::muraja::HalatMuraja;
+use taarib_mustalahat::musahim::{Musahim, MusahimId, Sumaa};
 use taarib_mustalahat::ruqaa::{
-    HalatRuqaa, MulakhkhasRuqaa, RuqaaId, RuqaaRevision, RukhsaRuqaa, TareeqaTarjama,
+    HalatRuqaa, MulakhkhasRuqaa, RukhsaRuqaa, RuqaaId, RuqaaRevision, TareeqaTarjama,
 };
 use taarib_mustalahat::taghtiya::Taghtiya;
 use taarib_usus::khata::{Khata, Natija};
@@ -120,7 +120,11 @@ impl SimaMukhzana {
     /// Builds a hint.
     #[must_use]
     pub fn jadeeda(aila: &str, naw: &str, qeema: &str) -> Self {
-        Self { aila: aila.to_owned(), naw: naw.to_owned(), qeema: qeema.to_owned() }
+        Self {
+            aila: aila.to_owned(),
+            naw: naw.to_owned(),
+            qeema: qeema.to_owned(),
+        }
     }
 }
 
@@ -201,7 +205,11 @@ fn min_ramz<T: DeserializeOwned>(
     nass: &str,
 ) -> Natija<T> {
     serde_json::from_value(serde_json::Value::String(nass.to_owned())).map_err(|_| {
-        Khata::from(KhataMakhzan::SafTalif { jadwal, amud, qeema: nass.to_owned() })
+        Khata::from(KhataMakhzan::SafTalif {
+            jadwal,
+            amud,
+            qeema: nass.to_owned(),
+        })
     })
 }
 
@@ -220,7 +228,10 @@ fn ila_ramz<T: Serialize>(jadwal: &'static str, amud: &'static str, qeema: &T) -
 /// Renders a path for storage, refusing one that is not valid Unicode.
 fn masar_nass<'a>(amud: &'static str, masar: &'a Path) -> Natija<&'a str> {
     masar.to_str().ok_or_else(|| {
-        Khata::from(KhataMakhzan::MasarGhayrNassi { amud, masar: masar.to_path_buf() })
+        Khata::from(KhataMakhzan::MasarGhayrNassi {
+            amud,
+            masar: masar.to_path_buf(),
+        })
     })
 }
 
@@ -233,9 +244,14 @@ fn masar_nass<'a>(amud: &'static str, masar: &'a Path) -> Natija<&'a str> {
 fn fakkik_masdar(masdar: &MasdarLuba) -> (&'static str, String, Option<&'static str>) {
     let asl = masdar.asl();
     let kamil = asl.muarrif();
-    let muarrif =
-        kamil.split_once(':').map_or_else(|| kamil.clone(), |(_, dhayl)| dhayl.to_owned());
-    let mudir = if matches!(masdar, MasdarLuba::Heroic(_)) { Some("heroic") } else { None };
+    let muarrif = kamil
+        .split_once(':')
+        .map_or_else(|| kamil.clone(), |(_, dhayl)| dhayl.to_owned());
+    let mudir = if matches!(masdar, MasdarLuba::Heroic(_)) {
+        Some("heroic")
+    } else {
+        None
+    };
     (asl.aila().slug(), muarrif, mudir)
 }
 
@@ -265,10 +281,14 @@ fn ijma_masdar(aila: &str, muarrif: &str, mudir: Option<&str>) -> Natija<MasdarL
                 amud: "aila",
                 qeema: aila.to_owned(),
             }));
-        }
+        },
     };
 
-    Ok(if mudir == Some("heroic") { MasdarLuba::Heroic(Box::new(asl)) } else { asl })
+    Ok(if mudir == Some("heroic") {
+        MasdarLuba::Heroic(Box::new(asl))
+    } else {
+        asl
+    })
 }
 
 /// Splits a compatibility environment into the three columns `luba` holds.
@@ -296,7 +316,11 @@ fn fakkik_beea(beea: &BeeatTawafuq) -> Natija<(&'static str, Option<String>, Opt
 /// into a directory that is not the game's.
 fn ijma_beea(naw: &str, isdar: Option<String>, jidhr: Option<String>) -> Natija<BeeatTawafuq> {
     let mafqud = |amud: &'static str| {
-        Khata::from(KhataMakhzan::SafTalif { jadwal: "luba", amud, qeema: "NULL".to_owned() })
+        Khata::from(KhataMakhzan::SafTalif {
+            jadwal: "luba",
+            amud,
+            qeema: "NULL".to_owned(),
+        })
     };
 
     match naw {
@@ -352,7 +376,11 @@ fn taghtiya_min_saf(saf: &Row<'_>, min: usize) -> rusqlite::Result<Taghtiya> {
 /// Reads a fingerprint from a column, refusing anything that is not one.
 fn basma_min_nass(jadwal: &'static str, amud: &'static str, nass: &str) -> Natija<Basma> {
     nass.parse::<Basma>().map_err(|_| {
-        Khata::from(KhataMakhzan::SafTalif { jadwal, amud, qeema: nass.to_owned() })
+        Khata::from(KhataMakhzan::SafTalif {
+            jadwal,
+            amud,
+            qeema: nass.to_owned(),
+        })
     })
 }
 
@@ -570,7 +598,10 @@ impl<'a> SijillAlaab<'a> {
                 luba.ism,
                 taarib_mustalahat::wahhid_ism(&luba.ism),
                 masar_nass("jidhr", &luba.jidhr)?,
-                luba.tanfidhi.as_deref().map(|q| masar_nass("tanfidhi", q)).transpose()?,
+                luba.tanfidhi
+                    .as_deref()
+                    .map(|q| masar_nass("tanfidhi", q))
+                    .transpose()?,
                 i64::try_from(luba.hajm).unwrap_or(i64::MAX),
                 luba.akhir_laab,
                 luba.akhir_tahdith,
@@ -688,7 +719,11 @@ impl<'a> SijillAlaab<'a> {
 
         let sufuf = jumla
             .query_map(params![luba.to_string()], |saf| {
-                Ok(SimaMukhzana { aila: saf.get(0)?, naw: saf.get(1)?, qeema: saf.get(2)? })
+                Ok(SimaMukhzana {
+                    aila: saf.get(0)?,
+                    naw: saf.get(1)?,
+                    qeema: saf.get(2)?,
+                })
             })
             .map_err(|q| khata_jumla("query", "sima_luba", q))?;
 
@@ -727,8 +762,7 @@ impl<'a> SijillAlaab<'a> {
 
         let mut natija = Vec::new();
         for saf in sufuf {
-            let (aila, muarrif, mudir) =
-                saf.map_err(|q| khata_jumla("read", "masdar_luba", q))?;
+            let (aila, muarrif, mudir) = saf.map_err(|q| khata_jumla("read", "masdar_luba", q))?;
             natija.push(ijma_masdar(&aila, &muarrif, mudir.as_deref())?);
         }
         Ok(natija)
@@ -754,7 +788,8 @@ impl<'a> SijillAlaab<'a> {
             .optional()
             .map_err(|q| khata_jumla("lookup", "masdar_luba", q))?;
 
-        nass.map(|q| min_ramz("masdar_luba", "luba", &q)).transpose()
+        nass.map(|q| min_ramz("masdar_luba", "luba", &q))
+            .transpose()
     }
 
     /// One game, with its identities and its current build.
@@ -805,10 +840,16 @@ impl<'a> SijillAlaab<'a> {
             TarteebMaktaba::Hajm => MAKTABA_BIL_HAJM,
         };
 
-        let hadd = if talab.hadd == 0 { -1_i64 } else { i64::from(talab.hadd) };
+        let hadd = if talab.hadd == 0 {
+            -1_i64
+        } else {
+            i64::from(talab.hadd)
+        };
 
-        let mut jumla =
-            self.ittisal.prepare(nass).map_err(|q| khata_jumla("prepare list", "luba", q))?;
+        let mut jumla = self
+            .ittisal
+            .prepare(nass)
+            .map_err(|q| khata_jumla("prepare list", "luba", q))?;
 
         let sufuf = jumla
             .query_map(
@@ -877,7 +918,10 @@ impl<'a> SijillAlaab<'a> {
             let (luba, aila, muarrif, mudir) =
                 saf.map_err(|q| khata_jumla("read", "masdar_luba", q))?;
             let id: LubaId = min_ramz("masdar_luba", "luba", &luba)?;
-            natija.entry(id).or_default().push(ijma_masdar(&aila, &muarrif, mudir.as_deref())?);
+            natija
+                .entry(id)
+                .or_default()
+                .push(ijma_masdar(&aila, &muarrif, mudir.as_deref())?);
         }
         Ok(natija)
     }
@@ -923,11 +967,13 @@ impl<'a> SijillAlaab<'a> {
     /// entry that does not exist — the foreign key catches a game pointed at an
     /// image nothing ever stored.
     pub fn sajjil_suwar(self, id: LubaId, suwar: &SuwarLuba) -> Natija<()> {
-        let (ahmar, akhdar, azraq) = suwar
-            .lawn
-            .map_or((None, None, None), |q| {
-                (Some(i64::from(q.ahmar)), Some(i64::from(q.akhdar)), Some(i64::from(q.azraq)))
-            });
+        let (ahmar, akhdar, azraq) = suwar.lawn.map_or((None, None, None), |q| {
+            (
+                Some(i64::from(q.ahmar)),
+                Some(i64::from(q.akhdar)),
+                Some(i64::from(q.azraq)),
+            )
+        });
 
         let _ = self
             .ittisal
@@ -1004,7 +1050,9 @@ impl<'a> SijillAlaab<'a> {
                 params![i64::try_from(fahs).unwrap_or(i64::MAX), aila],
             )
             .map_err(|q| khata_jumla("sweep", "luba", q))?;
-        Ok(HasilatMash::Jarat { adad: u64::try_from(adad).unwrap_or(0) })
+        Ok(HasilatMash::Jarat {
+            adad: u64::try_from(adad).unwrap_or(0),
+        })
     }
 }
 
@@ -1231,17 +1279,18 @@ impl<'a> SijillMuharrik<'a> {
             })
         })?;
 
-        let (kabir, sagheer, tasheeh, khaam) = muharrik.isdar.as_ref().map_or(
-            (None, None, None, None),
-            |q| {
-                (
-                    Some(i64::from(q.kabir)),
-                    Some(i64::from(q.sagheer)),
-                    Some(i64::from(q.tasheeh)),
-                    Some(q.khaam.clone()),
-                )
-            },
-        );
+        let (kabir, sagheer, tasheeh, khaam) =
+            muharrik
+                .isdar
+                .as_ref()
+                .map_or((None, None, None, None), |q| {
+                    (
+                        Some(i64::from(q.kabir)),
+                        Some(i64::from(q.sagheer)),
+                        Some(i64::from(q.tasheeh)),
+                        Some(q.khaam.clone()),
+                    )
+                });
 
         let mut jumla = self
             .ittisal
@@ -1344,7 +1393,8 @@ impl<'a> SijillMuharrik<'a> {
             .optional()
             .map_err(|q| khata_jumla("lookup tier", "bitaqa_muharrik", q))?;
 
-        nass.map(|q| min_ramz("bitaqa_muharrik", "tabaqa", &q)).transpose()
+        nass.map(|q| min_ramz("bitaqa_muharrik", "tabaqa", &q))
+            .transpose()
     }
 
     /// The games an older probe examined, which this build should re-examine.
@@ -1370,7 +1420,10 @@ impl<'a> SijillMuharrik<'a> {
     ///
     /// Fails when the query cannot run or a stored identity does not decode.
     pub fn marfuda(self) -> Natija<Vec<LubaId>> {
-        self.huwiyat("SELECT luba FROM bitaqa_muharrik WHERE marfuda = 1", params![])
+        self.huwiyat(
+            "SELECT luba FROM bitaqa_muharrik WHERE marfuda = 1",
+            params![],
+        )
     }
 
     /// The cheap install-root signature the probe took with the current report.
@@ -1430,17 +1483,16 @@ impl<'a> SijillMuharrik<'a> {
     pub fn ihdhif(self, luba: LubaId) -> Natija<()> {
         let _ = self
             .ittisal
-            .execute("DELETE FROM bitaqa_muharrik WHERE luba = ?1", params![luba.to_string()])
+            .execute(
+                "DELETE FROM bitaqa_muharrik WHERE luba = ?1",
+                params![luba.to_string()],
+            )
             .map_err(|q| khata_jumla("delete", "bitaqa_muharrik", q))?;
         self.sajjil_basmat_jidhr(luba, None)
     }
 
     /// Runs a statement that yields one identity column.
-    fn huwiyat(
-        self,
-        nass: &'static str,
-        muamalat: &[&dyn rusqlite::ToSql],
-    ) -> Natija<Vec<LubaId>> {
+    fn huwiyat(self, nass: &'static str, muamalat: &[&dyn rusqlite::ToSql]) -> Natija<Vec<LubaId>> {
         let mut jumla = self
             .ittisal
             .prepare(nass)
@@ -1847,7 +1899,11 @@ impl<'a> SijillFahs<'a> {
 
         let sufuf = jumla
             .query_map(params![i64::try_from(fahs).unwrap_or(i64::MAX)], |saf| {
-                Ok(TanbihMukhzan { aila: saf.get(0)?, mawdi: saf.get(1)?, sabab: saf.get(2)? })
+                Ok(TanbihMukhzan {
+                    aila: saf.get(0)?,
+                    mawdi: saf.get(1)?,
+                    sabab: saf.get(2)?,
+                })
             })
             .map_err(|q| khata_jumla("query", "tanbih_fahs", q))?;
 
@@ -1918,7 +1974,10 @@ impl<'a> SijillFahs<'a> {
 
         let sufuf = jumla
             .query_map([], |saf| {
-                Ok((PathBuf::from(saf.get::<_, String>(0)?), saf.get::<_, String>(1)?))
+                Ok((
+                    PathBuf::from(saf.get::<_, String>(0)?),
+                    saf.get::<_, String>(1)?,
+                ))
             })
             .map_err(|q| khata_jumla("query", "jidhr_maktaba", q))?;
 
@@ -1962,7 +2021,9 @@ fn ijma_rukhsa(muarrif: &str) -> RukhsaRuqaa {
         "CC-BY-4.0" => RukhsaRuqaa::CcBy,
         "CC-BY-SA-4.0" => RukhsaRuqaa::CcBySa,
         "all-rights-reserved" => RukhsaRuqaa::MilkiyaKhassa,
-        akhar => RukhsaRuqaa::Ukhra { ism: akhar.to_owned() },
+        akhar => RukhsaRuqaa::Ukhra {
+            ism: akhar.to_owned(),
+        },
     }
 }
 
@@ -1989,12 +2050,7 @@ impl<'a> SijillRuqaa<'a> {
     ///
     /// Fails when a value the schema constrains is out of range, or when a
     /// statement is rejected.
-    pub fn sajjil(
-        self,
-        mulakhkhas: &MulakhkhasRuqaa,
-        aila: &str,
-        muarrif: &str,
-    ) -> Natija<()> {
+    pub fn sajjil(self, mulakhkhas: &MulakhkhasRuqaa, aila: &str, muarrif: &str) -> Natija<()> {
         let waqt = alaan(self.ittisal)?;
         let taghtiya = &mulakhkhas.taghtiya;
 
@@ -2500,7 +2556,11 @@ impl<'a> SijillMusahim<'a> {
         };
 
         let huwiya = MusahimId::jadeed(nass.clone()).map_err(|_| {
-            Khata::from(KhataMakhzan::SafTalif { jadwal: "musahim", amud: "id", qeema: nass })
+            Khata::from(KhataMakhzan::SafTalif {
+                jadwal: "musahim",
+                amud: "id",
+                qeema: nass,
+            })
         })?;
 
         Ok(Some(Musahim {
@@ -2741,7 +2801,9 @@ impl<'a> SijillTathbeet<'a> {
                 mudkhal.amal.ramz(),
                 mudkhal.basma_asl.map(|q| q.to_string()),
                 mudkhal.basma_jadeed.map(|q| q.to_string()),
-                mudkhal.hajm_asl.map(|q| i64::try_from(q).unwrap_or(i64::MAX)),
+                mudkhal
+                    .hajm_asl
+                    .map(|q| i64::try_from(q).unwrap_or(i64::MAX)),
                 mudkhal.nuskha,
             ])
             .map_err(|q| khata_jumla("insert", "bayan_tathbeet", q))?;
@@ -2778,7 +2840,10 @@ impl<'a> SijillTathbeet<'a> {
     pub fn afshil(self, tathbeet: i64) -> Natija<()> {
         let _ = self
             .ittisal
-            .execute("UPDATE tathbeet SET halat = 'fashil' WHERE id = ?1", params![tathbeet])
+            .execute(
+                "UPDATE tathbeet SET halat = 'fashil' WHERE id = ?1",
+                params![tathbeet],
+            )
             .map_err(|q| khata_jumla("fail", "tathbeet", q))?;
         Ok(())
     }
@@ -2839,7 +2904,10 @@ impl<'a> SijillTathbeet<'a> {
 
         let mut natija = Vec::new();
         for saf in sufuf {
-            natija.push(saf.map_err(|q| khata_jumla("read", "tathbeet", q))?.ila_tathbeet()?);
+            natija.push(
+                saf.map_err(|q| khata_jumla("read", "tathbeet", q))?
+                    .ila_tathbeet()?,
+            );
         }
         Ok(natija)
     }
@@ -3083,7 +3151,10 @@ impl<'a> SijillMashari<'a> {
                     mashru.ruqaa.map(|q| q.to_string()),
                     mashru.murajaa.map(|q| i64::from(q.qeema())),
                     mashru.basma_bina.map(|q| q.to_string()),
-                    mashru.tareeqa.map(|q| ila_ramz("mashru", "tareeqa", &q)).transpose()?,
+                    mashru
+                        .tareeqa
+                        .map(|q| ila_ramz("mashru", "tareeqa", &q))
+                        .transpose()?,
                     mashru.rukhsa.as_ref().map(|q| q.muarrif().to_owned()),
                     mashru.musahim.as_ref().map(MusahimId::nass),
                     i64::from(taghtiya.majmu),
@@ -3132,7 +3203,10 @@ impl<'a> SijillMashari<'a> {
 
         let mut natija = Vec::new();
         for saf in sufuf {
-            natija.push(saf.map_err(|q| khata_jumla("read", "mashru", q))?.ila_mashru()?);
+            natija.push(
+                saf.map_err(|q| khata_jumla("read", "mashru", q))?
+                    .ila_mashru()?,
+            );
         }
         Ok(natija)
     }
@@ -3218,14 +3292,20 @@ impl KhaamMashru {
 
         Ok(MashruMukhzan {
             id: self.id,
-            luba: self.luba.map(|q| min_ramz("mashru", "luba", &q)).transpose()?,
+            luba: self
+                .luba
+                .map(|q| min_ramz("mashru", "luba", &q))
+                .transpose()?,
             ism_luba: self.ism_luba,
             unwan: self.unwan,
             mujallad: PathBuf::from(self.mujallad),
             lugha_masdar: self.lugha_masdar,
             lugha_hadaf: self.lugha_hadaf,
             halat: min_ramz("mashru", "halat", &self.halat)?,
-            ruqaa: self.ruqaa.map(|q| min_ramz("mashru", "ruqaa", &q)).transpose()?,
+            ruqaa: self
+                .ruqaa
+                .map(|q| min_ramz("mashru", "ruqaa", &q))
+                .transpose()?,
             murajaa: self
                 .murajaa
                 .map(|q| RuqaaRevision::jadeeda(u32::try_from(q).unwrap_or(1))),
@@ -3233,7 +3313,10 @@ impl KhaamMashru {
                 .basma_bina
                 .map(|q| basma_min_nass("mashru", "basma_bina", &q))
                 .transpose()?,
-            tareeqa: self.tareeqa.map(|q| min_ramz("mashru", "tareeqa", &q)).transpose()?,
+            tareeqa: self
+                .tareeqa
+                .map(|q| min_ramz("mashru", "tareeqa", &q))
+                .transpose()?,
             rukhsa: self.rukhsa.as_deref().map(ijma_rukhsa),
             musahim,
             taghtiya: self.taghtiya,
@@ -3346,7 +3429,10 @@ impl<'a> SijillDhakira<'a> {
                 mudkhal.luba.map(|q| q.to_string()),
                 mudkhal.ism_luba,
                 mudkhal.musahim.as_ref().map(MusahimId::nass),
-                mudkhal.tareeqa.map(|q| ila_ramz("dhakira", "tareeqa", &q)).transpose()?,
+                mudkhal
+                    .tareeqa
+                    .map(|q| ila_ramz("dhakira", "tareeqa", &q))
+                    .transpose()?,
                 ila_ramz("dhakira", "halat", &mudkhal.halat)?,
                 mudkhal.thiqa.map(f64::from),
                 waqt,
@@ -3403,7 +3489,10 @@ impl<'a> SijillDhakira<'a> {
 
         let mut natija = Vec::new();
         for saf in sufuf {
-            natija.push(saf.map_err(|q| khata_jumla("read", "dhakira", q))?.ila_mudkhal()?);
+            natija.push(
+                saf.map_err(|q| khata_jumla("read", "dhakira", q))?
+                    .ila_mudkhal()?,
+            );
         }
         Ok(natija)
     }
@@ -3488,10 +3577,16 @@ impl KhaamDhakira {
             lugha_masdar: self.lugha_masdar,
             lugha_hadaf: self.lugha_hadaf,
             mashru: self.mashru,
-            luba: self.luba.map(|q| min_ramz("dhakira", "luba", &q)).transpose()?,
+            luba: self
+                .luba
+                .map(|q| min_ramz("dhakira", "luba", &q))
+                .transpose()?,
             ism_luba: self.ism_luba,
             musahim,
-            tareeqa: self.tareeqa.map(|q| min_ramz("dhakira", "tareeqa", &q)).transpose()?,
+            tareeqa: self
+                .tareeqa
+                .map(|q| min_ramz("dhakira", "tareeqa", &q))
+                .transpose()?,
             halat: min_ramz("dhakira", "halat", &self.halat)?,
             thiqa: self.thiqa.map(|q| q as f32),
             marrat: u32::try_from(self.marrat).unwrap_or(0),
@@ -3559,9 +3654,11 @@ impl<'a> SijillHalat<'a> {
     /// Fails when the query cannot run.
     pub fn iqra(self, miftah: &str) -> Natija<Option<String>> {
         self.ittisal
-            .query_row("SELECT qeema FROM halat WHERE miftah = ?1", params![miftah], |saf| {
-                saf.get(0)
-            })
+            .query_row(
+                "SELECT qeema FROM halat WHERE miftah = ?1",
+                params![miftah],
+                |saf| saf.get(0),
+            )
             .optional()
             .map_err(|q| khata_jumla("lookup", "halat", q))
     }
@@ -3594,7 +3691,10 @@ impl<'a> SijillHalat<'a> {
     ///
     /// Fails when the query cannot run.
     pub fn iqra_raqm(self, miftah: &str) -> Natija<u64> {
-        Ok(self.iqra(miftah)?.and_then(|q| q.parse::<u64>().ok()).unwrap_or(0))
+        Ok(self
+            .iqra(miftah)?
+            .and_then(|q| q.parse::<u64>().ok())
+            .unwrap_or(0))
     }
 
     /// Writes an unsigned number.
@@ -3679,7 +3779,9 @@ mod ikhtibarat {
     /// Whether the store still says a game is on disk.
     fn mawjuda(ittisal: &Connection, id: LubaId) -> Result<bool, Box<dyn Error>> {
         let luba = bila_khata(SijillAlaab::jadeed(ittisal).wahida(id))?;
-        Ok(luba.ok_or("the game's row is gone, and absent is not deleted")?.mawjuda)
+        Ok(luba
+            .ok_or("the game's row is gone, and absent is not deleted")?
+            .mawjuda)
     }
 
     /// An installed launcher's record for a scan, with or without a complete
@@ -3719,7 +3821,10 @@ mod ikhtibarat {
 
         let hasila = bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "epic"))?;
         assert_eq!(hasila, HasilatMash::Rufidat);
-        assert!(mawjuda(&ittisal, luba.id)?, "a game nobody looked for is not absent");
+        assert!(
+            mawjuda(&ittisal, luba.id)?,
+            "a game nobody looked for is not absent"
+        );
 
         // The warning that explains the refusal is on record beside the scan.
         let mukhzana = bila_khata(SijillFahs::jadeed(&ittisal).tanbihat(thani))?;
@@ -3741,8 +3846,7 @@ mod ikhtibarat {
         sajjil(&ittisal, &luba, awwal)?;
 
         let thani = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
-        let hasila =
-            bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "steam"))?;
+        let hasila = bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "steam"))?;
         assert_eq!(hasila, HasilatMash::Rufidat);
         assert!(mawjuda(&ittisal, luba.id)?);
         Ok(())
@@ -3767,8 +3871,7 @@ mod ikhtibarat {
             &[],
         ))?;
 
-        let hasila =
-            bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "steam"))?;
+        let hasila = bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "steam"))?;
         assert_eq!(hasila, HasilatMash::Jarat { adad: 1 });
         assert!(!mawjuda(&ittisal, dhahaba.id)?);
         assert!(mawjuda(&ittisal, baqiya.id)?);
@@ -3782,7 +3885,10 @@ mod ikhtibarat {
     fn al_mash_la_yamass_luba_mudirha_lam_yuqra() -> NatijatIkhtibar {
         let ittisal = qaida()?;
         let awwal = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
-        let luba = luba(MasdarLuba::Heroic(Box::new(MasdarLuba::Epic("h1".to_owned()))), "Hades");
+        let luba = luba(
+            MasdarLuba::Heroic(Box::new(MasdarLuba::Epic("h1".to_owned()))),
+            "Hades",
+        );
         sajjil(&ittisal, &luba, awwal)?;
 
         let thani = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
@@ -3793,7 +3899,10 @@ mod ikhtibarat {
         ))?;
         let hasila = bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "epic"))?;
         assert_eq!(hasila, HasilatMash::Jarat { adad: 0 });
-        assert!(mawjuda(&ittisal, luba.id)?, "Heroic was not read, so its game stays");
+        assert!(
+            mawjuda(&ittisal, luba.id)?,
+            "Heroic was not read, so its game stays"
+        );
 
         bila_khata(SijillFahs::jadeed(&ittisal).sajjil_natijat_matjar(
             thani,

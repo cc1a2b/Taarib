@@ -303,7 +303,11 @@ impl NitaqKhana {
     /// How far into this range a codepoint sits, or [`None`] if it is outside.
     #[must_use]
     pub const fn fahras(self, khana: u32) -> Option<u32> {
-        if self.yahwi(khana) { Some(khana.saturating_sub(self.awwal)) } else { None }
+        if self.yahwi(khana) {
+            Some(khana.saturating_sub(self.awwal))
+        } else {
+            None
+        }
     }
 }
 
@@ -461,13 +465,21 @@ impl MiftahKhana {
     /// Builds a key from its three parts.
     #[must_use]
     pub const fn jadeed(khatt: u8, hajm_rubi: u16, muarrif: u32) -> Self {
-        Self { khatt, hajm_rubi, muarrif }
+        Self {
+            khatt,
+            hajm_rubi,
+            muarrif,
+        }
     }
 
     /// The key for one shaped glyph at one size.
     #[must_use]
     pub const fn min_harf(harf: &Harf, hajm_rubi: u16) -> Self {
-        Self { khatt: harf.khatt, hajm_rubi, muarrif: harf.muarrif }
+        Self {
+            khatt: harf.khatt,
+            hajm_rubi,
+            muarrif: harf.muarrif,
+        }
     }
 
     /// The key for an atlas entry, dropping the subpixel bucket and the
@@ -477,7 +489,11 @@ impl MiftahKhana {
     /// why a `BitmapFont` can express neither.
     #[must_use]
     pub const fn min_miftah_shakl(miftah: MiftahShakl) -> Self {
-        Self { khatt: miftah.khatt, hajm_rubi: miftah.hajm_rubi, muarrif: miftah.muarrif }
+        Self {
+            khatt: miftah.khatt,
+            hajm_rubi: miftah.hajm_rubi,
+            muarrif: miftah.muarrif,
+        }
     }
 
     /// The atlas key for this slot, at subpixel bucket zero.
@@ -502,7 +518,11 @@ impl MiftahKhana {
 impl fmt::Display for MiftahKhana {
     /// `font 0 / 48q / glyph 1093`, which is what an error message wants.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "font {} / {}q / glyph {}", self.khatt, self.hajm_rubi, self.muarrif)
+        write!(
+            f,
+            "font {} / {}q / glyph {}",
+            self.khatt, self.hajm_rubi, self.muarrif
+        )
     }
 }
 
@@ -527,7 +547,10 @@ impl HawdKhanat {
     /// An empty pool over one private-use area.
     #[must_use]
     pub const fn jadeed(namat: NamatKhana) -> Self {
-        Self { namat, ashkal: BTreeSet::new() }
+        Self {
+            namat,
+            ashkal: BTreeSet::new(),
+        }
     }
 
     /// Which area this pool draws from.
@@ -601,22 +624,27 @@ impl HawdKhanat {
         let mut ila_khana: BTreeMap<MiftahKhana, char> = BTreeMap::new();
         let mut min_khana: Vec<MiftahKhana> = Vec::with_capacity(self.ashkal.len());
         for (fahras, miftah) in self.ashkal.iter().enumerate() {
-            let raqm = u32::try_from(fahras).map_err(|_| KhataLawha::NaqlMumtali {
-                matlub,
-                mutah,
-            })?;
-            let khana = self.namat.khana(raqm).ok_or_else(|| KhataLawha::NaqlMarfud {
-                sabab: format!(
-                    "slot {raqm} of the {} area has no codepoint, though the area \
+            let raqm =
+                u32::try_from(fahras).map_err(|_| KhataLawha::NaqlMumtali { matlub, mutah })?;
+            let khana = self
+                .namat
+                .khana(raqm)
+                .ok_or_else(|| KhataLawha::NaqlMarfud {
+                    sabab: format!(
+                        "slot {raqm} of the {} area has no codepoint, though the area \
                      declares {mutah}",
-                    self.namat.ism()
-                ),
-            })?;
+                        self.namat.ism()
+                    ),
+                })?;
             let _ = ila_khana.insert(*miftah, khana);
             min_khana.push(*miftah);
         }
 
-        Ok(TawzeeKhanat { namat: self.namat, ila_khana, min_khana })
+        Ok(TawzeeKhanat {
+            namat: self.namat,
+            ila_khana,
+            min_khana,
+        })
     }
 }
 
@@ -687,10 +715,13 @@ impl TawzeeKhanat {
 
     /// Every assignment, in slot order, which is ascending codepoint order.
     pub fn tawzee(&self) -> impl Iterator<Item = (MiftahKhana, char)> + '_ {
-        self.min_khana.iter().enumerate().filter_map(|(fahras, miftah)| {
-            let raqm = u32::try_from(fahras).ok()?;
-            Some((*miftah, self.namat.khana(raqm)?))
-        })
+        self.min_khana
+            .iter()
+            .enumerate()
+            .filter_map(|(fahras, miftah)| {
+                let raqm = u32::try_from(fahras).ok()?;
+                Some((*miftah, self.namat.khana(raqm)?))
+            })
     }
 }
 
@@ -734,7 +765,10 @@ impl LawhaJahiza {
     /// An empty atlas.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { mawadi: BTreeMap::new(), safahat: Vec::new() }
+        Self {
+            mawadi: BTreeMap::new(),
+            safahat: Vec::new(),
+        }
     }
 
     /// The bridge from a compiled atlas.
@@ -803,8 +837,10 @@ impl LawhaJahiza {
             let khana = MiftahKhana::min_miftah_shakl(miftah);
             if jahiza.safahat.get(usize::from(mawdi.safha)).is_none() {
                 return Err(KhataLawha::NaqlMarfud {
-                    sabab: format!("{khana} sits on page {}, which the atlas does not have",
-                        mawdi.safha),
+                    sabab: format!(
+                        "{khana} sits on page {}, which the atlas does not have",
+                        mawdi.safha
+                    ),
                 });
             }
             if let Some(sabiq) = jahiza.dif_shakl(khana, mawdi) {
@@ -934,9 +970,12 @@ impl QiyasatNaql {
                 sabab: format!("the transport's descent rounds to {hubut}, which is negative"),
             });
         }
-        let matlub = suud.checked_add(hubut).ok_or_else(|| KhataLawha::KhattMarfud {
-            sabab: "the transport's ascent and descent do not sum to a usable height".to_owned(),
-        })?;
+        let matlub = suud
+            .checked_add(hubut)
+            .ok_or_else(|| KhataLawha::KhattMarfud {
+                sabab: "the transport's ascent and descent do not sum to a usable height"
+                    .to_owned(),
+            })?;
         if irtifa < matlub {
             return Err(KhataLawha::KhattMarfud {
                 sabab: format!(
@@ -945,7 +984,11 @@ impl QiyasatNaql {
                 ),
             });
         }
-        Ok(Self { suud, hubut, irtifa })
+        Ok(Self {
+            suud,
+            hubut,
+            irtifa,
+        })
     }
 
     /// How far the font rises above the baseline, in whole pixels.
@@ -1115,7 +1158,10 @@ impl JadwalKhattNaql {
     /// map beside them would be a second copy that can disagree with the first.
     #[must_use]
     pub fn khana(&self, khana: char) -> Option<&KhanaShakl> {
-        let fahras = self.khanat.binary_search_by(|saf| saf.khana.cmp(&khana)).ok()?;
+        let fahras = self
+            .khanat
+            .binary_search_by(|saf| saf.khana.cmp(&khana))
+            .ok()?;
         self.khanat.get(fahras)
     }
 
@@ -1188,7 +1234,8 @@ impl JadwalKhattNaql {
             "info face=\"taarib-naql\" size=0 bold=0 italic=0 charset=\"\" unicode=1 \
              stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=0,0\n",
         );
-        let _ = writeln!(nass, 
+        let _ = writeln!(
+            nass,
             "common lineHeight={} base={} scaleW={asas_ard} scaleH={asas_irtifa} pages={} \
              packed=0",
             self.qiyasat.irtifa(),
@@ -1201,7 +1248,8 @@ impl JadwalKhattNaql {
 
         let _ = writeln!(nass, "chars count={}", self.khanat.len());
         for saf in &self.khanat {
-            let _ = writeln!(nass, 
+            let _ = writeln!(
+                nass,
                 "char id={} x={} y={} width={} height={} xoffset={} yoffset={} xadvance={} \
                  page={} chnl=15",
                 u32::from(saf.khana),
@@ -1218,7 +1266,8 @@ impl JadwalKhattNaql {
 
         let _ = writeln!(nass, "kernings count={}", self.azwaj.len());
         for zawj in &self.azwaj {
-            let _ = writeln!(nass, 
+            let _ = writeln!(
+                nass,
                 "kerning first={} second={} amount={}",
                 u32::from(zawj.awwal),
                 u32::from(zawj.thani),
@@ -1251,7 +1300,10 @@ impl JadwalKhattNaql {
         let nass = self.fnt(asmaa_safahat)?;
         wijha
             .write_all(nass.as_bytes())
-            .map_err(|sabab| KhataLawha::KhataMalaf { masar: masar.to_path_buf(), sabab })
+            .map_err(|sabab| KhataLawha::KhataMalaf {
+                masar: masar.to_path_buf(),
+                sabab,
+            })
     }
 }
 
@@ -1267,7 +1319,8 @@ pub fn ism_safha_masmuh(ism: &str) -> bool {
     if ism.is_empty() || ism == "." || ism == ".." {
         return false;
     }
-    !ism.chars().any(|harf| harf == '/' || harf == '\\' || harf == '"' || harf.is_control())
+    !ism.chars()
+        .any(|harf| harf == '/' || harf == '\\' || harf == '"' || harf.is_control())
 }
 
 // ---------------------------------------------------------------------------
@@ -1441,7 +1494,8 @@ impl TaqreerNaql {
         if self.mutabaq() {
             nass.push_str("; every glyph sits where shaping put it");
         } else {
-            let _ = write!(nass, 
+            let _ = write!(
+                nass,
                 "; {} glyph instance(s) across {} slot(s) could not keep their shaped height, \
                  and {} adjacency(ies) across {} pair(s) could not keep their shaped gap",
                 self.isti_mutanaziaa,
@@ -1605,7 +1659,9 @@ impl Naql {
         let mut asas: Option<i32> = None;
 
         for fahras in tartib {
-            let Some(harf) = huruf.get(fahras) else { continue };
+            let Some(harf) = huruf.get(fahras) else {
+                continue;
+            };
             let miftah = MiftahKhana::min_harf(harf, hajm_rubi);
             let ghayr_raqm = |haql: &str, qeema: f32| KhataLawha::NaqlMarfud {
                 sabab: format!(
@@ -1613,7 +1669,8 @@ impl Naql {
                      {qeema}, which is not a pixel position"
                 ),
             };
-            let s = sahih_min_ashri(harf.s).ok_or_else(|| ghayr_raqm("horizontal origin", harf.s))?;
+            let s =
+                sahih_min_ashri(harf.s).ok_or_else(|| ghayr_raqm("horizontal origin", harf.s))?;
             let a = sahih_min_ashri(harf.a).ok_or_else(|| ghayr_raqm("vertical origin", harf.a))?;
 
             if !harf.alama {
@@ -1626,8 +1683,8 @@ impl Naql {
                                  baselines, {mawdi} and {a}; a transported run must be one line"
                             ),
                         });
-                    }
-                    Some(_) => {}
+                    },
+                    Some(_) => {},
                 }
             }
 
@@ -1720,7 +1777,12 @@ impl Naql {
             );
         }
 
-        Ok(NatijatNaql { tawzee, khatt: jadwal, nusus, taqreer })
+        Ok(NatijatNaql {
+            tawzee,
+            khatt: jadwal,
+            nusus,
+            taqreer,
+        })
     }
 
     /// Resolves every slot the pool holds against the atlas, once.
@@ -1747,9 +1809,11 @@ impl Naql {
                 });
             }
             let (ard, irtifa) =
-                lawha.qiyas_safha(mawdi.safha).ok_or_else(|| KhataLawha::NaqlMarfud {
-                    sabab: format!("atlas page {} has no dimensions", mawdi.safha),
-                })?;
+                lawha
+                    .qiyas_safha(mawdi.safha)
+                    .ok_or_else(|| KhataLawha::NaqlMarfud {
+                        sabab: format!("atlas page {} has no dimensions", mawdi.safha),
+                    })?;
             let yameen = mawdi.s.checked_add(mawdi.ard);
             let asfal = mawdi.a.checked_add(mawdi.irtifa);
             if yameen.is_none_or(|hadd| hadd > ard) || asfal.is_none_or(|hadd| hadd > irtifa) {
@@ -1780,13 +1844,19 @@ impl Naql {
         let mut ihsaa: BTreeMap<MiftahKhana, BTreeMap<i32, u32>> = BTreeMap::new();
         for rasd in &self.marasid {
             for harf in &rasd.huruf {
-                let Some(mawdi) = mawadi.get(&harf.miftah) else { continue };
+                let Some(mawdi) = mawadi.get(&harf.miftah) else {
+                    continue;
+                };
                 let Some(qeema) =
                     izahat_amudiya(self.qiyasat.suud(), mawdi.izaha_a, harf.a, rasd.asas)
                 else {
                     continue;
                 };
-                let adad = ihsaa.entry(harf.miftah).or_default().entry(qeema).or_insert(0_u32);
+                let adad = ihsaa
+                    .entry(harf.miftah)
+                    .or_default()
+                    .entry(qeema)
+                    .or_insert(0_u32);
                 *adad = adad.saturating_add(1);
             }
         }
@@ -1816,24 +1886,25 @@ impl Naql {
                 sabab: format!("{miftah} was assigned a slot and has no atlas image"),
             })?;
             let ihsaa = irtifaat.get(&miftah);
-            let mukhtara = match ihsaa.and_then(qeema_ghaliba) {
-                Some((qeema, muwafiq, kull)) => {
-                    if ihsaa.is_some_and(|tawzi| tawzi.len() > 1) {
-                        mutanaziaa = mutanaziaa.saturating_add(1);
-                        isti = isti.saturating_add(u64::from(kull.saturating_sub(muwafiq)));
-                    }
-                    qeema
-                }
-                // Unreachable through this module's own flow — every slot came
-                // from a run and every run contributed a height — and handled
-                // anyway, as the glyph's own bearing, rather than by a branch
-                // that would abort a build for a case nobody can produce.
-                None => izahat_amudiya(self.qiyasat.suud(), mawdi.izaha_a, 0, 0).ok_or_else(
-                    || KhataLawha::NaqlMarfud {
-                        sabab: format!("{miftah} has no vertical offset this font can carry"),
+            let mukhtara =
+                match ihsaa.and_then(qeema_ghaliba) {
+                    Some((qeema, muwafiq, kull)) => {
+                        if ihsaa.is_some_and(|tawzi| tawzi.len() > 1) {
+                            mutanaziaa = mutanaziaa.saturating_add(1);
+                            isti = isti.saturating_add(u64::from(kull.saturating_sub(muwafiq)));
+                        }
+                        qeema
                     },
-                )?,
-            };
+                    // Unreachable through this module's own flow — every slot came
+                    // from a run and every run contributed a height — and handled
+                    // anyway, as the glyph's own bearing, rather than by a branch
+                    // that would abort a build for a case nobody can produce.
+                    None => izahat_amudiya(self.qiyasat.suud(), mawdi.izaha_a, 0, 0).ok_or_else(
+                        || KhataLawha::NaqlMarfud {
+                            sabab: format!("{miftah} has no vertical offset this font can carry"),
+                        },
+                    )?,
+                };
 
             let izaha_a = i16::try_from(mukhtara).map_err(|_| KhataLawha::NaqlMarfud {
                 sabab: format!(
@@ -1881,9 +1952,11 @@ impl Naql {
         for rasd in &self.marasid {
             let mut khanat = String::with_capacity(rasd.huruf.len().saturating_mul(4));
             for harf in &rasd.huruf {
-                let khana = tawzee.khana(harf.miftah).ok_or_else(|| KhataLawha::NaqlMarfud {
-                    sabab: format!("{} was recorded and then not assigned a slot", harf.miftah),
-                })?;
+                let khana = tawzee
+                    .khana(harf.miftah)
+                    .ok_or_else(|| KhataLawha::NaqlMarfud {
+                        sabab: format!("{} was recorded and then not assigned a slot", harf.miftah),
+                    })?;
                 khanat.push(khana);
             }
             nusus.push(NassManqul {
@@ -1928,11 +2001,20 @@ impl Naql {
                 else {
                     continue;
                 };
-                let Some(saf) = jadwal.khana(khana_a) else { continue };
-                let Some(fajwa) = lahiq.s.checked_sub(sabiq.s) else { continue };
-                let Some(tashih) = fajwa.checked_sub(i32::from(saf.taqaddum)) else { continue };
-                let adad =
-                    ihsaa.entry((khana_a, khana_b)).or_default().entry(tashih).or_insert(0_u32);
+                let Some(saf) = jadwal.khana(khana_a) else {
+                    continue;
+                };
+                let Some(fajwa) = lahiq.s.checked_sub(sabiq.s) else {
+                    continue;
+                };
+                let Some(tashih) = fajwa.checked_sub(i32::from(saf.taqaddum)) else {
+                    continue;
+                };
+                let adad = ihsaa
+                    .entry((khana_a, khana_b))
+                    .or_default()
+                    .entry(tashih)
+                    .or_insert(0_u32);
                 *adad = adad.saturating_add(1);
             }
         }
@@ -1941,7 +2023,9 @@ impl Naql {
         let mut mutanaziaa: u32 = 0;
         let mut isti: u64 = 0;
         for ((awwal, thani), tawzi) in &ihsaa {
-            let Some((qeema, muwafiq, kull)) = qeema_ghaliba(tawzi) else { continue };
+            let Some((qeema, muwafiq, kull)) = qeema_ghaliba(tawzi) else {
+                continue;
+            };
             if tawzi.len() > 1 {
                 mutanaziaa = mutanaziaa.saturating_add(1);
                 isti = isti.saturating_add(u64::from(kull.saturating_sub(muwafiq)));
@@ -1957,7 +2041,11 @@ impl Naql {
                     u32::from(*thani)
                 ),
             })?;
-            azwaj.push(ZawjTaqaddum { awwal: *awwal, thani: *thani, tashih });
+            azwaj.push(ZawjTaqaddum {
+                awwal: *awwal,
+                thani: *thani,
+                tashih,
+            });
         }
 
         let adad = tul_u64(azwaj.len());
@@ -1985,7 +2073,9 @@ impl Naql {
 fn ijma_safahat(lawha: &dyn MasdarLawha) -> Vec<(u16, u16)> {
     let mut safahat: Vec<(u16, u16)> = Vec::new();
     for fahras in 0..lawha.adad_safahat() {
-        let Some(qiyas) = lawha.qiyas_safha(fahras) else { break };
+        let Some(qiyas) = lawha.qiyas_safha(fahras) else {
+            break;
+        };
         safahat.push(qiyas);
     }
     safahat
@@ -2039,7 +2129,9 @@ fn tartib_basari(huruf: &[Harf]) -> Vec<usize> {
     let mut tartib: Vec<usize> = Vec::with_capacity(huruf.len());
     for (bidaya, tul, _) in anaqid {
         for izaha in 0..tul {
-            let Some(fahras) = bidaya.checked_add(izaha) else { break };
+            let Some(fahras) = bidaya.checked_add(izaha) else {
+                break;
+            };
             tartib.push(fahras);
         }
     }
@@ -2110,7 +2202,11 @@ fn sahih_min_ashri(qeema: f32) -> Option<i32> {
         asas.checked_shl(khatawat)?
     } else {
         let khatawat = u32::try_from(izaha.checked_neg()?).ok()?;
-        if khatawat >= 64 { 0 } else { asas.checked_shr(khatawat)? }
+        if khatawat >= 64 {
+            0
+        } else {
+            asas.checked_shr(khatawat)?
+        }
     };
 
     let madd = i64::try_from(mutlaq).ok()?;

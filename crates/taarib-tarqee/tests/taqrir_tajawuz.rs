@@ -82,7 +82,10 @@ fn masar_khatt() -> PathBuf {
         }
         dalil = jidhr.parent();
     }
-    panic!("no Arabic font found at or above {}", env!("CARGO_MANIFEST_DIR"));
+    panic!(
+        "no Arabic font found at or above {}",
+        env!("CARGO_MANIFEST_DIR")
+    );
 }
 
 /// One string with the constraint a capture session would have recorded for
@@ -129,12 +132,20 @@ fn quyud_zirr(ard: f32) -> QuyudNass {
 fn mashru() -> Vec<MudkhalNass> {
     vec![
         mudkhal("ui/menu.txt", "Save", Some(YASA), quyud_zirr(400.0)),
-        mudkhal("ui/menu.txt", "Back to the game's main menu", Some(LA_YASA), quyud_zirr(40.0)),
+        mudkhal(
+            "ui/menu.txt",
+            "Back to the game's main menu",
+            Some(LA_YASA),
+            quyud_zirr(40.0),
+        ),
         mudkhal(
             "ui/menu.txt",
             "Options",
             Some(BILA_ARD),
-            QuyudNass { hajm_khatt: Some(HAJM), ..QuyudNass::default() },
+            QuyudNass {
+                hajm_khatt: Some(HAJM),
+                ..QuyudNass::default()
+            },
         ),
         mudkhal("ui/menu.txt", "Quit", Some(BILA_HAJM), QuyudNass::default()),
         mudkhal("ui/menu.txt", "Load", None, quyud_zirr(400.0)),
@@ -171,8 +182,12 @@ fn ijmi(nusus: &[MudkhalNass]) -> HuzmaMabniya {
         tareeqa: TareeqaTarjama::AaliyaFaqat,
         isdar_taarib: "1.0.0".to_owned(),
     };
-    let ijtiyaz = ijri(&MudkhalatFahs { madakhil: nusus, wasf: &wasf, takhtitat_fashila: &[] })
-        .expect("the hard checks pass on this project");
+    let ijtiyaz = ijri(&MudkhalatFahs {
+        madakhil: nusus,
+        wasf: &wasf,
+        takhtitat_fashila: &[],
+    })
+    .expect("the hard checks pass on this project");
 
     let irtibat = IrtibatBina {
         manassat: vec!["ikhtibar-1".to_owned()],
@@ -216,8 +231,12 @@ fn ijmi(nusus: &[MudkhalNass]) -> HuzmaMabniya {
 /// the thing under test.
 fn taqrir_fil_huzma(huzma: &HuzmaMabniya) -> TaqrirTajawuz {
     let ruqaa = Ruqaa::iftah(huzma.bayt.bayt()).expect("the package reopens");
-    let bayan = ruqaa.bayan_json().expect("the metadata section reads back as JSON");
-    let tajawuz = bayan.get("tajawuz").expect("the manifest carries the overflow report");
+    let bayan = ruqaa
+        .bayan_json()
+        .expect("the metadata section reads back as JSON");
+    let tajawuz = bayan
+        .get("tajawuz")
+        .expect("the manifest carries the overflow report");
     serde_json::from_value(tajawuz.clone()).expect("the report deserializes from the manifest")
 }
 
@@ -232,13 +251,20 @@ fn ikhtibar_thalathat_ahwal_min_tajmee_wahid() {
     let huzma = ijmi(&nusus);
     let taqrir = &huzma.bayan.tajawuz;
 
-    assert_eq!(taqrir.hala(), HalatQiyasTajawuz::Juzi, "{}", taqrir.wasf_injilizi());
-    assert_eq!(taqrir.mulakhkhas.maqis, 2, "two strings had a box and a layout to compare");
+    assert_eq!(
+        taqrir.hala(),
+        HalatQiyasTajawuz::Juzi,
+        "{}",
+        taqrir.wasf_injilizi()
+    );
+    assert_eq!(
+        taqrir.mulakhkhas.maqis, 2,
+        "two strings had a box and a layout to compare"
+    );
     assert_eq!(taqrir.mulakhkhas.salim, 1, "one of them fitted");
     assert_eq!(taqrir.mulakhkhas.mutajawiz, 1, "one of them did not");
     assert_eq!(
-        taqrir.mulakhkhas.ghayr_mutahaqqaq,
-        2,
+        taqrir.mulakhkhas.ghayr_mutahaqqaq, 2,
         "the string with no width and the string with no size were submitted and not measured"
     );
     assert_eq!(taqrir.mulakhkhas.nusus_ghayr_mutahaqqaqa, 2);
@@ -251,7 +277,9 @@ fn ikhtibar_almutajawiz_yuqas_mutajawizan() {
     let huzma = ijmi(&nusus);
     let taqrir = &huzma.bayan.tajawuz;
 
-    let Some(aswa) = taqrir.aswa() else { panic!("something overran") };
+    let Some(aswa) = taqrir.aswa() else {
+        panic!("something overran")
+    };
     assert_eq!(aswa.nass, id(&nusus, "Back to the game's main menu"));
     assert!(
         aswa.ard_maqis > aswa.ard_mutah,
@@ -264,8 +292,15 @@ fn ikhtibar_almutajawiz_yuqas_mutajawizan() {
         "a sentence in a one-word button is at least severe, got {:?}",
         aswa.shidda
     );
-    assert_eq!(taqrir.tajawuzat.len(), 1, "exactly one (string, size) pair overran");
-    assert!(taqrir.mulakhkhas.yastahiqq_iaada() >= 1, "and it is worth rewriting");
+    assert_eq!(
+        taqrir.tajawuzat.len(),
+        1,
+        "exactly one (string, size) pair overran"
+    );
+    assert!(
+        taqrir.mulakhkhas.yastahiqq_iaada() >= 1,
+        "and it is worth rewriting"
+    );
 }
 
 /// Per string, the four answers are four answers.
@@ -321,7 +356,10 @@ fn ikhtibar_kull_sabab_bismih() {
         NawAdamAltahaqquq::BilaArdMutah.wasf_injilizi(),
         NawAdamAltahaqquq::BilaHajm.wasf_injilizi()
     );
-    assert_eq!(taqrir.mulakhkhas.hasab_sabab.get("bila_ard_mutah"), Some(&1));
+    assert_eq!(
+        taqrir.mulakhkhas.hasab_sabab.get("bila_ard_mutah"),
+        Some(&1)
+    );
     assert_eq!(taqrir.mulakhkhas.hasab_sabab.get("bila_hajm"), Some(&1));
     assert_eq!(
         NawAdamAltahaqquq::min_miftah("bila_hajm"),
@@ -338,7 +376,10 @@ fn ikhtibar_altaqrir_yaqra_min_alhuzma() {
     let huzma = ijmi(&nusus);
     let maqru = taqrir_fil_huzma(&huzma);
 
-    assert_eq!(maqru, huzma.bayan.tajawuz, "what was written is what reads back");
+    assert_eq!(
+        maqru, huzma.bayan.tajawuz,
+        "what was written is what reads back"
+    );
     assert_eq!(maqru.hala(), HalatQiyasTajawuz::Juzi);
     assert_eq!(maqru.mulakhkhas.ghayr_mutahaqqaq, 2);
     assert_eq!(maqru.tajawuzat.len(), 1);
@@ -347,7 +388,12 @@ fn ikhtibar_altaqrir_yaqra_min_alhuzma() {
 /// A project measured clean is the only project that answers "fully measured".
 #[test]
 fn ikhtibar_alkamil_yahtaj_kull_zawj() {
-    let nusus = vec![mudkhal("ui/menu.txt", "Save", Some(YASA), quyud_zirr(400.0))];
+    let nusus = vec![mudkhal(
+        "ui/menu.txt",
+        "Save",
+        Some(YASA),
+        quyud_zirr(400.0),
+    )];
     let huzma = ijmi(&nusus);
     let taqrir = &huzma.bayan.tajawuz;
 
@@ -365,13 +411,19 @@ fn ikhtibar_bila_ard_laysa_najahan() {
         "ui/menu.txt",
         "Options",
         Some(BILA_ARD),
-        QuyudNass { hajm_khatt: Some(HAJM), ..QuyudNass::default() },
+        QuyudNass {
+            hajm_khatt: Some(HAJM),
+            ..QuyudNass::default()
+        },
     )];
     let huzma = ijmi(&nusus);
     let taqrir = &huzma.bayan.tajawuz;
 
     assert_eq!(taqrir.hala(), HalatQiyasTajawuz::LamYuqas);
-    assert!(taqrir.tajawuzat.is_empty(), "nothing overran, because nothing was compared");
+    assert!(
+        taqrir.tajawuzat.is_empty(),
+        "nothing overran, because nothing was compared"
+    );
     assert_eq!(taqrir.mulakhkhas.maqis, 0);
     assert_eq!(taqrir.mulakhkhas.ghayr_mutahaqqaq, 1);
     assert_eq!(taqrir.mulakhkhas.nisbat_altahaqquq(), Some(0.0));
@@ -401,16 +453,27 @@ fn ikhtibar_alqass_yahfaz_aladad() {
                 "ui/credits.txt",
                 &format!("line {fihris}"),
                 Some("سطر"),
-                QuyudNass { hajm_khatt: Some(HAJM), ..QuyudNass::default() },
+                QuyudNass {
+                    hajm_khatt: Some(HAJM),
+                    ..QuyudNass::default()
+                },
             );
             // The last one is a button; every other one is a credit line.
-            wahid.tasnif =
-                if fihris == adad - 1 { TasnifNass::Qaima } else { TasnifNass::Nusub };
+            wahid.tasnif = if fihris == adad - 1 {
+                TasnifNass::Qaima
+            } else {
+                TasnifNass::Nusub
+            };
             wahid
         })
         .collect();
     for wahid in &nusus {
-        bani.sajjil(&MudkhalQiyas { madkhal: wahid, hajm: HAJM, takhtit: None, takhtit_asl: None });
+        bani.sajjil(&MudkhalQiyas {
+            madkhal: wahid,
+            hajm: HAJM,
+            takhtit: None,
+            takhtit_asl: None,
+        });
     }
     let kamil = bani.ikhtim();
     assert_eq!(kamil.ghayr_qabil_lil_tahaqquq.len(), adad);
@@ -418,22 +481,33 @@ fn ikhtibar_alqass_yahfaz_aladad() {
 
     let lil_huzma = kamil.clone().lil_huzma();
     assert!(lil_huzma.ghayr_muqallam, "the cut is recorded");
-    assert_eq!(lil_huzma.ghayr_qabil_lil_tahaqquq.len(), AQSA_GHAYR_MUFASSAL);
+    assert_eq!(
+        lil_huzma.ghayr_qabil_lil_tahaqquq.len(),
+        AQSA_GHAYR_MUFASSAL
+    );
     assert_eq!(
         lil_huzma.mulakhkhas.ghayr_mutahaqqaq,
         u32::try_from(adad).expect("fits"),
         "the count is whole"
     );
     assert_eq!(lil_huzma.hala(), kamil.hala());
-    let Some(awwal) = lil_huzma.ghayr_qabil_lil_tahaqquq.first() else { panic!("rows kept") };
-    assert_eq!(awwal.tasnif, TasnifNass::Qaima, "the button survives the cut before the credits");
+    let Some(awwal) = lil_huzma.ghayr_qabil_lil_tahaqquq.first() else {
+        panic!("rows kept")
+    };
+    assert_eq!(
+        awwal.tasnif,
+        TasnifNass::Qaima,
+        "the button survives the cut before the credits"
+    );
 }
 
 /// A report written before the cut existed still reads.
 #[test]
 fn ikhtibar_taqrir_qadeem_yaqra() {
     let mut qadeem = serde_json::to_value(TaqrirTajawuz::farigh()).expect("serializes");
-    let Some(kaain) = qadeem.as_object_mut() else { panic!("an object") };
+    let Some(kaain) = qadeem.as_object_mut() else {
+        panic!("an object")
+    };
     let _ = kaain.remove("ghayr_muqallam");
     let maqru: TaqrirTajawuz = serde_json::from_value(qadeem).expect("reads without the field");
     assert!(!maqru.ghayr_muqallam);

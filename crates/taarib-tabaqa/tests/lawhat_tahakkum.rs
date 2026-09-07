@@ -20,8 +20,12 @@ use taarib_tabaqa::qissa::HalatKhayt;
 use taarib_tabaqa::wajiha::{HalatTabaqa, SighatSath, WajihatRusum, WasfSath};
 
 /// The surface the panel is laid out against.
-const SATH: WasfSath =
-    WasfSath { ard: 1920, irtifa: 1080, sigha: SighatSath::Bgra8, sirgb: true };
+const SATH: WasfSath = WasfSath {
+    ard: 1920,
+    irtifa: 1080,
+    sigha: SighatSath::Bgra8,
+    sirgb: true,
+};
 
 /// An open panel over a running overlay, on the requested page.
 fn lawha(safha: SafhatLawha) -> LawhatTahakkum {
@@ -34,7 +38,11 @@ fn lawha(safha: SafhatLawha) -> LawhatTahakkum {
 
 /// Every string the panel would shape, in layout order.
 fn nusus(lawha: &LawhatTahakkum) -> Vec<String> {
-    lawha.bina(SATH).into_iter().filter_map(|ansur| ansur.nass).collect()
+    lawha
+        .bina(SATH)
+        .into_iter()
+        .filter_map(|ansur| ansur.nass)
+        .collect()
 }
 
 /// The stopped state, with the reason a removed language pack produces.
@@ -111,16 +119,23 @@ fn safhat_al_meezaniya_taqtabis_jumlat_al_aamil() {
 
     lawha.hadith_khayt(HalatKhayt::Salima);
     let nusus_salima = nusus(&lawha);
-    assert!(nusus_salima.iter().any(|nass| nass == "حالة القراءة:"), "{nusus_salima:?}");
     assert!(
-        nusus_salima.iter().any(|nass| nass == &HalatKhayt::Salima.wasf_arabi()),
+        nusus_salima.iter().any(|nass| nass == "حالة القراءة:"),
+        "{nusus_salima:?}"
+    );
+    assert!(
+        nusus_salima
+            .iter()
+            .any(|nass| nass == &HalatKhayt::Salima.wasf_arabi()),
         "the healthy sentence is quoted verbatim: {nusus_salima:?}"
     );
 
     lawha.hadith_khayt(mutawaqqifa());
     let nusus_mutawaqqifa = nusus(&lawha);
     assert!(
-        nusus_mutawaqqifa.iter().any(|nass| nass == &mutawaqqifa().wasf_arabi()),
+        nusus_mutawaqqifa
+            .iter()
+            .any(|nass| nass == &mutawaqqifa().wasf_arabi()),
         "the stopped sentence is quoted verbatim, reason included: {nusus_mutawaqqifa:?}"
     );
     assert_eq!(lawha.khayt(), Some(&mutawaqqifa()));

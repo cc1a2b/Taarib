@@ -115,7 +115,9 @@ pub struct HarisSijill {
 
 impl std::fmt::Debug for HarisSijill {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("HarisSijill").field("masar", &self.masar).finish_non_exhaustive()
+        f.debug_struct("HarisSijill")
+            .field("masar", &self.masar)
+            .finish_non_exhaustive()
     }
 }
 
@@ -181,16 +183,25 @@ fn hayyi_fi_masar(
     };
 
     let murashih = tracing_subscriber::EnvFilter::try_new(mustawa.tawjeeh()).map_err(|q| {
-        Khata::min_tafsir(&KhataSijill::MurashihGhayrSalih { tafsil: q.to_string() })
+        Khata::min_tafsir(&KhataSijill::MurashihGhayrSalih {
+            tafsil: q.to_string(),
+        })
     })?;
 
-    let tabaqa = TabaqatTaarib { katib: katib.map(Mutex::new), maa_shasha };
+    let tabaqa = TabaqatTaarib {
+        katib: katib.map(Mutex::new),
+        maa_shasha,
+    };
 
     tracing_subscriber::registry()
         .with(murashih)
         .with(tabaqa)
         .try_init()
-        .map_err(|q| Khata::min_tafsir(&KhataSijill::SabaqTanseeb { tafsil: q.to_string() }))?;
+        .map_err(|q| {
+            Khata::min_tafsir(&KhataSijill::SabaqTanseeb {
+                tafsil: q.to_string(),
+            })
+        })?;
 
     if !bi_malaf {
         tracing::warn!(
@@ -198,7 +209,11 @@ fn hayyi_fi_masar(
             "the log directory could not be created; diagnostics are in memory only"
         );
     }
-    Ok(HarisSijill { _haris: haris, masar: mujallad.to_path_buf(), bi_malaf })
+    Ok(HarisSijill {
+        _haris: haris,
+        masar: mujallad.to_path_buf(),
+        bi_malaf,
+    })
 }
 
 /// The most recent events, newest last, for the Diagnostics screen.
@@ -240,7 +255,9 @@ pub fn nazzif_sijillat(mujallad: &Path, ayyam: u32, hadd_mb: u64) {
         if !masar.is_file() {
             continue;
         }
-        let Ok(bayanat) = madkhal.metadata() else { continue };
+        let Ok(bayanat) = madkhal.metadata() else {
+            continue;
+        };
         let waqt = bayanat.modified().unwrap_or(alaan);
         let hajm = bayanat.len();
 
@@ -458,15 +475,20 @@ where
         };
 
         if let Ok(satr) = serde_json::to_string(&hadath)
-            && let Some(katib) = self.katib.as_ref() {
-                let mut katib = katib.lock();
-                let _ = katib.write_all(satr.as_bytes());
-                let _ = katib.write_all(b"\n");
-            }
+            && let Some(katib) = self.katib.as_ref()
+        {
+            let mut katib = katib.lock();
+            let _ = katib.write_all(satr.as_bytes());
+            let _ = katib.write_all(b"\n");
+        }
 
         if self.maa_shasha {
             let mut satr = String::new();
-            let _ = write!(satr, "{} {} {}", hadath.mustawa, hadath.hadaf, hadath.risala);
+            let _ = write!(
+                satr,
+                "{} {} {}",
+                hadath.mustawa, hadath.hadaf, hadath.risala
+            );
             for (miftah, qeema) in &hadath.huqul {
                 let _ = write!(satr, " {miftah}={qeema}");
             }
@@ -493,7 +515,9 @@ impl JamiHuqul {
         if haql.name() == "message" {
             self.risala = hajjib_risala(qeema);
         } else {
-            let _ = self.huqul.insert(haql.name().to_owned(), hajjib(haql.name(), qeema));
+            let _ = self
+                .huqul
+                .insert(haql.name().to_owned(), hajjib(haql.name(), qeema));
         }
     }
 }
@@ -561,10 +585,8 @@ impl Tafsir for KhataSijill {
         match self {
             Self::MurashihGhayrSalih { .. } => {
                 "مستوى التسجيل المحدَّد غير صالح، وسيُستخدم المستوى الافتراضي.".to_owned()
-            }
-            Self::SabaqTanseeb { .. } => {
-                "نظام التسجيل مُهيَّأ مسبقًا في هذه العملية.".to_owned()
-            }
+            },
+            Self::SabaqTanseeb { .. } => "نظام التسجيل مُهيَّأ مسبقًا في هذه العملية.".to_owned(),
         }
     }
 
@@ -572,10 +594,10 @@ impl Tafsir for KhataSijill {
         match self {
             Self::MurashihGhayrSalih { .. } => {
                 "The configured log level is not valid; the default will be used.".to_owned()
-            }
+            },
             Self::SabaqTanseeb { .. } => {
                 "Logging is already initialised in this process.".to_owned()
-            }
+            },
         }
     }
 
@@ -588,7 +610,7 @@ impl Tafsir for KhataSijill {
         match self {
             Self::MurashihGhayrSalih { tafsil } | Self::SabaqTanseeb { tafsil } => {
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
         }
         siyaq
     }
@@ -625,7 +647,10 @@ mod ikhtibarat {
         assert_eq!(hajjib("radd", MIFTAH_MICROSOFT), MAHJOOB);
         assert_eq!(hajjib("radd", MIFTAH_DEEPL), MAHJOOB);
         assert_eq!(hajjib("radd", "Bearer 8xK2p"), MAHJOOB);
-        assert_eq!(hajjib("unwan", "https://api.example.test/v1?key=AIzaSyB7n2Qd"), MAHJOOB);
+        assert_eq!(
+            hajjib("unwan", "https://api.example.test/v1?key=AIzaSyB7n2Qd"),
+            MAHJOOB
+        );
     }
 
     #[test]
@@ -651,7 +676,10 @@ mod ikhtibarat {
         // The scheme name is what identifies a bearer credential; nothing about
         // the credential itself does.
         let tarwisa = hajjib_risala("sent Authorization: Bearer 8xK2p to the endpoint");
-        assert_eq!(tarwisa, format!("sent Authorization: Bearer {MAHJOOB} to the endpoint"));
+        assert_eq!(
+            tarwisa,
+            format!("sent Authorization: Bearer {MAHJOOB} to the endpoint")
+        );
     }
 
     #[test]
@@ -661,7 +689,10 @@ mod ikhtibarat {
         const ALAMA: &str = "kansuyub-9f31";
 
         nazzif_halqa();
-        let tabaqa = TabaqatTaarib { katib: None, maa_shasha: false };
+        let tabaqa = TabaqatTaarib {
+            katib: None,
+            maa_shasha: false,
+        };
         let mushtarik = tracing_subscriber::registry().with(tabaqa);
         tracing::subscriber::with_default(mushtarik, || {
             tracing::info!(
@@ -673,7 +704,11 @@ mod ikhtibarat {
 
         let mut wusul = ahdath_akhira(64);
         wusul.retain(|hadath| hadath.risala.contains(ALAMA));
-        assert_eq!(wusul.len(), 1, "the layer did not record the event it was handed");
+        assert_eq!(
+            wusul.len(),
+            1,
+            "the layer did not record the event it was handed"
+        );
         let Some(hadath) = wusul.first() else { return };
 
         // The field-name position.
@@ -681,7 +716,15 @@ mod ikhtibarat {
         // The field-value position: an innocent name, a key-shaped value.
         assert_eq!(hadath.huqul.get("radd").map(String::as_str), Some(MAHJOOB));
         // The message-body position, which used to be recorded verbatim.
-        assert!(!hadath.risala.contains(MIFTAH_DEEPL), "the key survived: {}", hadath.risala);
-        assert!(hadath.risala.contains(ALAMA), "the prose did not survive: {}", hadath.risala);
+        assert!(
+            !hadath.risala.contains(MIFTAH_DEEPL),
+            "the key survived: {}",
+            hadath.risala
+        );
+        assert!(
+            hadath.risala.contains(ALAMA),
+            "the prose did not survive: {}",
+            hadath.risala
+        );
     }
 }

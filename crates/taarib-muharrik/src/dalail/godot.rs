@@ -374,7 +374,9 @@ struct Mizaniya {
 impl Mizaniya {
     /// A fresh budget of [`AQSA_MADAKHIL`] entries.
     const fn jadeeda() -> Self {
-        Self { mutabaqqi: AQSA_MADAKHIL }
+        Self {
+            mutabaqqi: AQSA_MADAKHIL,
+        }
     }
 
     /// Lists one directory, spending from the budget.
@@ -387,19 +389,29 @@ impl Mizaniya {
         if self.mutabaqqi == 0 {
             return natija;
         }
-        let Ok(qira) = std::fs::read_dir(masar) else { return natija };
+        let Ok(qira) = std::fs::read_dir(masar) else {
+            return natija;
+        };
         for madkhal in qira {
             if self.mutabaqqi == 0 {
                 break;
             }
             self.mutabaqqi = self.mutabaqqi.saturating_sub(1);
             let Ok(madkhal) = madkhal else { continue };
-            let Ok(naw) = madkhal.file_type() else { continue };
+            let Ok(naw) = madkhal.file_type() else {
+                continue;
+            };
             if naw.is_symlink() {
                 continue;
             }
-            let Some(ism) = madkhal.file_name().to_str().map(str::to_owned) else { continue };
-            natija.push(Madkhal { ism, masar: madkhal.path(), mujallad: naw.is_dir() });
+            let Some(ism) = madkhal.file_name().to_str().map(str::to_owned) else {
+                continue;
+            };
+            natija.push(Madkhal {
+                ism,
+                masar: madkhal.path(),
+                mujallad: naw.is_dir(),
+            });
         }
         natija
     }
@@ -441,7 +453,10 @@ fn imtidad_huwa(masar: &Path, imtidad: &str) -> bool {
 
 /// A path relative to the game root, as the evidence trail records it.
 fn nisbi(jidhr: &Path, masar: &Path) -> Option<String> {
-    masar.strip_prefix(jidhr).ok().map(|nisbi| nisbi.display().to_string())
+    masar
+        .strip_prefix(jidhr)
+        .ok()
+        .map(|nisbi| nisbi.display().to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -495,11 +510,11 @@ impl JeelGodot {
             Self::Thalith => {
                 "Godot 3 has no TextServer: no shaping, no bidi, no mark attachment. Taarib \
                  takes the text over and draws the glyphs itself"
-            }
+            },
             Self::Rabi => {
                 "Godot 4 ships TextServerAdvanced, which shapes and applies the bidirectional \
                  algorithm. Taarib registers a font and translates through the engine"
-            }
+            },
         }
     }
 }
@@ -580,7 +595,9 @@ impl TarwisatPck {
         if hajm == 0 || hajm.checked_add(u64::try_from(HAJM_DHAYL_MUDMAJ).ok()?)? > tul {
             return None;
         }
-        let bidaya = tul.checked_sub(u64::try_from(HAJM_DHAYL_MUDMAJ).ok()?)?.checked_sub(hajm)?;
+        let bidaya = tul
+            .checked_sub(u64::try_from(HAJM_DHAYL_MUDMAJ).ok()?)?
+            .checked_sub(hajm)?;
         let rass = iqra_min(masar, bidaya, HAJM_RASS_PCK)?;
         Self::tahlil(&rass, bidaya, true, tul)
     }
@@ -607,7 +624,11 @@ impl TarwisatPck {
         }
 
         let (aalam, asas, izahat_adad) = if sigha >= 2 {
-            (Some(u32_min(bayt, 20)?), Some(u64_min(bayt, 24)?), IZAHAT_ADAD_V2)
+            (
+                Some(u32_min(bayt, 20)?),
+                Some(u64_min(bayt, 24)?),
+                IZAHAT_ADAD_V2,
+            )
         } else {
             (None, None, IZAHAT_ADAD_V1)
         };
@@ -703,7 +724,13 @@ impl TarwisatPck {
         let sagheer = u16::try_from(self.sagheer).ok()?;
         let tasheeh = u16::try_from(self.tasheeh).ok()?;
         let khaam = format!("{kabir}.{sagheer}.{tasheeh} (PCK format {})", self.sigha);
-        Some(IsdarMuharrik { kabir, sagheer, tasheeh, khaam, mushtaqq: false })
+        Some(IsdarMuharrik {
+            kabir,
+            sagheer,
+            tasheeh,
+            khaam,
+            mushtaqq: false,
+        })
     }
 }
 
@@ -765,9 +792,9 @@ fn yashbah_tanfidh(madkhal: &Madkhal) -> bool {
         return false;
     }
     match madkhal.masar.extension().and_then(std::ffi::OsStr::to_str) {
-        Some(imtidad) => {
-            IMTIDADAT_TANFIDH.iter().any(|maruf| maruf.eq_ignore_ascii_case(imtidad))
-        }
+        Some(imtidad) => IMTIDADAT_TANFIDH
+            .iter()
+            .any(|maruf| maruf.eq_ignore_ascii_case(imtidad)),
         None => true,
     }
 }
@@ -858,7 +885,9 @@ fn tasnif_madkhal(madkhal: &Madkhal, binya: &mut BinyaGodot) {
         return;
     }
     if binya.mawarid.len() < AQSA_MASHAHID
-        && IMTIDADAT_MAWRID.iter().any(|imtidad| imtidad_huwa(&madkhal.masar, imtidad))
+        && IMTIDADAT_MAWRID
+            .iter()
+            .any(|imtidad| imtidad_huwa(&madkhal.masar, imtidad))
     {
         binya.mawarid.push(madkhal.masar.clone());
     }
@@ -945,7 +974,11 @@ fn iqra_mashru(masar: &Path) -> Option<BayanMashru> {
             bayan.isdar = isdar_min_simat(satr);
         }
     }
-    if bayan.sigha.is_none() && bayan.isdar.is_none() { None } else { Some(bayan) }
+    if bayan.sigha.is_none() && bayan.isdar.is_none() {
+        None
+    } else {
+        Some(bayan)
+    }
 }
 
 /// Pulls the first `major.minor` out of a `config/features` line.
@@ -957,10 +990,16 @@ fn iqra_mashru(masar: &Path) -> Option<BayanMashru> {
 fn isdar_min_simat(satr: &str) -> Option<(u16, u16)> {
     for juz in satr.split('"').skip(1).step_by(2) {
         let mut aqsam = juz.split('.');
-        let Some(kabir) = aqsam.next().and_then(|raqm| raqm.trim().parse::<u16>().ok()) else {
+        let Some(kabir) = aqsam
+            .next()
+            .and_then(|raqm| raqm.trim().parse::<u16>().ok())
+        else {
             continue;
         };
-        let Some(sagheer) = aqsam.next().and_then(|raqm| raqm.trim().parse::<u16>().ok()) else {
+        let Some(sagheer) = aqsam
+            .next()
+            .and_then(|raqm| raqm.trim().parse::<u16>().ok())
+        else {
             continue;
         };
         if (2..=9).contains(&kabir) && sagheer <= 99 {
@@ -1052,7 +1091,10 @@ impl Fahis for FahisGodot {
     /// still reported.
     fn ifhas(&self, siyaq: &SiyaqFahs<'_>) -> Natija<HasilatFahs> {
         if !siyaq.jidhr.is_dir() {
-            return Err(KhataMuharrik::JidhrMafqud { jidhr: siyaq.jidhr.to_path_buf() }.into());
+            return Err(KhataMuharrik::JidhrMafqud {
+                jidhr: siyaq.jidhr.to_path_buf(),
+            }
+            .into());
         }
 
         let mut hasila = HasilatFahs::la_shay();
@@ -1103,7 +1145,9 @@ fn qira_huzam(
     hasila: &mut HasilatFahs,
 ) -> Option<(PathBuf, TarwisatPck)> {
     for masar in binya.huzam.iter().take(AQSA_HUZAM) {
-        let Some(tarwisa) = TarwisatPck::min_rass(masar) else { continue };
+        let Some(tarwisa) = TarwisatPck::min_rass(masar) else {
+            continue;
+        };
         sajjil_hazma(jidhr, masar, &tarwisa, hasila);
         return Some((masar.clone(), tarwisa));
     }
@@ -1122,7 +1166,9 @@ fn qira_huzam(
     }
 
     for masar in binya.tanfidhiyat.iter().take(AQSA_TANFIDHIYAT) {
-        let Some(tarwisa) = TarwisatPck::min_mudmaj(masar) else { continue };
+        let Some(tarwisa) = TarwisatPck::min_mudmaj(masar) else {
+            continue;
+        };
         sajjil_hazma(jidhr, masar, &tarwisa, hasila);
         return Some((masar.clone(), tarwisa));
     }
@@ -1178,7 +1224,7 @@ fn sajjil_hazma(jidhr: &Path, masar: &Path, tarwisa: &TarwisatPck, hasila: &mut 
             mawqi,
             30,
         ),
-        Some(false) => {}
+        Some(false) => {},
         None => hasila.sajjil(
             NawDaleel::TarwisatHawiya,
             "pack format 1 has no flags word, so whether this package's entries are encrypted \
@@ -1217,7 +1263,9 @@ fn dalail_binya(
             NawDaleel::BayanatMudmaja,
             format!(
                 "project.godot with config_version={} and features {}",
-                bayan.sigha.map_or_else(|| "absent".to_owned(), |sigha| sigha.to_string()),
+                bayan
+                    .sigha
+                    .map_or_else(|| "absent".to_owned(), |sigha| sigha.to_string()),
                 bayan.isdar.map_or_else(
                     || "absent".to_owned(),
                     |(kabir, sagheer)| format!("naming {kabir}.{sagheer}")
@@ -1317,7 +1365,9 @@ fn masah_mawarid(jidhr: &Path, binya: &BinyaGodot, hasila: &mut HasilatFahs) -> 
     let mut shawahid = ShawahidNusus::default();
     let mut mawrid_maruf: Option<String> = None;
     for masar in binya.mawarid.iter().take(AQSA_MASHAHID) {
-        let Some((bayt, _)) = iqra_rass(masar, HAJM_TARWISA) else { continue };
+        let Some((bayt, _)) = iqra_rass(masar, HAJM_TARWISA) else {
+            continue;
+        };
         shawahid.adad = shawahid.adad.saturating_add(1);
         if mawrid_maruf.is_none()
             && (yahtawi(&bayt, b"[gd_scene") || yahtawi(&bayt, b"[gd_resource"))
@@ -1372,7 +1422,10 @@ fn hasm_jeel(
         murashahat.push((
             jeel,
             NawDaleel::TarwisatHawiya,
-            format!("the package header's engine major field is {}", tarwisa.kabir),
+            format!(
+                "the package header's engine major field is {}",
+                tarwisa.kabir
+            ),
             90,
         ));
     }
@@ -1532,11 +1585,7 @@ fn khalfiya(
 }
 
 /// Names the text systems, each with the evidence that supports it.
-fn anzimat_nusus(
-    jeel: Option<JeelGodot>,
-    shawahid: ShawahidNusus,
-    hasila: &mut HasilatFahs,
-) {
+fn anzimat_nusus(jeel: Option<JeelGodot>, shawahid: ShawahidNusus, hasila: &mut HasilatFahs) {
     hasila.daa_itar(ItarNusus::GodotLabel);
     hasila.sajjil(
         NawDaleel::BinyatMujallad,
@@ -1577,7 +1626,11 @@ fn anzimat_nusus(
                 "{} loose resource file(s) were read and none named a RichTextLabel{}; the \
                  rich-text surface is therefore not claimed",
                 shawahid.adad,
-                if shawahid.label { ", though a plain Label was named" } else { "" }
+                if shawahid.label {
+                    ", though a plain Label was named"
+                } else {
+                    ""
+                }
             )
         },
         None,

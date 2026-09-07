@@ -51,7 +51,6 @@ use crate::khata::KhataTabaqa;
 /// no indication why.
 pub const ISM_MALAF_IQRAR: &str = "ifsah_tabaqa.json";
 
-
 /// What the user is told, in Arabic, before the overlay is enabled.
 ///
 /// Five sentences, each naming one concrete limitation. No sentence describes a
@@ -151,7 +150,9 @@ fn basma_thabita(awwal: &str, thani: &str) -> u64 {
     awwal
         .bytes()
         .chain(thani.bytes())
-        .fold(BIDAYA, |basma, wahid| (basma ^ u64::from(wahid)).wrapping_mul(ADAD_AWWALI))
+        .fold(BIDAYA, |basma, wahid| {
+            (basma ^ u64::from(wahid)).wrapping_mul(ADAD_AWWALI)
+        })
 }
 
 /// Proof that the tier-3 disclosure was shown and acknowledged.
@@ -194,7 +195,11 @@ impl Iqrar {
         if basma != BasmatIfsah::hadhihi_al_bina() {
             return Err(KhataTabaqa::IfsahMafqud);
         }
-        Ok(Self { basma, lahza, luba: luba.into() })
+        Ok(Self {
+            basma,
+            lahza,
+            luba: luba.into(),
+        })
     }
 
     /// The fingerprint of the text that was shown.

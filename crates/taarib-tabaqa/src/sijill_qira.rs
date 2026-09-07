@@ -133,7 +133,11 @@ impl ThiqatSatr {
     /// A confidence from a recognized line, honouring its own `maqisa` flag.
     #[must_use]
     pub const fn min_maqru(mia: u8, maqisa: bool) -> Self {
-        if maqisa { Self::maqisa_bi(mia) } else { Self::Ghayr }
+        if maqisa {
+            Self::maqisa_bi(mia)
+        } else {
+            Self::Ghayr
+        }
     }
 
     /// Whether this is a measurement.
@@ -166,9 +170,7 @@ impl ThiqatSatr {
 }
 
 /// Where a translation came from.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MasdarTarjama {
     /// Produced by a machine translator at play time.
@@ -245,9 +247,7 @@ impl MasdarTarjama {
 /// Monotonic within one history and never reused, so a panel holding a
 /// selection across a compaction can tell "the entry I had is gone" from "the
 /// entry I had is now at a different index".
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct MuarrifMadkhal(u64);
 
@@ -560,10 +560,18 @@ impl TaqreerSijill {
             self.mahfuza, self.saa, self.mustabaada, self.manatiq
         );
         if self.satur_talifa > 0 {
-            let _ = write!(wasf, ", {} malformed line(s) skipped on load", self.satur_talifa);
+            let _ = write!(
+                wasf,
+                ", {} malformed line(s) skipped on load",
+                self.satur_talifa
+            );
         }
         if self.muallaqa > 0 {
-            let _ = write!(wasf, ", {} change(s) not yet compacted to disk", self.muallaqa);
+            let _ = write!(
+                wasf,
+                ", {} change(s) not yet compacted to disk",
+                self.muallaqa
+            );
         }
         wasf
     }
@@ -576,7 +584,11 @@ impl TaqreerSijill {
             self.mahfuza, self.saa, self.mustabaada, self.manatiq
         );
         if self.satur_talifa > 0 {
-            let _ = write!(unwan, " وتُخطّي {} سطرًا تالفًا عند التحميل.", self.satur_talifa);
+            let _ = write!(
+                unwan,
+                " وتُخطّي {} سطرًا تالفًا عند التحميل.",
+                self.satur_talifa
+            );
         }
         unwan
     }
@@ -723,7 +735,9 @@ impl SijillQira {
     /// One entry by identity.
     #[must_use]
     pub fn madkhal(&self, muarrif: MuarrifMadkhal) -> Option<&MadkhalQira> {
-        self.madakhil.iter().find(|madkhal| madkhal.muarrif == muarrif)
+        self.madakhil
+            .iter()
+            .find(|madkhal| madkhal.muarrif == muarrif)
     }
 
     /// Changes the capacity, evicting immediately if it shrank.
@@ -816,7 +830,10 @@ impl SijillQira {
         masdar: MasdarTarjama,
     ) -> bool {
         let (nass, _) = iqtata(arabi);
-        let Some(madkhal) = self.madakhil.iter_mut().find(|madkhal| madkhal.muarrif == muarrif)
+        let Some(madkhal) = self
+            .madakhil
+            .iter_mut()
+            .find(|madkhal| madkhal.muarrif == muarrif)
         else {
             return false;
         };
@@ -829,13 +846,19 @@ impl SijillQira {
     /// Every entry whose source or translation contains a needle, oldest first.
     #[must_use]
     pub fn bahth(&self, matlub: &str) -> Vec<&MadkhalQira> {
-        self.madakhil.iter().filter(|madkhal| madkhal.yutabiq(matlub)).collect()
+        self.madakhil
+            .iter()
+            .filter(|madkhal| madkhal.yutabiq(matlub))
+            .collect()
     }
 
     /// Every entry from one region, oldest first.
     #[must_use]
     pub fn min_mintaqa(&self, mintaqa: MuarrifMintaqa) -> Vec<&MadkhalQira> {
-        self.madakhil.iter().filter(|madkhal| madkhal.mintaqa == mintaqa).collect()
+        self.madakhil
+            .iter()
+            .filter(|madkhal| madkhal.mintaqa == mintaqa)
+            .collect()
     }
 
     /// The most recent `adad` entries, still oldest first.
@@ -853,7 +876,10 @@ impl SijillQira {
     /// Which regions have produced at least one entry.
     #[must_use]
     pub fn manatiq_masjula(&self) -> BTreeSet<MuarrifMintaqa> {
-        self.madakhil.iter().map(|madkhal| madkhal.mintaqa).collect()
+        self.madakhil
+            .iter()
+            .map(|madkhal| madkhal.mintaqa)
+            .collect()
     }
 
     /// Forgets every entry, keeping the capacity, the identity counter and the
@@ -922,8 +948,11 @@ impl SijillQira {
             Ok(bayt) => bayt,
             Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => Vec::new(),
             Err(sabab) => {
-                return Err(KhataTabaqa::KhataMalaf { masar: masar.to_path_buf(), sabab });
-            }
+                return Err(KhataTabaqa::KhataMalaf {
+                    masar: masar.to_path_buf(),
+                    sabab,
+                });
+            },
         };
 
         let mut sijill = if bayt.iter().any(|wahid| !wahid.is_ascii_whitespace()) {
@@ -993,14 +1022,14 @@ impl SijillQira {
                     sijill.talee = sijill.talee.max(madkhal.muarrif.raqm().saturating_add(1));
                     sijill.madakhil.push_back(madkhal);
                     sijill.qallim();
-                }
+                },
                 Err(_) => {
                     // Skipped and counted, never fatal. A history is not worth
                     // losing to one line that a power cut cut in half, and the
                     // count is surfaced in `TaqreerSijill` so the panel can say
                     // what happened instead of quietly showing a short history.
                     sijill.satur_talifa = sijill.satur_talifa.saturating_add(1);
-                }
+                },
             }
         }
         Ok(sijill)
@@ -1110,7 +1139,11 @@ impl SijillQira {
         let Some(masar) = self.masar.clone() else {
             return Ok(());
         };
-        let tarwisa = TarwisatSijill { luba: self.luba, saa: self.saa, talee: self.talee };
+        let tarwisa = TarwisatSijill {
+            luba: self.luba,
+            saa: self.saa,
+            talee: self.talee,
+        };
         let mut nass = self.satr_tarwisa(&tarwisa)?;
         nass.push('\n');
         for madkhal in &self.madakhil {
@@ -1178,12 +1211,18 @@ impl SijillQira {
         let mut qeema = serde_json::to_value(tarwisa).map_err(|khata| self.ghalat(&khata))?;
         let Some(kain) = qeema.as_object_mut() else {
             return Err(KhataTabaqa::MalafGhayrMafhum {
-                masar: self.masar.clone().unwrap_or_else(|| PathBuf::from(ISM_MALAF)),
+                masar: self
+                    .masar
+                    .clone()
+                    .unwrap_or_else(|| PathBuf::from(ISM_MALAF)),
                 sigha: TarwisatSijill::ISM,
                 sabab: "the history header did not serialize to a JSON object".to_owned(),
             });
         };
-        let _ = kain.insert(mukhattat::HAQL.to_owned(), Value::from(TarwisatSijill::ISDAR));
+        let _ = kain.insert(
+            mukhattat::HAQL.to_owned(),
+            Value::from(TarwisatSijill::ISDAR),
+        );
         serde_json::to_string(&qeema).map_err(|khata| self.ghalat(&khata))
     }
 
@@ -1195,7 +1234,10 @@ impl SijillQira {
     /// A serialization failure, named against the file it was going into.
     fn ghalat(&self, khata: &serde_json::Error) -> KhataTabaqa {
         KhataTabaqa::MalafGhayrMafhum {
-            masar: self.masar.clone().unwrap_or_else(|| PathBuf::from(ISM_MALAF)),
+            masar: self
+                .masar
+                .clone()
+                .unwrap_or_else(|| PathBuf::from(ISM_MALAF)),
             sigha: TarwisatSijill::ISM,
             sabab: format!("a history line could not be written as JSON: {khata}"),
         }
@@ -1226,7 +1268,7 @@ impl SijillMushtarak {
     }
 
     /// Records a reading in memory only.
-    #[must_use] 
+    #[must_use]
     pub fn sajjil(
         &self,
         lahza: u64,
@@ -1235,7 +1277,9 @@ impl SijillMushtarak {
         asl: &str,
         thiqa: ThiqatSatr,
     ) -> NatijatIdraj {
-        self.0.write().sajjil(lahza, mintaqa, ism_mintaqa, asl, thiqa)
+        self.0
+            .write()
+            .sajjil(lahza, mintaqa, ism_mintaqa, asl, thiqa)
     }
 
     /// Records a reading and makes it durable.
@@ -1251,11 +1295,13 @@ impl SijillMushtarak {
         asl: &str,
         thiqa: ThiqatSatr,
     ) -> Result<NatijatIdraj, KhataTabaqa> {
-        self.0.write().qayyid(lahza, mintaqa, ism_mintaqa, asl, thiqa)
+        self.0
+            .write()
+            .qayyid(lahza, mintaqa, ism_mintaqa, asl, thiqa)
     }
 
     /// Attaches a translation that arrived after its line was recorded.
-    #[must_use] 
+    #[must_use]
     pub fn adkhil_tarjama(
         &self,
         muarrif: MuarrifMadkhal,
@@ -1285,13 +1331,25 @@ impl SijillMushtarak {
     /// copy the whole history into a frame.
     #[must_use]
     pub fn bahth(&self, matlub: &str, saqf: usize) -> Vec<MadkhalQira> {
-        self.0.read().bahth(matlub).into_iter().take(saqf).cloned().collect()
+        self.0
+            .read()
+            .bahth(matlub)
+            .into_iter()
+            .take(saqf)
+            .cloned()
+            .collect()
     }
 
     /// Every entry from one region, capped.
     #[must_use]
     pub fn min_mintaqa(&self, mintaqa: MuarrifMintaqa, saqf: usize) -> Vec<MadkhalQira> {
-        self.0.read().min_mintaqa(mintaqa).into_iter().take(saqf).cloned().collect()
+        self.0
+            .read()
+            .min_mintaqa(mintaqa)
+            .into_iter()
+            .take(saqf)
+            .cloned()
+            .collect()
     }
 
     /// The summary for the control panel.

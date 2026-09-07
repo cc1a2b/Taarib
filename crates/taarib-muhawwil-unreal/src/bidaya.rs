@@ -185,7 +185,10 @@ fn uktub(mujallad: &Path, satr: &str) {
     if std::fs::metadata(&masar).is_ok_and(|bayan| bayan.len() > AQSA_SIJILL) {
         let _ = std::fs::remove_file(&masar);
     }
-    let Ok(mut malaf) = std::fs::OpenOptions::new().create(true).append(true).open(&masar)
+    let Ok(mut malaf) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&masar)
     else {
         return;
     };
@@ -199,17 +202,32 @@ fn uktub(mujallad: &Path, satr: &str) {
 /// nobody can diagnose. Zero rather than a refusal: a clock that will not answer
 /// is not a reason to lose the line.
 fn waqt() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |mudda| mudda.as_secs())
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |mudda| mudda.as_secs())
 }
 
 /// Records one outcome, by state and by the name of the step that produced it.
 fn sajjil(mujallad: &Path, hala: HalatBidaya, khatwa: &str, tafsil: &str) {
     if hala.munabbiha() {
-        tracing::warn!(hala = hala.ism(), khatwa, tafsil, "the Unreal payload's bootstrap");
+        tracing::warn!(
+            hala = hala.ism(),
+            khatwa,
+            tafsil,
+            "the Unreal payload's bootstrap"
+        );
     } else {
-        tracing::info!(hala = hala.ism(), khatwa, tafsil, "the Unreal payload's bootstrap");
+        tracing::info!(
+            hala = hala.ism(),
+            khatwa,
+            tafsil,
+            "the Unreal payload's bootstrap"
+        );
     }
-    uktub(mujallad, &format!("{} {ISM_HAMULA} {} {khatwa}: {tafsil}", waqt(), hala.ism()));
+    uktub(
+        mujallad,
+        &format!("{} {ISM_HAMULA} {} {khatwa}: {tafsil}", waqt(), hala.ism()),
+    );
 }
 
 /// Records a fact that is not an outcome — what was found, where, and at what
@@ -220,7 +238,10 @@ fn sajjil(mujallad: &Path, hala: HalatBidaya, khatwa: &str, tafsil: &str) {
 /// force every fact to pretend to be a decision.
 fn athar(mujallad: &Path, khatwa: &str, tafsil: &str) {
     tracing::debug!(khatwa, tafsil, "the Unreal payload's bootstrap");
-    uktub(mujallad, &format!("{} {ISM_HAMULA} note {khatwa}: {tafsil}", waqt()));
+    uktub(
+        mujallad,
+        &format!("{} {ISM_HAMULA} note {khatwa}: {tafsil}", waqt()),
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -308,7 +329,9 @@ fn ihmi() {
         return;
     };
     let _ = catch_unwind(AssertUnwindSafe(|| {
-        let Some(mujallad) = mujallad_nafsi() else { return };
+        let Some(mujallad) = mujallad_nafsi() else {
+            return;
+        };
         sajjil(
             &mujallad,
             HalatBidaya::Ikhfaq,
@@ -337,7 +360,9 @@ fn wasf_dhuar(dhuar: &(dyn core::any::Any + Send)) -> &str {
 /// the one path in this file with no log line, and it cannot be otherwise: the
 /// log lives in the directory that could not be resolved.
 fn ibda_mahmi() {
-    let Some(mujallad) = mujallad_nafsi() else { return };
+    let Some(mujallad) = mujallad_nafsi() else {
+        return;
+    };
 
     if MARRA.swap(true, Ordering::AcqRel) {
         sajjil(
@@ -365,7 +390,11 @@ fn ibda_mahmi() {
 /// here is the closing line, so a reader who greps for one launch's last
 /// `bidaya` line learns what the payload did without reading the rest.
 fn ibda(mujallad: &Path) -> (HalatBidaya, String) {
-    athar(mujallad, "mawqi", &format!("loaded from {}", mujallad.display()));
+    athar(
+        mujallad,
+        "mawqi",
+        &format!("loaded from {}", mujallad.display()),
+    );
 
     // 2 — what am I inside.
     sajjil_wahda(mujallad);
@@ -381,7 +410,11 @@ fn ibda(mujallad: &Path) -> (HalatBidaya, String) {
             );
         },
     };
-    athar(mujallad, "bina", &format!("{} at {}", bina.wasf(), bina.jidhr.display()));
+    athar(
+        mujallad,
+        "bina",
+        &format!("{} at {}", bina.wasf(), bina.jidhr.display()),
+    );
     for satr in bina.athar.iter().take(AQSA_ATHAR) {
         athar(mujallad, "bina", satr);
     }
@@ -444,8 +477,11 @@ fn sajjil_wahda(mujallad: &Path) {
         Some(qaida) => athar(
             mujallad,
             "wahda",
-            &format!("{ism} is mapped at {:#x} and is the module Unreal linked the engine \
-                      into", qaida.raqm()),
+            &format!(
+                "{ism} is mapped at {:#x} and is the module Unreal linked the engine \
+                      into",
+                qaida.raqm()
+            ),
         ),
         None => athar(
             mujallad,
@@ -511,7 +547,9 @@ fn jid_bina(mujallad: &Path) -> Result<Bina, String> {
 
 /// The patches installed beside this module, in a stable order.
 fn ruqaat(mujallad: &Path) -> Vec<PathBuf> {
-    let Ok(madakhil) = std::fs::read_dir(mujallad) else { return Vec::new() };
+    let Ok(madakhil) = std::fs::read_dir(mujallad) else {
+        return Vec::new();
+    };
 
     let mut kull: Vec<PathBuf> = Vec::new();
     for madkhal in madakhil.flatten().take(AQSA_MADAKHIL) {
@@ -522,7 +560,10 @@ fn ruqaat(mujallad: &Path) -> Vec<PathBuf> {
         if !masar.is_file() {
             continue;
         }
-        let imtidad = masar.extension().and_then(OsStr::to_str).unwrap_or_default();
+        let imtidad = masar
+            .extension()
+            .and_then(OsStr::to_str)
+            .unwrap_or_default();
         if imtidad.eq_ignore_ascii_case(IMTIDAD) {
             kull.push(masar);
         }
@@ -547,7 +588,10 @@ fn iftah_ruqaa(mujallad: &Path, ruqaat: &[PathBuf]) -> Option<MalafRuqaa> {
     let mut maftuh: Option<MalafRuqaa> = None;
 
     for masar in ruqaat {
-        let ism = masar.file_name().and_then(OsStr::to_str).unwrap_or("the patch");
+        let ism = masar
+            .file_name()
+            .and_then(OsStr::to_str)
+            .unwrap_or("the patch");
         match MalafRuqaa::iftah(masar) {
             Ok(malaf) => {
                 if maftuh.is_some() {
@@ -713,8 +757,12 @@ fn wasf_slate(mawsul: &WaslSlate) -> String {
 /// name is what stops the next reader concluding that the corrections were
 /// installed and silently did nothing.
 fn sajjil_qiyas(mujallad: &Path) {
-    const AHDAF: [HadafKhatf; 4] =
-        [HadafKhatf::Ittijah, HadafKhatf::Muhadhaha, HadafKhatf::Laff, HadafKhatf::Mujassam];
+    const AHDAF: [HadafKhatf; 4] = [
+        HadafKhatf::Ittijah,
+        HadafKhatf::Muhadhaha,
+        HadafKhatf::Laff,
+        HadafKhatf::Mujassam,
+    ];
 
     for hadaf in AHDAF {
         sajjil(
@@ -761,7 +809,11 @@ fn slim_lil_muhawwil(
         sajjil(mujallad, HalatBidaya::Rafd, "tashghil", &tafsil);
         return (HalatBidaya::Rafd, tafsil);
     };
-    athar(mujallad, "tashghil", &format!("the game's configuration is {}", ini.display()));
+    athar(
+        mujallad,
+        "tashghil",
+        &format!("the game's configuration is {}", ini.display()),
+    );
 
     let tashghil = Tashghil::jadeed(ini);
     let sijill = match tashghil.shaghghil(Some(musaddir)) {
@@ -781,7 +833,11 @@ fn slim_lil_muhawwil(
                 "rung {} ({}) {}: {}",
                 natija.rutba.raqm(),
                 natija.rutba.ism(),
-                if natija.muakkada { "confirmed" } else { "unconfirmed" },
+                if natija.muakkada {
+                    "confirmed"
+                } else {
+                    "unconfirmed"
+                },
                 natija.mulahaza
             ),
         );
@@ -827,7 +883,11 @@ fn ibda_haris(mujallad: &Path, tashghil: &Tashghil, musaddir: &'static wasl::Was
 
     let tawkeedat = tashghil.tawkeedat();
     if tawkeedat.is_empty() {
-        athar(mujallad, "haris", "the watchdog was not started: nothing to hold");
+        athar(
+            mujallad,
+            "haris",
+            "the watchdog was not started: nothing to hold",
+        );
         return;
     }
 
@@ -876,13 +936,18 @@ fn jid_ini(jidhr: &Path) -> Option<PathBuf> {
     let mut murashahat: Vec<(SystemTime, PathBuf)> = Vec::new();
 
     for mashru in mujalladat(jidhr) {
-        if mashru.file_name().is_some_and(|ism| ism.eq_ignore_ascii_case("Engine")) {
+        if mashru
+            .file_name()
+            .is_some_and(|ism| ism.eq_ignore_ascii_case("Engine"))
+        {
             continue;
         }
         let idadat = crate::isdar::masar_bila_hala(&mashru, "Saved/Config");
         for manassa in mujalladat(&idadat) {
             let ini = crate::isdar::masar_bila_hala(&manassa, "Engine.ini");
-            let Ok(bayan) = std::fs::metadata(&ini) else { continue };
+            let Ok(bayan) = std::fs::metadata(&ini) else {
+                continue;
+            };
             if !bayan.is_file() {
                 continue;
             }
@@ -903,7 +968,9 @@ fn jid_ini(jidhr: &Path) -> Option<PathBuf> {
 /// be listed — which for `Saved/Config` is the ordinary answer before a game's
 /// first run.
 fn mujalladat(jidhr: &Path) -> Vec<PathBuf> {
-    let Ok(madakhil) = std::fs::read_dir(jidhr) else { return Vec::new() };
+    let Ok(madakhil) = std::fs::read_dir(jidhr) else {
+        return Vec::new();
+    };
 
     let mut kull: Vec<PathBuf> = Vec::new();
     for madkhal in madakhil.flatten().take(AQSA_MADAKHIL) {

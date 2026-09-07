@@ -135,7 +135,10 @@ pub fn basmat_tathbeet(jidhr: &Path) -> Option<BasmatMuhtawa> {
     // Largest first, then by path so that two files of identical size cannot
     // swap places between scans.
     shuhud.sort_by(|awwal, thani| {
-        thani.hajm.cmp(&awwal.hajm).then_with(|| awwal.nisbi.cmp(&thani.nisbi))
+        thani
+            .hajm
+            .cmp(&awwal.hajm)
+            .then_with(|| awwal.nisbi.cmp(&thani.nisbi))
     });
     shuhud.truncate(ADAD_ASHHAD);
 
@@ -150,7 +153,9 @@ pub fn basmat_tathbeet(jidhr: &Path) -> Option<BasmatMuhtawa> {
         hashib.update(shahid.nisbi.as_bytes());
         hashib.update(b"\n");
     }
-    Some(BasmatMuhtawa(Basma::min_bayt(*hashib.finalize().as_bytes())))
+    Some(BasmatMuhtawa(Basma::min_bayt(
+        *hashib.finalize().as_bytes(),
+    )))
 }
 
 /// Collects file witnesses from one directory level.
@@ -169,7 +174,9 @@ fn ijma_shuhud(
     if umq > UMQ_BAHTH || *adad >= AQSA_MADAKHIL {
         return;
     }
-    let Ok(qaima) = std::fs::read_dir(haliy) else { return };
+    let Ok(qaima) = std::fs::read_dir(haliy) else {
+        return;
+    };
 
     for madkhal in qaima {
         if *adad >= AQSA_MADAKHIL {
@@ -177,7 +184,9 @@ fn ijma_shuhud(
         }
         *adad = adad.saturating_add(1);
         let Ok(madkhal) = madkhal else { continue };
-        let Ok(naw) = madkhal.file_type() else { continue };
+        let Ok(naw) = madkhal.file_type() else {
+            continue;
+        };
 
         // Symlinks are not followed. A launcher that symlinks a shared runtime
         // into every game's directory would otherwise make every game on the
@@ -193,10 +202,17 @@ fn ijma_shuhud(
         if !naw.is_file() {
             continue;
         }
-        let Ok(bayanat) = madkhal.metadata() else { continue };
+        let Ok(bayanat) = madkhal.metadata() else {
+            continue;
+        };
         let masar = madkhal.path();
-        let Some(nisbi) = masar_nisbi(jidhr, &masar) else { continue };
-        shuhud.push(ShahidMalaf { hajm: bayanat.len(), nisbi });
+        let Some(nisbi) = masar_nisbi(jidhr, &masar) else {
+            continue;
+        };
+        shuhud.push(ShahidMalaf {
+            hajm: bayanat.len(),
+            nisbi,
+        });
     }
 }
 
@@ -210,7 +226,9 @@ fn masar_nisbi(jidhr: &Path, masar: &Path) -> Option<String> {
     let baqi = masar.strip_prefix(jidhr).ok()?;
     let mut nateeja = String::new();
     for juz in baqi.components() {
-        let std::path::Component::Normal(ism) = juz else { return None };
+        let std::path::Component::Normal(ism) = juz else {
+            return None;
+        };
         let nass = ism.to_str()?;
         if !nateeja.is_empty() {
             nateeja.push('/');
@@ -219,7 +237,11 @@ fn masar_nisbi(jidhr: &Path, masar: &Path) -> Option<String> {
         // routinely disagree on capitalisation and the filesystem does not care.
         nateeja.push_str(&nass.to_lowercase());
     }
-    if nateeja.is_empty() { None } else { Some(nateeja) }
+    if nateeja.is_empty() {
+        None
+    } else {
+        Some(nateeja)
+    }
 }
 
 /// One game, and every install of it that was found.
@@ -308,7 +330,10 @@ impl TaqreerTawheed {
 /// manager — see [`LubaMuwahhada::asasi`] for why.
 #[must_use]
 pub fn wahhid(madkhalat: Vec<LubaMuktashafa>) -> (Vec<LubaMuwahhada>, TaqreerTawheed) {
-    let mut taqreer = TaqreerTawheed { madkhalat: madkhalat.len(), ..TaqreerTawheed::default() };
+    let mut taqreer = TaqreerTawheed {
+        madkhalat: madkhalat.len(),
+        ..TaqreerTawheed::default()
+    };
 
     // Pass one: by the identity behind any manager wrapping it.
     let mut bil_muarrif: BTreeMap<String, Vec<LubaMuktashafa>> = BTreeMap::new();
@@ -331,8 +356,12 @@ pub fn wahhid(madkhalat: Vec<LubaMuktashafa>) -> (Vec<LubaMuwahhada>, TaqreerTaw
     let mut bila_basma: Vec<LubaMuwahhada> = Vec::new();
 
     for miftah in tarteeb {
-        let Some(majmua) = bil_muarrif.remove(&miftah) else { continue };
-        let Some(luba) = ibn_muwahhada(majmua) else { continue };
+        let Some(majmua) = bil_muarrif.remove(&miftah) else {
+            continue;
+        };
+        let Some(luba) = ibn_muwahhada(majmua) else {
+            continue;
+        };
 
         if let Some(basma) = basmat_tathbeet(&luba.asasi.jidhr) {
             let nass = basma.nass();
@@ -340,7 +369,10 @@ pub fn wahhid(madkhalat: Vec<LubaMuktashafa>) -> (Vec<LubaMuwahhada>, TaqreerTaw
             if !dalu.is_empty() {
                 taqreer.bil_basma = taqreer.bil_basma.saturating_add(1);
             }
-            dalu.push(LubaMuwahhada { basma: Some(basma), ..luba });
+            dalu.push(LubaMuwahhada {
+                basma: Some(basma),
+                ..luba
+            });
         } else {
             taqreer.bila_basma = taqreer.bila_basma.saturating_add(1);
             bila_basma.push(luba);
@@ -366,13 +398,20 @@ pub fn wahhid(madkhalat: Vec<LubaMuktashafa>) -> (Vec<LubaMuwahhada>, TaqreerTaw
 /// rather than indexing is what keeps `indexing_slicing` satisfied honestly
 /// instead of with an exception.
 fn ibn_muwahhada(majmua: Vec<LubaMuktashafa>) -> Option<LubaMuwahhada> {
-    let mawdi = majmua.iter().position(|luba| !luba.masdar.mudir()).unwrap_or(0);
+    let mawdi = majmua
+        .iter()
+        .position(|luba| !luba.masdar.mudir())
+        .unwrap_or(0);
     let mut baqi = majmua;
     if mawdi >= baqi.len() {
         return None;
     }
     let asasi = baqi.remove(mawdi);
-    Some(LubaMuwahhada { asasi, thanawiya: baqi, basma: None })
+    Some(LubaMuwahhada {
+        asasi,
+        thanawiya: baqi,
+        basma: None,
+    })
 }
 
 /// Folds several fingerprint-equal games into one.
@@ -380,7 +419,10 @@ fn idmaj(majmua: Vec<LubaMuwahhada>) -> Option<LubaMuwahhada> {
     let mut baqi = majmua;
     // Same rule as within a group: a store outranks a manager, because the store
     // is the one that knows the build the patch has to match.
-    let mawdi = baqi.iter().position(|luba| !luba.asasi.masdar.mudir()).unwrap_or(0);
+    let mawdi = baqi
+        .iter()
+        .position(|luba| !luba.asasi.masdar.mudir())
+        .unwrap_or(0);
     if mawdi >= baqi.len() {
         return None;
     }
@@ -429,7 +471,9 @@ impl QararatMustakhdim {
     /// No corrections.
     #[must_use]
     pub const fn khaliya() -> Self {
-        Self { qararat: Vec::new() }
+        Self {
+            qararat: Vec::new(),
+        }
     }
 
     /// Whether an identifier is pinned apart.
@@ -448,7 +492,7 @@ impl QararatMustakhdim {
             .filter_map(|qarar| match qarar {
                 QararMustakhdim::Damm { masadir } if masadir.iter().any(|q| q == masdar) => {
                     Some(masadir)
-                }
+                },
                 _ => None,
             })
             .flatten()
@@ -465,10 +509,7 @@ impl QararatMustakhdim {
 /// let a join re-merge what a split had just separated, and the outcome would
 /// depend on the order the corrections happened to be stored in.
 #[must_use]
-pub fn atbiq_qararat(
-    alaab: Vec<LubaMuwahhada>,
-    qararat: &QararatMustakhdim,
-) -> Vec<LubaMuwahhada> {
+pub fn atbiq_qararat(alaab: Vec<LubaMuwahhada>, qararat: &QararatMustakhdim) -> Vec<LubaMuwahhada> {
     let mut natija: Vec<LubaMuwahhada> = Vec::with_capacity(alaab.len());
 
     for luba in alaab {
@@ -477,7 +518,10 @@ pub fn atbiq_qararat(
             .into_iter()
             .partition(|thanawi| qararat.mafsul(&thanawi.masdar.muarrif()));
 
-        natija.push(LubaMuwahhada { thanawiya: mubqat, ..luba });
+        natija.push(LubaMuwahhada {
+            thanawiya: mubqat,
+            ..luba
+        });
         for munfasila in mafsula {
             natija.push(LubaMuwahhada {
                 asasi: munfasila,

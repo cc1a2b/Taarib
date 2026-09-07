@@ -64,7 +64,11 @@ impl QiraatMatjar {
             (Some(appid), Some(jidhr_steam)) => {
                 let masar = masar_appinfo(jidhr_steam);
                 match istikhraj(&masar, appid) {
-                    Ok((himaya, shabaka)) => Self { himaya, shabaka, hala: HalatMatjar::Maqru },
+                    Ok((himaya, shabaka)) => Self {
+                        himaya,
+                        shabaka,
+                        hala: HalatMatjar::Maqru,
+                    },
                     // The short kind label rather than a sentence: it is what
                     // the refusal text and both gap lists already carry, and
                     // the path it happened to is the field standing beside it.
@@ -79,7 +83,11 @@ impl QiraatMatjar {
 
     /// A reading that found nothing because it never happened.
     const fn bila(hala: HalatMatjar) -> Self {
-        Self { himaya: Vec::new(), shabaka: Vec::new(), hala }
+        Self {
+            himaya: Vec::new(),
+            shabaka: Vec::new(),
+            hala,
+        }
     }
 }
 
@@ -98,8 +106,10 @@ pub fn masar_appinfo(jidhr_steam: &Path) -> PathBuf {
 /// catalogue's own framing is corrupt. A malformed *app* is not a failure:
 /// [`vdf::murur_appinfo`] hands that entry over as an `Err` and the sweep
 /// continues at the next one, which is why one bad app costs one app.
-fn istikhraj(masar: &Path, appid: u32) -> Result<(Vec<DaleelHimaya>, Vec<DaleelShabaka>), io::Error>
-{
+fn istikhraj(
+    masar: &Path,
+    appid: u32,
+) -> Result<(Vec<DaleelHimaya>, Vec<DaleelShabaka>), io::Error> {
     let bayt = std::fs::read(masar)?;
 
     let mut himaya: Vec<DaleelHimaya> = Vec::new();
@@ -142,7 +152,10 @@ mod ikhtibarat {
     fn muarrif_bila_jidhr_yubqi_al_sual_bila_jawab() {
         let qiraa = QiraatMatjar::iqra(Some(730), None);
         assert_eq!(qiraa.hala, HalatMatjar::JidhrMajhul);
-        assert!(qiraa.hala.lam_yuqra(), "an unaskable question is not an answered one");
+        assert!(
+            qiraa.hala.lam_yuqra(),
+            "an unaskable question is not an answered one"
+        );
     }
 
     #[test]

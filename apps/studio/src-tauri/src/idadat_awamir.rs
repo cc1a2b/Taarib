@@ -64,7 +64,10 @@ fn tahaqqaq_idadat(idadat: &Idadat) -> Natija<()> {
         // `None` is the documented "no ceiling at all" and stays allowed. A
         // *present* amount that is not a positive finite number is not a smaller
         // ceiling — it is no ceiling wearing the look of one.
-        if tarif.mizaniya.is_some_and(|mablagh| !mablagh.is_finite() || mablagh <= 0.0) {
+        if tarif
+            .mizaniya
+            .is_some_and(|mablagh| !mablagh.is_finite() || mablagh <= 0.0)
+        {
             return Err(Khata::from(KhataIdadatAmr::QeematGhayrSaliha {
                 haql: "muzawwidun.qaima.mizaniya",
                 sabab: format!(
@@ -81,7 +84,11 @@ fn tahaqqaq_idadat(idadat: &Idadat) -> Natija<()> {
     // both carry the default with them, so this is reachable from a hand-edited
     // file and from an environment override, not from the screen.
     if let Some(ism) = &idadat.muzawwidun.iftiradi
-        && !idadat.muzawwidun.qaima.iter().any(|tarif| &tarif.muarrif == ism)
+        && !idadat
+            .muzawwidun
+            .qaima
+            .iter()
+            .any(|tarif| &tarif.muarrif == ism)
     {
         return Err(Khata::from(KhataIdadatAmr::MuzawwidIftiradiMajhul {
             muarrif: ism.clone(),
@@ -244,7 +251,9 @@ pub fn imsah_itimad_muzawwid(muzawwid: String) -> Result<bool, Khata> {
     reason = "tauri commands receive owned arguments and managed state by value"
 )]
 pub fn hal_itimad_muzawwid(muzawwid: String) -> Result<bool, Khata> {
-    Ok(Itimad::min_khazina(&muzawwid).map_err(Khata::from)?.is_some())
+    Ok(Itimad::min_khazina(&muzawwid)
+        .map_err(Khata::from)?
+        .is_some())
 }
 
 /// Every font in Taarib's own font directory, each validated for Arabic;
@@ -269,9 +278,13 @@ pub fn khutut_mutaha(masarat: tauri::State<'_, Masarat>) -> Result<Vec<KhattHie>
         let Some(ism) = masar.file_name().map(|q| q.to_string_lossy().into_owned()) else {
             continue;
         };
-        let Ok(bayt) = std::fs::read(&masar) else { continue };
+        let Ok(bayt) = std::fs::read(&masar) else {
+            continue;
+        };
         let hajm = u64::try_from(bayt.len()).unwrap_or(u64::MAX);
-        let Ok(arabi) = fahs_khatt(&Arc::new(bayt)) else { continue };
+        let Ok(arabi) = fahs_khatt(&Arc::new(bayt)) else {
+            continue;
+        };
         khutut.push(KhattHie { ism, arabi, hajm });
     }
     khutut.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
@@ -292,10 +305,7 @@ pub fn khutut_mutaha(masarat: tauri::State<'_, Masarat>) -> Result<Vec<KhattHie>
 /// whatever writing into the font directory raises.
 #[tauri::command]
 #[specta::specta]
-pub fn ikhtar_khatt(
-    masar: String,
-    masarat: tauri::State<'_, Masarat>,
-) -> Result<KhattHie, Khata> {
+pub fn ikhtar_khatt(masar: String, masarat: tauri::State<'_, Masarat>) -> Result<KhattHie, Khata> {
     let masar = PathBuf::from(masar);
     let Some(ism) = masar.file_name().map(|q| q.to_string_lossy().into_owned()) else {
         return Err(Khata::from(KhataIdadatAmr::KhattGhayrSalih {
@@ -304,12 +314,18 @@ pub fn ikhtar_khatt(
         }));
     };
     let bayt = std::fs::read(&masar).map_err(|sabab| {
-        Khata::from(KhataIdadatAmr::MalafTalif { masar: masar.clone(), sabab: sabab.to_string() })
+        Khata::from(KhataIdadatAmr::MalafTalif {
+            masar: masar.clone(),
+            sabab: sabab.to_string(),
+        })
     })?;
     let hajm = u64::try_from(bayt.len()).unwrap_or(u64::MAX);
     let bayt = Arc::new(bayt);
     let arabi = fahs_khatt(&bayt).map_err(|khata| {
-        Khata::from(KhataIdadatAmr::KhattGhayrSalih { masar: masar.clone(), sabab: khata.injilizi })
+        Khata::from(KhataIdadatAmr::KhattGhayrSalih {
+            masar: masar.clone(),
+            sabab: khata.injilizi,
+        })
     })?;
 
     let mujallad = masarat.khutut();
@@ -490,31 +506,37 @@ impl Tafsir for KhataIdadatAmr {
     fn khutwa(&self) -> Khutwa {
         match self {
             Self::MuzawwidMukarrar { .. } | Self::MuzawwidIftiradiMajhul { .. } => {
-                Khutwa::FathIdadat { qism: QismIdadat::Muzawwidun }
-            }
+                Khutwa::FathIdadat {
+                    qism: QismIdadat::Muzawwidun,
+                }
+            },
             Self::QeematGhayrSaliha { haql, .. } => match *haql {
                 "muzawwidun.qaima.muarrif"
                 | "muzawwidun.qaima.namudhaj"
-                | "muzawwidun.qaima.mizaniya" => {
-                    Khutwa::FathIdadat { qism: QismIdadat::Muzawwidun }
-                }
-                "takhzin.hadd_makhbaa_mb" => {
-                    Khutwa::FathIdadat { qism: QismIdadat::Takhzin }
-                }
-                "masadir.fatra_tahdith" => {
-                    Khutwa::FathIdadat { qism: QismIdadat::Masadir }
-                }
-                "tashkhis.ayyam_hifz" => {
-                    Khutwa::FathIdadat { qism: QismIdadat::Tashkhis }
-                }
+                | "muzawwidun.qaima.mizaniya" => Khutwa::FathIdadat {
+                    qism: QismIdadat::Muzawwidun,
+                },
+                "takhzin.hadd_makhbaa_mb" => Khutwa::FathIdadat {
+                    qism: QismIdadat::Takhzin,
+                },
+                "masadir.fatra_tahdith" => Khutwa::FathIdadat {
+                    qism: QismIdadat::Masadir,
+                },
+                "tashkhis.ayyam_hifz" => Khutwa::FathIdadat {
+                    qism: QismIdadat::Tashkhis,
+                },
                 // The overlay has no Settings section of its own; the sentence
                 // names the field.
                 _ => Khutwa::LaShay,
             },
             Self::KhattGhayrSalih { .. } => Khutwa::IkhtiyarKhattAakhar,
-            Self::KhattMutaarid { .. } => Khutwa::FathIdadat { qism: QismIdadat::Khutut },
+            Self::KhattMutaarid { .. } => Khutwa::FathIdadat {
+                qism: QismIdadat::Khutut,
+            },
             Self::MalafTalif { .. } => Khutwa::AadaMuhawala,
-            Self::MahmulLaMafatih => Khutwa::FathIdadat { qism: QismIdadat::Muzawwidun },
+            Self::MahmulLaMafatih => Khutwa::FathIdadat {
+                qism: QismIdadat::Muzawwidun,
+            },
         }
     }
 
@@ -523,21 +545,21 @@ impl Tafsir for KhataIdadatAmr {
         match self {
             Self::MuzawwidMukarrar { muarrif } | Self::MuzawwidIftiradiMajhul { muarrif } => {
                 let _ = siyaq.insert("muarrif".to_owned(), QeemaSiyaq::Nass(muarrif.clone()));
-            }
+            },
             Self::QeematGhayrSaliha { haql, sabab } => {
                 let _ = siyaq.insert("haql".to_owned(), QeemaSiyaq::Nass((*haql).to_owned()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::KhattGhayrSalih { masar, sabab } | Self::MalafTalif { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::KhattMutaarid { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-            }
+            },
             // The refusal is the whole message: a portable install keeps no
             // keyring, so there is no path, no field and no name to add.
-            Self::MahmulLaMafatih => {}
+            Self::MahmulLaMafatih => {},
         }
         siyaq
     }

@@ -61,9 +61,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use parking_lot::Mutex;
 use taarib_saff::rasm::{NamatRasm, Rassam};
-use taarib_saff::{
-    KhiyaratTakhtit, MawridKhatt, Saff, SilsilatKhutut, TakhtitNass, TalabTakhtit,
-};
+use taarib_saff::{KhiyaratTakhtit, MawridKhatt, Saff, SilsilatKhutut, TakhtitNass, TalabTakhtit};
 use taarib_tabaqa::khata::KhataTabaqa;
 use taarib_tabaqa::lawhat_tahakkum::LawhatTahakkum;
 use taarib_tabaqa::qira::SatrMaqru;
@@ -142,7 +140,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             )));
         }
     }
-    println!("source text: no Arabic Presentation Forms — checked, all {} lines", HIWAR.len());
+    println!(
+        "source text: no Arabic Presentation Forms — checked, all {} lines",
+        HIWAR.len()
+    );
 
     // -- 1. a frame the game rendered -------------------------------------
     let mut itar = Itar::jadeed(ARD, IRTIFA);
@@ -168,7 +169,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         let sunduq = itar.utbua(&rassam, &takhtit, satr.yasar, satr.aala, [0.85, 0.87, 0.90])?;
         maqru.push(SatrMaqru::jadeed(satr.injilizi, sunduq, 94, true));
     }
-    println!("\nthe game's frame: {ARD}×{IRTIFA}, {} lines of its own text drawn", maqru.len());
+    println!(
+        "\nthe game's frame: {ARD}×{IRTIFA}, {} lines of its own text drawn",
+        maqru.len()
+    );
     for (satr, khaam) in maqru.iter().zip(HIWAR) {
         println!(
             "  read {:>3},{:>3} {:>3}×{:>2} conf {:>3}  {:?}",
@@ -195,9 +199,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     // -- 3. the real control panel ----------------------------------------
     let mut lawha_tahakkum = LawhatTahakkum::jadeeda("برهان التلقيم");
     lawha_tahakkum.hala_mut().irfa();
-    let sath = WasfSath { ard: ARD, irtifa: IRTIFA, sigha: SighatSath::Rgba8, sirgb: true };
+    let sath = WasfSath {
+        ard: ARD,
+        irtifa: IRTIFA,
+        sigha: SighatSath::Rgba8,
+        sirgb: true,
+    };
     let ansur = lawha_tahakkum.bina(sath);
-    println!("control panel: {} elements from LawhatTahakkum::bina", ansur.len());
+    println!(
+        "control panel: {} elements from LawhatTahakkum::bina",
+        ansur.len()
+    );
 
     // -- 4. the producer ---------------------------------------------------
     let mut mulaqqim = Mulaqqim::jadeed(khutut, KhiyaratTalqeem::iftiradiya())?;
@@ -206,7 +218,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("\n--- the tier-3 disclosure, shown because the type system requires it ---");
     println!("{NASS_IFSAH_ARABI}");
     println!("--- end of disclosure ---\n");
-    let lahza = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |mudda| mudda.as_secs());
+    let lahza = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |mudda| mudda.as_secs());
     let iqrar = Iqrar::baad_ard(BasmatIfsah::hadhihi_al_bina(), lahza, "برهان التلقيم")?;
 
     let musattah = Arc::new(Mutex::new(itar));
@@ -218,7 +232,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // -- 6. produce a batch and draw it -----------------------------------
     let Some(sath_hayy) = tabaqa.sath() else {
-        return Err(Box::<dyn Error>::from("the overlay reported no live surface"));
+        return Err(Box::<dyn Error>::from(
+            "the overlay reported no live surface",
+        ));
     };
     let dufaa = mulaqqim.qaddim(&mut tabaqa, sath_hayy, &sutur, &ansur, 0)?;
 
@@ -248,10 +264,20 @@ fn utbua_dufaa(dufaa: &LawhatRasm, mulaqqim: &Mulaqqim) {
         ihsaat.sutur,
         ihsaat.ansur
     );
-    let masturat = dufaa.qitaat.iter().filter(|qita| qita.khareeta.is_some()).count();
+    let masturat = dufaa
+        .qitaat
+        .iter()
+        .filter(|qita| qita.khareeta.is_some())
+        .count();
     println!("  textured (glyphs): {masturat}");
-    println!("  solid (plates and panel): {}", dufaa.qitaat.len() - masturat);
-    println!("surface recorded on the batch: {}×{}", dufaa.sath.ard, dufaa.sath.irtifa);
+    println!(
+        "  solid (plates and panel): {}",
+        dufaa.qitaat.len() - masturat
+    );
+    println!(
+        "surface recorded on the batch: {}×{}",
+        dufaa.sath.ard, dufaa.sath.irtifa
+    );
 
     println!("\n=== the runtime atlas ===");
     let namu = ihsaat.lawha;
@@ -307,7 +333,11 @@ impl Itar {
     /// A black frame.
     fn jadeed(ard: u32, irtifa: u32) -> Self {
         let adad = (ard as usize) * (irtifa as usize) * 4;
-        Self { ard, irtifa, biksel: vec![0.0; adad] }
+        Self {
+            ard,
+            irtifa,
+            biksel: vec![0.0; adad],
+        }
     }
 
     /// The index of a pixel's first channel, when it is on the frame.
@@ -417,7 +447,12 @@ impl Itar {
         }
 
         if adna_s == i64::MAX {
-            return Ok(MustatilBiksel { yasar, aala, ard: 0, irtifa: 0 });
+            return Ok(MustatilBiksel {
+                yasar,
+                aala,
+                ard: 0,
+                irtifa: 0,
+            });
         }
         Ok(MustatilBiksel {
             yasar: adna_s.max(0) as u32,
@@ -482,7 +517,12 @@ struct KhattafBarmaji {
 impl KhattafBarmaji {
     /// A backend over a frame buffer.
     const fn jadeed(itar: Arc<Mutex<Itar>>, sath: WasfSath) -> Self {
-        Self { itar, sath, lawha: None, marsuma: 0 }
+        Self {
+            itar,
+            sath,
+            lawha: None,
+            marsuma: 0,
+        }
     }
 
     /// One texel of the uploaded page, nearest-sampled.
@@ -531,7 +571,9 @@ impl Khattaf for KhattafBarmaji {
         // The same length check the GL backend makes, for the same reason: a
         // page whose bytes do not match its declared size would put arbitrary
         // memory on screen.
-        let matlub = (ard as usize).saturating_mul(irtifa as usize).saturating_mul(4);
+        let matlub = (ard as usize)
+            .saturating_mul(irtifa as usize)
+            .saturating_mul(4);
         if bayt.len() != matlub {
             return Err(KhataTabaqa::MawridFashil {
                 mawrid: "glyph atlas texture",
@@ -600,8 +642,7 @@ impl Khattaf for KhattafBarmaji {
                 irtifa: itar.irtifa,
             });
         }
-        let mut kharj =
-            Vec::with_capacity((mintaqa.ard as usize) * (mintaqa.irtifa as usize) * 4);
+        let mut kharj = Vec::with_capacity((mintaqa.ard as usize) * (mintaqa.irtifa as usize) * 4);
         for a in mintaqa.aala..mintaqa.aala + mintaqa.irtifa {
             for s in mintaqa.yasar..mintaqa.yasar + mintaqa.ard {
                 let Some(fahras) = itar.fahras(s, a) else {
@@ -609,8 +650,9 @@ impl Khattaf for KhattafBarmaji {
                 };
                 for qanat in 0..4 {
                     kharj.push(
-                        (ila_sirgb(itar.biksel[fahras + qanat]) * 255.0).round().clamp(0.0, 255.0)
-                            as u8,
+                        (ila_sirgb(itar.biksel[fahras + qanat]) * 255.0)
+                            .round()
+                            .clamp(0.0, 255.0) as u8,
                     );
                 }
             }

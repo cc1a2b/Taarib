@@ -38,7 +38,10 @@ pub struct BitaqatJanib {
 
 impl BitaqatJanib {
     fn min_mudkhal(mudkhal: &MudkhalNass) -> Option<Self> {
-        let hadaf = mudkhal.hadaf.clone().filter(|nass| !nass.trim().is_empty())?;
+        let hadaf = mudkhal
+            .hadaf
+            .clone()
+            .filter(|nass| !nass.trim().is_empty())?;
         Some(Self {
             hadaf,
             hala: mudkhal.muraja.hala(),
@@ -183,12 +186,19 @@ impl Damj {
         hasim: &MusahimId,
         lahza: u64,
     ) -> NatijatWarsha<(Vec<MudkhalNass>, Vec<QaydHasm>)> {
-        let maruf: BTreeMap<NassId, &Nizaa> =
-            self.nizaat.iter().map(|nizaa| (nizaa.nass, nizaa)).collect();
+        let maruf: BTreeMap<NassId, &Nizaa> = self
+            .nizaat
+            .iter()
+            .map(|nizaa| (nizaa.nass, nizaa))
+            .collect();
         if qararat.keys().any(|nass| !maruf.contains_key(nass)) {
             return Err(KhataWarsha::QararBilaNizaa);
         }
-        let muallaq = self.nizaat.iter().filter(|n| !qararat.contains_key(&n.nass)).count();
+        let muallaq = self
+            .nizaat
+            .iter()
+            .filter(|n| !qararat.contains_key(&n.nass))
+            .count();
         if muallaq > 0 {
             return Err(KhataWarsha::NizaatMuallaqa { adad: muallaq });
         }
@@ -215,7 +225,7 @@ impl Damj {
                     );
                     thalith.muharrir = Some(hasim.clone());
                     (thalith, None, nizaa.hum.clone())
-                }
+                },
             };
             husum.push(QaydHasm {
                 nass: nizaa.nass,
@@ -240,20 +250,21 @@ impl Damj {
 /// changes merge silently; a translation on one side against none on the
 /// other is taken, not raised.
 #[must_use]
-pub fn damj(
-    ana: Vec<MudkhalNass>,
-    hum: Vec<MudkhalNass>,
-    aslaf: Option<&[MudkhalNass]>,
-) -> Damj {
+pub fn damj(ana: Vec<MudkhalNass>, hum: Vec<MudkhalNass>, aslaf: Option<&[MudkhalNass]>) -> Damj {
     let aslaf_bil_id: BTreeMap<NassId, &MudkhalNass> = aslaf
         .unwrap_or(&[])
         .iter()
         .map(|mudkhal| (mudkhal.id, mudkhal))
         .collect();
-    let mut taqreer = TaqreerDamj { thulathi: aslaf.is_some(), ..TaqreerDamj::default() };
+    let mut taqreer = TaqreerDamj {
+        thulathi: aslaf.is_some(),
+        ..TaqreerDamj::default()
+    };
 
-    let mut hum_bil_id: BTreeMap<NassId, MudkhalNass> =
-        hum.into_iter().map(|mudkhal| (mudkhal.id, mudkhal)).collect();
+    let mut hum_bil_id: BTreeMap<NassId, MudkhalNass> = hum
+        .into_iter()
+        .map(|mudkhal| (mudkhal.id, mudkhal))
+        .collect();
 
     let mut madmuja = Vec::new();
     let mut nizaat = Vec::new();
@@ -281,19 +292,26 @@ pub fn damj(
         taqreer.munfarida = taqreer.munfarida.saturating_add(1);
         madmuja.push(mudkhal_hum);
     }
-    let madmuja_ids: std::collections::BTreeSet<NassId> =
-        madmuja.iter().map(|m| m.id).collect();
+    let madmuja_ids: std::collections::BTreeSet<NassId> = madmuja.iter().map(|m| m.id).collect();
     taqreer.saqatat = aslaf_bil_id
         .keys()
         .filter(|id| !madmuja_ids.contains(id) && !ajnab.contains_key(id))
         .count();
     taqreer.nizaat = nizaat.len();
 
-    Damj { madmuja, nizaat, ajnab, taqreer }
+    Damj {
+        madmuja,
+        nizaat,
+        ajnab,
+        taqreer,
+    }
 }
 
 fn nass_faal(mudkhal: &MudkhalNass) -> Option<&str> {
-    mudkhal.hadaf.as_deref().filter(|nass| !nass.trim().is_empty())
+    mudkhal
+        .hadaf
+        .as_deref()
+        .filter(|nass| !nass.trim().is_empty())
 }
 
 fn idmij_wahid(
@@ -313,7 +331,7 @@ fn idmij_wahid(
         (None, None) => {
             taqreer.mutatabiqa = taqreer.mutatabiqa.saturating_add(1);
             madmuja.push(ana);
-        }
+        },
         (Some(_), None) => {
             if nass_salaf.is_some() && salaf.is_some() {
                 taqreer.tarjama_ala_faragh = taqreer.tarjama_ala_faragh.saturating_add(1);
@@ -321,7 +339,7 @@ fn idmij_wahid(
                 taqreer.min_ana = taqreer.min_ana.saturating_add(1);
             }
             madmuja.push(ana);
-        }
+        },
         (None, Some(_)) => {
             if nass_salaf.is_some() && salaf.is_some() {
                 taqreer.tarjama_ala_faragh = taqreer.tarjama_ala_faragh.saturating_add(1);
@@ -329,11 +347,11 @@ fn idmij_wahid(
                 taqreer.min_hum = taqreer.min_hum.saturating_add(1);
             }
             madmuja.push(hum);
-        }
+        },
         (Some(ni), Some(hu)) if ni == hu => {
             taqreer.mutatabiqa = taqreer.mutatabiqa.saturating_add(1);
             idmij_hala_mutatabiqa(ana, hum, nizaat, ajnab, madmuja);
-        }
+        },
         (Some(ni), Some(hu)) => {
             if nass_salaf.as_deref() == Some(ni.as_str()) {
                 taqreer.min_hum = taqreer.min_hum.saturating_add(1);
@@ -342,9 +360,10 @@ fn idmij_wahid(
                 taqreer.min_ana = taqreer.min_ana.saturating_add(1);
                 madmuja.push(ana);
             } else {
-                let (Some(bitaqat_ana), Some(bitaqat_hum)) =
-                    (BitaqatJanib::min_mudkhal(&ana), BitaqatJanib::min_mudkhal(&hum))
-                else {
+                let (Some(bitaqat_ana), Some(bitaqat_hum)) = (
+                    BitaqatJanib::min_mudkhal(&ana),
+                    BitaqatJanib::min_mudkhal(&hum),
+                ) else {
                     madmuja.push(ana);
                     return;
                 };
@@ -357,7 +376,7 @@ fn idmij_wahid(
                 });
                 let _ = ajnab.insert(ana.id, (ana, hum));
             }
-        }
+        },
     }
 }
 
@@ -386,9 +405,10 @@ fn idmij_hala_mutatabiqa(
             | (HalatMuraja::Marfuda, HalatMuraja::Muakkada)
     );
     if khilaf_bashari {
-        let (Some(bitaqat_ana), Some(bitaqat_hum)) =
-            (BitaqatJanib::min_mudkhal(&ana), BitaqatJanib::min_mudkhal(&hum))
-        else {
+        let (Some(bitaqat_ana), Some(bitaqat_hum)) = (
+            BitaqatJanib::min_mudkhal(&ana),
+            BitaqatJanib::min_mudkhal(&hum),
+        ) else {
             madmuja.push(ana);
             return;
         };

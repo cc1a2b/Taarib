@@ -119,13 +119,23 @@ impl DaleelShabaka {
     /// The evidence named in one Arabic line.
     #[must_use]
     pub fn arabi(&self) -> String {
-        format!("{} — {}: {}", self.dalala.arabi(), self.naw.arabi(), self.ayn)
+        format!(
+            "{} — {}: {}",
+            self.dalala.arabi(),
+            self.naw.arabi(),
+            self.ayn
+        )
     }
 
     /// The evidence named in one English line.
     #[must_use]
     pub fn injilizi(&self) -> String {
-        format!("{} — {}: {}", self.dalala.injilizi(), self.naw.injilizi(), self.ayn)
+        format!(
+            "{} — {}: {}",
+            self.dalala.injilizi(),
+            self.naw.injilizi(),
+            self.ayn
+        )
     }
 }
 
@@ -202,8 +212,7 @@ impl IjmaaShabaka {
         }
         if self.mabtur {
             sutur.push(
-                "توقّف الفحص عند حدّه قبل أن يفرغ من المجلّد، فما لم يُفحص لا يُعرف عنه شيء."
-                    .to_owned(),
+                "توقّف الفحص عند حدّه قبل أن يفرغ من المجلّد، فما لم يُفحص لا يُعرف عنه شيء.".to_owned(),
             );
         }
         sutur.join("\n")
@@ -229,9 +238,7 @@ impl IjmaaShabaka {
             ));
         }
         if self.mabtur {
-            sutur.push(
-                "- the walk stopped at a bound before it finished the folder".to_owned(),
-            );
+            sutur.push("- the walk stopped at a bound before it finished the folder".to_owned());
         }
         sutur.join("\n")
     }
@@ -289,10 +296,30 @@ const FIAT: &[FiaMaerufa] = &[
 /// Steamworks wrappers (`steam_api`, `Steamworks.NET`) are deliberately absent:
 /// single-player games ship them for achievements, so they are not evidence.
 const ALAMAT_SHABAKA: &[AlamaShabaka] = &[
-    wsm("gamenetworkingsockets", MalafJuzi, MutaaddidOnline, "GameNetworkingSockets"),
-    wsm("gamenetworkingsockets", Wahda, MutaaddidOnline, "GameNetworkingSockets"),
-    wsm("steamnetworkingsockets", MalafJuzi, MutaaddidOnline, "Steam networking sockets"),
-    wsm("steamnetworkingsockets", Wahda, MutaaddidOnline, "Steam networking sockets"),
+    wsm(
+        "gamenetworkingsockets",
+        MalafJuzi,
+        MutaaddidOnline,
+        "GameNetworkingSockets",
+    ),
+    wsm(
+        "gamenetworkingsockets",
+        Wahda,
+        MutaaddidOnline,
+        "GameNetworkingSockets",
+    ),
+    wsm(
+        "steamnetworkingsockets",
+        MalafJuzi,
+        MutaaddidOnline,
+        "Steam networking sockets",
+    ),
+    wsm(
+        "steamnetworkingsockets",
+        Wahda,
+        MutaaddidOnline,
+        "Steam networking sockets",
+    ),
     wsm("eossdk", MalafJuzi, MutaaddidOnline, "Epic Online Services"),
     wsm("eossdk", Wahda, MutaaddidOnline, "Epic Online Services"),
     wsm("photon", MalafJuzi, MutaaddidOnline, "Photon"),
@@ -300,12 +327,42 @@ const ALAMAT_SHABAKA: &[AlamaShabaka] = &[
     wsm("mirror", MalafJidhr, ShabakiAam, "Mirror"),
     wsm("mirror", Wahda, ShabakiAam, "Mirror"),
     wsm("mirage", MalafJidhr, ShabakiAam, "Mirage"),
-    wsm("unity.netcode", MalafJuzi, ShabakiAam, "Unity Netcode for GameObjects"),
-    wsm("unity.netcode", Wahda, ShabakiAam, "Unity Netcode for GameObjects"),
-    wsm("com.unity.transport", MalafJuzi, ShabakiAam, "Unity Transport"),
-    wsm("com.unity.netcode", MalafJuzi, ShabakiAam, "Unity Netcode package"),
-    wsm("com.unity.multiplayer", MalafJuzi, ShabakiAam, "Unity Multiplayer"),
-    wsm("unity.networking", MalafJuzi, ShabakiAam, "Unity UNet (HLAPI)"),
+    wsm(
+        "unity.netcode",
+        MalafJuzi,
+        ShabakiAam,
+        "Unity Netcode for GameObjects",
+    ),
+    wsm(
+        "unity.netcode",
+        Wahda,
+        ShabakiAam,
+        "Unity Netcode for GameObjects",
+    ),
+    wsm(
+        "com.unity.transport",
+        MalafJuzi,
+        ShabakiAam,
+        "Unity Transport",
+    ),
+    wsm(
+        "com.unity.netcode",
+        MalafJuzi,
+        ShabakiAam,
+        "Unity Netcode package",
+    ),
+    wsm(
+        "com.unity.multiplayer",
+        MalafJuzi,
+        ShabakiAam,
+        "Unity Multiplayer",
+    ),
+    wsm(
+        "unity.networking",
+        MalafJuzi,
+        ShabakiAam,
+        "Unity UNet (HLAPI)",
+    ),
     wsm("nakama", MalafJuzi, MutaaddidOnline, "Nakama"),
     wsm("nakama", Wahda, MutaaddidOnline, "Nakama"),
     wsm("playfab", MalafJuzi, MutaaddidOnline, "PlayFab"),
@@ -343,7 +400,11 @@ struct FiaMaerufa {
 
 /// Builds a category-table row.
 const fn fia(raqm: u32, dalala: DalalatShabaka, injilizi: &'static str) -> FiaMaerufa {
-    FiaMaerufa { raqm, dalala, injilizi }
+    FiaMaerufa {
+        raqm,
+        dalala,
+        injilizi,
+    }
 }
 
 /// Where a networking marker is looked for.
@@ -373,7 +434,12 @@ const fn wsm(
     dalala: DalalatShabaka,
     wasf: &'static str,
 ) -> AlamaShabaka {
-    AlamaShabaka { ibra, mahal, dalala, wasf }
+    AlamaShabaka {
+        ibra,
+        mahal,
+        dalala,
+        wasf,
+    }
 }
 
 /// One server-binary marker: a needle, what it means, and how it is named.
@@ -459,7 +525,10 @@ impl Musajjil {
 
     /// Records a place the scan could not read.
     fn thughra(&mut self, masar: PathBuf, sabab: impl Into<String>) {
-        self.thughrat.push(ThughraFahs { masar, sabab: sabab.into() });
+        self.thughrat.push(ThughraFahs {
+            masar,
+            sabab: sabab.into(),
+        });
     }
 }
 
@@ -506,13 +575,15 @@ fn imsah_luba(jidhr: &Path, musajjil: &mut Musajjil) {
         let madkhal = match natija {
             Ok(madkhal) => madkhal,
             Err(khata) => {
-                let masar = khata.path().map_or_else(|| jidhr.to_path_buf(), Path::to_path_buf);
+                let masar = khata
+                    .path()
+                    .map_or_else(|| jidhr.to_path_buf(), Path::to_path_buf);
                 let sabab = khata
                     .io_error()
                     .map_or_else(|| "walk error".to_owned(), |io| format!("{:?}", io.kind()));
                 musajjil.thughra(masar, sabab);
                 continue;
-            }
+            },
         };
 
         adad = adad.saturating_add(1);
@@ -576,7 +647,10 @@ fn fahs_madkhal(mafhus: &MadkhalMafhus<'_>, musajjil: &mut Musajjil) {
 
 /// Records a dedicated-server or matchmaking binary, confirmed by its own header.
 fn fahs_khadim(mafhus: &MadkhalMafhus<'_>, adad: &mut usize, musajjil: &mut Musajjil) {
-    let Some(alama) = KHUYUT_KHADIM.iter().find(|alama| mafhus.ism.contains(alama.ibra)) else {
+    let Some(alama) = KHUYUT_KHADIM
+        .iter()
+        .find(|alama| mafhus.ism.contains(alama.ibra))
+    else {
         return;
     };
     if *adad >= AQSA_KHADIM {
@@ -604,7 +678,7 @@ fn ifhas_mustawradat(jidhr: &Path, masar: &Path, musajjil: &mut Musajjil) {
         Err(khata) => {
             musajjil.thughra(masar.to_path_buf(), format!("{:?}", khata.kind()));
             return;
-        }
+        },
     };
     let Ok(kaen) = object::read::File::parse(bayt.as_slice()) else {
         return;
@@ -622,7 +696,10 @@ fn ifhas_mustawradat(jidhr: &Path, masar: &Path, musajjil: &mut Musajjil) {
         if maktaba.is_empty() {
             continue;
         }
-        for alama in ALAMAT_SHABAKA.iter().filter(|alama| matches!(alama.mahal, Wahda)) {
+        for alama in ALAMAT_SHABAKA
+            .iter()
+            .filter(|alama| matches!(alama.mahal, Wahda))
+        {
             if maktaba.contains(alama.ibra) {
                 musajjil.sajjil(DaleelShabaka {
                     naw: NawDaleel::WahdaShabaka,
@@ -639,13 +716,19 @@ fn ifhas_mustawradat(jidhr: &Path, masar: &Path, musajjil: &mut Musajjil) {
 pub(crate) fn dalail_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelShabaka> {
     let mut dalail: Vec<DaleelShabaka> = Vec::new();
 
-    let fiat = bayanat.kain_bi_masar(&["appinfo", "common", "category"]).unwrap_or(&[]);
+    let fiat = bayanat
+        .kain_bi_masar(&["appinfo", "common", "category"])
+        .unwrap_or(&[]);
     for (miftah, qeema) in fiat {
         // A cleared category is written as zero, not removed, so the value is checked too.
         if qeema.raqm().unwrap_or(1) == 0 {
             continue;
         }
-        let Some(raqm) = miftah.rsplit('_').next().and_then(|raqm| raqm.parse::<u32>().ok()) else {
+        let Some(raqm) = miftah
+            .rsplit('_')
+            .next()
+            .and_then(|raqm| raqm.parse::<u32>().ok())
+        else {
             continue;
         };
         if let Some(fia) = FIAT.iter().find(|fia| fia.raqm == raqm) {
@@ -670,10 +753,18 @@ pub(crate) fn dalail_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelShab
         });
     }
 
-    let tashghil = bayanat.kain_bi_masar(&["appinfo", "config", "launch"]).unwrap_or(&[]);
+    let tashghil = bayanat
+        .kain_bi_masar(&["appinfo", "config", "launch"])
+        .unwrap_or(&[]);
     for (miftah, madkhal) in tashghil {
-        let wasf = madkhal.nass_bi_masar(&["description"]).unwrap_or("").to_ascii_lowercase();
-        let tanfidhi = madkhal.nass_bi_masar(&["executable"]).unwrap_or("").to_ascii_lowercase();
+        let wasf = madkhal
+            .nass_bi_masar(&["description"])
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        let tanfidhi = madkhal
+            .nass_bi_masar(&["executable"])
+            .unwrap_or("")
+            .to_ascii_lowercase();
         // `dedicated` is unambiguous; a bare `server` also matches `observer`, so it is not used.
         if wasf.contains("dedicated") || tanfidhi.contains("dedicated") {
             dalail.push(DaleelShabaka {
@@ -724,5 +815,9 @@ fn qism_ism(ism: &str) -> (String, String) {
 
 /// A path as the report names it: relative to the game root when it is under it.
 fn nisbi(jidhr: &Path, masar: &Path) -> String {
-    masar.strip_prefix(jidhr).unwrap_or(masar).display().to_string()
+    masar
+        .strip_prefix(jidhr)
+        .unwrap_or(masar)
+        .display()
+        .to_string()
 }

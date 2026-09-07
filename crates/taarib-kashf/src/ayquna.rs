@@ -297,8 +297,19 @@ const ANWA_ICNS_QADIMA: [[u8; 4]; 17] = [
 /// `scalable` is deliberately absent: it holds SVG, and see [`ayqunat_elf`] for
 /// why an SVG is refused rather than guessed at.
 const MUJALLADAT_MAQAYIS: [&str; 13] = [
-    "1024x1024", "512x512", "384x384", "256x256", "192x192", "128x128", "96x96", "72x72", "64x64",
-    "48x48", "32x32", "24x24", "16x16",
+    "1024x1024",
+    "512x512",
+    "384x384",
+    "256x256",
+    "192x192",
+    "128x128",
+    "96x96",
+    "72x72",
+    "64x64",
+    "48x48",
+    "32x32",
+    "24x24",
+    "16x16",
 ];
 
 /// The icon theme searched. Only `hicolor`, which is the fallback theme every
@@ -350,7 +361,10 @@ impl AyqunaMustakhraja {
 /// trail. `rabt` carries the path or the container position so a bundle names
 /// the file that was refused.
 fn rafd(wasf: &str, tafsil: impl Into<String>) -> KhataKashf {
-    KhataKashf::SuraGhayrSaliha { rabt: wasf.to_owned(), tafsil: tafsil.into() }
+    KhataKashf::SuraGhayrSaliha {
+        rabt: wasf.to_owned(),
+        tafsil: tafsil.into(),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -458,15 +472,17 @@ pub fn ayqunat(masar: &Path, judhur: &[PathBuf]) -> Result<Vec<AyqunaMustakhraja
             }
             return Ok(murattaba);
         }
-        return Err(rafd(&wasf, "a directory is not an executable and not an .app bundle"));
+        return Err(rafd(
+            &wasf,
+            "a directory is not an executable and not an .app bundle",
+        ));
     }
 
     let mut malaf =
         File::open(masar).map_err(|sabab| rafd(&wasf, format!("cannot open it: {sabab}")))?;
 
-    let mut sihr: Vec<u8> = Vec::with_capacity(
-        usize::try_from(TUL_SIHR).unwrap_or(HAJM_TARWISAT_DIB),
-    );
+    let mut sihr: Vec<u8> =
+        Vec::with_capacity(usize::try_from(TUL_SIHR).unwrap_or(HAJM_TARWISAT_DIB));
     let _ = (&mut malaf)
         .take(TUL_SIHR)
         .read_to_end(&mut sihr)
@@ -720,7 +736,7 @@ fn ayqunat_pe(malaf: File, wasf: &str) -> Result<Vec<AyqunaMustakhraja>, KhataKa
                 wasf,
                 format!("it begins with MZ but is {akhar:?}, not a portable executable"),
             ));
-        }
+        },
     };
 
     let kitab = object::File::parse(&makhzan)
@@ -741,18 +757,32 @@ fn ayqunat_pe(malaf: File, wasf: &str) -> Result<Vec<AyqunaMustakhraja>, KhataKa
         let Some((izahat_malaf, hajm_malaf)) = qita.file_range() else {
             continue;
         };
-        qitaa.push(QitaMulakhkhasa { rva, hajm_wahmi, izahat_malaf, hajm_malaf });
+        qitaa.push(QitaMulakhkhasa {
+            rva,
+            hajm_wahmi,
+            izahat_malaf,
+            hajm_malaf,
+        });
     }
 
     let rsrc = kitab.section_by_name(".rsrc").ok_or_else(|| {
-        rafd(wasf, "it has no .rsrc section, so it carries no icon resource at all")
+        rafd(
+            wasf,
+            "it has no .rsrc section, so it carries no icon resource at all",
+        )
     })?;
     let rsrc_rva = u32::try_from(rsrc.address().saturating_sub(asas)).map_err(|_| {
-        rafd(wasf, "its .rsrc section is placed past the four-gigabyte image limit")
+        rafd(
+            wasf,
+            "its .rsrc section is placed past the four-gigabyte image limit",
+        )
     })?;
-    let (izaha, hajm) = rsrc
-        .file_range()
-        .ok_or_else(|| rafd(wasf, "its .rsrc section is declared but has no bytes in the file"))?;
+    let (izaha, hajm) = rsrc.file_range().ok_or_else(|| {
+        rafd(
+            wasf,
+            "its .rsrc section is declared but has no bytes in the file",
+        )
+    })?;
     if hajm == 0 {
         return Err(rafd(wasf, "its .rsrc section is present but empty"));
     }
@@ -770,7 +800,12 @@ fn ayqunat_pe(malaf: File, wasf: &str) -> Result<Vec<AyqunaMustakhraja>, KhataKa
     })?;
 
     let quyud = imsah_mawarid(bayanat_rsrc, wasf)?;
-    let siyaq = SiyaqMawarid { makhzan: &makhzan, rsrc: bayanat_rsrc, rsrc_rva, qitaa };
+    let siyaq = SiyaqMawarid {
+        makhzan: &makhzan,
+        rsrc: bayanat_rsrc,
+        rsrc_rva,
+        qitaa,
+    };
 
     let mut ajsam: Vec<(Option<u32>, &[u8])> = Vec::new();
     let mut majmuat: Vec<(String, &[u8])> = Vec::new();
@@ -847,12 +882,18 @@ fn ayqunat_pe(malaf: File, wasf: &str) -> Result<Vec<AyqunaMustakhraja>, KhataKa
 /// corrupt says nothing about the icons.
 fn imsah_mawarid(rsrc: &[u8], wasf: &str) -> Result<Vec<QaydMawrid>, KhataKashf> {
     if rsrc.len() < HAJM_DALIL_MAWARID {
-        return Err(rafd(wasf, "its .rsrc section is shorter than one resource directory header"));
+        return Err(rafd(
+            wasf,
+            "its .rsrc section is shorter than one resource directory header",
+        ));
     }
     let mut hasad = Vec::new();
     imsah_dalil(rsrc, 0, 0, &MafatihMawrid::default(), &mut hasad);
     if hasad.is_empty() {
-        return Err(rafd(wasf, "its resource tree holds no RT_ICON or RT_GROUP_ICON entry"));
+        return Err(rafd(
+            wasf,
+            "its resource tree holds no RT_ICON or RT_GROUP_ICON entry",
+        ));
     }
     Ok(hasad)
 }
@@ -885,9 +926,10 @@ fn imsah_dalil(
     else {
         return;
     };
-    let (Some(bi_ism), Some(bi_raqm)) =
-        (u16_saghir(rsrc, mawdi_musamma), u16_saghir(rsrc, mawdi_raqmi))
-    else {
+    let (Some(bi_ism), Some(bi_raqm)) = (
+        u16_saghir(rsrc, mawdi_musamma),
+        u16_saghir(rsrc, mawdi_raqmi),
+    ) else {
         return;
     };
     let kul = usize::from(bi_ism)
@@ -901,9 +943,10 @@ fn imsah_dalil(
         let Some(mawdi) = izaha_qayd(izaha, fahras) else {
             return;
         };
-        let (Some(ism_khaam), Some(bayanat_khaam)) =
-            (u32_saghir(rsrc, mawdi), u32_saghir(rsrc, mawdi.saturating_add(4)))
-        else {
+        let (Some(ism_khaam), Some(bayanat_khaam)) = (
+            u32_saghir(rsrc, mawdi),
+            u32_saghir(rsrc, mawdi.saturating_add(4)),
+        ) else {
             return;
         };
 
@@ -917,7 +960,7 @@ fn imsah_dalil(
             match umq {
                 0 => faraiya.naw = Some(ism_khaam),
                 1 => faraiya.raqm = Some(ism_khaam),
-                _ => {}
+                _ => {},
             }
         } else {
             let izahat_ism = usize::try_from(ism_khaam & !RAYAT_FAR).unwrap_or(usize::MAX);
@@ -927,7 +970,7 @@ fn imsah_dalil(
                 // the subtree is skipped outright rather than walked.
                 0 => continue,
                 1 => faraiya.ism = ism,
-                _ => {}
+                _ => {},
             }
         }
 
@@ -955,7 +998,13 @@ fn imsah_dalil(
             ) else {
                 continue;
             };
-            hasad.push(QaydMawrid { naw, raqm: faraiya.raqm, ism: faraiya.ism, rva, hajm });
+            hasad.push(QaydMawrid {
+                naw,
+                raqm: faraiya.raqm,
+                ism: faraiya.ism,
+                rva,
+                hajm,
+            });
         } else {
             let Ok(mawdi_far) = usize::try_from(bayanat_khaam & !RAYAT_FAR) else {
                 continue;
@@ -1016,9 +1065,11 @@ fn ijma_ico(
     ajsam: &[(Option<u32>, &[u8])],
     wasf: &str,
 ) -> Result<Vec<u8>, KhataKashf> {
-    let (Some(mahjuz), Some(naw), Some(adad_muallan)) =
-        (u16_saghir(majmua, 0), u16_saghir(majmua, 2), u16_saghir(majmua, 4))
-    else {
+    let (Some(mahjuz), Some(naw), Some(adad_muallan)) = (
+        u16_saghir(majmua, 0),
+        u16_saghir(majmua, 2),
+        u16_saghir(majmua, 4),
+    ) else {
         return Err(rafd(wasf, "its GRPICONDIR header is truncated"));
     };
     if mahjuz != 0 || !matches!(naw, 1 | 2) {
@@ -1054,11 +1105,18 @@ fn ijma_ico(
     }
 
     if mukhtara.is_empty() {
-        return Err(rafd(wasf, "none of the RT_ICON resources its group names are in the file"));
+        return Err(rafd(
+            wasf,
+            "none of the RT_ICON resources its group names are in the file",
+        ));
     }
 
-    let adad_fili = u16::try_from(mukhtara.len())
-        .map_err(|_| rafd(wasf, "its group holds more entries than an ICONDIR can address"))?;
+    let adad_fili = u16::try_from(mukhtara.len()).map_err(|_| {
+        rafd(
+            wasf,
+            "its group holds more entries than an ICONDIR can address",
+        )
+    })?;
     let jadwal = HAJM_TARWISAT_ICO
         .checked_add(mukhtara.len().saturating_mul(HAJM_QAYD_ICO))
         .ok_or_else(|| rafd(wasf, "its group's entry table does not fit in memory"))?;
@@ -1071,10 +1129,18 @@ fn ijma_ico(
 
     let mut mawdi_jism = jadwal;
     for (mushtarak, jism) in &mukhtara {
-        let hajm_jism = u32::try_from(jism.len())
-            .map_err(|_| rafd(wasf, "one RT_ICON resource is larger than a u32 can describe"))?;
-        let izaha = u32::try_from(mawdi_jism)
-            .map_err(|_| rafd(wasf, "the reassembled icon is larger than a u32 can address"))?;
+        let hajm_jism = u32::try_from(jism.len()).map_err(|_| {
+            rafd(
+                wasf,
+                "one RT_ICON resource is larger than a u32 can describe",
+            )
+        })?;
+        let izaha = u32::try_from(mawdi_jism).map_err(|_| {
+            rafd(
+                wasf,
+                "the reassembled icon is larger than a u32 can address",
+            )
+        })?;
         // Bytes 0..8 verbatim (size, colour count, planes, bit count), then the
         // corrected length, then the file offset.
         let Some(ras) = mushtarak.get(..8) else {
@@ -1128,9 +1194,11 @@ fn ijma_ico(
 /// joined, because "the icon did not decode" without saying which of the six
 /// images failed and how is not an answer anybody can act on.
 pub fn hallil_ico(bayt: &[u8], wasf: &str) -> Result<Vec<AyqunaMustakhraja>, KhataKashf> {
-    let (Some(mahjuz), Some(naw), Some(adad_muallan)) =
-        (u16_saghir(bayt, 0), u16_saghir(bayt, 2), u16_saghir(bayt, 4))
-    else {
+    let (Some(mahjuz), Some(naw), Some(adad_muallan)) = (
+        u16_saghir(bayt, 0),
+        u16_saghir(bayt, 2),
+        u16_saghir(bayt, 4),
+    ) else {
         return Err(rafd(wasf, "its ICONDIR header is truncated"));
     };
     if mahjuz != 0 || !matches!(naw, 1 | 2) {
@@ -1157,9 +1225,10 @@ pub fn hallil_ico(bayt: &[u8], wasf: &str) -> Result<Vec<AyqunaMustakhraja>, Kha
         else {
             break;
         };
-        let (Some(ard_bayt), Some(irtifa_bayt)) =
-            (bayt_wahid(bayt, mawdi), bayt_wahid(bayt, mawdi.saturating_add(1)))
-        else {
+        let (Some(ard_bayt), Some(irtifa_bayt)) = (
+            bayt_wahid(bayt, mawdi),
+            bayt_wahid(bayt, mawdi.saturating_add(1)),
+        ) else {
             break;
         };
         let (Some(hajm), Some(izaha)) = (
@@ -1173,11 +1242,18 @@ pub fn hallil_ico(bayt: &[u8], wasf: &str) -> Result<Vec<AyqunaMustakhraja>, Kha
         // cannot be written literally, and it is the most common large size —
         // an entry that read this as "a zero-pixel icon" would discard exactly
         // the image a card wants.
-        let ard_muallan = if ard_bayt == 0 { 256 } else { u32::from(ard_bayt) };
-        let irtifa_muallan = if irtifa_bayt == 0 { 256 } else { u32::from(irtifa_bayt) };
+        let ard_muallan = if ard_bayt == 0 {
+            256
+        } else {
+            u32::from(ard_bayt)
+        };
+        let irtifa_muallan = if irtifa_bayt == 0 {
+            256
+        } else {
+            u32::from(irtifa_bayt)
+        };
 
-        let (Ok(mawdi_jism), Ok(hajm_jism)) =
-            (usize::try_from(izaha), usize::try_from(hajm))
+        let (Ok(mawdi_jism), Ok(hajm_jism)) = (usize::try_from(izaha), usize::try_from(hajm))
         else {
             continue;
         };
@@ -1229,19 +1305,26 @@ pub fn abaad_ico(bayt: &[u8]) -> Option<(u32, u32)> {
         let mawdi = fahras
             .checked_mul(HAJM_QAYD_ICO)
             .and_then(|izaha| HAJM_TARWISAT_ICO.checked_add(izaha))?;
-        let (Some(ard_bayt), Some(irtifa_bayt)) =
-            (bayt_wahid(bayt, mawdi), bayt_wahid(bayt, mawdi.saturating_add(1)))
-        else {
+        let (Some(ard_bayt), Some(irtifa_bayt)) = (
+            bayt_wahid(bayt, mawdi),
+            bayt_wahid(bayt, mawdi.saturating_add(1)),
+        ) else {
             break;
         };
-        let ard = if ard_bayt == 0 { 256 } else { u32::from(ard_bayt) };
-        let irtifa = if irtifa_bayt == 0 { 256 } else { u32::from(irtifa_bayt) };
+        let ard = if ard_bayt == 0 {
+            256
+        } else {
+            u32::from(ard_bayt)
+        };
+        let irtifa = if irtifa_bayt == 0 {
+            256
+        } else {
+            u32::from(irtifa_bayt)
+        };
         let masaha = u64::from(ard).saturating_mul(u64::from(irtifa));
-        let ahsan = akbar
-            .is_none_or(|(qadim_ard, qadim_irtifa)| {
-                masaha
-                    > u64::from(qadim_ard).saturating_mul(u64::from(qadim_irtifa))
-            });
+        let ahsan = akbar.is_none_or(|(qadim_ard, qadim_irtifa)| {
+            masaha > u64::from(qadim_ard).saturating_mul(u64::from(qadim_irtifa))
+        });
         if ahsan {
             akbar = Some((ard, irtifa));
         }
@@ -1312,13 +1395,19 @@ fn iqra_tarwisat_dib(bayt: &[u8], izaha: usize, wasf: &str) -> Result<TarwisatDi
         i32_saghir(bayt, izaha.saturating_add(4)),
         i32_saghir(bayt, izaha.saturating_add(8)),
     ) else {
-        return Err(rafd(wasf, "its DIB header is truncated before the dimensions"));
+        return Err(rafd(
+            wasf,
+            "its DIB header is truncated before the dimensions",
+        ));
     };
     let (Some(bit_lil_biksil), Some(daght)) = (
         u16_saghir(bayt, izaha.saturating_add(14)),
         u32_saghir(bayt, izaha.saturating_add(16)),
     ) else {
-        return Err(rafd(wasf, "its DIB header is truncated before the compression field"));
+        return Err(rafd(
+            wasf,
+            "its DIB header is truncated before the compression field",
+        ));
     };
     let alwan_mustakhdama = u32_saghir(bayt, izaha.saturating_add(32)).unwrap_or(0);
 
@@ -1330,14 +1419,14 @@ fn iqra_tarwisat_dib(bayt: &[u8], izaha: usize, wasf: &str) -> Result<TarwisatDi
 
     match daght {
         // BI_RGB.
-        0 => {}
+        0 => {},
         1 | 2 => {
             return Err(rafd(
                 wasf,
                 "it is run-length encoded (BI_RLE8/BI_RLE4); RLE appears in no icon this decoder \
                  has a reason to support and implementing it here would be a second codec",
             ));
-        }
+        },
         3 => {
             return Err(rafd(
                 wasf,
@@ -1345,8 +1434,13 @@ fn iqra_tarwisat_dib(bayt: &[u8], izaha: usize, wasf: &str) -> Result<TarwisatDi
                  rather than in a fixed layout; a decoder that assumed BGRA would read the \
                  channels in the wrong order and silently produce wrong colours",
             ));
-        }
-        4 => return Err(rafd(wasf, "it is a BI_JPEG payload, which is not a bitmap at all")),
+        },
+        4 => {
+            return Err(rafd(
+                wasf,
+                "it is a BI_JPEG payload, which is not a bitmap at all",
+            ));
+        },
         5 => {
             return Err(rafd(
                 wasf,
@@ -1354,33 +1448,39 @@ fn iqra_tarwisat_dib(bayt: &[u8], izaha: usize, wasf: &str) -> Result<TarwisatDi
                  and is detected before the header is read, so reaching here means the container \
                  is inconsistent",
             ));
-        }
+        },
         akhar => {
             return Err(rafd(
                 wasf,
                 format!("it declares compression {akhar}, which no DIB layout defines"),
             ));
-        }
+        },
     }
 
     match bit_lil_biksil {
-        1 | 4 | 8 | 24 | 32 => {}
+        1 | 4 | 8 | 24 | 32 => {},
         16 => {
             return Err(rafd(
                 wasf,
                 "it is 16 bits per pixel, whose 5-5-5 and 5-6-5 channel layouts are only \
                  distinguishable from a BI_BITFIELDS block this decoder refuses",
             ));
-        }
+        },
         akhar => {
             return Err(rafd(
                 wasf,
                 format!("it is {akhar} bits per pixel, which no DIB layout defines"),
             ));
-        }
+        },
     }
 
-    Ok(TarwisatDib { hajm_tarwisa, ard, irtifa_khaam, bit_lil_biksil, alwan_mustakhdama })
+    Ok(TarwisatDib {
+        hajm_tarwisa,
+        ard,
+        irtifa_khaam,
+        bit_lil_biksil,
+        alwan_mustakhdama,
+    })
 }
 
 /// Everything one DIB decode needs, gathered so the function keeps a signature a
@@ -1436,7 +1536,9 @@ fn fukk_dib(talab: &TalabFakk<'_>) -> Result<Vec<u8>, KhataKashf> {
     let bit = talab.tarwisa.bit_lil_biksil;
     let wasf = talab.wasf;
 
-    let takhsis = u64::from(ard).saturating_mul(u64::from(irtifa)).saturating_mul(4);
+    let takhsis = u64::from(ard)
+        .saturating_mul(u64::from(irtifa))
+        .saturating_mul(4);
     if takhsis > talab.aqsa_bayt {
         return Err(rafd(
             wasf,
@@ -1448,10 +1550,11 @@ fn fukk_dib(talab: &TalabFakk<'_>) -> Result<Vec<u8>, KhataKashf> {
         ));
     }
 
-    let (Ok(ard_hajmi), Ok(irtifa_hajmi)) =
-        (usize::try_from(ard), usize::try_from(irtifa))
-    else {
-        return Err(rafd(wasf, "its dimensions do not fit this machine's address space"));
+    let (Ok(ard_hajmi), Ok(irtifa_hajmi)) = (usize::try_from(ard), usize::try_from(irtifa)) else {
+        return Err(rafd(
+            wasf,
+            "its dimensions do not fit this machine's address space",
+        ));
     };
 
     let Some(tul) = tul_satr(ard, bit) else {
@@ -1482,7 +1585,7 @@ fn fukk_dib(talab: &TalabFakk<'_>) -> Result<Vec<u8>, KhataKashf> {
     let qina = match (talab.maa_qina, bidayat_qina, hajm_qina) {
         (true, Some(bidaya), Some(hajm)) => {
             shariha(talab.bayt, bidaya, hajm).map(|_| (bidaya, tul_qina))
-        }
+        },
         _ => None,
     };
 
@@ -1490,10 +1593,19 @@ fn fukk_dib(talab: &TalabFakk<'_>) -> Result<Vec<u8>, KhataKashf> {
     // scan can distinguish "deliberately transparent everywhere" from "alpha was
     // never written" — which is the same bit pattern.
     let alfa_min_qina = bit == 32
-        && alfa_khaliya(talab.bayt, talab.bidayat_alwan, tul, ard_hajmi, irtifa_hajmi);
+        && alfa_khaliya(
+            talab.bayt,
+            talab.bidayat_alwan,
+            tul,
+            ard_hajmi,
+            irtifa_hajmi,
+        );
 
     let Ok(sia) = usize::try_from(takhsis) else {
-        return Err(rafd(wasf, "its decoded size does not fit this machine's address space"));
+        return Err(rafd(
+            wasf,
+            "its decoded size does not fit this machine's address space",
+        ));
     };
     let mut kharij: Vec<u8> = Vec::with_capacity(sia);
 
@@ -1510,7 +1622,10 @@ fn fukk_dib(talab: &TalabFakk<'_>) -> Result<Vec<u8>, KhataKashf> {
             return Err(rafd(wasf, "its row offset overflows"));
         };
         let Some(satr) = shariha(talab.bayt, mawdi_satr, tul) else {
-            return Err(rafd(wasf, format!("row {saf_masdar} is not inside the payload")));
+            return Err(rafd(
+                wasf,
+                format!("row {saf_masdar} is not inside the payload"),
+            ));
         };
 
         let satr_qina = qina.and_then(|(bidaya, tul_q)| {
@@ -1523,7 +1638,10 @@ fn fukk_dib(talab: &TalabFakk<'_>) -> Result<Vec<u8>, KhataKashf> {
         for x in 0..ard_hajmi {
             let Some((ahmar, akhdar, azraq, alfa_khaam)) = biksil_min_satr(satr, x, bit, &lawha)
             else {
-                return Err(rafd(wasf, format!("pixel {x} of row {saf_masdar} is truncated")));
+                return Err(rafd(
+                    wasf,
+                    format!("pixel {x} of row {saf_masdar} is truncated"),
+                ));
             };
             // A set mask bit means transparent. When the mask is absent the
             // pixel keeps whatever alpha its own encoding gave it, which for
@@ -1624,7 +1742,12 @@ fn fukk_dib_ayquna(
         wasf,
     })?;
 
-    Ok(AyqunaMustakhraja { ard: tarwisa.ard, irtifa, biksilat, wasf: wasf.to_owned() })
+    Ok(AyqunaMustakhraja {
+        ard: tarwisa.ard,
+        irtifa,
+        biksilat,
+        wasf: wasf.to_owned(),
+    })
 }
 
 /// A standalone `.bmp` file, decoded to RGBA.
@@ -1690,7 +1813,12 @@ pub fn bmp_ila_rgba(bayt: &[u8], wasf: &str) -> Result<AyqunaMustakhraja, KhataK
         wasf,
     })?;
 
-    Ok(AyqunaMustakhraja { ard: tarwisa.ard, irtifa, biksilat, wasf: wasf.to_owned() })
+    Ok(AyqunaMustakhraja {
+        ard: tarwisa.ard,
+        irtifa,
+        biksilat,
+        wasf: wasf.to_owned(),
+    })
 }
 
 /// The dimensions a `.bmp` declares, read from its header alone.
@@ -1707,7 +1835,10 @@ pub fn abaad_bmp(bayt: &[u8]) -> Option<(u32, u32)> {
     let (ard, irtifa) = if hajm_tarwisa == 12 {
         // OS/2 1.x: two *unsigned* 16-bit dimensions instead of two signed
         // 32-bit ones, and consequently no top-down row order to represent.
-        (u32::from(u16_saghir(bayt, 18)?), u32::from(u16_saghir(bayt, 20)?))
+        (
+            u32::from(u16_saghir(bayt, 18)?),
+            u32::from(u16_saghir(bayt, 20)?),
+        )
     } else {
         let ard = u32::try_from(i32_saghir(bayt, 18)?).ok()?;
         let irtifa = u32::try_from(i32_saghir(bayt, 22)?.checked_abs()?).ok()?;
@@ -1760,8 +1891,11 @@ fn hajm_lawha(tarwisa: &TarwisatDib) -> usize {
         return 0;
     }
     let aqsa = 1_u32 << tarwisa.bit_lil_biksil;
-    let adad =
-        if tarwisa.alwan_mustakhdama == 0 { aqsa } else { tarwisa.alwan_mustakhdama.min(aqsa) };
+    let adad = if tarwisa.alwan_mustakhdama == 0 {
+        aqsa
+    } else {
+        tarwisa.alwan_mustakhdama.min(aqsa)
+    };
     usize::try_from(adad).unwrap_or(0).saturating_mul(4)
 }
 
@@ -1783,42 +1917,37 @@ fn tul_satr(ard: u32, bit: u16) -> Option<usize> {
 /// destructures rather than indexes and reverses as it goes; a slice pattern is
 /// also the only way to read three or four consecutive bytes without tripping
 /// the workspace's ban on indexing.
-fn biksil_min_satr(
-    satr: &[u8],
-    x: usize,
-    bit: u16,
-    lawha: &[[u8; 3]],
-) -> Option<(u8, u8, u8, u8)> {
+fn biksil_min_satr(satr: &[u8], x: usize, bit: u16, lawha: &[[u8; 3]]) -> Option<(u8, u8, u8, u8)> {
     match bit {
         32 => {
             let qita = shariha(satr, x.checked_mul(4)?, 4)?;
             let [azraq, akhdar, ahmar, alfa] = <[u8; 4]>::try_from(qita).ok()?;
             Some((ahmar, akhdar, azraq, alfa))
-        }
+        },
         24 => {
             let qita = shariha(satr, x.checked_mul(3)?, 3)?;
             let [azraq, akhdar, ahmar] = <[u8; 3]>::try_from(qita).ok()?;
             Some((ahmar, akhdar, azraq, 0xFF))
-        }
+        },
         8 => {
             let fahras = usize::from(*satr.get(x)?);
             let [ahmar, akhdar, azraq] = lawha.get(fahras).copied().unwrap_or([0, 0, 0]);
             Some((ahmar, akhdar, azraq, 0xFF))
-        }
+        },
         4 => {
             let zawj = *satr.get(x >> 1)?;
             // The high nibble is the even pixel, the low nibble the odd one.
             let fahras = usize::from(if x & 1 == 0 { zawj >> 4 } else { zawj & 0x0F });
             let [ahmar, akhdar, azraq] = lawha.get(fahras).copied().unwrap_or([0, 0, 0]);
             Some((ahmar, akhdar, azraq, 0xFF))
-        }
+        },
         1 => {
             let thumn = *satr.get(x >> 3)?;
             let izaha = 7_u32.saturating_sub(u32::try_from(x & 7).ok()?);
             let fahras = usize::from((thumn >> izaha) & 1);
             let [ahmar, akhdar, azraq] = lawha.get(fahras).copied().unwrap_or([0, 0, 0]);
             Some((ahmar, akhdar, azraq, 0xFF))
-        }
+        },
         _ => None,
     }
 }
@@ -1836,15 +1965,12 @@ fn bit_qina(satr: &[u8], x: usize) -> Option<bool> {
 /// answer: a row that cannot be read cannot be shown to contain opacity, and
 /// falling back to the AND mask for a damaged image is better than rendering it
 /// entirely invisible.
-fn alfa_khaliya(
-    bayt: &[u8],
-    bidaya: usize,
-    tul: usize,
-    ard: usize,
-    irtifa: usize,
-) -> bool {
+fn alfa_khaliya(bayt: &[u8], bidaya: usize, tul: usize, ard: usize, irtifa: usize) -> bool {
     for saf in 0..irtifa {
-        let Some(mawdi) = saf.checked_mul(tul).and_then(|izaha| bidaya.checked_add(izaha)) else {
+        let Some(mawdi) = saf
+            .checked_mul(tul)
+            .and_then(|izaha| bidaya.checked_add(izaha))
+        else {
             return true;
         };
         let Some(satr) = shariha(bayt, mawdi, tul) else {
@@ -1887,7 +2013,10 @@ fn fukk_mushaffara(
     let sigha = qari
         .format()
         .ok_or_else(|| rafd(wasf, "the bytes match no image format"))?;
-    if !matches!(sigha, ImageFormat::Png | ImageFormat::Jpeg | ImageFormat::WebP) {
+    if !matches!(
+        sigha,
+        ImageFormat::Png | ImageFormat::Jpeg | ImageFormat::WebP
+    ) {
         return Err(rafd(
             wasf,
             format!("{sigha:?} is not one of the three formats this build decodes"),
@@ -1897,7 +2026,9 @@ fn fukk_mushaffara(
     let (ard, irtifa) = qari
         .into_dimensions()
         .map_err(|sabab| rafd(wasf, sabab.to_string()))?;
-    let takhsis = u64::from(ard).saturating_mul(u64::from(irtifa)).saturating_mul(4);
+    let takhsis = u64::from(ard)
+        .saturating_mul(u64::from(irtifa))
+        .saturating_mul(4);
     if ard == 0 || irtifa == 0 || ard > aqsa_bud || irtifa > aqsa_bud || takhsis > aqsa_bayt {
         return Err(rafd(
             wasf,
@@ -1917,7 +2048,9 @@ fn fukk_mushaffara(
     hudud.max_alloc = Some(aqsa_bayt);
     qari.limits(hudud);
 
-    let sura = qari.decode().map_err(|sabab| rafd(wasf, sabab.to_string()))?;
+    let sura = qari
+        .decode()
+        .map_err(|sabab| rafd(wasf, sabab.to_string()))?;
     let biksilat = sura.to_rgba8();
     Ok(AyqunaMustakhraja {
         ard: biksilat.width(),
@@ -1998,13 +2131,18 @@ fn ayqunat_mach(
 /// actually contains `Contents/Info.plist`, so a bundle whose extension was
 /// stripped by an archiver is still found.
 fn hazmat_min_tanfidhi(masar: &Path) -> Option<PathBuf> {
-    masar.ancestors().skip(1).take(4).find(|jadd| {
-        let musamma = jadd
-            .extension()
-            .and_then(|imtidad| imtidad.to_str())
-            .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("app"));
-        musamma || jadd.join("Contents").join("Info.plist").is_file()
-    }).map(Path::to_path_buf)
+    masar
+        .ancestors()
+        .skip(1)
+        .take(4)
+        .find(|jadd| {
+            let musamma = jadd
+                .extension()
+                .and_then(|imtidad| imtidad.to_str())
+                .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("app"));
+            musamma || jadd.join("Contents").join("Info.plist").is_file()
+        })
+        .map(Path::to_path_buf)
 }
 
 /// Every icon inside a macOS application bundle.
@@ -2029,7 +2167,7 @@ fn ayqunat_hazma(hazma: &Path, wasf: &str) -> Result<Vec<AyqunaMustakhraja>, Kha
             tracing::debug!(hazma = %hazma.display(), sabab = %sabab, "falling back to a scan \
                 of Contents/Resources for an .icns");
             None
-        }
+        },
     };
 
     let masar_ayquna = match ism {
@@ -2051,7 +2189,7 @@ fn ayqunat_hazma(hazma: &Path, wasf: &str) -> Result<Vec<AyqunaMustakhraja>, Kha
             } else {
                 awwal_icns(&mawarid)
             }
-        }
+        },
         None => awwal_icns(&mawarid),
     };
 
@@ -2093,13 +2231,13 @@ fn awwal_icns(mawarid: &Path) -> Option<PathBuf> {
 /// [`KhataKashf::SuraGhayrSaliha`] when the file cannot be opened or read, or
 /// when it is empty.
 fn iqra_bi_hadd(masar: &Path, hadd: u64, wasf: &str) -> Result<Vec<u8>, KhataKashf> {
-    let malaf = File::open(masar).map_err(|sabab| {
-        rafd(wasf, format!("cannot open {}: {sabab}", masar.display()))
-    })?;
+    let malaf = File::open(masar)
+        .map_err(|sabab| rafd(wasf, format!("cannot open {}: {sabab}", masar.display())))?;
     let mut bayt = Vec::new();
-    let _ = malaf.take(hadd).read_to_end(&mut bayt).map_err(|sabab| {
-        rafd(wasf, format!("cannot read {}: {sabab}", masar.display()))
-    })?;
+    let _ = malaf
+        .take(hadd)
+        .read_to_end(&mut bayt)
+        .map_err(|sabab| rafd(wasf, format!("cannot read {}: {sabab}", masar.display())))?;
     if bayt.is_empty() {
         return Err(rafd(wasf, format!("{} is empty", masar.display())));
     }
@@ -2140,7 +2278,9 @@ fn ism_ayquna_min_plist(masar: &Path, wasf: &str) -> Result<String, KhataKashf> 
     }
 
     let nass = String::from_utf8_lossy(&bayt);
-    let nass = nass.strip_prefix('\u{feff}').unwrap_or_else(|| nass.as_ref());
+    let nass = nass
+        .strip_prefix('\u{feff}')
+        .unwrap_or_else(|| nass.as_ref());
 
     let mut qari = quick_xml::Reader::from_str(nass);
     qari.config_mut().trim_text(true);
@@ -2155,20 +2295,18 @@ fn ism_ayquna_min_plist(masar: &Path, wasf: &str) -> Result<String, KhataKashf> 
     loop {
         match qari.read_event() {
             Ok(quick_xml::events::Event::Eof) => break,
-            Ok(quick_xml::events::Event::Start(marka)) => {
-                match marka.local_name().as_ref() {
-                    "dict" => umq = umq.saturating_add(1),
-                    "key" if umq == 1 => {
-                        fi_miftah = true;
-                        miftah.clear();
-                    }
-                    "string" if umq == 1 => {
-                        fi_qeema = true;
-                        qeema.clear();
-                    }
-                    _ => {}
-                }
-            }
+            Ok(quick_xml::events::Event::Start(marka)) => match marka.local_name().as_ref() {
+                "dict" => umq = umq.saturating_add(1),
+                "key" if umq == 1 => {
+                    fi_miftah = true;
+                    miftah.clear();
+                },
+                "string" if umq == 1 => {
+                    fi_qeema = true;
+                    qeema.clear();
+                },
+                _ => {},
+            },
             Ok(quick_xml::events::Event::Text(nass_marka)) => {
                 if fi_miftah || fi_qeema {
                     let qita = nass_marka.xml10_content();
@@ -2178,7 +2316,7 @@ fn ism_ayquna_min_plist(masar: &Path, wasf: &str) -> Result<String, KhataKashf> 
                         qeema.push_str(qita.as_ref());
                     }
                 }
-            }
+            },
             // A reference is a separate event, not part of the text around it,
             // so a reader that matched only on text would drop every `&amp;`.
             Ok(quick_xml::events::Event::GeneralRef(marja)) => {
@@ -2191,7 +2329,7 @@ fn ism_ayquna_min_plist(masar: &Path, wasf: &str) -> Result<String, KhataKashf> 
                         qeema.push_str(&qita);
                     }
                 }
-            }
+            },
             Ok(quick_xml::events::Event::End(marka)) => match marka.local_name().as_ref() {
                 "dict" => umq = umq.saturating_sub(1),
                 "key" => fi_miftah = false,
@@ -2202,14 +2340,14 @@ fn ism_ayquna_min_plist(masar: &Path, wasf: &str) -> Result<String, KhataKashf> 
                         "CFBundleIconFile" if !mahsub.is_empty() => return Ok(mahsub),
                         "CFBundleIconName" if bil_ism.is_none() && !mahsub.is_empty() => {
                             bil_ism = Some(mahsub);
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                     miftah.clear();
-                }
-                _ => {}
+                },
+                _ => {},
             },
-            Ok(_) => {}
+            Ok(_) => {},
             Err(sabab) => {
                 return Err(rafd(
                     wasf,
@@ -2218,7 +2356,7 @@ fn ism_ayquna_min_plist(masar: &Path, wasf: &str) -> Result<String, KhataKashf> 
                         qari.buffer_position()
                     ),
                 ));
-            }
+            },
         }
     }
 
@@ -2259,7 +2397,9 @@ pub fn hallil_icns(bayt: &[u8], wasf: &str) -> Result<Vec<AyqunaMustakhraja>, Kh
     // The declared length is a claim; the buffer is the fact. Taking the
     // smaller means a truncated download reads what is there instead of
     // walking off the end, and a padded file stops where it said it would.
-    let nihaya = usize::try_from(tul_muallan).unwrap_or(usize::MAX).min(bayt.len());
+    let nihaya = usize::try_from(tul_muallan)
+        .unwrap_or(usize::MAX)
+        .min(bayt.len());
 
     let mut hasad: Vec<AyqunaMustakhraja> = Vec::new();
     let mut asbab: Vec<String> = Vec::new();
@@ -2269,9 +2409,10 @@ pub fn hallil_icns(bayt: &[u8], wasf: &str) -> Result<Vec<AyqunaMustakhraja>, Kh
         if mawdi >= nihaya || hasad.len() >= HADD_AYQUNAT_MURJAA {
             break;
         }
-        let (Some(naw), Some(hajm_khaam)) =
-            (wasm_arbaa(bayt, mawdi), u32_kabir(bayt, mawdi.saturating_add(4)))
-        else {
+        let (Some(naw), Some(hajm_khaam)) = (
+            wasm_arbaa(bayt, mawdi),
+            u32_kabir(bayt, mawdi.saturating_add(4)),
+        ) else {
             break;
         };
         let Ok(hajm) = usize::try_from(hajm_khaam) else {
@@ -2387,7 +2528,10 @@ fn ayqunat_elf(
     let naw = FileKind::parse(&makhzan)
         .map_err(|sabab| rafd(wasf, format!("its ELF header does not parse: {sabab}")))?;
     if !matches!(naw, FileKind::Elf32 | FileKind::Elf64) {
-        return Err(rafd(wasf, format!("it begins with \\x7FELF but is {naw:?}")));
+        return Err(rafd(
+            wasf,
+            format!("it begins with \\x7FELF but is {naw:?}"),
+        ));
     }
 
     let mut asbab: Vec<String> = Vec::new();
@@ -2400,7 +2544,10 @@ fn ayqunat_elf(
             continue;
         };
         if nass.len() > usize::try_from(HADD_HAJM_MAQATI).unwrap_or(usize::MAX) {
-            asbab.push(format!("{} is too large to be an entry file", desktop.display()));
+            asbab.push(format!(
+                "{} is too large to be an entry file",
+                desktop.display()
+            ));
             continue;
         }
         let Some(ism) = ayquna_min_desktop(&nass) else {
@@ -2421,12 +2568,10 @@ fn ayqunat_elf(
         }
         let wasf_kamil = format!("{wasf}: {wasf_murashah}");
         match iqra_bi_hadd(&murashah, HADD_HAJM_HAWIYA, &wasf_kamil) {
-            Ok(bayt) => {
-                match fukk_mushaffara(&bayt, &wasf_kamil, HADD_BUD_SURA, HADD_BAYT_SURA) {
-                    Ok(wahida) => hasad.push(wahida),
-                    Err(sabab) => asbab.push(sabab.to_string()),
-                }
-            }
+            Ok(bayt) => match fukk_mushaffara(&bayt, &wasf_kamil, HADD_BUD_SURA, HADD_BAYT_SURA) {
+                Ok(wahida) => hasad.push(wahida),
+                Err(sabab) => asbab.push(sabab.to_string()),
+            },
             Err(sabab) => asbab.push(sabab.to_string()),
         }
     }
@@ -2449,7 +2594,10 @@ fn murashahat_mujawira(masar: &Path, asbab: &mut Vec<String>) -> Vec<(PathBuf, S
     let Some(mujallad) = masar.parent() else {
         return Vec::new();
     };
-    let jidhr = masar.file_stem().and_then(|jidhr| jidhr.to_str()).unwrap_or("");
+    let jidhr = masar
+        .file_stem()
+        .and_then(|jidhr| jidhr.to_str())
+        .unwrap_or("");
     let ism_mujallad = mujallad
         .file_name()
         .and_then(|ism| ism.to_str())
@@ -2567,7 +2715,9 @@ fn hall_ayqunat_sima(ism: &str, judhur: &[PathBuf]) -> (Vec<(PathBuf, String)>, 
             .and_then(|imtidad| imtidad.to_str())
             .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("svg"))
         {
-            asbab.push(format!("{ism} is an SVG path, and there is no rasterizer here"));
+            asbab.push(format!(
+                "{ism} is an SVG path, and there is no rasterizer here"
+            ));
         } else if masar.is_file() {
             murashahat.push((masar, format!("{ism} (an absolute Icon= path)")));
         } else {
@@ -2595,7 +2745,10 @@ fn hall_ayqunat_sima(ism: &str, judhur: &[PathBuf]) -> (Vec<(PathBuf, String)>, 
         }
 
         // The one place an SVG is expected rather than accidental.
-        let matjah = simat.join("scalable").join(QISM_SIMA).join(format!("{ism}.svg"));
+        let matjah = simat
+            .join("scalable")
+            .join(QISM_SIMA)
+            .join(format!("{ism}.svg"));
         if matjah.is_file() {
             asbab.push(format!(
                 "{} is the only theme entry for this icon and it is SVG; rasterizing it is out \
@@ -2647,7 +2800,7 @@ fn fukk_tahreeb_desktop(qeema: &str) -> String {
             Some(akhar) => {
                 kharij.push('\\');
                 kharij.push(akhar);
-            }
+            },
         }
     }
     kharij
@@ -2762,7 +2915,10 @@ pub fn iqra_maqati(nass: &str) -> MalafMaqati {
             continue;
         }
 
-        if let Some(dakhil) = satr.strip_prefix('[').and_then(|baqi| baqi.strip_suffix(']')) {
+        if let Some(dakhil) = satr
+            .strip_prefix('[')
+            .and_then(|baqi| baqi.strip_suffix(']'))
+        {
             if maqati.len() >= HADD_MAQATI {
                 break;
             }

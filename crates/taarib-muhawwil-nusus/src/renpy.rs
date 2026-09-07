@@ -197,13 +197,13 @@ impl Masar {
                 "This game's Ren'Py ships HarfBuzz and FriBidi and shapes Arabic correctly on \
                  its own. Taarib supplies the font and the translation through Ren'Py's own \
                  localization mechanism and changes nothing about how text is drawn."
-            }
+            },
             Self::Istila => {
                 "This game's Ren'Py was built without a shaper, so Taarib lays the Arabic out \
                  and draws it. It will look correct, it will NOT be selectable or copyable \
                  inside the game, and it needs the Python 3 build of the engine: on a Python 2 \
                  build the adapter installs the font and the translation only and says so."
-            }
+            },
         }
     }
 
@@ -215,11 +215,11 @@ impl Masar {
                 "نسخة رن‌باي في هذه اللعبة تحمل HarfBuzz وFriBidi وتشكّل العربية بنفسها. \
                  يزوّدها تعريب بالخطّ والترجمة عبر آلية الترجمة الخاصة بالمحرّك ولا يغيّر \
                  طريقة الرسم."
-            }
+            },
             Self::Istila => {
                 "بُنيت نسخة رن‌باي هذه بلا مشكّل، فيتولّى تعريب تخطيط العربية ورسمها. سيظهر \
                  النصّ صحيحًا ولن يكون قابلًا للتحديد أو النسخ داخل اللعبة."
-            }
+            },
         }
     }
 
@@ -269,8 +269,12 @@ const ASMAA_HBFONT: [&str; 6] = [
 /// Present in every build, including the shaping ones, so its presence proves
 /// nothing on its own. It earns a line in the evidence only when `hbfont` is
 /// absent beside it, because then it names what will actually draw the text.
-const ASMAA_FTFONT: [&str; 4] =
-    ["ftfont.pyd", "ftfont.so", "ftfont.cpython-39-x86_64-linux-gnu.so", "ftfont.dylib"];
+const ASMAA_FTFONT: [&str; 4] = [
+    "ftfont.pyd",
+    "ftfont.so",
+    "ftfont.cpython-39-x86_64-linux-gnu.so",
+    "ftfont.dylib",
+];
 
 /// Substrings that identify a shipped `HarfBuzz` shared library.
 ///
@@ -326,7 +330,10 @@ fn asmaa_mujallad(masar: &Path) -> Vec<String> {
         .flatten()
         .filter_map(|madkhal| {
             let ism = madkhal.file_name().into_string().ok()?;
-            madkhal.file_type().is_ok_and(|naw| naw.is_file()).then(|| ism.to_lowercase())
+            madkhal
+                .file_type()
+                .is_ok_and(|naw| naw.is_file())
+                .then(|| ism.to_lowercase())
         })
         .collect()
 }
@@ -341,7 +348,10 @@ fn mujalladat_far(masar: &Path) -> Vec<String> {
         .flatten()
         .filter_map(|madkhal| {
             let ism = madkhal.file_name().into_string().ok()?;
-            madkhal.file_type().is_ok_and(|naw| naw.is_dir()).then_some(ism)
+            madkhal
+                .file_type()
+                .is_ok_and(|naw| naw.is_dir())
+                .then_some(ism)
         })
         .collect()
 }
@@ -371,8 +381,10 @@ fn isdar_renpy(jidhr: &Path) -> Option<(u16, u16, u16)> {
     let bidaya = satr.find('(')?;
     let baqi = satr.get(bidaya.checked_add(1)?..)?;
     let nihaya = baqi.find(')')?;
-    let mut arqam =
-        baqi.get(..nihaya)?.split(',').filter_map(|juz| juz.trim().parse::<u16>().ok());
+    let mut arqam = baqi
+        .get(..nihaya)?
+        .split(',')
+        .filter_map(|juz| juz.trim().parse::<u16>().ok());
     Some((arqam.next()?, arqam.next()?, arqam.next().unwrap_or(0)))
 }
 
@@ -420,7 +432,11 @@ fn ibhath_maktaba(amakin: &[PathBuf], qita: &[&str]) -> Option<(PathBuf, String)
 /// A path rendered relative to the game root, with forward slashes, for the
 /// `masdar` of a piece of evidence.
 fn mawqi_nisbi(jidhr: &Path, masar: &Path) -> String {
-    masar.strip_prefix(jidhr).unwrap_or(masar).to_string_lossy().replace('\\', "/")
+    masar
+        .strip_prefix(jidhr)
+        .unwrap_or(masar)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
 impl Mifhas for MifhasRenPy {
@@ -470,8 +486,13 @@ impl Mifhas for MifhasRenPy {
                         ),
                     )
                 };
-                adilla.push(Dalil::jadeed("renpy/__init__.py", wujid, yushir, WAZN_ISDAR));
-            }
+                adilla.push(Dalil::jadeed(
+                    "renpy/__init__.py",
+                    wujid,
+                    yushir,
+                    WAZN_ISDAR,
+                ));
+            },
             None => adilla.push(Dalil::siyaq(
                 "renpy/__init__.py",
                 "absent or carrying no readable version_tuple, so the release says nothing \
@@ -489,8 +510,9 @@ impl Mifhas for MifhasRenPy {
                 "renpy/text",
                 "not readable, so which text module this build compiled could not be seen",
             ));
-        } else if let Some(ism) =
-            asmaa_nass.iter().find(|ism| ASMAA_HBFONT.contains(&ism.as_str()))
+        } else if let Some(ism) = asmaa_nass
+            .iter()
+            .find(|ism| ASMAA_HBFONT.contains(&ism.as_str()))
         {
             adilla.push(Dalil::jadeed(
                 "renpy/text",
@@ -562,7 +584,10 @@ impl Mifhas for MifhasRenPy {
             if !lughat.is_empty() {
                 adilla.push(Dalil::siyaq(
                     "game/tl",
-                    format!("the game already ships translations for {}", lughat.join(", ")),
+                    format!(
+                        "the game already ships translations for {}",
+                        lughat.join(", ")
+                    ),
                 ));
             }
         }
@@ -739,7 +764,7 @@ impl Silsila {
         match self.uqda(muashir)? {
             Uqda::Qaima(anasir) | Uqda::Thulathi(anasir) | Uqda::Majmua(anasir) => {
                 Some(anasir.as_slice())
-            }
+            },
             _ => None,
         }
     }
@@ -805,12 +830,19 @@ impl<'a> Qari<'a> {
 
     /// The refusal a short read produces.
     fn qaseer(&self, haql: &'static str, matlub: u64) -> KhataNusus {
-        KhataNusus::MalafQaseer { haql, tul: self.baqi(), matlub }
+        KhataNusus::MalafQaseer {
+            haql,
+            tul: self.baqi(),
+            matlub,
+        }
     }
 
     /// One byte.
     fn wahid(&mut self, haql: &'static str) -> Result<u8, KhataNusus> {
-        let qeema = *self.bayt.get(self.mawqi).ok_or_else(|| self.qaseer(haql, 1))?;
+        let qeema = *self
+            .bayt
+            .get(self.mawqi)
+            .ok_or_else(|| self.qaseer(haql, 1))?;
         self.mawqi = self.mawqi.saturating_add(1);
         Ok(qeema)
     }
@@ -934,7 +966,9 @@ impl AlatSilsila {
 
     /// Pops one value.
     fn isjab(&mut self) -> Result<Muashir, KhataNusus> {
-        self.kudsa.pop().ok_or_else(|| silsila_talifa("an opcode popped an empty stack"))
+        self.kudsa
+            .pop()
+            .ok_or_else(|| silsila_talifa("an opcode popped an empty stack"))
     }
 
     /// The topmost value without popping it.
@@ -952,7 +986,9 @@ impl AlatSilsila {
             .pop()
             .ok_or_else(|| silsila_talifa("an opcode closed a mark that was never opened"))?;
         if alama > self.kudsa.len() {
-            return Err(silsila_talifa("a mark points above the stack it was set on"));
+            return Err(silsila_talifa(
+                "a mark points above the stack it was set on",
+            ));
         }
         Ok(self.kudsa.split_off(alama))
     }
@@ -1008,12 +1044,12 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                         aqsa: 5,
                     });
                 }
-            }
+            },
             0x95 => {
                 // FRAME is an optimisation hint whose payload is a length; the
                 // bytes it frames are read by the opcodes inside it.
                 let _ = qari.adad_le("a pickle frame length", 8)?;
-            }
+            },
             b'.' => break,
 
             // -- marks and the stack ---------------------------------------
@@ -1027,18 +1063,18 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                     });
                 }
                 ala.alamat.push(ala.kudsa.len());
-            }
+            },
             b'0' => {
                 let _ = ala.isjab()?;
-            }
+            },
             b'1' => {
                 umq = umq.saturating_sub(1);
                 let _ = ala.min_alama()?;
-            }
+            },
             b'2' => {
                 let qimma = ala.qimma()?;
                 ala.kudsa.push(qimma);
-            }
+            },
 
             // -- atoms -----------------------------------------------------
             b'N' => ala.idfa(Uqda::Faragh)?,
@@ -1048,15 +1084,15 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                 let khaam = qari.adad_le("a 32-bit pickle integer", 4)?;
                 let masfufa = u32::try_from(khaam).unwrap_or(0).to_le_bytes();
                 ala.idfa(Uqda::Sahih(i64::from(i32::from_le_bytes(masfufa))))?;
-            }
+            },
             b'K' => {
                 let khaam = qari.wahid("an 8-bit pickle integer")?;
                 ala.idfa(Uqda::Sahih(i64::from(khaam)))?;
-            }
+            },
             b'M' => {
                 let khaam = qari.adad_le("a 16-bit pickle integer", 2)?;
                 ala.idfa(Uqda::Sahih(i64::try_from(khaam).unwrap_or(0)))?;
-            }
+            },
             b'I' => {
                 let satr = qari.satr("a text pickle integer")?;
                 // Protocol 0 spells the booleans as integers, and Ren'Py's own
@@ -1069,13 +1105,13 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                     })?),
                 };
                 ala.idfa(uqda)?;
-            }
+            },
             b'L' => {
                 let satr = qari.satr("a text pickle long")?;
                 let munaqqa = nass_ascii(satr)?;
                 let qeema = munaqqa.trim().trim_end_matches('L');
                 ala.idfa(Uqda::Sahih(qeema.parse::<i64>().unwrap_or(0)))?;
-            }
+            },
             0x8A | 0x8B => {
                 let adad = if ramz == 0x8A {
                     u64::from(qari.wahid("a pickle long length")?)
@@ -1085,18 +1121,20 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                 let tul = hajm_maqbul("a pickle long", adad, 4096)?;
                 let juz = qari.nitaq("a pickle long", tul)?;
                 ala.idfa(kabir_min_bayt(juz))?;
-            }
+            },
             b'G' => {
                 let juz = qari.nitaq("a pickle float", 8)?;
-                let masfufa: [u8; 8] = juz.try_into().map_err(|_| {
-                    silsila_talifa("a binary float opcode is not eight bytes wide")
-                })?;
+                let masfufa: [u8; 8] = juz
+                    .try_into()
+                    .map_err(|_| silsila_talifa("a binary float opcode is not eight bytes wide"))?;
                 ala.idfa(Uqda::Ashari(f64::from_be_bytes(masfufa)))?;
-            }
+            },
             b'F' => {
                 let satr = qari.satr("a text pickle float")?;
-                ala.idfa(Uqda::Ashari(nass_ascii(satr)?.trim().parse::<f64>().unwrap_or(0.0)))?;
-            }
+                ala.idfa(Uqda::Ashari(
+                    nass_ascii(satr)?.trim().parse::<f64>().unwrap_or(0.0),
+                ))?;
+            },
 
             // -- text and bytes --------------------------------------------
             b'X' | 0x8C | 0x8D => {
@@ -1108,7 +1146,7 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                 let tul = hajm_maqbul("a pickle string", adad, AQSA_UDW_RPA)?;
                 let juz = qari.nitaq("a pickle string", tul)?;
                 ala.idfa(Uqda::Nass(nass_utf8(juz, qari.mawqi)?))?;
-            }
+            },
             b'T' | b'U' => {
                 // Protocol 0 and 1 `str`, which is Python 2 bytes. Kept as
                 // bytes when it is not valid UTF-8: an archive index written by
@@ -1125,7 +1163,7 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                     Ok(nass) => Uqda::Nass(nass.to_owned()),
                     Err(_) => Uqda::Bayt(juz.to_vec()),
                 })?;
-            }
+            },
             b'B' | b'C' | 0x8E => {
                 let adad = match ramz {
                     b'C' => u64::from(qari.wahid("a short bytes length")?),
@@ -1135,11 +1173,11 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                 let tul = hajm_maqbul("a pickle bytes object", adad, AQSA_UDW_RPA)?;
                 let juz = qari.nitaq("a pickle bytes object", tul)?;
                 ala.idfa(Uqda::Bayt(juz.to_vec()))?;
-            }
+            },
             b'S' | b'V' => {
                 let satr = qari.satr("a text pickle string")?;
                 ala.idfa(Uqda::Nass(nass_muqtabas(satr)))?;
-            }
+            },
 
             // -- containers ------------------------------------------------
             b']' => ala.idfa(Uqda::Qaima(Vec::new()))?,
@@ -1150,12 +1188,12 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                 umq = umq.saturating_sub(1);
                 let anasir = ala.min_alama()?;
                 ala.idfa(Uqda::Qaima(anasir))?;
-            }
+            },
             b't' => {
                 umq = umq.saturating_sub(1);
                 let anasir = ala.min_alama()?;
                 ala.idfa(Uqda::Thulathi(anasir))?;
-            }
+            },
             0x85..=0x87 => {
                 let adad = usize::from(ramz.saturating_sub(0x84));
                 let mut anasir = Vec::with_capacity(adad);
@@ -1164,26 +1202,29 @@ pub fn iqra_silsila(bayt: &[u8]) -> Result<Silsila, KhataNusus> {
                 }
                 anasir.reverse();
                 ala.idfa(Uqda::Thulathi(anasir))?;
-            }
+            },
             b'd' => {
                 umq = umq.saturating_sub(1);
                 let anasir = ala.min_alama()?;
                 ala.idfa(Uqda::Kharita(azwaj_min_qaima(&anasir)?))?;
-            }
+            },
             0x91 => {
                 umq = umq.saturating_sub(1);
                 let anasir = ala.min_alama()?;
                 ala.idfa(Uqda::Majmua(anasir))?;
-            }
+            },
 
             _ => {
                 idara_silsila(ramz, &mut qari, &mut ala, &mut umq)?;
-            }
+            },
         }
     }
 
     let jidhr = ala.isjab()?;
-    Ok(Silsila { uqad: ala.uqad, jidhr })
+    Ok(Silsila {
+        uqad: ala.uqad,
+        jidhr,
+    })
 }
 
 /// The opcodes that touch the memo, mutate a container, or name a class.
@@ -1210,7 +1251,7 @@ fn idara_silsila(
             };
             let qimma = ala.qimma()?;
             let _ = ala.dhakira.insert(raqm, qimma);
-        }
+        },
         b'g' | b'h' | b'j' => {
             let raqm = match ramz {
                 b'h' => u64::from(qari.wahid("a memo index")?),
@@ -1223,13 +1264,12 @@ fn idara_silsila(
             // The back-reference resolves to the same handle rather than to a
             // copy. That is what preserves identity across the stream and what
             // lets a cyclic structure terminate.
-            let muashir = ala
-                .dhakira
-                .get(&raqm)
-                .copied()
-                .ok_or_else(|| silsila_talifa("a memo reference names an index never stored"))?;
+            let muashir =
+                ala.dhakira.get(&raqm).copied().ok_or_else(|| {
+                    silsila_talifa("a memo reference names an index never stored")
+                })?;
             ala.kudsa.push(muashir);
-        }
+        },
 
         // -- mutation ------------------------------------------------------
         b'a' | b'e' => {
@@ -1249,7 +1289,7 @@ fn idara_silsila(
             let mut jadeed = hali.clone();
             jadeed.extend_from_slice(&mudaf);
             ala.haddith(hadaf, Uqda::Qaima(jadeed))?;
-        }
+        },
         0x90 => {
             *umq = umq.saturating_sub(1);
             let mudaf = ala.min_alama()?;
@@ -1263,7 +1303,7 @@ fn idara_silsila(
             let mut jadeed = hali.clone();
             jadeed.extend_from_slice(&mudaf);
             ala.haddith(hadaf, Uqda::Majmua(jadeed))?;
-        }
+        },
         b's' | b'u' => {
             let mudaf = if ramz == b's' {
                 let qeema = ala.isjab()?;
@@ -1284,14 +1324,14 @@ fn idara_silsila(
             let mut jadeed = hali.clone();
             jadeed.extend_from_slice(&mudaf);
             ala.haddith(hadaf, Uqda::Kharita(jadeed))?;
-        }
+        },
 
         // -- names, which stay names ---------------------------------------
         b'c' => {
             let wahda = nass_ascii(qari.satr("a global's module")?)?;
             let ism = nass_ascii(qari.satr("a global's name")?)?;
             ala.idfa(Uqda::Ism(format!("{wahda}.{ism}")))?;
-        }
+        },
         0x93 => {
             let ism = ala.isjab()?;
             let wahda = ala.isjab()?;
@@ -1301,15 +1341,19 @@ fn idara_silsila(
                 nass_min_uqda(ala, ism).unwrap_or_else(|| "?".to_owned())
             );
             ala.idfa(Uqda::Ism(mansub))?;
-        }
+        },
 
         // -- construction, which constructs nothing -------------------------
         b'R' => {
             let muamalat = ala.isjab()?;
             let ism = ala.isjab()?;
             let asmaa = nass_min_uqda(ala, ism).unwrap_or_else(|| "?".to_owned());
-            ala.idfa(Uqda::Kaain { ism: asmaa, muamalat: vec![muamalat], hala: None })?;
-        }
+            ala.idfa(Uqda::Kaain {
+                ism: asmaa,
+                muamalat: vec![muamalat],
+                hala: None,
+            })?;
+        },
         0x81 | 0x92 => {
             // NEWOBJ leaves (class, args) on the stack; NEWOBJ_EX leaves
             // (class, args, keywords). Both are popped in reverse and none of
@@ -1322,8 +1366,12 @@ fn idara_silsila(
                 (awsat, vec![akhir])
             };
             let asmaa = nass_min_uqda(ala, fasila).unwrap_or_else(|| "?".to_owned());
-            ala.idfa(Uqda::Kaain { ism: asmaa, muamalat: mawad, hala: None })?;
-        }
+            ala.idfa(Uqda::Kaain {
+                ism: asmaa,
+                muamalat: mawad,
+                hala: None,
+            })?;
+        },
         b'o' | b'i' => {
             *umq = umq.saturating_sub(1);
             let mut anasir = ala.min_alama()?;
@@ -1339,8 +1387,12 @@ fn idara_silsila(
                 let ism = anasir.remove(0);
                 nass_min_uqda(ala, ism).unwrap_or_else(|| "?".to_owned())
             };
-            ala.idfa(Uqda::Kaain { ism: asmaa, muamalat: anasir, hala: None })?;
-        }
+            ala.idfa(Uqda::Kaain {
+                ism: asmaa,
+                muamalat: anasir,
+                hala: None,
+            })?;
+        },
         b'b' => {
             let hala = ala.isjab()?;
             let hadaf = ala.qimma()?;
@@ -1354,10 +1406,13 @@ fn idara_silsila(
                     "a build opcode targeted something that is not an object placeholder",
                 ));
             };
-            let tabdeel =
-                Uqda::Kaain { ism: ism.clone(), muamalat: muamalat.clone(), hala: Some(hala) };
+            let tabdeel = Uqda::Kaain {
+                ism: ism.clone(),
+                muamalat: muamalat.clone(),
+                hala: Some(hala),
+            };
             ala.haddith(hadaf, tabdeel)?;
-        }
+        },
 
         // -- refused --------------------------------------------------------
         b'P' | b'Q' => {
@@ -1365,15 +1420,20 @@ fn idara_silsila(
                 ramz,
                 "a persistent id resolves through a table this process would have to supply",
             ));
-        }
+        },
         0x82..=0x84 => {
             return Err(ramz_marfud(
                 ramz,
                 "an extension code resolves through the copyreg registry, which is a global \
                  lookup and has no inert reading",
             ));
-        }
-        _ => return Err(ramz_marfud(ramz, "not part of the subset this reader implements")),
+        },
+        _ => {
+            return Err(ramz_marfud(
+                ramz,
+                "not part of the subset this reader implements",
+            ));
+        },
     }
     Ok(())
 }
@@ -1390,9 +1450,14 @@ fn nass_min_uqda(ala: &AlatSilsila, muashir: Muashir) -> Option<String> {
 /// A flat run of stack items read as alternating keys and values.
 fn azwaj_min_qaima(anasir: &[Muashir]) -> Result<Vec<(Muashir, Muashir)>, KhataNusus> {
     if anasir.len().checked_rem(2) != Some(0) {
-        return Err(silsila_talifa("a mapping opcode was handed an odd number of items"));
+        return Err(silsila_talifa(
+            "a mapping opcode was handed an odd number of items",
+        ));
     }
-    Ok(anasir.chunks_exact(2).filter_map(|zawj| Some((*zawj.first()?, *zawj.get(1)?))).collect())
+    Ok(anasir
+        .chunks_exact(2)
+        .filter_map(|zawj| Some((*zawj.first()?, *zawj.get(1)?)))
+        .collect())
 }
 
 /// A big integer as sign and little-endian magnitude, from two's complement.
@@ -1433,20 +1498,24 @@ fn kabir_min_bayt(juz: &[u8]) -> Uqda {
 
 /// Bytes that must be ASCII text, as text.
 fn nass_ascii(juz: &[u8]) -> Result<String, KhataNusus> {
-    core::str::from_utf8(juz).map(str::to_owned).map_err(|khata| KhataNusus::NassGhayrSalih {
-        malaf: "a Ren'Py pickle stream".to_owned(),
-        tarmiz: "ASCII",
-        mawqi: tul_u64(khata.valid_up_to()),
-    })
+    core::str::from_utf8(juz)
+        .map(str::to_owned)
+        .map_err(|khata| KhataNusus::NassGhayrSalih {
+            malaf: "a Ren'Py pickle stream".to_owned(),
+            tarmiz: "ASCII",
+            mawqi: tul_u64(khata.valid_up_to()),
+        })
 }
 
 /// Bytes that must be UTF-8, as text, naming where they stopped being valid.
 fn nass_utf8(juz: &[u8], mawqi: usize) -> Result<String, KhataNusus> {
-    core::str::from_utf8(juz).map(str::to_owned).map_err(|khata| KhataNusus::NassGhayrSalih {
-        malaf: "a Ren'Py pickle stream".to_owned(),
-        tarmiz: "UTF-8",
-        mawqi: tul_u64(mawqi.saturating_add(khata.valid_up_to())),
-    })
+    core::str::from_utf8(juz)
+        .map(str::to_owned)
+        .map_err(|khata| KhataNusus::NassGhayrSalih {
+            malaf: "a Ren'Py pickle stream".to_owned(),
+            tarmiz: "UTF-8",
+            mawqi: tul_u64(mawqi.saturating_add(khata.valid_up_to())),
+        })
 }
 
 /// A protocol-0 quoted string, with the escapes Python's repr produces.
@@ -1461,7 +1530,11 @@ fn nass_muqtabas(juz: &[u8]) -> String {
     let bila_iqtibas = munaqqa
         .strip_prefix('\'')
         .and_then(|baqi| baqi.strip_suffix('\''))
-        .or_else(|| munaqqa.strip_prefix('"').and_then(|baqi| baqi.strip_suffix('"')))
+        .or_else(|| {
+            munaqqa
+                .strip_prefix('"')
+                .and_then(|baqi| baqi.strip_suffix('"'))
+        })
         .unwrap_or(munaqqa);
     let mut kharj = String::with_capacity(bila_iqtibas.len());
     let mut huruf = bila_iqtibas.chars();
@@ -1575,7 +1648,9 @@ fn uktub_qeema(
     umq: u32,
 ) -> Result<(), KhataNusus> {
     if umq > AQSA_UMQ_SILSILA {
-        return Err(silsila_talifa("a value nests deeper than this writer will emit"));
+        return Err(silsila_talifa(
+            "a value nests deeper than this writer will emit",
+        ));
     }
     if let Some(raqm) = dhakira.get(&muashir.raqm()).copied() {
         uktub_marja(kharj, raqm);
@@ -1601,7 +1676,7 @@ fn uktub_qeema(
         Uqda::Ashari(qeema) => {
             kharj.push(b'G');
             kharj.extend_from_slice(&qeema.to_be_bytes());
-        }
+        },
         Uqda::Kabir { salib, adad } => {
             let mut bayt = adad.clone();
             if *salib {
@@ -1621,21 +1696,21 @@ fn uktub_qeema(
             kharj.push(0x8A);
             kharj.push(tul);
             kharj.extend_from_slice(&bayt);
-        }
+        },
         Uqda::Nass(nass) => {
             let juz = nass.as_bytes();
             kharj.push(b'X');
             kharj.extend_from_slice(&u32::try_from(juz.len()).unwrap_or(u32::MAX).to_le_bytes());
             kharj.extend_from_slice(juz);
             sajjil(kharj, dhakira);
-        }
+        },
         Uqda::Bayt(bayt) => {
             // Protocol 2 has no BYTES opcode; Python 2's `str` and Python 3's
             // `bytes` share the SHORT_BINSTRING/BINSTRING pair, which is what
             // Ren'Py's own index writer emits for a member prefix.
             uktub_tul(kharj, b'U', b'T', bayt);
             sajjil(kharj, dhakira);
-        }
+        },
         Uqda::Thulathi(anasir) if anasir.is_empty() => kharj.push(b')'),
         Uqda::Thulathi(anasir) => {
             // A tuple is immutable, so it is written *before* it is memoized:
@@ -1658,7 +1733,7 @@ fn uktub_qeema(
                 _ => kharj.push(b't'),
             }
             sajjil(kharj, dhakira);
-        }
+        },
         Uqda::Qaima(anasir) => {
             kharj.push(b']');
             sajjil(kharj, dhakira);
@@ -1669,7 +1744,7 @@ fn uktub_qeema(
                 }
                 kharj.push(b'e');
             }
-        }
+        },
         Uqda::Majmua(anasir) => {
             // Protocol 2 has no set opcode, so a set is emitted as the list
             // Ren'Py's index never contains one of anyway; refusing is honest.
@@ -1677,7 +1752,7 @@ fn uktub_qeema(
             return Err(silsila_talifa(
                 "protocol 2 cannot represent a set, and no structure this crate writes has one",
             ));
-        }
+        },
         Uqda::Kharita(azwaj) => {
             kharj.push(b'}');
             sajjil(kharj, dhakira);
@@ -1689,19 +1764,19 @@ fn uktub_qeema(
                 }
                 kharj.push(b'u');
             }
-        }
+        },
         Uqda::Ism(ism) => {
             return Err(silsila_talifa(&format!(
                 "writing the global {ism} would mean emitting an import instruction into a \
                  file the game executes, which this crate never does"
             )));
-        }
+        },
         Uqda::Kaain { ism, .. } => {
             return Err(silsila_talifa(&format!(
                 "writing a constructed {ism} would mean emitting a call instruction into a \
                  file the game executes, which this crate never does"
             )));
-        }
+        },
     }
     Ok(())
 }
@@ -1783,10 +1858,18 @@ impl BinaSilsila {
     /// [`KhataNusus::BunyaGhayrMutawaqqaa`] when the handle is not one this
     /// builder issued.
     pub fn ikhtim(self, jidhr: Muashir) -> Result<Silsila, KhataNusus> {
-        if usize::try_from(jidhr.0).ok().is_none_or(|fahras| fahras >= self.uqad.len()) {
-            return Err(silsila_talifa("a builder was closed on a handle it never issued"));
+        if usize::try_from(jidhr.0)
+            .ok()
+            .is_none_or(|fahras| fahras >= self.uqad.len())
+        {
+            return Err(silsila_talifa(
+                "a builder was closed on a handle it never issued",
+            ));
         }
-        Ok(Silsila { uqad: self.uqad, jidhr })
+        Ok(Silsila {
+            uqad: self.uqad,
+            jidhr,
+        })
     }
 }
 
@@ -1937,7 +2020,9 @@ impl Hawiya {
 
     /// Every member whose path ends with `lahiqa`.
     pub fn bi_lahiqa<'a>(&'a self, lahiqa: &'a str) -> impl Iterator<Item = &'a MadkhalRpa> + 'a {
-        self.madakhil.iter().filter(move |madkhal| madkhal.masar.ends_with(lahiqa))
+        self.madakhil
+            .iter()
+            .filter(move |madkhal| madkhal.masar.ends_with(lahiqa))
     }
 }
 
@@ -1946,12 +2031,20 @@ const SIGHA_RPA: &str = "RPA";
 
 /// An I/O failure, carrying the path that produced it.
 fn khata_malaf(masar: &Path, sabab: std::io::Error) -> KhataNusus {
-    KhataNusus::KhataMalaf { masar: masar.to_path_buf(), sabab }
+    KhataNusus::KhataMalaf {
+        masar: masar.to_path_buf(),
+        sabab,
+    }
 }
 
 /// A field in a container that points outside it.
 const fn hawiya_talifa(haql: &'static str, qeema: u64, hadd: u64) -> KhataNusus {
-    KhataNusus::HawiyaTalifa { sigha: SIGHA_RPA, haql, qeema, hadd }
+    KhataNusus::HawiyaTalifa {
+        sigha: SIGHA_RPA,
+        haql,
+        qeema,
+        hadd,
+    }
 }
 
 impl Hawiya {
@@ -1979,19 +2072,25 @@ impl Hawiya {
         {
             let mut mala = 0_usize;
             while mala < tarwisa.len() {
-                let Some(baqi) = tarwisa.get_mut(mala..) else { break };
+                let Some(baqi) = tarwisa.get_mut(mala..) else {
+                    break;
+                };
                 match malaf.read(baqi) {
                     Ok(0) => break,
                     Ok(adad) => mala = mala.saturating_add(adad),
-                    Err(sabab) if sabab.kind() == std::io::ErrorKind::Interrupted => {}
+                    Err(sabab) if sabab.kind() == std::io::ErrorKind::Interrupted => {},
                     Err(sabab) => return Err(khata_malaf(masar, sabab)),
                 }
             }
             tarwisa.truncate(mala);
         }
-        let nihayat_satr = tarwisa.iter().position(|bayt| *bayt == b'\n').ok_or_else(|| {
-            KhataNusus::SihrGhayrMutabaq { masar: masar.to_path_buf(), sigha: SIGHA_RPA }
-        })?;
+        let nihayat_satr = tarwisa
+            .iter()
+            .position(|bayt| *bayt == b'\n')
+            .ok_or_else(|| KhataNusus::SihrGhayrMutabaq {
+                masar: masar.to_path_buf(),
+                sigha: SIGHA_RPA,
+            })?;
         let satr = tarwisa
             .get(..nihayat_satr)
             .map(String::from_utf8_lossy)
@@ -2087,12 +2186,12 @@ impl Hawiya {
             .seek(SeekFrom::Start(madkhal.izaha))
             .map_err(|sabab| khata_malaf(&self.masar, sabab))?;
 
-        let mut kharj = Vec::with_capacity(
-            hajm_usize(madkhal.tul).unwrap_or(0).min(1024 * 1024),
-        );
+        let mut kharj = Vec::with_capacity(hajm_usize(madkhal.tul).unwrap_or(0).min(1024 * 1024));
         kharj.extend_from_slice(&madkhal.sabiqa);
         let mut jism = vec![0_u8; hajm_usize(tul_jism).unwrap_or(0)];
-        malaf.read_exact(&mut jism).map_err(|sabab| khata_malaf(&self.masar, sabab))?;
+        malaf
+            .read_exact(&mut jism)
+            .map_err(|sabab| khata_malaf(&self.masar, sabab))?;
         kharj.append(&mut jism);
         Ok(kharj)
     }
@@ -2114,7 +2213,10 @@ fn fukk_zlib(
     let adad = fakk
         .take(saqf.saturating_add(1))
         .read_to_end(&mut khaam)
-        .map_err(|sabab| KhataNusus::FakkFashil { sigha, tafsil: sabab.to_string() })?;
+        .map_err(|sabab| KhataNusus::FakkFashil {
+            sigha,
+            tafsil: sabab.to_string(),
+        })?;
     if tul_u64(adad) > saqf {
         return Err(KhataNusus::HajmMufrit {
             haql: "an expanded archive index",
@@ -2185,8 +2287,7 @@ fn fahras_min_silsila(
         let izaha = u64::try_from(khaam_izaha)
             .map_err(|_| bunya("a segment's offset is negative"))?
             ^ miftah64;
-        let tul = u64::try_from(khaam_tul)
-            .map_err(|_| bunya("a segment's length is negative"))?
+        let tul = u64::try_from(khaam_tul).map_err(|_| bunya("a segment's length is negative"))?
             ^ miftah64;
 
         if izaha > tul_malaf {
@@ -2199,7 +2300,12 @@ fn fahras_min_silsila(
             return Err(hawiya_talifa("a member's end", nihaya, tul_malaf));
         }
 
-        madakhil.push(MadkhalRpa { masar, izaha, tul, sabiqa });
+        madakhil.push(MadkhalRpa {
+            masar,
+            izaha,
+            tul,
+            sabiqa,
+        });
     }
     Ok(madakhil)
 }
@@ -2265,8 +2371,12 @@ impl KatibRpa {
         let muaqqat = masar.with_extension("rpa-taarib");
         let mut malaf = fs::File::create(&muaqqat).map_err(|sabab| khata_malaf(&muaqqat, sabab))?;
         let hashw = vec![b' '; isdar.tul_tarwisa().saturating_sub(1)];
-        malaf.write_all(&hashw).map_err(|sabab| khata_malaf(&muaqqat, sabab))?;
-        malaf.write_all(b"\n").map_err(|sabab| khata_malaf(&muaqqat, sabab))?;
+        malaf
+            .write_all(&hashw)
+            .map_err(|sabab| khata_malaf(&muaqqat, sabab))?;
+        malaf
+            .write_all(b"\n")
+            .map_err(|sabab| khata_malaf(&muaqqat, sabab))?;
         Ok(Self {
             masar: masar.to_path_buf(),
             muaqqat,
@@ -2296,7 +2406,9 @@ impl KatibRpa {
                 saqf: AQSA_UDW_RPA,
             });
         }
-        self.malaf.write_all(bayt).map_err(|sabab| khata_malaf(&self.muaqqat, sabab))?;
+        self.malaf
+            .write_all(bayt)
+            .map_err(|sabab| khata_malaf(&self.muaqqat, sabab))?;
         self.madakhil.push(MadkhalRpa {
             masar: masar.replace('\\', "/"),
             izaha: self.mawqi,
@@ -2359,8 +2471,12 @@ impl KatibRpa {
         let satr = match self.isdar {
             IsdarRpa::Thani => format!("{} {izahat_fahras:016x}", self.isdar.alama()),
             IsdarRpa::Thalith => {
-                format!("{} {izahat_fahras:016x} {:08x}", self.isdar.alama(), self.miftah)
-            }
+                format!(
+                    "{} {izahat_fahras:016x} {:08x}",
+                    self.isdar.alama(),
+                    self.miftah
+                )
+            },
             IsdarRpa::ThalithNuqtatan => format!(
                 "{} {izahat_fahras:016x} {:08x} {:08x}",
                 self.isdar.alama(),
@@ -2375,12 +2491,15 @@ impl KatibRpa {
         self.malaf
             .write_all(satr.as_bytes())
             .map_err(|sabab| khata_malaf(&self.muaqqat, sabab))?;
-        self.malaf.flush().map_err(|sabab| khata_malaf(&self.muaqqat, sabab))?;
-        self.malaf.sync_all().map_err(|sabab| khata_malaf(&self.muaqqat, sabab))?;
+        self.malaf
+            .flush()
+            .map_err(|sabab| khata_malaf(&self.muaqqat, sabab))?;
+        self.malaf
+            .sync_all()
+            .map_err(|sabab| khata_malaf(&self.muaqqat, sabab))?;
         drop(self.malaf);
 
-        fs::rename(&self.muaqqat, &self.masar)
-            .map_err(|sabab| khata_malaf(&self.masar, sabab))?;
+        fs::rename(&self.muaqqat, &self.masar).map_err(|sabab| khata_malaf(&self.masar, sabab))?;
         Ok(())
     }
 
@@ -2414,12 +2533,13 @@ fn sahih_min_u64(qeema: u64) -> i64 {
 fn udghut_zlib(khaam: &[u8]) -> Result<Vec<u8>, KhataNusus> {
     use std::io::Write as _;
 
-    let mut daght =
-        flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
-    daght.write_all(khaam).map_err(|sabab| KhataNusus::FakkFashil {
-        sigha: SIGHA_RPA,
-        tafsil: sabab.to_string(),
-    })?;
+    let mut daght = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    daght
+        .write_all(khaam)
+        .map_err(|sabab| KhataNusus::FakkFashil {
+            sigha: SIGHA_RPA,
+            tafsil: sabab.to_string(),
+        })?;
     daght.finish().map_err(|sabab| KhataNusus::FakkFashil {
         sigha: SIGHA_RPA,
         tafsil: sabab.to_string(),
@@ -2521,7 +2641,10 @@ impl MalafRpyc {
                 });
             }
         }
-        Ok(Self { masdar: masdar.to_owned(), khanat })
+        Ok(Self {
+            masdar: masdar.to_owned(),
+            khanat,
+        })
     }
 
     /// The abstract syntax tree, decoded through the inert pickle machine.
@@ -2543,12 +2666,14 @@ impl MalafRpyc {
             })?;
         let bidaya = hajm_usize(u64::from(khana.bidaya)).unwrap_or(usize::MAX);
         let nihaya = bidaya.saturating_add(hajm_usize(u64::from(khana.tul)).unwrap_or(0));
-        let juz = bayt.get(bidaya..nihaya).ok_or_else(|| KhataNusus::HawiyaTalifa {
-            sigha: SIGHA_RPYC,
-            haql: "the syntax tree slot",
-            qeema: tul_u64(nihaya),
-            hadd: tul_u64(bayt.len()),
-        })?;
+        let juz = bayt
+            .get(bidaya..nihaya)
+            .ok_or_else(|| KhataNusus::HawiyaTalifa {
+                sigha: SIGHA_RPYC,
+                haql: "the syntax tree slot",
+                qeema: tul_u64(nihaya),
+                hadd: tul_u64(bayt.len()),
+            })?;
         let khaam = fukk_zlib(juz, AQSA_RPYC, SIGHA_RPYC)?;
         iqra_silsila(&khaam)
     }
@@ -2669,7 +2794,7 @@ fn yustahaqq(nass: &str) -> bool {
             ']' => fi_badil = false,
             _ => {
                 return !fi_wasm && !fi_badil && !harf.is_whitespace() && harf != '.';
-            }
+            },
         }
         false
     })
@@ -2756,7 +2881,9 @@ pub fn iltiqat_min_rpy(nass: &str, masdar: &str) -> Vec<Sijill> {
             let mutakallim = if sabiq.is_empty() {
                 None
             } else if sabiq.split_whitespace().count() <= 2
-                && sabiq.chars().all(|harf| harf.is_alphanumeric() || harf == '_')
+                && sabiq
+                    .chars()
+                    .all(|harf| harf.is_alphanumeric() || harf == '_')
             {
                 Some(sabiq.to_owned())
             } else {
@@ -2996,7 +3123,11 @@ impl IdadRenPy {
     /// Which adapter these settings select.
     #[must_use]
     pub const fn masar(&self) -> Masar {
-        if self.rutba >= Rutba::Istila as u8 { Masar::Istila } else { Masar::Khadim }
+        if self.rutba >= Rutba::Istila as u8 {
+            Masar::Istila
+        } else {
+            Masar::Khadim
+        }
     }
 }
 
@@ -3145,7 +3276,11 @@ pub fn iktub_idad(
         nass,
         "# Path: {} ({}), probe confidence {}.",
         masar.ism(),
-        if masar.yukallif() { "text is drawn, not typeset by the engine" } else { "configuration" },
+        if masar.yukallif() {
+            "text is drawn, not typeset by the engine"
+        } else {
+            "configuration"
+        },
         idad.thiqa
     );
     for satr in &idad.athar {
@@ -3190,7 +3325,12 @@ pub fn iktub_idad(
     let _ = writeln!(nass, "    layout \"subtitle\"");
     let _ = writeln!(nass, "    language \"unicode\"");
     nass.push('\n');
-    for uslub in ["say_dialogue", "say_label", "input_text", "menu_choice_button_text"] {
+    for uslub in [
+        "say_dialogue",
+        "say_label",
+        "input_text",
+        "menu_choice_button_text",
+    ] {
         let _ = writeln!(nass, "translate {LUGHA} style {uslub}:");
         if lahu_khatt {
             let _ = writeln!(nass, "    font {}", iqtibas_masar_rpy(&khatt));
@@ -3260,7 +3400,13 @@ pub fn iktub_mustalahat(
             matruka = matruka.saturating_add(1);
             continue;
         };
-        let _ = writeln!(nass, "    # {} — {}:{}", sijill.naw.ism(), sijill.masdar, sijill.satr);
+        let _ = writeln!(
+            nass,
+            "    # {} — {}:{}",
+            sijill.naw.ism(),
+            sijill.masdar,
+            sijill.satr
+        );
         let _ = writeln!(nass, "    old {}", iqtibas_rpy(asl));
         let _ = writeln!(nass, "    new {}\n", iqtibas_rpy(tarjama));
         adad = adad.saturating_add(1);
@@ -3341,10 +3487,10 @@ pub fn iktub_hiwar(
         match sijill.mutakallim.as_deref() {
             Some(mutakallim) if !mutakallim.is_empty() => {
                 let _ = writeln!(nass, "    {mutakallim} {}\n", iqtibas_rpy(tarjama));
-            }
+            },
             _ => {
                 let _ = writeln!(nass, "    {}\n", iqtibas_rpy(tarjama));
-            }
+            },
         }
         adad = adad.saturating_add(1);
     }
@@ -3380,11 +3526,10 @@ pub fn iktub_hiwar(
 /// is a file whose ownership is unknown.
 pub fn izal(hafiz: &mut dyn Hafiz, jidhr: &Path) -> Result<Vec<PathBuf>, KhataNusus> {
     let mut muzala = Vec::new();
-    let mut murashahat: Vec<PathBuf> =
-        [MALAF_BAYANAT, MALAF_IDAD, MALAF_MUSTALAHAT]
-            .iter()
-            .map(|nisbi| masar_bila_hala(jidhr, nisbi))
-            .collect();
+    let mut murashahat: Vec<PathBuf> = [MALAF_BAYANAT, MALAF_IDAD, MALAF_MUSTALAHAT]
+        .iter()
+        .map(|nisbi| masar_bila_hala(jidhr, nisbi))
+        .collect();
     let mujallad = masar_bila_hala(jidhr, MUJALLAD_TARJAMA);
     if let Ok(qaima) = fs::read_dir(&mujallad) {
         for madkhal in qaima.take(AQSA_MADAKHIL).flatten() {
@@ -3405,8 +3550,8 @@ pub fn izal(hafiz: &mut dyn Hafiz, jidhr: &Path) -> Result<Vec<PathBuf>, KhataNu
         // The settings file is JSON and cannot carry a comment marker, so it is
         // matched on its own name instead — the one exception, and it is the
         // one file whose name this module owns outright.
-        let malna = masar.ends_with("idad.json")
-            || String::from_utf8_lossy(&bayt).contains(ALAMAT_TAARIB);
+        let malna =
+            masar.ends_with("idad.json") || String::from_utf8_lossy(&bayt).contains(ALAMAT_TAARIB);
         if !malna {
             continue;
         }

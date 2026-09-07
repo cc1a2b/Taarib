@@ -33,12 +33,15 @@ fn main() -> ExitCode {
 
     match taarib_khatm::malik::khzin_malik(&bidhra) {
         Ok(aam) => {
-            println!("owner key stored in the keychain; public half {}", hex::encode(aam.bayt()));
+            println!(
+                "owner key stored in the keychain; public half {}",
+                hex::encode(aam.bayt())
+            );
             ExitCode::SUCCESS
-        }
+        },
         Err(khata) => {
             eprintln!("refused: {khata}");
             ExitCode::FAILURE
-        }
+        },
     }
 }

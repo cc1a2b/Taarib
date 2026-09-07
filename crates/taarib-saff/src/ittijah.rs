@@ -160,7 +160,10 @@ impl TahleelIttijah {
             .paragraphs
             .iter()
             .map(|faqara| {
-                (ila32(faqara.range.start)..ila32(faqara.range.end), faqara.level.number())
+                (
+                    ila32(faqara.range.start)..ila32(faqara.range.end),
+                    faqara.level.number(),
+                )
             })
             .collect();
         let asas = faqarat.first().map_or_else(
@@ -174,7 +177,13 @@ impl TahleelIttijah {
         let mustawayat = core::mem::take(&mut tahleel.levels);
         let asnaf = core::mem::take(&mut tahleel.original_classes);
 
-        Ok(Self { mustawayat, asnaf, faqarat, asas, tul: ila32(nass.len()) })
+        Ok(Self {
+            mustawayat,
+            asnaf,
+            faqarat,
+            asas,
+            tul: ila32(nass.len()),
+        })
     }
 
     /// The base direction of the text as a whole.
@@ -196,7 +205,9 @@ impl TahleelIttijah {
     /// a caret goes, and the caret goes where the paragraph starts.
     #[must_use]
     pub fn mustawa(&self, mawqi: u32) -> u8 {
-        self.mustawayat.get(mawqi as usize).map_or(self.asas, Level::number)
+        self.mustawayat
+            .get(mawqi as usize)
+            .map_or(self.asas, Level::number)
     }
 
     /// The level runs inside a byte range, in logical order, with rule L1
@@ -237,7 +248,7 @@ impl TahleelIttijah {
                 BidiClass::S | BidiClass::B => {
                     dhail = true;
                     self.mustawa_faqara(mawqi)
-                }
+                },
                 BidiClass::WS
                 | BidiClass::LRI
                 | BidiClass::RLI
@@ -246,20 +257,20 @@ impl TahleelIttijah {
                     if dhail =>
                 {
                     self.mustawa_faqara(mawqi)
-                }
+                },
                 _ => {
                     dhail = false;
                     self.mustawa(mawqi)
-                }
+                },
             };
 
             match jari {
-                Some(sabiq) if sabiq == mustawa => {}
+                Some(sabiq) if sabiq == mustawa => {},
                 Some(sabiq) => {
                     maqati.push((mawqi + 1..nihayat_maqta, sabiq));
                     nihayat_maqta = mawqi + 1;
                     jari = Some(mustawa);
-                }
+                },
                 None => jari = Some(mustawa),
             }
         }
@@ -292,7 +303,8 @@ impl TahleelIttijah {
     /// because that is where a caret sitting after the final character lives.
     #[must_use]
     pub fn mustawa_faqara(&self, mawqi: u32) -> u8 {
-        self.faqara_ind(mawqi).map_or(self.asas, |(_, mustawa)| *mustawa)
+        self.faqara_ind(mawqi)
+            .map_or(self.asas, |(_, mustawa)| *mustawa)
     }
 
     /// The base direction of the paragraph a byte offset falls in.
@@ -310,7 +322,8 @@ impl TahleelIttijah {
     /// — answers with the whole text, so a caller never has to special-case it.
     #[must_use]
     pub fn faqara(&self, mawqi: u32) -> Range<u32> {
-        self.faqara_ind(mawqi).map_or(0..self.tul, |(nitaq, _)| nitaq.clone())
+        self.faqara_ind(mawqi)
+            .map_or(0..self.tul, |(nitaq, _)| nitaq.clone())
     }
 
     /// How many paragraphs the text resolved into.
@@ -325,7 +338,10 @@ impl TahleelIttijah {
 
     /// The original bidirectional class at a byte offset.
     fn sanf(&self, mawqi: u32) -> BidiClass {
-        self.asnaf.get(mawqi as usize).copied().unwrap_or(BidiClass::ON)
+        self.asnaf
+            .get(mawqi as usize)
+            .copied()
+            .unwrap_or(BidiClass::ON)
     }
 
     /// The paragraph a byte offset falls in, or the last one when the offset is
@@ -432,11 +448,11 @@ fn yameen_dakhil_azl(nass: &str, min: usize) -> bool {
                     return false;
                 }
                 umq -= 1;
-            }
+            },
             BidiClass::B => return false,
             BidiClass::L if umq == 0 => return false,
             BidiClass::R | BidiClass::AL if umq == 0 => return true,
-            _ => {}
+            _ => {},
         }
     }
     false
@@ -627,9 +643,15 @@ pub fn rattib_basariyan<T: DhuMustawa>(maqati: &mut [T], mustawa_asas: u8) {
     while mustawa >= adna_fardi {
         let mut fahras = 0usize;
         while fahras < maqati.len() {
-            if maqati.get(fahras).is_some_and(|maqta| maqta.mustawa() >= mustawa) {
+            if maqati
+                .get(fahras)
+                .is_some_and(|maqta| maqta.mustawa() >= mustawa)
+            {
                 let mut nihaya = fahras + 1;
-                while maqati.get(nihaya).is_some_and(|maqta| maqta.mustawa() >= mustawa) {
+                while maqati
+                    .get(nihaya)
+                    .is_some_and(|maqta| maqta.mustawa() >= mustawa)
+                {
                     nihaya += 1;
                 }
                 if let Some(shariha) = maqati.get_mut(fahras..nihaya) {
@@ -655,7 +677,9 @@ pub fn rattib_basariyan<T: DhuMustawa>(maqati: &mut [T], mustawa_asas: u8) {
 /// text at real sizes.
 #[must_use]
 pub fn atn(harf: char) -> Option<char> {
-    CodePointMapData::<BidiMirroringGlyph>::new().get(harf).mirroring_glyph
+    CodePointMapData::<BidiMirroringGlyph>::new()
+        .get(harf)
+        .mirroring_glyph
 }
 
 /// Applies a digit policy to the digits that belong to the text, leaving the ones
@@ -714,8 +738,8 @@ pub fn hawwil_arqam_bil_siyaq<'n>(
             BidiClass::R | BidiClass::AL => qawi = Some(true),
             BidiClass::LRI | BidiClass::RLI | BidiClass::FSI | BidiClass::PDI | BidiClass::B => {
                 qawi = None;
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         let badeel = qeemat_raqm(harf)
@@ -773,7 +797,10 @@ fn mulazim(sanf: BidiClass, kitaba: Kitaba) -> bool {
 /// The script covering a byte offset, walking the script runs in step with the
 /// text rather than searching them per character.
 fn kitaba_ind(kitabat: &[(Range<u32>, Kitaba)], fahras: &mut usize, mawqi: u32) -> Kitaba {
-    while kitabat.get(*fahras).is_some_and(|(nitaq, _)| nitaq.end <= mawqi) {
+    while kitabat
+        .get(*fahras)
+        .is_some_and(|(nitaq, _)| nitaq.end <= mawqi)
+    {
         *fahras += 1;
     }
     kitabat
@@ -869,7 +896,11 @@ fn tahaqquq_nitaqat(nass: &str, nitaqat: &[NitaqUslub], tul: u32) -> Natija<()> 
         }
         for hadd in [nitaq.bidaya, nihaya] {
             if !nass.is_char_boundary(hadd as usize) {
-                return Err(KhataSaff::HaddNitaqTalif { id: nitaq.id, mawqi: hadd }.into());
+                return Err(KhataSaff::HaddNitaqTalif {
+                    id: nitaq.id,
+                    mawqi: hadd,
+                }
+                .into());
             }
         }
     }
@@ -877,7 +908,11 @@ fn tahaqquq_nitaqat(nass: &str, nitaqat: &[NitaqUslub], tul: u32) -> Natija<()> 
     for (fahras, awwal) in nitaqat.iter().enumerate() {
         for thani in nitaqat.iter().skip(fahras + 1) {
             if tadakhul_juzii(awwal, thani) && yashtarik(&awwal.uslub, &thani.uslub) {
-                return Err(KhataSaff::NitaqMutadakhil { awwal: awwal.id, thani: thani.id }.into());
+                return Err(KhataSaff::NitaqMutadakhil {
+                    awwal: awwal.id,
+                    thani: thani.id,
+                }
+                .into());
             }
         }
     }

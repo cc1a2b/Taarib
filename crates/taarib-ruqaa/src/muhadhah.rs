@@ -87,7 +87,9 @@ impl std::fmt::Debug for BaytMuhadhah {
     /// — inside a game, on a player's machine, in a diagnostics bundle they are
     /// about to send somewhere.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BaytMuhadhah").field("tul", &self.tul).finish_non_exhaustive()
+        f.debug_struct("BaytMuhadhah")
+            .field("tul", &self.tul)
+            .finish_non_exhaustive()
     }
 }
 
@@ -96,7 +98,10 @@ impl BaytMuhadhah {
     #[must_use]
     pub fn sifr(tul: usize) -> Self {
         let khalaya = tul.div_ceil(MUHADHAT_JADWAL);
-        Self { kutal: vec![Kutla([0; MUHADHAT_JADWAL]); khalaya], tul }
+        Self {
+            kutal: vec![Kutla([0; MUHADHAT_JADWAL]); khalaya],
+            tul,
+        }
     }
 
     /// A copy of a byte slice, on an aligned buffer.
@@ -121,8 +126,10 @@ impl BaytMuhadhah {
     ///
     /// [`KhataRuqaa::KhataMalaf`] naming the path.
     pub fn iqra(masar: &std::path::Path) -> Result<Self, KhataRuqaa> {
-        let khaam = std::fs::read(masar)
-            .map_err(|sabab| KhataRuqaa::KhataMalaf { masar: masar.to_path_buf(), sabab })?;
+        let khaam = std::fs::read(masar).map_err(|sabab| KhataRuqaa::KhataMalaf {
+            masar: masar.to_path_buf(),
+            sabab,
+        })?;
         Ok(Self::min_bayt(&khaam))
     }
 
@@ -132,8 +139,10 @@ impl BaytMuhadhah {
     ///
     /// [`KhataRuqaa::KhataMalaf`] naming the path.
     pub fn uktub(&self, masar: &std::path::Path) -> Result<(), KhataRuqaa> {
-        std::fs::write(masar, self.bayt())
-            .map_err(|sabab| KhataRuqaa::KhataMalaf { masar: masar.to_path_buf(), sabab })
+        std::fs::write(masar, self.bayt()).map_err(|sabab| KhataRuqaa::KhataMalaf {
+            masar: masar.to_path_buf(),
+            sabab,
+        })
     }
 
     /// The bytes.
@@ -142,14 +151,18 @@ impl BaytMuhadhah {
         // Casting to `u8` cannot fail: the target's alignment is one and its
         // size divides the cell's exactly. The length is trimmed because the
         // backing store is rounded up to whole cells.
-        bytemuck::cast_slice::<Kutla, u8>(&self.kutal).get(..self.tul).unwrap_or(&[])
+        bytemuck::cast_slice::<Kutla, u8>(&self.kutal)
+            .get(..self.tul)
+            .unwrap_or(&[])
     }
 
     /// The bytes, mutably.
     #[must_use]
     pub fn bayt_mut(&mut self) -> &mut [u8] {
         let tul = self.tul;
-        bytemuck::cast_slice_mut::<Kutla, u8>(&mut self.kutal).get_mut(..tul).unwrap_or(&mut [])
+        bytemuck::cast_slice_mut::<Kutla, u8>(&mut self.kutal)
+            .get_mut(..tul)
+            .unwrap_or(&mut [])
     }
 
     /// How many bytes the buffer holds.

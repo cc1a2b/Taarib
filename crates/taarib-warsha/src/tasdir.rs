@@ -243,9 +243,9 @@ pub fn saddir(
     waqt: String,
     ila: &Path,
 ) -> NatijatWarsha<HuzmatWarsha> {
-    mashru
-        .adif_dufa()
-        .map_err(|khata| KhataWarsha::Mawrid { sabab: khata.to_string() })?;
+    mashru.adif_dufa().map_err(|khata| KhataWarsha::Mawrid {
+        sabab: khata.to_string(),
+    })?;
     masarat::insha_mujallad(ila).map_err(min_usus)?;
 
     let masar_rasm = mashru.jidhr().join(MALAF_MASHRU);
@@ -286,15 +286,22 @@ pub fn saddir(
     }
 
     let asl = AslHuzma::jadeed(musaddir, jihaz, waqt, mashru.rasm());
-    let bayan = BayanHuzma { mukhattat: ISDAR_HUZMA, asl, adaa };
-    let bayt_bayan = serde_json::to_vec_pretty(&bayan)
-        .map_err(|sabab| KhataWarsha::Mawrid { sabab: sabab.to_string() })?;
+    let bayan = BayanHuzma {
+        mukhattat: ISDAR_HUZMA,
+        asl,
+        adaa,
+    };
+    let bayt_bayan = serde_json::to_vec_pretty(&bayan).map_err(|sabab| KhataWarsha::Mawrid {
+        sabab: sabab.to_string(),
+    })?;
     masarat::kitaba_dharra(&ila.join(MALAF_BAYAN), &bayt_bayan).map_err(min_usus)?;
 
-    masarat::kitaba_dharra(&mashru.jidhr().join(MALAF_ASLAF), &bayt_nusus)
-        .map_err(min_usus)?;
+    masarat::kitaba_dharra(&mashru.jidhr().join(MALAF_ASLAF), &bayt_nusus).map_err(min_usus)?;
 
-    Ok(HuzmatWarsha { jidhr: ila.to_path_buf(), bayan })
+    Ok(HuzmatWarsha {
+        jidhr: ila.to_path_buf(),
+        bayan,
+    })
 }
 
 /// Loads a bundle directory, verifying the schema and every member hash.
@@ -313,11 +320,15 @@ pub fn istawrid(jidhr: &Path) -> NatijatWarsha<MuhtawaHuzma> {
         amal: "reading the bundle manifest",
         sabab,
     })?;
-    let bayan: BayanHuzma = serde_json::from_slice(&bayt_bayan).map_err(|sabab| {
-        KhataWarsha::HuzmaTalifa { sabab: format!("the manifest does not parse: {sabab}") }
-    })?;
+    let bayan: BayanHuzma =
+        serde_json::from_slice(&bayt_bayan).map_err(|sabab| KhataWarsha::HuzmaTalifa {
+            sabab: format!("the manifest does not parse: {sabab}"),
+        })?;
     if bayan.mukhattat > ISDAR_HUZMA {
-        return Err(KhataWarsha::IsdarMajhul { wujid: bayan.mukhattat, madum: ISDAR_HUZMA });
+        return Err(KhataWarsha::IsdarMajhul {
+            wujid: bayan.mukhattat,
+            madum: ISDAR_HUZMA,
+        });
     }
 
     let mut adaa: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
@@ -411,8 +422,9 @@ pub fn aslaf_mashru(jidhr: &Path) -> NatijatWarsha<Option<(Vec<MudkhalNass>, usi
 pub fn sajjil_aslaf(jidhr: &Path, nusus: &[MudkhalNass]) -> NatijatWarsha<()> {
     let mut bayt = Vec::with_capacity(nusus.len().saturating_mul(256));
     for mudkhal in nusus {
-        let satr = serde_json::to_vec(mudkhal)
-            .map_err(|sabab| KhataWarsha::Mawrid { sabab: sabab.to_string() })?;
+        let satr = serde_json::to_vec(mudkhal).map_err(|sabab| KhataWarsha::Mawrid {
+            sabab: sabab.to_string(),
+        })?;
         bayt.extend_from_slice(&satr);
         bayt.push(b'\n');
     }
@@ -420,11 +432,15 @@ pub fn sajjil_aslaf(jidhr: &Path, nusus: &[MudkhalNass]) -> NatijatWarsha<()> {
 }
 
 fn min_usus(khata: Khata) -> KhataWarsha {
-    KhataWarsha::Mawrid { sabab: khata.injilizi }
+    KhataWarsha::Mawrid {
+        sabab: khata.injilizi,
+    }
 }
 
 fn ila_json<T: serde::Serialize + ?Sized>(qeema: &T) -> NatijatWarsha<Vec<u8>> {
-    serde_json::to_vec(qeema).map_err(|sabab| KhataWarsha::Mawrid { sabab: sabab.to_string() })
+    serde_json::to_vec(qeema).map_err(|sabab| KhataWarsha::Mawrid {
+        sabab: sabab.to_string(),
+    })
 }
 
 fn min_json<T: serde::de::DeserializeOwned>(ism: &str, bayt: &[u8]) -> NatijatWarsha<T> {
@@ -450,9 +466,12 @@ fn iqra_in_wujid(masar: &Path) -> NatijatWarsha<Vec<u8>> {
 
 fn iktub_udw(jidhr: &Path, ism: &str, bayt: &[u8]) -> NatijatWarsha<UdwHuzma> {
     let masar = masar_udw(jidhr, ism);
-    let madghut = zstd::encode_all(bayt, MUSTAWA_DAGHT).map_err(|sabab| {
-        KhataWarsha::KhataMalaf { masar: masar.clone(), amal: "compressing a bundle member", sabab }
-    })?;
+    let madghut =
+        zstd::encode_all(bayt, MUSTAWA_DAGHT).map_err(|sabab| KhataWarsha::KhataMalaf {
+            masar: masar.clone(),
+            amal: "compressing a bundle member",
+            sabab,
+        })?;
     masarat::kitaba_dharra(&masar, &madghut).map_err(min_usus)?;
     Ok(UdwHuzma {
         ism: ism.to_owned(),
@@ -478,8 +497,8 @@ fn iqra_udw(jidhr: &Path, bayan: &BayanHuzma, ism: &str) -> NatijatWarsha<Vec<u8
         amal: "reading a bundle member",
         sabab,
     })?;
-    let bayt = zstd::decode_all(madghut.as_slice()).map_err(|sabab| {
-        KhataWarsha::HuzmaTalifa { sabab: format!("member {ism} does not decompress: {sabab}") }
+    let bayt = zstd::decode_all(madghut.as_slice()).map_err(|sabab| KhataWarsha::HuzmaTalifa {
+        sabab: format!("member {ism} does not decompress: {sabab}"),
     })?;
     if u64::try_from(bayt.len()).unwrap_or(u64::MAX) != udw.hajm {
         return Err(KhataWarsha::HuzmaTalifa {

@@ -158,7 +158,10 @@ const MARJI_ASAS: &str = "refs/heads/taarib-asas";
 
 /// The `User-Agent` every request carries.
 fn wakil() -> String {
-    format!("Taarib/{} (+https://github.com/cc1a2b/taarib)", taarib_usus::ISDAR)
+    format!(
+        "Taarib/{} (+https://github.com/cc1a2b/taarib)",
+        taarib_usus::ISDAR
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -202,10 +205,14 @@ impl QalabRabt {
             rabt = rabt.replace(&format!("{{{miftah}}}"), qeema);
         }
         if rabt.contains('{') || rabt.contains('}') {
-            return Err(KhataTaqdeem::BayanNaqis { haql: "a URL template with every field filled" });
+            return Err(KhataTaqdeem::BayanNaqis {
+                haql: "a URL template with every field filled",
+            });
         }
         if !rabt.starts_with("https://") {
-            return Err(KhataTaqdeem::BayanNaqis { haql: "an https endpoint" });
+            return Err(KhataTaqdeem::BayanNaqis {
+                haql: "an https endpoint",
+            });
         }
         Ok(rabt)
     }
@@ -216,9 +223,9 @@ fn juz_salih(nass: &str) -> bool {
     !nass.is_empty()
         && nass.len() <= 128
         && !nass.contains("..")
-        && nass.bytes().all(|q| {
-            q.is_ascii_alphanumeric() || q == b'-' || q == b'_' || q == b'.' || q == b'/'
-        })
+        && nass
+            .bytes()
+            .all(|q| q.is_ascii_alphanumeric() || q == b'-' || q == b'_' || q == b'.' || q == b'/')
 }
 
 /// The device authorisation flow's endpoints and client identity.
@@ -270,10 +277,14 @@ impl IdadatTawthiq {
             }
         }
         if !self.muhayya() {
-            return Err(KhataTaqdeem::IrsalGhayrMuhayya { naqis: HAQL_MUARRIF_AMIL });
+            return Err(KhataTaqdeem::IrsalGhayrMuhayya {
+                naqis: HAQL_MUARRIF_AMIL,
+            });
         }
         if !juz_salih(&self.hisab) {
-            return Err(KhataTaqdeem::BayanNaqis { haql: "a keychain account name" });
+            return Err(KhataTaqdeem::BayanNaqis {
+                haql: "a keychain account name",
+            });
         }
         Ok(())
     }
@@ -291,7 +302,10 @@ fn muarrif_muhayya(nass: &str) -> bool {
     if mahdhuf.len() < ADNA_TUL_MUARRIF {
         return false;
     }
-    if mahdhuf.chars().any(|harf| harf.is_whitespace() || harf.is_control()) {
+    if mahdhuf
+        .chars()
+        .any(|harf| harf.is_whitespace() || harf.is_control())
+    {
         return false;
     }
     if mahdhuf.contains(['{', '}', '<', '>']) {
@@ -302,7 +316,9 @@ fn muarrif_muhayya(nass: &str) -> bool {
         return false;
     }
     // A run of one repeated character is a mask somebody typed, not an id.
-    !saghir.bytes().all(|harf| harf == saghir.as_bytes().first().copied().unwrap_or(0))
+    !saghir
+        .bytes()
+        .all(|harf| harf == saghir.as_bytes().first().copied().unwrap_or(0))
 }
 
 /// Whether an upload endpoint is one a package may be sent to.
@@ -378,10 +394,14 @@ impl IdadatMustawda {
             }
         }
         if !self.rabt_git.starts_with("https://") {
-            return Err(KhataTaqdeem::BayanNaqis { haql: "an https clone address" });
+            return Err(KhataTaqdeem::BayanNaqis {
+                haql: "an https clone address",
+            });
         }
         if !self.muhayya() {
-            return Err(KhataTaqdeem::IrsalGhayrMuhayya { naqis: HAQL_RABT_TAJHEEZ });
+            return Err(KhataTaqdeem::IrsalGhayrMuhayya {
+                naqis: HAQL_RABT_TAJHEEZ,
+            });
         }
         if !qabul_tajheez(self.qalab_tajheez.nass()) {
             return Err(KhataTaqdeem::BayanNaqis {
@@ -438,7 +458,9 @@ pub struct RamzWusul {
 impl std::fmt::Debug for RamzWusul {
     /// Prints the scheme and never the secret.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RamzWusul").field("naw", &self.naw).finish_non_exhaustive()
+        f.debug_struct("RamzWusul")
+            .field("naw", &self.naw)
+            .finish_non_exhaustive()
     }
 }
 
@@ -506,7 +528,9 @@ fn qitaa(bayt: &[u8], fahras: usize) -> [u8; HAJM_QITAA] {
 
 /// The keychain failure, as this crate's.
 fn khata_khazna(khata: &KhataKhatm) -> KhataTaqdeem {
-    KhataTaqdeem::TawthiqFashil { sabab: format!("the OS keychain refused: {khata}") }
+    KhataTaqdeem::TawthiqFashil {
+        sabab: format!("the OS keychain refused: {khata}"),
+    }
 }
 
 /// Stores a token in the OS keychain and nowhere else.
@@ -575,7 +599,7 @@ pub fn hat_ramz(hisab: &str) -> NatijatTaqdeem<Option<RamzWusul>> {
                     sabab: "the stored token is missing a segment and cannot be reassembled"
                         .to_owned(),
                 });
-            }
+            },
             Err(khata) => return Err(khata_khazna(&khata)),
         }
     }
@@ -584,9 +608,11 @@ pub fn hat_ramz(hisab: &str) -> NatijatTaqdeem<Option<RamzWusul>> {
     let mahtawa = String::from_utf8(bayt).map_err(|_| KhataTaqdeem::TawthiqFashil {
         sabab: "the stored token is not text this client wrote".to_owned(),
     })?;
-    let (naw, sirr) = mahtawa.split_once('\u{1f}').ok_or_else(|| KhataTaqdeem::TawthiqFashil {
-        sabab: "the stored token carries no scheme".to_owned(),
-    })?;
+    let (naw, sirr) = mahtawa
+        .split_once('\u{1f}')
+        .ok_or_else(|| KhataTaqdeem::TawthiqFashil {
+            sabab: "the stored token carries no scheme".to_owned(),
+        })?;
     RamzWusul::jadeed(sirr, Some(naw.to_owned())).map(Some)
 }
 
@@ -798,7 +824,11 @@ struct RaddTalabDamj {
 impl RaddTalabDamj {
     /// The address a person opens to read the request.
     fn rabt(&self) -> Option<&str> {
-        awwal_ghayr_farigh(&[self.html_url.as_ref(), self.web_url.as_ref(), self.url.as_ref()])
+        awwal_ghayr_farigh(&[
+            self.html_url.as_ref(),
+            self.web_url.as_ref(),
+            self.url.as_ref(),
+        ])
     }
 
     /// The request's number in its repository, when the forge gives one.
@@ -858,10 +888,13 @@ pub async fn ibda_tawthiq(
         ramz_mustakhdim: radd.ramz_mustakhdim,
         rabt_tahaqquq: rabt,
         rabt_kamil: radd.rabt_kamil,
-        yantahi_baad: radd
-            .yantahi
-            .map_or(MUHLAT_TAWTHIQ, |thawani| Duration::from_secs(thawani).min(MUHLAT_TAWTHIQ)),
-        fasil: radd.fasil.map_or(FASIL_ISTITLA, Duration::from_secs).clamp(ADNA_FASIL, AQSA_FASIL),
+        yantahi_baad: radd.yantahi.map_or(MUHLAT_TAWTHIQ, |thawani| {
+            Duration::from_secs(thawani).min(MUHLAT_TAWTHIQ)
+        }),
+        fasil: radd
+            .fasil
+            .map_or(FASIL_ISTITLA, Duration::from_secs)
+            .clamp(ADNA_FASIL, AQSA_FASIL),
     })
 }
 
@@ -892,19 +925,22 @@ pub async fn akmil_tawthiq(
 
         match istitla(amil, idadat, talab).await? {
             HalatIstitla::Ramz(ramz) => return Ok(*ramz),
-            HalatIstitla::Muntazir => {}
+            HalatIstitla::Muntazir => {},
             HalatIstitla::Abti => {
                 fasil = fasil.saturating_add(ZIYADAT_TABTEE).min(AQSA_FASIL);
-                tracing::debug!(thawani = fasil.as_secs(), "the server asked for a slower poll");
-            }
+                tracing::debug!(
+                    thawani = fasil.as_secs(),
+                    "the server asked for a slower poll"
+                );
+            },
             HalatIstitla::Muntahi => {
                 return Err(KhataTaqdeem::TawthiqFashil {
                     sabab: "the device code expired before it was approved".to_owned(),
                 });
-            }
+            },
             HalatIstitla::Marfud(sabab) => {
                 return Err(KhataTaqdeem::TawthiqFashil { sabab });
-            }
+            },
         }
     }
 
@@ -946,8 +982,7 @@ fn hala_min_khata(khata: &str, wasf: Option<&str>) -> HalatIstitla {
                 .to_owned(),
         ),
         "unsupported_grant_type" => HalatIstitla::Marfud(
-            "the authorisation server does not accept the device grant at this endpoint"
-                .to_owned(),
+            "the authorisation server does not accept the device grant at this endpoint".to_owned(),
         ),
         "incorrect_device_code" => HalatIstitla::Marfud(
             "the authorisation server no longer recognises this device code; start the \
@@ -985,7 +1020,10 @@ async fn istitla(
     .await?;
     let (hala, bayt) = (radd_khaam.hala, radd_khaam.bayt);
     let Ok(radd) = serde_json::from_slice::<RaddRamz>(&bayt) else {
-        return Err(KhataTaqdeem::MustawdaRafad { amal, sabab: iqtibas(hala, &bayt) });
+        return Err(KhataTaqdeem::MustawdaRafad {
+            amal,
+            sabab: iqtibas(hala, &bayt),
+        });
     };
 
     if let Some(khata) = radd.khata.as_deref() {
@@ -998,7 +1036,10 @@ async fn istitla(
             return Ok(HalatIstitla::Abti);
         }
         if !hala.is_success() {
-            return Err(KhataTaqdeem::MustawdaRafad { amal, sabab: iqtibas(hala, &bayt) });
+            return Err(KhataTaqdeem::MustawdaRafad {
+                amal,
+                sabab: iqtibas(hala, &bayt),
+            });
         }
         return Ok(HalatIstitla::Muntazir);
     }
@@ -1135,8 +1176,7 @@ impl RaddMahdud {
         if self.hala == reqwest::StatusCode::TOO_MANY_REQUESTS {
             return true;
         }
-        self.hala == reqwest::StatusCode::FORBIDDEN
-            && (self.baad.is_some() || self.baqi == Some(0))
+        self.hala == reqwest::StatusCode::FORBIDDEN && (self.baad.is_some() || self.baqi == Some(0))
     }
 
     /// Whether this refusal is transient in a way that says nothing about
@@ -1162,7 +1202,10 @@ impl RaddMahdud {
         // gateway failure would park the submission until the top of the hour.
         let hatta =
             (self.baqi == Some(0)).then(|| self.istiada.map(|hadd| thawani_hatta(hadd, alan)));
-        let matlub = self.baad.map(Duration::from_secs).or_else(|| hatta.flatten());
+        let matlub = self
+            .baad
+            .map(Duration::from_secs)
+            .or_else(|| hatta.flatten());
         // A rate-limit refusal that names no wait at all is the secondary
         // limiter, for which the forge's own guidance is a minute before trying
         // again — the exponential schedule alone would come back in half a
@@ -1187,7 +1230,9 @@ fn taraju(muhawala: u32) -> Duration {
     // 500ms past 120s, so the ceiling below is what actually caps the wait and
     // not this. Across the four attempts a request is given, the schedule never
     // gets past four seconds anyway.
-    ASAS_TARAJU.saturating_mul(1_u32 << muhawala.min(8)).min(AQSA_TARAJU)
+    ASAS_TARAJU
+        .saturating_mul(1_u32 << muhawala.min(8))
+        .min(AQSA_TARAJU)
 }
 
 /// How long until an absolute epoch second, never negative.
@@ -1232,10 +1277,13 @@ async fn iqra_radd(
 
     let mut bayt: Vec<u8> = Vec::new();
     loop {
-        let qita = radd.chunk().await.map_err(|khata| KhataTaqdeem::MustawdaRafad {
-            amal,
-            sabab: khata.to_string(),
-        })?;
+        let qita = radd
+            .chunk()
+            .await
+            .map_err(|khata| KhataTaqdeem::MustawdaRafad {
+                amal,
+                sabab: khata.to_string(),
+            })?;
         let Some(qita) = qita else { break };
         let majmu = u64::try_from(bayt.len().saturating_add(qita.len())).unwrap_or(u64::MAX);
         if majmu > hadd {
@@ -1247,7 +1295,13 @@ async fn iqra_radd(
         bayt.extend_from_slice(&qita);
     }
 
-    Ok(RaddMahdud { hala, bayt, baqi, istiada, baad })
+    Ok(RaddMahdud {
+        hala,
+        bayt,
+        baqi,
+        istiada,
+        baad,
+    })
 }
 
 /// Sends a request, retrying under `siyasa` while the forge says it did not act
@@ -1284,7 +1338,10 @@ where
                 // the request at all, so only a policy that says the request is
                 // repeatable may repeat it.
                 let sabab = khata.to_string();
-                akhir = Some(KhataTaqdeem::MustawdaRafad { amal, sabab: sabab.clone() });
+                akhir = Some(KhataTaqdeem::MustawdaRafad {
+                    amal,
+                    sabab: sabab.clone(),
+                });
                 if siyasa == SiyasatItada::Aid && muhawala.saturating_add(1) < ADAD_MUHAWALAT_TALAB
                 {
                     tracing::debug!(amal, muhawala, %sabab, "retrying after a transport failure");
@@ -1292,7 +1349,7 @@ where
                     continue;
                 }
                 break;
-            }
+            },
         };
 
         let mahdud = iqra_radd(radd, hadd, amal).await?;
@@ -1362,8 +1419,12 @@ pub async fn hawiya_muwaththaqa(
     let amal = "reading the authenticated identity";
     let rabt = idadat.qalab_tadqiq.mila(&[])?;
     let tarwisa = ramz.tarwisa();
-    let radd: RaddHawiya =
-        jalb_json(|| tarwisat_api(amil.get(&rabt), &tarwisa), SiyasatItada::Aid, amal).await?;
+    let radd: RaddHawiya = jalb_json(
+        || tarwisat_api(amil.get(&rabt), &tarwisa),
+        SiyasatItada::Aid,
+        amal,
+    )
+    .await?;
     let Some(login) = radd.ism() else {
         return Err(KhataTaqdeem::MustawdaRafad {
             amal,
@@ -1395,8 +1456,11 @@ pub async fn shawka(
         .qalab_shawkati
         .mila(&[("malik_shawka", login), ("mustawda", &idadat.mustawda)])?;
     let tarwisa = ramz.tarwisa();
-    let rabt_shawka =
-        || idadat.qalab_git_shawka.mila(&[("malik_shawka", login), ("mustawda", &idadat.mustawda)]);
+    let rabt_shawka = || {
+        idadat
+            .qalab_git_shawka
+            .mila(&[("malik_shawka", login), ("mustawda", &idadat.mustawda)])
+    };
 
     let amal = "looking for an existing fork";
     let radd = arsil(
@@ -1414,7 +1478,10 @@ pub async fn shawka(
     // either as "no fork" would go on to attempt a creation that fails for the
     // same reason, reporting the wrong step as the one that broke.
     if radd.hala != reqwest::StatusCode::NOT_FOUND {
-        return Err(KhataTaqdeem::MustawdaRafad { amal, sabab: iqtibas(radd.hala, &radd.bayt) });
+        return Err(KhataTaqdeem::MustawdaRafad {
+            amal,
+            sabab: iqtibas(radd.hala, &radd.bayt),
+        });
     }
 
     let amal = "creating a fork of the registry";
@@ -1422,10 +1489,7 @@ pub async fn shawka(
         .qalab_shawka
         .mila(&[("malik", &idadat.malik), ("mustawda", &idadat.mustawda)])?;
     let radd = arsil(
-        || {
-            tarwisat_api(amil.post(&insha), &tarwisa)
-                .header(reqwest::header::CONTENT_LENGTH, 0)
-        },
+        || tarwisat_api(amil.post(&insha), &tarwisa).header(reqwest::header::CONTENT_LENGTH, 0),
         // Forking a repository already forked answers with the existing fork
         // rather than making a second one, so an unanswered attempt is safe to
         // make again.
@@ -1435,7 +1499,10 @@ pub async fn shawka(
     )
     .await?;
     if !radd.najah() {
-        return Err(KhataTaqdeem::MustawdaRafad { amal, sabab: iqtibas(radd.hala, &radd.bayt) });
+        return Err(KhataTaqdeem::MustawdaRafad {
+            amal,
+            sabab: iqtibas(radd.hala, &radd.bayt),
+        });
     }
 
     // A fork is created asynchronously on every forge this transport targets,
@@ -1490,7 +1557,9 @@ pub async fn irfa_ila_tajheez(
         });
     }
     if bayt.is_empty() {
-        return Err(KhataTaqdeem::BayanNaqis { haql: "a package with bytes in it" });
+        return Err(KhataTaqdeem::BayanNaqis {
+            haql: "a package with bytes in it",
+        });
     }
 
     let rabt = idadat.qalab_tajheez.mila(&[("ism", ism)])?;
@@ -1685,7 +1754,9 @@ pub async fn iftah_talab_damj(
 pub fn tahaqquq_basma(bayt: &[u8], mutawaqqa: Basma) -> NatijatTaqdeem<()> {
     let ruqaa = Ruqaa::iftah(bayt).map_err(|khata| {
         tracing::error!(%khata, "the package about to be uploaded would not open");
-        KhataTaqdeem::BayanNaqis { haql: "a package this build can read back" }
+        KhataTaqdeem::BayanNaqis {
+            haql: "a package this build can read back",
+        }
     })?;
     let mawjuda = Basma::min_bayt(*ruqaa.basma());
     if mawjuda != mutawaqqa {
@@ -1718,7 +1789,9 @@ pub fn akhtim_musahim(
     let basma = {
         let ruqaa = Ruqaa::iftah(huzma.bayt.bayt()).map_err(|khata| {
             tracing::error!(%khata, "the compiled package would not reopen for sealing");
-            KhataTaqdeem::BayanNaqis { haql: "a package this build can read back" }
+            KhataTaqdeem::BayanNaqis {
+                haql: "a package this build can read back",
+            }
         })?;
         *ruqaa.basma()
     };
@@ -1734,7 +1807,9 @@ pub fn akhtim_musahim(
 
     huzma.akhtim(&kutla, &MudaqqiqEd25519).map_err(|khata| {
         tracing::error!(%khata, "the contributor self-signature did not seal the package");
-        KhataTaqdeem::BayanNaqis { haql: "a package that seals under the contributor's own key" }
+        KhataTaqdeem::BayanNaqis {
+            haql: "a package that seals under the contributor's own key",
+        }
     })?;
     Ok(Basma::min_bayt(basma))
 }
@@ -1910,7 +1985,10 @@ pub fn wasf_talab_damj(
     if !wasf.trim().is_empty() {
         let _ = writeln!(matn, "### From the contributor\n\n{}\n", wasf.trim());
     }
-    if let Some(sijill) = sijill_taghyeer.map(str::trim).filter(|nass| !nass.is_empty()) {
+    if let Some(sijill) = sijill_taghyeer
+        .map(str::trim)
+        .filter(|nass| !nass.is_empty())
+    {
         let _ = writeln!(matn, "### Changes since the last revision\n\n{sijill}");
     }
     matn
@@ -1947,19 +2025,21 @@ pub fn adif_ila_shareeha(
             if let Some(khana) = qaima.get_mut(mawqi) {
                 *khana = record.clone();
             }
-        }
+        },
         None => qaima.push(record.clone()),
     }
     qaima.sort_by(|awwal, thani| {
-        awwal.id.cmp(&thani.id).then_with(|| awwal.murajaa.cmp(&thani.murajaa))
+        awwal
+            .id
+            .cmp(&thani.id)
+            .then_with(|| awwal.murajaa.cmp(&thani.murajaa))
     });
 
-    let mut bayt = serde_json::to_vec_pretty(&muhtawa).map_err(|khata| {
-        KhataTaqdeem::MustawdaRafad {
+    let mut bayt =
+        serde_json::to_vec_pretty(&muhtawa).map_err(|khata| KhataTaqdeem::MustawdaRafad {
             amal,
             sabab: format!("the shard will not serialize: {khata}"),
-        }
-    })?;
+        })?;
     bayt.push(b'\n');
     Ok(bayt)
 }
@@ -1990,7 +2070,10 @@ struct MudkhalGit {
 
 /// A git failure, as this crate's.
 fn khata_git(amal: &'static str, khata: &git2::Error) -> KhataTaqdeem {
-    KhataTaqdeem::MustawdaRafad { amal, sabab: khata.message().to_owned() }
+    KhataTaqdeem::MustawdaRafad {
+        amal,
+        sabab: khata.message().to_owned(),
+    }
 }
 
 /// Fetches the base branch, writes the shard, commits, and pushes the branch to
@@ -2021,7 +2104,9 @@ fn adfa(mudkhal: &MudkhalGit) -> NatijatTaqdeem<String> {
         .find_reference(MARJI_ASAS)
         .and_then(|marji| marji.peel_to_commit())
         .map_err(|khata| khata_git("reading the registry base branch", &khata))?;
-    let jidhr = asas.tree().map_err(|khata| khata_git("reading the registry tree", &khata))?;
+    let jidhr = asas
+        .tree()
+        .map_err(|khata| khata_git("reading the registry tree", &khata))?;
 
     let sabiqa = jidhr
         .get_name(MUJALLAD_SHARAIH)
@@ -2043,7 +2128,11 @@ fn adfa(mudkhal: &MudkhalGit) -> NatijatTaqdeem<String> {
         .treebuilder(sabiqa.as_ref())
         .map_err(|khata| khata_git("building the shard directory", &khata))?;
     let _ = bani_sharaih
-        .insert(&mudkhal.ism_shareeha, kutla, i32::from(git2::FileMode::Blob))
+        .insert(
+            &mudkhal.ism_shareeha,
+            kutla,
+            i32::from(git2::FileMode::Blob),
+        )
         .map_err(|khata| khata_git("building the shard directory", &khata))?;
     let sharaih = bani_sharaih
         .write()
@@ -2068,7 +2157,12 @@ fn adfa(mudkhal: &MudkhalGit) -> NatijatTaqdeem<String> {
         .commit(None, &tawqee, &tawqee, &mudkhal.risala, &shajara, &[&asas])
         .map_err(|khata| khata_git("committing the metadata record", &khata))?;
     let _ = mustawda
-        .reference(&format!("refs/heads/{}", mudkhal.far), iltizam, true, "taarib submission")
+        .reference(
+            &format!("refs/heads/{}", mudkhal.far),
+            iltizam,
+            true,
+            "taarib submission",
+        )
         .map_err(|khata| khata_git("creating the submission branch", &khata))?;
 
     let mut dafa = git2::PushOptions::new();
@@ -2236,14 +2330,14 @@ impl DaftarIrsal {
             Ok(bayt) => bayt,
             Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
                 return Ok(Self::default());
-            }
+            },
             Err(sabab) => {
                 return Err(KhataTaqdeem::KhataMalaf {
                     masar: masar.to_path_buf(),
                     amal: "reading the submission ledger",
                     sabab,
                 });
-            }
+            },
         };
         serde_json::from_slice(&bayt).map_err(|khata| KhataTaqdeem::KhataMalaf {
             masar: masar.to_path_buf(),
@@ -2290,7 +2384,10 @@ impl DaftarIrsal {
     /// Every submission that never reached the owner's queue.
     #[must_use]
     pub fn ghayr_muktamila(&self) -> Vec<&SijillIrsal> {
-        self.sijillat.values().filter(|sijill| !sijill.wasalat()).collect()
+        self.sijillat
+            .values()
+            .filter(|sijill| !sijill.wasalat())
+            .collect()
     }
 }
 
@@ -2415,8 +2512,11 @@ async fn ajri(
     let ism = ism_shareeha(raqm).map_err(|_| KhataTaqdeem::BayanNaqis {
         haql: "a shard index inside the registry layout",
     })?;
-    let ism_huzma =
-        format!("{}-r{}-{basma}.ruqaa", talab.record.id, talab.record.murajaa.qeema());
+    let ism_huzma = format!(
+        "{}-r{}-{basma}.ruqaa",
+        talab.record.id,
+        talab.record.murajaa.qeema()
+    );
     sijill.taqaddum(MarhalatIrsal::Bayanat);
 
     let amil = bina_amil(MUHLAT_TALAB)?;
@@ -2438,11 +2538,17 @@ async fn ajri(
         record.murajaa.qeema()
     );
     if !juz_salih(&far) {
-        return Err(KhataTaqdeem::BayanNaqis { haql: "a branch name this build will push" });
+        return Err(KhataTaqdeem::BayanNaqis {
+            haql: "a branch name this build will push",
+        });
     }
 
-    let unwan =
-        format!("{} — {} r{}", talab.ism_luba, record.unwan, record.murajaa.qeema());
+    let unwan = format!(
+        "{} — {} r{}",
+        talab.ism_luba,
+        record.unwan,
+        record.murajaa.qeema()
+    );
     let matn = talab.matn_talab.clone();
 
     let mudkhal = MudkhalGit {
@@ -2460,12 +2566,12 @@ async fn ajri(
         record: record.clone(),
         risala: format!("{unwan}\n\nShard {raqm:02x}; content hash {basma}."),
     };
-    let iltizam = tokio::task::spawn_blocking(move || adfa(&mudkhal)).await.map_err(|khata| {
-        KhataTaqdeem::MustawdaRafad {
+    let iltizam = tokio::task::spawn_blocking(move || adfa(&mudkhal))
+        .await
+        .map_err(|khata| KhataTaqdeem::MustawdaRafad {
             amal: "pushing the submission branch",
             sabab: khata.to_string(),
-        }
-    })??;
+        })??;
     sijill.far = Some(far.clone());
     sijill.taqaddum(MarhalatIrsal::Far);
 
@@ -2488,7 +2594,6 @@ async fn ajri(
     })
 }
 
-
 #[cfg(test)]
 mod ikhtibarat {
     use taarib_mustalahat::muharrik::{AilatMuharrik, KhalfiyaBarmajiya, Tabaqa};
@@ -2504,8 +2609,7 @@ mod ikhtibarat {
     /// `docs/mustawda.md` §7.2 writes it: a release-asset upload addressed by
     /// the release's numeric identifier, with the staging marker carried in the
     /// asset name because the path has nowhere to put it.
-    const RAFA_GITHUB: &str =
-        "https://uploads.github.com/repos/cc1a2b/taarib-registry/releases/301442889/assets\
+    const RAFA_GITHUB: &str = "https://uploads.github.com/repos/cc1a2b/taarib-registry/releases/301442889/assets\
          ?name=tajheez-{ism}";
 
     fn tawthiq(muarrif: &str) -> IdadatTawthiq {
@@ -2526,9 +2630,7 @@ mod ikhtibarat {
             far_asasi: "main".to_owned(),
             bidayat_far: "taqdeem".to_owned(),
             rabt_git: "https://github.com/cc1a2b/taarib-registry.git".to_owned(),
-            qalab_git_shawka: QalabRabt::jadeed(
-                "https://github.com/{malik_shawka}/{mustawda}.git",
-            ),
+            qalab_git_shawka: QalabRabt::jadeed("https://github.com/{malik_shawka}/{mustawda}.git"),
             qalab_shawkati: QalabRabt::jadeed(
                 "https://api.github.com/repos/{malik_shawka}/{mustawda}",
             ),
@@ -2590,7 +2692,14 @@ mod ikhtibarat {
 
     #[test]
     fn hashw_alqalab_yuqal_ghayr_muhayya_aydan() {
-        for hashw in ["TODO", "changeme", "your-client-id", "<client id>", "xxxxxxxx", "Iv1"] {
+        for hashw in [
+            "TODO",
+            "changeme",
+            "your-client-id",
+            "<client id>",
+            "xxxxxxxx",
+            "Iv1",
+        ] {
             assert!(
                 !muarrif_muhayya(hashw),
                 "`{hashw}` is what a half-filled settings file holds, not an identifier"
@@ -2600,8 +2709,14 @@ mod ikhtibarat {
 
     #[test]
     fn muarrif_haqiqi_yajtaz() {
-        assert!(muarrif_muhayya(MUARRIF_HAQIQI), "the shape the forge issues today");
-        assert!(muarrif_muhayya("Iv23liAbCdEfGhIjKlMn"), "the GitHub App shape");
+        assert!(
+            muarrif_muhayya(MUARRIF_HAQIQI),
+            "the shape the forge issues today"
+        );
+        assert!(
+            muarrif_muhayya("Iv23liAbCdEfGhIjKlMn"),
+            "the GitHub App shape"
+        );
         assert!(
             muarrif_muhayya(&"a1b2c3d4".repeat(8)),
             "the sixty-four hex characters a self-hosted forge issues"
@@ -2615,10 +2730,19 @@ mod ikhtibarat {
         // The point of the whole exercise: with no client identifier at all,
         // every part of the transport that is not the device flow still builds,
         // validates and answers. Only `tawthiq` refuses.
-        let idadat = IdadatIrsal { tawthiq: tawthiq(""), mustawda: mustawda(RAFA_GITHUB) };
+        let idadat = IdadatIrsal {
+            tawthiq: tawthiq(""),
+            mustawda: mustawda(RAFA_GITHUB),
+        };
         assert!(!idadat.muhayya());
-        assert!(idadat.mustawda.tahaqquq().is_ok(), "the repository half needs no client id");
-        assert!(bina_amil(MUHLAT_TALAB).is_ok(), "the HTTP client needs no client id");
+        assert!(
+            idadat.mustawda.tahaqquq().is_ok(),
+            "the repository half needs no client id"
+        );
+        assert!(
+            bina_amil(MUHLAT_TALAB).is_ok(),
+            "the HTTP client needs no client id"
+        );
         assert!(
             idadat
                 .mustawda
@@ -2647,7 +2771,9 @@ mod ikhtibarat {
     fn qalab_yamla_kul_alhuqul() {
         let qalab = QalabRabt::jadeed("https://api.github.com/repos/{malik}/{mustawda}/pulls");
         assert_eq!(
-            qalab.mila(&[("malik", "cc1a2b"), ("mustawda", "taarib-registry")]).ok(),
+            qalab
+                .mila(&[("malik", "cc1a2b"), ("mustawda", "taarib-registry")])
+                .ok(),
             Some("https://api.github.com/repos/cc1a2b/taarib-registry/pulls".to_owned())
         );
     }
@@ -2666,7 +2792,10 @@ mod ikhtibarat {
     #[test]
     fn qalab_yarfud_haqlan_lam_yumla_wa_ghayr_https() {
         let naqis = QalabRabt::jadeed("https://x/{malik}/{mustawda}");
-        assert!(naqis.mila(&[("malik", "cc1a2b")]).is_err(), "an unfilled placeholder");
+        assert!(
+            naqis.mila(&[("malik", "cc1a2b")]).is_err(),
+            "an unfilled placeholder"
+        );
         let sarih = QalabRabt::jadeed("http://api.github.com/x");
         assert!(sarih.mila(&[]).is_err(), "cleartext");
     }
@@ -2687,7 +2816,9 @@ mod ikhtibarat {
 
     #[test]
     fn nuqtat_rafa_tusammi_altajheez_maqbula() {
-        assert!(qabul_tajheez("https://forge.example/api/tajheez/upload?name=x"));
+        assert!(qabul_tajheez(
+            "https://forge.example/api/tajheez/upload?name=x"
+        ));
     }
 
     #[test]
@@ -2702,8 +2833,13 @@ mod ikhtibarat {
             matches!(khata, Some(KhataTaqdeem::BayanNaqis { .. })),
             "an unmarked upload endpoint is a refusal"
         );
-        let Some(KhataTaqdeem::BayanNaqis { haql }) = khata else { return };
-        assert!(haql.contains("tajheez-"), "the refusal has to say what to write: {haql}");
+        let Some(KhataTaqdeem::BayanNaqis { haql }) = khata else {
+            return;
+        };
+        assert!(
+            haql.contains("tajheez-"),
+            "the refusal has to say what to write: {haql}"
+        );
     }
 
     #[test]
@@ -2713,7 +2849,10 @@ mod ikhtibarat {
             "https://github.com/cc1a2b/taarib-registry/releases/download/tajheez/x.ruqaa",
             "https://forge.example/api/objects/put",
         ] {
-            assert!(!qabul_tajheez(radee), "`{radee}` is not somewhere a package may be staged");
+            assert!(
+                !qabul_tajheez(radee),
+                "`{radee}` is not somewhere a package may be staged"
+            );
             assert!(matches!(
                 mustawda(radee).tahaqquq(),
                 Err(KhataTaqdeem::BayanNaqis { .. })
@@ -2779,7 +2918,10 @@ mod ikhtibarat {
             url: None,
         });
         let mawqi = radd.rabt().unwrap_or_default();
-        assert!(mawqi.contains(MASAR_TAJHEEZ), "the public address, not the API handle: {mawqi}");
+        assert!(
+            mawqi.contains(MASAR_TAJHEEZ),
+            "the public address, not the API handle: {mawqi}"
+        );
         assert!(!mawqi.contains("api.github.com"));
     }
 
@@ -2840,35 +2982,65 @@ mod ikhtibarat {
 
     #[test]
     fn khata_jihaz_yufassar_min_aljism_la_min_alhala() {
-        assert!(matches!(hala_min_khata("authorization_pending", None), HalatIstitla::Muntazir));
-        assert!(matches!(hala_min_khata("slow_down", None), HalatIstitla::Abti));
+        assert!(matches!(
+            hala_min_khata("authorization_pending", None),
+            HalatIstitla::Muntazir
+        ));
+        assert!(matches!(
+            hala_min_khata("slow_down", None),
+            HalatIstitla::Abti
+        ));
         // Both spellings of the same answer: the forge's table and its prose
         // disagree, and a client that read one of them would report an expiry
         // as an unknown failure.
-        assert!(matches!(hala_min_khata("expired_token", None), HalatIstitla::Muntahi));
-        assert!(matches!(hala_min_khata("token_expired", None), HalatIstitla::Muntahi));
+        assert!(matches!(
+            hala_min_khata("expired_token", None),
+            HalatIstitla::Muntahi
+        ));
+        assert!(matches!(
+            hala_min_khata("token_expired", None),
+            HalatIstitla::Muntahi
+        ));
     }
 
     #[test]
     fn khata_jihaz_alghayr_muhayya_yusammi_almashghil() {
         let hala = hala_min_khata("device_flow_disabled", None);
-        assert!(matches!(hala, HalatIstitla::Marfud(_)), "a disabled device flow is a refusal");
-        let HalatIstitla::Marfud(sabab) = hala else { return };
+        assert!(
+            matches!(hala, HalatIstitla::Marfud(_)),
+            "a disabled device flow is a refusal"
+        );
+        let HalatIstitla::Marfud(sabab) = hala else {
+            return;
+        };
         assert!(sabab.contains("device flow enabled"), "{sabab}");
         assert!(sabab.contains("registry operator"), "{sabab}");
 
         let hala = hala_min_khata("incorrect_client_credentials", None);
-        assert!(matches!(hala, HalatIstitla::Marfud(_)), "an unrecognised client id is a refusal");
-        let HalatIstitla::Marfud(sabab) = hala else { return };
+        assert!(
+            matches!(hala, HalatIstitla::Marfud(_)),
+            "an unrecognised client id is a refusal"
+        );
+        let HalatIstitla::Marfud(sabab) = hala else {
+            return;
+        };
         assert!(sabab.contains("client identifier"), "{sabab}");
-        assert!(!sabab.contains("incorrect_client_credentials"), "not the raw code: {sabab}");
+        assert!(
+            !sabab.contains("incorrect_client_credentials"),
+            "not the raw code: {sabab}"
+        );
     }
 
     #[test]
     fn khata_jihaz_majhul_yunqal_kama_wasal() {
         let hala = hala_min_khata("something_new", Some("the forge added a code"));
-        assert!(matches!(hala, HalatIstitla::Marfud(_)), "an unknown code is still a refusal");
-        let HalatIstitla::Marfud(sabab) = hala else { return };
+        assert!(
+            matches!(hala, HalatIstitla::Marfud(_)),
+            "an unknown code is still a refusal"
+        );
+        let HalatIstitla::Marfud(sabab) = hala else {
+            return;
+        };
         assert!(sabab.contains("something_new"), "{sabab}");
         assert!(sabab.contains("the forge added a code"), "{sabab}");
     }
@@ -2890,11 +3062,17 @@ mod ikhtibarat {
 
         let mut thanawi = radd_khaam(403);
         thanawi.baad = Some(60);
-        assert!(thanawi.hadd_muadal(), "a secondary limit answers 403 with retry-after");
+        assert!(
+            thanawi.hadd_muadal(),
+            "a secondary limit answers 403 with retry-after"
+        );
 
         let mut mamnu = radd_khaam(403);
         mamnu.baqi = Some(4998);
-        assert!(!mamnu.hadd_muadal(), "a plain 403 is a permissions refusal, not a limit");
+        assert!(
+            !mamnu.hadd_muadal(),
+            "a plain 403 is a permissions refusal, not a limit"
+        );
         assert!(!radd_khaam(404).hadd_muadal());
         assert!(!radd_khaam(422).hadd_muadal());
     }
@@ -2902,10 +3080,16 @@ mod ikhtibarat {
     #[test]
     fn alaarid_yatamayyaz_an_almarfud() {
         for hala in [408_u16, 500, 502, 503, 504] {
-            assert!(radd_khaam(hala).aarid(), "{hala} says nothing about whether it was acted on");
+            assert!(
+                radd_khaam(hala).aarid(),
+                "{hala} says nothing about whether it was acted on"
+            );
         }
         for hala in [400_u16, 401, 403, 404, 409, 422] {
-            assert!(!radd_khaam(hala).aarid(), "{hala} is an answer, not a hiccup");
+            assert!(
+                !radd_khaam(hala).aarid(),
+                "{hala} is an answer, not a hiccup"
+            );
         }
     }
 
@@ -2916,7 +3100,10 @@ mod ikhtibarat {
         assert_eq!(radd.intizar(0, 0), Some(Duration::from_secs(45)));
         // Never less than the server asked, even when the schedule is shorter.
         radd.baad = Some(1);
-        assert_eq!(radd.intizar(0, 0), Some(ASAS_TARAJU.max(Duration::from_secs(1))));
+        assert_eq!(
+            radd.intizar(0, 0),
+            Some(ASAS_TARAJU.max(Duration::from_secs(1)))
+        );
     }
 
     #[test]
@@ -2948,7 +3135,11 @@ mod ikhtibarat {
     fn intizar_atwal_min_alsaqf_yatawaqqaf() {
         let mut radd = radd_khaam(429);
         radd.baad = Some(AQSA_TARAJU.as_secs().saturating_add(1));
-        assert_eq!(radd.intizar(0, 0), None, "a submission is not held silent for that long");
+        assert_eq!(
+            radd.intizar(0, 0),
+            None,
+            "a submission is not held silent for that long"
+        );
     }
 
     #[test]
@@ -2961,7 +3152,11 @@ mod ikhtibarat {
 
     #[test]
     fn thawani_hatta_la_tasir_salba() {
-        assert_eq!(thawani_hatta(50, 100), Duration::ZERO, "a window already past is no wait");
+        assert_eq!(
+            thawani_hatta(50, 100),
+            Duration::ZERO,
+            "a window already past is no wait"
+        );
         assert_eq!(thawani_hatta(150, 100), Duration::from_secs(50));
     }
 
@@ -2973,8 +3168,14 @@ mod ikhtibarat {
     fn ramz_yarfud_ma_la_yukhzan() {
         assert!(RamzWusul::jadeed("", None).is_err(), "blank");
         assert!(RamzWusul::jadeed("   ", None).is_err(), "whitespace only");
-        assert!(RamzWusul::jadeed("gho_a\nb", None).is_err(), "a control character");
-        assert!(RamzWusul::jadeed("a".repeat(HADD_TUL_RAMZ + 1), None).is_err(), "over the limit");
+        assert!(
+            RamzWusul::jadeed("gho_a\nb", None).is_err(),
+            "a control character"
+        );
+        assert!(
+            RamzWusul::jadeed("a".repeat(HADD_TUL_RAMZ + 1), None).is_err(),
+            "over the limit"
+        );
         assert!(
             RamzWusul::jadeed("gho_x", Some("Bearer token".to_owned())).is_err(),
             "a scheme with a space in it"
@@ -2988,7 +3189,10 @@ mod ikhtibarat {
         let Ok(ramz) = ramz else { return };
         assert_eq!(ramz.tarwisa(), "Bearer gho_secretsecret");
         let mutba = format!("{ramz:?}");
-        assert!(!mutba.contains("gho_secretsecret"), "the secret must never print: {mutba}");
+        assert!(
+            !mutba.contains("gho_secretsecret"),
+            "the secret must never print: {mutba}"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -3000,7 +3204,10 @@ mod ikhtibarat {
         let tawil = "x".repeat(HADD_IQTIBAS * 2);
         let nass = iqtibas(reqwest::StatusCode::UNPROCESSABLE_ENTITY, tawil.as_bytes());
         assert!(nass.starts_with("HTTP 422: "));
-        assert!(nass.len() < tawil.len(), "a four-kilobyte error page is not quoted whole");
+        assert!(
+            nass.len() < tawil.len(),
+            "a four-kilobyte error page is not quoted whole"
+        );
     }
 
     fn sijill_tajribi(murajaa: u32) -> Option<MulakhkhasRuqaa> {
@@ -3039,8 +3246,13 @@ mod ikhtibarat {
     #[test]
     fn shareeha_tastabdil_almurajaa_alsabiqa() {
         let zawj = (sijill_tajribi(1), sijill_tajribi(2));
-        assert!(matches!(zawj, (Some(_), Some(_))), "the fixture record must build");
-        let (Some(sabiq), Some(lahiq)) = zawj else { return };
+        assert!(
+            matches!(zawj, (Some(_), Some(_))),
+            "the fixture record must build"
+        );
+        let (Some(sabiq), Some(lahiq)) = zawj else {
+            return;
+        };
         let luba = LubaId::min_uuid(uuid_thabit());
 
         let awwal = adif_ila_shareeha(&[], luba, &sabiq);
@@ -3051,8 +3263,15 @@ mod ikhtibarat {
         assert!(thani.is_ok());
         let thani = thani.unwrap_or_default();
         let nass = String::from_utf8_lossy(&thani);
-        assert_eq!(nass.matches("\"ism_musahim\"").count(), 1, "one lineage, one entry");
-        assert!(nass.contains("\"murajaa\": 2"), "the newer revision replaces the older");
+        assert_eq!(
+            nass.matches("\"ism_musahim\"").count(),
+            1,
+            "one lineage, one entry"
+        );
+        assert!(
+            nass.contains("\"murajaa\": 2"),
+            "the newer revision replaces the older"
+        );
     }
 
     #[test]
@@ -3102,13 +3321,19 @@ mod ikhtibarat_shabaka {
         let Ok(amil) = amil else { return };
 
         let radd = arsil(
-            || amil.get(HUDUD).header(reqwest::header::ACCEPT, "application/json"),
+            || {
+                amil.get(HUDUD)
+                    .header(reqwest::header::ACCEPT, "application/json")
+            },
             SiyasatItada::Aid,
             HADD_HAJM_ISTIJABA,
             "reading the rate limit",
         )
         .await;
-        assert!(radd.is_ok(), "a real https round trip must complete: {radd:?}");
+        assert!(
+            radd.is_ok(),
+            "a real https round trip must complete: {radd:?}"
+        );
         let Ok(radd) = radd else { return };
 
         assert!(radd.najah(), "HTTP {}", radd.hala.as_u16());
@@ -3118,7 +3343,8 @@ mod ikhtibarat_shabaka {
         assert!(radd.baqi.is_some(), "x-ratelimit-remaining was not read");
         assert!(radd.istiada.is_some(), "x-ratelimit-reset was not read");
         assert!(
-            radd.istiada.is_some_and(|hadd| hadd > jiff::Timestamp::now().as_second()),
+            radd.istiada
+                .is_some_and(|hadd| hadd > jiff::Timestamp::now().as_second()),
             "the window resets in the future"
         );
         assert!(!radd.bayt.is_empty(), "the body arrived");
@@ -3134,16 +3360,23 @@ mod ikhtibarat_shabaka {
         assert!(amil.is_ok(), "the TLS client must build");
         let ramz = RamzWusul::jadeed("ghp_notarealtokenatall", None);
         assert!(ramz.is_ok(), "the token must wrap");
-        let (Ok(amil), Ok(ramz)) = (amil, ramz) else { return };
+        let (Ok(amil), Ok(ramz)) = (amil, ramz) else {
+            return;
+        };
 
         let khata = hawiya_muwaththaqa(&amil, &tawthiq_ikhtibar(), &ramz).await;
         assert!(
             matches!(khata, Err(KhataTaqdeem::MustawdaRafad { .. })),
             "an unusable token is a named refusal: {khata:?}"
         );
-        let Err(KhataTaqdeem::MustawdaRafad { amal, sabab }) = khata else { return };
+        let Err(KhataTaqdeem::MustawdaRafad { amal, sabab }) = khata else {
+            return;
+        };
         assert_eq!(amal, "reading the authenticated identity");
-        assert!(sabab.starts_with("HTTP 401"), "the forge's own words: {sabab}");
+        assert!(
+            sabab.starts_with("HTTP 401"),
+            "the forge's own words: {sabab}"
+        );
     }
 
     fn tawthiq_ikhtibar() -> IdadatTawthiq {
@@ -3162,9 +3395,9 @@ mod ikhtibarat_shabaka {
     async fn shabaka_alhuzma_tursal_muqattaa_bitul_muallan() {
         // The upload body as the forge receives it: one declared length, the
         // octet-stream type, and every header the transport claims to send.
-        let bayt: Vec<u8> = (0..(HAJM_QITAA_RAFA * 2 + 7)).map(|n| {
-            u8::try_from(n % 251).unwrap_or(0)
-        }).collect();
+        let bayt: Vec<u8> = (0..(HAJM_QITAA_RAFA * 2 + 7))
+            .map(|n| u8::try_from(n % 251).unwrap_or(0))
+            .collect();
         let hajm = u64::try_from(bayt.len()).unwrap_or(0);
         let humula = Arc::new(bayt);
 
@@ -3183,7 +3416,10 @@ mod ikhtibarat_shabaka {
             "echoing the package upload",
         )
         .await;
-        assert!(radd.is_ok(), "the chunked body must reach a real server: {radd:?}");
+        assert!(
+            radd.is_ok(),
+            "the chunked body must reach a real server: {radd:?}"
+        );
         let Ok(radd) = radd else { return };
         assert!(radd.najah(), "HTTP {}", radd.hala.as_u16());
 
@@ -3191,9 +3427,18 @@ mod ikhtibarat_shabaka {
         // recognise, and the assertion is about what was sent, not about how
         // somebody else spells it back.
         let sada = String::from_utf8_lossy(&radd.bayt).to_ascii_lowercase();
-        assert!(sada.contains(&format!("\"content-length\": \"{hajm}\"")), "{sada}");
-        assert!(sada.contains("\"content-type\": \"application/octet-stream\""), "{sada}");
-        assert!(sada.contains("\"authorization\": \"bearer gho_ikhtibar\""), "{sada}");
+        assert!(
+            sada.contains(&format!("\"content-length\": \"{hajm}\"")),
+            "{sada}"
+        );
+        assert!(
+            sada.contains("\"content-type\": \"application/octet-stream\""),
+            "{sada}"
+        );
+        assert!(
+            sada.contains("\"authorization\": \"bearer gho_ikhtibar\""),
+            "{sada}"
+        );
         assert!(
             sada.contains(&format!(
                 "\"{}\": \"{}\"",
@@ -3222,7 +3467,10 @@ mod ikhtibarat_shabaka {
             "following redirects",
         )
         .await;
-        assert!(dakhil.is_ok_and(|radd| radd.najah()), "two hops are inside the ceiling");
+        assert!(
+            dakhil.is_ok_and(|radd| radd.najah()),
+            "two hops are inside the ceiling"
+        );
 
         let kharij = arsil(
             || amil.get("https://httpbin.org/redirect/6"),
@@ -3235,7 +3483,9 @@ mod ikhtibarat_shabaka {
             matches!(kharij, Err(KhataTaqdeem::MustawdaRafad { .. })),
             "past the ceiling is a refusal, not a longer walk"
         );
-        let Err(KhataTaqdeem::MustawdaRafad { sabab, .. }) = kharij else { return };
+        let Err(KhataTaqdeem::MustawdaRafad { sabab, .. }) = kharij else {
+            return;
+        };
         assert!(sabab.contains("redirect"), "{sabab}");
     }
 
@@ -3274,7 +3524,9 @@ mod ikhtibarat_shabaka {
         assert!(muada.is_ok_and(|radd| radd.hala.as_u16() == 503));
 
         // Three waits before the fourth attempt: 500ms, 1s, 2s.
-        let matluba = taraju(0).saturating_add(taraju(1)).saturating_add(taraju(2));
+        let matluba = taraju(0)
+            .saturating_add(taraju(1))
+            .saturating_add(taraju(2));
         assert!(
             mudda_muada >= matluba,
             "the retried call has to carry the backoff: {mudda_muada:?} < {matluba:?}"

@@ -450,7 +450,10 @@ impl Fahis for FahisBio4 {
     /// all the absence of evidence, which is [`HasilatFahs::la_shay`].
     fn ifhas(&self, siyaq: &SiyaqFahs<'_>) -> Natija<HasilatFahs> {
         if !siyaq.jidhr.exists() {
-            return Err(KhataMuharrik::JidhrMafqud { jidhr: siyaq.jidhr.to_path_buf() }.into());
+            return Err(KhataMuharrik::JidhrMafqud {
+                jidhr: siyaq.jidhr.to_path_buf(),
+            }
+            .into());
         }
 
         let mut hasila = HasilatFahs::la_shay();
@@ -554,7 +557,9 @@ fn fihi_hawiya(siyaq: &SiyaqFahs<'_>, jidhr: &Fahras) -> bool {
         if *mujallad {
             continue;
         }
-        let Ok(masar) = siyaq.dakhil(haqiqi) else { continue };
+        let Ok(masar) = siyaq.dakhil(haqiqi) else {
+            continue;
+        };
         hasad.daa(haqiqi, haqiqi.clone(), masar);
     }
     let mut hasila = HasilatFahs::la_shay();
@@ -588,12 +593,16 @@ fn masah(siyaq: &SiyaqFahs<'_>, bayanat: Option<&str>) -> Hasad {
         }
         let masar = match nisbi.as_deref() {
             Some(nisbi) => {
-                let Ok(masar) = siyaq.dakhil(nisbi) else { continue };
+                let Ok(masar) = siyaq.dakhil(nisbi) else {
+                    continue;
+                };
                 masar
-            }
+            },
             None => siyaq.jidhr.to_path_buf(),
         };
-        let Ok(madakhil) = fs::read_dir(&masar) else { continue };
+        let Ok(madakhil) = fs::read_dir(&masar) else {
+            continue;
+        };
 
         for (adad, madkhal) in madakhil.enumerate() {
             if adad >= AQSA_MADAKHIL_MUJALLAD || zurr >= AQSA_MADAKHIL_MASH {
@@ -614,7 +623,9 @@ fn masah(siyaq: &SiyaqFahs<'_>, bayanat: Option<&str>) -> Hasad {
                 }
                 continue;
             }
-            let Ok(kamil) = siyaq.dakhil(&dakhili) else { continue };
+            let Ok(kamil) = siyaq.dakhil(&dakhili) else {
+                continue;
+            };
             hasad.daa(ism, dakhili, kamil);
         }
     }
@@ -659,8 +670,12 @@ fn lfs(murashahun: &[Murashah], hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(tul) = tul_malaf(&murashah.masar) else { continue };
-        let Some(hajm) = tarwisat_lfs(&nafidha, tul) else { continue };
+        let Some(tul) = tul_malaf(&murashah.masar) else {
+            continue;
+        };
+        let Some(hajm) = tarwisat_lfs(&nafidha, tul) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Bio4,
             NawDaleel::TarwisatHawiya,
@@ -681,8 +696,12 @@ fn dict(murashahun: &[Murashah], hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(tul) = tul_malaf(&murashah.masar) else { continue };
-        let Some(tarwisa) = tarwisat_dict(&nafidha, tul) else { continue };
+        let Some(tul) = tul_malaf(&murashah.masar) else {
+            continue;
+        };
+        let Some(tarwisa) = tarwisat_dict(&nafidha, tul) else {
+            continue;
+        };
         hasila.sajjil_aila(
             AilatMuharrik::Bio4,
             NawDaleel::TarwisatHawiya,
@@ -705,7 +724,9 @@ fn tpl(murashahun: &[Murashah], hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(tarwisa) = tarwisat_tpl(&nafidha) else { continue };
+        let Some(tarwisa) = tarwisat_tpl(&nafidha) else {
+            continue;
+        };
         let tarteeb = if tarwisa.kabir {
             "big-endian, as the GameCube wrote it"
         } else {
@@ -735,7 +756,9 @@ fn udas(murashahun: &[Murashah], hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(kabir) = sihr_fi_ittijahayn(&nafidha, SIHR_UDAS) else { continue };
+        let Some(kabir) = sihr_fi_ittijahayn(&nafidha, SIHR_UDAS) else {
+            continue;
+        };
         let tarteeb = if kabir { "big-endian" } else { "little-endian" };
         hasila.sajjil_aila(
             AilatMuharrik::Bio4,
@@ -766,7 +789,9 @@ fn arshif(murashahun: &[Murashah], hasila: &mut HasilatFahs) {
         let Some(nafidha) = iqra_nafidha(&murashah.masar, 0, HAJM_TARWISA_HAWIYA) else {
             continue;
         };
-        let Some(sihr) = raqm32_kabir(&nafidha, 0) else { continue };
+        let Some(sihr) = raqm32_kabir(&nafidha, 0) else {
+            continue;
+        };
         if sihr != SIHR_U8 {
             continue;
         }
@@ -846,7 +871,12 @@ fn tarwisat_dict(nafidha: &[u8], tul: u64) -> Option<TarwisatDict> {
     if u64::from(nihayat_jadwal) > tul {
         return None;
     }
-    Some(TarwisatDict { bidhra, adad, asas_jadwal, nihayat_jadwal })
+    Some(TarwisatDict {
+        bidhra,
+        adad,
+        asas_jadwal,
+        nihayat_jadwal,
+    })
 }
 
 /// A `.tpl` header, once its table fields have been checked against its count.
@@ -880,7 +910,11 @@ fn tarwisat_tpl(nafidha: &[u8]) -> Option<TarwisatTpl> {
     if raqm32_sagheer(nafidha, 12)? != nihayat_jadwal {
         return None;
     }
-    Some(TarwisatTpl { adad, nihayat_jadwal, kabir })
+    Some(TarwisatTpl {
+        adad,
+        nihayat_jadwal,
+        kabir,
+    })
 }
 
 /// Whether the first four bytes are `matlub` in either byte order, and which.
@@ -911,11 +945,15 @@ const MUJALLADAT_BAYANAT: &[&str] = &["text", "etc", "font", "imagepack", "image
 
 /// Records the engine's data directory and what is inside it.
 fn binya(siyaq: &SiyaqFahs<'_>, nisbi: &str, hasila: &mut HasilatFahs) {
-    let Ok(masar) = siyaq.dakhil(nisbi) else { return };
+    let Ok(masar) = siyaq.dakhil(nisbi) else {
+        return;
+    };
     let dakhil = fahras_mujallad(&masar);
 
-    let mawjuda: Vec<&str> =
-        MUJALLADAT_BAYANAT.iter().filter_map(|ism| dakhil.mujallad(ism)).collect();
+    let mawjuda: Vec<&str> = MUJALLADAT_BAYANAT
+        .iter()
+        .filter_map(|ism| dakhil.mujallad(ism))
+        .collect();
     let marahil = dakhil.marahil();
     let kamila = dakhil.mujallad("text").is_some() && dakhil.mujallad("etc").is_some();
 
@@ -943,11 +981,17 @@ fn binya(siyaq: &SiyaqFahs<'_>, nisbi: &str, hasila: &mut HasilatFahs) {
         NawDaleel::BinyatMujallad,
         wasf,
         Some(nisbi.to_owned()),
-        if kamila { WAZN_BINYA_KAMILA } else { WAZN_ISM_MUJALLAD },
+        if kamila {
+            WAZN_BINYA_KAMILA
+        } else {
+            WAZN_ISM_MUJALLAD
+        },
     );
 
     for ism in ["imagepack", "imagepackhd"] {
-        let Some(haqiqi) = dakhil.mujallad(ism) else { continue };
+        let Some(haqiqi) = dakhil.mujallad(ism) else {
+            continue;
+        };
         hasila.sajjil(
             NawDaleel::BinyatMujallad,
             format!("`{haqiqi}`, where this engine keeps its packed screen images"),
@@ -1000,7 +1044,9 @@ fn tanfidhi(
         Some((nisbi, masar.to_path_buf()))
     });
     let Some((nisbi, masar)) = maqru else { return };
-    let Some(bayan) = bayan_tanfidhi(&masar) else { return };
+    let Some(bayan) = bayan_tanfidhi(&masar) else {
+        return;
+    };
 
     if let Some(mimariya) = bayan.mimariya {
         hasila.mimariya = Some(mimariya);
@@ -1041,7 +1087,9 @@ fn tanfidhi_min_binya(
 /// Returns whether the binary named this engine, because the copyright behind it
 /// only means something about *this* engine once it has.
 fn ism_dakhili(bayan: &BayanTanfidhi, nisbi: &str, hasila: &mut HasilatFahs) -> bool {
-    let Some(ism) = bayan.ism_dakhili.as_deref() else { return false };
+    let Some(ism) = bayan.ism_dakhili.as_deref() else {
+        return false;
+    };
     if !ism.eq_ignore_ascii_case(ISM_DAKHILI) {
         return false;
     }
@@ -1076,7 +1124,9 @@ fn ism_dakhili(bayan: &BayanTanfidhi, nisbi: &str, hasila: &mut HasilatFahs) -> 
 /// claim about this engine, and reading it off a binary that never said it was
 /// one would be exactly the confident wrong answer the module refuses elsewhere.
 fn huquq(bayan: &BayanTanfidhi, nisbi: &str, huwa: bool, hasila: &mut HasilatFahs) {
-    let Some(huquq) = bayan.huquq.as_deref() else { return };
+    let Some(huquq) = bayan.huquq.as_deref() else {
+        return;
+    };
     if !huquq.to_ascii_uppercase().contains("CAPCOM") {
         return;
     }
@@ -1093,7 +1143,9 @@ fn huquq(bayan: &BayanTanfidhi, nisbi: &str, huwa: bool, hasila: &mut HasilatFah
     if !huwa {
         return;
     }
-    let Some(sana) = sanat_akhira(huquq) else { return };
+    let Some(sana) = sanat_akhira(huquq) else {
+        return;
+    };
     hasila.isdar = Some(IsdarMuharrik {
         kabir: sana,
         sagheer: 0,
@@ -1117,7 +1169,9 @@ fn huquq(bayan: &BayanTanfidhi, nisbi: &str, huwa: bool, hasila: &mut HasilatFah
 
 /// Records the file version, and refuses to read an engine version out of it.
 fn isdar_malaf(bayan: &BayanTanfidhi, nisbi: &str, hasila: &mut HasilatFahs) {
-    let Some(khaam) = bayan.isdar_malaf.as_deref() else { return };
+    let Some(khaam) = bayan.isdar_malaf.as_deref() else {
+        return;
+    };
     hasila.sajjil(
         NawDaleel::BayanatMudmaja,
         format!(
@@ -1199,7 +1253,6 @@ impl Fahras {
             })
             .count()
     }
-
 }
 
 /// Lists one directory, bounded, and returns an empty index when it will not
@@ -1208,7 +1261,9 @@ impl Fahras {
 /// An unreadable directory is the absence of evidence rather than a failure:
 /// [`Fahis::ifhas`] is only allowed to fail for a root that is not there.
 fn fahras_mujallad(masar: &Path) -> Fahras {
-    let Ok(madakhil) = fs::read_dir(masar) else { return Fahras::default() };
+    let Ok(madakhil) = fs::read_dir(masar) else {
+        return Fahras::default();
+    };
     let mut fahras = Fahras::default();
     for (adad, madkhal) in madakhil.enumerate() {
         if adad >= AQSA_MADAKHIL_MUJALLAD {
@@ -1218,7 +1273,9 @@ fn fahras_mujallad(masar: &Path) -> Fahras {
         let khaam = madkhal.file_name();
         let Some(ism) = khaam.to_str() else { continue };
         let mujallad = huwa_mujallad(&madkhal);
-        fahras.madakhil.push((ism.to_ascii_lowercase(), ism.to_owned(), mujallad));
+        fahras
+            .madakhil
+            .push((ism.to_ascii_lowercase(), ism.to_owned(), mujallad));
     }
     fahras
 }
@@ -1262,22 +1319,22 @@ mod ikhtibarat {
 
     /// `BIO4/Font/common_j.fnt.lfs`, and its real length.
     const TARWISAT_LFS: [u8; 16] = [
-        0x52, 0x44, 0x4C, 0x58, 0xAA, 0xBA, 0xEE, 0xFE, 0x70, 0x08, 0x00, 0x00, 0xA8, 0x02,
-        0x00, 0x00,
+        0x52, 0x44, 0x4C, 0x58, 0xAA, 0xBA, 0xEE, 0xFE, 0x70, 0x08, 0x00, 0x00, 0xA8, 0x02, 0x00,
+        0x00,
     ];
     /// The length of that file on disk.
     const TUL_LFS: usize = 716;
 
     /// `BIO4/Etc/moji8.tpl` — the magic stored big-endian, one image.
     const TARWISAT_TPL_KABIR: [u8; 16] = [
-        0x12, 0x34, 0x56, 0x78, 0x01, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x14, 0x00,
-        0x00, 0x00,
+        0x12, 0x34, 0x56, 0x78, 0x01, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00,
+        0x00,
     ];
 
     /// `BIO4/SS/chs/f00a.tpl` — the same header with the magic byte-swapped.
     const TARWISAT_TPL_SAGHEER: [u8; 16] = [
-        0x78, 0x56, 0x34, 0x12, 0x01, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x14, 0x00,
-        0x00, 0x00,
+        0x78, 0x56, 0x34, 0x12, 0x01, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00,
+        0x00,
     ];
     /// The length of both of those files on disk.
     const TUL_TPL: usize = 64;
@@ -1285,8 +1342,8 @@ mod ikhtibarat {
     /// `BIO4/text/ENGLISH_WIN32.dct` — magic, version, seed, bucket pointer and
     /// bucket count.
     const TARWISAT_DICT: [u8; 20] = [
-        0x44, 0x49, 0x43, 0x54, 0x00, 0x10, 0x00, 0x00, 0x9F, 0x7D, 0xD5, 0x55, 0x07, 0x00,
-        0x00, 0x00, 0x93, 0x01, 0x00, 0x00,
+        0x44, 0x49, 0x43, 0x54, 0x00, 0x10, 0x00, 0x00, 0x9F, 0x7D, 0xD5, 0x55, 0x07, 0x00, 0x00,
+        0x00, 0x93, 0x01, 0x00, 0x00,
     ];
     /// The length of that file on disk.
     const TUL_DICT: usize = 10_824;
@@ -1339,8 +1396,11 @@ mod ikhtibarat {
 
     /// Decodes a hex fixture, dropping anything that is not a hex digit.
     fn min_sitteen(nass: &str) -> Vec<u8> {
-        let arqam: Vec<u8> =
-            nass.bytes().filter(u8::is_ascii_hexdigit).map(qeemat_raqm).collect();
+        let arqam: Vec<u8> = nass
+            .bytes()
+            .filter(u8::is_ascii_hexdigit)
+            .map(qeemat_raqm)
+            .collect();
         arqam
             .chunks_exact(2)
             .filter_map(|zawj| match zawj {
@@ -1394,12 +1454,32 @@ mod ikhtibarat {
 
     /// Lays out the shipped install's shape, with every real header in it.
     fn luba_kamila(jidhr: &Path) -> std::io::Result<()> {
-        iktub(jidhr, "Bin32/bio4.exe", &pe_bi_mawarid(&min_sitteen(MAWARID)))?;
-        iktub(jidhr, "BIO4/Font/common_j.fnt.lfs", &mamdud(&TARWISAT_LFS, TUL_LFS))?;
-        iktub(jidhr, "BIO4/text/ENGLISH_WIN32.dct", &mamdud(&TARWISAT_DICT, TUL_DICT))?;
-        iktub(jidhr, "BIO4/Etc/moji8.tpl", &mamdud(&TARWISAT_TPL_KABIR, TUL_TPL))?;
+        iktub(
+            jidhr,
+            "Bin32/bio4.exe",
+            &pe_bi_mawarid(&min_sitteen(MAWARID)),
+        )?;
+        iktub(
+            jidhr,
+            "BIO4/Font/common_j.fnt.lfs",
+            &mamdud(&TARWISAT_LFS, TUL_LFS),
+        )?;
+        iktub(
+            jidhr,
+            "BIO4/text/ENGLISH_WIN32.dct",
+            &mamdud(&TARWISAT_DICT, TUL_DICT),
+        )?;
+        iktub(
+            jidhr,
+            "BIO4/Etc/moji8.tpl",
+            &mamdud(&TARWISAT_TPL_KABIR, TUL_TPL),
+        )?;
         iktub(jidhr, "BIO4/Etc/core.udas", &mamdud(&TARWISAT_UDAS, 4096))?;
-        iktub(jidhr, "BIO4/iww/HomeButton2/homeBtn.arc", &mamdud(&TARWISAT_ARC, 4096))?;
+        iktub(
+            jidhr,
+            "BIO4/iww/HomeButton2/homeBtn.arc",
+            &mamdud(&TARWISAT_ARC, 4096),
+        )?;
         fs::create_dir_all(jidhr.join("BIO4/St0"))?;
         fs::create_dir_all(jidhr.join("BIO4/ImagePack"))?;
         fs::create_dir_all(jidhr.join("BIO4/ImagePackHD"))?;
@@ -1416,7 +1496,9 @@ mod ikhtibarat {
             nizam: NizamTashghil::Windows,
             beea: &beea,
         };
-        FahisBio4::jadeed().ifhas(&siyaq).unwrap_or_else(|_| HasilatFahs::la_shay())
+        FahisBio4::jadeed()
+            .ifhas(&siyaq)
+            .unwrap_or_else(|_| HasilatFahs::la_shay())
     }
 
     /// The strongest observation whose description contains `ibara`.
@@ -1447,7 +1529,11 @@ mod ikhtibarat {
         let hasila = ifhas(masrah.path());
 
         assert_eq!(hasila.aila, Some(AilatMuharrik::Bio4));
-        assert_eq!(hasila.aqwa(), WAZN_SIHR_LFS, "the RDLX header is the strongest signal");
+        assert_eq!(
+            hasila.aqwa(),
+            WAZN_SIHR_LFS,
+            "the RDLX header is the strongest signal"
+        );
         assert_eq!(hasila.mimariya, Some(Mimariya::X86));
 
         let isdar = hasila.isdar.unwrap_or_else(|| IsdarMuharrik {
@@ -1457,9 +1543,15 @@ mod ikhtibarat {
             khaam: String::new(),
             mushtaqq: false,
         });
-        assert_eq!(isdar.kabir, 2014, "the last year in the copyright is the build's year");
+        assert_eq!(
+            isdar.kabir, 2014,
+            "the last year in the copyright is the build's year"
+        );
         assert_eq!(isdar.khaam, "2014");
-        assert!(isdar.mushtaqq, "a year is derived, and must never outrank a version read");
+        assert!(
+            isdar.mushtaqq,
+            "a year is derived, and must never outrank a version read"
+        );
         Ok(())
     }
 
@@ -1486,7 +1578,11 @@ mod ikhtibarat {
             ("engine data directory", WAZN_BINYA_KAMILA),
             ("Nintendo's U8 archive", WAZN_ARSHIF_U8),
         ] {
-            assert_eq!(wazn_daleel(&hasila, ibara), Some(wazn), "missing or misweighted: {ibara}");
+            assert_eq!(
+                wazn_daleel(&hasila, ibara),
+                Some(wazn),
+                "missing or misweighted: {ibara}"
+            );
         }
         Ok(())
     }
@@ -1509,12 +1605,18 @@ mod ikhtibarat {
 
     /// Replaces the first occurrence of `sabiq` with an equally long `badil`.
     fn ibdal(kawm: &[u8], sabiq: &[u8], badil: &[u8]) -> Vec<u8> {
-        let Some(mawqi) = kawm.windows(sabiq.len()).position(|nafidha| nafidha == sabiq) else {
+        let Some(mawqi) = kawm
+            .windows(sabiq.len())
+            .position(|nafidha| nafidha == sabiq)
+        else {
             return kawm.to_vec();
         };
         let mut kharij = kawm.get(..mawqi).unwrap_or_default().to_vec();
         kharij.extend_from_slice(badil);
-        kharij.extend_from_slice(kawm.get(mawqi.saturating_add(sabiq.len())..).unwrap_or_default());
+        kharij.extend_from_slice(
+            kawm.get(mawqi.saturating_add(sabiq.len())..)
+                .unwrap_or_default(),
+        );
         kharij
     }
 
@@ -1538,8 +1640,14 @@ mod ikhtibarat {
         let hasila = ifhas(masrah.path());
 
         assert!(wazn_daleel(&hasila, "`InternalName` as `BIO4`").is_none());
-        assert_eq!(wazn_daleel(&hasila, "names the publisher and not the engine"), Some(70));
-        assert!(hasila.isdar.is_none(), "a year was taken off a binary that never named itself");
+        assert_eq!(
+            wazn_daleel(&hasila, "names the publisher and not the engine"),
+            Some(70)
+        );
+        assert!(
+            hasila.isdar.is_none(),
+            "a year was taken off a binary that never named itself"
+        );
         Ok(())
     }
 
@@ -1552,7 +1660,11 @@ mod ikhtibarat {
         let hasila = ifhas(masrah.path());
 
         let tanfidhi = hasila.tanfidhi.unwrap_or_default();
-        assert!(tanfidhi.ends_with("Bin32/bio4.exe"), "{}", tanfidhi.display());
+        assert!(
+            tanfidhi.ends_with("Bin32/bio4.exe"),
+            "{}",
+            tanfidhi.display()
+        );
         Ok(())
     }
 
@@ -1570,7 +1682,10 @@ mod ikhtibarat {
 
         assert_eq!(hasila.aila, Some(AilatMuharrik::Bio4));
         assert_eq!(hasila.aqwa(), WAZN_ISM_MUJALLAD);
-        assert!(hasila.isdar.is_none(), "no executable, so no year and no version");
+        assert!(
+            hasila.isdar.is_none(),
+            "no executable, so no year and no version"
+        );
         Ok(())
     }
 
@@ -1624,12 +1739,20 @@ mod ikhtibarat {
         if let Some(bayt) = kadhib.get_mut(8) {
             *bayt = 0xFF;
         }
-        iktub(masrah.path(), "BIO4/Etc/qalib.tpl", &mamdud(&kadhib, TUL_TPL))?;
+        iktub(
+            masrah.path(),
+            "BIO4/Etc/qalib.tpl",
+            &mamdud(&kadhib, TUL_TPL),
+        )?;
         fs::create_dir_all(masrah.path().join("BIO4/text"))?;
         fs::create_dir_all(masrah.path().join("BIO4/Etc"))?;
         let hasila = ifhas(masrah.path());
 
-        assert_eq!(hasila.aqwa(), WAZN_BINYA_KAMILA, "a bad TPL must not answer at 90");
+        assert_eq!(
+            hasila.aqwa(),
+            WAZN_BINYA_KAMILA,
+            "a bad TPL must not answer at 90"
+        );
         assert!(wazn_daleel(&hasila, "GameCube texture container").is_none());
         Ok(())
     }
@@ -1661,7 +1784,10 @@ mod ikhtibarat {
                 *bayt = 0x00;
             }
         }
-        assert!(tarwisat_dict(&kadhib, 10_824).is_none(), "a zero bucket count is not a header");
+        assert!(
+            tarwisat_dict(&kadhib, 10_824).is_none(),
+            "a zero bucket count is not a header"
+        );
     }
 
     /// An `.lfs` with the right tag and the wrong sentinel.
@@ -1683,10 +1809,19 @@ mod ikhtibarat {
     /// value is not.
     #[test]
     fn alsihr_yuqbal_fi_alittijahayn() {
-        assert_eq!(sihr_fi_ittijahayn(&TARWISAT_TPL_KABIR, SIHR_TPL), Some(true));
-        assert_eq!(sihr_fi_ittijahayn(&TARWISAT_TPL_SAGHEER, SIHR_TPL), Some(false));
+        assert_eq!(
+            sihr_fi_ittijahayn(&TARWISAT_TPL_KABIR, SIHR_TPL),
+            Some(true)
+        );
+        assert_eq!(
+            sihr_fi_ittijahayn(&TARWISAT_TPL_SAGHEER, SIHR_TPL),
+            Some(false)
+        );
         assert_eq!(sihr_fi_ittijahayn(&TARWISAT_UDAS, SIHR_UDAS), Some(true));
-        assert_eq!(sihr_fi_ittijahayn(&TARWISAT_UDAS_SAGHEER, SIHR_UDAS), Some(false));
+        assert_eq!(
+            sihr_fi_ittijahayn(&TARWISAT_UDAS_SAGHEER, SIHR_UDAS),
+            Some(false)
+        );
         assert_eq!(sihr_fi_ittijahayn(&[0, 1, 2, 3], SIHR_TPL), None);
         assert!(tarwisat_tpl(&TARWISAT_TPL_SAGHEER).is_some());
     }
@@ -1718,12 +1853,24 @@ mod ikhtibarat {
         let masrah = tempfile::tempdir()?;
         iktub(masrah.path(), "hollow_knight.exe", b"MZ")?;
         iktub(masrah.path(), "UnityPlayer.dll", b"MZ")?;
-        iktub(masrah.path(), "hollow_knight_Data/globalgamemanagers", b"\0\0\0\0")?;
-        iktub(masrah.path(), "hollow_knight_Data/Managed/Assembly-CSharp.dll", b"MZ")?;
+        iktub(
+            masrah.path(),
+            "hollow_knight_Data/globalgamemanagers",
+            b"\0\0\0\0",
+        )?;
+        iktub(
+            masrah.path(),
+            "hollow_knight_Data/Managed/Assembly-CSharp.dll",
+            b"MZ",
+        )?;
         fs::create_dir_all(masrah.path().join("MonoBleedingEdge"))?;
         let hasila = ifhas(masrah.path());
 
-        assert!(!hasila.wajad(), "a Unity game produced BIO4 evidence: {:?}", hasila.dalail);
+        assert!(
+            !hasila.wajad(),
+            "a Unity game produced BIO4 evidence: {:?}",
+            hasila.dalail
+        );
         assert_eq!(hasila.aila, None);
         Ok(())
     }
@@ -1732,12 +1879,24 @@ mod ikhtibarat {
     #[test]
     fn luba_unreal_la_tujeeb() -> std::io::Result<()> {
         let masrah = tempfile::tempdir()?;
-        iktub(masrah.path(), "Atlas/Content/Paks/Atlas-WindowsNoEditor.pak", b"\0\0\0\0")?;
-        iktub(masrah.path(), "Atlas/Binaries/Win64/LittleNightmares.exe", b"MZ")?;
+        iktub(
+            masrah.path(),
+            "Atlas/Content/Paks/Atlas-WindowsNoEditor.pak",
+            b"\0\0\0\0",
+        )?;
+        iktub(
+            masrah.path(),
+            "Atlas/Binaries/Win64/LittleNightmares.exe",
+            b"MZ",
+        )?;
         iktub(masrah.path(), "Engine/Build/Build.version", b"{}")?;
         let hasila = ifhas(masrah.path());
 
-        assert!(!hasila.wajad(), "an Unreal game produced BIO4 evidence: {:?}", hasila.dalail);
+        assert!(
+            !hasila.wajad(),
+            "an Unreal game produced BIO4 evidence: {:?}",
+            hasila.dalail
+        );
         Ok(())
     }
 
@@ -1752,11 +1911,19 @@ mod ikhtibarat {
     fn imtidad_mustaar_la_yaftah_albawwaba() -> std::io::Result<()> {
         let masrah = tempfile::tempdir()?;
         iktub(masrah.path(), "layout.tpl", b"<html>{$title}</html>")?;
-        iktub(masrah.path(), "strings.dct", b"# a spell-checker dictionary\nhello\n")?;
+        iktub(
+            masrah.path(),
+            "strings.dct",
+            b"# a spell-checker dictionary\nhello\n",
+        )?;
         fs::create_dir_all(masrah.path().join("Content"))?;
         let hasila = ifhas(masrah.path());
 
-        assert!(!hasila.wajad(), "a borrowed extension opened the gate: {:?}", hasila.dalail);
+        assert!(
+            !hasila.wajad(),
+            "a borrowed extension opened the gate: {:?}",
+            hasila.dalail
+        );
         Ok(())
     }
 
@@ -1800,7 +1967,11 @@ mod ikhtibarat {
 
         assert_eq!(muharrik.aila, AilatMuharrik::Bio4);
         assert_eq!(muharrik.aila.ism(), "Capcom BIO4");
-        assert!(muharrik.thiqa >= WAZN_SIHR_LFS, "confidence {} below the base", muharrik.thiqa);
+        assert!(
+            muharrik.thiqa >= WAZN_SIHR_LFS,
+            "confidence {} below the base",
+            muharrik.thiqa
+        );
         assert_eq!(muharrik.mimariya, Mimariya::X86);
         assert_eq!(
             muharrik.khalfiya,
@@ -1815,8 +1986,14 @@ mod ikhtibarat {
             taarib_mustalahat::muharrik::JahiziyatTashghil::Ghaiba,
             "nothing in this build puts Arabic on this engine's screen"
         );
-        assert!(taqreer.naqs.is_some(), "an unfinished tier names what is missing");
-        assert!(taqreer.anzimat_qabila.is_empty(), "nothing is taken over while nothing runs");
+        assert!(
+            taqreer.naqs.is_some(),
+            "an unfinished tier names what is missing"
+        );
+        assert!(
+            taqreer.anzimat_qabila.is_empty(),
+            "nothing is taken over while nothing runs"
+        );
         assert_eq!(taqreer.isdar_fahs, crate::imkaniyat::ISDAR_FAHS);
         Ok(())
     }

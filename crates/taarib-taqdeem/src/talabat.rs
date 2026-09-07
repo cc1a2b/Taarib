@@ -38,7 +38,13 @@ impl TalabTarjama {
             let maqsus: String = nass.trim().chars().take(AQSA_TUL_MULAHAZA).collect();
             (!maqsus.is_empty()).then_some(maqsus)
         });
-        Self { luba, ism_luba, talib, waqt, mulahaza }
+        Self {
+            luba,
+            ism_luba,
+            talib,
+            waqt,
+            mulahaza,
+        }
     }
 }
 
@@ -78,7 +84,12 @@ impl TalabatLuba {
     /// An empty board entry for one game.
     #[must_use]
     pub const fn jadeed(luba: LubaId, ism_luba: String) -> Self {
-        Self { luba, ism_luba, talabat: BTreeMap::new(), ighlaq: None }
+        Self {
+            luba,
+            ism_luba,
+            talabat: BTreeMap::new(),
+            ighlaq: None,
+        }
     }
 
     /// Records a request, replacing that person's earlier one.
@@ -156,7 +167,10 @@ impl LawhatTalabat {
         let mut murattaba: Vec<&TalabatLuba> =
             self.alaab.values().filter(|wahid| wahid.maftuh()).collect();
         murattaba.sort_by(|awwal, thani| {
-            thani.talab().cmp(&awwal.talab()).then(awwal.luba.cmp(&thani.luba))
+            thani
+                .talab()
+                .cmp(&awwal.talab())
+                .then(awwal.luba.cmp(&thani.luba))
         });
         murattaba
     }
@@ -166,7 +180,9 @@ impl LawhatTalabat {
     /// Returns everyone who asked, so they can be notified. An already-closed
     /// or absent request notifies nobody.
     pub fn ughliq(&mut self, luba: LubaId, ruqaa: RuqaaId) -> Vec<MusahimId> {
-        let Some(wahid) = self.alaab.get_mut(&luba) else { return Vec::new() };
+        let Some(wahid) = self.alaab.get_mut(&luba) else {
+            return Vec::new();
+        };
         if wahid.ighlaq.is_some() {
             return Vec::new();
         }

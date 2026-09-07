@@ -80,8 +80,8 @@ pub fn iqra_bayan(jidhr_makhzan: &Path) -> Result<Option<BayanMukawwinat>, Khata
         return Err(marfud("not a readable manifest"));
     }
     let bayt = std::fs::read(&masar).map_err(|_| marfud("could not be read"))?;
-    let bayan: BayanMukawwinat =
-        serde_json::from_slice(&bayt).map_err(|_| marfud("is not the manifest this build reads"))?;
+    let bayan: BayanMukawwinat = serde_json::from_slice(&bayt)
+        .map_err(|_| marfud("is not the manifest this build reads"))?;
     if bayan.mukhattat != MUKHATTAT_MADUM {
         return Err(marfud("declares a schema this build does not understand"));
     }
@@ -126,13 +126,12 @@ pub fn kamil_hasab_bayan(jidhr_makhzan: &Path, ism: &str) -> Result<(), KhataTat
             continue;
         };
         adad = adad.saturating_add(1);
-        let masar = masarat::dakhil(jidhr_makhzan, dhayl).map_err(|khata| {
-            KhataTathbeet::MasarKharij {
+        let masar =
+            masarat::dakhil(jidhr_makhzan, dhayl).map_err(|khata| KhataTathbeet::MasarKharij {
                 masar: std::path::PathBuf::from(dhayl),
                 jidhr: jidhr_makhzan.to_path_buf(),
                 sabab: khata.injilizi,
-            }
-        })?;
+            })?;
         let Ok(wasf) = std::fs::metadata(&masar) else {
             return Err(KhataTathbeet::MukawwinMafqud {
                 mukawwin: format!("{ism}/{dhayl}"),

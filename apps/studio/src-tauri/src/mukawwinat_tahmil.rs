@@ -98,7 +98,12 @@ pub(crate) struct NatijatZamin {
 impl NatijatZamin {
     /// An empty result, before any file has been looked at.
     const fn faragh() -> Self {
-        Self { munsakha: 0, mutatabiqa: 0, muhaqqaqa: 0, mashakil: Vec::new() }
+        Self {
+            munsakha: 0,
+            mutatabiqa: 0,
+            muhaqqaqa: 0,
+            mashakil: Vec::new(),
+        }
     }
 
     /// A result that is one named problem and nothing else — how an absent or
@@ -111,8 +116,10 @@ impl NatijatZamin {
 
     /// Records one named problem against a matrix path.
     fn sajjil(&mut self, masar: &str, tafsir: &KhataMukawwinat) {
-        self.mashakil
-            .push(MushkilatZamin { masar: masar.to_owned(), khata: Khata::min_tafsir(tafsir) });
+        self.mashakil.push(MushkilatZamin {
+            masar: masar.to_owned(),
+            khata: Khata::min_tafsir(tafsir),
+        });
     }
 
     /// Whether every listed file settled clean and the store manifest was
@@ -134,7 +141,11 @@ impl NatijatZamin {
             self.mashakil.len()
         ));
         for mushkila in &self.mashakil {
-            sutur.push(format!("  {}: {}", mushkila.masar, mushkila.khata.li_sijill()));
+            sutur.push(format!(
+                "  {}: {}",
+                mushkila.masar,
+                mushkila.khata.li_sijill()
+            ));
         }
         sutur
     }
@@ -188,10 +199,12 @@ pub(crate) fn zamin_mukawwinat(jidhr_mawarid: &Path, masarat: &Masarat) -> Natij
                 tafsil: sabab.to_string(),
             };
             return sajjil_wa_arjii(NatijatZamin::bi_mushkila(ISM_MALAF_BAYAN, &tafsir));
-        }
+        },
     };
     if bayan.mukhattat != MUKHATTAT_MADUM {
-        let tafsir = KhataMukawwinat::MukhattatGhayrMadum { mukhattat: bayan.mukhattat };
+        let tafsir = KhataMukawwinat::MukhattatGhayrMadum {
+            mukhattat: bayan.mukhattat,
+        };
         return sajjil_wa_arjii(NatijatZamin::bi_mushkila(ISM_MALAF_BAYAN, &tafsir));
     }
 
@@ -212,14 +225,14 @@ pub(crate) fn zamin_mukawwinat(jidhr_mawarid: &Path, masarat: &Masarat) -> Natij
             Ok(HalatMalaf::Nusikha) => {
                 natija.munsakha = natija.munsakha.saturating_add(1);
                 natija.muhaqqaqa = natija.muhaqqaqa.saturating_add(1);
-            }
+            },
             Ok(HalatMalaf::Mutatabiq) => {
                 natija.mutatabiqa = natija.mutatabiqa.saturating_add(1);
                 natija.muhaqqaqa = natija.muhaqqaqa.saturating_add(1);
-            }
+            },
             Ok(HalatMalaf::MuhaqqaqFaqat) => {
                 natija.muhaqqaqa = natija.muhaqqaqa.saturating_add(1);
-            }
+            },
             Err(tafsir) => natija.sajjil(&malaf.masar, &tafsir),
         }
     }
@@ -266,10 +279,13 @@ fn qira_bayan(masar: &Path) -> Result<Vec<u8>, KhataMukawwinat> {
         Ok(wasf) => wasf,
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
             return Err(bayan_mafqud(masar));
-        }
+        },
         Err(sabab) => {
-            return Err(KhataMukawwinat::QiraatFashila { masar: masar.to_path_buf(), sabab });
-        }
+            return Err(KhataMukawwinat::QiraatFashila {
+                masar: masar.to_path_buf(),
+                sabab,
+            });
+        },
     };
     if !wasf.is_file() {
         return Err(bayan_mafqud(masar));
@@ -286,7 +302,10 @@ fn qira_bayan(masar: &Path) -> Result<Vec<u8>, KhataMukawwinat> {
     match fs::read(masar) {
         Ok(bayt) => Ok(bayt),
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => Err(bayan_mafqud(masar)),
-        Err(sabab) => Err(KhataMukawwinat::QiraatFashila { masar: masar.to_path_buf(), sabab }),
+        Err(sabab) => Err(KhataMukawwinat::QiraatFashila {
+            masar: masar.to_path_buf(),
+            sabab,
+        }),
     }
 }
 
@@ -295,7 +314,10 @@ fn qira_bayan(masar: &Path) -> Result<Vec<u8>, KhataMukawwinat> {
 /// One constructor rather than three literals so the audience can never be
 /// decided in one arm of [`qira_bayan`] and forgotten in another.
 fn bayan_mafqud(masar: &Path) -> KhataMukawwinat {
-    KhataMukawwinat::BayanMafqud { masar: masar.to_path_buf(), beea: BeeatBina::hali() }
+    KhataMukawwinat::BayanMafqud {
+        masar: masar.to_path_buf(),
+        beea: BeeatBina::hali(),
+    }
 }
 
 /// Verifies one listed file in the bundle and settles its store copy.
@@ -319,16 +341,23 @@ fn zamin_malaf(
     let wasf = match fs::metadata(&masar_huzma) {
         Ok(wasf) => wasf,
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
-            return Err(KhataMukawwinat::MalafGhaib { masar: malaf.masar.clone() });
-        }
+            return Err(KhataMukawwinat::MalafGhaib {
+                masar: malaf.masar.clone(),
+            });
+        },
         Err(sabab) => {
-            return Err(KhataMukawwinat::QiraatFashila { masar: masar_huzma, sabab });
-        }
+            return Err(KhataMukawwinat::QiraatFashila {
+                masar: masar_huzma,
+                sabab,
+            });
+        },
     };
     // A directory or a special file where the manifest promised a regular file
     // is the promised file being absent.
     if !wasf.is_file() {
-        return Err(KhataMukawwinat::MalafGhaib { masar: malaf.masar.clone() });
+        return Err(KhataMukawwinat::MalafGhaib {
+            masar: malaf.masar.clone(),
+        });
     }
     if wasf.len() != malaf.hajm {
         return Err(KhataMukawwinat::BasmaMukhtalifa {
@@ -370,7 +399,9 @@ fn sahih_madkhal(malaf: &MalafMudraj) -> Result<(), KhataMukawwinat> {
         return Err(marfud("the path carries an embedded NUL"));
     }
     if malaf.masar.contains('\\') {
-        return Err(marfud("the path uses backslashes; the manifest is forward-slash only"));
+        return Err(marfud(
+            "the path uses backslashes; the manifest is forward-slash only",
+        ));
     }
     if malaf.masar.starts_with('/') {
         return Err(marfud("the path is absolute"));
@@ -387,11 +418,16 @@ fn sahih_madkhal(malaf: &MalafMudraj) -> Result<(), KhataMukawwinat> {
         }
     }
     let basma_saliha = malaf.sha256.len() == 64
-        && malaf.sha256.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase());
+        && malaf
+            .sha256
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase());
     if basma_saliha {
         Ok(())
     } else {
-        Err(marfud("the declared sha256 is not 64 lowercase hexadecimal characters"))
+        Err(marfud(
+            "the declared sha256 is not 64 lowercase hexadecimal characters",
+        ))
     }
 }
 
@@ -407,7 +443,9 @@ fn dakhil_marsud(jidhr: &Path, nisbi: &str) -> Result<PathBuf, KhataMukawwinat> 
 /// Whether the store already holds this exact file: present, the declared
 /// size, and the declared hash.
 fn mutatabiq(masar_makhzan: &Path, malaf: &MalafMudraj) -> bool {
-    let Ok(wasf) = fs::metadata(masar_makhzan) else { return false };
+    let Ok(wasf) = fs::metadata(masar_makhzan) else {
+        return false;
+    };
     if !wasf.is_file() || wasf.len() != malaf.hajm {
         return false;
     }
@@ -422,7 +460,7 @@ fn mutatabiq(masar_makhzan: &Path, malaf: &MalafMudraj) -> bool {
                 "an existing store copy could not be hashed and will be rewritten"
             );
             false
-        }
+        },
     }
 }
 
@@ -435,8 +473,10 @@ fn tahaqqaq_basma(masar_huzma: &Path, malaf: &MalafMudraj) -> Result<(), KhataMu
             tafsil: format!("declared sha256 {}, computed {mahsuba}", malaf.sha256),
         }),
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
-            Err(KhataMukawwinat::MalafGhaib { masar: malaf.masar.clone() })
-        }
+            Err(KhataMukawwinat::MalafGhaib {
+                masar: malaf.masar.clone(),
+            })
+        },
         Err(sabab) => Err(KhataMukawwinat::QiraatFashila {
             masar: masar_huzma.to_path_buf(),
             sabab,
@@ -492,11 +532,7 @@ impl std::io::Write for KatibMuhashib<'_> {
 /// the manifest's value, and [`KhataMukawwinat::MakhzanGhayrKatib`] when the
 /// store cannot be created, written, synced or renamed into. On every failure
 /// the `.juz` remainder is removed and the target is left untouched.
-fn unsakh_muhaqqaqan(
-    min: &Path,
-    ila: &Path,
-    malaf: &MalafMudraj,
-) -> Result<(), KhataMukawwinat> {
+fn unsakh_muhaqqaqan(min: &Path, ila: &Path, malaf: &MalafMudraj) -> Result<(), KhataMukawwinat> {
     let Some(walid) = ila.parent() else {
         return Err(KhataMukawwinat::MasarMarfud {
             masar: malaf.masar.clone(),
@@ -511,28 +547,44 @@ fn unsakh_muhaqqaqan(
     let mut qari = match fs::File::open(min) {
         Ok(qari) => qari,
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
-            return Err(KhataMukawwinat::MalafGhaib { masar: malaf.masar.clone() });
-        }
+            return Err(KhataMukawwinat::MalafGhaib {
+                masar: malaf.masar.clone(),
+            });
+        },
         Err(sabab) => {
-            return Err(KhataMukawwinat::QiraatFashila { masar: min.to_path_buf(), sabab });
-        }
+            return Err(KhataMukawwinat::QiraatFashila {
+                masar: min.to_path_buf(),
+                sabab,
+            });
+        },
     };
 
     let masar_juz = masar_juz(ila);
-    let mut katib = fs::File::create(&masar_juz).map_err(|sabab| {
-        KhataMukawwinat::MakhzanGhayrKatib { masar: masar_juz.clone(), sabab }
-    })?;
+    let mut katib =
+        fs::File::create(&masar_juz).map_err(|sabab| KhataMukawwinat::MakhzanGhayrKatib {
+            masar: masar_juz.clone(),
+            sabab,
+        })?;
 
     let mut hashib = Sha256::new();
-    let mut tawzi =
-        KatibMuhashib { malaf: &mut katib, hashib: &mut hashib, kitaba_fashilat: false };
+    let mut tawzi = KatibMuhashib {
+        malaf: &mut katib,
+        hashib: &mut hashib,
+        kitaba_fashilat: false,
+    };
     if let Err(sabab) = std::io::copy(&mut qari, &mut tawzi) {
         let kitaba = tawzi.kitaba_fashilat;
         imsah_juz(&masar_juz);
         return Err(if kitaba {
-            KhataMukawwinat::MakhzanGhayrKatib { masar: masar_juz, sabab }
+            KhataMukawwinat::MakhzanGhayrKatib {
+                masar: masar_juz,
+                sabab,
+            }
         } else {
-            KhataMukawwinat::QiraatFashila { masar: min.to_path_buf(), sabab }
+            KhataMukawwinat::QiraatFashila {
+                masar: min.to_path_buf(),
+                sabab,
+            }
         });
     }
 
@@ -547,12 +599,18 @@ fn unsakh_muhaqqaqan(
 
     if let Err(sabab) = katib.sync_all() {
         imsah_juz(&masar_juz);
-        return Err(KhataMukawwinat::MakhzanGhayrKatib { masar: masar_juz, sabab });
+        return Err(KhataMukawwinat::MakhzanGhayrKatib {
+            masar: masar_juz,
+            sabab,
+        });
     }
     drop(katib);
     if let Err(sabab) = fs::rename(&masar_juz, ila) {
         imsah_juz(&masar_juz);
-        return Err(KhataMukawwinat::MakhzanGhayrKatib { masar: ila.to_path_buf(), sabab });
+        return Err(KhataMukawwinat::MakhzanGhayrKatib {
+            masar: ila.to_path_buf(),
+            sabab,
+        });
     }
 
     // The rename is atomic, but its directory entry is not durable until the
@@ -585,11 +643,17 @@ fn iktub_bayan(jidhr_makhzan: &Path, bayt: &[u8]) -> Result<(), KhataMukawwinat>
     });
     if let Err(sabab) = natija {
         imsah_juz(&masar_juz);
-        return Err(KhataMukawwinat::MakhzanGhayrKatib { masar: masar_juz, sabab });
+        return Err(KhataMukawwinat::MakhzanGhayrKatib {
+            masar: masar_juz,
+            sabab,
+        });
     }
     if let Err(sabab) = fs::rename(&masar_juz, &hadaf) {
         imsah_juz(&masar_juz);
-        return Err(KhataMukawwinat::MakhzanGhayrKatib { masar: hadaf, sabab });
+        return Err(KhataMukawwinat::MakhzanGhayrKatib {
+            masar: hadaf,
+            sabab,
+        });
     }
     #[cfg(unix)]
     if let Ok(maftuh) = fs::File::open(jidhr_makhzan) {
@@ -651,13 +715,12 @@ fn hex_saghir(bayt: &[u8]) -> String {
     reason = "the studio-side install path that resolves a component out of the store is not \
               wired yet; removing this would take the store's completeness gate with it"
 )]
-pub(crate) fn masar_mukawwin(
-    masarat: &Masarat,
-    ism: &str,
-) -> Result<PathBuf, KhataMukawwinat> {
+pub(crate) fn masar_mukawwin(masarat: &Masarat, ism: &str) -> Result<PathBuf, KhataMukawwinat> {
     let aila = ism.split('/').next().unwrap_or_default();
     if !AILAT_MUKAWWINAT.contains(&aila) {
-        return Err(KhataMukawwinat::MukawwinGhayrMaruf { ism: ism.to_owned() });
+        return Err(KhataMukawwinat::MukawwinGhayrMaruf {
+            ism: ism.to_owned(),
+        });
     }
 
     let jidhr_makhzan = masarat.mukawwinat();
@@ -667,7 +730,10 @@ pub(crate) fn masar_mukawwin(
     })?;
 
     if !masar.is_dir() {
-        return Err(KhataMukawwinat::MukawwinMafqud { mukawwin: ism.to_owned(), masar });
+        return Err(KhataMukawwinat::MukawwinMafqud {
+            mukawwin: ism.to_owned(),
+            masar,
+        });
     }
     kamil_hasab_bayan(&jidhr_makhzan, ism)?;
     Ok(masar)
@@ -691,17 +757,23 @@ pub(crate) fn masar_mukawwin(
 fn kamil_hasab_bayan(jidhr_makhzan: &Path, ism: &str) -> Result<(), KhataMukawwinat> {
     let bayt = qira_bayan(&jidhr_makhzan.join(ISM_MALAF_BAYAN))?;
     let masar_bayan = jidhr_makhzan.join(ISM_MALAF_BAYAN);
-    let bayan: BayanMukawwinat = serde_json::from_slice(&bayt).map_err(|sabab| {
-        KhataMukawwinat::BayanTalif { masar: masar_bayan, tafsil: sabab.to_string() }
-    })?;
+    let bayan: BayanMukawwinat =
+        serde_json::from_slice(&bayt).map_err(|sabab| KhataMukawwinat::BayanTalif {
+            masar: masar_bayan,
+            tafsil: sabab.to_string(),
+        })?;
     if bayan.mukhattat != MUKHATTAT_MADUM {
-        return Err(KhataMukawwinat::MukhattatGhayrMadum { mukhattat: bayan.mukhattat });
+        return Err(KhataMukawwinat::MukhattatGhayrMadum {
+            mukhattat: bayan.mukhattat,
+        });
     }
 
     let badiya = format!("{BADIYAT_MAKHZAN}{ism}/");
     let mut adad = 0_usize;
     for malaf in &bayan.milaffat {
-        let Some(dhayl) = malaf.masar.strip_prefix(BADIYAT_MAKHZAN) else { continue };
+        let Some(dhayl) = malaf.masar.strip_prefix(BADIYAT_MAKHZAN) else {
+            continue;
+        };
         if !malaf.masar.starts_with(&badiya) {
             continue;
         }
@@ -714,7 +786,7 @@ fn kamil_hasab_bayan(jidhr_makhzan: &Path, ism: &str) -> Result<(), KhataMukawwi
                     mukawwin: format!("{ism} (missing {dhayl})"),
                     masar,
                 });
-            }
+            },
             Err(sabab) => return Err(KhataMukawwinat::QiraatFashila { masar, sabab }),
         };
         if !wasf.is_file() || wasf.len() != malaf.hajm {
@@ -781,7 +853,11 @@ impl BeeatBina {
             .ok()
             .and_then(|tanfidhi| tanfidhi.parent().map(Path::to_path_buf))
             .is_some_and(|mujallad| mujallad.join(MARSAD_CARGO).exists());
-        if min_cargo { Self::MinCargo } else { Self::Muwazzaa }
+        if min_cargo {
+            Self::MinCargo
+        } else {
+            Self::Muwazzaa
+        }
     }
 
     /// The value the log and the diagnostics bundle carry, so which audience
@@ -922,10 +998,16 @@ impl Tafsir for KhataMukawwinat {
             // distributed build the same absence is an incomplete package, and
             // it drops through to the severity every other incomplete-package
             // failure carries.
-            Self::BayanMafqud { beea: BeeatBina::MinCargo, .. } => Khutura::Tanbeeh,
+            Self::BayanMafqud {
+                beea: BeeatBina::MinCargo,
+                ..
+            } => Khutura::Tanbeeh,
             // A traversal attempt means a corrupt or hostile manifest.
             Self::MasarMarfud { .. } => Khutura::Fadih,
-            Self::BayanMafqud { beea: BeeatBina::Muwazzaa, .. }
+            Self::BayanMafqud {
+                beea: BeeatBina::Muwazzaa,
+                ..
+            }
             | Self::BayanTalif { .. }
             | Self::MukhattatGhayrMadum { .. }
             | Self::MalafGhaib { .. }
@@ -939,24 +1021,28 @@ impl Tafsir for KhataMukawwinat {
 
     fn arabi(&self) -> String {
         match self {
-            Self::BayanMafqud { beea: BeeatBina::MinCargo, masar } => format!(
+            Self::BayanMafqud {
+                beea: BeeatBina::MinCargo,
+                masar,
+            } => format!(
                 "لا يوجد بيان مكوّنات في {}، وهذا هو الوضع المتوقَّع لبناء يعمل من cargo إذ لا حزمة \
                  له أصلًا. سيستمر تعريب، وسترفض التثبيتات لاحقًا كل مكوّن غائب باسمه. لتجربة \
                  التثبيت كاملًا شغِّل أداة الترحيل taarib-tajmee ثم أعد التشغيل.",
                 masar.display()
             ),
-            Self::BayanMafqud { beea: BeeatBina::Muwazzaa, .. } => {
-                "نسخة تعريب المثبَّتة عندك ناقصة: حُزمت بدون بيان المكوّنات، فلن تكتمل أي عملية \
+            Self::BayanMafqud {
+                beea: BeeatBina::Muwazzaa,
+                ..
+            } => "نسخة تعريب المثبَّتة عندك ناقصة: حُزمت بدون بيان المكوّنات، فلن تكتمل أي عملية \
                  تثبيت تحتاج مكوّنًا، وسيُرفض كل مكوّن غائب باسمه. لا شيء في جهازك سبّب هذا. \
                  حدِّث تعريب أو أعد تثبيته من صفحة الإصدارات؛ فإن ظهرت الرسالة نفسها بعد تثبيت \
                  نظيف فأبلغ مالك المشروع وأرفق حزمة التشخيص."
-                    .to_owned()
-            }
+                .to_owned(),
             Self::BayanTalif { .. } => {
                 "تعذّرت قراءة بيان المكوّنات المرفق بهذه النسخة، أو أن محتواه ليس بالصيغة \
                  المتوقعة. النسخة ناقصة أو تالفة؛ شغِّل المحدِّث أو أعد تثبيت تعريب."
                     .to_owned()
-            }
+            },
             Self::MukhattatGhayrMadum { mukhattat } => format!(
                 "بيان المكوّنات مكتوب بمخطط ({mukhattat}) لا تفهمه هذه النسخة من تعريب. حدِّث تعريب \
                  إلى نسخة أحدث."
@@ -996,22 +1082,26 @@ impl Tafsir for KhataMukawwinat {
 
     fn injilizi(&self) -> String {
         match self {
-            Self::BayanMafqud { beea: BeeatBina::MinCargo, masar } => format!(
+            Self::BayanMafqud {
+                beea: BeeatBina::MinCargo,
+                masar,
+            } => format!(
                 "No component manifest at {}, which is the expected state of a build run from \
                  cargo: it has no bundle to carry one. The studio continues, and installs will \
                  refuse each absent component by name. To exercise a real install, run the \
                  staging tool (taarib-tajmee), then relaunch.",
                 masar.display()
             ),
-            Self::BayanMafqud { beea: BeeatBina::Muwazzaa, .. } => {
-                "This installation of Taarib is incomplete: it was packaged without its \
+            Self::BayanMafqud {
+                beea: BeeatBina::Muwazzaa,
+                ..
+            } => "This installation of Taarib is incomplete: it was packaged without its \
                  component manifest, so any install that needs a component cannot finish and \
                  every absent component will be refused by name. Nothing on your machine caused \
                  this. Update Taarib, or reinstall it from the releases page; if a clean \
                  install shows the same message, report it to the project owner and attach a \
                  diagnostics bundle."
-                    .to_owned()
-            }
+                .to_owned(),
             Self::BayanTalif { masar, tafsil } => format!(
                 "The staging manifest at {} could not be read as a manifest: {tafsil}. This \
                  build is incomplete or damaged; run the updater or reinstall Taarib.",
@@ -1062,8 +1152,14 @@ impl Tafsir for KhataMukawwinat {
             // From cargo there is no button that conjures a bundle. From a
             // distributed build there is one, and it is the same button every
             // other incomplete-package failure offers: get a complete build.
-            Self::BayanMafqud { beea: BeeatBina::MinCargo, .. } => Khutwa::LaShay,
-            Self::BayanMafqud { beea: BeeatBina::Muwazzaa, .. }
+            Self::BayanMafqud {
+                beea: BeeatBina::MinCargo,
+                ..
+            } => Khutwa::LaShay,
+            Self::BayanMafqud {
+                beea: BeeatBina::Muwazzaa,
+                ..
+            }
             | Self::BayanTalif { .. }
             | Self::MukhattatGhayrMadum { .. }
             | Self::MalafGhaib { .. }
@@ -1072,7 +1168,7 @@ impl Tafsir for KhataMukawwinat {
             Self::MasarMarfud { .. } | Self::MukawwinGhayrMaruf { .. } => Khutwa::IblaghLilMalik,
             Self::QiraatFashila { sabab, .. } | Self::MakhzanGhayrKatib { sabab, .. } => {
                 khutwa_io(sabab, MasarMatlub::MujalladRuqaa)
-            }
+            },
         }
     }
 
@@ -1083,40 +1179,40 @@ impl Tafsir for KhataMukawwinat {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 // The decision itself, so a bug report shows which audience this
                 // build picked instead of leaving it to be inferred from prose.
-                let _ =
-                    siyaq.insert("beea".to_owned(), QeemaSiyaq::Nass(beea.wasm().to_owned()));
-            }
+                let _ = siyaq.insert("beea".to_owned(), QeemaSiyaq::Nass(beea.wasm().to_owned()));
+            },
             Self::BayanTalif { masar, tafsil } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::MukhattatGhayrMadum { mukhattat } => {
-                let _ = siyaq
-                    .insert("mukhattat".to_owned(), QeemaSiyaq::Raqm(i64::from(*mukhattat)));
-            }
+                let _ = siyaq.insert(
+                    "mukhattat".to_owned(),
+                    QeemaSiyaq::Raqm(i64::from(*mukhattat)),
+                );
+            },
             Self::MasarMarfud { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(masar.clone()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::MalafGhaib { masar } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(masar.clone()));
-            }
-            Self::QiraatFashila { masar, sabab }
-            | Self::MakhzanGhayrKatib { masar, sabab } => {
+            },
+            Self::QiraatFashila { masar, sabab } | Self::MakhzanGhayrKatib { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 siyaq.extend(siyaq_io(sabab));
-            }
+            },
             Self::BasmaMukhtalifa { masar, tafsil } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(masar.clone()));
                 let _ = siyaq.insert("tafsil".to_owned(), QeemaSiyaq::Nass(tafsil.clone()));
-            }
+            },
             Self::MukawwinGhayrMaruf { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-            }
+            },
             Self::MukawwinMafqud { mukawwin, masar } => {
                 let _ = siyaq.insert("mukawwin".to_owned(), QeemaSiyaq::Nass(mukawwin.clone()));
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
-            }
+            },
         }
         siyaq
     }
@@ -1181,15 +1277,19 @@ pub(crate) fn milaffat_khutut(judhur: &[PathBuf]) -> Vec<PathBuf> {
         let mut min_jidhr = Vec::new();
         let mut tabur = vec![jidhr.clone()];
         while let Some(hali) = tabur.pop() {
-            let Ok(qaima) = fs::read_dir(&hali) else { continue };
+            let Ok(qaima) = fs::read_dir(&hali) else {
+                continue;
+            };
             for dakhla in qaima.flatten() {
                 let masar = dakhla.path();
                 if masar.is_dir() {
                     tabur.push(masar);
                     continue;
                 }
-                let lahiqa =
-                    masar.extension().and_then(|q| q.to_str()).map(str::to_ascii_lowercase);
+                let lahiqa = masar
+                    .extension()
+                    .and_then(|q| q.to_str())
+                    .map(str::to_ascii_lowercase);
                 if matches!(lahiqa.as_deref(), Some("ttf" | "otf")) {
                     min_jidhr.push(masar);
                 }
@@ -1199,7 +1299,9 @@ pub(crate) fn milaffat_khutut(judhur: &[PathBuf]) -> Vec<PathBuf> {
         for masar in min_jidhr {
             // Case-folded, because two of the three platforms would treat
             // `Amiri.ttf` and `amiri.ttf` as one file and the third would not.
-            let Some(ism) = masar.file_name() else { continue };
+            let Some(ism) = masar.file_name() else {
+                continue;
+            };
             if maakhudha.insert(ism.to_string_lossy().to_lowercase()) {
                 khraj.push(masar);
             }

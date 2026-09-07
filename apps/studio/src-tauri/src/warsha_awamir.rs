@@ -17,9 +17,9 @@ use taarib_mustalahat::ruqaa::TareeqaTarjama;
 use taarib_saff::Saff;
 use taarib_saff::khatt::{MawridKhatt, SilsilatKhutut};
 use taarib_saff::talab::{KhiyaratTakhtit, TalabTakhtit};
+use taarib_taqdeem::taaliq::Taaliq;
 use taarib_tarjama::alamat::{
-    AtabatAlamat, MudkhalatQiyas, ThiqaMublagha, ihsib_mashru, ihsib_wa_thabbit,
-    thabbit_tanaqud,
+    AtabatAlamat, MudkhalatQiyas, ThiqaMublagha, ihsib_mashru, ihsib_wa_thabbit, thabbit_tanaqud,
 };
 use taarib_tarjama::dhakira::{AslQayd, Dhakira, QaydDhakira, QaydId, QaydJadid, TalabDhakira};
 use taarib_tarjama::dufaat::{
@@ -32,11 +32,8 @@ use taarib_tarjama::muzawwidun::{
     Itimad, Muzawwid, MuzawwidAnthropic, MuzawwidDeepL, MuzawwidGemini, MuzawwidMicrosoft,
     MuzawwidMuwafiqOpenAI, taklifat_anthropic, taklifat_gemini,
 };
-use taarib_taqdeem::taaliq::Taaliq;
 use taarib_tathbeet::bayan::waqt_alaan;
-use taarib_usus::idadat::{
-    HalatMuzawwidin, Idadat, IdadatMuzawwid, MakhzanIdadat, NawMuzawwid,
-};
+use taarib_usus::idadat::{HalatMuzawwidin, Idadat, IdadatMuzawwid, MakhzanIdadat, NawMuzawwid};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
@@ -45,11 +42,11 @@ use taarib_usus::masarat::{Masarat, kitaba_dharra};
 use taarib_warsha::damj::{BitaqatJanib, Damj, NawNizaa, Nizaa, Qarar, damj};
 use taarib_warsha::salama::{self, HalatNusus, QiraatNusus, SatrTalif, TaqreerInqadh};
 use taarib_warsha::tarikh::{TarikhMashru, damj_tarikh};
-use tauri::Emitter as _;
 use taarib_warsha::tasdir::{
     UDW_MASRAD, UDW_TAALIQAT, UDW_TARIKH, UDW_TAWZI, aslaf_mashru, istawrid, sajjil_aslaf,
 };
 use taarib_warsha::tawzi::Tawzi;
+use tauri::Emitter as _;
 
 use crate::luba_awamir::huwiya;
 
@@ -505,12 +502,18 @@ pub struct AqfalMashariya(pub tokio::sync::Mutex<HashMap<LubaId, Arc<tokio::sync
 
 fn qufl_mashru(aqfal: &AqfalMashariya, id: LubaId) -> Arc<tokio::sync::Mutex<()>> {
     let mut kharita = aqfal.0.blocking_lock();
-    kharita.entry(id).or_insert_with(|| Arc::new(tokio::sync::Mutex::new(()))).clone()
+    kharita
+        .entry(id)
+        .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
+        .clone()
 }
 
 async fn qufl_mashru_async(aqfal: &AqfalMashariya, id: LubaId) -> Arc<tokio::sync::Mutex<()>> {
     let mut kharita = aqfal.0.lock().await;
-    kharita.entry(id).or_insert_with(|| Arc::new(tokio::sync::Mutex::new(()))).clone()
+    kharita
+        .entry(id)
+        .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
+        .clone()
 }
 
 fn khata_malaf(masar: &Path, sabab: impl std::fmt::Display) -> Khata {
@@ -521,7 +524,9 @@ fn khata_malaf(masar: &Path, sabab: impl std::fmt::Display) -> Khata {
 }
 
 pub(crate) fn lahza_alaan() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |muddat| muddat.as_secs())
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |muddat| muddat.as_secs())
 }
 
 fn jidhr_mashru(masarat_hala: &Masarat, id: LubaId) -> PathBuf {
@@ -532,7 +537,9 @@ fn jidhr_mashru(masarat_hala: &Masarat, id: LubaId) -> PathBuf {
 fn iftah_mashru(masarat_hala: &Masarat, id: LubaId) -> Natija<MashruMaftuh> {
     let jidhr = jidhr_mashru(masarat_hala, id);
     if !jidhr.join(MALAF_MASHRU).is_file() {
-        return Err(Khata::from(KhataWarshaAmr::MashruGhayrMawjud { ism: id.to_string() }));
+        return Err(Khata::from(KhataWarshaAmr::MashruGhayrMawjud {
+            ism: id.to_string(),
+        }));
     }
     MashruMaftuh::iftah(jidhr).map_err(Khata::from)
 }
@@ -559,8 +566,11 @@ fn sufuf_lil_kitaba(mashru: &MashruMaftuh) -> Natija<Vec<MudkhalNass>> {
 
 /// Parses a string identity the interface sent back.
 fn huwiyat_nass(nass: &str) -> Natija<NassId> {
-    serde_json::from_value::<NassId>(serde_json::Value::String(nass.to_owned()))
-        .map_err(|_| Khata::from(KhataWarshaAmr::NassGhayrMawjud { nass: nass.to_owned() }))
+    serde_json::from_value::<NassId>(serde_json::Value::String(nass.to_owned())).map_err(|_| {
+        Khata::from(KhataWarshaAmr::NassGhayrMawjud {
+            nass: nass.to_owned(),
+        })
+    })
 }
 
 /// This machine's editor identity, minted once and kept beside the data.
@@ -594,8 +604,10 @@ pub(crate) fn muharrir_mahalli(masarat_hala: &Masarat) -> Natija<MusahimId> {
             sabab: "a freshly minted identity failed its own validation".to_owned(),
         })
     })?;
-    let bayt = serde_json::to_vec(&MalafMuharrir { musahim: musahim.nass().to_owned() })
-        .map_err(|sabab| khata_malaf(&masar, sabab))?;
+    let bayt = serde_json::to_vec(&MalafMuharrir {
+        musahim: musahim.nass().to_owned(),
+    })
+    .map_err(|sabab| khata_malaf(&masar, sabab))?;
     kitaba_dharra(&masar, &bayt)?;
     Ok(musahim)
 }
@@ -635,11 +647,15 @@ fn silsilat_khutut(masarat_hala: &Masarat, idadat: &Idadat) -> Option<SilsilatKh
         mujalladat.push(PathBuf::from(masar));
     }
     mujalladat.extend(
-        crate::mukawwinat_tahmil::judhur_khutut(masarat_hala).into_iter().skip(1),
+        crate::mukawwinat_tahmil::judhur_khutut(masarat_hala)
+            .into_iter()
+            .skip(1),
     );
     let mut khutut = Vec::new();
     for masar in crate::mukawwinat_tahmil::milaffat_khutut(&mujalladat) {
-        let Ok(bayt) = std::fs::read(&masar) else { continue };
+        let Ok(bayt) = std::fs::read(&masar) else {
+            continue;
+        };
         let bayt = Arc::new(bayt);
         let mawrid = MawridKhatt::jadeed(Arc::clone(&bayt), 0)
             .or_else(|_| MawridKhatt::jadeed_latini(bayt, 0));
@@ -708,7 +724,9 @@ fn saf_hie(mudkhal: &MudkhalNass, tawzi: &Tawzi) -> SafWarshaHie {
         mutakallim: mudkhal.siyaq.mutakallim.clone(),
         jiwar: mudkhal.siyaq.jiwar.clone(),
         takrar: mudkhal.takrar,
-        tareeqa_arabi: mudkhal.tareeqa.map(|tareeqa| tareeqa.wasf_arabi().to_owned()),
+        tareeqa_arabi: mudkhal
+            .tareeqa
+            .map(|tareeqa| tareeqa.wasf_arabi().to_owned()),
         muzawwid: mudkhal.muzawwid.clone(),
         muayyan: tawzi.mukallaf(mudkhal.id).map(MusahimId::mukhtasar),
         aqsa_ard: mudkhal.quyud.aqsa_ard.map(f64::from),
@@ -737,7 +755,11 @@ fn sutur_arabi(adad: usize, majrur: bool) -> String {
 
 /// A count of rows in English.
 fn sutur_injilizi(adad: usize) -> String {
-    if adad == 1 { "1 row".to_owned() } else { format!("{adad} rows") }
+    if adad == 1 {
+        "1 row".to_owned()
+    } else {
+        format!("{adad} rows")
+    }
 }
 
 fn qassir(nass: &str) -> String {
@@ -753,20 +775,26 @@ fn satr_talif_hie(satr: &SatrTalif) -> SatrTalifHie {
     let mukhtasar = satr.huwiya.map(NassId::mukhtasar);
     let masdar_qasir = satr.masdar.as_deref().map(qassir);
     let (dhayl_arabi, dhayl_injilizi) = match (masdar_qasir, mukhtasar) {
-        (Some(masdar), _) => {
-            (format!("النص الأصلي: «{masdar}»"), format!("source: \"{masdar}\""))
-        }
+        (Some(masdar), _) => (
+            format!("النص الأصلي: «{masdar}»"),
+            format!("source: \"{masdar}\""),
+        ),
         (None, Some(id)) => (format!("الهوية {id}"), format!("identity {id}")),
-        (None, None) => {
-            (format!("بدايته: {}", satr.muqtataf), format!("opens with: {}", satr.muqtataf))
-        }
+        (None, None) => (
+            format!("بدايته: {}", satr.muqtataf),
+            format!("opens with: {}", satr.muqtataf),
+        ),
     };
     SatrTalifHie {
         raqm: adad_u32(satr.raqm),
         huwiya: satr.huwiya.map(|id| id.to_string()),
         masdar: satr.masdar.clone(),
         muqtataf: satr.muqtataf.clone(),
-        wasf_arabi: format!("السطر {}: {} — {dhayl_arabi}", satr.raqm, satr.sabab.wasf_arabi()),
+        wasf_arabi: format!(
+            "السطر {}: {} — {dhayl_arabi}",
+            satr.raqm,
+            satr.sabab.wasf_arabi()
+        ),
         wasf_injilizi: format!(
             "Line {}: {} — {dhayl_injilizi}",
             satr.raqm,
@@ -850,11 +878,19 @@ fn talaf_hie(qiraa: &QiraatNusus) -> TalafHie {
             "The string file is damaged and no row read".to_owned(),
         )
     } else {
-        ("ملف النصوص تالف جزئيًا".to_owned(), "The string file is partly unreadable".to_owned())
+        (
+            "ملف النصوص تالف جزئيًا".to_owned(),
+            "The string file is partly unreadable".to_owned(),
+        )
     };
     TalafHie {
         talifa: adad_u32(talifa),
-        sutur: qiraa.talifa.iter().take(AQSA_SUTUR_TALIFA).map(satr_talif_hie).collect(),
+        sutur: qiraa
+            .talifa
+            .iter()
+            .take(AQSA_SUTUR_TALIFA)
+            .map(satr_talif_hie)
+            .collect(),
         unwan_arabi,
         unwan_injilizi,
         mukhtasar_arabi: format!("تعذّرت قراءة {}", sutur_arabi(talifa, true)),
@@ -901,7 +937,7 @@ fn salamat_hie(qiraa: &QiraatNusus, masar: &Path) -> SalamatMashruHie {
                 wasf_injilizi,
                 talaf: Some(talaf_hie(qiraa)),
             }
-        }
+        },
     }
 }
 
@@ -942,7 +978,10 @@ fn iftah_warsha(
         ism_luba: mashru.rasm().ism_luba.clone(),
         musahimi: muharrir_mahalli(masarat_hala)?.mukhtasar(),
         adad: adad_u32(sufuf.len()),
-        sufuf: sufuf.iter().map(|mudkhal| saf_hie(mudkhal, &tawzi)).collect(),
+        sufuf: sufuf
+            .iter()
+            .map(|mudkhal| saf_hie(mudkhal, &tawzi))
+            .collect(),
         salama,
         muzawwid: muzawwid_warsha_hie(hali),
     })
@@ -958,7 +997,10 @@ fn muzawwid_warsha_hie(hali: &Idadat) -> MuzawwidWarshaHie {
             HalatMuzawwidin::Mukhtar => HalatMuzawwidinHie::Mukhtar,
             HalatMuzawwidin::Badeel => HalatMuzawwidinHie::Badeel,
         },
-        ism: hali.muzawwidun.muntakhab().map(|tarif| tarif.muarrif.clone()),
+        ism: hali
+            .muzawwidun
+            .muntakhab()
+            .map(|tarif| tarif.muarrif.clone()),
         wasf_arabi: hala.arabi().to_owned(),
         wasf_injilizi: hala.injilizi().to_owned(),
     }
@@ -1003,7 +1045,10 @@ fn inqadh_hie(taqreer: &TaqreerInqadh) -> InqadhHie {
     } else {
         (
             format!("وتتابع الورشة على {}", sutur_arabi(taqreer.najin, true)),
-            format!("the workshop continues on {}", sutur_injilizi(taqreer.najin)),
+            format!(
+                "the workshop continues on {}",
+                sutur_injilizi(taqreer.najin)
+            ),
         )
     };
     InqadhHie {
@@ -1081,7 +1126,10 @@ fn haddith_alamat_saf(
     silsila: Option<&SilsilatKhutut>,
 ) {
     let mut saff = Saff::jadeed();
-    let mut qiyas = silsila.map(|khutut| MudkhalatQiyas { saff: &mut saff, khutut });
+    let mut qiyas = silsila.map(|khutut| MudkhalatQiyas {
+        saff: &mut saff,
+        khutut,
+    });
     if let Some(mudkhal) = sufuf.iter_mut().find(|mudkhal| mudkhal.id == id) {
         let sijill = mudkhal.muraja.clone();
         let alamat_masrad = masrad.afhas(mudkhal);
@@ -1126,7 +1174,11 @@ pub fn haddith_tarjama(
     let waqt = waqt_alaan();
     let lahza = lahza_alaan();
 
-    let jadeed = if hadaf.trim().is_empty() { None } else { Some(hadaf) };
+    let jadeed = if hadaf.trim().is_empty() {
+        None
+    } else {
+        Some(hadaf)
+    };
     let (sabiq, tasnif, masdar_nass, nasq_masdar) = {
         let Some(mudkhal) = sufuf.iter_mut().find(|mudkhal| mudkhal.id == nass_id) else {
             return Err(Khata::from(KhataWarshaAmr::NassGhayrMawjud { nass }));
@@ -1154,19 +1206,29 @@ pub fn haddith_tarjama(
         }
         mudkhal.muharrir = Some(muharrir.clone());
         mudkhal.akhir_tabdeel = Some(waqt.clone());
-        (sabiq, mudkhal.tasnif, mudkhal.masdar.clone(), mudkhal.nasq_masdar.clone())
+        (
+            sabiq,
+            mudkhal.tasnif,
+            mudkhal.masdar.clone(),
+            mudkhal.nasq_masdar.clone(),
+        )
     };
 
     let masar_tarikh = mashru.jidhr().join(UDW_TARIKH);
     let mut tarikh: TarikhMashru = iqra_janibi(&masar_tarikh)?;
-    if tarikh.sajjil_tabdeel(nass_id, sabiq, jadeed.clone(), muharrir.clone(), waqt.clone(), None)
-    {
+    if tarikh.sajjil_tabdeel(
+        nass_id,
+        sabiq,
+        jadeed.clone(),
+        muharrir.clone(),
+        waqt.clone(),
+        None,
+    ) {
         uktub_janibi(&masar_tarikh, &tarikh)?;
     }
 
     if let Some(hadaf_jadeed) = &jadeed
-        && let Some(asl) =
-            AslQayd::min_halat(HalatMuraja::Musawwada, Some(muharrir), None, None)
+        && let Some(asl) = AslQayd::min_halat(HalatMuraja::Musawwada, Some(muharrir), None, None)
     {
         let mut dhakira = Dhakira::iftah(&masarat_hala)?;
         dhakira.sajjil(&QaydJadid {
@@ -1240,12 +1302,15 @@ pub fn iqtirahat_nass(
         .collect();
 
     let dhakira = Dhakira::iftah(&masarat_hala)?;
-    let hasad = dhakira
-        .ibhath(&TalabDhakira::jadeed(&mudkhal.masdar, mudkhal.tasnif).bi_luba(&muarrif))?;
+    let hasad =
+        dhakira.ibhath(&TalabDhakira::jadeed(&mudkhal.masdar, mudkhal.tasnif).bi_luba(&muarrif))?;
 
     Ok(IqtirahatHie {
         mustalahat,
-        tatbiq: hasad.tatbiq.as_ref().map(|tatbiq| iqtirah_hie(&tatbiq.qayd, 1000)),
+        tatbiq: hasad
+            .tatbiq
+            .as_ref()
+            .map(|tatbiq| iqtirah_hie(&tatbiq.qayd, 1000)),
         iqtirahat: hasad
             .iqtirahat
             .iter()
@@ -1302,7 +1367,9 @@ pub fn tatbiq_iqtirah(
                 .map(|iqtirah| iqtirah.qayd.clone())
         });
     let Some(sajl) = makhtar else {
-        return Err(Khata::from(KhataWarshaAmr::IqtirahGhayrMawjud { qayd: qayd.raqm() }));
+        return Err(Khata::from(KhataWarshaAmr::IqtirahGhayrMawjud {
+            qayd: qayd.raqm(),
+        }));
     };
 
     let sabiq = {
@@ -1382,7 +1449,9 @@ pub(crate) fn nano_min_dolar(mablagh: f64) -> Natija<u64> {
 /// before a run is started.
 pub(crate) fn muzawwid_muntakhab(hali: &Idadat) -> Natija<IdadatMuzawwid> {
     hali.muzawwidun.muntakhab().cloned().ok_or_else(|| {
-        Khata::from(KhataWarshaAmr::LaMuzawwid { hala: hali.muzawwidun.hala() })
+        Khata::from(KhataWarshaAmr::LaMuzawwid {
+            hala: hali.muzawwidun.hala(),
+        })
     })
 }
 
@@ -1395,9 +1464,13 @@ pub(crate) fn bin_muzawwid(
     let idhn = IdhnInfaq::baad_taakid(saqf, lahza);
     let hisab = tarif.hisab_miftah.as_deref().unwrap_or(&tarif.muarrif);
     let itimad = || -> Natija<Itimad> {
-        Itimad::min_khazina(hisab).map_err(Khata::from)?.ok_or_else(|| {
-            Khata::from(KhataWarshaAmr::LaItimad { muzawwid: tarif.muarrif.clone() })
-        })
+        Itimad::min_khazina(hisab)
+            .map_err(Khata::from)?
+            .ok_or_else(|| {
+                Khata::from(KhataWarshaAmr::LaItimad {
+                    muzawwid: tarif.muarrif.clone(),
+                })
+            })
     };
     let hadd = NonZeroU32::new(tarif.hadd_talabat);
     match tarif.naw {
@@ -1410,8 +1483,10 @@ pub(crate) fn bin_muzawwid(
             if let Some(nz) = hadd {
                 tarkib.hadd_talabat = nz;
             }
-            Ok(Box::new(MuzawwidAnthropic::jadeed(tarkib, itimad()?, idhn).map_err(Khata::from)?))
-        }
+            Ok(Box::new(
+                MuzawwidAnthropic::jadeed(tarkib, itimad()?, idhn).map_err(Khata::from)?,
+            ))
+        },
         NawMuzawwid::OpenAiMutawafiq => {
             let mut tarkib = IdadatMuwafiqOpenAI::openai();
             tarkib.ism.clone_from(&tarif.muarrif);
@@ -1427,7 +1502,7 @@ pub(crate) fn bin_muzawwid(
             Ok(Box::new(
                 MuzawwidMuwafiqOpenAI::jadeed(tarkib, itimad()?, idhn).map_err(Khata::from)?,
             ))
-        }
+        },
         NawMuzawwid::Mahalli => {
             if tarif.namudhaj.is_empty() {
                 return Err(Khata::from(KhataWarshaAmr::MuzawwidGhayrMadum {
@@ -1445,8 +1520,10 @@ pub(crate) fn bin_muzawwid(
             if let Some(nz) = hadd {
                 tarkib.hadd_talabat = nz;
             }
-            Ok(Box::new(MuzawwidMuwafiqOpenAI::mahalli(tarkib).map_err(Khata::from)?))
-        }
+            Ok(Box::new(
+                MuzawwidMuwafiqOpenAI::mahalli(tarkib).map_err(Khata::from)?,
+            ))
+        },
         NawMuzawwid::Gemini => {
             let mut tarkib = IdadatGemini::default();
             if !tarif.namudhaj.is_empty() {
@@ -1456,22 +1533,28 @@ pub(crate) fn bin_muzawwid(
             if let Some(nz) = hadd {
                 tarkib.hadd_talabat = nz;
             }
-            Ok(Box::new(MuzawwidGemini::jadeed(tarkib, itimad()?, idhn).map_err(Khata::from)?))
-        }
+            Ok(Box::new(
+                MuzawwidGemini::jadeed(tarkib, itimad()?, idhn).map_err(Khata::from)?,
+            ))
+        },
         NawMuzawwid::Deepl => {
             let mut tarkib = IdadatDeepL::default();
             if let Some(nz) = hadd {
                 tarkib.hadd_talabat = nz;
             }
-            Ok(Box::new(MuzawwidDeepL::jadeed(tarkib, itimad()?, idhn).map_err(Khata::from)?))
-        }
+            Ok(Box::new(
+                MuzawwidDeepL::jadeed(tarkib, itimad()?, idhn).map_err(Khata::from)?,
+            ))
+        },
         NawMuzawwid::MicrosoftTarjama => {
             let mut tarkib = IdadatMicrosoft::default();
             if let Some(nz) = hadd {
                 tarkib.hadd_talabat = nz;
             }
-            Ok(Box::new(MuzawwidMicrosoft::jadeed(tarkib, itimad()?, idhn).map_err(Khata::from)?))
-        }
+            Ok(Box::new(
+                MuzawwidMicrosoft::jadeed(tarkib, itimad()?, idhn).map_err(Khata::from)?,
+            ))
+        },
         NawMuzawwid::GoogleTarjama => Err(Khata::from(KhataWarshaAmr::MuzawwidGhayrMadum {
             muzawwid: tarif.muarrif.clone(),
             sabab_arabi: "مزوّد ترجمة Google السحابي يتطلّب معرّف مشروع سحابي لا تحمله \
@@ -1494,12 +1577,19 @@ fn aid_hisab_alamat(
 ) {
     let silsila = silsilat_khutut(masarat_hala, hali);
     let masrad = masrad_kamil(jidhr, sufuf);
-    let muraja: BTreeMap<NassId, SijillMuraja> =
-        sufuf.iter().map(|mudkhal| (mudkhal.id, mudkhal.muraja.clone())).collect();
-    let alamat_masrad: BTreeMap<NassId, Vec<AlamJawda>> =
-        sufuf.iter().map(|mudkhal| (mudkhal.id, masrad.afhas(mudkhal))).collect();
+    let muraja: BTreeMap<NassId, SijillMuraja> = sufuf
+        .iter()
+        .map(|mudkhal| (mudkhal.id, mudkhal.muraja.clone()))
+        .collect();
+    let alamat_masrad: BTreeMap<NassId, Vec<AlamJawda>> = sufuf
+        .iter()
+        .map(|mudkhal| (mudkhal.id, masrad.afhas(mudkhal)))
+        .collect();
     let mut saff = Saff::jadeed();
-    let mut qiyas = silsila.as_ref().map(|khutut| MudkhalatQiyas { saff: &mut saff, khutut });
+    let mut qiyas = silsila.as_ref().map(|khutut| MudkhalatQiyas {
+        saff: &mut saff,
+        khutut,
+    });
     let _ = ihsib_mashru(
         sufuf,
         Some(&muraja),
@@ -1537,14 +1627,19 @@ pub async fn tarjim_nass(
     let hali = idadat.hali();
     let tarif = muzawwid_muntakhab(&hali)?;
     let lahza = lahza_alaan();
-    let saqf_nano =
-        tarif.mizaniya.and_then(|mablagh| nano_min_dolar(mablagh).ok()).unwrap_or(u64::MAX);
+    let saqf_nano = tarif
+        .mizaniya
+        .and_then(|mablagh| nano_min_dolar(mablagh).ok())
+        .unwrap_or(u64::MAX);
     let muzawwid = bin_muzawwid(&tarif, saqf_nano, lahza)?;
 
     let mut mashru = iftah_mashru(&masarat_hala, id)?;
     let mut sufuf = sufuf_lil_kitaba(&mashru)?;
-    let mufrad: Vec<MudkhalNass> =
-        sufuf.iter().filter(|mudkhal| mudkhal.id == nass_id).cloned().collect();
+    let mufrad: Vec<MudkhalNass> = sufuf
+        .iter()
+        .filter(|mudkhal| mudkhal.id == nass_id)
+        .cloned()
+        .collect();
     if mufrad.is_empty() {
         return Err(Khata::from(KhataWarshaAmr::NassGhayrMawjud { nass }));
     }
@@ -1577,11 +1672,20 @@ pub async fn tarjim_nass(
     } else if taqreer.taqaddum.mutarjama > 0 || tatbiq.mutabbaqa > 0 {
         (true, None)
     } else if tatbiq.mahmiya > 0 {
-        (false, Some("عمل إنسان أحدث في الطريق؛ لم تُكتب الترجمة الآلية فوقه.".to_owned()))
+        (
+            false,
+            Some("عمل إنسان أحدث في الطريق؛ لم تُكتب الترجمة الآلية فوقه.".to_owned()),
+        )
     } else if takhatti.mutarjama_musbaqan > 0 {
-        (false, Some("النص مترجم بالفعل؛ الترجمة الآلية لا تكتب فوق ترجمة قائمة.".to_owned()))
+        (
+            false,
+            Some("النص مترجم بالفعل؛ الترجمة الآلية لا تكتب فوق ترجمة قائمة.".to_owned()),
+        )
     } else if takhatti.mujammada > 0 {
-        (false, Some("النص مجمّد؛ العمليات الجماعية لا تلمسه.".to_owned()))
+        (
+            false,
+            Some("النص مجمّد؛ العمليات الجماعية لا تلمسه.".to_owned()),
+        )
     } else if takhatti.farigha > 0 {
         (false, Some("النص الأصلي فارغ فلا شيء يُترجم.".to_owned()))
     } else if let Some(khata) = &taqreer.tawaqquf {
@@ -1596,7 +1700,11 @@ pub async fn tarjim_nass(
         .find(|mudkhal| mudkhal.id == nass_id)
         .map(|mudkhal| saf_hie(mudkhal, &tawzi))
         .ok_or_else(|| Khata::from(KhataWarshaAmr::NassGhayrMawjud { nass }))?;
-    Ok(NatijatTarjamaHie { saf, najahat, sabab_arabi })
+    Ok(NatijatTarjamaHie {
+        saf,
+        najahat,
+        sabab_arabi,
+    })
 }
 
 /// A batch run to a cost ceiling, committed as it lands; progress streams on its event.
@@ -1735,7 +1843,11 @@ pub fn alamat_mashru(
 
     let masrad = masrad_kamil(&jidhr, &sufuf);
     let tadarubat = masrad.tadarubat(&sufuf).iter().map(tadarub_hie).collect();
-    Ok(AlamatMashruHie { adad_alamat, adad_khatira, tadarubat })
+    Ok(AlamatMashruHie {
+        adad_alamat,
+        adad_khatira,
+        tadarubat,
+    })
 }
 
 /// One term unified across every occurrence; answers how many strings changed.
@@ -1766,7 +1878,10 @@ pub fn wahhid_mustalah(
 
     let masrad = masrad_kamil(&jidhr, &sufuf);
     let tadarubat = masrad.tadarubat(&sufuf);
-    let Some(tadarub) = tadarubat.iter().find(|tadarub| tadarub.mustalah == mustalah) else {
+    let Some(tadarub) = tadarubat
+        .iter()
+        .find(|tadarub| tadarub.mustalah == mustalah)
+    else {
         return Err(Khata::from(KhataWarshaAmr::TadarubGhayrMawjud { mustalah }));
     };
     let taadilat = wahhid_tadarub(tadarub, &shakl, &sufuf);
@@ -1843,9 +1958,7 @@ pub fn muayana(
     let Some(silsila) = silsilat_khutut(&masarat_hala, &hali) else {
         return Ok(MuayanaHie {
             ghayr_qabil: true,
-            sabab_ghayr_qabil: Some(
-                "لا خط عربي صالح في مجلد الخطوط؛ لا قياس بلا خط.".to_owned(),
-            ),
+            sabab_ghayr_qabil: Some("لا خط عربي صالح في مجلد الخطوط؛ لا قياس بلا خط.".to_owned()),
             hajm: None,
             mutah: mutah_maruf,
             sutur: Vec::new(),
@@ -1893,7 +2006,7 @@ pub fn muayana(
                 tajawuz_biksil: None,
                 tajawuz_nisba: None,
             });
-        }
+        },
     };
 
     let sutur = takhtit
@@ -1916,7 +2029,9 @@ pub fn muayana(
             let (zaid, nisba) = takhtit
                 .tajawuz
                 .as_ref()
-                .map_or((0.0_f32, 0.0_f32), |taqreer| (taqreer.zaid(), taqreer.nisba()));
+                .map_or((0.0_f32, 0.0_f32), |taqreer| {
+                    (taqreer.zaid(), taqreer.nisba())
+                });
             Ok(MuayanaHie {
                 ghayr_qabil: false,
                 sabab_ghayr_qabil: None,
@@ -1926,7 +2041,7 @@ pub fn muayana(
                 tajawuz_biksil: Some(f64::from(zaid)),
                 tajawuz_nisba: Some(f64::from(nisba)),
             })
-        }
+        },
         None => Ok(MuayanaHie {
             ghayr_qabil: true,
             sabab_ghayr_qabil: Some(
@@ -2020,9 +2135,13 @@ pub fn idmaj_huzma(
     // A bundle with rows that did not read would merge as if the colleague never had
     // them; their work on those rows would vanish from the result with no message.
     if muhtawa.talifa > 0 {
-        return Err(Khata::from(KhataWarshaAmr::HuzmaBihaTalaf { talifa: muhtawa.talifa }));
+        return Err(Khata::from(KhataWarshaAmr::HuzmaBihaTalaf {
+            talifa: muhtawa.talifa,
+        }));
     }
-    muhtawa.tahaqquq_tatabuq(mashru.rasm()).map_err(Khata::from)?;
+    muhtawa
+        .tahaqquq_tatabuq(mashru.rasm())
+        .map_err(Khata::from)?;
     let aslaf = aslaf_mashru(mashru.jidhr()).map_err(Khata::from)?;
     let aslaf_talifa = aslaf.as_ref().map_or(0, |(_, talifa)| *talifa);
     // A partly unreadable ancestor is kept as it is: the rows it lost merge without an
@@ -2045,8 +2164,11 @@ pub fn idmaj_huzma(
         (None, None)
     };
 
-    let natijat_damj =
-        damj(sufuf, muhtawa.nusus, aslaf.as_ref().map(|(nusus, _)| nusus.as_slice()));
+    let natijat_damj = damj(
+        sufuf,
+        muhtawa.nusus,
+        aslaf.as_ref().map(|(nusus, _)| nusus.as_slice()),
+    );
     let taqreer = natijat_damj.taqreer().clone();
     let nizaat = natijat_damj.nizaat().iter().map(nizaa_hie).collect();
 
@@ -2098,8 +2220,7 @@ pub fn qarrir_nizaat(
     let lahza = lahza_alaan();
 
     let mahfudh = {
-        let mut kharita =
-            jalasat.0.lock();
+        let mut kharita = jalasat.0.lock();
         kharita.remove(&id)
     };
     let Some(mahfudh) = mahfudh else {
@@ -2116,8 +2237,10 @@ pub fn qarrir_nizaat(
         let _ = talabat.insert(huwiyat_nass(&nass)?, qeema);
     }
 
-    let (mut sufuf, husum) =
-        mahfudh.damj.itmam(&talabat, &muharrir, lahza).map_err(Khata::from)?;
+    let (mut sufuf, husum) = mahfudh
+        .damj
+        .itmam(&talabat, &muharrir, lahza)
+        .map_err(Khata::from)?;
     let jidhr = mashru.jidhr().to_path_buf();
 
     let tarikh_ana: TarikhMashru = iqra_janibi(&jidhr.join(UDW_TARIKH))?;
@@ -2148,7 +2271,10 @@ pub fn qarrir_nizaat(
     mashru.uktub_kul(&sufuf, waqt)?;
     sajjil_aslaf(&jidhr, &sufuf).map_err(Khata::from)?;
 
-    Ok(DamjHie { sufuf: adad_u32(sufuf.len()), husum: adad_u32(husum.len()) })
+    Ok(DamjHie {
+        sufuf: adad_u32(sufuf.len()),
+        husum: adad_u32(husum.len()),
+    })
 }
 
 /// Failures of the workspace surface itself.
@@ -2276,7 +2402,7 @@ impl Tafsir for KhataWarshaAmr {
             // A run was requested and cannot start; the user can fix the settings.
             Self::LaMuzawwid { .. } | Self::LaItimad { .. } | Self::MuzawwidGhayrMadum { .. } => {
                 Khutura::Khatar
-            }
+            },
             // A file beside somebody's work, or the work itself, does not read.
             Self::MalafTalif { .. } | Self::MashruTalif { .. } => Khutura::Khatar,
         }
@@ -2285,13 +2411,11 @@ impl Tafsir for KhataWarshaAmr {
     fn arabi(&self) -> String {
         match self {
             Self::MashruGhayrMawjud { .. } => {
-                "لا مشروع ترجمة لهذه اللعبة بعد. ابدأ الترجمة من شاشة اللعبة أولًا."
-                    .to_owned()
-            }
+                "لا مشروع ترجمة لهذه اللعبة بعد. ابدأ الترجمة من شاشة اللعبة أولًا.".to_owned()
+            },
             Self::NassGhayrMawjud { .. } => {
-                "هذا النص لم يعد في جدول المشروع. أعد فتح الورشة لتحميل الجدول الحالي."
-                    .to_owned()
-            }
+                "هذا النص لم يعد في جدول المشروع. أعد فتح الورشة لتحميل الجدول الحالي.".to_owned()
+            },
             Self::LaMuzawwid { hala } => hala.arabi().to_owned(),
             Self::LaItimad { muzawwid } => format!(
                 "لا اعتماد في سلسلة مفاتيح النظام للمزوّد {muzawwid}. أدخل مفتاحه في \
@@ -2302,18 +2426,17 @@ impl Tafsir for KhataWarshaAmr {
                 "لم تعد الذاكرة تعرض هذا القيد لهذا النص. حدّث الاقتراحات ثم اختر من \
                  جديد."
                     .to_owned()
-            }
+            },
             Self::TadarubGhayrMawjud { mustalah } => format!(
                 "لا تضارب مصطلحات على «{mustalah}» الآن؛ ربما حُسم في تحرير سابق. أعد \
                  حساب العلامات."
             ),
             Self::LaDamjMaftuh => {
-                "لا دمج معلّقًا لهذا المشروع. استورد حزمة زميل أولًا ثم احسم تعارضاتها."
-                    .to_owned()
-            }
+                "لا دمج معلّقًا لهذا المشروع. استورد حزمة زميل أولًا ثم احسم تعارضاتها.".to_owned()
+            },
             Self::SaqfGhayrSalih => {
                 "سقف التكلفة يجب أن يكون مبلغًا موجبًا محدودًا بالدولار.".to_owned()
-            }
+            },
             Self::MalafTalif { masar, .. } => format!(
                 "الملف {} موجود ولا يُقرأ. لن يُكتب فوقه؛ افحصه أو انقله ثم أعد المحاولة.",
                 masar.display()
@@ -2360,10 +2483,10 @@ impl Tafsir for KhataWarshaAmr {
                 "No merge is held open for this project. Import a colleague's bundle \
                  first, then resolve its conflicts."
                     .to_owned()
-            }
+            },
             Self::SaqfGhayrSalih => {
                 "The cost ceiling must be a positive, finite dollar amount.".to_owned()
-            }
+            },
             Self::MalafTalif { masar, sabab } => format!(
                 "{} exists and does not read ({sabab}). Nothing will be written over it; \
                  inspect or move it, then retry.",
@@ -2395,8 +2518,10 @@ impl Tafsir for KhataWarshaAmr {
             | Self::SaqfGhayrSalih
             | Self::MalafTalif { .. } => Khutwa::AadaMuhawala,
             Self::LaMuzawwid { .. } | Self::LaItimad { .. } | Self::MuzawwidGhayrMadum { .. } => {
-                Khutwa::FathIdadat { qism: QismIdadat::Muzawwidun }
-            }
+                Khutwa::FathIdadat {
+                    qism: QismIdadat::Muzawwidun,
+                }
+            },
         }
     }
 
@@ -2405,42 +2530,40 @@ impl Tafsir for KhataWarshaAmr {
         match self {
             Self::MashruGhayrMawjud { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
-            }
+            },
             Self::NassGhayrMawjud { nass } => {
                 let _ = siyaq.insert("nass".to_owned(), QeemaSiyaq::Nass(nass.clone()));
-            }
+            },
             Self::LaItimad { muzawwid } | Self::MuzawwidGhayrMadum { muzawwid, .. } => {
-                let _ =
-                    siyaq.insert("muzawwid".to_owned(), QeemaSiyaq::Nass(muzawwid.clone()));
-            }
+                let _ = siyaq.insert("muzawwid".to_owned(), QeemaSiyaq::Nass(muzawwid.clone()));
+            },
             Self::IqtirahGhayrMawjud { qayd } => {
                 let _ = siyaq.insert("qayd".to_owned(), QeemaSiyaq::Raqm(*qayd));
-            }
+            },
             Self::TadarubGhayrMawjud { mustalah } => {
-                let _ =
-                    siyaq.insert("mustalah".to_owned(), QeemaSiyaq::Nass(mustalah.clone()));
-            }
+                let _ = siyaq.insert("mustalah".to_owned(), QeemaSiyaq::Nass(mustalah.clone()));
+            },
             Self::MalafTalif { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::MashruTalif { talifa, masar } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert(
                     "talifa".to_owned(),
                     QeemaSiyaq::Hajm(u64::try_from(*talifa).unwrap_or(u64::MAX)),
                 );
-            }
+            },
             Self::HuzmaBihaTalaf { talifa } => {
                 let _ = siyaq.insert(
                     "talifa".to_owned(),
                     QeemaSiyaq::Hajm(u64::try_from(*talifa).unwrap_or(u64::MAX)),
                 );
-            }
+            },
             Self::LaMuzawwid { hala } => {
                 let _ = siyaq.insert("hala".to_owned(), QeemaSiyaq::Nass(hala.ism().to_owned()));
-            }
-            Self::LaDamjMaftuh | Self::SaqfGhayrSalih => {}
+            },
+            Self::LaDamjMaftuh | Self::SaqfGhayrSalih => {},
         }
         siyaq
     }
@@ -2550,8 +2673,9 @@ mod ikhtibarat {
             BayanIstikhraj::default(),
             WAQT.to_owned(),
         )?;
-        let sufuf: Vec<MudkhalNass> =
-            (0..adad).map(|raqm| saf(&format!("menu/{raqm}"), &format!("Option {raqm}"))).collect();
+        let sufuf: Vec<MudkhalNass> = (0..adad)
+            .map(|raqm| saf(&format!("menu/{raqm}"), &format!("Option {raqm}")))
+            .collect();
         mashru.adif(sufuf)?;
         mashru.ikhtim(WAQT.to_owned())?;
         Ok((id, jidhr))
@@ -2559,8 +2683,9 @@ mod ikhtibarat {
 
     /// Appends two damaged lines to the string file, raw.
     fn atlif(jidhr: &Path) -> std::io::Result<()> {
-        let mut malaf =
-            std::fs::OpenOptions::new().append(true).open(jidhr.join(MALAF_NUSUS))?;
+        let mut malaf = std::fs::OpenOptions::new()
+            .append(true)
+            .open(jidhr.join(MALAF_NUSUS))?;
         malaf.write_all(RAAS_MABTUR.as_bytes())?;
         malaf.write_all(b"\n")?;
         malaf.write_all(BAYT_TALIFA)?;
@@ -2611,7 +2736,9 @@ mod ikhtibarat {
         let qabl = std::fs::read(jidhr.join(MALAF_NUSUS))?;
 
         let mashru = iftah_mashru(&masarat_hala, id)?;
-        let khata = sufuf_lil_kitaba(&mashru).err().ok_or("a damaged file must refuse a write")?;
+        let khata = sufuf_lil_kitaba(&mashru)
+            .err()
+            .ok_or("a damaged file must refuse a write")?;
 
         assert_eq!(khata.ramz, Ramz::jadeed(RAMZ_MASHRU_TALIF));
         assert_eq!(std::fs::read(jidhr.join(MALAF_NUSUS))?, qabl);
@@ -2650,7 +2777,10 @@ mod ikhtibarat {
         assert_eq!(warsha.salama.hala, HalatNususHie::Talifa);
         assert_eq!(warsha.adad, 4, "the survivors are shown");
         assert_eq!(warsha.salama.najin, 4);
-        let talaf = warsha.salama.talaf.ok_or("the damage must be reported beside the rows")?;
+        let talaf = warsha
+            .salama
+            .talaf
+            .ok_or("the damage must be reported beside the rows")?;
         assert_eq!(talaf.talifa, 2);
         assert_eq!(talaf.sutur.len(), 2);
         assert_eq!(talaf.sutur.first().map(|satr| satr.raqm), Some(5));
@@ -2663,7 +2793,11 @@ mod ikhtibarat {
         assert!(!talaf.zir_arabi.is_empty() && !talaf.zir_injilizi.is_empty());
         assert!(warsha.salama.wasf_arabi.contains("لا تُعِد الاستخراج"));
         assert!(warsha.salama.wasf_injilizi.contains("Do not re-extract"));
-        assert_eq!(std::fs::read(jidhr.join(MALAF_NUSUS))?, qabl, "nothing was written");
+        assert_eq!(
+            std::fs::read(jidhr.join(MALAF_NUSUS))?,
+            qabl,
+            "nothing was written"
+        );
         assert_eq!(asma(&jidhr)?, asma_qabl, "nothing was created");
         Ok(())
     }
@@ -2724,7 +2858,11 @@ mod ikhtibarat {
 
         assert_eq!(inqadh.najin, 4);
         assert_eq!(inqadh.talifa, 2);
-        assert_eq!(std::fs::read(&inqadh.mahfudh)?, asl, "the original is preserved byte for byte");
+        assert_eq!(
+            std::fs::read(&inqadh.mahfudh)?,
+            asl,
+            "the original is preserved byte for byte"
+        );
         assert!(Path::new(&inqadh.marfud).is_file());
         assert!(Path::new(&inqadh.taqreer).is_file());
         assert!(inqadh.wasf_arabi.contains(&inqadh.mahfudh));
@@ -2768,7 +2906,10 @@ mod ikhtibarat {
 
     fn idadat_bi_muzawwidin(qaima: Vec<IdadatMuzawwid>, iftiradi: Option<&str>) -> Idadat {
         Idadat {
-            muzawwidun: IdadatMuzawwidin { qaima, iftiradi: iftiradi.map(str::to_owned) },
+            muzawwidun: IdadatMuzawwidin {
+                qaima,
+                iftiradi: iftiradi.map(str::to_owned),
+            },
             ..Idadat::default()
         }
     }
@@ -2788,11 +2929,21 @@ mod ikhtibarat {
                 .err()
                 .ok_or("a list of disabled providers refuses")?;
         assert_eq!(muattala.injilizi, HalatMuzawwidin::Muattala.injilizi());
-        assert_ne!(muattala.injilizi, faragh.injilizi, "two states, two remedies");
-        assert_eq!(muattala.ramz, faragh.ramz, "one code, since one screen answers both");
+        assert_ne!(
+            muattala.injilizi, faragh.injilizi,
+            "two states, two remedies"
+        );
+        assert_eq!(
+            muattala.ramz, faragh.ramz,
+            "one code, since one screen answers both"
+        );
 
         let badeel = idadat_bi_muzawwidin(vec![tarif("a", false), tarif("b", true)], Some("a"));
-        assert_eq!(muzawwid_muntakhab(&badeel)?.muarrif, "b", "the settings' own fallthrough");
+        assert_eq!(
+            muzawwid_muntakhab(&badeel)?.muarrif,
+            "b",
+            "the settings' own fallthrough"
+        );
         let hie = muzawwid_warsha_hie(&badeel);
         assert_eq!(hie.hala, HalatMuzawwidinHie::Badeel);
         assert_eq!(hie.ism.as_deref(), Some("b"));
@@ -2800,15 +2951,25 @@ mod ikhtibarat {
         assert_eq!(hie.wasf_arabi, HalatMuzawwidin::Badeel.arabi());
 
         let mukhtar = idadat_bi_muzawwidin(vec![tarif("a", true), tarif("b", true)], Some("b"));
-        assert_eq!(muzawwid_muntakhab(&mukhtar)?.muarrif, "b", "the default wins when enabled");
-        assert_eq!(muzawwid_warsha_hie(&mukhtar).hala, HalatMuzawwidinHie::Mukhtar);
+        assert_eq!(
+            muzawwid_muntakhab(&mukhtar)?.muarrif,
+            "b",
+            "the default wins when enabled"
+        );
+        assert_eq!(
+            muzawwid_warsha_hie(&mukhtar).hala,
+            HalatMuzawwidinHie::Mukhtar
+        );
         Ok(())
     }
 
     /// Both refusals carry both languages and the count.
     #[test]
     fn alrafdan_bilughatayn() {
-        let mashru = KhataWarshaAmr::MashruTalif { talifa: 2, masar: PathBuf::from("nusus.jsonl") };
+        let mashru = KhataWarshaAmr::MashruTalif {
+            talifa: 2,
+            masar: PathBuf::from("nusus.jsonl"),
+        };
         assert!(mashru.arabi().contains("سطرين"));
         assert!(mashru.injilizi().contains("2 rows"));
         assert_eq!(mashru.khutwa(), Khutwa::FathNusus);

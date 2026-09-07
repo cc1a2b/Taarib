@@ -81,7 +81,11 @@ pub async fn jalb_fahras(
 ) -> NatijatMustawda<FahrasMajlub> {
     let (bayan, masdar_bayan) = jalb_bayan_maa_masdar(silsila, mukhazzan).await?;
     let sharaih = jalb_sharaih(silsila, &bayan, alab, makhbaa).await?;
-    Ok(FahrasMajlub { bayan, masdar_bayan, sharaih })
+    Ok(FahrasMajlub {
+        bayan,
+        masdar_bayan,
+        sharaih,
+    })
 }
 
 /// Where one shard's verified bytes are cached.
@@ -90,7 +94,10 @@ pub async fn jalb_fahras(
 ///
 /// [`KhataMustawda::ShareehaMajhula`] when `raqm` is not a shard index.
 pub fn masar_makhbaa_shareeha(makhbaa: &Path, raqm: u16) -> NatijatMustawda<PathBuf> {
-    Ok(makhbaa.join(MUJALLAD_MAKHBAA).join(MUJALLAD_SHARAIH).join(ism_shareeha(raqm)?))
+    Ok(makhbaa
+        .join(MUJALLAD_MAKHBAA)
+        .join(MUJALLAD_SHARAIH)
+        .join(ism_shareeha(raqm)?))
 }
 
 /// Fetches the global manifest and parses it.
@@ -104,7 +111,9 @@ pub async fn jalb_bayan(
     silsila: &SilsilatMasadir,
     mukhazzan: Option<u64>,
 ) -> NatijatMustawda<BayanMustawda> {
-    jalb_bayan_maa_masdar(silsila, mukhazzan).await.map(|(bayan, _)| bayan)
+    jalb_bayan_maa_masdar(silsila, mukhazzan)
+        .await
+        .map(|(bayan, _)| bayan)
 }
 
 /// As [`jalb_bayan`], naming the source that served the manifest.
@@ -208,7 +217,9 @@ pub async fn jalb_qaimat_sahb(
     silsila: &SilsilatMasadir,
     bayan: &BayanMustawda,
 ) -> NatijatMustawda<Vec<u8>> {
-    jalb_qaimat_sahb_maa_masdar(silsila, bayan).await.map(|(bayt, _)| bayt)
+    jalb_qaimat_sahb_maa_masdar(silsila, bayan)
+        .await
+        .map(|(bayt, _)| bayt)
 }
 
 /// As [`jalb_qaimat_sahb`], naming the source that served the list.
@@ -244,10 +255,10 @@ async fn min_makhbaa(masar: &Path, raqm: u16, bayan: &BayanMustawda) -> Option<V
 async fn ila_makhbaa(masar: PathBuf, bayt: Vec<u8>) {
     let wasf = masar.display().to_string();
     match tokio::task::spawn_blocking(move || kitaba_dharra(&masar, &bayt)).await {
-        Ok(Ok(())) => {}
+        Ok(Ok(())) => {},
         Ok(Err(khata)) => {
             tracing::warn!(masar = %wasf, khata = %khata.li_sijill(), "shard was not cached");
-        }
+        },
         Err(khata) => tracing::warn!(masar = %wasf, khata = %khata, "shard was not cached"),
     }
 }

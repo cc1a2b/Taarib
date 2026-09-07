@@ -185,13 +185,13 @@ pub use crate::lawha_js::{
     NamatLawha, TaaribIhsaat, TaaribKhiyaratLawha, TaaribLawha, TaaribMawdi,
 };
 pub use crate::natija_js::{
-    AlamHarf, AlamSatr, HaqlHarf, HaqlSatr, NawDharra, TaaribQiyas, TaaribTajawuz,
-    TaaribTakhtit, TaaribTakhtitKhaam,
+    AlamHarf, AlamSatr, HaqlHarf, HaqlSatr, NawDharra, TaaribQiyas, TaaribTajawuz, TaaribTakhtit,
+    TaaribTakhtitKhaam,
 };
 pub use crate::saff_js::{Lahja, TaaribSaff};
 pub use crate::talab_js::{
-    IttijahAsas, LughaNass, Muhadhaha, NamatDabt, SiyasatArqam, SiyasatTajawuz,
-    SiyasatTashkeel, TaaribKhiyarat, TaaribNitaq, TaaribTalab,
+    IttijahAsas, LughaNass, Muhadhaha, NamatDabt, SiyasatArqam, SiyasatTajawuz, SiyasatTashkeel,
+    TaaribKhiyarat, TaaribNitaq, TaaribTalab,
 };
 
 /// Prepares the module for use inside a page: installs the panic hook that

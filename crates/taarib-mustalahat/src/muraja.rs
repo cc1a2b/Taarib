@@ -36,8 +36,8 @@
 //! where a reason was given. Phase 19 reconciles two contributors' histories by
 //! merging them, so the history has to be data rather than prose.
 
-use serde::{Deserialize, Serialize};
 use crate::musahim::MusahimId;
+use serde::{Deserialize, Serialize};
 
 /// Where a translation stands.
 ///
@@ -46,7 +46,9 @@ use crate::musahim::MusahimId;
 /// and the other is a human's own draft, and every downstream decision — what
 /// to show a reviewer first, what a bulk operation may touch, what Phase 14 will
 /// compile — treats them differently.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 #[cfg_attr(feature = "wajiha", derive(specta::Type))]
 #[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -211,7 +213,11 @@ impl SijillMuraja {
     /// A fresh record, untranslated and with nothing behind it.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { hala: HalatMuraja::LamTutarjam, tareekh: Vec::new(), mujammad: false }
+        Self {
+            hala: HalatMuraja::LamTutarjam,
+            tareekh: Vec::new(),
+            mujammad: false,
+        }
     }
 
     /// Where the string stands.
@@ -340,7 +346,13 @@ impl SijillMuraja {
             // reviewer's timeline with entries that say nothing happened.
             return;
         }
-        self.tareekh.push(IntiqalMuraja { min: self.hala, ila, musahim, lahza, sabab });
+        self.tareekh.push(IntiqalMuraja {
+            min: self.hala,
+            ila,
+            musahim,
+            lahza,
+            sabab,
+        });
         self.hala = ila;
     }
 }

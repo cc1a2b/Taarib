@@ -16,6 +16,4 @@
 //! which has no public constructor and no `Deserialize`, so there is no
 //! sequence of calls and no stored document that approves text nobody read.
 
-pub use taarib_mustalahat::muraja::{
-    HalatMuraja, IntiqalMuraja, ShahadatMuraja, SijillMuraja,
-};
+pub use taarib_mustalahat::muraja::{HalatMuraja, IntiqalMuraja, ShahadatMuraja, SijillMuraja};

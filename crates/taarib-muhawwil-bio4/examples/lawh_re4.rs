@@ -74,14 +74,38 @@ struct Ayina {
 /// The samples, chosen so that each of the brief's four questions is answerable
 /// from the pixels alone.
 const AYINAT: [Ayina; 8] = [
-    Ayina { wasf: "joining: one word, four letters, three joins", nass: "بيبب" },
-    Ayina { wasf: "isolated / initial / medial / final beh", nass: "ب ببب" },
-    Ayina { wasf: "lam-alef: one ligature, not two letters", nass: "لا لأ لإ لآ" },
-    Ayina { wasf: "diacritics on their bases", nass: "بَ بُ بِ بّ" },
-    Ayina { wasf: "a vocalised word", nass: "مُحَمَّدٌ" },
-    Ayina { wasf: "direction: alef first logically, last visually", nass: "ابج" },
-    Ayina { wasf: "a real line of interface text", nass: "اضغط الزر للمتابعة" },
-    Ayina { wasf: "digits inside Arabic", nass: "الذخيرة ١٢ طلقة" },
+    Ayina {
+        wasf: "joining: one word, four letters, three joins",
+        nass: "بيبب",
+    },
+    Ayina {
+        wasf: "isolated / initial / medial / final beh",
+        nass: "ب ببب",
+    },
+    Ayina {
+        wasf: "lam-alef: one ligature, not two letters",
+        nass: "لا لأ لإ لآ",
+    },
+    Ayina {
+        wasf: "diacritics on their bases",
+        nass: "بَ بُ بِ بّ",
+    },
+    Ayina {
+        wasf: "a vocalised word",
+        nass: "مُحَمَّدٌ",
+    },
+    Ayina {
+        wasf: "direction: alef first logically, last visually",
+        nass: "ابج",
+    },
+    Ayina {
+        wasf: "a real line of interface text",
+        nass: "اضغط الزر للمتابعة",
+    },
+    Ayina {
+        wasf: "digits inside Arabic",
+        nass: "الذخيرة ١٢ طلقة",
+    },
 ];
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -90,14 +114,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map_or_else(|| PathBuf::from("lawh_re4.png"), PathBuf::from);
 
     let khutut = khutut()?;
-    let takhtit = KhiyaratTakhtit { satr_wahid: true, ..KhiyaratTakhtit::default() };
+    let takhtit = KhiyaratTakhtit {
+        satr_wahid: true,
+        ..KhiyaratTakhtit::default()
+    };
     let nusus: Vec<&str> = AYINAT.iter().map(|ayina| ayina.nass).collect();
     let asli = Shabaka::jadeeda(HAJM_KHANA, ARD_LAWHA, 576)?;
     let mabni = ibni(
         &nusus,
         &khutut,
         &takhtit,
-        KhiyaratBina { hajm: HAJM, asas: ASAS, hizma: [0x09, 0x00, 0x00, 0x13], asli },
+        KhiyaratBina {
+            hajm: HAJM,
+            asas: ASAS,
+            hizma: [0x09, 0x00, 0x00, 0x13],
+            asli,
+        },
     )?;
 
     let shabaka = mabni.khatt.shabaka()?;
@@ -106,14 +138,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("distinct glyphs : {}", mabni.taqreer.ashkal);
     println!("clamped glyphs  : {}", mabni.taqreer.ashkal_maqsusa);
     println!("worst clamp     : {} texel(s)", mabni.taqreer.aqsa_tajawuz);
-    println!("advance lost    : {} texel(s) in total", mabni.taqreer.farq_taqaddum);
+    println!(
+        "advance lost    : {} texel(s) in total",
+        mabni.taqreer.farq_taqaddum
+    );
     println!("marks dropped   : {}", mabni.taqreer.alamat_mafquda);
     println!("marks contested : {}", mabni.taqreer.alamat_mutanaziaa);
     println!("atlas           : {}x{}", shabaka.ard(), shabaka.irtifa());
     println!();
     println!("the drawn lines, top to bottom:");
     for (fahras, ayina) in AYINAT.iter().enumerate() {
-        let tul = mabni.nusus.get(fahras).map_or(0, taarib_muhawwil_bio4::NassManqulBio4::tul);
+        let tul = mabni
+            .nusus
+            .get(fahras)
+            .map_or(0, taarib_muhawwil_bio4::NassManqulBio4::tul);
         println!("  {}. {} — {tul} cell(s)", fahras + 1, ayina.wasf);
     }
 
@@ -162,7 +200,11 @@ impl Lawh {
     /// A white canvas.
     fn jadeed(ard: u32, irtifa: u32) -> Self {
         let hajm = (ard as usize) * (irtifa as usize) * 3;
-        Self { ard, irtifa, bayt: vec![0xFF; hajm] }
+        Self {
+            ard,
+            irtifa,
+            bayt: vec![0xFF; hajm],
+        }
     }
 
     /// Paints one pixel.
@@ -198,9 +240,8 @@ fn irsim(mabni: &KhattMabni, shabaka: Shabaka) -> Lawh {
     let ard = ARD_LAWHA + HASHIYA * 2;
     let irtifa_lawha = shabaka.irtifa();
     let irtifa_satr = HAJM_KHANA * TAKBIR + 10;
-    let irtifa = HASHIYA * 3
-        + irtifa_lawha
-        + irtifa_satr * u32::try_from(mabni.nusus.len()).unwrap_or(0);
+    let irtifa =
+        HASHIYA * 3 + irtifa_lawha + irtifa_satr * u32::try_from(mabni.nusus.len()).unwrap_or(0);
     let mut lawh = Lawh::jadeed(ard, irtifa);
 
     // The atlas, one texel per pixel, ink in black.
@@ -214,7 +255,11 @@ fn irsim(mabni: &KhattMabni, shabaka: Shabaka) -> Lawh {
     for satr in 0..=shabaka.sufuf() {
         let a = HASHIYA + satr * HAJM_KHANA;
         for s in 0..shabaka.ard() {
-            lawh.nuqta(HASHIYA + s, a.min(HASHIYA + irtifa_lawha), [0xCC, 0xD6, 0xE0]);
+            lawh.nuqta(
+                HASHIYA + s,
+                a.min(HASHIYA + irtifa_lawha),
+                [0xCC, 0xD6, 0xE0],
+            );
         }
     }
     for amud in 0..=shabaka.aamida() {
@@ -344,7 +389,11 @@ fn crc32(bayanat: &[u8]) -> u32 {
     for bayt in bayanat {
         qeema ^= u32::from(*bayt);
         for _ in 0..8 {
-            qeema = if qeema & 1 == 0 { qeema >> 1 } else { (qeema >> 1) ^ 0xEDB8_8320 };
+            qeema = if qeema & 1 == 0 {
+                qeema >> 1
+            } else {
+                (qeema >> 1) ^ 0xEDB8_8320
+            };
         }
     }
     !qeema

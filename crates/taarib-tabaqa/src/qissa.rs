@@ -78,8 +78,9 @@ use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::nass::{SiyaqNass, TasnifNass};
 use taarib_usus::khata::Tafsir as _;
 
-use crate::iltiqat_shasha::{IdadatTahsin, MuhassinSura, MuqayyidMuadal, SuraMultaqata,
-    basmat_mutawassit};
+use crate::iltiqat_shasha::{
+    IdadatTahsin, MuhassinSura, MuqayyidMuadal, SuraMultaqata, basmat_mutawassit,
+};
 use crate::khata::KhataTabaqa;
 use crate::manatiq::{MajmuatManatiq, MuarrifMintaqa, QaidatTarjama};
 use crate::mutarjim::{
@@ -92,8 +93,8 @@ use crate::talqeem::SatrMulaqqam;
 use crate::tatabbu::{
     HasilatDawra, IhsaatTatabbu, MuarrifSatr, Mutatabbi, QiraaMulahaza, SiyasatIstiqrar,
 };
-use crate::watira::{MunazzimWatira, TaghyeerWatira};
 use crate::wajiha::{MustatilBiksel, WasfSath};
+use crate::watira::{MunazzimWatira, TaghyeerWatira};
 
 /// How many lines the overlay will draw at once.
 ///
@@ -272,13 +273,21 @@ impl IhsaatQissa {
             self.isabat_dhakira
         );
         if self.thiqa_dunya > 0 {
-            let _ = write!(wasf, ", {} skipped as too uncertain to translate", self.thiqa_dunya);
+            let _ = write!(
+                wasf,
+                ", {} skipped as too uncertain to translate",
+                self.thiqa_dunya
+            );
         }
         if self.ikhfaqat > 0 {
             let _ = write!(wasf, ", {} translation failure(s)", self.ikhfaqat);
         }
         if self.ikhfaqat_hifz > 0 {
-            let _ = write!(wasf, ", {} pair(s) the memory would not store", self.ikhfaqat_hifz);
+            let _ = write!(
+                wasf,
+                ", {} pair(s) the memory would not store",
+                self.ikhfaqat_hifz
+            );
         }
         wasf
     }
@@ -318,7 +327,9 @@ impl KhulasatQissa {
         let _ = writeln!(
             wasf,
             "translator: {}",
-            self.mutarjim.as_deref().unwrap_or("none attached — nothing will be translated")
+            self.mutarjim
+                .as_deref()
+                .unwrap_or("none attached — nothing will be translated")
         );
         if let Some(sijill) = &self.sijill {
             let _ = writeln!(wasf, "history: {}", sijill.wasf());
@@ -390,7 +401,10 @@ impl std::fmt::Debug for Qissa {
             .field("khiyarat", &self.khiyarat)
             .field("mutatabbi", self.mutatabbi.ihsaat())
             .field("dhakira", &self.dhakira.ism())
-            .field("mutarjim", &self.mutarjim.as_ref().map(|m| m.ism().to_owned()))
+            .field(
+                "mutarjim",
+                &self.mutarjim.as_ref().map(|m| m.ism().to_owned()),
+            )
             .field("marsuma", &self.marsuma.len())
             .field("ihsaat", &self.ihsaat)
             .finish_non_exhaustive()
@@ -441,7 +455,11 @@ impl Qissa {
         self.athar.push(format!(
             "memory: {} ({})",
             dhakira.ism(),
-            if dhakira.daaima() { "persistent" } else { "session only" }
+            if dhakira.daaima() {
+                "persistent"
+            } else {
+                "session only"
+            }
         ));
         self.dhakira = dhakira;
         self
@@ -514,8 +532,14 @@ impl Qissa {
             watira: watira.wasf(),
             mutadahwira: watira.mutadahwira(),
             dhakira: self.dhakira.ism().to_owned(),
-            sijill: self.sijill.as_ref().and_then(SijillMushtarak::taqreer_in_amkan),
-            mutarjim: self.mutarjim.as_ref().map(|mutarjim| mutarjim.ism().to_owned()),
+            sijill: self
+                .sijill
+                .as_ref()
+                .and_then(SijillMushtarak::taqreer_in_amkan),
+            mutarjim: self
+                .mutarjim
+                .as_ref()
+                .map(|mutarjim| mutarjim.ism().to_owned()),
         }
     }
 
@@ -616,14 +640,16 @@ impl Qissa {
         lahza_mikro: u64,
     ) -> KhulasatMualaja {
         let hasila = self.mutatabbi.thabbit(mintaqa, lahza_mikro);
-        let mut khulasa =
-            KhulasatMualaja { hasila: hasila.clone(), ..KhulasatMualaja::default() };
+        let mut khulasa = KhulasatMualaja {
+            hasila: hasila.clone(),
+            ..KhulasatMualaja::default()
+        };
         for muarrif in &hasila.mustaqirra {
             match self.aalij_mustaqirr(*muarrif, mintaqa, ism_mintaqa, lahza_mikro) {
                 NatijatSatr::Talab => khulasa.talabat = khulasa.talabat.saturating_add(1),
                 NatijatSatr::Dhakira => khulasa.isabat = khulasa.isabat.saturating_add(1),
                 NatijatSatr::Ikhfaq => khulasa.ikhfaqat = khulasa.ikhfaqat.saturating_add(1),
-                NatijatSatr::LaShay => {}
+                NatijatSatr::LaShay => {},
             }
         }
         if !hasila.mustaqirra.is_empty() {
@@ -669,7 +695,7 @@ impl Qissa {
                 NatijatSatr::Talab => khulasa.talabat = khulasa.talabat.saturating_add(1),
                 NatijatSatr::Dhakira => khulasa.isabat = khulasa.isabat.saturating_add(1),
                 NatijatSatr::Ikhfaq => khulasa.ikhfaqat = khulasa.ikhfaqat.saturating_add(1),
-                NatijatSatr::LaShay => {}
+                NatijatSatr::LaShay => {},
             }
         }
 
@@ -693,7 +719,8 @@ impl Qissa {
         self.muhawalat.clear();
         self.madakhil.clear();
         self.sath = Some(sath);
-        self.athar.push(format!("surface changed to {}×{}", sath.ard, sath.irtifa));
+        self.athar
+            .push(format!("surface changed to {}×{}", sath.ard, sath.irtifa));
         self.inshur(0);
     }
 
@@ -719,7 +746,8 @@ impl Qissa {
         for bawwaba in self.bawwabat.values_mut() {
             bawwaba.ansa();
         }
-        self.athar.push("re-read requested; every region's change gate was cleared".to_owned());
+        self.athar
+            .push("re-read requested; every region's change gate was cleared".to_owned());
     }
 
     /// Forgets one region entirely.
@@ -756,12 +784,13 @@ impl Qissa {
         ism_mintaqa: &str,
         lahza_mikro: u64,
     ) -> NatijatSatr {
-        let Some((asl, mawdi, thiqa)) = self
-            .mutatabbi
-            .satr(muarrif)
-            .map(|satr| (satr.nass.clone(), satr.mawdi, ThiqatSatr::min_maqru(satr.thiqa,
-                satr.maqisa)))
-        else {
+        let Some((asl, mawdi, thiqa)) = self.mutatabbi.satr(muarrif).map(|satr| {
+            (
+                satr.nass.clone(),
+                satr.mawdi,
+                ThiqatSatr::min_maqru(satr.thiqa, satr.maqisa),
+            )
+        }) else {
             return NatijatSatr::LaShay;
         };
 
@@ -771,20 +800,27 @@ impl Qissa {
         // region for three hours.
         let _ = self.mutatabbi.sajjil_irsal(muarrif);
 
-        let mawdi_sijill = self.qayyid_sijill(muarrif, mintaqa, ism_mintaqa, lahza_mikro, &asl,
-            thiqa);
+        let mawdi_sijill =
+            self.qayyid_sijill(muarrif, mintaqa, ism_mintaqa, lahza_mikro, &asl, thiqa);
         let _ = mawdi_sijill;
 
         // An engine that reports nothing is not a low-confidence engine, so an
         // unmeasured reading is *not* held back by the floor: doing so would
         // translate nothing at all on Windows and Linux, where nothing measures.
         // The floor screens out the readings an engine itself called doubtful.
-        if thiqa.mia_in_wujidat().is_some_and(|mia| mia < self.khiyarat.adna_thiqa) {
+        if thiqa
+            .mia_in_wujidat()
+            .is_some_and(|mia| mia < self.khiyarat.adna_thiqa)
+        {
             self.ihsaat.thiqa_dunya = self.ihsaat.thiqa_dunya.saturating_add(1);
             return NatijatSatr::LaShay;
         }
 
-        let talab = TalabDhakira { asl: &asl, luba: self.luba, tasnif: self.khiyarat.tasnif };
+        let talab = TalabDhakira {
+            asl: &asl,
+            luba: self.luba,
+            tasnif: self.khiyarat.tasnif,
+        };
         if let Some(radd) = self.dhakira.ibhath(&talab) {
             self.ihsaat.isabat_dhakira = self.ihsaat.isabat_dhakira.saturating_add(1);
             self.arsi(muarrif, mawdi, thiqa, &radd);
@@ -800,7 +836,10 @@ impl Qissa {
             return NatijatSatr::Ikhfaq;
         }
         let saqf = self.khiyarat.aqsa_muhawalat;
-        let muhawala = self.muhawalat.entry(muarrif).or_insert_with(|| (asl.clone(), 0));
+        let muhawala = self
+            .muhawalat
+            .entry(muarrif)
+            .or_insert_with(|| (asl.clone(), 0));
         if muhawala.0 != asl {
             *muhawala = (asl.clone(), 0);
         }
@@ -824,14 +863,16 @@ impl Qissa {
             Ok(radd) if !radd.khali() => radd,
             Ok(_) => {
                 self.ihsaat.ikhfaqat = self.ihsaat.ikhfaqat.saturating_add(1);
-                self.athar.push(format!("{muarrif}: the translator returned nothing"));
+                self.athar
+                    .push(format!("{muarrif}: the translator returned nothing"));
                 return NatijatSatr::Ikhfaq;
-            }
+            },
             Err(khata) => {
                 self.ihsaat.ikhfaqat = self.ihsaat.ikhfaqat.saturating_add(1);
-                self.athar.push(format!("{muarrif}: translation failed: {khata}"));
+                self.athar
+                    .push(format!("{muarrif}: translation failed: {khata}"));
                 return NatijatSatr::Ikhfaq;
-            }
+            },
         };
 
         let qayd = QaydTabaqa {
@@ -855,7 +896,9 @@ impl Qissa {
             // is still a translation, and refusing to draw it would be losing
             // the line to protect the memory.
             self.ihsaat.ikhfaqat_hifz = self.ihsaat.ikhfaqat_hifz.saturating_add(1);
-            self.athar.push(format!("{muarrif}: the memory would not store the pair: {khata}"));
+            self.athar.push(format!(
+                "{muarrif}: the memory would not store the pair: {khata}"
+            ));
         }
 
         self.arsi(muarrif, mawdi, thiqa, &radd);
@@ -910,9 +953,10 @@ impl Qissa {
         let natija = match sijill.qayyid(thawani, mintaqa, ism_mintaqa, asl, thiqa) {
             Ok(natija) => natija,
             Err(khata) => {
-                self.athar.push(format!("the reading history could not be written: {khata}"));
+                self.athar
+                    .push(format!("the reading history could not be written: {khata}"));
                 sijill.sajjil(thawani, mintaqa, ism_mintaqa, asl, thiqa)
-            }
+            },
         };
         let madkhal = natija.muarrif()?;
         let _ = self.madakhil.insert(muarrif, madkhal);
@@ -939,7 +983,11 @@ impl Qissa {
     ) {
         let _ = self.marsuma.insert(
             muarrif,
-            SatrMulaqqam { nass: radd.arabi.clone(), mawdi, thiqa: thiqa.mia() },
+            SatrMulaqqam {
+                nass: radd.arabi.clone(),
+                mawdi,
+                thiqa: thiqa.mia(),
+            },
         );
     }
 
@@ -964,8 +1012,12 @@ impl Qissa {
         }
         self.jeel = self.jeel.saturating_add(1);
         self.ihsaat.laqtat = self.ihsaat.laqtat.saturating_add(1);
-        let laqta =
-            LaqtaTarjama { sutur, sath: self.sath, jeel: self.jeel, lahza_mikro };
+        let laqta = LaqtaTarjama {
+            sutur,
+            sath: self.sath,
+            jeel: self.jeel,
+            lahza_mikro,
+        };
         *self.manshura.write() = laqta;
     }
 }
@@ -1084,7 +1136,11 @@ impl Munassiq {
     /// correct. Never blocks: see this module's header.
     #[must_use]
     pub fn laqta(&self, sath: WasfSath) -> &[SatrMulaqqam] {
-        if self.sath == Some(sath) { &self.marsuma } else { &[] }
+        if self.sath == Some(sath) {
+            &self.marsuma
+        } else {
+            &[]
+        }
     }
 
     /// Which regions the clock says to capture on this frame.
@@ -1109,8 +1165,7 @@ impl Munassiq {
             let Some(mustatil) = mintaqa.fi_bikselat(sath) else {
                 continue;
             };
-            let fasil_mintaqa =
-                u64::from(mintaqa.fasila_faaila(iftiradi)).saturating_mul(1_000);
+            let fasil_mintaqa = u64::from(mintaqa.fasila_faaila(iftiradi)).saturating_mul(1_000);
             let fasil = fasil_mintaqa.max(fasil_watira);
             let muaqqit = self
                 .muaqqitat
@@ -1158,7 +1213,8 @@ impl Munassiq {
         self.muaqqitat.clear();
         self.marsuma.clear();
         self.sath = None;
-        self.athar.push("refresh rate reset after a surface change".to_owned());
+        self.athar
+            .push("refresh rate reset after a surface change".to_owned());
     }
 
     /// Copies the worker's snapshot out, if it is not being written.
@@ -1250,7 +1306,7 @@ impl HalatKhayt {
             Self::Salima => "every pass completed or read nothing".to_owned(),
             Self::Aabira { sabab, .. } => {
                 format!("the most recent refusal was one capture's: {sabab}")
-            }
+            },
             Self::Mutawaqqifa { sabab, .. } => format!(
                 "recognition has stopped for this session: {sabab}. Captures are refused until a \
                  re-read is asked for"
@@ -1265,7 +1321,7 @@ impl HalatKhayt {
             Self::Salima => "اكتملت كل الجولات أو لم تجد نصًا.".to_owned(),
             Self::Aabira { sabab_arabi, .. } => {
                 format!("آخر رفض كان لالتقاطة واحدة: {sabab_arabi}")
-            }
+            },
             Self::Mutawaqqifa { sabab_arabi, .. } => format!(
                 "توقّفت القراءة في هذه الجلسة: {sabab_arabi} تُرفض الالتقاطات حتى يُطلب إعادة \
                  القراءة."
@@ -1352,13 +1408,17 @@ impl KhaytQissa {
             .spawn(move || {
                 while let Ok(risala) = mutalaqqi.recv() {
                     match risala {
-                        RisalatQissa::Iltiqat { mintaqa, ism, qaida, lahza_mikro, sura } => {
-                            match qissa.aalij(mintaqa, &ism, qaida, lahza_mikro, &sura, &mut qari)
-                            {
+                        RisalatQissa::Iltiqat {
+                            mintaqa,
+                            ism,
+                            qaida,
+                            lahza_mikro,
+                            sura,
+                        } => {
+                            match qissa.aalij(mintaqa, &ism, qaida, lahza_mikro, &sura, &mut qari) {
                                 Ok(_) => {
-                                    let _ =
-                                        adaad_khayt.muaalaja.fetch_add(1, Ordering::Relaxed);
-                                }
+                                    let _ = adaad_khayt.muaalaja.fetch_add(1, Ordering::Relaxed);
+                                },
                                 Err(khata) => {
                                     // Kept and never printed: this runs inside
                                     // somebody's game, where there is no
@@ -1376,9 +1436,9 @@ impl KhaytQissa {
                                             HalatKhayt::Aabira { sabab, sabab_arabi };
                                     }
                                     let _ = adaad_khayt.akhta.fetch_add(1, Ordering::Release);
-                                }
+                                },
                             }
-                        }
+                        },
                         RisalatQissa::Sath(sath) => qissa.sath_taghayyar(sath),
                         RisalatQissa::IqraAlan => {
                             // The user's re-read is the one thing that reopens
@@ -1386,7 +1446,7 @@ impl KhaytQissa {
                             // or stops it again with a fresh reason.
                             *adaad_khayt.hala.lock() = HalatKhayt::Salima;
                             qissa.iqra_alan();
-                        }
+                        },
                         RisalatQissa::Nisyan(mintaqa) => qissa.ansa_mintaqa(mintaqa),
                         RisalatQissa::Tawaqquf => break,
                     }
@@ -1397,7 +1457,12 @@ impl KhaytQissa {
                 sabab: sabab.to_string(),
             })?;
 
-        Ok(Self { mursil, khayt: Some(khayt), manshura, adaad })
+        Ok(Self {
+            mursil,
+            khayt: Some(khayt),
+            manshura,
+            adaad,
+        })
     }
 
     /// The snapshot handle to give [`Munassiq`].

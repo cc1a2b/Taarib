@@ -236,7 +236,7 @@ impl HasilatTashkhees {
                             .to_owned(),
                     );
                 }
-            }
+            },
             None => satr.push(
                 "nothing in this crate applies to this directory, or every probe that applied \
                  refused to choose"
@@ -270,7 +270,11 @@ pub fn tashkhees(
     tanfidhi: Option<&Path>,
     aila: AilatMuharrik,
 ) -> Result<HasilatTashkhees, KhataNusus> {
-    let siyaq = SiyaqTabaqa { jidhr, tanfidhi, aila };
+    let siyaq = SiyaqTabaqa {
+        jidhr,
+        tanfidhi,
+        aila,
+    };
     let mut natai = Vec::with_capacity(MAFAHIS.len());
     let mut ahkam = Vec::new();
     let mut imtinaat = Vec::new();
@@ -286,20 +290,24 @@ pub fn tashkhees(
             Ok(natija) => {
                 ahkam.push(natija.clone());
                 natai.push(NatijatMifhas::Hukm(natija));
-            }
+            },
             // A refusal to *choose a rung* is data. A failure to *read* is not,
             // and the two are separated here rather than by a caller that would
             // have to know which variants mean which.
             Err(KhataNusus::TabaqaMajhula { sabab }) => {
                 imtinaat.push((hadaf, sabab.clone()));
                 natai.push(NatijatMifhas::Imtina { hadaf, sabab });
-            }
+            },
             Err(khata) => return Err(khata),
         }
     }
 
     ahkam.sort_by_key(|hukm| Reverse(hukm.thiqa));
-    Ok(HasilatTashkhees { natai, ahkam, imtinaat })
+    Ok(HasilatTashkhees {
+        natai,
+        ahkam,
+        imtinaat,
+    })
 }
 
 /// The rung a directory lands on, for a caller that wants only the answer.

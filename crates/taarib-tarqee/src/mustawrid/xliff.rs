@@ -231,14 +231,14 @@ pub(crate) fn iqra_muhtawa(
                     muhtawa.azwaj.push(marka_kamila(&marka, false));
                 }
                 muhtawa.nass.push_str(&marka_kamila(&marka, false));
-            }
+            },
             Ok(Event::Empty(marka)) => {
                 let dakhili = ism_mahalli(&marka);
                 if dharrat.contains(&dakhili.as_str()) {
                     muhtawa.dharrat.push(marka_kamila(&marka, true));
                 }
                 muhtawa.nass.push_str(&marka_kamila(&marka, true));
-            }
+            },
             Ok(Event::End(nihaya)) => {
                 let dakhili = nihaya.local_name().as_ref().to_ascii_lowercase();
                 if dakhili == ism {
@@ -250,10 +250,10 @@ pub(crate) fn iqra_muhtawa(
                 muhtawa.nass.push_str("</");
                 muhtawa.nass.push_str(nihaya.name().as_ref());
                 muhtawa.nass.push('>');
-            }
+            },
             Ok(Event::Text(matn)) => {
                 muhtawa.nass.push_str(&matn.xml10_content());
-            }
+            },
             Ok(Event::GeneralRef(marja)) => {
                 let Some(maqru) = taarib_usus::kayanat::hall_marja(&marja) else {
                     let maktub = taarib_usus::kayanat::nass_marja(&marja);
@@ -265,15 +265,17 @@ pub(crate) fn iqra_muhtawa(
                     ));
                 };
                 muhtawa.nass.push_str(&maqru);
-            }
+            },
             Ok(Event::CData(matn)) => {
                 muhtawa.nass.push_str(matn.into_inner().as_ref());
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd_doctype()),
             Ok(Event::Eof) => {
-                return Err(format!("the document ended inside <{ism}>, which never closed"));
-            }
-            Ok(_) => {}
+                return Err(format!(
+                    "the document ended inside <{ism}>, which never closed"
+                ));
+            },
+            Ok(_) => {},
             Err(khata) => return Err(format!("the document is not well-formed XML: {khata}")),
         }
     }
@@ -295,7 +297,7 @@ pub(crate) fn tajawaz(qari: &mut QariXml<'_>, ism: &str) -> Result<(), String> {
         match qari.read_event() {
             Ok(Event::Start(marka)) if ism_mahalli(&marka) == ism => {
                 umq = umq.saturating_add(1);
-            }
+            },
             Ok(Event::End(nihaya)) => {
                 let dakhili = nihaya.local_name().as_ref().to_ascii_lowercase();
                 if dakhili == ism {
@@ -304,12 +306,14 @@ pub(crate) fn tajawaz(qari: &mut QariXml<'_>, ism: &str) -> Result<(), String> {
                     }
                     umq = umq.saturating_sub(1);
                 }
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd_doctype()),
             Ok(Event::Eof) => {
-                return Err(format!("the document ended inside <{ism}>, which never closed"));
-            }
-            Ok(_) => {}
+                return Err(format!(
+                    "the document ended inside <{ism}>, which never closed"
+                ));
+            },
+            Ok(_) => {},
             Err(khata) => return Err(format!("the document is not well-formed XML: {khata}")),
         }
     }
@@ -375,7 +379,9 @@ pub(crate) fn tarmiz_muallan(nass: &str) -> Option<String> {
     let nihaya = baad.find("?>")?;
     let bayan = baad.get(..nihaya)?;
     let mawqi = bayan.find("encoding")?;
-    let qeema = bayan.get(mawqi.saturating_add("encoding".len())..)?.trim_start();
+    let qeema = bayan
+        .get(mawqi.saturating_add("encoding".len())..)?
+        .trim_start();
     let jasad = qeema.strip_prefix('=')?.trim_start();
     let iqtibas = jasad.chars().next()?;
     if iqtibas != '"' && iqtibas != '\'' {
@@ -458,9 +464,9 @@ pub(crate) fn iqra_jidhr(
                     let _ = sifat.insert(miftah, qeema);
                 }
                 return Ok((ism, sifat));
-            }
+            },
             Ok(Event::Eof) => return Err("the document has no root element".to_owned()),
-            Ok(_) => {}
+            Ok(_) => {},
             Err(khata) => return Err(format!("the document is not well-formed XML: {khata}")),
         }
     }
@@ -493,7 +499,10 @@ pub fn iqra_nuskha_ula(
     nass: &str,
     khiyarat: &IstiradKhiyarat,
 ) -> Result<MilaffWarid, KhataTarqee> {
-    let rafd = |sabab: String| KhataTarqee::IstiradFashil { masar: masar.to_path_buf(), sabab };
+    let rafd = |sabab: String| KhataTarqee::IstiradFashil {
+        masar: masar.to_path_buf(),
+        sabab,
+    };
     tahaqquq_wathiqa(nass).map_err(rafd)?;
     let astur = FahrasAstur::jadeed(nass);
     let mut qari = qari_jadeed(nass);
@@ -510,7 +519,9 @@ pub fn iqra_nuskha_ula(
     let mut badail = 0_usize;
     let mut thunaiya = 0_usize;
     if let Some(nuskha) = sifat_jidhr.get("version") {
-        milaff.tanbihat.push(format!("the document declares XLIFF version {nuskha}"));
+        milaff
+            .tanbihat
+            .push(format!("the document declares XLIFF version {nuskha}"));
     }
 
     loop {
@@ -529,17 +540,17 @@ pub fn iqra_nuskha_ula(
                     // unbalance the stack on the first `<file>` with no
                     // `original` attribute.
                     majmuat.push(sifa(&marka, "original").unwrap_or_default());
-                }
+                },
                 "group" => majmuat.push(sifa(&marka, "id").unwrap_or_default()),
                 "header" => tajawaz(&mut qari, "header").map_err(rafd)?,
                 "alt-trans" => {
                     tajawaz(&mut qari, "alt-trans").map_err(rafd)?;
                     badail = badail.saturating_add(1);
-                }
+                },
                 "bin-unit" => {
                     tajawaz(&mut qari, "bin-unit").map_err(rafd)?;
                     thunaiya = thunaiya.saturating_add(1);
-                }
+                },
                 "trans-unit" => {
                     let (warid, sabab) =
                         iqra_wahda_ula(&mut qari, &marka, &majmuat, saqf, satr).map_err(rafd)?;
@@ -547,8 +558,8 @@ pub fn iqra_nuskha_ula(
                         Some(sabab) => milaff.marfuda.push(MudkhalMarfud { warid, sabab }),
                         None => milaff.madakhil.push(warid),
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             },
             Ok(Event::Empty(marka)) => {
                 if ism_mahalli(&marka) == "trans-unit" {
@@ -556,24 +567,26 @@ pub fn iqra_nuskha_ula(
                     let mut warid = MudkhalWarid::jadeed(String::new(), None, satr);
                     warid.miftah = sifa(&marka, "resname").or_else(|| sifa(&marka, "id"));
                     warid.hala = saqf;
-                    milaff
-                        .marfuda
-                        .push(MudkhalMarfud { warid, sabab: SababRafd::BilaHadaf });
+                    milaff.marfuda.push(MudkhalMarfud {
+                        warid,
+                        sabab: SababRafd::BilaHadaf,
+                    });
                 }
-            }
+            },
             Ok(Event::End(nihaya)) => {
-                let ism =
-                    nihaya.local_name().as_ref().to_ascii_lowercase();
+                let ism = nihaya.local_name().as_ref().to_ascii_lowercase();
                 if ism == "group" || ism == "file" {
                     let _ = majmuat.pop();
                 }
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd(rafd_doctype())),
             Ok(Event::Eof) => break,
-            Ok(_) => {}
+            Ok(_) => {},
             Err(khata) => {
-                return Err(rafd(format!("the document is not well-formed XML: {khata}")));
-            }
+                return Err(rafd(format!(
+                    "the document is not well-formed XML: {khata}"
+                )));
+            },
         }
     }
 
@@ -630,7 +643,7 @@ fn iqra_wahda_ula(
                     masdar = muhtawa.nass;
                     dharrat_masdar = muhtawa.dharrat;
                     azwaj_masdar = muhtawa.azwaj.len();
-                }
+                },
                 "target" => {
                     let (hala_wahda, muallam_wahda) = hala_nuskha_ula(
                         sifa(&dakhili, "state").as_deref(),
@@ -647,27 +660,27 @@ fn iqra_wahda_ula(
                     hadaf = Some(muhtawa.nass);
                     dharrat_hadaf = muhtawa.dharrat;
                     azwaj_hadaf = muhtawa.azwaj.len();
-                }
+                },
                 "note" => {
                     let muhtawa = iqra_muhtawa(qari, "note", &[])?;
                     if !muhtawa.nass.trim().is_empty() {
                         mulahazat.push(muhtawa.nass.trim().to_owned());
                     }
-                }
+                },
                 "context" => {
-                    let naw = sifa(&dakhili, "context-type")
-                        .unwrap_or_else(|| "context".to_owned());
+                    let naw =
+                        sifa(&dakhili, "context-type").unwrap_or_else(|| "context".to_owned());
                     let muhtawa = iqra_muhtawa(qari, "context", &[])?;
                     if !muhtawa.nass.trim().is_empty() {
                         marja.push(format!("{naw}={}", muhtawa.nass.trim()));
                     }
-                }
+                },
                 // Segmented source, and the alternatives a tool proposed. The
                 // first duplicates `<source>` with `<mrk>` boundaries added and
                 // the second is not the translation; both are read past.
                 "seg-source" => tajawaz(qari, "seg-source")?,
                 "alt-trans" => tajawaz(qari, "alt-trans")?,
-                _ => {}
+                _ => {},
             },
             Ok(Event::Empty(dakhili)) => match ism_mahalli(&dakhili).as_str() {
                 "source" => masdar = String::new(),
@@ -684,21 +697,20 @@ fn iqra_wahda_ula(
                         muattamad.as_deref(),
                     ));
                     hadaf = Some(String::new());
-                }
-                _ => {}
+                },
+                _ => {},
             },
             Ok(Event::End(nihaya)) => {
-                let ism =
-                    nihaya.local_name().as_ref().to_ascii_lowercase();
+                let ism = nihaya.local_name().as_ref().to_ascii_lowercase();
                 if ism == "trans-unit" {
                     break;
                 }
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd_doctype()),
             Ok(Event::Eof) => {
                 return Err("the document ended inside a <trans-unit>".to_owned());
-            }
-            Ok(_) => {}
+            },
+            Ok(_) => {},
             Err(khata) => return Err(format!("the document is not well-formed XML: {khata}")),
         }
     }
@@ -731,15 +743,26 @@ fn iqra_wahda_ula(
         ));
     }
 
-    let sabab = if mamnu { Some(SababRafd::MamnuMinAttarjama) } else { rafd_wahda(&warid) };
+    let sabab = if mamnu {
+        Some(SababRafd::MamnuMinAttarjama)
+    } else {
+        rafd_wahda(&warid)
+    };
     Ok((warid, sabab))
 }
 
 /// The group path a unit sits under, as one string.
 fn siyaq_majmuat(majmuat: &[String]) -> Option<String> {
-    let mawjuda: Vec<&str> =
-        majmuat.iter().map(String::as_str).filter(|juz| !juz.is_empty()).collect();
-    if mawjuda.is_empty() { None } else { Some(mawjuda.join("/")) }
+    let mawjuda: Vec<&str> = majmuat
+        .iter()
+        .map(String::as_str)
+        .filter(|juz| !juz.is_empty())
+        .collect();
+    if mawjuda.is_empty() {
+        None
+    } else {
+        Some(mawjuda.join("/"))
+    }
 }
 
 /// An XLIFF 1.2 `state` and `state-qualifier` as this project's vocabulary.
@@ -751,7 +774,7 @@ fn hala_nuskha_ula(hala: Option<&str>, muhaddid: Option<&str>) -> (HalatWarid, b
     let asas = match hala.map(str::to_ascii_lowercase).as_deref() {
         Some("needs-review-translation" | "needs-review-adaptation" | "needs-review-l10n") => {
             HalatWarid::LilMuraja
-        }
+        },
         _ => HalatWarid::Musawwada,
     };
     match muhaddid.map(str::to_ascii_lowercase).as_deref() {
@@ -762,11 +785,7 @@ fn hala_nuskha_ula(hala: Option<&str>, muhaddid: Option<&str>) -> (HalatWarid, b
 }
 
 /// The state attributes verbatim, for the report.
-fn wasf_hala_ula(
-    hala: Option<&str>,
-    muhaddid: Option<&str>,
-    muattamad: Option<&str>,
-) -> String {
+fn wasf_hala_ula(hala: Option<&str>, muhaddid: Option<&str>, muattamad: Option<&str>) -> String {
     let mut ajza = Vec::with_capacity(3);
     if let Some(hala) = hala {
         ajza.push(format!("state={hala}"));
@@ -778,7 +797,11 @@ fn wasf_hala_ula(
         // Read, recorded, and without effect. See this module's header.
         ajza.push(format!("approved={muattamad}"));
     }
-    if ajza.is_empty() { "no state declared".to_owned() } else { ajza.join(" ") }
+    if ajza.is_empty() {
+        "no state declared".to_owned()
+    } else {
+        ajza.join(" ")
+    }
 }
 
 /// The reason a fully parsed unit is declined, if there is one.
@@ -827,7 +850,10 @@ pub fn iqra_nuskha_thaniya(
     nass: &str,
     khiyarat: &IstiradKhiyarat,
 ) -> Result<MilaffWarid, KhataTarqee> {
-    let rafd = |sabab: String| KhataTarqee::IstiradFashil { masar: masar.to_path_buf(), sabab };
+    let rafd = |sabab: String| KhataTarqee::IstiradFashil {
+        masar: masar.to_path_buf(),
+        sabab,
+    };
     tahaqquq_wathiqa(nass).map_err(rafd)?;
     let astur = FahrasAstur::jadeed(nass);
     let mut qari = qari_jadeed(nass);
@@ -850,13 +876,15 @@ pub fn iqra_nuskha_thaniya(
         match qari.read_event() {
             Ok(Event::Start(marka)) => match ism_mahalli(&marka).as_str() {
                 "file" => majmuat.push(
-                    sifa(&marka, "id").or_else(|| sifa(&marka, "original")).unwrap_or_default(),
+                    sifa(&marka, "id")
+                        .or_else(|| sifa(&marka, "original"))
+                        .unwrap_or_default(),
                 ),
                 "group" => majmuat.push(sifa(&marka, "id").unwrap_or_default()),
                 "matches" => {
                     tajawaz(&mut qari, "matches").map_err(rafd)?;
                     murashshahat = murashshahat.saturating_add(1);
-                }
+                },
                 "unit" => {
                     let wahda = iqra_wahda_thaniya(&mut qari, &marka, &majmuat, saqf, satr)
                         .map_err(rafd)?;
@@ -866,22 +894,23 @@ pub fn iqra_nuskha_thaniya(
                             None => milaff.madakhil.push(warid),
                         }
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             },
             Ok(Event::End(nihaya)) => {
-                let ism =
-                    nihaya.local_name().as_ref().to_ascii_lowercase();
+                let ism = nihaya.local_name().as_ref().to_ascii_lowercase();
                 if ism == "group" || ism == "file" {
                     let _ = majmuat.pop();
                 }
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd(rafd_doctype())),
             Ok(Event::Eof) => break,
-            Ok(_) => {}
+            Ok(_) => {},
             Err(khata) => {
-                return Err(rafd(format!("the document is not well-formed XML: {khata}")));
-            }
+                return Err(rafd(format!(
+                    "the document is not well-formed XML: {khata}"
+                )));
+            },
         }
     }
 
@@ -922,28 +951,27 @@ fn iqra_wahda_thaniya(
                     if !muhtawa.nass.trim().is_empty() {
                         mulahazat.push(muhtawa.nass.trim().to_owned());
                     }
-                }
+                },
                 "data" => {
                     let muarrif_bayan = sifa(&dakhili, "id").unwrap_or_default();
                     let muhtawa = iqra_muhtawa(qari, "data", &[])?;
                     let _ = bayanat.insert(muarrif_bayan, muhtawa.nass);
-                }
+                },
                 "segment" => maqati.push(iqra_maqta(qari, &dakhili)?),
                 // Whitespace and punctuation between segments. Not a string.
                 "ignorable" => tajawaz(qari, "ignorable")?,
                 "matches" => tajawaz(qari, "matches")?,
-                _ => {}
+                _ => {},
             },
             Ok(Event::End(nihaya)) => {
-                let ism =
-                    nihaya.local_name().as_ref().to_ascii_lowercase();
+                let ism = nihaya.local_name().as_ref().to_ascii_lowercase();
                 if ism == "unit" {
                     break;
                 }
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd_doctype()),
             Ok(Event::Eof) => return Err("the document ended inside a <unit>".to_owned()),
-            Ok(_) => {}
+            Ok(_) => {},
             Err(khata) => return Err(format!("the document is not well-formed XML: {khata}")),
         }
     }
@@ -1058,31 +1086,30 @@ fn iqra_maqta(qari: &mut QariXml<'_>, marka: &BytesStart<'_>) -> Result<MaqtaWah
                     maqta.masdar = muhtawa.nass;
                     maqta.dharrat_masdar = muhtawa.dharrat;
                     maqta.azwaj_masdar = muhtawa.azwaj.len();
-                }
+                },
                 "target" => {
                     let muhtawa = iqra_muhtawa(qari, "target", &DHARRAT_NUSKHA_THANIYA)?;
                     maqta.hadaf = muhtawa.nass;
                     maqta.dharrat_hadaf = muhtawa.dharrat;
                     maqta.azwaj_hadaf = muhtawa.azwaj.len();
                     maqta.laha_hadaf = true;
-                }
-                _ => {}
+                },
+                _ => {},
             },
             Ok(Event::Empty(dakhili)) => match ism_mahalli(&dakhili).as_str() {
                 "source" => maqta.masdar = String::new(),
                 "target" => maqta.laha_hadaf = true,
-                _ => {}
+                _ => {},
             },
             Ok(Event::End(nihaya)) => {
-                let ism =
-                    nihaya.local_name().as_ref().to_ascii_lowercase();
+                let ism = nihaya.local_name().as_ref().to_ascii_lowercase();
                 if ism == "segment" {
                     return Ok(maqta);
                 }
-            }
+            },
             Ok(Event::DocType(_)) => return Err(rafd_doctype()),
             Ok(Event::Eof) => return Err("the document ended inside a <segment>".to_owned()),
-            Ok(_) => {}
+            Ok(_) => {},
             Err(khata) => return Err(format!("the document is not well-formed XML: {khata}")),
         }
     }
@@ -1098,8 +1125,12 @@ fn iqra_maqta(qari: &mut QariXml<'_>, marka: &BytesStart<'_>) -> Result<MaqtaWah
 fn maraji_bayanat(dharrat: &[String], bayanat: &BTreeMap<String, String>) -> Vec<String> {
     let mut maraji = Vec::new();
     for dharra in dharrat {
-        let Some(mawqi) = dharra.find("dataRef=\"") else { continue };
-        let baad = dharra.get(mawqi.saturating_add("dataRef=\"".len())..).unwrap_or_default();
+        let Some(mawqi) = dharra.find("dataRef=\"") else {
+            continue;
+        };
+        let baad = dharra
+            .get(mawqi.saturating_add("dataRef=\"".len())..)
+            .unwrap_or_default();
         let Some(tul) = baad.find('"') else { continue };
         let marja = baad.get(..tul).unwrap_or_default();
         if let Some(khaam) = bayanat.get(marja) {
@@ -1134,7 +1165,11 @@ fn hala_nuskha_thaniya(hala: Option<&str>, fariya: Option<&str>) -> (HalatWarid,
         .split([':', '-', '_'])
         .any(|juz| juz == "mt" || juz.starts_with("mt"));
     let muallam = fariya.contains("fuzzy");
-    if aali { (HalatWarid::Aaliya, muallam) } else { (asas, muallam) }
+    if aali {
+        (HalatWarid::Aaliya, muallam)
+    } else {
+        (asas, muallam)
+    }
 }
 
 /// The 2.0 state attributes verbatim, for the report.
@@ -1146,5 +1181,9 @@ fn wasf_hala_thaniya(hala: Option<&str>, fariya: Option<&str>) -> String {
     if let Some(fariya) = fariya {
         ajza.push(format!("subState={fariya}"));
     }
-    if ajza.is_empty() { "no state declared".to_owned() } else { ajza.join(" ") }
+    if ajza.is_empty() {
+        "no state declared".to_owned()
+    } else {
+        ajza.join(" ")
+    }
 }

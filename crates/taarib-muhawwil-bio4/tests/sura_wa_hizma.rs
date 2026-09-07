@@ -71,7 +71,10 @@ fn mujallad_luba() -> Option<PathBuf> {
             return Some(masar);
         }
     }
-    let wujid = MURASHAHAT.into_iter().map(PathBuf::from).find(|masar| masar.is_dir());
+    let wujid = MURASHAHAT
+        .into_iter()
+        .map(PathBuf::from)
+        .find(|masar| masar.is_dir());
     assert!(
         !(wujid.is_none() && std::env::var_os("TAARIB_RE4_ILZAM").is_some()),
         "TAARIB_RE4_ILZAM is set and no Resident Evil 4 install was found; \
@@ -85,10 +88,7 @@ fn ayina(ard: u32, irtifa: u32) -> SuraMufakkaka {
     let mut sura = SuraMufakkaka::jadeeda(ard, irtifa).unwrap();
     for a in 0..irtifa {
         for s in 0..ard {
-            let ramp = u8::try_from(
-                (s * 255).checked_div(ard.max(1)).unwrap_or(0),
-            )
-            .unwrap_or(255);
+            let ramp = u8::try_from((s * 255).checked_div(ard.max(1)).unwrap_or(0)).unwrap_or(255);
             let khatt = if s == a { 255 } else { ramp };
             sura.daa_texel(s, a, khatt);
         }
@@ -119,7 +119,10 @@ fn c4_yadur_baad_altakmim() {
     // must not move anything: an encoder that was not idempotent on its own
     // output would drift a little every time a font was rebuilt.
     let thaniya = irsim_c4(&mufakkaka, &lawhat).expect("re-encoding quantized texels");
-    assert_eq!(marsuma, thaniya, "C4 encoding must be idempotent on its own output");
+    assert_eq!(
+        marsuma, thaniya,
+        "C4 encoding must be idempotent on its own output"
+    );
 }
 
 #[test]
@@ -154,7 +157,10 @@ fn dds_yadur_bikhata_saghira() {
     // `BC3` fits sixteen alphas onto eight interpolated values, so a block
     // holding a full ramp cannot be exact. Anything past a sixteenth of the
     // range would mean the endpoints or the index search are wrong.
-    assert!(aqsa <= 16, "worst DXT5 alpha error was {aqsa}, which is past interpolation loss");
+    assert!(
+        aqsa <= 16,
+        "worst DXT5 alpha error was {aqsa}, which is past interpolation loss"
+    );
 }
 
 #[test]
@@ -167,7 +173,10 @@ fn dds_bilon_wahid_yadur_tamaman() {
     }
     let marsuma = irsim_dds(&asl).unwrap();
     let mufakkaka = ifkak_dds(&marsuma).unwrap();
-    assert_eq!(asl.bayt, mufakkaka.bayt, "two alpha values per block must be exact");
+    assert_eq!(
+        asl.bayt, mufakkaka.bayt,
+        "two alpha values per block must be exact"
+    );
 }
 
 #[test]
@@ -194,10 +203,17 @@ fn hizmat_alluba_tadur_bayt_bi_bayt() {
         };
         let hizma = Hizma::min_bayt(&bayt).unwrap_or_else(|khata| panic!("{ism}: {khata}"));
         assert_eq!(hizma.ila_bayt().unwrap(), bayt, "{ism} did not round-trip");
-        assert_eq!(hizma.hawiya.ism(), ism, "the header identifier must name the file");
+        assert_eq!(
+            hizma.hawiya.ism(),
+            ism,
+            "the header identifier must name the file"
+        );
         adad = adad.saturating_add(1);
     }
-    assert!(adad > 0, "the install was found but none of the named packs were readable");
+    assert!(
+        adad > 0,
+        "the install was found but none of the named packs were readable"
+    );
 }
 
 #[test]
@@ -228,13 +244,15 @@ fn madakhil_tutabiq_biksilat_alluba() {
     for fahras in 0..khatt.adad_khanat() {
         let raqm = u32::try_from(fahras).unwrap();
         let madkhal = khatt.madakhil[fahras];
-        let (cx, cy) = shabaka.mawdi(raqm).expect("every counted cell is in the grid");
+        let (cx, cy) = shabaka
+            .mawdi(raqm)
+            .expect("every counted cell is in the grid");
 
         let mut yasar: Option<u32> = None;
         let mut yameen: Option<u32> = None;
         for amud in 0..hajm {
-            let mahbur = (0..hajm)
-                .any(|satr| sura.texel(cx + amud, cy + satr).unwrap_or(0) >= HADD_HIBR);
+            let mahbur =
+                (0..hajm).any(|satr| sura.texel(cx + amud, cy + satr).unwrap_or(0) >= HADD_HIBR);
             if mahbur {
                 yasar = Some(yasar.unwrap_or(amud));
                 yameen = Some(amud + 1);
@@ -255,7 +273,9 @@ fn madakhil_tutabiq_biksilat_alluba() {
         } else if mahsub == muallan {
             muwafiq += 1;
         } else {
-            mukhalif.push(format!("cell {fahras}: declared {muallan:?}, measured {mahsub:?}"));
+            mukhalif.push(format!(
+                "cell {fahras}: declared {muallan:?}, measured {mahsub:?}"
+            ));
         }
     }
 
@@ -267,8 +287,7 @@ fn madakhil_tutabiq_biksilat_alluba() {
         mukhalif.get(..5.min(mukhalif.len())).unwrap_or(&[])
     );
     assert_eq!(
-        muwafiq,
-        548,
+        muwafiq, 548,
         "report_zh-cn.fnt describes 548 cells and every one of them must be where it says"
     );
 }

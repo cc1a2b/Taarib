@@ -69,7 +69,11 @@ pub struct KhiyaratMusharakaHie {
 impl From<KhiyaratMusharakaHie> for KhiyaratMusharaka {
     fn from(khiyarat: KhiyaratMusharakaHie) -> Self {
         let asas = Self::iftiradiya().bi_atabaa(khiyarat.atabaa);
-        if khiyarat.ghayr_maqisa { asas.maa_ghayr_maqisa() } else { asas }
+        if khiyarat.ghayr_maqisa {
+            asas.maa_ghayr_maqisa()
+        } else {
+            asas
+        }
     }
 }
 
@@ -285,7 +289,9 @@ fn khata_malaf(masar: &Path, sabab: impl std::fmt::Display) -> Khata {
 
 /// The watermark file for one game.
 fn masar_hasad(masarat: &Masarat, luba: LubaId) -> PathBuf {
-    mujallad_tabaqa(masarat).join(luba.to_string()).join(ISM_MALAF_HASAD)
+    mujallad_tabaqa(masarat)
+        .join(luba.to_string())
+        .join(ISM_MALAF_HASAD)
 }
 
 /// The directory signed shares are written into.
@@ -346,15 +352,14 @@ fn ihsid(masarat: &Masarat, luba: LubaId, ism_luba: &str) -> Natija<HasadHie> {
         // A game whose overlay never ran has nothing to harvest, which is a normal answer.
         Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => {
             return Ok(HasadHie::default());
-        }
+        },
         Err(sabab) => return Err(khata_malaf(&masar_sijill, sabab)),
     };
 
     let madakhil = hallil_sutur(&bayt);
     let masar_qayd = masar_hasad(masarat, luba);
     let sabiq: QaydHasad = iqra_janibi(&masar_qayd)?;
-    let mut tabaqa =
-        DhakiratTabaqa::jadeeda(Dhakira::iftah(masarat)?, luba).bi_ism_luba(ism_luba);
+    let mut tabaqa = DhakiratTabaqa::jadeeda(Dhakira::iftah(masarat)?, luba).bi_ism_luba(ism_luba);
 
     let mut taqreer = HasadHie::default();
     let mut akhir = sabiq.akhir;
@@ -372,7 +377,7 @@ fn ihsid(masarat: &Masarat, luba: LubaId, ism_luba: &str) -> Natija<HasadHie> {
                 Err(khata) => {
                     taathhur = Some(Khata::from(khata));
                     break;
-                }
+                },
             },
             None => taqreer.matruka = taqreer.matruka.saturating_add(1),
         }
@@ -479,7 +484,11 @@ fn jahhiz(
         adad_ghayr_maqis: adad_u32(musawwada.adad().saturating_sub(musawwada.adad_maqis())),
         khiyarat,
         basma: musawwada.basma().to_owned(),
-        tahdheerat: musawwada.tahdheerat().into_iter().map(tahdheer_hie).collect(),
+        tahdheerat: musawwada
+            .tahdheerat()
+            .into_iter()
+            .map(tahdheer_hie)
+            .collect(),
         sutur: musawwada.qayyid().iter().map(satr_hie).collect(),
         hasad,
     };
@@ -675,7 +684,10 @@ fn idmij(
     // Released only now, and only if it is still the same one: a merge that failed leaves the
     // bundle in place so the user can retry without re-verifying the file.
     let mut mahfuza = hala.huzma.lock();
-    if mahfuza.as_ref().is_some_and(|mawjuda| mawjuda.tarwisa().basma == basma) {
+    if mahfuza
+        .as_ref()
+        .is_some_and(|mawjuda| mawjuda.tarwisa().basma == basma)
+    {
         *mahfuza = None;
     }
 
@@ -689,10 +701,13 @@ fn idmij(
 
 fn hex(bayt: &[u8]) -> String {
     use std::fmt::Write as _;
-    bayt.iter().fold(String::with_capacity(bayt.len().saturating_mul(2)), |mut khraj, wahid| {
-        let _ = write!(khraj, "{wahid:02x}");
-        khraj
-    })
+    bayt.iter().fold(
+        String::with_capacity(bayt.len().saturating_mul(2)),
+        |mut khraj, wahid| {
+            let _ = write!(khraj, "{wahid:02x}");
+            khraj
+        },
+    )
 }
 
 /// Failures of the sharing surface itself.
@@ -778,12 +793,12 @@ impl Tafsir for KhataMusharakaAmr {
                 "لم تُجهَّز مشاركة لهذه اللعبة في هذه الجلسة. اضغط «جهّز المشاركة» ثم أعد \
                  المحاولة."
                     .to_owned()
-            }
+            },
             Self::BasmaMukhtalifa => {
                 "ما عُرض على الشاشة ليس ما سيُكتب؛ ربما تغيّرت الأسطر منذ العرض. أعد التجهيز \
                  واقرأ القائمة من جديد قبل الإقرار."
                     .to_owned()
-            }
+            },
             Self::TahdheerMajhul { tahdheer } => format!(
                 "التحذير «{tahdheer}» غير معروف. القيم المقبولة: muhtawa_shakhsi أو lam_tuqas \
                  أو thiqa_munkhafida."
@@ -792,12 +807,12 @@ impl Tafsir for KhataMusharakaAmr {
                 "لم تُفحص مشاركة في هذه الجلسة. افحص الملف بالمفتاح المعلن أولًا ثم أعد \
                  المحاولة."
                     .to_owned()
-            }
+            },
             Self::MiftahGhayrSalih => {
                 "المفتاح المعلن ليس 64 محرفًا ست عشريًّا. انسخه كاملًا ممّن شارك الملف ثم أعد \
                  المحاولة."
                     .to_owned()
-            }
+            },
             Self::MalafKabir { masar, hajm, hadd } => format!(
                 "الملف {} حجمه {hajm} بايت، وهذه النسخة تقرأ {hadd} بايت على الأكثر.",
                 masar.display()
@@ -815,12 +830,12 @@ impl Tafsir for KhataMusharakaAmr {
                 "No share has been gathered for this game in this session. Gather one, then \
                  try again."
                     .to_owned()
-            }
+            },
             Self::BasmaMukhtalifa => {
                 "What the screen showed is not what would be written; the readings may have \
                  changed since. Gather again and read the list before acknowledging."
                     .to_owned()
-            }
+            },
             Self::TahdheerMajhul { tahdheer } => format!(
                 "\"{tahdheer}\" is not a sharing warning. The accepted values are \
                  muhtawa_shakhsi, lam_tuqas and thiqa_munkhafida."
@@ -829,12 +844,12 @@ impl Tafsir for KhataMusharakaAmr {
                 "No share has been verified in this session. Verify the file against the \
                  sharer's key first, then try again."
                     .to_owned()
-            }
+            },
             Self::MiftahGhayrSalih => {
                 "The sharer's key is not 64 hexadecimal characters. Copy it in full from \
                  whoever shared the file, then try again."
                     .to_owned()
-            }
+            },
             Self::MalafKabir { masar, hajm, hadd } => format!(
                 "{} is {hajm} bytes and this build reads at most {hadd}.",
                 masar.display()
@@ -858,7 +873,7 @@ impl Tafsir for KhataMusharakaAmr {
         match self {
             Self::TahdheerMajhul { tahdheer } => {
                 let _ = siyaq.insert("tahdheer".to_owned(), QeemaSiyaq::Nass(tahdheer.clone()));
-            }
+            },
             Self::MalafKabir { masar, hajm, hadd } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert(
@@ -869,15 +884,15 @@ impl Tafsir for KhataMusharakaAmr {
                     "hadd".to_owned(),
                     QeemaSiyaq::Raqm(i64::try_from(*hadd).unwrap_or(i64::MAX)),
                 );
-            }
+            },
             Self::MalafTalif { masar, sabab } => {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
-            }
+            },
             Self::MusawwadaGhayrMujahhaza
             | Self::BasmaMukhtalifa
             | Self::HuzmaGhayrMafhusa
-            | Self::MiftahGhayrSalih => {}
+            | Self::MiftahGhayrSalih => {},
         }
         siyaq
     }
@@ -964,8 +979,11 @@ mod ikhtibarat {
         let mintaqa = MuarrifMintaqa::min_raqm(1);
         for (raqm, &(asl, arabi)) in azwaj().iter().enumerate() {
             let lahza = 1_700_000_000_u64.saturating_add(u64::try_from(raqm).unwrap_or(0));
-            let thiqa =
-                if maqisa { ThiqatSatr::maqisa_bi(92) } else { ThiqatSatr::Ghayr };
+            let thiqa = if maqisa {
+                ThiqatSatr::maqisa_bi(92)
+            } else {
+                ThiqatSatr::Ghayr
+            };
             let mut awwal = None;
             for _ in 0..3 {
                 if let NatijatIdraj::Judida(muarrif) =
@@ -983,7 +1001,11 @@ mod ikhtibarat {
     }
 
     fn iqrarat_kull(musawwada: &MusawwadaMusharakaHie) -> Vec<String> {
-        musawwada.tahdheerat.iter().map(|tahdheer| tahdheer.ramz.clone()).collect()
+        musawwada
+            .tahdheerat
+            .iter()
+            .map(|tahdheer| tahdheer.ramz.clone())
+            .collect()
     }
 
     /// The whole loop, end to end: one player's session becomes a second player's free answer.
@@ -1002,13 +1024,23 @@ mod ikhtibarat {
 
         // --- gather -------------------------------------------------------------------
         let hala_awwal = HalatMusharaka::default();
-        let khiyarat = KhiyaratMusharakaHie { atabaa: 60, ghayr_maqisa: false };
+        let khiyarat = KhiyaratMusharakaHie {
+            atabaa: 60,
+            ghayr_maqisa: false,
+        };
         let musawwada = jahhiz(&awwal, id, "ELDEN RING", khiyarat, &hala_awwal)?;
-        assert_eq!(musawwada.hasad.sujjilat, 4, "one observation per distinct line, not per read");
+        assert_eq!(
+            musawwada.hasad.sujjilat, 4,
+            "one observation per distinct line, not per read"
+        );
         assert_eq!(musawwada.adad, 4);
         assert_eq!(musawwada.adad_maqis, 4);
         assert_eq!(musawwada.majmu, 4);
-        assert_eq!(musawwada.sutur.len(), 4, "every entry that would leave is shown, not a sample");
+        assert_eq!(
+            musawwada.sutur.len(),
+            4,
+            "every entry that would leave is shown, not a sample"
+        );
         assert!(musawwada.sutur.iter().all(|satr| satr.thiqa.qisat()));
 
         // --- consent ------------------------------------------------------------------
@@ -1026,9 +1058,11 @@ mod ikhtibarat {
         assert!(shakhsi.arabi.contains("قُرئت من شاشتك"));
 
         // Nothing leaves while a warning is unacknowledged.
-        let bila_iqrar =
-            saddir(&awwal, id, &musawwada.basma, &[], &khass, &hala_awwal);
-        assert!(bila_iqrar.is_err(), "an unacknowledged warning must block the export");
+        let bila_iqrar = saddir(&awwal, id, &musawwada.basma, &[], &khass, &hala_awwal);
+        assert!(
+            bila_iqrar.is_err(),
+            "an unacknowledged warning must block the export"
+        );
 
         // Nor does consent for one entry set spend on another.
         let mukhtalifa = saddir(
@@ -1039,7 +1073,10 @@ mod ikhtibarat {
             &khass,
             &hala_awwal,
         );
-        assert!(mukhtalifa.is_err(), "a permit is about the set the screen showed");
+        assert!(
+            mukhtalifa.is_err(),
+            "a permit is about the set the screen showed"
+        );
 
         // --- export -------------------------------------------------------------------
         let tasdir = saddir(
@@ -1065,7 +1102,11 @@ mod ikhtibarat {
         assert_eq!(huzma.adad, 4);
         assert_eq!(huzma.ism_luba, "ELDEN RING");
         assert_eq!(huzma.basma, tasdir.basma);
-        assert_eq!(huzma.sutur.len(), 4, "the importer sees what lands in their memory");
+        assert_eq!(
+            huzma.sutur.len(),
+            4,
+            "the importer sees what lands in their memory"
+        );
 
         let taqreer = idmij(&thani, &huzma.basma, khiyarat, &hala_thani)?;
         assert_eq!(taqreer.zurat, 4);
@@ -1077,17 +1118,22 @@ mod ikhtibarat {
         let mut tabaqa = DhakiratTabaqa::jadeeda(Dhakira::iftah(&thani)?, id);
         for (asl, arabi) in azwaj() {
             match tabaqa.istafhim(asl)? {
-                RaddTabaqa::Jahiza { arabi: mahfuz, naw, .. } => {
-                    assert_eq!(mahfuz, arabi, "the second player gets the first player's answer");
+                RaddTabaqa::Jahiza {
+                    arabi: mahfuz, naw, ..
+                } => {
+                    assert_eq!(
+                        mahfuz, arabi,
+                        "the second player gets the first player's answer"
+                    );
                     assert_eq!(
                         naw,
                         NawAsl::Mulahaza,
                         "an imported reading can never outrank reviewed text"
                     );
-                }
+                },
                 RaddTabaqa::Majhula => {
                     return Err(format!("{asl} was never answered on the importing side").into());
-                }
+                },
             }
         }
         assert_eq!(
@@ -1111,14 +1157,23 @@ mod ikhtibarat {
         iktub_sijill(&masarat, id, true, MasdarTarjama::Aaliya)?;
 
         let hala = HalatMusharaka::default();
-        let khiyarat = KhiyaratMusharakaHie { atabaa: 60, ghayr_maqisa: false };
+        let khiyarat = KhiyaratMusharakaHie {
+            atabaa: 60,
+            ghayr_maqisa: false,
+        };
         let awwal = jahhiz(&masarat, id, "ELDEN RING", khiyarat, &hala)?;
         assert_eq!(awwal.hasad.sujjilat, 4);
 
         let thani = jahhiz(&masarat, id, "ELDEN RING", khiyarat, &hala)?;
-        assert_eq!(thani.hasad.zurat, 0, "the watermark leaves nothing to re-record");
+        assert_eq!(
+            thani.hasad.zurat, 0,
+            "the watermark leaves nothing to re-record"
+        );
         assert_eq!(thani.hasad.sujjilat, 0);
-        assert_eq!(thani.adad, awwal.adad, "and the payload is the same size it was");
+        assert_eq!(
+            thani.adad, awwal.adad,
+            "and the payload is the same size it was"
+        );
         Ok(())
     }
 
@@ -1135,12 +1190,21 @@ mod ikhtibarat {
         iktub_sijill(&masarat, id, true, MasdarTarjama::Mashru)?;
 
         let hala = HalatMusharaka::default();
-        let khiyarat = KhiyaratMusharakaHie { atabaa: 60, ghayr_maqisa: false };
+        let khiyarat = KhiyaratMusharakaHie {
+            atabaa: 60,
+            ghayr_maqisa: false,
+        };
         let musawwada = jahhiz(&masarat, id, "ELDEN RING", khiyarat, &hala)?;
         assert_eq!(musawwada.hasad.zurat, 4, "the entries were looked at");
-        assert_eq!(musawwada.hasad.sujjilat, 0, "and every one of them was refused");
+        assert_eq!(
+            musawwada.hasad.sujjilat, 0,
+            "and every one of them was refused"
+        );
         assert_eq!(musawwada.adad, 0);
-        assert!(musawwada.tahdheerat.is_empty(), "an empty payload raises no warning");
+        assert!(
+            musawwada.tahdheerat.is_empty(),
+            "an empty payload raises no warning"
+        );
         Ok(())
     }
 
@@ -1159,25 +1223,45 @@ mod ikhtibarat {
         iktub_sijill(&masarat, id, false, MasdarTarjama::Aaliya)?;
 
         let hala = HalatMusharaka::default();
-        let mabdai = KhiyaratMusharakaHie { atabaa: 60, ghayr_maqisa: false };
+        let mabdai = KhiyaratMusharakaHie {
+            atabaa: 60,
+            ghayr_maqisa: false,
+        };
         let mahjuba = jahhiz(&masarat, id, "ELDEN RING", mabdai, &hala)?;
         assert_eq!(mahjuba.majmu, 4, "the readings are in the memory");
-        assert_eq!(mahjuba.adad, 0, "and none of them is in the default payload");
+        assert_eq!(
+            mahjuba.adad, 0,
+            "and none of them is in the default payload"
+        );
         assert!(
             saddir(&masarat, id, &mahjuba.basma, &[], &khass, &hala).is_err(),
             "signing an empty share would put a file in the world that answers nothing"
         );
 
-        let mawsa = KhiyaratMusharakaHie { atabaa: 60, ghayr_maqisa: true };
+        let mawsa = KhiyaratMusharakaHie {
+            atabaa: 60,
+            ghayr_maqisa: true,
+        };
         let musawwada = jahhiz(&masarat, id, "ELDEN RING", mawsa, &hala)?;
         assert_eq!(musawwada.adad, 4);
         assert_eq!(musawwada.adad_maqis, 0);
         assert_eq!(musawwada.adad_ghayr_maqis, 4);
-        assert!(musawwada.sutur.iter().all(|satr| satr.thiqa == ThiqatQira::Ghayr));
+        assert!(
+            musawwada
+                .sutur
+                .iter()
+                .all(|satr| satr.thiqa == ThiqatQira::Ghayr)
+        );
 
-        let asma: Vec<&str> =
-            musawwada.tahdheerat.iter().map(|tahdheer| tahdheer.ramz.as_str()).collect();
-        assert!(asma.contains(&"lam_tuqas"), "the unmeasured warning must fire: {asma:?}");
+        let asma: Vec<&str> = musawwada
+            .tahdheerat
+            .iter()
+            .map(|tahdheer| tahdheer.ramz.as_str())
+            .collect();
+        assert!(
+            asma.contains(&"lam_tuqas"),
+            "the unmeasured warning must fire: {asma:?}"
+        );
         assert!(asma.contains(&"muhtawa_shakhsi"));
 
         // Acknowledging only the loud one is not acknowledging both.
@@ -1193,8 +1277,14 @@ mod ikhtibarat {
             .is_err(),
             "each warning is acknowledged by name, not as a group"
         );
-        let tasdir =
-            saddir(&masarat, id, &musawwada.basma, &iqrarat_kull(&musawwada), &khass, &hala)?;
+        let tasdir = saddir(
+            &masarat,
+            id,
+            &musawwada.basma,
+            &iqrarat_kull(&musawwada),
+            &khass,
+            &hala,
+        )?;
         assert_eq!(tasdir.adad, 4);
         Ok(())
     }
@@ -1208,7 +1298,10 @@ mod ikhtibarat {
         iktub_sijill(&masarat, id, true, MasdarTarjama::Aaliya)?;
 
         let hala = HalatMusharaka::default();
-        let khiyarat = KhiyaratMusharakaHie { atabaa: 60, ghayr_maqisa: false };
+        let khiyarat = KhiyaratMusharakaHie {
+            atabaa: 60,
+            ghayr_maqisa: false,
+        };
         let musawwada = jahhiz(&masarat, id, "ELDEN RING", khiyarat, &hala)?;
         let khata = saddir(
             &masarat,
@@ -1218,7 +1311,10 @@ mod ikhtibarat {
             &miftah(5),
             &hala,
         );
-        assert!(khata.is_err(), "an unknown key must not silently acknowledge nothing");
+        assert!(
+            khata.is_err(),
+            "an unknown key must not silently acknowledge nothing"
+        );
         Ok(())
     }
 
@@ -1242,7 +1338,10 @@ mod ikhtibarat {
         let saghir = hex(&bayt);
         let kabir = saghir.to_uppercase();
         assert_eq!(miftah_min_hex(&saghir).map(|aam| aam.bayt()), Some(bayt));
-        assert_eq!(miftah_min_hex(&format!("  {kabir}  ")).map(|aam| aam.bayt()), Some(bayt));
+        assert_eq!(
+            miftah_min_hex(&format!("  {kabir}  ")).map(|aam| aam.bayt()),
+            Some(bayt)
+        );
         assert!(miftah_min_hex("").is_none());
         assert!(miftah_min_hex(&saghir[..62]).is_none());
         assert!(miftah_min_hex(&"z".repeat(64)).is_none());
@@ -1274,7 +1373,10 @@ mod ikhtibarat {
             "a free provider's ceiling is zero, and the overlay reads that as free"
         );
         assert_eq!(muzawwid.takalif().munfaq(), 0);
-        assert!(!muzawwid.qudrat().taklifa.madfu(), "nothing here charges anybody");
+        assert!(
+            !muzawwid.qudrat().taklifa.madfu(),
+            "nothing here charges anybody"
+        );
         Ok(())
     }
 }

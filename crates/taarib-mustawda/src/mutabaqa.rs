@@ -17,7 +17,10 @@ use crate::khata::{KhataMustawda, NatijatMustawda};
 const HADD_ASMAA_BINA: usize = 3;
 
 /// The verdict of a listing whose binding could not be constructed.
-const HUKM_MURFUD: HukmIrtibat = HukmIrtibat { sabab: SababMutabaqa::BilaTatabuq, naqis: false };
+const HUKM_MURFUD: HukmIrtibat = HukmIrtibat {
+    sabab: SababMutabaqa::BilaTatabuq,
+    naqis: false,
+};
 
 /// What a full metadata record adds to the bindings an index listing carries.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
@@ -32,7 +35,10 @@ impl IdafatIrtibat {
     /// A range with no recipe size behind it.
     #[must_use]
     pub const fn min_nitaq(nitaq: NitaqBina) -> Self {
-        Self { nitaq: Some(nitaq), adad_malaffat: 0 }
+        Self {
+            nitaq: Some(nitaq),
+            adad_malaffat: 0,
+        }
     }
 }
 
@@ -58,8 +64,7 @@ impl SababGhayrTawafuq {
     #[must_use]
     pub fn wasf_arabi(&self) -> String {
         if self.bila_irtibat {
-            return "لا تعلن هذه الحزمة أيّ ارتباط ببناء، فلا سبيل إلى التحقّق من توافقها."
-                .to_owned();
+            return "لا تعلن هذه الحزمة أيّ ارتباط ببناء، فلا سبيل إلى التحقّق من توافقها.".to_owned();
         }
         if self.kharij_nitaq {
             return match self.bina_mawjud.as_deref() {
@@ -91,10 +96,10 @@ impl SababGhayrTawafuq {
             return match self.bina_mawjud.as_deref() {
                 Some(mawjud) => {
                     format!("your build {mawjud} is outside the range the contributor declared")
-                }
+                },
                 None => {
                     "your launcher reports no build id and the range is over build ids".to_owned()
-                }
+                },
             };
         }
         let basmat = format!(
@@ -282,7 +287,10 @@ impl MutabiqBina {
     /// A matcher for one installed build, judging from index listings alone.
     #[must_use]
     pub const fn jadeed(bina: BinaId) -> Self {
-        Self { bina, idafat: BTreeMap::new() }
+        Self {
+            bina,
+            idafat: BTreeMap::new(),
+        }
     }
 
     /// The same, with the bindings full metadata records added.
@@ -372,7 +380,12 @@ impl MutabiqBina {
             bila_irtibat: manassat.is_empty() && basmat.is_empty(),
             kharij_nitaq: idafa.nitaq.is_some(),
         });
-        MutabaqatRuqaa { id, murajaa, hukm, sabab_ghayr }
+        MutabaqatRuqaa {
+            id,
+            murajaa,
+            hukm,
+            sabab_ghayr,
+        }
     }
 }
 

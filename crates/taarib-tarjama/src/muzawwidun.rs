@@ -243,13 +243,17 @@ impl Itimad {
             || nadhif.len() > AQSA_TUL_ITIMAD
             || nadhif.chars().any(char::is_control)
         {
-            return Err(KhataTarjama::BilaItimad { muzawwid: muzawwid.to_owned() });
+            return Err(KhataTarjama::BilaItimad {
+                muzawwid: muzawwid.to_owned(),
+            });
         }
         let madkhal = madkhal_khazina(muzawwid)?;
         madkhal
             .set_password(nadhif)
             .map_err(|khata| khata_khazina(muzawwid, &khata))?;
-        Ok(Self { qeema: nadhif.to_owned() })
+        Ok(Self {
+            qeema: nadhif.to_owned(),
+        })
     }
 
     /// Loads the stored credential for a provider, if one was ever entered.
@@ -442,7 +446,10 @@ impl NamudhajTaklifa {
     pub const fn min_rumuz(&self, idkhal: u64, ikhraj: u64) -> u64 {
         match self {
             Self::Majani | Self::BilAhruf { .. } => 0,
-            Self::BilRumuz { idkhal: sir_idkhal, ikhraj: sir_ikhraj } => idkhal
+            Self::BilRumuz {
+                idkhal: sir_idkhal,
+                ikhraj: sir_ikhraj,
+            } => idkhal
                 .saturating_mul(*sir_idkhal)
                 .saturating_add(ikhraj.saturating_mul(*sir_ikhraj)),
         }
@@ -472,7 +479,6 @@ impl NamudhajTaklifa {
 pub fn hajm_usize(qeema: u64) -> usize {
     usize::try_from(qeema).unwrap_or(usize::MAX)
 }
-
 
 /// An upper-bound token count for a prompt, from its byte length.
 ///
@@ -520,14 +526,20 @@ impl TakalifJarya {
                   caller holding it and able to authorise a second meter"
     )]
     pub const fn min_idhn(idhn: IdhnInfaq) -> Self {
-        Self { munfaq: AtomicU64::new(0), saqf: idhn.saqf() }
+        Self {
+            munfaq: AtomicU64::new(0),
+            saqf: idhn.saqf(),
+        }
     }
 
     /// The meter for a free provider: ceiling zero, and zero-cost
     /// reservations always fit under it.
     #[must_use]
     pub const fn majani() -> Self {
-        Self { munfaq: AtomicU64::new(0), saqf: 0 }
+        Self {
+            munfaq: AtomicU64::new(0),
+            saqf: 0,
+        }
     }
 
     /// What has been spent (plus at most one in-flight reservation), in
@@ -555,12 +567,23 @@ impl TakalifJarya {
     /// [`KhataTarjama::SaqfTakalif`] when the reservation would cross the
     /// ceiling. Nothing has been sent when this returns; that is the point.
     fn ihjiz(&self, taqdir: u64) -> Result<HajzTaklifa<'_>, KhataTarjama> {
-        let natija = self.munfaq.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |halin| {
-            halin.checked_add(taqdir).filter(|majmu| *majmu <= self.saqf || taqdir == 0)
-        });
+        let natija = self
+            .munfaq
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |halin| {
+                halin
+                    .checked_add(taqdir)
+                    .filter(|majmu| *majmu <= self.saqf || taqdir == 0)
+            });
         match natija {
-            Ok(_) => Ok(HajzTaklifa { hisab: self, taqdir, muthabbat: false }),
-            Err(halin) => Err(KhataTarjama::SaqfTakalif { munfaq: halin, saqf: self.saqf }),
+            Ok(_) => Ok(HajzTaklifa {
+                hisab: self,
+                taqdir,
+                muthabbat: false,
+            }),
+            Err(halin) => Err(KhataTarjama::SaqfTakalif {
+                munfaq: halin,
+                saqf: self.saqf,
+            }),
         }
     }
 }
@@ -601,9 +624,12 @@ impl HajzTaklifa<'_> {
     /// promise [`KhataTarjama::SaqfTakalif`] makes and this type exists to
     /// keep.
     fn thabbit(mut self, fili: u64) {
-        let _ = self.hisab.munfaq.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |halin| {
-            Some(halin.saturating_sub(self.taqdir).saturating_add(fili))
-        });
+        let _ = self
+            .hisab
+            .munfaq
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |halin| {
+                Some(halin.saturating_sub(self.taqdir).saturating_add(fili))
+            });
         self.muthabbat = true;
     }
 }
@@ -703,7 +729,7 @@ impl QudratMuzawwid {
                 // the input's size rather than at nothing. Under-reserving is
                 // the failure that lets a run cross its own ceiling.
                 self.taklifa.min_rumuz(idkhal, idkhal)
-            }
+            },
         }
     }
 
@@ -714,7 +740,11 @@ impl QudratMuzawwid {
     /// and cannot claim a confidence it never measured.
     #[must_use]
     pub const fn dalil_thiqa(&self) -> Option<DalilThiqa> {
-        if self.yublighu_thiqa { Some(DalilThiqa(())) } else { None }
+        if self.yublighu_thiqa {
+            Some(DalilThiqa(()))
+        } else {
+            None
+        }
     }
 }
 
@@ -766,7 +796,12 @@ impl NatijatTarjama {
     /// nothing.
     #[must_use]
     pub const fn bila_thiqa(matn: String, taklifa: u64) -> Self {
-        Self { matn, thiqa: None, maqisa: false, taklifa }
+        Self {
+            matn,
+            thiqa: None,
+            maqisa: false,
+            taklifa,
+        }
     }
 
     /// A result carrying the provider's own confidence.
@@ -784,7 +819,12 @@ impl NatijatTarjama {
     pub fn bi_thiqa(matn: String, taklifa: u64, thiqa: f32, dalil: DalilThiqa) -> Self {
         let DalilThiqa(()) = dalil;
         let salima = thiqa.is_finite().then(|| thiqa.clamp(0.0, 1.0));
-        Self { matn, maqisa: salima.is_some(), thiqa: salima, taklifa }
+        Self {
+            matn,
+            maqisa: salima.is_some(),
+            thiqa: salima,
+            taklifa,
+        }
     }
 
     /// The translated text, `hima` tokens intact, ready for
@@ -824,9 +864,7 @@ impl NatijatTarjama {
 /// would eventually appear.
 fn natija_min_radd(radd: RaddMufassal, taklifa: u64, qudrat: &QudratMuzawwid) -> NatijatTarjama {
     match (radd.thiqa(), qudrat.dalil_thiqa()) {
-        (Some(thiqa), Some(dalil)) => {
-            NatijatTarjama::bi_thiqa(radd.tarjama, taklifa, thiqa, dalil)
-        }
+        (Some(thiqa), Some(dalil)) => NatijatTarjama::bi_thiqa(radd.tarjama, taklifa, thiqa, dalil),
         _ => NatijatTarjama::bila_thiqa(radd.tarjama, taklifa),
     }
 }
@@ -1071,7 +1109,7 @@ impl JawharIrsal {
                     tracing::debug!(muzawwid = %self.ism, muhawala, sabab, "transport failure");
                     sabab_akhir = SababIada::Naql(sabab);
                     continue;
-                }
+                },
             };
 
             self.sajjil_hudud(&radd);
@@ -1085,9 +1123,7 @@ impl JawharIrsal {
                 sabab_akhir = SababIada::Muadal(thawani);
                 continue;
             }
-            if hala == reqwest::StatusCode::UNAUTHORIZED
-                || hala == reqwest::StatusCode::FORBIDDEN
-            {
+            if hala == reqwest::StatusCode::UNAUTHORIZED || hala == reqwest::StatusCode::FORBIDDEN {
                 return Err(KhataTarjama::MuzawwidGhayrMutah {
                     muzawwid: self.ism.clone(),
                     sabab: format!("the credential was refused (HTTP {})", hala.as_u16()),
@@ -1149,8 +1185,8 @@ impl JawharIrsal {
                 ),
                 Some(baqi) => {
                     tracing::trace!(muzawwid = %self.ism, baqi, "provider request budget");
-                }
-                None => {}
+                },
+                None => {},
             }
         }
         if let Some(ism_ras) = self.asma.iadat_dabt
@@ -1227,10 +1263,12 @@ async fn mukhtasar_jasad(radd: reqwest::Response) -> String {
 ///
 /// [`KhataTarjama::RaddGhayrMufassal`] when the body could not be read.
 async fn jasad_najah(radd: reqwest::Response, muzawwid: &str) -> Result<String, KhataTarjama> {
-    radd.text().await.map_err(|_| KhataTarjama::RaddGhayrMufassal {
-        muzawwid: muzawwid.to_owned(),
-        radd: "(the reply body could not be read)".to_owned(),
-    })
+    radd.text()
+        .await
+        .map_err(|_| KhataTarjama::RaddGhayrMufassal {
+            muzawwid: muzawwid.to_owned(),
+            radd: "(the reply body could not be read)".to_owned(),
+        })
 }
 
 /// The size refusal, shared by every provider's pre-flight check.
@@ -1330,7 +1368,13 @@ impl Default for IdadatAnthropic {
         let namudhaj = "claude-sonnet-5".to_owned();
         let taklifa = taklifat_anthropic(&namudhaj);
         let hararat = hararat_anthropic(&namudhaj);
-        Self { namudhaj, aqsa_ikhraj: 1024, hadd_talabat: hadd_thabit(50), taklifa, hararat }
+        Self {
+            namudhaj,
+            aqsa_ikhraj: 1024,
+            hadd_talabat: hadd_thabit(50),
+            taklifa,
+            hararat,
+        }
     }
 }
 
@@ -1350,15 +1394,30 @@ impl Default for IdadatAnthropic {
 #[must_use]
 pub fn taklifat_anthropic(namudhaj: &str) -> NamudhajTaklifa {
     if namudhaj.contains("haiku") {
-        NamudhajTaklifa::BilRumuz { idkhal: 1_000, ikhraj: 5_000 }
+        NamudhajTaklifa::BilRumuz {
+            idkhal: 1_000,
+            ikhraj: 5_000,
+        }
     } else if namudhaj.contains("sonnet-5") || namudhaj.contains("sonnet5") {
-        NamudhajTaklifa::BilRumuz { idkhal: 2_000, ikhraj: 10_000 }
+        NamudhajTaklifa::BilRumuz {
+            idkhal: 2_000,
+            ikhraj: 10_000,
+        }
     } else if namudhaj.contains("sonnet") {
-        NamudhajTaklifa::BilRumuz { idkhal: 3_000, ikhraj: 15_000 }
+        NamudhajTaklifa::BilRumuz {
+            idkhal: 3_000,
+            ikhraj: 15_000,
+        }
     } else if namudhaj.contains("opus") {
-        NamudhajTaklifa::BilRumuz { idkhal: 5_000, ikhraj: 25_000 }
+        NamudhajTaklifa::BilRumuz {
+            idkhal: 5_000,
+            ikhraj: 25_000,
+        }
     } else {
-        NamudhajTaklifa::BilRumuz { idkhal: 10_000, ikhraj: 50_000 }
+        NamudhajTaklifa::BilRumuz {
+            idkhal: 10_000,
+            ikhraj: 50_000,
+        }
     }
 }
 
@@ -1445,7 +1504,12 @@ impl MuzawwidAnthropic {
             yaqbal_tawjih: true,
             taklifa: idadat.taklifa,
         };
-        Ok(Self { idadat, itimad, jawhar, qudrat })
+        Ok(Self {
+            idadat,
+            itimad,
+            jawhar,
+            qudrat,
+        })
     }
 }
 
@@ -1570,7 +1634,10 @@ impl Muzawwid for MuzawwidAnthropic {
         // request's own hard cap — an upper bound the API itself enforces.
         let taqdir = self.idadat.taklifa.min_rumuz(
             taqdir_rumuz_min_bayt(
-                tawjih.len().saturating_add(risala.len()).saturating_add(hajm_mukhattat),
+                tawjih
+                    .len()
+                    .saturating_add(risala.len())
+                    .saturating_add(hajm_mukhattat),
             ),
             u64::from(self.idadat.aqsa_ikhraj),
         );
@@ -1580,7 +1647,10 @@ impl Muzawwid for MuzawwidAnthropic {
             model: &self.idadat.namudhaj,
             max_tokens: self.idadat.aqsa_ikhraj,
             system: &tawjih,
-            messages: vec![RisalaAnthropic { role: "user", content: &risala }],
+            messages: vec![RisalaAnthropic {
+                role: "user",
+                content: &risala,
+            }],
             tools: vec![AdatAnthropic {
                 name: ISM_ADAT_TARJAMA,
                 description: "Deliver the finished Arabic translation of the given game string.",
@@ -1609,7 +1679,7 @@ impl Muzawwid for MuzawwidAnthropic {
             Err(khata) => {
                 hajz.thabbit(taqdir);
                 return Err(khata);
-            }
+            },
         };
         let Ok(mufakkak) = serde_json::from_str::<RaddAnthropic>(&nass_radd) else {
             hajz.thabbit(taqdir);
@@ -1635,7 +1705,7 @@ impl Muzawwid for MuzawwidAnthropic {
                     muzawwid: Self::ISM.to_owned(),
                     sabab: "the model refused this input (stop_reason: refusal)".to_owned(),
                 });
-            }
+            },
             Some("max_tokens") => {
                 return Err(KhataTarjama::MudkhalMarfud {
                     muzawwid: Self::ISM.to_owned(),
@@ -1644,16 +1714,14 @@ impl Muzawwid for MuzawwidAnthropic {
                         self.idadat.aqsa_ikhraj
                     ),
                 });
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         let hujja = mufakkak
             .content
             .iter()
-            .find(|qita| {
-                qita.naw == "tool_use" && qita.name.as_deref() == Some(ISM_ADAT_TARJAMA)
-            })
+            .find(|qita| qita.naw == "tool_use" && qita.name.as_deref() == Some(ISM_ADAT_TARJAMA))
             .and_then(|qita| qita.input.as_ref())
             .ok_or_else(|| KhataTarjama::RaddGhayrMufassal {
                 muzawwid: Self::ISM.to_owned(),
@@ -1802,15 +1870,27 @@ pub fn taklifat_openai(namudhaj: &str) -> NamudhajTaklifa {
         }
     }
     if namudhaj.contains("gpt-5-nano") {
-        return NamudhajTaklifa::BilRumuz { idkhal: 50, ikhraj: 400 };
+        return NamudhajTaklifa::BilRumuz {
+            idkhal: 50,
+            ikhraj: 400,
+        };
     }
     if namudhaj.contains("gpt-5-mini") {
-        return NamudhajTaklifa::BilRumuz { idkhal: 250, ikhraj: 2_000 };
+        return NamudhajTaklifa::BilRumuz {
+            idkhal: 250,
+            ikhraj: 2_000,
+        };
     }
     if namudhaj.contains("gpt-5") {
-        return NamudhajTaklifa::BilRumuz { idkhal: 1_250, ikhraj: 10_000 };
+        return NamudhajTaklifa::BilRumuz {
+            idkhal: 1_250,
+            ikhraj: 10_000,
+        };
     }
-    NamudhajTaklifa::BilRumuz { idkhal: 30_000, ikhraj: 180_000 }
+    NamudhajTaklifa::BilRumuz {
+        idkhal: 30_000,
+        ikhraj: 180_000,
+    }
 }
 
 /// Any Chat-Completions-compatible provider.
@@ -1926,7 +2006,13 @@ impl MuzawwidMuwafiqOpenAI {
             yaqbal_tawjih: true,
             taklifa: idadat.taklifa,
         };
-        Ok(Self { idadat, itimad, unwan, jawhar, qudrat })
+        Ok(Self {
+            idadat,
+            itimad,
+            unwan,
+            jawhar,
+            qudrat,
+        })
     }
 }
 
@@ -2065,7 +2151,10 @@ impl Muzawwid for MuzawwidMuwafiqOpenAI {
 
         let taqdir = self.idadat.taklifa.min_rumuz(
             taqdir_rumuz_min_bayt(
-                tawjih.len().saturating_add(risala.len()).saturating_add(hajm_sigha),
+                tawjih
+                    .len()
+                    .saturating_add(risala.len())
+                    .saturating_add(hajm_sigha),
             ),
             u64::from(self.idadat.aqsa_ikhraj),
         );
@@ -2074,8 +2163,14 @@ impl Muzawwid for MuzawwidMuwafiqOpenAI {
         let jasad = TalabMuwafiq {
             model: &self.idadat.namudhaj,
             messages: vec![
-                RisalaMuwafiq { role: "system", content: &tawjih },
-                RisalaMuwafiq { role: "user", content: &risala },
+                RisalaMuwafiq {
+                    role: "system",
+                    content: &tawjih,
+                },
+                RisalaMuwafiq {
+                    role: "user",
+                    content: &risala,
+                },
             ],
             temperature: self.idadat.hararat,
             max_completion_tokens: self.idadat.lahja_haditha.then_some(self.idadat.aqsa_ikhraj),
@@ -2083,17 +2178,17 @@ impl Muzawwid for MuzawwidMuwafiqOpenAI {
             response_format: sighat_radd,
         };
 
-        let radd = self
-            .jawhar
-            .irsal(|amil| {
-                let talab_khaam = amil.post(&self.unwan).json(&jasad);
-                match &self.itimad {
-                    Some(itimad) => talab_khaam
-                        .header("authorization", format!("Bearer {}", itimad.qeema())),
-                    None => talab_khaam,
-                }
-            })
-            .await?;
+        let radd =
+            self.jawhar
+                .irsal(|amil| {
+                    let talab_khaam = amil.post(&self.unwan).json(&jasad);
+                    match &self.itimad {
+                        Some(itimad) => talab_khaam
+                            .header("authorization", format!("Bearer {}", itimad.qeema())),
+                        None => talab_khaam,
+                    }
+                })
+                .await?;
 
         // A 2xx was billed whatever the body holds: settle, never release,
         // on every path below.
@@ -2102,7 +2197,7 @@ impl Muzawwid for MuzawwidMuwafiqOpenAI {
             Err(khata) => {
                 hajz.thabbit(taqdir);
                 return Err(khata);
-            }
+            },
         };
         let Ok(mufakkak) = serde_json::from_str::<RaddMuwafiq>(&nass_radd) else {
             hajz.thabbit(taqdir);
@@ -2120,12 +2215,13 @@ impl Muzawwid for MuzawwidMuwafiqOpenAI {
         });
         hajz.thabbit(fili);
 
-        let khiyar = mufakkak.choices.first().ok_or_else(|| {
-            KhataTarjama::RaddGhayrMufassal {
+        let khiyar = mufakkak
+            .choices
+            .first()
+            .ok_or_else(|| KhataTarjama::RaddGhayrMufassal {
                 muzawwid: self.ism().to_owned(),
                 radd: nass_radd.chars().take(64).collect(),
-            }
-        })?;
+            })?;
 
         match khiyar.finish_reason.as_deref() {
             Some("content_filter") => {
@@ -2133,7 +2229,7 @@ impl Muzawwid for MuzawwidMuwafiqOpenAI {
                     muzawwid: self.ism().to_owned(),
                     sabab: "the endpoint's content filter refused this string".to_owned(),
                 });
-            }
+            },
             Some("length") => {
                 return Err(KhataTarjama::MudkhalMarfud {
                     muzawwid: self.ism().to_owned(),
@@ -2142,16 +2238,19 @@ impl Muzawwid for MuzawwidMuwafiqOpenAI {
                         self.idadat.aqsa_ikhraj
                     ),
                 });
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
-        let nass_json = khiyar.message.content.as_deref().ok_or_else(|| {
-            KhataTarjama::RaddGhayrMufassal {
-                muzawwid: self.ism().to_owned(),
-                radd: nass_radd.chars().take(64).collect(),
-            }
-        })?;
+        let nass_json =
+            khiyar
+                .message
+                .content
+                .as_deref()
+                .ok_or_else(|| KhataTarjama::RaddGhayrMufassal {
+                    muzawwid: self.ism().to_owned(),
+                    radd: nass_radd.chars().take(64).collect(),
+                })?;
 
         let mufassal = hallil_radd(nass_json, self.ism())?;
         Ok(natija_min_radd(mufassal, fili, &self.qudrat))
@@ -2217,7 +2316,13 @@ impl Default for IdadatGemini {
         let namudhaj = "gemini-3.8-flash".to_owned();
         let taklifa = taklifat_gemini(&namudhaj);
         let hararat = hararat_gemini(&namudhaj);
-        Self { namudhaj, aqsa_ikhraj: 1024, hadd_talabat: hadd_thabit(120), taklifa, hararat }
+        Self {
+            namudhaj,
+            aqsa_ikhraj: 1024,
+            hadd_talabat: hadd_thabit(120),
+            taklifa,
+            hararat,
+        }
     }
 }
 
@@ -2257,13 +2362,25 @@ pub fn hararat_gemini(namudhaj: &str) -> Option<f32> {
 #[must_use]
 pub fn taklifat_gemini(namudhaj: &str) -> NamudhajTaklifa {
     if namudhaj.contains("2.5-flash") {
-        NamudhajTaklifa::BilRumuz { idkhal: 300, ikhraj: 2_500 }
+        NamudhajTaklifa::BilRumuz {
+            idkhal: 300,
+            ikhraj: 2_500,
+        }
     } else if namudhaj.contains("2.5-pro") {
-        NamudhajTaklifa::BilRumuz { idkhal: 1_250, ikhraj: 10_000 }
+        NamudhajTaklifa::BilRumuz {
+            idkhal: 1_250,
+            ikhraj: 10_000,
+        }
     } else if namudhaj.contains("flash") {
-        NamudhajTaklifa::BilRumuz { idkhal: 1_500, ikhraj: 7_500 }
+        NamudhajTaklifa::BilRumuz {
+            idkhal: 1_500,
+            ikhraj: 7_500,
+        }
     } else {
-        NamudhajTaklifa::BilRumuz { idkhal: 4_000, ikhraj: 18_000 }
+        NamudhajTaklifa::BilRumuz {
+            idkhal: 4_000,
+            ikhraj: 18_000,
+        }
     }
 }
 
@@ -2326,7 +2443,10 @@ impl MuzawwidGemini {
             false,
             idadat.hadd_talabat,
             TakalifJarya::min_idhn(idhn),
-            AsmaHudud { baqi_talabat: None, iadat_dabt: None },
+            AsmaHudud {
+                baqi_talabat: None,
+                iadat_dabt: None,
+            },
         )?;
         let unwan = format!("{ASAS_GEMINI}/{}:generateContent", idadat.namudhaj);
         let qudrat = QudratMuzawwid {
@@ -2337,7 +2457,13 @@ impl MuzawwidGemini {
             yaqbal_tawjih: true,
             taklifa: idadat.taklifa,
         };
-        Ok(Self { idadat, itimad, unwan, jawhar, qudrat })
+        Ok(Self {
+            idadat,
+            itimad,
+            unwan,
+            jawhar,
+            qudrat,
+        })
     }
 }
 
@@ -2487,14 +2613,19 @@ impl Muzawwid for MuzawwidGemini {
 
         let taqdir = self.idadat.taklifa.min_rumuz(
             taqdir_rumuz_min_bayt(
-                tawjih.len().saturating_add(risala.len()).saturating_add(hajm_idadat),
+                tawjih
+                    .len()
+                    .saturating_add(risala.len())
+                    .saturating_add(hajm_idadat),
             ),
             u64::from(self.idadat.aqsa_ikhraj),
         );
         let hajz = self.jawhar.takalif.ihjiz(taqdir)?;
 
         let jasad = TalabGemini {
-            tawjih: MuhtawaGemini { parts: vec![JuzGemini { text: &tawjih }] },
+            tawjih: MuhtawaGemini {
+                parts: vec![JuzGemini { text: &tawjih }],
+            },
             contents: vec![MuhtawaMawsumGemini {
                 role: "user",
                 parts: vec![JuzGemini { text: &risala }],
@@ -2518,7 +2649,7 @@ impl Muzawwid for MuzawwidGemini {
             Err(khata) => {
                 hajz.thabbit(taqdir);
                 return Err(khata);
-            }
+            },
         };
         let Ok(mufakkak) = serde_json::from_str::<RaddGemini>(&nass_radd) else {
             hajz.thabbit(taqdir);
@@ -2545,12 +2676,14 @@ impl Muzawwid for MuzawwidGemini {
             });
         }
 
-        let murashshah = mufakkak.candidates.first().ok_or_else(|| {
-            KhataTarjama::RaddGhayrMufassal {
-                muzawwid: Self::ISM.to_owned(),
-                radd: nass_radd.chars().take(64).collect(),
-            }
-        })?;
+        let murashshah =
+            mufakkak
+                .candidates
+                .first()
+                .ok_or_else(|| KhataTarjama::RaddGhayrMufassal {
+                    muzawwid: Self::ISM.to_owned(),
+                    radd: nass_radd.chars().take(64).collect(),
+                })?;
 
         if let Some(sabab) = &murashshah.sabab_tawaqquf
             && sabab != "STOP"
@@ -2680,13 +2813,20 @@ impl MuzawwidDeepL {
         itimad: Itimad,
         idhn: IdhnInfaq,
     ) -> Result<Self, KhataTarjama> {
-        let unwan = if itimad.qeema().ends_with(":fx") { UNWAN_DEEPL_HURR } else { UNWAN_DEEPL };
+        let unwan = if itimad.qeema().ends_with(":fx") {
+            UNWAN_DEEPL_HURR
+        } else {
+            UNWAN_DEEPL
+        };
         let jawhar = JawharIrsal::jadeed(
             Self::ISM.to_owned(),
             false,
             idadat.hadd_talabat,
             TakalifJarya::min_idhn(idhn),
-            AsmaHudud { baqi_talabat: None, iadat_dabt: None },
+            AsmaHudud {
+                baqi_talabat: None,
+                iadat_dabt: None,
+            },
         )?;
         let qudrat = QudratMuzawwid {
             dufaat: true,
@@ -2696,7 +2836,13 @@ impl MuzawwidDeepL {
             yaqbal_tawjih: false,
             taklifa: idadat.taklifa,
         };
-        Ok(Self { idadat, itimad, unwan, jawhar, qudrat })
+        Ok(Self {
+            idadat,
+            itimad,
+            unwan,
+            jawhar,
+            qudrat,
+        })
     }
 }
 
@@ -2802,22 +2948,23 @@ impl Muzawwid for MuzawwidDeepL {
             Err(khata) => {
                 hajz.thabbit(taqdir);
                 return Err(khata);
-            }
+            },
         };
         hajz.thabbit(taqdir);
-        let mufakkak: RaddDeepL = serde_json::from_str(&nass_radd).map_err(|_| {
-            KhataTarjama::RaddGhayrMufassal {
+        let mufakkak: RaddDeepL =
+            serde_json::from_str(&nass_radd).map_err(|_| KhataTarjama::RaddGhayrMufassal {
                 muzawwid: Self::ISM.to_owned(),
                 radd: nass_radd.chars().take(64).collect(),
-            }
-        })?;
+            })?;
 
-        let tarjama = mufakkak.translations.first().ok_or_else(|| {
-            KhataTarjama::RaddGhayrMufassal {
-                muzawwid: Self::ISM.to_owned(),
-                radd: nass_radd.chars().take(64).collect(),
-            }
-        })?;
+        let tarjama =
+            mufakkak
+                .translations
+                .first()
+                .ok_or_else(|| KhataTarjama::RaddGhayrMufassal {
+                    muzawwid: Self::ISM.to_owned(),
+                    radd: nass_radd.chars().take(64).collect(),
+                })?;
         if tarjama.text.trim().is_empty() {
             return Err(KhataTarjama::RaddGhayrMufassal {
                 muzawwid: Self::ISM.to_owned(),
@@ -2935,8 +3082,7 @@ impl MuzawwidGoogleSahabi {
         itimad: Itimad,
         idhn: IdhnInfaq,
     ) -> Result<Self, KhataTarjama> {
-        if !juz_masar_salih(&idadat.mashru)
-            || !idadat.makan.as_deref().is_none_or(juz_masar_salih)
+        if !juz_masar_salih(&idadat.mashru) || !idadat.makan.as_deref().is_none_or(juz_masar_salih)
         {
             return Err(KhataTarjama::MuzawwidGhayrMutah {
                 muzawwid: Self::ISM.to_owned(),
@@ -2953,7 +3099,10 @@ impl MuzawwidGoogleSahabi {
             false,
             idadat.hadd_talabat,
             TakalifJarya::min_idhn(idhn),
-            AsmaHudud { baqi_talabat: None, iadat_dabt: None },
+            AsmaHudud {
+                baqi_talabat: None,
+                iadat_dabt: None,
+            },
         )?;
         let qudrat = QudratMuzawwid {
             dufaat: true,
@@ -2967,7 +3116,13 @@ impl MuzawwidGoogleSahabi {
             yaqbal_tawjih: false,
             taklifa: idadat.taklifa,
         };
-        Ok(Self { idadat, itimad, unwan, jawhar, qudrat })
+        Ok(Self {
+            idadat,
+            itimad,
+            unwan,
+            jawhar,
+            qudrat,
+        })
     }
 }
 
@@ -3066,7 +3221,7 @@ impl Muzawwid for MuzawwidGoogleSahabi {
                 match self.idadat.tawtheeq {
                     TawtheeqGoogle::MiftahApi => {
                         talab_khaam.header("x-goog-api-key", self.itimad.qeema())
-                    }
+                    },
                     TawtheeqGoogle::HamilOauth => talab_khaam
                         .header("authorization", format!("Bearer {}", self.itimad.qeema())),
                 }
@@ -3080,22 +3235,23 @@ impl Muzawwid for MuzawwidGoogleSahabi {
             Err(khata) => {
                 hajz.thabbit(taqdir);
                 return Err(khata);
-            }
+            },
         };
         hajz.thabbit(taqdir);
-        let mufakkak: RaddGoogleSahabi = serde_json::from_str(&nass_radd).map_err(|_| {
-            KhataTarjama::RaddGhayrMufassal {
+        let mufakkak: RaddGoogleSahabi =
+            serde_json::from_str(&nass_radd).map_err(|_| KhataTarjama::RaddGhayrMufassal {
                 muzawwid: Self::ISM.to_owned(),
                 radd: nass_radd.chars().take(64).collect(),
-            }
-        })?;
+            })?;
 
-        let tarjama = mufakkak.translations.first().ok_or_else(|| {
-            KhataTarjama::RaddGhayrMufassal {
-                muzawwid: Self::ISM.to_owned(),
-                radd: nass_radd.chars().take(64).collect(),
-            }
-        })?;
+        let tarjama =
+            mufakkak
+                .translations
+                .first()
+                .ok_or_else(|| KhataTarjama::RaddGhayrMufassal {
+                    muzawwid: Self::ISM.to_owned(),
+                    radd: nass_radd.chars().take(64).collect(),
+                })?;
         let nass = tarjama.nass.as_deref().unwrap_or_default();
         if nass.trim().is_empty() {
             return Err(KhataTarjama::RaddGhayrMufassal {
@@ -3206,7 +3362,10 @@ impl MuzawwidMicrosoft {
             false,
             idadat.hadd_talabat,
             TakalifJarya::min_idhn(idhn),
-            AsmaHudud { baqi_talabat: None, iadat_dabt: None },
+            AsmaHudud {
+                baqi_talabat: None,
+                iadat_dabt: None,
+            },
         )?;
         let qudrat = QudratMuzawwid {
             dufaat: true,
@@ -3218,7 +3377,12 @@ impl MuzawwidMicrosoft {
             yaqbal_tawjih: false,
             taklifa: idadat.taklifa,
         };
-        Ok(Self { idadat, itimad, jawhar, qudrat })
+        Ok(Self {
+            idadat,
+            itimad,
+            jawhar,
+            qudrat,
+        })
     }
 }
 
@@ -3312,9 +3476,7 @@ impl Muzawwid for MuzawwidMicrosoft {
                     .header("ocp-apim-subscription-key", self.itimad.qeema())
                     .json(&jasad);
                 match &self.idadat.mintaqa {
-                    Some(mintaqa) => {
-                        talab_khaam.header("ocp-apim-subscription-region", mintaqa)
-                    }
+                    Some(mintaqa) => talab_khaam.header("ocp-apim-subscription-region", mintaqa),
                     None => talab_khaam,
                 }
             })
@@ -3332,18 +3494,20 @@ impl Muzawwid for MuzawwidMicrosoft {
             Err(khata) => {
                 hajz.thabbit(fili);
                 return Err(khata);
-            }
+            },
         };
         hajz.thabbit(fili);
-        let mufakkak: Vec<RaddMicrosoft> = serde_json::from_str(&nass_radd).map_err(|_| {
-            KhataTarjama::RaddGhayrMufassal {
+        let mufakkak: Vec<RaddMicrosoft> =
+            serde_json::from_str(&nass_radd).map_err(|_| KhataTarjama::RaddGhayrMufassal {
                 muzawwid: Self::ISM.to_owned(),
                 radd: nass_radd.chars().take(64).collect(),
-            }
-        })?;
+            })?;
 
         let awwal = mufakkak.first().and_then(|radd_wahid| {
-            radd_wahid.translations.first().map(|tarjama| (radd_wahid, tarjama))
+            radd_wahid
+                .translations
+                .first()
+                .map(|tarjama| (radd_wahid, tarjama))
         });
         let Some((radd_wahid, tarjama)) = awwal else {
             return Err(KhataTarjama::RaddGhayrMufassal {
@@ -3391,7 +3555,9 @@ mod ikhtibarat {
     /// A credential for testing, built past the store the real constructors go
     /// through. Only this module can, which is the point being tested.
     fn itimad_wahmi(qeema: &str) -> Itimad {
-        Itimad { qeema: qeema.to_owned() }
+        Itimad {
+            qeema: qeema.to_owned(),
+        }
     }
 
     /// A `#[derive(Debug)]` struct holding a credential — the shape a
@@ -3431,7 +3597,10 @@ mod ikhtibarat {
         assert!(awwal.is_ok());
         // 60 + 60 crosses 100, so it is the reservation that is refused —
         // before anything is sent, which is what "stops at the ceiling" means.
-        assert!(matches!(hisab.ihjiz(60), Err(KhataTarjama::SaqfTakalif { .. })));
+        assert!(matches!(
+            hisab.ihjiz(60),
+            Err(KhataTarjama::SaqfTakalif { .. })
+        ));
         // Exactly at the ceiling is allowed; only past it is not.
         assert!(hisab.ihjiz(40).is_ok());
         drop(awwal);
@@ -3552,29 +3721,61 @@ mod ikhtibarat {
         let majhul_anthropic = taklifat_anthropic("a-model-nobody-has-shipped-yet");
         for ism in masmuha {
             let maruf = taklifat_anthropic(ism);
-            assert!(idkhal(maruf) <= idkhal(majhul_anthropic), "input price of {ism}");
-            assert!(ikhraj(maruf) <= ikhraj(majhul_anthropic), "output price of {ism}");
+            assert!(
+                idkhal(maruf) <= idkhal(majhul_anthropic),
+                "input price of {ism}"
+            );
+            assert!(
+                ikhraj(maruf) <= ikhraj(majhul_anthropic),
+                "output price of {ism}"
+            );
         }
 
         let asmaa_openai = [
-            "gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-5.1", "gpt-5.2", "gpt-5.4",
-            "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.5", "gpt-5.6-sol", "gpt-5.6-terra",
-            "gpt-5.6-luna", "gpt-6-astra",
+            "gpt-5",
+            "gpt-5-mini",
+            "gpt-5-nano",
+            "gpt-5.1",
+            "gpt-5.2",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "gpt-5.4-nano",
+            "gpt-5.5",
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-6-astra",
         ];
         let majhul_openai = taklifat_openai("some-gateway-model");
         for ism in asmaa_openai {
             let maruf = taklifat_openai(ism);
-            assert!(idkhal(maruf) <= idkhal(majhul_openai), "input price of {ism}");
-            assert!(ikhraj(maruf) <= ikhraj(majhul_openai), "output price of {ism}");
+            assert!(
+                idkhal(maruf) <= idkhal(majhul_openai),
+                "input price of {ism}"
+            );
+            assert!(
+                ikhraj(maruf) <= ikhraj(majhul_openai),
+                "output price of {ism}"
+            );
         }
 
-        let asmaa_gemini =
-            ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.8-flash", "gemini-3.6-flash"];
+        let asmaa_gemini = [
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
+            "gemini-3.8-flash",
+            "gemini-3.6-flash",
+        ];
         let majhul_gemini = taklifat_gemini("gemini-99-ultra");
         for ism in asmaa_gemini {
             let maruf = taklifat_gemini(ism);
-            assert!(idkhal(maruf) <= idkhal(majhul_gemini), "input price of {ism}");
-            assert!(ikhraj(maruf) <= ikhraj(majhul_gemini), "output price of {ism}");
+            assert!(
+                idkhal(maruf) <= idkhal(majhul_gemini),
+                "input price of {ism}"
+            );
+            assert!(
+                ikhraj(maruf) <= ikhraj(majhul_gemini),
+                "output price of {ism}"
+            );
         }
     }
 
@@ -3585,27 +3786,45 @@ mod ikhtibarat {
         // contains `gpt-5`, and `claude-sonnet-5` contains `sonnet`.
         assert_eq!(
             taklifat_gemini("gemini-2.5-flash"),
-            NamudhajTaklifa::BilRumuz { idkhal: 300, ikhraj: 2_500 }
+            NamudhajTaklifa::BilRumuz {
+                idkhal: 300,
+                ikhraj: 2_500
+            }
         );
         assert_eq!(
             taklifat_gemini("gemini-3.8-flash"),
-            NamudhajTaklifa::BilRumuz { idkhal: 1_500, ikhraj: 7_500 }
+            NamudhajTaklifa::BilRumuz {
+                idkhal: 1_500,
+                ikhraj: 7_500
+            }
         );
         assert_eq!(
             taklifat_openai("gpt-5.4-mini"),
-            NamudhajTaklifa::BilRumuz { idkhal: 750, ikhraj: 4_500 }
+            NamudhajTaklifa::BilRumuz {
+                idkhal: 750,
+                ikhraj: 4_500
+            }
         );
         assert_eq!(
             taklifat_openai("gpt-5"),
-            NamudhajTaklifa::BilRumuz { idkhal: 1_250, ikhraj: 10_000 }
+            NamudhajTaklifa::BilRumuz {
+                idkhal: 1_250,
+                ikhraj: 10_000
+            }
         );
         assert_eq!(
             taklifat_anthropic("claude-sonnet-5"),
-            NamudhajTaklifa::BilRumuz { idkhal: 2_000, ikhraj: 10_000 }
+            NamudhajTaklifa::BilRumuz {
+                idkhal: 2_000,
+                ikhraj: 10_000
+            }
         );
         assert_eq!(
             taklifat_anthropic("claude-sonnet-4-5"),
-            NamudhajTaklifa::BilRumuz { idkhal: 3_000, ikhraj: 15_000 }
+            NamudhajTaklifa::BilRumuz {
+                idkhal: 3_000,
+                ikhraj: 15_000
+            }
         );
     }
 
@@ -3616,8 +3835,14 @@ mod ikhtibarat {
         // refusal of the *input* — so sending it would fail every string of a
         // run with a message blaming text that was never the problem. The
         // unknown case omits, which is always accepted.
-        assert_eq!(hararat_anthropic("claude-sonnet-4-5"), Some(HARARAT_TARJAMA));
-        assert_eq!(hararat_anthropic("claude-haiku-4-5-20251001"), Some(HARARAT_TARJAMA));
+        assert_eq!(
+            hararat_anthropic("claude-sonnet-4-5"),
+            Some(HARARAT_TARJAMA)
+        );
+        assert_eq!(
+            hararat_anthropic("claude-haiku-4-5-20251001"),
+            Some(HARARAT_TARJAMA)
+        );
         assert_eq!(hararat_anthropic("claude-opus-5"), None);
         assert_eq!(hararat_anthropic("claude-sonnet-5"), None);
         assert_eq!(hararat_anthropic("claude-fable-5-1"), None);
@@ -3642,7 +3867,10 @@ mod ikhtibarat {
         // The platform default omits; the loopback default sends, because a
         // local model accepts it and costs nothing to get wrong.
         assert_eq!(IdadatMuwafiqOpenAI::openai().hararat, None);
-        assert_eq!(IdadatMuwafiqOpenAI::ollama("qwen3").hararat, Some(HARARAT_TARJAMA));
+        assert_eq!(
+            IdadatMuwafiqOpenAI::ollama("qwen3").hararat,
+            Some(HARARAT_TARJAMA)
+        );
     }
 
     #[test]
@@ -3657,7 +3885,10 @@ mod ikhtibarat {
                 model: "claude-sonnet-5",
                 max_tokens: 16,
                 system: "s",
-                messages: vec![RisalaAnthropic { role: "user", content: "u" }],
+                messages: vec![RisalaAnthropic {
+                    role: "user",
+                    content: "u",
+                }],
                 tools: vec![AdatAnthropic {
                     name: ISM_ADAT_TARJAMA,
                     description: "d",
@@ -3682,7 +3913,10 @@ mod ikhtibarat {
         let bina_muwafiq = |hararat: Option<f32>| {
             serde_json::to_value(TalabMuwafiq {
                 model: "gpt-5",
-                messages: vec![RisalaMuwafiq { role: "user", content: "u" }],
+                messages: vec![RisalaMuwafiq {
+                    role: "user",
+                    content: "u",
+                }],
                 temperature: hararat,
                 max_completion_tokens: Some(16),
                 max_tokens: None,
@@ -3746,17 +3980,28 @@ mod ikhtibarat {
             itimad_wahmi("sk-test"),
             IdhnInfaq::baad_taakid(1_000, 0),
         );
-        assert!(matches!(mabni, Err(KhataTarjama::MuzawwidGhayrMutah { .. })));
+        assert!(matches!(
+            mabni,
+            Err(KhataTarjama::MuzawwidGhayrMutah { .. })
+        ));
     }
 
     #[test]
     fn assaqf_yuqif_aljawla_wa_khalal_alhimaya_la() {
         // The batch loop asks these two questions instead of enumerating
         // variants, so a variant added later inherits the right behaviour.
-        assert!(KhataTarjama::SaqfTakalif { munfaq: 10, saqf: 10 }.yuqif_aljawla());
         assert!(
-            KhataTarjama::BilaItimad { muzawwid: MuzawwidAnthropic::ISM.to_owned() }
-                .yuqif_aljawla()
+            KhataTarjama::SaqfTakalif {
+                munfaq: 10,
+                saqf: 10
+            }
+            .yuqif_aljawla()
+        );
+        assert!(
+            KhataTarjama::BilaItimad {
+                muzawwid: MuzawwidAnthropic::ISM.to_owned()
+            }
+            .yuqif_aljawla()
         );
         let marfud = KhataTarjama::MudkhalMarfud {
             muzawwid: MuzawwidAnthropic::ISM.to_owned(),
@@ -3775,7 +4020,10 @@ mod ikhtibarat {
             muddat_taraju(1, Some(AQSA_TARAJU_THAWANI.saturating_add(600))),
             Duration::from_secs(AQSA_TARAJU_THAWANI)
         );
-        assert_eq!(muddat_taraju(1, None), Duration::from_millis(ASAS_TARAJU_MILLI * 2));
+        assert_eq!(
+            muddat_taraju(1, None),
+            Duration::from_millis(ASAS_TARAJU_MILLI * 2)
+        );
         // The shift is bounded, so a long retry chain cannot overflow it.
         assert!(muddat_taraju(u32::MAX, None) <= Duration::from_millis(ASAS_TARAJU_MILLI << 6));
     }

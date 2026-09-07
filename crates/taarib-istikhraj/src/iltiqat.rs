@@ -295,7 +295,9 @@ impl HadathIltiqat {
             return Some(SababRafdHadath::Farigh);
         }
         if self.nass.len() > AQSA_TUL_NASS {
-            return Some(SababRafdHadath::Tawil { tul: self.nass.len() });
+            return Some(SababRafdHadath::Tawil {
+                tul: self.nass.len(),
+            });
         }
         None
     }
@@ -394,8 +396,12 @@ impl MiftahMulahaza {
         if khaam.len() != 32 {
             return None;
         }
-        let awwal = khaam.get(0..16).and_then(|q| u64::from_str_radix(q, 16).ok())?;
-        let thani = khaam.get(16..32).and_then(|q| u64::from_str_radix(q, 16).ok())?;
+        let awwal = khaam
+            .get(0..16)
+            .and_then(|q| u64::from_str_radix(q, 16).ok())?;
+        let thani = khaam
+            .get(16..32)
+            .and_then(|q| u64::from_str_radix(q, 16).ok())?;
         Some(Self { awwal, thani })
     }
 }
@@ -529,7 +535,11 @@ impl MulahazaMutakarrira {
             self.quyud.aqsa_ard = baada;
         }
         if let Some(irtifa) = jadeed.aqsa_irtifa {
-            let baada = Some(self.quyud.aqsa_irtifa.map_or(irtifa, |sabiq| sabiq.min(irtifa)));
+            let baada = Some(
+                self.quyud
+                    .aqsa_irtifa
+                    .map_or(irtifa, |sabiq| sabiq.min(irtifa)),
+            );
             taghayyar |= farq_ashri(self.quyud.aqsa_irtifa, baada);
             self.quyud.aqsa_irtifa = baada;
         }
@@ -812,15 +822,17 @@ impl SijillMulahazat {
                         mawjud.get_mut().sajjil_muayana();
                         return NatijatIstiqbal::Muayyana { miftah };
                     }
-                }
+                },
                 Entry::Vacant(farigh) => {
                     if mumtali {
                         self.marfuda_imtila = self.marfuda_imtila.saturating_add(1);
-                        return NatijatIstiqbal::Marfuda { sabab: SababRafdHadath::Imtila };
+                        return NatijatIstiqbal::Marfuda {
+                            sabab: SababRafdHadath::Imtila,
+                        };
                     }
                     let _ = farigh.insert(MulahazaMutakarrira::min_hadath(miftah, hadath));
                     return NatijatIstiqbal::Jadeeda { miftah };
-                }
+                },
             }
 
             // A verified collision: the key is taken by a different string. Move
@@ -829,7 +841,9 @@ impl SijillMulahazat {
             self.tasadumat = self.tasadumat.saturating_add(1);
             tahassus = tahassus.saturating_add(1);
             if tahassus >= AQSA_TAHASSUS {
-                return NatijatIstiqbal::Marfuda { sabab: SababRafdHadath::Tasadum };
+                return NatijatIstiqbal::Marfuda {
+                    sabab: SababRafdHadath::Tasadum,
+                };
             }
             miftah.thani = miftah.thani.wrapping_add(1);
         }
@@ -1245,21 +1259,21 @@ impl IhsaatJalsa {
         match sabab {
             SababRafdHadath::Farigh => {
                 self.marfuda_farigh = self.marfuda_farigh.saturating_add(1);
-            }
+            },
             SababRafdHadath::Tawil { .. } => {
                 self.marfuda_tawil = self.marfuda_tawil.saturating_add(1);
-            }
+            },
             SababRafdHadath::Imtila => {
                 self.marfuda_imtila = self.marfuda_imtila.saturating_add(1);
-            }
+            },
             SababRafdHadath::Tasadum => {
                 self.marfuda_tasadum = self.marfuda_tasadum.saturating_add(1);
-            }
+            },
             // Counted inside the budget, which is the only thing that knows a
             // frame's ceiling was reached, and which reports it as
             // [`IhsaatMizaniya::mahdhufa_kulliya`] — apart from every other loss
             // because it is the only one that can cost an unseen string.
-            SababRafdHadath::SaqfItar => {}
+            SababRafdHadath::SaqfItar => {},
         }
     }
 }
@@ -1589,7 +1603,13 @@ impl KhiyaratJalsa {
 pub fn masar_jalsa(mujallad: &Path, jalsa: &str) -> PathBuf {
     let aamin: String = jalsa
         .chars()
-        .map(|harf| if harf.is_control() || "/\\:*?\"<>|".contains(harf) { '_' } else { harf })
+        .map(|harf| {
+            if harf.is_control() || "/\\:*?\"<>|".contains(harf) {
+                '_'
+            } else {
+                harf
+            }
+        })
         .collect();
     mujallad.join(format!("{aamin}.jsonl"))
 }
@@ -1734,7 +1754,9 @@ impl JalsatIltiqat {
             return Ok(NatijatIstiqbal::Marfuda { sabab });
         }
         if !self.mizaniya.yaqbal() {
-            return Ok(NatijatIstiqbal::Marfuda { sabab: SababRafdHadath::SaqfItar });
+            return Ok(NatijatIstiqbal::Marfuda {
+                sabab: SababRafdHadath::SaqfItar,
+            });
         }
 
         // Split borrow: the sampler and the table are separate fields, and the
@@ -1750,7 +1772,7 @@ impl JalsatIltiqat {
                     let satr = SatrJalsa::Nass(mulahaza.clone());
                     self.katib.aktub(&satr, true)?;
                 }
-            }
+            },
             NatijatIstiqbal::Mutakarrira { miftah, taghayyar } => {
                 self.ihsaat.musajjala = self.ihsaat.musajjala.saturating_add(1);
                 if taghayyar {
@@ -1765,11 +1787,11 @@ impl JalsatIltiqat {
                 } else {
                     self.sijill.allim(miftah);
                 }
-            }
+            },
             NatijatIstiqbal::Muayyana { miftah } => {
                 self.ihsaat.musajjala = self.ihsaat.musajjala.saturating_add(1);
                 self.sijill.allim(miftah);
-            }
+            },
             NatijatIstiqbal::Marfuda { sabab } => self.ihsaat.sajjil_rafd(sabab),
         }
 
@@ -1829,7 +1851,11 @@ impl JalsatIltiqat {
             jadeeda: self.jadeeda,
             ahdath: self.ihsaat.ahdath,
             mudda_thawani: mudda,
-            fi_thaniya: if mudda > 0.0 { ila_kasr(self.ihsaat.ahdath) / mudda } else { 0.0 },
+            fi_thaniya: if mudda > 0.0 {
+                ila_kasr(self.ihsaat.ahdath) / mudda
+            } else {
+                0.0
+            },
             taghtiya_muqaddara: taghtiya_muqaddara(nusus, self.adad_sakin),
             khutwa: self.mizaniya.khutwa(),
             muayyan: self.mizaniya.ihsaat().mahdhufa_mutakarrira > 0,
@@ -1918,10 +1944,11 @@ impl JalsatIltiqat {
     /// message.
     const fn tafaqqad_tasalsul(&mut self, tasalsul: u64) {
         if let Some(sabiq) = self.akhir_tasalsul
-            && tasalsul > sabiq.saturating_add(1) {
-                let fajwa = tasalsul.saturating_sub(sabiq).saturating_sub(1);
-                self.ihsaat.fajawat = self.ihsaat.fajawat.saturating_add(fajwa);
-            }
+            && tasalsul > sabiq.saturating_add(1)
+        {
+            let fajwa = tasalsul.saturating_sub(sabiq).saturating_sub(1);
+            self.ihsaat.fajawat = self.ihsaat.fajawat.saturating_add(fajwa);
+        }
         self.akhir_tasalsul = Some(tasalsul);
     }
 }
@@ -2033,7 +2060,11 @@ impl TaqreerJalsa {
             sutur.push(format!(
                 "  about {:.0}% of the static table's size{}",
                 taghtiya * 100.0,
-                if self.taghtiya_mawthuqa() { "" } else { " — and this is a floor, not a figure" }
+                if self.taghtiya_mawthuqa() {
+                    ""
+                } else {
+                    " — and this is a floor, not a figure"
+                }
             ));
         }
         sutur.push(format!("  {}", self.ihsaat.mizaniya.wasf_injilizi()));
@@ -2161,7 +2192,11 @@ impl JalsaMuhammala {
         let mut sutur = vec![format!(
             "session \"{}\" ({}): {} distinct string(s)",
             self.tarwisa.jalsa,
-            if self.iktamalat() { "closed cleanly" } else { "ended without a footer" },
+            if self.iktamalat() {
+                "closed cleanly"
+            } else {
+                "ended without a footer"
+            },
             self.adad()
         )];
         if self.mabtura {
@@ -2234,7 +2269,7 @@ pub fn iqra_jalsa(masar: &Path, hadd: usize) -> Natija<JalsaMuhammala> {
                 sutur_talifa = sutur_talifa.saturating_add(1);
                 akhir_talif = true;
                 continue;
-            }
+            },
             Err(sabab) => return Err(khata_qira(masar, &sabab)),
         };
         if satr.trim().is_empty() {
@@ -2274,18 +2309,18 @@ pub fn iqra_jalsa(masar: &Path, hadd: usize) -> Natija<JalsaMuhammala> {
                         if sabiq.adad_sakin.is_none() {
                             sabiq.adad_sakin = jadeeda.adad_sakin;
                         }
-                    }
+                    },
                     None => tarwisa = Some(jadeeda),
                 }
-            }
+            },
             SatrJalsa::Nass(mulahaza) => {
                 let _ = sijill.ahill(mulahaza);
-            }
+            },
             SatrJalsa::Tahdith(tahdith) => {
                 if !tabbiq_tahdith(&mut sijill, &tahdith) {
                     tahdithat_yatima = tahdithat_yatima.saturating_add(1);
                 }
-            }
+            },
             SatrJalsa::Khitam(nihaya) => khitam = Some(nihaya),
         }
     }
@@ -2310,7 +2345,14 @@ pub fn iqra_jalsa(masar: &Path, hadd: usize) -> Natija<JalsaMuhammala> {
         sutur_talifa = sutur_talifa.saturating_sub(1);
     }
 
-    Ok(JalsaMuhammala { tarwisa, sijill, khitam, sutur_talifa, mabtura, tahdithat_yatima })
+    Ok(JalsaMuhammala {
+        tarwisa,
+        sijill,
+        khitam,
+        sutur_talifa,
+        mabtura,
+        tahdithat_yatima,
+    })
 }
 
 /// Applies one update line, answering whether it found its record.

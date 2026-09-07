@@ -228,7 +228,12 @@ impl DaleelHimaya {
     /// The evidence named in one English line.
     #[must_use]
     pub fn injilizi(&self) -> String {
-        format!("{}: {} — {}", self.naw.injilizi(), self.sinf.injilizi(), self.ayn)
+        format!(
+            "{}: {} — {}",
+            self.naw.injilizi(),
+            self.sinf.injilizi(),
+            self.ayn
+        )
     }
 }
 
@@ -875,7 +880,10 @@ pub fn ifhas_himaya_bi_matjar(
     masdar_luba_appid: Option<u32>,
     jidhr_steam: Option<&Path>,
 ) -> (IjmaaHimaya, HalatMatjar) {
-    ifhas_himaya_bi_qiraa(jidhr_luba, &QiraatMatjar::iqra(masdar_luba_appid, jidhr_steam))
+    ifhas_himaya_bi_qiraa(
+        jidhr_luba,
+        &QiraatMatjar::iqra(masdar_luba_appid, jidhr_steam),
+    )
 }
 
 /// The same scan again, against a catalogue reading the caller already has.
@@ -938,7 +946,10 @@ impl Musajjil {
 
     /// Records a place the scan could not read.
     fn thughra(&mut self, masar: PathBuf, sabab: impl Into<String>) {
-        self.thughrat.push(ThughraFahs { masar, sabab: sabab.into() });
+        self.thughrat.push(ThughraFahs {
+            masar,
+            sabab: sabab.into(),
+        });
     }
 }
 
@@ -986,13 +997,15 @@ fn imsah_luba(jidhr: &Path, musajjil: &mut Musajjil) {
         let madkhal = match natija {
             Ok(madkhal) => madkhal,
             Err(khata) => {
-                let masar = khata.path().map_or_else(|| jidhr.to_path_buf(), Path::to_path_buf);
+                let masar = khata
+                    .path()
+                    .map_or_else(|| jidhr.to_path_buf(), Path::to_path_buf);
                 let sabab = khata
                     .io_error()
                     .map_or_else(|| "walk error".to_owned(), |io| format!("{:?}", io.kind()));
                 musajjil.thughra(masar, sabab);
                 continue;
-            }
+            },
         };
 
         adad = adad.saturating_add(1);
@@ -1047,7 +1060,7 @@ fn fahs_madkhal(mafhus: &MadkhalMafhus<'_>, musajjil: &mut Musajjil) {
             MahalAlama::MalafKamil => mafhus.ism == alama.ibra && !mustathna(mafhus.ism, alama),
             MahalAlama::Mushaghghil => {
                 !mafhus.mujallad && mafhus.imtidad == "sys" && yahwi(mafhus.jidhr_ism, alama)
-            }
+            },
             MahalAlama::Wahda | MahalAlama::Khidma => false,
         };
         if mutabiq {
@@ -1069,7 +1082,7 @@ fn ifhas_mustawradat(jidhr: &Path, masar: &Path, musajjil: &mut Musajjil) {
         Err(khata) => {
             musajjil.thughra(masar.to_path_buf(), format!("{:?}", khata.kind()));
             return;
-        }
+        },
     };
     let Ok(kaen) = object::read::File::parse(bayt.as_slice()) else {
         return;
@@ -1087,7 +1100,10 @@ fn ifhas_mustawradat(jidhr: &Path, masar: &Path, musajjil: &mut Musajjil) {
         if maktaba.is_empty() {
             continue;
         }
-        for alama in ALAMAT.iter().filter(|alama| matches!(alama.mahal, MahalAlama::Wahda)) {
+        for alama in ALAMAT
+            .iter()
+            .filter(|alama| matches!(alama.mahal, MahalAlama::Wahda))
+        {
             if yahwi(&maktaba, alama) {
                 musajjil.sajjil(DaleelHimaya {
                     naw: alama.naw,
@@ -1110,7 +1126,10 @@ fn ifhas_khidmat(jidhr: &Path, musajjil: &mut Musajjil) {
     let jidhr_kanuni = std::fs::canonicalize(jidhr).ok();
     let mut ruit: BTreeSet<String> = BTreeSet::new();
 
-    for alama in ALAMAT.iter().filter(|alama| matches!(alama.mahal, MahalAlama::Khidma)) {
+    for alama in ALAMAT
+        .iter()
+        .filter(|alama| matches!(alama.mahal, MahalAlama::Khidma))
+    {
         for ism in [format!("{}.exe", alama.ibra), alama.ibra.to_owned()] {
             if !ruit.insert(ism.clone()) {
                 continue;
@@ -1139,13 +1158,18 @@ fn ifhas_khidmat(jidhr: &Path, musajjil: &mut Musajjil) {
 pub(crate) fn adillat_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelHimaya> {
     let mut adilla: Vec<DaleelHimaya> = Vec::new();
 
-    let fiat = bayanat.kain_bi_masar(&["appinfo", "common", "category"]).unwrap_or(&[]);
+    let fiat = bayanat
+        .kain_bi_masar(&["appinfo", "common", "category"])
+        .unwrap_or(&[]);
     for (miftah, qeema) in fiat {
         // A cleared category is written as zero, not removed, so the value is checked too.
         if qeema.raqm().unwrap_or(1) == 0 {
             continue;
         }
-        let raqm = miftah.rsplit('_').next().and_then(|raqm| raqm.parse::<u32>().ok());
+        let raqm = miftah
+            .rsplit('_')
+            .next()
+            .and_then(|raqm| raqm.parse::<u32>().ok());
         if raqm == Some(FIAT_VAC) {
             adilla.push(tawqee(
                 NawHimaya::Vac,
@@ -1160,7 +1184,10 @@ pub(crate) fn adillat_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelHim
         let saghir = miftah.to_ascii_lowercase();
         // `vacmodulefilename` and the `VACMacModuleInfo` map: the second folds without `vacmodule`.
         if saghir.contains("vacmodule") || saghir.contains("vacmacmodule") {
-            let dhayl = qeema.nass().map(|nass| format!(" = {nass}")).unwrap_or_default();
+            let dhayl = qeema
+                .nass()
+                .map(|nass| format!(" = {nass}"))
+                .unwrap_or_default();
             adilla.push(tawqee(
                 NawHimaya::Vac,
                 format!("appinfo.vdf: config/{miftah}{dhayl}"),
@@ -1170,7 +1197,10 @@ pub(crate) fn adillat_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelHim
         }
     }
 
-    for (_, madkhal) in bayanat.kain_bi_masar(&["appinfo", "config", "launch"]).unwrap_or(&[]) {
+    for (_, madkhal) in bayanat
+        .kain_bi_masar(&["appinfo", "config", "launch"])
+        .unwrap_or(&[])
+    {
         if let Some(tanfidhi) = madkhal.nass_bi_masar(&["executable"])
             && let Some((naw, kalima)) = matjar_himaya(tanfidhi)
         {
@@ -1183,7 +1213,10 @@ pub(crate) fn adillat_appinfo(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelHim
         }
     }
 
-    for (_, ittifaq) in bayanat.kain_bi_masar(&["appinfo", "common", "eulas"]).unwrap_or(&[]) {
+    for (_, ittifaq) in bayanat
+        .kain_bi_masar(&["appinfo", "common", "eulas"])
+        .unwrap_or(&[])
+    {
         for miftah in ["name", "id"] {
             if let Some(nass) = ittifaq.nass_bi_masar(&[miftah])
                 && let Some((naw, kalima)) = matjar_himaya(nass)
@@ -1245,7 +1278,13 @@ fn adillat_tawafuq(bayanat: &QeemaVdf, masar: &Path) -> Vec<DaleelHimaya> {
 /// Builds one store-signature detection.
 fn tawqee(naw: NawHimaya, ayn: String, masar: &Path, thiqa: Thiqa) -> DaleelHimaya {
     let masar = Some(masar.to_path_buf());
-    DaleelHimaya { naw, sinf: NawDaleel::TawqeeMatjar, ayn, masar, thiqa }
+    DaleelHimaya {
+        naw,
+        sinf: NawDaleel::TawqeeMatjar,
+        ayn,
+        masar,
+        thiqa,
+    }
 }
 
 /// The anti-cheat a catalogue string names, and the keyword that named it.
@@ -1277,7 +1316,11 @@ fn qism_ism(ism: &str) -> (String, String) {
 
 /// A path as the report names it: relative to the game root when it is under it.
 fn nisbi(jidhr: &Path, masar: &Path) -> String {
-    masar.strip_prefix(jidhr).unwrap_or(masar).display().to_string()
+    masar
+        .strip_prefix(jidhr)
+        .unwrap_or(masar)
+        .display()
+        .to_string()
 }
 
 /// Whether `masar` resolves under `jidhr`, following links; with no resolved
@@ -1359,18 +1402,33 @@ mod ikhtibarat {
     #[test]
     fn jidhr_fc26_yusammi_javelin_wa_yurfad() -> NatijatIkhtibar {
         let (_masrah, ijmaa) = ifhas_asma(&JIDHR_FC26)?;
-        assert!(mahmiya(&ijmaa), "a Javelin-protected root must not read as clean");
+        assert!(
+            mahmiya(&ijmaa),
+            "a Javelin-protected root must not read as clean"
+        );
         assert_eq!(ijmaa.anwa(), vec![NawHimaya::EaJavelin]);
-        assert!(ijmaa.thughrat.is_empty(), "nothing in the fixture was out of reach");
+        assert!(
+            ijmaa.thughrat.is_empty(),
+            "nothing in the fixture was out of reach"
+        );
 
         // The refusal has to be able to point at something, so the evidence
         // names the launcher itself rather than only the folder it sits in.
-        let ayunn: Vec<&str> = ijmaa.adilla.iter().map(|daleel| daleel.ayn.as_str()).collect();
+        let ayunn: Vec<&str> = ijmaa
+            .adilla
+            .iter()
+            .map(|daleel| daleel.ayn.as_str())
+            .collect();
         assert!(
-            ayunn.iter().any(|ayn| ayn.contains("EAAntiCheat.GameServiceLauncher.exe")),
+            ayunn
+                .iter()
+                .any(|ayn| ayn.contains("EAAntiCheat.GameServiceLauncher.exe")),
             "{ayunn:?}"
         );
-        assert!(ayunn.iter().any(|ayn| ayn.contains("EAJavelinInstaller")), "{ayunn:?}");
+        assert!(
+            ayunn.iter().any(|ayn| ayn.contains("EAJavelinInstaller")),
+            "{ayunn:?}"
+        );
         Ok(())
     }
 
@@ -1408,9 +1466,18 @@ mod ikhtibarat {
 
     #[test]
     fn neac_yuraf_bi_thalathat_asma() -> NatijatIkhtibar {
-        assert_eq!(anwa_asma(&["NeacSafe64.sys"])?, vec![NawHimaya::NeacProtect]);
-        assert_eq!(anwa_asma(&["NeacClient.exe"])?, vec![NawHimaya::NeacProtect]);
-        assert_eq!(anwa_asma(&["NeacInterface.dll"])?, vec![NawHimaya::NeacProtect]);
+        assert_eq!(
+            anwa_asma(&["NeacSafe64.sys"])?,
+            vec![NawHimaya::NeacProtect]
+        );
+        assert_eq!(
+            anwa_asma(&["NeacClient.exe"])?,
+            vec![NawHimaya::NeacProtect]
+        );
+        assert_eq!(
+            anwa_asma(&["NeacInterface.dll"])?,
+            vec![NawHimaya::NeacProtect]
+        );
         Ok(())
     }
 
@@ -1433,8 +1500,16 @@ mod ikhtibarat {
                 let _ = darajat.insert("blackcipher", daleel.thiqa);
             }
         }
-        assert_eq!(darajat.get("ngservice"), Some(&Thiqa::Rajiha), "{darajat:?}");
-        assert_eq!(darajat.get("blackcipher"), Some(&Thiqa::Muakkada), "{darajat:?}");
+        assert_eq!(
+            darajat.get("ngservice"),
+            Some(&Thiqa::Rajiha),
+            "{darajat:?}"
+        );
+        assert_eq!(
+            darajat.get("blackcipher"),
+            Some(&Thiqa::Muakkada),
+            "{darajat:?}"
+        );
         Ok(())
     }
 
@@ -1449,7 +1524,11 @@ mod ikhtibarat {
             .iter()
             .filter(|daleel| daleel.sinf == NawDaleel::MushaghghilNawat)
             .count();
-        assert_eq!(mushaghghilat, 2, "both files are kernel drivers: {:?}", ijmaa.adilla);
+        assert_eq!(
+            mushaghghilat, 2,
+            "both files are kernel drivers: {:?}",
+            ijmaa.adilla
+        );
         Ok(())
     }
 
@@ -1472,7 +1551,11 @@ mod ikhtibarat {
             "version.dll",
             "steam_api64.dll",
         ])?;
-        assert!(!mahmiya(&ijmaa), "a clean game must stay clean: {:?}", ijmaa.adilla);
+        assert!(
+            !mahmiya(&ijmaa),
+            "a clean game must stay clean: {:?}",
+            ijmaa.adilla
+        );
         Ok(())
     }
 
@@ -1574,9 +1657,10 @@ mod ikhtibarat {
             "#,
         )?;
         let adilla = adillat_appinfo(&shajara, Path::new("appinfo.vdf"));
-        assert_eq!(adilla.iter().map(|daleel| daleel.naw).collect::<Vec<_>>(), vec![
-            NawHimaya::EaJavelin
-        ]);
+        assert_eq!(
+            adilla.iter().map(|daleel| daleel.naw).collect::<Vec<_>>(),
+            vec![NawHimaya::EaJavelin]
+        );
         Ok(())
     }
 
@@ -1592,18 +1676,17 @@ mod ikhtibarat {
             match alama.mahal {
                 MahalAlama::Khidma => {
                     let _ = khidmi.insert(alama.naw);
-                }
+                },
                 MahalAlama::MalafJuzi | MahalAlama::MalafKamil | MahalAlama::Mushaghghil => {
                     let _ = qursi.insert(alama.naw);
-                }
+                },
                 // An import table is read off a file on disk, but it is the
                 // game's file and not the anti-cheat's, so it is not counted
                 // as an on-disk marker for this property.
-                MahalAlama::Wahda => {}
+                MahalAlama::Wahda => {},
             }
         }
-        let wahidatan: Vec<NawHimaya> =
-            khidmi.difference(&qursi).copied().collect();
+        let wahidatan: Vec<NawHimaya> = khidmi.difference(&qursi).copied().collect();
         assert!(
             wahidatan.is_empty(),
             "service-only kinds are undetectable in a sandbox: {wahidatan:?}"

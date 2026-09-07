@@ -141,8 +141,8 @@ pub use crate::fahs::{
 };
 pub use crate::khata::KhataKashf;
 pub use crate::lugha_rasmiya::{
-    Fahis, FahisMawarid, KhazinaDhakira, KhazinatLugha, LughaMuallana, LughatMuallana, MasdarLughat,
-    MawridLugha, MiftahLugha, SijillLughaRasmiya, TalabLugha,
+    Fahis, FahisMawarid, KhazinaDhakira, KhazinatLugha, LughaMuallana, LughatMuallana,
+    MasdarLughat, MawridLugha, MiftahLugha, SijillLughaRasmiya, TalabLugha,
 };
 pub use crate::tahdith::{FarqFahs, Muraqib, TaghyeerLuba};
 
@@ -179,7 +179,9 @@ impl Kashif {
     /// A scanner over every adapter.
     #[must_use]
     pub fn jadeed() -> Self {
-        Self { matajir: matajir::kul() }
+        Self {
+            matajir: matajir::kul(),
+        }
     }
 
     /// A scanner over a chosen subset, for a caller refreshing one launcher
@@ -249,7 +251,7 @@ impl Kashif {
                         mawdi,
                         khata.injilizi.clone(),
                     ));
-                }
+                },
             }
         }
 
@@ -294,8 +296,8 @@ impl Kashif {
 )]
 pub fn siyaq_fahs(manassat: IdadatManassat, manzil: PathBuf) -> Natija<SiyaqFahs> {
     let nizam = NizamTashghil::hali();
-    let khazina_bayanat = khazina_xdg("XDG_DATA_HOME")
-        .unwrap_or_else(|| manzil.join(".local").join("share"));
+    let khazina_bayanat =
+        khazina_xdg("XDG_DATA_HOME").unwrap_or_else(|| manzil.join(".local").join("share"));
     Ok(SiyaqFahs {
         mujalladat_baramij: mujalladat_baramij(nizam),
         bayanat_barnamij: mujallad_windows(nizam, "PROGRAMDATA", || {
@@ -336,7 +338,10 @@ fn mujallad_windows(
     if !matches!(nizam, NizamTashghil::Windows) {
         return None;
     }
-    Some(mujallad_aw_ihtiyati(std::env::var_os(mutaghayyir), ihtiyati))
+    Some(mujallad_aw_ihtiyati(
+        std::env::var_os(mutaghayyir),
+        ihtiyati,
+    ))
 }
 
 /// The rule the environment feeds: a value that is set and not empty wins, and
@@ -350,7 +355,9 @@ fn mujallad_aw_ihtiyati(
     qeema: Option<std::ffi::OsString>,
     ihtiyati: impl FnOnce() -> PathBuf,
 ) -> PathBuf {
-    qeema.filter(|qeema| !qeema.is_empty()).map_or_else(ihtiyati, PathBuf::from)
+    qeema
+        .filter(|qeema| !qeema.is_empty())
+        .map_or_else(ihtiyati, PathBuf::from)
 }
 
 /// One XDG base directory, honoured only when it is absolute.
@@ -388,11 +395,10 @@ fn judhur_bayanat(
     }
 
     let mut judhur: Vec<PathBuf> = vec![khazina_bayanat.to_path_buf()];
-    let khaam = qeema
-        .filter(|qeema| !qeema.is_empty())
-        .map_or_else(|| DHUR_BAYANAT_IFTIRADI.to_owned(), |qeema| {
-            qeema.to_string_lossy().into_owned()
-        });
+    let khaam = qeema.filter(|qeema| !qeema.is_empty()).map_or_else(
+        || DHUR_BAYANAT_IFTIRADI.to_owned(),
+        |qeema| qeema.to_string_lossy().into_owned(),
+    );
     for juz in khaam.split(':') {
         if judhur.len() >= HADD_JUDHUR_BAYANAT {
             break;
@@ -439,9 +445,10 @@ fn mujalladat_baramij(nizam: NizamTashghil) -> Vec<PathBuf> {
         return Vec::new();
     }
     let mut mujalladat: Vec<PathBuf> = Vec::new();
-    for (mutaghayyir, ihtiyati) in
-        [("ProgramFiles(x86)", r"C:\Program Files (x86)"), ("ProgramFiles", r"C:\Program Files")]
-    {
+    for (mutaghayyir, ihtiyati) in [
+        ("ProgramFiles(x86)", r"C:\Program Files (x86)"),
+        ("ProgramFiles", r"C:\Program Files"),
+    ] {
         let mujallad =
             mujallad_aw_ihtiyati(std::env::var_os(mutaghayyir), || PathBuf::from(ihtiyati));
         if !mujalladat.contains(&mujallad) {
@@ -491,7 +498,7 @@ pub fn ijma(natija: &NatijatFahs) -> Vec<Luba> {
             Some(mawjuda) => damm(mawjuda, muktashafa),
             None => {
                 let _ = bil_huwiya.insert(hadaf, min_muktashafa(hadaf, muktashafa));
-            }
+            },
         }
         let _ = bil_masar.insert(miftah_masar, hadaf);
     }
@@ -528,7 +535,11 @@ fn min_muktashafa(huwiya: LubaId, muktashafa: &LubaMuktashafa) -> Luba {
 /// so "first wins" means "Steam's name for a Steam game", and a later launcher
 /// only fills in what the earlier one did not know.
 fn damm(mawjuda: &mut Luba, muktashafa: &LubaMuktashafa) {
-    if !mawjuda.masadir.iter().any(|mawjud| mawjud.asl() == muktashafa.masdar.asl()) {
+    if !mawjuda
+        .masadir
+        .iter()
+        .any(|mawjud| mawjud.asl() == muktashafa.masdar.asl())
+    {
         mawjuda.masadir.push(muktashafa.masdar.clone());
     }
     if mawjuda.tanfidhi.is_none() {
@@ -586,7 +597,11 @@ mod ikhtibarat {
         for matjar in matajir::kul() {
             let mujallad = masrah.path().join(matjar.muarrif());
             std::fs::create_dir_all(&mujallad)?;
-            for nizam in [NizamTashghil::Windows, NizamTashghil::Linux, NizamTashghil::Mac] {
+            for nizam in [
+                NizamTashghil::Windows,
+                NizamTashghil::Linux,
+                NizamTashghil::Mac,
+            ] {
                 let mut siyaq = SiyaqFahs::lil_ikhtibar(nizam, masrah.path());
                 if !idbit_tajawuz(&mut siyaq.manassat, matjar.muarrif(), mujallad.clone())
                     || matjar.mawqi(&siyaq).is_none()
@@ -661,9 +676,14 @@ mod ikhtibarat {
         );
         let mut fareeda = mujalladat.clone();
         fareeda.dedup();
-        assert_eq!(fareeda, mujalladat, "a repeated directory would be scanned twice");
+        assert_eq!(
+            fareeda, mujalladat,
+            "a repeated directory would be scanned twice"
+        );
         assert!(
-            mujalladat.iter().all(|mujallad| !mujallad.as_os_str().is_empty()),
+            mujalladat
+                .iter()
+                .all(|mujallad| !mujallad.as_os_str().is_empty()),
             "an empty variable must fall back, never become an empty path"
         );
     }
@@ -674,7 +694,10 @@ mod ikhtibarat {
 
         // The point of the field: the adapters are handed the answer rather
         // than each reaching for the environment and disagreeing.
-        assert_eq!(siyaq.mujalladat_baramij, mujalladat_baramij(NizamTashghil::hali()));
+        assert_eq!(
+            siyaq.mujalladat_baramij,
+            mujalladat_baramij(NizamTashghil::hali())
+        );
         Ok(())
     }
 
@@ -702,7 +725,10 @@ mod ikhtibarat {
         // Unset and empty are the same case: a variable a stripped service
         // environment cleared is not a directory named the empty string.
         assert_eq!(mujallad_aw_ihtiyati(None, ihtiyati), ihtiyati());
-        assert_eq!(mujallad_aw_ihtiyati(Some(std::ffi::OsString::new()), ihtiyati), ihtiyati());
+        assert_eq!(
+            mujallad_aw_ihtiyati(Some(std::ffi::OsString::new()), ihtiyati),
+            ihtiyati()
+        );
     }
 
     #[test]
@@ -714,7 +740,11 @@ mod ikhtibarat {
         );
         assert_eq!(khazina_mutlaqa(None), None);
 
-        let mutlaq = if cfg!(windows) { r"D:\bayanat" } else { "/bayanat" };
+        let mutlaq = if cfg!(windows) {
+            r"D:\bayanat"
+        } else {
+            "/bayanat"
+        };
         assert_eq!(
             khazina_mutlaqa(Some(std::ffi::OsString::from(mutlaq))),
             Some(PathBuf::from(mutlaq))
@@ -734,8 +764,11 @@ mod ikhtibarat {
 
         // Unset and empty both mean the specification's own default, and the
         // user's own directory always leads.
-        let iftiradi =
-            vec![manzil.clone(), PathBuf::from("/usr/local/share"), PathBuf::from("/usr/share")];
+        let iftiradi = vec![
+            manzil.clone(),
+            PathBuf::from("/usr/local/share"),
+            PathBuf::from("/usr/share"),
+        ];
         assert_eq!(bi(None), iftiradi);
         assert_eq!(bi(Some("")), iftiradi);
 
@@ -744,11 +777,18 @@ mod ikhtibarat {
         // too, because scanning it twice is two answers to one question.
         assert_eq!(
             bi(Some("share:/opt/x::/manzil/.local/share:/usr/share")),
-            vec![manzil.clone(), PathBuf::from("/opt/x"), PathBuf::from("/usr/share")]
+            vec![
+                manzil.clone(),
+                PathBuf::from("/opt/x"),
+                PathBuf::from("/usr/share")
+            ]
         );
 
         // The cap holds however long the value is.
-        let tawil = (0..40).map(|raqm| format!("/d{raqm}")).collect::<Vec<_>>().join(":");
+        let tawil = (0..40)
+            .map(|raqm| format!("/d{raqm}"))
+            .collect::<Vec<_>>()
+            .join(":");
         assert_eq!(bi(Some(&tawil)).len(), HADD_JUDHUR_BAYANAT);
 
         // Off Linux the freedesktop hierarchy does not exist, and a value that
@@ -763,14 +803,22 @@ mod ikhtibarat {
         // A drive letter on Windows, where a path with a root and no prefix —
         // `\manzil` — is *not* absolute, so a `/manzil` fixture would fail the
         // assertion below over the fixture rather than over the code.
-        let manzil = PathBuf::from(if cfg!(windows) { r"D:\manzil" } else { "/manzil" });
+        let manzil = PathBuf::from(if cfg!(windows) {
+            r"D:\manzil"
+        } else {
+            "/manzil"
+        });
         let siyaq = siyaq_fahs(IdadatManassat::default(), manzil.clone())?;
 
         // Absolute in every case: either the variable was absolute, or the
         // home-relative default the specification names took over. An adapter
         // that joined onto a relative value would be scanning whatever
         // directory the process was started in.
-        for khazina in [&siyaq.khazina_bayanat, &siyaq.khazina_idadat, &siyaq.khazina_makhbaa] {
+        for khazina in [
+            &siyaq.khazina_bayanat,
+            &siyaq.khazina_idadat,
+            &siyaq.khazina_makhbaa,
+        ] {
             assert!(khazina.is_absolute(), "{}", khazina.display());
         }
         if khazina_xdg("XDG_DATA_HOME").is_none() {

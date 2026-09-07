@@ -250,7 +250,9 @@ impl KutlatTawqee {
     /// algorithm byte that is not one of the values the format defines.
     pub fn min_bayt(bayt: &[u8]) -> Result<Self, KhataRuqaa> {
         if bayt.len() < HAJM_KUTLA {
-            return Err(KhataRuqaa::KutlatTawqeeTalifa { haql: "the block is short" });
+            return Err(KhataRuqaa::KutlatTawqeeTalifa {
+                haql: "the block is short",
+            });
         }
         let sihr: [u8; 4] = iqra_masfufa(bayt, IZAHAT_SIHR)
             .ok_or(KhataRuqaa::KutlatTawqeeTalifa { haql: "sihr" })?;
@@ -272,7 +274,9 @@ impl KutlatTawqee {
             .get(IZAHAT_KHWARIZMIYA)
             .copied()
             .and_then(Khwarizmiya::min_bayt)
-            .ok_or(KhataRuqaa::KutlatTawqeeTalifa { haql: "khwarizmiya" })?;
+            .ok_or(KhataRuqaa::KutlatTawqeeTalifa {
+                haql: "khwarizmiya",
+            })?;
 
         let waqt_khana: [u8; 8] = iqra_masfufa(bayt, IZAHAT_WAQT)
             .ok_or(KhataRuqaa::KutlatTawqeeTalifa { haql: "waqt" })?;
@@ -281,7 +285,13 @@ impl KutlatTawqee {
         let tawqee: [u8; 64] = iqra_masfufa(bayt, IZAHAT_TAWQEE)
             .ok_or(KhataRuqaa::KutlatTawqeeTalifa { haql: "tawqee" })?;
 
-        Ok(Self { dawr, khwarizmiya, waqt: i64::from_le_bytes(waqt_khana), miftah, tawqee })
+        Ok(Self {
+            dawr,
+            khwarizmiya,
+            waqt: i64::from_le_bytes(waqt_khana),
+            miftah,
+            tawqee,
+        })
     }
 
     /// Writes the block into a buffer of exactly [`HAJM_KUTLA`] bytes.
@@ -357,7 +367,9 @@ impl KutlatTawqee {
         if mudaqqiq.tahaqquq(&self.miftah, &risala, &self.tawqee) {
             Ok(())
         } else {
-            Err(KhataRuqaa::TawqeeGhayrSalih { miftah: sittasi(&self.miftah) })
+            Err(KhataRuqaa::TawqeeGhayrSalih {
+                miftah: sittasi(&self.miftah),
+            })
         }
     }
 

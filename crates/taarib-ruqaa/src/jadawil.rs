@@ -1017,7 +1017,11 @@ pub fn tahaqquq_mada(
     };
     for mada in madayat {
         if mada.izaha < tasdir {
-            return Err(talif(mada.haql_izaha, u64::from(mada.izaha), u64::from(tasdir)));
+            return Err(talif(
+                mada.haql_izaha,
+                u64::from(mada.izaha),
+                u64::from(tasdir),
+            ));
         }
         let khatwa = u64::try_from(mada.khatwa).unwrap_or(u64::MAX);
         let nihaya = u64::from(mada.adad)

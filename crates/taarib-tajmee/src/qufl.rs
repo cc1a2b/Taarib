@@ -112,7 +112,10 @@ impl Qufl {
 
         if !makhbaa.is_file() {
             if !jalb {
-                return Ok(Err(KhataTajmee::MukawwinGhaib { saf, masar: makhbaa }));
+                return Ok(Err(KhataTajmee::MukawwinGhaib {
+                    saf,
+                    masar: makhbaa,
+                }));
             }
             // A fetch verifies before it renames onto the cache path, so its
             // bytes arrive already checked and re-reading them here would only
@@ -151,9 +154,15 @@ impl Qufl {
         jalb: bool,
         mustaqarr: &mut Mustaqarr,
     ) -> NatijatTajmee<()> {
-        let Some(madkhal) = self.madakhil.iter().find(|madkhal| madkhal.muarrif == muarrif)
+        let Some(madkhal) = self
+            .madakhil
+            .iter()
+            .find(|madkhal| madkhal.muarrif == muarrif)
         else {
-            mustaqarr.sajjil_naqs(KhataTajmee::QuflNaqis { saf, muarrif: muarrif.to_owned() });
+            mustaqarr.sajjil_naqs(KhataTajmee::QuflNaqis {
+                saf,
+                muarrif: muarrif.to_owned(),
+            });
             return Ok(());
         };
         self.ifragh_madkhal(saf, madkhal, wajha, jidhr, jalb, mustaqarr)
@@ -173,7 +182,10 @@ impl Qufl {
         mustaqarr: &mut Mustaqarr,
     ) -> NatijatTajmee<()> {
         for madkhal in &self.madakhil {
-            let dhayl = madkhal.wajha.clone().unwrap_or_else(|| madkhal.muarrif.clone());
+            let dhayl = madkhal
+                .wajha
+                .clone()
+                .unwrap_or_else(|| madkhal.muarrif.clone());
             self.ifragh_madkhal(
                 saf,
                 madkhal,
@@ -200,7 +212,7 @@ impl Qufl {
             Err(khata) => {
                 mustaqarr.sajjil_naqs(khata);
                 return Ok(());
-            }
+            },
         };
         if madkhal.huzma {
             ifragh_huzma(&bayt, wajha, mustaqarr)
@@ -211,11 +223,7 @@ impl Qufl {
 }
 
 /// Unpacks a zip into the tree, refusing any entry that escapes it.
-fn ifragh_huzma(
-    bayt: &[u8],
-    wajha: &str,
-    mustaqarr: &mut Mustaqarr,
-) -> NatijatTajmee<()> {
+fn ifragh_huzma(bayt: &[u8], wajha: &str, mustaqarr: &mut Mustaqarr) -> NatijatTajmee<()> {
     let mut arshif = zip::ZipArchive::new(std::io::Cursor::new(bayt)).map_err(|sabab| {
         KhataTajmee::KhataMalaf {
             masar: PathBuf::from(wajha),
@@ -224,11 +232,13 @@ fn ifragh_huzma(
         }
     })?;
     for fihris in 0..arshif.len() {
-        let mut madkhal = arshif.by_index(fihris).map_err(|sabab| KhataTajmee::KhataMalaf {
-            masar: PathBuf::from(wajha),
-            amal: "reading a locked archive entry",
-            sabab: std::io::Error::new(std::io::ErrorKind::InvalidData, sabab.to_string()),
-        })?;
+        let mut madkhal = arshif
+            .by_index(fihris)
+            .map_err(|sabab| KhataTajmee::KhataMalaf {
+                masar: PathBuf::from(wajha),
+                amal: "reading a locked archive entry",
+                sabab: std::io::Error::new(std::io::ErrorKind::InvalidData, sabab.to_string()),
+            })?;
         if madkhal.is_dir() {
             continue;
         }
@@ -282,7 +292,13 @@ fn ijlib(
     let muaqqat = hadaf.with_extension(format!("juzii.{}", std::process::id()));
 
     let khraj = std::process::Command::new("curl")
-        .args(["--fail", "--location", "--silent", "--show-error", "--output"])
+        .args([
+            "--fail",
+            "--location",
+            "--silent",
+            "--show-error",
+            "--output",
+        ])
         .arg(&muaqqat)
         .arg(&madkhal.rabt)
         .output()
@@ -305,7 +321,7 @@ fn ijlib(
                 amal: "reading a fetched download",
                 sabab,
             });
-        }
+        },
     };
     let mahsuba = hex_min_bayt(&Sha256::digest(&bayt));
     if !mahsuba.eq_ignore_ascii_case(muqfal) {

@@ -319,13 +319,17 @@ pub const fn qita_qabila_lilizaha(ism: [u8; 4]) -> bool {
 /// A little-endian `u16` at a byte offset, bounds-checked.
 fn iqra_u16(bayt: &[u8], izaha: usize) -> Option<u16> {
     let nihaya = izaha.checked_add(2)?;
-    bayt.get(izaha..nihaya).and_then(|juz| <[u8; 2]>::try_from(juz).ok()).map(u16::from_le_bytes)
+    bayt.get(izaha..nihaya)
+        .and_then(|juz| <[u8; 2]>::try_from(juz).ok())
+        .map(u16::from_le_bytes)
 }
 
 /// A little-endian `u32` at a byte offset, bounds-checked.
 fn iqra_u32(bayt: &[u8], izaha: usize) -> Option<u32> {
     let nihaya = izaha.checked_add(4)?;
-    bayt.get(izaha..nihaya).and_then(|juz| <[u8; 4]>::try_from(juz).ok()).map(u32::from_le_bytes)
+    bayt.get(izaha..nihaya)
+        .and_then(|juz| <[u8; 4]>::try_from(juz).ok())
+        .map(u32::from_le_bytes)
 }
 
 /// A signed little-endian `i16` at a byte offset, bounds-checked.
@@ -336,7 +340,8 @@ fn iqra_i16(bayt: &[u8], izaha: usize) -> Option<i16> {
 /// A four-byte name at a byte offset, bounds-checked.
 fn iqra_ism(bayt: &[u8], izaha: usize) -> Option<[u8; 4]> {
     let nihaya = izaha.checked_add(4)?;
-    bayt.get(izaha..nihaya).and_then(|juz| <[u8; 4]>::try_from(juz).ok())
+    bayt.get(izaha..nihaya)
+        .and_then(|juz| <[u8; 4]>::try_from(juz).ok())
 }
 
 /// Writes a little-endian `u32` at a byte offset, or reports that it could not.
@@ -353,7 +358,7 @@ fn uktub_u32(bayt: &mut [u8], izaha: usize, qeema: u32) -> bool {
         Some(khana) => {
             khana.copy_from_slice(&qeema.to_le_bytes());
             true
-        }
+        },
         None => false,
     }
 }
@@ -367,7 +372,7 @@ fn uktub_u16(bayt: &mut [u8], izaha: usize, qeema: u16) -> bool {
         Some(khana) => {
             khana.copy_from_slice(&qeema.to_le_bytes());
             true
-        }
+        },
         None => false,
     }
 }
@@ -604,7 +609,10 @@ pub fn jadwal_qita(bayt: &[u8], masar: &Path) -> Result<Vec<QitaHawiya>, KhataNu
         matlub: HAJM_TARWISAT_QITA,
     })?;
     if sihr != SIHR_FORM {
-        return Err(KhataNusus::SihrGhayrMutabaq { masar: masar.to_path_buf(), sigha: SIGHA });
+        return Err(KhataNusus::SihrGhayrMutabaq {
+            masar: masar.to_path_buf(),
+            sigha: SIGHA,
+        });
     }
 
     let mualan = u64::from(iqra_u32(bayt, 4).ok_or(KhataNusus::MalafQaseer {
@@ -645,17 +653,29 @@ pub fn jadwal_qita(bayt: &[u8], masar: &Path) -> Result<Vec<QitaHawiya>, KhataNu
         };
         let ism = iqra_ism(bayt, ras).ok_or_else(|| talif("a chunk name", mawqi))?;
         if !ism.iter().all(u8::is_ascii_graphic) {
-            return Err(talif("a chunk name that is not four printable bytes", mawqi));
+            return Err(talif(
+                "a chunk name that is not four printable bytes",
+                mawqi,
+            ));
         }
         let tul = u64::from(
             iqra_u32(bayt, ras.saturating_add(4)).ok_or_else(|| talif("a chunk length", mawqi))?,
         );
-        let izaha = mawqi.checked_add(HAJM_TARWISAT_QITA).ok_or_else(|| talif("a chunk", mawqi))?;
-        let baad = izaha.checked_add(tul).ok_or_else(|| talif("a chunk length", tul))?;
+        let izaha = mawqi
+            .checked_add(HAJM_TARWISAT_QITA)
+            .ok_or_else(|| talif("a chunk", mawqi))?;
+        let baad = izaha
+            .checked_add(tul)
+            .ok_or_else(|| talif("a chunk length", tul))?;
         if baad > nihaya {
             return Err(talif("a chunk running past the FORM payload", baad));
         }
-        jadwal.push(QitaHawiya { ism, tarwisa: mawqi, izaha, tul });
+        jadwal.push(QitaHawiya {
+            ism,
+            tarwisa: mawqi,
+            izaha,
+            tul,
+        });
         mawqi = baad;
     }
     Ok(jadwal)
@@ -750,12 +770,16 @@ pub fn iqra_gen8(bayt: &[u8], qita: &QitaHawiya) -> Result<BayanGen8, KhataNusus
         qeema: qita.izaha,
         hadd: tul_u64(bayt.len()),
     })?;
-    let hadd = hajm_usize(qita.nihaya()).unwrap_or(bayt.len()).min(bayt.len());
-    let juz = bayt.get(bidaya..hadd).ok_or_else(|| KhataNusus::MalafQaseer {
-        haql: "the GEN8 payload",
-        tul: tul_u64(bayt.len()),
-        matlub: qita.nihaya(),
-    })?;
+    let hadd = hajm_usize(qita.nihaya())
+        .unwrap_or(bayt.len())
+        .min(bayt.len());
+    let juz = bayt
+        .get(bidaya..hadd)
+        .ok_or_else(|| KhataNusus::MalafQaseer {
+            haql: "the GEN8 payload",
+            tul: tul_u64(bayt.len()),
+            matlub: qita.nihaya(),
+        })?;
     let qaseer = |haql: &'static str, matlub: u64| KhataNusus::MalafQaseer {
         haql,
         tul: tul_u64(juz.len()),
@@ -764,10 +788,15 @@ pub fn iqra_gen8(bayt: &[u8], qita: &QitaHawiya) -> Result<BayanGen8, KhataNusus
 
     // The version, before any other field is read. Every offset below means what
     // it means only because this number said so.
-    let bytecode = *juz.get(1).ok_or_else(|| qaseer("the GEN8 bytecode version", 2))?;
+    let bytecode = *juz
+        .get(1)
+        .ok_or_else(|| qaseer("the GEN8 bytecode version", 2))?;
     let jeel = JeelHawiya::min_bytecode(bytecode)?;
 
-    let munaqqih_muattal = *juz.first().ok_or_else(|| qaseer("the GEN8 debugger flag", 1))? != 0;
+    let munaqqih_muattal = *juz
+        .first()
+        .ok_or_else(|| qaseer("the GEN8 debugger flag", 1))?
+        != 0;
     let muarrif = iqra_u32(juz, 20).ok_or_else(|| qaseer("the GEN8 game id", 24))?;
     let isdar = (
         iqra_u32(juz, 44).ok_or_else(|| qaseer("the GEN8 runtime major", 48))?,
@@ -921,8 +950,8 @@ impl HawdNusus {
             qeema,
             hadd: tul_kulli,
         };
-        let ras = hajm_usize(qita.izaha)
-            .ok_or_else(|| talif("the STRG payload offset", qita.izaha))?;
+        let ras =
+            hajm_usize(qita.izaha).ok_or_else(|| talif("the STRG payload offset", qita.izaha))?;
         let adad = iqra_u32(bayt, ras).ok_or_else(|| KhataNusus::MalafQaseer {
             haql: "the STRG string count",
             tul: tul_u64(bayt.len()),
@@ -945,9 +974,8 @@ impl HawdNusus {
             });
         }
 
-        let mut madakhil: Vec<MadkhalHawd> = Vec::with_capacity(
-            usize::try_from(adad).unwrap_or_default().min(bayt.len()),
-        );
+        let mut madakhil: Vec<MadkhalHawd> =
+            Vec::with_capacity(usize::try_from(adad).unwrap_or_default().min(bayt.len()));
         let mut bi_izaha: BTreeMap<u64, u32> = BTreeMap::new();
         for fahras in 0..adad {
             let mawqi_mu_ashir = qita
@@ -962,9 +990,16 @@ impl HawdNusus {
             );
             let madkhal = Self::iqra_sijil(bayt, izaha, fahras)?;
             let _ = bi_izaha.insert(izaha, fahras);
-            madakhil.push(MadkhalHawd { mawqi_mu_ashir, ..madkhal });
+            madakhil.push(MadkhalHawd {
+                mawqi_mu_ashir,
+                ..madkhal
+            });
         }
-        Ok(Self { qita: *qita, madakhil, bi_izaha })
+        Ok(Self {
+            qita: *qita,
+            madakhil,
+            bi_izaha,
+        })
     }
 
     /// Reads one record: the length behind the pointer, the body, the NUL.
@@ -976,8 +1011,9 @@ impl HawdNusus {
             qeema,
             hadd: tul_kulli,
         };
-        let mawqi_sijil =
-            izaha.checked_sub(4).ok_or_else(|| talif("a STRG pointer below the file", izaha))?;
+        let mawqi_sijil = izaha
+            .checked_sub(4)
+            .ok_or_else(|| talif("a STRG pointer below the file", izaha))?;
         let ras = hajm_usize(mawqi_sijil).ok_or_else(|| talif("a STRG record", mawqi_sijil))?;
         let tul = iqra_u32(bayt, ras).ok_or_else(|| talif("a STRG record length", mawqi_sijil))?;
         if tul > AQSA_TUL_NASS {
@@ -1002,9 +1038,14 @@ impl HawdNusus {
                     tarmiz: "UTF-8",
                     mawqi: izaha.saturating_add(tul_u64(khata.valid_up_to())),
                 });
-            }
+            },
         };
-        Ok(MadkhalHawd { mawqi_mu_ashir: 0, mawqi_sijil, izaha, nass })
+        Ok(MadkhalHawd {
+            mawqi_mu_ashir: 0,
+            mawqi_sijil,
+            izaha,
+            nass,
+        })
     }
 }
 
@@ -1090,7 +1131,10 @@ impl JadwalMaraji {
     /// An empty census.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self { maraji: Vec::new(), qita_mafhuma: BTreeSet::new() }
+        Self {
+            maraji: Vec::new(),
+            qita_mafhuma: BTreeSet::new(),
+        }
     }
 
     /// Records one reference.
@@ -1128,7 +1172,10 @@ impl JadwalMaraji {
 
     /// Every reference to one string, by pool index.
     pub fn maraji_nass(&self, fahras: u32) -> impl Iterator<Item = MarjaIzaha> + '_ {
-        self.maraji.iter().copied().filter(move |marja| marja.naw == NawMarja::Nass(fahras))
+        self.maraji
+            .iter()
+            .copied()
+            .filter(move |marja| marja.naw == NawMarja::Nass(fahras))
     }
 
     /// Every reference whose target is at or after a file offset.
@@ -1136,7 +1183,10 @@ impl JadwalMaraji {
     /// The relocation planner's query: these are the fields that would be wrong
     /// if everything from `hadd` onwards moved.
     pub fn maraji_baad(&self, hadd: u64) -> impl Iterator<Item = MarjaIzaha> + '_ {
-        self.maraji.iter().copied().filter(move |marja| marja.hadaf >= hadd)
+        self.maraji
+            .iter()
+            .copied()
+            .filter(move |marja| marja.hadaf >= hadd)
     }
 }
 
@@ -1173,7 +1223,11 @@ fn maraji_mutatabia(
         let ras = hajm_usize(mawqi)?;
         let hadaf = u64::from(iqra_u32(bayt, ras)?);
         let fahras = hawd.fahras_bi_izaha(hadaf)?;
-        maraji.push(MarjaIzaha { mawqi, hadaf, naw: NawMarja::Nass(fahras) });
+        maraji.push(MarjaIzaha {
+            mawqi,
+            hadaf,
+            naw: NawMarja::Nass(fahras),
+        });
         mawqi = mawqi.checked_add(khutwa)?;
     }
     Some(maraji)
@@ -1521,11 +1575,23 @@ pub fn iqra_txtr(bayt: &[u8], qita: &QitaHawiya) -> Result<Vec<SafhaTxtr>, Khata
     // the signature test is what actually decides.
     let mut safahat: Vec<SafhaTxtr> = Vec::with_capacity(madakhil.len());
     for (fahras, mawqi) in madakhil.iter().enumerate() {
-        let hadd =
-            madakhil.get(fahras.saturating_add(1)).copied().unwrap_or_else(|| qita.nihaya());
+        let hadd = madakhil
+            .get(fahras.saturating_add(1))
+            .copied()
+            .unwrap_or_else(|| qita.nihaya());
         let (mawqi_mu_ashir, izaha) = mu_ashir_safha(bayt, qita, *mawqi, hadd.max(*mawqi))
-            .ok_or_else(|| talif("a TXTR page entry with no identifiable blob pointer", *mawqi))?;
-        safahat.push(SafhaTxtr { mawqi_madkhal: *mawqi, mawqi_mu_ashir, izaha, tul: 0 });
+            .ok_or_else(|| {
+                talif(
+                    "a TXTR page entry with no identifiable blob pointer",
+                    *mawqi,
+                )
+            })?;
+        safahat.push(SafhaTxtr {
+            mawqi_madkhal: *mawqi,
+            mawqi_mu_ashir,
+            izaha,
+            tul: 0,
+        });
     }
 
     // A blob runs to the next blob, and the last runs to the chunk's end. The
@@ -1535,7 +1601,9 @@ pub fn iqra_txtr(bayt: &[u8], qita: &QitaHawiya) -> Result<Vec<SafhaTxtr>, Khata
     bidayat.sort_unstable();
     for safha in &mut safahat {
         let baad = bidayat.iter().copied().find(|bidaya| *bidaya > safha.izaha);
-        safha.tul = baad.unwrap_or_else(|| qita.nihaya()).saturating_sub(safha.izaha);
+        safha.tul = baad
+            .unwrap_or_else(|| qita.nihaya())
+            .saturating_sub(safha.izaha);
     }
     Ok(safahat)
 }
@@ -1648,7 +1716,9 @@ impl ShaklKhatt {
     /// How many bytes this record occupies when written.
     #[must_use]
     pub fn hajm(&self) -> u64 {
-        tul_u64(self.azwaj.len()).saturating_mul(4).saturating_add(16)
+        tul_u64(self.azwaj.len())
+            .saturating_mul(4)
+            .saturating_add(16)
     }
 
     /// Serializes the record into the byte order the container uses.
@@ -1662,7 +1732,11 @@ impl ShaklKhatt {
         khaam.extend_from_slice(&self.mustatil.irtifa.to_le_bytes());
         khaam.extend_from_slice(&self.izaha.to_le_bytes());
         khaam.extend_from_slice(&self.taqaddum.to_le_bytes());
-        khaam.extend_from_slice(&u16::try_from(self.azwaj.len()).unwrap_or(u16::MAX).to_le_bytes());
+        khaam.extend_from_slice(
+            &u16::try_from(self.azwaj.len())
+                .unwrap_or(u16::MAX)
+                .to_le_bytes(),
+        );
         for zawj in &self.azwaj {
             khaam.extend_from_slice(&zawj.akhar.to_le_bytes());
             khaam.extend_from_slice(&zawj.tashih.to_le_bytes());
@@ -1681,7 +1755,9 @@ impl ShaklKhatt {
         }
         let mut azwaj: Vec<ZawjTaqaddumShakl> = Vec::with_capacity(usize::from(adad));
         for fahras in 0..adad {
-            let asas = ras.checked_add(16)?.checked_add(usize::from(fahras).checked_mul(4)?)?;
+            let asas = ras
+                .checked_add(16)?
+                .checked_add(usize::from(fahras).checked_mul(4)?)?;
             azwaj.push(ZawjTaqaddumShakl {
                 akhar: iqra_u16(bayt, asas)?,
                 tashih: iqra_i16(bayt, asas.checked_add(2)?)?,
@@ -1826,9 +1902,8 @@ pub fn iqra_font(
         });
     }
 
-    let mut khutut: Vec<KhattGameMaker> = Vec::with_capacity(
-        usize::try_from(adad).unwrap_or_default(),
-    );
+    let mut khutut: Vec<KhattGameMaker> =
+        Vec::with_capacity(usize::try_from(adad).unwrap_or_default());
     for fahras in 0..adad {
         let khana = ras
             .checked_add(4)
@@ -1840,7 +1915,14 @@ pub fn iqra_font(
         if !qita.yahwi(mawqi) {
             return Err(talif("a FONT entry outside its own chunk", mawqi));
         }
-        khutut.push(iqra_madkhal_khatt(bayt, qita, hawd, mawqi, tul_u64(khana), fahras)?);
+        khutut.push(iqra_madkhal_khatt(
+            bayt,
+            qita,
+            hawd,
+            mawqi,
+            tul_u64(khana),
+            fahras,
+        )?);
     }
     Ok(khutut)
 }
@@ -1891,8 +1973,7 @@ fn iqra_madkhal_khatt(
     let nihayat_nitaq = haql32(24)?;
     let band = u64::from(haql32(28)?);
 
-    let (mawqi_adad_ashkal, ashkal, hajm_madkhal) =
-        jadwal_ashkal(bayt, qita, mawqi, fahras, &ism)?;
+    let (mawqi_adad_ashkal, ashkal, hajm_madkhal) = jadwal_ashkal(bayt, qita, mawqi, fahras, &ism)?;
 
     Ok(KhattGameMaker {
         mawqi,
@@ -1936,13 +2017,16 @@ fn jadwal_ashkal(
             break;
         };
         let Some(ras) = hajm_usize(mawdi) else { break };
-        let Some(adad) = iqra_u32(bayt, ras) else { break };
+        let Some(adad) = iqra_u32(bayt, ras) else {
+            break;
+        };
         if adad == 0 || adad > AQSA_ASHKAL_KHATT {
             continue;
         }
-        let Some(bidayat_masfufa) = mawdi.checked_add(4) else { break };
-        let Some(nihayat_masfufa) =
-            bidayat_masfufa.checked_add(u64::from(adad).saturating_mul(4))
+        let Some(bidayat_masfufa) = mawdi.checked_add(4) else {
+            break;
+        };
+        let Some(nihayat_masfufa) = bidayat_masfufa.checked_add(u64::from(adad).saturating_mul(4))
         else {
             continue;
         };
@@ -2078,7 +2162,16 @@ impl HawiyatGameMaker {
         };
 
         let maraji = ihsa_maraji(&bayt, &jadwal, gen8, &hawd, &khutut, &bunud, &safahat);
-        Ok(Self { bayt, jadwal, gen8, hawd, khutut, bunud, safahat, maraji })
+        Ok(Self {
+            bayt,
+            jadwal,
+            gen8,
+            hawd,
+            khutut,
+            bunud,
+            safahat,
+            maraji,
+        })
     }
 
     /// The container's bytes, exactly as they were read.
@@ -2140,13 +2233,18 @@ impl HawiyatGameMaker {
     pub fn ism_luba(&self) -> Option<&str> {
         let mu_ashir = hajm_usize(self.gen8.mawqi_ism).and_then(|ras| iqra_u32(&self.bayt, ras))?;
         let fahras = self.hawd.fahras_bi_izaha(u64::from(mu_ashir))?;
-        self.hawd.madkhal(fahras).map(|madkhal| madkhal.nass.as_str())
+        self.hawd
+            .madkhal(fahras)
+            .map(|madkhal| madkhal.nass.as_str())
     }
 
     /// The `TPAG` item a font draws from, by the pointer the entry holds.
     #[must_use]
     pub fn band_khatt(&self, khatt: &KhattGameMaker) -> Option<BandTpag> {
-        self.bunud.iter().copied().find(|band| band.mawqi == khatt.band)
+        self.bunud
+            .iter()
+            .copied()
+            .find(|band| band.mawqi == khatt.band)
     }
 
     /// The last chunk in the table, which is where an appended region goes.
@@ -2177,11 +2275,15 @@ fn ihsa_maraji(
 ) -> JadwalMaraji {
     let mut sijil = JadwalMaraji::jadeed();
     let nass_marja = |sijil: &mut JadwalMaraji, mawqi: u64| {
-        let Some(hadaf) = hajm_usize(mawqi).and_then(|ras| iqra_u32(bayt, ras)).map(u64::from)
+        let Some(hadaf) = hajm_usize(mawqi)
+            .and_then(|ras| iqra_u32(bayt, ras))
+            .map(u64::from)
         else {
             return;
         };
-        let naw = hawd.fahras_bi_izaha(hadaf).map_or(NawMarja::Majhul, NawMarja::Nass);
+        let naw = hawd
+            .fahras_bi_izaha(hadaf)
+            .map_or(NawMarja::Majhul, NawMarja::Nass);
         sijil.sajjil(MarjaIzaha { mawqi, hadaf, naw });
     };
 
@@ -2203,7 +2305,9 @@ fn ihsa_maraji(
     // The pool's own pointer array. Every entry is a string reference by
     // construction, so this is the one walk that cannot fail.
     for (fahras, madkhal) in hawd.madakhil().iter().enumerate() {
-        let Ok(raqm) = u32::try_from(fahras) else { break };
+        let Ok(raqm) = u32::try_from(fahras) else {
+            break;
+        };
         sijil.sajjil(MarjaIzaha {
             mawqi: madkhal.mawqi_mu_ashir,
             hadaf: madkhal.izaha,
@@ -2214,12 +2318,20 @@ fn ihsa_maraji(
 
     // TPAG items are named by the chunk's own array and name nothing themselves.
     for (fahras, band) in bunud.iter().enumerate() {
-        let Ok(raqm) = u32::try_from(fahras) else { break };
+        let Ok(raqm) = u32::try_from(fahras) else {
+            break;
+        };
         let mawqi = qita_bi_ism(jadwal, ISM_TPAG).map(|qita| {
-            qita.izaha.saturating_add(4).saturating_add(tul_u64(fahras).saturating_mul(4))
+            qita.izaha
+                .saturating_add(4)
+                .saturating_add(tul_u64(fahras).saturating_mul(4))
         });
         if let Some(mawqi) = mawqi {
-            sijil.sajjil(MarjaIzaha { mawqi, hadaf: band.mawqi, naw: NawMarja::Band(raqm) });
+            sijil.sajjil(MarjaIzaha {
+                mawqi,
+                hadaf: band.mawqi,
+                naw: NawMarja::Band(raqm),
+            });
         }
     }
     if qita_bi_ism(jadwal, ISM_TPAG).is_some() {
@@ -2228,7 +2340,9 @@ fn ihsa_maraji(
 
     // TXTR: the entry pointer and, inside each entry, the verified blob pointer.
     for (fahras, safha) in safahat.iter().enumerate() {
-        let Ok(raqm) = u32::try_from(fahras) else { break };
+        let Ok(raqm) = u32::try_from(fahras) else {
+            break;
+        };
         if let Some(qita) = qita_bi_ism(jadwal, ISM_TXTR) {
             sijil.sajjil(MarjaIzaha {
                 mawqi: qita
@@ -2251,7 +2365,9 @@ fn ihsa_maraji(
 
     // FONT: the entry pointer, the two names, the TPAG pointer, the glyph array.
     for (fahras, khatt) in khutut.iter().enumerate() {
-        let Ok(raqm) = u32::try_from(fahras) else { break };
+        let Ok(raqm) = u32::try_from(fahras) else {
+            break;
+        };
         sijil.sajjil(MarjaIzaha {
             mawqi: khatt.mawqi_mu_ashir,
             hadaf: khatt.mawqi,
@@ -2269,11 +2385,17 @@ fn ihsa_maraji(
                 .mawqi_adad_ashkal
                 .saturating_add(4)
                 .saturating_add(u64::from(shakl).saturating_mul(4));
-            let Some(hadaf) = hajm_usize(mawqi).and_then(|ras| iqra_u32(bayt, ras)).map(u64::from)
+            let Some(hadaf) = hajm_usize(mawqi)
+                .and_then(|ras| iqra_u32(bayt, ras))
+                .map(u64::from)
             else {
                 continue;
             };
-            sijil.sajjil(MarjaIzaha { mawqi, hadaf, naw: NawMarja::ShaklKhatt(raqm, shakl) });
+            sijil.sajjil(MarjaIzaha {
+                mawqi,
+                hadaf,
+                naw: NawMarja::ShaklKhatt(raqm, shakl),
+            });
         }
     }
     if qita_bi_ism(jadwal, ISM_FONT).is_some() {
@@ -2290,12 +2412,7 @@ fn ihsa_maraji(
 /// `FUNC` are contiguous runs whose entry width changed with the generation, so
 /// each is tried against the strides this build knows and accepted only when the
 /// run verifies — see [`maraji_mutatabia`].
-fn ihsa_asmaa_qita(
-    bayt: &[u8],
-    jadwal: &[QitaHawiya],
-    hawd: &HawdNusus,
-    sijil: &mut JadwalMaraji,
-) {
+fn ihsa_asmaa_qita(bayt: &[u8], jadwal: &[QitaHawiya], hawd: &HawdNusus, sijil: &mut JadwalMaraji) {
     if let Some(qita) = qita_bi_ism(jadwal, ISM_CODE)
         && let Some(maraji) = maraji_masfufa(bayt, &qita, hawd)
     {
@@ -2362,13 +2479,19 @@ fn maraji_kutal(bayt: &[u8], qita: &QitaHawiya) -> Option<Vec<MarjaIzaha>> {
     }
     let mut maraji: Vec<MarjaIzaha> = Vec::with_capacity(usize::try_from(adad).ok()?);
     for fahras in 0..adad {
-        let mawqi =
-            qita.izaha.checked_add(4)?.checked_add(u64::from(fahras).checked_mul(4)?)?;
+        let mawqi = qita
+            .izaha
+            .checked_add(4)?
+            .checked_add(u64::from(fahras).checked_mul(4)?)?;
         let hadaf = u64::from(iqra_u32(bayt, hajm_usize(mawqi)?)?);
         if !qita.yahwi(hadaf) {
             return None;
         }
-        maraji.push(MarjaIzaha { mawqi, hadaf, naw: NawMarja::Sawt(fahras) });
+        maraji.push(MarjaIzaha {
+            mawqi,
+            hadaf,
+            naw: NawMarja::Sawt(fahras),
+        });
     }
     Some(maraji)
 }
@@ -2399,7 +2522,11 @@ fn maraji_masfufa(bayt: &[u8], qita: &QitaHawiya, hawd: &HawdNusus) -> Option<Ve
         }
         let hadaf = u64::from(iqra_u32(bayt, hajm_usize(madkhal)?)?);
         let nass = hawd.fahras_bi_izaha(hadaf)?;
-        maraji.push(MarjaIzaha { mawqi: madkhal, hadaf, naw: NawMarja::Nass(nass) });
+        maraji.push(MarjaIzaha {
+            mawqi: madkhal,
+            hadaf,
+            naw: NawMarja::Nass(nass),
+        });
     }
     Some(maraji)
 }
@@ -2538,7 +2665,9 @@ impl KhareetatIzaha {
     /// The total number of bytes inserted.
     #[must_use]
     pub fn majmu(&self) -> u64 {
-        self.nuqat.iter().fold(0_u64, |kull, (_, tul)| kull.saturating_add(*tul))
+        self.nuqat
+            .iter()
+            .fold(0_u64, |kull, (_, tul)| kull.saturating_add(*tul))
     }
 
     /// Where an original byte ends up in the output.
@@ -2692,12 +2821,14 @@ impl MuhawwilGameMaker {
             qeema: mawqi,
             hadd: tul,
         })?;
-        let nihaya = ras.checked_add(jadeed.len()).ok_or(KhataNusus::HawiyaTalifa {
-            sigha: SIGHA,
-            haql: "an edit extent",
-            qeema: mawqi,
-            hadd: tul,
-        })?;
+        let nihaya = ras
+            .checked_add(jadeed.len())
+            .ok_or(KhataNusus::HawiyaTalifa {
+                sigha: SIGHA,
+                haql: "an edit extent",
+                qeema: mawqi,
+                hadd: tul,
+            })?;
         let qadeem = self
             .hawiya
             .bayt
@@ -2709,7 +2840,12 @@ impl MuhawwilGameMaker {
                 hadd: tul,
             })?
             .to_vec();
-        self.tahrirat.push(TahreerBayt { mawqi, qadeem, jadeed, sabab });
+        self.tahrirat.push(TahreerBayt {
+            mawqi,
+            qadeem,
+            jadeed,
+            sabab,
+        });
         Ok(())
     }
 
@@ -2749,12 +2885,16 @@ impl MuhawwilGameMaker {
             });
         }
         let madkhal =
-            self.hawiya.hawd.madkhal(fahras).cloned().ok_or_else(|| KhataNusus::HawiyaTalifa {
-                sigha: SIGHA,
-                haql: "a pool index this container does not have",
-                qeema: u64::from(fahras),
-                hadd: tul_u64(self.hawiya.hawd.adad()),
-            })?;
+            self.hawiya
+                .hawd
+                .madkhal(fahras)
+                .cloned()
+                .ok_or_else(|| KhataNusus::HawiyaTalifa {
+                    sigha: SIGHA,
+                    haql: "a pool index this container does not have",
+                    qeema: u64::from(fahras),
+                    hadd: tul_u64(self.hawiya.hawd.adad()),
+                })?;
 
         let sijil = sijil_nass(nass);
         if tul_u64(sijil.len()) <= madkhal.hajm_sijil() {
@@ -2979,7 +3119,9 @@ impl MuhawwilGameMaker {
             .get(usize::try_from(fahras_khatt).unwrap_or(usize::MAX))
             .cloned()
             .ok_or_else(|| {
-                marfud(format!("this container has no font {fahras_khatt} to replace"))
+                marfud(format!(
+                    "this container has no font {fahras_khatt} to replace"
+                ))
             })?;
         let (ard_safha, irtifa_safha) = talab
             .lawha
@@ -2997,14 +3139,22 @@ impl MuhawwilGameMaker {
             });
         }
 
-        let band = self.hawiya.band_khatt(&khatt).ok_or_else(|| KhataNusus::KhattMarfud {
-            sabab: format!(
-                "font {fahras_khatt} ({}) points at {} for its texture region and no TPAG \
+        let band = self
+            .hawiya
+            .band_khatt(&khatt)
+            .ok_or_else(|| KhataNusus::KhattMarfud {
+                sabab: format!(
+                    "font {fahras_khatt} ({}) points at {} for its texture region and no TPAG \
                  item sits there, so there is nothing to repoint at the new page",
-                khatt.ism, khatt.band
-            ),
-        })?;
-        let mustatil = MustatilSafha { s: 0, a: 0, ard: ard_safha, irtifa: irtifa_safha };
+                    khatt.ism, khatt.band
+                ),
+            })?;
+        let mustatil = MustatilSafha {
+            s: 0,
+            a: 0,
+            ard: ard_safha,
+            irtifa: irtifa_safha,
+        };
         self.sajjil_tahreer_band(band, talab.safha_hawiya, mustatil)?;
 
         self.alhiq_madkhal_khatt(&khatt, &ashkal)?;
@@ -3128,7 +3278,13 @@ fn ibni_ashkal(
                 mawdi.safha, talab.safha_lawha
             )));
         }
-        ashkal.push(shakl_min_mawdi(miftah, harf, mawdi, talab.qiyasat, irtifa_safha)?);
+        ashkal.push(shakl_min_mawdi(
+            miftah,
+            harf,
+            mawdi,
+            talab.qiyasat,
+            irtifa_safha,
+        )?);
     }
 
     adkhil_azwaj(&mut ashkal, talab.azwaj);
@@ -3153,7 +3309,9 @@ fn shakl_min_mawdi(
     let marfud = |sabab: String| KhataNusus::JadwalAshkalMarfud { sabab };
     let fajwa = i32::from(qiyasat.suud).saturating_sub(i32::from(mawdi.izaha_a));
     let ala = i32::from(mawdi.a).checked_sub(fajwa).ok_or_else(|| {
-        marfud(format!("{miftah} has a cell top that does not fit a signed offset"))
+        marfud(format!(
+            "{miftah} has a cell top that does not fit a signed offset"
+        ))
     })?;
     if ala < 0 {
         return Err(marfud(format!(
@@ -3173,11 +3331,18 @@ fn shakl_min_mawdi(
     let taqaddum = sahih_min_ashri(mawdi.taqaddum)
         .and_then(|qeema| i16::try_from(qeema).ok())
         .ok_or_else(|| {
-            marfud(format!("{miftah} has an advance that does not fit a sixteen-bit field"))
+            marfud(format!(
+                "{miftah} has an advance that does not fit a sixteen-bit field"
+            ))
         })?;
     Ok(ShaklKhatt {
         harf,
-        mustatil: MustatilSafha { s: mawdi.s, a, ard: mawdi.ard, irtifa: qiyasat.irtifa },
+        mustatil: MustatilSafha {
+            s: mawdi.s,
+            a,
+            ard: mawdi.ard,
+            irtifa: qiyasat.irtifa,
+        },
         izaha: mawdi.izaha_s,
         taqaddum,
         azwaj: Vec::new(),
@@ -3193,9 +3358,10 @@ fn shakl_min_mawdi(
 /// one patch produce identical bytes whatever order the caller supplied.
 fn adkhil_azwaj(ashkal: &mut [ShaklKhatt], azwaj: &[(char, char, i16)]) {
     for (awwal, thani, tashih) in azwaj.iter().copied() {
-        let (Ok(min), Ok(ila)) =
-            (u16::try_from(u32::from(awwal)), u16::try_from(u32::from(thani)))
-        else {
+        let (Ok(min), Ok(ila)) = (
+            u16::try_from(u32::from(awwal)),
+            u16::try_from(u32::from(thani)),
+        ) else {
             continue;
         };
         if let Some(shakl) = ashkal.iter_mut().find(|shakl| shakl.harf == min)
@@ -3277,7 +3443,9 @@ impl MuhawwilGameMaker {
         // own glyph-count search relies on.
         let bidayat_masfufa = tul_u64(self.mulhaq_akhir.len());
         self.mulhaq_akhir.resize(
-            self.mulhaq_akhir.len().saturating_add(ashkal.len().saturating_mul(4)),
+            self.mulhaq_akhir
+                .len()
+                .saturating_add(ashkal.len().saturating_mul(4)),
             0,
         );
         let mut mawdi = tul_u64(self.mulhaq_akhir.len());
@@ -3345,7 +3513,10 @@ impl MuhawwilGameMaker {
             .copied()
             .ok_or_else(|| marfud("this container has no texture page to copy".to_owned()))?;
         let adad = tul_u64(self.hawiya.safahat.len());
-        let nihayat_masfufa = qita.izaha.saturating_add(4).saturating_add(adad.saturating_mul(4));
+        let nihayat_masfufa = qita
+            .izaha
+            .saturating_add(4)
+            .saturating_add(adad.saturating_mul(4));
         let nihayat_madakhil = self
             .hawiya
             .safahat
@@ -3366,9 +3537,12 @@ impl MuhawwilGameMaker {
             .get(bidaya..hadd)
             .ok_or_else(|| marfud("a texture entry running past this container".to_owned()))?
             .to_vec();
-        let izahat_mu_ashir = akhir.mawqi_mu_ashir.checked_sub(akhir.mawqi_madkhal).ok_or_else(
-            || marfud("a texture entry whose blob pointer sits before it".to_owned()),
-        )?;
+        let izahat_mu_ashir = akhir
+            .mawqi_mu_ashir
+            .checked_sub(akhir.mawqi_madkhal)
+            .ok_or_else(|| {
+                marfud("a texture entry whose blob pointer sits before it".to_owned())
+            })?;
 
         // A field declaring the source blob's length has to be updated with it.
         // Two candidates means guessing which, and a page whose declared length
@@ -3416,8 +3590,11 @@ impl MuhawwilGameMaker {
             let adad = tul_u64(self.safahat_mulhaqa.len());
             idrajat.push(IdrajBayt {
                 mawqi: khutat.nihayat_masfufa,
-                bayt: hashw_muhadhah(vec![0_u8; usize::try_from(adad.saturating_mul(4))
-                    .unwrap_or_default()]),
+                bayt: hashw_muhadhah(vec![
+                    0_u8;
+                    usize::try_from(adad.saturating_mul(4))
+                        .unwrap_or_default()
+                ]),
                 qita: ISM_TXTR,
                 naw: NawIdraj::MasfufatSafahat,
             });
@@ -3452,12 +3629,13 @@ impl MuhawwilGameMaker {
             let mut kutla: Vec<u8> = Vec::new();
             if matches!(self.mawdi_ilhaq, MawdiIlhaq::QitaJadida) {
                 kutla.extend_from_slice(&ISM_QITA_ILHAQ);
-                let tul = u32::try_from(hashw_muhadhah(self.mulhaq_akhir.clone()).len())
-                    .map_err(|_| KhataNusus::HajmMufrit {
+                let tul = u32::try_from(hashw_muhadhah(self.mulhaq_akhir.clone()).len()).map_err(
+                    |_| KhataNusus::HajmMufrit {
                         haql: "the appended region",
                         qeema: tul_u64(self.mulhaq_akhir.len()),
                         saqf: AQSA_HAJM_HAWIYA,
-                    })?;
+                    },
+                )?;
                 kutla.extend_from_slice(&tul.to_le_bytes());
             }
             kutla.extend_from_slice(&hashw_muhadhah(self.mulhaq_akhir.clone()));
@@ -3582,7 +3760,10 @@ impl MuhawwilGameMaker {
             .count();
         let kull = majhula.saturating_add(tul_u64(mutalliqa));
         if kull > 0 {
-            return Err(KhataNusus::DawraGhayrMutabaqa { sigha: SIGHA, adad: kull });
+            return Err(KhataNusus::DawraGhayrMutabaqa {
+                sigha: SIGHA,
+                adad: kull,
+            });
         }
         Ok(())
     }
@@ -3607,13 +3788,18 @@ impl MuhawwilGameMaker {
         let mut mukhraj: Vec<u8> = Vec::with_capacity(hajm_usize(hajm).unwrap_or(asl.len()));
         let mut mawqi = 0_usize;
         for idraj in murattaba {
-            let hadd = hajm_usize(idraj.mawqi).unwrap_or(asl.len()).min(asl.len()).max(mawqi);
-            let juz = asl.get(mawqi..hadd).ok_or_else(|| KhataNusus::HawiyaTalifa {
-                sigha: SIGHA,
-                haql: "an insertion point outside the container",
-                qeema: idraj.mawqi,
-                hadd: tul_u64(asl.len()),
-            })?;
+            let hadd = hajm_usize(idraj.mawqi)
+                .unwrap_or(asl.len())
+                .min(asl.len())
+                .max(mawqi);
+            let juz = asl
+                .get(mawqi..hadd)
+                .ok_or_else(|| KhataNusus::HawiyaTalifa {
+                    sigha: SIGHA,
+                    haql: "an insertion point outside the container",
+                    qeema: idraj.mawqi,
+                    hadd: tul_u64(asl.len()),
+                })?;
             mukhraj.extend_from_slice(juz);
             mukhraj.extend_from_slice(&idraj.bayt);
             mawqi = hadd;
@@ -3684,7 +3870,9 @@ fn mawadi_idrajat(idrajat: &[IdrajBayt]) -> BTreeMap<NawIdraj, u64> {
     let mut mawadi: BTreeMap<NawIdraj, u64> = BTreeMap::new();
     let mut zaid = 0_u64;
     for fahras in tartib {
-        let Some(idraj) = idrajat.get(fahras) else { continue };
+        let Some(idraj) = idrajat.get(fahras) else {
+            continue;
+        };
         let _ = mawadi.insert(idraj.naw, idraj.mawqi.saturating_add(zaid));
         zaid = zaid.saturating_add(tul_u64(idraj.bayt.len()));
     }
@@ -3704,8 +3892,10 @@ impl MuhawwilGameMaker {
         khareeta: &KhareetatIzaha,
     ) -> Result<(), KhataNusus> {
         let idrajat = self.idrajat()?;
-        let bidayat_hawd =
-            mawadi_idrajat(&idrajat).get(&NawIdraj::Hawd).copied().unwrap_or_default();
+        let bidayat_hawd = mawadi_idrajat(&idrajat)
+            .get(&NawIdraj::Hawd)
+            .copied()
+            .unwrap_or_default();
         for marja in self.hawiya.maraji.maraji() {
             if !marja.naw.maaruf() {
                 continue;
@@ -3725,11 +3915,7 @@ impl MuhawwilGameMaker {
 
     /// Wires the appended texture pages: the count, the new pointer slots, the
     /// new entries and their blob pointers.
-    fn asleh_txtr(
-        &self,
-        mukhraj: &mut [u8],
-        khareeta: &KhareetatIzaha,
-    ) -> Result<(), KhataNusus> {
+    fn asleh_txtr(&self, mukhraj: &mut [u8], khareeta: &KhareetatIzaha) -> Result<(), KhataNusus> {
         if self.safahat_mulhaqa.is_empty() {
             return Ok(());
         }
@@ -3770,7 +3956,11 @@ impl MuhawwilGameMaker {
                 bidayat_masfufa.saturating_add(raqm.saturating_mul(4)),
                 madkhal,
             )?;
-            uktub_marja(mukhraj, madkhal.saturating_add(khutat.izahat_mu_ashir), mawdi_kutla)?;
+            uktub_marja(
+                mukhraj,
+                madkhal.saturating_add(khutat.izahat_mu_ashir),
+                mawdi_kutla,
+            )?;
             if let Some(izahat_tul) = khutat.izahat_tul {
                 uktub_marja(
                     mukhraj,
@@ -3778,8 +3968,7 @@ impl MuhawwilGameMaker {
                     tul_u64(kutla.len()),
                 )?;
             }
-            mawdi_kutla = mawdi_kutla
-                .saturating_add(tul_u64(hashw_muhadhah(kutla.clone()).len()));
+            mawdi_kutla = mawdi_kutla.saturating_add(tul_u64(hashw_muhadhah(kutla.clone()).len()));
         }
         Ok(())
     }
@@ -3796,12 +3985,15 @@ impl MuhawwilGameMaker {
         let idrajat = self.idrajat()?;
         let mawadi = mawadi_idrajat(&idrajat);
         let bidaya =
-            mawadi.get(&NawIdraj::Ilhaq).copied().ok_or_else(|| KhataNusus::HawiyaTalifa {
-                sigha: SIGHA,
-                haql: "the appended region",
-                qeema: 0,
-                hadd: tul_u64(mukhraj.len()),
-            })?;
+            mawadi
+                .get(&NawIdraj::Ilhaq)
+                .copied()
+                .ok_or_else(|| KhataNusus::HawiyaTalifa {
+                    sigha: SIGHA,
+                    haql: "the appended region",
+                    qeema: 0,
+                    hadd: tul_u64(mukhraj.len()),
+                })?;
         let asas = match self.mawdi_ilhaq {
             MawdiIlhaq::TadhyeelAkhir => bidaya,
             MawdiIlhaq::QitaJadida => bidaya.saturating_add(HAJM_TARWISAT_QITA),
@@ -3812,17 +4004,22 @@ impl MuhawwilGameMaker {
             } else {
                 khareeta.izaha_jadida(marja.mawqi)
             };
-            uktub_marja(mukhraj, mawqi, asas.saturating_add(marja.dakhili)).map_err(
-                |khata| match khata {
+            uktub_marja(mukhraj, mawqi, asas.saturating_add(marja.dakhili)).map_err(|khata| {
+                match khata {
                     // The generic message says a reference site is out of range;
                     // this says which reference, which is what a person reading
                     // the refusal actually needs.
-                    KhataNusus::HawiyaTalifa { sigha, qeema, hadd, .. } => {
-                        KhataNusus::HawiyaTalifa { sigha, haql: marja.sabab, qeema, hadd }
-                    }
+                    KhataNusus::HawiyaTalifa {
+                        sigha, qeema, hadd, ..
+                    } => KhataNusus::HawiyaTalifa {
+                        sigha,
+                        haql: marja.sabab,
+                        qeema,
+                        hadd,
+                    },
                     akhar => akhar,
-                },
-            )?;
+                }
+            })?;
         }
         Ok(())
     }
@@ -3861,7 +4058,9 @@ impl MuhawwilGameMaker {
             let zaid = idrajat
                 .iter()
                 .filter(|idraj| idraj.qita == qita.ism)
-                .fold(0_u64, |kull, idraj| kull.saturating_add(tul_u64(idraj.bayt.len())));
+                .fold(0_u64, |kull, idraj| {
+                    kull.saturating_add(tul_u64(idraj.bayt.len()))
+                });
             if zaid == 0 {
                 continue;
             }
@@ -3920,7 +4119,10 @@ impl MuhawwilGameMaker {
             }
         }
         for qita in &self.hawiya.jadwal {
-            manatiq.push((qita.tarwisa.saturating_add(4), qita.tarwisa.saturating_add(8)));
+            manatiq.push((
+                qita.tarwisa.saturating_add(4),
+                qita.tarwisa.saturating_add(8),
+            ));
             if qita.ism == ISM_TXTR && !self.safahat_mulhaqa.is_empty() {
                 manatiq.push((qita.izaha, qita.izaha.saturating_add(4)));
             }
@@ -3987,14 +4189,16 @@ impl MuhawwilGameMaker {
         let mut mukhtalif: u64 = 0;
         let nuqat: Vec<u64> = hudud.into_iter().collect();
         for zawj in nuqat.windows(2) {
-            let (Some(bidaya), Some(nihaya)) = (zawj.first().copied(), zawj.get(1).copied())
-            else {
+            let (Some(bidaya), Some(nihaya)) = (zawj.first().copied(), zawj.get(1).copied()) else {
                 continue;
             };
             if nihaya <= bidaya {
                 continue;
             }
-            if manatiq.iter().any(|(min, ila)| *min <= bidaya && bidaya < *ila) {
+            if manatiq
+                .iter()
+                .any(|(min, ila)| *min <= bidaya && bidaya < *ila)
+            {
                 continue;
             }
             mukhtalif = mukhtalif.saturating_add(farq_qita(
@@ -4006,7 +4210,10 @@ impl MuhawwilGameMaker {
             ));
         }
         if mukhtalif > 0 {
-            return Err(KhataNusus::DawraGhayrMutabaqa { sigha: SIGHA, adad: mukhtalif });
+            return Err(KhataNusus::DawraGhayrMutabaqa {
+                sigha: SIGHA,
+                adad: mukhtalif,
+            });
         }
         Ok(())
     }
@@ -4028,7 +4235,13 @@ fn farq_qita(asl: &[u8], mukhraj: &[u8], bidaya: u64, nihaya: u64, jadeed: u64) 
     if qadeem == hali {
         return 0;
     }
-    tul_u64(qadeem.iter().zip(hali.iter()).filter(|(awwal, thani)| awwal != thani).count())
+    tul_u64(
+        qadeem
+            .iter()
+            .zip(hali.iter())
+            .filter(|(awwal, thani)| awwal != thani)
+            .count(),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -4076,12 +4289,14 @@ pub fn nass_manqul(
     let mut khanat = String::with_capacity(huruf.len());
     for harf in huruf {
         let miftah = MiftahKhana::min_harf(harf, hajm_rubi);
-        let khana = tawzee.khana(miftah).ok_or_else(|| KhataNusus::JadwalAshkalMarfud {
-            sabab: format!(
-                "the frozen slot assignment does not hold {miftah}, so this line was laid \
+        let khana = tawzee
+            .khana(miftah)
+            .ok_or_else(|| KhataNusus::JadwalAshkalMarfud {
+                sabab: format!(
+                    "the frozen slot assignment does not hold {miftah}, so this line was laid \
                  out after the glyph pool was frozen"
-            ),
-        })?;
+                ),
+            })?;
         khanat.push(khana);
     }
     Ok(khanat)
@@ -4234,10 +4449,11 @@ pub fn mawadi_muhadhaha_murashaha(hawiya: &HawiyatGameMaker) -> Vec<MawdiMuhadha
     let mut mawdi = bidaya;
     while mawdi.saturating_add(8) <= nihaya.min(bayt.len()) {
         let daf = bayt.get(mawdi..mawdi.saturating_add(4)).unwrap_or_default();
-        let nidaa = bayt.get(mawdi.saturating_add(4)..mawdi.saturating_add(8)).unwrap_or_default();
+        let nidaa = bayt
+            .get(mawdi.saturating_add(4)..mawdi.saturating_add(8))
+            .unwrap_or_default();
         let shakl_daf = daf.get(2) == Some(&NAW_SAHIH_QASEER) && daf.get(3) == Some(&AMALIYAT_DAF);
-        let shakl_nidaa = nidaa.get(3) == Some(&AMALIYAT_NIDAA)
-            && iqra_i16(nidaa, 0) == Some(1);
+        let shakl_nidaa = nidaa.get(3) == Some(&AMALIYAT_NIDAA) && iqra_i16(nidaa, 0) == Some(1);
         if shakl_daf
             && shakl_nidaa
             && let Some(qadeem) = iqra_i16(daf, 0).and_then(MuhadhahaGameMaker::min_qeema)
@@ -4278,7 +4494,11 @@ impl MuhawwilGameMaker {
                 qeema: mawdi.mawqi,
                 hadd: tul_u64(self.hawiya.bayt.len()),
             })?;
-            let hali = self.hawiya.bayt.get(ras..ras.saturating_add(4)).unwrap_or_default();
+            let hali = self
+                .hawiya
+                .bayt
+                .get(ras..ras.saturating_add(4))
+                .unwrap_or_default();
             let mutawaqqa = kalimat_daf(mawdi.qadeem);
             if hali != mutawaqqa.as_slice() {
                 return Err(KhataNusus::HawiyaTalifa {
@@ -4352,14 +4572,11 @@ impl WasfIstratijiya {
     /// Whatever the insertion planning reports — the descriptor states how many
     /// bytes the container grows, and that number is only knowable once the
     /// insertions are known.
-    pub fn min_muhawwil(
-        muhawwil: &MuhawwilGameMaker,
-        rutba: Rutba,
-    ) -> Result<Self, KhataNusus> {
+    pub fn min_muhawwil(muhawwil: &MuhawwilGameMaker, rutba: Rutba) -> Result<Self, KhataNusus> {
         let idrajat = muhawwil.idrajat()?;
-        let zaid = idrajat
-            .iter()
-            .fold(0_u64, |kull, idraj| kull.saturating_add(tul_u64(idraj.bayt.len())));
+        let zaid = idrajat.iter().fold(0_u64, |kull, idraj| {
+            kull.saturating_add(tul_u64(idraj.bayt.len()))
+        });
         Ok(Self {
             jeel: muhawwil.hawiya.jeel(),
             bytecode: muhawwil.hawiya.gen8().bytecode,
@@ -4426,11 +4643,18 @@ impl WasfIstratijiya {
             self.rutba as u8,
             self.rutba.ism()
         ));
-        let asmaa: Vec<&str> =
-            self.istratijiyat.iter().map(|istratijiya| istratijiya.ism()).collect();
+        let asmaa: Vec<&str> = self
+            .istratijiyat
+            .iter()
+            .map(|istratijiya| istratijiya.ism())
+            .collect();
         sutur.push(format!(
             "  rewriting: {}; appended region: {}",
-            if asmaa.is_empty() { "nothing changed".to_owned() } else { asmaa.join(", ") },
+            if asmaa.is_empty() {
+                "nothing changed".to_owned()
+            } else {
+                asmaa.join(", ")
+            },
             self.mawdi_ilhaq.ism()
         ));
         sutur.push(format!(
@@ -4482,8 +4706,15 @@ pub const MAKTABAT_TASHKEEL: [&str; 6] =
 /// GameMaker's most widely used text renderer and is named explicitly: it does
 /// its own glyph layout, and a game using it is a game where taking the font
 /// resource over changes nothing about how text is placed.
-pub const ASMAA_IMTIDAD_NASS: [&str; 7] =
-    ["harfbuzz", "fribidi", "scribble", "bidi", "shaper", "text_extension", "arabic"];
+pub const ASMAA_IMTIDAD_NASS: [&str; 7] = [
+    "harfbuzz",
+    "fribidi",
+    "scribble",
+    "bidi",
+    "shaper",
+    "text_extension",
+    "arabic",
+];
 
 /// How many bytes of the string pool the probe scans.
 ///
@@ -4592,11 +4823,15 @@ impl Mifhas for MifhasGameMaker {
         };
         let ism = masar.display().to_string();
 
-        let bayanat = fs::metadata(&masar)
-            .map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.clone(), sabab })?;
+        let bayanat = fs::metadata(&masar).map_err(|sabab| KhataNusus::KhataMalaf {
+            masar: masar.clone(),
+            sabab,
+        })?;
         let tul_malaf = bayanat.len();
-        let mut malaf = File::open(&masar)
-            .map_err(|sabab| KhataNusus::KhataMalaf { masar: masar.clone(), sabab })?;
+        let mut malaf = File::open(&masar).map_err(|sabab| KhataNusus::KhataMalaf {
+            masar: masar.clone(),
+            sabab,
+        })?;
 
         let Some(jadwal) = jadwal_qita_musalsal(&mut malaf, tul_malaf) else {
             adilla.push(Dalil::siyaq(
@@ -4609,7 +4844,10 @@ impl Mifhas for MifhasGameMaker {
         let asmaa: Vec<String> = jadwal.iter().map(QitaHawiya::ism_nass).collect();
         adilla.push(Dalil::siyaq(
             ism.clone(),
-            format!("a FORM container of {tul_malaf} bytes holding: {}", asmaa.join(", ")),
+            format!(
+                "a FORM container of {tul_malaf} bytes holding: {}",
+                asmaa.join(", ")
+            ),
         ));
 
         adilla_isdar(&mut malaf, tul_malaf, &jadwal, &ism, &mut adilla);
@@ -4639,7 +4877,7 @@ fn iqra_bi_izaha(malaf: &mut File, tul_malaf: u64, izaha: u64, tul: usize) -> Op
         match malaf.read(bayt.get_mut(mala..)?) {
             Ok(0) => break,
             Ok(adad) => mala = mala.checked_add(adad)?,
-            Err(khata) if khata.kind() == ErrorKind::Interrupted => {}
+            Err(khata) if khata.kind() == ErrorKind::Interrupted => {},
             Err(_) => return None,
         }
     }
@@ -4662,19 +4900,30 @@ fn jadwal_qita_musalsal(malaf: &mut File, tul_malaf: u64) -> Option<Vec<QitaHawi
     let mut jadwal: Vec<QitaHawiya> = Vec::new();
     let mut mawqi = HAJM_TARWISAT_QITA;
     while mawqi < nihaya && jadwal.len() < AQSA_QITA {
-        let Some(ras) = iqra_bi_izaha(malaf, tul_malaf, mawqi, 8) else { break };
+        let Some(ras) = iqra_bi_izaha(malaf, tul_malaf, mawqi, 8) else {
+            break;
+        };
         let (Some(ism), Some(tul)) = (iqra_ism(&ras, 0), iqra_u32(&ras, 4).map(u64::from)) else {
             break;
         };
         if !ism.iter().all(u8::is_ascii_graphic) {
             break;
         }
-        let Some(izaha) = mawqi.checked_add(HAJM_TARWISAT_QITA) else { break };
-        let Some(baad) = izaha.checked_add(tul) else { break };
+        let Some(izaha) = mawqi.checked_add(HAJM_TARWISAT_QITA) else {
+            break;
+        };
+        let Some(baad) = izaha.checked_add(tul) else {
+            break;
+        };
         if baad > nihaya {
             break;
         }
-        jadwal.push(QitaHawiya { ism, tarwisa: mawqi, izaha, tul });
+        jadwal.push(QitaHawiya {
+            ism,
+            tarwisa: mawqi,
+            izaha,
+            tul,
+        });
         mawqi = baad;
     }
     Some(jadwal)
@@ -4711,13 +4960,16 @@ fn adilla_isdar(
         return;
     };
     let Some(bytecode) = bayt.get(1).copied() else {
-        adilla.push(Dalil::siyaq(ism.to_owned(), "the GEN8 chunk is shorter than its version"));
+        adilla.push(Dalil::siyaq(
+            ism.to_owned(),
+            "the GEN8 chunk is shorter than its version",
+        ));
         return;
     };
-    let jeel = JeelHawiya::min_bytecode(bytecode)
-        .map_or_else(|_| "a generation this build does not read".to_owned(), |jeel| {
-            jeel.ism().to_owned()
-        });
+    let jeel = JeelHawiya::min_bytecode(bytecode).map_or_else(
+        |_| "a generation this build does not read".to_owned(),
+        |jeel| jeel.ism().to_owned(),
+    );
     let isdar = (44..=56)
         .step_by(4)
         .filter_map(|izaha| iqra_u32(&bayt, izaha))
@@ -4891,7 +5143,9 @@ fn adilla_maktabat(jidhr: &Path, masar: &Path, adilla: &mut Vec<Dalil>) {
             let ism = madkhal.file_name().to_string_lossy().to_ascii_lowercase();
             // `.so.N` is a versioned soname, which `Path::extension` reads as `N`.
             let maktaba = Path::new(&ism).extension().is_some_and(|lahiqa| {
-                ["dll", "so", "dylib"].iter().any(|naw| lahiqa.eq_ignore_ascii_case(naw))
+                ["dll", "so", "dylib"]
+                    .iter()
+                    .any(|naw| lahiqa.eq_ignore_ascii_case(naw))
             }) || ism.contains(".so.");
             if maktaba && MAKTABAT_TASHKEEL.iter().any(|ibra| ism.contains(ibra)) {
                 wujidat.push(ism);
@@ -4916,5 +5170,3 @@ fn adilla_maktabat(jidhr: &Path, masar: &Path, adilla: &mut Vec<Dalil>) {
         55,
     ));
 }
-
-

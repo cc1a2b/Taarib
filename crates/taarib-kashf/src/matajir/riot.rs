@@ -349,13 +349,12 @@ impl Matjar for MatjarRiot {
 
         let mut murashahat: Vec<MurashahMuntaj> = Vec::new();
         if mujallad.is_dir() {
-            let madakhil = std::fs::read_dir(&mujallad).map_err(|sabab| {
-                KhataKashf::TaadhurQiraatFahras {
+            let madakhil =
+                std::fs::read_dir(&mujallad).map_err(|sabab| KhataKashf::TaadhurQiraatFahras {
                     matjar: MUARRIF,
                     masar: mujallad.clone(),
                     sabab,
-                }
-            })?;
+                })?;
             for madkhal in madakhil.take(HADD_MUJALLADAT).flatten() {
                 match murashah_min_mujallad(&madkhal.path()) {
                     Ok(Some(murashah)) => murashahat.push(murashah),
@@ -422,7 +421,9 @@ impl Matjar for MatjarRiot {
             tanbih_ala_ghayr_mawsuf(sijill, &mawaqi, siyaq.nizam, &mut natija.tanbihat);
         }
 
-        natija.alaab.sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
+        natija
+            .alaab
+            .sort_by(|awwal, thani| awwal.ism.cmp(&thani.ism));
         natija.muddat = bidaya.elapsed();
         Ok(natija)
     }
@@ -519,9 +520,8 @@ fn murashah_min_mujallad(mujallad: &Path) -> Result<Option<MurashahMuntaj>, Tanb
         ));
     }
 
-    let nass = iqra_mahdud(&masar_idadat, HADD_HAJM_IDADAT).map_err(|sabab| {
-        TanbihFahs::jadeed(MUARRIF, masar_idadat.display().to_string(), sabab)
-    })?;
+    let nass = iqra_mahdud(&masar_idadat, HADD_HAJM_IDADAT)
+        .map_err(|sabab| TanbihFahs::jadeed(MUARRIF, masar_idadat.display().to_string(), sabab))?;
     let idadat = hallil_idadat(&nass);
 
     let Some(jidhr) = idadat
@@ -585,7 +585,11 @@ fn lahiqat_rafd(idadat: &IdadatMuntaj) -> String {
         .take(4)
         .map(|rafd| format!("line {}: {}", rafd.raqm, rafd.sabab))
         .collect();
-    format!("; the reader refused {} line(s) — {}", marfudat.len(), tafsil.join("; "))
+    format!(
+        "; the reader refused {} line(s) — {}",
+        marfudat.len(),
+        tafsil.join("; ")
+    )
 }
 
 /// The order patchlines are preferred in.
@@ -632,7 +636,9 @@ fn luba_min_murashah(
         ));
     }
 
-    let maruf = MUNTAJAT.iter().find(|muntaj| muntaj.silaa == murashah.silaa);
+    let maruf = MUNTAJAT
+        .iter()
+        .find(|muntaj| muntaj.silaa == murashah.silaa);
     let ism = murashah
         .unwan
         .clone()
@@ -773,7 +779,11 @@ fn sijill_tathbeet(masar: &Path) -> Option<SijillTathbeet> {
         if !miftah.starts_with("rc_") {
             continue;
         }
-        if let Some(nass) = qeema.as_str().map(str::trim).filter(|nass| !nass.is_empty()) {
+        if let Some(nass) = qeema
+            .as_str()
+            .map(str::trim)
+            .filter(|nass| !nass.is_empty())
+        {
             let masar = PathBuf::from(nass);
             if !sijill.mushghilat.contains(&masar) {
                 sijill.mushghilat.push(masar);
@@ -887,7 +897,9 @@ pub fn hallil_idadat(nass: &str) -> IdadatMuntaj {
         let satr = satr_khaam.trim_end_matches(['\r', '\n']);
 
         if satr.len() > HADD_TUL_SATR {
-            natija.marfudat.push(rafd(raqm, "longer than a settings line may be"));
+            natija
+                .marfudat
+                .push(rafd(raqm, "longer than a settings line may be"));
             continue;
         }
         if satr.trim().is_empty() {
@@ -899,7 +911,9 @@ pub fn hallil_idadat(nass: &str) -> IdadatMuntaj {
         // here rather than refusing every remaining line one at a time, so the
         // refusal list stays a list of distinct problems.
         if satr.starts_with("---") || satr.starts_with("...") {
-            natija.marfudat.push(rafd(raqm, "a document marker; nothing after it is read"));
+            natija
+                .marfudat
+                .push(rafd(raqm, "a document marker; nothing after it is read"));
             break;
         }
         if satr.starts_with('#') {
@@ -912,11 +926,15 @@ pub fn hallil_idadat(nass: &str) -> IdadatMuntaj {
             continue;
         }
         if satr.starts_with(' ') {
-            natija.marfudat.push(rafd(raqm, "indented, so it belongs to a nested block"));
+            natija
+                .marfudat
+                .push(rafd(raqm, "indented, so it belongs to a nested block"));
             continue;
         }
         if satr.starts_with("- ") || satr == "-" {
-            natija.marfudat.push(rafd(raqm, "a sequence item, not a scalar key"));
+            natija
+                .marfudat
+                .push(rafd(raqm, "a sequence item, not a scalar key"));
             continue;
         }
 
@@ -925,13 +943,16 @@ pub fn hallil_idadat(nass: &str) -> IdadatMuntaj {
             continue;
         };
         if !miftah_maqbul(miftah) {
-            natija.marfudat.push(rafd(raqm, "the key is not a plain scalar name"));
+            natija
+                .marfudat
+                .push(rafd(raqm, "the key is not a plain scalar name"));
             continue;
         }
         if baqi.trim().is_empty() {
-            natija
-                .marfudat
-                .push(rafd(raqm, "the key opens a nested block rather than naming a value"));
+            natija.marfudat.push(rafd(
+                raqm,
+                "the key opens a nested block rather than naming a value",
+            ));
             continue;
         }
         let qeema = match qeema_maqbula(baqi) {
@@ -942,7 +963,9 @@ pub fn hallil_idadat(nass: &str) -> IdadatMuntaj {
             },
         };
         if natija.qeem.contains_key(miftah) {
-            natija.marfudat.push(rafd(raqm, "a key the file already defined"));
+            natija
+                .marfudat
+                .push(rafd(raqm, "a key the file already defined"));
             continue;
         }
         let _ = natija.qeem.insert(miftah.to_owned(), qeema);
@@ -953,7 +976,10 @@ pub fn hallil_idadat(nass: &str) -> IdadatMuntaj {
 
 /// Builds one refusal.
 fn rafd(raqm: usize, sabab: &str) -> RafdSatr {
-    RafdSatr { raqm, sabab: sabab.to_owned() }
+    RafdSatr {
+        raqm,
+        sabab: sabab.to_owned(),
+    }
 }
 
 /// Whether a key is a plain scalar name this reader accepts.
@@ -1036,7 +1062,10 @@ fn qeema_maqbula(baqi: &str) -> Result<String, &'static str> {
                 return Err("an unterminated double-quoted value");
             };
             let mabni = dakhil.get(..nihaya).unwrap_or_default().to_owned();
-            let dhayl = dakhil.get(nihaya.saturating_add(1)..).unwrap_or_default().trim();
+            let dhayl = dakhil
+                .get(nihaya.saturating_add(1)..)
+                .unwrap_or_default()
+                .trim();
             if !dhayl.is_empty() && !dhayl.starts_with('#') {
                 return Err("trailing text after a quoted value");
             }
@@ -1116,7 +1145,11 @@ fn ism_min_mujallad(jidhr: &Path) -> Option<String> {
 fn muwahhad(masar: &Path, nizam: NizamTashghil) -> String {
     let nass = masar.to_string_lossy().replace('\\', "/");
     let nass = nass.trim_end_matches('/').to_owned();
-    if nizam.hassas_lil_ahruf() { nass } else { nass.to_lowercase() }
+    if nizam.hassas_lil_ahruf() {
+        nass
+    } else {
+        nass.to_lowercase()
+    }
 }
 
 /// Strips a byte order mark, which no JSON parser accepts and which a settings

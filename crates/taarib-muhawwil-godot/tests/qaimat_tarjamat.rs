@@ -54,7 +54,11 @@ const MARJA_RABI: &str = "res://taarib/ar.translation";
 fn mujallad_ikhtibar(ism: &str) -> PathBuf {
     let masar = std::env::temp_dir().join(format!("taarib-godot-qaima-{ism}"));
     let _ = std::fs::remove_dir_all(&masar);
-    assert!(std::fs::create_dir_all(&masar).is_ok(), "{} could not be created", masar.display());
+    assert!(
+        std::fs::create_dir_all(&masar).is_ok(),
+        "{} could not be created",
+        masar.display()
+    );
     masar
 }
 
@@ -114,7 +118,9 @@ fn thalith_qaima_ghayr_maqrua_la_yaktub_shayan() {
     let jidhr = mujallad_ikhtibar("thalith-lam-tuqra");
     let tawseel = thalith(
         &jidhr,
-        TarjamatLuba::LamTuqra { sabab: "the package is encrypted".to_owned() },
+        TarjamatLuba::LamTuqra {
+            sabab: "the package is encrypted".to_owned(),
+        },
     );
     assert!(tawseel.qaimat_tarjamat().is_none());
     assert!(
@@ -126,8 +132,14 @@ fn thalith_qaima_ghayr_maqrua_la_yaktub_shayan() {
         panic!("rung one cannot deliver without the key, so the ladder must refuse")
     };
     let sabab = khata.to_string();
-    assert!(sabab.contains("the package is encrypted"), "the caller's reason is lost: {sabab}");
-    assert!(sabab.contains("take away every language"), "the refusal must say why: {sabab}");
+    assert!(
+        sabab.contains("the package is encrypted"),
+        "the caller's reason is lost: {sabab}"
+    );
+    assert!(
+        sabab.contains("take away every language"),
+        "the refusal must say why: {sabab}"
+    );
     assert!(
         !tawseel.mawdi().mutlaq_masar().exists(),
         "a resource nothing names is a file nothing loads, and must not be written"
@@ -171,7 +183,9 @@ fn thalith_qaimat_alluba_tasbiq_alruqaa() {
     assert_eq!(qaima.first().map(String::as_str), LUBA.first().copied());
     assert_eq!(qaima.last().map(String::as_str), Some(MARJA_THALITH));
 
-    let Ok(natija) = tawseel.hayyi() else { panic!("the delivery installed nothing") };
+    let Ok(natija) = tawseel.hayyi() else {
+        panic!("the delivery installed nothing")
+    };
     let mulahaza = natija
         .thaqafa
         .rutab
@@ -179,7 +193,10 @@ fn thalith_qaimat_alluba_tasbiq_alruqaa() {
         .find(|rutba| rutba.rutba == RutbatThalith::Idadat)
         .map(|rutba| rutba.mulahaza.clone())
         .unwrap_or_default();
-    assert!(mulahaza.contains("game's own 2 entry/entries"), "{mulahaza}");
+    assert!(
+        mulahaza.contains("game's own 2 entry/entries"),
+        "{mulahaza}"
+    );
     let _ = std::fs::remove_dir_all(&jidhr);
 }
 
@@ -195,12 +212,16 @@ fn rabi_qaima_ghayr_maqrua_yatruk_almiftah_wa_yaktub_albaqi() {
     let jidhr = mujallad_ikhtibar("rabi-lam-tuqra");
     let khadim = rabi(
         &jidhr,
-        TarjamatLuba::LamTuqra { sabab: "project.binary did not parse".to_owned() },
+        TarjamatLuba::LamTuqra {
+            sabab: "project.binary did not parse".to_owned(),
+        },
     );
     let madakhil = khadim.madakhil();
     assert!(qaima_min(&madakhil, MIFTAH_RABI).is_none(), "{madakhil:?}");
     assert!(
-        madakhil.iter().any(|madkhal| madkhal.miftah == MIFTAH_ITTIJAH_JIDHR),
+        madakhil
+            .iter()
+            .any(|madkhal| madkhal.miftah == MIFTAH_ITTIJAH_JIDHR),
         "the other keys are still rung one's to write"
     );
 
@@ -219,7 +240,10 @@ fn rabi_qaima_ghayr_maqrua_yatruk_almiftah_wa_yaktub_albaqi() {
         .find(|rutba| rutba.rutba == Rutba::Idadat)
         .map(|rutba| rutba.mulahaza.clone())
         .unwrap_or_default();
-    assert!(mulahaza.contains("project.binary did not parse"), "{mulahaza}");
+    assert!(
+        mulahaza.contains("project.binary did not parse"),
+        "{mulahaza}"
+    );
     assert!(mulahaza.contains("left unwritten"), "{mulahaza}");
     let _ = std::fs::remove_dir_all(&jidhr);
 }
@@ -234,7 +258,9 @@ fn rabi_qaima_maqrua_tuktab_kamila() {
     assert_eq!(qaima.first().map(String::as_str), LUBA.first().copied());
     assert_eq!(qaima.last().map(String::as_str), Some(MARJA_RABI));
 
-    let Ok(natija) = khadim.hayyi(None) else { panic!("the offline run writes the override") };
+    let Ok(natija) = khadim.hayyi(None) else {
+        panic!("the offline run writes the override")
+    };
     let mulahaza = natija
         .thaqafa
         .rutab
@@ -255,7 +281,10 @@ fn rabi_qaima_maqrua_tuktab_kamila() {
 fn tajawuz_bila_madakhil_yarfud_wa_la_yaktub() {
     let jidhr = mujallad_ikhtibar("tajawuz-farigh");
     let tajawuz = MalafTajawuz::fi_mujallad(&jidhr);
-    assert!(tajawuz.aktub_bi(Lahja::Rabi, &[]).is_err(), "an empty write is not a write");
+    assert!(
+        tajawuz.aktub_bi(Lahja::Rabi, &[]).is_err(),
+        "an empty write is not a write"
+    );
     assert!(tajawuz.aktub(&[]).is_err());
     assert!(!tajawuz.masar().exists());
     let _ = std::fs::remove_dir_all(&jidhr);

@@ -147,19 +147,28 @@ impl RaddSatr {
     /// A machine translation of this game's own text, produced now.
     #[must_use]
     pub fn aaliya(arabi: impl Into<String>) -> Self {
-        Self { arabi: arabi.into(), masdar: MasdarTarjama::Aaliya }
+        Self {
+            arabi: arabi.into(),
+            masdar: MasdarTarjama::Aaliya,
+        }
     }
 
     /// A translation a human wrote, from a project for this game.
     #[must_use]
     pub fn basharia(arabi: impl Into<String>) -> Self {
-        Self { arabi: arabi.into(), masdar: MasdarTarjama::Mashru }
+        Self {
+            arabi: arabi.into(),
+            masdar: MasdarTarjama::Mashru,
+        }
     }
 
     /// A translation of somebody's screen reading, out of the shared memory.
     #[must_use]
     pub fn mulahaza(arabi: impl Into<String>) -> Self {
-        Self { arabi: arabi.into(), masdar: MasdarTarjama::Mulahaza }
+        Self {
+            arabi: arabi.into(),
+            masdar: MasdarTarjama::Mulahaza,
+        }
     }
 
     /// Whether there is anything to draw.
@@ -437,7 +446,10 @@ impl DhakiraTabaqa for DhakiraJalsaMushtaraka {
     fn sajjil(&self, qayd: &QaydTabaqa<'_>) -> Result<(), KhataTabaqa> {
         // Stored as an observation, because that is what it is: this session
         // read the source off a screen and had a machine translate the reading.
-        let radd = RaddSatr { arabi: qayd.arabi.to_owned(), masdar: MasdarTarjama::Mulahaza };
+        let radd = RaddSatr {
+            arabi: qayd.arabi.to_owned(),
+            masdar: MasdarTarjama::Mulahaza,
+        };
         self.0.lock().adhif(qayd.luba, qayd.asl, radd);
         Ok(())
     }

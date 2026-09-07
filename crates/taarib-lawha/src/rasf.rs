@@ -201,7 +201,12 @@ impl Safha {
     /// An empty page, zero-filled.
     fn jadeeda(ard: u16, irtifa: u16, namat: NamatSafha) -> Self {
         let hajm = usize::from(ard).saturating_mul(usize::from(irtifa));
-        Self { ard, irtifa, namat, bayt: vec![0u8; hajm] }
+        Self {
+            ard,
+            irtifa,
+            namat,
+            bayt: vec![0u8; hajm],
+        }
     }
 
     /// How many bytes this page costs.
@@ -349,7 +354,11 @@ impl Rasif {
     /// the answer that cannot shrink anything that does exist.
     #[must_use]
     pub fn irtifa_lazim(&self, safha: u16) -> u16 {
-        let mustaghal = self.asfal.get(usize::from(safha)).copied().unwrap_or(self.irtifa);
+        let mustaghal = self
+            .asfal
+            .get(usize::from(safha))
+            .copied()
+            .unwrap_or(self.irtifa);
         bud_lazim(mustaghal, self.irtifa, self.khiyarat.quwwat_ithnayn)
     }
 
@@ -437,9 +446,11 @@ impl Rasif {
         // Every open page is full. Open another, if the budget allows one.
         let adad = ila_raqm_safha(self.safahat.len());
         if adad >= self.khiyarat.aqsa_safahat {
-            return Err(
-                KhataLawha::SafahatNafidat { adad, hadd: self.khiyarat.aqsa_safahat }.into()
-            );
+            return Err(KhataLawha::SafahatNafidat {
+                adad,
+                hadd: self.khiyarat.aqsa_safahat,
+            }
+            .into());
         }
         let fahras = self.iftah_safha();
         self.hawil(fahras, matlub, ard, irtifa).ok_or_else(|| {
@@ -517,8 +528,10 @@ impl Rasif {
             num_columns: 1,
         };
         let qiyas: Size = size2(i32::from(self.ard), i32::from(self.irtifa));
-        self.safahat.push(Safha::jadeeda(self.ard, self.irtifa, self.namat));
-        self.muwazziun.push(AtlasAllocator::with_options(qiyas, &khiyarat));
+        self.safahat
+            .push(Safha::jadeeda(self.ard, self.irtifa, self.namat));
+        self.muwazziun
+            .push(AtlasAllocator::with_options(qiyas, &khiyarat));
         self.hayya.push(FxHashMap::default());
         self.asfal.push(0);
         self.safahat.len().saturating_sub(1)
@@ -656,7 +669,10 @@ impl Rasif {
     /// Total bytes the pages occupy.
     #[must_use]
     pub fn bayt(&self) -> u64 {
-        self.safahat.iter().map(|safha| u64::try_from(safha.bayt.len()).unwrap_or(0)).sum()
+        self.safahat
+            .iter()
+            .map(|safha| u64::try_from(safha.bayt.len()).unwrap_or(0))
+            .sum()
     }
 
     /// The fraction of allocated area that glyph pixels actually cover.
@@ -815,7 +831,10 @@ fn imsah_mustatil(safha: &mut Safha, s: u16, a: u16, ard: u16, irtifa: u16) {
     let s0 = usize::from(s);
     let ard_h = usize::from(ard);
     for satr in 0..usize::from(irtifa) {
-        let bidaya = usize::from(a).saturating_add(satr).saturating_mul(khatwa).saturating_add(s0);
+        let bidaya = usize::from(a)
+            .saturating_add(satr)
+            .saturating_mul(khatwa)
+            .saturating_add(s0);
         let nihaya = bidaya.saturating_add(ard_h);
         if let Some(makan) = safha.bayt.get_mut(bidaya..nihaya) {
             makan.fill(0);

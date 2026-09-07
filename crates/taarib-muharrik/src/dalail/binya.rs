@@ -178,8 +178,10 @@ impl Fahis for FahisBinya {
     /// the shapes that did match are still reported.
     fn ifhas(&self, siyaq: &SiyaqFahs<'_>) -> Natija<HasilatFahs> {
         let mashhad = imsah(siyaq.jidhr)?;
-        let mut hasad =
-            Hasad { tanfidhi_maruf: siyaq.tanfidhi.is_some(), ..Hasad::default() };
+        let mut hasad = Hasad {
+            tanfidhi_maruf: siyaq.tanfidhi.is_some(),
+            ..Hasad::default()
+        };
 
         if mashhad.mabtur {
             let khata = KhataMuharrik::TajawuzHadd {
@@ -308,7 +310,9 @@ impl Mashhad {
 
     /// The first file anywhere the walk reached whose lowercase name is `ism`.
     fn bism_ayn(&self, ism: &str) -> Option<&Madkhal> {
-        self.madakhil.iter().find(|madkhal| !madkhal.mujallad && madkhal.ism == ism)
+        self.madakhil
+            .iter()
+            .find(|madkhal| !madkhal.mujallad && madkhal.ism == ism)
     }
 
     /// The first file anywhere matching any of `asmaa`.
@@ -356,9 +360,14 @@ impl Mashhad {
 fn imsah(jidhr: &Path) -> Natija<Mashhad> {
     let jidhr_qaima = std::fs::read_dir(jidhr).map_err(|sabab| {
         if sabab.kind() == std::io::ErrorKind::NotFound {
-            KhataMuharrik::JidhrMafqud { jidhr: jidhr.to_path_buf() }
+            KhataMuharrik::JidhrMafqud {
+                jidhr: jidhr.to_path_buf(),
+            }
         } else {
-            KhataMuharrik::TaadhurQiraatJidhr { jidhr: jidhr.to_path_buf(), sabab }
+            KhataMuharrik::TaadhurQiraatJidhr {
+                jidhr: jidhr.to_path_buf(),
+                sabab,
+            }
         }
     })?;
 
@@ -418,16 +427,28 @@ fn adrij(
             // A marker directory buys its own subtree one level, never more
             // than `AQSA_UMQ_ZAID` past the ceiling in total.
             let hadd_ibn = if mujallad_ameeq(&ism) {
-                hadd.max(umq.saturating_add(1)).min(AQSA_UMQ.saturating_add(AQSA_UMQ_ZAID))
+                hadd.max(umq.saturating_add(1))
+                    .min(AQSA_UMQ.saturating_add(AQSA_UMQ_ZAID))
             } else {
                 hadd
             };
             if umq < hadd_ibn {
-                saff.push_back((masar.clone(), nisbi.clone(), umq.saturating_add(1), hadd_ibn));
+                saff.push_back((
+                    masar.clone(),
+                    nisbi.clone(),
+                    umq.saturating_add(1),
+                    hadd_ibn,
+                ));
             }
         }
 
-        mashhad.madakhil.push(Madkhal { nisbi, ism, masar, mujallad, umq });
+        mashhad.madakhil.push(Madkhal {
+            nisbi,
+            ism,
+            masar,
+            mujallad,
+            umq,
+        });
     }
 }
 
@@ -469,7 +490,8 @@ struct Hasad {
 impl Hasad {
     /// Records an observation that names no engine.
     fn sajjil(&mut self, wasf: impl Into<String>, mawqi: Option<String>, wazn: u8) {
-        self.hasila.sajjil(NawDaleel::BinyatMujallad, wasf, mawqi, wazn);
+        self.hasila
+            .sajjil(NawDaleel::BinyatMujallad, wasf, mawqi, wazn);
     }
 
     /// Records an observation and the engine family it points at.
@@ -608,12 +630,19 @@ const WAZN_MUSHAGHGHIL_UNITY: u8 = 90;
 const WAZN_JIDHR_UNITY: u8 = 90;
 
 /// The player runtime, under every name the three platforms give it.
-const ASMAA_MUSHAGHGHIL_UNITY: &[&str] =
-    &["unityplayer.dll", "unityplayer.so", "libunityplayer.so", "unityplayer.dylib"];
+const ASMAA_MUSHAGHGHIL_UNITY: &[&str] = &[
+    "unityplayer.dll",
+    "unityplayer.so",
+    "libunityplayer.so",
+    "unityplayer.dylib",
+];
 
 /// The IL2CPP runtime, under every name the three platforms give it.
-const ASMAA_IL2CPP: &[&str] =
-    &["gameassembly.dll", "libgameassembly.so", "gameassembly.dylib"];
+const ASMAA_IL2CPP: &[&str] = &[
+    "gameassembly.dll",
+    "libgameassembly.so",
+    "gameassembly.dylib",
+];
 
 /// Managed assemblies whose presence names a text system Taarib can take over.
 ///
@@ -656,8 +685,9 @@ fn unity(siyaq: &SiyaqFahs<'_>, mashhad: &Mashhad, hasad: &mut Hasad) {
         }
         mujalladat.push((madkhal.nisbi.clone(), madkhal.masar.clone()));
 
-        let qarin =
-            mashhad.kul().find(|akhar| akhar.umq == madkhal.umq && tanfidhi_bism(akhar, jidhr_ism));
+        let qarin = mashhad
+            .kul()
+            .find(|akhar| akhar.umq == madkhal.umq && tanfidhi_bism(akhar, jidhr_ism));
         match qarin {
             Some(tanfidhi) => {
                 hasad.aila(
@@ -710,22 +740,34 @@ fn unity(siyaq: &SiyaqFahs<'_>, mashhad: &Mashhad, hasad: &mut Hasad) {
 
     // 3 — the macOS bundle carries the same binding under a different
     //     spelling: `Contents/Resources/Data` beside `Contents/MacOS/<name>`.
-    for madkhal in mashhad.kul().filter(|madkhal| madkhal.mujallad && madkhal.ism == "data") {
+    for madkhal in mashhad
+        .kul()
+        .filter(|madkhal| madkhal.mujallad && madkhal.ism == "data")
+    {
         if !madkhal.fi("resources") {
             continue;
         }
         mujalladat.push((madkhal.nisbi.clone(), madkhal.masar.clone()));
-        let hazma = madkhal.nisbi.split('/').next().unwrap_or_default().to_ascii_lowercase();
+        let hazma = madkhal
+            .nisbi
+            .split('/')
+            .next()
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         let jidhr_ism = hazma.strip_suffix(".app").unwrap_or(&hazma).to_owned();
         hasad.aila(
             AilatMuharrik::Unity,
             None,
-            format!("Unity: the macOS bundle {} holds the player's data directory", madkhal.nisbi),
+            format!(
+                "Unity: the macOS bundle {} holds the player's data directory",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_RIBAT_UNITY,
         );
-        if let Some(tanfidhi) =
-            mashhad.kul().find(|akhar| akhar.fi("macos") && tanfidhi_bism(akhar, &jidhr_ism))
+        if let Some(tanfidhi) = mashhad
+            .kul()
+            .find(|akhar| akhar.fi("macos") && tanfidhi_bism(akhar, &jidhr_ism))
         {
             hasad.tanfidhi(&tanfidhi.masar);
         }
@@ -842,7 +884,10 @@ fn unity_managed(mashhad: &Mashhad, hasad: &mut Hasad) {
             if madkhal.ism == *ism {
                 hasad.itar(*itar);
                 hasad.sajjil(
-                    format!("Unity: {} is present, so {} is reachable", madkhal.nisbi, ism),
+                    format!(
+                        "Unity: {} is present, so {} is reachable",
+                        madkhal.nisbi, ism
+                    ),
                     Some(madkhal.nisbi.clone()),
                     WAZN_MANAGED,
                 );
@@ -928,7 +973,10 @@ fn unreal(mashhad: &Mashhad, hasad: &mut Hasad) {
                 hasad.aila(
                     AilatMuharrik::Unreal,
                     Some(KhalfiyaBarmajiya::UnrealNative),
-                    format!("Unreal: {} is where a build mounts its content", madkhal.nisbi),
+                    format!(
+                        "Unreal: {} is where a build mounts its content",
+                        madkhal.nisbi
+                    ),
                     Some(madkhal.nisbi.clone()),
                     WAZN_PAKS_FARIGH,
                 );
@@ -1028,8 +1076,9 @@ fn godot(mashhad: &Mashhad, hasad: &mut Hasad) {
         let Some(jidhr_ism) = madkhal.ism.strip_suffix(".pck") else {
             continue;
         };
-        let qarin =
-            mashhad.kul().find(|akhar| akhar.umq == madkhal.umq && tanfidhi_bism(akhar, jidhr_ism));
+        let qarin = mashhad
+            .kul()
+            .find(|akhar| akhar.umq == madkhal.umq && tanfidhi_bism(akhar, jidhr_ism));
         match qarin {
             Some(tanfidhi) => {
                 hasad.aila(
@@ -1075,7 +1124,10 @@ fn godot(mashhad: &Mashhad, hasad: &mut Hasad) {
         let Some(jidhr_ism) = madkhal.ism.strip_suffix(".console.exe") else {
             continue;
         };
-        if mashhad.kul().any(|akhar| akhar.umq == madkhal.umq && tanfidhi_bism(akhar, jidhr_ism)) {
+        if mashhad
+            .kul()
+            .any(|akhar| akhar.umq == madkhal.umq && tanfidhi_bism(akhar, jidhr_ism))
+        {
             hasad.aila(
                 AilatMuharrik::Godot,
                 None,
@@ -1153,7 +1205,10 @@ fn rpg_maker(mashhad: &Mashhad, hasad: &mut Hasad) {
         hasad.aila(
             AilatMuharrik::RpgMakerMv,
             Some(KhalfiyaBarmajiya::JavaScript),
-            format!("RPG Maker MV: {} is the runtime core the editor exports", madkhal.nisbi),
+            format!(
+                "RPG Maker MV: {} is the runtime core the editor exports",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_RPG_QATI,
         );
@@ -1164,7 +1219,10 @@ fn rpg_maker(mashhad: &Mashhad, hasad: &mut Hasad) {
         hasad.aila(
             AilatMuharrik::RpgMakerMz,
             Some(KhalfiyaBarmajiya::JavaScript),
-            format!("RPG Maker MZ: {} is the runtime core the editor exports", madkhal.nisbi),
+            format!(
+                "RPG Maker MZ: {} is the runtime core the editor exports",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_RPG_QATI,
         );
@@ -1178,12 +1236,18 @@ fn rpg_maker(mashhad: &Mashhad, hasad: &mut Hasad) {
     // With neither core file present it is still an RPG Maker database, and it
     // is reported as MV, the generation that ships the layout it is in.
     if let Some(madkhal) = mashhad.fi("data", "system.json") {
-        let aila =
-            if mz.is_some() { AilatMuharrik::RpgMakerMz } else { AilatMuharrik::RpgMakerMv };
+        let aila = if mz.is_some() {
+            AilatMuharrik::RpgMakerMz
+        } else {
+            AilatMuharrik::RpgMakerMv
+        };
         hasad.aila(
             aila,
             Some(KhalfiyaBarmajiya::JavaScript),
-            format!("RPG Maker: {} is the project's own database file", madkhal.nisbi),
+            format!(
+                "RPG Maker: {} is the project's own database file",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_BAYANAT_RPG,
         );
@@ -1191,7 +1255,10 @@ fn rpg_maker(mashhad: &Mashhad, hasad: &mut Hasad) {
 
     if let Some(madkhal) = mashhad.mujallad_fi("js", "plugins") {
         hasad.sajjil(
-            format!("RPG Maker: {} holds the project's plugin scripts", madkhal.nisbi),
+            format!(
+                "RPG Maker: {} holds the project's plugin scripts",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_IDAFAT_RPG,
         );
@@ -1212,7 +1279,10 @@ fn rpg_maker(mashhad: &Mashhad, hasad: &mut Hasad) {
         hasad.aila(
             AilatMuharrik::RpgMakerVxAce,
             Some(KhalfiyaBarmajiya::Ruby),
-            format!("RPG Maker VX Ace: {} is the RGSS3 interpreter", madkhal.nisbi),
+            format!(
+                "RPG Maker VX Ace: {} is the RGSS3 interpreter",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_RGSS,
         );
@@ -1254,12 +1324,19 @@ fn renpy(mashhad: &Mashhad, hasad: &mut Hasad) {
         hasad.aila(
             AilatMuharrik::Renpy,
             Some(KhalfiyaBarmajiya::Python),
-            format!("Ren'Py: {} is the engine package the game imports", madkhal.nisbi),
+            format!(
+                "Ren'Py: {} is the engine package the game imports",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_RENPY_QATI,
         );
         hasad.itar(ItarNusus::NassRenpy);
-    } else if let Some(madkhal) = mashhad.madakhil.iter().find(|m| m.mujallad && m.ism == "renpy") {
+    } else if let Some(madkhal) = mashhad
+        .madakhil
+        .iter()
+        .find(|m| m.mujallad && m.ism == "renpy")
+    {
         hasad.aila(
             AilatMuharrik::Renpy,
             Some(KhalfiyaBarmajiya::Python),
@@ -1270,7 +1347,10 @@ fn renpy(mashhad: &Mashhad, hasad: &mut Hasad) {
         hasad.itar(ItarNusus::NassRenpy);
     }
 
-    for madkhal in mashhad.kul().filter(|madkhal| !madkhal.mujallad && madkhal.fi("game")) {
+    for madkhal in mashhad
+        .kul()
+        .filter(|madkhal| !madkhal.mujallad && madkhal.fi("game"))
+    {
         if imtidad(&madkhal.ism, "rpa") {
             hasad.aila(
                 AilatMuharrik::Renpy,
@@ -1311,7 +1391,10 @@ fn renpy(mashhad: &Mashhad, hasad: &mut Hasad) {
         hasad.aila(
             AilatMuharrik::Renpy,
             Some(KhalfiyaBarmajiya::Python),
-            format!("Ren'Py: {} is the bundled interpreter for one target", madkhal.nisbi),
+            format!(
+                "Ren'Py: {} is the bundled interpreter for one target",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_LIB_RENPY,
         );
@@ -1333,8 +1416,11 @@ const WAZN_GAMEMAKER_IOS: u8 = 88;
 const WAZN_AUDIOGROUP: u8 = 70;
 
 /// The FORM container, under each name a GameMaker export gives it.
-const ASMAA_GAMEMAKER: &[(&str, u8)] =
-    &[("data.win", WAZN_GAMEMAKER), ("game.unx", WAZN_GAMEMAKER), ("game.ios", WAZN_GAMEMAKER_IOS)];
+const ASMAA_GAMEMAKER: &[(&str, u8)] = &[
+    ("data.win", WAZN_GAMEMAKER),
+    ("game.unx", WAZN_GAMEMAKER),
+    ("game.ios", WAZN_GAMEMAKER_IOS),
+];
 
 /// Matches the GameMaker shapes.
 fn game_maker(mashhad: &Mashhad, hasad: &mut Hasad) {
@@ -1434,7 +1520,10 @@ fn chromium(mashhad: &Mashhad, hasad: &mut Hasad) {
         hasad.aila(
             AilatMuharrik::Electron,
             Some(KhalfiyaBarmajiya::JavaScript),
-            format!("Electron: {} is the application archive the runtime mounts", madkhal.nisbi),
+            format!(
+                "Electron: {} is the application archive the runtime mounts",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_ASAR,
         );
@@ -1443,7 +1532,10 @@ fn chromium(mashhad: &Mashhad, hasad: &mut Hasad) {
         hasad.aila(
             AilatMuharrik::Electron,
             Some(KhalfiyaBarmajiya::JavaScript),
-            format!("Electron: {} is an unpacked application directory", madkhal.nisbi),
+            format!(
+                "Electron: {} is an unpacked application directory",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_ASAR_MAFTUH,
         );
@@ -1489,7 +1581,10 @@ fn chromium(mashhad: &Mashhad, hasad: &mut Hasad) {
         hasad.aila(
             AilatMuharrik::Electron,
             Some(KhalfiyaBarmajiya::JavaScript),
-            format!("Chromium: {} ships with every Chromium embedder", madkhal.nisbi),
+            format!(
+                "Chromium: {} ships with every Chromium embedder",
+                madkhal.nisbi
+            ),
             Some(madkhal.nisbi.clone()),
             WAZN_RUKHSA_CHROMIUM,
         );
@@ -1519,8 +1614,7 @@ fn chromium(mashhad: &Mashhad, hasad: &mut Hasad) {
     // is the manifest an NW.js or Electron runtime opens at startup, and the
     // fields inside it that name the runtime are the metadata source's to read.
     if let Some(madkhal) = mashhad.bism("package.json")
-        && (mashhad.mujallad("www").is_some()
-            || mashhad.mujallad_fi("resources", "app").is_some())
+        && (mashhad.mujallad("www").is_some() || mashhad.mujallad_fi("resources", "app").is_some())
     {
         wujid = true;
         hasad.aila(
@@ -1600,7 +1694,10 @@ fn rusum(mashhad: &Mashhad, hasad: &mut Hasad) {
         if let Some(madkhal) = mashhad.bism_ayn(ism) {
             hasad.hasila.daa_rusum(WajihaRusum::Vulkan);
             hasad.sajjil(
-                format!("{} is a Vulkan loader shipped inside the game", madkhal.nisbi),
+                format!(
+                    "{} is a Vulkan loader shipped inside the game",
+                    madkhal.nisbi
+                ),
                 Some(madkhal.nisbi.clone()),
                 WAZN_VULKAN_MUJAWIR,
             );
