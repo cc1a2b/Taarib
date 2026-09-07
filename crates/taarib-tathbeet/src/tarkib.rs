@@ -264,6 +264,21 @@ impl TahmilMusbaq {
             Self::DyldInsert => format!("loaded through {ISM_TAHMIL_MAC}"),
         }
     }
+
+    /// The same line in Arabic.
+    #[must_use]
+    pub fn wasf_arabi(&self) -> String {
+        match self {
+            Self::WakeelWindows { wahda } => {
+                format!("يُحمَّل وكيلًا باسم {wahda} بجانب الملف التنفيذي")
+            }
+            Self::TajawuzWine { wahda } => {
+                format!("يُحمَّل بتجاوز واين للوحدة {wahda} إلى الأصلية")
+            }
+            Self::LdPreload => format!("يُحمَّل عبر {ISM_TAHMIL_LINUX}"),
+            Self::DyldInsert => format!("يُحمَّل عبر {ISM_TAHMIL_MAC}"),
+        }
+    }
 }
 
 /// How a component's files are spread over the destinations.
@@ -373,6 +388,15 @@ pub struct MukawwinItar {
     /// A one-line description for the install report.
     pub wasf: String,
 
+    /// The same description in Arabic.
+    ///
+    /// A field rather than a rendering of [`Self::ism`], for the reason
+    /// [`SababLaHaja`] and [`TalabItlaq`] carry both languages: this sentence
+    /// reaches a confirmation screen whose first language is Arabic, and a
+    /// screen that had to write its own Arabic for a sentence the installer
+    /// already owns is a second copy of the installer's judgement.
+    pub wasf_arabi: String,
+
     /// How the component's files are spread over the destinations.
     pub tawzi: TawziMukawwin,
 
@@ -422,6 +446,12 @@ impl MukawwinItar {
                 khalfiya.wasf(),
                 mimariya.mujallad()
             ),
+            wasf_arabi: format!(
+                "إطار BepInEx ليونيتي {} ({}، {})",
+                jeel.wasf(),
+                khalfiya.wasf(),
+                mimariya.mujallad()
+            ),
             tawzi: TawziMukawwin::Wahid,
             tahmil,
             ism_muhammil,
@@ -440,6 +470,11 @@ impl MukawwinItar {
             wasf: format!(
                 "the Taarib loader and injected module ({}, {})",
                 ism_hadaf(hadaf),
+                mimariya.mujallad()
+            ),
+            wasf_arabi: format!(
+                "مُحمِّل تعريب والوحدة التي يحقنها ({}، {})",
+                ism_hadaf_arabi(hadaf),
                 mimariya.mujallad()
             ),
             tawzi: TawziMukawwin::Munfasil,
@@ -519,14 +554,23 @@ pub fn hajat_itar(
             HajatItar::LaHaja(SababLaHaja::DakhilAlRuqaa)
         }
 
-        // Capcom's BIO4 has no plugin system, no scripting backend and no
-        // third-party framework anywhere — nobody publishes a loader for one
-        // 2005 engine — so the module that gets inside is Taarib's own, exactly
-        // as for a game whose engine was never identified. Which slot that
-        // takes is the question re4_tweaks makes real: `version.dll` here, and
-        // `wakeel_qaim` refuses rather than fights for it if another mod already
-        // holds it.
-        AilatMuharrik::Bio4 | AilatMuharrik::Majhul => {
+        // The proprietary native engines, and the game whose engine was never
+        // identified, take the same answer for the same reason: no plugin
+        // system, no scripting backend a translation can be loaded through, and
+        // no third-party framework anywhere — nobody publishes a loader for
+        // Capcom's 2005 BIO4, for Dantelion2 or for RAGE — so the module that
+        // gets inside is Taarib's own. Which slot that takes is the question
+        // re4_tweaks makes real: `version.dll` here, and the plan now says so
+        // before the button while `wakeel_qaim` still refuses rather than
+        // fights for it if another mod already holds it.
+        AilatMuharrik::Bio4
+        | AilatMuharrik::Frostbite
+        | AilatMuharrik::BlackSpace
+        | AilatMuharrik::Alchemy
+        | AilatMuharrik::Dantelion
+        | AilatMuharrik::Rage
+        | AilatMuharrik::Snowdrop
+        | AilatMuharrik::Majhul => {
             HajatItar::Matlub(Box::new(MukawwinItar::mudkhal(hadaf, mimariya, fi_beea)))
         }
     }
@@ -545,6 +589,16 @@ const fn ism_hadaf(nizam: NizamTashghil) -> &'static str {
         NizamTashghil::Windows => "windows",
         NizamTashghil::Linux => "linux",
         NizamTashghil::Mac => "mac",
+    }
+}
+
+/// The same target, named the way an Arabic report names it.
+#[must_use]
+const fn ism_hadaf_arabi(nizam: NizamTashghil) -> &'static str {
+    match nizam {
+        NizamTashghil::Windows => "ويندوز",
+        NizamTashghil::Linux => "لينكس",
+        NizamTashghil::Mac => "ماك",
     }
 }
 
@@ -1377,8 +1431,204 @@ fn masah_huqn(mujallad: &Path) -> NatijatTathbeet<Vec<WakeelQaim>> {
     wukala::masah(mujallad).map_err(|sabab| min_khata_io(mujallad, AMAL_MASAH, sabab))
 }
 
-/// Refuses when the module name Taarib's own loader is published as is already
-/// held by a file Taarib did not put there.
+/// Who holds the loader slot a framework needs.
+///
+/// Three answers and not two, because Taarib's own loader in Taarib's own slot
+/// is neither a free slot nor a collision — see [`Self::Taarib`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HalatSlot {
+    /// Nothing is there. The normal answer, and the only one that deploys.
+    Mutah,
+
+    /// Taarib's own loader is already there: a reinstall, not a collision.
+    ///
+    /// **This is the reading `taarib_tabaqa::istitlaa`'s `slot_mutah` has
+    /// always had, and it is now this crate's too.** The two used to disagree
+    /// about exactly this case: the overlay's survey reported the slot
+    /// available, while the installer refused the game. The overlay's reading
+    /// won, on the argument the refusal itself makes — it exists so that a mod
+    /// Taarib did not put there is never silently erased, and a module proved
+    /// to be Taarib's own is not that mod. It also has no remedy to offer: the
+    /// message would name Taarib as the obstacle and
+    /// [`wukala::AilatWakeel::tasalsul`] is [`None`] for it, so there is not
+    /// even a door to point at.
+    ///
+    /// Proof is required, not assumed. The occupant is recognised from the
+    /// marks inside the module, so an unreadable or unmarked file in the slot
+    /// is [`Self::Mashghul`] and still refuses.
+    Taarib {
+        /// The occupying file's size in bytes.
+        hajm: u64,
+    },
+
+    /// Somebody else's module is there, and the deployment will refuse.
+    Mashghul {
+        /// Which product, with the evidence that named it — or an honest
+        /// "unidentified proxy" when nothing did.
+        huwiya: wukala::HuwiyatWakeel,
+        /// The occupying file's size in bytes.
+        hajm: u64,
+    },
+}
+
+/// The loader slot one plan's framework will take, and who holds it now.
+///
+/// Carried by [`KhuttatTarkib`] so that a plan can state the refusal *before*
+/// the install is agreed to. It states it; it does not make it — the refusal is
+/// still [`wakeel_qaim`]'s, on the write path, over a directory re-read at the
+/// moment of writing. Both go through [`hal_slot`], which is the only place the
+/// question is answered, so the sentence on the screen and the outcome of the
+/// button cannot disagree.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SlotMuhammil {
+    /// The loader's own file name — the proxy slot on Windows, the shared
+    /// object's name on Linux and macOS.
+    pub ism: String,
+
+    /// Where that file would land.
+    pub mawqi: MawqiTarkib,
+
+    /// Who holds it.
+    pub hala: HalatSlot,
+}
+
+impl SlotMuhammil {
+    /// Whether the deployment will refuse over this slot.
+    #[must_use]
+    pub const fn yarfud(&self) -> bool {
+        matches!(self.hala, HalatSlot::Mashghul { .. })
+    }
+
+    /// The product holding the slot, when the evidence named one.
+    #[must_use]
+    pub const fn shaghil(&self) -> Option<wukala::AilatWakeel> {
+        match &self.hala {
+            HalatSlot::Mutah => None,
+            HalatSlot::Taarib { .. } => Some(wukala::AilatWakeel::Taarib),
+            HalatSlot::Mashghul { huwiya, .. } => huwiya.aila(),
+        }
+    }
+
+    /// The line a confirmation screen owes about this slot, in English.
+    ///
+    /// [`None`] for a free slot: there is nothing to say about a directory that
+    /// holds no loader, and saying it anyway would train a reader past the
+    /// notice in the one case that stops an install.
+    ///
+    /// The occupant's documented chain-load door is part of the sentence
+    /// wherever the product has one, because the difference between "no" and
+    /// "no, and here is the door" is the difference between a screen that
+    /// blocks somebody and a screen that tells them what to do next.
+    #[must_use]
+    pub fn malhuza_injiliziya(&self) -> Option<String> {
+        match &self.hala {
+            HalatSlot::Mutah => None,
+            HalatSlot::Taarib { hajm } => Some(format!(
+                "Taarib's own loader is already at {} ({hajm} byte(s)), so this is a reinstall \
+                 rather than a first install; nothing else in the game is touched by that",
+                self.mawqi
+            )),
+            HalatSlot::Mashghul { huwiya, hajm } => {
+                let bab = huwiya
+                    .aila()
+                    .and_then(wukala::AilatWakeel::tasalsul)
+                    .map_or_else(String::new, |bab| {
+                        format!(" That product does have a way in: {bab}.")
+                    });
+                Some(format!(
+                    "this install will refuse: {} at {} ({hajm} byte(s)) is already held by {} \
+                     — Windows loads one file of that name, not two, and Taarib will not write \
+                     over a mod it did not put there.{bab}",
+                    self.ism,
+                    self.mawqi,
+                    huwiya.wasf_injilizi()
+                ))
+            }
+        }
+    }
+
+    /// The same line in Arabic.
+    #[must_use]
+    pub fn malhuza_arabiya(&self) -> Option<String> {
+        match &self.hala {
+            HalatSlot::Mutah => None,
+            HalatSlot::Taarib { hajm } => Some(format!(
+                "مُحمِّل تعريب موجود أصلًا في {} ({hajm} بايت)، فهذا إعادة تثبيت لا تثبيتٌ أوّل، \
+                 ولا يمسّ ذلك شيئًا آخر في اللعبة.",
+                self.mawqi
+            )),
+            HalatSlot::Mashghul { huwiya, hajm } => {
+                let bab = huwiya
+                    .aila()
+                    .and_then(wukala::AilatWakeel::tasalsul_arabi)
+                    .map_or_else(String::new, |bab| format!(" ولهذا المنتج باب: {bab}"));
+                Some(format!(
+                    "سيرفض هذا التثبيت: الاسم {} في {} ({hajm} بايت) يشغله {}. تحمّل ويندوز \
+                     ملفًا واحدًا بهذا الاسم لا اثنين، ولا يكتب تعريب فوق تعديل لم يضعه هو.{bab}",
+                    self.ism,
+                    self.mawqi,
+                    huwiya.wasf_arabi()
+                ))
+            }
+        }
+    }
+}
+
+/// Answers who holds one component's loader slot, from a survey of the
+/// directory that loader lands in.
+///
+/// **The one place that question is decided.** [`khutta`] calls it so the plan
+/// can carry the answer, and [`wakeel_qaim`] calls it so the write can refuse on
+/// it. Neither re-derives it: two readings of "is this slot taken" is exactly
+/// the plan-versus-writer split this crate has produced six instances of, and
+/// the two would then differ over the case that matters — the plan saying an
+/// install is ready while the write refuses it.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::MasarKharij`] when the loader's destination does not stay
+/// inside the game root or the prefix.
+fn hal_slot(
+    mawadi: &MawadiTarkib,
+    mukawwin: &MukawwinItar,
+    qaima: &[WakeelQaim],
+) -> NatijatTathbeet<SlotMuhammil> {
+    let nisbi = mawadi.bijanib(&mukawwin.ism_muhammil);
+    let mawqi = mawadi.wajha(&nisbi)?;
+    let masar = mawqi.mutlaq(mawadi.jidhr_luba())?;
+
+    // `is_file` rather than `exists`: a directory carrying the loader's name is
+    // not something any loader can map, and refusing an install over one would
+    // be refusing over a collision that cannot happen.
+    let hala = if masar.is_file() {
+        // The survey has already identified everything it found, so the occupant
+        // is looked up rather than re-examined. It is absent from the survey only
+        // when the loader is not a proxy slot at all — the Linux and macOS
+        // builds, whose loader is a shared object with no system name to stand in
+        // for — and an unidentified answer is the right one for a file that was
+        // never a proxy.
+        let qaim = wukala::shaghil_slot(qaima, &mukawwin.ism_muhammil);
+        let hajm = qaim.map_or_else(
+            || std::fs::metadata(&masar).map_or(0, |bayan| bayan.len()),
+            |qaim| qaim.hajm,
+        );
+        let huwiya = qaim.map_or(wukala::HuwiyatWakeel::Majhul { mahzum: false }, |qaim| {
+            qaim.huwiya.clone()
+        });
+        if huwiya.huwa_taarib() {
+            HalatSlot::Taarib { hajm }
+        } else {
+            HalatSlot::Mashghul { huwiya, hajm }
+        }
+    } else {
+        HalatSlot::Mutah
+    };
+
+    Ok(SlotMuhammil { ism: mukawwin.ism_muhammil.clone(), mawqi, hala })
+}
+
+/// Refuses when the module name this framework's loader is published as is
+/// already held by a file Taarib did not put there.
 ///
 /// The slot is exclusive. Windows resolves a module name to one file, and the
 /// one it resolves to is whichever is beside the executable — so a second
@@ -1389,6 +1639,11 @@ fn masah_huqn(mujallad: &Path) -> NatijatTathbeet<Vec<WakeelQaim>> {
 /// another overlay has taken, for the same reason and with the same conclusion:
 /// whoever took the slot last is the only one who can give it back.
 ///
+/// Taarib's own loader is the one occupant that is not that mod, and it is let
+/// through here — see [`HalatSlot::Taarib`]. The write does not then overwrite
+/// it: [`rakkib_mukawwin`]'s destination check finds the file already there and
+/// answers [`NatijatTarkib::Mawjud`], which places nothing.
+///
 /// The survey it returns on success is not a by-product. A game with another
 /// mod's `dinput8.dll` in it is a game whose behaviour is not the publisher's
 /// any more, and the person agreeing to an install is entitled to know that
@@ -1396,35 +1651,23 @@ fn masah_huqn(mujallad: &Path) -> NatijatTathbeet<Vec<WakeelQaim>> {
 ///
 /// # Errors
 ///
-/// [`KhataTathbeet::WakeelMashghul`] when the loader's own path is occupied, and
-/// whatever reading the directory raises.
+/// [`KhataTathbeet::WakeelMashghul`] when the loader's own path is occupied by
+/// anything else, and whatever reading the directory raises.
 fn wakeel_qaim(
     mawadi: &MawadiTarkib,
     mukawwin: &MukawwinItar,
 ) -> NatijatTathbeet<Vec<WakeelQaim>> {
     let jidhr = mawadi.jidhr_muhammil()?.mutlaq(mawadi.jidhr_luba())?;
     let qaima = masah_huqn(&jidhr)?;
+    // Re-read here rather than taken from the plan, deliberately: a mod may have
+    // been installed between the confirmation screen and the button, and a
+    // refusal that trusted a stale reading would write over it.
+    let slot = hal_slot(mawadi, mukawwin, &qaima)?;
 
-    let nisbi = mawadi.bijanib(&mukawwin.ism_muhammil);
-    let masar = mawadi.wajha(&nisbi)?.mutlaq(mawadi.jidhr_luba())?;
-    // `is_file` rather than `exists`: a directory carrying the loader's name is
-    // not something any loader can map, and refusing an install over one would
-    // be refusing over a collision that cannot happen.
-    if !masar.is_file() {
-        return Ok(qaima);
-    }
-
-    let hajm = std::fs::metadata(&masar).map_or(0, |bayan| bayan.len());
-    // The survey has already identified everything it found, so the occupant is
-    // looked up rather than re-examined. It is absent from the survey only when
-    // the loader is not a proxy slot at all — the Linux and macOS builds, whose
-    // loader is a shared object with no system name to stand in for — and an
-    // unidentified answer is the right one for a file that was never a proxy.
-    let huwiya = wukala::shaghil_slot(&qaima, &mukawwin.ism_muhammil)
-        .map_or(wukala::HuwiyatWakeel::Majhul { mahzum: false }, |qaim| qaim.huwiya.clone());
+    let HalatSlot::Mashghul { huwiya, hajm } = slot.hala else { return Ok(qaima) };
     Err(KhataTathbeet::WakeelMashghul {
-        wakeel: mukawwin.ism_muhammil.clone(),
-        masar,
+        wakeel: slot.ism,
+        masar: slot.mawqi.mutlaq(mawadi.jidhr_luba())?,
         hajm,
         huwiya,
         jiran: qaima
@@ -1825,6 +2068,18 @@ pub struct KhuttatTarkib {
     /// Where the framework's loader would land, when one is deployed.
     pub jidhr_muhammil: Option<MawqiTarkib>,
 
+    /// The loader slot that deployment will take, and who holds it right now.
+    ///
+    /// [`None`] when no framework is deployed at all — tier 3, and every engine
+    /// whose answer is [`SababLaHaja`] — because there is then no loader and no
+    /// slot to speak for.
+    ///
+    /// This is the field that lets a plan say «this install will stop» instead
+    /// of a plan that reads as ready and a write that refuses. It carries the
+    /// prediction and never the decision: [`wakeel_qaim`] still refuses, over a
+    /// directory re-read at write time, and both go through [`hal_slot`].
+    pub slot_muhammil: Option<SlotMuhammil>,
+
     /// Directories the additive layer needs, in creation order.
     pub mujalladat: Vec<MujalladTarkib>,
 
@@ -1862,10 +2117,12 @@ pub struct KhuttatTarkib {
     /// uninstall cannot reach it — see [`TarkibMunaffadh::huqn_mujawir`] — but
     /// the disclosure belongs *before* the install, not in the report after it.
     ///
-    /// Empty is the normal answer. When Taarib's own slot is among these the
-    /// install refuses outright with [`KhataTathbeet::WakeelMashghul`] rather
-    /// than listing it here, so a plan that carries entries is always a plan
-    /// that can still go ahead.
+    /// Empty is the normal answer, and an entry here is not by itself a reason
+    /// the install will stop: Taarib deploys beside these. Whether one of them
+    /// holds the slot Taarib's own loader needs — the case that does stop it —
+    /// is [`Self::slot_muhammil`]'s answer, and the occupant appears in both
+    /// because it is two different facts about the same file: something else is
+    /// in this game, and this install will refuse.
     ///
     /// The directory surveyed is the one the framework's loader would land in,
     /// which is beside the game's executable. For a tier-3 game — no framework,
@@ -1903,6 +2160,42 @@ pub struct MalhuzatManassa {
     /// Running, or unseeable. [`HalatTashghil::LaTashtaghil`] never reaches
     /// here: there is nothing to say about a launcher that is closed.
     pub hala: HalatTashghil,
+}
+
+impl MalhuzatManassa {
+    /// The note this warrants, in English.
+    #[must_use]
+    pub fn wasf_injilizi(&self) -> String {
+        let ism = &self.ism;
+        match self.hala.sunduq() {
+            None => format!(
+                "{ism} is running and rewrites its configuration when it exits; close it \
+                 before installing"
+            ),
+            Some(sunduq) => format!(
+                "this build runs inside {} and sees only its own processes, so whether {ism} \
+                 is running is unknown; the install will refuse rather than edit a file {ism} \
+                 may overwrite from memory",
+                sunduq.ism()
+            ),
+        }
+    }
+
+    /// The same note in Arabic.
+    #[must_use]
+    pub fn wasf_arabi(&self) -> String {
+        let ism = &self.ism;
+        match self.hala.sunduq() {
+            None => format!(
+                "{ism} يعمل الآن، وهو يعيد كتابة إعداداته عند إغلاقه. أغلقه قبل التثبيت."
+            ),
+            Some(sunduq) => format!(
+                "هذه النسخة تعمل داخل {} ولا ترى إلا عمليّاتها، فلا يُعرف هل {ism} يعمل أم لا. \
+                 سيرفض التثبيت بدل أن يعدّل ملفًّا قد يكتبه {ism} من ذاكرته.",
+                sunduq.ism_arabi()
+            ),
+        }
+    }
 }
 
 impl KhuttatTarkib {
@@ -1946,10 +2239,56 @@ impl KhuttatTarkib {
         self.mudkhalat.iter().filter(|m| matches!(m.naw, NawMudkhal::Tadeel)).count()
     }
 
+    /// Whether the deployment this plan describes will refuse over an occupied
+    /// loader slot.
+    ///
+    /// A prediction, made from the directory as it was when the plan was built.
+    /// The write re-reads it and decides for itself — see [`hal_slot`] — so a
+    /// mod installed in between turns a `false` here into a refusal there,
+    /// which is the safe direction and the only one available.
+    #[must_use]
+    pub fn yarfud_al_wakeel(&self) -> bool {
+        self.slot_muhammil.as_ref().is_some_and(SlotMuhammil::yarfud)
+    }
+
+    /// The note a plan that modifies the game's own files owes, in English.
+    ///
+    /// Measured on Steam, not reasoned about: a verify compares the tree against
+    /// the depot manifest, so it restores every file Taarib modified and leaves
+    /// every file Taarib added — the added ones are not in the manifest to be
+    /// judged against. The halves come apart rather than the install being
+    /// undone, which is the state nobody predicts: the loader and the payload
+    /// are still in place, the translated data is not, and the game launches
+    /// into its original language with Taarib loaded. Said because a
+    /// confirmation screen that lists "modify" lines without it describes the
+    /// write and hides what routinely reverses it.
+    ///
+    /// [`None`] when nothing the store knows about is touched: a verify then has
+    /// nothing of Taarib's to undo, and saying it anyway would train people past
+    /// the notice in the one case where it matters.
+    #[must_use]
+    pub fn malhuzat_tahaqquq(&self) -> Option<&'static str> {
+        (self.adad_tadeelat() > 0).then_some(
+            "verifying this game's files through its launcher restores the originals, so the \
+             modifications above are undone while the added files stay; run the install again \
+             after a verify",
+        )
+    }
+
+    /// The same note in Arabic.
+    #[must_use]
+    pub fn malhuzat_tahaqquq_arabi(&self) -> Option<&'static str> {
+        (self.adad_tadeelat() > 0).then_some(
+            "إن تحقّقت من سلامة ملفات هذه اللعبة من متجرها، أُعيدت ملفاتها الأصلية: تُلغى \
+             التعديلات أعلاه وتبقى الملفات المضافة في مكانها. النتيجة أنّ تعريب يبقى محمَّلًا \
+             واللعبة تعود إلى نصّها الأصلي دون أن يخبرك شيء. أعِد التثبيت بعد أيّ تحقّق.",
+        )
+    }
+
     /// The plan as lines for a confirmation screen.
     #[must_use]
     pub fn taqreer(&self) -> Vec<String> {
-        let mut sutur = Vec::with_capacity(self.mudkhalat.len().saturating_add(4));
+        let mut sutur = Vec::with_capacity(self.mudkhalat.len().saturating_add(5));
         match (&self.hajat, self.jidhr_muhammil.as_ref()) {
             (HajatItar::Matlub(mukawwin), Some(mawqi)) => sutur.push(format!(
                 "framework: {} into {mawqi} ({})",
@@ -1979,22 +2318,16 @@ impl KhuttatTarkib {
         for talab in &self.talabat {
             sutur.push(format!("  launch: {}", talab.wasf_injilizi()));
         }
-        // Measured on Steam, not reasoned about: a verify compares the tree
-        // against the depot manifest, so it restores every file Taarib modified
-        // and leaves every file Taarib added — the added ones are not in the
-        // manifest to be judged against. The halves come apart rather than the
-        // install being undone, which is the state nobody predicts: the loader
-        // and the payload are still in place, the translated data is not, and
-        // the game launches into its original language with Taarib loaded. Said
-        // here because a confirmation screen that lists "modify" lines without
-        // it describes the write and hides what routinely reverses it.
-        if self.adad_tadeelat() > 0 {
-            sutur.push(
-                "  note: verifying this game's files through its launcher restores the \
-                 originals, so the modifications above are undone while the added files \
-                 stay; run the install again after a verify"
-                    .to_owned(),
-            );
+        // Before the other notes, because it is the one that says the button
+        // will not work. A reader who stops after the first note has read the
+        // one that changes what they should do next.
+        if let Some(malhuza) =
+            self.slot_muhammil.as_ref().and_then(SlotMuhammil::malhuza_injiliziya)
+        {
+            sutur.push(format!("  note: {malhuza}"));
+        }
+        if let Some(malhuza) = self.malhuzat_tahaqquq() {
+            sutur.push(format!("  note: {malhuza}"));
         }
         for wakeel in &self.huqn_qaim {
             sutur.push(format!(
@@ -2004,19 +2337,67 @@ impl KhuttatTarkib {
             ));
         }
         if let Some(malhuza) = self.manassa_taamil.as_ref() {
-            let ism = &malhuza.ism;
-            sutur.push(match malhuza.hala.sunduq() {
-                None => format!(
-                    "  note: {ism} is running and rewrites its configuration when it exits; \
-                     close it before installing"
-                ),
-                Some(sunduq) => format!(
-                    "  note: this build runs inside {} and sees only its own processes, so \
-                     whether {ism} is running is unknown; the install will refuse rather \
-                     than edit a file {ism} may overwrite from memory",
-                    sunduq.ism()
-                ),
-            });
+            sutur.push(format!("  note: {}", malhuza.wasf_injilizi()));
+        }
+        sutur
+    }
+
+    /// The same report in Arabic, line for line.
+    ///
+    /// Its own function rather than a translation layer over [`Self::taqreer`],
+    /// and every sentence in it comes from the same place its English twin does
+    /// — [`SababLaHaja::wasf_arabi`], [`TalabItlaq::wasf_arabi`],
+    /// [`MukawwinItar::wasf_arabi`], [`WakeelQaim::wasf_arabi`]. The two lists
+    /// therefore hold the same number of lines saying the same things, and
+    /// neither is a place a new fact can be introduced.
+    #[must_use]
+    pub fn taqreer_arabi(&self) -> Vec<String> {
+        let mut sutur = Vec::with_capacity(self.mudkhalat.len().saturating_add(5));
+        match (&self.hajat, self.jidhr_muhammil.as_ref()) {
+            (HajatItar::Matlub(mukawwin), Some(mawqi)) => sutur.push(format!(
+                "الإطار: {} في {mawqi} ({})",
+                mukawwin.wasf_arabi,
+                mukawwin.tahmil.wasf_arabi()
+            )),
+            (HajatItar::Matlub(mukawwin), None) => {
+                sutur.push(format!("الإطار: {}", mukawwin.wasf_arabi));
+            }
+            (HajatItar::LaHaja(sabab), _) => {
+                sutur.push(format!("الإطار: لا حاجة إليه — {}", sabab.wasf_arabi()));
+            }
+        }
+        for mujallad in &self.mujalladat {
+            sutur.push(format!("  مجلّد يُنشأ: {}", mujallad.nisbi));
+        }
+        for mudkhal in &self.mudkhalat {
+            let fil = match mudkhal.naw {
+                NawMudkhal::Idafa => "ملف يُضاف",
+                NawMudkhal::Tadeel => "ملف يُعدَّل",
+            };
+            sutur.push(format!("  {fil}: {}", mudkhal.nisbi));
+        }
+        if let Some(khatt) = self.khatt_renpy.as_deref() {
+            sutur.push(format!("  الخط: {khatt}، ويُسجَّل في إعدادات رن‑باي المولَّدة"));
+        }
+        for talab in &self.talabat {
+            sutur.push(format!("  عند الإطلاق: {}", talab.wasf_arabi()));
+        }
+        if let Some(malhuza) = self.slot_muhammil.as_ref().and_then(SlotMuhammil::malhuza_arabiya)
+        {
+            sutur.push(format!("  ملحوظة: {malhuza}"));
+        }
+        if let Some(malhuza) = self.malhuzat_tahaqquq_arabi() {
+            sutur.push(format!("  ملحوظة: {malhuza}"));
+        }
+        for wakeel in &self.huqn_qaim {
+            sutur.push(format!(
+                "  ملحوظة: في هذه اللعبة تعديلٌ ليس من تعريب — {} — لا يلمسه تعريب ولا تصل \
+                 إليه إزالته",
+                wakeel.wasf_arabi()
+            ));
+        }
+        if let Some(malhuza) = self.manassa_taamil.as_ref() {
+            sutur.push(format!("  ملحوظة: {}", malhuza.wasf_arabi()));
         }
         sutur
     }
@@ -2099,6 +2480,7 @@ pub fn khutta(
         tabaqa: qarar.tabaqa(),
         hajat: HajatItar::LaHaja(SababLaHaja::BayanatWaMulhaq),
         jidhr_muhammil: None,
+        slot_muhammil: None,
         mujalladat: Vec::new(),
         mudkhalat: Vec::new(),
         khatt_renpy: None,
@@ -2138,6 +2520,10 @@ pub fn khutta(
     );
 
     let jidhr_muhammil = mawadi.jidhr_muhammil()?;
+    // One listing of the loader's directory, read for both questions it answers:
+    // what else is installed in this game, and whether the one name Taarib needs
+    // is free. Two walks would be two readings of the same directory a moment
+    // apart, which is how the plan and the writer came to disagree before.
     mukhattat.huqn_qaim = masah_huqn(&jidhr_muhammil.mutlaq(mawadi.jidhr_luba())?)?;
 
     mukhattat.hajat = hajat_maa_tabaqa(muharrik, qarar.tabaqa(), luba.nizam, &luba.beea);
@@ -2146,6 +2532,10 @@ pub fn khutta(
         if let Some(talab) = talab_tahmil(mukawwin, &mawadi) {
             mukhattat.talabat.push(talab);
         }
+        // The refusal the write will raise, stated here rather than discovered
+        // there. `hal_slot` is the writer's own answer, asked over the survey
+        // this plan already has.
+        mukhattat.slot_muhammil = Some(hal_slot(&mawadi, mukawwin, &mukhattat.huqn_qaim)?);
         mukhattat.jidhr_muhammil = Some(jidhr_muhammil);
     }
 
@@ -2457,14 +2847,21 @@ fn mulhaqat_muharrik(
             }
         }
         // Nothing additive: each of these is reached from inside its process by
-        // the module the framework step placed, and BIO4 — which loads no
-        // plugin of any kind — is the clearest case of it.
+        // the module the framework step placed, and the proprietary native
+        // engines — which load no plugin of any kind — are the clearest case of
+        // it.
         AilatMuharrik::Unity
         | AilatMuharrik::Unreal
         | AilatMuharrik::RpgMakerVxAce
         | AilatMuharrik::GameMaker
         | AilatMuharrik::Electron
         | AilatMuharrik::Bio4
+        | AilatMuharrik::Frostbite
+        | AilatMuharrik::BlackSpace
+        | AilatMuharrik::Alchemy
+        | AilatMuharrik::Dantelion
+        | AilatMuharrik::Rage
+        | AilatMuharrik::Snowdrop
         | AilatMuharrik::Majhul => Ok(()),
     }
 }
@@ -2982,12 +3379,15 @@ fn damj_override_cfg(masar: &Path, hali: &str) -> NatijatTathbeet<Option<String>
 /// length has moved. `taarib_muhawwil_nusus::rpgmaker::rakkib_mulhaq` documents
 /// the same ordering for the same reason.
 ///
-/// Every one of the three writes is authorised by the `mukhattat` argument.
-/// That is the whole point of this function existing beside [`nashr`]: the
-/// script-engine write used to run outside any plan, unconditionally, from
+/// Every one of the three writes is authorised by the `mukhattat` argument, and
+/// **there is no entry point that does not take one**. The script-engine write
+/// used to run outside any plan, unconditionally, from
 /// [`crate::masar_tathbeet::thabbit`] — so a tier-3 game, whose report had just
 /// told the player it would not be modified at all, had its `data/*.json`, its
 /// `game/tl/arabic/*.rpy`, its `data.win` or its `app.asar` rewritten anyway.
+/// A `nashr` that planned and executed in one call stood beside this one until
+/// every production caller had moved off it; it is gone, so a caller that wants
+/// to write has to hold the plan the user was shown.
 ///
 /// # Errors
 ///
@@ -3006,27 +3406,6 @@ pub fn nashr_bi_khutta(
     let mulhaqat =
         nashr_mulhaqat(mukhattat, &luba.jidhr, mukawwinat, nashir.muthabbit())?;
     Ok((itar, mulhaqat))
-}
-
-/// Plans and then executes, for a caller that holds a capability report rather
-/// than a plan.
-///
-/// The plan is built **once**, here, before the first byte, and every writer
-/// below receives it. Nothing downstream re-derives the tier, the safety
-/// refusal or the loader directory from the game's own directory.
-///
-/// # Errors
-///
-/// Whatever [`khutta`] and [`nashr_bi_khutta`] raise.
-pub fn nashr(
-    luba: &LubaMuhallala,
-    halat: &HalatIdadat,
-    taqreer: &TaqreerImkaniyat,
-    mukawwinat: &Path,
-    nashir: &mut Nashir<'_>,
-) -> NatijatTathbeet<(NatijatTarkib, TaqreerMulhaqat)> {
-    let mukhattat = khutta(taqreer, luba, mukawwinat)?;
-    nashr_bi_khutta(&mukhattat, luba, halat, mukawwinat, nashir)
 }
 
 #[cfg(test)]
@@ -3067,6 +3446,7 @@ mod ikhtibarat {
             tabaqa: Tabaqa::Kamil,
             hajat: HajatItar::LaHaja(SababLaHaja::BayanatWaMulhaq),
             jidhr_muhammil: None,
+            slot_muhammil: None,
             mujalladat: Vec::new(),
             mudkhalat,
             khatt_renpy: None,
@@ -3119,6 +3499,34 @@ mod ikhtibarat {
     #[test]
     fn khutta_farigha_la_tuhadhdhir() {
         assert!(!fihi_malhuzat_tahaqquq(&khutta_bi(Vec::new())));
+    }
+
+    #[test]
+    fn altaqreeran_yaquln_nafs_aladad_min_alashya() {
+        // The Arabic report is a second rendering of the same plan, not a
+        // second plan. A line added to one and forgotten in the other is a
+        // screen that says less in Arabic than in English — which, on a product
+        // whose first language is Arabic, is the wrong direction to fail in.
+        for khutta in [
+            khutta_bi(Vec::new()),
+            khutta_bi(vec![
+                mudkhal("taarib/tarjama.ruqaa", NawMudkhal::Idafa),
+                mudkhal("Data/messages.dat", NawMudkhal::Tadeel),
+            ]),
+        ] {
+            let injilizi = khutta.taqreer();
+            let arabi = khutta.taqreer_arabi();
+            assert_eq!(
+                injilizi.len(),
+                arabi.len(),
+                "the two reports differ in length:\n{injilizi:#?}\n{arabi:#?}"
+            );
+            assert_eq!(
+                khutta.malhuzat_tahaqquq().is_some(),
+                khutta.malhuzat_tahaqquq_arabi().is_some(),
+                "and the store-verify note is owed in both languages or in neither"
+            );
+        }
     }
 
     #[test]

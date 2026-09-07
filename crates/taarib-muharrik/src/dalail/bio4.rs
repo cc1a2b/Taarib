@@ -178,15 +178,18 @@
 //! exists past those bounds was not looked at rather than found absent.
 
 use std::collections::VecDeque;
-use std::fs::{self, File};
-use std::io::{Read, Seek, SeekFrom};
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use taarib_mustalahat::muharrik::{AilatMuharrik, IsdarMuharrik, NawDaleel};
 use taarib_usus::khata::Natija;
-use taarib_usus::manassa::Mimariya;
 
 use crate::dalail::imtidad;
+// Aliased on the way in because this module already has a `tanfidhi` of its
+// own: the function that resolves which binary to read.
+use crate::dalail::tanfidhi::{
+    BayanTanfidhi, bayan as bayan_tanfidhi, iqra_nafidha, raqm32_sagheer,
+};
 use crate::fahs::{AQSA_UMQ, Fahis, HasilatFahs, SiyaqFahs};
 use crate::khata::KhataMuharrik;
 
@@ -284,25 +287,6 @@ const AQSA_QUYUD_DICT: u32 = 1_000_000;
 /// to look at the file in a hex dump beside the layouts documented above without
 /// reading anything that could be called content.
 const HAJM_TARWISA_HAWIYA: usize = 64;
-
-/// Bytes taken from the front of the executable.
-///
-/// Enough for the DOS stub, the PE signature, the COFF header, the optional
-/// header and a section table of any size a linker produces.
-const HAJM_TARWISA_PE: usize = 4 * 1024;
-
-/// The most of a `.rsrc` section this module will read.
-///
-/// A version resource is a few hundred bytes and lives near the front of the
-/// section. A megabyte covers the section whole for every desktop game binary
-/// and bounds the one that ships its artwork in there.
-const HAJM_MAWARID: usize = 1024 * 1024;
-
-/// The most sections a PE image may declare before the file is refused.
-const AQSA_MAQATI: usize = 96;
-
-/// The most UTF-16 code units accepted as one version-resource value.
-const AQSA_QEEMAT_MAWRID: usize = 256;
 
 /// How many entries of any one directory the scan will look at.
 ///
@@ -1167,169 +1151,6 @@ fn sanat_akhira(nass: &str) -> Option<u16> {
 }
 
 // ---------------------------------------------------------------------------
-// The Windows version resource
-// ---------------------------------------------------------------------------
-
-/// What the executable's version resource said about itself.
-#[derive(Debug)]
-struct BayanTanfidhi {
-    /// The image's architecture, from the COFF machine field.
-    mimariya: Option<Mimariya>,
-    /// `InternalName`.
-    ism_dakhili: Option<String>,
-    /// `CompanyName`.
-    sharika: Option<String>,
-    /// `LegalCopyright`.
-    huquq: Option<String>,
-    /// `FileVersion`.
-    isdar_malaf: Option<String>,
-}
-
-/// Parses the PE headers far enough to find `.rsrc`, then reads the four
-/// version-resource strings this module uses.
-///
-/// Only the section table is walked; the resource *tree* is not. Locating the
-/// version block properly means descending three levels of
-/// `IMAGE_RESOURCE_DIRECTORY`, and what that buys over searching the section for
-/// the key strings is nothing this module needs — the keys are unique inside a
-/// version block, the block is the only place they appear, and every offset
-/// derived from a hit is bounds-checked against the bytes actually read.
-fn bayan_tanfidhi(masar: &Path) -> Option<BayanTanfidhi> {
-    let tarwisa = iqra_nafidha(masar, 0, HAJM_TARWISA_PE)?;
-    if !tarwisa.starts_with(b"MZ") {
-        return None;
-    }
-    let bidayat_pe = usize::try_from(raqm32_sagheer(&tarwisa, 0x3C)?).ok()?;
-    if !tarwisa.get(bidayat_pe..)?.starts_with(b"PE\0\0") {
-        return None;
-    }
-
-    let mimariya = mimariyat_pe(raqm16_sagheer(&tarwisa, bidayat_pe.checked_add(4)?)?);
-    let adad = usize::from(raqm16_sagheer(&tarwisa, bidayat_pe.checked_add(6)?)?);
-    let hajm_ikhtiyari = usize::from(raqm16_sagheer(&tarwisa, bidayat_pe.checked_add(20)?)?);
-    if adad == 0 || adad > AQSA_MAQATI {
-        return None;
-    }
-    let jadwal = bidayat_pe.checked_add(24)?.checked_add(hajm_ikhtiyari)?;
-
-    let Some((mawdi, hajm)) = qism_mawarid(&tarwisa, jadwal, adad) else {
-        return Some(BayanTanfidhi {
-            mimariya,
-            ism_dakhili: None,
-            sharika: None,
-            huquq: None,
-            isdar_malaf: None,
-        });
-    };
-    let mawarid = iqra_nafidha(masar, u64::from(mawdi), hajm).unwrap_or_default();
-    Some(BayanTanfidhi {
-        mimariya,
-        ism_dakhili: qeemat_mawrid(&mawarid, "InternalName"),
-        sharika: qeemat_mawrid(&mawarid, "CompanyName"),
-        huquq: qeemat_mawrid(&mawarid, "LegalCopyright"),
-        isdar_malaf: qeemat_mawrid(&mawarid, "FileVersion"),
-    })
-}
-
-/// The file offset and length of the `.rsrc` section, when the image has one.
-fn qism_mawarid(tarwisa: &[u8], jadwal: usize, adad: usize) -> Option<(u32, usize)> {
-    for raqm in 0..adad {
-        let madkhal = jadwal.checked_add(raqm.checked_mul(40)?)?;
-        let Some(ism) = tarwisa.get(madkhal..madkhal.checked_add(8)?) else { break };
-        if !ism.starts_with(b".rsrc") {
-            continue;
-        }
-        let hajm_khaam = raqm32_sagheer(tarwisa, madkhal.checked_add(16)?)?;
-        let mawdi_khaam = raqm32_sagheer(tarwisa, madkhal.checked_add(20)?)?;
-        if hajm_khaam == 0 || mawdi_khaam == 0 {
-            return None;
-        }
-        return Some((mawdi_khaam, usize::try_from(hajm_khaam).ok()?.min(HAJM_MAWARID)));
-    }
-    None
-}
-
-/// The COFF machine field, for the architectures this product installs into.
-const fn mimariyat_pe(alat: u16) -> Option<Mimariya> {
-    match alat {
-        0x014C => Some(Mimariya::X86),
-        0x8664 => Some(Mimariya::X8664),
-        0xAA64 => Some(Mimariya::Aarch64),
-        _ => None,
-    }
-}
-
-/// One `StringFileInfo` value out of a version resource, by its key.
-///
-/// The layout is Microsoft's `String` structure: the key as NUL-terminated
-/// UTF-16, then padding to the next 32-bit boundary, then the value as
-/// NUL-terminated UTF-16. Both the key and its terminator sit on even offsets,
-/// so the padding is either nothing or one zero code unit — which is why
-/// stepping over at most one is exact rather than approximate, and why this does
-/// not need to know where the enclosing block began.
-fn qeemat_mawrid(mawarid: &[u8], miftah: &str) -> Option<String> {
-    let ibra: Vec<u8> = miftah.encode_utf16().flat_map(u16::to_le_bytes).collect();
-    let mawqi = mawdi_zawji(mawarid, &ibra)?;
-    let mut baad = mawqi.checked_add(ibra.len())?;
-    if !zawj_sifr(mawarid, baad) {
-        return None;
-    }
-    baad = baad.checked_add(2)?;
-    if zawj_sifr(mawarid, baad) {
-        baad = baad.checked_add(2)?;
-    }
-    nass_utf16(mawarid, baad, AQSA_QEEMAT_MAWRID)
-}
-
-/// The first occurrence of `ibra` at an even offset.
-///
-/// Even because UTF-16 code units are, and a match straddling one would be two
-/// halves of two other characters that happened to spell the key.
-fn mawdi_zawji(kawm: &[u8], ibra: &[u8]) -> Option<usize> {
-    if ibra.is_empty() || ibra.len() > kawm.len() {
-        return None;
-    }
-    kawm.windows(ibra.len())
-        .enumerate()
-        .find(|(mawqi, nafidha)| mawqi.is_multiple_of(2) && *nafidha == ibra)
-        .map(|(mawqi, _)| mawqi)
-}
-
-/// Whether the two bytes at `mawdi` are a zero UTF-16 code unit.
-fn zawj_sifr(kawm: &[u8], mawdi: usize) -> bool {
-    mawdi
-        .checked_add(2)
-        .and_then(|nihaya| kawm.get(mawdi..nihaya))
-        .is_some_and(|zawj| zawj == [0, 0])
-}
-
-/// A NUL-terminated UTF-16 string, bounded, trimmed, and decoded lossily.
-///
-/// Lossily because a company name or a copyright line is written by whichever
-/// build machine produced the binary and can carry anything; one unpaired
-/// surrogate must cost a character rather than the whole observation. A run that
-/// reaches `aqsa` without a terminator is refused, because a version-resource
-/// value is short by construction and a long one means this is not one.
-fn nass_utf16(kawm: &[u8], bidaya: usize, aqsa: usize) -> Option<String> {
-    let mut wahdat: Vec<u16> = Vec::new();
-    let mut mawdi = bidaya;
-    loop {
-        let zawj = kawm.get(mawdi..mawdi.checked_add(2)?)?;
-        let wahda = u16::from_le_bytes(<[u8; 2]>::try_from(zawj).ok()?);
-        if wahda == 0 {
-            break;
-        }
-        wahdat.push(wahda);
-        if wahdat.len() > aqsa {
-            return None;
-        }
-        mawdi = mawdi.checked_add(2)?;
-    }
-    let nass = String::from_utf16_lossy(&wahdat).trim().to_owned();
-    (!nass.is_empty()).then_some(nass)
-}
-
-// ---------------------------------------------------------------------------
 // Directories
 // ---------------------------------------------------------------------------
 
@@ -1406,31 +1227,9 @@ fn fahras_mujallad(masar: &Path) -> Fahras {
 // Bounded reads and fields
 // ---------------------------------------------------------------------------
 
-/// Reads at most `hadd` bytes of a file starting at `izaha`.
-///
-/// Opened and read rather than mapped, for the reason
-/// [`crate::dalail::unity`] gives: a probe runs across a library where Steam is
-/// mid-update on one title while another is being read, and a mapped page whose
-/// backing file is truncated underneath it raises a signal no `Result` catches.
-fn iqra_nafidha(masar: &Path, izaha: u64, hadd: usize) -> Option<Vec<u8>> {
-    let mut malaf = File::open(masar).ok()?;
-    if izaha > 0 && malaf.seek(SeekFrom::Start(izaha)).is_err() {
-        return None;
-    }
-    let mut bayt = Vec::new();
-    let _ = malaf.take(u64::try_from(hadd).ok()?).read_to_end(&mut bayt).ok()?;
-    Some(bayt)
-}
-
 /// A file's length, when it can be had.
 fn tul_malaf(masar: &Path) -> Option<u64> {
     Some(fs::metadata(masar).ok()?.len())
-}
-
-/// A little-endian `u32` at a checked offset.
-fn raqm32_sagheer(qita: &[u8], izaha: usize) -> Option<u32> {
-    let bayt = qita.get(izaha..izaha.checked_add(4)?)?;
-    <[u8; 4]>::try_from(bayt).ok().map(u32::from_le_bytes)
 }
 
 /// A big-endian `u32` at a checked offset.
@@ -1439,19 +1238,15 @@ fn raqm32_kabir(qita: &[u8], izaha: usize) -> Option<u32> {
     <[u8; 4]>::try_from(bayt).ok().map(u32::from_be_bytes)
 }
 
-/// A little-endian `u16` at a checked offset.
-fn raqm16_sagheer(qita: &[u8], izaha: usize) -> Option<u16> {
-    let bayt = qita.get(izaha..izaha.checked_add(2)?)?;
-    <[u8; 2]>::try_from(bayt).ok().map(u16::from_le_bytes)
-}
-
 #[cfg(test)]
 mod ikhtibarat {
+    use std::fs::File;
     use std::io::Write as _;
 
-    use taarib_usus::manassa::{BeeatTawafuq, NizamTashghil};
+    use taarib_usus::manassa::{BeeatTawafuq, Mimariya, NizamTashghil};
 
     use super::*;
+    use crate::dalail::tanfidhi::suwar::{Sura, sawwir};
     use crate::tahdid;
 
     // -----------------------------------------------------------------------
@@ -1505,32 +1300,38 @@ mod ikhtibarat {
     /// `BIO4/iww/HomeButton2/homeBtn.arc` — Nintendo's U8 magic.
     const TARWISAT_ARC: [u8; 4] = [0x55, 0xAA, 0x38, 0x2D];
 
-    /// The `StringFileInfo` block of `Bin32/bio4.exe`, verbatim.
+    /// The whole `VS_VERSION_INFO` resource of `Bin32/bio4.exe`, verbatim.
     ///
-    /// 646 bytes lifted straight out of the shipped executable's `.rsrc`
-    /// section, starting on the four-byte boundary in front of `CompanyName`.
-    /// It is here rather than reconstructed because the one thing this parser
-    /// can get wrong is the padding between a key and its value, and the real
-    /// block carries both cases: `InternalName` needs none and `CompanyName`
-    /// needs one zero code unit.
+    /// 872 bytes lifted out of the shipped executable at offset 8 703 480, which
+    /// is where that image's own resource tree says the block starts and for
+    /// exactly the length its leaf declares. It is here rather than
+    /// reconstructed because the one thing a parser of this structure can get
+    /// wrong is the padding between a key and its value, and the real block
+    /// carries both cases: `InternalName` needs none and `CompanyName` needs one
+    /// zero code unit.
     const MAWARID: &str = "\
-        010043006F006D00700061006E0079004E0061006D0065000000000043004100500043004F004D00\
-        200055002E0053002E0041002C00200049004E0043002E000000000064001E000100460069006C00\
-        65004400650073006300720069007000740069006F006E0000000000520065007300690064006500\
+        680334000000560053005F00560045005200530049004F004E005F0049004E0046004F0000000000\
+        BD04EFFE00000100000001000000000000000100000000003F000000000000000400040001000000\
+        000000000000000000000000C6020000010053007400720069006E006700460069006C0065004900\
+        6E0066006F000000A202000001003000300030003000300034006200300000004600130001004300\
+        6F006D00700061006E0079004E0061006D0065000000000043004100500043004F004D0020005500\
+        2E0053002E0041002C00200049004E0043002E000000000064001E000100460069006C0065004400\
+        650073006300720069007000740069006F006E00000000005200650073006900640065006E007400\
+        20004500760069006C002000340020002F002000420069006F00680061007A006100720064002000\
+        34000000460013000100460069006C006500560065007200730069006F006E000000000031002E00\
+        30002E003000520045004C0045004100530045005F004400450056002E003000000000002A000500\
+        010049006E007400650072006E0061006C004E0061006D0065000000420049004F00340000000000\
+        8800320001004C006500670061006C0043006F0070007900720069006700680074000000A9004300\
+        4100500043004F004D00200043004F002E002C0020004C00540044002E0020003200300030003500\
+        2C0020003200300031003400200041004C004C002000520049004700480054005300200052004500\
+        5300450052005600450044002E0000003A00090001004F0072006900670069006E0061006C004600\
+        69006C0065006E0061006D0065000000620069006F0034002E00650078006500000000005C001E00\
+        0100500072006F0064007500630074004E0061006D00650000000000520065007300690064006500\
         6E00740020004500760069006C002000340020002F002000420069006F00680061007A0061007200\
-        6400200034000000460013000100460069006C006500560065007200730069006F006E0000000000\
-        31002E0030002E003000520045004C0045004100530045005F004400450056002E00300000000000\
-        2A000500010049006E007400650072006E0061006C004E0061006D0065000000420049004F003400\
-        000000008800320001004C006500670061006C0043006F0070007900720069006700680074000000\
-        A90043004100500043004F004D00200043004F002E002C0020004C00540044002E00200032003000\
-        300035002C0020003200300031003400200041004C004C0020005200490047004800540053002000\
-        520045005300450052005600450044002E0000003A00090001004F0072006900670069006E006100\
-        6C00460069006C0065006E0061006D0065000000620069006F0034002E0065007800650000000000\
-        5C001E000100500072006F0064007500630074004E0061006D006500000000005200650073006900\
-        640065006E00740020004500760069006C002000340020002F002000420069006F00680061007A00\
-        6100720064002000340000004A0013000100500072006F0064007500630074005600650072007300\
-        69006F006E00000031002E0030002E003000520045004C0045004100530045005F00440045005600\
-        2E0030000000";
+        64002000340000004A0013000100500072006F006400750063007400560065007200730069006F00\
+        6E00000031002E0030002E003000520045004C0045004100530045005F004400450056002E003000\
+        00000000440000000100560061007200460069006C00650049006E0066006F000000000024000400\
+        00005400720061006E0073006C006100740069006F006E00000000000000B004";
 
     // -----------------------------------------------------------------------
     // Helpers
@@ -1574,42 +1375,21 @@ mod ikhtibarat {
         bayt
     }
 
-    /// A minimal 32-bit PE image carrying `mawarid` as its `.rsrc` section.
+    /// A minimal 32-bit PE image carrying `mawarid` as its version resource.
     ///
-    /// The wrapper is synthetic and the resource bytes inside it are not: what
-    /// is under test is that the section table is walked correctly and that the
-    /// real `String` structures behind it decode, and a nine-megabyte
-    /// executable in the source tree would test the same thing and cost a
-    /// hundred times as much to read.
+    /// The wrapper is built by the reader's own test support and the resource
+    /// bytes inside it are not: what is under test is that the resource tree is
+    /// walked correctly and that the real `String` structures at the end of it
+    /// decode, and a nine-megabyte executable in the source tree would test the
+    /// same thing and cost a hundred times as much to read.
     fn pe_bi_mawarid(mawarid: &[u8]) -> Vec<u8> {
-        const BIDAYAT_PE: usize = 0x80;
-        const HAJM_IKHTIYARI: usize = 224;
-        const BIDAYAT_QISM: usize = 0x400;
-
-        let mut bayt: Vec<u8> = Vec::new();
-        bayt.extend_from_slice(b"MZ");
-        bayt.resize(0x3C, 0);
-        bayt.extend_from_slice(&u32::try_from(BIDAYAT_PE).unwrap_or(0).to_le_bytes());
-        bayt.resize(BIDAYAT_PE, 0);
-        bayt.extend_from_slice(b"PE\0\0");
-        bayt.extend_from_slice(&0x014C_u16.to_le_bytes());
-        bayt.extend_from_slice(&1_u16.to_le_bytes());
-        bayt.resize(BIDAYAT_PE.saturating_add(20), 0);
-        bayt.extend_from_slice(&u16::try_from(HAJM_IKHTIYARI).unwrap_or(0).to_le_bytes());
-        bayt.extend_from_slice(&0x0102_u16.to_le_bytes());
-        bayt.resize(BIDAYAT_PE.saturating_add(24).saturating_add(HAJM_IKHTIYARI), 0);
-
-        let mut ism = b".rsrc".to_vec();
-        ism.resize(8, 0);
-        bayt.extend_from_slice(&ism);
-        let hajm = u32::try_from(mawarid.len()).unwrap_or(0);
-        bayt.extend_from_slice(&hajm.to_le_bytes());
-        bayt.extend_from_slice(&0x2000_u32.to_le_bytes());
-        bayt.extend_from_slice(&hajm.to_le_bytes());
-        bayt.extend_from_slice(&u32::try_from(BIDAYAT_QISM).unwrap_or(0).to_le_bytes());
-        bayt.resize(BIDAYAT_QISM, 0);
-        bayt.extend_from_slice(mawarid);
-        bayt
+        sawwir(&Sura {
+            alat: 0x014C,
+            rdata: b"",
+            ism_mawarid: b".rsrc",
+            hashw: 0,
+            kutla: mawarid,
+        })
     }
 
     /// Lays out the shipped install's shape, with every real header in it.

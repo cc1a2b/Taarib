@@ -92,6 +92,7 @@ interface TartibWusata {
   readonly idadat_hali: [];
   readonly maalumat_taarib: [];
   readonly maktaba: [];
+  readonly fahs_akhir: [];
   readonly hassil_suwar_maktaba: [];
   readonly iftah_manassa: ['muarrif'];
   readonly adif_mujallad_fahs: ['masar'];
@@ -118,6 +119,12 @@ interface TartibWusata {
   readonly iqrar_aman: [];
   readonly sajjil_iqrar_aman: [];
   readonly thabbit_ruqaa: ['muarrif', 'masarMalaf', 'iqrarShabaka', 'iqrarTaqribi'];
+  // What an install would write and what a removal would leave. Both are the
+  // installer's own dry runs — the same `khutta` the write itself is handed —
+  // and both read the game directory, so a screen asks for them at the moment
+  // the decision is made rather than on mount.
+  readonly khuttat_tathbeet: ['muarrif'];
+  readonly khuttat_izala: ['muarrif', 'matlab'];
 
   // The workshop.
   readonly nusus_warsha: ['muarrif'];
@@ -132,6 +139,7 @@ interface TartibWusata {
   readonly taaliqat_warsha: ['muarrif'];
   readonly idmaj_huzma: ['muarrif', 'masar'];
   readonly qarrir_nizaat: ['muarrif', 'qararat'];
+  readonly anqidh_mashru: ['muarrif'];
 
   // The submission a contributor prepares.
   readonly jalsati: [];

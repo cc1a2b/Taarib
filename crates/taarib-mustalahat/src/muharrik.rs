@@ -55,11 +55,131 @@ pub enum AilatMuharrik {
     /// [`crate::muharrik`]'s detector in `taarib-muharrik` records each of those
     /// so that a reader who expects MT Framework can see why it is not.
     Bio4,
+    /// DICE's Frostbite, as Electronic Arts ships it across its own catalogue.
+    ///
+    /// The one engine of the six below that publishes both a name and a version
+    /// in a place a reader can check: the shipped
+    /// `Engine.Render.Core2.PlatformPcDx12.dll` carries a Windows version
+    /// resource whose `ProductName` is the single word `Frostbite`, whose
+    /// `CompanyName` is `Electronic Arts`, and whose `ProductVersion` is an
+    /// engine release number — `2.42.5` in the build this was written against.
+    Frostbite,
+    /// Pearl Abyss's `BlackSpace`, the engine behind Crimson Desert.
+    ///
+    /// Named by the game's own sibling binary: `bin64/pers.exe` declares
+    /// `ProductName` as `BlackSpace version` under `LegalCopyright`
+    /// `Pearlabyss Corp`. Pearl Abyss publishes no release numbering for it, so
+    /// no version is reported — the number beside that name is the patcher's
+    /// own file version and says nothing about the engine.
+    BlackSpace,
+    /// Vicarious Visions' Alchemy, the engine under Crash Bandicoot N. Sane
+    /// Trilogy.
+    ///
+    /// Recognised by the two container tags it descends from Intrinsic
+    /// Graphics' middleware and never renamed: `IGA\x1A` at the head of every
+    /// archive and `IGZ\x01` — written byte-swapped, `01 5A 47 49` — at the
+    /// head of every object file. Activision published no name or version for
+    /// this engine, so only the container versions are readable and neither is
+    /// reported as the engine's.
+    Alchemy,
+    /// `FromSoftware`'s `Dantelion2`, the core library every Souls-lineage title
+    /// is built on.
+    ///
+    /// The engine names itself the way a compiler makes it: assertion strings
+    /// in the shipped executable's read-only data carry the engine's own source
+    /// path, `N:\FRPG\Source\Dantelion2\...` in DARK SOULS: REMASTERED and
+    /// `W:\GR\RootBranch\Source\Library\Dantelion2\...` in ELDEN RING. Its file
+    /// formats are the second half of the identification: `DCX\0` compression
+    /// wrappers whose own header points at the `DCS\0` and `DCP\0` blocks
+    /// behind it, and the `BND3`/`BDF3` archive pair.
+    ///
+    /// `FromSoftware` publishes no marketing name and no version for it, exactly
+    /// as Capcom publishes none for [`Self::Bio4`], so the internal name is the
+    /// only name there is.
+    Dantelion,
+    /// Rockstar's RAGE — the Rockstar Advanced Game Engine.
+    ///
+    /// Named from two independent places in the game's own files: the `RPF7`
+    /// archive magic every `.rpf` opens with (`37 46 50 52` on disk, the tag
+    /// stored little-endian), and log format strings inside the executable's
+    /// read-only data that tag their subsystem `[RAGE]`.
+    Rage,
+    /// Massive Entertainment's Snowdrop, as Ubisoft ships it.
+    ///
+    /// Identified entirely from its data root, which is what makes it worth
+    /// having: the executable of the title this was written against is behind a
+    /// protector that leaves a reader almost nothing. `rogue/sdf/pc/data/`
+    /// holds `sdf.sdftoc`, whose first four bytes are `WEST` and which carries
+    /// the studio's own name `massive` as ASCII inside its header, beside a
+    /// thousand-odd `.sdfdata` chunks that each open with `BERG` and the same
+    /// format version as the table of contents.
+    Snowdrop,
     /// Nothing Taarib recognises. A first-class answer, not a failure.
     Majhul,
 }
 
 impl AilatMuharrik {
+    /// Every engine family, once.
+    ///
+    /// Written out rather than iterated, because the enum has no iterator — and
+    /// public rather than private to whichever module wanted it, because three
+    /// separate hand-kept copies of this list already existed and two of them
+    /// went stale. The automatic-run gate's copy still held ten families after
+    /// the set reached seventeen, so its exhaustiveness test quietly skipped
+    /// seven engines including every one added in the last two phases, and the
+    /// library filter dropped the same seven.
+    ///
+    /// [`Self::kul_mashmula`] proves this covers the enum, so a family added
+    /// without being added here fails a test rather than disappearing from
+    /// whatever reads it.
+    pub const KUL: [Self; 17] = [
+        Self::Unity,
+        Self::Unreal,
+        Self::Godot,
+        Self::RpgMakerMv,
+        Self::RpgMakerMz,
+        Self::RpgMakerVxAce,
+        Self::Renpy,
+        Self::GameMaker,
+        Self::Electron,
+        Self::Bio4,
+        Self::Frostbite,
+        Self::BlackSpace,
+        Self::Alchemy,
+        Self::Dantelion,
+        Self::Rage,
+        Self::Snowdrop,
+        Self::Majhul,
+    ];
+
+    /// Whether [`Self::KUL`] names this family.
+    ///
+    /// The match is exhaustive on purpose: it is what makes the list above
+    /// provably complete. A new variant stops the build here, and the fix is to
+    /// add it in both places rather than to add a wildcard.
+    #[must_use]
+    pub const fn kul_mashmula(self) -> bool {
+        match self {
+            Self::Unity
+            | Self::Unreal
+            | Self::Godot
+            | Self::RpgMakerMv
+            | Self::RpgMakerMz
+            | Self::RpgMakerVxAce
+            | Self::Renpy
+            | Self::GameMaker
+            | Self::Electron
+            | Self::Bio4
+            | Self::Frostbite
+            | Self::BlackSpace
+            | Self::Alchemy
+            | Self::Dantelion
+            | Self::Rage
+            | Self::Snowdrop
+            | Self::Majhul => true,
+        }
+    }
+
     /// The engine's name as the interface writes it.
     #[must_use]
     pub const fn ism(self) -> &'static str {
@@ -77,15 +197,54 @@ impl AilatMuharrik {
             // wrote into the binary, with the company in front of it so that a
             // reader who has never met the string knows whose engine it is.
             Self::Bio4 => "Capcom BIO4",
+            // Each of the six carries its studio in front of the engine name,
+            // for the same reason `Bio4` does: these are in-house engines a
+            // player has no reason to have met, and the studio is what makes
+            // the name mean something. `Frostbite` is the exception because it
+            // is the one of the six the engine itself publishes under a bare
+            // name, in its own version resource.
+            Self::Frostbite => "Frostbite",
+            Self::BlackSpace => "Pearl Abyss BlackSpace",
+            Self::Alchemy => "Vicarious Visions Alchemy",
+            Self::Dantelion => "FromSoftware Dantelion",
+            Self::Rage => "Rockstar RAGE",
+            Self::Snowdrop => "Ubisoft Snowdrop",
             Self::Majhul => "غير معروف",
         }
     }
 
     /// Whether Taarib can replace text inside this engine at all, or whether
     /// the overlay is the only route.
+    ///
+    /// Written as a total match rather than as a negation of the unknown
+    /// family, because the answer stopped being "everything except the unknown"
+    /// the moment an engine could be *named* without being reachable. Six of
+    /// these are named from their own bytes and none of them has a way in: no
+    /// plugin system, no scripting runtime, no published container format this
+    /// build can rebuild. Naming an engine says what a game is; it does not
+    /// say Taarib can get inside it, and this method is where the difference is
+    /// kept honest for every caller that asks.
     #[must_use]
     pub const fn qabil_lil_tarqee(self) -> bool {
-        !matches!(self, Self::Majhul)
+        match self {
+            Self::Unity
+            | Self::Unreal
+            | Self::Godot
+            | Self::RpgMakerMv
+            | Self::RpgMakerMz
+            | Self::RpgMakerVxAce
+            | Self::Renpy
+            | Self::GameMaker
+            | Self::Electron
+            | Self::Bio4 => true,
+            Self::Frostbite
+            | Self::BlackSpace
+            | Self::Alchemy
+            | Self::Dantelion
+            | Self::Rage
+            | Self::Snowdrop
+            | Self::Majhul => false,
+        }
     }
 }
 
@@ -636,4 +795,39 @@ pub mod asmaa_muharrik {
     ///
     /// `taarib-muhawwil-godot` writes it; `taarib-tathbeet` plans where it goes.
     pub const TAJAWUZ_GODOT: &str = "override.cfg";
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use super::AilatMuharrik;
+
+    /// The canonical list holds every family, once.
+    ///
+    /// Two assertions rather than one, because the two ways this list rots are
+    /// different: a family added to the enum and forgotten here shrinks it
+    /// below the variant count, and a copy-paste while adding one duplicates an
+    /// existing entry without changing the length.
+    #[test]
+    fn kul_tashmal_kul_aila() {
+        for aila in AilatMuharrik::KUL {
+            assert!(aila.kul_mashmula(), "{aila:?}");
+        }
+        let mut asma: Vec<&str> = AilatMuharrik::KUL.iter().map(|a| a.ism()).collect();
+        let qabl = asma.len();
+        asma.sort_unstable();
+        asma.dedup();
+        assert_eq!(asma.len(), qabl, "a family appears twice in KUL");
+    }
+
+    /// Every family names itself, and no two share a name.
+    ///
+    /// `ism` reaches the screen and the diagnostics bundle, so two families
+    /// answering the same string would make a report unreadable at exactly the
+    /// moment somebody is trying to work out which engine a game really is.
+    #[test]
+    fn kul_aila_lahaa_ism_farid() {
+        for aila in AilatMuharrik::KUL {
+            assert!(!aila.ism().is_empty(), "{aila:?} has no name");
+        }
+    }
 }

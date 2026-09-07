@@ -33,6 +33,7 @@ pub mod damj_mawarid;
 pub mod ihsaat;
 pub mod khata;
 pub mod mushtaraka;
+pub mod salama;
 pub mod tabadul;
 pub mod tarikh;
 pub mod tasdir;
@@ -47,6 +48,7 @@ pub use mushtaraka::{
 };
 pub use ihsaat::{IhsaatMashru, IhsaatMusahim, ihsib};
 pub use khata::{KhataWarsha, NatijatWarsha};
+pub use salama::{HalatNusus, QiraatNusus, SababTalaf, SatrTalif, TaqreerInqadh, anqidh};
 pub use tabadul::saddir_wa_athbit;
 pub use tarikh::{QaydTarikh, TarikhMashru};
 pub use tasdir::{AslHuzma, MuhtawaHuzma, istawrid, saddir};

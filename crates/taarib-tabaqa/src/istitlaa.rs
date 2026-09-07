@@ -37,6 +37,21 @@
 //! leaves the other product calling into memory that has been unmapped, and that
 //! is refused by reading the slot back before writing to it.
 //!
+//! ## A slot that could not be read is not a free slot
+//!
+//! The rule above is only as good as the read behind it. A `version.dll` an
+//! antivirus is holding open, one past the size this survey will load, one
+//! behind a symlink loop or an ACL the survey cannot traverse — each answers the
+//! question "what is in Taarib's slot?" with *nothing*, and nothing is exactly
+//! what an empty slot answers too. So every slot that could not be read is
+//! carried in [`TaqrirIstitlaa::thughrat`] with the reason, [`halat_slot`]
+//! answers with its own state for it, and the verdict for Taarib's slot is
+//! [`crate::qudra::HukmQudra::Majhula`] — not "taken", which would be a claim
+//! about a file nothing read, and not "free", which would be the overwrite
+//! this module exists to prevent.
+//!
+//! [`halat_slot`]: TaqrirIstitlaa::halat_slot
+//!
 //! ## The import table
 //!
 //! Which graphics API a game uses is not knowable with certainty from its files
@@ -84,8 +99,9 @@ const BASMAT_MUDKHAL: &[u8] = b"mudkhal.sijill";
 /// Thirty-two mebibytes covers every game executable and every proxy DLL there
 /// is. The cap exists because this runs against a directory the user chose, and
 /// a path that resolves to something enormous should be declined rather than
-/// loaded into a process that may be a 32-bit game.
-const AQSA_MALAF: u64 = 32 * 1024 * 1024;
+/// loaded into a process that may be a 32-bit game. A proxy slot past it is
+/// reported as unread, never as free and never as somebody else's.
+pub const AQSA_MALAF: u64 = 32 * 1024 * 1024;
 
 /// How many import descriptors are walked before the table is called malformed.
 const AQSA_MUSTAWRADAT: usize = 4_096;
@@ -134,7 +150,7 @@ pub const SLOTAT_WAKEEL: &[&str] = &[
 /// The separation matters because the two kinds of occupied slot ask different
 /// questions. A `dinput8.dll` belonging to a mod loader means a third party is
 /// live in the process, which is a disclosure. A `dxgi.dll` belonging to
-/// ReShade means a third party is **on the presentation path**, which is the
+/// `ReShade` means a third party is **on the presentation path**, which is the
 /// question of whether the overlay draws at all.
 const SLOTAT_RUSUM: &[&str] = &[
     "d3d8.dll",
@@ -163,12 +179,13 @@ const SLOTAT_MUSHTARAKA: &[&str] = &["xinput1_3.dll", "xinput1_4.dll"];
 pub enum TariqatJar {
     /// It hands the game an object of its own.
     ///
-    /// ReShade's proxy returns its own `IDXGISwapChain` and ENBSeries its own
-    /// `IDirect3DDevice9`. The game's pointer is that C++ class, so its method
-    /// table is the product's and not the system's — and the documented way to
-    /// find a method table, which is to make a device of your own and read the
-    /// pointers out of it, reads the *system* table. Hooking it succeeds,
-    /// verifies, and is never called. Nothing crashes and nothing is drawn.
+    /// `ReShade`'s proxy returns its own `IDXGISwapChain` and `ENBSeries` its
+    /// own `IDirect3DDevice9`. The game's pointer is that C++ class, so its
+    /// method table is the product's and not the system's — and the documented
+    /// way to find a method table, which is to make a device of your own and
+    /// read the pointers out of it, reads the *system* table. Hooking it
+    /// succeeds, verifies, and is never called. Nothing crashes and nothing is
+    /// drawn.
     Ghilaf,
     /// It patches the system function where it lives.
     ///
@@ -297,6 +314,49 @@ pub struct SlotMashghul {
     pub tariqa: TariqatJar,
 }
 
+/// One proxy slot the survey could not read, and why.
+///
+/// A present file is a fact even when its bytes are not: the name is taken by
+/// *something*, and the survey does not know what. Carried separately from
+/// [`SlotMashghul`] because every field that type promises — the size, whether
+/// it is Taarib's, the product holding it — is exactly what was not learned.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ThughraIstitlaa {
+    /// The slot's name.
+    pub ism: String,
+    /// Where it is.
+    pub masar: PathBuf,
+    /// Its size, when the metadata was readable and only the bytes were not.
+    pub hajm: Option<u64>,
+    /// What refused, in the filesystem's own words.
+    pub sabab: String,
+}
+
+/// What Taarib's own proxy slot holds, as far as the survey could see.
+///
+/// Four states rather than a `bool`, because the fourth is the one a `bool`
+/// would have to fold into one of the others — and folding it into "free" is
+/// the overwrite this module exists to refuse, while folding it into "taken"
+/// asserts a competitor that may not exist. [`TaqrirIstitlaa::slot_mutah`] is
+/// the fail-safe fold for a caller that needs only a yes or no.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HalatSlot {
+    /// Nothing is there.
+    Hurr,
+    /// Taarib's own loader is there, so this is a reinstall.
+    Taarib,
+    /// Another product's module is there, and Taarib will not write over it.
+    Mashghul {
+        /// The file, as the survey saw it.
+        slot: SlotMashghul,
+    },
+    /// Something is there and the survey could not read it.
+    GhayrMaqru {
+        /// What could not be read, and why.
+        thughra: ThughraIstitlaa,
+    },
+}
+
 /// What a game's files say, before anything is installed into them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaqrirIstitlaa {
@@ -311,6 +371,12 @@ pub struct TaqrirIstitlaa {
     pub mustawradat: Vec<String>,
     /// The proxy slots already occupied, in the order this module looks.
     pub mashghula: Vec<SlotMashghul>,
+    /// The proxy slots that hold something the survey could not read.
+    ///
+    /// Never empty because nothing went wrong *and* never empty because nothing
+    /// was looked at: every name in [`SLOTAT_WAKEEL`] is either absent,
+    /// occupied, or here.
+    pub thughrat: Vec<ThughraIstitlaa>,
     /// Every finding, in both languages, with its own verdict.
     pub asbab: Vec<SababQudra>,
 }
@@ -323,18 +389,44 @@ impl TaqrirIstitlaa {
     }
 
     /// Whether the overlay can be installed into this game at all.
+    ///
+    /// False for a taken slot and false for an unread one: an installer that
+    /// cannot see what it is about to write over does not write.
     #[must_use]
     pub fn yumkin(&self) -> bool {
         self.hukm().qabila()
     }
 
+    /// What Taarib's own proxy slot holds.
+    ///
+    /// An unread slot answers before an occupied one, because a name that could
+    /// not be read is in neither list's terms and must not be described in
+    /// them.
+    #[must_use]
+    pub fn halat_slot(&self) -> HalatSlot {
+        if let Some(thughra) =
+            self.thughrat.iter().find(|thughra| thughra.ism.eq_ignore_ascii_case(SLOT_TAARIB))
+        {
+            return HalatSlot::GhayrMaqru { thughra: thughra.clone() };
+        }
+        match self.mashghula.iter().find(|slot| slot.ism.eq_ignore_ascii_case(SLOT_TAARIB)) {
+            None => HalatSlot::Hurr,
+            Some(slot) if slot.taarib => HalatSlot::Taarib,
+            Some(slot) => HalatSlot::Mashghul { slot: slot.clone() },
+        }
+    }
+
     /// Whether Taarib's own proxy slot is free, or already holds Taarib.
+    ///
+    /// The fail-safe fold of [`TaqrirIstitlaa::halat_slot`]: a slot that could
+    /// not be read answers `false` here, the same way a process table that
+    /// could not be read answers "treat it as running". A caller that tells the
+    /// user the difference between "taken" and "could not be read" — which is
+    /// the difference between "remove that product" and "retry in a moment" —
+    /// wants the four-state answer by name.
     #[must_use]
     pub fn slot_mutah(&self) -> bool {
-        self.mashghula
-            .iter()
-            .find(|slot| slot.ism.eq_ignore_ascii_case(SLOT_TAARIB))
-            .is_none_or(|slot| slot.taarib)
+        matches!(self.halat_slot(), HalatSlot::Hurr | HalatSlot::Taarib)
     }
 
     /// The occupied slots that belong to somebody else.
@@ -354,9 +446,15 @@ impl TaqrirIstitlaa {
     }
 
     /// The report as the lines a diagnostics bundle carries.
+    ///
+    /// What could not be read comes before what was found, so a bundle is never
+    /// read as clean by somebody who stopped at the first few lines.
     #[must_use]
     pub fn sutur(&self) -> Vec<String> {
         let mut sutur = vec![format!("{}: {}", self.luba.display(), self.hukm())];
+        sutur.extend(self.thughrat.iter().map(|thughra| {
+            format!("unread: {} at {} — {}", thughra.ism, thughra.masar.display(), thughra.sabab)
+        }));
         sutur.extend(
             self.asbab.iter().map(|sabab| format!("{}: {}", sabab.hukm, sabab.injilizi)),
         );
@@ -400,7 +498,7 @@ pub fn istatli(malaf_luba: &Path) -> Result<TaqrirIstitlaa, KhataTabaqa> {
     }
 
     let mujallad = malaf_luba.parent().unwrap_or_else(|| Path::new("."));
-    let mashghula = slotat_mashghula(mujallad);
+    let (mashghula, thughrat) = slotat_mashghula(mujallad);
     let mut asbab = Vec::new();
 
     if wajihat.is_empty() {
@@ -441,10 +539,16 @@ pub fn istatli(malaf_luba: &Path) -> Result<TaqrirIstitlaa, KhataTabaqa> {
         ));
     }
 
+    for thughra in &thughrat {
+        asbab.push(sabab_thughra(thughra));
+    }
     for slot in &mashghula {
         asbab.push(sabab_slot(slot));
     }
-    if mashghula.is_empty() {
+    // The all-clear is a claim about every name, and it is only true when every
+    // name was actually read. A gap beside it would make this sentence the
+    // "empty result reads as clean" the gap list exists to prevent.
+    if mashghula.is_empty() && thughrat.is_empty() {
         asbab.push(SababQudra::kamila(
             "لا يشغل أي منتج آخر أسماء التحميل المجاورة لهذا الملف التنفيذي.",
             "none of the loader names beside this executable are taken by another product",
@@ -456,8 +560,80 @@ pub fn istatli(malaf_luba: &Path) -> Result<TaqrirIstitlaa, KhataTabaqa> {
         wajihat,
         mustawradat: asmaa,
         mashghula,
+        thughrat,
         asbab,
     })
+}
+
+/// The finding one unread slot produces.
+///
+/// Reported as the worst the slot could be, where that worst is a limit, and as
+/// not determined where it is a refusal — see [`crate::qudra`]'s header. Nothing
+/// in a slot Taarib does not use can stop an installation: a graphics name is
+/// at worst a wrapper on the presentation path, any other name is at worst a
+/// hook live in the process, and both are what an *identified* module in that
+/// slot already produces. Taarib's own slot is different, because the worst it
+/// could hold is another product, and the survey will neither claim that nor
+/// deny it about bytes it did not read.
+fn sabab_thughra(thughra: &ThughraIstitlaa) -> SababQudra {
+    let hajm = thughra.hajm.map_or_else(String::new, |hajm| format!(", {hajm} bytes"));
+    let hajm_arabi = thughra.hajm.map_or_else(String::new, |hajm| format!("، {hajm} بايت"));
+    if thughra.ism.eq_ignore_ascii_case(SLOT_TAARIB) {
+        return SababQudra::majhula(
+            format!(
+                "الاسم {} يحمل ملفًا لم يتمكّن الاستطلاع من قراءته ({}{hajm_arabi}). هذا هو \
+                 الاسم الوحيد الذي يستخدمه تعريب، ولا يكتب تعريب فوق ملف لم يقرأه: قد يكون \
+                 مُحمّل تعريب نفسه محجوزًا لحظةً، وقد يكون منتجًا آخر. أعد المحاولة بعد زوال \
+                 السبب.",
+                thughra.ism, thughra.sabab
+            ),
+            format!(
+                "the {} slot holds a file this survey could not read ({}{hajm}, at {}). This is \
+                 the one name Taarib uses, and Taarib does not write over a file it could not \
+                 read: it may be Taarib's own loader held open for a moment, and it may be \
+                 another product. Retry once the cause is gone; whether the slot is free is \
+                 not known until then.",
+                thughra.ism,
+                thughra.sabab,
+                thughra.masar.display()
+            ),
+        );
+    }
+    if SLOTAT_RUSUM.iter().any(|slot| slot.eq_ignore_ascii_case(&thughra.ism)) {
+        return SababQudra::naqisa(
+            format!(
+                "الاسم {} يحمل ملفًا لم يتمكّن الاستطلاع من قراءته ({}{hajm_arabi})، وهو على \
+                 مسار العرض. أسوأ ما قد يكون هو غلاف يعترض جهاز اللعبة — فتُركَّب الطبقة ولا \
+                 تُستدعى — وعلى ذلك يُحكم. لا يستخدم تعريب هذا الاسم ولا يمسّه.",
+                thughra.ism, thughra.sabab
+            ),
+            format!(
+                "the {} slot holds a file this survey could not read ({}{hajm}, at {}), and it \
+                 is on the presentation path. The worst it can be is a wrapper around the \
+                 game's device — the hook installs and is never called — so that is what it is \
+                 treated as. Taarib does not use this slot and leaves it alone.",
+                thughra.ism,
+                thughra.sabab,
+                thughra.masar.display()
+            ),
+        );
+    }
+    SababQudra::kamila(
+        format!(
+            "الاسم {} يحمل ملفًا لم يتمكّن الاستطلاع من قراءته ({}{hajm_arabi}). لا يستخدم \
+             تعريب هذا الاسم ولا يمسّه؛ أسوأ ما قد يكون هو خطّاف من طرف ثالث يعمل داخل اللعبة، \
+             ولا يفكّ تعريب خطّاف غيره.",
+            thughra.ism, thughra.sabab
+        ),
+        format!(
+            "the {} slot holds a file this survey could not read ({}{hajm}, at {}). Taarib does \
+             not use this slot and leaves it alone; the worst it can be is a third-party hook \
+             live in the process, which is chained onto rather than refused.",
+            thughra.ism,
+            thughra.sabab,
+            thughra.masar.display()
+        ),
+    )
 }
 
 /// The finding one occupied slot produces.
@@ -535,8 +711,8 @@ fn sabab_slot(slot: &SlotMashghul) -> SababQudra {
 /// swap chain of its own against a hidden window, read the pointers out, and
 /// destroy them. Those pointers belong to the *class*, so they are the same
 /// ones the game's own swap chain uses — which is true right up until something
-/// hands the game an object of a different class. ReShade's proxy returns its
-/// own `IDXGISwapChain`; ENBSeries returns its own `IDirect3DDevice9`. The
+/// hands the game an object of a different class. `ReShade`'s proxy returns its
+/// own `IDXGISwapChain`; `ENBSeries` returns its own `IDirect3DDevice9`. The
 /// overlay's hook is then installed in a table nothing calls: it succeeds, it
 /// verifies, the game runs, and nothing is drawn.
 ///
@@ -585,23 +761,50 @@ fn sabab_ghilaf(slot: &SlotMashghul) -> SababQudra {
     )
 }
 
-/// The occupied proxy slots in one directory.
+/// The occupied proxy slots in one directory, and the ones that would not be
+/// read.
 ///
-/// A directory that cannot be listed answers "none". This runs against a game
-/// directory the caller pointed at, and a permission error there is not a fact
-/// about proxies; the caller learns about it from the executable read, which
-/// happens first and does report its own failure.
-fn slotat_mashghula(mujallad: &Path) -> Vec<SlotMashghul> {
+/// Each name is asked two questions — is something there, and what is it — and
+/// a refusal to either is a gap, never a "no". Only [`std::io::ErrorKind::NotFound`]
+/// means the name is free; a permission refusal, a symlink loop, a sharing
+/// violation from a scanner holding the file, or a file past [`AQSA_MALAF`] each
+/// mean the name is *taken by something this survey did not see*. The directory
+/// itself is not listed, so an untraversable directory reaches this as a gap
+/// per name rather than as an empty answer — and the executable read, which
+/// happens first, has already refused for that case.
+fn slotat_mashghula(mujallad: &Path) -> (Vec<SlotMashghul>, Vec<ThughraIstitlaa>) {
     let mut mashghula = Vec::new();
+    let mut thughrat = Vec::new();
     for ism in SLOTAT_WAKEEL.iter().chain(SLOTAT_MUSHTARAKA.iter()) {
         let masar = mujallad.join(ism);
-        let Ok(bayan) = std::fs::metadata(&masar) else {
-            continue;
+        let bayan = match std::fs::metadata(&masar) {
+            Ok(bayan) => bayan,
+            Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(sabab) => {
+                thughrat.push(ThughraIstitlaa {
+                    ism: (*ism).to_owned(),
+                    masar,
+                    hajm: None,
+                    sabab: sabab.to_string(),
+                });
+                continue;
+            }
         };
         if !bayan.is_file() {
             continue;
         }
-        let bayt = iqra_mahdud(&masar).unwrap_or_default();
+        let bayt = match iqra_mahdud(&masar) {
+            Ok(bayt) => bayt,
+            Err(khata) => {
+                thughrat.push(ThughraIstitlaa {
+                    ism: (*ism).to_owned(),
+                    masar,
+                    hajm: Some(bayan.len()),
+                    sabab: khata.to_string(),
+                });
+                continue;
+            }
+        };
         let taarib = fihi(&bayt, BASMAT_MUDKHAL);
         let tawqi = if taarib { None } else { tawqi_min_bayt(ism, &bayt) };
         // A name a game may legitimately ship is Microsoft's own file until
@@ -627,15 +830,16 @@ fn slotat_mashghula(mujallad: &Path) -> Vec<SlotMashghul> {
             },
         });
     }
-    mashghula
+    (mashghula, thughrat)
 }
 
 /// The product a module's own bytes name, if any.
 ///
 /// Marks are matched in ASCII and in the UTF-16 a Windows version resource
-/// stores its strings in — which is where the string that identifies ReShade or
-/// Special K actually lives — and case-insensitively, because Alexander Blade's
-/// ASI loader spells itself `asiloader` where the ecosystem writes `ASI Loader`.
+/// stores its strings in — which is where the string that identifies `ReShade`
+/// or Special K actually lives — and case-insensitively, because Alexander
+/// Blade's ASI loader spells itself `asiloader` where the ecosystem writes
+/// `ASI Loader`.
 ///
 /// The slot is a guard rather than a hint. A `re4_tweaks` proxy contains the
 /// string `DXVK` because it reports whether DXVK is in use, and DXVK is never
@@ -684,15 +888,15 @@ fn fihi(kawm: &[u8], basma: &[u8]) -> bool {
     })
 }
 
-/// Whether a file on disk is Taarib's own loader.
-///
-/// A file too large to read under the cap answers `false`, which is the safe
-/// direction: treating an unknown module as a third party's means declining to
-/// overwrite it.
-// `huwa_mudkhal` used to live here and read the file a second time to answer
-// the same question. `slotat_mashghula` now reads each module once and asks
-// every question of the one buffer, which matters because that buffer can be
-// eleven megabytes and there are seventeen names to try.
+// `huwa_mudkhal` — "is this file Taarib's own loader?" — used to live here and
+// read the file a second time to answer the same question. `slotat_mashghula`
+// now reads each module once and asks every question of the one buffer, which
+// matters because that buffer can be eleven megabytes and there are seventeen
+// names to try. Its unreadable-file answer used to survive in the caller as
+// "treated as a third party's" — the safe direction for the write, and a false
+// sentence about the file, since an unread `version.dll` may be Taarib's own
+// loader held open by a scanner. It is now a `ThughraIstitlaa`, which refuses
+// the write for the same reason and says what actually happened.
 
 /// Reads a file, refusing one larger than [`AQSA_MALAF`].
 ///

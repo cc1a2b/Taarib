@@ -62,7 +62,7 @@ use taarib_mustalahat::luba::MasdarLuba;
 use taarib_usus::khata::{Khata, Natija};
 use tokio::sync::Mutex;
 
-use crate::fahs::{LubaMuktashafa, NatijatFahs, TanbihFahs};
+use crate::fahs::{HalatFahsMatjar, LubaMuktashafa, NatijatFahs, TanbihFahs};
 use crate::khata::KhataKashf;
 
 // ---------------------------------------------------------------------------
@@ -173,12 +173,17 @@ impl FarqFahs {
 ///
 /// ## The launcher guard
 ///
-/// A launcher that produced no result this round — not installed, or its
-/// catalogue on a drive that is not mounted — has its games left strictly
-/// alone. Without that guard, starting Taarib before an external drive finished
+/// A launcher whose catalogue was not read end to end this round — not
+/// installed, its catalogue directory gone, one of its libraries on a drive
+/// that is not mounted — has its games left strictly alone: only a result whose
+/// verdict is [`HalatFahsMatjar::Tamma`] is believed about what it did *not*
+/// list. Without that guard, starting Taarib before an external drive finished
 /// mounting would mark an entire library absent in one pass, and every one of
 /// those games would flip back on the next refresh. The user would watch their
 /// library empty and refill itself, which is exactly how a tool loses trust.
+/// The guard used to test whether a root was found or a game was returned,
+/// which a Steam client on one drive with its library on another passed while
+/// the library drive was unplugged.
 ///
 /// ## Reading the filesystem
 ///
@@ -209,10 +214,12 @@ pub fn qarin(mukhtashaf: &NatijatFahs, mukhazzan: &[LubaMuktashafa]) -> FarqFahs
         let _ = fahras.entry(luba.masdar.muarrif()).or_insert(luba);
     }
 
-    // Which launcher families are in a position to be believed this round.
+    // Which launcher families are in a position to be believed this round:
+    // only those whose catalogue was read whole. A found root or a non-empty
+    // list is not that — a library on an unplugged drive yields both.
     let mut aailat: HashSet<&'static str> = HashSet::new();
     for natija in &mukhtashaf.matajir {
-        if natija.jidhr_matjar.is_some() || !natija.alaab.is_empty() {
+        if natija.hala() == HalatFahsMatjar::Tamma {
             let _ = aailat.insert(natija.matjar);
         }
     }

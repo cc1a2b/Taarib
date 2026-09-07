@@ -203,6 +203,9 @@ pub fn ijri(
         }],
         iqrar_taqribi: false,
         tanfidhi: &tanfidhi,
+        // The same root the safety gate above was given, for the same reason:
+        // one resolution of where Steam is, not two that can disagree.
+        jidhr_steam: talab.aman.jidhr_steam,
     };
 
     muraqib.ballagh(

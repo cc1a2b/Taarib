@@ -7,7 +7,7 @@ the product and links into everything here. This page is the index.
 
 | document | what it answers |
 | --- | --- |
-| [`mimar.md`](mimar.md) | How Taarib is put together: the twenty-seven crates, the four boundaries, the path a string takes from a game's data files to Arabic on screen. |
+| [`mimar.md`](mimar.md) | How Taarib is put together: every crate under `crates/`, the four boundaries, the path a string takes from a game's data files to Arabic on screen. |
 | [`taqdimiya.md`](taqdimiya.md) | Why Taarib never produces a Unicode presentation form. **The decision a newcomer is most likely to want to undo.** Read before touching shaping, the atlas, or an adapter's draw path. |
 | [`bina.md`](bina.md) | Building all of it from source, including the Windows bundle and the payload feature flag that silently produces a do-nothing module if you forget it. |
 
@@ -20,7 +20,7 @@ written to be obeyed, not summarised.
 | --- | --- |
 | [`abi.md`](abi.md) | The `jisr` C ABI in full — every type, every ownership rule, versioning, and the error model. The only way into the engine from outside Rust. |
 | [`bidaya.md`](bidaya.md) | The payload bootstrap contract: the `taarib_bidaya` symbol, the order its steps run in, and the refusal discipline. **Section 6 is the honest record of what each in-game path reaches today and where it stops.** |
-| [`tawzee.md`](tawzee.md) | Packaging and distribution: the two signing identities, the five shipped targets, the twenty-row artifact matrix the staging tool enforces, runtime resolution, self-update, and uninstall. |
+| [`tawzee.md`](tawzee.md) | Packaging and distribution: the two signing identities, the target table (five rows, two of them macOS rows the workspace does not currently build for — see `tawzee/macos.md`), the artifact matrix the staging tool enforces row by row, runtime resolution, self-update, and uninstall. |
 
 ## What actually runs
 
@@ -51,20 +51,37 @@ the pinned Tauri sources — not from intention.
 
 ### A note on staleness
 
-`tawzee/steamdeck.md` and `tawzee/windows.md` are audit records written at a
-point in time, and parts of them have been overtaken. `tawzee/windows.md` still
-describes `msi` and `rpm` as present in `bundle.targets` and requiring removal;
-they were removed, and the live value is
-`["deb", "appimage", "nsis", "app", "dmg"]`. Both files also predate several
-things they record as absent — `bundle.resources`, the `mawarid/` directory, and
-the `taarib-tajmee` / `taarib-tahdith` / `taarib-mudkhal` crates all exist now —
-and the Steam Deck document contradicts itself on some of these between its
-checklist and its later findings, because the findings were amended as they
-closed and the checklist was not.
-
-They are left as written because they are records of an audit rather than living
+The files under `tawzee/` other than `adhonat.md` are audit records written at
+a point in time, and parts of each have been overtaken. Each now opens with a
+dated note naming what the tree has changed underneath it; the bodies are left
+as written, because they are records of an audit rather than living
 descriptions, and rewriting an audit erases what it found. Where one disagrees
-with the tree, the tree wins.
+with the tree, the tree wins. The headline items, as of 2026-09-06:
+
+- `tawzee/windows.md` still describes `msi` and `rpm` as present in
+  `bundle.targets` and requiring removal; they were removed, and the live value
+  is `["deb", "appimage", "nsis", "app", "dmg"]`. Its on-disk tree names
+  `basmat\`, `jisr\` and `unity\` directories the staging tool never writes
+  (those land inside each BepInEx component), and its `languages: ["Arabic"]`
+  is `["Arabic", "English"]` in the live configuration.
+- `tawzee/steamdeck.md` records `bundle.resources`, `mawarid/`, the
+  `mukawwinat_tahmil.rs` / `bidaya.rs` / `istiada_cli.rs` files and the
+  `taarib-tajmee` / `taarib-tahdith` / `taarib-mudkhal` crates as absent; all
+  exist. Its findings F1 (launch options never applied) and F5 (one Steam root
+  scanned) have been overtaken by code — the install path now writes and the
+  uninstall path restores launch options through `itlaq.rs`, and
+  `steam::hall_judhur` scans every root — and F3's "harmless today" no longer
+  holds because F1 closed. It also contradicts itself between its checklist and
+  its later findings, because the findings were amended as they closed and the
+  checklist was not.
+- `tawzee/tahaqquq.md` measured an installer whose `mawarid/` held only its
+  README; a fully staged tree and a much larger installer have been built since,
+  and `tauri.conf.json`'s `beforeBundleCommand` now runs the font gate that §5.1
+  says nothing enforces. The measured numbers in that file are the numbers of
+  the build it measured.
+- Line-number citations across all of these files, and across `linux.md` and
+  `macos.md`, have drifted as the two install crates grew; the function names
+  beside them are what to grep for.
 
 ## Elsewhere in the repository
 

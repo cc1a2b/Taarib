@@ -96,7 +96,7 @@ use taarib_ruqaa::tarwisa::ISDAR_SIYAGHA;
 use taarib_ruqaa::tawqee::{KutlatTawqee, MudaqqiqTawqee};
 use taarib_saff::khatt::SilsilatKhutut;
 
-use crate::bawwaba::{KhattMujammaa, MuhtawaMasmuh, ShahadatBawwaba};
+use crate::bawwaba::{KhattMujammaa, MuhtawaMasmuh, SafhatMasmuha, ShahadatBawwaba};
 use crate::bayan::{BayanHuzma, MUKHATTAT_BAYAN, MuharrikHuzma, SijillFuhus};
 use crate::fuhusat::{AQSA_AMTHILA, IjtiyazFuhus, WasfHuzma};
 use crate::irtibat::IrtibatBina;
@@ -104,8 +104,7 @@ use crate::khata::KhataTarqee;
 use crate::taghtiya_ruqaa::TaqrirTaghtiya;
 use crate::tahdid_maqasat::TaqreerMaqasat;
 use crate::tahweel::{self, SiyasatHuzma};
-use crate::takhtit::{KhiyaratTasbeeq, TakhtitMusbaq};
-use crate::taqrir_tajawuz::TaqrirTajawuz;
+use crate::takhtit::KhiyaratTasbeeq;
 
 /// Everything the assembler needs that is not a proof.
 ///
@@ -130,9 +129,12 @@ pub struct MudkhalatTajmee<'a> {
     /// Which sizes were discovered.
     pub maqasat: &'a TaqreerMaqasat,
     /// Coverage, measured.
+    ///
+    /// The overflow report is deliberately *not* beside it. It is produced by
+    /// precomputation from the layouts that ship, and a field here would be a
+    /// field a caller could fill with an empty report — which is what every
+    /// caller did.
     pub taghtiya: &'a TaqrirTaghtiya,
-    /// The overflow report.
-    pub tajawuz: &'a TaqrirTajawuz,
     /// The options precomputation ran under, so the constraint records carry
     /// the same decisions the layouts were made under.
     pub khiyarat: &'a KhiyaratTasbeeq,
@@ -254,8 +256,9 @@ impl HuzmaMabniya {
 /// first, because every other table is keyed by a string's handle and the
 /// handles do not exist until then. Precomputation runs second, because it
 /// needs the handles. The atlas is built inside precomputation, because the
-/// glyph set is whatever shaping turned out to produce. The manifest is last,
-/// because it reports on all of it.
+/// glyph set is whatever shaping turned out to produce, and so is the overflow
+/// report, because it is measured from those same layouts. The manifest is
+/// last, because it reports on all of it.
 ///
 /// Two entries that disagree about how one source string is translated are
 /// resolved by [`wahhid_tarajim`] before the writer sees either of them, and
@@ -323,7 +326,8 @@ pub fn ijmaa(
 
     let iqama = musbaq.iqama().clone();
     let taqreer = musbaq.taqreer().clone();
-    let muhtawa = ijma_muhtawa(&nusus, &huwiyat, musbaq);
+    let (takhtitat, safahat, khutut_mabniya, tajawuz) = musbaq.ikhrij();
+    let muhtawa = ijma_muhtawa(&nusus, &huwiyat, takhtitat, safahat, khutut_mabniya);
     let bawwaba = ShahadatBawwaba::min_muhtawa(&muhtawa);
     uktub_muhtawa(&mut katib, muhtawa);
 
@@ -341,7 +345,7 @@ pub fn ijmaa(
         takhtit: taqreer,
         iqama,
         taghtiya: mudkhalat.taghtiya.clone(),
-        tajawuz: mudkhalat.tajawuz.clone(),
+        tajawuz: tajawuz.lil_huzma(),
         siyasa: SiyasatHuzma::min_khiyarat(&mudkhalat.khiyarat.takhtit),
     };
 
@@ -585,9 +589,10 @@ fn aqyad_min(awwal: &SijillQayd, thani: &SijillQayd) -> bool {
 fn ijma_muhtawa(
     nusus: &[MudkhalNass],
     huwiyat: &BTreeMap<NassId, HuwiyatNass>,
-    musbaq: TakhtitMusbaq,
+    takhtitat: Vec<TakhtitMabni>,
+    safahat: Option<SafhatMasmuha>,
+    khutut: Vec<KhattMabni>,
 ) -> Vec<MuhtawaMasmuh> {
-    let (takhtitat, safahat, khutut) = musbaq.ikhrij();
     let mut muhtawa: Vec<MuhtawaMasmuh> =
         Vec::with_capacity(nusus.len().saturating_add(takhtitat.len()));
 

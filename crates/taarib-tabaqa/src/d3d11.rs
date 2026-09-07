@@ -174,7 +174,7 @@ pub(crate) const KHATWAT_RAS: u32 = 36;
 // wrong colour, with no error anywhere. The agreement is checked at compile time
 // instead of trusted.
 const _: () = {
-    assert!(mem::size_of::<Ras>() == KHATWAT_RAS as usize, "Ras is not 36 bytes");
+    assert!(size_of::<Ras>() == KHATWAT_RAS as usize, "Ras is not 36 bytes");
     assert!(mem::offset_of!(Ras, mawdi) == IZAHAT_MAWDI as usize, "Ras.mawdi moved");
     assert!(mem::offset_of!(Ras, khareeta) == IZAHAT_KHAREETA as usize, "Ras.khareeta moved");
     assert!(mem::offset_of!(Ras, lawn) == IZAHAT_LAWN as usize, "Ras.lawn moved");
@@ -188,11 +188,11 @@ const _: () = {
 /// time rather than at compile time.
 ///
 /// Compiled at `vs_4_0` / `ps_4_0`, which every D3D11 device at feature level
-/// 10_0 and above accepts. Feature level 9_x would need the `_level_9_1`
+/// `10_0` and above accepts. Feature level `9_x` would need the `_level_9_1`
 /// profiles and a different constant buffer layout; a game running the D3D11
-/// runtime against 9_x hardware is not a game this overlay is for, and pretending
-/// otherwise would mean carrying a second shader nobody could test.
-pub(crate) const MASDAR_HLSL: &str = r#"
+/// runtime against `9_x` hardware is not a game this overlay is for, and
+/// pretending otherwise would mean carrying a second shader nobody could test.
+pub(crate) const MASDAR_HLSL: &str = r"
 cbuffer Thawabit : register(b0)
 {
     float4x4 isqat;
@@ -248,7 +248,7 @@ float4 biksel(Marhala m) : SV_TARGET
     }
     return natija;
 }
-"#;
+";
 
 /// `D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3`, plus
 /// row-major matrix packing.
@@ -781,10 +781,10 @@ impl HalatMasar {
                 self.izahat_faharis,
             );
 
-            siyaq.VSSetConstantBuffers(0, Some(&[self.thawabit_ras.clone()]));
-            siyaq.PSSetConstantBuffers(0, Some(&[self.thawabit_biksel.clone()]));
-            siyaq.PSSetShaderResources(0, Some(&[self.mawrid_biksel.clone()]));
-            siyaq.PSSetSamplers(0, Some(&[self.akhidh_biksel.clone()]));
+            siyaq.VSSetConstantBuffers(0, Some(core::slice::from_ref(&self.thawabit_ras)));
+            siyaq.PSSetConstantBuffers(0, Some(core::slice::from_ref(&self.thawabit_biksel)));
+            siyaq.PSSetShaderResources(0, Some(core::slice::from_ref(&self.mawrid_biksel)));
+            siyaq.PSSetSamplers(0, Some(core::slice::from_ref(&self.akhidh_biksel)));
 
             siyaq.VSSetShader(self.shader_ras.as_ref(), Some(self.mutajassidat_ras.shariha()));
             siyaq.PSSetShader(
@@ -1128,7 +1128,7 @@ impl KhattafD3D11 {
             ]);
         }
         let wasf_faharis = D3D11_BUFFER_DESC {
-            ByteWidth: u32::try_from(faharis_khaam.len() * mem::size_of::<u16>()).unwrap_or(0),
+            ByteWidth: u32::try_from(faharis_khaam.len() * size_of::<u16>()).unwrap_or(0),
             Usage: D3D11_USAGE_IMMUTABLE,
             BindFlags: D3D11_BIND_INDEX_BUFFER.0.cast_unsigned(),
             CPUAccessFlags: 0,
@@ -1158,7 +1158,7 @@ impl KhattafD3D11 {
 
         let thawabit_khaam = ThawabitIsqat::min_sath(sath);
         let wasf_thawabit = D3D11_BUFFER_DESC {
-            ByteWidth: u32::try_from(mem::size_of::<ThawabitIsqat>()).unwrap_or(0),
+            ByteWidth: u32::try_from(size_of::<ThawabitIsqat>()).unwrap_or(0),
             Usage: D3D11_USAGE_DEFAULT,
             BindFlags: D3D11_BIND_CONSTANT_BUFFER.0.cast_unsigned(),
             CPUAccessFlags: 0,
@@ -1443,7 +1443,7 @@ impl KhattafD3D11 {
             self.siyaq.VSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
             self.siyaq.PSSetShader(Some(shader_biksel), None);
             self.siyaq.PSSetConstantBuffers(0, Some(&[Some(thawabit.clone())]));
-            self.siyaq.PSSetShaderResources(0, Some(&[self.ru2yat_lawha.clone()]));
+            self.siyaq.PSSetShaderResources(0, Some(core::slice::from_ref(&self.ru2yat_lawha)));
             self.siyaq.PSSetSamplers(0, Some(&[Some(akhidh.clone())]));
 
             // The three stages the overlay does not use are cleared rather than
@@ -2033,7 +2033,7 @@ fn jami_sufuf(
 /// The same conversion `crate::wajiha` makes, made again here because that one
 /// is private to its module and a `pub` version would be a public API whose only
 /// purpose is to satisfy a lint.
-pub(crate) fn madaa_f32(qeema: u32) -> f32 {
+pub(crate) const fn madaa_f32(qeema: u32) -> f32 {
     #[expect(
         clippy::cast_precision_loss,
         reason = "surface and atlas dimensions are below 2^24, where u32 to f32 is exact"

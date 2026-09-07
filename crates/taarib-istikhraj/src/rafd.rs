@@ -182,6 +182,66 @@ impl SababRafd {
         !matches!(self, Self::BilaNusus)
     }
 
+    /// A stable short name for the kind of refusal, for grouping and logs.
+    #[must_use]
+    pub const fn miftah(&self) -> &'static str {
+        match self {
+            Self::BilaShajaratAnwa { .. } => "bila_shajarat_anwa",
+            Self::Mushaffar { .. } => "mushaffar",
+            Self::SighaMajhula { .. } => "sigha_majhula",
+            Self::IsdarGhayrMadum { .. } => "isdar_ghayr_madum",
+            Self::Talif { .. } => "talif",
+            Self::TaadhurQira { .. } => "taadhur_qira",
+            Self::BilaNusus => "bila_nusus",
+            Self::TajawuzHadd { .. } => "tajawuz_hadd",
+            Self::HadUlBina { .. } => "had_ul_bina",
+        }
+    }
+
+    /// The same refusal, widened to say it applied to `adad` members of one
+    /// container.
+    ///
+    /// The count goes into the field the sentence already prints rather than
+    /// into a new one, so the shape every stored and displayed report has stays
+    /// what it was. Unchanged below two, and unchanged for the two reasons a
+    /// member count would not describe: a container read and empty, and a
+    /// Unity object count, which [`MujammiRafd`] sums instead.
+    #[must_use]
+    pub fn bi_adad(self, adad: usize) -> Self {
+        if adad < 2 {
+            return self;
+        }
+        match self {
+            Self::Mushaffar { wasf } => Self::Mushaffar {
+                wasf: format!("{wasf}; {adad} members of this container are locked the same way"),
+            },
+            Self::SighaMajhula { wujid } => Self::SighaMajhula {
+                wujid: format!("{adad} members of this container, each {wujid}"),
+            },
+            Self::IsdarGhayrMadum { sigha, wujid, madum } => Self::IsdarGhayrMadum {
+                sigha,
+                wujid: format!("{wujid} across {adad} members of this container"),
+                madum,
+            },
+            Self::Talif { sabab } => Self::Talif {
+                sabab: format!("{sabab}; {adad} members of this container refused the same way"),
+            },
+            Self::TaadhurQira { sabab } => Self::TaadhurQira {
+                sabab: format!("{sabab}; {adad} members of this container refused the same way"),
+            },
+            Self::HadUlBina { wujid, sabab } => Self::HadUlBina {
+                wujid: format!("{adad} members of this container, each {wujid}"),
+                sabab,
+            },
+            Self::TajawuzHadd { hadd, qeema, saqf } => Self::TajawuzHadd {
+                hadd: format!("{hadd}, in {adad} members of this container,"),
+                qeema,
+                saqf,
+            },
+            Self::BilaShajaratAnwa { .. } | Self::BilaNusus => self,
+        }
+    }
+
     /// The reason, in Arabic.
     #[must_use]
     pub fn arabi(&self) -> String {
@@ -398,18 +458,7 @@ impl TaqreerRafd {
     pub fn majmua(&self) -> BTreeMap<String, Vec<&MadkhalRafd>> {
         let mut majmuat: BTreeMap<String, Vec<&MadkhalRafd>> = BTreeMap::new();
         for madkhal in &self.marfuda {
-            let miftah = match &madkhal.sabab {
-                SababRafd::BilaShajaratAnwa { .. } => "bila_shajarat_anwa",
-                SababRafd::Mushaffar { .. } => "mushaffar",
-                SababRafd::SighaMajhula { .. } => "sigha_majhula",
-                SababRafd::IsdarGhayrMadum { .. } => "isdar_ghayr_madum",
-                SababRafd::Talif { .. } => "talif",
-                SababRafd::TaadhurQira { .. } => "taadhur_qira",
-                SababRafd::BilaNusus => "bila_nusus",
-                SababRafd::TajawuzHadd { .. } => "tajawuz_hadd",
-                SababRafd::HadUlBina { .. } => "had_ul_bina",
-            };
-            majmuat.entry(miftah.to_owned()).or_default().push(madkhal);
+            majmuat.entry(madkhal.sabab.miftah().to_owned()).or_default().push(madkhal);
         }
         majmuat
     }
@@ -443,5 +492,85 @@ impl TaqreerRafd {
     pub fn dammij(&mut self, akhar: Self) {
         self.maqrua.extend(akhar.maqrua);
         self.marfuda.extend(akhar.marfuda);
+    }
+}
+
+/// One reason's share of a container's member refusals.
+#[derive(Debug)]
+struct MajmuatRafd {
+    /// The first member refused this way, which is the one the entry names.
+    asl: String,
+    /// The first refusal, which is the one the entry carries.
+    sabab: SababRafd,
+    /// How many members were refused this way.
+    adad: usize,
+}
+
+/// Member refusals inside one container, folded into one entry per reason.
+///
+/// A container is read member by member, and the reader refuses each one it
+/// cannot open on its own. Dropping those refusals is the defect this crate
+/// keeps finding: an encrypted package whose every member was skipped in
+/// silence is byte-identical, in the report, to a package that holds no text.
+/// Recording every one is the other failure: an export whose encryption filter
+/// matched every scene fails thousands of times the same way, and a report with
+/// a line per member is a wall nobody reads. So they are folded here, one line
+/// per kind of reason, naming the first member and carrying the count — which
+/// keeps the refusal's variant, and with it the remedy the interface offers.
+#[derive(Debug)]
+pub struct MujammiRafd {
+    hawiya: String,
+    majmuat: BTreeMap<&'static str, MajmuatRafd>,
+}
+
+impl MujammiRafd {
+    /// A collector for one container.
+    #[must_use]
+    pub fn jadeed(hawiya: impl Into<String>) -> Self {
+        Self { hawiya: hawiya.into(), majmuat: BTreeMap::new() }
+    }
+
+    /// Records one member the reader refused.
+    ///
+    /// The first refusal of each kind is kept whole; a later one of the same
+    /// kind only raises the count. The one exception is a Unity object count,
+    /// which is summed so that "objects skipped" stays a number of objects.
+    pub fn sajjil(&mut self, asl: impl Into<String>, sabab: SababRafd) {
+        match self.majmuat.entry(sabab.miftah()) {
+            std::collections::btree_map::Entry::Vacant(khana) => {
+                let _ = khana.insert(MajmuatRafd { asl: asl.into(), sabab, adad: 1 });
+            }
+            std::collections::btree_map::Entry::Occupied(mut khana) => {
+                let majmua = khana.get_mut();
+                majmua.adad = majmua.adad.saturating_add(1);
+                if let (
+                    SababRafd::BilaShajaratAnwa { adad, .. },
+                    SababRafd::BilaShajaratAnwa { adad: zaid, .. },
+                ) = (&mut majmua.sabab, &sabab)
+                {
+                    *adad = adad.saturating_add(*zaid);
+                }
+            }
+        }
+    }
+
+    /// How many members have been refused so far, over every reason.
+    #[must_use]
+    pub fn adad(&self) -> usize {
+        self.majmuat.values().map(|majmua| majmua.adad).fold(0, usize::saturating_add)
+    }
+
+    /// Whether nothing was refused.
+    #[must_use]
+    pub fn khali(&self) -> bool {
+        self.majmuat.is_empty()
+    }
+
+    /// Writes the folded refusals into the report, one per reason.
+    pub fn ikhtim(self, taqreer: &mut TaqreerRafd) {
+        let Self { hawiya, majmuat } = self;
+        for majmua in majmuat.into_values() {
+            taqreer.sajjil(hawiya.clone(), Some(majmua.asl), majmua.sabab.bi_adad(majmua.adad));
+        }
     }
 }

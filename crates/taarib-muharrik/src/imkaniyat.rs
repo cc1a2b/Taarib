@@ -145,7 +145,21 @@ use crate::tahdid::{maghlufa, mutaarid};
 /// determined". Stored reports for the Unreal titles are stale too, in the
 /// smaller direction: they name every API those games import except the
 /// Direct3D 9 one.
-pub const ISDAR_FAHS: u32 = 6;
+///
+/// Raised to 7 when six in-house engine families —
+/// [`AilatMuharrik::Frostbite`], [`AilatMuharrik::BlackSpace`],
+/// [`AilatMuharrik::Alchemy`], [`AilatMuharrik::Dantelion`],
+/// [`AilatMuharrik::Rage`] and [`AilatMuharrik::Snowdrop`] — and the detectors
+/// in `crate::dalail::khassa` that read them were added. Every game on one of
+/// the six was previously reported as an unrecognised engine, and every one of
+/// those stored reports is stale in the sentences rather than in the tier: the
+/// tier stays at the overlay because none of the six has an adapter, but the
+/// engine is now named, the reason sentence says what it is instead of saying
+/// nothing was recognised, and the readiness gap names the container the text
+/// actually sits in. Raising this number re-probes every stored scan on every
+/// machine for every engine, which is the price of a detector reaching games
+/// that were already examined.
+pub const ISDAR_FAHS: u32 = 7;
 
 /// The confidence below which the report tells the user the identification may
 /// be wrong.
@@ -391,6 +405,12 @@ pub fn tabaqa_min_muharrik(muharrik: &Muharrik) -> (Tabaqa, String, String) {
              knowing it is Arabic."
                 .to_owned(),
         ),
+        AilatMuharrik::Frostbite
+        | AilatMuharrik::BlackSpace
+        | AilatMuharrik::Alchemy
+        | AilatMuharrik::Dantelion
+        | AilatMuharrik::Rage
+        | AilatMuharrik::Snowdrop => tabaqa_khassa(muharrik.aila),
         AilatMuharrik::Majhul => (
             Tabaqa::TarjamaFawqiya,
             "لم يتعرّف تعريب على محرّك هذه اللعبة. هذه اللعبة تستخدم نظام نصوص غير معروف؛ \
@@ -403,6 +423,94 @@ pub fn tabaqa_min_muharrik(muharrik: &Muharrik) -> (Tabaqa, String, String) {
                 .to_owned(),
         ),
     }
+}
+
+/// Where an in-house engine keeps the text a player reads, in Arabic and then
+/// in English.
+///
+/// One sentence fragment per engine, and every one of them names a container
+/// this build has no reader for. That is the whole reason these six are tier 3
+/// rather than tier 1, so it is written down once and used by both the tier's
+/// reason and the readiness gap rather than being said twice in two voices.
+///
+/// [`None`] for every engine that is not one of the six, because the question
+/// only means something for an engine Taarib named and cannot open.
+const fn khazinat_nusus(aila: AilatMuharrik) -> Option<(&'static str, &'static str)> {
+    match aila {
+        AilatMuharrik::Frostbite => Some((
+            "داخل فهارس أرشيف مُعمّاة وحُزم محتوى خلفها",
+            "inside obfuscated archive indexes and the content bundles behind them",
+        )),
+        AilatMuharrik::BlackSpace => Some((
+            "داخل أرشيفات محتوى خاصة بالمحرّك في مجلّدات مرقّمة",
+            "inside the engine's own content archives in its numbered directories",
+        )),
+        AilatMuharrik::Alchemy => Some((
+            "داخل أرشيفات المحرّك وملفّات كائناته",
+            "inside the engine's archives and its object files",
+        )),
+        AilatMuharrik::Dantelion => Some((
+            "داخل أرشيفات رسائل مضغوطة، مجلّد لكل لغة",
+            "inside compressed message archives, one directory per language",
+        )),
+        AilatMuharrik::Rage => Some((
+            "داخل أرشيفات المحرّك الكبيرة المُعمّاة",
+            "inside the engine's large encrypted archives",
+        )),
+        AilatMuharrik::Snowdrop => Some((
+            "داخل قطع محتوى يفهرسها جدول محتويات واحد",
+            "inside content chunks indexed by a single table of contents",
+        )),
+        AilatMuharrik::Unity
+        | AilatMuharrik::Unreal
+        | AilatMuharrik::Godot
+        | AilatMuharrik::RpgMakerMv
+        | AilatMuharrik::RpgMakerMz
+        | AilatMuharrik::RpgMakerVxAce
+        | AilatMuharrik::Renpy
+        | AilatMuharrik::GameMaker
+        | AilatMuharrik::Electron
+        | AilatMuharrik::Bio4
+        | AilatMuharrik::Majhul => None,
+    }
+}
+
+/// The tier for an engine Taarib can name and cannot get inside.
+///
+/// Tier 3, and the two sentences say why in the only terms that matter to a
+/// player: the engine *was* recognised, and that recognition on its own does not
+/// open it. Naming an engine is worth doing — it is the difference between "we
+/// have no idea what this game is" and "we know exactly what this is and cannot
+/// reach into it yet" — and writing the first sentence as though it were the
+/// second would be the report taking credit for work nobody has done.
+///
+/// Every one of the six shares this arm because every one of them is in the same
+/// position: no plugin system, no scripting runtime, no published container
+/// format, and no adapter in this build. When one of them gains an adapter it
+/// gains an arm of its own, and this function is where the reviewer will look
+/// for the ones that have not.
+fn tabaqa_khassa(aila: AilatMuharrik) -> (Tabaqa, String, String) {
+    let (ayn_arabi, ayn_injilizi) = khazinat_nusus(aila).unwrap_or((
+        "داخل ملفّات المحرّك نفسها",
+        "inside the engine's own files",
+    ));
+    let ism = aila.ism();
+    (
+        Tabaqa::TarjamaFawqiya,
+        format!(
+            "تعرّف تعريب على محرّك هذه اللعبة: {ism}. وهو محرّك داخلي لا يُرخَّص لأحد، ولا \
+             يقبل إضافات، ونصوصه {ayn_arabi} بصيغ لا يقرؤها تعريب. فالتعرّف على اسمه لا يفتحه: \
+             سيُستخدم أسلوب الطبقة، يُقرأ ما يظهر على الشاشة وتُعرض العربية فوقه، دون تعديل أي \
+             ملف من ملفات اللعبة."
+        ),
+        format!(
+            "Taarib recognised this game's engine: {ism}. It is an in-house engine, licensed \
+             to nobody, with no plugin system, and it keeps its text {ayn_injilizi} in formats \
+             Taarib has no reader for. Knowing its name does not open it, so the overlay \
+             approach is used: what appears on screen is read and Arabic is shown over it, \
+             without modifying any of the game's files."
+        ),
+    )
 }
 
 /// Unity's tier is always 1; only the explanation differs with the backend.
@@ -547,6 +655,14 @@ pub fn jahiziya(muharrik: &Muharrik) -> (JahiziyatTashghil, Option<Hadd>) {
         AilatMuharrik::GameMaker => (JahiziyatTashghil::Ghaiba, naqs_gamemaker()),
         AilatMuharrik::Electron => (JahiziyatTashghil::Ghaiba, naqs_electron()),
         AilatMuharrik::Bio4 => (JahiziyatTashghil::Ghaiba, naqs_bio4()),
+        AilatMuharrik::Frostbite
+        | AilatMuharrik::BlackSpace
+        | AilatMuharrik::Alchemy
+        | AilatMuharrik::Dantelion
+        | AilatMuharrik::Rage
+        | AilatMuharrik::Snowdrop => {
+            (JahiziyatTashghil::Ghaiba, naqs_khassa(muharrik.aila))
+        }
         AilatMuharrik::Majhul => (JahiziyatTashghil::Ghaiba, naqs_tabaqa()),
     };
     // A finished tier has nothing to warn about, and `TaqreerImkaniyat::naqs`
@@ -568,16 +684,18 @@ pub fn jahiziya(muharrik: &Muharrik) -> (JahiziyatTashghil, Option<Hadd>) {
 /// `game/tl/arabic/` and the generated `.rpy` that selects the language and sets
 /// the direction; the `taarib_renpy` package beside it is the one script-engine
 /// component that is genuinely staged, because it is Python source copied
-/// straight out of `adapters-script/`. So on a Ren'Py that shapes, everything
-/// but the font arrives.
+/// straight out of `adapters-script/`. On a Ren'Py that shapes, the font arrives
+/// with it: the staging matrix carries an Arabic face into the Ren'Py component
+/// and the generated `.rpy` registers it by name.
 ///
-/// The font does not arrive. `raqqi_nusus` passes `Mawarid::khatt_renpy` as
-/// [`None`] — the component store's deployment step for Ren'Py copies
-/// `mulhaq/renpy/**` into `game/` and no font with it, so there is no name this
-/// module could honestly hand over — and the generated file therefore registers
-/// no face at all, which is correct: Ren'Py assigns whatever name it is given to
-/// every `gui` font variable, and an empty one is a game with no font rather
-/// than a game with its own.
+/// **The paragraph that used to stand here said the opposite**, and it was true
+/// when it was written: `raqqi_nusus` passed `Mawarid::khatt_renpy` as [`None`],
+/// so the generated file registered no face and a shaping Ren'Py game came out
+/// with no font at all. The arm below has answered [`JahiziyatTashghil::Mukammala`]
+/// since the face was staged, and a doc describing the state its own function no
+/// longer returns is worse than no doc, because it is the half a reader trusts.
+/// What has *not* been done is watching it happen in a game, and
+/// [`naqs_renpy_khatt`] says exactly that.
 ///
 /// Below the shaping release there is no partial outcome to report. The engine
 /// blits one character at a time, the takeover that would draw the letters
@@ -820,35 +938,34 @@ fn naqs_vx_ace() -> Hadd {
     )
 }
 
-/// Ren'Py on an engine that shapes: everything but a font.
+/// Ren'Py on an engine that shapes: complete, and never yet watched working.
 ///
-/// The one [`JahiziyatTashghil::Naqisa`] in the table, and the part that works
-/// is the whole of the tier except one thing. `renpy::iktub_idad` now has a
-/// caller, so `game/tl/arabic/` is written, `taarib_renpy.rakkib` is invoked
-/// from a generated `.rpy`, `config.language` selects the translation and
-/// `sajjil_ittijah` sets the direction, the alignment and `language "unicode"`.
-/// The `taarib_renpy` package itself is deployed, because staging row I3 is a
-/// copy of a directory that is in this repository.
+/// The only arm in the table that answers [`JahiziyatTashghil::Mukammala`], so
+/// [`jahiziya`] drops this `Hadd` before it can reach anyone — the contract is
+/// that a finished tier carries no gap sentence. It is written and kept anyway,
+/// truthfully, because the previous text survived here as a *false* sentence one
+/// wiring change away from the screen: it said Taarib places no font inside the
+/// game and names none, which stopped being true when the staging matrix took an
+/// Arabic face into the Ren'Py component and `tarkib::khutta` began naming it
+/// through `ikhtar_khatt_renpy`.
 ///
-/// What is missing is the face. `raqqi_nusus` hands `khatt_renpy` as [`None`],
-/// the Ren'Py deployment step places no font beside the package, and
-/// `_rakkib_khadim` therefore logs that no font was named and leaves the game's
-/// own fonts alone. Whether that is legible is then a fact about the game rather
-/// than about Taarib, and the sentence says so plainly instead of averaging the
-/// two outcomes into a promise.
+/// What remains is not a missing piece but a missing observation. Every part of
+/// this path — `game/tl/arabic/`, the generated `.rpy`, `config.language`, the
+/// direction and alignment from `sajjil_ittijah`, the `taarib_renpy` package
+/// from staging row I3, and now the face — is built and staged; none of it has
+/// been seen running inside a Ren'Py game. That is a different claim from "it
+/// works" and this says the weaker one.
 fn naqs_renpy_khatt() -> Hadd {
     hadd(
-        "تُثبَّت ترجمة رِن باي كاملة ويعمل معها اتجاه الكتابة والمحاذاة، ومحرّك هذه اللعبة \
-         يشكّل العربية بنفسه. الناقص خطّ عربي: لا يضع هذا الإصدار من تعريب أي خطّ داخل \
-         اللعبة ولا يسمّي واحدًا، فتُرسم الترجمة بخطّ اللعبة نفسه. إن كان خطّ اللعبة يحتوي \
-         الحروف العربية ظهرت الترجمة كما ينبغي، وإن كان لا يحتويها ظهرت مربّعات فارغة مكان \
-         النصّ. يُغلق هذا بتحديث يضع الخطّ ويسجّله.",
-        "Ren'Py's translation is installed in full and the reading direction and alignment come \
-         with it, and this game's engine shapes Arabic itself. What is missing is an Arabic \
-         font: this build of Taarib places no font inside the game and names none, so the \
-         translation is drawn in the game's own font. If that font has the Arabic letters the \
-         translation appears as it should; if it does not, you will see empty boxes where the \
-         text is. An update that places the font and registers it closes this.",
+        "تُثبَّت ترجمة رِن باي كاملة: النصّ، واختيار اللغة، واتجاه الكتابة والمحاذاة، وخطّ \
+         عربي يوضع داخل اللعبة ويُسجَّل باسمه، ومحرّك هذه اللعبة يشكّل العربية بنفسه. ما لم \
+         يحدث بعدُ هو أن يُرى ذلك عاملًا داخل لعبة رِن باي حقيقية: كلّ قطعة مبنيّة ومشحونة، \
+         ولم تُجرَّب المسيرة كاملة في لعبة تعمل.",
+        "Ren'Py's translation is installed in full: the text, the language selection, the \
+         reading direction and alignment, and an Arabic font placed inside the game and \
+         registered by name, on an engine that shapes Arabic itself. What has not happened \
+         yet is anyone watching it work inside a real Ren'Py game: every piece is built and \
+         staged, and the whole path has never been run in a game that is playing.",
     )
 }
 
@@ -1028,6 +1145,48 @@ fn naqs_tabaqa() -> Hadd {
     )
 }
 
+/// A newly-named in-house engine: nothing runs, and the gap has two halves.
+///
+/// The first half is the overlay's, and it is exactly [`naqs_tabaqa`]'s: the
+/// layer attaches and draws and nothing feeds it text. The second half is this
+/// engine's own, and it is what a reader of a *named* engine's report will
+/// actually want — Taarib knows what this game is, and the reason that changes
+/// nothing today is that there is no reader for the containers its text sits in
+/// and no adapter that loads into its process.
+///
+/// Naming the second half matters more here than anywhere else in this table. A
+/// player who sees their game identified as Frostbite or as RAGE and then reads
+/// that nothing happens is owed the difference between "this engine cannot be
+/// Arabized" and "this engine has not been Arabized yet" — the first is false
+/// and the second is a thing an update changes.
+fn naqs_khassa(aila: AilatMuharrik) -> Hadd {
+    let (ayn_arabi, ayn_injilizi) = khazinat_nusus(aila).unwrap_or((
+        "داخل ملفّات المحرّك نفسها",
+        "inside the engine's own files",
+    ));
+    let ism = aila.ism();
+    hadd(
+        format!(
+            "يعرف تعريب أن محرّك هذه اللعبة {ism}، لكن لا شيء في هذا الإصدار يدخل إليه: نصوص \
+             اللعبة {ayn_arabi} ولا يوجد قارئ لها، ولا توجد وحدة تعمل داخل هذه اللعبة أثناء \
+             تشغيلها. وطبقة الترجمة تفتح مع اللعبة وتلتصق بصورتها وتستطيع الرسم فوقها، لكن \
+             الجزء الذي يقرأ ما على الشاشة ويسلّمه إليها لم يكتمل، فتبقى فارغة. لن يُكتب في \
+             لعبتك شيء ولن يتغيّر منها شيء حتى يصل التحديث الذي يبني أحد الطرفين — والمعرفة \
+             باسم المحرّك هي أول خطوة في ذلك الطريق، لا نهايته."
+        ),
+        format!(
+            "Taarib knows this game's engine is {ism}, and nothing in this build gets inside \
+             it: the game's text sits {ayn_injilizi} with no reader for it, and there is no \
+             module that runs inside this game while you play. The translation overlay does \
+             open with the game, attach to its picture and draw over it, but the part that \
+             reads what is on screen and hands it over is not finished, so it stays empty. \
+             Nothing is written into your game and nothing about it changes until the update \
+             that builds one of those two arrives — and naming the engine is the first step \
+             along that road rather than the end of it."
+        ),
+    )
+}
+
 /// Everything that will not work for this game, named specifically.
 ///
 /// The honest part of the report, and the part a user judges the product on. A
@@ -1191,7 +1350,20 @@ fn hudud_aila(muharrik: &Muharrik, hudud: &mut Vec<Hadd>) {
                  not every Arabic letter shape may fit on a given screen.",
             ));
         }
-        AilatMuharrik::Majhul => {}
+        // The six in-house engines are here with the unrecognised family and
+        // for the same structural reason: this function is only reached at tier
+        // 1 and tier 2, [`tabaqa_khassa`] puts every one of them at tier 3, and
+        // a limitation about replacing text inside a game nothing is written
+        // into would be a sentence about work that does not happen. What the
+        // player is told instead is [`naqs_khassa`], which names the engine and
+        // says what is missing.
+        AilatMuharrik::Frostbite
+        | AilatMuharrik::BlackSpace
+        | AilatMuharrik::Alchemy
+        | AilatMuharrik::Dantelion
+        | AilatMuharrik::Rage
+        | AilatMuharrik::Snowdrop
+        | AilatMuharrik::Majhul => {}
     }
     if muharrik.aila != AilatMuharrik::Electron && ladayh(muharrik, ItarNusus::Canvas) {
         hudud.push(hadd_canvas());
@@ -1417,6 +1589,33 @@ fn hadd_rafd(himaya: &str) -> Hadd {
     )
 }
 
+/// The launcher entry that is not a game at all.
+///
+/// Worded as the core words it, deliberately to the letter: the same entry is
+/// refused in two places and a reader who sees both must not have to wonder
+/// whether they are two findings.
+fn hadd_laysat_luba(naw: &str) -> Hadd {
+    hadd(
+        format!(
+            "هذا المدخل ليس لعبة؛ يصنّفه المتجر على أنه {naw}. لا يُعرَّب إلا ما هو لعبة، \
+             ولن يُكتب في هذا المجلّد شيء."
+        ),
+        format!(
+            "This entry is not a game — the launcher classifies it as {naw}. Taarib \
+             arabizes games, and nothing will be written into this folder."
+        ),
+    )
+}
+
+/// What the launcher called this entry, when it called it something other than a
+/// game.
+fn naw_ghayr_luba(simat: &[SimatLuba]) -> Option<String> {
+    simat.iter().find_map(|sima| match sima {
+        SimatLuba::LaysatLuba(naw) => Some(naw.clone()),
+        _ => None,
+    })
+}
+
 /// Multiplayer without anti-cheat: a warning rather than a refusal.
 fn hadd_jamai() -> Hadd {
     hadd(
@@ -1578,7 +1777,18 @@ fn jawda_min_itarat(muharrik: &Muharrik) -> JawdaMutawaqqaa {
         // BIO4 has no [`ItarNusus`] value at all, so there is nothing to switch
         // on for it even in principle.
         AilatMuharrik::GameMaker | AilatMuharrik::Bio4 => JawdaMutawaqqaa::Jayida,
-        AilatMuharrik::Majhul => JawdaMutawaqqaa::Mahduda,
+        // Named and unreachable is the same expected quality as unrecognised,
+        // and it has to be: the result a player gets is the overlay's, and the
+        // overlay does not read better for having been told which engine it is
+        // drawing over. Promoting these six because the identification improved
+        // would be the report grading its own knowledge instead of the outcome.
+        AilatMuharrik::Frostbite
+        | AilatMuharrik::BlackSpace
+        | AilatMuharrik::Alchemy
+        | AilatMuharrik::Dantelion
+        | AilatMuharrik::Rage
+        | AilatMuharrik::Snowdrop
+        | AilatMuharrik::Majhul => JawdaMutawaqqaa::Mahduda,
     }
 }
 
@@ -1652,8 +1862,23 @@ fn tabaqat_tawafuq(simat: &[SimatLuba]) -> Option<String> {
 /// but *why* Taarib's adapter is unfinished is beside the point for a game
 /// Taarib is refusing to touch, and the interface shows the verdict only when a
 /// sentence comes with it.
+///
+/// **Two refusals short-circuit, not one.** The entry that is not a game refuses
+/// here as well as in the core, and it has to: this report is *persisted*, and
+/// the core is not. A stored report saying tier three over Steamworks Common
+/// Redistributables outlives the session that made it and is read by anything
+/// that opens the record without going through
+/// [`taarib_aql`](https://docs.rs/taarib-aql) — which is the shape of every
+/// two-surfaces-disagree defect this product has found. The core still refuses
+/// it, and the two refusals now say the same thing.
 #[must_use]
 pub fn taqreer(muharrik: Muharrik, simat: &[SimatLuba], waqt: String) -> TaqreerImkaniyat {
+    // Anti-cheat is asked first, and the order is not arbitrary: it is
+    // `taarib_aql::NawMani::rutba`, where `Himaya` is 0 and `LaysatLuba` is 3.
+    // An entry carrying both tags would otherwise be refused here for one reason
+    // and by the core for another — two surfaces disagreeing about one entry,
+    // which is the defect this whole short-circuit exists to avoid rather than
+    // to add.
     if let Some(himaya) = himaya_maalana(simat) {
         return TaqreerImkaniyat {
             tabaqa: Tabaqa::TarjamaFawqiya,
@@ -1673,6 +1898,28 @@ pub fn taqreer(muharrik: Muharrik, simat: &[SimatLuba], waqt: String) -> Taqreer
             anzimat_qabila: Vec::new(),
             jawda: JawdaMutawaqqaa::Mahduda,
             hudud: vec![hadd_rafd(&himaya)],
+            marfuda: true,
+            isdar_fahs: ISDAR_FAHS,
+            waqt,
+            muharrik,
+        };
+    }
+    if let Some(naw) = naw_ghayr_luba(simat) {
+        return TaqreerImkaniyat {
+            tabaqa: Tabaqa::TarjamaFawqiya,
+            jahiziya: JahiziyatTashghil::Ghaiba,
+            naqs: None,
+            sabab_arabi: format!(
+                "هذا المدخل ليس لعبة؛ يصنّفه المتجر على أنه {naw}. لا يُعرَّب إلا ما هو لعبة، \
+                 ولن يُكتب في هذا المجلّد شيء."
+            ),
+            sabab_injilizi: format!(
+                "This entry is not a game — the launcher classifies it as {naw}. Taarib \
+                 arabizes games, and nothing will be written into this folder."
+            ),
+            anzimat_qabila: Vec::new(),
+            jawda: JawdaMutawaqqaa::Mahduda,
+            hudud: vec![hadd_laysat_luba(&naw)],
             marfuda: true,
             isdar_fahs: ISDAR_FAHS,
             waqt,
@@ -1728,7 +1975,7 @@ mod ikhtibarat {
     /// Listed rather than iterated because the enum has no iterator, and written
     /// out in full so that adding a family breaks the exhaustiveness assertion
     /// below rather than quietly leaving the new one untested.
-    const KUL_AILAT: [AilatMuharrik; 11] = [
+    const KUL_AILAT: [AilatMuharrik; 17] = [
         AilatMuharrik::Unity,
         AilatMuharrik::Unreal,
         AilatMuharrik::Godot,
@@ -1739,6 +1986,12 @@ mod ikhtibarat {
         AilatMuharrik::GameMaker,
         AilatMuharrik::Electron,
         AilatMuharrik::Bio4,
+        AilatMuharrik::Frostbite,
+        AilatMuharrik::BlackSpace,
+        AilatMuharrik::Alchemy,
+        AilatMuharrik::Dantelion,
+        AilatMuharrik::Rage,
+        AilatMuharrik::Snowdrop,
         AilatMuharrik::Majhul,
     ];
 

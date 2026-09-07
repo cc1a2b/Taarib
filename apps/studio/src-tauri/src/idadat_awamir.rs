@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use taarib_saff::khatt::MawridKhatt;
 use taarib_tarjama::muzawwidun::Itimad;
-use taarib_usus::idadat::{Idadat, MakhzanIdadat, Sima};
+use taarib_usus::idadat::{Idadat, MakhzanIdadat, NawMuzawwid, Sima};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
@@ -27,6 +27,14 @@ pub struct KhattHie {
 }
 
 /// Refuses a settings tree carrying a value the product cannot run on.
+///
+/// The provider checks are the ones that decide *where* a bad value is met. Each
+/// of them names a tree that saves cleanly today and then fails at the moment
+/// somebody presses a button that costs money — a blank local model name refused
+/// by `bin_muzawwid`, a budget of zero refused by `nano_min_dolar` after the
+/// verdict has already printed a ceiling of `$0.00` beside the sentence "the run
+/// stops at the ceiling and never crosses it". Refusing them here costs the user
+/// one corrected field on the screen they are already looking at.
 fn tahaqqaq_idadat(idadat: &Idadat) -> Natija<()> {
     let mut muarrifat = BTreeSet::new();
     for tarif in &idadat.muzawwidun.qaima {
@@ -41,6 +49,43 @@ fn tahaqqaq_idadat(idadat: &Idadat) -> Natija<()> {
                 muarrif: tarif.muarrif.clone(),
             }));
         }
+        // Only for an enabled one. A half-filled entry that is switched off is a
+        // draft somebody is still writing, and refusing to save the tree around
+        // it would make the screen unusable between two fields.
+        if tarif.mufaal && tarif.naw == NawMuzawwid::Mahalli && tarif.namudhaj.trim().is_empty() {
+            return Err(Khata::from(KhataIdadatAmr::QeematGhayrSaliha {
+                haql: "muzawwidun.qaima.namudhaj",
+                sabab: format!(
+                    "local provider {} is enabled with no model name, which no run can use",
+                    tarif.muarrif
+                ),
+            }));
+        }
+        // `None` is the documented "no ceiling at all" and stays allowed. A
+        // *present* amount that is not a positive finite number is not a smaller
+        // ceiling — it is no ceiling wearing the look of one.
+        if tarif.mizaniya.is_some_and(|mablagh| !mablagh.is_finite() || mablagh <= 0.0) {
+            return Err(Khata::from(KhataIdadatAmr::QeematGhayrSaliha {
+                haql: "muzawwidun.qaima.mizaniya",
+                sabab: format!(
+                    "the budget set for provider {} is not a positive finite amount, so it \
+                     bounds nothing",
+                    tarif.muarrif
+                ),
+            }));
+        }
+    }
+    // A default naming nothing at all is a preference that cannot ever be
+    // honoured, and the election silently uses a different provider instead —
+    // the one whose bill the user then pays. Removing and renaming a provider
+    // both carry the default with them, so this is reachable from a hand-edited
+    // file and from an environment override, not from the screen.
+    if let Some(ism) = &idadat.muzawwidun.iftiradi
+        && !idadat.muzawwidun.qaima.iter().any(|tarif| &tarif.muarrif == ism)
+    {
+        return Err(Khata::from(KhataIdadatAmr::MuzawwidIftiradiMajhul {
+            muarrif: ism.clone(),
+        }));
     }
     if idadat.tashkhis.ayyam_hifz == 0 {
         return Err(Khata::from(KhataIdadatAmr::QeematGhayrSaliha {
@@ -296,6 +341,13 @@ pub enum KhataIdadatAmr {
         muarrif: String,
     },
 
+    /// The elected default names no provider in the list.
+    #[error("the default provider {muarrif} is not in the provider list")]
+    MuzawwidIftiradiMajhul {
+        /// The identifier the default names.
+        muarrif: String,
+    },
+
     /// A settings field holds a value outside its accepted bounds.
     #[error("settings field {haql} is invalid: {sabab}")]
     QeematGhayrSaliha {
@@ -346,6 +398,7 @@ impl Tafsir for KhataIdadatAmr {
                     Self::KhattMutaarid { .. } => 93,
                     Self::MalafTalif { .. } => 94,
                     Self::MahmulLaMafatih => 95,
+                    Self::MuzawwidIftiradiMajhul { .. } => 96,
                 },
         )
     }
@@ -354,6 +407,7 @@ impl Tafsir for KhataIdadatAmr {
         match self {
             // The tree or the name was refused whole; nothing was persisted.
             Self::MuzawwidMukarrar { .. }
+            | Self::MuzawwidIftiradiMajhul { .. }
             | Self::QeematGhayrSaliha { .. }
             | Self::KhattMutaarid { .. }
             | Self::MahmulLaMafatih => Khutura::Tanbeeh,
@@ -367,6 +421,11 @@ impl Tafsir for KhataIdadatAmr {
             Self::MuzawwidMukarrar { muarrif } => format!(
                 "المعرّف «{muarrif}» مستخدم لأكثر من مزوّد واحد، ولم يُحفظ شيء من \
                  الإعدادات. اجعل لكل مزوّد معرّفًا فريدًا ثم احفظ من جديد."
+            ),
+            Self::MuzawwidIftiradiMajhul { muarrif } => format!(
+                "المزوّد الافتراضي «{muarrif}» ليس في قائمة المزوّدين، ولم يُحفظ شيء من \
+                 الإعدادات. لو حُفظ لاستخدمت الترجمة الجديدة مزوّدًا آخر دون أن يُقال لك، \
+                 وهو المزوّد الذي ستُحتسب تكلفته. اختر افتراضيًّا من القائمة أو أزل التحديد."
             ),
             Self::QeematGhayrSaliha { haql, .. } => format!(
                 "قيمة الحقل {haql} خارج حدودها المقبولة، ولم يُحفظ شيء من الإعدادات. \
@@ -397,6 +456,12 @@ impl Tafsir for KhataIdadatAmr {
                 "The identifier {muarrif} is used by more than one provider; nothing was \
                  saved. Give every provider a unique identifier, then save again."
             ),
+            Self::MuzawwidIftiradiMajhul { muarrif } => format!(
+                "The default provider {muarrif} is not in the provider list; nothing was \
+                 saved. Saved as it stands, a new translation would silently use a different \
+                 provider — and that is the one that would be charged for. Pick a default \
+                 from the list, or clear it."
+            ),
             Self::QeematGhayrSaliha { haql, sabab } => format!(
                 "Settings field {haql} holds a value outside its accepted bounds \
                  ({sabab}); nothing was saved. Correct it, then save again."
@@ -424,11 +489,13 @@ impl Tafsir for KhataIdadatAmr {
 
     fn khutwa(&self) -> Khutwa {
         match self {
-            Self::MuzawwidMukarrar { .. } => {
+            Self::MuzawwidMukarrar { .. } | Self::MuzawwidIftiradiMajhul { .. } => {
                 Khutwa::FathIdadat { qism: QismIdadat::Muzawwidun }
             }
             Self::QeematGhayrSaliha { haql, .. } => match *haql {
-                "muzawwidun.qaima.muarrif" => {
+                "muzawwidun.qaima.muarrif"
+                | "muzawwidun.qaima.namudhaj"
+                | "muzawwidun.qaima.mizaniya" => {
                     Khutwa::FathIdadat { qism: QismIdadat::Muzawwidun }
                 }
                 "takhzin.hadd_makhbaa_mb" => {
@@ -454,7 +521,7 @@ impl Tafsir for KhataIdadatAmr {
     fn siyaq(&self) -> BTreeMap<String, QeemaSiyaq> {
         let mut siyaq = BTreeMap::new();
         match self {
-            Self::MuzawwidMukarrar { muarrif } => {
+            Self::MuzawwidMukarrar { muarrif } | Self::MuzawwidIftiradiMajhul { muarrif } => {
                 let _ = siyaq.insert("muarrif".to_owned(), QeemaSiyaq::Nass(muarrif.clone()));
             }
             Self::QeematGhayrSaliha { haql, sabab } => {

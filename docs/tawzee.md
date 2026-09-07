@@ -31,6 +31,10 @@ present; a bundle whose `maalumat_taarib` reports `tatwir` is not a release.
 `msi` and `rpm` are deliberately not shipped: every shipped format must have an
 owner and a tested update path, and those two would have neither.
 
+The two macOS rows are configured targets that the workspace does not currently
+build for — see `tawzee/macos.md` for what fails and why — and nothing on this
+page should be read as a claim that a `.dmg` exists.
+
 ## 3. The artifact matrix
 
 "Host" columns mark which *client* bundles carry the artifact. Game-side
@@ -60,9 +64,9 @@ every desktop bundle carries the windows game-side set.
 | H1 | `taarib_core.js` + `taarib_core_bg.wasm` | `crates/taarib-wasm` → `wasm-bindgen --target no-modules --out-name taarib_core` | **not a tree of its own** — required *contents* of I1 and I2, under each component's `taarib/` subdirectory | ✓ | ✓ | ✓ |
 | I1 | Electron adapter | `adapters-script/electron/` (compiled to JS at staging) | `mukawwinat/mulhaq/electron/taarib.js` + the H1 wasm pair under `…/electron/taarib/`. Phase 22 recorded this as "a build-time embedded string"; that was wrong — `HimlGhilaf.tashghil` is caller-supplied and **has no caller**, so the runtime is staged where that caller will read it. See the Phase 23 finding on the script-engine write side | ✓ | ✓ | ✓ |
 | I2 | RPG Maker MV/MZ adapter | `adapters-script/rpgmaker/` (compiled to JS) | **two** components, both carrying the same output: `mukawwinat/mulhaq/rpgmaker/mv/` and `…/mz/` — `rpg_maker()` demands one per generation | ✓ | ✓ | ✓ |
-| I3 | Ren'Py adapter | `adapters-script/renpy/taarib_renpy/` | `mukawwinat/mulhaq/renpy/taarib_renpy/{__init__,jisr}.py` — the package directory is preserved; flattening it breaks the relative imports | ✓ | ✓ | ✓ |
+| I3 | Ren'Py adapter | `adapters-script/renpy/taarib_renpy/` | `mukawwinat/mulhaq/renpy/taarib_renpy/{__init__,jisr}.py` — the package directory is preserved; flattening it breaks the relative imports. Beside it, `saf_mulhaq` stages one Arabic face and its licence — `NotoNaskhArabic[wght].ttf` and `OFL.txt`, the same J1 bytes — under `mukawwinat/mulhaq/renpy/taarib/khutut/`, because `tarkib::renpy` copies this component's whole tree into the game's `game/` and the face has to travel inside it; `tarkib::khutta` reads it back from exactly that path to name it in the generated `.rpy` | ✓ | ✓ | ✓ |
 | I4 | VX Ace adapter | `adapters-script/vxace/taarib_rgss3.rb` | *no component store row*: VX Ace is `SababLaHaja::DakhilAlRuqaa` — the script travels inside the patch | ✓ | ✓ | ✓ |
-| J1 | bundled fonts + their licenses | fetched at staging from `assets/fonts/khutut.json` sources, pinned in `assets/aqfal/qufl_khutut.json` | `khutut/<malaf>` verbatim as `khutut.json` names them (`malaf` already carries the class, e.g. `sans/…`), plus every `malaf_rukhsa` | ✓ | ✓ | ✓ |
+| J1 | bundled fonts + their licenses | fetched at staging from `assets/fonts/khutut.json` sources, pinned in `assets/aqfal/qufl_khutut.json` | `khutut/<malaf>` verbatim as `khutut.json` names them (`malaf` already carries the class, e.g. `sans/…`), plus every `malaf_rukhsa`; and a second destination for one face, inside the Ren'Py component (row I3) | ✓ | ✓ | ✓ |
 | K1 | IL2CPP signature database | `assets/basmat/basmat.json` (committed) | inside D1's il2cpp components: `…/BepInEx/plugins/Taarib/basmat.json`, beside the assembly whose `Basmat/Qaida.cs` reads it | ✓ | ✓ | ✓ |
 | L1 | revocation list seed | `assets/qaimat_sahb.json` | — (compiled in via `include_bytes!`) | ✓ | ✓ | ✓ |
 | M1 | staging manifest | written by the staging tool | `bayan_mukawwinat.json` | ✓ | ✓ | ✓ |
@@ -74,8 +78,9 @@ artifact on every host, and additionally the host-native build on its own host.
 **Recorded gap (B1–B3 into I3).** This table used to say B1 was also copied into
 `mulhaq/renpy/taarib/jisr/<mimariya>/`. It is not, and no version of the staging
 tool has ever done it: `saf_bepinex` writes the C-ABI core into the BepInEx
-components only (`crates/taarib-tajmee/src/masfufa.rs:102`–`:109`), and `saf_mulhaq`
-stages row I3 as a directory copy of the Python package and nothing else (`:206`–`:211`).
+components only (`crates/taarib-tajmee/src/masfufa.rs`), and `saf_mulhaq` stages
+row I3 as a directory copy of the Python package plus the one face above — never
+the library.
 
 The Ren'Py adapter expects exactly those files. `taarib_renpy._rakkib_istila`
 (`adapters-script/renpy/taarib_renpy/__init__.py:588`) calls `jisr.hammil`
@@ -92,23 +97,23 @@ of its own and the takeover is the whole tier; at 7.4 and above the engine shape
 and the takeover is not on the path. Closing it means one more staging call in
 `saf_mulhaq`, writing the same cdylib into
 `mukawwinat/mulhaq/renpy/taarib/jisr/<mimariya>/`, which `tarkib::renpy`
-(`crates/taarib-tathbeet/src/tarkib.rs:2155`) then deploys under `game/` unchanged.
+(`crates/taarib-tathbeet/src/tarkib.rs`) then deploys under `game/` unchanged.
 `docs/tashghil.md` carries the same fact from the adapter's side.
 
-**Recorded limitation (E/F/G payload bootstrap).** `taarib-mudkhal` opens each
-payload beside it and calls `taarib_bidaya` when the payload exports it. Today
-none of F1/G1/G2 exports that symbol: `taarib-tabaqa`, `taarib-muhawwil-unreal`
-and `taarib-muhawwil-godot` expose library APIs that need a hooker, a
-disclosure record or engine pointers to start, and the in-process bootstrap
-that assembles those inside a game has not been built — it belongs to the same
-gap as the empty `taarib-haqn` (a documented module header whose four modules
-do not exist). Consequences, precisely: the overlay's **Vulkan layer** path
-works today, because the Vulkan loader itself calls
-`vkNegotiateLoaderLayerInterfaceVersion` in `taarib-tabaqa`; the D3D11/D3D12/GL
-overlay paths and the Unreal and Godot takeovers load their module and then do
-nothing. Staging them is still correct — they are the real artifacts, and the
-symbol is what the bootstrap will export — but no packaging task may claim the
-injection tier is live.
+**Recorded limitation (E/F/G payload bootstrap), as it stands now.**
+`taarib-mudkhal` opens each payload beside it and calls `taarib_bidaya` when the
+payload exports it. Each of F1/G1/G2 exports that symbol *when built with the
+`hamula` feature*, which only the release build passes, and the staging tool
+refuses a payload that lacks it (`nasakh::yusaddir_bidaya`). `taarib-haqn` is
+complete and every bootstrap reaches a named outcome — `docs/bidaya.md` §6 and
+`docs/tashghil.md` record where each one stops. None of them draws: the overlay
+attaches on Direct3D 8–12, OpenGL and Vulkan and is fed no text; the Unreal
+payload writes one console variable and declines the rest by name; the Godot 3
+payload binds the engine and is handed neither the translation nor this build's
+addresses. An earlier version of this paragraph said the Vulkan layer path
+"works today"; the layer is live and correctly registered, and it has never
+drawn anything. Staging these payloads is correct — they are the real artifacts
+— and no packaging task may claim the injection tier is live.
 
 ## 4. Staging
 
@@ -157,7 +162,8 @@ its own absence marks a partial staging.
 ## 6. Self-update
 
 New crate `crates/taarib-tahdith`. The channel manifest `tahdith.json` sits
-under the official registry root (`masadir.rasmi`), signed detached
+under the official registry root (the `masadir.rasmi` setting in
+`taarib_usus::idadat`), signed detached
 (Ed25519, `MudaqqiqEd25519`) by the identity the client trusts — a release
 client refuses a dev-signed channel exactly as it refuses a dev-signed patch.
 Per-target entries: `{ rabt, hajm, sha256, isdar, adna_isdar }`.

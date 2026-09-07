@@ -21,6 +21,7 @@ import type {
   DamjHie,
   DufaHie,
   Idadat,
+  InqadhHie,
   IqtirahatHie,
   Lugha,
   MuayanaHie,
@@ -42,6 +43,21 @@ import './warsha.css';
 const wajihat = getRouteApi('/warsha/$muarrif');
 
 type HalatSaff = SafWarshaHie['hala'];
+
+/** What the backend says about the string file's integrity, and the damage when there is any. */
+type SalamaHie = WarshaHie['salama'];
+type TalafHie = NonNullable<SalamaHie['talaf']>;
+
+/**
+ * One of two sentences the backend wrote, in the session's language.
+ *
+ * The integrity sentences are worded by the code that knows the count, the
+ * path and the advice, in both languages at once, so the screen never assembles
+ * them and the two languages cannot drift apart.
+ */
+function ikhtar(lugha: Lugha, arabi: string, injilizi: string): string {
+  return lugha === 'arabi' ? arabi : injilizi;
+}
 
 const HALAT: readonly HalatSaff[] = [
   'lam_tutarjam',
@@ -339,6 +355,76 @@ function BitaqatNizaa({ nizaa, qarar, lugha, alaQarar }: KhasaisNizaa): JSX.Elem
   );
 }
 
+interface KhasaisTalaf {
+  readonly salama: SalamaHie;
+  readonly talaf: TalafHie;
+  readonly lugha: Lugha;
+  readonly yajri: boolean;
+  readonly khata: KhataJisr | null;
+  readonly muarrif: string;
+  readonly alaInqadh: () => void;
+}
+
+/**
+ * The damage panel: what did not read, line by line, and the one choice that
+ * writes anything. Shown whenever the string file did not read whole, whether
+ * three rows survived or three thousand, because a table that looks complete
+ * is the quieter of the two failures.
+ */
+function LawhatTalaf({
+  salama,
+  talaf,
+  lugha,
+  yajri,
+  khata,
+  muarrif,
+  alaInqadh,
+}: KhasaisTalaf): JSX.Element {
+  const unwan = ikhtar(lugha, talaf.unwan_arabi, talaf.unwan_injilizi);
+  return (
+    <section className="warsha__lawha" role="alert" aria-label={unwan}>
+      <div className="warsha__lawha-dakhil">
+        <p className="warsha__tahdheer">{unwan}</p>
+        <p className="warsha__nass-hadi">
+          {ikhtar(lugha, salama.wasf_arabi, salama.wasf_injilizi)}
+        </p>
+        <p className="warsha__nass-hadi mono-ltr" dir="ltr">
+          {salama.masar}
+        </p>
+        <ul className="warsha__jiwar">
+          {talaf.sutur.map((satr) => (
+            <li key={satr.raqm} dir="auto">
+              {ikhtar(lugha, satr.wasf_arabi, satr.wasf_injilizi)}
+            </li>
+          ))}
+        </ul>
+        <div className="halat__afal">
+          <button
+            type="button"
+            className="zir zir--tamyeez"
+            aria-disabled={yajri}
+            onClick={() => {
+              if (!yajri) {
+                alaInqadh();
+              }
+            }}
+          >
+            {ikhtar(lugha, talaf.zir_arabi, talaf.zir_injilizi)}
+          </button>
+        </div>
+        {khata !== null ? (
+          <KutlatKhata
+            unwan={t('luba.khata.amal', lugha)}
+            khata={khata}
+            lugha={lugha}
+            muarrif={muarrif}
+          />
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 interface KhasaisIqtirahat {
   readonly bayanat: IqtirahatHie;
   readonly mutabbaq: boolean;
@@ -547,6 +633,10 @@ export function Warsha(): JSX.Element {
 
   const sufuf = useMemo(() => warsha.data?.sufuf ?? [], [warsha.data]);
   const musahimi = warsha.data?.musahimi ?? '';
+  // Three states, kept apart: nothing extracted, everything read, something did not.
+  // An empty table is drawn as "no strings yet" only in the first of them.
+  const salama = warsha.data?.salama ?? null;
+  const talaf = salama?.talaf ?? null;
   const zahira = useMemo(
     () => sufuf.filter((saf) => yutabiq(saf, murashshihat, musahimi)),
     [sufuf, murashshihat, musahimi],
@@ -831,6 +921,14 @@ export function Warsha(): JSX.Element {
     },
   });
 
+  const inqadh = useMutation<InqadhHie, KhataJisr, void>({
+    mutationFn: () => nadi('anqidh_mashru', { muarrif }),
+    onSuccess: () => {
+      void makhzan.invalidateQueries({ queryKey: mafatih.warsha(muarrif) });
+      void makhzan.invalidateQueries({ queryKey: mafatih.alamat(muarrif) });
+    },
+  });
+
   const jawda = useQuery<AlamatMashruHie, KhataJisr>({
     queryKey: mafatih.alamat(muarrif),
     queryFn: () => nadi('alamat_mashru', { muarrif }),
@@ -889,6 +987,11 @@ export function Warsha(): JSX.Element {
             <span className="warsha__adad-luba">
               {jam('warsha.adad', lugha, warsha.data.adad, munassiq)}
             </span>
+            {talaf !== null ? (
+              <span className="warsha__adad-luba warsha__tahdheer" role="status">
+                {ikhtar(lugha, talaf.mukhtasar_arabi, talaf.mukhtasar_injilizi)}
+              </span>
+            ) : null}
           </>
         ) : null}
         <div className="warsha__adawat">
@@ -1081,6 +1184,11 @@ export function Warsha(): JSX.Element {
                           munfarida: munassiq.raqm(idmaj.data.munfarida),
                         })}
                       </p>
+                      {idmaj.data.tanbih_arabi !== null && idmaj.data.tanbih_injilizi !== null ? (
+                        <p className="warsha__tahdheer" role="status">
+                          {ikhtar(lugha, idmaj.data.tanbih_arabi, idmaj.data.tanbih_injilizi)}
+                        </p>
+                      ) : null}
                       {nizaat.length === 0 ? (
                         <p className="warsha__nass-hadi">{t('warsha.damj.bila_nizaa', lugha)}</p>
                       ) : (
@@ -1149,145 +1257,197 @@ export function Warsha(): JSX.Element {
             ) : null}
           </AnimatePresence>
 
-          <div className="warsha__tasfiya" role="search">
-            <input
-              ref={haqlBahth}
-              className="warsha__haql warsha__bahth"
-              type="search"
-              dir="auto"
-              placeholder={t('warsha.bahth.mawdi', lugha)}
-              aria-label={t('warsha.bahth.tasmiya', lugha)}
-              value={murashshihat.bahth}
-              onChange={(hadath) => {
-                setMurashshihat((hali) => ({ ...hali, bahth: hadath.target.value }));
-              }}
-            />
-            <div
-              className="warsha__halat"
-              role="group"
-              aria-label={t('warsha.tasfiya.hala', lugha)}
-            >
-              {HALAT.map((hala) => {
-                const faal = murashshihat.halat.includes(hala);
-                return (
-                  <button
-                    key={hala}
-                    type="button"
-                    className={faal ? 'warsha__riqaqa warsha__riqaqa--faal' : 'warsha__riqaqa'}
-                    aria-pressed={faal}
-                    onClick={() => {
-                      setMurashshihat((hali) => ({
-                        ...hali,
-                        halat: faal
-                          ? hali.halat.filter((wahida) => wahida !== hala)
-                          : [...hali.halat, hala],
-                      }));
-                    }}
-                  >
-                    <span
-                      className={`warsha__nuqta warsha__nuqta--${hala}`}
-                      aria-hidden="true"
-                    />
-                    {t(MIFTAH_HALA[hala], lugha)}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="warsha__qawaim">
-              <select
-                className="warsha__haql"
-                aria-label={t('warsha.tasfiya.alamat', lugha)}
-                value={murashshihat.alamat}
-                onChange={(hadath) => {
-                  const qeema = hadath.target.value as MurashshihAlamat;
-                  setMurashshihat((hali) => ({ ...hali, alamat: qeema }));
+          {/* One grid child: the workshop's grid has exactly four chrome tracks above the
+              body, so the damage panel shares the filter strip's track rather than taking
+              a fifth and pushing the strip below the table. */}
+          <div>
+            {salama !== null && talaf !== null ? (
+              <LawhatTalaf
+                salama={salama}
+                talaf={talaf}
+                lugha={lugha}
+                yajri={inqadh.isPending}
+                khata={inqadh.error}
+                muarrif={muarrif}
+                alaInqadh={() => {
+                  inqadh.mutate();
                 }}
-              >
-                <option value="kul">{t('warsha.tasfiya.alamat_kul', lugha)}</option>
-                <option value="ay">{t('warsha.tasfiya.alamat_ay', lugha)}</option>
-                <option value="khatir">{t('warsha.tasfiya.alamat_khatir', lugha)}</option>
-              </select>
-              <select
-                className="warsha__haql"
-                aria-label={t('warsha.tasfiya.tasnif', lugha)}
-                value={murashshihat.tasnif}
+              />
+            ) : null}
+            {inqadh.data !== undefined ? (
+              <section className="warsha__lawha" role="status">
+                <div className="warsha__lawha-dakhil">
+                  <p className="warsha__nass-hadi">
+                    {ikhtar(lugha, inqadh.data.wasf_arabi, inqadh.data.wasf_injilizi)}
+                  </p>
+                </div>
+              </section>
+            ) : null}
+            <div className="warsha__tasfiya" role="search">
+              <input
+                ref={haqlBahth}
+                className="warsha__haql warsha__bahth"
+                type="search"
+                dir="auto"
+                placeholder={t('warsha.bahth.mawdi', lugha)}
+                aria-label={t('warsha.bahth.tasmiya', lugha)}
+                value={murashshihat.bahth}
                 onChange={(hadath) => {
-                  const qeema = hadath.target.value;
-                  setMurashshihat((hali) => ({ ...hali, tasnif: qeema }));
+                  setMurashshihat((hali) => ({ ...hali, bahth: hadath.target.value }));
                 }}
+              />
+              <div
+                className="warsha__halat"
+                role="group"
+                aria-label={t('warsha.tasfiya.hala', lugha)}
               >
-                <option value="kul">{t('warsha.tasfiya.kul', lugha)}</option>
-                {asnaf.map(([qeema, wasf]) => (
-                  <option key={qeema} value={qeema}>
-                    {wasf}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="warsha__haql"
-                aria-label={t('warsha.tasfiya.masdar_tarjama', lugha)}
-                value={murashshihat.masdar}
-                onChange={(hadath) => {
-                  const qeema = hadath.target.value as MurashshihMasdar;
-                  setMurashshihat((hali) => ({ ...hali, masdar: qeema }));
-                }}
-              >
-                <option value="kul">{t('warsha.tasfiya.masdar_kul', lugha)}</option>
-                <option value="aali">{t('warsha.tasfiya.masdar_aali', lugha)}</option>
-                <option value="bashari">{t('warsha.tasfiya.masdar_bashari', lugha)}</option>
-                <option value="dhakira">{t('warsha.tasfiya.masdar_dhakira', lugha)}</option>
-              </select>
-              <select
-                className="warsha__haql"
-                aria-label={t('warsha.tasfiya.takleef', lugha)}
-                value={murashshihat.takleef}
-                onChange={(hadath) => {
-                  const qeema = hadath.target.value as MurashshihTakleef;
-                  setMurashshihat((hali) => ({ ...hali, takleef: qeema }));
-                }}
-              >
-                <option value="kul">{t('warsha.tasfiya.takleef_kul', lugha)}</option>
-                <option value="muayyan">{t('warsha.tasfiya.takleef_muayyan', lugha)}</option>
-                <option value="li">{t('warsha.tasfiya.takleef_li', lugha)}</option>
-                <option value="bila">{t('warsha.tasfiya.takleef_bila', lugha)}</option>
-              </select>
-              {adadDakhili > 0 ? (
-                <button
-                  type="button"
-                  className="zir"
-                  aria-pressed={murashshihat.dakhili}
-                  onClick={() => {
-                    setMurashshihat((hali) => ({ ...hali, dakhili: !hali.dakhili }));
+                {HALAT.map((hala) => {
+                  const faal = murashshihat.halat.includes(hala);
+                  return (
+                    <button
+                      key={hala}
+                      type="button"
+                      className={faal ? 'warsha__riqaqa warsha__riqaqa--faal' : 'warsha__riqaqa'}
+                      aria-pressed={faal}
+                      onClick={() => {
+                        setMurashshihat((hali) => ({
+                          ...hali,
+                          halat: faal
+                            ? hali.halat.filter((wahida) => wahida !== hala)
+                            : [...hali.halat, hala],
+                        }));
+                      }}
+                    >
+                      <span
+                        className={`warsha__nuqta warsha__nuqta--${hala}`}
+                        aria-hidden="true"
+                      />
+                      {t(MIFTAH_HALA[hala], lugha)}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="warsha__qawaim">
+                <select
+                  className="warsha__haql"
+                  aria-label={t('warsha.tasfiya.alamat', lugha)}
+                  value={murashshihat.alamat}
+                  onChange={(hadath) => {
+                    const qeema = hadath.target.value as MurashshihAlamat;
+                    setMurashshihat((hali) => ({ ...hali, alamat: qeema }));
                   }}
                 >
-                  {t(
-                    murashshihat.dakhili
-                      ? 'warsha.tasfiya.dakhili_ikhfa'
-                      : 'warsha.tasfiya.dakhili_izhar',
-                    lugha,
-                    { adad: munassiq.raqm(adadDakhili) },
-                  )}
-                </button>
-              ) : null}
+                  <option value="kul">{t('warsha.tasfiya.alamat_kul', lugha)}</option>
+                  <option value="ay">{t('warsha.tasfiya.alamat_ay', lugha)}</option>
+                  <option value="khatir">{t('warsha.tasfiya.alamat_khatir', lugha)}</option>
+                </select>
+                <select
+                  className="warsha__haql"
+                  aria-label={t('warsha.tasfiya.tasnif', lugha)}
+                  value={murashshihat.tasnif}
+                  onChange={(hadath) => {
+                    const qeema = hadath.target.value;
+                    setMurashshihat((hali) => ({ ...hali, tasnif: qeema }));
+                  }}
+                >
+                  <option value="kul">{t('warsha.tasfiya.kul', lugha)}</option>
+                  {asnaf.map(([qeema, wasf]) => (
+                    <option key={qeema} value={qeema}>
+                      {wasf}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="warsha__haql"
+                  aria-label={t('warsha.tasfiya.masdar_tarjama', lugha)}
+                  value={murashshihat.masdar}
+                  onChange={(hadath) => {
+                    const qeema = hadath.target.value as MurashshihMasdar;
+                    setMurashshihat((hali) => ({ ...hali, masdar: qeema }));
+                  }}
+                >
+                  <option value="kul">{t('warsha.tasfiya.masdar_kul', lugha)}</option>
+                  <option value="aali">{t('warsha.tasfiya.masdar_aali', lugha)}</option>
+                  <option value="bashari">{t('warsha.tasfiya.masdar_bashari', lugha)}</option>
+                  <option value="dhakira">{t('warsha.tasfiya.masdar_dhakira', lugha)}</option>
+                </select>
+                <select
+                  className="warsha__haql"
+                  aria-label={t('warsha.tasfiya.takleef', lugha)}
+                  value={murashshihat.takleef}
+                  onChange={(hadath) => {
+                    const qeema = hadath.target.value as MurashshihTakleef;
+                    setMurashshihat((hali) => ({ ...hali, takleef: qeema }));
+                  }}
+                >
+                  <option value="kul">{t('warsha.tasfiya.takleef_kul', lugha)}</option>
+                  <option value="muayyan">{t('warsha.tasfiya.takleef_muayyan', lugha)}</option>
+                  <option value="li">{t('warsha.tasfiya.takleef_li', lugha)}</option>
+                  <option value="bila">{t('warsha.tasfiya.takleef_bila', lugha)}</option>
+                </select>
+                {adadDakhili > 0 ? (
+                  <button
+                    type="button"
+                    className="zir"
+                    aria-pressed={murashshihat.dakhili}
+                    onClick={() => {
+                      setMurashshihat((hali) => ({ ...hali, dakhili: !hali.dakhili }));
+                    }}
+                  >
+                    {t(
+                      murashshihat.dakhili
+                        ? 'warsha.tasfiya.dakhili_ikhfa'
+                        : 'warsha.tasfiya.dakhili_izhar',
+                      lugha,
+                      { adad: munassiq.raqm(adadDakhili) },
+                    )}
+                  </button>
+                ) : null}
+              </div>
+              <span
+                className={
+                  murashshah
+                    ? 'warsha__adad-zahir warsha__adad-zahir--murashshah'
+                    : 'warsha__adad-zahir'
+                }
+              >
+                {t('warsha.adad_zahir', lugha, {
+                  adad: munassiq.raqm(zahira.length),
+                  kulli: munassiq.raqm(sufuf.length),
+                })}
+              </span>
             </div>
-            <span
-              className={
-                murashshah
-                  ? 'warsha__adad-zahir warsha__adad-zahir--murashshah'
-                  : 'warsha__adad-zahir'
-              }
-            >
-              {t('warsha.adad_zahir', lugha, {
-                adad: munassiq.raqm(zahira.length),
-                kulli: munassiq.raqm(sufuf.length),
-              })}
-            </span>
           </div>
 
           <div className="warsha__amida">
             {zahira.length === 0 ? (
               <div className="warsha__qaima warsha__qaima--faragh">
-                {sufuf.length === 0 ? (
+                {sufuf.length === 0 && salama !== null && talaf !== null ? (
+                  // Not "no strings yet": the file exists and did not read. The advice
+                  // to re-extract would recreate the project over it, so it is not given.
+                  <div className="halat">
+                    <p className="halat__unwan">
+                      {ikhtar(lugha, talaf.unwan_arabi, talaf.unwan_injilizi)}
+                    </p>
+                    <p className="halat__nass">
+                      {ikhtar(lugha, salama.wasf_arabi, salama.wasf_injilizi)}
+                    </p>
+                    <div className="halat__afal">
+                      <button
+                        type="button"
+                        className="zir zir--tamyeez"
+                        aria-disabled={inqadh.isPending}
+                        onClick={() => {
+                          if (!inqadh.isPending) {
+                            inqadh.mutate();
+                          }
+                        }}
+                      >
+                        {ikhtar(lugha, talaf.zir_arabi, talaf.zir_injilizi)}
+                      </button>
+                    </div>
+                  </div>
+                ) : sufuf.length === 0 ? (
                   <div className="halat">
                     <p className="halat__unwan">{t('warsha.faragh.nusus.unwan', lugha)}</p>
                     <p className="halat__nass">{t('warsha.faragh.nusus.nass', lugha)}</p>
@@ -1625,6 +1785,24 @@ export function Warsha(): JSX.Element {
 
               <section className="warsha__dufa" aria-label={t('warsha.dufa.unwan', lugha)}>
                 <h2 className="warsha__unwan-qism">{t('warsha.dufa.unwan', lugha)}</h2>
+                {warsha.data.muzawwid.hala !== 'mukhtar' ? (
+                  // Said here, before a run is started: which provider a run would bill,
+                  // in the settings crate's own words — a stale default most of all.
+                  <p
+                    className={
+                      warsha.data.muzawwid.hala === 'badeel'
+                        ? 'warsha__tahdheer'
+                        : 'warsha__nass-hadi'
+                    }
+                    role="status"
+                  >
+                    {ikhtar(
+                      lugha,
+                      warsha.data.muzawwid.wasf_arabi,
+                      warsha.data.muzawwid.wasf_injilizi,
+                    )}
+                  </p>
+                ) : null}
                 <label className="warsha__tasmiya" htmlFor="warsha-saqf">
                   {t('warsha.dufa.saqf', lugha)}
                 </label>

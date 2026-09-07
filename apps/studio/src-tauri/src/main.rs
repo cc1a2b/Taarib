@@ -64,6 +64,7 @@
 // items beside every command it wraps, and a `pub` item inside a private module
 // is what `unreachable_pub` refuses.
 pub mod luba_awamir;
+pub mod maktaba_awamir;
 pub mod tathbeet_awamir;
 // No commands inside these three, so they stay private.
 mod bidaya;
@@ -92,7 +93,7 @@ use taarib_kashf::wujud::{self, SijillWujud, TalabWujud};
 use taarib_kashf::tawheed;
 use taarib_mustalahat::ghiyab::{SababGhiyab, ShahidTanfidhi};
 use taarib_mustalahat::lawha_badila::{LawhaBadila, SimatLawha};
-use taarib_makhzan::sijillat::{SijillAlaab, SijillMuharrik};
+use taarib_makhzan::sijillat::{HasilatMash, SijillAlaab, SijillMuharrik};
 use taarib_mustalahat::luba::{LawnBariz, Luba, Manassa, MasdarLuba};
 use taarib_mustalahat::muharrik::{
     AilatMuharrik, JahiziyatTashghil, Tabaqa, TaqreerImkaniyat,
@@ -409,7 +410,19 @@ struct HasilatMaktaba {
     /// Every game that exists but whose record this scan could not complete.
     mutaadhira: Vec<SijillMutaadhir>,
     /// Which launchers were searched, so an empty library can name them.
+    ///
+    /// Only a launcher whose catalogue was read end to end is in here. One
+    /// that is installed and could not be read is not "searched" in any sense
+    /// the empty-library sentence can honestly use — and it is the case that
+    /// sentence used to lie about, naming Epic on a machine whose Epic data
+    /// folder had no manifest directory. Those launchers are in
+    /// [`Self::matajir`] with their reason.
     manassat: Vec<String>,
+    /// What the scan learned about every launcher on this platform — found or
+    /// not, read whole or not, and every warning — with a sentence about each
+    /// in both languages. The library's own report on where its games did and
+    /// did not come from.
+    matajir: Vec<maktaba_awamir::MatjarMaktabaHie>,
     /// What the deduplication pass did, for the diagnostics bundle.
     tawheed: String,
     /// What the existence gate concluded, likewise.
@@ -470,12 +483,18 @@ fn maktaba(
     let kashif = taarib_kashf::Kashif::jadeed();
     let natija = kashif.ifhas(&siyaq)?;
 
-    let manassat: Vec<String> = kashif
-        .matajir()
-        .iter()
-        .filter(|matjar| matjar.mawqi(&siyaq).is_some())
-        .map(|matjar| matjar.muarrif().to_owned())
-        .collect();
+    // Everything a launcher said about itself, taken before the games are
+    // pulled out of the result: the warnings, the verdicts and the roots used
+    // to be dropped on this line, which left every adapter's "reported in
+    // Diagnostics" a promise nothing kept — and left the absence sweep below
+    // keyed on whether a launcher's folder existed, which is not the question.
+    maktaba_awamir::dawwin(&natija);
+    let matajir = maktaba_awamir::matajir_hie(kashif.matajir(), &natija);
+    let sijillat_matajir = maktaba_awamir::mukhzan_min_fahs(&natija);
+    // Only a launcher whose catalogue was read end to end was searched in the
+    // sense the empty-library sentence uses, and only its stored games may be
+    // marked absent below.
+    let manassat: Vec<String> = natija.matajir_tamma().into_iter().map(str::to_owned).collect();
 
     let madkhalat: Vec<LubaMuktashafa> =
         natija.matajir.into_iter().flat_map(|wahid| wahid.alaab).collect();
@@ -518,7 +537,17 @@ fn maktaba(
     }
     luba_awamir::sajjil_lughat_matjar(lughat_muallana.clone());
 
-    let fahs = qaida.bi_muamala(|muamala| SijillFahs::jadeed(muamala).ibda(true))?;
+    // The scan and its launcher records open together: the sweep at the end
+    // reads `fahs_matjar.najah` for this generation, and a generation with no
+    // launcher rows is one the store refuses to sweep for at all.
+    let fahs = qaida.bi_muamala(|muamala| {
+        let sijill = SijillFahs::jadeed(muamala);
+        let fahs = sijill.ibda(true)?;
+        for (matjar, tanbihat) in &sijillat_matajir {
+            sijill.sajjil_natijat_matjar(fahs, matjar, tanbihat)?;
+        }
+        Ok(fahs)
+    })?;
 
     let mut alaab = Vec::with_capacity(muwahhada.len());
     let mut ghaiba = Vec::new();
@@ -730,9 +759,23 @@ fn maktaba(
 
     qaida.bi_muamala(|muamala| {
         // Marking rows absent is the game record's own operation, not the scan
-        // record's: `SijillAlaab` owns the `luba` table this updates.
+        // record's: `SijillAlaab` owns the `luba` table this updates. The list
+        // holds only launchers read whole, and the store checks that again
+        // against what this scan recorded; a refusal here means the two
+        // disagree, which is worth a line in the log rather than silence.
         for manassa in &manassat {
-            let _ = SijillAlaab::jadeed(muamala).allim_ghayr_mawjud(fahs, manassa)?;
+            match SijillAlaab::jadeed(muamala).allim_ghayr_mawjud(fahs, manassa)? {
+                HasilatMash::Jarat { adad } => {
+                    tracing::debug!(manassa = %manassa, adad, "absence sweep");
+                }
+                HasilatMash::Rufidat => {
+                    tracing::warn!(
+                        manassa = %manassa,
+                        "the store refused an absence sweep for a launcher this scan did not \
+                         record as read whole"
+                    );
+                }
+            }
         }
         SijillFahs::jadeed(muamala).anhi(fahs, u32::try_from(alaab.len()).unwrap_or(u32::MAX))
     })?;
@@ -753,6 +796,7 @@ fn maktaba(
         ghaiba,
         mutaadhira,
         manassat,
+        matajir,
         tawheed: taqreer_tawheed.satr(),
         wujud: sijill.taqreer(),
     })
@@ -920,6 +964,7 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             idadat_hali,
             maalumat_taarib,
             maktaba,
+            maktaba_awamir::fahs_akhir,
             suwar_awamir::hassil_suwar_maktaba,
             iftah_manassa,
             adif_mujallad_fahs,
@@ -938,6 +983,8 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             tathbeet_awamir::iqrar_aman,
             tathbeet_awamir::sajjil_iqrar_aman,
             tathbeet_awamir::thabbit_ruqaa,
+            tathbeet_awamir::khuttat_tathbeet,
+            tathbeet_awamir::khuttat_izala,
             warsha_awamir::nusus_warsha,
             warsha_awamir::haddith_tarjama,
             warsha_awamir::iqtirahat_nass,
@@ -950,6 +997,7 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             warsha_awamir::taaliqat_warsha,
             warsha_awamir::idmaj_huzma,
             warsha_awamir::qarrir_nizaat,
+            warsha_awamir::anqidh_mashru,
             taqdeem_awamir::jalsati,
             taqdeem_awamir::musawwadat_luba,
             taqdeem_awamir::jahhiz_taqdeem,
@@ -1038,6 +1086,9 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
     // The setup closure needs the paths, and `masarat` itself is moved into
     // managed state before it runs.
     let masarat_zamin = masarat.clone();
+    // The settings store is moved into managed state below, and the setup hook
+    // needs it to start the revocation refresh.
+    let makhzan_zamin = Arc::clone(&makhzan);
     let ayyam_hifz = idadat.tashkhis.ayyam_hifz;
     let hadd_hajm_mb = idadat.tashkhis.hadd_hajm_mb;
     let sima_mabdai = idadat.sima;
@@ -1107,6 +1158,16 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             // The chrome wears the saved palette from the first frame the window
             // shows; `tauri.conf.json` only knows the default.
             idadat_awamir::tabbiq_sima(tatbiq, sima_mabdai);
+
+            // The revocation list refreshes from here, not only from the first
+            // command that happens to need it. It is the product's one kill
+            // switch — the way a compromised signing key or a patch that bricks
+            // a game is withdrawn from every machine — and started from the
+            // commands alone it never runs at all for somebody who opens the
+            // application and does not visit a game page. The call is idempotent
+            // per process, so the command-side starts stay correct and become
+            // no-ops.
+            tathbeet_awamir::dhamin_mujaddid_sahb(&masarat_zamin, &makhzan_zamin);
 
             // The artwork cache, and nothing else, is readable through the asset
             // protocol. The scope cannot be a static glob in `tauri.conf.json`

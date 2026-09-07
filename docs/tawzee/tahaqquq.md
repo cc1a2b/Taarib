@@ -11,6 +11,20 @@ at all.
 Nothing here is inferred from a config file. Every "yes" below has a
 reproduction in §6.
 
+> **Overtaken since it was written — re-read against the tree on 2026-09-06.**
+> The measurements below are the measurements of the builds they name, and they
+> are left as recorded. What has changed: the `mawarid/` tree that §1 and §5.1
+> describe as holding only its README has since been fully staged by
+> `scripts/isdar.sh` (1,598 files and a written manifest, Windows target,
+> 2026-09-05), and an installer built from it — about 66 MB against the
+> 10,590,543 bytes measured here — exists and has **not** been through this
+> audit; and §5.1's "nothing in this tree enforces" that staging precedes
+> bundling is no longer wholly true, because `tauri.conf.json`'s
+> `beforeBundleCommand` now runs `src-tauri/tadqiq_mawarid.mjs`, which refuses a
+> bundle whose fonts are missing or unshapeable (fonts only — an absent component
+> is still named at startup and refused at install, not at bundle time), and
+> `scripts/isdar.sh` runs the whole sequence in order.
+
 ## 1. The answer, first
 
 > A user downloads one file and runs it. Does the application start, in Arabic,

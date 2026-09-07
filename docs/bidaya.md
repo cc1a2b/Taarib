@@ -76,7 +76,7 @@ that is dropped on the failure path.
 
 | payload | module to find | what it hands over to |
 | --- | --- | --- |
-| `taarib-tabaqa` | the graphics API in use: `d3d11.dll`, `d3d12.dll`, `opengl32.dll`/`libGL.so.1` | `wajiha::Tabaqa::shaghghil(Box<dyn Khattaf>, Iqrar)` with the backend for whichever API answered |
+| `taarib-tabaqa` | the graphics API in use, probed newest generation first: `d3d12.dll`, `d3d11.dll`, `d3d10.dll`, `d3d9.dll`, `d3d8.dll`, `opengl32.dll` on Windows and `libGL.so.1` on Linux (the ordered table is `bidaya.rs`'s module list) | `wajiha::Tabaqa::shaghghil(Box<dyn Khattaf>, Iqrar)` with the backend for whichever API answered |
 | `taarib-muhawwil-unreal` | the game's own executable module (Unreal links the engine in) | `tashghil` / `wasl`'s initialisation |
 | `taarib-muhawwil-godot` | Godot 3 loads the module through `taarib.gdnlib`, so this payload's own GDNative entry is the bootstrap | `istila`'s takeover |
 
@@ -105,18 +105,23 @@ payloads `taarib-mudkhal` opens, and for nothing else.
 
 ## 6. What the bootstraps reach, and where each stops
 
-Recorded after implementation and re-read against the tree on 2026-09-05. Every
+Recorded after implementation and re-read against the tree on 2026-09-06. Every
 line here is a fact about this tree, not a plan. `docs/tashghil.md` is the
-engine-by-engine version of the same reading, with the line numbers; where the two
-disagree, `tashghil.md` and `imkaniyat::jahiziya` are the ones that were checked
-most recently.
+engine-by-engine version of the same reading; where the two disagree,
+`tashghil.md` and `imkaniyat::jahiziya` are the ones that were checked most
+recently.
+
+Functions are named, and line numbers are not. Every "has no caller" below was
+re-established on 2026-09-06 by grepping `crates/`, `apps/`, `unity/` and
+`adapters-script/` for the name; a line number would have been wrong within the
+week — a tree-wide reformat is pending — and a function name is what you grep.
 
 | path | reaches | stops at |
 | --- | --- | --- |
-| Vulkan overlay | `vkQueuePresentKHR`, through the loader's own layer chain | the draw callback, which is never registered: `sajjil_munadi` (`crates/taarib-tabaqa/src/vulkan.rs:786`) has no caller, so the present handler reads `None` at `vulkan.rs:1518` and forwards the application's present info byte for byte. `KhattafVulkan` is never constructed |
-| D3D11 / D3D12 / OpenGL overlay | `Tabaqa::shaghghil` from the first-present hook, through `taarib-haqn`'s vtable hooker, with a complete pipeline built around the game's own device | first the persisted disclosure (`bidaya.rs:366`), which declines by name rather than constructing an `Iqrar` any other way. Past it, `INTAHAT` is set on the successful start (`bidaya.rs:790`) and every later present returns at the guard in `shaghghil_min_itar` (`:764`) — and nothing would be drawn anyway, because `Tabaqa::iltaqit` (`src/wajiha.rs:891`) has no caller and no worker produces lines |
-| Unreal | `Tashghil::shaghghil` — the adapter's own initialisation, with the engine's `Engine.ini` written for the next launch | `qiyas::AhdafQiyas` and `wasl::FaharisAwamir` are *supplied*, not discovered: `slate.rs` refuses a byte-pattern database and `wasl.rs` refuses a guessed vtable slot. Nothing in the product supplies them, so `rutbat_haqn` returns at `src/tashghil.rs:916` and `TasheehQiyas::rakkib` (`src/qiyas.rs:978`) is never called. The `Engine.ini` write is behind `--features hamula`, which only `scripts/isdar.sh` turns on |
-| Godot 3 | `taarib_gdnative_init` / `_singleton` bind the core API and open the patch | **both** halves, not one. `thabbit_tawseel` (`crates/taarib-muhawwil-godot/src/bidaya.rs:805`) delivers the translated text and `thabbit_istila` (`:780`) delivers three `Font::` addresses and a `VisualServer` slot that `istila.rs` refuses to discover. Neither has a caller, so `awsil` refuses at `:1095` and `sallim` takes its `Mumtania` branch at `:1197`. The patch companion that would call either does not exist |
+| Vulkan overlay | `vkQueuePresentKHR`, through the loader's own layer chain | the draw callback, which is never registered: `sajjil_munadi` (`crates/taarib-tabaqa/src/vulkan.rs`) has no caller, so the present handler reads `None` and forwards the application's present info byte for byte. `KhattafVulkan` is never constructed anywhere in `src/` |
+| Direct3D 8–12 / OpenGL overlay | `Tabaqa::shaghghil` from the first-present hook, through `taarib-haqn`'s vtable hooker, with a complete pipeline built around the game's own device | first the persisted disclosure check in `bidaya.rs`, which declines by name rather than constructing an `Iqrar` any other way. Past it, `INTAHAT` is set on the successful start and every later present returns at the guard in `shaghghil_min_itar` — and nothing would be drawn anyway, because `Tabaqa::iltaqit` (`src/wajiha.rs`) has no caller in `src/` (only an example drives it) and no worker produces lines |
+| Unreal | `Tashghil::shaghghil` — the adapter's own initialisation, with the engine's `Engine.ini` written for the next launch | `qiyas::AhdafQiyas` and `wasl::FaharisAwamir` are *supplied*, not discovered: `slate.rs` refuses a byte-pattern database and `wasl.rs` refuses a guessed vtable slot. Nothing in the product supplies them — `AhdafQiyas` is constructed nowhere in the workspace — so `rutbat_haqn` (`src/tashghil.rs`) returns early and `TasheehQiyas::rakkib` (`src/qiyas.rs`) is never called. The `Engine.ini` write is behind `--features hamula`, which only `scripts/isdar.sh` and `.github/workflows/isdar.yml` turn on |
+| Godot 3 | `taarib_gdnative_init` / `_singleton` bind the core API and open the patch | **both** halves, not one. `thabbit_tawseel` (`crates/taarib-muhawwil-godot/src/bidaya.rs`) delivers the translated text and `thabbit_istila` delivers three `Font::` addresses and a `VisualServer` slot that `istila.rs` refuses to discover. Neither has a caller, so `awsil` refuses and `sallim` takes its `Mumtania` branch. The patch companion that would call either does not exist |
 | Godot 3 via preload | — | declines by name, having verified its own `taarib_gdnative_init` export is really there. Correct: a Godot game is taken over through the gdnlib |
 | Unity Mono / IL2CPP | BepInEx calls the C# plugin's `Load()` | not in this contract — that bootstrap already existed. Mono stops earlier than its own bootstrap: the plugin asks for BepInEx 6 and the bundle pins 5.4.23.5 for that backend, so the chainloader never reaches `Awake` |
 | script engines | the game's own script runtime registers the adapter | not in this contract. Their *text* no longer depends on it: `taarib_muhawwil_nusus::tarkeeb::rakkib_luba` writes the Arabic into the game's own data at install time, from `taarib_tathbeet::nusus::raqqi_nusus` |

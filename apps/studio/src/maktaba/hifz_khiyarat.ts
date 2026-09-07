@@ -111,19 +111,44 @@ export const MANASSAT: readonly Manassa[] = [
   'yadawi',
 ];
 
+/**
+ * Every engine family a filter may name.
+ *
+ * Keyed off `AilatMuharrik` rather than listed as an array, and that is the
+ * whole point: as a plain array this held ten families long after the backend
+ * reached seventeen, so a library filtered by engine silently dropped Bio4 and
+ * the six families named in the last two phases — a user filtering for ELDEN
+ * RING's engine got an empty library and no way to tell that from having no
+ * such games. A `Record` keyed by the generated union makes a missing family a
+ * TypeScript error at build time instead, which is the only mechanism here that
+ * does not depend on somebody remembering.
+ *
+ * The values are `true` and carry no meaning; the keys are the list.
+ */
+const KUL_MUHARRIKAT: Record<AilatMuharrik, true> = {
+  unity: true,
+  unreal: true,
+  godot: true,
+  rpg_maker_mv: true,
+  rpg_maker_mz: true,
+  rpg_maker_vx_ace: true,
+  renpy: true,
+  game_maker: true,
+  electron: true,
+  bio4: true,
+  frostbite: true,
+  black_space: true,
+  alchemy: true,
+  dantelion: true,
+  rage: true,
+  snowdrop: true,
+  majhul: true,
+};
+
 /** Every engine family a filter may name. */
-export const MUHARRIKAT: readonly AilatMuharrik[] = [
-  'unity',
-  'unreal',
-  'godot',
-  'rpg_maker_mv',
-  'rpg_maker_mz',
-  'rpg_maker_vx_ace',
-  'renpy',
-  'game_maker',
-  'electron',
-  'majhul',
-];
+export const MUHARRIKAT: readonly AilatMuharrik[] = Object.keys(
+  KUL_MUHARRIKAT,
+) as AilatMuharrik[];
 
 /** Every Arabization state a filter may name. */
 export const HALAT: readonly HalatLuba[] = [

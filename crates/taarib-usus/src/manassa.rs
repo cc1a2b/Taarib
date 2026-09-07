@@ -275,6 +275,14 @@ pub fn amaliyat_bism(ism: &str) -> Vec<Amaliya> {
 /// "refuse while the game is running" answers "not running" for every process
 /// on the machine and quietly stops guarding anything.
 #[must_use]
+#[cfg_attr(
+    not(target_os = "linux"),
+    allow(
+        clippy::missing_const_for_fn,
+        reason = "constant only on the platforms whose answer is a constant; the Linux body reads \
+                  the sandbox markers, and one signature serves both"
+    )
+)]
 pub fn fi_sunduq() -> Option<Sunduq> {
     #[cfg(target_os = "linux")]
     {
@@ -516,6 +524,516 @@ pub fn masaha_mutaha(masar: &Path) -> Natija<u64> {
             }))
         }
     }
+}
+
+/// Where a path lives, decided before the path itself is touched.
+///
+/// Four answers, and the fourth is the one an `Option<PathBuf>` folds into the
+/// third: "no volume could be named for this path" and "this path is on the
+/// system's own disk" are different facts, and only the second licenses the
+/// caller to read a missing directory as a deleted one. A game on a second SSD
+/// mounted at `/games` whose mount lost the race with the desktop session is
+/// intact and unreachable, and telling its owner to reinstall it is the mistake
+/// this type exists to make impossible.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "wajiha", derive(specta::Type))]
+#[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
+#[serde(tag = "naw", rename_all = "snake_case")]
+pub enum HalatHajm {
+    /// A volume the platform names, whose root answered just now.
+    Muttasil {
+        /// The root, as the platform spells it: `E:\`, `\\server\share\`,
+        /// `/media/games`, `/mnt/library`, `/Volumes/External`.
+        jidhr: PathBuf,
+        /// Whether it is a network location, for the wording and nothing else.
+        shabaki: bool,
+    },
+    /// A volume the platform names, whose root did not answer — a drive letter
+    /// with nothing behind it, a declared mount that is not mounted, a share
+    /// that timed out.
+    GhayrMuttasil {
+        /// The root that did not answer.
+        jidhr: PathBuf,
+        /// Whether it is a network location.
+        shabaki: bool,
+    },
+    /// The path lives on the filesystem this process runs from, which is
+    /// reachable by construction. No volume question is owed, and an absent
+    /// directory under it is genuinely absent.
+    JidhrAlNizam,
+    /// No volume could be named or probed for the path, and this is why.
+    ///
+    /// Not "fine". The caller has been told nothing about reachability, and a
+    /// missing directory under such a path is not evidence of deletion.
+    Majhul {
+        /// What could not be read or decided.
+        sabab: String,
+    },
+}
+
+impl HalatHajm {
+    /// Whether a missing directory under this path means the directory is
+    /// gone.
+    ///
+    /// Only the two answers that *established* reachability clear it. An
+    /// unreachable volume and an unanswered question both say "do not decide
+    /// from absence", which is the same rule [`HalatTashghil::yamnaa`] applies
+    /// to a process table that could not be read.
+    #[must_use]
+    pub const fn yasmah_bil_hukm(&self) -> bool {
+        matches!(self, Self::Muttasil { .. } | Self::JidhrAlNizam)
+    }
+
+    /// The volume root, where one was named.
+    #[must_use]
+    pub fn jidhr(&self) -> Option<&Path> {
+        match self {
+            Self::Muttasil { jidhr, .. } | Self::GhayrMuttasil { jidhr, .. } => Some(jidhr),
+            Self::JidhrAlNizam | Self::Majhul { .. } => None,
+        }
+    }
+}
+
+/// One mount, as the mount table or its declaration names it.
+#[cfg(unix)]
+#[cfg_attr(
+    not(target_os = "linux"),
+    allow(
+        dead_code,
+        reason = "constructed only from the Linux mount table; macOS reaches the same decision \
+                  with an empty one, and the type is what keeps the two decisions one function"
+    )
+)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Tarkeeb {
+    /// Where it is, or would be, mounted.
+    masar: PathBuf,
+    /// Whether its filesystem type is a network one.
+    shabaki: bool,
+}
+
+/// Which volume holds a path, and whether that volume answers right now.
+///
+/// On Windows the answer is the drive or share prefix, probed once. On Linux the
+/// kernel's own mount table decides: the deepest mount covering the path is the
+/// volume, and a path the table places on the root filesystem is then checked
+/// against `/etc/fstab` — a mount point declared there and not in the table is
+/// a volume that is *not connected*, which is exactly what a LUKS volume not yet
+/// unlocked or a mount unit that lost the race with the session looks like. The
+/// conventional removable-media parents (`/media`, `/mnt`, `/run/media`,
+/// `/Volumes`, `/net`) are honoured on every Unix, which is how macOS, with no
+/// mount table this build reads, still names an external disk.
+///
+/// The network flag chooses between two wordings for one held-not-deleted
+/// outcome, so a wrong guess there costs a less accurate sentence and nothing
+/// else. Every other distinction here costs a user's patch state if it is
+/// wrong, which is why the fourth answer exists rather than being folded away.
+#[must_use]
+pub fn halat_hajm(masar: &Path) -> HalatHajm {
+    #[cfg(windows)]
+    {
+        halat_hajm_windows(masar)
+    }
+    #[cfg(unix)]
+    {
+        halat_hajm_unix(masar)
+    }
+}
+
+/// The Windows half: the prefix is the volume.
+#[cfg(windows)]
+fn halat_hajm_windows(masar: &Path) -> HalatHajm {
+    use std::path::{Component, Prefix};
+
+    let Some(Component::Prefix(badia)) = masar.components().next() else {
+        return HalatHajm::Majhul {
+            sabab: format!(
+                "{} carries no drive letter or share prefix, so no volume can be named for it",
+                masar.display()
+            ),
+        };
+    };
+    let shabaki = match badia.kind() {
+        Prefix::Disk(_) | Prefix::VerbatimDisk(_) => false,
+        Prefix::UNC(..) | Prefix::VerbatimUNC(..) => true,
+        Prefix::Verbatim(_) | Prefix::DeviceNS(_) => {
+            return HalatHajm::Majhul {
+                sabab: format!(
+                    "{} names a device namespace rather than a volume, so its reachability \
+                     is not a question this build can ask",
+                    masar.display()
+                ),
+            };
+        }
+    };
+    let mut jidhr = PathBuf::from(badia.as_os_str());
+    jidhr.push(std::path::MAIN_SEPARATOR_STR);
+    ijhas_jidhr(jidhr, shabaki, |jidhr| std::fs::metadata(jidhr).map(|_| ()))
+}
+
+/// The Unix half: the mount table where there is one, the conventions
+/// everywhere.
+#[cfg(unix)]
+fn halat_hajm_unix(masar: &Path) -> HalatHajm {
+    use std::path::Component;
+
+    if !matches!(masar.components().next(), Some(Component::RootDir)) {
+        return HalatHajm::Majhul {
+            sabab: format!(
+                "{} is not an absolute path, so no volume can be named for it",
+                masar.display()
+            ),
+        };
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let jadwal = match jadwal_al_tarkeeb() {
+            Ok(jadwal) => jadwal,
+            Err(sabab) => {
+                return HalatHajm::Majhul {
+                    sabab: format!("the mount table {MASAR_MOUNTINFO} could not be read: {sabab}"),
+                };
+            }
+        };
+        ihkum_hajm(masar, &jadwal, ilanat_fstab, |jidhr| std::fs::metadata(jidhr).map(|_| ()))
+    }
+    #[cfg(target_os = "macos")]
+    {
+        // Everything outside `/Volumes` is the boot volume or a firmlink onto
+        // its data half, both of which are mounted for as long as the system
+        // is up — so the conventions are the whole answer here.
+        ihkum_hajm(masar, &[], || Ok(Vec::new()), |jidhr| std::fs::metadata(jidhr).map(|_| ()))
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        HalatHajm::Majhul {
+            sabab: format!(
+                "this build reads no mount table on this platform, so the volume holding {} \
+                 cannot be named",
+                masar.display()
+            ),
+        }
+    }
+}
+
+/// The decision, over an already-read mount table, a lazily-read declaration
+/// list, and an injected probe — so every branch can be driven by a test
+/// without a mount of its own.
+///
+/// The order is the design. The kernel's table is consulted first because it
+/// is the truth about what *is* mounted; the conventions second, because a
+/// removable disk mounted by `udisks` is in the table when present and its
+/// directory is gone when not, so a conventional root that is neither mounted
+/// nor present is absent; the declarations last, because they are the only
+/// thing that turns "on the root filesystem as far as the kernel knows" into
+/// "on a volume that is not here". A conventional root that is present but
+/// neither mounted nor declared is an unmounted volume and a plain directory
+/// wearing the same face, and the fourth answer is the only honest one there.
+#[cfg(unix)]
+fn ihkum_hajm(
+    masar: &Path,
+    jadwal: &[Tarkeeb],
+    ilanat: impl FnOnce() -> std::io::Result<Vec<Tarkeeb>>,
+    ijhas: impl Fn(&Path) -> std::io::Result<()>,
+) -> HalatHajm {
+    if let Some(tarkeeb) = atwal_tarkeeb(jadwal, masar)
+        && tarkeeb.masar != Path::new("/")
+    {
+        return ijhas_jidhr(tarkeeb.masar.clone(), tarkeeb.shabaki, ijhas);
+    }
+
+    if let Some(jidhr) = jidhr_taqlidi(masar) {
+        let shabaki = shabaki_taqlidi(masar);
+        return match ijhas(&jidhr) {
+            Err(sabab) if ghaib(&sabab) => HalatHajm::GhayrMuttasil { jidhr, shabaki },
+            Err(sabab) => HalatHajm::Majhul {
+                sabab: format!(
+                    "the volume root {} answered neither present nor absent: {sabab}",
+                    jidhr.display()
+                ),
+            },
+            // The directory is there and nothing is mounted on it. A declaration
+            // covering the path — at this root or deeper — settles it as a
+            // volume that is not here; without one, nothing can.
+            Ok(()) => match ilanat() {
+                Ok(ilanat) => match atwal_tarkeeb(&ilanat, masar) {
+                    Some(ilan) if ilan.masar != Path::new("/") => HalatHajm::GhayrMuttasil {
+                        jidhr: ilan.masar.clone(),
+                        shabaki: ilan.shabaki || shabaki,
+                    },
+                    _ => HalatHajm::Majhul {
+                        sabab: format!(
+                            "{} exists, nothing is mounted on it and nothing declares it, so an \
+                             unmounted volume and a plain directory look the same from here",
+                            jidhr.display()
+                        ),
+                    },
+                },
+                Err(sabab) => HalatHajm::Majhul {
+                    sabab: format!(
+                        "{} exists and nothing is mounted on it, and the declarations that \
+                         would say whether it is a volume could not be read: {sabab}",
+                        jidhr.display()
+                    ),
+                },
+            },
+        };
+    }
+
+    match ilanat() {
+        Ok(ilanat) => match atwal_tarkeeb(&ilanat, masar) {
+            Some(ilan) if ilan.masar != Path::new("/") => {
+                HalatHajm::GhayrMuttasil { jidhr: ilan.masar.clone(), shabaki: ilan.shabaki }
+            }
+            _ => HalatHajm::JidhrAlNizam,
+        },
+        Err(sabab) => HalatHajm::Majhul {
+            sabab: format!(
+                "the declarations that would say whether {} is on a volume of its own could \
+                 not be read: {sabab}",
+                masar.display()
+            ),
+        },
+    }
+}
+
+/// Probes a named root once and reads the three answers off the result.
+fn ijhas_jidhr(
+    jidhr: PathBuf,
+    shabaki: bool,
+    ijhas: impl Fn(&Path) -> std::io::Result<()>,
+) -> HalatHajm {
+    match ijhas(&jidhr) {
+        Ok(()) => HalatHajm::Muttasil { jidhr, shabaki },
+        Err(sabab) if ghaib(&sabab) => HalatHajm::GhayrMuttasil { jidhr, shabaki },
+        Err(sabab) => HalatHajm::Majhul {
+            sabab: format!(
+                "the volume root {} answered neither present nor absent: {sabab}",
+                jidhr.display()
+            ),
+        },
+    }
+}
+
+/// Whether a probe failure means "not there" rather than "could not ask".
+///
+/// A drive letter with nothing behind it and an unmounted directory are
+/// [`std::io::ErrorKind::NotFound`]; a share that is down answers with one of
+/// the network kinds or a timeout. A permission refusal is neither — something
+/// answered — and stays a gap.
+fn ghaib(sabab: &std::io::Error) -> bool {
+    matches!(
+        sabab.kind(),
+        std::io::ErrorKind::NotFound
+            | std::io::ErrorKind::HostUnreachable
+            | std::io::ErrorKind::NetworkUnreachable
+            | std::io::ErrorKind::NetworkDown
+            | std::io::ErrorKind::StaleNetworkFileHandle
+            | std::io::ErrorKind::TimedOut
+    )
+}
+
+/// The deepest mount covering a path, or [`None`] when no entry covers it.
+///
+/// Component-wise, so `/mnt/wslg` does not cover `/mnt/wslgames`. Equal depths
+/// resolve to the later entry, which is the one the kernel lists as shadowing
+/// the earlier.
+#[cfg(unix)]
+fn atwal_tarkeeb<'a>(jadwal: &'a [Tarkeeb], masar: &Path) -> Option<&'a Tarkeeb> {
+    jadwal
+        .iter()
+        .filter(|tarkeeb| masar.starts_with(&tarkeeb.masar))
+        .max_by_key(|tarkeeb| tarkeeb.masar.components().count())
+}
+
+/// The conventional volume root under a removable-media parent, if the path is
+/// under one.
+///
+/// `/media/<label>`, `/mnt/<name>`, `/Volumes/<name>`, `/net/<host>`, and the
+/// `udisks` shape `/run/media/<user>/<label>`. `/home` and `/usr` are always
+/// present and treating them as volumes would make every ordinary install look
+/// like it lived on removable media.
+#[cfg(unix)]
+fn jidhr_taqlidi(masar: &Path) -> Option<PathBuf> {
+    use std::path::Component;
+
+    let mut ajza = masar.components();
+    if !matches!(ajza.next(), Some(Component::RootDir)) {
+        return None;
+    }
+    let Some(Component::Normal(walid)) = ajza.next() else {
+        return None;
+    };
+    let walid_nass = walid.to_str()?;
+    if !["media", "mnt", "run", "Volumes", "net"].contains(&walid_nass) {
+        return None;
+    }
+    let mut jidhr = PathBuf::from("/");
+    jidhr.push(walid);
+    if walid_nass == "run" {
+        let Some(Component::Normal(thani)) = ajza.next() else { return None };
+        if thani != "media" {
+            return None;
+        }
+        jidhr.push(thani);
+        let Some(Component::Normal(mustakhdim)) = ajza.next() else { return None };
+        jidhr.push(mustakhdim);
+    }
+    let Some(Component::Normal(ism)) = ajza.next() else { return None };
+    jidhr.push(ism);
+    Some(jidhr)
+}
+
+/// Whether a conventional root looks like a network location.
+#[cfg(unix)]
+fn shabaki_taqlidi(masar: &Path) -> bool {
+    masar.starts_with("/net")
+}
+
+/// Filesystem types that put a path on the far side of a network.
+#[cfg(target_os = "linux")]
+const ANWA_SHABAKIYA: &[&str] = &[
+    "nfs",
+    "nfs4",
+    "cifs",
+    "smb3",
+    "smbfs",
+    "afs",
+    "ceph",
+    "glusterfs",
+    "sshfs",
+    "fuse.sshfs",
+    "davfs",
+    "fuse.davfs2",
+    "fuse.rclone",
+    "ncpfs",
+];
+
+/// The kernel's mount table.
+#[cfg(target_os = "linux")]
+const MASAR_MOUNTINFO: &str = "/proc/self/mountinfo";
+
+/// The declared mounts.
+#[cfg(target_os = "linux")]
+const MASAR_FSTAB: &str = "/etc/fstab";
+
+/// The kernel's mount table, read from `/proc`.
+///
+/// # Errors
+///
+/// Whatever the read refuses. Inside a sandbox that hides `/proc` this is the
+/// gap that makes every answer [`HalatHajm::Majhul`], which is right: a build
+/// that cannot see the mount table cannot say what is mounted.
+#[cfg(target_os = "linux")]
+fn jadwal_al_tarkeeb() -> std::io::Result<Vec<Tarkeeb>> {
+    // Lossy on purpose: one mount point that is not UTF-8 must not turn every
+    // path on the machine into a gap, and the four bytes the kernel escapes
+    // are the only ones a lookup here depends on.
+    let bayt = std::fs::read(MASAR_MOUNTINFO)?;
+    Ok(ifham_mountinfo(&String::from_utf8_lossy(&bayt)))
+}
+
+/// The declared mounts, read from `/etc/fstab`.
+///
+/// An absent file is an empty declaration list, not a gap: a system with no
+/// `fstab` has declared nothing, and that was read successfully.
+///
+/// # Errors
+///
+/// Any refusal other than absence.
+#[cfg(target_os = "linux")]
+fn ilanat_fstab() -> std::io::Result<Vec<Tarkeeb>> {
+    match std::fs::read(MASAR_FSTAB) {
+        Ok(bayt) => Ok(ifham_fstab(&String::from_utf8_lossy(&bayt))),
+        Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
+        Err(sabab) => Err(sabab),
+    }
+}
+
+/// `mountinfo`, one mount per line.
+///
+/// Field five is the mount point and the fields after the `-` separator begin
+/// with the filesystem type; both are what this needs and nothing else is read.
+/// A line that does not have that shape is skipped rather than failing the
+/// table — the kernel does not write malformed lines, and a reader that
+/// refused the whole table over one it did not understand would turn every
+/// path on the machine into a gap.
+#[cfg(target_os = "linux")]
+fn ifham_mountinfo(nass: &str) -> Vec<Tarkeeb> {
+    nass.lines()
+        .filter_map(|satr| {
+            let mut huqul = satr.split(' ');
+            let masar = huqul.nth(4)?;
+            let naw = huqul.skip_while(|haql| *haql != "-").nth(1).unwrap_or("");
+            Some(Tarkeeb {
+                masar: PathBuf::from(fukk_tahreeb(masar)),
+                shabaki: ANWA_SHABAKIYA.contains(&naw),
+            })
+        })
+        .collect()
+}
+
+/// `fstab`, one declaration per line.
+///
+/// Comments and blank lines are skipped, and so is anything whose mount point
+/// is not an absolute path — swap, and the `none` some tools write.
+#[cfg(target_os = "linux")]
+fn ifham_fstab(nass: &str) -> Vec<Tarkeeb> {
+    nass.lines()
+        .filter_map(|satr| {
+            let satr = satr.split('#').next().unwrap_or("").trim();
+            if satr.is_empty() {
+                return None;
+            }
+            let mut huqul = satr.split_whitespace();
+            let _ = huqul.next()?;
+            let masar = fukk_tahreeb(huqul.next()?);
+            if !masar.starts_with('/') {
+                return None;
+            }
+            let naw = huqul.next().unwrap_or("");
+            Some(Tarkeeb { masar: PathBuf::from(masar), shabaki: ANWA_SHABAKIYA.contains(&naw) })
+        })
+        .collect()
+}
+
+/// Undoes the octal escapes both tables use for the four characters a mount
+/// point cannot carry literally: `\040` space, `\011` tab, `\012` newline,
+/// `\134` backslash. A backslash not followed by three octal digits is kept as
+/// it was, digits included.
+#[cfg(target_os = "linux")]
+fn fukk_tahreeb(nass: &str) -> String {
+    let mut natija = String::with_capacity(nass.len());
+    let mut ahruf = nass.chars().peekable();
+    while let Some(harf) = ahruf.next() {
+        if harf != '\\' {
+            natija.push(harf);
+            continue;
+        }
+        let mut arqam = String::new();
+        while arqam.len() < 3 {
+            match ahruf.peek() {
+                Some(raqm) if raqm.is_digit(8) => {
+                    arqam.push(*raqm);
+                    let _ = ahruf.next();
+                }
+                _ => break,
+            }
+        }
+        let mafkuk = if arqam.len() == 3 {
+            u32::from_str_radix(&arqam, 8).ok().and_then(char::from_u32)
+        } else {
+            None
+        };
+        if let Some(mafkuk) = mafkuk {
+            natija.push(mafkuk);
+        } else {
+            natija.push('\\');
+            natija.push_str(&arqam);
+        }
+    }
+    natija
 }
 
 /// Reads an executable's architecture from its own header.
@@ -778,6 +1296,322 @@ mod ikhtibarat {
             RuyatAmaliyat::Maazula { sunduq } => {
                 assert_eq!(hala, HalatTashghil::GhayrMaaruf { sunduq });
             }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Which volume holds a path
+    // -----------------------------------------------------------------------
+
+    use std::path::{Path, PathBuf};
+
+    use super::{HalatHajm, halat_hajm};
+
+    /// Only the two answers that established reachability let a missing
+    /// directory be read as a deleted one. Re-merging the fourth answer into
+    /// the third is the defect this type was split to remove, and it fails here.
+    #[test]
+    fn al_hukm_min_al_ghiyab_yahtaj_ittisalan_muthbatan() {
+        let jidhr = PathBuf::from("/games");
+        assert!(HalatHajm::Muttasil { jidhr: jidhr.clone(), shabaki: false }.yasmah_bil_hukm());
+        assert!(HalatHajm::JidhrAlNizam.yasmah_bil_hukm());
+        assert!(!HalatHajm::GhayrMuttasil { jidhr, shabaki: false }.yasmah_bil_hukm());
+        assert!(!HalatHajm::Majhul { sabab: "no table".to_owned() }.yasmah_bil_hukm());
+    }
+
+    /// A path that is reachable by construction is never called unreachable
+    /// and never called unknown.
+    #[test]
+    fn masar_muttasil_bil_bina_la_yuqal_anhu_ghayr_dhalik() {
+        let hala = halat_hajm(&std::env::temp_dir());
+        assert!(
+            hala.yasmah_bil_hukm(),
+            "the temporary directory is on a mounted volume and the answer was {hala:?}"
+        );
+    }
+
+    /// A relative path names no volume, and the answer says so rather than
+    /// pretending the system disk was meant.
+    #[test]
+    fn masar_nisbi_majhul() {
+        assert!(matches!(
+            halat_hajm(Path::new("alaab/luba")),
+            HalatHajm::Majhul { .. }
+        ));
+    }
+
+    #[cfg(unix)]
+    mod hajm_unix {
+        use std::cell::Cell;
+        use std::io::{Error, ErrorKind};
+        use std::path::{Path, PathBuf};
+
+        use super::super::{HalatHajm, Tarkeeb, atwal_tarkeeb, ihkum_hajm, jidhr_taqlidi};
+
+        fn tarkeeb(masar: &str) -> Tarkeeb {
+            Tarkeeb { masar: PathBuf::from(masar), shabaki: false }
+        }
+
+        fn jidhr_faqat() -> Vec<Tarkeeb> {
+            vec![tarkeeb("/")]
+        }
+
+        // The probes and the declaration lists a test injects, in the
+        // signatures the decision takes. The two that always succeed are still
+        // fallible in type, because that is the type the decision is written
+        // against.
+        #[expect(
+            clippy::unnecessary_wraps,
+            reason = "a probe that always answers 'present', in the fallible signature the \
+                      decision takes; narrowing it would not fit the parameter"
+        )]
+        fn mawjud(_: &Path) -> std::io::Result<()> {
+            Ok(())
+        }
+
+        fn ghaib(_: &Path) -> std::io::Result<()> {
+            Err(Error::from(ErrorKind::NotFound))
+        }
+
+        fn mamnu(_: &Path) -> std::io::Result<()> {
+            Err(Error::from(ErrorKind::PermissionDenied))
+        }
+
+        #[expect(
+            clippy::unnecessary_wraps,
+            reason = "a declaration list that always reads, in the fallible signature the \
+                      decision takes; see `mawjud`"
+        )]
+        fn bila_ilanat() -> std::io::Result<Vec<Tarkeeb>> {
+            Ok(Vec::new())
+        }
+
+        #[test]
+        fn atwal_tarkeeb_yuqaddim_al_aamaq_wa_yuqarin_bil_ajza() {
+            let jadwal = vec![
+                tarkeeb("/"),
+                tarkeeb("/mnt/wslg"),
+                tarkeeb("/mnt/wslg/distro"),
+                tarkeeb("/tmp/.X11-unix"),
+            ];
+            let aamaq = atwal_tarkeeb(&jadwal, Path::new("/mnt/wslg/distro/etc/fstab"));
+            assert_eq!(aamaq.map(|t| t.masar.as_path()), Some(Path::new("/mnt/wslg/distro")));
+            // A string prefix is not a path prefix: `/mnt/wslg` must not cover
+            // `/mnt/wslgames`, and `/tmp/.X11-unix` must not cover `/tmp/x`.
+            let jidhr = atwal_tarkeeb(&jadwal, Path::new("/mnt/wslgames/x"));
+            assert_eq!(jidhr.map(|t| t.masar.as_path()), Some(Path::new("/")));
+            let jidhr = atwal_tarkeeb(&jadwal, Path::new("/tmp/x"));
+            assert_eq!(jidhr.map(|t| t.masar.as_path()), Some(Path::new("/")));
+            assert!(atwal_tarkeeb(&[], Path::new("/anything")).is_none());
+        }
+
+        #[test]
+        fn al_judhur_al_taqlidiya() {
+            let hal = |masar: &str| jidhr_taqlidi(Path::new(masar));
+            assert_eq!(hal("/media/games/Steam/x"), Some(PathBuf::from("/media/games")));
+            assert_eq!(hal("/mnt/library/x"), Some(PathBuf::from("/mnt/library")));
+            assert_eq!(hal("/Volumes/External/x"), Some(PathBuf::from("/Volumes/External")));
+            assert_eq!(
+                hal("/run/media/hassan/Games/x"),
+                Some(PathBuf::from("/run/media/hassan/Games"))
+            );
+            // `/run/user/...` is not media, and a bare parent names no volume.
+            assert_eq!(hal("/run/user/1000/x"), None);
+            assert_eq!(hal("/mnt"), None);
+            assert_eq!(hal("/home/hassan/Games/x"), None);
+            assert_eq!(hal("/usr/share/x"), None);
+        }
+
+        #[test]
+        fn mujallad_murakkab_yuhkam_min_jadwal_al_nawa() {
+            let jadwal = vec![tarkeeb("/"), tarkeeb("/games")];
+            let masar = Path::new("/games/Steam/steamapps/common/ELDEN RING");
+            assert_eq!(
+                ihkum_hajm(masar, &jadwal, bila_ilanat, mawjud),
+                HalatHajm::Muttasil { jidhr: PathBuf::from("/games"), shabaki: false }
+            );
+            // Mounted a moment ago and gone now: the table is stale, the probe
+            // is not.
+            assert_eq!(
+                ihkum_hajm(masar, &jadwal, bila_ilanat, ghaib),
+                HalatHajm::GhayrMuttasil { jidhr: PathBuf::from("/games"), shabaki: false }
+            );
+            // Something answered, and it was not "absent".
+            assert!(matches!(
+                ihkum_hajm(masar, &jadwal, bila_ilanat, mamnu),
+                HalatHajm::Majhul { .. }
+            ));
+        }
+
+        #[test]
+        fn mujallad_muallan_ghayr_murakkab_huwa_hajm_ghayr_muttasil() {
+            // The F20 shape exactly: `/games` in fstab, not in the mount table,
+            // and the game directory under it absent. The old answer was "the
+            // game was deleted"; the honest one is "the volume is not here".
+            let ilanat = || Ok(vec![tarkeeb("/games"), tarkeeb("/")]);
+            let masar = Path::new("/games/Steam/steamapps/common/ELDEN RING");
+            let musta = Cell::new(0_u32);
+            let ijhas = |_: &Path| {
+                musta.set(musta.get() + 1);
+                Err(Error::from(ErrorKind::NotFound))
+            };
+            assert_eq!(
+                ihkum_hajm(masar, &jidhr_faqat(), ilanat, ijhas),
+                HalatHajm::GhayrMuttasil { jidhr: PathBuf::from("/games"), shabaki: false }
+            );
+            assert_eq!(musta.get(), 0, "a declared, unmounted volume is not probed");
+        }
+
+        #[test]
+        fn masar_ala_jidhr_al_nizam_bila_ilan() {
+            let masar = Path::new("/home/hassan/Games/x");
+            assert_eq!(
+                ihkum_hajm(masar, &jidhr_faqat(), bila_ilanat, mamnu),
+                HalatHajm::JidhrAlNizam
+            );
+        }
+
+        #[test]
+        fn al_ilanat_ghayr_al_maqrua_tamnaa_al_hukm() {
+            // fstab unreadable and the path on the root filesystem: a declared
+            // volume cannot be ruled out, so the answer is not "system disk".
+            let ilanat = || Err(Error::from(ErrorKind::PermissionDenied));
+            let masar = Path::new("/home/hassan/Games/x");
+            assert!(matches!(
+                ihkum_hajm(masar, &jidhr_faqat(), ilanat, mawjud),
+                HalatHajm::Majhul { .. }
+            ));
+        }
+
+        #[test]
+        fn jidhr_taqlidi_ghaib_huwa_hajm_ghayr_muttasil() {
+            // `udisks` removes the mount-point directory on unmount, so an
+            // absent conventional root is an absent volume.
+            let masar = Path::new("/run/media/hassan/Games/Steam/x");
+            assert_eq!(
+                ihkum_hajm(masar, &jidhr_faqat(), bila_ilanat, ghaib),
+                HalatHajm::GhayrMuttasil {
+                    jidhr: PathBuf::from("/run/media/hassan/Games"),
+                    shabaki: false
+                }
+            );
+        }
+
+        #[test]
+        fn jidhr_taqlidi_mawjud_ghayr_murakkab() {
+            let masar = Path::new("/mnt/library/Steam/x");
+            // Declared: an unmounted volume.
+            let muallan = || Ok(vec![tarkeeb("/mnt/library")]);
+            assert_eq!(
+                ihkum_hajm(masar, &jidhr_faqat(), muallan, mawjud),
+                HalatHajm::GhayrMuttasil { jidhr: PathBuf::from("/mnt/library"), shabaki: false }
+            );
+            // Declared deeper than the conventional root: still the declared one.
+            let aamaq = || Ok(vec![tarkeeb("/mnt/library/Steam")]);
+            assert_eq!(
+                ihkum_hajm(masar, &jidhr_faqat(), aamaq, mawjud),
+                HalatHajm::GhayrMuttasil {
+                    jidhr: PathBuf::from("/mnt/library/Steam"),
+                    shabaki: false
+                }
+            );
+            // Not declared: a plain directory and an unmounted volume look the
+            // same, and neither "deleted" nor "not connected" may be asserted.
+            assert!(matches!(
+                ihkum_hajm(masar, &jidhr_faqat(), bila_ilanat, mawjud),
+                HalatHajm::Majhul { .. }
+            ));
+        }
+
+        #[test]
+        fn al_ilan_al_shabaki_yahmil_wasfahu() {
+            let ilanat = || Ok(vec![Tarkeeb { masar: PathBuf::from("/games"), shabaki: true }]);
+            assert_eq!(
+                ihkum_hajm(Path::new("/games/x"), &jidhr_faqat(), ilanat, ghaib),
+                HalatHajm::GhayrMuttasil { jidhr: PathBuf::from("/games"), shabaki: true }
+            );
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    mod hajm_linux {
+        use std::path::Path;
+
+        use super::super::{fukk_tahreeb, ifham_fstab, ifham_mountinfo};
+
+        #[test]
+        fn fakk_al_tahreeb() {
+            assert_eq!(fukk_tahreeb(r"/media/user/My\040Games"), "/media/user/My Games");
+            assert_eq!(fukk_tahreeb(r"C:\134"), r"C:\");
+            assert_eq!(fukk_tahreeb(r"a\011b\012c"), "a\tb\nc");
+            // Not an escape: kept as written, digits and all.
+            assert_eq!(fukk_tahreeb(r"\04x"), r"\04x");
+            assert_eq!(fukk_tahreeb(r"end\"), r"end\");
+            assert_eq!(fukk_tahreeb("/plain/path"), "/plain/path");
+        }
+
+        #[test]
+        fn qiraat_mountinfo() {
+            // Real lines from a WSL2 machine, plus one NFS mount.
+            let nass = "82 67 8:48 / / rw,relatime - ext4 /dev/sdd rw,discard\n\
+                        78 82 0:34 / /mnt/wsl rw,relatime shared:1 - tmpfs none rw\n\
+                        136 82 0:74 / /mnt/e rw,noatime - 9p E:\\134 rw,aname=drvfs\n\
+                        140 82 0:80 / /media/hassan/My\\040Games rw - ext4 /dev/sdb1 rw\n\
+                        141 82 0:81 / /net/nas rw,relatime - nfs4 nas:/games rw\n\
+                        malformed line\n";
+            let jadwal = ifham_mountinfo(nass);
+            let masarat: Vec<&Path> = jadwal.iter().map(|t| t.masar.as_path()).collect();
+            assert_eq!(
+                masarat,
+                vec![
+                    Path::new("/"),
+                    Path::new("/mnt/wsl"),
+                    Path::new("/mnt/e"),
+                    Path::new("/media/hassan/My Games"),
+                    Path::new("/net/nas"),
+                ]
+            );
+            let shabaki: Vec<bool> = jadwal.iter().map(|t| t.shabaki).collect();
+            assert_eq!(shabaki, vec![false, false, false, false, true]);
+        }
+
+        #[test]
+        fn qiraat_fstab() {
+            let nass = "# /etc/fstab\n\
+                        \n\
+                        UUID=1234 /  ext4 errors=remount-ro 0 1\n\
+                        UUID=5678 /games ext4 defaults,noauto 0 2  # second SSD\n\
+                        /dev/mapper/vault /home/hassan/Games ext4 noauto 0 0\n\
+                        nas:/export /net/nas nfs4 defaults 0 0\n\
+                        /swapfile none swap sw 0 0\n\
+                        tmpfs /tmp tmpfs defaults 0 0\n";
+            let ilanat = ifham_fstab(nass);
+            let masarat: Vec<&Path> = ilanat.iter().map(|t| t.masar.as_path()).collect();
+            assert_eq!(
+                masarat,
+                vec![
+                    Path::new("/"),
+                    Path::new("/games"),
+                    Path::new("/home/hassan/Games"),
+                    Path::new("/net/nas"),
+                    Path::new("/tmp"),
+                ]
+            );
+            let shabaki: Vec<bool> = ilanat.iter().map(|t| t.shabaki).collect();
+            assert_eq!(shabaki, vec![false, false, false, true, false]);
+        }
+
+        #[test]
+        fn al_jihaz_al_hali_yaqra_jadwalahu() {
+            // `/proc/self/mountinfo` is readable here, and the one entry every
+            // machine has is the root filesystem.
+            let jadwal = super::super::jadwal_al_tarkeeb();
+            assert!(
+                jadwal
+                    .as_ref()
+                    .is_ok_and(|jadwal| jadwal.iter().any(|t| t.masar == Path::new("/"))),
+                "the mount table must be readable and name the root: {jadwal:?}"
+            );
         }
     }
 }

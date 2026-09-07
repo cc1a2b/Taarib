@@ -1,7 +1,9 @@
 # src/mustalahat — generated bindings
 
-Everything in this directory except this file is generated. Do not edit it, do
-not reformat it, and do not commit a hand-made correction to it.
+`awamir.ts` in this directory is generated. Do not edit it, do not reformat it,
+and do not commit a hand-made correction to it. The other two files are written
+by hand: this README, and `arqam.ts`, which holds the decisions the generator
+cannot express (its own header says so) and exports one helper, `kasr`.
 
 The generated file **is** committed, which is the one thing here that surprises
 people. It is committed so that a fresh clone type-checks before anyone has run
@@ -20,6 +22,10 @@ the two means this file is stale rather than that the Rust is wrong.
   including the shared vocabulary from `taarib-mustalahat` and the error model
   from `taarib-usus` (`Khata`, `Khutwa`, `Khutura`, `Ramz`),
 - the event payload types, once the backend emits events.
+
+`arqam.ts` — hand-written, beside the generated file on purpose: the numeric
+conventions the bindings need and `specta` cannot derive. Nothing in it
+describes a Rust type.
 
 ## Where it comes from
 

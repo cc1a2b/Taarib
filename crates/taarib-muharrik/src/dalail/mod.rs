@@ -10,7 +10,7 @@
 //! | directory shape | [`binya`] | the layouts an engine's own runtime has to find, so it has to ship them |
 //! | binary signatures | [`thunai`] | imported modules, section names, and version tags in the executable's constant data |
 //! | embedded metadata | [`unity`], [`nusus`] | the engine's own declaration of its version, inside its own files |
-//! | container headers | [`unreal`], [`godot`], [`bio4`] | the framing of the archives an engine ships its content in |
+//! | container headers | [`unreal`], [`godot`], [`bio4`], [`khassa`] | the framing of the archives an engine ships its content in |
 //!
 //! Several modules straddle two sources — [`unity`] reads both a container
 //! header and a metadata blob — and that is fine. The point of the four is that
@@ -30,11 +30,23 @@
 //! was rejected because it makes every detector depend on another's success. A
 //! game whose pak footer is corrupt should still be identified as Unreal by its
 //! directory shape, and it is.
+//!
+//! ## One reader per format, however many detectors read it
+//!
+//! [`tanfidhi`] is not a detector and answers nothing. It is the single parser
+//! of a Windows PE image and its version resource, which [`bio4`] and [`khassa`]
+//! both need. It exists because they each had their own copy of it and the two
+//! copies disagreed — one of them reporting an engine's internal name as
+//! `t(\u{1}LegalCopyright` and finding nothing at all in a binary whose version
+//! block sits past a megabyte. Overlapping *evidence* is the design; overlapping
+//! *parsers* is a defect that only shows up in one of them.
 
 pub mod binya;
 pub mod bio4;
 pub mod godot;
+pub mod khassa;
 pub mod nusus;
+pub mod tanfidhi;
 pub mod thunai;
 pub mod unity;
 pub mod unreal;
@@ -44,6 +56,9 @@ use crate::fahs::Fahis;
 pub use crate::dalail::binya::FahisBinya;
 pub use crate::dalail::bio4::FahisBio4;
 pub use crate::dalail::godot::FahisGodot;
+pub use crate::dalail::khassa::{
+    FahisAlchemy, FahisBlackSpace, FahisDantelion, FahisFrostbite, FahisRage, FahisSnowdrop,
+};
 pub use crate::dalail::nusus::{FahisNusus, HadafNusus};
 pub use crate::dalail::thunai::FahisThunai;
 pub use crate::dalail::unity::FahisUnity;
@@ -74,6 +89,11 @@ pub fn kul() -> Vec<Box<dyn Fahis>> {
         // until that listing has already said the layout is there.
         Box::new(FahisBio4::jadeed()),
     ];
+    // Six more, one per in-house engine, each gated on one listing of the game
+    // root the same way the detector above it is. They are last because they
+    // are the newest and because none of them can contradict anything in front
+    // of them: an engine nobody licenses does not look like Unity.
+    kul.extend(khassa::jamee());
     // Five detectors rather than one, because a single result carries a single
     // engine family and an RPG Maker project inside NW.js is genuinely two.
     for wahid in FahisNusus::jamee() {

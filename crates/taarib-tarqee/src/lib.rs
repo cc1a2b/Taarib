@@ -128,5 +128,8 @@ pub use crate::mujammi::{HuzmaMabniya, MudkhalatTajmee, TawhidTarjama, ijmaa};
 pub use crate::tahdid_maqasat::{HajmMuqannan, IktishafMaqasat, TaqreerMaqasat};
 pub use crate::tahweel::SiyasatHuzma;
 pub use crate::takhtit::{KhiyaratTasbeeq, MizaniyatIqama, SiyasatNamu, TakhtitMusbaq, sabbiq};
-pub use crate::taqrir_tajawuz::{BaniTaqrirTajawuz, MudkhalQiyas, ShiddatTajawuz, TaqrirTajawuz};
+pub use crate::taqrir_tajawuz::{
+    BaniTaqrirTajawuz, HalatQiyasTajawuz, MudkhalQiyas, NawAdamAltahaqquq, SababAdamAltahaqquq,
+    ShiddatTajawuz, TaqrirTajawuz,
+};
 pub use crate::taghtiya_ruqaa::{TaqrirTaghtiya, ihsib_taghtiya};

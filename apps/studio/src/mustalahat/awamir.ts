@@ -64,6 +64,33 @@ export const commands = {
 	 */
 	maktaba: () => typedError<HasilatMaktaba, Khata>(__TAURI_INVOKE("maktaba")),
 	/**
+	 *  The most recent scan, with what every launcher contributed to it and every
+	 *  warning it left, or `None` before the first scan.
+	 * 
+	 *  Read from the store rather than remembered from the last `maktaba` call, so
+	 *  the diagnostics screen answers the same after a restart, and so a bundle
+	 *  built for a maintainer can carry the launcher record of a scan they did not
+	 *  watch.
+	 * 
+	 *  # Errors
+	 * 
+	 *  Whatever the store raises reading the scan ledger.
+	 */
+	fahsAkhir: () => typedError<{
+	/**  The scan's generation number. */
+	raqm: number,
+	/**  When it started, RFC 3339. */
+	bidaya: string,
+	/**  When it finished, or `None` if it never did — a crash mid-scan. */
+	nihaya: string | null,
+	/**  Whether it covered every launcher or refreshed one. */
+	kamil: boolean,
+	/**  How many games it saw. */
+	adad_alaab: number,
+	/**  Every launcher it recorded, in adapter order, with its warnings. */
+	matajir: MatjarMaktabaHie[],
+} | null, Khata>(__TAURI_INVOKE("fahs_akhir")),
+	/**
 	 *  Resolves the artwork the library scan did not already have, streaming each
 	 *  game as it lands.
 	 * 
@@ -184,11 +211,11 @@ export const commands = {
 	 *  **This one walks the game directory.** The two hard scans behind
 	 *  `hala_himaya` and the multiplayer risk read the game's files and its store
 	 *  catalogue, and the proxy survey reads the loader directory beside them; on a
-	 *  large installation that is seconds. It is deliberate: `MasahAman::faragh`
-	 *  would hand the core a scan that never ran, and the core would answer
-	 *  `la_tawqee` with nothing behind it — an absence presented as a finding, which
-	 *  is the exact failure this crate exists to prevent. Every surface that asks
-	 *  for it therefore asks on purpose, not on mount.
+	 *  large installation that is seconds, and it is spent on purpose:
+	 *  `MasahAman::lam_yumsah` hands the core a scan that never ran, and the core
+	 *  now refuses on it rather than answering `la_tawqee` — the refusal is the
+	 *  point, but a refusal is not an answer about the game. Every surface that
+	 *  wants a real answer therefore pays for the walk, on purpose and not on mount.
 	 * 
 	 *  # Errors
 	 * 
@@ -319,7 +346,58 @@ export const commands = {
 	 */
 	thabbitRuqaa: (muarrif: string, masarMalaf: string, iqrarShabaka: boolean, iqrarTaqribi: boolean) => typedError<NatijatTathbeetHie, Khata>(__TAURI_INVOKE("thabbit_ruqaa", { muarrif, masarMalaf, iqrarShabaka, iqrarTaqribi })),
 	/**
-	 *  The whole project, every row, as the workspace opens it.
+	 *  What installing into this game would write, before anything is written.
+	 * 
+	 *  The same [`taarib_tathbeet::tarkib::khutta`] call [`thabbit_ruqaa`] makes,
+	 *  over the same game description, so this is not a description of the install
+	 *  — it is the install's own plan, read early. It answers the four questions a
+	 *  person is entitled to have answered before they agree: which files are
+	 *  created and which of the game's own are replaced, what else is already
+	 *  hooked into this game, whether verifying the game through its store would
+	 *  undo it, and what launching it will need afterwards.
+	 * 
+	 *  It walks the game directory — the loader survey opens every module in the
+	 *  slot list to identify it — so a screen asks for it deliberately rather than
+	 *  on mount, the way it asks for the evidence chain.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataTathbeetAmr::LaTathbeet`] when the game has never been probed, so
+	 *  there is no capability report to plan against, and whatever the planner
+	 *  raises: a report the safety layer refused, a compatibility prefix that has
+	 *  never been built, a component the store does not hold. Each of those is a
+	 *  reason this install would fail, said before it is attempted instead of
+	 *  during it.
+	 */
+	khuttatTathbeet: (muarrif: string) => typedError<KhuttatTathbeetHie, Khata>(__TAURI_INVOKE("khuttat_tathbeet", { muarrif })),
+	/**
+	 *  What removing an installation would do, before it is done.
+	 * 
+	 *  The dry run [`taarib_tathbeet::taraju::khutta`] has always computed and
+	 *  nobody has ever been shown. It matters most for the one choice on this screen
+	 *  that can destroy something the user did not put there: the removal offers to
+	 *  sweep the directories Taarib created, and a sweep can only be consented to if
+	 *  what is inside them is named first. It also names the paths the store has
+	 *  replaced since the install, which a removal deliberately leaves alone — so
+	 *  "the game is back to how it shipped" is claimed only when it is true.
+	 * 
+	 *  Nothing is written. An installation that is not there is simply absent from
+	 *  the answer rather than an error, because the confirmation asks about
+	 *  whichever of the two are present.
+	 * 
+	 *  # Errors
+	 * 
+	 *  Whatever reading a manifest raises. A game with no installation at all
+	 *  answers with an empty list.
+	 */
+	khuttatIzala: (muarrif: string, matlab: MatlabIzala) => typedError<KhuttatIzalaHie[], Khata>(__TAURI_INVOKE("khuttat_izala", { muarrif, matlab })),
+	/**
+	 *  The whole project, every row that read, as the workspace opens it.
+	 * 
+	 *  A file with rows that did not read is opened as it is: the survivors are shown, the
+	 *  damage is reported beside them, and nothing is written — not even the run journal's
+	 *  pending fold. What to do about the damage is the user's choice, made through
+	 *  [`anqidh_mashru`].
 	 * 
 	 *  # Errors
 	 * 
@@ -436,6 +514,22 @@ export const commands = {
 	 */
 	qarrirNizaat: (muarrif: string, qararat: QararHie[]) => typedError<DamjHie, Khata>(__TAURI_INVOKE("qarrir_nizaat", { muarrif, qararat })),
 	/**
+	 *  Sets the unreadable rows of a damaged string file aside and lets the workspace continue
+	 *  on the rows that read.
+	 * 
+	 *  Nothing is replaced before the original is safe: the damaged file is copied byte for byte
+	 *  under a stamped name beside the project and read back to verify, the unreadable lines and
+	 *  a report naming each are written, and only then is the live table rewritten from what
+	 *  read. None of those files is ever deleted by Taarib.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataWarshaAmr::MashruGhayrMawjud`] when no project exists; the rescue's own refusals
+	 *  when every row reads (nothing is written) or the preserved copy does not verify (the live
+	 *  table is untouched); and whatever writing beside the project raises.
+	 */
+	anqidhMashru: (muarrif: string) => typedError<InqadhHie, Khata>(__TAURI_INVOKE("anqidh_mashru", { muarrif })),
+	/**
 	 *  Who this session is, and whether it holds the owner key.
 	 * 
 	 *  # Errors
@@ -488,6 +582,11 @@ export const commands = {
 	taghtiya_nisba: number | null,
 	/**  The pre-flight gate as it stands now. */
 	qaima: QaimatFahsHie,
+	/**
+	 *  How much of the package's overflow was actually measured, and why the
+	 *  rest was not.
+	 */
+	qiyas_tajawuz: QiyasTajawuzHie,
 	/**  When the draft was started, RFC 3339. */
 	ansha: string,
 	/**  Every state transition so far. */
@@ -988,6 +1087,13 @@ export const commands = {
 	khata: KhataTilqaiHie | null,
 	/**  Whether anything has been written into the game yet. */
 	muthabbata: boolean,
+	/**
+	 *  The revocation list the run's gate checks against, and where it stood
+	 *  the last time this run read it: as the door found the cache, then as
+	 *  the run's own refresh left it. Absent only for a snapshot read back from
+	 *  disk, which records stages and not what the registry said.
+	 */
+	sahb: HalatSahbHie | null,
 	/**  When the run last moved, RFC 3339. */
 	waqt: string,
 } | null, Khata>(__TAURI_INVOKE("laqtat_tilqai", { muarrif })),
@@ -1085,6 +1191,77 @@ export type AilatMuharrik =
  *  so that a reader who expects MT Framework can see why it is not.
  */
 "bio4" | 
+/**
+ *  DICE's Frostbite, as Electronic Arts ships it across its own catalogue.
+ * 
+ *  The one engine of the six below that publishes both a name and a version
+ *  in a place a reader can check: the shipped
+ *  `Engine.Render.Core2.PlatformPcDx12.dll` carries a Windows version
+ *  resource whose `ProductName` is the single word `Frostbite`, whose
+ *  `CompanyName` is `Electronic Arts`, and whose `ProductVersion` is an
+ *  engine release number — `2.42.5` in the build this was written against.
+ */
+"frostbite" | 
+/**
+ *  Pearl Abyss's `BlackSpace`, the engine behind Crimson Desert.
+ * 
+ *  Named by the game's own sibling binary: `bin64/pers.exe` declares
+ *  `ProductName` as `BlackSpace version` under `LegalCopyright`
+ *  `Pearlabyss Corp`. Pearl Abyss publishes no release numbering for it, so
+ *  no version is reported — the number beside that name is the patcher's
+ *  own file version and says nothing about the engine.
+ */
+"black_space" | 
+/**
+ *  Vicarious Visions' Alchemy, the engine under Crash Bandicoot N. Sane
+ *  Trilogy.
+ * 
+ *  Recognised by the two container tags it descends from Intrinsic
+ *  Graphics' middleware and never renamed: `IGA\x1A` at the head of every
+ *  archive and `IGZ\x01` — written byte-swapped, `01 5A 47 49` — at the
+ *  head of every object file. Activision published no name or version for
+ *  this engine, so only the container versions are readable and neither is
+ *  reported as the engine's.
+ */
+"alchemy" | 
+/**
+ *  `FromSoftware`'s `Dantelion2`, the core library every Souls-lineage title
+ *  is built on.
+ * 
+ *  The engine names itself the way a compiler makes it: assertion strings
+ *  in the shipped executable's read-only data carry the engine's own source
+ *  path, `N:\FRPG\Source\Dantelion2\...` in DARK SOULS: REMASTERED and
+ *  `W:\GR\RootBranch\Source\Library\Dantelion2\...` in ELDEN RING. Its file
+ *  formats are the second half of the identification: `DCX\0` compression
+ *  wrappers whose own header points at the `DCS\0` and `DCP\0` blocks
+ *  behind it, and the `BND3`/`BDF3` archive pair.
+ * 
+ *  `FromSoftware` publishes no marketing name and no version for it, exactly
+ *  as Capcom publishes none for [`Self::Bio4`], so the internal name is the
+ *  only name there is.
+ */
+"dantelion" | 
+/**
+ *  Rockstar's RAGE — the Rockstar Advanced Game Engine.
+ * 
+ *  Named from two independent places in the game's own files: the `RPF7`
+ *  archive magic every `.rpf` opens with (`37 46 50 52` on disk, the tag
+ *  stored little-endian), and log format strings inside the executable's
+ *  read-only data that tag their subsystem `[RAGE]`.
+ */
+"rage" | 
+/**
+ *  Massive Entertainment's Snowdrop, as Ubisoft ships it.
+ * 
+ *  Identified entirely from its data root, which is what makes it worth
+ *  having: the executable of the title this was written against is behind a
+ *  protector that leaves a reader almost nothing. `rogue/sdf/pc/data/`
+ *  holds `sdf.sdftoc`, whose first four bytes are `WEST` and which carries
+ *  the studio's own name `massive` as ASCII inside its header, beside a
+ *  thousand-odd `.sdfdata` chunks that each open with `BERG` and the same
+ *  format version as the table of contents.
+ */
+"snowdrop" | 
 /**  Nothing Taarib recognises. A first-class answer, not a failure. */
 "majhul";
 
@@ -1193,6 +1370,26 @@ export type AqlLubaHie = {
 	jahiz_lil_tashghil: boolean,
 };
 
+/**
+ *  What one directory Taarib created still holds that Taarib never put there.
+ * 
+ *  Named rather than counted, because the choice the sweep offers is a choice
+ *  about *these files*: a framework's own log, a mod's configuration, a save a
+ *  loader wrote beside itself. A number cannot be consented to.
+ */
+export type BaqiyaMujalladHie = {
+	/**  The directory, relative to the game root. */
+	mujallad: string,
+	/**
+	 *  The unrecorded entries inside it, sorted, a directory carrying a trailing
+	 *  slash. Capped by the installer, so this may be shorter than
+	 *  [`Self::adad`].
+	 */
+	madakhil: string[],
+	/**  How many unrecorded entries there are in total. */
+	adad: number,
+};
+
 /**  The installed build, rendered. */
 export type BinaHie = {
 	/**  The launcher's own build identifier, where the launcher has one. */
@@ -1253,6 +1450,22 @@ export type DufaHie = {
 	tawaqqafat_lil_saqf: boolean,
 };
 
+/**  The most recent scan, as the diagnostics screen shows it. */
+export type FahsAkhirHie = {
+	/**  The scan's generation number. */
+	raqm: number,
+	/**  When it started, RFC 3339. */
+	bidaya: string,
+	/**  When it finished, or `None` if it never did — a crash mid-scan. */
+	nihaya: string | null,
+	/**  Whether it covered every launcher or refreshed one. */
+	kamil: boolean,
+	/**  How many games it saw. */
+	adad_alaab: number,
+	/**  Every launcher it recorded, in adapter order, with its warnings. */
+	matajir: MatjarMaktabaHie[],
+};
+
 /**  The four groups the unavailable section is organised into. */
 export type FiatGhiyab = 
 /**  The launcher is working on it now. */
@@ -1263,6 +1476,26 @@ export type FiatGhiyab =
 "mafquda" | 
 /**  It is somewhere that is not reachable right now. */
 "ghayr_muttasila";
+
+/**  One string that could not be measured, for the console's list. */
+export type GhayrMaqisHie = {
+	/**  The string, abbreviated. */
+	nass: string,
+	/**  The container it was extracted from. */
+	hawiya: string,
+	/**  Where inside that container. */
+	mawqi: string,
+	/**  What kind of interface element it is, in Arabic. */
+	tasnif_arabi: string,
+	/**  The same, in English. */
+	tasnif_injilizi: string,
+	/**  The cause's stable key. */
+	sabab: string,
+	/**  The cause, in Arabic. */
+	sabab_arabi: string,
+	/**  The same, in English. */
+	sabab_injilizi: string,
+};
 
 /**
  *  One game's artwork, the moment it lands.
@@ -1381,6 +1614,24 @@ export type HalatMarhalaHie =
 "fashilat";
 
 /**
+ *  One launcher's verdict, as the interface receives it.
+ * 
+ *  The same three answers as [`HalatFahsMatjar`], spelled for the wire. Sent as
+ *  its own discriminant rather than folded into a sentence so the interface can
+ *  group launchers by it without matching on display text.
+ */
+export type HalatMatjarHie = 
+/**  Not on this machine. */
+"ghayr_muthabbat" | 
+/**  Installed, and its catalogue was read end to end. */
+"tamma" | 
+/**
+ *  Installed, and some part of its catalogue could not be read. Its stored
+ *  games were not marked absent on this scan's word.
+ */
+"naqisa";
+
+/**
  *  Where a translation stands.
  * 
  *  Six states. [`HalatMuraja::TarjamaAaliya`] and [`HalatMuraja::Musawwada`]
@@ -1413,6 +1664,55 @@ export type HalatMuraja =
  *  artefact is indistinguishable from never having tried.
  */
 "marfuda";
+
+/**  What the configured provider list amounts to, as the settings crate states it. */
+export type HalatMuzawwidinHie = 
+/**  Not one provider has been added. */
+"farigh" | 
+/**  Providers exist and every one is switched off. */
+"muattala" | 
+/**  The elected provider is the one the user chose. */
+"mukhtar" | 
+/**  The default names a disabled or deleted provider, so another one is used — and billed. */
+"badeel";
+
+/**  Whether the string file read whole — three states no screen may confuse. */
+export type HalatNususHie = 
+/**  No file, or no rows: nothing has been extracted yet. */
+"farigh" | 
+/**  Every line read. */
+"salima" | 
+/**  At least one line did not read. */
+"talifa";
+
+/**
+ *  Where the revocation list a gate consulted stood, as the interface shows it.
+ * 
+ *  Carried on every result an install produces, because "nothing is revoked"
+ *  is a different sentence from "nothing was checked against the registry",
+ *  and the result used to say the first whenever it meant the second.
+ */
+export type HalatSahbHie = {
+	/**
+	 *  The state as a stable key: `muhaddatha`, `mukhazzana`, `muntahiya`,
+	 *  `lam_tujlab` or `talifa`.
+	 */
+	hala: string,
+	/**
+	 *  Whether the registry confirmed the list within the refresh window — the
+	 *  only state under which a clean revocation answer is a statement about
+	 *  the registry rather than about this machine.
+	 */
+	muhaddatha: boolean,
+	/**  The list's sequence. */
+	tasalsul: number,
+	/**  How many revocations it carries. */
+	adad: number,
+	/**  The whole standing, in Arabic. */
+	arabi: string,
+	/**  The same, in English. */
+	injilizi: string,
+};
 
 /**
  *  A voice pack's state for one game, as the card's outer ring shows it.
@@ -1498,8 +1798,24 @@ export type HasilatMaktaba = {
 	ghaiba: SijillGhaib[],
 	/**  Every game that exists but whose record this scan could not complete. */
 	mutaadhira: SijillMutaadhir[],
-	/**  Which launchers were searched, so an empty library can name them. */
+	/**
+	 *  Which launchers were searched, so an empty library can name them.
+	 * 
+	 *  Only a launcher whose catalogue was read end to end is in here. One
+	 *  that is installed and could not be read is not "searched" in any sense
+	 *  the empty-library sentence can honestly use — and it is the case that
+	 *  sentence used to lie about, naming Epic on a machine whose Epic data
+	 *  folder had no manifest directory. Those launchers are in
+	 *  [`Self::matajir`] with their reason.
+	 */
 	manassat: string[],
+	/**
+	 *  What the scan learned about every launcher on this platform — found or
+	 *  not, read whole or not, and every warning — with a sentence about each
+	 *  in both languages. The library's own report on where its games did and
+	 *  did not come from.
+	 */
+	matajir: MatjarMaktabaHie[],
 	/**  What the deduplication pass did, for the diagnostics bundle. */
 	tawheed: string,
 	/**  What the existence gate concluded, likewise. */
@@ -1597,6 +1913,12 @@ export type HukmTilqaiHie = {
 	yalzam_iqrar_shabaka: boolean,
 	/**  What it has cost so far and what it may cost. */
 	takalif: TakalifHie,
+	/**
+	 *  The revocation list as this machine holds it right now, and where it
+	 *  stands, so the screen can say before the button whether the registry
+	 *  has confirmed it. The run refreshes it again before spending.
+	 */
+	sahb: HalatSahbHie,
 	/**  The cover's absolute path, when the artwork cache holds one. */
 	ghilaf: string | null,
 };
@@ -1853,7 +2175,15 @@ export type IdadatMuzawwid = {
 	hisab_miftah: string | null,
 	/**  Whether the provider is available for use. */
 	mufaal: boolean,
-	/**  Client-side request ceiling per minute. */
+	/**
+	 *  Client-side request ceiling per minute.
+	 * 
+	 *  Zero is not "no limit": it means "no client-side limit was chosen", and
+	 *  the provider's own built-in default applies instead. That substitution
+	 *  happens where the provider is built, and it was undocumented — a field
+	 *  showing `0` beside the word "limit" reads as unlimited and is the
+	 *  opposite of what it does.
+	 */
 	hadd_talabat: number,
 	/**
 	 *  A spend ceiling in US dollars for one translation run, or [`None`] for
@@ -1878,7 +2208,16 @@ export type IdadatMuzawwid = {
 	mizaniya: number | null,
 };
 
-/**  The configured providers. */
+/**
+ *  The configured providers.
+ * 
+ *  The default is an empty list with no elected provider, and that is the state
+ *  a fresh installation is in. It is a real state rather than a missing one:
+ *  installing a published patch never reaches a provider, so most of the product
+ *  works exactly as it does with ten of them configured, and what does not work
+ *  is new machine translation. [`Self::hala`] is where that distinction is
+ *  stated, once, so that no surface has to decide it again.
+ */
 export type IdadatMuzawwidin = {
 	/**  Every provider the user has set up. */
 	qaima: IdadatMuzawwid[],
@@ -1962,6 +2301,24 @@ export type IkhtilafHimayaHie = {
 	min_kashf: string[],
 	/**  What the launcher's own metadata named. */
 	min_iktishaf: string[],
+};
+
+/**  What setting the damaged rows aside did, and where everything went. */
+export type InqadhHie = {
+	/**  How many rows the live table now holds. */
+	najin: number,
+	/**  How many lines were set aside. */
+	talifa: number,
+	/**  The damaged file, preserved byte for byte. */
+	mahfudh: string,
+	/**  The unreadable lines alone. */
+	marfud: string,
+	/**  The report naming every line set aside. */
+	taqreer: string,
+	/**  What happened, in Arabic. */
+	wasf_arabi: string,
+	/**  The same in English. */
+	wasf_injilizi: string,
 };
 
 /**  One recorded state transition of a submission. */
@@ -2173,6 +2530,133 @@ export type KhiyaratMusharakaHie = {
 	ghayr_maqisa: boolean,
 };
 
+/**
+ *  What removing one installation would do, computed before it is done.
+ * 
+ *  A projection of one [`taarib_tathbeet::taraju::KhuttatIstiada`]. The dry run
+ *  existed and was called by nothing, so the removal confirmation asked for a
+ *  decision — sweep the directories or keep them — while showing neither what
+ *  would be swept nor what the store had already replaced.
+ */
+export type KhuttatIzalaHie = {
+	/**  Which installation this is about. */
+	naw: NawTathbeetHie,
+	/**  When it was installed, RFC 3339. */
+	waqt_tathbeet: string,
+	/**  How many of the game's own files would be written back. */
+	li_istiada: number,
+	/**  How many files Taarib added would be deleted. */
+	li_hadhf: number,
+	/**  How many created directories would be considered for removal. */
+	mujalladat: number,
+	/**
+	 *  Paths the store has already replaced since the install, which a removal
+	 *  leaves exactly as they are.
+	 */
+	mustabdala: string[],
+	/**  Recorded paths that are not on disk at all. */
+	mafquda: string[],
+	/**  What is inside the created directories that no manifest line names. */
+	baqaya: BaqiyaMujalladHie[],
+	/**  How many bytes the preserved originals occupy, which removing frees. */
+	hajm_nusakh: number,
+	/**  The same size as the interface writes it. */
+	hajm_nusakh_maqru: string,
+	/**  Whether removing this would leave the game byte-for-byte as it shipped. */
+	nazif: boolean,
+	/**  The dry run's own report text, line for line. */
+	sutur: string[],
+};
+
+/**
+ *  The whole deployment plan for one game, before anything is written.
+ * 
+ *  A projection of one [`taarib_tathbeet::tarkib::KhuttatTarkib`] and of nothing
+ *  else. Every sentence in it was written by the installer — the reason no
+ *  framework is needed, each launch requirement, each loader already in the game
+ *  — and is carried in both languages because the installer writes both. What
+ *  this layer adds is the *shape*: counts the screen groups by, and paths, which
+ *  have no language.
+ * 
+ *  [`Self::sutur`] is the plan's own report text, unedited. It is the artifact a
+ *  user pastes into a bug report and the one the install log carries, and it is
+ *  here for the same reason [`HasilatIzala::sutur`] is there.
+ */
+export type KhuttatTathbeetHie = {
+	/**  The tier this plan was built under, 1 to 3. */
+	tabaqa_raqm: number,
+	/**  The tier's name in Arabic. */
+	tabaqa_arabi: string,
+	/**  The tier's name in English. */
+	tabaqa_injilizi: string,
+	/**
+	 *  Whether the game's own files are changed at all.
+	 * 
+	 *  False at tier 3 and nowhere else, and read from the plan's own decision
+	 *  rather than from an empty file list: a plan that writes nothing because
+	 *  the component store is thin is not the same statement as a plan that
+	 *  writes nothing because the product does not touch this game.
+	 */
+	tughayyar_al_luba: boolean,
+	/**  Whether the plan writes nothing into the game at all. */
+	faragha: boolean,
+	/**  Why no framework is deployed, when none is, in Arabic. */
+	sabab_faragh_arabi: string | null,
+	/**  The same reason in English. */
+	sabab_faragh_injilizi: string | null,
+	/**
+	 *  The framework component to deploy, as the component table describes it.
+	 * 
+	 *  English only, and deliberately not translated here: it is a build
+	 *  identifier — "BepInEx for Unity 2019.1-2021.3 (Mono, x64)" — and the
+	 *  three things it names are proper nouns in every language.
+	 */
+	itar: string | null,
+	/**  Where that framework's loader lands, relative to the game root. */
+	jidhr_muhammil: string | null,
+	/**  Directories the additive layer creates, in creation order. */
+	mujalladat: string[],
+	/**  The additive layer's files, in write order. */
+	mudkhalat: MudkhalKhuttaHie[],
+	/**  How many files the game does not have yet. */
+	adad_idafat: number,
+	/**  How many files the game already has, whose originals are preserved first. */
+	adad_tadeelat: number,
+	/**  The Arabic face deployed into a Ren'Py game, relative to `game/`. */
+	khatt_renpy: string | null,
+	/**  What launching the game will require afterwards, in Arabic. */
+	talabat_arabi: string[],
+	/**  The same requirements in English. */
+	talabat_injilizi: string[],
+	/**
+	 *  Loader slots beside the game that a third-party mod already holds.
+	 * 
+	 *  Empty is the normal answer. A game with `BepInEx`, `ReShade`, an ASI
+	 *  loader or `re4_tweaks` already in it is not the game the publisher
+	 *  shipped, and this is the field that says so before the user agrees
+	 *  rather than after.
+	 */
+	huqn_qaim: WakeelQaimHie[],
+	/**  The launcher note, when the plan needs a launch-time change. */
+	manassa: MalhuzatManassaHie | null,
+	/**
+	 *  The store-verify note, in Arabic, when the plan warrants one.
+	 * 
+	 *  The sentence rather than the boolean that used to stand here. A verify
+	 *  compares the tree against the depot manifest, so it restores every
+	 *  modified file and leaves every added one — the halves come apart, and the
+	 *  game launches with Taarib loaded and its own original text. The screen
+	 *  used to hold its own Arabic for that and key it off a `bool`, which meant
+	 *  two sentences describing one thing with nothing tying them together;
+	 *  [`KhuttatTarkib::malhuzat_tahaqquq_arabi`] is now the only one.
+	 */
+	malhuzat_tahaqquq_arabi: string | null,
+	/**  The same note in English, from the same producer. */
+	malhuzat_tahaqquq_injilizi: string | null,
+	/**  The plan's own report text, line for line, in the installer's words. */
+	sutur: string[],
+};
+
 /**  How badly a failure hurts, which decides how loudly the interface says it. */
 export type Khutura = 
 /**  Worth recording, invisible to the user. */
@@ -2263,6 +2747,13 @@ export type LaqtatTilqaiHie = {
 	khata: KhataTilqaiHie | null,
 	/**  Whether anything has been written into the game yet. */
 	muthabbata: boolean,
+	/**
+	 *  The revocation list the run's gate checks against, and where it stood
+	 *  the last time this run read it: as the door found the cache, then as
+	 *  the run's own refresh left it. Absent only for a snapshot read back from
+	 *  disk, which records stages and not what the registry said.
+	 */
+	sahb: HalatSahbHie | null,
 	/**  When the run last moved, RFC 3339. */
 	waqt: string,
 };
@@ -2399,6 +2890,32 @@ export type MalafSijillHie = {
 };
 
 /**
+ *  What the plan learned about the launcher that owns this game's launch
+ *  options, when the plan needs a launch-time change.
+ */
+export type MalhuzatManassaHie = {
+	/**
+	 *  The launcher, as a person reading the plan knows it.
+	 * 
+	 *  Carried beside the finished sentences, not instead of them: a screen that
+	 *  wants to offer "close {ism}" as a button needs the bare name, and a
+	 *  screen that builds the sentence out of it is how the two languages drift.
+	 */
+	ism: string,
+	/**
+	 *  The whole note, in Arabic, as the installer words it.
+	 * 
+	 *  The two sandbox names this used to carry are gone. They existed so the
+	 *  screen could assemble one of two sentences from them, and the assembly
+	 *  lived in TypeScript while the same two sentences lived in Rust —
+	 *  [`MalhuzatManassa::wasf_arabi`] is now the only place either exists.
+	 */
+	wasf_arabi: string,
+	/**  The same note in English, from the same producer. */
+	wasf_injilizi: string,
+};
+
+/**
  *  The shard family a game's patches are published under.
  * 
  *  A real type rather than the `&'static str` this used to be. The interface
@@ -2527,6 +3044,34 @@ export type MasarTilqaiHie =
 /**  The safety layer refuses this game outright. */
 "marfud";
 
+/**  What one launcher's scan came to, with a sentence about it in each language. */
+export type MatjarMaktabaHie = {
+	/**  The launcher's identifier: `steam`, `epic`, `xbox`, … */
+	muarrif: string,
+	/**  Its name as the interface writes it in Arabic. */
+	ism_arabi: string,
+	/**  Its name in English. */
+	ism_injilizi: string,
+	/**  The verdict. */
+	hala: HalatMatjarHie,
+	/**
+	 *  Where the launcher was found, when a root was; `None` for a launcher
+	 *  that keeps its catalogue in the registry, and for a row read back from
+	 *  the store, which does not keep it.
+	 */
+	jidhr: string | null,
+	/**  How many games it produced. */
+	adad_alaab: number,
+	/**  Every warning, in the order the adapter raised them. */
+	tanbihat: TanbihFahsHie[],
+	/**  How long its scan took. */
+	muddat_ms: number,
+	/**  The one-line summary, in Arabic. */
+	wasf_arabi: string,
+	/**  The same summary in English. */
+	wasf_injilizi: string,
+};
+
 /**  Which installations a removal is asked to take off. */
 export type MatlabIzala = 
 /**  The text installation only. */
@@ -2600,6 +3145,22 @@ export type MuayanaHie = {
 	tajawuz_biksil: number | null,
 	/**  The same excess as a fraction of the width. */
 	tajawuz_nisba: number | null,
+};
+
+/**  One file the plan would write, and whether the game already has it. */
+export type MudkhalKhuttaHie = {
+	/**  The destination relative to the game root, as the plan names it. */
+	nisbi: string,
+	/**
+	 *  Whether the game already has this file.
+	 * 
+	 *  The distinction the confirmation screen is built around: an added file is
+	 *  invisible to the store's integrity check and survives it, and a modified
+	 *  one has its original preserved first and is put straight back by that
+	 *  same check. Both halves matter, and they part company — see
+	 *  [`KhuttatTathbeetHie::malhuzat_tahaqquq_arabi`].
+	 */
+	tadeel: boolean,
 };
 
 /**  One patch the registry offers for a game. */
@@ -2804,6 +3365,11 @@ export type MusawwadaHie = {
 	taghtiya_nisba: number | null,
 	/**  The pre-flight gate as it stands now. */
 	qaima: QaimatFahsHie,
+	/**
+	 *  How much of the package's overflow was actually measured, and why the
+	 *  rest was not.
+	 */
+	qiyas_tajawuz: QiyasTajawuzHie,
 	/**  When the draft was started, RFC 3339. */
 	ansha: string,
 	/**  Every state transition so far. */
@@ -2889,6 +3455,25 @@ export type MutabaqaBina =
 /**  Nothing matches. Shown with the reason, never silently hidden. */
 "ghayr";
 
+/**
+ *  The provider a new translation would use, said before anything is spent.
+ * 
+ *  The election is the settings crate's and so is the sentence; the workspace
+ *  only carries them, so a stale default that quietly bills a different
+ *  provider is read on the screen where the run is started, not discovered on
+ *  the invoice.
+ */
+export type MuzawwidWarshaHie = {
+	/**  Which of the four states the list is in. */
+	hala: HalatMuzawwidinHie,
+	/**  The elected provider's identifier, when one is elected. */
+	ism: string | null,
+	/**  The state's own sentence, in Arabic. */
+	wasf_arabi: string,
+	/**  The same sentence in English. */
+	wasf_injilizi: string,
+};
+
 /**  One machine-translation outcome for one string. */
 export type NatijatTarjamaHie = {
 	/**  The row afterwards. */
@@ -2909,6 +3494,8 @@ export type NatijatTathbeetHie = {
 	tahaqquq_arabi: string,
 	/**  Whether that verification found every path exactly as written. */
 	tahaqquq_salim: boolean,
+	/**  The revocation list the safety gate checked against, and where it stood. */
+	sahb: HalatSahbHie,
 };
 
 /**  The API shape a provider speaks. */
@@ -2963,6 +3550,18 @@ export type NizaatHie = {
 	munfarida: number,
 	/**  Whether a common ancestor was available. */
 	thulathi: boolean,
+	/**
+	 *  How many rows of the recorded ancestor did not read.
+	 * 
+	 *  Those strings were merged without an ancestor, which is the safe
+	 *  direction — more conflicts, never a silent choice — but a merge that
+	 *  quietly demoted itself would be this codebase's oldest defect again.
+	 */
+	aslaf_talifa: number,
+	/**  The sentence about the ancestor, in Arabic, when `aslaf_talifa` is not zero. */
+	tanbih_arabi: string | null,
+	/**  The same sentence in English. */
+	tanbih_injilizi: string | null,
 };
 
 /**
@@ -3095,6 +3694,48 @@ export type QismIdadat =
 "lugha" | 
 /**  Diagnostics level and log retention. */
 "tashkhis";
+
+/**
+ *  How much of a submission's overflow was actually measured.
+ * 
+ *  The third state the overflow list alone cannot carry. An empty list of
+ *  overruns means "measured, none found" only when `hala` is `kamil`; under
+ *  `lam_yuqas` it means nothing was compared, and under `juzi` it is the answer
+ *  for the measured part alone.
+ */
+export type QiyasTajawuzHie = {
+	/**  The verdict's stable key: `kamil`, `juzi`, `lam_yuqas` or `farigh`. */
+	hala: string,
+	/**  The verdict, in Arabic. */
+	hala_arabi: string,
+	/**  The same, in English. */
+	hala_injilizi: string,
+	/**  (string, size) pairs measured against a recorded width. */
+	maqis: number,
+	/**  Distinct strings among them. */
+	nusus_maqisa: number,
+	/**  Measured pairs that overran. */
+	mutajawiz: number,
+	/**  Measured pairs that fitted. */
+	salim: number,
+	/**  Measured pairs that overran badly enough to rewrite. */
+	yastahiqq_iaada: number,
+	/**  Pairs submitted and not measurable. */
+	ghayr_mutahaqqaq: number,
+	/**  Distinct strings among them. */
+	nusus_ghayr_mutahaqqaqa: number,
+	/**  Why, most common cause first. */
+	asbab: SababQiyasHie[],
+	/**
+	 *  Whether the per-string list of unmeasurable rows was cut in the package
+	 *  copy. The counts above are whole either way.
+	 */
+	ghayr_muqallam: boolean,
+	/**  The summary sentence, in Arabic. */
+	wasf_arabi: string,
+	/**  The same, in English. */
+	wasf_injilizi: string,
+};
 
 /**
  *  A stable, permanent error code.
@@ -3262,6 +3903,25 @@ qurs: string } |
 /**  The location. */
 masar: string };
 
+/**
+ *  One cause strings could not be measured for, with how many it accounts for
+ *  and what resolves it.
+ */
+export type SababQiyasHie = {
+	/**  The cause's stable key. */
+	miftah: string,
+	/**  How many (string, size) pairs it accounts for. */
+	adad: number,
+	/**  The cause, in Arabic. */
+	wasf_arabi: string,
+	/**  The same, in English. */
+	wasf_injilizi: string,
+	/**  What resolves it, in Arabic. */
+	ilaj_arabi: string,
+	/**  The same, in English. */
+	ilaj_injilizi: string,
+};
+
 /**  One package string pair, for the console's side-by-side table. */
 export type SafHuzmaHie = {
 	/**  The source text. */
@@ -3310,6 +3970,22 @@ export type SafWarshaHie = {
 	hajm_khatt: number | null,
 };
 
+/**  What the workspace knows about the string file's integrity. */
+export type SalamatMashruHie = {
+	/**  Which of the three states the file is in. */
+	hala: HalatNususHie,
+	/**  How many rows read. */
+	najin: number,
+	/**  The string file's path, for the user who wants to look at it. */
+	masar: string,
+	/**  The one sentence for this state, in Arabic. */
+	wasf_arabi: string,
+	/**  The same sentence in English. */
+	wasf_injilizi: string,
+	/**  The damage, exactly when `hala` is [`HalatNususHie::Talifa`]. */
+	talaf: TalafHie | null,
+};
+
 /**  One pre-flight checklist row. */
 export type SatrFahsHie = {
 	/**  The check's stable key. */
@@ -3328,12 +4004,23 @@ export type SatrFahsHie = {
 	 *  gate means showing a check as passed when nobody has run it. Every other
 	 *  state on this boundary already travels with its own wording; this one
 	 *  was the exception.
+	 * 
+	 *  The overflow row carries two states of its own beside the gate's four:
+	 *  `ghayr_maqis`, a pass over a report in which nothing was measured, and
+	 *  `maqis_juzi`, a pass over one that was measured in part. See
+	 *  [`halat_satr_tajawuz`].
 	 */
 	hala_arabi: string,
+	/**  The same, in English. */
+	hala_injilizi: string,
 	/**  The row's label, in Arabic. */
 	wasf_arabi: string,
+	/**  The same, in English. */
+	wasf_injilizi: string,
 	/**  The sentence beside it, in Arabic. */
 	tafsil_arabi: string,
+	/**  The same, in English. */
+	tafsil_injilizi: string,
 	/**  The strings it links to. */
 	nusus: string[],
 	/**  How many strings it found in total. */
@@ -3401,6 +4088,22 @@ export type SatrSijillHie = {
 	ruqaa: string,
 	/**  The revision acted on. */
 	murajaa: number,
+};
+
+/**  One line of the string file that did not read. */
+export type SatrTalifHie = {
+	/**  The line's number in the file, counting from one. */
+	raqm: number,
+	/**  The string's identity, when the line's head survived far enough to carry it. */
+	huwiya: string | null,
+	/**  The source text, when it survived. */
+	masdar: string | null,
+	/**  The line's opening, for the eye. */
+	muqtataf: string,
+	/**  The line, its reason and what it was, as one sentence in Arabic. */
+	wasf_arabi: string,
+	/**  The same sentence in English. */
+	wasf_injilizi: string,
 };
 
 /**  One line of a laid-out title. */
@@ -3753,6 +4456,13 @@ export type TafasilMurajaHie = {
 	sufuf: SafHuzmaHie[],
 	/**  The overflow report, worst first. */
 	tajawuz: TajawuzHie[],
+	/**  How much of it was measured at all. */
+	qiyas_tajawuz: QiyasTajawuzHie,
+	/**
+	 *  The strings that could not be measured, most sensitive class first, as
+	 *  many as the package copy kept.
+	 */
+	ghayr_maqis: GhayrMaqisHie[],
 	/**  The review conversation. */
 	taaliqat: TaaliqWarshaHie[],
 	/**  Every action taken on this lineage. */
@@ -3821,6 +4531,15 @@ export type TajawuzHie = {
 	mutah: number | null,
 	/**  The size it was measured at. */
 	hajm: number | null,
+	/**  The band's stable key: `tafif`, `malhuz`, `shadid` or `qati`. */
+	shidda: string,
+	/**
+	 *  The whole row as a sentence — band, numbers, lines, and whose overrun
+	 *  it is — in Arabic.
+	 */
+	wasf_arabi: string,
+	/**  The same, in English. */
+	wasf_injilizi: string,
 };
 
 /**  Money, against the ceiling it may not cross. */
@@ -3855,6 +4574,53 @@ export type TalabLubaHie = {
 	adad: number,
 	/**  When the newest request was filed, RFC 3339. */
 	akhir_waqt: string | null,
+};
+
+/**
+ *  The damage, when there is any: what did not read, and the sentences that say so.
+ * 
+ *  The sentences travel from here rather than from the interface's string set,
+ *  so the count, the path and the advice are worded once, in both languages, by
+ *  the code that knows them.
+ */
+export type TalafHie = {
+	/**  How many lines did not read. */
+	talifa: number,
+	/**  The lines that did not read, at most [`AQSA_SUTUR_TALIFA`] of them. */
+	sutur: SatrTalifHie[],
+	/**  The panel's title, in Arabic. */
+	unwan_arabi: string,
+	/**  The same title in English. */
+	unwan_injilizi: string,
+	/**  The short form beside the row count, in Arabic. */
+	mukhtasar_arabi: string,
+	/**  The same short form in English. */
+	mukhtasar_injilizi: string,
+	/**  The rescue button's label, in Arabic. */
+	zir_arabi: string,
+	/**  The same label in English. */
+	zir_injilizi: string,
+};
+
+/**
+ *  One warning a launcher's scan produced, as the interface receives it.
+ * 
+ *  The sentence is the adapter's own, in English, naming the file and the
+ *  reason: it is a technical detail beside a bilingual summary, the same way a
+ *  log line sits beside an error's two sentences.
+ */
+export type TanbihFahsHie = {
+	/**  The file or entry, as specifically as the adapter could name it. */
+	mawdi: string,
+	/**  What was wrong. */
+	sabab: string,
+	/**
+	 *  Whether this gap means games may exist that the scan did not see.
+	 * 
+	 *  Known for a scan that just ran; `None` for one read back from the
+	 *  store, which keeps the launcher's verdict but not each warning's kind.
+	 */
+	yukhfi_alaab: boolean | null,
 };
 
 /**  How far one stage has got. */
@@ -4025,6 +4791,11 @@ export type TaqreerSandooqHie = {
 	mustaada: number,
 	/**  Paths the restore left behind, when any. */
 	mutabaqqi: string[],
+	/**
+	 *  The revocation list the sandbox install's gate checked against, and
+	 *  where it stood. Absent for a restore, which consults no list.
+	 */
+	sahb: HalatSahbHie | null,
 };
 
 /**  What verification found in one installation. */
@@ -4131,6 +4902,30 @@ export type WadTilqaiHie =
 /**  Nothing readable in the files; the route is runtime capture. */
 "iltiqat";
 
+/**
+ *  One loader slot beside the game that a third-party mod already holds.
+ * 
+ *  Three fields, and two of them are whole sentences the installer wrote.
+ *  [`WakeelQaim`] composes its own line — the file, its size, what is beside it
+ *  and which product the evidence named — in both languages, and the confirmation
+ *  screen shows that line rather than rebuilding one out of the parts. A
+ *  projection that carried the parts instead would be a second place for the
+ *  wording to be decided, and the wording is the whole value here: "an ASI plugin
+ *  loader, from the string \"Alexander Blade\" inside it" is an answer, and
+ *  "`dinput8.dll`, 131072, `muhammil_asi`" is a puzzle.
+ */
+export type WakeelQaimHie = {
+	/**
+	 *  The file exactly as it is spelled on disk, which is the key a reader
+	 *  looks for in their own game directory.
+	 */
+	ism: string,
+	/**  The whole finding as one Arabic line, [`WakeelQaim`]'s own. */
+	arabi: string,
+	/**  The same line in English. */
+	injilizi: string,
+};
+
 /**  The whole project as the workspace opens it. */
 export type WarshaHie = {
 	/**  The game's identity. */
@@ -4139,10 +4934,14 @@ export type WarshaHie = {
 	ism_luba: string,
 	/**  The local identity's short form, which `muayyan` values are compared against. */
 	musahimi: string,
-	/**  How many rows the table holds. */
+	/**  How many rows the table holds — the rows that read, never the rows the file holds. */
 	adad: number,
-	/**  Every row. */
+	/**  Every row that read. */
 	sufuf: SafWarshaHie[],
+	/**  Whether the file read whole, and what to say when it did not. */
+	salama: SalamatMashruHie,
+	/**  The provider a run from this screen would use, and whether that is the user's choice. */
+	muzawwid: MuzawwidWarshaHie,
 };
 
 /* Tauri Specta runtime */

@@ -417,6 +417,12 @@
   color: var(--tanbeeh);
 }
 
+/* The overflow check over a project that was not, or only partly, measured:
+   a verdict never reached, which is neither of the two above. */
+.muraja__fahs-hala--majhul {
+  color: var(--tanbeeh);
+}
+
 .muraja__fahs-hala--lam_tujra {
   color: var(--nass-3);
 }
@@ -539,6 +545,104 @@
   line-height: var(--irtifa-qira);
   color: var(--nass-2);
   font-variant-numeric: tabular-nums lining-nums;
+}
+
+.muraja__tajawuz-satr {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--misafa-4);
+}
+
+.muraja__tajawuz-satr--shadid,
+.muraja__tajawuz-satr--qati {
+  color: var(--khatar);
+}
+
+.muraja__tajawuz-wasf {
+  flex-basis: 100%;
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+/* How much of the report was measured at all. Read before the list, because
+   the list is the answer for the measured part only. */
+.muraja__qiyas {
+  margin: 0 0 var(--misafa-8);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.muraja__qiyas--lam_yuqas,
+.muraja__qiyas--juzi,
+.muraja__qiyas--farigh {
+  color: var(--tanbeeh);
+}
+
+.muraja__asbab-qiyas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  margin: var(--misafa-8) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+}
+
+.muraja__sabab-qiyas {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--misafa-12);
+  align-items: baseline;
+}
+
+.muraja__sabab-adad {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.muraja__sabab-jism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+  min-inline-size: 0;
+  text-wrap: pretty;
+}
+
+.muraja__sabab-ilaj {
+  color: var(--nass-3);
+}
+
+.muraja__ghayr-maqis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-4);
+  margin: var(--misafa-8) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+}
+
+.muraja__ghayr-maqis > li {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--misafa-8);
+}
+
+.muraja__ghayr-maqis-mawqi {
+  color: var(--nass-3);
+}
+
+.muraja__ghayr-maqis-sabab {
+  flex-basis: 100%;
+  color: var(--nass-3);
+  text-wrap: pretty;
 }
 
 .muraja__taaliqat {

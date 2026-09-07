@@ -37,7 +37,10 @@ changes, and leaves the file's timestamp alone when the surface is unchanged.
 
 Uses `taarib.h` directly:
 
-- The C++ shims under `shims/`, which include it and link the library.
+- Nothing in this repository yet. There is no C or C++ source in the tree that
+  includes it — the Unreal and Godot adapters are Rust crates that link
+  `taarib-jisr` as an `rlib`, and the worked example in `docs/abi.md` is the
+  only C that compiles against it.
 - Any third party binding against `taarib_jisr` from C or C++.
 
 Does not use it — these mirror the frozen layouts of

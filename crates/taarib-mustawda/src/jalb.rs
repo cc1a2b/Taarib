@@ -46,6 +46,15 @@ pub fn sharaih_matluba(alab: &[LubaId]) -> BTreeSet<u16> {
 pub struct FahrasMajlub {
     /// The manifest.
     pub bayan: BayanMustawda,
+    /// The source that served the manifest, as [`MasdarMustawda::wasf`]
+    /// names it.
+    ///
+    /// Carried so that the revocation refresh that rides on this fetch can
+    /// record which source vouched for the manifest without asking the chain a
+    /// second time.
+    ///
+    /// [`MasdarMustawda::wasf`]: crate::masadir::MasdarMustawda::wasf
+    pub masdar_bayan: String,
     /// The shards, ordered by index.
     pub sharaih: Vec<ShareehaMuwaththaqa>,
 }
@@ -70,9 +79,9 @@ pub async fn jalb_fahras(
     makhbaa: &Path,
     mukhazzan: Option<u64>,
 ) -> NatijatMustawda<FahrasMajlub> {
-    let bayan = jalb_bayan(silsila, mukhazzan).await?;
+    let (bayan, masdar_bayan) = jalb_bayan_maa_masdar(silsila, mukhazzan).await?;
     let sharaih = jalb_sharaih(silsila, &bayan, alab, makhbaa).await?;
-    Ok(FahrasMajlub { bayan, sharaih })
+    Ok(FahrasMajlub { bayan, masdar_bayan, sharaih })
 }
 
 /// Where one shard's verified bytes are cached.
@@ -95,10 +104,27 @@ pub async fn jalb_bayan(
     silsila: &SilsilatMasadir,
     mukhazzan: Option<u64>,
 ) -> NatijatMustawda<BayanMustawda> {
-    let bayt = silsila.jalb(MASAR_BAYAN).await?;
+    jalb_bayan_maa_masdar(silsila, mukhazzan).await.map(|(bayan, _)| bayan)
+}
+
+/// As [`jalb_bayan`], naming the source that served the manifest.
+///
+/// # Errors
+///
+/// As [`jalb_bayan`].
+pub async fn jalb_bayan_maa_masdar(
+    silsila: &SilsilatMasadir,
+    mukhazzan: Option<u64>,
+) -> NatijatMustawda<(BayanMustawda, String)> {
+    let (bayt, masdar) = silsila.jalb_maa_masdar(MASAR_BAYAN).await?;
     let bayan = BayanMustawda::min_bayt(&bayt, mukhazzan)?;
-    tracing::debug!(tasalsul = bayan.tasalsul, sharaih = bayan.sharaih.len(), "manifest read");
-    Ok(bayan)
+    tracing::debug!(
+        tasalsul = bayan.tasalsul,
+        sharaih = bayan.sharaih.len(),
+        masdar = %masdar,
+        "manifest read"
+    );
+    Ok((bayan, masdar))
 }
 
 /// Fetches every shard the given games fall in, and nothing else.
@@ -182,6 +208,18 @@ pub async fn jalb_qaimat_sahb(
     silsila: &SilsilatMasadir,
     bayan: &BayanMustawda,
 ) -> NatijatMustawda<Vec<u8>> {
+    jalb_qaimat_sahb_maa_masdar(silsila, bayan).await.map(|(bayt, _)| bayt)
+}
+
+/// As [`jalb_qaimat_sahb`], naming the source that served the list.
+///
+/// # Errors
+///
+/// As [`jalb_qaimat_sahb`].
+pub async fn jalb_qaimat_sahb_maa_masdar(
+    silsila: &SilsilatMasadir,
+    bayan: &BayanMustawda,
+) -> NatijatMustawda<(Vec<u8>, String)> {
     let nisbi = bayan.rabt_qaimat_sahb.trim();
     if !masar_salih(nisbi) {
         // Repository-relative only: an absolute address is a manifest aiming
@@ -190,7 +228,7 @@ pub async fn jalb_qaimat_sahb(
             sabab: format!("the revocation path {nisbi:?} is not a repository path"),
         });
     }
-    silsila.jalb(nisbi).await
+    silsila.jalb_maa_masdar(nisbi).await
 }
 
 /// The cached bytes of one shard, when the manifest still vouches for them.

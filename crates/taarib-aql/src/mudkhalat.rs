@@ -15,7 +15,7 @@ use taarib_mustalahat::muharrik::TaqreerImkaniyat;
 use taarib_mustawda::mutabaqa::{MutabaqatLuba, MutabaqatRuqaa};
 use taarib_tathbeet::bayan_makhzan::{BayanMukawwinat, iqra_bayan, kamil_hasab_bayan};
 use taarib_tathbeet::wukala::WakeelQaim;
-use taarib_usus::idadat::Idadat;
+use taarib_usus::idadat::{HalatMuzawwidin, Idadat};
 
 use crate::khatar::NawKhatar;
 
@@ -33,8 +33,22 @@ pub struct HuwiyatLuba {
     pub id: LubaId,
     /// The name the launcher gives, verbatim.
     pub ism: String,
-    /// The launcher identity it came from.
-    pub masdar: MasdarLuba,
+    /// Every launcher identity this entry is known by, in discovery order.
+    ///
+    /// A list rather than the one identity it used to be, and the difference is
+    /// the anti-cheat question. `Luba::masadir` keeps discovery order
+    /// permanently — a source already known keeps the position it was first seen
+    /// at — so a Steam game that Playnite happened to find first has a Playnite
+    /// identity at position zero for the rest of that installation's life.
+    /// Holding only the first meant [`Self::appid_steam`] answered [`None`] for
+    /// it, the catalogue was never read, and the core reported *the scan ran and
+    /// matched nothing* about a game whose VAC status was never asked — while
+    /// the install door, which scanned every identity, refused it. Two surfaces
+    /// disagreeing about the one question that bans accounts.
+    ///
+    /// Never empty: the caller that builds this refuses an entry with no
+    /// identity rather than inventing one.
+    pub masadir: Vec<MasdarLuba>,
     /// The installation root.
     pub jidhr: PathBuf,
     /// The executable, when one is known.
@@ -61,7 +75,9 @@ impl HuwiyatLuba {
         Self {
             id,
             ism: luba.ism.clone(),
-            masdar: luba.masdar.clone(),
+            // A discovery record is one launcher's answer by construction, so
+            // the list is one long here and that is not a narrowing.
+            masadir: vec![luba.masdar.clone()],
             jidhr: luba.jidhr.clone(),
             tanfidhi: luba.tanfidhi.clone(),
             jidhr_steam,
@@ -78,10 +94,22 @@ impl HuwiyatLuba {
     /// that declares VAC.
     #[must_use]
     pub fn appid_steam(&self) -> Option<u32> {
-        match self.masdar.asl() {
+        self.masadir.iter().find_map(|masdar| match masdar.asl() {
             MasdarLuba::Steam(appid) => Some(*appid),
             _ => None,
-        }
+        })
+    }
+
+    /// The identity a screen names this entry by: the first one it was found
+    /// under.
+    ///
+    /// Separate from [`Self::appid_steam`] on purpose. Which launcher to *show*
+    /// is a presentation choice and the oldest one is as good as any; which
+    /// launcher's catalogue to *read* is a safety question, and there the answer
+    /// is every one of them.
+    #[must_use]
+    pub fn masdar(&self) -> Option<&MasdarLuba> {
+        self.masadir.first()
     }
 
     /// What the launcher says this entry is, when it says it is not a game.
@@ -163,6 +191,24 @@ impl HalatFahs {
     }
 }
 
+/// Whether the two hard scans were performed at all.
+///
+/// Carried beside their results rather than inferred from them, because it
+/// cannot be inferred from them: a scan that never ran and a game with nothing
+/// to find produce the same empty evidence list, the same empty gap list and the
+/// same `mabtur: false`. The gap list records places one *walk* could not reach
+/// and has nothing to say about a walk that was never started, so without this
+/// the un-run state is indistinguishable from the one verdict on which
+/// installation proceeds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HalatMash {
+    /// Both scans walked the game directory, and their results mean what they say.
+    Jara,
+    /// Neither scan ran. Nothing in the results below is a finding, and the
+    /// absence of findings is not one either.
+    LamYajri,
+}
+
 /// The two hard scans and the one catalogue read behind them.
 ///
 /// Held together because they are produced together: [`QiraatMatjar::iqra`]
@@ -178,6 +224,8 @@ pub struct MasahAman {
     pub halat_matjar: HalatMatjar,
     /// The multiplayer evidence.
     pub shabaka: IjmaaShabaka,
+    /// Whether any of the above was produced by a scan that actually ran.
+    pub hala: HalatMash,
 }
 
 impl MasahAman {
@@ -196,13 +244,21 @@ impl MasahAman {
             himaya,
             halat_matjar,
             shabaka,
+            hala: HalatMash::Jara,
         }
     }
 
-    /// The scan a game that was never walked produces: no evidence, and a
-    /// catalogue that was never owed.
+    /// The state of a game nothing has scanned yet.
+    ///
+    /// Named for the absence rather than for the empty collections it carries,
+    /// because the empty collections are not the point and reading them as the
+    /// point is the defect this constructor used to have: as `faragh` it built a
+    /// completed clean scan, which is the sole answer
+    /// [`crate::HalatHimaya::yasmah`] lets an install proceed on. A game handed
+    /// to the core this way is now refused for want of a scan, which is what it
+    /// is.
     #[must_use]
-    pub fn faragh(jidhr_luba: &Path) -> Self {
+    pub fn lam_yumsah(jidhr_luba: &Path) -> Self {
         Self {
             himaya: IjmaaHimaya {
                 jidhr: jidhr_luba.to_path_buf(),
@@ -217,6 +273,7 @@ impl MasahAman {
                 thughrat: Vec::new(),
                 mabtur: false,
             },
+            hala: HalatMash::LamYajri,
         }
     }
 }
@@ -412,6 +469,15 @@ pub struct MawqifMustakhdim {
     /// with it on, the publisher's Arabic stops being a blocker and becomes a
     /// risk the user has already chosen to take.
     pub istibdal_lugha_rasmiya: bool,
+    /// What the configured translation providers amount to, when anyone looked.
+    ///
+    /// [`None`] means nobody asked, and it is an [`Option`] for the reason
+    /// [`MudkhalatAql::lugha`] is one: [`Self::default`] is a real input in this
+    /// codebase — `MudkhalatAql::ijma` uses it — and a default that asserted
+    /// "no provider is configured" would put a blocker on every game assembled
+    /// without the settings, which is a verdict about a question that was never
+    /// put.
+    pub muzawwidun: Option<HalatMuzawwidin>,
     /// The risks acknowledged for this game.
     pub iqrarat: Vec<NawKhatar>,
 }
@@ -419,10 +485,14 @@ pub struct MawqifMustakhdim {
 impl MawqifMustakhdim {
     /// Takes the settings half off the stored settings, leaving the
     /// acknowledgements to the caller that collected them.
+    ///
+    /// Not `const`: [`IdadatMuzawwidin::hala`] walks the provider list. That is
+    /// the whole cost of the settings half and it is paid once per assembly.
     #[must_use]
-    pub const fn min_idadat(idadat: &Idadat, iqrarat: Vec<NawKhatar>) -> Self {
+    pub fn min_idadat(idadat: &Idadat, iqrarat: Vec<NawKhatar>) -> Self {
         Self {
             istibdal_lugha_rasmiya: idadat.istibdal_lugha_rasmiya,
+            muzawwidun: Some(idadat.muzawwidun.hala()),
             iqrarat,
         }
     }

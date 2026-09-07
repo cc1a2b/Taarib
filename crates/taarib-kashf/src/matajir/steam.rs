@@ -483,7 +483,7 @@ pub fn maktabat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<MaktabatSte
             return;
         }
         let Some(steamapps) = steamapps(&jidhr_maktaba) else {
-            tanbihat.push(TanbihFahs::jadeed(
+            tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 jidhr_maktaba.display().to_string(),
                 "this Steam library has no steamapps folder — the drive is probably disconnected, \
@@ -513,7 +513,9 @@ pub fn maktabat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<MaktabatSte
     let shajara = match iqra_vdf(&masar_fahras) {
         Ok(shajara) => shajara,
         Err(khata) => {
-            tanbihat.push(TanbihFahs::jadeed(
+            // The list of every other library is in this file; without it the
+            // games on every other drive are unseen, not absent.
+            tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 masar_fahras.display().to_string(),
                 khata.injilizi,
@@ -539,10 +541,10 @@ pub fn maktabat(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<MaktabatSte
             QeemaVdf::Nass(masar) => (masar.clone(), None, Vec::new()),
             QeemaVdf::Kain(_) => {
                 let Some(masar) = qeema.nass_bi_masar(&["path"]) else {
-                    tanbihat.push(TanbihFahs::jadeed(
+                    tanbihat.push(TanbihFahs::fahras(
                         MUARRIF,
                         format!("{}#{miftah}", masar_fahras.display()),
-                        "a library entry has no path",
+                        "a library entry has no path, so whatever library it names was not read",
                     ));
                     continue;
                 };
@@ -1867,7 +1869,7 @@ fn bayanat_maktaba(
     let mudkhalat = match std::fs::read_dir(&maktaba.steamapps) {
         Ok(mudkhalat) => mudkhalat,
         Err(sabab) => {
-            tanbihat.push(TanbihFahs::jadeed(
+            tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 maktaba.steamapps.display().to_string(),
                 format!("cannot list this Steam library: {:?}", sabab.kind()),
@@ -2039,16 +2041,14 @@ impl Matjar for MatjarSteam {
             "Steam scan complete"
         );
 
-        Ok(NatijatMatjar {
-            matjar: MUARRIF,
-            // The first root is the one `mawqi` names and the one a diagnostics
-            // screen shows; the others are folded into the same result because
-            // a game is a game whichever client installed it.
-            jidhr_matjar: Some(awwal),
-            alaab,
-            tanbihat,
-            muddat: bidaya.elapsed(),
-        })
+        // The first root is the one `mawqi` names and the one a diagnostics
+        // screen shows; the others are folded into the same result because a
+        // game is a game whichever client installed it.
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, Some(awwal));
+        natija.alaab = alaab;
+        natija.tanbihat = tanbihat;
+        natija.muddat = bidaya.elapsed();
+        Ok(natija)
     }
 
     fn judhur_muraqaba(&self, siyaq: &SiyaqFahs) -> Vec<PathBuf> {

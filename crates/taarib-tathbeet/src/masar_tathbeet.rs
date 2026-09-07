@@ -1,4 +1,4 @@
-//! The ordered install pipeline: authorise, verify, match, back up, deploy, place, confirm.
+//! The ordered install pipeline: authorise, verify, match, back up, deploy, set, place, confirm.
 
 use std::path::{Path, PathBuf};
 
@@ -11,6 +11,7 @@ use taarib_tarqee::irtibat::{IrtibatBina, SababMutabaqa};
 use taarib_usus::manassa::{self, HalatTashghil};
 
 use crate::bayan::{Muthabbit, NawTathbeet, TarifLuba, Tathbeet};
+use crate::itlaq;
 use crate::khata::{KhataTathbeet, NatijatTathbeet};
 use crate::mawdi::WajhatLuba;
 use crate::nusus::Nashir;
@@ -51,6 +52,18 @@ pub struct TalabTathbeet<'a> {
     pub iqrar_taqribi: bool,
     /// The game executable's name, to refuse installing while it runs.
     pub tanfidhi: &'a str,
+    /// Steam's install root, when the caller resolved one.
+    ///
+    /// The launch-option step needs it and nothing else here does. It is passed
+    /// in rather than discovered because the caller has already resolved it —
+    /// against the user's own override, which a second discovery here would not
+    /// see, and a machine with Steam in two places would then be patched in one
+    /// of them and told about the other.
+    ///
+    /// [`None`] is only correct for an install whose plan asks for no
+    /// launch-time change; when one is asked for and this is [`None`],
+    /// [`thabbit`] refuses rather than deploy a framework nothing will load.
+    pub jidhr_steam: Option<&'a Path>,
 }
 
 impl std::fmt::Debug for TalabTathbeet<'_> {
@@ -73,6 +86,14 @@ pub struct NatijatTathbeetKamil {
     pub adad_muhtawa: usize,
     /// The post-write verification verdict.
     pub tahaqquq: NatijatTahaqquq,
+    /// How many launcher account files had their launch options changed.
+    ///
+    /// Zero for the ordinary install, which asks for no launch-time change at
+    /// all, and zero again when every account already carried the assignment —
+    /// which is what a second install over the first produces. It is a count of
+    /// files and not of games: one requirement applied to two signed-in Steam
+    /// accounts is two.
+    pub adad_idadat: usize,
     /// What the script-engine write did, when the game is on one of the four
     /// engines Taarib patches as data.
     ///
@@ -125,8 +146,10 @@ pub struct NatijatTathbeetKamil {
 /// unanswerable; [`KhataTathbeet::RuqaaMarfuda`] when the package fails
 /// verification;
 /// [`KhataTathbeet::TawafuqMarfud`] when the build does not match and no
-/// acknowledgement was given; and whatever `nashr`, the manifest or the guard
-/// raise.
+/// acknowledgement was given; [`KhataTathbeet::MunassaTaamal`] and
+/// [`KhataTathbeet::HalatManassaMajhula`] when the deployment needs a
+/// launch-option change and the launcher that rewrites that file on exit is up
+/// or cannot be seen; and whatever `nashr`, the manifest or the guard raise.
 pub fn thabbit<F>(
     talab: &TalabTathbeet<'_>,
     idhn: &IdhnTathbeet,
@@ -155,6 +178,12 @@ where
         (nashir.qarar(), nashir.nusus())
     };
 
+    // Immediately after the deployment and before anything else, because this is
+    // the step that decides whether what was just deployed ever loads, and
+    // because the launcher guard inside it is the one refusal that has to happen
+    // while there is least in the game to take back out again.
+    let adad_idadat = naffidh_idadat(&mut tathbeet, talab.jidhr_steam)?;
+
     // The tier decides this too. Package content is Taarib's own file in a
     // directory Taarib creates, and at tier 3 there is no payload in the game to
     // read it — the tier deploys none — so placing it would be a directory added
@@ -167,10 +196,34 @@ where
     Ok(NatijatTathbeetKamil {
         tawafuq,
         adad_muhtawa,
+        adad_idadat,
         tahaqquq: taqreer.natija(),
         nusus,
         muhtawa_matruk: !yuktab && !talab.muhtawa.is_empty(),
     })
+}
+
+/// Carries out the launch-time changes the deployment recorded.
+///
+/// The deployment states the requirement and performs none of it — see
+/// [`crate::tarkib::KhuttatTarkib::talabat`] — so the manifest it just flushed
+/// is where the requirement is read from. Going through the record rather than
+/// through a second copy of the plan is what makes it impossible for the value
+/// written into a launcher to disagree with the value an uninstall will look
+/// for: they are the same string, read once.
+///
+/// The requirement is read out of the manifest and cloned before the recorder is
+/// borrowed to write into it, which is also why the list is materialised rather
+/// than iterated in place.
+fn naffidh_idadat(
+    tathbeet: &mut Tathbeet,
+    jidhr_steam: Option<&Path>,
+) -> NatijatTathbeet<usize> {
+    let talabat = itlaq::talabat_steam(tathbeet.bayan());
+    if talabat.is_empty() {
+        return Ok(0);
+    }
+    itlaq::naffidh_talabat_steam(tathbeet, &talabat, jidhr_steam)
 }
 
 fn basmat_ruqaa(jidhr: &Path, ruqaa: &MalafRuqaa) -> NatijatTathbeet<Basma> {

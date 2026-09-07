@@ -1694,6 +1694,15 @@ pub fn ikhtar() -> Result<Box<dyn Khattaf>, KhataTabaqa> {
 /// the two facts that actually stop this backend — a thread with no current
 /// context, and a colour-index pixel format — and those are stated as unknown
 /// rather than as absent when there is no context to ask.
+///
+/// Two kinds of "unknown", and they are reported differently. No context on
+/// this thread *yet* is the expected state before a game draws; the report says
+/// so and the verdict is not narrowed, because the first frame settles it. A
+/// context that **is** current and will not describe its pixel format is a
+/// question that was asked and not answered, and since the answer could be
+/// the colour-index refusal, the verdict is [`crate::qudra::HukmQudra::Majhula`]
+/// with the call that refused named — never "supported" over a format nothing
+/// read.
 #[must_use]
 pub fn qudra() -> crate::qudra::QudratTarkeeb {
     use crate::qudra::{MilShasha, QudratTarkeeb, SababQudra};
@@ -1771,16 +1780,37 @@ fn qudrat_siyaq(taqreer: crate::qudra::QudratTarkeeb) -> crate::qudra::QudratTar
         ));
     }
 
+    // A context is current, so each of the three calls below is owed an answer.
+    // One that refuses leaves the colour-index question — the one that can stop
+    // this backend outright — unasked, and the report says exactly that.
+    //
     // SAFETY: `wglGetCurrentDC` takes nothing and returns the device context
     // the current rendering context was made current against, or a null handle.
     let hdc = unsafe { wglGetCurrentDC() };
     if hdc.is_invalid() {
-        return taqreer;
+        return taqreer.maa(SababQudra::majhula(
+            "يوجد سياق أوبن‌جي‌إل حالي على هذا الخيط، لكن wglGetCurrentDC لم يُرجع سياق جهاز، \
+             فلم يتسنَّ سؤاله عن صيغة البكسل. لا يُعرف بعدُ إن كانت اللعبة تعرض بألوان مفهرسة.",
+            "an OpenGL context is current on this thread, but wglGetCurrentDC returned no device \
+             context, so the pixel format could not be asked for. Whether this game presents \
+             through a colour-index format — the one thing that stops this backend — is not \
+             known",
+        ));
     }
     // SAFETY: `hdc` is the live device context from the call above.
     let fahras = unsafe { GetPixelFormat(hdc) };
     if fahras <= 0 {
-        return taqreer;
+        return taqreer.maa(SababQudra::majhula(
+            format!(
+                "أرجع GetPixelFormat القيمة {fahras} لسياق الجهاز الحالي، فلا فهرس صيغة يُسأل \
+                 عنه. لا يُعرف بعدُ إن كانت اللعبة تعرض بألوان مفهرسة."
+            ),
+            format!(
+                "GetPixelFormat returned {fahras} for the current device context, so there is no \
+                 format index to describe. Whether this game presents through a colour-index \
+                 format is not known"
+            ),
+        ));
     }
 
     let mut wasf = PIXELFORMATDESCRIPTOR::default();
@@ -1793,7 +1823,17 @@ fn qudrat_siyaq(taqreer: crate::qudra::QudratTarkeeb) -> crate::qudra::QudratTar
     let natija =
         unsafe { DescribePixelFormat(hdc, fahras, u32::from(hajm), Some(&raw mut wasf)) };
     if natija == 0 {
-        return taqreer;
+        return taqreer.maa(SababQudra::majhula(
+            format!(
+                "رفض DescribePixelFormat وصف صيغة البكسل رقم {fahras} لسياق الجهاز الحالي. لا \
+                 يُعرف بعدُ إن كانت اللعبة تعرض بألوان مفهرسة."
+            ),
+            format!(
+                "DescribePixelFormat would not describe pixel format {fahras} for the current \
+                 device context. Whether this game presents through a colour-index format is \
+                 not known"
+            ),
+        ));
     }
 
     if wasf.iPixelType == PFD_TYPE_COLORINDEX {

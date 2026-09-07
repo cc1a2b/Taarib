@@ -255,11 +255,7 @@ impl Matjar for MatjarLegendary {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         };
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: Some(jidhr.clone()),
-            ..NatijatMatjar::default()
-        };
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, Some(jidhr.clone()));
 
         let masar_muthabbat = jidhr.join(ISM_MUTHABBAT);
         if !masar_muthabbat.is_file() {

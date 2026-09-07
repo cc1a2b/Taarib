@@ -41,7 +41,9 @@
 
 use std::path::{Path, PathBuf};
 
-use taarib_muhawwil_godot::khadim_nusus::{Lahja, MadkhalIdad, MalafTajawuz, QeemaIdad};
+use taarib_muhawwil_godot::khadim_nusus::{
+    Lahja, MadkhalIdad, MalafTajawuz, QeemaIdad, TarjamatLuba,
+};
 use taarib_muhawwil_godot::pck::Mawrid as _;
 use taarib_muhawwil_godot::pck::hawiya::{Hawiya, ISDAR_AWWAL, IsdarHawiya};
 use taarib_muhawwil_godot::pck::tarjama::{
@@ -407,10 +409,13 @@ fn tawseel_ikhtibar(jidhr: &Path) -> TawseelThalith {
     for (masdar, hadaf) in RASAIL {
         assert!(tarjama.daa(masdar, hadaf).is_ok());
     }
-    TawseelThalith::jadeed(MalafTajawuz::fi_mujallad(jidhr), mawdi)
-        .bi_tarjama(tarjama)
-        .bi_tarjamat_luba(vec!["res://locale/en.translation".to_owned()])
-        .bi_muharrik((3, 6))
+    TawseelThalith::jadeed(
+        MalafTajawuz::fi_mujallad(jidhr),
+        mawdi,
+        TarjamatLuba::Maqrua(vec!["res://locale/en.translation".to_owned()]),
+    )
+    .bi_tarjama(tarjama)
+    .bi_muharrik((3, 6))
 }
 
 /// The delivery writes a resource Godot 3 loads and an override naming it.
@@ -491,7 +496,11 @@ fn tawseel_bila_tarjama_yarfud() {
     else {
         panic!("the location was refused");
     };
-    let tawseel = TawseelThalith::jadeed(MalafTajawuz::fi_mujallad(&jidhr), mawdi);
+    let tawseel = TawseelThalith::jadeed(
+        MalafTajawuz::fi_mujallad(&jidhr),
+        mawdi,
+        TarjamatLuba::Maqrua(Vec::new()),
+    );
     assert!(tawseel.hayyi().is_err());
     assert!(!tawseel.mawdi().mutlaq_masar().exists());
     let _ = std::fs::remove_dir_all(&jidhr);

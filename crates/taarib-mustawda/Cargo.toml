@@ -42,3 +42,11 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 # Free-disk-space probing before a download commits bytes to its destination.
 sysinfo = { workspace = true }
+
+[dev-dependencies]
+# The revocation refresh is tested against directory sources on a real
+# filesystem — a repository with its list, one without, one serving an older
+# list than the machine holds, one serving a tampered one — so that
+# "unreachable", "withheld", "replayed" and "forged" are produced by the same
+# code that meets them in the field.
+tempfile = { workspace = true }

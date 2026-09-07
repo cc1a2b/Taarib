@@ -5,15 +5,19 @@ it before a release bundle is built:
 
     cargo run -p taarib-tajmee -- --hadaf <target-triple> --jalb
 
-`--jalb` is what permits the network, and a first run needs it. Neither the
-BepInEx archives nor the twenty-five font faces are in this repository; they are
+`--jalb` is what permits the network, and a first run needs it. The BepInEx
+archives are not in this repository, and of the twenty-five font faces the lock
+pins only the eight IBM Plex faces the interface's own CSS names are committed
+(under `apps/studio/src/khutut/`, for the webview, not for here); everything is
 pinned by sha256 in `assets/aqfal/` and fetched into `target/tajmee/makhbaa`.
 Without the flag a clean checkout stages neither and refuses both by name.
 
 **That command alone is not enough, and it will tell you so.** `taarib-tajmee`
-builds nothing: ten Rust cdylibs, four Unity assemblies, the `wasm-bindgen`
-pair and the two compiled script adapters have to exist before it runs, and on
-a clean checkout none of them do — the tool exits non-zero naming every one.
+builds nothing: the native cdylibs of matrix rows B, E, F and G (the C-ABI core,
+the loader and the three payloads, per game platform), four Unity assemblies,
+the `wasm-bindgen` pair and the two compiled script adapters have to exist
+before it runs, and on a clean checkout none of them do — the tool exits
+non-zero naming every one.
 `scripts/isdar.sh --hadaf <target-triple> --jalb` runs those builds in
 dependency order and then this one; `.github/workflows/isdar.yml` is the same
 sequence on a runner. Run either of those rather than this command by hand,
@@ -43,10 +47,11 @@ deploying a fraction of one.
 
 **Fonts may not.** `taarib-saff` has no Arabic fallback shaper: with no font
 under `mawarid/khutut/`, and none imported by the user, every layout, preview
-and patch build fails with `KhututNaqisa` — after download, install and first
-launch have all appeared to succeed. Nothing in the bundler noticed.
+and patch build has nothing to shape with and fails — the Studio's submission
+commands name it `KhututNaqisa` — after download, install and first launch
+have all appeared to succeed. Nothing in the bundler noticed.
 
-So `build.beforeBundleCommand` runs `../src-tauri/tadqiq_mawarid.mjs` between
+So `build.beforeBundleCommand` runs `node src-tauri/tadqiq_mawarid.mjs` between
 the compile and the bundler. It checks every font `assets/aqfal/qufl_khutut.json`
 locks against its recorded size and SHA-256, then checks every face
 `assets/fonts/khutut.json` declares for the tables, the OpenType features and

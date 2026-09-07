@@ -10,9 +10,9 @@ use taarib_aman::kashf_shabaka::{
     DalalatShabaka, DaleelShabaka, IjmaaShabaka, NawDaleel as NawDaleelShabaka,
 };
 use taarib_aql::{
-    Aql, HalatFahs, HalatHimaya, HalatMakhzan, HalatMustawda, HuwiyatLuba, Mani, MasahAman,
-    MasahWukala, MasdarMarifa, MawqifMustakhdim, MudkhalatAql, Muntaj, NawKhatar, NawMani,
-    NitaqMani,
+    Aql, HalatFahs, HalatHimaya, HalatMakhzan, HalatMash, HalatMustawda, HuwiyatLuba, Mani,
+    MasahAman, MasahWukala, MasdarMarifa, MawqifMustakhdim, MudkhalatAql, Muntaj, NawKhatar,
+    NawMani, NitaqMani,
 };
 use taarib_kashf::fahs::SimatLuba;
 use taarib_muharrik::imkaniyat::taqreer;
@@ -22,6 +22,7 @@ use taarib_mustalahat::luba::{
 use taarib_mustalahat::muharrik::{
     AilatMuharrik, Daleel, KhalfiyaBarmajiya, Muharrik, NawDaleel, TaqreerImkaniyat, WajihaRusum,
 };
+use taarib_usus::idadat::HalatMuzawwidin;
 use taarib_usus::manassa::Mimariya;
 
 /// Every test returns this so that a fixture failure propagates with `?`.
@@ -95,7 +96,10 @@ fn himaya_eldenring(jidhr: &Path) -> IjmaaHimaya {
 }
 
 /// An anti-cheat scan that ran, read the catalogue, and matched nothing.
-fn himaya_faragh(jidhr: &Path) -> IjmaaHimaya {
+///
+/// Named for the empty evidence rather than for emptiness, because the two are
+/// different states and only one of them is this one.
+fn himaya_bila_adilla(jidhr: &Path) -> IjmaaHimaya {
     IjmaaHimaya {
         jidhr: jidhr.to_path_buf(),
         adilla: Vec::new(),
@@ -104,8 +108,8 @@ fn himaya_faragh(jidhr: &Path) -> IjmaaHimaya {
     }
 }
 
-/// A multiplayer scan that found nothing.
-fn shabaka_faragh(jidhr: &Path) -> IjmaaShabaka {
+/// A multiplayer scan that ran and found nothing.
+fn shabaka_bila_dalail(jidhr: &Path) -> IjmaaShabaka {
     IjmaaShabaka {
         jidhr: jidhr.to_path_buf(),
         dalail: Vec::new(),
@@ -121,7 +125,7 @@ fn huwiya(appid: u32, ism: &str, simat: Vec<SimatLuba>) -> HuwiyatLuba {
     HuwiyatLuba {
         id: LubaId::min_masdar(&masdar, ism),
         ism: ism.to_owned(),
-        masdar,
+        masadir: vec![masdar],
         jidhr,
         tanfidhi: None,
         jidhr_steam: Some(PathBuf::from("/mnt/d/Program Files (x86)/Steam")),
@@ -139,9 +143,10 @@ fn mudkhalat(huwiya: HuwiyatLuba, fahs: HalatFahs) -> MudkhalatAql {
         huwiya,
         fahs,
         aman: MasahAman {
-            himaya: himaya_faragh(&jidhr),
+            himaya: himaya_bila_adilla(&jidhr),
             halat_matjar: HalatMatjar::Maqru,
-            shabaka: shabaka_faragh(&jidhr),
+            shabaka: shabaka_bila_dalail(&jidhr),
+            hala: HalatMash::Jara,
         },
         lugha: None,
         wukala: MasahWukala {
@@ -486,6 +491,231 @@ fn la_tawqee_laysa_naqiyan() -> NatijatIkhtibar {
     Ok(())
 }
 
+/// A scan that never ran is refused, and is not mistaken for one that passed.
+///
+/// The sibling of [`la_tawqee_laysa_naqiyan`], and the more dangerous half. That
+/// test pins what a scan says when it runs; this one pins that the absence of a
+/// scan is not that answer. Both inputs carry an empty evidence list, an empty
+/// gap list and `mabtur: false` — the bytes are identical — so the only thing
+/// telling them apart is [`HalatMash`], and the only thing that makes it matter
+/// is that the decision reads it. `LaTawqee` is the sole verdict
+/// [`HalatHimaya::yasmah`] admits, and before this the un-scanned game got it.
+#[test]
+fn al_mash_alladhi_lam_yajri_yurfad() -> NatijatIkhtibar {
+    let huwiya = huwiya(3_405_690, "FC 26", Vec::new());
+    let taqreer = taqreer_min(
+        muharrik(AilatMuharrik::Frostbite, 95, vec![WajihaRusum::D3d12]),
+        &[],
+    );
+    let jidhr = huwiya.jidhr.clone();
+    let mut mudkhalat = mudkhalat(huwiya, HalatFahs::mafhusa(taqreer));
+    mudkhalat.aman = MasahAman::lam_yumsah(&jidhr);
+    let aql = Aql::jadeed(mudkhalat);
+
+    let hala = aql.hala_himaya();
+    assert_eq!(
+        hala.qeema,
+        HalatHimaya::LamYajri,
+        "an un-run scan is not a scan that matched nothing"
+    );
+    assert!(!hala.qeema.yasmah(), "and nothing may be installed on it");
+
+    let mani = aql
+        .mawani()
+        .into_iter()
+        .find(|mani| mani.qeema.naw == NawMani::FahsHimayaLamYajri)
+        .ok_or("the refusal reaches the blocker list, not only the screen")?;
+    assert_eq!(
+        mani.qeema.nitaq(),
+        NitaqMani::Kul,
+        "it stops a hand-installed patch too, not only the automatic run"
+    );
+    assert!(
+        mani.qeema.injilizi.contains("no anti-cheat scan has been run"),
+        "the sentence names the real cause: {}",
+        mani.qeema.injilizi
+    );
+    assert!(
+        !mani.qeema.arabi.is_empty(),
+        "and it exists in Arabic, which is the language the product speaks"
+    );
+    assert!(aql.marfuda(), "the game is refused outright");
+    assert_eq!(aql.muntaj().qeema, Muntaj::LaShay);
+    Ok(())
+}
+
+/// The un-run scan and the unreadable catalogue are one blocker, not two.
+///
+/// Both are "the check did not run" and both carry `NawMani::FahsHimayaLamYajri`.
+/// A game in both states at once must still get one sentence, because a screen
+/// with room for one reason shows the first and a second copy of the same
+/// heading with a different body is how a user stops trusting either.
+#[test]
+fn sababa_lam_yajri_la_yatakarraran() {
+    let huwiya = huwiya(3_405_690, "FC 26", Vec::new());
+    let taqreer = taqreer_min(
+        muharrik(AilatMuharrik::Frostbite, 95, vec![WajihaRusum::D3d12]),
+        &[],
+    );
+    let jidhr = huwiya.jidhr.clone();
+    let mut mudkhalat = mudkhalat(huwiya, HalatFahs::mafhusa(taqreer));
+    let mut aman = MasahAman::lam_yumsah(&jidhr);
+    aman.halat_matjar = HalatMatjar::JidhrMajhul;
+    mudkhalat.aman = aman;
+    let aql = Aql::jadeed(mudkhalat);
+
+    let adad = aql
+        .mawani()
+        .iter()
+        .filter(|mani| mani.qeema.naw == NawMani::FahsHimayaLamYajri)
+        .count();
+    assert_eq!(adad, 1, "one cause reaches the screen, not both");
+
+}
+
+/// No provider configured blocks the automatic run and nothing else.
+///
+/// The scope is the whole finding. A machine with no provider can still install
+/// a published patch — the patch is already translated and never reaches a
+/// provider — so a blocker that stopped everything would be a lie in the
+/// expensive direction, telling most users the product does not work for them.
+/// `NitaqMani::Tashghil` is what says that, and this pins it.
+///
+/// It also pins where the sentence comes from. Before this the automatic-run
+/// command composed its own, so that screen said it and the game screen, reading
+/// the same core, said nothing about the same machine.
+#[test]
+fn la_muzawwid_yamna_al_tashghil_wahdah() -> NatijatIkhtibar {
+    let huwiya = huwiya(367_520, "Hollow Knight", Vec::new());
+    let taqreer = taqreer_min(
+        muharrik(AilatMuharrik::Renpy, 99, vec![WajihaRusum::OpenGl]),
+        &[],
+    );
+    let mut mudkhalat = mudkhalat(huwiya, HalatFahs::mafhusa(taqreer));
+    mudkhalat.mawqif.muzawwidun = Some(HalatMuzawwidin::Faragh);
+    let aql = Aql::jadeed(mudkhalat);
+
+    let mani = aql
+        .mawani()
+        .into_iter()
+        .find(|mani| mani.qeema.naw == NawMani::LaMuzawwid)
+        .ok_or("an unconfigured provider list reaches the blocker list")?;
+    assert_eq!(
+        mani.qeema.nitaq(),
+        NitaqMani::Tashghil,
+        "it stops the automatic run and not a hand-installed patch"
+    );
+    assert!(!mani.qeema.nihai(), "and it is not a permanent fact");
+    assert!(
+        !aql.marfuda(),
+        "so the game itself is not refused for want of a provider"
+    );
+    assert!(
+        mani.qeema.injilizi.contains("published patches"),
+        "the sentence says what still works: {}",
+        mani.qeema.injilizi
+    );
+    assert!(mani.min(MasdarMarifa::Idadat));
+    Ok(())
+}
+
+/// A question nobody put is not a blocker.
+///
+/// `MawqifMustakhdim::default()` is a real input — `MudkhalatAql::ijma` uses it
+/// — so a default that asserted "no provider is configured" would put this
+/// blocker on every game assembled without the settings. That is the same
+/// mistake as reporting an un-run scan as a clean one, in a cheaper place.
+#[test]
+fn muzawwid_ghayr_masul_anhu_laysa_maniyan() {
+    let huwiya = huwiya(367_520, "Hollow Knight", Vec::new());
+    let taqreer = taqreer_min(
+        muharrik(AilatMuharrik::Renpy, 99, vec![WajihaRusum::OpenGl]),
+        &[],
+    );
+    let mudkhalat = mudkhalat(huwiya, HalatFahs::mafhusa(taqreer));
+    assert_eq!(
+        mudkhalat.mawqif.muzawwidun, None,
+        "the fixture leaves the question unasked, as `default` does"
+    );
+    let aql = Aql::jadeed(mudkhalat);
+    assert!(
+        !aql.mawani()
+            .iter()
+            .any(|mani| mani.qeema.naw == NawMani::LaMuzawwid),
+        "and an unasked question produces no blocker"
+    );
+
+}
+
+/// A multiplayer scan that could not finish asks for consent anyway.
+///
+/// The anti-cheat answer beside this one has always carried its own coverage
+/// limits; the multiplayer answer threw them away, and returned "no risk" on the
+/// strength of a walk that stopped early. The markers are a closed set and the
+/// walk has a bound, so a title with its own netcode and no store categories
+/// produced exactly the silence a single-player game produces — and the
+/// acknowledgement this risk exists to collect was never asked for.
+///
+/// Asking costs a tick. Not asking costs a ban from a server that checks the
+/// files its players are running.
+#[test]
+fn shabaka_mabtura_tastadhin() -> NatijatIkhtibar {
+    let huwiya = huwiya(2_567_870, "Chained Together", Vec::new());
+    let jidhr = huwiya.jidhr.clone();
+    let taqreer = taqreer_min(
+        muharrik(AilatMuharrik::Unreal, 99, vec![WajihaRusum::D3d11]),
+        &[],
+    );
+    let mut mudkhalat = mudkhalat(huwiya, HalatFahs::mafhusa(taqreer));
+    // No evidence at all, and a walk that stopped at its bound — byte-identical
+    // to a finished single-player scan but for this one flag.
+    mudkhalat.aman.shabaka.mabtur = true;
+    let aql = Aql::jadeed(mudkhalat);
+
+    let khatar = aql
+        .makhatir()
+        .into_iter()
+        .find(|khatar| khatar.qeema.naw == NawKhatar::LaabJamai)
+        .ok_or("a truncated multiplayer scan asks rather than staying silent")?;
+    assert!(!khatar.qeema.muqarr, "and it is unanswered until answered");
+    assert!(
+        khatar.qeema.injilizi.contains("stopped at a bound"),
+        "the sentence says the scan did not finish, not that the game is \
+         multiplayer: {}",
+        khatar.qeema.injilizi
+    );
+    assert!(
+        !khatar.qeema.arabi.is_empty(),
+        "and it exists in Arabic too"
+    );
+    assert!(
+        !aql.jahiz_lil_tathbeet(),
+        "an unanswered risk holds the install"
+    );
+    Ok(())
+}
+
+/// A finished scan that found nothing still asks nothing.
+///
+/// The other half of [`shabaka_mabtura_tastadhin`], and the one that keeps the
+/// fix from being "prompt everybody". A complete walk over a single-player game
+/// is entitled to its negative answer.
+#[test]
+fn shabaka_kamila_bila_dalail_la_tastadhin() {
+    let huwiya = huwiya(367_520, "Hollow Knight", Vec::new());
+    let taqreer = taqreer_min(
+        muharrik(AilatMuharrik::Renpy, 99, vec![WajihaRusum::OpenGl]),
+        &[],
+    );
+    let aql = Aql::jadeed(mudkhalat(huwiya, HalatFahs::mafhusa(taqreer)));
+    assert!(
+        !aql.makhatir()
+            .iter()
+            .any(|khatar| khatar.qeema.naw == NawKhatar::LaabJamai),
+        "a complete walk over a single-player game asks nothing"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Probed and unrecognised is not never probed
 // ---------------------------------------------------------------------------
@@ -542,12 +772,14 @@ fn al_majhul_al_mafhus_ghayr_al_lam_yufhas() -> NatijatIkhtibar {
     Ok(())
 }
 
-/// A directory that is not a game at all does not get a capability report's
-/// answer.
+/// A directory that is not a game at all is refused twice, and says one thing.
 ///
 /// Steamworks Common Redistributables is a folder of .NET, VC++ and DirectX
-/// installers. The probe writes it a full tier-3 report; the core refuses to
-/// pass that on.
+/// installers. Both halves are pinned here because both are load-bearing and
+/// they fail differently: the probe refuses it *when told* — which matters
+/// because the probe's report is the half that gets persisted and read back
+/// without the core — and the core refuses it regardless, which matters because
+/// a caller can always hand the probe less than it knows.
 #[test]
 fn mudkhal_laysa_luba_la_yanal_taqreeran() -> NatijatIkhtibar {
     let huwiya = huwiya(
@@ -555,14 +787,26 @@ fn mudkhal_laysa_luba_la_yanal_taqreeran() -> NatijatIkhtibar {
         "Steamworks Shared",
         vec![SimatLuba::LaysatLuba("Tool".to_owned())],
     );
-    let taqreer = taqreer_min(muharrik(AilatMuharrik::Majhul, 15, Vec::new()), &[]);
-    assert_eq!(
-        taqreer.tabaqa.raqm(),
-        3,
-        "the probe does write it a tier-3 report"
+
+    // Told what the launcher knows, the producer refuses on its own.
+    let mubulligh = taqreer_min(muharrik(AilatMuharrik::Majhul, 15, Vec::new()), &huwiya.simat);
+    assert!(
+        mubulligh.marfuda,
+        "a persisted report must not describe a tier over a folder of installers"
+    );
+    assert!(
+        mubulligh.sabab_injilizi.contains("Tool")
+            && mubulligh.sabab_injilizi.contains("not a game"),
+        "and it names what the launcher called it: {}",
+        mubulligh.sabab_injilizi
     );
 
-    let aql = Aql::jadeed(mudkhalat(huwiya, HalatFahs::mafhusa(taqreer)));
+    // Not told, it still writes a tier-3 report — so the core is not redundant.
+    let samit = taqreer_min(muharrik(AilatMuharrik::Majhul, 15, Vec::new()), &[]);
+    assert_eq!(samit.tabaqa.raqm(), 3);
+    assert!(!samit.marfuda);
+
+    let aql = Aql::jadeed(mudkhalat(huwiya, HalatFahs::mafhusa(samit)));
     assert_eq!(aql.muntaj().qeema, Muntaj::LaShay);
     let awwal = aql.mani_awwal().ok_or("a blocker")?;
     assert_eq!(awwal.qeema.naw, NawMani::LaysatLuba);
@@ -572,6 +816,13 @@ fn mudkhal_laysa_luba_la_yanal_taqreeran() -> NatijatIkhtibar {
         awwal.qeema.injilizi
     );
     assert!(awwal.min(MasdarMarifa::Iktishaf));
+
+    // The two refusals are the same sentence, which is the point of doing it in
+    // two places rather than an accident of doing it twice.
+    assert_eq!(
+        mubulligh.sabab_injilizi, awwal.qeema.injilizi,
+        "one entry, one sentence, whichever surface the reader arrived on"
+    );
     Ok(())
 }
 

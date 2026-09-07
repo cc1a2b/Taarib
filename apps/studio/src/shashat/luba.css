@@ -1095,3 +1095,110 @@
 .luba__tilqai .zir[aria-disabled='true'] {
   cursor: not-allowed;
 }
+
+/* --- the install plan, above the button that runs it ------------------------
+   Two registers on purpose. The findings — a mod already in the game, a store
+   verify that would undo half of this, a launcher that will overwrite what is
+   being edited — sit open and carry the amber the rest of this screen uses for
+   "read this before you act". The inventory sits inside the same quiet
+   disclosure the per-game limits above it use, because it is long, it is read
+   once, and no decision turns on which file lands in which directory.
+
+   The panel itself is not a warning box. Most plans are ordinary — a handful of
+   added files and nothing else — and framing every install as a caution is how
+   a screen teaches somebody to stop reading the ones that are not. */
+
+.luba__khutta {
+  display: grid;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-16);
+}
+
+/* The one sentence in the panel that is a number: how many files appear and how
+   many of the game's own are replaced. Full-strength, because it is the answer
+   somebody came here for. */
+.luba__khutta-hasila {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+/* Somebody else's loader is already in this game. The same block the readiness
+   notice uses, for the same reason: it changes what "install Arabic into this
+   game" means, and it must be legible before a word of it is read. */
+.luba__khutta-tanbeeh {
+  display: grid;
+  gap: var(--misafa-6);
+  padding: var(--misafa-12) var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tanbeeh);
+  border-radius: var(--nisf-lawha);
+}
+
+.luba__khutta-tanbeeh-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--tanbeeh);
+}
+
+/* Each entry is the installer's own line: a file name, a size and the evidence
+   that named the product. It decides its own direction — the sentence is
+   Arabic in an Arabic session and the file name inside it never is. */
+.luba__khutta-huqn,
+.luba__khutta-talabat {
+  display: grid;
+  gap: var(--misafa-6);
+}
+
+.luba__khutta-huqn li,
+.luba__khutta-talabat li {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  unicode-bidi: plaintext;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.luba__khutta-talabat li {
+  color: var(--nass-2);
+}
+
+/* The plan's own report text, one level further in than the inventory it
+   duplicates: this is the thing to paste into a bug report, not the thing to
+   read. */
+.luba__khutta-nass {
+  margin-block-start: var(--misafa-12);
+}
+
+/* Left-aligned and wrapping, unlike the path rows above it. These lines carry
+   two-space indentation that is the structure of the report, so truncating them
+   or flipping them to the right edge of an Arabic column would destroy the one
+   thing that makes them readable as a listing. */
+.luba__satr-khutta {
+  color: var(--nass-2);
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* --- what the removal would leave ------------------------------------------
+   Inside the confirmation, between the question and the button that answers it.
+   The residue is named rather than counted because the sweep this control
+   authorises deletes exactly those entries, and a number cannot be agreed to. */
+
+.luba__khuttat-izala {
+  display: grid;
+  gap: var(--misafa-12);
+  margin-block: var(--misafa-12);
+}
+
+.luba__baqaya {
+  display: grid;
+  gap: var(--misafa-12);
+}

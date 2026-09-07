@@ -1250,11 +1250,23 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                             nusus: jam('tilqai.nusus', lugha, hukm.nusus_taqribi, munassiq),
                           })}
                     </p>
+                    {/* A ceiling of zero is not a ceiling. `hukm` reports the
+                        spend limit as 0 for two configurations — no provider is
+                        elected, and an elected provider with no budget set — and
+                        in both of them no run starts, so the unconditional
+                        sentence promised a ceiling that does not exist and
+                        implied the run was free. Which of the two it is, and
+                        what to do about it, is stated in `hudud` immediately
+                        below; this line only stops claiming the guarantee. */}
                     <p className="tilqai__nass">
-                      {t('tilqai.hukm.kulfa', lugha, {
-                        munfaq: nassMablagh(hukm.takalif.munfaq),
-                        saqf: nassMablagh(hukm.takalif.saqf),
-                      })}
+                      {hukm.takalif.saqf > 0
+                        ? t('tilqai.hukm.kulfa', lugha, {
+                            munfaq: nassMablagh(hukm.takalif.munfaq),
+                            saqf: nassMablagh(hukm.takalif.saqf),
+                          })
+                        : t('tilqai.hukm.kulfa_bila_saqf', lugha, {
+                            munfaq: nassMablagh(hukm.takalif.munfaq),
+                          })}
                     </p>
                     <h3 className="tilqai__unwan-farii">{t('tilqai.hukm.hudud', lugha)}</h3>
                     {(lugha === 'arabi' ? hukm.hudud_arabi : hukm.hudud_injilizi).length === 0 ? (

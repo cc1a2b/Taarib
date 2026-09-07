@@ -32,6 +32,20 @@
 //! two different sentences with two different remedies. So the reasons are a
 //! list, each carrying its own verdict, and [`QudratTarkeeb::hukm`] is the
 //! worst of them.
+//!
+//! ## A question that could not be asked is not a question answered "yes"
+//!
+//! Every producer here probes something — a device, a context, a file — and a
+//! probe can fail to answer. What that failure means depends on the worst the
+//! answer could have been. Where the worst answer is a *limit* — an unreadable
+//! backbuffer format, a proxy module whose bytes could not be read — the
+//! finding is reported as that limit, because that is the most the truth can
+//! cost. Where the worst answer is a *refusal* — a colour-index pixel format,
+//! another product in Taarib's own loader slot — neither word is honest:
+//! asserting the refusal would refuse games that work, and asserting support
+//! would offer games that cannot. That case is [`HukmQudra::Majhula`], and it
+//! is the only verdict that means "the answer is not known" rather than "the
+//! answer is this".
 
 use core::fmt;
 
@@ -40,7 +54,11 @@ use crate::wajiha::WajihatRusum;
 /// What the overlay will be able to do on this API, in this process.
 ///
 /// Ordered from best to worst, and [`Ord`] is derived so that the worst of a
-/// list is `max()` and nothing has to spell the precedence twice.
+/// list is `max()` and nothing has to spell the precedence twice. An unknown
+/// sits above every known limit and below a known refusal: a report that could
+/// not ask a question whose answer may be "no" cannot claim to be merely
+/// limited, and a report that *did* establish a refusal is not made less
+/// certain by a second question it could not ask.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum HukmQudra {
     /// The overlay will draw, read the screen, and restore what it changed.
@@ -52,6 +70,15 @@ pub enum HukmQudra {
     /// on it, which for a tier that reads the screen means the overlay is a
     /// control panel and no translation.
     Naqisa,
+    /// A question whose answer could stop the overlay was asked and not
+    /// answered.
+    ///
+    /// Not a refusal and not a limit. The reason names the question and what
+    /// refused to answer it, so a user can retry once the cause is gone — a
+    /// file an antivirus was holding, a context that would not describe its
+    /// pixel format. This module's header says when a producer reaches for it
+    /// rather than for [`HukmQudra::Naqisa`].
+    Majhula,
     /// The overlay will not be able to draw at all.
     Mustaheela,
 }
@@ -63,6 +90,7 @@ impl HukmQudra {
         match self {
             Self::Kamila => "supported",
             Self::Naqisa => "supported with limits",
+            Self::Majhula => "not determined",
             Self::Mustaheela => "not supported",
         }
     }
@@ -73,14 +101,28 @@ impl HukmQudra {
         match self {
             Self::Kamila => "مدعومة",
             Self::Naqisa => "مدعومة بحدود",
+            Self::Majhula => "غير محسومة",
             Self::Mustaheela => "غير مدعومة",
         }
     }
 
     /// Whether the overlay may be offered at all.
+    ///
+    /// Only the two verdicts that *established* something clear it. An
+    /// unanswered question is not a "yes" — the same rule
+    /// `taarib_usus::manassa::HalatTashghil::yamnaa` applies to a process
+    /// table that could not be read — and the one gate in this crate whose
+    /// wrong answer is destructive, the proxy-slot survey, depends on exactly
+    /// that: a slot that could not be read is a slot Taarib does not write over.
     #[must_use]
     pub const fn qabila(self) -> bool {
-        !matches!(self, Self::Mustaheela)
+        matches!(self, Self::Kamila | Self::Naqisa)
+    }
+
+    /// Whether this verdict was reached from evidence rather than from a gap.
+    #[must_use]
+    pub const fn hasim(self) -> bool {
+        !matches!(self, Self::Majhula)
     }
 }
 
@@ -124,6 +166,16 @@ impl SababQudra {
     #[must_use]
     pub fn mustaheela(arabi: impl Into<String>, injilizi: impl Into<String>) -> Self {
         Self { hukm: HukmQudra::Mustaheela, arabi: arabi.into(), injilizi: injilizi.into() }
+    }
+
+    /// A question that could stop the overlay, asked and not answered.
+    ///
+    /// The sentence names what was asked and what would not answer, never what
+    /// the answer "probably" is. See this module's header for when a producer
+    /// reaches for this rather than for [`SababQudra::naqisa`].
+    #[must_use]
+    pub fn majhula(arabi: impl Into<String>, injilizi: impl Into<String>) -> Self {
+        Self { hukm: HukmQudra::Majhula, arabi: arabi.into(), injilizi: injilizi.into() }
     }
 }
 
@@ -205,7 +257,9 @@ impl QudratTarkeeb {
     ///
     /// [`HukmQudra::Kamila`] when there are none, because a report with nothing
     /// to say about an API this build implements is a report that found nothing
-    /// wrong — not a report that found nothing.
+    /// wrong — not a report that found nothing. A producer that *could not ask*
+    /// records that as a [`HukmQudra::Majhula`] finding, so an empty list is
+    /// never what an unasked question looks like.
     #[must_use]
     pub fn hukm(&self) -> HukmQudra {
         self.asbab.iter().map(|sabab| sabab.hukm).max().unwrap_or(HukmQudra::Kamila)
@@ -215,6 +269,12 @@ impl QudratTarkeeb {
     #[must_use]
     pub fn qabila(&self) -> bool {
         self.hukm().qabila()
+    }
+
+    /// The questions this report could not answer, for an interface that has
+    /// to say what it does not know before it says what it does.
+    pub fn majhulat(&self) -> impl Iterator<Item = &SababQudra> {
+        self.asbab.iter().filter(|sabab| sabab.hukm == HukmQudra::Majhula)
     }
 
     /// Every finding at or above a verdict, for an interface that shows only

@@ -39,9 +39,8 @@ use taarib_tarqee::fuhusat::{MudkhalatFahs, WasfHuzma, ijri as ijri_fuhus};
 use taarib_tarqee::irtibat::{IrtibatBina, MukhattatBasma};
 use taarib_tarqee::mujammi::{MudkhalatTajmee, ijmaa};
 use taarib_tarqee::taghtiya_ruqaa::ihsib_taghtiya;
-use taarib_tarqee::tahdid_maqasat::{IktishafMaqasat, MaqasatNass, TaqreerMaqasat};
+use taarib_tarqee::tahdid_maqasat::{IktishafMaqasat, TaqreerMaqasat};
 use taarib_tarqee::takhtit::KhiyaratTasbeeq;
-use taarib_tarqee::taqrir_tajawuz::{BaniTaqrirTajawuz, MudkhalQiyas, TaqrirTajawuz};
 
 use crate::khata::{KhataTilqai, NatijatTilqai, khata_malaf, marfuda};
 use crate::talab::TalabTilqai;
@@ -189,31 +188,6 @@ fn maqasat(nusus: &[MudkhalNass], ahjam: &[f32]) -> TaqreerMaqasat {
     iktishaf.ahsi(nusus)
 }
 
-/// The overflow report, built through the product's own builder.
-///
-/// Every (string, size) pair is submitted, as the builder's contract requires.
-/// No string carries a width constraint unless a capture session measured one,
-/// and the builder decides on a missing constraint before it would look at a
-/// layout, so no layout is supplied: supplying one would mean running the whole
-/// layout pass twice for a field the builder does not read.
-fn tajawuz(nusus: &[MudkhalNass], maqasat: &TaqreerMaqasat) -> TaqrirTajawuz {
-    let mut bani = BaniTaqrirTajawuz::jadeed();
-    for mudkhal in nusus {
-        let ahjam = maqasat
-            .maqasat_nass(mudkhal.id)
-            .map_or_else(|| maqasat.ittihad().to_vec(), MaqasatNass::ahjam);
-        for hajm in ahjam {
-            bani.sajjil(&MudkhalQiyas {
-                madkhal: mudkhal,
-                hajm: hajm.biksal(),
-                takhtit: None,
-                takhtit_asl: None,
-            });
-        }
-    }
-    bani.ikhtim()
-}
-
 /// The extraction provenance the build binding is formed from.
 ///
 /// One recipe entry per container extraction actually read, each with its
@@ -356,8 +330,10 @@ pub fn ijmi(
     talab.miqbad.tahaqquq(MarhalaTilqai::Tarqee)?;
 
     let taghtiya = ihsib_taghtiya(&mutarjama, None, None);
-    let tajawuz = tajawuz(&mutarjama, &tahdeer.maqasat);
     let khiyarat = KhiyaratTasbeeq::default();
+    // The overflow report is not built here: the compiler measures it from
+    // the layouts it ships, so a captured width is compared against a real
+    // layout rather than reported as having none.
     let mudkhalat = MudkhalatTajmee {
         nusus: &mutarjama,
         id: RuqaaId::jadeeda(),
@@ -371,7 +347,6 @@ pub fn ijmi(
         irtibat: &irtibat,
         maqasat: &tahdeer.maqasat,
         taghtiya: &taghtiya,
-        tajawuz: &tajawuz,
         khiyarat: &khiyarat,
         mustawa: None,
     };
@@ -526,6 +501,12 @@ const fn ism_aila(aila: taarib_mustalahat::muharrik::AilatMuharrik) -> &'static 
         A::GameMaker => "gamemaker",
         A::Electron => "electron",
         A::Bio4 => "bio4",
+        A::Frostbite => "frostbite",
+        A::BlackSpace => "blackspace",
+        A::Alchemy => "alchemy",
+        A::Dantelion => "dantelion",
+        A::Rage => "rage",
+        A::Snowdrop => "snowdrop",
         A::Majhul => "unknown",
     }
 }

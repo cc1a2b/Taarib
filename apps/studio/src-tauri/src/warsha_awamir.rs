@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::de::DeserializeOwned;
-use taarib_istikhraj::mashru::{MALAF_MASHRU, MashruMaftuh};
+use taarib_istikhraj::mashru::{MALAF_MASHRU, MALAF_NUSUS, MashruMaftuh};
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::muraja::{HalatMuraja, SijillMuraja};
 use taarib_mustalahat::musahim::MusahimId;
@@ -34,13 +34,16 @@ use taarib_tarjama::muzawwidun::{
 };
 use taarib_taqdeem::taaliq::Taaliq;
 use taarib_tathbeet::bayan::waqt_alaan;
-use taarib_usus::idadat::{Idadat, IdadatMuzawwid, MakhzanIdadat, NawMuzawwid};
+use taarib_usus::idadat::{
+    HalatMuzawwidin, Idadat, IdadatMuzawwid, MakhzanIdadat, NawMuzawwid,
+};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
 use taarib_usus::khata_min;
 use taarib_usus::masarat::{Masarat, kitaba_dharra};
 use taarib_warsha::damj::{BitaqatJanib, Damj, NawNizaa, Nizaa, Qarar, damj};
+use taarib_warsha::salama::{self, HalatNusus, QiraatNusus, SatrTalif, TaqreerInqadh};
 use taarib_warsha::tarikh::{TarikhMashru, damj_tarikh};
 use tauri::Emitter as _;
 use taarib_warsha::tasdir::{
@@ -110,6 +113,128 @@ pub struct SafWarshaHie {
     pub hajm_khatt: Option<f64>,
 }
 
+/// One line of the string file that did not read.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct SatrTalifHie {
+    /// The line's number in the file, counting from one.
+    pub raqm: u32,
+    /// The string's identity, when the line's head survived far enough to carry it.
+    pub huwiya: Option<String>,
+    /// The source text, when it survived.
+    pub masdar: Option<String>,
+    /// The line's opening, for the eye.
+    pub muqtataf: String,
+    /// The line, its reason and what it was, as one sentence in Arabic.
+    pub wasf_arabi: String,
+    /// The same sentence in English.
+    pub wasf_injilizi: String,
+}
+
+/// Whether the string file read whole — three states no screen may confuse.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum HalatNususHie {
+    /// No file, or no rows: nothing has been extracted yet.
+    Farigh,
+    /// Every line read.
+    Salima,
+    /// At least one line did not read.
+    Talifa,
+}
+
+/// The damage, when there is any: what did not read, and the sentences that say so.
+///
+/// The sentences travel from here rather than from the interface's string set,
+/// so the count, the path and the advice are worded once, in both languages, by
+/// the code that knows them.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct TalafHie {
+    /// How many lines did not read.
+    pub talifa: u32,
+    /// The lines that did not read, at most [`AQSA_SUTUR_TALIFA`] of them.
+    pub sutur: Vec<SatrTalifHie>,
+    /// The panel's title, in Arabic.
+    pub unwan_arabi: String,
+    /// The same title in English.
+    pub unwan_injilizi: String,
+    /// The short form beside the row count, in Arabic.
+    pub mukhtasar_arabi: String,
+    /// The same short form in English.
+    pub mukhtasar_injilizi: String,
+    /// The rescue button's label, in Arabic.
+    pub zir_arabi: String,
+    /// The same label in English.
+    pub zir_injilizi: String,
+}
+
+/// What the workspace knows about the string file's integrity.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct SalamatMashruHie {
+    /// Which of the three states the file is in.
+    pub hala: HalatNususHie,
+    /// How many rows read.
+    pub najin: u32,
+    /// The string file's path, for the user who wants to look at it.
+    pub masar: String,
+    /// The one sentence for this state, in Arabic.
+    pub wasf_arabi: String,
+    /// The same sentence in English.
+    pub wasf_injilizi: String,
+    /// The damage, exactly when `hala` is [`HalatNususHie::Talifa`].
+    pub talaf: Option<TalafHie>,
+}
+
+/// What setting the damaged rows aside did, and where everything went.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct InqadhHie {
+    /// How many rows the live table now holds.
+    pub najin: u32,
+    /// How many lines were set aside.
+    pub talifa: u32,
+    /// The damaged file, preserved byte for byte.
+    pub mahfudh: String,
+    /// The unreadable lines alone.
+    pub marfud: String,
+    /// The report naming every line set aside.
+    pub taqreer: String,
+    /// What happened, in Arabic.
+    pub wasf_arabi: String,
+    /// The same in English.
+    pub wasf_injilizi: String,
+}
+
+/// What the configured provider list amounts to, as the settings crate states it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum HalatMuzawwidinHie {
+    /// Not one provider has been added.
+    Farigh,
+    /// Providers exist and every one is switched off.
+    Muattala,
+    /// The elected provider is the one the user chose.
+    Mukhtar,
+    /// The default names a disabled or deleted provider, so another one is used — and billed.
+    Badeel,
+}
+
+/// The provider a new translation would use, said before anything is spent.
+///
+/// The election is the settings crate's and so is the sentence; the workspace
+/// only carries them, so a stale default that quietly bills a different
+/// provider is read on the screen where the run is started, not discovered on
+/// the invoice.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct MuzawwidWarshaHie {
+    /// Which of the four states the list is in.
+    pub hala: HalatMuzawwidinHie,
+    /// The elected provider's identifier, when one is elected.
+    pub ism: Option<String>,
+    /// The state's own sentence, in Arabic.
+    pub wasf_arabi: String,
+    /// The same sentence in English.
+    pub wasf_injilizi: String,
+}
+
 /// The whole project as the workspace opens it.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct WarshaHie {
@@ -119,10 +244,14 @@ pub struct WarshaHie {
     pub ism_luba: String,
     /// The local identity's short form, which `muayyan` values are compared against.
     pub musahimi: String,
-    /// How many rows the table holds.
+    /// How many rows the table holds — the rows that read, never the rows the file holds.
     pub adad: u32,
-    /// Every row.
+    /// Every row that read.
     pub sufuf: Vec<SafWarshaHie>,
+    /// Whether the file read whole, and what to say when it did not.
+    pub salama: SalamatMashruHie,
+    /// The provider a run from this screen would use, and whether that is the user's choice.
+    pub muzawwid: MuzawwidWarshaHie,
 }
 
 /// One glossary hit for the selected string.
@@ -278,6 +407,16 @@ pub struct NizaatHie {
     pub munfarida: u32,
     /// Whether a common ancestor was available.
     pub thulathi: bool,
+    /// How many rows of the recorded ancestor did not read.
+    ///
+    /// Those strings were merged without an ancestor, which is the safe
+    /// direction — more conflicts, never a silent choice — but a merge that
+    /// quietly demoted itself would be this codebase's oldest defect again.
+    pub aslaf_talifa: u32,
+    /// The sentence about the ancestor, in Arabic, when `aslaf_talifa` is not zero.
+    pub tanbih_arabi: Option<String>,
+    /// The same sentence in English.
+    pub tanbih_injilizi: Option<String>,
 }
 
 /// One explicit conflict resolution, as the interface sends it.
@@ -396,6 +535,26 @@ fn iftah_mashru(masarat_hala: &Masarat, id: LubaId) -> Natija<MashruMaftuh> {
         return Err(Khata::from(KhataWarshaAmr::MashruGhayrMawjud { ism: id.to_string() }));
     }
     MashruMaftuh::iftah(jidhr).map_err(Khata::from)
+}
+
+/// The table for a command that only reads it: the rows that read, with the damage beside them.
+fn qiraat_nusus(mashru: &MashruMaftuh) -> Natija<QiraatNusus> {
+    salama::iqra_nusus(mashru).map_err(Khata::from)
+}
+
+/// The table for a command that will write it back, refused whole when any row did not read.
+///
+/// A rewrite from a partial read makes the loss permanent with no message, so a damaged
+/// file is written to by nothing but the rescue the user chooses.
+fn sufuf_lil_kitaba(mashru: &MashruMaftuh) -> Natija<Vec<MudkhalNass>> {
+    let qiraa = qiraat_nusus(mashru)?;
+    if !qiraa.salima() {
+        return Err(Khata::from(KhataWarshaAmr::MashruTalif {
+            talifa: qiraa.talifa.len(),
+            masar: mashru.jidhr().join(MALAF_NUSUS),
+        }));
+    }
+    Ok(qiraa.sufuf)
 }
 
 /// Parses a string identity the interface sent back.
@@ -557,7 +716,260 @@ fn saf_hie(mudkhal: &MudkhalNass, tawzi: &Tawzi) -> SafWarshaHie {
     }
 }
 
-/// The whole project, every row, as the workspace opens it.
+/// How many damaged lines travel to the screen; the report the rescue writes names them all.
+pub const AQSA_SUTUR_TALIFA: usize = 200;
+
+/// The longest source text quoted inside a damaged line's sentence, in characters.
+const AQSA_MASDAR_FI_JUMLA: usize = 60;
+
+/// A count of lines in Arabic, in the form the number demands; `majrur` picks the
+/// form that follows a preposition or a verbal noun, which differs only at two.
+fn sutur_arabi(adad: usize, majrur: bool) -> String {
+    match adad {
+        0 => "لا أسطر".to_owned(),
+        1 => "سطر واحد".to_owned(),
+        2 if majrur => "سطرين".to_owned(),
+        2 => "سطران".to_owned(),
+        3..=10 => format!("{adad} أسطر"),
+        _ => format!("{adad} سطرًا"),
+    }
+}
+
+/// A count of rows in English.
+fn sutur_injilizi(adad: usize) -> String {
+    if adad == 1 { "1 row".to_owned() } else { format!("{adad} rows") }
+}
+
+fn qassir(nass: &str) -> String {
+    let mut ahruf = nass.chars();
+    let mut awwal: String = ahruf.by_ref().take(AQSA_MASDAR_FI_JUMLA).collect();
+    if ahruf.next().is_some() {
+        awwal.push('…');
+    }
+    awwal
+}
+
+fn satr_talif_hie(satr: &SatrTalif) -> SatrTalifHie {
+    let mukhtasar = satr.huwiya.map(NassId::mukhtasar);
+    let masdar_qasir = satr.masdar.as_deref().map(qassir);
+    let (dhayl_arabi, dhayl_injilizi) = match (masdar_qasir, mukhtasar) {
+        (Some(masdar), _) => {
+            (format!("النص الأصلي: «{masdar}»"), format!("source: \"{masdar}\""))
+        }
+        (None, Some(id)) => (format!("الهوية {id}"), format!("identity {id}")),
+        (None, None) => {
+            (format!("بدايته: {}", satr.muqtataf), format!("opens with: {}", satr.muqtataf))
+        }
+    };
+    SatrTalifHie {
+        raqm: adad_u32(satr.raqm),
+        huwiya: satr.huwiya.map(|id| id.to_string()),
+        masdar: satr.masdar.clone(),
+        muqtataf: satr.muqtataf.clone(),
+        wasf_arabi: format!("السطر {}: {} — {dhayl_arabi}", satr.raqm, satr.sabab.wasf_arabi()),
+        wasf_injilizi: format!(
+            "Line {}: {} — {dhayl_injilizi}",
+            satr.raqm,
+            satr.sabab.wasf_injilizi()
+        ),
+    }
+}
+
+/// The two sentences for a file that did not read whole.
+///
+/// They say what the count means, what was and was not done, and what the two choices
+/// are — and they say not to re-extract, because re-extraction recreates the project and is
+/// the advice the old empty state gave for exactly this file.
+fn wasf_talaf(qiraa: &QiraatNusus, masar: &str) -> (String, String) {
+    let talifa = qiraa.talifa.len();
+    let najin = qiraa.sufuf.len();
+    let (arabi, injilizi) = if najin == 0 {
+        (
+            format!(
+                "تعذّرت قراءة كل أسطر ملف النصوص ({}). هذا ليس مشروعًا فارغًا: الملف موجود، \
+                 حجمه {} بايت، وهو تالف. لم يُكتب شيء فوقه. لا تُعِد الاستخراج، فذلك يُنشئ \
+                 المشروع من جديد ويُتلف ما بقي؛ افحص الملف {masar}، أو أبقِ أسطره جانبًا وتابع \
+                 بجدول فارغ مع بقاء الأصل محفوظًا.",
+                sutur_arabi(talifa, true),
+                qiraa.hajm
+            ),
+            format!(
+                "Every row of the string file failed to read ({}). This is not an empty \
+                 project: the file exists, is {} bytes long, and is damaged. Nothing has been \
+                 written over it. Do not re-extract — that recreates the project and destroys \
+                 what is left; inspect {masar}, or set its rows aside and continue with an \
+                 empty table while the original stays preserved.",
+                sutur_injilizi(talifa),
+                qiraa.hajm
+            ),
+        )
+    } else {
+        (
+            format!(
+                "تعذّرت قراءة {} من ملف النصوص، وما قُرئ منه {}. هذا ليس مشروعًا ناقصًا، بل \
+                 ملفٌ فيه عطب: كتابة انقطعت، أو خطأ في القرص، أو شكل كتبته نسخة أخرى. لم \
+                 يُكتب شيء فوق الملف، ولن يُكتب حتى تختار: أبقِ الأسطر التالفة جانبًا وتابع \
+                 على ما قُرئ، أو أغلق الورشة وافحص الملف {masar} بنفسك. لا تُعِد الاستخراج \
+                 قبل أن تحفظ نسخة منه، فإعادة الاستخراج تُنشئ المشروع من جديد.",
+                sutur_arabi(talifa, true),
+                sutur_arabi(najin, false)
+            ),
+            format!(
+                "{} of the string file could not be read; {} read. This is not a project that \
+                 is merely incomplete — it is a file with damage in it: a write that was cut \
+                 off, a disk fault, or a shape written by another build. Nothing has been \
+                 written over the file, and nothing will be until you choose: set the damaged \
+                 rows aside and continue on what read, or close the workshop and inspect \
+                 {masar} yourself. Do not re-extract before keeping a copy of it; re-extraction \
+                 recreates the project.",
+                sutur_injilizi(talifa),
+                sutur_injilizi(najin)
+            ),
+        )
+    };
+    if talifa > AQSA_SUTUR_TALIFA {
+        let dhayl_arabi = format!(
+            " تُعرض أدناه أول {} من التالفة؛ التقرير الذي يُكتب عند الإبقاء جانبًا يسمّيها كلّها.",
+            sutur_arabi(AQSA_SUTUR_TALIFA, true)
+        );
+        let dhayl_injilizi = format!(
+            " The first {} are listed below; the report written when they are set aside names \
+             them all.",
+            sutur_injilizi(AQSA_SUTUR_TALIFA)
+        );
+        return (arabi + &dhayl_arabi, injilizi + &dhayl_injilizi);
+    }
+    (arabi, injilizi)
+}
+
+fn talaf_hie(qiraa: &QiraatNusus) -> TalafHie {
+    let talifa = qiraa.talifa.len();
+    let (unwan_arabi, unwan_injilizi) = if qiraa.sufuf.is_empty() {
+        (
+            "ملف النصوص تالف ولم يُقرأ منه سطر".to_owned(),
+            "The string file is damaged and no row read".to_owned(),
+        )
+    } else {
+        ("ملف النصوص تالف جزئيًا".to_owned(), "The string file is partly unreadable".to_owned())
+    };
+    TalafHie {
+        talifa: adad_u32(talifa),
+        sutur: qiraa.talifa.iter().take(AQSA_SUTUR_TALIFA).map(satr_talif_hie).collect(),
+        unwan_arabi,
+        unwan_injilizi,
+        mukhtasar_arabi: format!("تعذّرت قراءة {}", sutur_arabi(talifa, true)),
+        mukhtasar_injilizi: if talifa == 1 {
+            "1 unreadable row".to_owned()
+        } else {
+            format!("{talifa} unreadable rows")
+        },
+        zir_arabi: "أبقِ الأسطر التالفة جانبًا وتابع".to_owned(),
+        zir_injilizi: "Set the damaged rows aside and continue".to_owned(),
+    }
+}
+
+/// The integrity of one read, with its sentence, in the state's own words.
+fn salamat_hie(qiraa: &QiraatNusus, masar: &Path) -> SalamatMashruHie {
+    let najin = adad_u32(qiraa.sufuf.len());
+    let masar_nass = masar.display().to_string();
+    match qiraa.hala() {
+        HalatNusus::Farigh => SalamatMashruHie {
+            hala: HalatNususHie::Farigh,
+            najin,
+            masar: masar_nass,
+            wasf_arabi: "لا نصوص في هذا المشروع بعد: لم يُستخرج شيء، ولا ملف تالف.".to_owned(),
+            wasf_injilizi: "This project holds no strings yet: nothing has been extracted, and \
+                            no file is damaged."
+                .to_owned(),
+            talaf: None,
+        },
+        HalatNusus::Salima => SalamatMashruHie {
+            hala: HalatNususHie::Salima,
+            najin,
+            masar: masar_nass,
+            wasf_arabi: "قُرئ ملف النصوص كاملًا.".to_owned(),
+            wasf_injilizi: "The string file read whole.".to_owned(),
+            talaf: None,
+        },
+        HalatNusus::Talifa => {
+            let (wasf_arabi, wasf_injilizi) = wasf_talaf(qiraa, &masar_nass);
+            SalamatMashruHie {
+                hala: HalatNususHie::Talifa,
+                najin,
+                masar: masar_nass,
+                wasf_arabi,
+                wasf_injilizi,
+                talaf: Some(talaf_hie(qiraa)),
+            }
+        }
+    }
+}
+
+/// Opens the project for the workspace: the rows that read, folded with the run journal only
+/// when every row read.
+fn iftah_warsha(
+    masarat_hala: &Masarat,
+    hali: &Idadat,
+    muarrif: String,
+    id: LubaId,
+) -> Natija<WarshaHie> {
+    let mut mashru = iftah_mashru(masarat_hala, id)?;
+    let qiraa = qiraat_nusus(&mashru)?;
+    let salama = salamat_hie(&qiraa, &mashru.jidhr().join(MALAF_NUSUS));
+    let salima = qiraa.salima();
+    let mut sufuf = qiraa.sufuf;
+
+    // A crash between a run's journal write and its table fold leaves finished
+    // translations invisible; the fold is pure, so opening folds the remainder — but only
+    // over a file that read whole. Folding over the survivors and writing them back is how
+    // a damaged file becomes a shorter one with no message.
+    let jidhr_mashru_hali = mashru.jidhr().to_path_buf();
+    if salima {
+        let sijill_jawla = SijillJawla::iftah(&jidhr_mashru_hali).map_err(Khata::from)?;
+        if !sijill_jawla.quyud().is_empty() {
+            let waqt = waqt_alaan();
+            let tatbiq = tabbiq_sijill(&mut sufuf, &sijill_jawla, &waqt);
+            if tatbiq.mutabbaqa > 0 || tatbiq.fashila_muallama > 0 {
+                let thiqat = thiqat_min_sijill(&sijill_jawla);
+                aid_hisab_alamat(masarat_hala, hali, &mut sufuf, &jidhr_mashru_hali, &thiqat);
+                mashru.uktub_kul(&sufuf, waqt)?;
+            }
+        }
+    }
+    let tawzi: Tawzi = iqra_janibi(&mashru.jidhr().join(UDW_TAWZI))?;
+    Ok(WarshaHie {
+        muarrif,
+        ism_luba: mashru.rasm().ism_luba.clone(),
+        musahimi: muharrir_mahalli(masarat_hala)?.mukhtasar(),
+        adad: adad_u32(sufuf.len()),
+        sufuf: sufuf.iter().map(|mudkhal| saf_hie(mudkhal, &tawzi)).collect(),
+        salama,
+        muzawwid: muzawwid_warsha_hie(hali),
+    })
+}
+
+/// The provider list's state and elected provider, in the settings crate's own words.
+fn muzawwid_warsha_hie(hali: &Idadat) -> MuzawwidWarshaHie {
+    let hala = hali.muzawwidun.hala();
+    MuzawwidWarshaHie {
+        hala: match hala {
+            HalatMuzawwidin::Faragh => HalatMuzawwidinHie::Farigh,
+            HalatMuzawwidin::Muattala => HalatMuzawwidinHie::Muattala,
+            HalatMuzawwidin::Mukhtar => HalatMuzawwidinHie::Mukhtar,
+            HalatMuzawwidin::Badeel => HalatMuzawwidinHie::Badeel,
+        },
+        ism: hali.muzawwidun.muntakhab().map(|tarif| tarif.muarrif.clone()),
+        wasf_arabi: hala.arabi().to_owned(),
+        wasf_injilizi: hala.injilizi().to_owned(),
+    }
+}
+
+/// The whole project, every row that read, as the workspace opens it.
+///
+/// A file with rows that did not read is opened as it is: the survivors are shown, the
+/// damage is reported beside them, and nothing is written — not even the run journal's
+/// pending fold. What to do about the damage is the user's choice, made through
+/// [`anqidh_mashru`].
 ///
 /// # Errors
 ///
@@ -574,31 +986,79 @@ pub fn nusus_warsha(
     let id = huwiya(muarrif.clone())?;
     let qufl = qufl_mashru(&aqfal, id);
     let _harasa = qufl.blocking_lock();
-    let mut mashru = iftah_mashru(&masarat_hala, id)?;
-    let (mut sufuf, _talifa) = mashru.iqra_nusus()?;
+    let hali = idadat.hali();
+    iftah_warsha(&masarat_hala, &hali, muarrif, id)
+}
 
-    // A crash between a run's journal write and its table fold leaves finished
-    // translations invisible; the fold is pure, so opening folds the remainder.
-    let jidhr_mashru_hali = mashru.jidhr().to_path_buf();
-    let sijill_jawla = SijillJawla::iftah(&jidhr_mashru_hali).map_err(Khata::from)?;
-    if !sijill_jawla.quyud().is_empty() {
-        let waqt = waqt_alaan();
-        let tatbiq = tabbiq_sijill(&mut sufuf, &sijill_jawla, &waqt);
-        if tatbiq.mutabbaqa > 0 || tatbiq.fashila_muallama > 0 {
-            let hali = idadat.hali();
-            let thiqat = thiqat_min_sijill(&sijill_jawla);
-            aid_hisab_alamat(&masarat_hala, &hali, &mut sufuf, &jidhr_mashru_hali, &thiqat);
-            mashru.uktub_kul(&sufuf, waqt)?;
-        }
+fn inqadh_hie(taqreer: &TaqreerInqadh) -> InqadhHie {
+    let talifa = taqreer.talifa.len();
+    let mahfudh = taqreer.mahfudh.display().to_string();
+    let marfud = taqreer.marfud.display().to_string();
+    let malaf_taqreer = taqreer.taqreer.display().to_string();
+    let (tabi_arabi, tabi_injilizi) = if taqreer.najin == 0 {
+        (
+            "وتتابع الورشة بجدول فارغ".to_owned(),
+            "the workshop continues with an empty table".to_owned(),
+        )
+    } else {
+        (
+            format!("وتتابع الورشة على {}", sutur_arabi(taqreer.najin, true)),
+            format!("the workshop continues on {}", sutur_injilizi(taqreer.najin)),
+        )
+    };
+    InqadhHie {
+        najin: adad_u32(taqreer.najin),
+        talifa: adad_u32(talifa),
+        wasf_arabi: format!(
+            "جرى إبقاء {} جانبًا، {tabi_arabi}. الأصل محفوظ كما هو بايتًا ببايت في {mahfudh}، \
+             والأسطر التالفة وحدها في {marfud}، وتقرير بأرقامها وأسبابها وهويّاتها في \
+             {malaf_taqreer}. لا يحذف تعريب هذه الملفات؛ احتفظ بها إلى أن تطمئن.",
+            sutur_arabi(talifa, true)
+        ),
+        wasf_injilizi: format!(
+            "{} set aside; {tabi_injilizi}. The original is preserved byte for byte at \
+             {mahfudh}, the damaged rows alone at {marfud}, and a report of their line numbers, \
+             reasons and identities at {malaf_taqreer}. Taarib never deletes these files; keep \
+             them until you are sure.",
+            sutur_injilizi(talifa)
+        ),
+        mahfudh,
+        marfud,
+        taqreer: malaf_taqreer,
     }
-    let tawzi: Tawzi = iqra_janibi(&mashru.jidhr().join(UDW_TAWZI))?;
-    Ok(WarshaHie {
-        muarrif,
-        ism_luba: mashru.rasm().ism_luba.clone(),
-        musahimi: muharrir_mahalli(&masarat_hala)?.mukhtasar(),
-        adad: u32::try_from(sufuf.len()).unwrap_or(u32::MAX),
-        sufuf: sufuf.iter().map(|mudkhal| saf_hie(mudkhal, &tawzi)).collect(),
-    })
+}
+
+/// Sets a damaged string file's unreadable rows aside; the caller holds the project lock.
+fn anqidh_dakhili(masarat_hala: &Masarat, id: LubaId, waqt: &str) -> Natija<InqadhHie> {
+    let mut mashru = iftah_mashru(masarat_hala, id)?;
+    let taqreer = salama::anqidh(&mut mashru, waqt).map_err(Khata::from)?;
+    Ok(inqadh_hie(&taqreer))
+}
+
+/// Sets the unreadable rows of a damaged string file aside and lets the workspace continue
+/// on the rows that read.
+///
+/// Nothing is replaced before the original is safe: the damaged file is copied byte for byte
+/// under a stamped name beside the project and read back to verify, the unreadable lines and
+/// a report naming each are written, and only then is the live table rewritten from what
+/// read. None of those files is ever deleted by Taarib.
+///
+/// # Errors
+///
+/// [`KhataWarshaAmr::MashruGhayrMawjud`] when no project exists; the rescue's own refusals
+/// when every row reads (nothing is written) or the preserved copy does not verify (the live
+/// table is untouched); and whatever writing beside the project raises.
+#[tauri::command]
+#[specta::specta]
+pub fn anqidh_mashru(
+    muarrif: String,
+    masarat_hala: tauri::State<'_, Masarat>,
+    aqfal: tauri::State<'_, AqfalMashariya>,
+) -> Result<InqadhHie, Khata> {
+    let id = huwiya(muarrif)?;
+    let qufl = qufl_mashru(&aqfal, id);
+    let _harasa = qufl.blocking_lock();
+    anqidh_dakhili(&masarat_hala, id, &waqt_alaan())
 }
 
 /// The glossary in force: terms harvested from the table plus the project's own file.
@@ -662,7 +1122,7 @@ pub fn haddith_tarjama(
     let nass_id = huwiyat_nass(&nass)?;
     let muharrir = muharrir_mahalli(&masarat_hala)?;
     let mut mashru = iftah_mashru(&masarat_hala, id)?;
-    let (mut sufuf, _talifa) = mashru.iqra_nusus()?;
+    let mut sufuf = sufuf_lil_kitaba(&mashru)?;
     let waqt = waqt_alaan();
     let lahza = lahza_alaan();
 
@@ -763,7 +1223,7 @@ pub fn iqtirahat_nass(
     let id = huwiya(muarrif.clone())?;
     let nass_id = huwiyat_nass(&nass)?;
     let mashru = iftah_mashru(&masarat_hala, id)?;
-    let (sufuf, _talifa) = mashru.iqra_nusus()?;
+    let sufuf = qiraat_nusus(&mashru)?.sufuf;
     let Some(mudkhal) = sufuf.iter().find(|mudkhal| mudkhal.id == nass_id) else {
         return Err(Khata::from(KhataWarshaAmr::NassGhayrMawjud { nass }));
     };
@@ -816,7 +1276,7 @@ pub fn tatbiq_iqtirah(
     let nass_id = huwiyat_nass(&nass)?;
     let muharrir = muharrir_mahalli(&masarat_hala)?;
     let mut mashru = iftah_mashru(&masarat_hala, id)?;
-    let (mut sufuf, _talifa) = mashru.iqra_nusus()?;
+    let mut sufuf = sufuf_lil_kitaba(&mashru)?;
     let waqt = waqt_alaan();
     let lahza = lahza_alaan();
 
@@ -912,16 +1372,18 @@ pub(crate) fn nano_min_dolar(mablagh: f64) -> Natija<u64> {
     Ok(nano)
 }
 
-/// The enabled provider the settings elect, or the named refusal.
+/// The provider the settings elect, or the refusal that names which "no provider" state
+/// this machine is in.
+///
+/// The election is not re-implemented here: `IdadatMuzawwidin::muntakhab` decides, and
+/// `hala` says whether the choice is the user's own or a fallthrough from a stale default.
+/// The fallthrough is allowed, exactly as the core and the automatic pipeline allow it, but
+/// it is never silent — [`MuzawwidWarshaHie`] puts the state's own sentence on the screen
+/// before a run is started.
 pub(crate) fn muzawwid_muntakhab(hali: &Idadat) -> Natija<IdadatMuzawwid> {
-    let qaima = &hali.muzawwidun.qaima;
-    hali.muzawwidun
-        .iftiradi
-        .as_ref()
-        .and_then(|ism| qaima.iter().find(|tarif| &tarif.muarrif == ism && tarif.mufaal))
-        .or_else(|| qaima.iter().find(|tarif| tarif.mufaal))
-        .cloned()
-        .ok_or_else(|| Khata::from(KhataWarshaAmr::LaMuzawwid))
+    hali.muzawwidun.muntakhab().cloned().ok_or_else(|| {
+        Khata::from(KhataWarshaAmr::LaMuzawwid { hala: hali.muzawwidun.hala() })
+    })
 }
 
 /// Builds the elected provider: credential from the keychain, ceiling as its confirmation.
@@ -1080,7 +1542,7 @@ pub async fn tarjim_nass(
     let muzawwid = bin_muzawwid(&tarif, saqf_nano, lahza)?;
 
     let mut mashru = iftah_mashru(&masarat_hala, id)?;
-    let (mut sufuf, _talifa) = mashru.iqra_nusus()?;
+    let mut sufuf = sufuf_lil_kitaba(&mashru)?;
     let mufrad: Vec<MudkhalNass> =
         sufuf.iter().filter(|mudkhal| mudkhal.id == nass_id).cloned().collect();
     if mufrad.is_empty() {
@@ -1164,7 +1626,7 @@ pub async fn tarjim_dufa(
     let muzawwid = bin_muzawwid(&tarif, saqf_nano, lahza)?;
 
     let mut mashru = iftah_mashru(&masarat_hala, id)?;
-    let (mut sufuf, _talifa) = mashru.iqra_nusus()?;
+    let mut sufuf = sufuf_lil_kitaba(&mashru)?;
     let waqt = waqt_alaan();
     let khiyarat = KhiyaratJawla {
         saqf_takalif: Some(saqf_nano),
@@ -1251,7 +1713,7 @@ pub fn alamat_mashru(
     let qufl = qufl_mashru(&aqfal, id);
     let _harasa = qufl.blocking_lock();
     let mut mashru = iftah_mashru(&masarat_hala, id)?;
-    let (mut sufuf, _talifa) = mashru.iqra_nusus()?;
+    let mut sufuf = sufuf_lil_kitaba(&mashru)?;
     let hali = idadat.hali();
     let jidhr = mashru.jidhr().to_path_buf();
 
@@ -1297,7 +1759,7 @@ pub fn wahhid_mustalah(
     let _harasa = qufl.blocking_lock();
     let muharrir = muharrir_mahalli(&masarat_hala)?;
     let mut mashru = iftah_mashru(&masarat_hala, id)?;
-    let (mut sufuf, _talifa) = mashru.iqra_nusus()?;
+    let mut sufuf = sufuf_lil_kitaba(&mashru)?;
     let waqt = waqt_alaan();
     let lahza = lahza_alaan();
     let jidhr = mashru.jidhr().to_path_buf();
@@ -1371,7 +1833,7 @@ pub fn muayana(
     let id = huwiya(muarrif)?;
     let nass_id = huwiyat_nass(&nass)?;
     let mashru = iftah_mashru(&masarat_hala, id)?;
-    let (sufuf, _talifa) = mashru.iqra_nusus()?;
+    let sufuf = qiraat_nusus(&mashru)?.sufuf;
     let Some(mudkhal) = sufuf.iter().find(|mudkhal| mudkhal.id == nass_id) else {
         return Err(Khata::from(KhataWarshaAmr::NassGhayrMawjud { nass }));
     };
@@ -1550,11 +2012,38 @@ pub fn idmaj_huzma(
 ) -> Result<NizaatHie, Khata> {
     let id = huwiya(muarrif)?;
     let mashru = iftah_mashru(&masarat_hala, id)?;
-    let (sufuf, _talifa) = mashru.iqra_nusus()?;
+    // The held merge ends in a rewrite of the live table, so it is refused on a file that
+    // did not read whole, exactly as an edit is.
+    let sufuf = sufuf_lil_kitaba(&mashru)?;
 
     let muhtawa = istawrid(Path::new(&masar)).map_err(Khata::from)?;
+    // A bundle with rows that did not read would merge as if the colleague never had
+    // them; their work on those rows would vanish from the result with no message.
+    if muhtawa.talifa > 0 {
+        return Err(Khata::from(KhataWarshaAmr::HuzmaBihaTalaf { talifa: muhtawa.talifa }));
+    }
     muhtawa.tahaqquq_tatabuq(mashru.rasm()).map_err(Khata::from)?;
     let aslaf = aslaf_mashru(mashru.jidhr()).map_err(Khata::from)?;
+    let aslaf_talifa = aslaf.as_ref().map_or(0, |(_, talifa)| *talifa);
+    // A partly unreadable ancestor is kept as it is: the rows it lost merge without an
+    // ancestor, which is more conflicts and never a silent choice. Said out loud below.
+    let (tanbih_arabi, tanbih_injilizi) = if aslaf_talifa > 0 {
+        (
+            Some(format!(
+                "لقطة آخر تصدير — الأصل المشترك للدمج — فيها ما لا يُقرأ: {} من أسطرها. دُمجت \
+                 تلك الأسطر بلا أصل مشترك، فتوقّع تعارضات أكثر بينها واحسم كلًّا منها بيدك.",
+                sutur_arabi(aslaf_talifa, false)
+            )),
+            Some(format!(
+                "The last-export snapshot, the merge's shared ancestor, has {} that did not \
+                 read. Those strings were merged without an ancestor: expect more conflicts \
+                 among them, and decide each by hand.",
+                sutur_injilizi(aslaf_talifa)
+            )),
+        )
+    } else {
+        (None, None)
+    };
 
     let natijat_damj =
         damj(sufuf, muhtawa.nusus, aslaf.as_ref().map(|(nusus, _)| nusus.as_slice()));
@@ -1577,6 +2066,9 @@ pub fn idmaj_huzma(
         min_hum: adad_u32(taqreer.min_hum),
         munfarida: adad_u32(taqreer.munfarida),
         thulathi: taqreer.thulathi,
+        aslaf_talifa: adad_u32(aslaf_talifa),
+        tanbih_arabi,
+        tanbih_injilizi,
     })
 }
 
@@ -1676,9 +2168,13 @@ pub enum KhataWarshaAmr {
         nass: String,
     },
 
-    /// No machine-translation provider is configured and enabled.
-    #[error("no machine-translation provider is configured")]
-    LaMuzawwid,
+    /// No machine-translation provider is elected: none is configured, or every one is
+    /// switched off — two states with two remedies, which the sentence keeps apart.
+    #[error("no machine-translation provider is elected; the provider list is {}", hala.ism())]
+    LaMuzawwid {
+        /// What the provider list amounts to.
+        hala: HalatMuzawwidin,
+    },
 
     /// The provider is configured but its credential is not in the keychain.
     #[error("no credential in the keychain for provider {muzawwid}")]
@@ -1728,6 +2224,22 @@ pub enum KhataWarshaAmr {
         /// What the reader said.
         sabab: String,
     },
+
+    /// The string file has rows that did not read, so nothing is written over it.
+    #[error("{talifa} row(s) of the string file did not read, so it was not written to")]
+    MashruTalif {
+        /// How many lines did not read.
+        talifa: usize,
+        /// The file.
+        masar: PathBuf,
+    },
+
+    /// A colleague's bundle carries rows that did not read, so it was not merged.
+    #[error("{talifa} row(s) of the bundle did not read, so it was not merged")]
+    HuzmaBihaTalaf {
+        /// How many lines did not read.
+        talifa: usize,
+    },
 }
 
 impl Tafsir for KhataWarshaAmr {
@@ -1737,7 +2249,7 @@ impl Tafsir for KhataWarshaAmr {
                 + match self {
                     Self::MashruGhayrMawjud { .. } => 40,
                     Self::NassGhayrMawjud { .. } => 41,
-                    Self::LaMuzawwid => 42,
+                    Self::LaMuzawwid { .. } => 42,
                     Self::LaItimad { .. } => 43,
                     Self::MuzawwidGhayrMadum { .. } => 44,
                     Self::IqtirahGhayrMawjud { .. } => 45,
@@ -1745,6 +2257,8 @@ impl Tafsir for KhataWarshaAmr {
                     Self::LaDamjMaftuh => 47,
                     Self::SaqfGhayrSalih => 48,
                     Self::MalafTalif { .. } => 49,
+                    Self::MashruTalif { .. } => 50,
+                    Self::HuzmaBihaTalaf { .. } => 51,
                 },
         )
     }
@@ -1757,13 +2271,14 @@ impl Tafsir for KhataWarshaAmr {
             | Self::IqtirahGhayrMawjud { .. }
             | Self::TadarubGhayrMawjud { .. }
             | Self::LaDamjMaftuh
-            | Self::SaqfGhayrSalih => Khutura::Tanbeeh,
+            | Self::SaqfGhayrSalih
+            | Self::HuzmaBihaTalaf { .. } => Khutura::Tanbeeh,
             // A run was requested and cannot start; the user can fix the settings.
-            Self::LaMuzawwid | Self::LaItimad { .. } | Self::MuzawwidGhayrMadum { .. } => {
+            Self::LaMuzawwid { .. } | Self::LaItimad { .. } | Self::MuzawwidGhayrMadum { .. } => {
                 Khutura::Khatar
             }
-            // A file beside somebody's work does not read.
-            Self::MalafTalif { .. } => Khutura::Khatar,
+            // A file beside somebody's work, or the work itself, does not read.
+            Self::MalafTalif { .. } | Self::MashruTalif { .. } => Khutura::Khatar,
         }
     }
 
@@ -1777,10 +2292,7 @@ impl Tafsir for KhataWarshaAmr {
                 "هذا النص لم يعد في جدول المشروع. أعد فتح الورشة لتحميل الجدول الحالي."
                     .to_owned()
             }
-            Self::LaMuzawwid => {
-                "لا مزوّد ترجمة آلية مهيّأ ومفعّل. أضف مزوّدًا في الإعدادات ثم عد."
-                    .to_owned()
-            }
+            Self::LaMuzawwid { hala } => hala.arabi().to_owned(),
             Self::LaItimad { muzawwid } => format!(
                 "لا اعتماد في سلسلة مفاتيح النظام للمزوّد {muzawwid}. أدخل مفتاحه في \
                  الإعدادات ليُخزَّن في السلسلة."
@@ -1806,6 +2318,17 @@ impl Tafsir for KhataWarshaAmr {
                 "الملف {} موجود ولا يُقرأ. لن يُكتب فوقه؛ افحصه أو انقله ثم أعد المحاولة.",
                 masar.display()
             ),
+            Self::MashruTalif { talifa, .. } => format!(
+                "تعذّرت قراءة {} من ملف نصوص هذا المشروع، فلن يُكتب فوقه شيء. افتح الورشة: \
+                 فيها بيان بالأسطر التالفة وخيار إبقائها جانبًا مع حفظ الأصل.",
+                sutur_arabi(*talifa, true)
+            ),
+            Self::HuzmaBihaTalaf { talifa } => format!(
+                "في حزمة الزميل ما لا يُقرأ — {} من أسطرها — فلم تُدمج: دمجٌ يُسقط أسطرًا بصمت \
+                 ليس دمجًا. اطلب من الزميل فتح ورشته، فستدلّه على الأسطر التالفة، ثم إعادة \
+                 التصدير.",
+                sutur_arabi(*talifa, false)
+            ),
         }
     }
 
@@ -1819,11 +2342,7 @@ impl Tafsir for KhataWarshaAmr {
                 "{nass} is no longer a string in this project. Reopen the workspace to \
                  load the current table."
             ),
-            Self::LaMuzawwid => {
-                "No machine-translation provider is configured and enabled. Add one in \
-                 Settings, then return."
-                    .to_owned()
-            }
+            Self::LaMuzawwid { hala } => hala.injilizi().to_owned(),
             Self::LaItimad { muzawwid } => format!(
                 "The system keychain holds no credential for provider {muzawwid}. Enter \
                  its key in Settings so it is stored there."
@@ -1850,19 +2369,32 @@ impl Tafsir for KhataWarshaAmr {
                  inspect or move it, then retry.",
                 masar.display()
             ),
+            Self::MashruTalif { talifa, .. } => format!(
+                "{} of this project's string file did not read, so nothing will be written \
+                 over it. Open the workshop: it lists the damaged rows and offers to set them \
+                 aside while preserving the original.",
+                sutur_injilizi(*talifa)
+            ),
+            Self::HuzmaBihaTalaf { talifa } => format!(
+                "The colleague's bundle carries {} that did not read, so it was not merged: a \
+                 merge that drops rows in silence is not a merge. Ask them to open their \
+                 workshop, which will point at the damaged rows, and export again.",
+                sutur_injilizi(*talifa)
+            ),
         }
     }
 
     fn khutwa(&self) -> Khutwa {
         match self {
-            Self::MashruGhayrMawjud { .. } => Khutwa::FathNusus,
+            Self::MashruGhayrMawjud { .. } | Self::MashruTalif { .. } => Khutwa::FathNusus,
+            Self::HuzmaBihaTalaf { .. } => Khutwa::LaShay,
             Self::NassGhayrMawjud { .. }
             | Self::IqtirahGhayrMawjud { .. }
             | Self::TadarubGhayrMawjud { .. }
             | Self::LaDamjMaftuh
             | Self::SaqfGhayrSalih
             | Self::MalafTalif { .. } => Khutwa::AadaMuhawala,
-            Self::LaMuzawwid | Self::LaItimad { .. } | Self::MuzawwidGhayrMadum { .. } => {
+            Self::LaMuzawwid { .. } | Self::LaItimad { .. } | Self::MuzawwidGhayrMadum { .. } => {
                 Khutwa::FathIdadat { qism: QismIdadat::Muzawwidun }
             }
         }
@@ -1892,10 +2424,398 @@ impl Tafsir for KhataWarshaAmr {
                 let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
             }
-            Self::LaMuzawwid | Self::LaDamjMaftuh | Self::SaqfGhayrSalih => {}
+            Self::MashruTalif { talifa, masar } => {
+                let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
+                let _ = siyaq.insert(
+                    "talifa".to_owned(),
+                    QeemaSiyaq::Hajm(u64::try_from(*talifa).unwrap_or(u64::MAX)),
+                );
+            }
+            Self::HuzmaBihaTalaf { talifa } => {
+                let _ = siyaq.insert(
+                    "talifa".to_owned(),
+                    QeemaSiyaq::Hajm(u64::try_from(*talifa).unwrap_or(u64::MAX)),
+                );
+            }
+            Self::LaMuzawwid { hala } => {
+                let _ = siyaq.insert("hala".to_owned(), QeemaSiyaq::Nass(hala.ism().to_owned()));
+            }
+            Self::LaDamjMaftuh | Self::SaqfGhayrSalih => {}
         }
         siyaq
     }
 }
 
 khata_min!(KhataWarshaAmr);
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::io::Write as _;
+
+    use taarib_istikhraj::mashru::BayanIstikhraj;
+    use taarib_mustalahat::luba::MasdarLuba;
+    use taarib_mustalahat::nass::{MasdarIstikhraj, QuyudNass, SiyaqNass};
+    use taarib_tarjama::dufaat::{HasilatNass, QaydJawla};
+    use taarib_usus::idadat::IdadatMuzawwidin;
+
+    use super::*;
+
+    /// Anything a test can fail on: a `Khata` from the code under test, a store
+    /// refusal, or an [`std::io::Error`] from the scratch directory it staged.
+    type NatijatIkhtibar = Result<(), Box<dyn std::error::Error>>;
+
+    /// The refusal's code, so the assertions name the failure and not the enum.
+    const RAMZ_MASHRU_TALIF: u16 = arqam::STUDIO + 50;
+
+    /// The rescue's refusal when nothing is damaged, from the workspace crate.
+    const RAMZ_LA_TALAF: u16 = arqam::WARSHA + 12;
+
+    /// The moment every write in these tests carries.
+    const WAQT: &str = "2026-09-06T10:00:00Z";
+
+    /// A torn head: identity and source text intact, everything after cut off.
+    const RAAS_MABTUR: &str =
+        r#"{"id":"1b4e28ba-2fa1-5d68-9d3a-3a0f0b1c2d3e","masdar":"Press any key","hadaf":nu"#;
+
+    /// Bytes that are not UTF-8 at all, then a partial object.
+    const BAYT_TALIFA: &[u8] = b"\xff\xfe\x00{\"id\":\"";
+
+    /// A scratch directory that removes itself, so a failed assertion does not
+    /// leave one behind in the machine's temporary directory.
+    struct JidhrMuaqqat(PathBuf);
+
+    impl Drop for JidhrMuaqqat {
+        fn drop(&mut self) {
+            // Best effort: a test that already failed must not fail twice.
+            #[expect(
+                clippy::disallowed_methods,
+                reason = "a scratch directory under `std::env::temp_dir()` removing itself, never \
+                          a data root or a game directory"
+            )]
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn jidhr_muaqqat() -> JidhrMuaqqat {
+        JidhrMuaqqat(std::env::temp_dir().join(format!("taarib-warsha-{}", uuid::Uuid::new_v4())))
+    }
+
+    fn masarat_muaqqata(haris: &JidhrMuaqqat) -> Masarat {
+        Masarat::min_judhur(haris.0.join("bayanat"), haris.0.join("idadat"))
+    }
+
+    fn luba_ikhtibar() -> LubaId {
+        LubaId::min_masdar(&MasdarLuba::Steam(480), "Spacewar")
+    }
+
+    fn saf(mawqi: &str, masdar: &str) -> MudkhalNass {
+        MudkhalNass {
+            id: NassId::min_mawqi("data/menu.json", mawqi, masdar),
+            masdar: masdar.to_owned(),
+            hadaf: None,
+            muraja: SijillMuraja::jadeed(),
+            siyaq: SiyaqNass {
+                hawiya: "data/menu.json".to_owned(),
+                mawqi: mawqi.to_owned(),
+                ..SiyaqNass::default()
+            },
+            quyud: QuyudNass::default(),
+            nasq_masdar: Vec::new(),
+            nasq_hadaf: Vec::new(),
+            takrar: 1,
+            majmua: None,
+            alamat: Vec::new(),
+            tareeqa: None,
+            muzawwid: None,
+            muharrir: None,
+            akhir_tabdeel: None,
+            tasnif: TasnifNass::Ikhtiyar,
+            thiqat_tasnif: 80,
+            masdar_istikhraj: MasdarIstikhraj::Sakin,
+            tarmiz: None,
+        }
+    }
+
+    /// A project of `adad` rows, written where the workspace looks for it.
+    fn mashru_bi_sufuf(
+        masarat_hala: &Masarat,
+        adad: usize,
+    ) -> Result<(LubaId, PathBuf), Box<dyn std::error::Error>> {
+        let id = luba_ikhtibar();
+        let jidhr = jidhr_mashru(masarat_hala, id);
+        let mut mashru = MashruMaftuh::ansha(
+            jidhr.clone(),
+            id,
+            "Spacewar".to_owned(),
+            BayanIstikhraj::default(),
+            WAQT.to_owned(),
+        )?;
+        let sufuf: Vec<MudkhalNass> =
+            (0..adad).map(|raqm| saf(&format!("menu/{raqm}"), &format!("Option {raqm}"))).collect();
+        mashru.adif(sufuf)?;
+        mashru.ikhtim(WAQT.to_owned())?;
+        Ok((id, jidhr))
+    }
+
+    /// Appends two damaged lines to the string file, raw.
+    fn atlif(jidhr: &Path) -> std::io::Result<()> {
+        let mut malaf =
+            std::fs::OpenOptions::new().append(true).open(jidhr.join(MALAF_NUSUS))?;
+        malaf.write_all(RAAS_MABTUR.as_bytes())?;
+        malaf.write_all(b"\n")?;
+        malaf.write_all(BAYT_TALIFA)?;
+        malaf.write_all(b"\n")
+    }
+
+    /// One finished machine translation in the run journal, awaiting its fold.
+    fn sajjil_jawla(
+        jidhr: &Path,
+        id: NassId,
+        hadaf: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut sijill = SijillJawla::iftah(jidhr)?;
+        let mut muraja = SijillMuraja::jadeed();
+        muraja.sajjil_aali(1);
+        sijill.sajjil(QaydJawla {
+            id,
+            muzawwid: "mahalli".to_owned(),
+            taklifa: 0,
+            lahza: 1,
+            hasila: HasilatNass::Tarjumat {
+                hadaf: hadaf.to_owned(),
+                nasq: Vec::new(),
+                thiqa: None,
+                alamat: Vec::new(),
+                muraja,
+            },
+        })?;
+        Ok(())
+    }
+
+    fn asma(jidhr: &Path) -> std::io::Result<Vec<String>> {
+        let mut asma = Vec::new();
+        for mudkhal in std::fs::read_dir(jidhr)? {
+            asma.push(mudkhal?.file_name().to_string_lossy().into_owned());
+        }
+        asma.sort();
+        Ok(asma)
+    }
+
+    /// A damaged file refuses every command that would write it back, and is not touched.
+    #[test]
+    fn alkitaba_turfad_ala_mashru_talif() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat_hala = masarat_muaqqata(&haris);
+        let (id, jidhr) = mashru_bi_sufuf(&masarat_hala, 4)?;
+        atlif(&jidhr)?;
+        let qabl = std::fs::read(jidhr.join(MALAF_NUSUS))?;
+
+        let mashru = iftah_mashru(&masarat_hala, id)?;
+        let khata = sufuf_lil_kitaba(&mashru).err().ok_or("a damaged file must refuse a write")?;
+
+        assert_eq!(khata.ramz, Ramz::jadeed(RAMZ_MASHRU_TALIF));
+        assert_eq!(std::fs::read(jidhr.join(MALAF_NUSUS))?, qabl);
+        Ok(())
+    }
+
+    /// A clean file is handed to a writing command whole.
+    #[test]
+    fn alkitaba_tumnah_ala_mashru_salim() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat_hala = masarat_muaqqata(&haris);
+        let (id, _) = mashru_bi_sufuf(&masarat_hala, 4)?;
+
+        let mashru = iftah_mashru(&masarat_hala, id)?;
+        let sufuf = sufuf_lil_kitaba(&mashru)?;
+
+        assert_eq!(sufuf.len(), 4);
+        Ok(())
+    }
+
+    /// Opening a damaged project reports every damaged line, shows the survivors, and
+    /// writes nothing — not even the run journal's pending fold, which is the path that
+    /// used to rewrite the file from the survivors on open.
+    #[test]
+    fn alfath_la_yaktub_fawq_mashru_talif_hatta_maa_sijill() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat_hala = masarat_muaqqata(&haris);
+        let (id, jidhr) = mashru_bi_sufuf(&masarat_hala, 4)?;
+        sajjil_jawla(&jidhr, saf("menu/1", "Option 1").id, "الخيار الأول")?;
+        atlif(&jidhr)?;
+        let qabl = std::fs::read(jidhr.join(MALAF_NUSUS))?;
+        let asma_qabl = asma(&jidhr)?;
+
+        let warsha = iftah_warsha(&masarat_hala, &Idadat::default(), "spacewar".to_owned(), id)?;
+
+        assert_eq!(warsha.salama.hala, HalatNususHie::Talifa);
+        assert_eq!(warsha.adad, 4, "the survivors are shown");
+        assert_eq!(warsha.salama.najin, 4);
+        let talaf = warsha.salama.talaf.ok_or("the damage must be reported beside the rows")?;
+        assert_eq!(talaf.talifa, 2);
+        assert_eq!(talaf.sutur.len(), 2);
+        assert_eq!(talaf.sutur.first().map(|satr| satr.raqm), Some(5));
+        assert_eq!(
+            talaf.sutur.first().and_then(|satr| satr.masdar.as_deref()),
+            Some("Press any key"),
+            "a torn line still names the string it was"
+        );
+        assert_eq!(talaf.sutur.get(1).map(|satr| satr.raqm), Some(6));
+        assert!(!talaf.zir_arabi.is_empty() && !talaf.zir_injilizi.is_empty());
+        assert!(warsha.salama.wasf_arabi.contains("لا تُعِد الاستخراج"));
+        assert!(warsha.salama.wasf_injilizi.contains("Do not re-extract"));
+        assert_eq!(std::fs::read(jidhr.join(MALAF_NUSUS))?, qabl, "nothing was written");
+        assert_eq!(asma(&jidhr)?, asma_qabl, "nothing was created");
+        Ok(())
+    }
+
+    /// On a clean file the pending fold still runs and still persists.
+    #[test]
+    fn alfath_yatwi_alsijill_ala_mashru_salim() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat_hala = masarat_muaqqata(&haris);
+        let (id, jidhr) = mashru_bi_sufuf(&masarat_hala, 4)?;
+        let nass = saf("menu/1", "Option 1").id;
+        sajjil_jawla(&jidhr, nass, "الخيار الأول")?;
+        let qabl = std::fs::read(jidhr.join(MALAF_NUSUS))?;
+
+        let warsha = iftah_warsha(&masarat_hala, &Idadat::default(), "spacewar".to_owned(), id)?;
+
+        assert_eq!(warsha.salama.hala, HalatNususHie::Salima);
+        assert!(warsha.salama.talaf.is_none());
+        let saf_1 = warsha
+            .sufuf
+            .iter()
+            .find(|saf| saf.nass == nass.to_string())
+            .ok_or("the journaled row is in the table")?;
+        assert_eq!(saf_1.hadaf.as_deref(), Some("الخيار الأول"));
+        let baad = std::fs::read(jidhr.join(MALAF_NUSUS))?;
+        assert_ne!(baad, qabl, "the fold is persisted");
+        assert!(String::from_utf8_lossy(&baad).contains("الخيار الأول"));
+        Ok(())
+    }
+
+    /// A project with nothing extracted is empty, and says so as empty — not as damaged.
+    #[test]
+    fn alfarigh_yuqal_farighan_la_talifan() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat_hala = masarat_muaqqata(&haris);
+        let (id, jidhr) = mashru_bi_sufuf(&masarat_hala, 0)?;
+        assert!(!jidhr.join(MALAF_NUSUS).exists(), "no batch, no file");
+
+        let warsha = iftah_warsha(&masarat_hala, &Idadat::default(), "spacewar".to_owned(), id)?;
+
+        assert_eq!(warsha.salama.hala, HalatNususHie::Farigh);
+        assert!(warsha.salama.talaf.is_none());
+        assert_eq!(warsha.adad, 0);
+        Ok(())
+    }
+
+    /// The rescue keeps the original, sets the damaged lines aside, and the next open
+    /// finds a whole file holding exactly the survivors.
+    #[test]
+    fn alinqadh_yuid_almashru_saliman_wa_yahfaz_alasl() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat_hala = masarat_muaqqata(&haris);
+        let (id, jidhr) = mashru_bi_sufuf(&masarat_hala, 4)?;
+        atlif(&jidhr)?;
+        let asl = std::fs::read(jidhr.join(MALAF_NUSUS))?;
+
+        let inqadh = anqidh_dakhili(&masarat_hala, id, WAQT)?;
+
+        assert_eq!(inqadh.najin, 4);
+        assert_eq!(inqadh.talifa, 2);
+        assert_eq!(std::fs::read(&inqadh.mahfudh)?, asl, "the original is preserved byte for byte");
+        assert!(Path::new(&inqadh.marfud).is_file());
+        assert!(Path::new(&inqadh.taqreer).is_file());
+        assert!(inqadh.wasf_arabi.contains(&inqadh.mahfudh));
+        assert!(inqadh.wasf_injilizi.contains(&inqadh.mahfudh));
+
+        let warsha = iftah_warsha(&masarat_hala, &Idadat::default(), "spacewar".to_owned(), id)?;
+        assert_eq!(warsha.salama.hala, HalatNususHie::Salima);
+        assert_eq!(warsha.adad, 4);
+        Ok(())
+    }
+
+    /// The rescue refuses a whole file and creates nothing.
+    #[test]
+    fn alinqadh_yarfud_mashruan_saliman() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat_hala = masarat_muaqqata(&haris);
+        let (id, jidhr) = mashru_bi_sufuf(&masarat_hala, 2)?;
+        let asma_qabl = asma(&jidhr)?;
+
+        let khata = anqidh_dakhili(&masarat_hala, id, WAQT)
+            .err()
+            .ok_or("a whole file has nothing to set aside")?;
+
+        assert_eq!(khata.ramz, Ramz::jadeed(RAMZ_LA_TALAF));
+        assert_eq!(asma(&jidhr)?, asma_qabl);
+        Ok(())
+    }
+
+    fn tarif(muarrif: &str, mufaal: bool) -> IdadatMuzawwid {
+        IdadatMuzawwid {
+            muarrif: muarrif.to_owned(),
+            naw: NawMuzawwid::Anthropic,
+            namudhaj: String::new(),
+            asas: None,
+            hisab_miftah: None,
+            mufaal,
+            hadd_talabat: 1,
+            mizaniya: None,
+        }
+    }
+
+    fn idadat_bi_muzawwidin(qaima: Vec<IdadatMuzawwid>, iftiradi: Option<&str>) -> Idadat {
+        Idadat {
+            muzawwidun: IdadatMuzawwidin { qaima, iftiradi: iftiradi.map(str::to_owned) },
+            ..Idadat::default()
+        }
+    }
+
+    /// The election is the settings crate's, and a refusal names which "no provider" state
+    /// the machine is in; a stale default is honoured as a fallthrough and said out loud.
+    #[test]
+    fn alintikhab_yufawwad_lil_idadat_wa_alrafd_yusammi_halatah() -> NatijatIkhtibar {
+        let faragh = muzawwid_muntakhab(&idadat_bi_muzawwidin(Vec::new(), None))
+            .err()
+            .ok_or("an empty list refuses")?;
+        assert_eq!(faragh.arabi, HalatMuzawwidin::Faragh.arabi());
+        assert_eq!(faragh.injilizi, HalatMuzawwidin::Faragh.injilizi());
+
+        let muattala =
+            muzawwid_muntakhab(&idadat_bi_muzawwidin(vec![tarif("a", false)], Some("a")))
+                .err()
+                .ok_or("a list of disabled providers refuses")?;
+        assert_eq!(muattala.injilizi, HalatMuzawwidin::Muattala.injilizi());
+        assert_ne!(muattala.injilizi, faragh.injilizi, "two states, two remedies");
+        assert_eq!(muattala.ramz, faragh.ramz, "one code, since one screen answers both");
+
+        let badeel = idadat_bi_muzawwidin(vec![tarif("a", false), tarif("b", true)], Some("a"));
+        assert_eq!(muzawwid_muntakhab(&badeel)?.muarrif, "b", "the settings' own fallthrough");
+        let hie = muzawwid_warsha_hie(&badeel);
+        assert_eq!(hie.hala, HalatMuzawwidinHie::Badeel);
+        assert_eq!(hie.ism.as_deref(), Some("b"));
+        assert_eq!(hie.wasf_injilizi, HalatMuzawwidin::Badeel.injilizi());
+        assert_eq!(hie.wasf_arabi, HalatMuzawwidin::Badeel.arabi());
+
+        let mukhtar = idadat_bi_muzawwidin(vec![tarif("a", true), tarif("b", true)], Some("b"));
+        assert_eq!(muzawwid_muntakhab(&mukhtar)?.muarrif, "b", "the default wins when enabled");
+        assert_eq!(muzawwid_warsha_hie(&mukhtar).hala, HalatMuzawwidinHie::Mukhtar);
+        Ok(())
+    }
+
+    /// Both refusals carry both languages and the count.
+    #[test]
+    fn alrafdan_bilughatayn() {
+        let mashru = KhataWarshaAmr::MashruTalif { talifa: 2, masar: PathBuf::from("nusus.jsonl") };
+        assert!(mashru.arabi().contains("سطرين"));
+        assert!(mashru.injilizi().contains("2 rows"));
+        assert_eq!(mashru.khutwa(), Khutwa::FathNusus);
+
+        let huzma = KhataWarshaAmr::HuzmaBihaTalaf { talifa: 1 };
+        assert!(huzma.arabi().contains("سطر واحد"));
+        assert!(huzma.injilizi().contains("1 row"));
+        assert_eq!(huzma.khutura(), Khutura::Tanbeeh);
+    }
+}

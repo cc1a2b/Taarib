@@ -242,7 +242,7 @@ struct ItarD3D12 {
 /// is possible and is wrong the first time an error path returns early, so the
 /// borrow is made explicit instead — the caller keeps the real reference alive
 /// across the call, which every use in this file does.
-fn muara<T: Interface>(shay: &T) -> ManuallyDrop<Option<T>> {
+const fn muara<T: Interface>(shay: &T) -> ManuallyDrop<Option<T>> {
     // SAFETY: every `windows` interface wrapper is a `#[repr(transparent)]`
     // newtype over a single non-null pointer, `Option<T>` of one is the same
     // size by niche optimisation, and `ManuallyDrop` adds nothing. The copy
@@ -257,7 +257,7 @@ fn muara<T: Interface>(shay: &T) -> ManuallyDrop<Option<T>> {
 /// The resource is borrowed rather than owned, so the caller must keep it alive
 /// until `ResourceBarrier` has been recorded. Every call site in this file holds
 /// the resource in a local for exactly that reason.
-fn hajiz_intiqal(
+const fn hajiz_intiqal(
     mawrid: &ID3D12Resource,
     min: D3D12_RESOURCE_STATES,
     ila: D3D12_RESOURCE_STATES,
@@ -384,7 +384,7 @@ impl fmt::Debug for KhattafD3D12 {
             .field("qeemat_hajiz", &self.qeemat_hajiz)
             .field("lawha", &self.lawha.is_some())
             .field("jahiz", &self.halat_rasm.is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -1298,7 +1298,7 @@ impl KhattafD3D12 {
         // committed resources are far more aligned than that — but the *size*
         // is what the runtime validates, so it is rounded here.
         let tul = hadhi(
-            tul_u64(mem::size_of::<ThawabitIsqat>()),
+            tul_u64(size_of::<ThawabitIsqat>()),
             u64::from(D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT),
         );
         let khasais = khasais_rafa();
@@ -1334,7 +1334,7 @@ impl KhattafD3D12 {
         let bayt = unsafe {
             core::slice::from_raw_parts(
                 (&raw const thawabit).cast::<u8>(),
-                mem::size_of::<ThawabitIsqat>(),
+                size_of::<ThawabitIsqat>(),
             )
         };
         iktub_fi(&mawrid, bayt, "overlay projection constant buffer")?;
@@ -1398,6 +1398,14 @@ impl KhattafD3D12 {
     /// Infallible in practice — `CreateShaderResourceView` returns nothing — so
     /// this returns a result only so the two call sites read the same as their
     /// neighbours.
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "the two call sites are why. One sits in a run of `ibni_*()?` setup steps and \
+                  would become the single bare statement among them; the other is a tail \
+                  expression returning this result, which would have to grow a trailing \
+                  `Ok(())`. Both read worse, and the signature is already the right one for the \
+                  day the D3D12 debug layer gives this call something to report"
+    )]
     fn sajjil_ru2yat_lawha(&self) -> Result<(), KhataTabaqa> {
         let (Some(kawma), Some(lawha)) = (self.kawmat_wasf.as_ref(), self.lawha.as_ref()) else {
             return Ok(());
@@ -2279,7 +2287,7 @@ impl KhattafD3D12 {
         lawha: &LawhatRasm,
         mawarid: &MawaridItar<'_>,
     ) -> Result<u64, KhataTabaqa> {
-        let khatwa_ras = usize::try_from(KHATWAT_RAS).unwrap_or(mem::size_of::<Ras>());
+        let khatwa_ras = usize::try_from(KHATWAT_RAS).unwrap_or(size_of::<Ras>());
         let matlub = musawwada.len();
         if matlub > mawarid.siat_ruus {
             return Err(KhataTabaqa::MawridFashil {
@@ -2317,7 +2325,7 @@ impl KhattafD3D12 {
         let bayt = unsafe {
             core::slice::from_raw_parts(
                 musawwada.as_ptr().cast::<u8>(),
-                musawwada.len().saturating_mul(mem::size_of::<Ras>()),
+                musawwada.len().saturating_mul(size_of::<Ras>()),
             )
         };
         // Safe to overwrite because of the same wait: this buffer belongs to the

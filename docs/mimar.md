@@ -1,8 +1,8 @@
 # المعمار — how Taarib is put together
 
-A map of the twenty-seven crates, the four boundaries that keep them honest, and
-the path a single string takes from a game's own data files to Arabic drawn on a
-screen.
+A map of every crate under `crates/`, the four boundaries that keep them honest,
+and the path a single string takes from a game's own data files to Arabic drawn
+on a screen.
 
 The authority for all of this is [`ROADMAP.md`](../ROADMAP.md) — sections 2
 (the eight settled decisions), 4 (the component map and the naming law) and 5
@@ -67,9 +67,13 @@ shaping to draw a preview, because a preview that lies is worse than no preview.
 
 ## 3. The crates
 
-Twenty-seven, under `crates/`. Names mirror the domain rather than abstracting
-it — there is no `utils`, no `helpers`, no `common`, no `manager` and no
-`service` anywhere in the tree. The full lexicon is `ROADMAP.md` section 4.1.
+Thirty under `crates/` as this is written, plus the Studio's own `taarib-studio`
+under `apps/studio/src-tauri`, which makes thirty-one workspace members. The
+authoritative list is `[workspace] members` in the root `Cargo.toml`; if a table
+below and that list ever disagree, the manifest is right and this page is stale.
+Names mirror the domain rather than abstracting it — there is no `utils`, no
+`helpers`, no `common`, no `manager` and no `service` anywhere in the tree. The
+full lexicon is `ROADMAP.md` section 4.1.
 
 ### Foundations
 
@@ -95,6 +99,7 @@ it — there is no `utils`, no `helpers`, no `common`, no `manager` and no
 | `taarib-kashf` | كشف | discovery across every launcher's own catalogue format, plus Proton and Wine prefixes |
 | `taarib-muharrik` | محرك | engine identification and the capability probe: what the game is, and what can be done to it |
 | `taarib-istikhraj` | استخراج | text extraction, static from the engine's containers and dynamic from runtime capture |
+| `taarib-aql` | عقل | one game held whole: every producer's answer about a game composed into a single vantage point, so that two screens cannot disagree about the same game |
 
 ### Producing a patch
 
@@ -116,6 +121,7 @@ it — there is no `utils`, no `helpers`, no `common`, no `manager` and no
 | `taarib-tathbeet` | تثبيت | install, byte-exact backup, rollback, and surviving a game update |
 | `taarib-tahdith` | تحديث | the application's own update channel |
 | `taarib-tajmee` | تجميع | the build-machine staging tool (a binary, no library) |
+| `taarib-tilqai` | تلقائي | the one-button pipeline: probe, extract, translate, build, install, with resume and cancel — it drives stages that already exist and adds no capability of its own |
 
 ### Inside the game
 
@@ -126,7 +132,8 @@ it — there is no `utils`, no `helpers`, no `common`, no `manager` and no
 | `taarib-muhawwil-unreal` | محوّل | the Unreal adapter |
 | `taarib-muhawwil-godot` | محوّل | the Godot adapter |
 | `taarib-muhawwil-nusus` | محوّل نصوص | the script-engine patchers: RPG Maker, Ren'Py, VX Ace, GameMaker, Electron |
-| `taarib-tabaqa` | طبقة | the universal overlay: D3D11, D3D12, OpenGL, Vulkan |
+| `taarib-muhawwil-bio4` | محوّل بيو٤ | the Capcom BIO4 adapter (Resident Evil 4's 2005 codebase): the `.fnt` font container, the fixed-cell glyph grid and the cell transport for an engine with no shaper. Readers and builders exist; nothing routes an install to them yet — see `tashghil.md` |
+| `taarib-tabaqa` | طبقة | the universal overlay: Direct3D 8, 9, 10, 11 and 12, OpenGL in both its fixed-function and modern profiles, and Vulkan. It attaches and can draw; nothing feeds it text yet — see `tashghil.md` |
 
 The Unity side is C#, under `unity/` — four projects built by
 `dotnet build unity/Taarib.Unity.sln`. The in-game JavaScript, Python and Ruby

@@ -249,14 +249,18 @@ impl Matjar for MatjarYadawi {
     /// reason to withhold the ones that do.
     fn ifhas(&self, siyaq: &SiyaqFahs) -> Natija<NatijatMatjar> {
         let bidaya = Instant::now();
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: self.mawqi(siyaq),
-            ..NatijatMatjar::default()
-        };
+        let madakhil = self.sijill.madakhil();
+        if madakhil.is_empty() && siyaq.manassat.mujalladat_idafiya.is_empty() {
+            // No entry and no folder: there is no source to read, so nothing
+            // may be concluded about the games this family once held.
+            let mut natija = NatijatMatjar::ghayr_mutah(MUARRIF);
+            natija.muddat = bidaya.elapsed();
+            return Ok(natija);
+        }
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, self.mawqi(siyaq));
 
         let mut maruf: Vec<String> = Vec::new();
-        for madkhal in self.sijill.madakhil() {
+        for madkhal in madakhil {
             if madkhal.mukhfi {
                 continue;
             }
@@ -269,7 +273,7 @@ impl Matjar for MatjarYadawi {
         // the whole library.
         for mujallad in &siyaq.manassat.mujalladat_idafiya {
             let Ok(qaima) = std::fs::read_dir(mujallad) else {
-                natija.tanbihat.push(TanbihFahs::jadeed(
+                natija.tanbihat.push(TanbihFahs::fahras(
                     MUARRIF,
                     mujallad.display().to_string(),
                     "this extra folder from Settings cannot be listed; correct it or remove it \

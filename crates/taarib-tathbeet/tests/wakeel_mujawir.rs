@@ -51,7 +51,7 @@ use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
 use taarib_tathbeet::bayan::{NawTathbeet, TarifLuba, Tathbeet};
 use taarib_tathbeet::khata::KhataTathbeet;
 use taarib_tathbeet::tarkib::{
-    HalatIdadat, KhuttatTarkib, LubaMuhallala, NatijatTarkib, khutta, rakkib_itar,
+    HalatIdadat, HalatSlot, KhuttatTarkib, LubaMuhallala, NatijatTarkib, khutta, rakkib_itar,
 };
 use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass};
 use taarib_tathbeet::wukala;
@@ -309,6 +309,136 @@ fn taarib_yathbut_bijanib_re4_tweaks_wa_yusammih() {
     assert!(sutur.contains("did not touch it"), "and says what Taarib did about it");
 }
 
+/// Puts Ultimate ASI Loader in the one slot Taarib needs.
+///
+/// Not a hypothetical: `version` is one of the names that loader publishes
+/// itself under, and it is given the shape a real installation has — its own
+/// name inside the module, an `.asi` plugin beside it, and the `scripts/`
+/// directory it loads from.
+fn ishghal_slot_taarib(luba: &Path) {
+    iktub_bi_basma(&luba.join("version.dll"), "Ultimate ASI Loader");
+    iktub(&luba.join("Menyoo.asi"), 4_202_496);
+    fs::create_dir_all(luba.join("scripts")).expect("the loader's plugin directory");
+}
+
+/// The plan foresees the refusal, in both languages, before anything is agreed
+/// to.
+///
+/// This is the hole the plan-as-input change left open. `wakeel_qaim` lives on
+/// the **write** path, so until now a game whose `version.dll` was already held
+/// produced a plan that read as ready and an install that refused a moment
+/// later — the confirmation screen promising a deployment the button could not
+/// perform. The refusal is still the writer's, and the test below still measures
+/// it; what is measured here is that the plan says so first.
+#[test]
+fn alkhutta_tunbi_bil_rafd_qabl_an_yuwafiq_ahad() {
+    let dalil = tempfile::tempdir().expect("a temporary directory");
+    let luba = dalil.path().join("Bin32");
+    let makhzan = dalil.path().join("mukawwinat");
+    fs::create_dir_all(&luba).expect("the game directory");
+    ibni_bin32(&luba);
+    ibni_makhzan(&makhzan);
+    ishghal_slot_taarib(&luba);
+
+    let mukhattat = khutta_li(&luba_muhallala(&luba), &makhzan);
+    let slot = mukhattat
+        .slot_muhammil
+        .as_ref()
+        .expect("a plan that deploys a loader knows which slot it takes");
+
+    assert_eq!(slot.ism, "version.dll", "the slot is named, not implied");
+    assert!(
+        mukhattat.yarfud_al_wakeel(),
+        "the plan states that this install will stop: {slot:?}"
+    );
+    assert_eq!(
+        slot.shaghil(),
+        Some(wukala::AilatWakeel::MuhammilAsi),
+        "and names the product holding it rather than only the collision: {slot:?}"
+    );
+
+    // The remedy, before the failure rather than after it. An ASI loader needs
+    // no slot from Taarib at all, and saying so is the difference between a
+    // screen that blocks somebody and one that tells them what to do next.
+    let satr = slot.malhuza_injiliziya().expect("an occupied slot has something to say");
+    assert!(satr.contains("will refuse"), "{satr}");
+    assert!(satr.contains("Ultimate ASI Loader"), "the evidence travels with it: {satr}");
+    assert!(satr.contains("loads every `.asi` beside it"), "and the door it leaves open: {satr}");
+
+    let arabi = slot.malhuza_arabiya().expect("and it says it in Arabic too");
+    assert!(arabi.contains("سيرفض"), "{arabi}");
+    assert!(arabi.contains("مُحمِّل إضافات ASI"), "the identity is Arabic in Arabic: {arabi}");
+
+    // Both report renderings carry it, which is what reaches a screen that
+    // shows the plan's own text verbatim.
+    let injilizi = mukhattat.taqreer().join("\n");
+    assert!(injilizi.contains("this install will refuse"), "{injilizi}");
+    let taqreer_arabi = mukhattat.taqreer_arabi().join("\n");
+    assert!(taqreer_arabi.contains("سيرفض هذا التثبيت"), "{taqreer_arabi}");
+    assert_eq!(
+        mukhattat.taqreer().len(),
+        mukhattat.taqreer_arabi().len(),
+        "the two reports say the same number of things:\n{injilizi}\n---\n{taqreer_arabi}"
+    );
+}
+
+/// Taarib's own loader in Taarib's own slot is a reinstall, not a collision.
+///
+/// `wukala`'s identifier and `taarib_tabaqa::istitlaa`'s `slot_mutah` have
+/// always read this case as "the slot is available"; the installer read it as
+/// "refuse". The overlay's reading won — see `HalatSlot::Taarib` — so the plan
+/// reports a reinstall and the write places nothing rather than refusing.
+///
+/// The identification is evidence-based and stays that way: the module carries
+/// the mark `taarib-mudkhal` compiles into itself, and a file in that slot
+/// without it is somebody else's and still refuses.
+#[test]
+fn muhammil_taarib_fi_slotihi_iadat_tathbeet_la_tasadum() {
+    let dalil = tempfile::tempdir().expect("a temporary directory");
+    let luba = dalil.path().join("Bin32");
+    let nusakh = dalil.path().join("nusakh");
+    let makhzan = dalil.path().join("mukawwinat");
+    fs::create_dir_all(&luba).expect("the game directory");
+    fs::create_dir_all(&nusakh).expect("the backup directory");
+    ibni_bin32(&luba);
+    ibni_makhzan(&makhzan);
+    // The mark `taarib-mudkhal` carries: the name it writes its own log under.
+    iktub_bi_basma(&luba.join("version.dll"), "mudkhal.sijill");
+
+    let muhallala = luba_muhallala(&luba);
+    let mukhattat = khutta_li(&muhallala, &makhzan);
+    let slot = mukhattat.slot_muhammil.as_ref().expect("the plan knows its slot");
+    assert!(
+        matches!(slot.hala, HalatSlot::Taarib { .. }),
+        "Taarib's own loader is recognised as Taarib's: {slot:?}"
+    );
+    assert!(!mukhattat.yarfud_al_wakeel(), "so nothing about it stops the install");
+    let satr = slot.malhuza_injiliziya().expect("it is still worth a line");
+    assert!(satr.contains("reinstall"), "{satr}");
+
+    let qabl = basmat_shajara(&luba);
+    let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
+        .expect("an installation session");
+    let natija = rakkib_itar(
+        &mukhattat,
+        &muhallala,
+        &HalatIdadat::default(),
+        &makhzan,
+        &mut tathbeet,
+    )
+    .expect("Taarib's own loader is not a mod Taarib would be erasing, so this is not a refusal");
+
+    let NatijatTarkib::Mawjud(qaim) = natija else {
+        panic!("the loader is already at that path, so nothing is deployed over it: {natija:?}");
+    };
+    assert_eq!(qaim.mukawwin, "mudkhal/windows/x86");
+    assert_eq!(
+        basmat_shajara(&luba),
+        qabl,
+        "and the file that was there is untouched, byte for byte"
+    );
+}
+
 #[test]
 fn wakeel_mashghul_yarfud_bil_ism_wala_yaktub_shayan() {
     let dalil = tempfile::tempdir().expect("a temporary directory");
@@ -319,13 +449,7 @@ fn wakeel_mashghul_yarfud_bil_ism_wala_yaktub_shayan() {
     fs::create_dir_all(&nusakh).expect("the backup directory");
     ibni_bin32(&luba);
     ibni_makhzan(&makhzan);
-    // A third mod, in the one slot Taarib needs. Ultimate ASI Loader publishes
-    // itself under this name among others, so this is not a hypothetical — and
-    // it is given the shape a real one has: its own name inside the module, an
-    // `.asi` plugin beside it, and the `scripts/` directory it loads from.
-    iktub_bi_basma(&luba.join("version.dll"), "Ultimate ASI Loader");
-    iktub(&luba.join("Menyoo.asi"), 4_202_496);
-    fs::create_dir_all(luba.join("scripts")).expect("the loader's plugin directory");
+    ishghal_slot_taarib(&luba);
 
     let qabl = basmat_shajara(&luba);
 

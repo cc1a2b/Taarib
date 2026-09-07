@@ -247,14 +247,25 @@ impl Matjar for MatjarAmazon {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         };
         let Some(masar_qaida) = malaf_qaida(&jidhr) else {
-            return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+            if !jidhr.is_dir() {
+                return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+            }
+            // The client's folder is here and its catalogue is not: the same
+            // answer `mawqi` gives, so the two cannot disagree about whether
+            // Amazon Games is installed.
+            let matlub = MASAR_QAIDA.iter().fold(jidhr.clone(), |mabni, juz| mabni.join(juz));
+            return Ok(NatijatMatjar::naqisa(
+                MUARRIF,
+                Some(jidhr),
+                matlub.display().to_string(),
+                "the Amazon Games client is installed here but its install catalogue is not, so \
+                 no Amazon game could be listed; open the client once so it rebuilds the \
+                 catalogue, or correct the configured root",
+            ));
         };
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: jidhr.is_dir().then(|| jidhr.clone()),
-            ..NatijatMatjar::default()
-        };
+        let mut natija =
+            NatijatMatjar::muthabbat(MUARRIF, jidhr.is_dir().then(|| jidhr.clone()));
 
         let (ittisal, thabita) = match iftah_qaida(&masar_qaida) {
             Ok(maftuh) => maftuh,
@@ -584,7 +595,7 @@ struct SaffTathbeet {
 /// Reads `DbSet` out of the install catalogue.
 fn sufuf_tathbeet(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec<SaffTathbeet> {
     let Some(asmaa) = asmaa_aamida(ittisal, JADWAL) else {
-        tanbihat.push(TanbihFahs::jadeed(
+        tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             JADWAL.to_owned(),
             "the Amazon Games catalogue has no DbSet table, so this client version stores its \
@@ -597,7 +608,7 @@ fn sufuf_tathbeet(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec<S
     let (Some(amud_muarrif), Some(amud_masar)) =
         (amud_mutah(&asmaa, &AAMIDA_MUARRIF), amud_mutah(&asmaa, &AAMIDA_MASAR))
     else {
-        tanbihat.push(TanbihFahs::jadeed(
+        tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             JADWAL.to_owned(),
             format!(
@@ -1150,6 +1161,27 @@ mod ikhtibarat {
         let siyaq = siyaq(masrah.path(), None);
         assert_eq!(MatjarAmazon::jadeed().mawqi(&siyaq), None);
         assert!(halat_matjar(&siyaq).is_empty());
+        Ok(())
+    }
+
+    /// The client's folder is present and its catalogue is not. `mawqi` calls
+    /// that installed, so `ifhas` must not call it absent.
+    #[test]
+    fn jidhr_bila_qaida_naqis_la_ghayr_muthabbat() -> NatijatIkhtibar {
+        use crate::fahs::HalatFahsMatjar;
+
+        let masrah = tempfile::tempdir()?;
+        let mahalliya = masrah.path().join("Local");
+        let jidhr = mahalliya.join(MUJALLAD_MATJAR);
+        fs::create_dir_all(&jidhr)?;
+        let siyaq = siyaq(masrah.path(), Some(&mahalliya));
+
+        let matjar = MatjarAmazon::jadeed();
+        assert_eq!(matjar.mawqi(&siyaq).as_deref(), Some(jidhr.as_path()));
+        let natija = matjar.ifhas(&siyaq)?;
+        assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
+        assert_eq!(natija.jidhr_matjar.as_deref(), Some(jidhr.as_path()));
+        assert!(natija.tanbihat.iter().any(TanbihFahs::yukhfi_alaab));
         Ok(())
     }
 }

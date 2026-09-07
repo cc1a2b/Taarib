@@ -66,6 +66,14 @@ pub enum NawMani {
     /// The part of Taarib that delivers this game's tier is unfinished in this
     /// build, so the automatic run would end in an unchanged game.
     JahiziyaGhaiba,
+    /// No translation provider is configured, or every configured one is off.
+    ///
+    /// Last, and the only entry that is a fact about the machine rather than
+    /// about the game. It ranks below an unfinished adapter deliberately: it is
+    /// the one blocker a reader clears in half a minute, and putting it above a
+    /// fact about the game would bury the thing they cannot change under the
+    /// thing they can.
+    LaMuzawwid,
 }
 
 impl NawMani {
@@ -74,7 +82,7 @@ impl NawMani {
     /// Written out rather than iterated because the enum has no iterator, and in
     /// full so that adding a blocker breaks the ordering test rather than
     /// quietly slipping in at whatever rank its author happened to pick.
-    pub const KUL: [Self; 8] = [
+    pub const KUL: [Self; 9] = [
         Self::Himaya,
         Self::FahsHimayaLamYajri,
         Self::LughaRasmiya,
@@ -83,6 +91,7 @@ impl NawMani {
         Self::GhayrHadira,
         Self::LamYufhas,
         Self::JahiziyaGhaiba,
+        Self::LaMuzawwid,
     ];
 
     /// Where this blocker sits in the one order. Lower is more serious.
@@ -97,6 +106,7 @@ impl NawMani {
             Self::GhayrHadira => 5,
             Self::LamYufhas => 6,
             Self::JahiziyaGhaiba => 7,
+            Self::LaMuzawwid => 8,
         }
     }
 
@@ -104,7 +114,7 @@ impl NawMani {
     #[must_use]
     pub const fn nitaq(self) -> NitaqMani {
         match self {
-            Self::JahiziyaGhaiba => NitaqMani::Tashghil,
+            Self::JahiziyaGhaiba | Self::LaMuzawwid => NitaqMani::Tashghil,
             Self::Himaya
             | Self::FahsHimayaLamYajri
             | Self::LughaRasmiya
@@ -129,7 +139,8 @@ impl NawMani {
             Self::FahsHimayaLamYajri
             | Self::GhayrHadira
             | Self::LamYufhas
-            | Self::JahiziyaGhaiba => false,
+            | Self::JahiziyaGhaiba
+            | Self::LaMuzawwid => false,
         }
     }
 
@@ -145,6 +156,7 @@ impl NawMani {
             Self::GhayrHadira => "ghayr_hadira",
             Self::LamYufhas => "lam_yufhas",
             Self::JahiziyaGhaiba => "jahiziya_ghaiba",
+            Self::LaMuzawwid => "la_muzawwid",
         }
     }
 }

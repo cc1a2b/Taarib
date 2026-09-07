@@ -297,6 +297,24 @@ pub enum KhataTabaqa {
     },
 }
 
+impl KhataTabaqa {
+    /// Whether this refusal ends recognition for the session rather than for
+    /// one capture.
+    ///
+    /// Two variants mean the recognizer itself is gone — a language pack
+    /// uninstalled mid-session, model files quarantined by an antivirus — and no
+    /// later frame changes that. Every other refusal is about one capture: a
+    /// degenerate region, a frame the GPU would not read back, a rectangle that
+    /// no longer fits the surface. Retrying the next capture is right for the
+    /// second kind and pointless for the first, and a worker that counted both
+    /// as one integer could not tell a user which of the two they were looking
+    /// at. See [`crate::qissa::KhaytQissa`].
+    #[must_use]
+    pub const fn yunhi_al_qiraa(&self) -> bool {
+        matches!(self, Self::QariGhayrMutah { .. } | Self::NamudhajFashil { .. })
+    }
+}
+
 /// The first code this crate uses. It owns its band outright.
 const AWWAL: u16 = 0;
 

@@ -264,11 +264,11 @@ pub fn aql_hie(aql: &Aql, id: LubaId, ism: &str) -> AqlLubaHie {
 /// **This one walks the game directory.** The two hard scans behind
 /// `hala_himaya` and the multiplayer risk read the game's files and its store
 /// catalogue, and the proxy survey reads the loader directory beside them; on a
-/// large installation that is seconds. It is deliberate: `MasahAman::faragh`
-/// would hand the core a scan that never ran, and the core would answer
-/// `la_tawqee` with nothing behind it — an absence presented as a finding, which
-/// is the exact failure this crate exists to prevent. Every surface that asks
-/// for it therefore asks on purpose, not on mount.
+/// large installation that is seconds, and it is spent on purpose:
+/// `MasahAman::lam_yumsah` hands the core a scan that never ran, and the core
+/// now refuses on it rather than answering `la_tawqee` — the refusal is the
+/// point, but a refusal is not an answer about the game. Every surface that
+/// wants a real answer therefore pays for the walk, on purpose and not on mount.
 ///
 /// # Errors
 ///
@@ -341,15 +341,20 @@ fn huwiyat_luba(
     simat: &[taarib_kashf::fahs::SimatLuba],
     jidhr_steam: Option<PathBuf>,
 ) -> Natija<HuwiyatLuba> {
-    let masdar = luba.masadir.first().cloned().ok_or_else(|| {
-        Khata::from(KhataAqlAmr::LubaBilaMasdar {
+    // Every identity, not the first. The core reads the Steam catalogue off
+    // whichever of them is a Steam identity, and `masadir` is in permanent
+    // discovery order — so handing over `first()` silently withheld the appid
+    // from any Steam game another launcher happened to find first, and the
+    // catalogue that declares VAC was then never opened.
+    if luba.masadir.is_empty() {
+        return Err(Khata::from(KhataAqlAmr::LubaBilaMasdar {
             ism: luba.ism.clone(),
-        })
-    })?;
+        }));
+    }
     Ok(HuwiyatLuba {
         id,
         ism: luba.ism.clone(),
-        masdar,
+        masadir: luba.masadir.clone(),
         jidhr: luba.jidhr.clone(),
         tanfidhi: luba.tanfidhi.clone(),
         jidhr_steam,
@@ -548,7 +553,7 @@ mod ikhtibarat {
         let huwiya = HuwiyatLuba {
             id,
             ism: "ELDEN RING".to_owned(),
-            masdar,
+            masadir: vec![masdar],
             jidhr: jidhr.clone(),
             tanfidhi: None,
             jidhr_steam: None,
@@ -561,13 +566,12 @@ mod ikhtibarat {
         // from an unrecognised engine at tier three.
         //
         // The safety scan is the real producer over a real (absent) directory
-        // for a Steam game with no Steam root, rather than `MasahAman::faragh`.
-        // The two are not the same input and the difference is the finding
-        // worth keeping: `faragh` reports the catalogue as *never owed*, so the
-        // core answers `la_tawqee` — "the scan ran and matched nothing" — about
-        // a walk that never happened. Running the producer instead reports the
-        // catalogue as owed and unread, which is what a Steam game with no
-        // Steam root really is.
+        // for a Steam game with no Steam root, rather than
+        // `MasahAman::lam_yumsah`. The two are not the same input and the
+        // difference is what this case is for: both now refuse, but they refuse
+        // for different reasons, and only the producer's reason — the catalogue
+        // was owed and unread — is the truth about a Steam game whose Steam root
+        // is unknown.
         let mudkhalat = MudkhalatAql {
             aman: MasahAman::ifhas(&jidhr, huwiya.appid_steam(), None),
             huwiya,
@@ -648,7 +652,7 @@ mod ikhtibarat {
         let huwiya = HuwiyatLuba {
             id,
             ism: "luba".to_owned(),
-            masdar,
+            masadir: vec![masdar],
             jidhr: jidhr.clone(),
             tanfidhi: None,
             jidhr_steam: None,
@@ -689,7 +693,7 @@ mod ikhtibarat {
         let huwiya = HuwiyatLuba {
             id,
             ism: "luba".to_owned(),
-            masdar,
+            masadir: vec![masdar],
             jidhr: jidhr.clone(),
             tanfidhi: None,
             jidhr_steam: None,
@@ -704,7 +708,7 @@ mod ikhtibarat {
         let mudkhalat = MudkhalatAql {
             huwiya,
             fahs: HalatFahs::ghayr_mafhusa(),
-            aman: MasahAman::faragh(&jidhr),
+            aman: MasahAman::lam_yumsah(&jidhr),
             lugha: None,
             wukala: MasahWukala::imsah(&jidhr),
             makhzan: HalatMakhzan::ghayr_mafhus(&jidhr),
@@ -716,10 +720,24 @@ mod ikhtibarat {
         let mut murattaba = rutab.clone();
         murattaba.sort_unstable();
         assert_eq!(rutab, murattaba, "the wire order is the core's order");
+
+        let asma: Vec<&str> = hie.mawani.iter().map(|mani| mani.naw.as_str()).collect();
+        let mawqi = |naw: NawMani| asma.iter().position(|ism| *ism == naw.ism());
+        assert!(
+            mawqi(NawMani::LaysatLuba) < mawqi(NawMani::MuhakatRum),
+            "not-a-game outranks an emulated title, whatever order they were seen in: {asma:?}"
+        );
+        // Three blockers, not the two the launcher hints put there. This fixture
+        // is a Steam game with no Steam root whose scan never ran, and that is
+        // now a blocker of its own — outranking both, because a check that did
+        // not run is the most serious thing known about this entry. The
+        // assertion above is deliberately relative rather than "first is
+        // not-a-game": it is about the one ordering, and pinning an absolute
+        // position would break every time the core learns another refusal.
         assert_eq!(
-            hie.mawani.first().map(|mani| mani.naw.as_str()),
-            Some(NawMani::LaysatLuba.ism()),
-            "not-a-game outranks an emulated title, whatever order they were seen in"
+            asma.first().copied(),
+            Some(NawMani::FahsHimayaLamYajri.ism()),
+            "{asma:?}"
         );
     }
 }

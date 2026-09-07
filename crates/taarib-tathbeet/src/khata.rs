@@ -376,6 +376,22 @@ pub enum KhataTathbeet {
         sabab: String,
     },
 
+    /// A launch-time setting the deployment recorded could not be applied.
+    ///
+    /// The install-side mirror of [`Self::IdadGhayrMustaad`], and a refusal for
+    /// the same kind of reason. A framework was deployed a moment before this,
+    /// and it does not load unless the launcher is told to put it in front of
+    /// the game. An install that shrugged here would report success over a game
+    /// that runs exactly as it did before, with Taarib's files sitting inside it
+    /// unread — which is the one failure a user has no way of noticing.
+    #[error("the launch setting {mahall} could not be applied")]
+    IdadGhayrMunaffadh {
+        /// Where the setting lives, as the record names it.
+        mahall: String,
+        /// Why it could not be applied.
+        sabab: String,
+    },
+
     /// The restore stopped part of the way through.
     ///
     /// Not a success with a caveat. The manifest still records every path that
@@ -516,7 +532,7 @@ pub enum KhataTathbeet {
         /// unidentified proxy said to be exactly that.
         ///
         /// "Something owns `version.dll`" is a refusal a user can do nothing
-        /// with. "ReShade owns it, and here is what proved that" is one they can
+        /// with. "`ReShade` owns it, and here is what proved that" is one they can
         /// act on, and the difference is the whole reason this field exists
         /// rather than the size alone standing in for an identity.
         ///
@@ -625,6 +641,7 @@ impl KhataTathbeet {
             }
             Self::HajmMufrit { .. }
             | Self::IdadGhayrMustaad { .. }
+            | Self::IdadGhayrMunaffadh { .. }
             | Self::TawafuqMarfud { .. }
             | Self::IdhnGhayrMutabiq => None,
             Self::IstiadaNaqisa { sabab, .. } => sabab.masar(),
@@ -688,6 +705,7 @@ impl Tafsir for KhataTathbeet {
                     // Inside the band reserved for `itlaq`.
                     Self::MunassaTaamal { .. } => 60,
                     Self::HalatManassaMajhula { .. } => 61,
+                    Self::IdadGhayrMunaffadh { .. } => 62,
                     // The pipeline's own continuation band.
                     Self::IdhnGhayrMutabiq => 80,
                     Self::NususMarfuda { .. } => 81,
@@ -798,6 +816,10 @@ impl Tafsir for KhataTathbeet {
                  تعريب معدَّلًا في صمت."
                     .to_owned()
             }
+            Self::IdadGhayrMunaffadh { mahall, .. } => format!(
+                "تعذّر ضبط إعداد التشغيل ({mahall})، وبدونه لا تُحمَّل ملفات تعريب في اللعبة \
+                 أصلًا. أُوقف التثبيت بدل أن يُقال إنه نجح واللعبة تعمل كما كانت."
+            ),
             Self::LubaTashtaghil { amaliya, .. } => format!(
                 "اللعبة تعمل الآن ({amaliya}). أغلقها تمامًا ثم أعد المحاولة؛ لا يُعدَّل ملف \
                  واللعبة تقرؤه."
@@ -844,10 +866,10 @@ impl Tafsir for KhataTathbeet {
                     format!(" وبجانبه أيضًا: {}.", jiran.join("، "))
                 };
                 let man = huwiya.wasf_arabi();
-                let bab = huwiya.aila().and_then(|aila| aila.tasalsul_arabi()).map_or_else(
-                    String::new,
-                    |bab| format!(" {bab}"),
-                );
+                let bab = huwiya
+                    .aila()
+                    .and_then(crate::wukala::AilatWakeel::tasalsul_arabi)
+                    .map_or_else(String::new, |bab| format!(" {bab}"));
                 format!(
                     "يوجد في مجلّد اللعبة ملف باسم {wakeel} ({mawdi})، وهو {man}، والاسم \
                      نفسه الذي يحمّل به تعريب نفسه. تحمّل ويندوز ملفًا واحدًا بهذا الاسم لا \
@@ -974,6 +996,11 @@ impl Tafsir for KhataTathbeet {
             ),
             Self::IdadGhayrMustaad { muarrif, mahall, sabab } => format!(
                 "The previous value of {muarrif} in {mahall} could not be restored: {sabab}"
+            ),
+            Self::IdadGhayrMunaffadh { mahall, sabab } => format!(
+                "The launch setting {mahall} could not be applied: {sabab}. Nothing Taarib \
+                 deployed would have loaded without it, so the install stopped rather than \
+                 report success over a game that runs exactly as it did before."
             ),
             Self::LubaTashtaghil { amaliya, tanfidhi } => format!(
                 "{amaliya} is running ({}) and the game cannot be modified until it exits \
@@ -1135,7 +1162,7 @@ impl Tafsir for KhataTathbeet {
                 IttijahDaght::Fakk => Khutwa::TahaqquqSalamatLuba,
             },
 
-            Self::IdadGhayrMustaad { .. } => {
+            Self::IdadGhayrMustaad { .. } | Self::IdadGhayrMunaffadh { .. } => {
                 Khutwa::FathIdadat { qism: QismIdadat::Manassat }
             }
 
@@ -1280,6 +1307,10 @@ impl Tafsir for KhataTathbeet {
             }
             Self::IdadGhayrMustaad { muarrif, mahall, sabab } => {
                 daa("muarrif", QeemaSiyaq::Nass(muarrif.clone()));
+                daa("mahall", QeemaSiyaq::Nass(mahall.clone()));
+                daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
+            }
+            Self::IdadGhayrMunaffadh { mahall, sabab } => {
                 daa("mahall", QeemaSiyaq::Nass(mahall.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             }

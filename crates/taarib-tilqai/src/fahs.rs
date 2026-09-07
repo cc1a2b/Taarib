@@ -223,18 +223,13 @@ mod ikhtibarat {
 
     /// Every engine family the probe can resolve to, so a test that walks the
     /// gate walks all of it rather than the two families somebody remembered.
-    const KUL_AILAT: [AilatMuharrik; 10] = [
-        AilatMuharrik::Unity,
-        AilatMuharrik::Unreal,
-        AilatMuharrik::Godot,
-        AilatMuharrik::RpgMakerMv,
-        AilatMuharrik::RpgMakerMz,
-        AilatMuharrik::RpgMakerVxAce,
-        AilatMuharrik::Renpy,
-        AilatMuharrik::GameMaker,
-        AilatMuharrik::Electron,
-        AilatMuharrik::Majhul,
-    ];
+    /// Every engine family, from the enum's own list rather than a copy.
+    ///
+    /// This was a hand-kept array and it held ten families after the set had
+    /// grown to seventeen, so the exhaustiveness test below silently skipped
+    /// seven engines — Bio4 and all six named in the last two phases — which is
+    /// the opposite of what an exhaustiveness test is for.
+    const KUL_AILAT: [AilatMuharrik; 17] = AilatMuharrik::KUL;
 
     /// A capability report for one engine family, built the way the probe
     /// builds one: through `imkaniyat::taqreer`, so the readiness verdict under

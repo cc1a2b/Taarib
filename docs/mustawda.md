@@ -59,9 +59,9 @@ set is what lets an offline mirror carry them as ordinary files.
 ```
 
 Both this object and `tajawuzat`'s entries carry `#[serde(deny_unknown_fields)]`
-(`crates/taarib-mustawda/src/fahras.rs:40`, `:56`), so a field this build does not
-know is `BayanTalif` and not a forward-compatible extension. Add nothing here that
-`BayanMustawda` does not declare.
+(`BayanMustawda` and `TajawuzNashr` in `crates/taarib-mustawda/src/fahras.rs`), so
+a field this build does not know is `BayanTalif` and not a forward-compatible
+extension. Add nothing here that `BayanMustawda` does not declare.
 
 `rabt_qaimat_sahb` is **repository-relative and nothing else**. An absolute
 address there would be a manifest aiming the fetch at a host of its choosing,
@@ -96,7 +96,7 @@ read from `makhbaa/mustawda/sharaih/` and never requested.
 ### `tajawuzat` — patches published over their own coverage gate
 
 Optional, and absent from the document rather than written as `[]` when there are
-none (`fahras.rs:74`). A manifest cast before the field existed still parses, and an
+none (`fahras.rs`). A manifest cast before the field existed still parses, and an
 ordinary catalogue's bytes are unchanged by it, which is why adding it did not move
 `ISDAR_BAYAN` off 1.
 
@@ -129,7 +129,7 @@ manifest at `:405`. Two refusals guard it in both directions: a package whose ga
 already permits it is told it needs no override (`:247`), and a package whose gate
 refuses it will not publish without one (`:275`).
 
-`BayanMustawda::tajawuz(ruqaa, murajaa)` (`fahras.rs:97`) is the lookup, keyed on the
+`BayanMustawda::tajawuz(ruqaa, murajaa)` (`fahras.rs`) is the lookup, keyed on the
 revision as well as the lineage — an override is granted for the package that was in
 front of the operator, and a later revision of the same patch has to earn its own.
 
@@ -154,14 +154,17 @@ a listing filed in the wrong bucket is simply never found.
 
 ```jsonc
 {
-  "ruqaa": { "<luba-uuid>": [ MulakhkhasRuqaa, … ] },
-  "aswat": { "<luba-uuid>": [ MulakhkhasSawt,  … ] }
+  "ruqaa":    { "<luba-uuid>": [ MulakhkhasRuqaa,    … ] },
+  "aswat":    { "<luba-uuid>": [ MulakhkhasSawt,     … ] },
+  "dhakirat": { "<luba-uuid>": [ MulakhkhasDhakira,  … ] }   // translation-memory shares
 }
 ```
 
-`#[serde(deny_unknown_fields)]`: an extra key anywhere in the document makes the
-whole shard `ShareehaTalifa`. `aswat` may be omitted (it is `#[serde(default)]`);
-`ruqaa` may not.
+`#[serde(deny_unknown_fields)]`: a key other than these three anywhere in the
+document makes the whole shard `ShareehaTalifa`. `aswat` and `dhakirat` may be
+omitted (both are `#[serde(default)]`, and `dhakirat` is also skipped on write
+when empty, which is what keeps the empty shard at 23 bytes); `ruqaa` may not.
+`MuhtawaShareeha` and `MulakhkhasDhakira` in `fahras.rs` are the shapes.
 
 The listing fields are `taarib_mustalahat::ruqaa::MulakhkhasRuqaa` verbatim. Six
 of them are load-bearing and the rest are display:
@@ -315,10 +318,10 @@ owner; everything below is the mechanism around it, proved with a stand-in.
 | custody | read the keyring database directly | no plaintext seed and no plaintext account name; the only readable tokens are gnome-keyring's MD5 attribute hashes (`md5("taarib.tawqee")`, `md5("malik")`), and the probe account `isdar.jass` was absent, so the reachability probe really does delete itself |
 | round trip | `isdar tahaqquq` | the stored key still derives the anchor in the file |
 | refusal by name | a package re-sealed under `MIFTAH_TATWIR`, verified by `taarib_aman::tahaqquq_tawqee::tahaqquq` under the test anchor | `SababTawqee::TawqeeTatwir`, and the whole gate `taarib_aman::fahs` refuses with the same sentence. The same package re-sealed by an unrelated key gives `MiftahMajhul` instead — so the development key is named, not merely unknown |
-| the interface | `MIRSAT_MALIK.hawiya.wasm()` in both builds | `"isdar"` under the release anchor, `"tatwir"` without it. `main.rs::maalumat_taarib` publishes that string and `maktaba.tsx:1221` draws the warning band only on `tatwir`. The wording is honest: en "Development build — trusts the published development key, not the release key", ar «نسخة تطوير — تثق بمفتاح التطوير المعلن لا بمفتاح الإصدار» |
+| the interface | `MIRSAT_MALIK.hawiya.wasm()` in both builds | `"isdar"` under the release anchor, `"tatwir"` without it. `main.rs::maalumat_taarib` publishes that string and the library screen (`maktaba.tsx`) draws the warning band only on `tatwir`. The wording is honest: en "Development build — trusts the published development key, not the release key", ar «نسخة تطوير — تثق بمفتاح التطوير المعلن لا بمفتاح الإصدار» |
 | the const assertion | four builds, each after `cargo clean -p taarib-khatm` | all four fail at compile time with `E0080`: the development key as the anchor (`malik.rs:120`), the `isdar` feature with the variable unset (`malik.rs:132`), an anchor that is not 64 characters and one with a non-hex digit (both `malik.rs:119`) |
 | Phase 26, local half | a package sealed with a run-local key, verified against `MirsatThiqa { miftah: <that key>, hawiya: MIRSAT_MALIK.hawiya }` — the anchor `tilqai_awamir.rs::jahhiz` builds — under a release build | accepted; `fahs` mints the permit. The one-button flow still installs what it just built |
-| Phase 26, downloaded half | the development-signed package against `MIRSAT_MALIK`, which is what `tathbeet_awamir.rs:1362` uses | refused, `TawqeeTatwir`. And the locally built patch against `MIRSAT_MALIK` is refused as `MiftahMajhul` — which is exactly why the local install is not anchored there |
+| Phase 26, downloaded half | the development-signed package against `MIRSAT_MALIK`, which is what `tathbeet_awamir.rs` anchors downloaded installs to | refused, `TawqeeTatwir`. And the locally built patch against `MIRSAT_MALIK` is refused as `MiftahMajhul` — which is exactly why the local install is not anchored there |
 | destruction | delete the throwaway entry, then re-read | `isdar mirsa --ism <throwaway>` refuses; the keyring database is back to its original size; the owner's key still reads back `e4260a5f…4cea` |
 
 The tree was swept for key material at the same time: every 64-hex token in all
@@ -330,22 +333,22 @@ design. There are no `.pem`, `.key`, `.p12`, `.jks`, `.env` or similarly named
 files, no `-----BEGIN` block anywhere, no hard-coded value for
 `TAARIB_MIFTAH_ISDAR`, and exactly one `[u8; 32]` key constant —
 `MIFTAH_TATWIR`, the public half. `.gitignore` already covers all of those
-names; note that it is currently inert, because this working tree is **not** a
-git repository and so has no history to scan either.
+names. That sweep was run before the tree was under version control; it is a git
+repository now, so a history scan is possible and has not been repeated.
 
-#### One thing that should change, outside this file's ownership
+#### One thing that has since changed, outside this file's ownership
 
-`taarib_aman::tahaqquq_tawqee::tahaqquq` never reads `mirsa.hawiya`. It returns
-`SababTawqee::TawqeeTatwir` whenever the signing key is `MIFTAH_TATWIR` and the
-anchor is anything else — and that refusal's own sentence says «وهذه نسخة إصدار
-ترفضه بالاسم» / "which a release build refuses by name". Under the Phase 26
-local anchor the two can disagree: a *development* build whose anchor is the
-run's own key answers a development-signed package with a sentence asserting it
-is a release build. `taarib_tahdith::bayan::ihlil` already guards the same
-refusal with `matches!(mirsa.hawiya, HawiyatThiqa::Isdar)`; the signature gate
-should do the same, after which the package falls through to `MusahimFaqat` or
-`MiftahMajhul`, which is the honest answer. One condition in
-`crates/taarib-aman/src/tahaqquq_tawqee.rs:106`.
+When this was written, `taarib_aman::tahaqquq_tawqee::tahaqquq` never read
+`mirsa.hawiya`: it returned `SababTawqee::TawqeeTatwir` whenever the signing key
+was `MIFTAH_TATWIR` and the anchor was anything else, so under the Phase 26 local
+anchor a *development* build could answer a development-signed package with a
+sentence asserting it was a release build. That is fixed: the refusal is now
+guarded with `matches!(mirsa.hawiya, HawiyatThiqa::Isdar)`, the same guard
+`taarib_tahdith::bayan::ihlil` already carried, and a development-signed package
+under a non-release anchor falls through to `MusahimFaqat` or `MiftahMajhul`,
+which is the honest answer. The comment above the condition in
+`crates/taarib-aman/src/tahaqquq_tawqee.rs` makes the same argument this
+paragraph used to.
 
 ### 7.2 The forge OAuth client id
 
@@ -356,7 +359,7 @@ settings are `None` until the registry operator provisions them, both in
 | field | what it holds | where it comes from |
 | --- | --- | --- |
 | `muarrif_amil` | the OAuth **client id**, e.g. `Iv23li…` | github.com → Settings → Developer settings → **OAuth Apps** → New OAuth App. Enable **Device flow**. Scope requested is `public_repo`. No client *secret* is used or stored — the device flow is a public-client flow, which is why this is a client id and not a credential |
-| `rabt_tajheez` | the staging upload endpoint template, `{ism}` for the file name | a **staging** release on the registry repository, e.g. `https://uploads.github.com/repos/<owner>/taarib-registry/releases/<id>/assets?name=tajheez-{ism}`. The template must contain `tajheez` and must not contain `isdar`; `IdadatMustawda::tahaqquq` refuses both ways round, so a submitted package can never land in the public release area |
+| `rabt_tajheez` | the staging upload endpoint template, `{ism}` for the file name | a **staging** release on the registry repository, e.g. `https://uploads.github.com/repos/<owner>/taarib-registry/releases/<id>/assets?name=tajheez-{ism}`. The template must contain `tajheez`, must not contain `isdar`, and must not contain `/releases/download/`; `IdadatMustawda::tahaqquq` refuses all three ways round (`qabul_tajheez` in `crates/taarib-taqdeem/src/irsal.rs`), so a submitted package can never land in the public release area |
 
 Everything else the transport needs is already compiled in
 (`apps/studio/src-tauri/src/taqdeem_awamir.rs::idadat_tawthiq`): the device-code
@@ -438,9 +441,9 @@ The patch it walks is published over its own coverage gate. Its metadata records
 `qabila_lil_nashr: false` — no capture session has recorded this game's opening,
 so first-hour coverage was never measured — and `bayan.json` carries the
 `tajawuzat` record saying so, an optional array `sabk` writes when `--tajawuz`
-is used and omits otherwise. **§2 above does not yet describe that field**; its
-shape is `fahras::TajawuzNashr` and the caster refuses to publish a package its
-gate rejects without one. The walk proves the transport, the verification and
+is used and omits otherwise. §2 above describes that field; its shape is
+`fahras::TajawuzNashr` and the caster refuses to publish a package its gate
+rejects without one. The walk proves the transport, the verification and
 the install; it does not prove that this particular patch is fit for a player,
 and the catalogue says so in public.
 

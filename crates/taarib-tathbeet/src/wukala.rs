@@ -1218,7 +1218,7 @@ mod ikhtibarat {
     fn wahda(jidhr: &Path, ism: &str, basmat: &[&str]) {
         let mut jism: Vec<u8> = b"MZ\x90\x00".to_vec();
         for basma in basmat {
-            jism.extend(basma.encode_utf16().flat_map(|wahda| wahda.to_le_bytes()));
+            jism.extend(basma.encode_utf16().flat_map(u16::to_le_bytes));
             jism.push(0);
         }
         jism.resize(jism.len().max(1024), 0x90);
@@ -1417,7 +1417,7 @@ mod ikhtibarat {
     ///
     /// Names and sizes only — none of these is the real file, and nothing here
     /// reads one.
-    fn bin32(jidhr: &std::path::Path) {
+    fn bin32(jidhr: &Path) {
         for (ism, hajm) in [
             ("bio4.exe", 9_139_840_usize),
             ("dinput8.dll", 11_760_128),

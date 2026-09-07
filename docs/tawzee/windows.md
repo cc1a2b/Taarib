@@ -8,6 +8,18 @@ The installer, the install, the cold start and the uninstall described here were
 2026-09-04; the measurements, the imports, the loaded-module list and the font evidence are in
 `tahaqquq.md`. Where that file and this one disagree, that one is the observation.
 
+> **Overtaken since it was written — re-read against the tree on 2026-09-06.** The body is
+> left as it was. Three parts no longer describe the tree: the closing "keys the convergence
+> step must set" block still lists dropping `msi`/`rpm` from `bundle.targets` as pending — the
+> live value is `["deb", "appimage", "nsis", "app", "dmg"]`, as the same block's last line
+> already says; `bundle.windows.nsis.languages` is `["Arabic", "English"]`, not `["Arabic"]`,
+> so the sentences about a single-language installer and no language selector are stale; and
+> the on-disk tree under "The installed tree" names `basmat\`, `jisr\` and `unity\`
+> directories under `mawarid\` that the staging tool never writes — the signature database,
+> the C-ABI core and the Unity assemblies land *inside* each BepInEx component under
+> `BepInEx/plugins/Taarib/`, and there is no `mulhaq\wasm` or `mulhaq\vxace` (`docs/tawzee.md`
+> §3, rows B1, C1–C4, H1, I4, K1).
+
 The artifact is a per-user NSIS installer, `Taarib_<isdar>_x64-setup.exe`, written to
 `target/[x86_64-pc-windows-msvc/]release/bundle/nsis/`. It requests `RequestExecutionLevel user`
 and never triggers a UAC prompt at any point, including WebView2 installation (see below).

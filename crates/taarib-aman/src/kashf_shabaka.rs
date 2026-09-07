@@ -169,19 +169,42 @@ impl IjmaaShabaka {
         self.dalail.iter().any(|daleel| daleel.dalala.shabaki())
     }
 
+    /// Whether this scan is entitled to be read as a negative answer.
+    ///
+    /// False when places went unread or the walk stopped at a bound. An empty
+    /// evidence list from such a scan is not "this is a single-player game"; it
+    /// is "nobody finished asking", and the two must not share a sentence.
+    #[must_use]
+    pub fn kamil(&self) -> bool {
+        self.thughrat.is_empty() && !self.mabtur
+    }
+
     /// Exactly what was found, in Arabic, for the acknowledgement dialog.
+    ///
+    /// The coverage sentence comes before the early return, not after it. It
+    /// used to sit below, where the only way to reach it was to have found
+    /// evidence — so the one case that needed it, an empty result from a scan
+    /// that could not finish, was the one case that could never say so.
     #[must_use]
     pub fn wasf_iqrar(&self) -> String {
-        if self.dalail.is_empty() {
-            return "لم يُعثر على أيّ دليل ملموس على اللعب متعدّد اللاعبين.".to_owned();
-        }
-        let mut sutur: Vec<String> =
-            vec!["عُثر على أدلّة ملموسة على أنّ هذه اللعبة تُلعب مع لاعبين آخرين:".to_owned()];
-        for daleel in &self.dalail {
-            sutur.push(format!("• {}", daleel.arabi()));
-        }
+        let mut sutur: Vec<String> = if self.dalail.is_empty() {
+            vec!["لم يُعثر على أيّ دليل ملموس على اللعب متعدّد اللاعبين.".to_owned()]
+        } else {
+            let mut bidaya =
+                vec!["عُثر على أدلّة ملموسة على أنّ هذه اللعبة تُلعب مع لاعبين آخرين:".to_owned()];
+            for daleel in &self.dalail {
+                bidaya.push(format!("• {}", daleel.arabi()));
+            }
+            bidaya
+        };
         if !self.thughrat.is_empty() {
             sutur.push("تعذّرت قراءة بعض المواضع أثناء الفحص، فقد يوجد ما لم يُكتشف.".to_owned());
+        }
+        if self.mabtur {
+            sutur.push(
+                "توقّف الفحص عند حدّه قبل أن يفرغ من المجلّد، فما لم يُفحص لا يُعرف عنه شيء."
+                    .to_owned(),
+            );
         }
         sutur.join("\n")
     }
@@ -189,12 +212,26 @@ impl IjmaaShabaka {
     /// The same, in English, for logs and diagnostics.
     #[must_use]
     pub fn wasf_injilizi(&self) -> String {
-        if self.dalail.is_empty() {
-            return "No concrete evidence of multiplayer was found.".to_owned();
+        let mut sutur: Vec<String> = if self.dalail.is_empty() {
+            vec!["No concrete evidence of multiplayer was found.".to_owned()]
+        } else {
+            let mut bidaya = vec!["Concrete evidence this game is multiplayer:".to_owned()];
+            for daleel in &self.dalail {
+                bidaya.push(format!("- {}", daleel.injilizi()));
+            }
+            bidaya
+        };
+        for thughra in &self.thughrat {
+            sutur.push(format!(
+                "- this place could not be read ({}): {}",
+                thughra.sabab,
+                thughra.masar.display()
+            ));
         }
-        let mut sutur: Vec<String> = vec!["Concrete evidence this game is multiplayer:".to_owned()];
-        for daleel in &self.dalail {
-            sutur.push(format!("- {}", daleel.injilizi()));
+        if self.mabtur {
+            sutur.push(
+                "- the walk stopped at a bound before it finished the folder".to_owned(),
+            );
         }
         sutur.join("\n")
     }

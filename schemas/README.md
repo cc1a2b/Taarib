@@ -5,9 +5,10 @@ the contract between a Taarib client, the registry repository, and anything a
 third party writes against either of them.
 
 Every file here **except one** is produced from the Rust types in
-[`crates/taarib-mustalahat`](../crates/taarib-mustalahat) — plus `Khata` from
-[`crates/taarib-usus`](../crates/taarib-usus) — by the `mukhattatat` binary in
-that crate. None of them is the source of truth. The Rust type is.
+[`crates/taarib-mustalahat`](../crates/taarib-mustalahat) — plus `Khata` and
+`RisalatMustakhdim` from [`crates/taarib-usus`](../crates/taarib-usus) — by the
+`mukhattatat` binary in that crate. None of them is the source of truth. The
+Rust type is.
 
 The exception is [`basmat.schema.json`](basmat.schema.json), which is written by
 hand because what it describes is not a Rust type at all: it is the IL2CPP
@@ -49,23 +50,24 @@ cargo run -p taarib-mustalahat --features mukhattatat --bin mukhattatat
 ```
 
 The binary resolves the workspace root from `CARGO_MANIFEST_DIR`, so it can be
-run from anywhere in the tree. It rewrites every file listed in `fahras.json`,
-prints one line per file, and writes nothing else. Run it after any change to a
-type in `taarib-mustalahat`, and commit the result in the same commit as the
-type change — a schema that lags its type by one commit is a schema that is
-wrong for one commit.
+run from anywhere in the tree. It rewrites every file listed in `fahras.json`
+and `fahras.json` itself, prints one line per file it wrote, and then sweeps:
+any `<type>.json` in this directory that no current type owns is deleted and
+reported with a `removed` line. Run it after any change to a type in
+`taarib-mustalahat`, and commit the result in the same commit as the type change
+— a schema that lags its type by one commit is a schema that is wrong for one
+commit.
 
-**Writes nothing else includes deletes nothing else.** Rename or remove a type
-and the generator stops writing its file; it does not remove the one already
-committed, and `fahras.json` stops mentioning it, so the stale file becomes
-invisible to the index and keeps answering at its `$id`. That is worse than a
-missing schema: `HalatTarjama` became `HalatMuraja`, gaining `tarjama_aaliya`
-and `marfuda` and losing `mujammada`, and for as long as `halat_tarjama.json`
-sat here it validated a state no build can read and rejected two that every
-current record uses. So a rename is a two-part change — regenerate, then delete
-the file the old name owned — and the check after regenerating is that the set
-of `.json` files here is exactly `fahras.json`'s entries plus `fahras.json`
-itself plus `basmat.schema.json`.
+**The sweep exists because a rename once published a lie.** `HalatTarjama`
+became `HalatMuraja`, gaining `tarjama_aaliya` and `marfuda` and losing
+`mujammada`, and an earlier generator that only wrote left `halat_tarjama.json`
+sitting here, invisible to the index and still answering at its `$id`,
+validating a state no build could read and rejecting two that every current
+record used. Deleting the orphan was a step a reviewer had to remember, so it is
+now `ihdhif_matruka` in the generator, run unconditionally. The check after
+regenerating is still worth doing by eye: the set of `.json` files here is
+exactly `fahras.json`'s entries plus `fahras.json` itself plus
+`basmat.schema.json`, which the sweep preserves by name.
 
 ## What the generator adds
 

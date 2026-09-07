@@ -201,11 +201,7 @@ impl Matjar for MatjarHeroic {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         };
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: Some(jidhr.clone()),
-            ..NatijatMatjar::default()
-        };
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, Some(jidhr.clone()));
 
         let idadat = idadat_al_alaab(&jidhr);
         jama_epic(&jidhr, &idadat, siyaq.nizam, &mut natija);
@@ -585,7 +581,7 @@ fn jama_epic(
         return;
     }
     let Some(qeema) = iqra_json(&masar) else {
-        natija.tanbihat.push(TanbihFahs::jadeed(
+        natija.tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             masar.display().to_string(),
             "legendary's installed-games file could not be read as JSON, so no Epic title \
@@ -594,7 +590,7 @@ fn jama_epic(
         return;
     };
     let Some(madakhil) = qeema.as_object() else {
-        natija.tanbihat.push(TanbihFahs::jadeed(
+        natija.tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             masar.display().to_string(),
             "legendary's installed-games file is not the object of app names this reader \
@@ -684,7 +680,7 @@ fn jama_gog(
         return;
     }
     let Some(qeema) = iqra_json(&masar) else {
-        natija.tanbihat.push(TanbihFahs::jadeed(
+        natija.tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             masar.display().to_string(),
             "Heroic's GOG installed-games file could not be read as JSON, so no GOG title \

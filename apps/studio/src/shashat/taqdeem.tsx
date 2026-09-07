@@ -19,6 +19,7 @@ import type {
   MusahamaHie,
   MusawwadaHie,
   NizamArqam,
+  QiyasTajawuzHie,
   SatrFahsHie,
   TalabJihazHie,
 } from '@/mustalahat/awamir';
@@ -82,6 +83,87 @@ function RamzIntizar(): JSX.Element {
   );
 }
 
+/** A check nobody could run: a question, drawn as neither a pass nor a failure. */
+function RamzMajhul(): JSX.Element {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeLinecap="round">
+      <path d="M5.7 6.2a2.3 2.3 0 1 1 3.3 2.1c-.7.4-1 .9-1 1.6M8 12.3v0.01" />
+    </svg>
+  );
+}
+
+/**
+ * The gate's four states as the row is coloured, plus one this screen draws
+ * for a pass the measurement does not back: the overflow check over a project
+ * in which nothing — or only part — was measured. It is not a warning the
+ * contributor can acknowledge and not a failure that blocks; it is a verdict
+ * that was never reached, and it must not wear the green check.
+ */
+type NawBand = 'najah' | 'khatar' | 'tanbeeh' | 'majhul';
+
+function nawBand(hala: string): NawBand {
+  switch (hala) {
+    case 'ijtaz':
+      return 'najah';
+    case 'rasab':
+      return 'khatar';
+    case 'ghayr_maqis':
+    case 'maqis_juzi':
+      return 'majhul';
+    default:
+      return 'tanbeeh';
+  }
+}
+
+/**
+ * The state's label. The four the gate mints keep their own keys; anything
+ * else is worded by the backend, which sends both languages, so a state this
+ * screen has never heard of is shown as what it is rather than as a guess.
+ */
+function wasmHala(satr: SatrFahsHie, lugha: Lugha): string {
+  switch (satr.hala) {
+    case 'ijtaz':
+      return t('taqdeem.fahs.ijtaz', lugha);
+    case 'rasab':
+      return t('taqdeem.fahs.rasab', lugha);
+    case 'muqarr':
+      return t('taqdeem.fahs.muqarr', lugha);
+    case 'yantazir_iqrar':
+      return t('taqdeem.fahs.yantazir', lugha);
+    default:
+      return lugha === 'arabi' ? satr.hala_arabi : satr.hala_injilizi;
+  }
+}
+
+interface KhasaisQiyas {
+  readonly qiyas: QiyasTajawuzHie;
+  readonly lugha: Lugha;
+  readonly munassiq: Munassiqat;
+}
+
+/** Why the overflow check could not be a verdict: every cause, with what resolves it. */
+function AsbabQiyas({ qiyas, lugha, munassiq }: KhasaisQiyas): JSX.Element | null {
+  if (qiyas.hala === 'kamil' || qiyas.asbab.length === 0) {
+    return null;
+  }
+  return (
+    <ul className="taqdeem__asbab-qiyas">
+      {qiyas.asbab.map((sabab) => {
+        const ilaj = lugha === 'arabi' ? sabab.ilaj_arabi : sabab.ilaj_injilizi;
+        return (
+          <li key={sabab.miftah} className="taqdeem__sabab-qiyas">
+            <span className="taqdeem__sabab-adad">{munassiq.raqm(sabab.adad)}</span>
+            <span className="taqdeem__sabab-jism">
+              <span>{lugha === 'arabi' ? sabab.wasf_arabi : sabab.wasf_injilizi}</span>
+              {ilaj !== '' ? <span className="taqdeem__sabab-ilaj">{ilaj}</span> : null}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 /** Where one wizard stage stands relative to the contributor's progress. */
 type HalatKhatwa = 'tamma' | 'haliya' | 'qadima';
 
@@ -126,16 +208,7 @@ interface KhasaisFahs {
 }
 
 function SaffFahs({ satr, muarrif, lugha, munassiq, yajri, alaIqrar }: KhasaisFahs): JSX.Element {
-  const naw =
-    satr.hala === 'ijtaz' ? 'najah' : satr.hala === 'rasab' ? 'khatar' : 'tanbeeh';
-  const miftahHala: MiftahLugha =
-    satr.hala === 'ijtaz'
-      ? 'taqdeem.fahs.ijtaz'
-      : satr.hala === 'rasab'
-        ? 'taqdeem.fahs.rasab'
-        : satr.hala === 'muqarr'
-          ? 'taqdeem.fahs.muqarr'
-          : 'taqdeem.fahs.yantazir';
+  const naw = nawBand(satr.hala);
   return (
     <li className={`taqdeem__band taqdeem__band--${naw}`}>
       <span className="taqdeem__band-ramz" aria-hidden="true">
@@ -143,16 +216,22 @@ function SaffFahs({ satr, muarrif, lugha, munassiq, yajri, alaIqrar }: KhasaisFa
           <RamzRafd />
         ) : satr.hala === 'yantazir_iqrar' ? (
           <RamzIntizar />
+        ) : naw === 'majhul' ? (
+          <RamzMajhul />
         ) : (
           <RamzSah />
         )}
       </span>
       <div className="taqdeem__band-jism">
         <p className="taqdeem__band-raas">
-          <span className="taqdeem__band-unwan">{satr.wasf_arabi}</span>
-          <span className="taqdeem__band-hala">{t(miftahHala, lugha)}</span>
+          <span className="taqdeem__band-unwan">
+            {lugha === 'arabi' ? satr.wasf_arabi : satr.wasf_injilizi}
+          </span>
+          <span className="taqdeem__band-hala">{wasmHala(satr, lugha)}</span>
         </p>
-        <p className="taqdeem__band-tafsil">{satr.tafsil_arabi}</p>
+        <p className="taqdeem__band-tafsil">
+          {lugha === 'arabi' ? satr.tafsil_arabi : satr.tafsil_injilizi}
+        </p>
         {satr.adad > 0 ? (
           <p className="taqdeem__band-nusus">
             {jam('taqdeem.fahs.nusus', lugha, satr.adad, munassiq)}
@@ -594,6 +673,7 @@ export function Taqdeem(): JSX.Element {
                       />
                     ))}
                   </ul>
+                  <AsbabQiyas qiyas={bayanat.qiyas_tajawuz} lugha={lugha} munassiq={munassiq} />
                   {iqrar.error !== null ? (
                     <KutlatKhata
                       unwan={t('luba.khata.amal', lugha)}

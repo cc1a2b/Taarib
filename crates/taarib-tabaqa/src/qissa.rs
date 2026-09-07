@@ -71,11 +71,12 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::nass::{SiyaqNass, TasnifNass};
+use taarib_usus::khata::Tafsir as _;
 
 use crate::iltiqat_shasha::{IdadatTahsin, MuhassinSura, MuqayyidMuadal, SuraMultaqata,
     basmat_mutawassit};
@@ -1206,13 +1207,102 @@ enum RisalatQissa {
     Tawaqquf,
 }
 
-/// The counters the render half can read without touching the worker.
+/// What the worker's most recent refusal was, kept beside the count.
+///
+/// A count alone cannot say whether it is looking at one noisy frame or at a
+/// recognizer that will never work again, and the two want opposite things
+/// from the user: nothing, and a two-minute language-pack install. So the
+/// refusal's identity survives, in both languages, and the terminal kind also
+/// closes the door — see [`KhaytQissa::adfa`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum HalatKhayt {
+    /// Every pass so far completed, or read nothing, which is ordinary.
+    #[default]
+    Salima,
+    /// The most recent refusal was one capture's; the next is worth posting.
+    Aabira {
+        /// The refusal, in English.
+        sabab: String,
+        /// The same, in Arabic.
+        sabab_arabi: String,
+    },
+    /// The recognizer is gone for the session, and no later capture changes
+    /// that. Captures are refused at the door until a re-read is asked for.
+    Mutawaqqifa {
+        /// The refusal, in English.
+        sabab: String,
+        /// The same, in Arabic.
+        sabab_arabi: String,
+    },
+}
+
+impl HalatKhayt {
+    /// Whether recognition has stopped for the session.
+    #[must_use]
+    pub const fn mutawaqqifa(&self) -> bool {
+        matches!(self, Self::Mutawaqqifa { .. })
+    }
+
+    /// The sentence the control panel shows, in English.
+    #[must_use]
+    pub fn wasf(&self) -> String {
+        match self {
+            Self::Salima => "every pass completed or read nothing".to_owned(),
+            Self::Aabira { sabab, .. } => {
+                format!("the most recent refusal was one capture's: {sabab}")
+            }
+            Self::Mutawaqqifa { sabab, .. } => format!(
+                "recognition has stopped for this session: {sabab}. Captures are refused until a \
+                 re-read is asked for"
+            ),
+        }
+    }
+
+    /// The same sentence, in Arabic.
+    #[must_use]
+    pub fn wasf_arabi(&self) -> String {
+        match self {
+            Self::Salima => "اكتملت كل الجولات أو لم تجد نصًا.".to_owned(),
+            Self::Aabira { sabab_arabi, .. } => {
+                format!("آخر رفض كان لالتقاطة واحدة: {sabab_arabi}")
+            }
+            Self::Mutawaqqifa { sabab_arabi, .. } => format!(
+                "توقّفت القراءة في هذه الجلسة: {sabab_arabi} تُرفض الالتقاطات حتى يُطلب إعادة \
+                 القراءة."
+            ),
+        }
+    }
+}
+
+/// What happened to one posted capture.
+///
+/// Three answers rather than a `bool`, because the two ways a capture does not
+/// reach the worker mean different things: dropped is "the worker is behind and
+/// this frame is stale", refused is "nothing will be read until somebody acts".
+/// A `false` that meant both would be the same integer this type replaces.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HalatDaf {
+    /// Queued for the worker.
+    Qubilat,
+    /// Dropped because the queue was full. Ordinary under load.
+    Turikat,
+    /// Refused at the door: recognition has stopped for the session.
+    Rufidat,
+}
+
+/// The counters and the last refusal, readable from the render half without
+/// touching the worker.
 #[derive(Debug, Default)]
 struct AdaadKhayt {
     mursala: AtomicU64,
     matruka: AtomicU64,
+    marfuda: AtomicU64,
     muaalaja: AtomicU64,
     akhta: AtomicU64,
+    /// Mirrors [`HalatKhayt::mutawaqqifa`] so the present path reads one
+    /// atomic rather than taking a lock.
+    mutawaqqif: AtomicBool,
+    hala: Mutex<HalatKhayt>,
 }
 
 /// The worker thread that runs everything off the presentation path.
@@ -1226,6 +1316,16 @@ struct AdaadKhayt {
 /// recognizing it produces a translation of a sentence the player has already
 /// read past. Dropping it is the honest behaviour, and
 /// [`KhaytQissa::matruka`] is the count that says how often it happened.
+///
+/// A refused pass keeps its identity. [`KhataTabaqa::yunhi_al_qiraa`] separates
+/// the refusal that ends the session — the recognizer is gone — from the one
+/// that ends a capture, and only the first closes the door: after it,
+/// [`KhaytQissa::adfa`] answers [`HalatDaf::Rufidat`] without queueing, the
+/// panel reads [`KhaytQissa::hala`] for the reason, and
+/// [`KhaytQissa::iqra_alan`] — the user's translate-now — is what reopens it.
+/// An overlay that retried a dead recognizer four times a second forever would
+/// show a blank panel and a climbing integer to a user whose fix was a
+/// language-pack install.
 #[derive(Debug)]
 pub struct KhaytQissa {
     mursil: std::sync::mpsc::SyncSender<RisalatQissa>,
@@ -1259,17 +1359,34 @@ impl KhaytQissa {
                                     let _ =
                                         adaad_khayt.muaalaja.fetch_add(1, Ordering::Relaxed);
                                 }
-                                Err(_) => {
-                                    // Counted here and described in the
-                                    // session's own trail. Nothing is printed:
-                                    // this runs inside somebody's game, where
-                                    // there is no console to print to.
-                                    let _ = adaad_khayt.akhta.fetch_add(1, Ordering::Relaxed);
+                                Err(khata) => {
+                                    // Kept and never printed: this runs inside
+                                    // somebody's game, where there is no
+                                    // console, and the panel reads it from here.
+                                    // The state lands before the count moves,
+                                    // so a reader that saw the count sees why.
+                                    let sabab_arabi = khata.arabi();
+                                    let sabab = khata.to_string();
+                                    if khata.yunhi_al_qiraa() {
+                                        *adaad_khayt.hala.lock() =
+                                            HalatKhayt::Mutawaqqifa { sabab, sabab_arabi };
+                                        adaad_khayt.mutawaqqif.store(true, Ordering::Release);
+                                    } else {
+                                        *adaad_khayt.hala.lock() =
+                                            HalatKhayt::Aabira { sabab, sabab_arabi };
+                                    }
+                                    let _ = adaad_khayt.akhta.fetch_add(1, Ordering::Release);
                                 }
                             }
                         }
                         RisalatQissa::Sath(sath) => qissa.sath_taghayyar(sath),
-                        RisalatQissa::IqraAlan => qissa.iqra_alan(),
+                        RisalatQissa::IqraAlan => {
+                            // The user's re-read is the one thing that reopens
+                            // a stopped session: the next pass either succeeds
+                            // or stops it again with a fresh reason.
+                            *adaad_khayt.hala.lock() = HalatKhayt::Salima;
+                            qissa.iqra_alan();
+                        }
                         RisalatQissa::Nisyan(mintaqa) => qissa.ansa_mintaqa(mintaqa),
                         RisalatQissa::Tawaqquf => break,
                     }
@@ -1289,11 +1406,14 @@ impl KhaytQissa {
         Arc::clone(&self.manshura)
     }
 
-    /// Posts a capture, or drops it when the worker is behind.
+    /// Posts a capture, drops it when the worker is behind, or refuses it when
+    /// recognition has stopped.
     ///
-    /// Returns whether it was accepted. Never blocks — this is called from
-    /// inside a present hook, and waiting for a worker there is exactly the
-    /// stall the whole split exists to avoid.
+    /// Never blocks — this is called from inside a present hook, and waiting
+    /// for a worker there is exactly the stall the whole split exists to
+    /// avoid. The refusal costs one atomic read and no allocation, which is
+    /// what makes a stopped session cheaper than a running one rather than a
+    /// running one that translates nothing.
     #[must_use]
     pub fn adfa(
         &self,
@@ -1302,7 +1422,11 @@ impl KhaytQissa {
         qaida: QaidatTarjama,
         lahza_mikro: u64,
         sura: SuraMultaqata,
-    ) -> bool {
+    ) -> HalatDaf {
+        if self.adaad.mutawaqqif.load(Ordering::Acquire) {
+            let _ = self.adaad.marfuda.fetch_add(1, Ordering::Relaxed);
+            return HalatDaf::Rufidat;
+        }
         let risala = RisalatQissa::Iltiqat {
             mintaqa,
             ism: ism.to_owned(),
@@ -1312,10 +1436,10 @@ impl KhaytQissa {
         };
         if self.mursil.try_send(risala).is_ok() {
             let _ = self.adaad.mursala.fetch_add(1, Ordering::Relaxed);
-            return true;
+            return HalatDaf::Qubilat;
         }
         let _ = self.adaad.matruka.fetch_add(1, Ordering::Relaxed);
-        false
+        HalatDaf::Turikat
     }
 
     /// Tells the worker the surface changed.
@@ -1323,9 +1447,16 @@ impl KhaytQissa {
         let _ = self.mursil.try_send(RisalatQissa::Sath(sath));
     }
 
-    /// Tells the worker to clear every picture gate.
+    /// Tells the worker to clear every picture gate, and reopens a stopped
+    /// session.
+    ///
+    /// The door is reopened only when the request reached the queue: a
+    /// re-read the worker never receives would leave the mirror and the
+    /// worker's own state disagreeing about whether the session is stopped.
     pub fn iqra_alan(&self) {
-        let _ = self.mursil.try_send(RisalatQissa::IqraAlan);
+        if self.mursil.try_send(RisalatQissa::IqraAlan).is_ok() {
+            self.adaad.mutawaqqif.store(false, Ordering::Release);
+        }
     }
 
     /// Tells the worker to forget one region.
@@ -1352,22 +1483,67 @@ impl KhaytQissa {
     }
 
     /// How many passes refused.
+    ///
+    /// Acquire, paired with the worker's release: a caller that reads this and
+    /// then [`KhaytQissa::hala`] sees the refusal the count is counting.
     #[must_use]
     pub fn akhta(&self) -> u64 {
-        self.adaad.akhta.load(Ordering::Relaxed)
+        self.adaad.akhta.load(Ordering::Acquire)
+    }
+
+    /// How many captures were refused at the door because recognition had
+    /// stopped.
+    #[must_use]
+    pub fn marfuda(&self) -> u64 {
+        self.adaad.marfuda.load(Ordering::Relaxed)
+    }
+
+    /// The most recent refusal, and whether it ended the session.
+    #[must_use]
+    pub fn hala(&self) -> HalatKhayt {
+        self.adaad.hala.lock().clone()
     }
 
     /// The sentence the control panel shows about the worker itself.
+    ///
+    /// The counts first, then which kind of refusal the last one was — the
+    /// integer without the sentence is the blank panel this type exists to
+    /// prevent.
     #[must_use]
     pub fn wasf(&self) -> String {
-        format!(
-            "{} capture(s) posted, {} dropped because the worker was behind, {} processed, {} \
-             refused",
+        let hala = self.hala();
+        let mut wasf = format!(
+            "{} capture(s) posted, {} dropped because the worker was behind, {} refused at the \
+             door, {} processed, {} refused",
             self.mursala(),
             self.matruka(),
+            self.marfuda(),
             self.muaalaja(),
             self.akhta()
-        )
+        );
+        if hala != HalatKhayt::Salima {
+            let _ = write!(wasf, "; {}", hala.wasf());
+        }
+        wasf
+    }
+
+    /// The same sentence, in Arabic.
+    #[must_use]
+    pub fn wasf_arabi(&self) -> String {
+        let hala = self.hala();
+        let mut wasf = format!(
+            "أُرسلت {} التقاطة، وأُسقطت {} لتأخّر العامل، ورُفضت {} عند الباب، وعولجت {}، \
+             ورُفضت {} أثناء المعالجة",
+            self.mursala(),
+            self.matruka(),
+            self.marfuda(),
+            self.muaalaja(),
+            self.akhta()
+        );
+        if hala != HalatKhayt::Salima {
+            let _ = write!(wasf, "؛ {}", hala.wasf_arabi());
+        }
+        wasf
     }
 
     /// Stops the worker and waits for it.

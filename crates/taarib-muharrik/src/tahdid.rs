@@ -517,7 +517,13 @@ const fn rutba(aila: AilatMuharrik) -> u8 {
         AilatMuharrik::GameMaker => 7,
         AilatMuharrik::Electron => 8,
         AilatMuharrik::Bio4 => 9,
-        AilatMuharrik::Majhul => 10,
+        AilatMuharrik::Frostbite => 10,
+        AilatMuharrik::BlackSpace => 11,
+        AilatMuharrik::Alchemy => 12,
+        AilatMuharrik::Dantelion => 13,
+        AilatMuharrik::Rage => 14,
+        AilatMuharrik::Snowdrop => 15,
+        AilatMuharrik::Majhul => 16,
     }
 }
 
@@ -793,7 +799,21 @@ const fn khalfiya_tunasib(aila: AilatMuharrik, khalfiya: KhalfiyaBarmajiya) -> b
         // So no neutral detector's reading is accepted for it, which is also
         // what stops a stray `mono-2.0-bdwgc` in a neighbouring library from
         // giving a 2005 Capcom binary a Mono backend.
-        AilatMuharrik::Bio4 => false,
+        //
+        // The six in-house engines beside it are excluded for exactly the same
+        // reason and it is worth stating once rather than six times: every one
+        // of them is compiled C++ with no scripting runtime under it, so there
+        // is no [`KhalfiyaBarmajiya`] value that would be true of them, and
+        // accepting a neutral detector's reading would let a stray runtime
+        // shipped in a neighbouring directory give a Frostbite or a RAGE game a
+        // Mono backend.
+        AilatMuharrik::Bio4
+        | AilatMuharrik::Frostbite
+        | AilatMuharrik::BlackSpace
+        | AilatMuharrik::Alchemy
+        | AilatMuharrik::Dantelion
+        | AilatMuharrik::Rage
+        | AilatMuharrik::Snowdrop => false,
         AilatMuharrik::Majhul => true,
     }
 }
@@ -817,6 +837,12 @@ const fn khalfiya_bunyawiya(aila: AilatMuharrik) -> Option<KhalfiyaBarmajiya> {
         AilatMuharrik::Unity
         | AilatMuharrik::Godot
         | AilatMuharrik::Bio4
+        | AilatMuharrik::Frostbite
+        | AilatMuharrik::BlackSpace
+        | AilatMuharrik::Alchemy
+        | AilatMuharrik::Dantelion
+        | AilatMuharrik::Rage
+        | AilatMuharrik::Snowdrop
         | AilatMuharrik::Majhul => None,
     }
 }

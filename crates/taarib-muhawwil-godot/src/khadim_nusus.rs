@@ -128,7 +128,8 @@ pub const MIFTAH_THAQAFA_IHTIYAT: &str = "internationalization/locale/fallback";
 ///
 /// A `PackedStringArray`. Additive in effect but not in syntax: the value
 /// replaces the whole list, so rung one writes the game's own entries back
-/// beside the patch's when it can see them, and the caller supplies them.
+/// beside the patch's — and writes the key **only** when the caller has read
+/// them. See [`TarjamatLuba`] for why "not read" is not an empty list.
 pub const MIFTAH_TARJAMAT: &str = "internationalization/locale/translations";
 
 /// The layout direction the root window starts in.
@@ -1204,8 +1205,10 @@ impl MalafTajawuz {
     ///
     /// Whatever [`MalafTajawuz::hala`] refuses; [`KhataGodot::ImtidadMarfud`]
     /// when a foreign override file is present, which closes this route without
-    /// closing the ladder; and [`KhataGodot::KhataMalaf`] when the write itself
-    /// fails.
+    /// closing the ladder, or when there are no entries to write — a rung that
+    /// wrote nothing has established nothing, and reporting it as written was
+    /// how "handed nothing" read as success; and [`KhataGodot::KhataMalaf`]
+    /// when the write itself fails.
     pub fn aktub(&self, madakhil: &[MadkhalIdad]) -> Result<(), KhataGodot> {
         self.aktub_bi(Lahja::Rabi, madakhil)
     }
@@ -1217,7 +1220,13 @@ impl MalafTajawuz {
     /// As [`MalafTajawuz::aktub`].
     pub fn aktub_bi(&self, lahja: Lahja, madakhil: &[MadkhalIdad]) -> Result<(), KhataGodot> {
         if madakhil.is_empty() {
-            return Ok(());
+            return Err(KhataGodot::ImtidadMarfud {
+                sabab: format!(
+                    "{} was not written: there were no settings to put in it, and a rung that \
+                     writes nothing establishes nothing",
+                    self.masar.display()
+                ),
+            });
         }
         let hala = self.hala()?;
         if !hala.qabil_lil_kitaba() {
@@ -1309,6 +1318,59 @@ pub fn wasm_mufaddal(matah: &[String]) -> String {
 }
 
 // ---------------------------------------------------------------------------
+// The game's own translation list
+// ---------------------------------------------------------------------------
+
+/// The game's own [`MIFTAH_TARJAMAT`] entries, as the caller found them.
+///
+/// Two states and no default, on purpose. The key replaces the whole list
+/// rather than adding to it, so a list written from a default nobody filled
+/// would take every language the game shipped with away in exchange for Arabic
+/// — and the first caller to forget a builder method would get exactly that by
+/// omission. So there is no builder method: the caller says at construction
+/// which of the two it has, and rung one writes the key only in the first case.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TarjamatLuba {
+    /// Read out of the game's packed settings. Empty means the game declares
+    /// none, which is a fact about the game and not the absence of one.
+    Maqrua(Vec<String>),
+    /// Not read, and why: an encrypted package, a `project.binary` this build
+    /// could not parse, a caller with no package in hand at all. Rung one
+    /// leaves the key alone, because writing it would replace a list nobody has
+    /// seen.
+    LamTuqra {
+        /// One sentence a user can act on.
+        sabab: String,
+    },
+}
+
+impl TarjamatLuba {
+    /// Whether the list was read, so the key may be written.
+    #[must_use]
+    pub const fn maqrua(&self) -> bool {
+        matches!(self, Self::Maqrua(_))
+    }
+
+    /// The entries, empty when the list was not read.
+    #[must_use]
+    pub fn madakhil(&self) -> &[String] {
+        match self {
+            Self::Maqrua(qaima) => qaima,
+            Self::LamTuqra { .. } => &[],
+        }
+    }
+
+    /// Why the list was not read, when it was not.
+    #[must_use]
+    pub fn sabab(&self) -> Option<&str> {
+        match self {
+            Self::Maqrua(_) => None,
+            Self::LamTuqra { sabab } => Some(sabab),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // The configuration
 // ---------------------------------------------------------------------------
 
@@ -1325,7 +1387,7 @@ pub struct KhadimNusus {
     anwa: Vec<MadkhalSima>,
     tarjama: Option<Vec<u8>>,
     masar_tarjama: String,
-    tarjamat_luba: Vec<String>,
+    tarjamat_luba: TarjamatLuba,
     wasm: String,
     jidhr: IttijahJidhr,
     nass: IttijahNass,
@@ -1334,13 +1396,15 @@ pub struct KhadimNusus {
 }
 
 impl KhadimNusus {
-    /// Builds the configuration against one game's override file.
+    /// Builds the configuration against one game's override file and the
+    /// game's own translation list.
     ///
     /// Defaults: the `ar` locale, the locale-driven root direction, automatic
     /// text direction, and the advanced text server forced on. No font, no
     /// theme entries and no translation until the caller supplies the patch's.
+    /// The translation list has no default — see [`TarjamatLuba`].
     #[must_use]
-    pub fn jadeed(tajawuz: MalafTajawuz) -> Self {
+    pub fn jadeed(tajawuz: MalafTajawuz, tarjamat_luba: TarjamatLuba) -> Self {
         Self {
             tajawuz,
             khatt: None,
@@ -1348,7 +1412,7 @@ impl KhadimNusus {
             anwa: Vec::new(),
             tarjama: None,
             masar_tarjama: MASAR_TARJAMA_RUQAA.to_owned(),
-            tarjamat_luba: Vec::new(),
+            tarjamat_luba,
             wasm: WASM_ARABI.to_owned(),
             jidhr: IttijahJidhr::Thaqafa,
             nass: IttijahNass::Tilqai,
@@ -1429,19 +1493,6 @@ impl KhadimNusus {
         self
     }
 
-    /// The game's own translation resources, so rung one keeps them.
-    ///
-    /// [`MIFTAH_TARJAMAT`] replaces the whole list rather than adding to it, so
-    /// an override that named only the patch's would delete every language the
-    /// game shipped with. The caller reads the game's list from its packed
-    /// settings and passes it here; an empty slice means "not known", and the
-    /// patch's entry is then the only one written.
-    #[must_use]
-    pub fn bi_tarjamat_luba(mut self, tarjamat: Vec<String>) -> Self {
-        self.tarjamat_luba = tarjamat;
-        self
-    }
-
     /// Overrides the locale tag — see [`wasm_mufaddal`].
     #[must_use]
     pub fn bi_wasm(mut self, wasm: impl Into<String>) -> Self {
@@ -1498,26 +1549,52 @@ impl KhadimNusus {
         &self.tajawuz
     }
 
-    /// The translation list rung one writes: the game's own, then the patch's.
+    /// The game's own translation list, as it was supplied.
+    #[must_use]
+    pub const fn tarjamat_luba(&self) -> &TarjamatLuba {
+        &self.tarjamat_luba
+    }
+
+    /// The translation list rung one writes — the game's own, then the
+    /// patch's — or [`None`] when the game's own was never read.
     ///
     /// The game's entries come first because [`MIFTAH_TARJAMAT`] replaces the
     /// list rather than extending it, and a game that lost its own languages
-    /// because it gained Arabic is a worse patch than no patch.
+    /// because it gained Arabic is a worse patch than no patch. [`None`] rather
+    /// than a shorter list for the same reason: a list nobody read cannot be
+    /// written back, so the key is not written at all.
     #[must_use]
-    pub fn qaimat_tarjamat(&self) -> Vec<String> {
-        let mut qaima = self.tarjamat_luba.clone();
+    pub fn qaimat_tarjamat(&self) -> Option<Vec<String>> {
+        let TarjamatLuba::Maqrua(luba) = &self.tarjamat_luba else {
+            return None;
+        };
+        let mut qaima = luba.clone();
         if self.tarjama.is_some() && !qaima.iter().any(|masar| masar == &self.masar_tarjama) {
             qaima.push(self.masar_tarjama.clone());
         }
-        qaima
+        Some(qaima)
+    }
+
+    /// What rung one has to say about the translation list when it left the
+    /// key alone, or nothing when it did not.
+    fn mulahazat_tarjamat(&self) -> String {
+        match self.tarjamat_luba.sabab() {
+            Some(sabab) if self.tarjama.is_some() => format!(
+                "; {MIFTAH_TARJAMAT} was left unwritten because the game's own list was not \
+                 read ({sabab}) and the key replaces the whole list, so the patch's translation \
+                 reaches the engine only through the extension"
+            ),
+            _ => String::new(),
+        }
     }
 
     /// The project settings this configuration owns, in write order.
     #[must_use]
     pub fn madakhil(&self) -> Vec<MadkhalIdad> {
         let mut madakhil = Vec::with_capacity(6);
-        let tarjamat = self.qaimat_tarjamat();
-        if !tarjamat.is_empty() {
+        if let Some(tarjamat) = self.qaimat_tarjamat()
+            && !tarjamat.is_empty()
+        {
             madakhil.push(MadkhalIdad::jadeed(MIFTAH_TARJAMAT, QeemaIdad::Qaima(tarjamat)));
         }
         if !self.wasm.trim().is_empty() {
@@ -1804,7 +1881,7 @@ impl KhadimNusus {
                 natija.thaqafa.sajjil(
                     Rutba::Idadat,
                     false,
-                    format!("{mulahaza} (locale {})", self.wasm),
+                    format!("{mulahaza} (locale {}){}", self.wasm, self.mulahazat_tarjamat()),
                 );
                 true
             }

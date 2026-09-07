@@ -381,11 +381,7 @@ impl Matjar for MatjarPlaynite {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         };
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: Some(jidhr.masar.clone()),
-            ..NatijatMatjar::default()
-        };
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, Some(jidhr.masar.clone()));
 
         let maktaba = iqra_maktaba(&jidhr.masar);
         natija.tanbihat.extend(maktaba.tanbihat.iter().cloned());
@@ -407,7 +403,10 @@ impl Matjar for MatjarPlaynite {
             }
         }
 
-        natija.tanbihat.push(TanbihFahs::jadeed(
+        // Catalogue-level by the header's own admission: the game list is a
+        // database this build does not read, so a Playnite entry missing from
+        // this result is never evidence that it is gone.
+        natija.tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             jidhr.masar.join(MUJALLAD_MAKTABA).display().to_string(),
             tanbih_qaida(&maktaba, &jidhr, natija.alaab.len(), ghayr_muthabbata),
@@ -665,7 +664,7 @@ pub fn iqra_maktaba(jidhr: &Path) -> MaktabatPlaynite {
     if let Some(muhaddad) = idadat.masar_qaida.as_ref()
         && !muhaddad.is_dir()
     {
-        tanbihat.push(TanbihFahs::jadeed(
+        tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             muhaddad.display().to_string(),
             "Playnite's config.json points DatabasePath at this directory and it is not there, \
@@ -1013,7 +1012,7 @@ fn sijillat_min_tasdir(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<Siji
         return Vec::new();
     }
     let Some(qeema) = iqra_json(&masar) else {
-        tanbihat.push(TanbihFahs::jadeed(
+        tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             masar.display().to_string(),
             "this export could not be read as JSON, or is larger than this build will load. \
@@ -1024,7 +1023,7 @@ fn sijillat_min_tasdir(jidhr: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<Siji
 
     let sijillat = sijillat_min_qeema(&qeema, &masar.display().to_string(), tanbihat);
     if sijillat.is_empty() {
-        tanbihat.push(TanbihFahs::jadeed(
+        tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             masar.display().to_string(),
             "this export parsed as JSON but held no records with both an Id and a name, so \

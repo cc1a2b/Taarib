@@ -78,6 +78,24 @@ impl Mustakhrij {
             | AilatMuharrik::GameMaker
             | AilatMuharrik::Electron => Self::Nusus,
             AilatMuharrik::Bio4 => Self::Qamus,
+            // Six in-house engines this build can name and cannot open. The
+            // refusal is deliberately worded differently from the unknown
+            // family's below: the engine *was* identified, so telling the user
+            // it was not would be false, and what is actually missing is a
+            // reader for the containers it keeps its text in.
+            AilatMuharrik::Frostbite
+            | AilatMuharrik::BlackSpace
+            | AilatMuharrik::Alchemy
+            | AilatMuharrik::Dantelion
+            | AilatMuharrik::Rage
+            | AilatMuharrik::Snowdrop => Self::LaShay {
+                sabab_arabi: "تعرَّف تعريب على محرّك هذه اللعبة، لكنه محرّك داخلي يحفظ نصوصه \
+                              في صيغ لا يقرؤها أي مستخرج في هذا الإصدار. يمكن التقاط النصوص \
+                              أثناء اللعب بدلًا من ذلك.",
+                sabab_injilizi: "Taarib identified this game's engine, but it is an in-house \
+                                 engine that keeps its text in formats no extractor in this \
+                                 build reads. Capturing text while you play works instead.",
+            },
             AilatMuharrik::Majhul => Self::LaShay {
                 sabab_arabi: "لم يُتعرَّف على محرّك هذه اللعبة، ولا يمكن اختيار طريقة استخراج \
                               بدون معرفته. يمكن التقاط النصوص أثناء اللعب بدلًا من ذلك.",

@@ -413,14 +413,14 @@ fn maqbul(muashir: *const c_void) -> bool {
 // Platform: Windows
 // ---------------------------------------------------------------------------
 
-/// The Windows loader entry points, declared rather than imported.
-///
-/// The `windows` crate is a dependency of this crate and is deliberately not
-/// used here. Three symbols with signatures fixed since Windows NT 3.1 do not
-/// need a binding generator, and declaring them keeps this module's two platform
-/// paths the same shape — a `dlopen`/`dlsym` pair on one side and a
-/// `LoadLibrary`/`GetProcAddress` pair on the other — which is what makes the
-/// resolution *order* readable as one idea instead of two.
+// The Windows loader entry points, declared rather than imported.
+//
+// The `windows` crate is a dependency of this crate and is deliberately not
+// used here. Three symbols with signatures fixed since Windows NT 3.1 do not
+// need a binding generator, and declaring them keeps this module's two platform
+// paths the same shape — a `dlopen`/`dlsym` pair on one side and a
+// `LoadLibrary`/`GetProcAddress` pair on the other — which is what makes the
+// resolution *order* readable as one idea instead of two.
 #[cfg(windows)]
 unsafe extern "system" {
     /// `GetModuleHandleA`, which finds a module the process already loaded.

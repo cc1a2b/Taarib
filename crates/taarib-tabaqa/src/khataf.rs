@@ -287,17 +287,6 @@ pub fn nafidha_muaqqata() -> Result<NafidhaMuaqqata, KhataTabaqa> {
     };
     use windows::core::PCWSTR;
 
-    let mut ism: Vec<u16> = "TaaribTabaqaMuaqqata\0".encode_utf16().collect();
-
-    // SAFETY: `GetModuleHandleW(None)` returns the handle of the calling
-    // process's own image and cannot fail for the null argument.
-    let wahda = unsafe { GetModuleHandleW(PCWSTR::null()) }.map_err(|khata| {
-        KhataTabaqa::JadwalGhayrMawjud {
-            wajiha: "IDXGISwapChain".to_owned(),
-            sabab: format!("the module handle could not be obtained: {khata}"),
-        }
-    })?;
-
     // The window procedure has to be a bare `extern "system"` pointer, and the
     // binding for `DefWindowProcW` is a safe-ish Rust wrapper around the real
     // import rather than the import itself, so it cannot be handed over as one.
@@ -314,6 +303,17 @@ pub fn nafidha_muaqqata() -> Result<NafidhaMuaqqata, KhataTabaqa> {
         // straight back to the handler it would otherwise have reached.
         unsafe { DefWindowProcW(nafidha, risala, wparam, lparam) }
     }
+
+    let mut ism: Vec<u16> = "TaaribTabaqaMuaqqata\0".encode_utf16().collect();
+
+    // SAFETY: `GetModuleHandleW(None)` returns the handle of the calling
+    // process's own image and cannot fail for the null argument.
+    let wahda = unsafe { GetModuleHandleW(PCWSTR::null()) }.map_err(|khata| {
+        KhataTabaqa::JadwalGhayrMawjud {
+            wajiha: "IDXGISwapChain".to_owned(),
+            sabab: format!("the module handle could not be obtained: {khata}"),
+        }
+    })?;
 
     let sanf_wasf = WNDCLASSEXW {
         cbSize: size_of_u32::<WNDCLASSEXW>(),

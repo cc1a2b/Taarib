@@ -165,14 +165,23 @@ that uses a few hundred. Note that the Arabic Presentation Forms blocks are
 themselves listed there as something a naive range enumeration would sweep in —
 so even the accidental route to a presentation form is closed.
 
-**Presentation forms are read in exactly one place, to destroy them.**
+**Presentation forms are transformed in exactly one place, to destroy them.**
 `lugha::hall_ashkal_taqdimiya` in `crates/taarib-saff/src/lugha.rs` is the only
-function in the product that looks at U+FB50–U+FDFF or U+FE70–U+FEFF. It exists
-because translators paste text from legacy tools and what they paste *looks*
-like Arabic. It decomposes those characters back to canonical form immediately,
-through `icu_normalizer`'s NFKD restricted to those two blocks, then recomposes
-with NFC. Canonical characters are what leaves. Nothing writes back into those
-blocks anywhere.
+function in the product that *maps* U+FB50–U+FDFF or U+FE70–U+FEFF to anything.
+It exists because translators paste text from legacy tools and what they paste
+*looks* like Arabic. It decomposes those characters back to canonical form
+immediately, through `icu_normalizer`'s NFKD restricted to those two blocks,
+then recomposes with NFC. Canonical characters are what leaves. Nothing writes
+back into those blocks anywhere.
+
+A handful of other places *look at* the two ranges, and all of them look in
+order to refuse or to warn: the Godot and Unreal adapters and the translation
+pipeline's glossary and placeholder guards test for a presentation form and
+report it, and the write-side tests assert that no output ever contains one.
+Those are detectors, not producers, and the thesis of this document is about
+production. (The comment in `lugha.rs` that calls itself "the one place in the
+entire product that reads" those blocks overstates it in the same way this
+paragraph once did.)
 
 The restriction matters: NFKD over the whole string would also flatten
 superscripts, fullwidth Latin, and every other compatibility character present —

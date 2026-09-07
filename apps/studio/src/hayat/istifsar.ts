@@ -70,6 +70,18 @@ export const mafatih = {
   ruqaa: (muarrif: string) => ['ruqaa', muarrif] as const,
   /** Whether one game's executable is running. */
   tashghil: (muarrif: string) => ['tashghil', muarrif] as const,
+  /**
+   * What installing into one game would write, and what else is already in it.
+   *
+   * The installer's own plan, not a summary of it, so it is cached under a key
+   * of its own rather than folded into `tafasil`: it costs a walk of the game
+   * directory and it is asked for at the moment the decision is made, not on
+   * every visit to the screen.
+   */
+  khutta: (muarrif: string) => ['khutta', muarrif] as const,
+  /** What removing one game's installations would restore, delete and leave. */
+  khuttat_izala: (muarrif: string, matlab: string) =>
+    ['khuttat_izala', muarrif, matlab] as const,
   /** Where the first-run acknowledgement stands. */
   iqrar: ['iqrar'] as const,
   /** The whole workspace table for one project. */

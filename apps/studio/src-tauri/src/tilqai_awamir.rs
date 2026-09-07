@@ -12,7 +12,7 @@ use taarib_aman::kashf_himaya::{
 };
 use taarib_aman::kashf_shabaka::{ifhas_shabaka_bi_qiraa, mutaaddid};
 use taarib_aman::matjar::QiraatMatjar;
-use taarib_aman::qaimat_sahb::QaimatSahb;
+use taarib_aman::qaimat_sahb::QaimaMuraqaba;
 use taarib_istikhraj::rafd::TaqreerRafd;
 use taarib_kashf::fahs::SimatLuba;
 use taarib_khatm::MiftahKhass;
@@ -40,6 +40,7 @@ use taarib_usus::ISDAR;
 use tauri::Emitter as _;
 
 use crate::luba_awamir::{appid_steam, huwiya, ijlib_luba, simat_luba, taqreer_luba};
+use crate::tathbeet_awamir::{HalatSahbHie, iqra_qaimat_sahb, sahb_hie};
 use crate::warsha_awamir::{
     bin_muzawwid, dolar, lahza_alaan, muzawwid_muntakhab, nano_min_dolar,
 };
@@ -250,6 +251,10 @@ pub struct HukmTilqaiHie {
     pub yalzam_iqrar_shabaka: bool,
     /// What it has cost so far and what it may cost.
     pub takalif: TakalifHie,
+    /// The revocation list as this machine holds it right now, and where it
+    /// stands, so the screen can say before the button whether the registry
+    /// has confirmed it. The run refreshes it again before spending.
+    pub sahb: HalatSahbHie,
     /// The cover's absolute path, when the artwork cache holds one.
     pub ghilaf: Option<String>,
 }
@@ -279,6 +284,11 @@ pub struct LaqtatTilqaiHie {
     pub khata: Option<KhataTilqaiHie>,
     /// Whether anything has been written into the game yet.
     pub muthabbata: bool,
+    /// The revocation list the run's gate checks against, and where it stood
+    /// the last time this run read it: as the door found the cache, then as
+    /// the run's own refresh left it. Absent only for a snapshot read back from
+    /// disk, which records stages and not what the registry said.
+    pub sahb: Option<HalatSahbHie>,
     /// When the run last moved, RFC 3339.
     pub waqt: String,
 }
@@ -365,6 +375,11 @@ pub fn hukm_tilqai(
     makhzan: tauri::State<'_, Makhzan>,
     idadat: tauri::State<'_, Arc<MakhzanIdadat>>,
 ) -> Result<HukmTilqaiHie, Khata> {
+    // One of the entry points that starts the background refresh, so a session
+    // spent entirely on this screen still keeps the revocation list current.
+    // In the wrapper rather than in `hukm`, so nothing driving that function
+    // directly — every test in this file — starts a loop.
+    crate::tathbeet_awamir::dhamin_mujaddid_sahb(&masarat, &idadat);
     hukm(muarrif, &masarat, &makhzan, &idadat)
 }
 
@@ -409,19 +424,12 @@ pub(crate) fn hukm(
         hudud_arabi.push(naqs.arabi.clone());
         hudud_injilizi.push(naqs.injilizi.clone());
     }
+    // No sentence here about a missing provider. The core answers that
+    // question through `taarib_aql::NawMani::LaMuzawwid`, whose four states
+    // include the one a local sentence could not express — a chosen default
+    // switched off while another provider is silently the one billed — and
+    // the screen reads it from `aql_luba` like every other blocker.
     let tarif = muzawwid_muntakhab(&hali);
-    if tarif.is_err() {
-        hudud_arabi.push(
-            "لا يوجد مزوّد ترجمة آلية مفعّل على هذا الجهاز، والتعريب التلقائي لا يبدأ بدونه. \
-             أضف مزوّدًا من الإعدادات ← المزوّدون."
-                .to_owned(),
-        );
-        hudud_injilizi.push(
-            "No machine-translation provider is enabled on this machine, and an automatic run \
-             cannot start without one. Add one in Settings, under Providers."
-                .to_owned(),
-        );
-    }
     let saqf = tarif
         .as_ref()
         .ok()
@@ -452,6 +460,16 @@ pub(crate) fn hukm(
         ));
     }
 
+    // The registry's word on what is withdrawn, as the cache holds it. The run
+    // refreshes it before spending; a registry that is answering and
+    // withholding its list is named here so the button is not the first to
+    // say so.
+    let sahb = iqra_qaimat_sahb(masarat, &hali)?;
+    if let Some(rafd) = sahb.rafd() {
+        hudud_arabi.push(rafd.arabi());
+        hudud_injilizi.push(rafd.injilizi());
+    }
+
     let hukm = HukmTilqaiHie {
         muarrif: id.to_string(),
         ism: luba.ism.clone(),
@@ -465,6 +483,7 @@ pub(crate) fn hukm(
         hudud_injilizi,
         nusus_taqribi,
         yalzam_iqrar_shabaka: yalzam_iqrar_shabaka(&simat),
+        sahb: sahb_hie(&sahb),
         takalif: TakalifHie {
             munfaq: dolar(munfaq),
             saqf,
@@ -793,6 +812,9 @@ fn laqta_min_qurs(masarat: &Masarat, hali: &Idadat, id: LubaId) -> Option<Laqtat
         takalif: takalif_hie(munfaq, hali),
         khata: None,
         muthabbata: tammat,
+        // The journal records stages, not what the registry said; a resumed
+        // run reads the list again at its door and says so then.
+        sahb: None,
         waqt: mawjuz.waqt,
     })
 }
@@ -1183,6 +1205,7 @@ pub(crate) fn ibda(
         },
         khata: None,
         muthabbata: false,
+        sahb: Some(sahb_hie(&mudkhalat.qaima)),
         waqt: waqt_alaan(),
     };
     let hay = Arc::new(MashwarHay {
@@ -1393,8 +1416,13 @@ struct MudkhalatMashwar {
     khutut: Vec<PathBuf>,
     /// What the finished patch declares.
     wasf: WasfTilqai,
-    /// The verified revocation list.
-    qaima: QaimatSahb,
+    /// The verified revocation list beside where it stands, as the door read
+    /// it; [`shaghghil`] refreshes and re-reads it before the first stage.
+    qaima: QaimaMuraqaba,
+    /// The data root, for that refresh.
+    masarat: Masarat,
+    /// The settings the run started under, for the same.
+    hali: Arc<Idadat>,
     /// The first-run acknowledgement, when one was given.
     iqrar: Option<SijillIqrar>,
     /// The user's own answer to the multiplayer warning, carried to the install
@@ -1507,7 +1535,9 @@ fn jahhiz(
         // identity so a diagnostics bundle still says which client this was.
         hawiya: taarib_khatm::MIRSAT_MALIK.hawiya,
     };
-    let qaima = crate::tathbeet_awamir::qaimat_sahb()?;
+    // The cache as the door finds it, refused here for the one thing it
+    // refuses on; the run refreshes it before the first paid batch.
+    let qaima = crate::tathbeet_awamir::qaimat_sahb_lil_bawwaba(masarat, &hali)?;
     let iqrar = iqrar::iqra(&crate::tathbeet_awamir::masar_iqrar(masarat))?;
 
     let waqt = waqt_alaan();
@@ -1539,6 +1569,8 @@ fn jahhiz(
             isdar_taarib: ISDAR.to_owned(),
         },
         qaima,
+        masarat: masarat.clone(),
+        hali: Arc::clone(&hali),
         iqrar,
         iqrar_shabaka,
         appid: appid_steam(&luba),
@@ -1606,7 +1638,32 @@ fn khutut_arabiya(masarat: &Masarat, hali: &Idadat) -> Vec<PathBuf> {
 // ---------------------------------------------------------------------------
 
 /// Drives one run to its end and publishes every snapshot it produces.
-async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mudkhalat: MudkhalatMashwar) {
+async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mut mudkhalat: MudkhalatMashwar) {
+    // The moment before the money: the registry's current word on what is
+    // withdrawn, fetched here because this task may wait for a network and the
+    // command that started it may not. The door read the cache; this re-reads
+    // it after the fetch, and a registry that answers and withholds its list
+    // stops the run before the first string is sent.
+    let _ = crate::tathbeet_awamir::jaddid_sahb(&mudkhalat.masarat, &mudkhalat.hali).await;
+    match iqra_qaimat_sahb(&mudkhalat.masarat, &mudkhalat.hali) {
+        Ok(qaima) => {
+            if let Some(rafd) = qaima.rafd() {
+                let khata = Khata::min_tafsir(&KhataTilqaiAmr::QaimatSahbMahjuba {
+                    masdar: rafd.masdar.clone(),
+                    sabab: rafd.sabab.clone(),
+                    waqt: rafd.waqt.to_string(),
+                });
+                awqif_qabl_al_bidaya(&mudhee, &hay, &khata, Some(sahb_hie(&qaima)));
+                return;
+            }
+            mudkhalat.qaima = qaima;
+        }
+        Err(khata) => {
+            awqif_qabl_al_bidaya(&mudhee, &hay, &khata, None);
+            return;
+        }
+    }
+
     let mukhbir = {
         let hay = Arc::clone(&hay);
         let mudhee = Arc::clone(&mudhee);
@@ -1653,7 +1710,7 @@ async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mudkhalat: Mudkhal
         wasf: mudkhalat.wasf.clone(),
         aman: MudkhalatAman {
             mirsa: &mudkhalat.mirsa,
-            qaima: &mudkhalat.qaima,
+            qaima: mudkhalat.qaima.qaima(),
             iqrar: mudkhalat.iqrar.as_ref(),
             appid: mudkhalat.appid,
             jidhr_steam: mudkhalat.jidhr_steam.as_deref(),
@@ -1692,6 +1749,40 @@ async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mudkhalat: Mudkhal
         hala.laqta = laqta.clone();
         hala.akhir_bath = Some(Instant::now());
     }
+    mudhee(&laqta);
+}
+
+/// Ends a run that was refused before its first stage, on the snapshot the
+/// door published: the first row fails, the failure is named, and nothing was
+/// spent or written.
+fn awqif_qabl_al_bidaya(
+    mudhee: &MudheeLaqta,
+    hay: &MashwarHay,
+    khata: &Khata,
+    sahb: Option<HalatSahbHie>,
+) {
+    let laqta = {
+        let mut hala = hay.hala.lock();
+        hala.laqta.wad = WadTilqaiHie::Fashal;
+        hala.laqta.khata = Some(KhataTilqaiHie {
+            ramz: khata.ramz.to_string(),
+            arabi: khata.arabi.clone(),
+            injilizi: khata.injilizi.clone(),
+        });
+        if let Some(saf) = hala.laqta.marahil.first_mut() {
+            saf.hala = HalatMarhalaHie::Fashilat;
+        }
+        if sahb.is_some() {
+            hala.laqta.sahb = sahb;
+        }
+        hala.laqta.waqt = waqt_alaan();
+        hala.akhir_bath = Some(Instant::now());
+        hala.laqta.clone()
+    };
+    tracing::warn!(
+        khata = %khata.li_sijill(),
+        "the automatic run stopped before its first stage"
+    );
     mudhee(&laqta);
 }
 
@@ -1827,6 +1918,7 @@ fn laqta_min_natija(
             umla: UMLA.to_owned(),
         },
         khata: natija.khata.as_ref().map(khata_hie),
+        sahb: Some(sahb_hie(&mudkhalat.qaima)),
         // A reversed install wrote nothing that survived it, so the game is
         // exactly as it was and the screen's cancel wording must say so.
         muthabbata: taqreer
@@ -2009,6 +2101,25 @@ pub enum KhataTilqaiAmr {
         /// The same, in English.
         wasf_injilizi: String,
     },
+
+    /// The registry is answering and its revocation list is not.
+    ///
+    /// The manual path's `9031`, raised here at the start of the run — after
+    /// the door, before the first paid batch — from the refresh the run itself
+    /// makes. An unreachable registry never raises it: an offline machine runs
+    /// against its local copy with the list's state said out loud. A registry
+    /// that serves its manifest and withholds the one document able to withdraw
+    /// a patch is refused, because on a machine that can ask, "we could not
+    /// check" must not become "nothing is revoked".
+    #[error("the registry {masdar} answered and did not serve its revocation list: {sabab}")]
+    QaimatSahbMahjuba {
+        /// The source that answered the manifest.
+        masdar: String,
+        /// Why no list was accepted.
+        sabab: String,
+        /// When that attempt was made, RFC 3339.
+        waqt: String,
+    },
 }
 
 impl Tafsir for KhataTilqaiAmr {
@@ -2026,10 +2137,21 @@ impl Tafsir for KhataTilqaiAmr {
                     Self::HimayaMuktashafa { .. } => 127,
                     Self::FahsHimayaLamYajri { .. } => 128,
                     Self::ShabakaBilaIqrar { .. } => 129,
+                    // 130 to 136 belong to the sharing surface, so the twin of
+                    // the manual path's `9031` takes the first free number
+                    // after them.
+                    Self::QaimatSahbMahjuba { .. } => 137,
                 },
         )
     }
 
+    #[expect(
+        clippy::match_same_arms,
+        reason = "a severity is shared by refusals that have nothing else in common — an \
+                  anti-cheat detection and a registry withholding its revocation list are both \
+                  `Tanbeeh` for unrelated reasons, and merging them would attach one comment to \
+                  two facts and let a change to either move the other"
+    )]
     fn khutura(&self) -> Khutura {
         match self {
             // Neither is a fault: one is the product refusing to run twice over
@@ -2050,6 +2172,9 @@ impl Tafsir for KhataTilqaiAmr {
             // routine: one names anti-cheat evidence, the other names a check
             // that could not be completed and must not be read as a pass.
             Self::HimayaMuktashafa { .. } | Self::FahsHimayaLamYajri { .. } => Khutura::Tanbeeh,
+            // A check that could not be completed and must not be read as a
+            // pass — about the registry rather than the account.
+            Self::QaimatSahbMahjuba { .. } => Khutura::Tanbeeh,
         }
     }
 
@@ -2104,6 +2229,12 @@ impl Tafsir for KhataTilqaiAmr {
                 "هذه لعبة متعدّدة اللاعبين، ويلزم إقرارك بمخاطر التعديل قبل أن تبدأ الجولة. \
                  تعديل لعبة تُلعب مع آخرين قد يُفقدك حسابك أو يمنعك من الخوادم، والقرار \
                  قرارك وحدك. لم يُنفَق شيء بعد.\n{wasf_arabi}"
+            ),
+            Self::QaimatSahbMahjuba { masdar, sabab, waqt } => format!(
+                "أجاب المستودع ({masdar}) في {waqt} لكنّه لم يقدّم قائمة الإبطال ({sabab})، \
+                 فلم تبدأ الجولة ولم يُنفَق شيء. ما دام المستودع يجيب فلا تُثبَّت رقعة قبل \
+                 قراءة قائمته، لأنّ الرقعة التي سُحبت لا تُعرف إلا منها. أعد المحاولة بعد \
+                 قليل؛ وإن كان المصدر مجلّدًا محليًا فتأكّد من أنّ ملف القائمة موجود فيه."
             ),
         }
     }
@@ -2165,6 +2296,13 @@ impl Tafsir for KhataTilqaiAmr {
                  your account or your access to its servers, and that decision is yours alone. \
                  Nothing has been spent.\n{wasf_injilizi}"
             ),
+            Self::QaimatSahbMahjuba { masdar, sabab, waqt } => format!(
+                "The registry ({masdar}) answered at {waqt} but did not serve its revocation \
+                 list ({sabab}), so the run did not start and nothing was spent. While the \
+                 registry is reachable no patch is installed until its list can be read, \
+                 because a withdrawn patch is known only from it. Try again shortly; if the \
+                 source is a local folder, make sure the list file is in it."
+            ),
         }
     }
 
@@ -2200,6 +2338,9 @@ impl Tafsir for KhataTilqaiAmr {
             Self::FahsHimayaLamYajri { .. } => Khutwa::FathIdadat {
                 qism: QismIdadat::Manassat,
             },
+            // Lifted by the next refresh that finds the list, which the next
+            // press runs; nothing on this machine is wrong.
+            Self::QaimatSahbMahjuba { .. } => Khutwa::AadaMuhawala,
         }
     }
 
@@ -2236,6 +2377,11 @@ impl Tafsir for KhataTilqaiAmr {
                 let _ = siyaq.insert("shabaka".to_owned(), QeemaSiyaq::Nass(wasf_injilizi.clone()));
             },
             Self::LaKhattArabi => {},
+            Self::QaimatSahbMahjuba { masdar, sabab, waqt } => {
+                let _ = siyaq.insert("masdar".to_owned(), QeemaSiyaq::Nass(masdar.clone()));
+                let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
+                let _ = siyaq.insert("waqt".to_owned(), QeemaSiyaq::Nass(waqt.clone()));
+            },
         }
         siyaq
     }
@@ -2295,6 +2441,10 @@ mod ikhtibarat {
 
     /// The door's multiplayer refusal, which the acknowledgement lifts.
     const RAMZ_SHABAKA: u16 = arqam::STUDIO + 129;
+
+    /// The run's refusal when the registry answers and withholds its
+    /// revocation list — the twin of the manual path's `9031`.
+    const RAMZ_SAHB_MAHJUBA: u16 = arqam::STUDIO + 137;
 
     /// A Steam application identifier no real catalogue can hold.
     ///
@@ -2446,10 +2596,12 @@ mod ikhtibarat {
         }
         makhzan.bi_muamala(|muamala| SijillMuharrik::jadeed(muamala).sajjil(id, &taqreer, None))?;
 
-        let idadat = Arc::new(MakhzanIdadat::min_qeema(
-            masarat.malaf_idadat(),
-            Idadat::default(),
-        ));
+        // Offline, with no local copy: the run's first step refreshes the
+        // revocation list from whatever sources the settings name, and a test
+        // must never reach the real forge.
+        let mut qeema = Idadat::default();
+        qeema.masadir.wadaa_ghayr_muttasil = true;
+        let idadat = Arc::new(MakhzanIdadat::min_qeema(masarat.malaf_idadat(), qeema));
         Ok(Masrah {
             masarat,
             makhzan,
@@ -2909,6 +3061,43 @@ mod ikhtibarat {
         Ok(())
     }
 
+    /// Whether a sentence carries any Arabic script at all.
+    ///
+    /// Local to this module, as the same predicate is in `luba_awamir` and
+    /// `tathbeet_awamir`: each is a private `#[cfg(test)]` module, and a shared
+    /// one would have to be a non-test item compiled into the shipping binary.
+    fn fiha_arabi(nass: &str) -> bool {
+        nass.chars().any(|harf| matches!(harf, '\u{0600}'..='\u{06ff}' | '\u{0750}'..='\u{077f}'))
+    }
+
+    /// The withheld-list refusal carries its own code, its own remedy and both
+    /// languages, and shares neither with the run's other refusals.
+    #[test]
+    fn rafd_al_sahb_lahu_ramz_wa_makhraj_yakhussanihi() {
+        let khata = Khata::min_tafsir(&KhataTilqaiAmr::QaimatSahbMahjuba {
+            masdar: "forge https://example.invalid".to_owned(),
+            sabab: "sahb/qaima.json answered 404".to_owned(),
+            waqt: "2026-09-06T12:00:00Z".to_owned(),
+        });
+
+        assert_eq!(khata.ramz, Ramz::jadeed(RAMZ_SAHB_MAHJUBA));
+        for ramz in [RAMZ_HIMAYA_BAB, RAMZ_FAHS_LAM_YAJRI, RAMZ_SHABAKA, RAMZ_BILA_SAQF] {
+            assert_ne!(khata.ramz, Ramz::jadeed(ramz));
+        }
+        // Nothing on this machine is wrong; the next press refreshes the list.
+        assert_eq!(khata.khutwa, Khutwa::AadaMuhawala);
+        assert_eq!(khata.khutura, Khutura::Tanbeeh);
+        assert!(khata.injilizi.contains("404"), "{}", khata.injilizi);
+        // The run's refusals all say what was and was not spent.
+        assert!(khata.injilizi.contains("nothing was spent"), "{}", khata.injilizi);
+        assert!(fiha_arabi(&khata.arabi));
+        assert!(!fiha_arabi(&khata.injilizi), "{}", khata.injilizi);
+        assert_eq!(
+            khata.siyaq.get("sabab"),
+            Some(&QeemaSiyaq::Nass("sahb/qaima.json answered 404".to_owned()))
+        );
+    }
+
     // -----------------------------------------------------------------------
     // The three refusals, and the order both commands take them in
     // -----------------------------------------------------------------------
@@ -2929,6 +3118,14 @@ mod ikhtibarat {
             hudud_injilizi: Vec::new(),
             nusus_taqribi: Some(4_000),
             yalzam_iqrar_shabaka: false,
+            sahb: HalatSahbHie {
+                hala: "lam_tujlab".to_owned(),
+                muhaddatha: false,
+                tasalsul: 1,
+                adad: 0,
+                arabi: "لم تُجلب قائمة".to_owned(),
+                injilizi: "no list was fetched".to_owned(),
+            },
             takalif: TakalifHie {
                 munfaq: 0.0,
                 saqf: 0.0,

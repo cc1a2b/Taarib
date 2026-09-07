@@ -955,36 +955,86 @@ impl<'a> SijillAlaab<'a> {
     }
 
     /// Marks as absent every game of one launcher family that the current scan
-    /// did not see.
+    /// did not see — and only when that scan recorded the family's catalogue as
+    /// read end to end.
     ///
     /// Absent, not deleted. The ROADMAP requires that a game removed from disk
     /// keeps its patches, its projects and its backups, so that reinstalling it
     /// tomorrow restores the user's Arabic exactly as it was instead of starting
     /// from nothing.
     ///
-    /// **The caller must not call this for a launcher whose catalogue could not
-    /// be read.** "Steam did not answer" and "the user uninstalled every Steam
-    /// game" produce the same empty result here, and acting on the second when
-    /// it was the first empties somebody's library. `fahs_matjar.najah` records
-    /// which is which; this ledger cannot see it, so the rule lives with the
-    /// caller and is written here so it cannot be missed.
+    /// The guard is in the statement, not left to the caller. "Steam did not
+    /// answer" and "the user uninstalled every Steam game" look identical from
+    /// this side, and acting on the second when it was the first empties
+    /// somebody's library. `fahs_matjar.najah`, written by
+    /// [`SijillFahs::sajjil_natijat_matjar`], records which is which, and both
+    /// the lookup and the `UPDATE` read it: a scan that never recorded the
+    /// launcher, or recorded it as not read whole, gets
+    /// [`HasilatMash::Rufidat`] and an untouched table. The rule used to live
+    /// only in a comment addressed to the caller, and the caller — which built
+    /// its list from whether a launcher's folder existed — did not follow it.
+    ///
+    /// A game installed through a manager, recorded in `masdar_luba.mudir`, is
+    /// swept only when that manager was read whole too: its store's own adapter
+    /// never listed it, so the store's silence says nothing about it.
     ///
     /// # Errors
     ///
-    /// Fails when the update cannot run.
-    pub fn allim_ghayr_mawjud(self, fahs: u64, aila: &str) -> Natija<u64> {
+    /// Fails when the lookup or the update cannot run.
+    pub fn allim_ghayr_mawjud(self, fahs: u64, aila: &str) -> Natija<HasilatMash> {
+        if !SijillFahs::jadeed(self.ittisal).najah_matjar(fahs, aila)? {
+            return Ok(HasilatMash::Rufidat);
+        }
         let adad = self
             .ittisal
             .execute(
                 "UPDATE luba SET mawjuda = 0
                  WHERE fahs < ?1
                    AND mawjuda = 1
+                   AND EXISTS (SELECT 1 FROM fahs_matjar f
+                                WHERE f.fahs = ?1 AND f.aila = ?2 AND f.najah = 1)
                    AND EXISTS (SELECT 1 FROM masdar_luba m
-                                WHERE m.luba = luba.id AND m.aila = ?2)",
+                                WHERE m.luba = luba.id
+                                  AND m.aila = ?2
+                                  AND (m.mudir IS NULL
+                                       OR EXISTS (SELECT 1 FROM fahs_matjar w
+                                                   WHERE w.fahs = ?1
+                                                     AND w.aila = m.mudir
+                                                     AND w.najah = 1)))",
                 params![i64::try_from(fahs).unwrap_or(i64::MAX), aila],
             )
             .map_err(|q| khata_jumla("sweep", "luba", q))?;
-        Ok(u64::try_from(adad).unwrap_or(0))
+        Ok(HasilatMash::Jarat { adad: u64::try_from(adad).unwrap_or(0) })
+    }
+}
+
+/// What an absence sweep did, as a value beside the count.
+///
+/// Two outcomes that a bare count collapsed: zero rows swept because every
+/// stored game was seen again, and zero rows swept because the launcher was
+/// never read this scan. The first is a library in order; the second is a
+/// launcher the interface must not describe as searched.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HasilatMash {
+    /// The launcher's catalogue was read end to end in this scan, and this many
+    /// games it no longer lists were marked absent.
+    Jarat {
+        /// Rows marked absent.
+        adad: u64,
+    },
+    /// The scan recorded no complete read of this launcher's catalogue, so
+    /// nothing was touched.
+    Rufidat,
+}
+
+impl HasilatMash {
+    /// Rows marked absent; zero for a refused sweep.
+    #[must_use]
+    pub const fn adad(self) -> u64 {
+        match self {
+            Self::Jarat { adad } => adad,
+            Self::Rufidat => 0,
+        }
     }
 }
 
@@ -1681,11 +1731,34 @@ impl<'a> SijillFahs<'a> {
         Ok(())
     }
 
+    /// Records one launcher's part of a scan together with every warning it
+    /// produced, in one call, so that neither is written without the other: a
+    /// launcher row with no warnings behind it would say "read whole" about a
+    /// catalogue the warnings say was not, and warnings with no row would be
+    /// sentences nobody can attribute.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a statement is rejected.
+    pub fn sajjil_natijat_matjar(
+        self,
+        fahs: u64,
+        matjar: &MatjarMukhzan,
+        tanbihat: &[TanbihMukhzan],
+    ) -> Natija<()> {
+        self.sajjil_matjar(fahs, matjar)?;
+        for tanbih in tanbihat {
+            self.sajjil_tanbih(fahs, tanbih)?;
+        }
+        Ok(())
+    }
+
     /// Whether a launcher's catalogue was read end to end in a given scan.
     ///
-    /// The one question [`SijillAlaab::allim_ghayr_mawjud`] must be asked before
-    /// it is called: sweeping on the strength of a catalogue that failed to open
-    /// marks a user's whole library absent.
+    /// The question [`SijillAlaab::allim_ghayr_mawjud`] asks before it sweeps,
+    /// and the one its `UPDATE` repeats: sweeping on the strength of a catalogue
+    /// that failed to open marks a user's whole library absent. `false` for a
+    /// launcher the scan never recorded at all.
     ///
     /// # Errors
     ///
@@ -1725,6 +1798,40 @@ impl<'a> SijillFahs<'a> {
             ])
             .map_err(|q| khata_jumla("insert", "tanbih_fahs", q))?;
         Ok(())
+    }
+
+    /// What every launcher contributed to a scan, by family name.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the query cannot run.
+    pub fn matajir(self, fahs: u64) -> Natija<Vec<MatjarMukhzan>> {
+        let mut jumla = self
+            .ittisal
+            .prepare(
+                "SELECT aila, mawjud, najah, adad_alaab, adad_tanbihat, muddat_milli
+                 FROM fahs_matjar WHERE fahs = ?1 ORDER BY aila",
+            )
+            .map_err(|q| khata_jumla("prepare", "fahs_matjar", q))?;
+
+        let sufuf = jumla
+            .query_map(params![i64::try_from(fahs).unwrap_or(i64::MAX)], |saf| {
+                Ok(MatjarMukhzan {
+                    aila: saf.get(0)?,
+                    mawjud: saf.get::<_, i64>(1)? != 0,
+                    najah: saf.get::<_, i64>(2)? != 0,
+                    adad_alaab: u32::try_from(saf.get::<_, i64>(3)?).unwrap_or(u32::MAX),
+                    adad_tanbihat: u32::try_from(saf.get::<_, i64>(4)?).unwrap_or(u32::MAX),
+                    muddat_milli: u64::try_from(saf.get::<_, i64>(5)?).unwrap_or(0),
+                })
+            })
+            .map_err(|q| khata_jumla("query", "fahs_matjar", q))?;
+
+        let mut natija = Vec::new();
+        for saf in sufuf {
+            natija.push(saf.map_err(|q| khata_jumla("read", "fahs_matjar", q))?);
+        }
+        Ok(natija)
     }
 
     /// Every warning a scan produced.
@@ -3509,6 +3616,193 @@ impl<'a> SijillHalat<'a> {
             .ittisal
             .execute("DELETE FROM halat WHERE miftah = ?1", params![miftah])
             .map_err(|q| khata_jumla("delete", "halat", q))?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use std::error::Error;
+
+    use super::*;
+
+    /// Every test returns this so that a fixture failure propagates with `?`.
+    /// `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
+
+    /// A store failure as a test failure, carrying the sentence a person would
+    /// read rather than a debug dump of the whole value.
+    fn bila_khata<T>(natija: Natija<T>) -> Result<T, Box<dyn Error>> {
+        natija.map_err(|khata| khata.injilizi.into())
+    }
+
+    /// The whole schema, in memory, through the same migration runner the
+    /// product uses — so a sweep tested here runs against the real tables and
+    /// the real constraints, not a hand-copied subset of them.
+    fn qaida() -> Result<Connection, Box<dyn Error>> {
+        let mut ittisal = Connection::open_in_memory()?;
+        ittisal.execute_batch("PRAGMA foreign_keys = ON;")?;
+        let _ = bila_khata(crate::hijra::rahhil(&mut ittisal))?;
+        Ok(ittisal)
+    }
+
+    /// A game known by one launcher identity and nothing else.
+    fn luba(masdar: MasdarLuba, ism: &str) -> Luba {
+        Luba {
+            id: LubaId::min_masdar(&masdar, ism),
+            masadir: vec![masdar],
+            ism: ism.to_owned(),
+            jidhr: PathBuf::from("/alaab").join(ism),
+            tanfidhi: None,
+            hajm: 0,
+            akhir_laab: None,
+            akhir_tahdith: None,
+            bina: None,
+            suwar: SuwarLuba::default(),
+            beea: BeeatTawafuq::Asli,
+            mawjuda: true,
+            mukhfiya: false,
+        }
+    }
+
+    /// Stamps a game with a scan generation, as the scan does for what it saw.
+    fn sajjil(ittisal: &Connection, luba: &Luba, fahs: u64) -> NatijatIkhtibar {
+        bila_khata(SijillAlaab::jadeed(ittisal).sajjil(&IdkhalLuba {
+            luba,
+            muktamila: true,
+            khiyarat_tashghil: None,
+            simat: &[],
+            fahs,
+        }))
+    }
+
+    /// Whether the store still says a game is on disk.
+    fn mawjuda(ittisal: &Connection, id: LubaId) -> Result<bool, Box<dyn Error>> {
+        let luba = bila_khata(SijillAlaab::jadeed(ittisal).wahida(id))?;
+        Ok(luba.ok_or("the game's row is gone, and absent is not deleted")?.mawjuda)
+    }
+
+    /// An installed launcher's record for a scan, with or without a complete
+    /// read.
+    fn matjar(aila: &str, najah: bool) -> MatjarMukhzan {
+        MatjarMukhzan {
+            aila: aila.to_owned(),
+            mawjud: true,
+            najah,
+            adad_alaab: 0,
+            adad_tanbihat: u32::from(!najah),
+            muddat_milli: 1,
+        }
+    }
+
+    /// A launcher whose folder is there and whose catalogue was not read — the
+    /// Epic-without-`Manifests` machine — must leave every stored game of that
+    /// family exactly as it was, and its reason must be readable afterwards.
+    #[test]
+    fn al_mash_yurfad_li_matjar_lam_yuqra_fahrasuhu() -> NatijatIkhtibar {
+        let ittisal = qaida()?;
+        let awwal = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
+        let luba = luba(MasdarLuba::Epic("abc".to_owned()), "Alan Wake 2");
+        sajjil(&ittisal, &luba, awwal)?;
+
+        let thani = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
+        let tanbih = TanbihMukhzan {
+            aila: "epic".to_owned(),
+            mawdi: "C:\\ProgramData\\Epic".to_owned(),
+            sabab: "no manifest directory under this Epic root".to_owned(),
+        };
+        bila_khata(SijillFahs::jadeed(&ittisal).sajjil_natijat_matjar(
+            thani,
+            &matjar("epic", false),
+            std::slice::from_ref(&tanbih),
+        ))?;
+
+        let hasila = bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "epic"))?;
+        assert_eq!(hasila, HasilatMash::Rufidat);
+        assert!(mawjuda(&ittisal, luba.id)?, "a game nobody looked for is not absent");
+
+        // The warning that explains the refusal is on record beside the scan.
+        let mukhzana = bila_khata(SijillFahs::jadeed(&ittisal).tanbihat(thani))?;
+        assert_eq!(mukhzana, vec![tanbih]);
+        let matajir = bila_khata(SijillFahs::jadeed(&ittisal).matajir(thani))?;
+        assert_eq!(matajir, vec![matjar("epic", false)]);
+        Ok(())
+    }
+
+    /// A launcher the scan never recorded at all is the same refusal: the old
+    /// caller built its sweep list from folder existence and never wrote this
+    /// table, so an unrecorded launcher is exactly the case that emptied
+    /// libraries.
+    #[test]
+    fn al_mash_yurfad_li_matjar_lam_yusajjal() -> NatijatIkhtibar {
+        let ittisal = qaida()?;
+        let awwal = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
+        let luba = luba(MasdarLuba::Steam(220), "Half-Life 2");
+        sajjil(&ittisal, &luba, awwal)?;
+
+        let thani = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
+        let hasila =
+            bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "steam"))?;
+        assert_eq!(hasila, HasilatMash::Rufidat);
+        assert!(mawjuda(&ittisal, luba.id)?);
+        Ok(())
+    }
+
+    /// The sweep still does its job for a launcher that was read whole: a game
+    /// it no longer lists is marked absent, and a game it listed again is not.
+    #[test]
+    fn al_mash_yajri_li_matjar_quria_kamilan() -> NatijatIkhtibar {
+        let ittisal = qaida()?;
+        let awwal = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
+        let dhahaba = luba(MasdarLuba::Steam(220), "Half-Life 2");
+        let baqiya = luba(MasdarLuba::Steam(400), "Portal");
+        sajjil(&ittisal, &dhahaba, awwal)?;
+        sajjil(&ittisal, &baqiya, awwal)?;
+
+        let thani = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
+        sajjil(&ittisal, &baqiya, thani)?;
+        bila_khata(SijillFahs::jadeed(&ittisal).sajjil_natijat_matjar(
+            thani,
+            &matjar("steam", true),
+            &[],
+        ))?;
+
+        let hasila =
+            bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "steam"))?;
+        assert_eq!(hasila, HasilatMash::Jarat { adad: 1 });
+        assert!(!mawjuda(&ittisal, dhahaba.id)?);
+        assert!(mawjuda(&ittisal, baqiya.id)?);
+        Ok(())
+    }
+
+    /// A game installed through Heroic shards under Epic, but Epic's own
+    /// catalogue never listed it — so Epic being read whole says nothing about
+    /// it. It is swept only once Heroic was read whole too.
+    #[test]
+    fn al_mash_la_yamass_luba_mudirha_lam_yuqra() -> NatijatIkhtibar {
+        let ittisal = qaida()?;
+        let awwal = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
+        let luba = luba(MasdarLuba::Heroic(Box::new(MasdarLuba::Epic("h1".to_owned()))), "Hades");
+        sajjil(&ittisal, &luba, awwal)?;
+
+        let thani = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
+        bila_khata(SijillFahs::jadeed(&ittisal).sajjil_natijat_matjar(
+            thani,
+            &matjar("epic", true),
+            &[],
+        ))?;
+        let hasila = bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "epic"))?;
+        assert_eq!(hasila, HasilatMash::Jarat { adad: 0 });
+        assert!(mawjuda(&ittisal, luba.id)?, "Heroic was not read, so its game stays");
+
+        bila_khata(SijillFahs::jadeed(&ittisal).sajjil_natijat_matjar(
+            thani,
+            &matjar("heroic", true),
+            &[],
+        ))?;
+        let hasila = bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "epic"))?;
+        assert_eq!(hasila, HasilatMash::Jarat { adad: 1 });
+        assert!(!mawjuda(&ittisal, luba.id)?);
         Ok(())
     }
 }

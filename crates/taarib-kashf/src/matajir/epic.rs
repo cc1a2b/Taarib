@@ -178,95 +178,35 @@ impl Matjar for MatjarEpic {
             },
         };
 
-        let Some(mujallad) = mujallad_bayanat(&jidhr) else {
-            return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
-        };
-
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: Some(jidhr.clone()),
-            ..NatijatMatjar::default()
-        };
-
-        let malaffat = malaffat_bayan(&mujallad, MUARRIF)?;
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, Some(jidhr.clone()));
         let mut asmaa: BTreeSet<String> = BTreeSet::new();
-        let mut idafat: BTreeMap<String, String> = BTreeMap::new();
         let mut mawaqi: BTreeSet<String> = BTreeSet::new();
 
-        for masar in malaffat {
-            let nass = match qira_nass(&masar) {
-                Ok(nass) => nass,
-                Err(khata) => {
-                    natija.tanbihat.push(TanbihFahs::jadeed(
-                        MUARRIF,
-                        masar.display().to_string(),
-                        khata.injilizi,
-                    ));
-                    continue;
-                },
-            };
-            let qeema: Value = match serde_json::from_str(bila_bom(&nass)) {
-                Ok(qeema) => qeema,
-                Err(khata) => {
-                    natija.tanbihat.push(TanbihFahs::jadeed(
-                        MUARRIF,
-                        masar.display().to_string(),
-                        format!("manifest is not valid JSON: {khata}"),
-                    ));
-                    continue;
-                },
-            };
-
-            let Some(ism_tatbeeq) = nass_haql(&qeema, "AppName") else {
-                natija.tanbihat.push(TanbihFahs::jadeed(
-                    MUARRIF,
-                    masar.display().to_string(),
-                    "manifest has no AppName, so it names no application".to_owned(),
-                ));
-                continue;
-            };
-            let _ = asmaa.insert(ism_tatbeeq.to_owned());
-
-            // An add-on: same install directory as its base game, no executable
-            // of its own, and no business being a second library entry.
-            if let Some(asl) = nass_haql(&qeema, "MainGameAppName")
-                && asl != ism_tatbeeq
-            {
-                let _ = idafat.insert(ism_tatbeeq.to_owned(), asl.to_owned());
-                continue;
-            }
-
-            match luba_min_bayan(&qeema, ism_tatbeeq, &masar) {
-                Ok(luba) => {
-                    let _ = mawaqi.insert(muwahhad(&luba.jidhr, siyaq.nizam));
-                    if nass_haql(&qeema, "CatalogItemId").is_none() {
-                        natija.tanbihat.push(TanbihFahs::jadeed(
-                            MUARRIF,
-                            masar.display().to_string(),
-                            format!(
-                                "manifest has no CatalogItemId; identity was derived from \
-                                 AppName {ism_tatbeeq} instead, and will not match a patch \
-                                 published against the catalogue item"
-                            ),
-                        ));
-                    }
-                    natija.alaab.push(luba);
-                },
-                Err(tanbih) => natija.tanbihat.push(tanbih),
-            }
-        }
-
-        for (idafa, asl) in &idafat {
-            if !asmaa.contains(asl) {
-                natija.tanbihat.push(TanbihFahs::jadeed(
-                    MUARRIF,
-                    idafa.clone(),
-                    format!(
-                        "this entry is add-on content for {asl}, which has no manifest of its \
-                         own, so the game it belongs to cannot be shown"
-                    ),
-                ));
-            }
+        // The manifest directory is the catalogue, and its absence is reported
+        // and then worked around — never returned as "Epic is not installed".
+        // The root is here, and a machine loses `Manifests` while keeping every
+        // game: a launcher repair, a relocated data folder, a reinstall that
+        // kept the games. The cross-check list below exists for exactly that
+        // machine, so it runs whether or not the manifests did.
+        if let Some(mujallad) = mujallad_bayanat(&jidhr) {
+            iqra_bayanat(&mujallad, siyaq, &mut asmaa, &mut mawaqi, &mut natija)?;
+        } else {
+            let matlub: Vec<String> = murashahat_bayanat(&jidhr)
+                .iter()
+                .map(|masar| masar.display().to_string())
+                .collect();
+            natija.tanbihat.push(TanbihFahs::fahras(
+                MUARRIF,
+                jidhr.display().to_string(),
+                format!(
+                    "no manifest directory under this Epic root, so the launcher's own catalogue \
+                     could not be read; looked for a folder of .item files at {}. Only the \
+                     cross-check list LauncherInstalled.dat was read. If Epic is installed here, \
+                     verify a game from the launcher so it rewrites the manifests; if the root \
+                     was configured by hand, correct it.",
+                    matlub.join(", ")
+                ),
+            ));
         }
 
         idaf_min_qaimat_altathbeet(&jidhr, siyaq, &asmaa, &mut mawaqi, &mut natija);
@@ -311,21 +251,122 @@ fn jidhr_tilqai(siyaq: &SiyaqFahs) -> Option<PathBuf> {
     }
 }
 
-/// Resolves the manifest directory under a launcher root.
-///
-/// Four shapes are accepted, because "the Epic root" means different things to
-/// different people: the manifest directory itself, a `Data` parent, the
-/// launcher directory, and the Epic data root.
-fn mujallad_bayanat(jidhr: &Path) -> Option<PathBuf> {
-    let murashahat = [
+/// The four places a manifest directory is looked for under a launcher root,
+/// because "the Epic root" means different things to different people: the
+/// manifest directory itself, a `Data` parent, the launcher directory, and the
+/// Epic data root.
+fn murashahat_bayanat(jidhr: &Path) -> [PathBuf; 4] {
+    [
         jidhr.to_path_buf(),
         jidhr.join("Manifests"),
         jidhr.join("Data").join("Manifests"),
         jidhr.join("EpicGamesLauncher").join("Data").join("Manifests"),
-    ];
-    murashahat.into_iter().find(|masar| {
+    ]
+}
+
+/// Resolves the manifest directory under a launcher root, or [`None`] when
+/// none of the four shapes is there — which the caller reports as a catalogue
+/// that could not be read, never as a launcher that is not installed.
+fn mujallad_bayanat(jidhr: &Path) -> Option<PathBuf> {
+    murashahat_bayanat(jidhr).into_iter().find(|masar| {
         masar.is_dir() && (masar.ends_with("Manifests") || fih_bayan(masar))
     })
+}
+
+/// Reads every `.item` manifest in the directory into the result.
+///
+/// Add-ons are read, remembered by the base game they belong to, and dropped;
+/// the module header says why. `asmaa` and `mawaqi` collect what the manifests
+/// covered so the cross-check list afterwards adds only what they missed.
+///
+/// # Errors
+///
+/// Only when the directory itself cannot be listed; see [`malaffat_bayan`].
+fn iqra_bayanat(
+    mujallad: &Path,
+    siyaq: &SiyaqFahs,
+    asmaa: &mut BTreeSet<String>,
+    mawaqi: &mut BTreeSet<String>,
+    natija: &mut NatijatMatjar,
+) -> Natija<()> {
+    let mut idafat: BTreeMap<String, String> = BTreeMap::new();
+
+    for masar in malaffat_bayan(mujallad, MUARRIF)? {
+        let nass = match qira_nass(&masar) {
+            Ok(nass) => nass,
+            Err(khata) => {
+                natija.tanbihat.push(TanbihFahs::jadeed(
+                    MUARRIF,
+                    masar.display().to_string(),
+                    khata.injilizi,
+                ));
+                continue;
+            },
+        };
+        let qeema: Value = match serde_json::from_str(bila_bom(&nass)) {
+            Ok(qeema) => qeema,
+            Err(khata) => {
+                natija.tanbihat.push(TanbihFahs::jadeed(
+                    MUARRIF,
+                    masar.display().to_string(),
+                    format!("manifest is not valid JSON: {khata}"),
+                ));
+                continue;
+            },
+        };
+
+        let Some(ism_tatbeeq) = nass_haql(&qeema, "AppName") else {
+            natija.tanbihat.push(TanbihFahs::jadeed(
+                MUARRIF,
+                masar.display().to_string(),
+                "manifest has no AppName, so it names no application".to_owned(),
+            ));
+            continue;
+        };
+        let _ = asmaa.insert(ism_tatbeeq.to_owned());
+
+        // An add-on: same install directory as its base game, no executable
+        // of its own, and no business being a second library entry.
+        if let Some(asl) = nass_haql(&qeema, "MainGameAppName")
+            && asl != ism_tatbeeq
+        {
+            let _ = idafat.insert(ism_tatbeeq.to_owned(), asl.to_owned());
+            continue;
+        }
+
+        match luba_min_bayan(&qeema, ism_tatbeeq, &masar) {
+            Ok(luba) => {
+                let _ = mawaqi.insert(muwahhad(&luba.jidhr, siyaq.nizam));
+                if nass_haql(&qeema, "CatalogItemId").is_none() {
+                    natija.tanbihat.push(TanbihFahs::jadeed(
+                        MUARRIF,
+                        masar.display().to_string(),
+                        format!(
+                            "manifest has no CatalogItemId; identity was derived from AppName \
+                             {ism_tatbeeq} instead, and will not match a patch published \
+                             against the catalogue item"
+                        ),
+                    ));
+                }
+                natija.alaab.push(luba);
+            },
+            Err(tanbih) => natija.tanbihat.push(tanbih),
+        }
+    }
+
+    for (idafa, asl) in &idafat {
+        if !asmaa.contains(asl) {
+            natija.tanbihat.push(TanbihFahs::jadeed(
+                MUARRIF,
+                idafa.clone(),
+                format!(
+                    "this entry is add-on content for {asl}, which has no manifest of its own, \
+                     so the game it belongs to cannot be shown"
+                ),
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Whether a directory holds at least one `.item` file, which is what makes it
@@ -453,10 +494,12 @@ fn idaf_min_qaimat_altathbeet(
     let Some(masar) = malaf_qaimat_altathbeet(jidhr) else {
         return;
     };
+    // Catalogue-level either way: an unreadable cross-check list is a set of
+    // installs this scan did not see, not one install that degraded.
     let nass = match qira_nass(&masar) {
         Ok(nass) => nass,
         Err(khata) => {
-            natija.tanbihat.push(TanbihFahs::jadeed(
+            natija.tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 masar.display().to_string(),
                 khata.injilizi,
@@ -467,7 +510,7 @@ fn idaf_min_qaimat_altathbeet(
     let qeema: Value = match serde_json::from_str(bila_bom(&nass)) {
         Ok(qeema) => qeema,
         Err(khata) => {
-            natija.tanbihat.push(TanbihFahs::jadeed(
+            natija.tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 masar.display().to_string(),
                 format!("cross-check list is not valid JSON: {khata}"),
@@ -644,6 +687,7 @@ mod ikhtibarat {
     use std::fs;
 
     use super::*;
+    use crate::fahs::HalatFahsMatjar;
 
     /// Every test returns this so that a fixture failure propagates with `?`.
     type NatijatIkhtibar = Result<(), Box<dyn Error>>;
@@ -675,9 +719,79 @@ mod ikhtibarat {
         // An absent root is "not installed", never a failure: nine other
         // launchers' games are still coming.
         let natija = MatjarEpic::jadeed().ifhas(&siyaq)?;
+        assert_eq!(natija.hala(), HalatFahsMatjar::GhayrMuthabbat);
         assert!(natija.jidhr_matjar.is_none());
         assert!(natija.alaab.is_empty());
         assert!(MatjarEpic::jadeed().judhur_muraqaba(&siyaq).is_empty());
+        Ok(())
+    }
+
+    /// The root is there, the manifest directory is not, and the cross-check
+    /// list still names an installed game — the state of a machine whose Epic
+    /// data folder holds `Catalog`, `EMS` and `Launcher.manifest` and no
+    /// `Manifests`. Two things have to hold: `mawqi` and `ifhas` agree that
+    /// Epic is installed, and the cross-check runs. Moving the early return
+    /// back above `idaf_min_qaimat_altathbeet` fails the second assertion;
+    /// returning `ghayr_mutah` again fails the first.
+    #[test]
+    fn jidhr_bila_manifests_naqis_la_ghayr_muthabbat_wa_yaqra_qaimat_altathbeet()
+    -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let bayanat = masrah.path().join("ProgramData");
+        let jidhr = bayanat.join("Epic");
+        fs::create_dir_all(jidhr.join("EpicGamesLauncher").join("Data").join("Catalog"))?;
+        let mujallad_luba = masrah.path().join("Games").join("Fortnite");
+        fs::create_dir_all(&mujallad_luba)?;
+        fs::create_dir_all(jidhr.join("UnrealEngineLauncher"))?;
+        fs::write(
+            jidhr.join("UnrealEngineLauncher").join("LauncherInstalled.dat"),
+            format!(
+                r#"{{"InstallationList":[{{"InstallLocation":{},"AppName":"Fortnite","ItemId":"abc123"}}]}}"#,
+                serde_json::to_string(&mujallad_luba.to_string_lossy())?
+            ),
+        )?;
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_barnamij = Some(bayanat);
+
+        let matjar = MatjarEpic::jadeed();
+        assert_eq!(matjar.mawqi(&siyaq).as_deref(), Some(jidhr.as_path()));
+        let natija = matjar.ifhas(&siyaq)?;
+
+        // Installed and unreadable, with the root named and the gap recorded as
+        // one that hides games — which is what keeps the absence sweep off
+        // every stored Epic game.
+        assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
+        assert_eq!(natija.jidhr_matjar.as_deref(), Some(jidhr.as_path()));
+        assert!(natija.tanbihat.iter().any(|tanbih| {
+            tanbih.yukhfi_alaab() && tanbih.mawdi == jidhr.display().to_string()
+        }));
+
+        // The cross-check list ran and recovered the game the manifests lost.
+        assert_eq!(natija.alaab.len(), 1);
+        let luba = natija.alaab.first().ok_or("the cross-check list added nothing")?;
+        assert_eq!(luba.ism, "Fortnite");
+        assert!(matches!(&luba.masdar, MasdarLuba::Epic(id) if id == "abc123"));
+        Ok(())
+    }
+
+    /// A configured root that exists and holds nothing: the user said Epic is
+    /// here, `mawqi` takes them at their word, and `ifhas` must not quietly
+    /// answer "not installed" — the adapter's own doc on `mawqi` promises the
+    /// wrong path becomes a message instead.
+    #[test]
+    fn tajawuz_mawjud_bila_fahras_naqis_la_ghayr_muthabbat() -> NatijatIkhtibar {
+        let masrah = tempfile::tempdir()?;
+        let tajawuz = masrah.path().join("epic-farigh");
+        fs::create_dir_all(&tajawuz)?;
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.manassat.epic = Some(tajawuz.clone());
+
+        let matjar = MatjarEpic::jadeed();
+        assert!(matjar.mawqi(&siyaq).is_some());
+        let natija = matjar.ifhas(&siyaq)?;
+        assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
+        assert_eq!(natija.jidhr_matjar.as_deref(), Some(tajawuz.as_path()));
+        assert!(natija.alaab.is_empty());
         Ok(())
     }
 

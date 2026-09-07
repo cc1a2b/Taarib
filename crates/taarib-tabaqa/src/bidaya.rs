@@ -515,7 +515,7 @@ fn rakkib_gl(mabni: &mut Tarkib) -> Result<(), Radd> {
     // convention for this platform, and it calls the original through
     // `ASL_TABDIL`, which is stored below before the detour can be reached.
     let masar = unsafe {
-        Masar::jadeed(hadaf.cast_const(), thunk_tabdil as *const () as *const c_void, ism_ramz)
+        Masar::jadeed(hadaf.cast_const(), (thunk_tabdil as *const ()).cast::<c_void>(), ism_ramz)
     }
     .map_err(|khata| Radd::fashal(format!("{ism_ramz} could not be detoured: {khata}")))?;
 
@@ -1298,12 +1298,27 @@ fn khattaf_d3d9(mujallad: &Path, jihaz: *mut c_void) -> Result<Option<Box<dyn Kh
     Ok(Some(Box::new(khattaf)))
 }
 
-/// The Direct3D 10 backend, over the swap chain the game just presented.
+/// The Direct3D 10 backend over the swap chain the game just presented — or the
+/// Direct3D 11 backend, when the device says that is what this game is.
 ///
-/// Declines rather than fails when the swap chain's device is not a Direct3D 10
-/// one, which is what an eleventh- or twelfth-generation game looks like from
-/// here — and is why the refusal is logged as a capability line rather than as
-/// a fault. The module search cannot tell the two apart; the device can.
+/// The module search names Direct3D 10 whenever `d3d10.dll` is mapped and no
+/// newer generation's module is, which is also what an eleventh-generation game
+/// looks like while its `d3d11.dll` is still delay-loaded and Direct2D has
+/// already brought `d3d10.dll` in. The two generations share one DXGI hook, so
+/// the swap chain that reached it is asked which device it has, and the answer
+/// picks the backend. Three outcomes, kept apart on purpose:
+///
+/// * a Direct3D 10 device — this backend;
+/// * a Direct3D 11 device — [`khattaf_d3d11`] over the same swap chain, logged
+///   as the capability it is, because nothing went wrong;
+/// * neither — a *decline*, not a failure. A twelfth-generation game whose
+///   module was not loaded when the search ran needs the command-queue hook
+///   this session never installed, and no retry on this session changes that.
+///
+/// What this must never do is what it once did: report the second and third
+/// as "the D3D10 backend could not be built", which unhooked everything and gave
+/// up for the process lifetime over a game the eleventh backend would have
+/// drawn on with the hook already in place.
 #[cfg(windows)]
 fn khattaf_d3d10(
     mujallad: &Path,
@@ -1318,9 +1333,33 @@ fn khattaf_d3d10(
     for satr in crate::d3d10::qudra().sutur() {
         sajjil(mujallad, &format!("capability: {satr}"));
     }
-    let khattaf = KhattafD3D10::min_silsila(wajiha)
-        .map_err(|khata| Radd::fashal(format!("the D3D10 backend could not be built: {khata}")))?;
-    Ok(Some(Box::new(khattaf)))
+    let imtinaa = match KhattafD3D10::min_silsila(wajiha) {
+        Ok(khattaf) => return Ok(Some(Box::new(khattaf))),
+        Err(khata @ crate::khata::KhataTabaqa::ApiGhayrMadum { .. }) => khata,
+        Err(khata) => {
+            return Err(Radd::fashal(format!("the D3D10 backend could not be built: {khata}")));
+        },
+    };
+    sajjil(mujallad, &format!("capability: Direct3D 10: declined — {imtinaa}"));
+
+    // SAFETY: `wajiha` is the live swap chain borrowed above, for the duration
+    // of the same call. `GetDevice` is a QueryInterface for the requested IID
+    // and returns an owned reference or an error; nothing is written through a
+    // raw pointer, and the reference is dropped here.
+    if unsafe { wajiha.GetDevice::<ID3D11Device>() }.is_ok() {
+        sajjil(
+            mujallad,
+            "capability: Direct3D 11: the swap chain's device is an ID3D11Device, so the \
+             eleventh backend takes this game over the hook already in place",
+        );
+        return khattaf_d3d11(silsila);
+    }
+    Err(Radd::imtinaa(
+        "this swap chain's device is neither an ID3D10Device nor an ID3D11Device. It is most \
+         likely a Direct3D 12 game whose d3d12.dll was not yet loaded when the module search \
+         ran; that generation needs the command-queue hook, which this session did not \
+         install. Nothing failed, and nothing on this session can draw on it",
+    ))
 }
 
 /// The Direct3D 8 backend, over the device the game just presented on.
@@ -1723,6 +1762,15 @@ unsafe extern "C" fn thunk_tabdil(aard: *mut c_void, satih: core::ffi::c_ulong) 
 #[cfg(windows)]
 struct HirasatJadwal(KhatfJadwal);
 
+#[cfg(windows)]
+#[expect(
+    clippy::non_send_fields_in_send_ty,
+    reason = "the field the lint names records the vtable slots this hook replaced, which is \
+              exactly what the claim below is about: they are not `Send` on their own and this \
+              wrapper asserts that moving them is sound because they are only ever read and \
+              written under the page guard. A thread-safe type would assert something different \
+              and would not make the underlying hook any more shareable"
+)]
 // SAFETY: `KhatfJadwal` is not `Send` on its own because it records the
 // addresses of the slots it replaced. It never dereferences them outside the
 // verified volatile read-and-write that `taarib_haqn::hirasa` performs with the
@@ -1730,7 +1778,6 @@ struct HirasatJadwal(KhatfJadwal);
 // capability the vtable does not already give every thread in the process. This
 // module guarantees the rest: the value lives in one static behind a mutex and
 // is never aliased.
-#[cfg(windows)]
 unsafe impl Send for HirasatJadwal {}
 
 /// A Direct3D 8 installation that may cross to the render thread.
@@ -1792,7 +1839,12 @@ struct Tarkib {
 
 impl Tarkib {
     /// An installation with nothing installed yet.
-    fn jadeed(mujallad: PathBuf, wajiha: WajihatRusum, ruqaa: MalafRuqaa, iqrar: Iqrar) -> Self {
+    const fn jadeed(
+        mujallad: PathBuf,
+        wajiha: WajihatRusum,
+        ruqaa: MalafRuqaa,
+        iqrar: Iqrar,
+    ) -> Self {
         Self {
             mujallad,
             wajiha,
@@ -1971,9 +2023,18 @@ pub fn hal_bada() -> bool {
 }
 
 /// Which graphics API this payload attached to, once it has attached to one.
+///
+/// The live overlay's own answer once there is one, because the backend that
+/// answered can differ from the module the search named — a Direct3D 10 search
+/// result drawn by the eleventh backend, an OpenGL one drawn by the
+/// fixed-function backend. Before attachment it is the search's answer, which
+/// is the only one there is.
 #[must_use]
 pub fn wajiha_hiya() -> Option<WajihatRusum> {
-    TARKIB.lock().as_ref().map(|mabni| mabni.wajiha)
+    TARKIB
+        .lock()
+        .as_ref()
+        .map(|mabni| mabni.tabaqa.as_ref().map_or(mabni.wajiha, Tabaqa::wajiha))
 }
 
 // ---------------------------------------------------------------------------

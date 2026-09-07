@@ -289,14 +289,26 @@ impl Matjar for MatjarRockstar {
         let mushghil = jidhr_mushghil();
         let madakhil = madakhil_sijill();
         if mushghil.is_none() && madakhil.is_empty() {
-            return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+            // The catalogue is the registry, and it names nothing. A configured
+            // folder that exists is still the user saying the launcher is here,
+            // which `mawqi` honours; so this answers "installed, unreadable"
+            // rather than contradicting it with "not installed".
+            let tajawuz = siyaq.manassat.rockstar.clone().filter(|masar| masar.is_dir());
+            let Some(tajawuz) = tajawuz else {
+                return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+            };
+            return Ok(NatijatMatjar::naqisa(
+                MUARRIF,
+                Some(tajawuz.clone()),
+                tajawuz.display().to_string(),
+                "the configured Rockstar folder exists, but the registry — where the Rockstar \
+                 launcher keeps its catalogue — names neither the launcher nor any title, so \
+                 nothing could be listed from it",
+            ));
         }
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: mushghil.filter(|masar| masar.is_dir()),
-            ..NatijatMatjar::default()
-        };
+        let mut natija =
+            NatijatMatjar::muthabbat(MUARRIF, mushghil.filter(|masar| masar.is_dir()));
 
         let mut fahras: BTreeMap<u32, LubaMuktashafa> = BTreeMap::new();
         for madkhal in madakhil {

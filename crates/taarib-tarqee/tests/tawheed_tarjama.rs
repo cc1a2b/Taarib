@@ -45,7 +45,7 @@ use taarib_tarqee::irtibat::BasmatKhatt;
 use taarib_tarqee::mujammi::HuzmaMabniya;
 use taarib_tarqee::{
     IktishafMaqasat, IrtibatBina, KhattMujammaa, KhiyaratTasbeeq, MudkhalatFahs, MudkhalatTajmee,
-    MuharrikHuzma, MukhattatBasma, TaqrirTajawuz, WasfHuzma, ihsib_taghtiya, ijmaa, ijri,
+    MuharrikHuzma, MukhattatBasma, WasfHuzma, ihsib_taghtiya, ijmaa, ijri,
 };
 
 /// The size every string in these projects is drawn at, in pixels.
@@ -154,7 +154,6 @@ fn ijmi(nusus: &[MudkhalNass]) -> HuzmaMabniya {
     let maqasat = iktishaf.ahsi(nusus);
 
     let taghtiya = ihsib_taghtiya(nusus, None, None);
-    let tajawuz = TaqrirTajawuz::farigh();
     let khiyarat = KhiyaratTasbeeq::default();
     let mudkhalat = MudkhalatTajmee {
         nusus,
@@ -169,7 +168,6 @@ fn ijmi(nusus: &[MudkhalNass]) -> HuzmaMabniya {
         irtibat: &irtibat,
         maqasat: &maqasat,
         taghtiya: &taghtiya,
-        tajawuz: &tajawuz,
         khiyarat: &khiyarat,
         mustawa: None,
     };

@@ -67,7 +67,11 @@
 //! - No launcher is required to be running, and Taarib never starts one in
 //!   order to discover anything.
 //! - A malformed or unexpected catalogue file degrades that one entry and is
-//!   reported with the file and the reason. It never fails the scan.
+//!   reported with the file and the reason. It never fails the scan. A
+//!   catalogue that cannot be read at all is reported as exactly that —
+//!   installed and unreadable, [`HalatFahsMatjar::Naqisa`] — and never as
+//!   "not installed", because the two lead to different repairs and only one
+//!   of them permits a stored game to be marked absent.
 //! - Every discovered game gets a `LubaId` that is stable across rescans,
 //!   reinstalls, and moves between drives — the same game found through two
 //!   launchers resolves to one identity, with both source identifiers kept.
@@ -132,8 +136,8 @@ use taarib_usus::khata::Natija;
 use taarib_usus::manassa::NizamTashghil;
 
 pub use crate::fahs::{
-    LubaMuktashafa, MasadirSuwar, MasdarSura, Matjar, NatijatFahs, NatijatMatjar, SimatLuba,
-    SiyaqFahs, TanbihFahs,
+    HalatFahsMatjar, LubaMuktashafa, MasadirSuwar, MasdarSura, Matjar, NatijatFahs, NatijatMatjar,
+    NawTanbih, SimatLuba, SiyaqFahs, TanbihFahs,
 };
 pub use crate::khata::KhataKashf;
 pub use crate::lugha_rasmiya::{
@@ -194,10 +198,12 @@ impl Kashif {
     /// Runs every adapter that applies to this platform.
     ///
     /// One adapter failing does not stop the others: its failure becomes a
-    /// warning on its own [`NatijatMatjar`] and the scan continues. A user with
-    /// a broken GOG installation still gets their Steam library, which is the
-    /// difference between a product that works on a real machine and one that
-    /// works on a clean one.
+    /// catalogue-level warning on its own [`NatijatMatjar`], whose verdict is
+    /// then [`HalatFahsMatjar::Naqisa`] rather than "not installed", and the
+    /// scan continues. A user with a broken GOG installation still gets their
+    /// Steam library, which is the difference between a product that works on
+    /// a real machine and one that works on a clean one — and their stored GOG
+    /// games are left alone, because nothing read GOG's catalogue this round.
     ///
     /// # Errors
     ///
@@ -221,21 +227,28 @@ impl Kashif {
             match matjar.ifhas(siyaq) {
                 Ok(wahid) => natija.matajir.push(wahid),
                 Err(khata) => {
-                    // The launcher is installed and unreadable. That is worth
-                    // seeing in Diagnostics, and worth nothing at all to the
-                    // nine other launchers whose games are still coming.
+                    // The launcher is installed and unreadable. That is a
+                    // different fact from "not installed" and the result has to
+                    // say so, because the absence sweep downstream believes an
+                    // empty result from a launcher it thinks was read. Worth
+                    // nothing at all to the nine other launchers whose games
+                    // are still coming.
                     tracing::warn!(
                         matjar = matjar.muarrif(),
                         ramz = %khata.ramz,
                         "a launcher could not be scanned"
                     );
-                    let mut fashil = NatijatMatjar::ghayr_mutah(matjar.muarrif());
-                    fashil.tanbihat.push(TanbihFahs::jadeed(
+                    let jidhr = matjar.mawqi(siyaq);
+                    let mawdi = jidhr.as_ref().map_or_else(
+                        || matjar.ism_injilizi().to_owned(),
+                        |jidhr| jidhr.display().to_string(),
+                    );
+                    natija.matajir.push(NatijatMatjar::naqisa(
                         matjar.muarrif(),
-                        matjar.ism_injilizi(),
+                        jidhr,
+                        mawdi,
                         khata.injilizi.clone(),
                     ));
-                    natija.matajir.push(fashil);
                 }
             }
         }
@@ -560,6 +573,72 @@ fn miftah_jidhr(jidhr: &Path) -> String {
 #[cfg(test)]
 mod ikhtibarat {
     use super::*;
+
+    /// Every adapter, handed a configured root that exists and holds nothing,
+    /// must agree with itself: when `mawqi` says the launcher is here, `ifhas`
+    /// may say "installed, unreadable" or refuse outright, but never "not
+    /// installed" — the shape that let the absence sweep run over a launcher
+    /// nobody had read. One assertion per adapter and platform, so a regression
+    /// names the adapter it happened in.
+    #[test]
+    fn mawqi_wa_ifhas_yattafiqan_ala_al_tathbeet() -> Result<(), Box<dyn std::error::Error>> {
+        let masrah = tempfile::tempdir()?;
+        for matjar in matajir::kul() {
+            let mujallad = masrah.path().join(matjar.muarrif());
+            std::fs::create_dir_all(&mujallad)?;
+            for nizam in [NizamTashghil::Windows, NizamTashghil::Linux, NizamTashghil::Mac] {
+                let mut siyaq = SiyaqFahs::lil_ikhtibar(nizam, masrah.path());
+                if !idbit_tajawuz(&mut siyaq.manassat, matjar.muarrif(), mujallad.clone())
+                    || matjar.mawqi(&siyaq).is_none()
+                {
+                    continue;
+                }
+                // A refusal is honest: `Kashif::ifhas` records it as a launcher
+                // that is installed and could not be read.
+                let Ok(natija) = matjar.ifhas(&siyaq) else {
+                    continue;
+                };
+                assert_ne!(
+                    natija.hala(),
+                    HalatFahsMatjar::GhayrMuthabbat,
+                    "{} on {nizam:?}: mawqi found a root and ifhas called the launcher absent",
+                    matjar.muarrif()
+                );
+            }
+        }
+        Ok(())
+    }
+
+    /// Points one adapter's configured root at a directory, by identifier.
+    /// `false` for an adapter that has no such setting.
+    fn idbit_tajawuz(idadat: &mut IdadatManassat, muarrif: &str, masar: PathBuf) -> bool {
+        let haql = match muarrif {
+            "steam" => &mut idadat.steam,
+            "epic" => &mut idadat.epic,
+            "gog" => &mut idadat.gog,
+            "ea" => &mut idadat.ea,
+            "ubisoft" => &mut idadat.ubisoft,
+            "battlenet" => &mut idadat.battlenet,
+            "xbox" => &mut idadat.xbox,
+            "itch" => &mut idadat.itch,
+            "heroic" => &mut idadat.heroic,
+            "amazon" => &mut idadat.amazon,
+            "rockstar" => &mut idadat.rockstar,
+            "riot" => &mut idadat.riot,
+            "lutris" => &mut idadat.lutris,
+            "bottles" => &mut idadat.bottles,
+            "legendary" => &mut idadat.legendary,
+            "playnite" => &mut idadat.playnite,
+            // The two path-based adapters read the nominated folders instead.
+            "yadawi" | "mahmul" => {
+                idadat.mujalladat_idafiya.push(masar);
+                return true;
+            },
+            _ => return false,
+        };
+        *haql = Some(masar);
+        true
+    }
 
     #[test]
     fn mujalladat_al_baramij_farigha_kharij_windows() {

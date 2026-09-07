@@ -195,9 +195,7 @@ impl Matjar for MatjarXbox {
             .into());
         }
 
-        let mut natija =
-            NatijatMatjar { matjar: MUARRIF, ..NatijatMatjar::default() };
-
+        let mut tanbihat: Vec<TanbihFahs> = Vec::new();
         let mut mujalladat: Vec<PathBuf> = Vec::new();
         let jidhr_nizam = siyaq
             .manassat
@@ -205,11 +203,18 @@ impl Matjar for MatjarXbox {
             .clone()
             .or_else(|| mujallad_windows_apps(siyaq))
             .filter(|masar| masar.exists());
-        if let Some(jidhr_nizam) = jidhr_nizam {
-            natija.jidhr_matjar = Some(jidhr_nizam.clone());
-            mujalladat.push(jidhr_nizam);
+        if let Some(jidhr_nizam) = jidhr_nizam.as_ref() {
+            mujalladat.push(jidhr_nizam.clone());
         }
-        mujalladat.extend(judhur_al_aqrass(siyaq, &mut natija.tanbihat));
+        mujalladat.extend(judhur_al_aqrass(siyaq, &mut tanbihat));
+        // No package root anywhere, and no drive whose `.GamingRoot` refused
+        // to say where one is: nothing on this machine holds Xbox packages.
+        if jidhr_nizam.is_none() && mujalladat.is_empty() && tanbihat.is_empty() {
+            return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+        }
+
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, jidhr_nizam);
+        natija.tanbihat = tanbihat;
 
         // One package can be reachable through two roots — a `.GamingRoot`
         // naming a folder that is also the conventional one, most commonly —
@@ -350,7 +355,7 @@ fn mujalladat_gaming_root(jidhr_qurs: &Path, tanbihat: &mut Vec<TanbihFahs>) -> 
         return Vec::new();
     }
     if bayanat.len() > AQSA_HAJM_GAMING_ROOT {
-        tanbihat.push(TanbihFahs::jadeed(
+        tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             masar.display().to_string(),
             format!(
@@ -365,7 +370,7 @@ fn mujalladat_gaming_root(jidhr_qurs: &Path, tanbihat: &mut Vec<TanbihFahs>) -> 
     let bayt = match std::fs::read(&masar) {
         Ok(bayt) => bayt,
         Err(sabab) => {
-            tanbihat.push(TanbihFahs::jadeed(
+            tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 masar.display().to_string(),
                 format!(
@@ -380,7 +385,7 @@ fn mujalladat_gaming_root(jidhr_qurs: &Path, tanbihat: &mut Vec<TanbihFahs>) -> 
     let nisabi = match masarat_min_gaming_root(&bayt) {
         Ok(nisabi) => nisabi,
         Err(khata) => {
-            tanbihat.push(TanbihFahs::jadeed(
+            tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 masar.display().to_string(),
                 format!(
@@ -401,7 +406,7 @@ fn mujalladat_gaming_root(jidhr_qurs: &Path, tanbihat: &mut Vec<TanbihFahs>) -> 
         match dakhil(jidhr_qurs, nisbi.trim_end_matches(['\\', '/'])) {
             Ok(mujallad) if mujallad.is_dir() => mujalladat.push(mujallad),
             Ok(_) => {},
-            Err(khata) => tanbihat.push(TanbihFahs::jadeed(
+            Err(khata) => tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 masar.display().to_string(),
                 format!(
@@ -491,18 +496,25 @@ fn ruzam_fi(mujallad: &Path, tanbihat: &mut Vec<TanbihFahs>) -> Vec<PathBuf> {
     let qaima = match std::fs::read_dir(mujallad) {
         Ok(qaima) => qaima,
         Err(sabab) => {
-            tanbihat.push(TanbihFahs::jadeed(
-                MUARRIF,
-                mujallad.display().to_string(),
-                if sabab.kind() == std::io::ErrorKind::PermissionDenied {
+            // A denial is the state of every Windows machine, and nothing Taarib
+            // could ever list lives behind it, so the scan is not incomplete by
+            // its own standard — it is one named place that is never readable.
+            // Any other refusal is a root whose packages this scan did not see.
+            tanbihat.push(if sabab.kind() == std::io::ErrorKind::PermissionDenied {
+                TanbihFahs::jadeed(
+                    MUARRIF,
+                    mujallad.display().to_string(),
                     "Windows denies listing this package folder. That is how Microsoft ships it: \
                      WindowsApps is owned by TrustedInstaller and grants read access to nobody, \
-                     administrators included. Games installed to other drives are still found."
-                        .to_owned()
-                } else {
-                    format!("cannot list this package folder ({sabab})")
-                },
-            ));
+                     administrators included. Games installed to other drives are still found.",
+                )
+            } else {
+                TanbihFahs::fahras(
+                    MUARRIF,
+                    mujallad.display().to_string(),
+                    format!("cannot list this package folder ({sabab})"),
+                )
+            });
             return Vec::new();
         },
     };

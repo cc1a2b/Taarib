@@ -254,11 +254,7 @@ impl Matjar for MatjarBottles {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         };
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: Some(awwal),
-            ..NatijatMatjar::default()
-        };
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, Some(awwal));
 
         for jidhr in &judhur {
             jama_qanani(&jidhr.join(MUJALLAD_QANANI), &mut natija)?;
@@ -364,7 +360,7 @@ fn jama_qinnina(jidhr: &Path, natija: &mut NatijatMatjar) {
     }
 
     let Some(wathiqa) = iqra_yaml(&masar_idad) else {
-        natija.tanbihat.push(TanbihFahs::jadeed(
+        natija.tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             masar_idad.display().to_string(),
             "this bottle's configuration file could not be read, so none of the programs inside \
@@ -385,7 +381,7 @@ fn jama_qinnina(jidhr: &Path, natija: &mut NatijatMatjar) {
     // and reporting the programs anyway would fill the library with entries that
     // point at files that were never created.
     if !crate::beea::hiya_beea(jidhr) {
-        natija.tanbihat.push(TanbihFahs::jadeed(
+        natija.tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             jidhr.display().to_string(),
             format!(
@@ -400,7 +396,7 @@ fn jama_qinnina(jidhr: &Path, natija: &mut NatijatMatjar) {
     tahaqqaq_min_masar(jidhr, &wathiqa, &ism_qinnina, &mut natija.tanbihat);
 
     if let Some(rafd) = wathiqa.marfud(&[MIFTAH_BARAMIJ]) {
-        natija.tanbihat.push(TanbihFahs::jadeed(
+        natija.tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             masar_idad.display().to_string(),
             format!(
@@ -425,7 +421,7 @@ fn jama_qinnina(jidhr: &Path, natija: &mut NatijatMatjar) {
         // one construct outside the subset explains the absence, and printing
         // all of them would be a wall.
         if let Some(rafd) = wathiqa.marfudat().first() {
-            natija.tanbihat.push(TanbihFahs::jadeed(
+            natija.tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 masar_idad.display().to_string(),
                 format!(

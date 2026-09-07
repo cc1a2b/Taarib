@@ -28,6 +28,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use jiff::{SignedDuration, Timestamp};
+use taarib_aman::qaimat_sahb::KatibQaima;
 use taarib_khatm::MiftahKhass;
 use taarib_mustalahat::bina::Basma;
 use taarib_mustalahat::luba::LubaId;
@@ -411,73 +413,43 @@ pub fn ijri(
     Ok(Mustawda { jidhr: jidhr.to_path_buf(), bayan, sharaih, madakhil })
 }
 
-/// The signed revocation list, in the exact canonical form
-/// `taarib_aman::qaimat_sahb` verifies.
+/// How long a cast list stays current before every client reports it stale.
 ///
-/// Written by hand rather than through that module because the module only
-/// *reads*: `QaimatSahb` has no public constructor but the verifier, which is
-/// the point of it. The owner side has to produce these bytes, and this is the
-/// producer.
+/// A year from the cast: long enough that a machine that never comes online
+/// again keeps installing from its local copy, short enough that a registry
+/// nobody has re-signed in a year is reported as exactly that. It used to be a
+/// fixed calendar date, which every cast after it would have shipped already
+/// expired.
+const MUDDAT_SALAHIYA: SignedDuration = SignedDuration::from_hours(24 * 365);
+
+/// The signed revocation list, through the one writer that shares its
+/// canonical form with the verifier.
+///
+/// The form used to be spelled here a second time, by hand, and a byte of
+/// drift between the two would have produced lists that verify against
+/// nothing. `KatibQaima` produces bytes and cannot produce a `QaimatSahb`, so
+/// the verifier is still the only constructor of that type.
 fn qaimat_sahb(
     tasalsul: u64,
     waqt: &str,
     khass: &MiftahKhass,
     mulghayat: &[(String, String)],
 ) -> Result<Vec<u8>, String> {
-    const FASIL: &[u8] = b"taarib.qaimat-sahb.v1\0";
-    const ISDAR: u32 = taarib_aman::qaimat_sahb::ISDAR_QAIMA;
+    let usdirat = waqt
+        .parse::<Timestamp>()
+        .map_err(|khata| format!("{waqt:?} is not an RFC 3339 timestamp: {khata}"))?;
+    let salih_hatta = usdirat
+        .checked_add(MUDDAT_SALAHIYA)
+        .map_err(|khata| format!("the validity window runs off the calendar: {khata}"))?;
 
-    let salih_hatta = "2027-09-04T00:00:00Z";
-    // A BTreeMap, because the signed form walks the entries in key order and a
-    // list signed in any other order verifies against nothing.
-    let mut mafatih: BTreeMap<[u8; 32], (String, String)> = BTreeMap::new();
+    let mut katib = KatibQaima::jadeed(tasalsul, waqt, &salih_hatta.to_string());
     for (miftah, sabab) in mulghayat {
         let mut khaam = [0_u8; 32];
         hex::decode_to_slice(miftah, &mut khaam)
             .map_err(|khata| format!("{miftah:?} is not a 64-hex key: {khata}"))?;
-        mafatih.insert(khaam, (sabab.clone(), waqt.to_owned()));
+        katib = katib.ilgha_miftah(khaam, sabab, waqt);
     }
-
-    let mut matn: Vec<u8> = Vec::new();
-    matn.extend_from_slice(FASIL);
-    matn.extend_from_slice(&ISDAR.to_le_bytes());
-    matn.extend_from_slice(&tasalsul.to_le_bytes());
-    for nass in [waqt, salih_hatta] {
-        matn.extend_from_slice(&(nass.len() as u64).to_le_bytes());
-        matn.extend_from_slice(nass.as_bytes());
-    }
-    matn.extend_from_slice(&(mafatih.len() as u64).to_le_bytes());
-    for (miftah, (sabab, lahza)) in &mafatih {
-        matn.extend_from_slice(miftah);
-        for nass in [sabab.as_str(), lahza.as_str()] {
-            matn.extend_from_slice(&(nass.len() as u64).to_le_bytes());
-            matn.extend_from_slice(nass.as_bytes());
-        }
-    }
-    // No revoked lineages and no revoked content hashes: two empty counts.
-    for _ in 0..2 {
-        matn.extend_from_slice(&0_u64.to_le_bytes());
-    }
-
-    let tawqee = khass.waqqi(&matn);
-    let wathiqa = serde_json::json!({
-        "isdar": ISDAR,
-        "tasalsul": tasalsul,
-        "usdirat": waqt,
-        "salih_hatta": salih_hatta,
-        "mafatih_mulgha": mafatih
-            .iter()
-            .map(|(miftah, (sabab, lahza))| serde_json::json!({
-                "miftah": hex::encode(miftah),
-                "sabab": sabab,
-                "waqt": lahza,
-            }))
-            .collect::<Vec<_>>(),
-        "ruqa_mulgha": Vec::<serde_json::Value>::new(),
-        "basmat_mulgha": Vec::<serde_json::Value>::new(),
-        "tawqee": hex::encode(tawqee),
-    });
-    serde_json::to_vec_pretty(&wathiqa).map_err(|khata| khata.to_string())
+    katib.uktub(khass).map_err(|khata| khata.to_string())
 }
 
 fn uktub(jidhr: &Path, nisbi: &str, bayt: &[u8]) -> Result<(), String> {
@@ -523,7 +495,7 @@ fn min_unix(thawani: i64) -> String {
     // from a scratch crate where jiff genuinely was not a dependency. Here it
     // is one, and a second implementation of the Gregorian calendar is a second
     // place to be wrong about February.
-    jiff::Timestamp::from_second(thawani)
+    Timestamp::from_second(thawani)
         .map_or_else(|_| "1970-01-01T00:00:00Z".to_owned(), |waqt| waqt.to_string())
 }
 

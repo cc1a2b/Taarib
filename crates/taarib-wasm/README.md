@@ -2,12 +2,13 @@
 
 **نواة تعريب لويب أسمبلي — the Taarib text engine, compiled for JavaScript.**
 
-This crate produces `taarib_core.wasm`: the same `taarib-saff` Arabic engine
-and the same `taarib-lawha` glyph atlas that live inside the native library,
-compiled to `wasm32-unknown-unknown` and exposed through `wasm-bindgen`
-instead of through C. It exists because two engine families in Taarib's
-coverage matrix — RPG Maker MV/MZ and Electron — run their text drawing
-inside a JavaScript runtime that cannot load a native library at all.
+This crate produces the `taarib_core.js` / `taarib_core_bg.wasm` pair: the
+same `taarib-saff` Arabic engine and the same `taarib-lawha` glyph atlas that
+live inside the native library, compiled to `wasm32-unknown-unknown` and
+exposed through `wasm-bindgen` instead of through C. It exists because two
+engine families in Taarib's coverage matrix — RPG Maker MV/MZ and Electron —
+run their text drawing inside a JavaScript runtime that cannot load a native
+library at all.
 
 ## One engine, not a reimplementation
 
@@ -37,29 +38,45 @@ side recognises every name.
 
 ## Building
 
+The shipping build is the one `scripts/isdar.sh` runs, and both of its flags
+are load-bearing:
+
 ```sh
-wasm-pack build crates/taarib-wasm --target web --release
+cargo build --release --target wasm32-unknown-unknown -p taarib-wasm
+wasm-bindgen --target no-modules --out-name taarib_core \
+    --out-dir target/wasm-bindgen target/wasm32-unknown-unknown/release/taarib_wasm.wasm
 ```
+
+`--target no-modules` because the RPG Maker plugin reads the global
+`wasm_bindgen` that only that target defines — the games run from `file://`
+in NW.js, where an ES module import is not an option — and
+`--out-name taarib_core` because the adapter loads exactly these two names
+and cannot be parameterised. The `wasm-bindgen` CLI version must equal the
+`wasm-bindgen` crate in `Cargo.lock`; the script checks and refuses otherwise.
+(A `wasm-pack build --target web` run produces a `pkg/` of `taarib_wasm.*`
+ES-module files; it is a fine way to poke at the API in a browser and it is not
+what ships.)
 
 The build target is `wasm32-unknown-unknown` — no WASI, no filesystem shim,
 no thread pool — so the module loads inside NW.js 0.29 (RPG Maker MV) as
 readily as inside current Chromium (RPG Maker MZ, Electron).
 
-`wasm-pack` writes a `pkg/` directory containing:
+`wasm-bindgen` writes `target/wasm-bindgen/`:
 
 | file | what it is |
 | --- | --- |
-| `taarib_wasm_bg.wasm` | the engine itself — shaper, bidi, line breaker, justifier, rasterizer, atlas |
-| `taarib_wasm.js` | the ES-module glue: loads the module, wraps every export in the classes below |
-| `taarib_wasm.d.ts` | TypeScript declarations for the whole surface, generated from the Rust signatures and doc comments |
-| `taarib_wasm_bg.wasm.d.ts` | declarations for the raw wasm exports; adapters never touch these directly |
-| `package.json` | the npm-shaped manifest the adapter bundles from |
+| `taarib_core_bg.wasm` | the engine itself — shaper, bidi, line breaker, justifier, rasterizer, atlas |
+| `taarib_core.js` | the no-modules glue: defines the global `wasm_bindgen`, loads the module, wraps every export in the classes below |
+| `taarib_core.d.ts` | TypeScript declarations for the whole surface, generated from the Rust signatures and doc comments |
+| `taarib_core_bg.wasm.d.ts` | declarations for the raw wasm exports; adapters never touch these directly |
 
-The adapter bundles decide how the module reaches the page: the RPG Maker
-plugin inlines the `.wasm` bytes into `js/plugins/taarib.js` so a patched
-game needs no extra file and no fetch; the Electron runtime ships it inside
-the injected `app.asar` payload. Nothing in this crate fetches anything —
-see below.
+`taarib-tajmee` stages the pair (matrix row H1) under each JavaScript
+adapter's own `taarib/` subdirectory — `mukawwinat/mulhaq/rpgmaker/{mv,mz}/taarib/`
+and `mukawwinat/mulhaq/electron/taarib/` — and the adapters load them as two
+separate files from beside themselves: the RPG Maker plugin injects the glue
+through a `<script>` element and fetches the `.wasm` over `XMLHttpRequest`,
+which is how those games load everything from `file://`. Nothing is inlined
+into the plugin, and nothing in this crate fetches anything — see below.
 
 ## Consumers
 
@@ -73,26 +90,33 @@ and gets the codes back as atoms and spans rather than glyphs; measurement
 questions route through `qis`; and every glyph is blitted from the atlas
 onto the window's bitmap.
 
-**The Electron runtime** (`adapters-script/electron/`). For canvas-rendered
-games — where the browser's own shaping never runs, because the game draws
-with `CanvasRenderingContext2D.fillText` — the runtime replaces `fillText`
-and `measureText`: `measureText` becomes `qis`, `fillText` becomes `khattit`
-plus one blit per glyph from the atlas page.
+**The Electron runtime** (`adapters-script/electron/`). Its default rung
+leaves the browser's text APIs alone on purpose: Chromium shapes Arabic in the
+DOM *and* in `fillText`, so the runtime installs the font, sets the direction
+and replaces the strings, and the text stays real text — selectable,
+searchable, legible to a screen reader. The takeover in `rakkibLawha` is for
+the one case the browser cannot help: a game that draws each character as its
+own sprite, blits a bitmap font, or bundles its own layout library. On that
+rung, and only when the patch recorded it, `measureText` becomes `qis` and
+`fillText` becomes `khattit` plus one blit per glyph from the atlas page.
 
-Both consumers draw glyph *images* from the atlas rather than calling the
-browser's text APIs, because only the atlas draws the glyphs shaping chose —
-contextual forms, lam-alef, the `rlig` and `calt` alternates — rather than
-whatever a codepoint maps to.
+The RPG Maker plugin always draws glyph *images* from the atlas, because
+`Bitmap.drawText` is the engine's own rasterizer and the only way to put the
+glyphs shaping chose — contextual forms, lam-alef, the `rlig` and `calt`
+alternates — onto its bitmaps. The Electron runtime does so only on its
+takeover rung.
 
 ## Using it
 
 ```js
-import init, {
+// The shipping glue is a no-modules build: taarib_core.js defines a global
+// `wasm_bindgen` and the module's exports hang off it once it has loaded.
+await wasm_bindgen("./taarib/taarib_core_bg.wasm");
+const {
   hayyi, TaaribKhatt, TaaribSilsila, TaaribSaff, TaaribTalab,
   TaaribLawha, TaaribKhiyaratLawha, HaqlHarf, HaqlSatr, Lahja,
-} from "./pkg/taarib_wasm.js";
+} = wasm_bindgen;
 
-await init();
 hayyi();                                   // panic hook — explicit, once
 
 // Fonts come from bytes the adapter already read out of the patch.
@@ -172,11 +196,12 @@ could reproduce.
 ## Errors
 
 Every fallible export throws a JavaScript `Error` whose `name` is
-`TaaribKhata` and whose `message` is the Arabic sentence, carrying the same
-four things the C ABI hands back: `ramz` (the permanent code,
-`TAARIB-E-2501`), `injilizi` (the English sentence), `khutwa` (the
-next-action discriminant, numbered exactly as the native library numbers it
-— the `Khutwa` enum names the values) and `khutura` (the severity). A font
+`TaaribKhata` and whose `message` is the Arabic sentence. It carries the same
+parts the C ABI hands back — `ramz` (the permanent code, `TAARIB-E-2501`),
+`injilizi` (the English sentence) and `khutwa` (the next-action discriminant,
+numbered exactly as the native library numbers it; the `Khutwa` enum names the
+values) — plus two the C surface has no accessor for: `khutura` (the severity)
+and `sijill` (the nested cause chain). A font
 without a `GSUB` table is rejected at `TaaribKhatt.min_bayt` with the
 sentence that says so, in both languages, with the action that fixes it —
 not with `"failed"`.

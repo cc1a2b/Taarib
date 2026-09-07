@@ -71,18 +71,19 @@
 //! [`TawseelThalith`] holds a [`Tarjama`] and writes two files: the generated
 //! resource and the override. The game's own package is never opened, never
 //! rewritten and never even named — the game's existing translation list is
-//! *passed in* by the caller that read it, for the same reason
-//! [`crate::khadim_nusus::KhadimNusus::bi_tarjamat_luba`] takes one: the
+//! *passed in* by the caller that read it, as a [`TarjamatLuba`], for the same
+//! reason [`crate::khadim_nusus::KhadimNusus`] takes one: the
 //! `locale/translations` setting replaces the whole list rather than adding to
 //! it, and a patch that took away every language the game shipped with in
-//! exchange for Arabic is a worse patch than none.
+//! exchange for Arabic is a worse patch than none. A list nobody read is not an
+//! empty list, and rung one writes nothing at all rather than guess.
 
 use std::path::{Path, PathBuf};
 
 use taarib_usus::masarat;
 
 use crate::khadim_nusus::{
-    Lahja, MadkhalIdad, MalafTajawuz, QeemaIdad, lugha_wasm, wasm_maqbul,
+    Lahja, MadkhalIdad, MalafTajawuz, QeemaIdad, TarjamatLuba, lugha_wasm, wasm_maqbul,
 };
 use crate::khata::{KhataGodot, tul_u64};
 use crate::pck::tarjama::{JeelMawrid, Tarjama, TarjamaMurakkaza};
@@ -125,9 +126,9 @@ pub const MIFTAH_THAQAFA_IHTIYAT: &str = "locale/fallback";
 /// to `ResourceLoader::load`, which accepts `res://`, `user://` and absolute
 /// filesystem paths — that last fact is the whole of rung one.
 ///
-/// The value replaces the list rather than extending it, so
-/// [`TawseelThalith::bi_tarjamat_luba`] exists to write the game's own entries
-/// back beside the patch's.
+/// The value replaces the list rather than extending it, so [`TawseelThalith`]
+/// takes the game's own entries at construction — as a [`TarjamatLuba`], which
+/// has no default — and writes the key only when they were read.
 pub const MIFTAH_TARJAMAT: &str = "locale/translations";
 
 /// The `GDNative` libraries Godot 3 loads and calls as singletons.
@@ -419,7 +420,7 @@ pub struct TawseelThalith {
     mawdi: MawdiTarjama,
     tarjama: Option<Tarjama>,
     murakkaza: bool,
-    tarjamat_luba: Vec<String>,
+    tarjamat_luba: TarjamatLuba,
     mufradat_luba: Vec<String>,
     gdnlib: Option<String>,
     khatt: Option<String>,
@@ -429,22 +430,27 @@ pub struct TawseelThalith {
 }
 
 impl TawseelThalith {
-    /// Builds the configuration against one game's override file and one place
-    /// to put the generated resource.
+    /// Builds the configuration against one game's override file, one place to
+    /// put the generated resource, and the game's own translation list.
     ///
     /// Defaults: the `ar` locale, the plain `Translation` form, the engine
     /// version recorded as 3.0 — the oldest 3.x, so that every 3.x accepts the
     /// resource, since Godot refuses a file whose recorded engine major is above
     /// its own and compares nothing else — and no takeover, because whether one
-    /// is available is the caller's answer and not this module's guess.
+    /// is available is the caller's answer and not this module's guess. The
+    /// translation list has no default — see [`TarjamatLuba`].
     #[must_use]
-    pub fn jadeed(tajawuz: MalafTajawuz, mawdi: MawdiTarjama) -> Self {
+    pub fn jadeed(
+        tajawuz: MalafTajawuz,
+        mawdi: MawdiTarjama,
+        tarjamat_luba: TarjamatLuba,
+    ) -> Self {
         Self {
             tajawuz,
             mawdi,
             tarjama: None,
             murakkaza: false,
-            tarjamat_luba: Vec::new(),
+            tarjamat_luba,
             mufradat_luba: Vec::new(),
             gdnlib: None,
             khatt: None,
@@ -478,13 +484,6 @@ impl TawseelThalith {
     #[must_use]
     pub const fn bi_murakkaza(mut self, murakkaza: bool) -> Self {
         self.murakkaza = murakkaza;
-        self
-    }
-
-    /// The game's own `locale/translations` entries, so rung one keeps them.
-    #[must_use]
-    pub fn bi_tarjamat_luba(mut self, tarjamat: Vec<String>) -> Self {
-        self.tarjamat_luba = tarjamat;
         self
     }
 
@@ -570,15 +569,29 @@ impl TawseelThalith {
         &self.tajawuz
     }
 
-    /// The translation list rung one writes: the game's own, then the patch's.
+    /// The game's own translation list, as it was supplied.
     #[must_use]
-    pub fn qaimat_tarjamat(&self) -> Vec<String> {
-        let mut qaima = self.tarjamat_luba.clone();
+    pub const fn tarjamat_luba(&self) -> &TarjamatLuba {
+        &self.tarjamat_luba
+    }
+
+    /// The translation list rung one writes — the game's own, then the
+    /// patch's — or [`None`] when the game's own was never read.
+    ///
+    /// [`None`] rather than a shorter list: the key replaces the whole list,
+    /// so a list nobody read cannot be written back, and the key is not
+    /// written at all.
+    #[must_use]
+    pub fn qaimat_tarjamat(&self) -> Option<Vec<String>> {
+        let TarjamatLuba::Maqrua(luba) = &self.tarjamat_luba else {
+            return None;
+        };
+        let mut qaima = luba.clone();
         let marja = self.mawdi.marja();
         if self.tarjama.is_some() && !qaima.iter().any(|mawjud| mawjud == marja) {
             qaima.push(marja.to_owned());
         }
-        qaima
+        Some(qaima)
     }
 
     /// The singleton list rung one writes, or [`None`] to leave the key alone.
@@ -596,8 +609,9 @@ impl TawseelThalith {
     #[must_use]
     pub fn madakhil(&self) -> Vec<MadkhalIdad> {
         let mut madakhil = Vec::with_capacity(5);
-        let tarjamat = self.qaimat_tarjamat();
-        if !tarjamat.is_empty() {
+        if let Some(tarjamat) = self.qaimat_tarjamat()
+            && !tarjamat.is_empty()
+        {
             madakhil.push(MadkhalIdad::jadeed(MIFTAH_TARJAMAT, QeemaIdad::Qaima(tarjamat)));
         }
         if !self.wasm.trim().is_empty() {
@@ -804,71 +818,7 @@ impl TawseelThalith {
     /// is a warning and not a failure.
     pub fn hayyi(&self) -> Result<NatijatTawseel, KhataGodot> {
         let mut natija = NatijatTawseel::default();
-        let masar_mawrid = self.mawdi.mutlaq_masar().display().to_string();
-        let masar_tajawuz = self.tajawuz.masar().display().to_string();
-
-        let kutiba = match self.rutbat_mawrid() {
-            Ok(hajm) => {
-                match self.tahaqquq_mawrid() {
-                    Ok(adad) => {
-                        natija.mawrid.sajjil(
-                            RutbatThalith::Idadat,
-                            true,
-                            format!(
-                                "{adad} message(s) written to {masar_mawrid} as {hajm} bytes \
-                                 of Godot 3 resource, read back and confirmed to answer with \
-                                 the patch's own translation"
-                            ),
-                        );
-                        true
-                    }
-                    Err(sabab) => {
-                        natija.mawrid.sajjil(RutbatThalith::Idadat, false, sabab);
-                        false
-                    }
-                }
-            }
-            Err(khata) => {
-                natija.mawrid.sajjil(RutbatThalith::Idadat, false, khata.to_string());
-                false
-            }
-        };
-
-        if kutiba {
-            match self.rutbat_idadat() {
-                Ok(()) => natija.thaqafa.sajjil(
-                    RutbatThalith::Idadat,
-                    true,
-                    format!(
-                        "{masar_tajawuz} written: locale {} forced, and the translation list \
-                         carries the game's own {} entry/entries beside the patch's. Godot \
-                         reads this file during startup, so it applies at the next launch",
-                        self.wasm,
-                        self.tarjamat_luba.len()
-                    ),
-                ),
-                Err(khata) => {
-                    natija.thaqafa.sajjil(RutbatThalith::Idadat, false, khata.to_string());
-                }
-            }
-        } else {
-            // The override is not written when the resource it would name did
-            // not land. Godot resolves every `locale/translations` entry at
-            // startup and logs a failure for each one it cannot open, so an
-            // override written on its own would turn a patch that did nothing
-            // into a patch that makes the game complain at every launch — and
-            // would additionally have replaced the game's own translation list
-            // with one carrying a dead entry.
-            natija.thaqafa.sajjil(
-                RutbatThalith::Idadat,
-                false,
-                format!(
-                    "{masar_tajawuz} was not written, because the resource it would have \
-                     named did not land: an override listing a translation the engine cannot \
-                     open is a game that reports a missing file at every launch"
-                ),
-            );
-        }
+        self.rutbat_ula(&mut natija);
 
         let khiyarat = self.rutbat_satr();
         natija.thaqafa.sajjil(
@@ -918,6 +868,93 @@ impl TawseelThalith {
             Ok(natija)
         } else {
             Err(KhataGodot::ImtidadMarfud { sabab: sabab_shamil(&natija) })
+        }
+    }
+
+    /// Rung one, both halves, recorded against the resource and locale concerns.
+    ///
+    /// Nothing is written when the game's own translation list was not read.
+    /// Rung one delivers through the one key that replaces that list, so
+    /// without it there is no way to name the resource that does not also take
+    /// away every language the game shipped with — and a resource nothing
+    /// names is a file in the player's directory that nothing loads.
+    fn rutbat_ula(&self, natija: &mut NatijatTawseel) {
+        let masar_mawrid = self.mawdi.mutlaq_masar().display().to_string();
+        let masar_tajawuz = self.tajawuz.masar().display().to_string();
+
+        if let Some(sabab) = self.tarjamat_luba.sabab() {
+            let mulahaza = format!(
+                "neither {masar_mawrid} nor {masar_tajawuz} was written: the game's own \
+                 {MIFTAH_TARJAMAT} list was not read ({sabab}), and the setting replaces the \
+                 whole list, so naming the patch's translation would take away every language \
+                 the game ships with"
+            );
+            natija.mawrid.sajjil(RutbatThalith::Idadat, false, mulahaza.clone());
+            natija.thaqafa.sajjil(RutbatThalith::Idadat, false, mulahaza);
+            return;
+        }
+
+        let kutiba = match self.rutbat_mawrid() {
+            Ok(hajm) => {
+                match self.tahaqquq_mawrid() {
+                    Ok(adad) => {
+                        natija.mawrid.sajjil(
+                            RutbatThalith::Idadat,
+                            true,
+                            format!(
+                                "{adad} message(s) written to {masar_mawrid} as {hajm} bytes \
+                                 of Godot 3 resource, read back and confirmed to answer with \
+                                 the patch's own translation"
+                            ),
+                        );
+                        true
+                    }
+                    Err(sabab) => {
+                        natija.mawrid.sajjil(RutbatThalith::Idadat, false, sabab);
+                        false
+                    }
+                }
+            }
+            Err(khata) => {
+                natija.mawrid.sajjil(RutbatThalith::Idadat, false, khata.to_string());
+                false
+            }
+        };
+
+        if kutiba {
+            match self.rutbat_idadat() {
+                Ok(()) => natija.thaqafa.sajjil(
+                    RutbatThalith::Idadat,
+                    true,
+                    format!(
+                        "{masar_tajawuz} written: locale {} forced, and the translation list \
+                         carries the game's own {} entry/entries beside the patch's. Godot \
+                         reads this file during startup, so it applies at the next launch",
+                        self.wasm,
+                        self.tarjamat_luba.madakhil().len()
+                    ),
+                ),
+                Err(khata) => {
+                    natija.thaqafa.sajjil(RutbatThalith::Idadat, false, khata.to_string());
+                }
+            }
+        } else {
+            // The override is not written when the resource it would name did
+            // not land. Godot resolves every `locale/translations` entry at
+            // startup and logs a failure for each one it cannot open, so an
+            // override written on its own would turn a patch that did nothing
+            // into a patch that makes the game complain at every launch — and
+            // would additionally have replaced the game's own translation list
+            // with one carrying a dead entry.
+            natija.thaqafa.sajjil(
+                RutbatThalith::Idadat,
+                false,
+                format!(
+                    "{masar_tajawuz} was not written, because the resource it would have \
+                     named did not land: an override listing a translation the engine cannot \
+                     open is a game that reports a missing file at every launch"
+                ),
+            );
         }
     }
 

@@ -10,6 +10,33 @@ either way is a named open question, and nothing here is aspirational. Findings
 discovered during verification are collected at the end; this file changes no
 code.
 
+> **Overtaken since it was written — re-read against the tree on 2026-09-06.**
+> This is an audit record and its body is left as it was. These parts no longer
+> describe the tree:
+>
+> - Checklist rows E1, E3 and E4 record `bundle.resources`, `mawarid/`, the
+>   `mukawwinat_tahmil.rs` / `bidaya.rs` / `istiada_cli.rs` files and the
+>   `taarib-tajmee` / `taarib-tahdith` / `taarib-mudkhal` crates as absent. All
+>   of them exist, and `mawarid/` on the authoring machine holds a fully staged
+>   component tree with its manifest.
+> - Finding F1 ("recorded launch options are never applied or shown") is closed
+>   by code: `masar_tathbeet::thabbit` calls `naffidh_idadat`, which reads the
+>   requirement from the manifest through `itlaq::talabat_steam` and performs it
+>   through `itlaq::naffidh_talabat_steam` into every signed-in account's
+>   `localconfig.vdf`; `taraju::nafidh` restores it on uninstall through
+>   `RadItlaq`. That wiring is days old, was still being edited when this note
+>   was written, and has not been exercised against a real Steam account, so the
+>   manual step in §3 remains the safe instruction.
+> - Finding F3's "harmless today because of F1" no longer holds, and the hazard
+>   it feared does not arise: `naffidh_talabat_steam` checks whether Steam is
+>   running before it touches any account file, independently of the
+>   `HalatIdadat` seam it describes (which is still passed as `None`).
+> - Finding F5 ("one Steam root is scanned, not both") is wrong about the
+>   current code: `steam::hall_judhur` collects every valid candidate,
+>   including the flatpak and snap roots, deduplicated.
+> - The `file:line` citations in §2 and §4 have drifted as `tarkib.rs` and
+>   `itlaq.rs` grew; the function names beside them are what to grep for.
+
 ## 1. SteamOS, in the terms that decide this target
 
 | fact | consequence for Taarib | source |

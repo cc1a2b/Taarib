@@ -138,6 +138,7 @@ use crate::bayan::{
     BayanTathbeet, NawTaghyeer, NawTathbeet, SalahiyatMalaf, SijillIdad, SijillTaghyeer,
     Tathbeet, basma_bayt, basma_malaf, dakhil_aw_khata, nisbi_min,
 };
+use crate::itlaq::RadItlaq;
 use crate::khata::{KhataTathbeet, NatijatTathbeet, min_khata_io};
 
 /// How a restore treats a file that is neither Taarib's work nor the original.
@@ -271,6 +272,22 @@ impl BaqiyaMujallad {
         let mazid = self.adad.saturating_sub(self.madakhil.len());
         if mazid > 0 {
             sutur.push(format!("    and {mazid} more"));
+        }
+        sutur
+    }
+
+    /// The same lines in Arabic, `amal` naming what became of the residue.
+    #[must_use]
+    pub fn sutur_arabiya(&self, amal: &str) -> Vec<String> {
+        if self.adad == 0 {
+            return vec![format!("  {}: بقي لأنّ مجلّدًا داخله بقي", self.mujallad)];
+        }
+        let mut sutur =
+            vec![format!("  {}: فيه {} مدخلًا لم يضعها تعريب، {amal}", self.mujallad, self.adad)];
+        sutur.extend(self.madakhil.iter().map(|ism| format!("    {ism}")));
+        let mazid = self.adad.saturating_sub(self.madakhil.len());
+        if mazid > 0 {
+            sutur.push(format!("    وغيرها {mazid}"));
         }
         sutur
     }
@@ -784,6 +801,13 @@ fn nafidh(
         istiada_wahid(tathbeet, &masar, siyasa, taqreer)?;
     }
 
+    // Built once from the manifest's own records, before the loop, because it
+    // has to know the *whole* set: a launcher requirement is only this crate's
+    // to answer when the per-account records it produced are in the same
+    // manifest, and that is a fact about the set rather than about any one line.
+    let sijillat: Vec<SijillIdad> = tathbeet.bayan().idadat.values().cloned().collect();
+    let mut itlaq = RadItlaq::min_sijillat(&sijillat);
+
     let idadat: Vec<String> = tathbeet
         .bayan()
         .idadat
@@ -792,7 +816,7 @@ fn nafidh(
         .map(|(muarrif, _)| muarrif.clone())
         .collect();
     for muarrif in idadat {
-        rudd_idad(tathbeet, &muarrif, radd, taqreer)?;
+        rudd_idad(tathbeet, &muarrif, &mut itlaq, radd, taqreer)?;
     }
 
     // Descending path order puts `BepInEx/plugins` before `BepInEx`, so the
@@ -1008,10 +1032,24 @@ fn hala_qabl(
     }
 }
 
-/// Puts one setting back, through the caller's writer, and marks it done.
+/// Puts one setting back and marks it done.
+///
+/// Two writers, and which one is used is decided by the record rather than by
+/// the caller. A launch option this crate wrote goes to [`RadItlaq`]; everything
+/// else goes to the writer the caller supplied, exactly as before.
+///
+/// That split is a change of premise rather than a shortcut past
+/// [`RadIdad`]'s contract. The contract exists because `taraju` must not guess
+/// *which file* a setting lives in — but a record `itlaq` wrote carries the
+/// account file's absolute path, so there is nothing left to guess and no
+/// second writer that could be more correct about it. A caller passing
+/// [`RadLaShay`] therefore gets a complete uninstall of a Steam launch option
+/// instead of a refusal, and no caller loses the ability to own any other kind
+/// of setting.
 fn rudd_idad(
     tathbeet: &mut Tathbeet,
     muarrif: &str,
+    itlaq: &mut RadItlaq,
     radd: &mut dyn RadIdad,
     taqreer: &mut TaqreerIstiada,
 ) -> Result<(), KhataTathbeet> {
@@ -1019,7 +1057,11 @@ fn rudd_idad(
     if idad.istiada_tammat {
         return Ok(());
     }
-    radd.rudd(&idad)?;
+    if itlaq.yamlik(&idad.mahall) {
+        itlaq.rudd(&idad)?;
+    } else {
+        radd.rudd(&idad)?;
+    }
     taqreer.idadat_mustaada = taqreer.idadat_mustaada.saturating_add(1);
     tathbeet.allim_idad_tammat(muarrif)
 }
@@ -1319,6 +1361,42 @@ impl KhuttatIstiada {
                 "  {} record(s) outstanding in total, including settings",
                 self.mutabaqqi
             ));
+        }
+        sutur
+    }
+
+    /// The same plan in Arabic, line for line.
+    ///
+    /// Its own function rather than a translation of [`Self::taqreer`], for the
+    /// reason [`crate::tarkib::KhuttatTarkib::taqreer_arabi`] is: this is the
+    /// confirmation screen for the one control in the product that can destroy
+    /// something the user did not put there, and that screen's first language is
+    /// Arabic. A screen that had to write its own Arabic for these sentences
+    /// would be a second copy of what the uninstall decided.
+    #[must_use]
+    pub fn taqreer_arabi(&self) -> Vec<String> {
+        let mut sutur = vec![format!(
+            "{} [{}] ثُبِّت في {}: {} ملفًّا تُستعاد، و{} تُحذف، و{} مجلّدًا، ويتحرّر {} بايت \
+             من النسخ المحفوظة",
+            self.luba,
+            self.naw.ism_arabi(),
+            self.waqt_tathbeet,
+            self.li_istiada,
+            self.li_hadhf,
+            self.mujalladat,
+            self.hajm_nusakh
+        )];
+        for masar in &self.mustabdala {
+            sutur.push(format!("  {masar}: استبدله المتجر بعد التثبيت، فيُترك كما هو"));
+        }
+        for masar in &self.mafquda {
+            sutur.push(format!("  {masar}: مسجَّل وليس على القرص"));
+        }
+        for baqiya in &self.baqaya {
+            sutur.extend(baqiya.sutur_arabiya("ويبقى مكانه ما لم تختر الكنس"));
+        }
+        if self.mutabaqqi > self.li_istiada.saturating_add(self.li_hadhf) {
+            sutur.push(format!("  {} سجلًّا متبقّيًا في الجملة، منها الإعدادات", self.mutabaqqi));
         }
         sutur
     }

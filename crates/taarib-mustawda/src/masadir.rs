@@ -241,6 +241,18 @@ impl SilsilatMasadir {
     /// [`KhataMustawda::LaMasdar`] when every source refused, carrying the
     /// reason the last one gave.
     pub async fn jalb(&self, nisbi: &str) -> NatijatMustawda<Vec<u8>> {
+        self.jalb_maa_masdar(nisbi).await.map(|(bayt, _)| bayt)
+    }
+
+    /// As [`Self::jalb`], naming the source that answered beside the bytes.
+    ///
+    /// The name is [`MasdarMustawda::wasf`]'s, so a refresh record and a
+    /// failure describe the same source in the same words.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::jalb`].
+    pub async fn jalb_maa_masdar(&self, nisbi: &str) -> NatijatMustawda<(Vec<u8>, String)> {
         let mut akhir = String::from("no registry source is configured");
 
         for masdar in &self.masadir {
@@ -259,7 +271,7 @@ impl SilsilatMasadir {
             match natija {
                 Ok(bayt) => {
                     tracing::debug!(masdar = %wasf, nisbi, hajm = bayt.len(), "source answered");
-                    return Ok(bayt);
+                    return Ok((bayt, wasf));
                 }
                 Err(khata) => {
                     tracing::debug!(masdar = %wasf, nisbi, khata = %khata, "source refused");

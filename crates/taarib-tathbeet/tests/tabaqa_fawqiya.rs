@@ -7,13 +7,18 @@
 //! all … and this is where that stays true".
 //!
 //! It did not stay true. [`khutta`] answers the tier correctly and returns
-//! before any per-engine arm, but [`nashr`] then called the framework writer,
-//! which re-derived the framework from the **engine alone** — and an
+//! before any per-engine arm, but `nashr` — the entry point that planned and
+//! executed in one call, since removed — then called the framework writer,
+//! which re-derived the framework from the **engine alone**, and an
 //! unrecognised engine is exactly the engine that gets tier 3. So a tier-3
 //! install deployed Taarib's loader and its payloads into a game the plan
 //! beside it said needed no framework whatever. Measured on a real game: five
 //! files and one directory written into a title whose report had just told the
 //! player nothing would be.
+//!
+//! Every test below now builds the plan and then executes *that plan*, because
+//! that is the only shape the crate offers: `khutta` and then
+//! [`nashr_bi_khutta`], which is what the two production callers do.
 //!
 //! It was not the only write that escaped the plan. The larger one — the
 //! script-engine write, which replaces a game's own shipped text — ran from
@@ -60,7 +65,8 @@ use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_tathbeet::bayan::{NawTathbeet, TarifLuba, Tathbeet};
 use taarib_tathbeet::nusus::Nashir;
 use taarib_tathbeet::tarkib::{
-    HalatIdadat, LubaMuhallala, NatijatTarkib, SababLaHaja, nashr,
+    HalatIdadat, KhuttatTarkib, LubaMuhallala, NatijatTarkib, SababLaHaja, khutta,
+    nashr_bi_khutta,
 };
 use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass, nazzif_nusakh};
 use taarib_usus::khata::Tafsir;
@@ -219,6 +225,16 @@ fn asmaa(jadwal: &BTreeMap<String, Option<Vec<u8>>>) -> Vec<&str> {
     jadwal.keys().map(String::as_str).collect()
 }
 
+/// The plan for this game at one tier.
+///
+/// Built here rather than folded into the write, because `tarkib::nashr` — the
+/// one entry point that planned and executed in a single call — is gone. Every
+/// caller now holds the plan first, which is the whole claim: the lines a person
+/// is shown are the lines that run.
+fn khutta_li(muhallala: &LubaMuhallala, makhzan: &Path, tabaqa: Tabaqa) -> KhuttatTarkib {
+    khutta(&imkaniyat(tabaqa), muhallala, makhzan).expect("a deployment plan")
+}
+
 // ---------------------------------------------------------------------------
 // 1. Tier 3 writes nothing
 // ---------------------------------------------------------------------------
@@ -240,13 +256,27 @@ fn tabaqa_fawqiya_la_taktub_ayya_bayt_fi_alluba() {
     let ruqaa = ibni_ruqaa(&dalil.path().join("dark-souls.ruqaa"));
 
     let qabl = shajara(&luba);
+    let muhallala = luba_muhallala(&luba);
+    let mukhattat = khutta_li(&muhallala, &makhzan, Tabaqa::TarjamaFawqiya);
+    assert_eq!(
+        mukhattat.sabab_faragh(),
+        Some(SababLaHaja::TabaqaFawqiya),
+        "the plan the person is shown says the tier deploys nothing, and it is this same value \
+         the write below is handed"
+    );
+    assert!(
+        mukhattat.slot_muhammil.is_none(),
+        "and no loader slot is claimed at all, because no loader is deployed: {:?}",
+        mukhattat.slot_muhammil
+    );
+
     let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
         .expect("an installation session");
     let mut nashir = Nashir::jadeed(&mut tathbeet, &ruqaa, &luba);
-    let (itar, mulhaqat) = nashr(
-        &luba_muhallala(&luba),
+    let (itar, mulhaqat) = nashr_bi_khutta(
+        &mukhattat,
+        &muhallala,
         &HalatIdadat::default(),
-        &imkaniyat(Tabaqa::TarjamaFawqiya),
         &makhzan,
         &mut nashir,
     )
@@ -315,15 +345,21 @@ fn nafs_almuharrik_bi_tabaqa_kamila_yansur_almuhammil() {
     ibni_makhzan(&makhzan);
 
     let ruqaa = ibni_ruqaa(&dalil.path().join("dark-souls.ruqaa"));
+    let muhallala = luba_muhallala(&luba);
+    // The identical engine, identical store, identical directory. Only the tier
+    // differs, and it is the only thing that may decide this.
+    let mukhattat = khutta_li(&muhallala, &makhzan, Tabaqa::Kamil);
+    let slot = mukhattat.slot_muhammil.as_ref().expect("tier 1 deploys a loader, so it has a slot");
+    assert_eq!(slot.ism, "version.dll");
+    assert!(!slot.yarfud(), "and nothing holds it in this game: {slot:?}");
+
     let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
         .expect("an installation session");
     let mut nashir = Nashir::jadeed(&mut tathbeet, &ruqaa, &luba);
-    let (itar, _) = nashr(
-        &luba_muhallala(&luba),
+    let (itar, _) = nashr_bi_khutta(
+        &mukhattat,
+        &muhallala,
         &HalatIdadat::default(),
-        // The identical engine, identical store, identical directory. Only the
-        // tier differs, and it is the only thing that may decide this.
-        &imkaniyat(Tabaqa::Kamil),
         &makhzan,
         &mut nashir,
     )
@@ -375,12 +411,14 @@ fn istiada_tatruk_ma_katabahu_alitar_bi_nafsihi() {
 
     let ruqaa = ibni_ruqaa(&dalil.path().join("dark-souls.ruqaa"));
     let qabl = shajara(&luba);
+    let muhallala = luba_muhallala(&luba);
+    let mukhattat = khutta_li(&muhallala, &makhzan, Tabaqa::Kamil);
     let mut tathbeet = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif(&luba), "dawra")
         .expect("an installation session");
-    let (itar, _) = nashr(
-        &luba_muhallala(&luba),
+    let (itar, _) = nashr_bi_khutta(
+        &mukhattat,
+        &muhallala,
         &HalatIdadat::default(),
-        &imkaniyat(Tabaqa::Kamil),
         &makhzan,
         &mut Nashir::jadeed(&mut tathbeet, &ruqaa, &luba),
     )

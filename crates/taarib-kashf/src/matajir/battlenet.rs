@@ -223,7 +223,16 @@ impl Matjar for MatjarBattleNet {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         };
         if !fahras_fih(&jidhr).is_file() {
-            return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+            // The root is here — configured, or found through this very file a
+            // moment ago — and the catalogue is not. Installed and unreadable.
+            return Ok(NatijatMatjar::naqisa(
+                MUARRIF,
+                Some(jidhr.clone()),
+                fahras_fih(&jidhr).display().to_string(),
+                "Battle.net is installed here but the Agent's product.db is not, so no Blizzard \
+                 game could be listed; start Battle.net once so the Agent rewrites it, or \
+                 correct the configured root",
+            ));
         }
 
         // Read through `std::fs` rather than the shared helper because the
@@ -256,7 +265,7 @@ impl Matjar for MatjarBattleNet {
         // signature of an Agent version whose layout has moved, and it is
         // reported as such rather than presented as "no Blizzard games".
         if sijillat.is_empty() {
-            tanbihat.push(TanbihFahs::jadeed(
+            tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 fahras.display().to_string(),
                 "product.db parsed as protobuf but held no installed-product records where this \
@@ -279,13 +288,11 @@ impl Matjar for MatjarBattleNet {
             }
         }
 
-        Ok(NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: Some(jidhr),
-            alaab,
-            tanbihat,
-            muddat: bidaya.elapsed(),
-        })
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, Some(jidhr));
+        natija.alaab = alaab;
+        natija.tanbihat = tanbihat;
+        natija.muddat = bidaya.elapsed();
+        Ok(natija)
     }
 
     fn judhur_muraqaba(&self, siyaq: &SiyaqFahs) -> Vec<PathBuf> {
@@ -815,6 +822,27 @@ mod ikhtibarat {
         // variable at all, so it is unaffected by the field being absent.
         let mac = SiyaqFahs::lil_ikhtibar(NizamTashghil::Mac, masrah.path());
         assert_eq!(MatjarBattleNet::judhur_muhtamala(&mac), vec![PathBuf::from(JIDHR_MAC)]);
+        Ok(())
+    }
+
+    /// A configured root that exists and holds no `Agent/product.db`. `mawqi`
+    /// honours the user's assertion; `ifhas` must answer "installed,
+    /// unreadable" rather than contradicting it with "not installed".
+    #[test]
+    fn tajawuz_bila_product_db_naqis_la_ghayr_muthabbat() -> NatijatIkhtibar {
+        use crate::fahs::HalatFahsMatjar;
+
+        let masrah = tempfile::tempdir()?;
+        let tajawuz = masrah.path().join("Battle.net");
+        fs::create_dir_all(&tajawuz)?;
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.manassat.battlenet = Some(tajawuz.clone());
+
+        let matjar = MatjarBattleNet::jadeed();
+        assert_eq!(matjar.mawqi(&siyaq).as_deref(), Some(tajawuz.as_path()));
+        let natija = matjar.ifhas(&siyaq)?;
+        assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
+        assert_eq!(natija.jidhr_matjar.as_deref(), Some(tajawuz.as_path()));
         Ok(())
     }
 }

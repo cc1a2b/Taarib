@@ -5,16 +5,24 @@ that carries the Arabic text engine (`taarib-saff`) and the glyph atlas
 (`taarib-lawha`) into processes that are not Rust. It is the contract the
 Unity adapters bind through P/Invoke, the Unreal module links directly, the
 Ren'Py adapter reaches through `ctypes`, and the RPG Maker VX Ace adapter
-reaches through RGSS3's `Win32API`. There is no second entry point into the
-engine from outside Rust, and no engine-specific extension of this one —
+reaches through RGSS3's `Win32API`. It is the only *native* entry point into
+the engine from outside Rust, and there is no engine-specific extension of it —
 an adapter that needed a private ABI call would be an adapter making policy,
-which adapters do not do.
+which adapters do not do. The JavaScript adapters do not use it at all: they
+load `crates/taarib-wasm`, which compiles the same `taarib-saff` and
+`taarib-lawha` code to WebAssembly and exposes the same shape through
+`wasm-bindgen` without going through this crate.
 
 The library ships as `taarib_jisr.dll` / `libtaarib_jisr.so` /
-`libtaarib_jisr.dylib`, built for `x86_64` and `aarch64` on Windows, Linux
-and macOS, plus `i686` on Windows and Linux, because a 32-bit game process
-needs a 32-bit library and the injector selects by the target image, not by
-the host. The generated header is `crates/taarib-jisr/include/taarib.h`; it
+`libtaarib_jisr.dylib`. The toolchain installs targets for `x86_64`, `aarch64`
+and `i686` across Windows and Linux and both Darwin triples, and the code is
+written to all of them; what the release build actually produces today is
+`x86_64` and `i686` on Windows (both always, because a Wine or Proton game
+needs the Windows payloads whatever the host), `x86_64` on Linux, and
+`x86_64` and `aarch64` on macOS — the triples `hadaf::hamulat_alalaab` in
+`crates/taarib-tajmee` enumerates and `scripts/isdar.sh` builds. A 32-bit game
+process needs a 32-bit library and the injector selects by the target image,
+not by the host. The generated header is `crates/taarib-jisr/include/taarib.h`; it
 is produced by cbindgen and committed, so a consumer never needs the Rust
 toolchain. The frozen structure layouts live in
 `crates/taarib-jisr/src/anwa.rs` — except the two appended types, which
@@ -63,6 +71,17 @@ Success is `0`. Every other value is negative and permanent: a code that has
 shipped never changes meaning. `TAARIB_SIAT_QASIRA` is the one code that is
 not a failure in the usual sense — it is the capacity negotiation described
 below, and a caller that treats it as an error has misread the protocol.
+
+Four of the codes below are defined and reserved but produced by no entry
+point in this build: `TAARIB_ISDAR_GHAYR_MUTAWAFIQ` (the bindings check the
+major version themselves and refuse before any call), `TAARIB_DHAKIRA` (the
+crate allocates through ordinary `Vec` and `Arc`, which abort on exhaustion
+rather than report it), `TAARIB_GHAYR_MADUM` and `TAARIB_GHAYR_MUHAYYAA` (there
+is no initialise/shutdown call to be out of order with). They are kept because
+a code that has been published is never reused, and a caller should still
+handle them as the table says; `ramz_min_khata` in
+`crates/taarib-jisr/src/khata_c.rs` is the mapping that decides which codes are
+live.
 
 | Code | Value | Meaning | What the caller does |
 | --- | --- | --- | --- |
@@ -177,9 +196,11 @@ possible:
 1. **The caller allocates every buffer; the library frees none of them.**
    Glyph arrays, line arrays, string buffers, out-structures — all of them
    are caller memory, read and written only for the duration of the call.
-   The library never keeps a pointer to caller memory past the return.
-   There is no function anywhere in the surface that returns memory the
-   caller must free.
+   The library keeps no pointer to caller memory past the return, with one
+   deliberate exception stated in its own section: the capture sink and its
+   `mustakhdim` pointer registered by `taarib_iltiqat_shaghghil` are held —
+   never dereferenced — until capture stops or the context dies. There is no
+   function anywhere in the surface that returns memory the caller must free.
 
 2. **Input pointers are borrowed for the call only.** The text, the span
    array and the feature array inside `TaaribTalab`, and the handle array
@@ -328,7 +349,12 @@ is precisely "text this context has not seen", so the stream
 self-deduplicates: the first frame that shows a line reports it, every
 later frame hits the cache and reports nothing, and steady-state play
 costs the sink no calls at all — which is what makes capture safe to
-leave on for a whole session. The report happens whatever the buffer
+leave on for a whole session. That deduplication is the layout cache's,
+so it holds only while the cache is enabled: a context created with
+`mizaniyat_makhzan` of zero — which is what a null `khiyarat` to
+`taarib_siyaq_insha` produces — has no cache, and every layout call is a
+miss that reports. An adapter that turns capture on gives the context a
+budget. The report happens whatever the buffer
 negotiation said: a `TAARIB_SIAT_QASIRA` return still captures, because a
 short buffer does not make the text less new, and the retry that follows
 hits the cache and does not report again.
@@ -592,14 +618,14 @@ documented in the ownership note.
 | `taarib_siyaq_amsah(TaaribSiyaq siyaq)` | Empties the context's caches — the layout cache, the pooled layout buffers, the prepared shaper state — and returns their memory. | No ownership change: every handle stays valid, a registered capture sink stays registered, and the atlas table is deliberately untouched — pages stay open, and page pointers lent by `taarib_lawha_safha` are not invalidated. The only cost is that the next layouts shape again. |
 | `taarib_khatt_min_dhakira(TaaribSiyaq siyaq, const uint8_t *bayt, size_t tul, uint32_t fahras, uint32_t fahs_arabi, TaaribKhatt *khuruj)` | Loads face `fahras` from font bytes, validating Arabic tables when `fahs_arabi` is non-zero. | **Bytes are copied**; the caller may free them immediately. Handle owned until `taarib_khatt_ihdham`. |
 | `taarib_khatt_ihdham(TaaribSiyaq siyaq, TaaribKhatt khatt)` | Destroys a font handle. | Chains holding the font keep their own references and survive. |
-| `taarib_khatt_huwiya(TaaribSiyaq siyaq, TaaribKhatt khatt, uint64_t *khuruj)` | The font's stable identity — the hash of its bytes, as carried in every glyph key and cache key. | Writes one caller-owned integer. |
+| `taarib_khatt_huwiya(TaaribSiyaq siyaq, TaaribKhatt khatt, uint64_t *khuruj)` | The font's identity within this process — a hash of its bytes and face index, as carried in every glyph key and cache key. Process-local by design: compare, map and log it inside the process, never persist it or send it anywhere. | Writes one caller-owned integer. |
 | `taarib_khatt_qiyasat(TaaribSiyaq siyaq, TaaribKhatt khatt, float hajm, TaaribQiyasatKhatt *khuruj)` | The font's metrics scaled to `hajm` pixels. | Writes a caller-owned structure. |
 | `taarib_khatt_aila(TaaribSiyaq siyaq, TaaribKhatt khatt, uint8_t *hadaf, size_t siaa, size_t *matlub)` | The font's family name. | Caller buffer, negotiated capacity. |
 | `taarib_silsila_insha(TaaribSiyaq siyaq, const TaaribKhatt *khutut, size_t adad, TaaribSilsila *khuruj)` | Builds a fallback chain from `adad` font handles, tried in order per character. | The handle array is read during the call only. The chain takes its own references to the fonts. Handle owned until `taarib_silsila_ihdham`. |
 | `taarib_silsila_ihdham(TaaribSiyaq siyaq, TaaribSilsila silsila)` | Destroys a chain. | Releases the chain's references; the font handles remain valid. |
 | `taarib_takhtit(TaaribSiyaq siyaq, const TaaribTalab *talab, TaaribMakhzanTakhtit *makhzan)` | The hot path: lays out one request into the caller's buffer, allocation-free, cache-first. When capture is on, a cache miss reports its text to the registered sink before the call returns. | Request pointers are read during the call only. The glyph and line arrays are caller memory; on `TAARIB_SIAT_QASIRA` the required counts are written and the arrays are untouched. No pointer is retained. |
 | `taarib_qiyas(TaaribSiyaq siyaq, const TaaribTalab *talab, TaaribQiyasNass *khuruj)` | Measures a request without positioning glyphs — same pipeline, same policies, so the number agrees with what layout would draw. | Writes a caller-owned structure. |
-| `taarib_makhzan_ihsaat(TaaribSiyaq siyaq, TaaribIhsaatKhazina *khuruj)` | The layout cache's counters: hits, misses, evictions, bytes held, the byte budget, entries. Diagnostics, not control — a cache that never hits is a cache whose key is wrong, and this is how the Diagnostics screen says so with numbers. The counters are cumulative for the context's life and survive `taarib_siyaq_amsah`. | Writes a caller-owned structure. |
+| `taarib_makhzan_ihsaat(TaaribSiyaq siyaq, TaaribIhsaatKhazina *khuruj)` | The layout cache's counters: hits, misses, evictions, bytes held, the byte budget, entries. Diagnostics, not control — a cache that never hits is a cache whose key is wrong, and this is how the Diagnostics screen says so with numbers. Hits, misses and evictions are cumulative for the context's life and survive `taarib_siyaq_amsah`; bytes held and entries describe the cache as it is now, and both read zero after a clear. | Writes a caller-owned structure. |
 | `taarib_lawha_insha(TaaribSiyaq siyaq, uint16_t aqsa_ard, uint16_t aqsa_irtifa, uint16_t hashw, uint32_t namat, size_t mizaniya, TaaribLawha *khuruj)` | Creates a runtime atlas: page limits, padding, coverage or SDF, byte budget. | Handle owned until `taarib_lawha_ihdham`. |
 | `taarib_lawha_ihdham(TaaribSiyaq siyaq, TaaribLawha lawha)` | Destroys an atlas. | Invalidates every page pointer previously lent by `taarib_lawha_safha`. |
 | `taarib_lawha_ibda_itar(TaaribSiyaq siyaq, TaaribLawha lawha)` | Marks a frame boundary, so eviction can reclaim rectangles from previous frames but never one promised to the current frame. | No ownership change. Call once per frame before the frame's lookups. |

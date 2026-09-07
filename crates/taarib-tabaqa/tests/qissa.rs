@@ -47,7 +47,7 @@ use taarib_tabaqa::manatiq::{MuarrifMintaqa, QaidatTarjama};
 use taarib_tabaqa::mutarjim::{
     DhakiraTabaqa, MutarjimTabaqa, QaydTabaqa, RaddSatr, TalabDhakira, TalabSatr,
 };
-use taarib_tabaqa::qissa::{KhiyaratQissa, Munassiq, Qissa};
+use taarib_tabaqa::qissa::{HalatDaf, HalatKhayt, KhaytQissa, KhiyaratQissa, Munassiq, Qissa};
 use taarib_tabaqa::tatabbu::QiraaMulahaza;
 use taarib_tabaqa::wajiha::{MeezaniyatItar, MustatilBiksel, SighatSath, WasfSath};
 use taarib_tabaqa::watira::{MunazzimWatira, NAFIDHAT_TADAHWUR, TaghyeerWatira};
@@ -856,7 +856,7 @@ fn nisfa_alitar_wa_ma_khalfah() {
         Box::new(QariShareet),
         vec!["chosen by the test".to_owned()],
     );
-    let mut khayt = match taarib_tabaqa::qissa::KhaytQissa::ibda(qissa, qari) {
+    let mut khayt = match KhaytQissa::ibda(qissa, qari) {
         Ok(khayt) => khayt,
         Err(khata) => panic!("the worker would not start: {khata}"),
     };
@@ -896,6 +896,7 @@ fn nisfa_alitar_wa_ma_khalfah() {
     assert_eq!(khayt.matruka(), 0, "the queue must not have overflowed at this pace");
     assert!(khayt.muaalaja() > 0, "the worker must have processed captures");
     assert_eq!(khayt.akhta(), 0, "no pass should have refused: {}", khayt.wasf());
+    assert_eq!(khayt.hala(), HalatKhayt::Salima, "and the worker says so");
     assert_eq!(
         mutarjim.adad(),
         3,
@@ -923,6 +924,199 @@ fn nisfa_alitar_wa_ma_khalfah() {
             satr.mawdi
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// A dead recognizer and a noisy frame are not the same integer
+// ---------------------------------------------------------------------------
+
+/// A recognizer whose engine is gone.
+///
+/// Every read answers [`KhataTabaqa::QariGhayrMutah`], which is what the
+/// Windows engine does once its language pack is removed mid-session and what
+/// the portable one does once an antivirus quarantines its model files.
+#[derive(Debug)]
+struct QariMayyit;
+
+impl taarib_tabaqa::qira::Qari for QariMayyit {
+    fn ism(&self) -> &'static str {
+        "dead engine"
+    }
+
+    fn mutah(&self) -> bool {
+        false
+    }
+
+    fn lughat(&self) -> &[&str] {
+        &["en"]
+    }
+
+    fn iqra(
+        &mut self,
+        _: &SuraMultaqata,
+    ) -> Result<Vec<taarib_tabaqa::qira::SatrMaqru>, KhataTabaqa> {
+        Err(KhataTabaqa::QariGhayrMutah {
+            sabab: "the language pack for [en-US] was removed while the game was running"
+                .to_owned(),
+        })
+    }
+}
+
+/// A recognizer that refuses one capture for that capture's own reason, then
+/// reads normally — a frame the GPU would not hand back, followed by ordinary
+/// empty regions.
+#[derive(Debug, Default)]
+struct QariMutaqallib {
+    rafada: bool,
+}
+
+impl taarib_tabaqa::qira::Qari for QariMutaqallib {
+    fn ism(&self) -> &'static str {
+        "one bad frame"
+    }
+
+    fn mutah(&self) -> bool {
+        true
+    }
+
+    fn lughat(&self) -> &[&str] {
+        &["en"]
+    }
+
+    fn iqra(
+        &mut self,
+        _: &SuraMultaqata,
+    ) -> Result<Vec<taarib_tabaqa::qira::SatrMaqru>, KhataTabaqa> {
+        if !self.rafada {
+            self.rafada = true;
+            return Err(KhataTabaqa::IltiqatFashil {
+                sabab: "the frame could not be read back this once".to_owned(),
+            });
+        }
+        Err(KhataTabaqa::LaNassMaqru { mintaqa: "synthetic".to_owned(), thiqa: None })
+    }
+}
+
+/// A worker over a session and a recognizer the test chose.
+fn khayt_bi_qari(qari: Box<dyn taarib_tabaqa::qira::Qari>) -> KhaytQissa {
+    let mut qissa = Qissa::jadeeda(luba(), ISM_LUBA, khiyarat())
+        .bi_mutarjim(Box::new(MutarjimAadd::default()))
+        .bi_dhakira(dhakirat_jalsa())
+        .bi_qari("chosen by the test");
+    qissa.ayyin_sath(SATH);
+    let ikhtiyar =
+        taarib_tabaqa::qira::IkhtiyarQari::min_qari(qari, vec!["chosen by the test".to_owned()]);
+    match KhaytQissa::ibda(qissa, ikhtiyar) {
+        Ok(khayt) => khayt,
+        Err(khata) => panic!("the worker would not start: {khata}"),
+    }
+}
+
+/// Posts one capture on the rule that bypasses the picture gate, so it reaches
+/// the recognizer rather than being held back as unchanged.
+fn adfa_wahida(khayt: &KhaytQissa, lahza: u64) -> HalatDaf {
+    khayt.adfa(
+        MINTAQA,
+        "subtitles",
+        QaidatTarjama::Mustamirra,
+        lahza,
+        sura_bi_shareet(200, Some(14)),
+    )
+}
+
+/// Waits, bounded, for the worker to make a condition true.
+///
+/// The worker is a real thread and nothing on the frame path waits for it, so
+/// the test does the waiting — and says so if it ran out of patience.
+fn intazir(shart: impl Fn() -> bool) {
+    for _ in 0..400 {
+        if shart() {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    panic!("the worker did not reach the expected state in two seconds");
+}
+
+/// A recognizer that is gone stops the session, says why in both languages,
+/// closes the door on further captures, and is reopened by translate-now.
+///
+/// This is the headline: before, the same sequence produced `1 refused`, then
+/// `2 refused`, then `14400 refused`, with the reason discarded at the moment
+/// it was known and the worker recognizing nothing four times a second for
+/// the rest of the session.
+#[test]
+fn qari_mayyit_yuqif_al_jalsa_wa_yusammi_al_sabab() {
+    let mut khayt = khayt_bi_qari(Box::new(QariMayyit));
+
+    assert_eq!(adfa_wahida(&khayt, 0), HalatDaf::Qubilat, "the first capture is posted");
+    intazir(|| khayt.akhta() >= 1);
+
+    let hala = khayt.hala();
+    let HalatKhayt::Mutawaqqifa { sabab, sabab_arabi } = hala.clone() else {
+        panic!("a dead recognizer must stop the session, not merely count: {hala:?}");
+    };
+    assert!(hala.mutawaqqifa());
+    assert!(sabab.contains("language pack"), "the reason survives verbatim: {sabab}");
+    assert!(!sabab_arabi.trim().is_empty(), "and is readable in Arabic");
+
+    // The door is closed: no queueing, no recognition, and the refusals are
+    // counted apart from both the drops and the failed passes.
+    assert_eq!(adfa_wahida(&khayt, KHUTWA_MIKRO), HalatDaf::Rufidat);
+    assert_eq!(adfa_wahida(&khayt, KHUTWA_MIKRO * 2), HalatDaf::Rufidat);
+    assert_eq!(khayt.marfuda(), 2, "refused at the door, twice");
+    assert_eq!(khayt.matruka(), 0, "refused is not dropped");
+    assert_eq!(khayt.akhta(), 1, "a closed door costs no further recognition");
+
+    let wasf = khayt.wasf();
+    assert!(wasf.contains("language pack"), "the panel sentence carries the reason: {wasf}");
+    assert!(wasf.contains("stopped"), "and says the session is stopped: {wasf}");
+    assert!(wasf.contains("2 refused at the door"), "and counts the door: {wasf}");
+    let wasf_arabi = khayt.wasf_arabi();
+    assert!(wasf_arabi.contains("توقّفت"), "the Arabic says stopped too: {wasf_arabi}");
+
+    // Translate-now is the user's way back in. The next pass either succeeds
+    // or stops the session again with a fresh reason — here, the same one.
+    khayt.iqra_alan();
+    assert_eq!(adfa_wahida(&khayt, KHUTWA_MIKRO * 3), HalatDaf::Qubilat, "reopened");
+    intazir(|| khayt.akhta() >= 2);
+    assert!(khayt.hala().mutawaqqifa(), "the engine is still dead, and the worker says so again");
+    assert_eq!(adfa_wahida(&khayt, KHUTWA_MIKRO * 4), HalatDaf::Rufidat, "and the door is shut");
+
+    khayt.awqif();
+}
+
+/// One capture's refusal is recorded as one capture's, and the session goes
+/// on.
+///
+/// The other half of the split: a noisy frame must not close the door, or a
+/// game with one unreadable frame an hour would have its overlay stop on it.
+#[test]
+fn rafd_aabir_la_yuqif_al_jalsa() {
+    let mut khayt = khayt_bi_qari(Box::new(QariMutaqallib::default()));
+
+    assert_eq!(adfa_wahida(&khayt, 0), HalatDaf::Qubilat);
+    intazir(|| khayt.akhta() >= 1);
+
+    let hala = khayt.hala();
+    let HalatKhayt::Aabira { sabab, .. } = hala.clone() else {
+        panic!("one capture's refusal must be recorded as one capture's: {hala:?}");
+    };
+    assert!(!hala.mutawaqqifa());
+    assert!(sabab.contains("read back"), "the reason survives: {sabab}");
+
+    // The door is open, the next capture is processed, and the record of the
+    // last refusal stays readable rather than being erased by a success.
+    assert_eq!(adfa_wahida(&khayt, KHUTWA_MIKRO), HalatDaf::Qubilat, "the door stays open");
+    intazir(|| khayt.muaalaja() >= 1);
+    assert_eq!(khayt.marfuda(), 0, "nothing was refused at the door");
+    assert_eq!(khayt.akhta(), 1, "one refusal, and it stayed one");
+    assert!(matches!(khayt.hala(), HalatKhayt::Aabira { .. }));
+    let wasf = khayt.wasf();
+    assert!(wasf.contains("one capture's"), "the panel says which kind it was: {wasf}");
+    assert!(!wasf.contains("stopped"), "and does not say the session stopped: {wasf}");
+
+    khayt.awqif();
 }
 
 // ---------------------------------------------------------------------------

@@ -21,7 +21,14 @@
 //!    enabled.
 //! 3. **Degrade one entry, never the scan.** A manifest that will not parse is a
 //!    [`TanbihFahs`](crate::fahs::TanbihFahs) on the result and the other two
-//!    hundred games still arrive.
+//!    hundred games still arrive. A *source* that will not read — the catalogue
+//!    directory itself, one library, one drive, one nominated folder — is a
+//!    [`TanbihFahs::fahras`](crate::fahs::TanbihFahs::fahras), which marks the
+//!    result [`Naqisa`](crate::fahs::HalatFahsMatjar::Naqisa) so that nothing
+//!    downstream mistakes what the scan did not see for what is not there. And
+//!    a root that is present with no catalogue under it is that — installed,
+//!    unreadable — never "not installed": [`Matjar::mawqi`] and
+//!    [`Matjar::ifhas`] must agree about whether a launcher is here.
 //!
 //! ## Which of these is a real identity
 //!

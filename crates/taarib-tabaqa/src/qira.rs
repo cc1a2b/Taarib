@@ -838,7 +838,7 @@ use windows::{
 #[cfg(windows)]
 use windows_future::{AsyncOperationCompletedHandler, AsyncStatus, IAsyncOperation};
 
-/// Waits for a WinRT async operation and hands back its result.
+/// Waits for a `WinRT` async operation and hands back its result.
 ///
 /// `windows-future` carried exactly this as `IAsyncOperation::get` until 0.3
 /// removed it, leaving `SetCompleted` and a poll of `Status` as the only ways
@@ -913,9 +913,9 @@ thread_local! {
     static HAYYIAT_AL_KHAYT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-/// Puts the calling thread into a WinRT apartment, once.
+/// Puts the calling thread into a `WinRT` apartment, once.
 ///
-/// Every WinRT call in this module fails with `CO_E_NOTINITIALIZED` on a thread
+/// Every `WinRT` call in this module fails with `CO_E_NOTINITIALIZED` on a thread
 /// that has not been initialized, and the recognizer runs on a worker thread
 /// this crate did not create the apartment for.
 ///
@@ -971,7 +971,7 @@ fn hayyi_al_khayt() -> Result<(), KhataTabaqa> {
     })
 }
 
-/// A WinRT failure as this crate's error.
+/// A `WinRT` failure as this crate's error.
 #[cfg(windows)]
 fn khata_winrt(mawdi: &str, khata: &windows::core::Error) -> KhataTabaqa {
     KhataTabaqa::QariGhayrMutah {
@@ -1016,7 +1016,7 @@ impl QariWindows {
     ///
     /// # Errors
     ///
-    /// [`KhataTabaqa::QariGhayrMutah`] when the WinRT apartment cannot be
+    /// [`KhataTabaqa::QariGhayrMutah`] when the `WinRT` apartment cannot be
     /// entered or the enumeration itself fails, which on a healthy machine it
     /// does not — an empty list is the normal way "no packs" is reported.
     pub fn lughat_al_nizam() -> Result<Vec<String>, KhataTabaqa> {
@@ -1093,8 +1093,10 @@ impl QariWindows {
             let wasm = muharrik
                 .RecognizerLanguage()
                 .and_then(|lugha| lugha.LanguageTag())
-                .map(|wasm| wasm.to_string())
-                .unwrap_or_else(|_| "the user profile's language".to_owned());
+                .map_or_else(
+                    |_| "the user profile's language".to_owned(),
+                    |wasm| wasm.to_string(),
+                );
             return Self::min_muharrik(muharrik, wasm, &mutaha);
         }
 
@@ -1156,7 +1158,7 @@ impl QariWindows {
     ///
     /// [`KhataTabaqa::IltiqatFashil`] when the region is larger than
     /// [`QariWindows::aqsa_buad`], naming both numbers, and
-    /// [`KhataTabaqa::QariGhayrMutah`] when a WinRT call refuses.
+    /// [`KhataTabaqa::QariGhayrMutah`] when a `WinRT` call refuses.
     fn ila_sura_barmajiya(&self, sura: &SuraMultaqata) -> Result<SoftwareBitmap, KhataTabaqa> {
         if sura.ard() > self.aqsa_buad || sura.irtifa() > self.aqsa_buad {
             return Err(KhataTabaqa::IltiqatFashil {
@@ -1216,8 +1218,7 @@ impl Qari for QariWindows {
         // then fails at recognition time, so availability is re-derived from
         // the live list rather than from the object's existence.
         Self::lughat_al_nizam()
-            .map(|mutaha| mutaha.iter().any(|wasm| yutabiq_lugha(wasm, &self.lugha)))
-            .unwrap_or(false)
+            .is_ok_and(|mutaha| mutaha.iter().any(|wasm| yutabiq_lugha(wasm, &self.lugha)))
     }
 
     fn lughat(&self) -> &[&str] {
@@ -1281,7 +1282,7 @@ impl Qari for QariWindows {
 ///
 /// # Errors
 ///
-/// [`KhataTabaqa::QariGhayrMutah`] when a WinRT call on the word collection
+/// [`KhataTabaqa::QariGhayrMutah`] when a `WinRT` call on the word collection
 /// refuses.
 #[cfg(windows)]
 fn hudud_al_satr(

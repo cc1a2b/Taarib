@@ -152,8 +152,10 @@ pub mod tatabbu;
 pub mod wajiha;
 pub mod watira;
 
-/// The provider seam wired onto `taarib-tarjama`. See this crate's `tarjama`
-/// feature: it is off for the payload, which links no HTTP stack.
+/// The provider seam wired onto `taarib-tarjama`.
+///
+/// See this crate's `tarjama` feature: it is off for the payload, which links
+/// no HTTP stack.
 #[cfg(feature = "tarjama")]
 pub mod wasil_tarjama;
 
@@ -214,7 +216,9 @@ pub use crate::mutarjim::{
     DhakiraJalsa, DhakiraJalsaMushtaraka, DhakiraTabaqa, MutarjimTabaqa, QaydTabaqa, RaddSatr,
     TalabSatr,
 };
-pub use crate::qissa::{KhaytQissa, KhiyaratQissa, LaqtaTarjama, Munassiq, Qissa};
+pub use crate::qissa::{
+    HalatDaf, HalatKhayt, KhaytQissa, KhiyaratQissa, LaqtaTarjama, Munassiq, Qissa,
+};
 pub use crate::talqeem::{IhsaatTalqeem, KhiyaratTalqeem, Mulaqqim, SatrMulaqqam};
 pub use crate::tatabbu::{HalatSatr, MuarrifSatr, Mutatabbi, QiraaMulahaza, SiyasatIstiqrar};
 pub use crate::watira::{MunazzimWatira, TaghyeerWatira};

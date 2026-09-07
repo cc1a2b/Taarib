@@ -61,6 +61,7 @@ use taarib_usus::mukhattat::{self, DhuMukhattat};
 
 use crate::khata::KhataTabaqa;
 use crate::manatiq::{MajmuatManatiq, MuarrifMintaqa, QaidatTarjama};
+use crate::qissa::HalatKhayt;
 use crate::sidq::{self, BasmatIfsah, NASS_IFSAH_ARABI};
 use crate::sijill_qira::{MadkhalQira, MuarrifMadkhal, TaqreerSijill};
 use crate::wajiha::{HalatTabaqa, MeezaniyatItar, MustatilNisbi, WasfSath, WajihatRusum};
@@ -1462,6 +1463,9 @@ pub struct LawhatTahakkum {
     manatiq: Vec<SatrMintaqa>,
     sijill: Vec<MadkhalQira>,
     taqreer: Option<TaqreerSijill>,
+    /// The recognition worker's last word about itself; [`None`] until the hook
+    /// has polled it once, which is a different fact from "healthy".
+    khayt: Option<HalatKhayt>,
 }
 
 impl LawhatTahakkum {
@@ -1509,6 +1513,7 @@ impl LawhatTahakkum {
             manatiq: Vec::new(),
             sijill: Vec::new(),
             taqreer: None,
+            khayt: None,
         }
     }
 
@@ -1553,6 +1558,24 @@ impl LawhatTahakkum {
     pub const fn hadith_tabaqa(&mut self, hala: HalatTabaqa, wajiha: Option<WajihatRusum>) {
         self.hala_tabaqa = hala;
         self.wajiha = wajiha;
+    }
+
+    /// Refreshes what the recognition worker last said about itself.
+    ///
+    /// Read off [`crate::qissa::KhaytQissa::hala`] by the hook and copied here
+    /// for the reason this whole type copies. This is the line that turns a
+    /// blank overlay into a sentence: a recognizer that is gone for the session
+    /// says so in the header, on the main page with its reason, and on the
+    /// budget page in full — rather than as a count of refusals climbing four
+    /// times a second.
+    pub fn hadith_khayt(&mut self, hala: HalatKhayt) {
+        self.khayt = Some(hala);
+    }
+
+    /// What the recognition worker last said about itself, if it has been asked.
+    #[must_use]
+    pub const fn khayt(&self) -> Option<&HalatKhayt> {
+        self.khayt.as_ref()
     }
 
     /// Refreshes the region list from the live set.
@@ -1721,7 +1744,25 @@ impl LawhatTahakkum {
     /// The state line under the title.
     fn satr_hala(&self) -> String {
         let wajiha = self.wajiha.map_or("—", WajihatRusum::ism);
-        format!("الطبقة: {} · الواجهة: {wajiha}", unwan_hala(self.hala_tabaqa))
+        // A stopped recognizer is on every page's status line, because the
+        // player who opens the panel over a blank overlay opens it on
+        // whichever page it was left on.
+        let qiraa = if self.khayt.as_ref().is_some_and(HalatKhayt::mutawaqqifa) {
+            " · القراءة متوقّفة"
+        } else {
+            ""
+        };
+        format!("الطبقة: {} · الواجهة: {wajiha}{qiraa}", unwan_hala(self.hala_tabaqa))
+    }
+
+    /// The short word for the worker's state, for the main page's row.
+    const fn unwan_khayt(&self) -> &'static str {
+        match self.khayt {
+            None => "—",
+            Some(HalatKhayt::Salima) => "سليمة",
+            Some(HalatKhayt::Aabira { .. }) => "رفض عابر",
+            Some(HalatKhayt::Mutawaqqifa { .. }) => "متوقّفة",
+        }
     }
 
     /// The footer's text: how to close the panel.
@@ -1836,6 +1877,15 @@ impl LawhatTahakkum {
             &format!("{}٪", self.hala.miqyas_khat()),
             ataama,
         );
+        Self::saf_thunai(takhtit, ansur, "القراءة", self.unwan_khayt(), ataama);
+        // The reason goes here, on the page the panel opens to, and not only on
+        // the budget page: a session that has stopped reading is the one thing
+        // a player needs to know before they press anything below.
+        if let Some(khayt @ HalatKhayt::Mutawaqqifa { .. }) = self.khayt.as_ref()
+            && let Some(saf) = takhtit.saf(2.0)
+        {
+            ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, khayt.wasf_arabi(), ataama));
+        }
 
         if let Some(saf) = takhtit.saf(0.25) {
             ansur.push(AnsurLawha::zukhrufi(saf, DawrAnsur::Fasil, ataama));
@@ -1993,6 +2043,19 @@ impl LawhatTahakkum {
             }
             if let Some(saf) = takhtit.saf(1.5) {
                 ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, taqreer.wasf(), ataama));
+            }
+        }
+        // Verbatim, as the budget is: the worker's own sentence about its last
+        // refusal, whichever kind it was.
+        if let Some(khayt) = self.khayt.as_ref() {
+            if let Some(saf) = takhtit.saf(0.25) {
+                ansur.push(AnsurLawha::zukhrufi(saf, DawrAnsur::Fasil, ataama));
+            }
+            if let Some(saf) = takhtit.saf(1.0) {
+                ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Wasm, "حالة القراءة:", ataama));
+            }
+            if let Some(saf) = takhtit.saf(2.0) {
+                ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, khayt.wasf_arabi(), ataama));
             }
         }
     }

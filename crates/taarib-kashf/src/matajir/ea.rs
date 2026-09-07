@@ -180,11 +180,7 @@ impl Matjar for MatjarEa {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         }
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: judhur.first().cloned(),
-            ..NatijatMatjar::default()
-        };
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, judhur.first().cloned());
         let mut murashahat: BTreeMap<String, MurashahEa> = BTreeMap::new();
 
         for jidhr in &judhur {
@@ -200,8 +196,18 @@ impl Matjar for MatjarEa {
         }
 
         for jidhr in judhur_tathbeet(siyaq, &judhur) {
-            let Ok(qaima) = std::fs::read_dir(&jidhr) else {
-                continue;
+            let qaima = match std::fs::read_dir(&jidhr) {
+                Ok(qaima) => qaima,
+                Err(sabab) => {
+                    // A whole install root that will not list is a set of games
+                    // this scan did not see, not one game that degraded.
+                    natija.tanbihat.push(TanbihFahs::fahras(
+                        MUARRIF,
+                        jidhr.display().to_string(),
+                        format!("cannot list this EA install folder ({sabab})"),
+                    ));
+                    continue;
+                },
             };
             for madkhal in qaima.flatten() {
                 let masar = madkhal.path();

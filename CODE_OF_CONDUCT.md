@@ -1,9 +1,10 @@
 # Code of Conduct
 
-Taarib adopts the Contributor Covenant, version 3.0, unmodified except for the two sections
-its authors expect a project to fill in: how to report an incident, and what happens after
-one is reported. Both of those are below in the project's own words. Everything else is the
-Covenant's text.
+Taarib adopts the Contributor Covenant, version 3.0. The Covenant's own text is kept as it
+is; what this project adds is written in its own words and listed in full under Attribution
+at the end — the reporting channels and what happens after a report, one enforcement rung of
+its own, a short section on what this document is not, this preface, and the Arabic
+translation.
 
 One thing is worth saying before the document rather than inside it. Taarib is maintained by
 one person. Where the Covenant says "Community Moderators", read: `cc1a2b`. There is no

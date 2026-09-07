@@ -140,7 +140,9 @@ section of the README. A route around it is both a security issue and a legal on
 ### Reaching the network from a place that should not
 
 `taarib-saff` contains no `std::fs` and no `std::net`; the adapters do not talk to the network
-at all. A path that does is a bug regardless of what it fetches.
+at all — the one `XMLHttpRequest` in the tree, in the RPG Maker plugin, reads the game's own
+files over `file://`, which is how those games load everything. A path that reaches a host is a
+bug regardless of what it fetches.
 
 ## What is not in scope
 
@@ -181,6 +183,14 @@ An honest policy names what is already known rather than waiting to be told.
 - **Stock SteamOS provides no Secret Service.** On a Steam Deck there may be no
   `org.freedesktop.secrets` provider, which changes where key material can live.
   `docs/tawzee/steamdeck.md` covers what that means.
+- **The one-button pipeline verifies against a run-local anchor.** `tahaqquq` in
+  `crates/taarib-aman/src/tahaqquq_tawqee.rs` takes the anchor as an argument, and the
+  one-button install verifies the package it just built against the key that just signed it,
+  rather than against the compiled-in `MIRSAT_MALIK` — the comment above the check says so.
+  Downloaded packages are verified against the compiled-in anchor. Whether a release build
+  can be made to reach the run-local path with a package it did not build has not been
+  audited; that audit is open, and a finding there is in scope under "an anchor that can be
+  substituted at runtime".
 - **The in-game half is not yet live.** See the injection surface section above.
 
 ## How fixes reach users

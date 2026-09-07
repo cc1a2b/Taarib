@@ -231,11 +231,7 @@ impl Matjar for MatjarUbisoft {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         }
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: jidhr.clone(),
-            ..NatijatMatjar::default()
-        };
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, jidhr.clone());
 
         let manatiq = jidhr.as_ref().map_or_else(Vec::new, |jidhr| {
             match manatiq_tashkeelat(jidhr) {

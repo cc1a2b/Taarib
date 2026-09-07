@@ -119,11 +119,14 @@ they describe the font, not because anything uses them.
 
 ## Vendoring
 
-No font binary is committed to this repository, and `assets/fonts/` never holds
-one. What is committed is this README, `khutut.json`, and — one directory over —
-`assets/aqfal/qufl_khutut.json`, which is the only thing that decides which
-bytes are a Taarib font. Thirty-four files are pinned there: twenty-five faces
-and nine licence texts.
+`assets/fonts/` never holds a font binary. What is committed here is this
+README, `khutut.json`, and — one directory over — `assets/aqfal/qufl_khutut.json`,
+which is the only thing that decides which bytes are a Taarib font. Thirty-four
+files are pinned there: twenty-five faces and nine licence texts. The one place
+a font binary *is* committed is `apps/studio/src/khutut/`, where the eight IBM
+Plex faces the interface's CSS names are checked in for Vite to fingerprint;
+they are the same bytes the lock pins, and the second bullet below says why that
+is not a second, unlicensed copy.
 
 Two tools read that lock and neither writes here:
 

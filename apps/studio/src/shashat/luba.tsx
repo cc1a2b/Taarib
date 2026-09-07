@@ -37,6 +37,8 @@ import type {
   HasilatIzala,
   HimayaHie,
   Idadat,
+  KhuttatIzalaHie,
+  KhuttatTathbeetHie,
   LawnBariz,
   Lugha,
   LughaRasmiyaHie,
@@ -1420,6 +1422,363 @@ function TilqaiMutah({ muarrif, lugha, jahiziya, naqs }: KhasaisTilqaiMutah): JS
   );
 }
 
+/* ---------------------------------------------------------------------------
+   ما الذي سيُكتب في لعبتك — the install plan, beside the button that runs it.
+
+   `khuttat_tathbeet` is the same `tarkib::khutta` the install itself is handed,
+   over the same description of the game, so this is not a description of the
+   install: it is the install's own plan, read early. Nothing in here is phrased
+   twice. The reason no framework is needed, each launch requirement and each
+   loader already sitting in the game are the installer's own sentences in both
+   languages, and the paths are the plan's own.
+
+   That now includes the last two that were not. The store-verify note and the
+   launcher note used to exist in `KhuttatTarkib` in English only, so this screen
+   — whose first language is Arabic — held its own Arabic for both and keyed each
+   off a bare `bool`. Nothing tied the two wordings together, and this panel is
+   the one place a user reads what is about to happen to a game they own.
+   `malhuzat_tahaqquq_arabi` and `MalhuzatManassa::wasf_arabi` mean the plan says
+   both sentences itself, in both languages; the screen chooses a language and
+   renders. Nothing in this panel is phrased twice any more.
+
+   The shape is deliberate. Findings are never behind a disclosure: a mod already
+   in the game, a store verify that would undo half of this, a launcher that will
+   overwrite what is being edited. The inventory — which file goes where — is,
+   because it is long, it is read once, and it is not the part a decision turns
+   on. `IqrarKhatar` was considered and rejected: that component is for the two
+   risks that carry a permanent consequence and need a tick, and a plan is not a
+   risk. It is a statement of what will happen, and it is owed whether or not
+   anybody agrees to anything.
+   --------------------------------------------------------------------------- */
+
+interface KhasaisKhutta {
+  readonly muarrif: string;
+  readonly lugha: Lugha;
+  readonly munassiq: Munassiqat;
+  /**
+   * Whether building the plan is worth it on this screen at all.
+   *
+   * The plan reads the game directory — one listing of the executable's own
+   * directory, and the modules in it that occupy a loader slot — so it is not
+   * asked for on a refused game or on a game with nothing to install.
+   */
+  readonly mumakkan: boolean;
+}
+
+/** One labelled list of paths, drawn only when it has entries. */
+function QaimatMasarat({
+  unwan,
+  masarat,
+}: {
+  readonly unwan: string;
+  readonly masarat: readonly string[];
+}): JSX.Element | null {
+  if (masarat.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <h4 className="luba__unwan-farii">{unwan}</h4>
+      <ul className="luba__sutur">
+        {masarat.map((masar) => (
+          <li key={masar} className="mono-ltr luba__satr-masar" title={masar}>
+            {masar}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function QismKhutta({ muarrif, lugha, munassiq, mumakkan }: KhasaisKhutta): JSX.Element | null {
+  const khutta = useQuery<KhuttatTathbeetHie, KhataJisr>({
+    queryKey: mafatih.khutta(muarrif),
+    queryFn: () => nadi('khuttat_tathbeet', { muarrif }),
+    enabled: mumakkan,
+  });
+
+  if (!mumakkan) {
+    return null;
+  }
+  if (khutta.isPending) {
+    return <p className="luba__jari">{t('luba.khutta.jari', lugha)}</p>;
+  }
+  // A plan that cannot be built is an install that would not have run. The
+  // component that is missing, the compatibility prefix that was never built,
+  // the report the safety layer refused — each of those is the install's own
+  // refusal, said before a backup is taken instead of half way through one.
+  if (khutta.error !== null) {
+    return (
+      <KutlatKhata
+        unwan={t('luba.khutta.taadhur', lugha)}
+        khata={khutta.error}
+        lugha={lugha}
+        muarrif={muarrif}
+        aada={() => {
+          void khutta.refetch();
+        }}
+      />
+    );
+  }
+  const bayanat = khutta.data;
+  if (bayanat === undefined) {
+    return null;
+  }
+
+  const sababFaragh =
+    lugha === 'arabi' ? bayanat.sabab_faragh_arabi : bayanat.sabab_faragh_injilizi;
+  const talabat = lugha === 'arabi' ? bayanat.talabat_arabi : bayanat.talabat_injilizi;
+  const mudafa = bayanat.mudkhalat.filter((m) => !m.tadeel).map((m) => m.nisbi);
+  const muaddala = bayanat.mudkhalat.filter((m) => m.tadeel).map((m) => m.nisbi);
+  const manassa = bayanat.manassa;
+  const malhuzatManassa =
+    manassa === null ? null : lugha === 'arabi' ? manassa.wasf_arabi : manassa.wasf_injilizi;
+  const malhuzatTahaqquq =
+    lugha === 'arabi' ? bayanat.malhuzat_tahaqquq_arabi : bayanat.malhuzat_tahaqquq_injilizi;
+
+  return (
+    <section className="luba__khutta" aria-labelledby="luba-unwan-khutta">
+      <h3 id="luba-unwan-khutta" className="luba__unwan-farii">
+        {t('luba.khutta.unwan', lugha)}
+      </h3>
+      {/* Two sentences and not one count, because the plan counts two different
+          things. `mudkhalat` is the additive layer only — the framework's own
+          files are copied out of the component store as it is deployed and are
+          never enumerated in the plan — so a Unity game, whose whole install is
+          the framework, has an additive layer of exactly nothing. Summarising it
+          as "0 files added, 0 modified" would be the screen telling somebody
+          that pressing install writes nothing into their game. */}
+      {bayanat.faragha ? (
+        <p className="luba__khutta-hasila">{t('luba.khutta.la_shay', lugha)}</p>
+      ) : (
+        <>
+          {bayanat.itar === null ? null : (
+            <p className="luba__khutta-hasila">{t('luba.khutta.hasila_itar', lugha)}</p>
+          )}
+          {bayanat.adad_idafat === 0 && bayanat.adad_tadeelat === 0 ? null : (
+            <p className="luba__khutta-hasila">
+              {t('luba.khutta.hasila', lugha, {
+                idafat: munassiq.raqm(bayanat.adad_idafat),
+                tadeelat: munassiq.raqm(bayanat.adad_tadeelat),
+              })}
+            </p>
+          )}
+        </>
+      )}
+      {sababFaragh === null ? null : (
+        <p className="luba__nass-hadi" dir="auto">
+          {sababFaragh}
+        </p>
+      )}
+
+      {/* The findings, and never behind a disclosure. Somebody agreeing to
+          "install Arabic into this game" is agreeing to a different thing than
+          they think if nobody tells them what else is already loaded in it. */}
+      {bayanat.huqn_qaim.length === 0 ? null : (
+        <div className="luba__khutta-tanbeeh">
+          <p className="luba__khutta-tanbeeh-unwan">{t('luba.khutta.huqn', lugha)}</p>
+          <ul className="luba__khutta-huqn">
+            {bayanat.huqn_qaim.map((wakeel) => (
+              <li key={wakeel.ism} dir="auto">
+                {lugha === 'arabi' ? wakeel.arabi : wakeel.injilizi}
+              </li>
+            ))}
+          </ul>
+          <p className="luba__nass-hadi">{t('luba.khutta.huqn_sharh', lugha)}</p>
+        </div>
+      )}
+      {malhuzatTahaqquq === null ? null : (
+        <p className="luba__nass-hadi luba__tahdheer" dir="auto">
+          {malhuzatTahaqquq}
+        </p>
+      )}
+      {malhuzatManassa === null ? null : (
+        <p className="luba__nass-hadi luba__tahdheer" dir="auto">
+          {malhuzatManassa}
+        </p>
+      )}
+      {/* Outside the disclosure, because a launch requirement is a change to
+          something the user owns and did not come here to change: Taarib writes
+          the launch options at install and puts them back at removal, and that
+          is not a detail about file layout. */}
+      {talabat.length === 0 ? null : (
+        <>
+          <h4 className="luba__unwan-farii">{t('luba.khutta.talabat', lugha)}</h4>
+          <ul className="luba__khutta-talabat">
+            {talabat.map((talab) => (
+              <li key={talab} dir="auto">
+                {talab}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/* The inventory. Long, read once, and not the part the decision turns on
+          — so it takes the same disclosure shape the per-game limits above it
+          already use. */}
+      {bayanat.faragha ? null : (
+        <details className="luba__kulfa">
+          <summary className="luba__kulfa-unwan">{t('luba.khutta.tafsil', lugha)}</summary>
+          {bayanat.itar === null ? null : (
+            <dl className="luba__jadwal">
+              <Saff unwan={t('luba.khutta.itar', lugha)}>
+                <span dir="auto">{bayanat.itar}</span>
+              </Saff>
+              {bayanat.jidhr_muhammil === null ? null : (
+                <Saff unwan={t('luba.khutta.mawqi_muhammil', lugha)}>
+                  <span className="mono-ltr">{bayanat.jidhr_muhammil}</span>
+                </Saff>
+              )}
+            </dl>
+          )}
+          <QaimatMasarat
+            unwan={t('luba.khutta.mujalladat', lugha)}
+            masarat={bayanat.mujalladat}
+          />
+          <QaimatMasarat unwan={t('luba.khutta.mudafa', lugha)} masarat={mudafa} />
+          <QaimatMasarat unwan={t('luba.khutta.muaddala', lugha)} masarat={muaddala} />
+          {bayanat.khatt_renpy === null ? null : (
+            <QaimatMasarat
+              unwan={t('luba.khutta.khatt', lugha)}
+              masarat={[bayanat.khatt_renpy]}
+            />
+          )}
+          {/* The plan's own report text, unedited: the thing to paste into a bug
+              report, and the same lines the install log carries. */}
+          <details className="luba__khutta-nass">
+            <summary className="luba__kulfa-unwan">{t('luba.khutta.sutur', lugha)}</summary>
+            <ol className="luba__sutur">
+              {bayanat.sutur.map((satr, martaba) => (
+                <li key={`${String(martaba)}:${satr}`} className="mono-ltr luba__satr-khutta">
+                  {satr}
+                </li>
+              ))}
+            </ol>
+          </details>
+        </details>
+      )}
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   ما الذي ستفعله الإزالة — the removal's dry run, inside its confirmation.
+
+   `taraju::khutta` has always computed this and nobody has ever been shown it.
+   It belongs here and nowhere else: the removal is the one control on this
+   screen that can destroy something the user did not put there, and the
+   residue is now named rather than counted, so a decision about it is possible.
+   --------------------------------------------------------------------------- */
+
+interface KhasaisKhuttatIzala {
+  readonly muarrif: string;
+  readonly matlab: MatlabIzala;
+  readonly lugha: Lugha;
+  readonly munassiq: Munassiqat;
+}
+
+function KhuttatIzala({
+  muarrif,
+  matlab,
+  lugha,
+  munassiq,
+}: KhasaisKhuttatIzala): JSX.Element | null {
+  const khutta = useQuery<KhuttatIzalaHie[], KhataJisr>({
+    queryKey: mafatih.khuttat_izala(muarrif, matlab),
+    queryFn: () => nadi('khuttat_izala', { muarrif, matlab }),
+  });
+
+  if (khutta.isPending) {
+    return <p className="luba__jari">{t('luba.izala.khutta_jari', lugha)}</p>;
+  }
+  if (khutta.error !== null) {
+    return (
+      <KutlatKhata
+        unwan={t('luba.izala.khutta_taadhur', lugha)}
+        khata={khutta.error}
+        lugha={lugha}
+        muarrif={muarrif}
+        aada={() => {
+          void khutta.refetch();
+        }}
+      />
+    );
+  }
+  const khutat = khutta.data;
+  if (khutat === undefined) {
+    return null;
+  }
+  if (khutat.length === 0) {
+    return <p className="luba__nass-hadi">{t('luba.izala.khutta_la_shay', lugha)}</p>;
+  }
+
+  return (
+    <div className="luba__khuttat-izala">
+      <h3 className="luba__unwan-farii">{t('luba.izala.khutta_unwan', lugha)}</h3>
+      {khutat.map((khutwa) => (
+        <div key={khutwa.naw} className="luba__natija-band">
+          <p className="luba__natija-nass">
+            <span
+              className={
+                khutwa.nazif ? 'luba__nuqta luba__nuqta--najah' : 'luba__nuqta luba__nuqta--khatar'
+              }
+              aria-hidden="true"
+            />
+            {t(miftahNaw(khutwa.naw === 'nass' ? 'nass' : 'sawt'), lugha)}
+            {' — '}
+            {t(khutwa.nazif ? 'luba.izala.nazif' : 'luba.izala.ghayr_nazif', lugha)}
+          </p>
+          <ul className="luba__adad-natija">
+            <li>{t('luba.izala.li_istiada', lugha, { adad: munassiq.raqm(khutwa.li_istiada) })}</li>
+            <li>{t('luba.izala.li_hadhf', lugha, { adad: munassiq.raqm(khutwa.li_hadhf) })}</li>
+            <li>{t('luba.izala.mujalladat', lugha, { adad: munassiq.raqm(khutwa.mujalladat) })}</li>
+            <li>{t('luba.izala.hajm', lugha, { hajm: khutwa.hajm_nusakh_maqru })}</li>
+          </ul>
+          <QaimatMasarat
+            unwan={t('luba.izala.mustabdala', lugha)}
+            masarat={khutwa.mustabdala}
+          />
+          <QaimatMasarat unwan={t('luba.izala.mafquda', lugha)} masarat={khutwa.mafquda} />
+          {khutwa.baqaya.length === 0 ? null : (
+            <>
+              <h4 className="luba__unwan-farii">{t('luba.izala.baqaya', lugha)}</h4>
+              <ul className="luba__baqaya">
+                {khutwa.baqaya.map((baqiya) => (
+                  <li key={baqiya.mujallad}>
+                    <p className="luba__nass-hadi" dir="auto">
+                      {baqiya.adad === 0
+                        ? t('luba.izala.baqaya_dakhil', lugha, { mujallad: baqiya.mujallad })
+                        : t('luba.izala.baqaya_mujallad', lugha, {
+                            mujallad: baqiya.mujallad,
+                            adad: munassiq.raqm(baqiya.adad),
+                          })}
+                    </p>
+                    <ul className="luba__sutur">
+                      {baqiya.madakhil.map((madkhal) => (
+                        <li key={madkhal} className="mono-ltr luba__satr-masar" title={madkhal}>
+                          {madkhal}
+                        </li>
+                      ))}
+                      {baqiya.adad > baqiya.madakhil.length ? (
+                        <li className="luba__nass-hadi">
+                          {t('luba.izala.baqaya_mazid', lugha, {
+                            adad: munassiq.raqm(baqiya.adad - baqiya.madakhil.length),
+                          })}
+                        </li>
+                      ) : null}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * What one install was authorised with, and by whom.
  *
@@ -1546,6 +1905,11 @@ function QismRuqaa({
     },
     onSuccess: () => {
       void makhzan.invalidateQueries({ queryKey: mafatih.tafasil(muarrif) });
+      // The plan described the game before this install. Its loader slot is now
+      // taken, its files are now there, and a plan still saying otherwise would
+      // be describing a game that no longer exists.
+      void makhzan.invalidateQueries({ queryKey: mafatih.khutta(muarrif) });
+      void makhzan.invalidateQueries({ queryKey: ['khuttat_izala', muarrif] });
     },
   });
 
@@ -1755,6 +2119,22 @@ function QismRuqaa({
               </ul>
             </details>
           )}
+          {/*
+            What pressing install actually does, above the button that does it.
+
+            Asked for as soon as there is something to install and this game is
+            not refused, rather than on a press: the answer is the reason to
+            press or not to press, and a plan nobody opened is a plan nobody was
+            shown. It is the cheapest of the three directory reads this screen
+            can make — one listing of the executable's own directory — which is
+            why it is not behind a button the way the evidence chain is.
+          */}
+          <QismKhutta
+            muarrif={muarrif}
+            lugha={lugha}
+            munassiq={munassiq}
+            mumakkan={!mahmiya && (ruqaa.data?.mudkhalat.length ?? 0) > 0}
+          />
           {yashtaghil ? (
             <p className="luba__nass-hadi luba__tahdheer">
               {tashghilMajhul
@@ -2065,6 +2445,11 @@ export function Luba(): JSX.Element {
     mutationFn: (matlab) => nadi('azil_ruqaa', { muarrif, matlab, sarim: false }),
     onSuccess: () => {
       void makhzan.invalidateQueries({ queryKey: mafatih.tafasil(muarrif) });
+      // Both plans described the game as it was a moment ago. The removal put
+      // files back and deleted others, so what an install would write and what a
+      // second removal would find are now different answers.
+      void makhzan.invalidateQueries({ queryKey: mafatih.khutta(muarrif) });
+      void makhzan.invalidateQueries({ queryKey: ['khuttat_izala', muarrif] });
     },
   });
 
@@ -2563,6 +2948,17 @@ export function Luba(): JSX.Element {
                               <p id="luba-nass-taakid" className="luba__taakid-nass">
                                 {t(MIFTAH_TAAKID[taakid], lugha)}
                               </p>
+                              {/* The removal's own dry run, between the question
+                                  and the button that answers it. The sweep this
+                                  confirmation authorises can delete files
+                                  Taarib never wrote, and those files are named
+                                  here — a count cannot be consented to. */}
+                              <KhuttatIzala
+                                muarrif={muarrif}
+                                matlab={taakid}
+                                lugha={lugha}
+                                munassiq={munassiq}
+                              />
                               <div className="luba__taakid-azrar">
                                 <button
                                   type="button"

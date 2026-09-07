@@ -20,6 +20,12 @@
 //!   `taarib_aman::fahs`, and moves the permit it mints into
 //!   `taarib_tathbeet::thabbit`. A network download, an imported file and a LAN
 //!   share take that one path; no source is privileged.
+//! - **The revocation list never travels without its state.** [`sahb`]
+//!   refreshes it from the same chain and records every outcome beside the
+//!   cache, and the install path takes the list only as a
+//!   `taarib_aman::qaimat_sahb::QaimaMuraqaba` — the list beside whether the
+//!   registry confirmed it — so an empty answer cannot be read as "nothing is
+//!   revoked" when it means "nobody asked".
 //!
 //! No client fetches the whole catalogue: only the shards covering identifiers
 //! the user owns are requested, and an unchanged manifest hits zero network.
@@ -29,6 +35,7 @@ pub mod jalb;
 pub mod khata;
 pub mod masadir;
 pub mod mutabaqa;
+pub mod sahb;
 pub mod sumaa;
 pub mod tanzeel;
 pub mod taqyeem;
@@ -40,10 +47,12 @@ pub use fahras::{
     TajawuzNashr, shareeha,
 };
 pub use jalb::{
-    FahrasMajlub, jalb_bayan, jalb_fahras, jalb_qaimat_sahb, jalb_shareeha, jalb_sharaih,
+    FahrasMajlub, jalb_bayan, jalb_bayan_maa_masdar, jalb_fahras, jalb_qaimat_sahb,
+    jalb_qaimat_sahb_maa_masdar, jalb_shareeha, jalb_sharaih,
 };
 pub use khata::{KhataMustawda, NatijatMustawda};
 pub use masadir::{MasdarMustawda, SilsilatMasadir};
+pub use sahb::{NatijatTajdid, jaddid_qaimat_sahb, jaddid_qaimat_sahb_bi_bayan};
 pub use mutabaqa::{
     IdafatIrtibat, MutabaqatLuba, MutabaqatRuqaa, MutabiqBina, SababGhayrTawafuq, afdal,
     ghayr_mutawafiqa, mutawafiqa,

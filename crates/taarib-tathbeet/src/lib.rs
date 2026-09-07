@@ -16,13 +16,13 @@
 //!   root is unrepresentable: package content becomes a [`mawdi::WajhatLuba`]
 //!   or it is refused.
 //! - **The plan is an input, never a recomputation.** [`tarkib::khutta`] is the
-//!   one place the tier, the safety refusal and the loader directory are
-//!   decided, and every write on the install path receives its answer:
+//!   one place the tier, the safety refusal, the loader directory and the loader
+//!   slot are decided, and every write on the install path receives its answer:
 //!   [`tarkib::nashr_bi_khutta`] executes a [`tarkib::KhuttatTarkib`], and the
 //!   script-engine write takes a [`nusus::IdhnNusus`] carrying a
 //!   [`tarkib::QararTabaqa`] that only a report the safety layer did not refuse
 //!   can mint. A plan cannot be built outside `tarkib`, so a writer cannot
-//!   disagree with one.
+//!   disagree with one, and there is no entry point that writes without one.
 
 pub mod bayan;
 pub mod bayan_makhzan;
@@ -42,10 +42,11 @@ pub use bayan::{
     SalahiyatMalaf, SijillIdad, SijillTaghyeer, TarifLuba, Tathbeet, WaqtNizam,
 };
 pub use itlaq::{
-    IdadBeea, KhiyaratLutris, KhiyaratMughallif, KhiyaratSteam, MUTAGHAYYIR_TAJAWUZ, RadItlaq,
-    TAJAWUZ_TAARIB, badiyat_amr_bidun_tahmeel, badiyat_amr_maa_tahmeel, bidun_tajawuz,
-    dam_tajawuz, fihi_ramz_amr, khiyarat_bidun_tahmeel, khiyarat_maa_amr,
-    khiyarat_maa_mutaghayyir, khiyarat_maa_tahmeel, tajawuz_maa, yabda_bi_beea,
+    IdadBeea, IsnadItlaq, KhiyaratLutris, KhiyaratMughallif, KhiyaratSteam, MUTAGHAYYIR_TAJAWUZ,
+    RadItlaq, TAJAWUZ_TAARIB, app_talab_steam, badiyat_amr_bidun_tahmeel,
+    badiyat_amr_maa_tahmeel, bidun_tajawuz, dam_tajawuz, fihi_ramz_amr, isnadat_talab,
+    khiyarat_bidun_tahmeel, khiyarat_maa_amr, khiyarat_maa_isnad, khiyarat_maa_mutaghayyir,
+    khiyarat_maa_tahmeel, naffidh_talabat_steam, tajawuz_maa, talabat_steam, yabda_bi_beea,
 };
 pub use khata::{IttijahDaght, KhataTathbeet, NatijatTathbeet};
 pub use masar_tathbeet::{
@@ -70,9 +71,9 @@ pub use taraju::{
     istiada_al_maktaba, istiada_kul, istiada_nass, istiada_sawt, nazzif_nusakh,
 };
 pub use tarkib::{
-    HajatItar, HalatIdadat, KhuttatTarkib, LubaMuhallala, MalhuzatManassa, MukawwinItar,
-    NatijatTarkib, QararTabaqa, SababLaHaja, TalabItlaq, TaqreerMulhaqat, hajat_itar, khutta,
-    nashr, nashr_bi_khutta, nashr_mulhaqat, rakkib_itar,
+    HajatItar, HalatIdadat, HalatSlot, KhuttatTarkib, LubaMuhallala, MalhuzatManassa,
+    MukawwinItar, NatijatTarkib, QararTabaqa, SababLaHaja, SlotMuhammil, TalabItlaq,
+    TaqreerMulhaqat, hajat_itar, khutta, nashr_bi_khutta, nashr_mulhaqat, rakkib_itar,
 };
 // Renamed on the way out: `masah` is unambiguous inside `wukala` and much less
 // so beside `khutta` and `nashr` at the crate root.

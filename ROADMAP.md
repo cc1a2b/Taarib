@@ -9,6 +9,18 @@ build it from this file alone. Nothing here is a summary, an aspiration, or a sk
 **Status:** plan complete, Phase 0 not started.
 **Version of this contract:** 1.0.0 — changes to it are changes to the product.
 
+> **How to read this document now.** It is the contract as it was written before Phase 0,
+> kept verbatim; the status line above is the status of the plan, not of the tree. What has
+> been built since, what has been observed working, and where each in-game path stops are
+> recorded in [`README.md`](README.md) under "What works today" and in
+> [`docs/tashghil.md`](docs/tashghil.md). Where this document and the tree disagree, the tree
+> wins. Two places where they are known to: section 5 names a `taarib-barid` crate that was
+> never created and omits six that were (`taarib-mudkhal`, `taarib-tahdith`, `taarib-tajmee`,
+> `taarib-tilqai`, `taarib-aql`, `taarib-muhawwil-bio4`); and the coverage matrix in section 3
+> predates Capcom's BIO4 codebase and the six in-house engine families — Frostbite, BlackSpace,
+> Alchemy, Dantelion, RAGE, Snowdrop — that `taarib-mustalahat` now recognises by name and
+> sends to the overlay tier because nothing can read their containers.
+
 ---
 
 ## Table of Contents

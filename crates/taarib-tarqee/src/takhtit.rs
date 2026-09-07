@@ -64,6 +64,26 @@
 //! — truncation inserts it during layout, so it is in the output already. A
 //! glyph that is in the atlas is a glyph something drew.
 //!
+//! ## The overflow report is built here, from these layouts
+//!
+//! [`TakhtitMusbaq::tajawuz`] is produced in the same pass, from the same
+//! [`TakhtitNass`] values the container records are made from, and from
+//! nowhere else. The report used to be an input to the assembler, and every
+//! caller that had no second layout pass to spend handed it an empty one — so
+//! every package declared "no measured overflow" without a single string
+//! having been measured. Building it here removes the field a caller could
+//! leave empty: the numbers in the report are the numbers in the package,
+//! because they are the same numbers.
+//!
+//! Every translated string reaches the report. One laid out at a size is
+//! submitted at that size with its layout, and [`crate::taqrir_tajawuz`]
+//! decides whether a recorded width exists to compare it against. One the
+//! work list declined before any size took part — no size discovered, an
+//! inline sprite, a hard break inside an atom, no container handle — is
+//! recorded once with that cause. Only a string with no translation is left
+//! out, because overflow of text that does not exist is not a question, and
+//! coverage already counts it.
+//!
 //! ## The atlas is built through the gate, and only through the gate
 //!
 //! [`crate::bawwaba::rassim`] is the only call that produces pages, and
@@ -145,6 +165,7 @@ use taarib_saff::{Saff, SilsilatKhutut};
 use crate::bawwaba::{KhattMujammaa, SafhatMasmuha, rassim};
 use crate::khata::{KhataTarqee, tul_u64};
 use crate::tahdid_maqasat::{HajmMuqannan, SababLaHajm, TaqreerMaqasat};
+use crate::taqrir_tajawuz::{BaniTaqrirTajawuz, MudkhalQiyas, SababAdamAltahaqquq, TaqrirTajawuz};
 
 /// How many glyph slots the runtime atlas reserves beyond the compiled set,
 /// unless the caller says otherwise.
@@ -302,6 +323,23 @@ impl SababLaTakhtit {
     #[must_use]
     pub const fn ila_zaman_tashghil(&self) -> bool {
         !matches!(self, Self::BilaTarjama | Self::TarjamaFarigha)
+    }
+
+    /// What the overflow report records for a string this stage declined.
+    ///
+    /// [`None`] for the two causes that mean there is no translation: those
+    /// strings are coverage's business and are not submitted for measurement.
+    /// Every other cause is one entry, so the report can say the string was
+    /// not checked and why.
+    #[must_use]
+    pub const fn sabab_adam_altahaqquq(&self) -> Option<SababAdamAltahaqquq> {
+        match self {
+            Self::BilaTarjama | Self::TarjamaFarigha => None,
+            Self::BilaHajm { .. } => Some(SababAdamAltahaqquq::BilaHajm),
+            Self::BilaHuwiya => Some(SababAdamAltahaqquq::BilaHuwiya),
+            Self::SuraBilaQiyas { .. } => Some(SababAdamAltahaqquq::SuraBilaQiyas),
+            Self::KasrSatrSarih { .. } => Some(SababAdamAltahaqquq::KasrSatrSarih),
+        }
     }
 }
 
@@ -621,6 +659,7 @@ pub struct TakhtitMusbaq {
     khutut: Vec<KhattMabni>,
     iqama: MizaniyatIqama,
     taqreer: TaqreerTakhtit,
+    tajawuz: TaqrirTajawuz,
 }
 
 impl TakhtitMusbaq {
@@ -628,6 +667,16 @@ impl TakhtitMusbaq {
     #[must_use]
     pub fn takhtitat(&self) -> &[TakhtitMabni] {
         &self.takhtitat
+    }
+
+    /// The overflow report, measured from these same layouts.
+    ///
+    /// Untrimmed: the passing rows are still present, so a caller beside the
+    /// project can answer per string. [`TaqrirTajawuz::lil_huzma`] is the form
+    /// the assembler puts in the package.
+    #[must_use]
+    pub const fn tajawuz(&self) -> &TaqrirTajawuz {
+        &self.tajawuz
     }
 
     /// The glyph set the atlas was built from, sorted.
@@ -669,10 +718,13 @@ impl TakhtitMusbaq {
     /// Consuming rather than borrowing because the pages have to *move* into
     /// `crate::bawwaba::MuhtawaMasmuh::Safahat`: the proof they carry is not
     /// [`Clone`], and a borrowing accessor would leave the assembler with
-    /// nothing it could put in a package.
+    /// nothing it could put in a package. The overflow report travels with
+    /// them so the assembler cannot write a package without it.
     #[must_use]
-    pub fn ikhrij(self) -> (Vec<TakhtitMabni>, Option<SafhatMasmuha>, Vec<KhattMabni>) {
-        (self.takhtitat, self.safahat, self.khutut)
+    pub fn ikhrij(
+        self,
+    ) -> (Vec<TakhtitMabni>, Option<SafhatMasmuha>, Vec<KhattMabni>, TaqrirTajawuz) {
+        (self.takhtitat, self.safahat, self.khutut, self.tajawuz)
     }
 }
 
@@ -730,10 +782,16 @@ pub fn sabbiq(
 
     let mut wahdat: Vec<WahdatTakhtit<'_>> = Vec::new();
     let mut matwiya: Vec<NassBilaTakhtit> = Vec::new();
+    let mut bani = BaniTaqrirTajawuz::jadeed();
     for mudkhal in nusus {
         match wahhid(mudkhal, huwiyat, maqasat, &asbab) {
             Ok(jadida) => wahdat.extend(jadida),
-            Err(sabab) => matwiya.push(NassBilaTakhtit { nass: mudkhal.id, sabab }),
+            Err(sabab) => {
+                if let Some(adam) = sabab.sabab_adam_altahaqquq() {
+                    bani.sajjil_bila_takhtit(mudkhal, adam);
+                }
+                matwiya.push(NassBilaTakhtit { nass: mudkhal.id, sabab });
+            }
         }
     }
 
@@ -751,13 +809,24 @@ pub fn sabbiq(
     let mut takhtitat: Vec<TakhtitMabni> = Vec::with_capacity(natayij.len());
     let mut asma: BTreeSet<NassId> = BTreeSet::new();
     // Scanned in work-list order, so the failure reported is the first one in
-    // the project and not the first one a worker happened to reach.
-    for natija in natayij {
+    // the project and not the first one a worker happened to reach. The
+    // indexed parallel map keeps results in work-list order, which is what
+    // lets each layout be paired back with the string it was made from.
+    for (wahda, natija) in wahdat.iter().zip(natayij) {
         let natija = natija?;
         jami.idif_takhtit(&natija.takhtit, natija.hajm_matlub.biksal());
         let _ = asma.insert(natija.nass);
+        // Submitted with the requested size, not the settled one: the report
+        // records what was asked for and reads the settled size off the layout.
+        bani.sajjil(&MudkhalQiyas {
+            madkhal: wahda.mudkhal,
+            hajm: natija.hajm_matlub.biksal(),
+            takhtit: Some(&natija.takhtit),
+            takhtit_asl: None,
+        });
         takhtitat.push(ila_mabni(&natija));
     }
+    let tajawuz = bani.ikhtim();
 
     let ashkal = jami.ashkal();
     let (safahat, lawha) = if ashkal.is_empty() {
@@ -805,6 +874,7 @@ pub fn sabbiq(
         safahat = taqreer.safahat,
         bila_qayd_ard = taqreer.bila_qayd_ard,
         matwiya = taqreer.matwiya.len(),
+        tajawuz = %tajawuz.wasf_injilizi(),
         "precomputation finished"
     );
 
@@ -815,6 +885,7 @@ pub fn sabbiq(
         khutut: khutut.iter().map(KhattMujammaa::sijill).collect(),
         iqama,
         taqreer,
+        tajawuz,
     })
 }
 
@@ -827,6 +898,9 @@ pub fn sabbiq(
 struct WahdatTakhtit<'a> {
     /// The string's identity, for the report.
     nass: NassId,
+    /// The whole entry, which the overflow report reads its constraint and its
+    /// class from once the layout exists.
+    mudkhal: &'a MudkhalNass,
     /// Its handle in the container being built.
     huwiya: HuwiyatNass,
     /// The clean Arabic text.
@@ -911,6 +985,7 @@ fn wahhid<'a>(
         .iter()
         .map(|shahid| WahdatTakhtit {
             nass: mudkhal.id,
+            mudkhal,
             huwiya,
             hadaf,
             nasq: &mudkhal.nasq_hadaf,

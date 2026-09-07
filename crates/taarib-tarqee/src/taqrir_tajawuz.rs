@@ -38,6 +38,30 @@
 //! four-valued verdict in which "never submitted for measurement" is its own
 //! outcome rather than an absence.
 //!
+//! The same rule holds one level up. [`TaqrirTajawuz::hala`] answers for the
+//! whole report with [`HalatQiyasTajawuz`], and a report in which nothing was
+//! measured answers [`HalatQiyasTajawuz::LamYuqas`] — never "no overflow". A
+//! gate that reads the overflowing list alone cannot tell a project that was
+//! measured clean from one that was never measured, and every project built
+//! from static extraction alone is the second kind, because no string table
+//! format records the box a string is drawn into.
+//!
+//! A string the compiler declines before any size takes part — no size was
+//! discovered for it, it carries an inline sprite of unmeasured width or a
+//! hard break inside an atom, or it was never added to the container — is
+//! recorded once, with that cause, rather than once per size it does not have.
+//!
+//! ## The package copy keeps every count and not every row
+//!
+//! A project of forty thousand strings with no capture session behind it is
+//! forty thousand unverifiable strings at every discovered size, and a package
+//! carrying a row for each would be larger than the layouts it describes. So
+//! [`TaqrirTajawuz::lil_huzma`] keeps the first [`AQSA_GHAYR_MUFASSAL`] rows —
+//! most sensitive class first, so a button survives the cut before a credit
+//! line — and records that it cut in [`TaqrirTajawuz::ghayr_muqallam`], exactly
+//! as it already records dropping the passing rows. The counts in
+//! [`MulakhkhasTajawuz`] are computed before the cut and are always whole.
+//!
 //! ## Severity is not the ratio
 //!
 //! A two per cent overrun on a subtitle is invisible: the line wraps, the box
@@ -227,6 +251,13 @@ pub const DAAF_SATR_WAHID: f64 = 1.5;
 /// report over a project of tens of thousands of strings stays a report rather
 /// than a second copy of the string table.
 pub const TUL_MUQTATAS: usize = 48;
+
+/// How many unverifiable rows the package copy of a report keeps.
+///
+/// Five hundred — the same bound the submission gate puts on the strings one
+/// checklist row links to, and for the same reason: enough to open a filtered
+/// view from, short of a second string table. The counts are never cut.
+pub const AQSA_GHAYR_MUFASSAL: usize = 500;
 
 // ---------------------------------------------------------------------------
 // Severity
@@ -663,10 +694,15 @@ impl Ord for MadkhalTajawuz {
 
 /// Why a string could not be checked for overflow.
 ///
-/// Six causes, and they are kept apart rather than collapsed into one "not
-/// measured" because they need three different people to act: the contributor
-/// translates, the capture session records widths, the compiler recomputes
-/// layouts. A single cause would send all three to the same wrong place.
+/// Ten causes, and they are kept apart rather than collapsed into one "not
+/// measured" because they need different people to act: the contributor
+/// translates, the capture session records widths and sizes, the compiler
+/// recomputes layouts, the runtime path draws what the compiler declined. A
+/// single cause would send all of them to the same wrong place.
+///
+/// The four that carry a number carry it for the reviewer; the summary groups
+/// by [`SababAdamAltahaqquq::naw`], which is the cause with the number
+/// stripped, so four bad widths still count as one cause.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "naw", rename_all = "snake_case")]
 pub enum SababAdamAltahaqquq {
@@ -705,9 +741,143 @@ pub enum SababAdamAltahaqquq {
         /// The size the empty layout came back at.
         hajm: f32,
     },
+    /// Size discovery produced no size for this string, so there was nothing
+    /// to lay it out at.
+    ///
+    /// Recorded once per string rather than once per size, because there is
+    /// no size for it to be recorded at.
+    BilaHajm,
+    /// The string was never added to the container being built, so no layout
+    /// could be bound to it.
+    ///
+    /// Structural rather than editorial: the assembler and the precomputation
+    /// stage were handed different string tables.
+    BilaHuwiya,
+    /// The string carries an inline sprite whose width nobody measured.
+    ///
+    /// The compiler leaves such a string to the runtime path, and the runtime
+    /// path is not measured here.
+    SuraBilaQiyas,
+    /// The string carries a mandatory line break inside an atom, which a
+    /// precomputed layout cannot express; it is left to the runtime path.
+    KasrSatrSarih,
 }
 
 impl SababAdamAltahaqquq {
+    /// The cause with its number stripped.
+    #[must_use]
+    pub const fn naw(self) -> NawAdamAltahaqquq {
+        match self {
+            Self::BilaTarjama => NawAdamAltahaqquq::BilaTarjama,
+            Self::BilaArdMutah => NawAdamAltahaqquq::BilaArdMutah,
+            Self::ArdGhayrMujdi { .. } => NawAdamAltahaqquq::ArdGhayrMujdi,
+            Self::HajmGhayrMujdi { .. } => NawAdamAltahaqquq::HajmGhayrMujdi,
+            Self::BilaTakhtit { .. } => NawAdamAltahaqquq::BilaTakhtit,
+            Self::TakhtitFarigh { .. } => NawAdamAltahaqquq::TakhtitFarigh,
+            Self::BilaHajm => NawAdamAltahaqquq::BilaHajm,
+            Self::BilaHuwiya => NawAdamAltahaqquq::BilaHuwiya,
+            Self::SuraBilaQiyas => NawAdamAltahaqquq::SuraBilaQiyas,
+            Self::KasrSatrSarih => NawAdamAltahaqquq::KasrSatrSarih,
+        }
+    }
+
+    /// Whether the contributor is the person who can resolve this.
+    #[must_use]
+    pub const fn alaa_almusahim(self) -> bool {
+        self.naw().alaa_almusahim()
+    }
+
+    /// The cause, in Arabic.
+    #[must_use]
+    pub const fn wasf_arabi(self) -> &'static str {
+        self.naw().wasf_arabi()
+    }
+
+    /// The same, in English.
+    #[must_use]
+    pub const fn wasf_injilizi(self) -> &'static str {
+        self.naw().wasf_injilizi()
+    }
+
+    /// What resolves it, in Arabic.
+    #[must_use]
+    pub const fn ilaj_arabi(self) -> &'static str {
+        self.naw().ilaj_arabi()
+    }
+
+    /// The same, in English.
+    #[must_use]
+    pub const fn ilaj_injilizi(self) -> &'static str {
+        self.naw().ilaj_injilizi()
+    }
+
+    /// A stable key for grouping causes in the summary.
+    ///
+    /// Returns the variant name rather than the whole value, so that
+    /// [`ArdGhayrMujdi`](SababAdamAltahaqquq::ArdGhayrMujdi) entries carrying
+    /// four different bad widths still count as one cause.
+    #[must_use]
+    pub const fn miftah(self) -> &'static str {
+        self.naw().miftah()
+    }
+}
+
+/// A cause of unverifiability with its number stripped.
+///
+/// What [`MulakhkhasTajawuz::hasab_sabab`] is keyed by, and what a surface
+/// holding only that key — a review console reading the summary, not the rows
+/// — can turn back into a sentence and a remedy through
+/// [`NawAdamAltahaqquq::min_miftah`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NawAdamAltahaqquq {
+    /// [`SababAdamAltahaqquq::BilaTarjama`].
+    BilaTarjama,
+    /// [`SababAdamAltahaqquq::BilaArdMutah`].
+    BilaArdMutah,
+    /// [`SababAdamAltahaqquq::ArdGhayrMujdi`].
+    ArdGhayrMujdi,
+    /// [`SababAdamAltahaqquq::HajmGhayrMujdi`].
+    HajmGhayrMujdi,
+    /// [`SababAdamAltahaqquq::BilaTakhtit`].
+    BilaTakhtit,
+    /// [`SababAdamAltahaqquq::TakhtitFarigh`].
+    TakhtitFarigh,
+    /// [`SababAdamAltahaqquq::BilaHajm`].
+    BilaHajm,
+    /// [`SababAdamAltahaqquq::BilaHuwiya`].
+    BilaHuwiya,
+    /// [`SababAdamAltahaqquq::SuraBilaQiyas`].
+    SuraBilaQiyas,
+    /// [`SababAdamAltahaqquq::KasrSatrSarih`].
+    KasrSatrSarih,
+}
+
+impl NawAdamAltahaqquq {
+    /// Every cause, in the order the summary lists them.
+    pub const KULL: [Self; 10] = [
+        Self::BilaTarjama,
+        Self::BilaArdMutah,
+        Self::ArdGhayrMujdi,
+        Self::HajmGhayrMujdi,
+        Self::BilaTakhtit,
+        Self::TakhtitFarigh,
+        Self::BilaHajm,
+        Self::BilaHuwiya,
+        Self::SuraBilaQiyas,
+        Self::KasrSatrSarih,
+    ];
+
+    /// The cause behind a summary key, or [`None`] for a key this build does
+    /// not know.
+    ///
+    /// [`None`] rather than a fallback cause: a key from a newer build must
+    /// not be worded as some other cause's sentence.
+    #[must_use]
+    pub fn min_miftah(miftah: &str) -> Option<Self> {
+        Self::KULL.into_iter().find(|naw| naw.miftah() == miftah)
+    }
+
     /// Whether the contributor is the person who can resolve this.
     #[must_use]
     pub const fn alaa_almusahim(self) -> bool {
@@ -720,10 +890,14 @@ impl SababAdamAltahaqquq {
         match self {
             Self::BilaTarjama => "لا ترجمة لقياسها.",
             Self::BilaArdMutah => "لم يسجّل الاستخراج عرضًا متاحًا لهذه العبارة.",
-            Self::ArdGhayrMujdi { .. } => "العرض المسجَّل ليس عرضًا صالحًا للمقارنة.",
-            Self::HajmGhayrMujdi { .. } => "الحجم المطلوب للقياس ليس حجمًا صالحًا.",
-            Self::BilaTakhtit { .. } => "لا تخطيط محسوبًا لهذه العبارة عند هذا الحجم.",
-            Self::TakhtitFarigh { .. } => "التخطيط عاد فارغًا لنصٍّ غير فارغ.",
+            Self::ArdGhayrMujdi => "العرض المسجَّل ليس عرضًا صالحًا للمقارنة.",
+            Self::HajmGhayrMujdi => "الحجم المطلوب للقياس ليس حجمًا صالحًا.",
+            Self::BilaTakhtit => "لا تخطيط محسوبًا لهذه العبارة عند هذا الحجم.",
+            Self::TakhtitFarigh => "التخطيط عاد فارغًا لنصٍّ غير فارغ.",
+            Self::BilaHajm => "لم يُكتشف حجم خطّ لهذه العبارة، فلا حجم يُخطَّط عنده.",
+            Self::BilaHuwiya => "لم تُضَف هذه العبارة إلى الحاوية، فلا تخطيط يُربط بها.",
+            Self::SuraBilaQiyas => "تحمل صورة مضمَّنة لم يُقَس عرضها؛ تُخطَّط وقت التشغيل ولا تُقاس هنا.",
+            Self::KasrSatrSarih => "تحمل كسر سطر إجباريًا داخل ذرّة؛ تُخطَّط وقت التشغيل ولا تُقاس هنا.",
         }
     }
 
@@ -733,10 +907,24 @@ impl SababAdamAltahaqquq {
         match self {
             Self::BilaTarjama => "There is no translation to measure.",
             Self::BilaArdMutah => "Extraction recorded no available width for this string.",
-            Self::ArdGhayrMujdi { .. } => "The recorded width is not a width worth comparing to.",
-            Self::HajmGhayrMujdi { .. } => "The requested measurement size is not a valid size.",
-            Self::BilaTakhtit { .. } => "No layout was precomputed for this string at this size.",
-            Self::TakhtitFarigh { .. } => "The layout came back empty for text that is not empty.",
+            Self::ArdGhayrMujdi => "The recorded width is not a width worth comparing to.",
+            Self::HajmGhayrMujdi => "The requested measurement size is not a valid size.",
+            Self::BilaTakhtit => "No layout was precomputed for this string at this size.",
+            Self::TakhtitFarigh => "The layout came back empty for text that is not empty.",
+            Self::BilaHajm => {
+                "No font size was discovered for this string, so there is no size to lay it out at."
+            }
+            Self::BilaHuwiya => {
+                "The string was never added to the container, so no layout could be bound to it."
+            }
+            Self::SuraBilaQiyas => {
+                "It carries an inline sprite of unmeasured width; it is laid out at run time and \
+                 not measured here."
+            }
+            Self::KasrSatrSarih => {
+                "It carries a mandatory line break inside an atom; it is laid out at run time and \
+                 not measured here."
+            }
         }
     }
 
@@ -745,13 +933,16 @@ impl SababAdamAltahaqquq {
     pub const fn ilaj_arabi(self) -> &'static str {
         match self {
             Self::BilaTarjama => "ترجم العبارة ثم أعد البناء.",
-            Self::BilaArdMutah | Self::ArdGhayrMujdi { .. } => {
-                "شغّل جلسة التقاط تمرّ على الشاشة التي تظهر فيها العبارة لتُسجَّل مساحتها."
+            Self::BilaArdMutah | Self::ArdGhayrMujdi | Self::BilaHajm => {
+                "شغّل جلسة التقاط تمرّ على الشاشة التي تظهر فيها العبارة لتُسجَّل مساحتها وحجمها."
             }
-            Self::HajmGhayrMujdi { .. } | Self::BilaTakhtit { .. } => {
+            Self::HajmGhayrMujdi | Self::BilaTakhtit | Self::BilaHuwiya => {
                 "أعد اكتشاف المقاسات ثم أعد حساب التخطيطات."
             }
-            Self::TakhtitFarigh { .. } => "تحقّق من تغطية الخطّ للنص العربي في هذا المشروع.",
+            Self::TakhtitFarigh => "تحقّق من تغطية الخطّ للنص العربي في هذا المشروع.",
+            Self::SuraBilaQiyas | Self::KasrSatrSarih => {
+                "لا يقيسها المترجم المسبق؛ تحقّق منها في جلسة التقاط أثناء اللعب."
+            }
         }
     }
 
@@ -760,33 +951,37 @@ impl SababAdamAltahaqquq {
     pub const fn ilaj_injilizi(self) -> &'static str {
         match self {
             Self::BilaTarjama => "Translate the string and rebuild.",
-            Self::BilaArdMutah | Self::ArdGhayrMujdi { .. } => {
+            Self::BilaArdMutah | Self::ArdGhayrMujdi | Self::BilaHajm => {
                 "Run a capture session that reaches the screen this string appears on, so its \
-                 rectangle is recorded."
+                 rectangle and size are recorded."
             }
-            Self::HajmGhayrMujdi { .. } | Self::BilaTakhtit { .. } => {
+            Self::HajmGhayrMujdi | Self::BilaTakhtit | Self::BilaHuwiya => {
                 "Re-run size discovery and recompute the layouts."
             }
-            Self::TakhtitFarigh { .. } => {
+            Self::TakhtitFarigh => {
                 "Check that the project's font chain covers the Arabic script."
+            }
+            Self::SuraBilaQiyas | Self::KasrSatrSarih => {
+                "The precompiler does not measure it; check it in a capture session while the \
+                 game runs."
             }
         }
     }
 
-    /// A stable key for grouping causes in the summary.
-    ///
-    /// Returns the variant name rather than the whole value, so that
-    /// [`ArdGhayrMujdi`](SababAdamAltahaqquq::ArdGhayrMujdi) entries carrying
-    /// four different bad widths still count as one cause.
+    /// The stable key the summary groups by.
     #[must_use]
     pub const fn miftah(self) -> &'static str {
         match self {
             Self::BilaTarjama => "bila_tarjama",
             Self::BilaArdMutah => "bila_ard_mutah",
-            Self::ArdGhayrMujdi { .. } => "ard_ghayr_mujdi",
-            Self::HajmGhayrMujdi { .. } => "hajm_ghayr_mujdi",
-            Self::BilaTakhtit { .. } => "bila_takhtit",
-            Self::TakhtitFarigh { .. } => "takhtit_farigh",
+            Self::ArdGhayrMujdi => "ard_ghayr_mujdi",
+            Self::HajmGhayrMujdi => "hajm_ghayr_mujdi",
+            Self::BilaTakhtit => "bila_takhtit",
+            Self::TakhtitFarigh => "takhtit_farigh",
+            Self::BilaHajm => "bila_hajm",
+            Self::BilaHuwiya => "bila_huwiya",
+            Self::SuraBilaQiyas => "sura_bila_qiyas",
+            Self::KasrSatrSarih => "kasr_satr_sarih",
         }
     }
 }
@@ -990,13 +1185,123 @@ pub struct TaqrirTajawuz {
     /// that means "nothing passed" from one that means "the detail was trimmed",
     /// which is the same distinction the unverifiable list draws elsewhere.
     pub salima_muqallama: bool,
+    /// Whether the unverifiable list was cut to [`AQSA_GHAYR_MUFASSAL`] rows.
+    ///
+    /// Defaulted on read because reports written before the cut existed carry
+    /// no such field, and every one of them was written whole.
+    #[serde(default)]
+    pub ghayr_muqallam: bool,
+}
+
+/// What a whole report says about how much of a project was measured.
+///
+/// The report-level answer to the question the three lists answer per string,
+/// and it has the same shape: a report in which nothing was measured is not a
+/// report of no overflow, and a report that measured half a project is not a
+/// pass over the other half.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HalatQiyasTajawuz {
+    /// Every submitted pair was measured. The overflowing list is the whole
+    /// answer.
+    Kamil,
+    /// Some pairs were measured and some could not be. The overflowing list is
+    /// the answer for the measured part only.
+    Juzi,
+    /// Pairs were submitted and not one could be measured. There is no overflow
+    /// answer at all.
+    LamYuqas,
+    /// Nothing was submitted, which is what a project with no translated string
+    /// produces. Distinct from [`HalatQiyasTajawuz::LamYuqas`]: nothing was
+    /// owed here, whereas there everything was.
+    Farigh,
+}
+
+impl HalatQiyasTajawuz {
+    /// The stable key a surface switches on.
+    #[must_use]
+    pub const fn miftah(self) -> &'static str {
+        match self {
+            Self::Kamil => "kamil",
+            Self::Juzi => "juzi",
+            Self::LamYuqas => "lam_yuqas",
+            Self::Farigh => "farigh",
+        }
+    }
+
+    /// Whether the overflowing list may be read as the whole answer.
+    #[must_use]
+    pub const fn kamil(self) -> bool {
+        matches!(self, Self::Kamil)
+    }
+
+    /// The label, in Arabic.
+    #[must_use]
+    pub const fn wasf_arabi(self) -> &'static str {
+        match self {
+            Self::Kamil => "مقيس كاملًا",
+            Self::Juzi => "قياس جزئي",
+            Self::LamYuqas => "لم يُقَس",
+            Self::Farigh => "لا شيء للقياس",
+        }
+    }
+
+    /// The same, in English.
+    #[must_use]
+    pub const fn wasf_injilizi(self) -> &'static str {
+        match self {
+            Self::Kamil => "fully measured",
+            Self::Juzi => "partly measured",
+            Self::LamYuqas => "not measured",
+            Self::Farigh => "nothing to measure",
+        }
+    }
 }
 
 impl TaqrirTajawuz {
     /// An empty report: nothing measured, nothing submitted.
+    ///
+    /// Answers [`HalatQiyasTajawuz::Farigh`], never a pass. Its only honest use
+    /// is a project with nothing to submit; handing one to a gate in place of a
+    /// measurement is the defect this module's header describes.
     #[must_use]
     pub fn farigh() -> Self {
         Self::default()
+    }
+
+    /// How much of what was submitted was actually measured.
+    ///
+    /// Read from the counts rather than the lists, so the answer is the same
+    /// before and after [`TaqrirTajawuz::lil_huzma`] trims the rows.
+    #[must_use]
+    pub const fn hala(&self) -> HalatQiyasTajawuz {
+        let maqis = self.mulakhkhas.maqis;
+        let ghayr = self.mulakhkhas.ghayr_mutahaqqaq;
+        if maqis == 0 && ghayr == 0 {
+            HalatQiyasTajawuz::Farigh
+        } else if maqis == 0 {
+            HalatQiyasTajawuz::LamYuqas
+        } else if ghayr == 0 {
+            HalatQiyasTajawuz::Kamil
+        } else {
+            HalatQiyasTajawuz::Juzi
+        }
+    }
+
+    /// The form that goes into a package and, from there, into a draft.
+    ///
+    /// Drops the passing rows and cuts the unverifiable rows to
+    /// [`AQSA_GHAYR_MUFASSAL`], recording both, and touches no count. The
+    /// overflowing rows are kept whole: they are the rows a reviewer acts on.
+    #[must_use]
+    pub fn lil_huzma(mut self) -> Self {
+        self = self.bila_salima();
+        if self.ghayr_qabil_lil_tahaqquq.len() > AQSA_GHAYR_MUFASSAL {
+            self.ghayr_qabil_lil_tahaqquq.truncate(AQSA_GHAYR_MUFASSAL);
+            self.ghayr_qabil_lil_tahaqquq.shrink_to_fit();
+            self.ghayr_muqallam = true;
+        }
+        self
     }
 
     /// The worst entry, when anything overran.
@@ -1036,7 +1341,9 @@ impl TaqrirTajawuz {
     /// Answers [`HalatTahaqquq::LamYuqas`] for a string not in this report at
     /// all. After [`TaqrirTajawuz::bila_salima`] a string that passed everywhere
     /// answers that too, which is why the trimmed copy records
-    /// [`TaqrirTajawuz::salima_muqallama`].
+    /// [`TaqrirTajawuz::salima_muqallama`] — and after [`TaqrirTajawuz::lil_huzma`]
+    /// an unverifiable string past the cut does as well, which is what
+    /// [`TaqrirTajawuz::ghayr_muqallam`] records.
     #[must_use]
     pub fn hal_nass(&self, nass: NassId) -> HalatTahaqquq {
         let mut mutajawiz = 0_u32;
@@ -1277,15 +1584,41 @@ impl BaniTaqrirTajawuz {
         }
     }
 
+    /// Records a string the compiler declined before any size took part.
+    ///
+    /// For the causes that are decided per string and not per size: no size
+    /// was discovered, the string never reached the container, or it carries
+    /// something a precomputed layout cannot express. There is nothing to
+    /// measure it at, so it is recorded once, with the cause, and never as
+    /// passing. A caller that instead dropped such a string would be producing
+    /// the single-list report this module was written to replace.
+    pub fn sajjil_bila_takhtit(&mut self, madkhal: &MudkhalNass, sabab: SababAdamAltahaqquq) {
+        let _ = self.tasnifat.insert(madkhal.tasnif);
+        self.ghayr.push(MadkhalGhayrMutahaqqaq {
+            nass: madkhal.id,
+            hawiya: madkhal.siyaq.hawiya.clone(),
+            mawqi: madkhal.siyaq.mawqi.clone(),
+            muqtatas: muqtatas(madkhal.hadaf.as_deref().unwrap_or(&madkhal.masdar)),
+            tasnif: madkhal.tasnif,
+            sabab,
+        });
+        let _ = self.nusus_ghayr.insert(madkhal.id);
+    }
+
     /// Sorts, counts, and produces the report.
+    ///
+    /// The unverifiable rows are ordered most sensitive class first, so that
+    /// when [`TaqrirTajawuz::lil_huzma`] cuts the list a button is kept before
+    /// a credit line; within a class the order is by cause, then by where the
+    /// string lives, so two builds of one project list them identically.
     #[must_use]
     pub fn ikhtim(mut self) -> TaqrirTajawuz {
         self.tajawuzat.sort_unstable();
         self.salima.sort_unstable();
         self.ghayr.sort_by(|awwal, thani| {
-            awwal
-                .tasnif
-                .cmp(&thani.tasnif)
+            hassasiyat_tasnif(thani.tasnif)
+                .total_cmp(&hassasiyat_tasnif(awwal.tasnif))
+                .then_with(|| awwal.tasnif.cmp(&thani.tasnif))
                 .then_with(|| awwal.sabab.miftah().cmp(thani.sabab.miftah()))
                 .then_with(|| awwal.hawiya.cmp(&thani.hawiya))
                 .then_with(|| awwal.mawqi.cmp(&thani.mawqi))
@@ -1377,6 +1710,7 @@ impl BaniTaqrirTajawuz {
             ghayr_qabil_lil_tahaqquq: self.ghayr,
             mulakhkhas,
             salima_muqallama: false,
+            ghayr_muqallam: false,
         }
     }
 }

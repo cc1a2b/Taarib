@@ -57,7 +57,9 @@ use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_tathbeet::bayan::{NawTathbeet, TarifLuba, Tathbeet};
 use taarib_tathbeet::khata::KhataTathbeet;
 use taarib_tathbeet::nusus::{IdhnNusus, Nashir};
-use taarib_tathbeet::tarkib::{HalatIdadat, LubaMuhallala, NatijatTarkib, QararTabaqa};
+use taarib_tathbeet::tarkib::{
+    HalatIdadat, KhuttatTarkib, LubaMuhallala, NatijatTarkib, QararTabaqa,
+};
 use taarib_tathbeet::{nusus, tarkib};
 use taarib_usus::manassa::{BeeatTawafuq, Mimariya, NizamTashghil};
 
@@ -251,6 +253,16 @@ impl Masrah {
         Tathbeet::ibda(&self.nusakh, NawTathbeet::Nass, &tarif(&self.luba), "dawra")
             .expect("an installation session")
     }
+
+    /// The plan for this game at one tier and one safety verdict.
+    ///
+    /// Built separately from the write because `tarkib::nashr` — the one entry
+    /// point that planned and executed together — is gone. The gate under test
+    /// is therefore reached exactly the way the product reaches it: a plan
+    /// first, and a write that is handed that plan and nothing else.
+    fn khutta(&self, tabaqa: Tabaqa, marfuda: bool) -> Result<KhuttatTarkib, KhataTathbeet> {
+        tarkib::khutta(&imkaniyat(tabaqa, marfuda), &luba_muhallala(&self.luba), &self.makhzan)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -262,13 +274,17 @@ fn tabaqa_fawqiya_la_tuaid_kitabat_nusus_alluba() {
     let masrah = Masrah::ibni();
     let qabl = shajara(&masrah.luba);
 
+    let mukhattat = masrah
+        .khutta(Tabaqa::TarjamaFawqiya, false)
+        .expect("tier 3 is a tier, not a refusal, so it plans");
+
     let mut tathbeet = masrah.sijill();
     {
         let mut nashir = Nashir::jadeed(&mut tathbeet, &masrah.ruqaa, &masrah.luba);
-        let (itar, mulhaqat) = tarkib::nashr(
+        let (itar, mulhaqat) = tarkib::nashr_bi_khutta(
+            &mukhattat,
             &luba_muhallala(&masrah.luba),
             &HalatIdadat::default(),
-            &imkaniyat(Tabaqa::TarjamaFawqiya, false),
             &masrah.makhzan,
             &mut nashir,
         )
@@ -355,18 +371,19 @@ fn alluba_almarfuda_amanan_la_yulmas_minha_bayt() {
 
     let mut tathbeet = masrah.sijill();
     {
-        let mut nashir = Nashir::jadeed(&mut tathbeet, &masrah.ruqaa, &masrah.luba);
-        let khata = tarkib::nashr(
-            &luba_muhallala(&masrah.luba),
-            &HalatIdadat::default(),
-            // Tier 1 — the tier that patches the most — with the safety layer's
-            // refusal beside it. The refusal has to be what stops this, or the
-            // gate is only a tier gate wearing a second name.
-            &imkaniyat(Tabaqa::Kamil, true),
-            &masrah.makhzan,
-            &mut nashir,
-        )
-        .expect_err("a report the safety layer refused cannot be planned against");
+        let nashir = Nashir::jadeed(&mut tathbeet, &masrah.ruqaa, &masrah.luba);
+        // Tier 1 — the tier that patches the most — with the safety layer's
+        // refusal beside it. The refusal has to be what stops this, or the gate
+        // is only a tier gate wearing a second name.
+        //
+        // There is no longer any way to attempt the write: the value
+        // `nashr_bi_khutta` demands is the plan, and a refused report yields no
+        // plan. That is stronger than the refusal this test used to measure,
+        // where planning and writing were one call and the refusal happened
+        // inside it.
+        let khata = masrah
+            .khutta(Tabaqa::Kamil, true)
+            .expect_err("a report the safety layer refused cannot be planned against");
         assert!(
             matches!(khata, KhataTathbeet::IdhnGhayrMutabiq),
             "and it refuses as an authorisation failure, by name: {khata:?}"
@@ -409,14 +426,15 @@ fn altaqreer_almarfud_la_yuntij_qararan() {
 #[test]
 fn nafs_alluba_bi_tabaqa_kamila_tunqal_nususuha() {
     let masrah = Masrah::ibni();
+    // The identical game, package and store. Only the tier differs.
+    let mukhattat = masrah.khutta(Tabaqa::Kamil, false).expect("a deployment plan");
     let mut tathbeet = masrah.sijill();
     {
         let mut nashir = Nashir::jadeed(&mut tathbeet, &masrah.ruqaa, &masrah.luba);
-        let _ = tarkib::nashr(
+        let _ = tarkib::nashr_bi_khutta(
+            &mukhattat,
             &luba_muhallala(&masrah.luba),
             &HalatIdadat::default(),
-            // The identical game, package and store. Only the tier differs.
-            &imkaniyat(Tabaqa::Kamil, false),
             &masrah.makhzan,
             &mut nashir,
         )

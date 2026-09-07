@@ -62,3 +62,10 @@ tracing = { workspace = true }
 # adapter's own monotonic clock and are never formatted. `jiff` is already the
 # workspace's clock everywhere a timestamp is written.
 jiff = { workspace = true }
+
+[dev-dependencies]
+# The encrypted-member fixture in `tests/hawiyat_marfuda.rs` is encrypted for
+# real — AES-256-CBC under the frame Godot's exporter writes — so the reader's
+# own key path can prove the fixture before the report is checked against it.
+aes = { workspace = true }
+cbc = { workspace = true }

@@ -194,15 +194,20 @@ impl Matjar for MatjarItch {
         };
         let qaida = qaida_fih(&jidhr);
         if !qaida.is_file() {
-            return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+            // The root is here — the user configured it, or a probe found the
+            // database a moment ago — and the catalogue is not. Installed and
+            // unreadable, never "not installed".
+            return Ok(NatijatMatjar::naqisa(
+                MUARRIF,
+                Some(jidhr),
+                qaida.display().to_string(),
+                "the itch app's catalogue (db/butler.db) is not under this root, so no itch.io \
+                 game could be listed; if the root was configured by hand, point it at the \
+                 folder that holds the db directory",
+            ));
         }
 
-        let mut natija =
-            NatijatMatjar {
-                matjar: MUARRIF,
-                jidhr_matjar: Some(jidhr),
-                ..NatijatMatjar::default()
-            };
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, Some(jidhr));
 
         let (silat, thabita) = iftah_lil_qiraa(&qaida)?;
         if thabita {
@@ -513,7 +518,7 @@ fn jama_alaab(sila: &Connection, nizam: NizamTashghil, natija: &mut NatijatMatja
     let kuhuf = match asfuf(sila, "caves") {
         Ok(kuhuf) => kuhuf,
         Err(sabab) => {
-            natija.tanbihat.push(TanbihFahs::jadeed(
+            natija.tanbihat.push(TanbihFahs::fahras(
                 MUARRIF,
                 "butler.db: caves",
                 format!(
@@ -728,6 +733,27 @@ mod ikhtibarat {
         let masrah = tempfile::tempdir()?;
         let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
         assert!(MatjarItch::judhur_muhtamala(&siyaq).is_empty());
+        Ok(())
+    }
+
+    /// A configured root that exists and holds no `db/butler.db`. The user said
+    /// the itch app is here and `mawqi` takes them at their word; `ifhas` must
+    /// answer "installed, unreadable", not "not installed".
+    #[test]
+    fn tajawuz_bila_qaida_naqis_la_ghayr_muthabbat() -> NatijatIkhtibar {
+        use crate::fahs::HalatFahsMatjar;
+
+        let masrah = tempfile::tempdir()?;
+        let tajawuz = masrah.path().join("itch-farigh");
+        fs::create_dir_all(&tajawuz)?;
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.manassat.itch = Some(tajawuz.clone());
+
+        let matjar = MatjarItch::jadeed();
+        assert_eq!(matjar.mawqi(&siyaq).as_deref(), Some(tajawuz.as_path()));
+        let natija = matjar.ifhas(&siyaq)?;
+        assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
+        assert_eq!(natija.jidhr_matjar.as_deref(), Some(tajawuz.as_path()));
         Ok(())
     }
 }

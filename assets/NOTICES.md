@@ -6,10 +6,11 @@ each one carries, and carries the licence texts themselves in the appendix at
 the end. `taarib-tajmee` stages it into every bundle as `mawarid/NOTICES.md`
 (matrix row N1), which is the copy that discharges the obligations below.
 
-Nothing in the application opens this file yet: no Rust or TypeScript in the
-tree reads `NOTICES.md`. It ships because a recipient must be able to read it,
-not because a screen renders it; wiring it into the diagnostics screen is worth
-doing and has not been done.
+No screen in the application renders this file yet: the only code in the tree
+that touches `NOTICES.md` is the staging tool, which copies it into the bundle.
+It ships because a recipient must be able to read it, not because a screen
+renders it; wiring it into the diagnostics screen is worth doing and has not
+been done.
 
 ## Bundled fonts — SIL Open Font License 1.1
 

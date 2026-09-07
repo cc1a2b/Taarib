@@ -5684,6 +5684,8 @@ dependencies = [
 name = "taarib-istikhraj"
 version = "1.0.0"
 dependencies = [
+ "aes 0.8.4",
+ "cbc 0.1.2",
  "flate2",
  "jiff",
  "lz4_flex",
@@ -5921,6 +5923,7 @@ dependencies = [
  "taarib-tarqee",
  "taarib-tathbeet",
  "taarib-usus",
+ "tempfile",
  "thiserror 2.0.20",
  "tokio",
  "tracing",

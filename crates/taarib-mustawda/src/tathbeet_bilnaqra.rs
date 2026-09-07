@@ -4,7 +4,7 @@ use std::path::Path;
 
 use taarib_aman::fahs::{NatijatFahs, Rafd, TalabFahs, fahs};
 use taarib_aman::iqrar::SijillIqrar;
-use taarib_aman::qaimat_sahb::QaimatSahb;
+use taarib_aman::qaimat_sahb::{QaimaMuraqaba, RafdQaima};
 use taarib_aman::sandooq_fak::fak_ila_hajr;
 use taarib_khatm::{MirsatThiqa, MudaqqiqEd25519};
 use taarib_mustalahat::luba::LubaId;
@@ -62,6 +62,13 @@ pub enum FashalTathbeet {
     Mustawda(KhataMustawda),
     /// The safety layer refused, with its evidence.
     Aman(Box<Rafd>),
+    /// The registry is answering and its revocation list is not.
+    ///
+    /// Raised before the package is even quarantined, because it is a fact
+    /// about the registry rather than about the package: nothing is installed
+    /// while the one document able to withdraw a patch is being withheld by a
+    /// registry that can be reached. An unreachable registry never raises it.
+    Sahb(RafdQaima),
     /// The installer refused or failed.
     Tathbeet(KhataTathbeet),
 }
@@ -74,6 +81,7 @@ impl FashalTathbeet {
         match self {
             Self::Mustawda(khata) => khata.arabi(),
             Self::Aman(rafd) => rafd.arabi(),
+            Self::Sahb(rafd) => rafd.arabi(),
             Self::Tathbeet(khata) => khata.arabi(),
         }
     }
@@ -85,6 +93,7 @@ impl FashalTathbeet {
         match self {
             Self::Mustawda(khata) => khata.injilizi(),
             Self::Aman(rafd) => rafd.injilizi(),
+            Self::Sahb(rafd) => rafd.injilizi(),
             Self::Tathbeet(khata) => khata.injilizi(),
         }
     }
@@ -96,6 +105,9 @@ impl FashalTathbeet {
         match self {
             Self::Mustawda(khata) => Some(khata.khutwa()),
             Self::Tathbeet(khata) => Some(khata.khutwa()),
+            // A registry that is up and withholding its list is fixed by the
+            // next successful refresh, which the next press triggers.
+            Self::Sahb(_) => Some(taarib_usus::khata::Khutwa::AadaMuhawala),
             Self::Aman(_) => None,
         }
     }
@@ -119,8 +131,14 @@ pub struct TalabNaqra<'a> {
     pub jidhr_nusakh: &'a Path,
     /// The trust anchor compiled into this client.
     pub mirsa: &'a MirsatThiqa,
-    /// The signature-verified revocation list.
-    pub qaima: &'a QaimatSahb,
+    /// The signature-verified revocation list, beside where it stands.
+    ///
+    /// The pair rather than the list, so that no caller can hand this pipeline
+    /// a list without having read the cache that says whether the registry
+    /// ever confirmed it — the only way to reach a `QaimaMuraqaba` is through
+    /// that read. Its refusal, when the state earns one, is answered here
+    /// before anything else happens.
+    pub qaima: &'a QaimaMuraqaba,
     /// The first-run acknowledgement record.
     pub iqrar: Option<&'a SijillIqrar>,
     /// Whether the multiplayer warning was acknowledged for this game.
@@ -163,11 +181,16 @@ impl std::fmt::Debug for TalabNaqra<'_> {
 /// `nashr` is the deployment step, exactly as [`thabbit`] requires: it is handed
 /// a [`Nashir`] and owns every write into the game's own files — the framework
 /// and adapter through the recorder, and the script-engine write through
-/// [`Nashir::raqqi`], under the plan it built. A step that calls
-/// `taarib_tathbeet::tarkib::nashr` gets both without doing anything else.
+/// [`Nashir::raqqi`], under the plan it was given. A step that builds the plan
+/// with `taarib_tathbeet::tarkib::khutta` and executes it with
+/// `taarib_tathbeet::tarkib::nashr_bi_khutta` gets both without doing anything
+/// else — and building it first is what lets the same plan be put in front of
+/// the user before this function is called at all.
 ///
 /// # Errors
 ///
+/// [`FashalTathbeet::Sahb`] when the registry is reachable and withholding its
+/// revocation list, before the package is touched;
 /// [`FashalTathbeet::Mustawda`] when quarantine or the container refuses,
 /// [`FashalTathbeet::Aman`] with the evidence when a safety check refuses, and
 /// [`FashalTathbeet::Tathbeet`] when the installer refuses or fails.
@@ -180,6 +203,19 @@ where
     F: FnOnce(&mut Nashir<'_>) -> Result<(), KhataTathbeet>,
     P: FnMut(MarhalatTathbeet),
 {
+    // First and free: no file is opened to learn it, and a package that is
+    // about to be refused over the registry's state should not be unpacked.
+    if let Some(rafd) = talab.qaima.rafd() {
+        return Err(FashalTathbeet::Sahb(rafd.clone()));
+    }
+    tracing::info!(
+        hala = talab.qaima.hala().ism(),
+        tasalsul = talab.qaima.qaima().tasalsul(),
+        adad = talab.qaima.qaima().adad(),
+        "{}",
+        talab.qaima.wasf_injilizi()
+    );
+
     taqaddum(MarhalatTathbeet::Hajr);
     let muhtawa_hajr = fak_ila_hajr(talab.malaf_munazzal, talab.jidhr_hajr)
         .map_err(|khata| FashalTathbeet::Mustawda(khata_hajr(&khata)))?;
@@ -204,7 +240,7 @@ where
         jidhr_steam: talab.jidhr_steam,
         malaf: &malaf,
         mirsa: talab.mirsa,
-        qaima: talab.qaima,
+        qaima: talab.qaima.qaima(),
         iqrar: talab.iqrar,
         iqrar_shabaka: talab.iqrar_shabaka,
     }) {
@@ -221,6 +257,10 @@ where
             muhtawa: talab.muhtawa,
             iqrar_taqribi: talab.iqrar_taqribi,
             tanfidhi: talab.tanfidhi,
+            // The same root the safety gate above was given. Resolving it twice
+            // is how the gate and the launcher edit come to disagree about which
+            // Steam this machine has.
+            jidhr_steam: talab.jidhr_steam,
         },
         &idhn,
         &malaf,

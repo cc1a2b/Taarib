@@ -78,8 +78,8 @@ use taarib_mustalahat::muharrik::{
 pub use crate::khatar::{Khatar, NawKhatar};
 pub use crate::mani::{Mani, NawMani, NitaqMani};
 pub use crate::mudkhalat::{
-    HalatFahs, HalatMakhzan, HalatMustawda, HuwiyatLuba, MasahAman, MasahWukala, MawqifMustakhdim,
-    MudkhalatAql, MukawwinMakhzan,
+    HalatFahs, HalatMakhzan, HalatMash, HalatMustawda, HuwiyatLuba, MasahAman, MasahWukala,
+    MawqifMustakhdim, MudkhalatAql, MukawwinMakhzan,
 };
 pub use crate::muntaj::{Muntaj, Waad};
 pub use crate::shahid::{MasdarMarifa, Musnad, Shahid};
@@ -140,8 +140,12 @@ pub enum HalatHimaya {
     /// The scan ran and nothing in this build's signature list matched.
     ///
     /// The only answer on which an install proceeds, and deliberately not called
-    /// "clean": what it asserts is that twelve named anti-cheats were looked for
-    /// and none was found, which is a smaller claim.
+    /// "clean": what it asserts is that every kind in
+    /// [`taarib_aman::kashf_himaya::NawHimaya`] was looked for and none was
+    /// found, which is a smaller claim. The count is left to the enum rather
+    /// than written here — this sentence said "twelve" for three phases after
+    /// the set had grown past it, and a doc that has to be remembered is a doc
+    /// that goes stale.
     LaTawqee,
 }
 
@@ -276,6 +280,20 @@ impl Aql {
     #[must_use]
     pub fn hala_himaya(&self) -> Musnad<HalatHimaya> {
         let ijmaa = &self.mudkhalat.aman.himaya;
+        // Before the evidence is read, not after: every branch below states
+        // something about a scan, and there is no scan to state it about. The
+        // check is first rather than folded in beside the catalogue one so that
+        // a caller who hands the core an inconsistent value — evidence attached
+        // to a scan marked un-run — is refused rather than believed.
+        if matches!(self.mudkhalat.aman.hala, HalatMash::LamYajri) {
+            return Musnad::jadeed(
+                HalatHimaya::LamYajri,
+                vec![Shahid::jadeed(
+                    MasdarMarifa::KashfHimaya,
+                    "no anti-cheat scan has been run on this game",
+                )],
+            );
+        }
         if mahmiya(ijmaa) {
             let shawahid = ijmaa
                 .adilla
@@ -334,13 +352,14 @@ impl Aql {
     pub fn mawani(&self) -> Vec<Musnad<Mani>> {
         let mut mawani: Vec<Musnad<Mani>> = Vec::new();
         mawani.extend(self.mani_himaya());
-        mawani.extend(self.mani_fahs_matjar());
+        mawani.extend(self.mani_fahs_lam_yajri());
         mawani.extend(self.mani_lugha_rasmiya());
         mawani.extend(self.mani_laysat_luba());
         mawani.extend(self.mani_muhakat_rum());
         mawani.extend(self.mani_ghayr_hadira());
         mawani.extend(self.mani_lam_yufhas());
         mawani.extend(self.mani_jahiziya());
+        mawani.extend(self.mani_la_muzawwid());
         // Pushed in rank order above; sorted anyway so that the guarantee is the
         // type's rather than this function's reading order, and so that adding a
         // blocker in the wrong place here cannot change what a surface shows.
@@ -606,33 +625,62 @@ impl Aql {
 
     /// The anti-cheat question that could not be put.
     ///
-    /// The gate is [`HalatMatjar::lam_yuqra`] — the producer's own predicate,
-    /// not a re-reading of the variants — and the sentence is
-    /// [`Rafd::FahsMatjarLamYajri`]'s. Only the destructure between them is
-    /// local, because the safety layer's own mapping is private to it.
-    fn mani_fahs_matjar(&self) -> Option<Musnad<Mani>> {
-        let hala = &self.mudkhalat.aman.halat_matjar;
-        if !hala.lam_yuqra() {
+    /// The gate is [`Self::hala_himaya`] rather than a second reading of the
+    /// inputs, and that is the whole point of the function: the screen and the
+    /// decision now come from one producer, so a state the screen calls
+    /// "the check did not run" cannot be a state the installer treats as a pass.
+    /// It could, before — the display asked [`Self::hala_himaya`] and the
+    /// blocker asked [`mahmiya`], and the two disagree exactly when no scan ran,
+    /// which is the case that matters.
+    ///
+    /// Two causes reach it and each keeps its own sentence: the store catalogue
+    /// was owed and unreadable, or nothing walked the folder at all.
+    fn mani_fahs_lam_yajri(&self) -> Option<Musnad<Mani>> {
+        if self.hala_himaya().qeema.yasmah() {
             return None;
         }
-        let (masar, sabab) = match hala {
-            HalatMatjar::Mutaadhdhir { masar, sabab } => (Some(masar.clone()), sabab.clone()),
-            _ => (None, "no Steam root was given for a Steam game".to_owned()),
-        };
-        let mawqi = masar.as_ref().map(|masar| masar.display().to_string());
-        let rafd = Rafd::FahsMatjarLamYajri {
-            masar,
-            sabab: sabab.clone(),
-        };
-        let shahid = Shahid {
-            masdar: MasdarMarifa::FahrasMatjar,
-            wasf: format!("the store catalogue was owed and not read: {sabab}"),
-            mawqi,
-        };
-        Some(Musnad::jadeed(
-            Mani::jadeed(NawMani::FahsHimayaLamYajri, rafd.arabi(), rafd.injilizi()),
-            vec![shahid],
-        ))
+        let hala = &self.mudkhalat.aman.halat_matjar;
+        // The catalogue is asked about first because it is the narrower claim:
+        // when both are true, naming the unreadable file is more use to someone
+        // fixing it than naming the folder nobody walked.
+        if hala.lam_yuqra() {
+            let (masar, sabab) = match hala {
+                HalatMatjar::Mutaadhdhir { masar, sabab } => (Some(masar.clone()), sabab.clone()),
+                _ => (None, "no Steam root was given for a Steam game".to_owned()),
+            };
+            let mawqi = masar.as_ref().map(|masar| masar.display().to_string());
+            let rafd = Rafd::FahsMatjarLamYajri {
+                masar,
+                sabab: sabab.clone(),
+            };
+            let shahid = Shahid {
+                masdar: MasdarMarifa::FahrasMatjar,
+                wasf: format!("the store catalogue was owed and not read: {sabab}"),
+                mawqi,
+            };
+            return Some(Musnad::jadeed(
+                Mani::jadeed(NawMani::FahsHimayaLamYajri, rafd.arabi(), rafd.injilizi()),
+                vec![shahid],
+            ));
+        }
+        if matches!(self.mudkhalat.aman.hala, HalatMash::LamYajri) {
+            let jidhr = self.mudkhalat.aman.himaya.jidhr.clone();
+            let mawqi = jidhr.display().to_string();
+            let rafd = Rafd::MashHimayaLamYajri { jidhr };
+            let shahid = Shahid {
+                masdar: MasdarMarifa::KashfHimaya,
+                wasf: "no anti-cheat scan was run on this game".to_owned(),
+                mawqi: Some(mawqi),
+            };
+            return Some(Musnad::jadeed(
+                Mani::jadeed(NawMani::FahsHimayaLamYajri, rafd.arabi(), rafd.injilizi()),
+                vec![shahid],
+            ));
+        }
+        // `hala_himaya` refused, and neither cause above explains it. That is
+        // `HalatHimaya::Mahmiya`, which `mani_himaya` states in full; stating it
+        // twice would put the same refusal on the screen under two headings.
+        None
     }
 
     /// The publisher's own Arabic, when the user has not asked to be offered
@@ -785,6 +833,35 @@ impl Aql {
         ))
     }
 
+    /// No provider is configured, so no new translation can start on this
+    /// machine.
+    ///
+    /// The one blocker here that is a fact about the machine rather than about
+    /// the game, and the reason it belongs in the core at all is that it was
+    /// already being answered outside it: `tilqai_awamir::hukm` composed its own
+    /// sentence for this case, so the automatic-run screen said it and the game
+    /// screen — reading the same core — said nothing. Two surfaces, one machine,
+    /// different answers, which is the whole of what this crate exists to stop.
+    ///
+    /// The sentences are [`HalatMuzawwidin`]'s own. Nothing is worded here.
+    fn mani_la_muzawwid(&self) -> Option<Musnad<Mani>> {
+        // `None` is "nobody asked", not "nothing is configured". A default
+        // `MawqifMustakhdim` must not manufacture a blocker out of a question
+        // that was never put — the same distinction `HalatMash` draws for the
+        // anti-cheat scan, for the same reason.
+        let hala = self.mudkhalat.mawqif.muzawwidun?;
+        if hala.yutarjim() {
+            return None;
+        }
+        Some(Musnad::jadeed(
+            Mani::jadeed(NawMani::LaMuzawwid, hala.arabi(), hala.injilizi()),
+            vec![Shahid::jadeed(
+                MasdarMarifa::Idadat,
+                format!("the settings' provider list is in state {}", hala.ism()),
+            )],
+        ))
+    }
+
     // -----------------------------------------------------------------------
     // The risks, one at a time
     // -----------------------------------------------------------------------
@@ -928,7 +1005,15 @@ impl Aql {
         let ijmaa = &self.mudkhalat.aman.shabaka;
         let bil_kashf = mutaaddid(ijmaa);
         let bil_iktishaf = self.huwiya().jamai_online();
-        if !bil_kashf && !bil_iktishaf {
+        // The third door, and the one that was missing. An empty evidence list
+        // from a scan that could not finish is not a single-player game; the
+        // markers are a closed set and the walk has a bound, so a title with its
+        // own netcode and no store categories produced silence indistinguishable
+        // from a real negative — and the consent this risk exists to collect was
+        // never asked for. Asking costs a tick. Not asking costs a ban from a
+        // server that checks its own files.
+        let bil_naqs = !ijmaa.kamil();
+        if !bil_kashf && !bil_iktishaf && !bil_naqs {
             return None;
         }
         let muqarr = self.mudkhalat.mawqif.muqarr(NawKhatar::LaabJamai);
@@ -948,6 +1033,18 @@ impl Aql {
             shawahid.push(Shahid::jadeed(
                 MasdarMarifa::Iktishaf,
                 "the launcher lists online multiplayer for this game",
+            ));
+        }
+        // The same two the anti-cheat answer beside this one already carries.
+        shawahid.extend(ijmaa.thughrat.iter().map(|thughra| Shahid {
+            masdar: MasdarMarifa::KashfShabaka,
+            wasf: format!("this place could not be read ({})", thughra.sabab),
+            mawqi: Some(thughra.masar.display().to_string()),
+        }));
+        if ijmaa.mabtur {
+            shawahid.push(Shahid::jadeed(
+                MasdarMarifa::KashfShabaka,
+                "the walk stopped at a bound before it finished",
             ));
         }
         Some(Musnad::jadeed(

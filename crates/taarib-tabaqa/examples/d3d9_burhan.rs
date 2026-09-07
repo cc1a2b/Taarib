@@ -72,7 +72,7 @@ mod windows_only {
     use taarib_tabaqa::sidq::{BasmatIfsah, Iqrar, NASS_IFSAH_ARABI};
     use taarib_tabaqa::talqeem::{KhiyaratTalqeem, Mulaqqim, SatrMulaqqam};
     use taarib_tabaqa::d3d9::KhattafD3D9;
-    use taarib_tabaqa::istitlaa::istatli;
+    use taarib_tabaqa::istitlaa::{HalatSlot, istatli};
     use taarib_tabaqa::khataf::nafidha_muaqqata;
     use taarib_tabaqa::wajiha::{
         Khattaf, LawhatRasm, MustatilBiksel, MustatilNisbi, SighatSath, Tabaqa, WajihatRusum,
@@ -112,6 +112,13 @@ mod windows_only {
     /// ```text
     /// cargo run -p taarib-tabaqa --example d3d9_burhan -- "F:/.../bio4.exe"
     /// ```
+    #[expect(
+        clippy::redundant_pub_crate,
+        reason = "the lint's own fix does not compile here: this module is private, so widening \
+                  to `pub` makes the item unreachable outside it and the workspace denies \
+                  `unreachable_pub`. Every narrower visibility is what this lint objects to, so \
+                  the two rules have no overlap and the deny is the one that must win"
+    )]
     pub(super) fn ishtaghil() -> Result<(), Box<dyn Error>> {
         if let Some(matlub) = std::env::args_os().nth(1) {
             return istatli_luba(Path::new(&matlub));
@@ -210,7 +217,18 @@ mod windows_only {
                     .join(", ")
             }
         );
-        println!("Taarib's own proxy slot is {}", if taqrir.slot_mutah() { "free" } else { "TAKEN" });
+        println!(
+            "Taarib's own proxy slot is {}",
+            match taqrir.halat_slot() {
+                HalatSlot::Hurr => "free".to_owned(),
+                HalatSlot::Taarib => "Taarib's own loader (a reinstall)".to_owned(),
+                HalatSlot::Mashghul { slot } => format!("TAKEN by {} bytes at {}", slot.hajm, slot.masar.display()),
+                HalatSlot::GhayrMaqru { thughra } => format!("UNREAD — {}", thughra.sabab),
+            }
+        );
+        for thughra in &taqrir.thughrat {
+            println!("  unread: {} — {}", thughra.ism, thughra.sabab);
+        }
         for slot in &taqrir.mashghula {
             println!(
                 "  occupied: {} — {} bytes{}",

@@ -388,24 +388,22 @@ impl Matjar for MatjarMahmul {
     /// a reason to withhold the games from the folders that worked.
     fn ifhas(&self, siyaq: &SiyaqFahs) -> Natija<NatijatMatjar> {
         let bidaya = Instant::now();
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: self.mawqi(siyaq),
-            ..NatijatMatjar::default()
-        };
-
         let judhur = self.judhur_fahs(siyaq);
         if judhur.is_empty() {
+            // Nothing nominated: there is no source to read, so nothing may be
+            // concluded about the games this family once held.
+            let mut natija = NatijatMatjar::ghayr_mutah(MUARRIF);
             natija.muddat = bidaya.elapsed();
             return Ok(natija);
         }
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, self.mawqi(siyaq));
 
         let mahjuza = self.mafatih_mahjuza(siyaq);
         let mut maruf: BTreeSet<String> = BTreeSet::new();
 
         for jidhr in judhur {
             if !jidhr.is_dir() {
-                natija.tanbihat.push(TanbihFahs::jadeed(
+                natija.tanbihat.push(TanbihFahs::fahras(
                     MUARRIF,
                     jidhr.display().to_string(),
                     "this scan folder from Settings is not there. Correct it or remove it, so it \
@@ -526,7 +524,7 @@ fn imsah_jidhr(
     }
 
     if mabtur {
-        natija.tanbihat.push(TanbihFahs::jadeed(
+        natija.tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             jidhr.display().to_string(),
             format!(
@@ -537,7 +535,7 @@ fn imsah_jidhr(
         ));
     }
     if mutakhkham {
-        natija.tanbihat.push(TanbihFahs::jadeed(
+        natija.tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             jidhr.display().to_string(),
             format!(

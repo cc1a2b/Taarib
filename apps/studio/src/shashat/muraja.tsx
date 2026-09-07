@@ -73,7 +73,7 @@ function halatIstifsar(qiraa: QiraatIstifsar, farigh: boolean): HalatIstifsar {
 }
 
 /** The kinds of checklist outcome the state mark can be coloured for. */
-type FiatFahs = 'najahat' | 'akhfaqat' | 'tanbeeh' | 'lam_tujra';
+type FiatFahs = 'najahat' | 'akhfaqat' | 'tanbeeh' | 'majhul' | 'lam_tujra';
 
 /**
  * The mark's kind, from the stable key `slug_hala_band` emits.
@@ -84,9 +84,10 @@ type FiatFahs = 'najahat' | 'akhfaqat' | 'tanbeeh' | 'lam_tujra';
  * The pass slug is `ijtaz`, so every passing row on this console read as "not
  * run" until the label arrived on the wire. What remains here is only the
  * colour: a pass, a failure, a warning that fired whether or not it has been
- * acknowledged, and a slug this build has never heard of. That last one reads
- * as unrun rather than as a pass, because a failure shown as a failure is the
- * half of this column a reviewer cannot afford to be told wrongly.
+ * acknowledged, the overflow check over a project that was not — or only
+ * partly — measured, and a slug this build has never heard of. That last one
+ * reads as unrun rather than as a pass, because a failure shown as a failure
+ * is the half of this column a reviewer cannot afford to be told wrongly.
  */
 function fiatFahs(hala: string): FiatFahs {
   switch (hala) {
@@ -97,6 +98,9 @@ function fiatFahs(hala: string): FiatFahs {
     case 'yantazir_iqrar':
     case 'muqarr':
       return 'tanbeeh';
+    case 'ghayr_maqis':
+    case 'maqis_juzi':
+      return 'majhul';
     default:
       return 'lam_tujra';
   }
@@ -948,11 +952,15 @@ export function Muraja(): JSX.Element {
                     return (
                       <li key={satr.band} className="muraja__fahs-satr">
                         <span className={`muraja__fahs-hala muraja__fahs-hala--${fia}`}>
-                          {satr.hala_arabi}
+                          {lugha === 'arabi' ? satr.hala_arabi : satr.hala_injilizi}
                         </span>
                         <span className="muraja__fahs-nass">
-                          <span className="muraja__fahs-wasf">{satr.wasf_arabi}</span>
-                          <span className="muraja__fahs-tafsil">{satr.tafsil_arabi}</span>
+                          <span className="muraja__fahs-wasf">
+                            {lugha === 'arabi' ? satr.wasf_arabi : satr.wasf_injilizi}
+                          </span>
+                          <span className="muraja__fahs-tafsil">
+                            {lugha === 'arabi' ? satr.tafsil_arabi : satr.tafsil_injilizi}
+                          </span>
                         </span>
                         {/* Emitted even when empty: the row places three cells into
                             the list's grid, and two would shift the next row. */}
@@ -993,12 +1001,26 @@ export function Muraja(): JSX.Element {
 
               <section className="muraja__qism">
                 <h3 className="muraja__unwan-farii">{t('muraja.tafasil.tajawuz', lugha)}</h3>
+                {/* The measurement first, and always: an empty overrun list is
+                    "no overflow" only when everything submitted was measured.
+                    Under any other verdict the list below is the answer for the
+                    measured part, or for nothing at all. */}
+                <p className={`muraja__qiyas muraja__qiyas--${bayanat.qiyas_tajawuz.hala}`}>
+                  {lugha === 'arabi'
+                    ? bayanat.qiyas_tajawuz.wasf_arabi
+                    : bayanat.qiyas_tajawuz.wasf_injilizi}
+                </p>
                 {bayanat.tajawuz.length === 0 ? (
-                  <p className="muraja__nass-hadi">{t('muraja.tajawuz.la_shay', lugha)}</p>
+                  bayanat.qiyas_tajawuz.hala === 'kamil' ? (
+                    <p className="muraja__nass-hadi">{t('muraja.tajawuz.la_shay', lugha)}</p>
+                  ) : null
                 ) : (
                   <ul className="muraja__tajawuz">
                     {bayanat.tajawuz.map((satr, fihris) => (
-                      <li key={`${satr.nass}-${String(fihris)}`}>
+                      <li
+                        key={`${satr.nass}-${String(fihris)}`}
+                        className={`muraja__tajawuz-satr muraja__tajawuz-satr--${satr.shidda}`}
+                      >
                         <span dir="rtl">{satr.nass}</span>
                         {' — '}
                         {t('muraja.tajawuz.satr', lugha, {
@@ -1006,10 +1028,49 @@ export function Muraja(): JSX.Element {
                           mutah: munassiq.raqm(kasr(satr.mutah)),
                           hajm: munassiq.raqm(kasr(satr.hajm)),
                         })}
+                        <span className="muraja__tajawuz-wasf">
+                          {lugha === 'arabi' ? satr.wasf_arabi : satr.wasf_injilizi}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 )}
+                {bayanat.qiyas_tajawuz.asbab.length > 0 ? (
+                  <ul className="muraja__asbab-qiyas">
+                    {bayanat.qiyas_tajawuz.asbab.map((sabab) => {
+                      const wasf = lugha === 'arabi' ? sabab.wasf_arabi : sabab.wasf_injilizi;
+                      const ilaj = lugha === 'arabi' ? sabab.ilaj_arabi : sabab.ilaj_injilizi;
+                      return (
+                        <li key={sabab.miftah} className="muraja__sabab-qiyas">
+                          <span className="muraja__sabab-adad">{munassiq.raqm(sabab.adad)}</span>
+                          <span className="muraja__sabab-jism">
+                            <span>{wasf}</span>
+                            {ilaj !== '' ? (
+                              <span className="muraja__sabab-ilaj">{ilaj}</span>
+                            ) : null}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+                {bayanat.ghayr_maqis.length > 0 ? (
+                  <ul className="muraja__ghayr-maqis">
+                    {bayanat.ghayr_maqis.map((satr, fihris) => (
+                      <li key={`${satr.hawiya}-${satr.mawqi}-${String(fihris)}`}>
+                        <span dir="rtl">{satr.nass}</span>
+                        <span className="mono-ltr muraja__ghayr-maqis-mawqi">
+                          {satr.hawiya}:{satr.mawqi}
+                        </span>
+                        <span className="muraja__ghayr-maqis-sabab">
+                          {lugha === 'arabi' ? satr.tasnif_arabi : satr.tasnif_injilizi}
+                          {' — '}
+                          {lugha === 'arabi' ? satr.sabab_arabi : satr.sabab_injilizi}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </section>
 
               <section className="muraja__qism">

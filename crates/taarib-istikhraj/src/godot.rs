@@ -65,7 +65,7 @@ use taarib_muhawwil_godot::pck::Mawrid as _;
 use taarib_mustalahat::nass::TasnifNass;
 
 use crate::jadwal::{JadwalNusus, MawqiNass};
-use crate::rafd::{SababRafd, TaqreerRafd};
+use crate::rafd::{MujammiRafd, SababRafd, TaqreerRafd};
 use crate::tasnif::{TalabMudkhal, ansha_mudkhal};
 
 /// How deep the walk for loose resources goes.
@@ -261,12 +261,16 @@ fn min_hazma(
     let mut mizaniya = AQSA_MASH_MAWARID;
     let mut mashahid_marfuda = 0_usize;
     let mut bila_nusus = 0_usize;
+    // Members the reader refused — an encrypted entry with no key, a damaged
+    // digest, a compression mode this build lacks — folded per reason. Dropping
+    // them made an encrypted Godot game look like an empty one.
+    let mut mujammi = MujammiRafd::jadeed(hawiya.clone());
 
     for asl in &masarat {
         let lahiqa = lahiqat(asl);
         match lahiqa.as_str() {
             "translation" => {
-                let Ok(bayt) = hazma.istakhrij(asl, None) else {
+                let Some(bayt) = istakhrij_udw(&hazma, &mut mujammi, asl) else {
                     continue;
                 };
                 sajjil_tarjama(
@@ -280,7 +284,7 @@ fn min_hazma(
                 );
             }
             "po" => {
-                let Ok(bayt) = hazma.istakhrij(asl, None) else {
+                let Some(bayt) = istakhrij_udw(&hazma, &mut mujammi, asl) else {
                     continue;
                 };
                 match std::str::from_utf8(&bayt) {
@@ -300,13 +304,24 @@ fn min_hazma(
                 }
             }
             "tscn" | "tres" => {
-                let Ok(bayt) = hazma.istakhrij(asl, None) else {
+                let Some(bayt) = istakhrij_udw(&hazma, &mut mujammi, asl) else {
                     continue;
                 };
-                if let Ok(nass) = std::str::from_utf8(&bayt)
-                    && sajjil_mashhad(jadwal, taqreer, &hawiya, Some(asl), nass) == 0
-                {
-                    bila_nusus = bila_nusus.saturating_add(1);
+                match std::str::from_utf8(&bayt) {
+                    Ok(nass) => {
+                        if sajjil_mashhad(jadwal, taqreer, &hawiya, Some(asl), nass) == 0 {
+                            bila_nusus = bila_nusus.saturating_add(1);
+                        }
+                    }
+                    Err(khata) => mujammi.sajjil(
+                        asl.clone(),
+                        SababRafd::Talif {
+                            sabab: format!(
+                                "a text scene or resource that is not valid UTF-8 at byte {}",
+                                khata.valid_up_to()
+                            ),
+                        },
+                    ),
                 }
             }
             "res" | "scn" => {
@@ -314,7 +329,7 @@ fn min_hazma(
                     mashahid_marfuda = mashahid_marfuda.saturating_add(1);
                     continue;
                 }
-                let Ok(bayt) = hazma.istakhrij(asl, None) else {
+                let Some(bayt) = istakhrij_udw(&hazma, &mut mujammi, asl) else {
                     continue;
                 };
                 let tul = u64::try_from(bayt.len()).unwrap_or(u64::MAX);
@@ -332,6 +347,8 @@ fn min_hazma(
             _ => {}
         }
     }
+
+    mujammi.ikhtim(taqreer);
 
     if bila_nusus > 0 {
         taqreer.sajjil_qira(
@@ -357,6 +374,27 @@ fn min_hazma(
                 ),
             },
         );
+    }
+}
+
+/// Reads one member out of a package, recording the reader's refusal when
+/// there is one.
+///
+/// The key is never supplied — see [`KhataGodot::PckMushaffar`] — so a member
+/// the export encrypted is refused here, and the refusal is what the report
+/// needs: it is the one whose remedy is capture, and the one whose absence made
+/// an encrypted game read as an empty one.
+fn istakhrij_udw(
+    hazma: &HawiyaMaftuha,
+    mujammi: &mut MujammiRafd,
+    asl: &str,
+) -> Option<Vec<u8>> {
+    match hazma.istakhrij(asl, None) {
+        Ok(bayt) => Some(bayt),
+        Err(khata) => {
+            mujammi.sajjil(asl.to_owned(), sabab_min_khata(&khata));
+            None
+        }
     }
 }
 
@@ -1275,8 +1313,12 @@ fn sabab_min_khata(khata: &KhataGodot) -> SababRafd {
         KhataGodot::KhataMalaf { sabab, .. } => {
             SababRafd::TaadhurQira { sabab: sabab.to_string() }
         }
+        // One sentence for both an encrypted index and an encrypted member,
+        // because the reader raises the same refusal for both and the remedy
+        // is the same: the game's own export key, which Taarib does not seek.
         KhataGodot::PckMushaffar { .. } => SababRafd::Mushaffar {
-            wasf: "an encrypted PCK, and no key was supplied".to_owned(),
+            wasf: "AES-256-CBC, Godot's own package encryption, and no key was supplied"
+                .to_owned(),
         },
         KhataGodot::MiftahGhayrSalih { sabab, .. } => {
             SababRafd::Mushaffar { wasf: (*sabab).to_owned() }

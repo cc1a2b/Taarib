@@ -392,6 +392,56 @@
   border-inline-start-color: var(--khatar);
 }
 
+/* A verdict that was never reached. Dashed rather than solid, so it reads as
+   "open" beside a warning that fired, and never as the pass it used to be
+   painted as. */
+.taqdeem__band--majhul {
+  color: var(--tanbeeh);
+  background-color: var(--sath-2);
+  border-inline-start-color: var(--tanbeeh);
+  border-inline-start-style: dashed;
+}
+
+/* Why the overflow check could not be a verdict, one cause per row, with the
+   count first so the biggest reason is the first thing read. */
+.taqdeem__asbab-qiyas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  margin: 0;
+  padding: var(--misafa-12) var(--misafa-16);
+  list-style: none;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+}
+
+.taqdeem__sabab-qiyas {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--misafa-12);
+  align-items: baseline;
+}
+
+.taqdeem__sabab-adad {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.taqdeem__sabab-jism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+  min-inline-size: 0;
+  text-wrap: pretty;
+}
+
+.taqdeem__sabab-ilaj {
+  font-size: var(--qiyas-1);
+  color: var(--nass-3);
+}
+
 /* Aligned to the first text line rather than to the row, so the marks form a
    straight column no matter how far the detail sentence wraps. */
 .taqdeem__band-ramz {

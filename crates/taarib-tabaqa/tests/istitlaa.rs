@@ -39,7 +39,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use taarib_tabaqa::istitlaa::{SLOT_TAARIB, istatli};
+use taarib_tabaqa::istitlaa::{AQSA_MALAF, HalatSlot, SLOT_TAARIB, TaqrirIstitlaa, istatli};
 use taarib_tabaqa::qudra::HukmQudra;
 use taarib_tabaqa::wajiha::WajihatRusum;
 
@@ -242,6 +242,12 @@ fn yarfud_slot_maakhudh() {
     };
 
     assert!(!taqrir.slot_mutah(), "{SLOT_TAARIB} is taken and must not be reported as free");
+    assert!(
+        matches!(taqrir.halat_slot(), HalatSlot::Mashghul { .. }),
+        "a readable third-party file is 'taken', not 'unread': {:?}",
+        taqrir.halat_slot()
+    );
+    assert!(taqrir.thughrat.is_empty(), "every slot was readable");
     assert_eq!(
         taqrir.hukm(),
         HukmQudra::Mustaheela,
@@ -284,6 +290,7 @@ fn wakeel_ghareeb_yudhkar_wala_yamnaa() {
     };
 
     assert!(taqrir.slot_mutah(), "Taarib's own slot is free and must be reported so");
+    assert_eq!(taqrir.halat_slot(), HalatSlot::Hurr);
     assert!(taqrir.yumkin(), "a proxy Taarib does not use must not stop an installation");
     assert_eq!(taqrir.ghurabaa().len(), 1, "the third-party proxy must be reported");
     let Some(ghareeb) = taqrir.ghurabaa().first().copied() else {
@@ -316,8 +323,195 @@ fn slot_taarib_nafsuh_laysa_taarudan() {
         Err(khata) => panic!("the executable would not be surveyed: {khata}"),
     };
     assert!(taqrir.slot_mutah(), "Taarib's own loader in Taarib's slot is a reinstall");
+    assert_eq!(taqrir.halat_slot(), HalatSlot::Taarib);
     assert!(taqrir.yumkin(), "a reinstall must not be refused");
     assert!(taqrir.ghurabaa().is_empty(), "Taarib's own loader is not a third party");
+    let _ = fs::remove_dir_all(&jidhr);
+}
+
+// ---------------------------------------------------------------------------
+// A slot that could not be read is not a free slot
+// ---------------------------------------------------------------------------
+
+/// What every unread-Taarib-slot case must look like, whatever made it unread.
+///
+/// The verdict is "not determined": not "taken", which would assert a
+/// competitor about bytes nothing read, and not "free", which would be the
+/// overwrite the survey exists to prevent. The install is refused, the fold
+/// says `false`, the four-state answer says *why*, and the sentence says what
+/// refused rather than who owns the file.
+fn taakkad_slot_ghayr_maqru(taqrir: &TaqrirIstitlaa, matlub: &str) {
+    let HalatSlot::GhayrMaqru { thughra } = taqrir.halat_slot() else {
+        panic!("an unread {SLOT_TAARIB} must answer as unread, not {:?}", taqrir.halat_slot());
+    };
+    assert!(thughra.ism.eq_ignore_ascii_case(SLOT_TAARIB));
+    assert!(thughra.sabab.contains(matlub), "the gap must say what refused: {}", thughra.sabab);
+    assert!(!taqrir.slot_mutah(), "the fold of 'unread' is 'do not write'");
+    assert_eq!(taqrir.hukm(), HukmQudra::Majhula, "unread is neither taken nor free");
+    assert!(!taqrir.yumkin(), "Taarib does not write over a file it could not read");
+    assert!(taqrir.mashghula.iter().all(|slot| !slot.ism.eq_ignore_ascii_case(SLOT_TAARIB)),
+        "an unread slot must not also be listed as occupied");
+
+    let majhula: Vec<&str> = taqrir
+        .asbab
+        .iter()
+        .filter(|sabab| sabab.hukm == HukmQudra::Majhula)
+        .map(|sabab| sabab.injilizi.as_str())
+        .collect();
+    assert_eq!(majhula.len(), 1, "one unread slot, one unanswered question: {majhula:?}");
+    let Some(injilizi) = majhula.first() else {
+        panic!("the unanswered question carried no sentence");
+    };
+    assert!(injilizi.contains("could not read"), "the sentence names the gap: {injilizi}");
+    assert!(
+        !injilizi.contains("taken by another product"),
+        "the sentence must not assert a competitor it did not see: {injilizi}"
+    );
+    assert!(
+        !taqrir.asbab.iter().any(|sabab| sabab.injilizi.contains("none of the loader names")),
+        "the all-clear is a claim about every name and one was not read"
+    );
+    assert!(
+        taqrir.sutur().iter().any(|satr| satr.starts_with("unread:")),
+        "the bundle must lead with what was not read: {:?}",
+        taqrir.sutur()
+    );
+    let arabi = taqrir
+        .asbab
+        .iter()
+        .find(|sabab| sabab.hukm == HukmQudra::Majhula)
+        .map(|sabab| sabab.arabi.clone())
+        .unwrap_or_default();
+    assert!(!arabi.trim().is_empty(), "the gap must be readable in Arabic too");
+}
+
+/// A `version.dll` past the size this survey will load is unread, not
+/// somebody else's.
+///
+/// This is the case the old code got backwards in words: it refused the write
+/// — correctly — with a sentence asserting "taken by another product" about a
+/// file that could as easily have been Taarib's own loader. A sparse file
+/// produces the size without the bytes on every platform.
+#[test]
+fn slot_dakhm_ghayr_maqru_laysa_maakhudhan() {
+    let jidhr = mujallad("slot-dakhm");
+    let masar = uktub(&jidhr, "luba.exe", &banni_pe(false, &["d3d9.dll"]));
+    let dakhm = jidhr.join(SLOT_TAARIB);
+    match fs::File::create(&dakhm).and_then(|malaf| malaf.set_len(AQSA_MALAF.saturating_add(1))) {
+        Ok(()) => {},
+        Err(khata) => panic!("the oversized fixture could not be made: {khata}"),
+    }
+
+    let taqrir = match istatli(&masar) {
+        Ok(taqrir) => taqrir,
+        Err(khata) => panic!("the executable would not be surveyed: {khata}"),
+    };
+    taakkad_slot_ghayr_maqru(&taqrir, "ceiling");
+    let HalatSlot::GhayrMaqru { thughra } = taqrir.halat_slot() else {
+        panic!("asserted above");
+    };
+    assert_eq!(
+        thughra.hajm,
+        Some(AQSA_MALAF.saturating_add(1)),
+        "the size was readable even though the bytes were not, and is carried"
+    );
+    let _ = fs::remove_dir_all(&jidhr);
+}
+
+/// A graphics slot past the cap narrows the verdict and records the gap; it
+/// does not stop anything, because nothing in a slot Taarib does not use can.
+#[test]
+fn slot_rusum_ghayr_maqru_yunqis_wa_yusajjal() {
+    let jidhr = mujallad("rusum-dakhm");
+    let masar = uktub(&jidhr, "luba.exe", &banni_pe(true, &["d3d11.dll", "dxgi.dll"]));
+    match fs::File::create(jidhr.join("dxgi.dll"))
+        .and_then(|malaf| malaf.set_len(AQSA_MALAF.saturating_add(1)))
+    {
+        Ok(()) => {},
+        Err(khata) => panic!("the oversized fixture could not be made: {khata}"),
+    }
+
+    let taqrir = match istatli(&masar) {
+        Ok(taqrir) => taqrir,
+        Err(khata) => panic!("the executable would not be surveyed: {khata}"),
+    };
+    assert_eq!(taqrir.halat_slot(), HalatSlot::Hurr, "Taarib's own slot is untouched");
+    assert!(taqrir.yumkin(), "an unread bystander does not stop an installation");
+    assert_eq!(taqrir.hukm(), HukmQudra::Naqisa, "the worst a graphics slot can be is a wrapper");
+    assert_eq!(taqrir.thughrat.len(), 1, "and the gap is on record");
+    assert!(taqrir.thughrat.first().is_some_and(|thughra| thughra.ism == "dxgi.dll"));
+    assert!(taqrir.ghurabaa().is_empty(), "an unread file is not reported as a known product");
+    assert!(
+        !taqrir.asbab.iter().any(|sabab| sabab.injilizi.contains("none of the loader names")),
+        "the all-clear must not be said over an unread name"
+    );
+    let _ = fs::remove_dir_all(&jidhr);
+}
+
+/// A `version.dll` the process is not allowed to read is unread, not free.
+///
+/// The metadata is readable — the size is known — and the bytes are not, which
+/// is what a file an antivirus is holding looks like. Skipped, with the reason
+/// printed into the assertion path rather than silently, where the process can
+/// read the file regardless: root ignores mode bits.
+#[cfg(unix)]
+#[test]
+fn slot_mamnu_ghayr_maqru_laysa_hurran() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let jidhr = mujallad("slot-mamnu");
+    let masar = uktub(&jidhr, "luba.exe", &banni_pe(false, &["d3d9.dll"]));
+    let mamnu = uktub(&jidhr, SLOT_TAARIB, b"whatever is in here was never read");
+    if let Err(khata) = fs::set_permissions(&mamnu, fs::Permissions::from_mode(0o000)) {
+        panic!("the fixture's mode could not be changed: {khata}");
+    }
+    if fs::read(&mamnu).is_ok() {
+        // Root reads a mode-000 file without complaint, so this environment
+        // cannot produce the condition. Nothing is asserted rather than
+        // something false; the sparse-file test above covers the same path.
+        let _ = fs::set_permissions(&mamnu, fs::Permissions::from_mode(0o644));
+        let _ = fs::remove_dir_all(&jidhr);
+        return;
+    }
+
+    let taqrir = match istatli(&masar) {
+        Ok(taqrir) => taqrir,
+        Err(khata) => panic!("the executable would not be surveyed: {khata}"),
+    };
+    taakkad_slot_ghayr_maqru(&taqrir, "could not be read");
+    let HalatSlot::GhayrMaqru { thughra } = taqrir.halat_slot() else {
+        panic!("asserted above");
+    };
+    assert!(thughra.hajm.is_some(), "the metadata was readable and its size is carried");
+
+    let _ = fs::set_permissions(&mamnu, fs::Permissions::from_mode(0o644));
+    let _ = fs::remove_dir_all(&jidhr);
+}
+
+/// A `version.dll` whose metadata itself cannot be read is unread, not free.
+///
+/// This is the branch that used to be `continue` — indistinguishable from
+/// "not there". A symlink that points at itself makes `metadata` refuse with
+/// something other than `NotFound`, which is exactly what a slot behind an ACL
+/// the survey cannot traverse produces.
+#[cfg(unix)]
+#[test]
+fn slot_bila_bayanat_ghayr_maqru_laysa_hurran() {
+    let jidhr = mujallad("slot-halaqa");
+    let masar = uktub(&jidhr, "luba.exe", &banni_pe(false, &["d3d9.dll"]));
+    if let Err(khata) = std::os::unix::fs::symlink(SLOT_TAARIB, jidhr.join(SLOT_TAARIB)) {
+        panic!("the looping symlink could not be made: {khata}");
+    }
+
+    let taqrir = match istatli(&masar) {
+        Ok(taqrir) => taqrir,
+        Err(khata) => panic!("the executable would not be surveyed: {khata}"),
+    };
+    taakkad_slot_ghayr_maqru(&taqrir, "");
+    let HalatSlot::GhayrMaqru { thughra } = taqrir.halat_slot() else {
+        panic!("asserted above");
+    };
+    assert_eq!(thughra.hajm, None, "no metadata, no size — and no invented one");
     let _ = fs::remove_dir_all(&jidhr);
 }
 
@@ -325,11 +519,11 @@ fn slot_taarib_nafsuh_laysa_taarudan() {
 ///
 /// The marks go in as UTF-16, which is where a real one keeps them: a Windows
 /// version resource stores `CompanyName` and `ProductName` in UTF-16, and that
-/// is the encoding the strings identifying ReShade and DXVK actually live in.
+/// is the encoding the strings identifying `ReShade` and DXVK actually live in.
 fn wahda(basmat: &[&str]) -> Vec<u8> {
     let mut jism = vec![0x00_u8; 256];
     for basma in basmat {
-        jism.extend(basma.encode_utf16().flat_map(|wahda| wahda.to_le_bytes()));
+        jism.extend(basma.encode_utf16().flat_map(u16::to_le_bytes));
         jism.push(0);
     }
     jism.extend_from_slice(&[0x90; 256]);
@@ -338,7 +532,7 @@ fn wahda(basmat: &[&str]) -> Vec<u8> {
 
 /// A wrapper on the presentation path narrows the verdict and says why.
 ///
-/// This is the collision that is neither a crash nor a refusal. ReShade hands
+/// This is the collision that is neither a crash nor a refusal. `ReShade` hands
 /// the game its own `IDXGISwapChain`, so the method table the overlay reads
 /// from a swap chain of its own is not the one the game calls — the hook
 /// installs, verifies, and is never invoked. Nothing breaks and nothing is

@@ -13,7 +13,16 @@
 //! deleted from underneath its launcher — all of these are ordinary on real
 //! machines, and a scan that aborted on the first one would leave a user with an
 //! empty library and no explanation. Each becomes a [`TanbihFahs`] attached to
-//! the result, visible in Diagnostics, and the other games still arrive.
+//! the result and the other games still arrive.
+//!
+//! A warning also says *what kind* of gap it is — one named entry, or a whole
+//! catalogue, library or folder that could not be read — because the second
+//! kind changes what the scan may conclude afterwards: see [`NawTanbih`] and
+//! [`HalatFahsMatjar`]. This crate persists nothing, so the warnings are only as
+//! visible as the caller makes them. Studio writes every one to its log and to
+//! the scan ledger beside the result, and hands them to the interface with the
+//! library, so that a game missing from the grid has its reason recorded
+//! somewhere a person can read.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -214,6 +223,25 @@ impl LubaMuktashafa {
     }
 }
 
+/// What a warning says about the rest of the scan.
+///
+/// The distinction decides what an absence means afterwards. When every warning
+/// on a result names one entry, a game missing from that result is a game the
+/// launcher does not list, and the store may mark it absent. When one warning
+/// says a catalogue, a library root or a folder could not be read, a missing
+/// game may simply be one the scan never saw — and marking it absent on that
+/// evidence is how a disconnected drive empties somebody's library.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NawTanbih {
+    /// One enumerated entry could not be turned into a game. The entry is named
+    /// in the warning; nothing unnamed was missed.
+    Madkhal,
+    /// A source of entries — the catalogue itself, one library or drive, a
+    /// nominated folder, an index file — could not be read end to end. Games
+    /// may exist that this scan did not see.
+    Fahras,
+}
+
 /// One entry a scan could not read, and why.
 ///
 /// Carries enough to act on: which launcher, which file, and what was wrong with
@@ -227,43 +255,164 @@ pub struct TanbihFahs {
     pub mawdi: String,
     /// What was wrong, in a sentence.
     pub sabab: String,
+    /// Whether this is about one entry or about a whole source of entries.
+    pub naw: NawTanbih,
 }
 
 impl TanbihFahs {
-    /// Builds a warning.
+    /// A warning about one entry. Everything else in the catalogue was read.
     #[must_use]
     pub fn jadeed(
         matjar: &'static str,
         mawdi: impl Into<String>,
         sabab: impl Into<String>,
     ) -> Self {
-        Self { matjar, mawdi: mawdi.into(), sabab: sabab.into() }
+        Self { matjar, mawdi: mawdi.into(), sabab: sabab.into(), naw: NawTanbih::Madkhal }
+    }
+
+    /// A warning that a source of entries could not be read end to end, so the
+    /// result may be missing games it never saw.
+    ///
+    /// Pushing one of these onto a [`NatijatMatjar`] turns its verdict into
+    /// [`HalatFahsMatjar::Naqisa`]; that is the point of the constructor, and
+    /// the reason an adapter must choose between the two rather than reach for
+    /// [`Self::jadeed`] by habit.
+    #[must_use]
+    pub fn fahras(
+        matjar: &'static str,
+        mawdi: impl Into<String>,
+        sabab: impl Into<String>,
+    ) -> Self {
+        Self { matjar, mawdi: mawdi.into(), sabab: sabab.into(), naw: NawTanbih::Fahras }
+    }
+
+    /// Whether games may exist that the scan did not see because of this.
+    #[must_use]
+    pub const fn yukhfi_alaab(&self) -> bool {
+        matches!(self.naw, NawTanbih::Fahras)
     }
 }
 
+/// What a scan may conclude from one launcher's result.
+///
+/// Three answers, and the third exists because the first two used to be one:
+/// "not installed" and "installed, catalogue unreadable" both produced an empty
+/// list, and the absence sweep downstream marked every stored game of a launcher
+/// it had never actually read as gone. On a machine whose Epic data folder had
+/// lost its `Manifests` directory that greyed out the whole Epic library on
+/// every scan, under a launcher the interface said it had searched.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HalatFahsMatjar {
+    /// The launcher is not on this machine. Nothing was owed, and nothing may be
+    /// concluded about the games it once listed.
+    GhayrMuthabbat,
+    /// The launcher is installed and its catalogue was read end to end. Every
+    /// warning names one entry, so a stored game missing from the result is one
+    /// the launcher no longer lists. The only verdict an absence sweep may act on.
+    Tamma,
+    /// The launcher is installed and some part of its catalogue could not be
+    /// read. The games that were found are real; the games that were not found
+    /// may be too, so nothing may be marked absent on this result's word.
+    Naqisa,
+}
+
 /// What one launcher's scan produced.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+///
+/// Built only through [`Self::ghayr_mutah`], [`Self::muthabbat`] and
+/// [`Self::naqisa`], each of which has to say whether the launcher was found.
+/// There is deliberately no `Default`: a result nobody finished filling in used
+/// to look exactly like a launcher that was scanned and had nothing in it.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NatijatMatjar {
     /// The launcher's identifier.
     pub matjar: &'static str,
-    /// Where the launcher itself is installed, when it was found.
+    /// Where the launcher itself is installed, when a root was found. A
+    /// launcher can be installed with no single root to name — Rockstar and
+    /// GOG both keep a catalogue in the registry — so this is not the
+    /// installed flag; [`Self::hala`] is.
     pub jidhr_matjar: Option<PathBuf>,
     /// The games.
     pub alaab: Vec<LubaMuktashafa>,
-    /// Every entry that degraded.
+    /// Every entry that degraded, and every source of entries that could not be
+    /// read. Which is which is on each warning, and [`Self::hala`] reads it.
     pub tanbihat: Vec<TanbihFahs>,
     /// How long the scan took, for the diagnostics screen — a launcher whose
     /// scan takes seconds is a launcher whose catalogue lives on a slow or
     /// disconnected drive, and that is worth seeing.
     pub muddat: Duration,
+    /// Whether the launcher was found on this machine at all.
+    muthabbat: bool,
 }
 
 impl NatijatMatjar {
     /// An empty result for a launcher that is not installed. Not a failure: most
     /// machines have two or three of the ten.
+    ///
+    /// Only for a launcher whose root could not be located. A root that is
+    /// there with no catalogue under it is [`Self::naqisa`], because "Epic is
+    /// not here" and "Epic is here and its manifest folder is not" are
+    /// different sentences and lead to different repairs.
     #[must_use]
-    pub fn ghayr_mutah(matjar: &'static str) -> Self {
-        Self { matjar, ..Self::default() }
+    pub const fn ghayr_mutah(matjar: &'static str) -> Self {
+        Self {
+            matjar,
+            jidhr_matjar: None,
+            alaab: Vec::new(),
+            tanbihat: Vec::new(),
+            muddat: Duration::ZERO,
+            muthabbat: false,
+        }
+    }
+
+    /// An empty result for a launcher that was found, ready for the adapter to
+    /// fill. The verdict is [`HalatFahsMatjar::Tamma`] until a
+    /// [`TanbihFahs::fahras`] is pushed onto it.
+    #[must_use]
+    pub const fn muthabbat(matjar: &'static str, jidhr_matjar: Option<PathBuf>) -> Self {
+        Self {
+            matjar,
+            jidhr_matjar,
+            alaab: Vec::new(),
+            tanbihat: Vec::new(),
+            muddat: Duration::ZERO,
+            muthabbat: true,
+        }
+    }
+
+    /// A result for a launcher that was found and whose catalogue could not be
+    /// read at all, carrying the one warning that says so.
+    ///
+    /// The shape every adapter used to collapse into [`Self::ghayr_mutah`]: the
+    /// root exists, the file or directory the catalogue lives in does not. The
+    /// warning names what was looked for, so the user can put it back or
+    /// correct the configured root.
+    #[must_use]
+    pub fn naqisa(
+        matjar: &'static str,
+        jidhr_matjar: Option<PathBuf>,
+        mawdi: impl Into<String>,
+        sabab: impl Into<String>,
+    ) -> Self {
+        let mut natija = Self::muthabbat(matjar, jidhr_matjar);
+        natija.tanbihat.push(TanbihFahs::fahras(matjar, mawdi, sabab));
+        natija
+    }
+
+    /// What may be concluded from this result.
+    ///
+    /// Derived rather than stored, so that a catalogue-level warning cannot be
+    /// pushed without the verdict changing with it. A result is
+    /// [`HalatFahsMatjar::Tamma`] only while every warning on it names one
+    /// entry.
+    #[must_use]
+    pub fn hala(&self) -> HalatFahsMatjar {
+        if !self.muthabbat {
+            HalatFahsMatjar::GhayrMuthabbat
+        } else if self.tanbihat.iter().any(TanbihFahs::yukhfi_alaab) {
+            HalatFahsMatjar::Naqisa
+        } else {
+            HalatFahsMatjar::Tamma
+        }
     }
 }
 
@@ -516,13 +665,81 @@ impl NatijatFahs {
         self.matajir.iter().flat_map(|natija| natija.tanbihat.iter()).collect()
     }
 
-    /// The launchers that were actually found installed.
+    /// The launchers that were found installed, whether or not their catalogue
+    /// could be read.
     #[must_use]
     pub fn matajir_mutaha(&self) -> Vec<&'static str> {
         self.matajir
             .iter()
-            .filter(|natija| natija.jidhr_matjar.is_some())
+            .filter(|natija| natija.hala() != HalatFahsMatjar::GhayrMuthabbat)
             .map(|natija| natija.matjar)
             .collect()
+    }
+
+    /// The launchers whose catalogue was read end to end — the only ones an
+    /// absence sweep may act on. See [`HalatFahsMatjar::Tamma`].
+    #[must_use]
+    pub fn matajir_tamma(&self) -> Vec<&'static str> {
+        self.matajir
+            .iter()
+            .filter(|natija| natija.hala() == HalatFahsMatjar::Tamma)
+            .map(|natija| natija.matjar)
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use super::*;
+
+    /// The three verdicts, from the two facts that produce them.
+    #[test]
+    fn al_hala_tushtaqq_min_al_tathbeet_wa_naw_al_tanbihat() {
+        assert_eq!(NatijatMatjar::ghayr_mutah("epic").hala(), HalatFahsMatjar::GhayrMuthabbat);
+
+        let mut natija = NatijatMatjar::muthabbat("epic", Some(PathBuf::from("/epic")));
+        assert_eq!(natija.hala(), HalatFahsMatjar::Tamma);
+
+        // One entry that would not parse leaves the verdict alone: everything
+        // else in the catalogue was read, and a missing game is really missing.
+        natija.tanbihat.push(TanbihFahs::jadeed("epic", "a.item", "not JSON"));
+        assert_eq!(natija.hala(), HalatFahsMatjar::Tamma);
+
+        // A source that could not be read does not.
+        natija.tanbihat.push(TanbihFahs::fahras("epic", "Manifests", "not there"));
+        assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
+    }
+
+    /// The constructor for the shape that used to be reported as "not
+    /// installed": the root is named, the warning is catalogue-level, and the
+    /// verdict follows from it without the adapter setting anything else.
+    #[test]
+    fn naqisa_tahmil_al_jidhr_wa_tanbihan_yukhfi_al_alaab() {
+        let natija = NatijatMatjar::naqisa(
+            "epic",
+            Some(PathBuf::from("/epic")),
+            "/epic/Manifests",
+            "no manifest directory",
+        );
+        assert_eq!(natija.jidhr_matjar.as_deref(), Some(Path::new("/epic")));
+        assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
+        assert_eq!(natija.tanbihat.len(), 1);
+        assert!(natija.tanbihat.iter().all(TanbihFahs::yukhfi_alaab));
+        assert!(natija.alaab.is_empty());
+    }
+
+    /// Only a complete read is a launcher the sweep may believe.
+    #[test]
+    fn matajir_tamma_tastathni_al_naqisa_wa_ghayr_al_muthabbata() {
+        let natija = NatijatFahs {
+            matajir: vec![
+                NatijatMatjar::muthabbat("steam", Some(PathBuf::from("/steam"))),
+                NatijatMatjar::naqisa("epic", Some(PathBuf::from("/epic")), "Manifests", "gone"),
+                NatijatMatjar::ghayr_mutah("gog"),
+            ],
+            muddat: Duration::ZERO,
+        };
+        assert_eq!(natija.matajir_tamma(), ["steam"]);
+        assert_eq!(natija.matajir_mutaha(), ["steam", "epic"]);
     }
 }

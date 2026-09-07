@@ -360,6 +360,12 @@ pub struct IdadatMuzawwid {
     /// Whether the provider is available for use.
     pub mufaal: bool,
     /// Client-side request ceiling per minute.
+    ///
+    /// Zero is not "no limit": it means "no client-side limit was chosen", and
+    /// the provider's own built-in default applies instead. That substitution
+    /// happens where the provider is built, and it was undocumented — a field
+    /// showing `0` beside the word "limit" reads as unlimited and is the
+    /// opposite of what it does.
     pub hadd_talabat: u32,
     /// A spend ceiling in US dollars for one translation run, or [`None`] for
     /// no ceiling at all.
@@ -405,6 +411,13 @@ pub enum NawMuzawwid {
 }
 
 /// The configured providers.
+///
+/// The default is an empty list with no elected provider, and that is the state
+/// a fresh installation is in. It is a real state rather than a missing one:
+/// installing a published patch never reaches a provider, so most of the product
+/// works exactly as it does with ten of them configured, and what does not work
+/// is new machine translation. [`Self::hala`] is where that distinction is
+/// stated, once, so that no surface has to decide it again.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "wajiha", derive(specta::Type))]
 #[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
@@ -414,6 +427,142 @@ pub struct IdadatMuzawwidin {
     pub qaima: Vec<IdadatMuzawwid>,
     /// Which one a new batch uses, by identifier.
     pub iftiradi: Option<String>,
+}
+
+impl IdadatMuzawwidin {
+    /// The provider a new translation would actually use, or [`None`].
+    ///
+    /// The election rule, written here rather than at each caller. `iftiradi` is
+    /// honoured when it names an entry that is both present and switched on; a
+    /// default naming a disabled or deleted provider falls through to the first
+    /// enabled one, because refusing to translate over a stale preference helps
+    /// nobody. Which of the two happened is exactly what [`Self::hala`] reports,
+    /// so the fallthrough is never the silent part.
+    #[must_use]
+    pub fn muntakhab(&self) -> Option<&IdadatMuzawwid> {
+        self.iftiradi
+            .as_ref()
+            .and_then(|ism| {
+                self.qaima.iter().find(|tarif| &tarif.muarrif == ism && tarif.mufaal)
+            })
+            .or_else(|| self.qaima.iter().find(|tarif| tarif.mufaal))
+    }
+
+    /// What this list amounts to on this machine.
+    #[must_use]
+    pub fn hala(&self) -> HalatMuzawwidin {
+        let Some(muntakhab) = self.muntakhab() else {
+            return if self.qaima.is_empty() {
+                HalatMuzawwidin::Faragh
+            } else {
+                HalatMuzawwidin::Muattala
+            };
+        };
+        match &self.iftiradi {
+            Some(ism) if ism != &muntakhab.muarrif => HalatMuzawwidin::Badeel,
+            _ => HalatMuzawwidin::Mukhtar,
+        }
+    }
+}
+
+/// What the configured provider list amounts to, and therefore what the product
+/// can offer right now.
+///
+/// Four states rather than a boolean, because "no provider" has two causes with
+/// two different remedies and the product used to give both of them the same
+/// sentence — telling somebody who has a provider switched off to go and add
+/// one. The fourth is not a refusal at all: it is a preference that is quietly
+/// not being honoured, which matters because the provider being used instead of
+/// the chosen one is the provider being charged for.
+///
+/// Every sentence states both halves of the truth. An empty list does not stop
+/// the product working; it stops one part of it working, and a message that says
+/// only "no provider" reads as "nothing works" to somebody who came here to
+/// install a patch that needs none.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum HalatMuzawwidin {
+    /// Not one provider has been added. The state a fresh installation is in.
+    Faragh,
+    /// Providers are configured and every one of them is switched off.
+    Muattala,
+    /// A provider is elected, and it is the one the default names — or the only
+    /// enabled one, with no default set.
+    Mukhtar,
+    /// A provider is elected, but it is not the one the default names: that one
+    /// is switched off, or is no longer in the list.
+    Badeel,
+}
+
+impl HalatMuzawwidin {
+    /// Whether new machine translation can start at all.
+    ///
+    /// False does not mean the product is unusable. Installing a published patch
+    /// reaches no provider and is unaffected by every state here.
+    #[must_use]
+    pub const fn yutarjim(self) -> bool {
+        matches!(self, Self::Mukhtar | Self::Badeel)
+    }
+
+    /// The sentence a user reads, in Arabic.
+    #[must_use]
+    pub const fn arabi(self) -> &'static str {
+        match self {
+            Self::Faragh => {
+                "لا مزوّد ترجمة آلية مضبوط على هذا الجهاز. تثبيت الرقع المنشورة يعمل كما هو \
+                 — فهي مترجَمة سلفًا ولا تمرّ بمزوّد — أمّا ترجمة نصّ جديد فلا تبدأ حتى تضيف \
+                 مزوّدًا في الإعدادات ← المزوّدون."
+            }
+            Self::Muattala => {
+                "كلّ المزوّدين المضبوطين على هذا الجهاز معطَّلون. تثبيت الرقع المنشورة يعمل \
+                 كما هو، أمّا ترجمة نصّ جديد فلا تبدأ حتى تفعّل أحدهم في الإعدادات ← \
+                 المزوّدون."
+            }
+            Self::Mukhtar => "المزوّد الافتراضي مفعّل، وهو الذي تستخدمه أيّ ترجمة جديدة.",
+            Self::Badeel => {
+                "المزوّد المحدَّد افتراضيًّا غير مفعّل أو لم يعد في القائمة، فستستخدم الترجمة \
+                 الجديدة أوّل مزوّد مفعّل بدلًا منه — وهو المزوّد الذي ستُحتسب تكلفته. راجع \
+                 «افتراضي» في الإعدادات ← المزوّدون إن لم يكن هذا ما تقصده."
+            }
+        }
+    }
+
+    /// The same sentence in English.
+    #[must_use]
+    pub const fn injilizi(self) -> &'static str {
+        match self {
+            Self::Faragh => {
+                "No machine-translation provider is configured on this machine. Installing \
+                 published patches still works — they are already translated and never reach \
+                 a provider — but translating new text does not start until you add one in \
+                 Settings, under Providers."
+            }
+            Self::Muattala => {
+                "Every provider configured on this machine is switched off. Installing \
+                 published patches still works, but translating new text does not start \
+                 until you enable one in Settings, under Providers."
+            }
+            Self::Mukhtar => {
+                "The default provider is enabled, and it is the one any new translation uses."
+            }
+            Self::Badeel => {
+                "The provider marked as the default is switched off or is no longer in the \
+                 list, so a new translation uses the first enabled provider instead — and \
+                 that is the one being charged for. Check which provider is marked default \
+                 in Settings, Providers, if that is not what you meant."
+            }
+        }
+    }
+
+    /// A stable machine name, for logs and for the diagnostics bundle.
+    #[must_use]
+    pub const fn ism(self) -> &'static str {
+        match self {
+            Self::Faragh => "faragh",
+            Self::Muattala => "muattala",
+            Self::Mukhtar => "mukhtar",
+            Self::Badeel => "badeel",
+        }
+    }
 }
 
 /// Registry sources.
@@ -889,3 +1038,118 @@ impl Tafsir for KhataIdadat {
 }
 
 khata_min!(KhataIdadat);
+
+#[cfg(test)]
+mod ikhtibarat {
+    use super::{HalatMuzawwidin, Idadat, IdadatMuzawwid, IdadatMuzawwidin, NawMuzawwid};
+
+    fn tarif(muarrif: &str, mufaal: bool) -> IdadatMuzawwid {
+        IdadatMuzawwid {
+            muarrif: muarrif.to_owned(),
+            naw: NawMuzawwid::Mahalli,
+            namudhaj: "qwen2.5:7b".to_owned(),
+            asas: None,
+            hisab_miftah: None,
+            mufaal,
+            hadd_talabat: 60,
+            mizaniya: None,
+        }
+    }
+
+    /// A fresh installation has no provider, and that is a state with a name.
+    #[test]
+    fn al_tarkeeb_al_jadeed_faragh() {
+        let idadat = Idadat::default();
+        assert!(idadat.muzawwidun.qaima.is_empty());
+        assert_eq!(idadat.muzawwidun.iftiradi, None);
+        assert_eq!(idadat.muzawwidun.hala(), HalatMuzawwidin::Faragh);
+        assert_eq!(idadat.muzawwidun.muntakhab(), None);
+    }
+
+    /// Configured and switched off is not the same answer as nothing configured:
+    /// the two have different remedies, and both used to produce one sentence
+    /// telling the second user to add a provider they already had.
+    #[test]
+    fn al_muattal_laysa_kal_faragh() {
+        let muzawwidun = IdadatMuzawwidin {
+            qaima: vec![tarif("ollama", false)],
+            iftiradi: None,
+        };
+        assert_eq!(muzawwidun.hala(), HalatMuzawwidin::Muattala);
+        assert_eq!(muzawwidun.muntakhab(), None);
+        assert_ne!(HalatMuzawwidin::Muattala.arabi(), HalatMuzawwidin::Faragh.arabi());
+        assert_ne!(
+            HalatMuzawwidin::Muattala.injilizi(),
+            HalatMuzawwidin::Faragh.injilizi()
+        );
+    }
+
+    /// A default that is switched off elects somebody else, and says so.
+    #[test]
+    fn al_iftiradi_al_muattal_yuntij_badeelan() {
+        let muzawwidun = IdadatMuzawwidin {
+            qaima: vec![tarif("ghali", false), tarif("rakhees", true)],
+            iftiradi: Some("ghali".to_owned()),
+        };
+        assert_eq!(muzawwidun.hala(), HalatMuzawwidin::Badeel);
+        assert_eq!(
+            muzawwidun.muntakhab().map(|tarif| tarif.muarrif.as_str()),
+            Some("rakhees")
+        );
+    }
+
+    /// A default that is present and on is the ordinary case and is silent.
+    #[test]
+    fn al_iftiradi_al_mufaal_mukhtar() {
+        let muzawwidun = IdadatMuzawwidin {
+            qaima: vec![tarif("ghali", true), tarif("rakhees", true)],
+            iftiradi: Some("ghali".to_owned()),
+        };
+        assert_eq!(muzawwidun.hala(), HalatMuzawwidin::Mukhtar);
+        assert_eq!(
+            muzawwidun.muntakhab().map(|tarif| tarif.muarrif.as_str()),
+            Some("ghali")
+        );
+    }
+
+    /// No default at all, with one provider on, is the ordinary case too — not a
+    /// substitution, because nothing was chosen to be substituted for.
+    #[test]
+    fn bila_iftiradi_awwal_mufaal_mukhtar() {
+        let muzawwidun = IdadatMuzawwidin {
+            qaima: vec![tarif("awwal", false), tarif("thani", true)],
+            iftiradi: None,
+        };
+        assert_eq!(muzawwidun.hala(), HalatMuzawwidin::Mukhtar);
+        assert_eq!(
+            muzawwidun.muntakhab().map(|tarif| tarif.muarrif.as_str()),
+            Some("thani")
+        );
+    }
+
+    /// Exactly the two states that stop new translation, and no others. Every
+    /// sentence carries both halves of the truth in both languages.
+    #[test]
+    fn al_halatan_allatan_tamnaan_al_tarjama() {
+        for hala in [
+            HalatMuzawwidin::Faragh,
+            HalatMuzawwidin::Muattala,
+            HalatMuzawwidin::Mukhtar,
+            HalatMuzawwidin::Badeel,
+        ] {
+            assert!(!hala.ism().is_empty());
+            assert!(!hala.arabi().is_empty());
+            assert!(!hala.injilizi().is_empty());
+        }
+        assert!(!HalatMuzawwidin::Faragh.yutarjim());
+        assert!(!HalatMuzawwidin::Muattala.yutarjim());
+        assert!(HalatMuzawwidin::Mukhtar.yutarjim());
+        assert!(HalatMuzawwidin::Badeel.yutarjim());
+        // The half a bare "no provider configured" leaves out, and the half the
+        // reader came for: installing a published patch reaches no provider.
+        for hala in [HalatMuzawwidin::Faragh, HalatMuzawwidin::Muattala] {
+            assert!(hala.injilizi().contains("Installing published patches still works"));
+            assert!(hala.arabi().contains("تثبيت الرقع المنشورة يعمل"));
+        }
+    }
+}

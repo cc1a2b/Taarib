@@ -243,11 +243,7 @@ impl Matjar for MatjarLutris {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         };
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: Some(judhur.bayanat.clone()),
-            ..NatijatMatjar::default()
-        };
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, Some(judhur.bayanat.clone()));
 
         let qaida = judhur.qaida();
         let (ittisal, thabita) = iftah_lil_qiraa(&qaida)?;

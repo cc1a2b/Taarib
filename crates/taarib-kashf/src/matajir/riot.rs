@@ -299,23 +299,53 @@ impl Matjar for MatjarRiot {
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         };
         let mujallad = jidhr.join(ISM_MUJALLAD_BAYANAT);
-        let sijill = sijill_tathbeet(&jidhr.join(ISM_SIJILL_TATHBEET));
+        let masar_sijill = jidhr.join(ISM_SIJILL_TATHBEET);
+        let sijill = sijill_tathbeet(&masar_sijill);
         if !mujallad.is_dir() && sijill.is_none() {
+            // `mawqi` calls the client installed when either file exists. An
+            // install record that is there and would not parse is that case,
+            // and it is "installed, unreadable" rather than "not installed".
+            if masar_sijill.is_file() {
+                return Ok(NatijatMatjar::naqisa(
+                    MUARRIF,
+                    jidhr.is_dir().then(|| jidhr.clone()),
+                    masar_sijill.display().to_string(),
+                    "the Riot client's install record could not be read as JSON and there is no \
+                     Metadata directory beside it, so no Riot product could be listed",
+                ));
+            }
             return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
         }
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
+        let mut natija = NatijatMatjar::muthabbat(
+            MUARRIF,
             // The Riot Client's own directory when the install record names it,
             // because that is where the launcher actually lives; the machine's
             // `Riot Games` data folder is the fallback, and is what exists on a
             // machine whose install record was lost.
-            jidhr_matjar: sijill
+            sijill
                 .as_ref()
                 .and_then(SijillTathbeet::jidhr_mushghil)
                 .or_else(|| jidhr.is_dir().then(|| jidhr.clone())),
-            ..NatijatMatjar::default()
-        };
+        );
+        // Each half of the catalogue that is missing or unreadable hides
+        // installs the other half cannot name on its own.
+        if !mujallad.is_dir() {
+            natija.tanbihat.push(TanbihFahs::fahras(
+                MUARRIF,
+                mujallad.display().to_string(),
+                "the Metadata directory is not there, so only the install record was read; it \
+                 names where products are installed but not which product each one is",
+            ));
+        }
+        if sijill.is_none() && masar_sijill.is_file() {
+            natija.tanbihat.push(TanbihFahs::fahras(
+                MUARRIF,
+                masar_sijill.display().to_string(),
+                "the install record could not be read as JSON, so an install the Metadata \
+                 directory does not describe was not seen",
+            ));
+        }
 
         let mut murashahat: Vec<MurashahMuntaj> = Vec::new();
         if mujallad.is_dir() {
@@ -1130,6 +1160,30 @@ mod ikhtibarat {
         let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
         assert_eq!(MatjarRiot::jadeed().mawqi(&siyaq), None);
         assert!(MatjarRiot::jadeed().judhur_muraqaba(&siyaq).is_empty());
+        Ok(())
+    }
+
+    /// An install record that is there and will not parse, with no Metadata
+    /// directory beside it. `mawqi` calls the client installed because the
+    /// file exists; `ifhas` used to read the unparseable file as "no record"
+    /// and answer "not installed".
+    #[test]
+    fn sijill_tathbeet_talif_naqis_la_ghayr_muthabbat() -> NatijatIkhtibar {
+        use crate::fahs::HalatFahsMatjar;
+
+        let masrah = tempfile::tempdir()?;
+        let bayanat = masrah.path().join("ProgramData");
+        let jidhr = bayanat.join(MUJALLAD_MATJAR);
+        fs::create_dir_all(&jidhr)?;
+        fs::write(jidhr.join(ISM_SIJILL_TATHBEET), b"{ not json")?;
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_barnamij = Some(bayanat);
+
+        let matjar = MatjarRiot::jadeed();
+        assert_eq!(matjar.mawqi(&siyaq).as_deref(), Some(jidhr.as_path()));
+        let natija = matjar.ifhas(&siyaq)?;
+        assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
+        assert_eq!(natija.jidhr_matjar.as_deref(), Some(jidhr.as_path()));
         Ok(())
     }
 }

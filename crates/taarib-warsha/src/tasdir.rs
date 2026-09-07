@@ -498,21 +498,10 @@ fn iqra_udw(jidhr: &Path, bayan: &BayanHuzma, ism: &str) -> NatijatWarsha<Vec<u8
     Ok(bayt)
 }
 
+/// The rows that read and how many lines did not — one reader for every JSONL
+/// table this crate meets, so a bundle and a snapshot cannot disagree with the
+/// live file about what counts as damaged.
 fn iqra_jsonl(bayt: &[u8]) -> (Vec<MudkhalNass>, usize) {
-    let mut madakhil = Vec::new();
-    let mut talifa = 0_usize;
-    // A torn tail line is skipped with a count, exactly as the project's own reader does.
-    for satr in bayt.split(|harf| *harf == b'\n') {
-        if satr.is_empty() {
-            continue;
-        }
-        match std::str::from_utf8(satr)
-            .ok()
-            .and_then(|nass| serde_json::from_str::<MudkhalNass>(nass).ok())
-        {
-            Some(mudkhal) => madakhil.push(mudkhal),
-            None => talifa = talifa.saturating_add(1),
-        }
-    }
-    (madakhil, talifa)
+    let (madakhil, talifa) = crate::salama::hallil_jsonl(bayt);
+    (madakhil, talifa.len())
 }

@@ -160,6 +160,41 @@ const MUZAWWID_FARIGH: IdadatMuzawwid = {
   mizaniya: null,
 };
 
+/**
+ * What the provider list amounts to, and therefore what it does not offer.
+ *
+ * The same four states as `taarib_usus::idadat::HalatMuzawwidin`, and derived
+ * here rather than asked for, because this screen edits a **working copy**: the
+ * backend's answer describes the tree that was last saved, and the sentence has
+ * to describe the tree the person is looking at. A key mirrors the state, so the
+ * two sets of words stay one translation apart rather than one paraphrase.
+ *
+ * `mukhtar` has no sentence. A configuration that is doing what it says needs no
+ * paragraph explaining that, and a screen that annotates every healthy state is
+ * a screen whose annotations stop being read.
+ */
+type HalatMuzawwidin = 'faragh' | 'muattala' | 'mukhtar' | 'badeel';
+
+const ATHAR_MUZAWWIDIN: Readonly<Record<HalatMuzawwidin, MiftahLugha | null>> = {
+  faragh: 'idadat.muzawwidun.athar_faragh',
+  muattala: 'idadat.muzawwidun.athar_muattala',
+  mukhtar: null,
+  badeel: 'idadat.muzawwidun.athar_badeel',
+};
+
+function halatMuzawwidin(muzawwidun: Idadat['muzawwidun']): HalatMuzawwidin {
+  const { qaima, iftiradi } = muzawwidun;
+  const muntakhab =
+    (iftiradi === null
+      ? undefined
+      : qaima.find((muzawwid) => muzawwid.muarrif === iftiradi && muzawwid.mufaal)) ??
+    qaima.find((muzawwid) => muzawwid.mufaal);
+  if (muntakhab === undefined) {
+    return qaima.length === 0 ? 'faragh' : 'muattala';
+  }
+  return iftiradi !== null && iftiradi !== muntakhab.muarrif ? 'badeel' : 'mukhtar';
+}
+
 /** Defensive number parsing: empty keeps the old value, NaN is ignored. */
 function raqmAw(khaam: string, qadeem: number): number {
   if (khaam.trim() === '') {
@@ -452,6 +487,11 @@ export function IdadatShasha(): JSX.Element {
       bayanat !== undefined &&
       JSON.stringify(nuskha) !== JSON.stringify(bayanat),
     [nuskha, bayanat],
+  );
+
+  const athar = useMemo(
+    () => (nuskha === null ? null : ATHAR_MUZAWWIDIN[halatMuzawwidin(nuskha.muzawwidun)]),
+    [nuskha],
   );
 
   const hifz = useMutation<Idadat, KhataJisr, TalabHifz>({
@@ -1042,15 +1082,28 @@ export function IdadatShasha(): JSX.Element {
                   {t('idadat.muzawwidun.unwan', lugha)}
                 </h2>
               </div>
+              {/* What the current list means, drawn from the working copy so it
+                  follows an enable, a rename and a removal without a save. The
+                  empty state carries it inside its own block because that block
+                  is the whole section; the other two carry it above the list,
+                  which is what they are about. */}
               {nuskha.muzawwidun.qaima.length === 0 ? (
                 <div className="idadat__farigh">
                   <p className="idadat__farigh-unwan">{t('idadat.muzawwidun.la_shay', lugha)}</p>
+                  <p className="idadat__farigh-nass">
+                    {t('idadat.muzawwidun.athar_faragh', lugha)}
+                  </p>
                   <button type="button" className="zir" onClick={adifMuzawwid}>
                     {t('idadat.muzawwidun.adif', lugha)}
                   </button>
                 </div>
               ) : (
                 <>
+                  {athar === null ? null : (
+                    <p className="idadat__mudakhkhal idadat__athar" role="status">
+                      {t(athar, lugha)}
+                    </p>
+                  )}
                   <ul className="idadat__muzawwidun">
                     {nuskha.muzawwidun.qaima.map((muzawwid, fihris) => (
                       <li key={String(fihris)} className="idadat__muzawwid">

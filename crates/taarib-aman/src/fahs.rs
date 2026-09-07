@@ -41,6 +41,20 @@ pub enum Rafd {
         /// Why, as the same short label the scan's gap list carries.
         sabab: String,
     },
+    /// No anti-cheat scan was run on this game at all.
+    ///
+    /// The wider case of [`Rafd::FahsMatjarLamYajri`], and refused for the
+    /// identical reason: an empty evidence list is what a scan that never
+    /// started produces and also what a genuinely clean game produces, so
+    /// reading one as the other is reading an absence as a finding. This is the
+    /// state a caller reaches by constructing the inputs by hand — a surface
+    /// that has done no I/O yet, a stored record replayed without its scan — and
+    /// it must arrive at a refusal rather than at the one verdict that mints a
+    /// permit. No override exists.
+    MashHimayaLamYajri {
+        /// The game folder nothing walked.
+        jidhr: PathBuf,
+    },
     /// The package signature was rejected.
     Tawqee(SababTawqee),
     /// The signing key, lineage or content hash is revoked.
@@ -79,6 +93,11 @@ impl Rafd {
                      شيء قبل قراءة الفهرس."
                 )
             }
+            Self::MashHimayaLamYajri { jidhr } => format!(
+                "لم يُجرَ فحص مكافحة الغش على {} أصلًا. خلوّ قائمة الأدلّة هنا يعني أنّ أحدًا لم \
+                 ينظر، لا أنّ اللعبة سليمة، والاثنان يبدوان سواءً. لا يُثبَّت شيء قبل إجراء الفحص.",
+                jidhr.display()
+            ),
             Self::Tawqee(sabab) => sabab.arabi(),
             Self::Mulgha { sabab } => format!("أُبطلت هذه الحزمة أو مفتاحها: {sabab}"),
             Self::ShabakaBilaIqrar(_) => {
@@ -114,6 +133,12 @@ impl Rafd {
                      clean result. {mawdi}. Nothing is installed until the catalogue is read."
                 )
             }
+            Self::MashHimayaLamYajri { jidhr } => format!(
+                "no anti-cheat scan has been run on {} at all. An empty evidence list here means \
+                 nobody looked, not that the game is clean, and the two are indistinguishable. \
+                 Nothing is installed until the scan runs.",
+                jidhr.display()
+            ),
             Self::Tawqee(sabab) => sabab.injilizi(),
             Self::Mulgha { sabab } => format!("this package or its key was revoked: {sabab}"),
             Self::ShabakaBilaIqrar(_) => {

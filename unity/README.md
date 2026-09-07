@@ -97,8 +97,11 @@ That qualifier is load-bearing, not hedging, because a reader who greps the solu
 the attribute finds more than Jisr and deserves to know which hits matter. The counts, as
 built: `Taarib.Unity.Jisr` declares 33, of which 28 are the `taarib_*` entry points named
 through a single library-name constant and 5 are the loader's own primitives —
-`LoadLibrary`/`GetProcAddress` on `kernel32`, `dlopen`/`dlsym` on `libdl.so.2` and on
-`/usr/lib/libSystem.B.dylib` — which is how it opens the file it then imports from.
+`LoadLibraryW` on `kernel32`, and `dlopen` plus `dlerror` on each of `libdl.so.2` and
+`/usr/lib/libSystem.B.dylib` (`Muhammil.cs`). There is no `GetProcAddress` and no `dlsym`
+anywhere in the solution: the loader pre-loads the library by path and lets the runtime bind
+the 28 imports by name, which is why a library whose `DT_SONAME` does not match is a named
+refusal rather than a mystery.
 `Taarib.Unity.Il2cpp` declares 16: 7 on `kernel32.dll`, 3 on `libc`
 (`mmap`, `mprotect`, `munmap`), 3 `_dyld_*` on `/usr/lib/libSystem.B.dylib`, 2 on
 `libSystem.dylib` (`sys_icache_invalidate`, `pthread_jit_write_protect_np`) and 1
@@ -108,18 +111,22 @@ invalidate the instruction cache before the CPU runs the old bytes again. None o
 reaches Taarib's ABI, and no glyph, layout, patch string or status code travels through
 any of them.
 
-`Taarib.Unity.Mono` and `Taarib.Unity.Mushtarak` declare none at all. The only match in
-`Mushtarak` is the comment in `Ruqaa.cs` recording that it may not have one, which is the
-rule holding rather than the rule being broken.
+`Taarib.Unity.Mono` and `Taarib.Unity.Mushtarak` declare none at all — a grep for the
+attribute over either project returns nothing. `Mushtarak/Ruqaa.cs` carries a comment recording
+that it must not grow "a second P/Invoke surface", which is the rule holding rather than the
+rule being broken.
 
 **The ABI has a version and a refusal.** `taarib_abi_isdar()` returns a major and a
 minor. A caller whose major does not match must refuse to load and say so in the BepInEx
 log in a sentence the user can act on. One loader means one place that check happens, and
 no path around it. Two loaders means the second one eventually forgets.
 
-**Ownership is stated once.** Every handle — `TaaribContext`, `TaaribKhatt`,
-`TaaribLawha`, `TaaribLayout` — is an opaque, generation-tagged pointer with an explicit
-create/destroy pair. Which side allocates, which side frees, how long a returned pointer
+**Ownership is stated once.** Every handle — `TaaribSiyaq` (the context), `TaaribKhatt`
+(a font), `TaaribSilsila` (a fallback chain), `TaaribLawha` (an atlas) — is an opaque,
+generation-tagged pointer with an explicit create/destroy pair, mirrored here as the four
+`SafeHandle` subclasses `MaqbadSiyaq`, `MaqbadKhatt`, `MaqbadSilsila` and `MaqbadLawha`. A
+layout is deliberately not a handle: `taarib_takhtit` writes into a caller-owned buffer and
+retains nothing. Which side allocates, which side frees, how long a returned pointer
 stays valid, and whether the next call invalidates it are documented per function in the
 generated header and in `docs/abi.md`. Encoded once as `SafeHandle` subclasses, those
 rules are enforced by the type system instead of remembered. A raw `IntPtr` passed around
@@ -172,8 +179,11 @@ parsed. It is not part of this tree.
 
 ## What is on disk at install time
 
-`taarib-tathbeet` (Phase 15) installs BepInEx 6 into the game root with the correct
-architecture and backend variant, then puts Taarib's own payload in one directory:
+`taarib-tathbeet` (Phase 15) installs BepInEx into the game root with the correct
+architecture and backend variant — the 5.4.23.5 line for Mono games and the 6.0.0-pre.2 line
+for IL2CPP games, as `assets/aqfal/qufl_bepinex.json` pins them; see "How BepInEx is pinned"
+below for why the Mono half of that does not match what this solution compiles against — then
+puts Taarib's own payload in one directory:
 
 ```
 <game root>/
@@ -186,10 +196,16 @@ architecture and backend variant, then puts Taarib's own payload in one director
         Taarib.Unity.Mono.dll        exactly one of these two, never both
         Taarib.Unity.Il2cpp.dll
         jisr/                        the native library, per architecture
-        khutut/                      the fonts the installed patch declares
-        basmat/                      the IL2CPP signature database (IL2CPP only)
-        <patch>.ruqaa                the installed patch container
+        basmat.json                  the IL2CPP signature database (IL2CPP only)
 ```
+
+That is the shape the staging tool builds into every BepInEx component today
+(`saf_bepinex` in `crates/taarib-tajmee/src/masfufa.rs`). Two things this document once listed
+here are not placed by any code in the tree: a `khutut/` directory of the patch's fonts, and
+the `.ruqaa` container beside the plugin. The installer's own fixtures put the container at
+`taarib/<name>.ruqaa` under the *game root*, and no step copies fonts into the plugin
+directory. The assemblies are written to read the patch from beside themselves; where Phase 15
+finally puts it is a decision that has not been closed, and this README does not close it.
 
 **The `.pdb` files are built and not shipped.** `DebugType portable` produces one beside
 every assembly, and a portable PDB is what turns a stack trace in the game's log into one
@@ -241,9 +257,10 @@ its dependency list says so — Phase 7 depends on Phase 6, not merely on Phase 
 
 ## How BepInEx is pinned
 
-**The version is exact, in three places, and nowhere else.**
+**The version is exact, and it is written in the two package references and nowhere else.**
 `BepInEx.Unity.Mono` and `BepInEx.Unity.IL2CPP` are both `6.0.0-be.780`, and
-`BepInEx.PluginInfoProps` is `2.1.0`. No range, no `6.0.0-*`, no floating suffix.
+`BepInEx.PluginInfoProps` is `2.1.0` in the same two project files. No range, no `6.0.0-*`,
+no floating suffix.
 
 This matters more for BepInEx 6 than for a typical dependency. There is no stable 6.0.0
 release: every usable build is a bleeding-edge snapshot, `be.NNN`, and the API moves
@@ -388,8 +405,12 @@ appearing inside a game install.
 zero-allocation layout path needs no `System.Memory` package. That is one less assembly
 beside the plugin and, more importantly, no chance of a version conflict with a
 `System.Memory` the game or another mod has already loaded — a conflict that surfaces as a
-`TypeLoadException` from an assembly nobody in this repository referenced. Unity's Mono
-runtime from the 2018.1 era onward implements .NET Standard 2.1.
+`TypeLoadException` from an assembly nobody in this repository referenced. Which Unity
+versions' Mono runtime implements .NET Standard 2.1 is a fact about Unity rather than about
+this tree, and an earlier version of this sentence put it at 2018.1, which is not right; the
+tree's own generation table (`JeelUnity` in `crates/taarib-tathbeet/src/tarkib.rs`) puts
+Unity 5.0 through 2018.4 in its oldest generation, and whether a game in that generation can
+load a `netstandard2.1` assembly at all is something to establish per game, not assume.
 
 **C# 12 syntax, on frameworks that predate some of it.** A few language features are
 compiler features that require attributes the target framework has to declare. `init`

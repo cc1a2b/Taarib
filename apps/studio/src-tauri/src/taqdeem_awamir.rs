@@ -20,7 +20,7 @@ use taarib_ruqaa::qari;
 use taarib_ruqaa::tawqee::{DawrMiftah, Khwarizmiya, KutlatTawqee};
 use taarib_saff::khatt::{MawridKhatt, SilsilatKhutut};
 use taarib_taqdeem::bawwaba::{
-    BandFahs, FahsHasim, HalatBand, Iqrarat, MudkhalatBawwaba, QaimatFahs, Tahdheer,
+    BandFahs, FahsHasim, HalatBand, Iqrarat, MudkhalatBawwaba, QaimatFahs, SatrFahs, Tahdheer,
 };
 use taarib_taqdeem::hawiya::{HawiyatMusahim, SalahiyatMalik};
 use taarib_taqdeem::muraja::{
@@ -44,7 +44,9 @@ use taarib_tarqee::fuhusat::{MudkhalatFahs, WasfHuzma, ijri as ijri_fuhus};
 use taarib_tarqee::irtibat::IrtibatBina;
 use taarib_tarqee::mujammi::{MudkhalatTajmee, ijmaa};
 use taarib_tarqee::tahdid_maqasat::IktishafMaqasat;
-use taarib_tarqee::taqrir_tajawuz::TaqrirTajawuz;
+use taarib_tarqee::taqrir_tajawuz::{
+    HalatQiyasTajawuz, MulakhkhasTajawuz, NawAdamAltahaqquq, ShiddatTajawuz, TaqrirTajawuz,
+};
 use taarib_tarqee::takhtit::KhiyaratTasbeeq;
 use taarib_tathbeet::bayan::waqt_alaan;
 use taarib_usus::idadat::MakhzanIdadat;
@@ -89,11 +91,22 @@ pub struct SatrFahsHie {
     /// gate means showing a check as passed when nobody has run it. Every other
     /// state on this boundary already travels with its own wording; this one
     /// was the exception.
+    ///
+    /// The overflow row carries two states of its own beside the gate's four:
+    /// `ghayr_maqis`, a pass over a report in which nothing was measured, and
+    /// `maqis_juzi`, a pass over one that was measured in part. See
+    /// [`halat_satr_tajawuz`].
     pub hala_arabi: String,
+    /// The same, in English.
+    pub hala_injilizi: String,
     /// The row's label, in Arabic.
     pub wasf_arabi: String,
+    /// The same, in English.
+    pub wasf_injilizi: String,
     /// The sentence beside it, in Arabic.
     pub tafsil_arabi: String,
+    /// The same, in English.
+    pub tafsil_injilizi: String,
     /// The strings it links to.
     pub nusus: Vec<String>,
     /// How many strings it found in total.
@@ -160,6 +173,9 @@ pub struct MusawwadaHie {
     pub taghtiya_nisba: f64,
     /// The pre-flight gate as it stands now.
     pub qaima: QaimatFahsHie,
+    /// How much of the package's overflow was actually measured, and why the
+    /// rest was not.
+    pub qiyas_tajawuz: QiyasTajawuzHie,
     /// When the draft was started, RFC 3339.
     pub ansha: String,
     /// Every state transition so far.
@@ -302,6 +318,91 @@ pub struct TajawuzHie {
     pub mutah: f64,
     /// The size it was measured at.
     pub hajm: f64,
+    /// The band's stable key: `tafif`, `malhuz`, `shadid` or `qati`.
+    pub shidda: String,
+    /// The whole row as a sentence — band, numbers, lines, and whose overrun
+    /// it is — in Arabic.
+    pub wasf_arabi: String,
+    /// The same, in English.
+    pub wasf_injilizi: String,
+}
+
+/// One cause strings could not be measured for, with how many it accounts for
+/// and what resolves it.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct SababQiyasHie {
+    /// The cause's stable key.
+    pub miftah: String,
+    /// How many (string, size) pairs it accounts for.
+    pub adad: u32,
+    /// The cause, in Arabic.
+    pub wasf_arabi: String,
+    /// The same, in English.
+    pub wasf_injilizi: String,
+    /// What resolves it, in Arabic.
+    pub ilaj_arabi: String,
+    /// The same, in English.
+    pub ilaj_injilizi: String,
+}
+
+/// How much of a submission's overflow was actually measured.
+///
+/// The third state the overflow list alone cannot carry. An empty list of
+/// overruns means "measured, none found" only when `hala` is `kamil`; under
+/// `lam_yuqas` it means nothing was compared, and under `juzi` it is the answer
+/// for the measured part alone.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct QiyasTajawuzHie {
+    /// The verdict's stable key: `kamil`, `juzi`, `lam_yuqas` or `farigh`.
+    pub hala: String,
+    /// The verdict, in Arabic.
+    pub hala_arabi: String,
+    /// The same, in English.
+    pub hala_injilizi: String,
+    /// (string, size) pairs measured against a recorded width.
+    pub maqis: u32,
+    /// Distinct strings among them.
+    pub nusus_maqisa: u32,
+    /// Measured pairs that overran.
+    pub mutajawiz: u32,
+    /// Measured pairs that fitted.
+    pub salim: u32,
+    /// Measured pairs that overran badly enough to rewrite.
+    pub yastahiqq_iaada: u32,
+    /// Pairs submitted and not measurable.
+    pub ghayr_mutahaqqaq: u32,
+    /// Distinct strings among them.
+    pub nusus_ghayr_mutahaqqaqa: u32,
+    /// Why, most common cause first.
+    pub asbab: Vec<SababQiyasHie>,
+    /// Whether the per-string list of unmeasurable rows was cut in the package
+    /// copy. The counts above are whole either way.
+    pub ghayr_muqallam: bool,
+    /// The summary sentence, in Arabic.
+    pub wasf_arabi: String,
+    /// The same, in English.
+    pub wasf_injilizi: String,
+}
+
+/// One string that could not be measured, for the console's list.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct GhayrMaqisHie {
+    /// The string, abbreviated.
+    pub nass: String,
+    /// The container it was extracted from.
+    pub hawiya: String,
+    /// Where inside that container.
+    pub mawqi: String,
+    /// What kind of interface element it is, in Arabic.
+    pub tasnif_arabi: String,
+    /// The same, in English.
+    pub tasnif_injilizi: String,
+    /// The cause's stable key.
+    pub sabab: String,
+    /// The cause, in Arabic.
+    pub sabab_arabi: String,
+    /// The same, in English.
+    pub sabab_injilizi: String,
 }
 
 /// Everything the console's detail screen draws for one submission.
@@ -315,6 +416,11 @@ pub struct TafasilMurajaHie {
     pub sufuf: Vec<SafHuzmaHie>,
     /// The overflow report, worst first.
     pub tajawuz: Vec<TajawuzHie>,
+    /// How much of it was measured at all.
+    pub qiyas_tajawuz: QiyasTajawuzHie,
+    /// The strings that could not be measured, most sensitive class first, as
+    /// many as the package copy kept.
+    pub ghayr_maqis: Vec<GhayrMaqisHie>,
     /// The review conversation.
     pub taaliqat: Vec<TaaliqWarshaHie>,
     /// Every action taken on this lineage.
@@ -334,6 +440,9 @@ pub struct TaqreerSandooqHie {
     pub mustaada: u32,
     /// Paths the restore left behind, when any.
     pub mutabaqqi: Vec<String>,
+    /// The revocation list the sandbox install's gate checked against, and
+    /// where it stood. Absent for a restore, which consults no list.
+    pub sahb: Option<crate::tathbeet_awamir::HalatSahbHie>,
 }
 
 /// One game's open translation requests.
@@ -536,27 +645,279 @@ const fn slug_hala_band(hala: HalatBand) -> &'static str {
     }
 }
 
-fn qaimat_hie(qaima: &QaimatFahs) -> QaimatFahsHie {
+/// The overflow row's wire state for a pass over a report that measured nothing.
+const HALA_GHAYR_MAQIS: &str = "ghayr_maqis";
+
+/// The same, for a pass over a report that was measured in part.
+const HALA_MAQIS_JUZI: &str = "maqis_juzi";
+
+const fn slug_shidda(shidda: ShiddatTajawuz) -> &'static str {
+    match shidda {
+        ShiddatTajawuz::Bila => "bila",
+        ShiddatTajawuz::Tafif => "tafif",
+        ShiddatTajawuz::Malhuz => "malhuz",
+        ShiddatTajawuz::Shadid => "shadid",
+        ShiddatTajawuz::Qati => "qati",
+    }
+}
+
+/// A checklist row's state and sentence as the wire carries them.
+struct HalatSatrHie {
+    hala: String,
+    hala_arabi: String,
+    hala_injilizi: String,
+    tafsil_arabi: String,
+    tafsil_injilizi: String,
+}
+
+fn halat_satr_asliya(satr: &SatrFahs) -> HalatSatrHie {
+    HalatSatrHie {
+        hala: slug_hala_band(satr.hala).to_owned(),
+        hala_arabi: satr.hala.wasf_arabi().to_owned(),
+        hala_injilizi: satr.hala.wasf_injilizi().to_owned(),
+        tafsil_arabi: satr.tafsil_arabi.clone(),
+        tafsil_injilizi: satr.tafsil_injilizi.clone(),
+    }
+}
+
+/// The overflow row, re-stated over the measurement it is a verdict on.
+///
+/// The gate counts the strings that overran and cannot say over how many that
+/// count was taken, because it never sees the measured total — so a pass from
+/// it reads the same over a project measured clean and over one nobody
+/// measured, and every project built from static extraction alone is the
+/// second kind. The gate's own state is kept whenever the gate fired: a warning
+/// waiting for its acknowledgement is not overridden, and its sentence still
+/// carries the measured basis. A pass is kept only when every submitted pair
+/// was measured; a pass over a partly measured report is sent as
+/// [`HALA_MAQIS_JUZI`], and one over a report that measured nothing as
+/// [`HALA_GHAYR_MAQIS`]. Neither blocks — the gate's `jahiza` is untouched —
+/// but neither is a green check.
+fn halat_satr_tajawuz(satr: &SatrFahs, tajawuz: &TaqrirTajawuz) -> HalatSatrHie {
+    let (tafsil_arabi, tafsil_injilizi) = wasf_qiyas(tajawuz);
+    let hala_qiyas = tajawuz.hala();
+    let (hala, hala_arabi, hala_injilizi) = match (satr.hala, hala_qiyas) {
+        (HalatBand::Ijtaz, HalatQiyasTajawuz::Juzi) => {
+            (HALA_MAQIS_JUZI, hala_qiyas.wasf_arabi(), hala_qiyas.wasf_injilizi())
+        }
+        (HalatBand::Ijtaz, HalatQiyasTajawuz::LamYuqas | HalatQiyasTajawuz::Farigh) => {
+            (HALA_GHAYR_MAQIS, hala_qiyas.wasf_arabi(), hala_qiyas.wasf_injilizi())
+        }
+        (hala, _) => (slug_hala_band(hala), hala.wasf_arabi(), hala.wasf_injilizi()),
+    };
+    HalatSatrHie {
+        hala: hala.to_owned(),
+        hala_arabi: hala_arabi.to_owned(),
+        hala_injilizi: hala_injilizi.to_owned(),
+        tafsil_arabi,
+        tafsil_injilizi,
+    }
+}
+
+fn satr_fahs_hie(satr: &SatrFahs, tajawuz: &TaqrirTajawuz) -> SatrFahsHie {
+    let hala = if satr.band == BandFahs::Tahdheer(Tahdheer::TajawuzKatheer) {
+        halat_satr_tajawuz(satr, tajawuz)
+    } else {
+        halat_satr_asliya(satr)
+    };
+    SatrFahsHie {
+        band: match satr.band {
+            BandFahs::Hasim(fahs) => slug_hasim(fahs).to_owned(),
+            BandFahs::Tahdheer(tahdheer) => slug_tahdheer(tahdheer).to_owned(),
+        },
+        hasim: matches!(satr.band, BandFahs::Hasim(_)),
+        hala: hala.hala,
+        hala_arabi: hala.hala_arabi,
+        hala_injilizi: hala.hala_injilizi,
+        wasf_arabi: satr.band.wasf_arabi().to_owned(),
+        wasf_injilizi: satr.band.wasf_injilizi().to_owned(),
+        tafsil_arabi: hala.tafsil_arabi,
+        tafsil_injilizi: hala.tafsil_injilizi,
+        nusus: satr.nusus.iter().map(ToString::to_string).collect(),
+        adad: crate::warsha_awamir::adad_u32(satr.adad),
+    }
+}
+
+/// The checklist on the wire, with the overflow row read against its report.
+fn qaimat_hie(qaima: &QaimatFahs, tajawuz: &TaqrirTajawuz) -> QaimatFahsHie {
     QaimatFahsHie {
-        sutur: qaima
-            .sutur()
-            .iter()
-            .map(|satr| SatrFahsHie {
-                band: match satr.band {
-                    BandFahs::Hasim(fahs) => slug_hasim(fahs).to_owned(),
-                    BandFahs::Tahdheer(tahdheer) => slug_tahdheer(tahdheer).to_owned(),
-                },
-                hasim: matches!(satr.band, BandFahs::Hasim(_)),
-                hala: slug_hala_band(satr.hala).to_owned(),
-                hala_arabi: satr.hala.wasf_arabi().to_owned(),
-                wasf_arabi: satr.band.wasf_arabi().to_owned(),
-                tafsil_arabi: satr.tafsil_arabi.clone(),
-                nusus: satr.nusus.iter().map(ToString::to_string).collect(),
-                adad: crate::warsha_awamir::adad_u32(satr.adad),
-            })
-            .collect(),
+        sutur: qaima.sutur().iter().map(|satr| satr_fahs_hie(satr, tajawuz)).collect(),
         jahiza: qaima.jahiza(),
     }
+}
+
+/// The cause that accounts for the most unmeasurable pairs, when any.
+///
+/// Ties break toward the smaller key so two builds name the same cause. A key
+/// this build does not know is skipped rather than worded as another cause.
+fn aghlab_sabab(mulakhkhas: &MulakhkhasTajawuz) -> Option<NawAdamAltahaqquq> {
+    mulakhkhas
+        .hasab_sabab
+        .iter()
+        .max_by(|awwal, thani| awwal.1.cmp(thani.1).then_with(|| thani.0.cmp(awwal.0)))
+        .and_then(|(miftah, _)| NawAdamAltahaqquq::min_miftah(miftah))
+}
+
+/// The two summary sentences for a report, leading with what was not measured.
+fn wasf_qiyas(tajawuz: &TaqrirTajawuz) -> (String, String) {
+    let mulakhkhas = &tajawuz.mulakhkhas;
+    let sabab = aghlab_sabab(mulakhkhas);
+    let sabab_arabi =
+        sabab.map_or_else(String::new, |naw| format!(" أغلب الأسباب: {}", naw.wasf_arabi()));
+    let sabab_injilizi = sabab
+        .map_or_else(String::new, |naw| format!(" Most common cause: {}", naw.wasf_injilizi()));
+    let qass_arabi = if tajawuz.ghayr_muqallam {
+        format!(" القائمة أدناه تعرض أوّل {} منها.", tajawuz.ghayr_qabil_lil_tahaqquq.len())
+    } else {
+        String::new()
+    };
+    let qass_injilizi = if tajawuz.ghayr_muqallam {
+        let mahfuza = tajawuz.ghayr_qabil_lil_tahaqquq.len();
+        format!(" The list below shows the first {mahfuza} of them.")
+    } else {
+        String::new()
+    };
+    match tajawuz.hala() {
+        HalatQiyasTajawuz::Farigh => (
+            "لم تُقدَّم أيّ عبارة مترجمة للقياس، فلا حكم على التجاوز.".to_owned(),
+            "No translated string was submitted for measurement, so there is no overflow \
+             verdict."
+                .to_owned(),
+        ),
+        HalatQiyasTajawuz::LamYuqas => (
+            format!(
+                "لم يُقَس أيّ تجاوز: {} قياسًا على {} عبارة لم يمكن التحقّق منه، فلا حكم على التجاوز في هذا التقديم.{sabab_arabi}{qass_arabi}",
+                mulakhkhas.ghayr_mutahaqqaq, mulakhkhas.nusus_ghayr_mutahaqqaqa
+            ),
+            format!(
+                "No overflow was measured: {} measurement(s) across {} string(s) could not be \
+                 verified, so this submission carries no overflow verdict.\
+                 {sabab_injilizi}{qass_injilizi}",
+                mulakhkhas.ghayr_mutahaqqaq, mulakhkhas.nusus_ghayr_mutahaqqaqa
+            ),
+        ),
+        HalatQiyasTajawuz::Juzi => (
+            format!(
+                "قياس جزئي: قِيس {} قياسًا على {} عبارة، منها {} متجاوز و{} يستحقّ إعادة الصياغة؛ و{} قياسًا على {} عبارة لم يمكن التحقّق منه.{sabab_arabi}{qass_arabi}",
+                mulakhkhas.maqis,
+                mulakhkhas.nusus_maqisa,
+                mulakhkhas.mutajawiz,
+                mulakhkhas.yastahiqq_iaada(),
+                mulakhkhas.ghayr_mutahaqqaq,
+                mulakhkhas.nusus_ghayr_mutahaqqaqa
+            ),
+            format!(
+                "Partly measured: {} measurement(s) across {} string(s) were made, {} of them \
+                 over and {} worth rewriting; {} measurement(s) across {} string(s) could not \
+                 be verified.{sabab_injilizi}{qass_injilizi}",
+                mulakhkhas.maqis,
+                mulakhkhas.nusus_maqisa,
+                mulakhkhas.mutajawiz,
+                mulakhkhas.yastahiqq_iaada(),
+                mulakhkhas.ghayr_mutahaqqaq,
+                mulakhkhas.nusus_ghayr_mutahaqqaqa
+            ),
+        ),
+        HalatQiyasTajawuz::Kamil => (
+            format!(
+                "قِيس {} قياسًا على {} عبارة كلّها، منها {} متجاوز و{} يستحقّ إعادة الصياغة.",
+                mulakhkhas.maqis,
+                mulakhkhas.nusus_maqisa,
+                mulakhkhas.mutajawiz,
+                mulakhkhas.yastahiqq_iaada()
+            ),
+            format!(
+                "Every one of {} measurement(s) across {} string(s) was made: {} over, {} worth \
+                 rewriting.",
+                mulakhkhas.maqis,
+                mulakhkhas.nusus_maqisa,
+                mulakhkhas.mutajawiz,
+                mulakhkhas.yastahiqq_iaada()
+            ),
+        ),
+    }
+}
+
+/// The causes, most common first, each with the sentence that resolves it.
+///
+/// A key this build does not know is sent as its key with no remedy, never
+/// with another cause's remedy.
+fn asbab_qiyas_hie(mulakhkhas: &MulakhkhasTajawuz) -> Vec<SababQiyasHie> {
+    let mut asbab: Vec<(&String, &u32)> = mulakhkhas.hasab_sabab.iter().collect();
+    asbab.sort_by(|awwal, thani| thani.1.cmp(awwal.1).then_with(|| awwal.0.cmp(thani.0)));
+    asbab
+        .into_iter()
+        .map(|(miftah, adad)| {
+            let naw = NawAdamAltahaqquq::min_miftah(miftah);
+            SababQiyasHie {
+                miftah: miftah.clone(),
+                adad: *adad,
+                wasf_arabi: naw.map_or_else(|| miftah.clone(), |naw| naw.wasf_arabi().to_owned()),
+                wasf_injilizi: naw
+                    .map_or_else(|| miftah.clone(), |naw| naw.wasf_injilizi().to_owned()),
+                ilaj_arabi: naw.map_or_else(String::new, |naw| naw.ilaj_arabi().to_owned()),
+                ilaj_injilizi: naw.map_or_else(String::new, |naw| naw.ilaj_injilizi().to_owned()),
+            }
+        })
+        .collect()
+}
+
+/// How much of a report was measured, as the two screens draw it.
+fn qiyas_tajawuz_hie(tajawuz: &TaqrirTajawuz) -> QiyasTajawuzHie {
+    let mulakhkhas = &tajawuz.mulakhkhas;
+    let hala = tajawuz.hala();
+    let (wasf_arabi, wasf_injilizi) = wasf_qiyas(tajawuz);
+    QiyasTajawuzHie {
+        hala: hala.miftah().to_owned(),
+        hala_arabi: hala.wasf_arabi().to_owned(),
+        hala_injilizi: hala.wasf_injilizi().to_owned(),
+        maqis: mulakhkhas.maqis,
+        nusus_maqisa: mulakhkhas.nusus_maqisa,
+        mutajawiz: mulakhkhas.mutajawiz,
+        salim: mulakhkhas.salim,
+        yastahiqq_iaada: mulakhkhas.yastahiqq_iaada(),
+        ghayr_mutahaqqaq: mulakhkhas.ghayr_mutahaqqaq,
+        nusus_ghayr_mutahaqqaqa: mulakhkhas.nusus_ghayr_mutahaqqaqa,
+        asbab: asbab_qiyas_hie(mulakhkhas),
+        ghayr_muqallam: tajawuz.ghayr_muqallam,
+        wasf_arabi,
+        wasf_injilizi,
+    }
+}
+
+/// The overruns, worst first, as the console lists them.
+fn tajawuz_hie(tajawuz: &TaqrirTajawuz) -> Vec<TajawuzHie> {
+    tajawuz
+        .tajawuzat
+        .iter()
+        .map(|madkhal| TajawuzHie {
+            nass: madkhal.muqtatas.clone(),
+            ard: f64::from(madkhal.ard_maqis),
+            mutah: f64::from(madkhal.ard_mutah),
+            hajm: f64::from(madkhal.hajm),
+            shidda: slug_shidda(madkhal.shidda).to_owned(),
+            wasf_arabi: madkhal.wasf_arabi(),
+            wasf_injilizi: madkhal.wasf_injilizi(),
+        })
+        .collect()
+}
+
+/// The strings nothing could be said about, as the console lists them.
+fn ghayr_maqis_hie(tajawuz: &TaqrirTajawuz) -> Vec<GhayrMaqisHie> {
+    tajawuz
+        .ghayr_qabil_lil_tahaqquq
+        .iter()
+        .map(|madkhal| GhayrMaqisHie {
+            nass: madkhal.muqtatas.clone(),
+            hawiya: madkhal.hawiya.clone(),
+            mawqi: madkhal.mawqi.clone(),
+            tasnif_arabi: madkhal.tasnif.wasf_arabi().to_owned(),
+            tasnif_injilizi: madkhal.tasnif.wasf_injilizi().to_owned(),
+            sabab: madkhal.sabab.miftah().to_owned(),
+            sabab_arabi: madkhal.sabab.wasf_arabi().to_owned(),
+            sabab_injilizi: madkhal.sabab.wasf_injilizi().to_owned(),
+        })
+        .collect()
 }
 
 fn iqra_iqrarat(masarat: &Masarat, ruqaa: RuqaaId) -> Natija<Iqrarat> {
@@ -664,6 +1025,7 @@ fn musawwada_hie(musawwada: &Musawwada, qaima: QaimatFahsHie) -> MusawwadaHie {
         muakkada: adad.muakkad,
         taghtiya_nisba: nisbat_taghtiya(taghtiya.majmu, taghtiya.mutarjam),
         qaima,
+        qiyas_tajawuz: qiyas_tajawuz_hie(musawwada.tajawuz()),
         ansha: musawwada.ansha().to_owned(),
         tareekh: intiqalat(musawwada),
     }
@@ -860,7 +1222,7 @@ pub fn musawwadat_luba(
         return Ok(None);
     };
     let qaima = qaimat_lil(&masarat, &musawwada)?;
-    Ok(Some(musawwada_hie(&musawwada, qaimat_hie(&qaima))))
+    Ok(Some(musawwada_hie(&musawwada, qaimat_hie(&qaima, musawwada.tajawuz()))))
 }
 
 /// Compiles the project into a package and starts or replaces the draft.
@@ -942,7 +1304,8 @@ pub fn jahhiz_taqdeem(
     let irtibat = IrtibatBina::min_bayan(&mashru.rasm().bayan, &khutut, None)
         .map_err(Khata::from)?;
     let taghtiya = taarib_tarqee::taghtiya_ruqaa::ihsib_taghtiya(&sufuf, None, None);
-    let tajawuz = TaqrirTajawuz::farigh();
+    // The overflow report is not built here. The compiler measures it from the
+    // layouts it ships, so the draft's copy is the package's own.
     let khiyarat = KhiyaratTasbeeq::default();
     let muharrik = MuharrikHuzma {
         aila: taqreer.muharrik.aila,
@@ -966,7 +1329,6 @@ pub fn jahhiz_taqdeem(
         irtibat: &irtibat,
         maqasat: &maqasat,
         taghtiya: &taghtiya,
-        tajawuz: &tajawuz,
         khiyarat: &khiyarat,
         mustawa: None,
     };
@@ -1031,7 +1393,7 @@ pub fn jahhiz_taqdeem(
     ihfaz_musawwada(&masarat, &musawwada)?;
 
     let qaima = qaimat_lil(&masarat, &musawwada)?;
-    Ok(musawwada_hie(&musawwada, qaimat_hie(&qaima)))
+    Ok(musawwada_hie(&musawwada, qaimat_hie(&qaima, musawwada.tajawuz())))
 }
 
 /// Acknowledges one warning, or withdraws the acknowledgement.
@@ -1065,7 +1427,7 @@ pub fn aqirr_tahdheer(
     }
     uktub_iqrarat(&masarat, musawwada.id(), &iqrarat)?;
     let qaima = qaimat_lil(&masarat, &musawwada)?;
-    Ok(musawwada_hie(&musawwada, qaimat_hie(&qaima)))
+    Ok(musawwada_hie(&musawwada, qaimat_hie(&qaima, musawwada.tajawuz())))
 }
 
 fn idadat_tawthiq(muarrif_amil: &str) -> IdadatTawthiq {
@@ -1224,6 +1586,27 @@ pub async fn sallim_taqdeem(
     )
     .map_err(Khata::from)?;
 
+    // The registry's word on this contributor and this lineage, refreshed now
+    // — this command is asynchronous and may wait for a network — and checked
+    // before the draft moves: a key the owner withdrew signs nothing worth
+    // uploading, and a lineage the owner pulled is not resubmitted under the
+    // same name.
+    let hali = idadat.hali();
+    let _ = crate::tathbeet_awamir::jaddid_sahb(&masarat, &hali).await;
+    let qaima = crate::tathbeet_awamir::qaimat_sahb_lil_bawwaba(&masarat, &hali)?;
+    let khass = miftah_musahim()?;
+    if let Some(sabab) = qaima.qaima().mulgha_miftah(&khass.aam().bayt()) {
+        return Err(Khata::from(KhataTaqdeemAmr::MiftahMusahimMulgha {
+            sabab: sabab.to_owned(),
+        }));
+    }
+    if let Some(sabab) = qaima.qaima().mulgha_ruqaa(musawwada.id()) {
+        return Err(Khata::from(KhataTaqdeemAmr::TaqdeemMulgha {
+            ruqaa: musawwada.id().to_string(),
+            sabab: sabab.to_owned(),
+        }));
+    }
+
     let waqt = waqt_alaan();
     let ruqaa = musawwada.id().to_string();
     let ruqaa_id = musawwada.id();
@@ -1252,7 +1635,6 @@ pub async fn sallim_taqdeem(
         }));
     };
 
-    let hali = idadat.hali();
     let amil_id = hali
         .masadir
         .muarrif_amil
@@ -1299,7 +1681,6 @@ pub async fn sallim_taqdeem(
         let bayt = std::fs::read(&masar_huzma).map_err(|_| {
             Khata::from(KhataTaqdeemAmr::HuzmaMafquda { masar: masar_huzma.clone() })
         })?;
-        let khass = miftah_musahim()?;
         let (musahim_hali, ism_hali, itimad_hali) = hawiyati(&masarat)?;
         let hawiya = HawiyatMusahim {
             musahim: musahim_hali,
@@ -1583,7 +1964,9 @@ pub fn tafasil_muraja(
     }
 
     let qaima = qaimat_lil(&masarat, &musawwada)
-        .map_or(QaimatFahsHie { sutur: Vec::new(), jahiza: false }, |qaima| qaimat_hie(&qaima));
+        .map_or(QaimatFahsHie { sutur: Vec::new(), jahiza: false }, |qaima| {
+            qaimat_hie(&qaima, musawwada.tajawuz())
+        });
 
     let sufuf: Vec<SafHuzmaHie> = match nusus_mashru(&masarat, musawwada.luba()) {
         Ok((_mashru, madakhil)) => madakhil
@@ -1596,17 +1979,9 @@ pub fn tafasil_muraja(
         Err(_) => Vec::new(),
     };
 
-    let tajawuz: Vec<TajawuzHie> = musawwada
-        .tajawuz()
-        .tajawuzat
-        .iter()
-        .map(|madkhal| TajawuzHie {
-            nass: madkhal.muqtatas.clone(),
-            ard: f64::from(madkhal.ard_maqis),
-            mutah: f64::from(madkhal.ard_mutah),
-            hajm: f64::from(madkhal.hajm),
-        })
-        .collect();
+    let tajawuz = tajawuz_hie(musawwada.tajawuz());
+    let qiyas_tajawuz = qiyas_tajawuz_hie(musawwada.tajawuz());
+    let ghayr_maqis = ghayr_maqis_hie(musawwada.tajawuz());
 
     let khuyut = taaliqat_muraja(&masarat)?;
     let taaliqat = khuyut
@@ -1621,6 +1996,8 @@ pub fn tafasil_muraja(
         sumaa: sumaa_hie(&sumaa_li(&masarat, &musawwada.musahim().musahim)?),
         sufuf,
         tajawuz,
+        qiyas_tajawuz,
+        ghayr_maqis,
         taaliqat,
         sijill: quyud,
         // Only the latest revision's package is on this machine; there is
@@ -1767,7 +2144,9 @@ pub fn qarrir_muraja(
     ihfaz_musawwada(&masarat, &baada)?;
 
     let qaima = qaimat_lil(&masarat, &baada)
-        .map_or(QaimatFahsHie { sutur: Vec::new(), jahiza: false }, |qaima| qaimat_hie(&qaima));
+        .map_or(QaimatFahsHie { sutur: Vec::new(), jahiza: false }, |qaima| {
+            qaimat_hie(&qaima, baada.tajawuz())
+        });
     Ok(musawwada_hie(&baada, qaima))
 }
 
@@ -1887,7 +2266,9 @@ pub fn iaatimad_muraja(
     uktub_sijill_malik(&masarat, &sijill)?;
 
     let qaima = qaimat_lil(&masarat, &manshura)
-        .map_or(QaimatFahsHie { sutur: Vec::new(), jahiza: false }, |qaima| qaimat_hie(&qaima));
+        .map_or(QaimatFahsHie { sutur: Vec::new(), jahiza: false }, |qaima| {
+            qaimat_hie(&qaima, manshura.tajawuz())
+        });
     Ok(musawwada_hie(&manshura, qaima))
 }
 
@@ -1929,9 +2310,6 @@ pub fn sijill_muraja_kull(
     quyud.reverse();
     Ok(quyud)
 }
-
-/// The bundled revocation list, signed by the owner key at sequence 1.
-const QAIMAT_SAHB_SANDOOQ: &[u8] = include_bytes!("../../../../assets/qaimat_sahb.json");
 
 /// Copies a game tree into the sandbox, once; a populated sandbox is reused.
 fn insakh_lil_sandooq(min: &Path, ila: &Path) -> Natija<u64> {
@@ -2058,10 +2436,10 @@ pub fn sandooq_thabbit(
     let ism_tanfidhi =
         tanfidhi.file_name().and_then(|s| s.to_str()).unwrap_or_default().to_owned();
 
-    let miftah_aam = taarib_khatm::MiftahAam::min_bayt(&MIRSAT_MALIK.miftah)
-        .map_err(|q| Khata::min_tafsir(&q))?;
-    let qaima = taarib_aman::qaimat_sahb::QaimatSahb::min_bayt(QAIMAT_SAHB_SANDOOQ, &miftah_aam)
-        .map_err(|q| Khata::min_tafsir(&q))?;
+    // The same list, the same state and the same refusal the real install
+    // reads: a review that cleared a check the registry never made is a review
+    // of something else.
+    let qaima = crate::tathbeet_awamir::qaimat_sahb_lil_bawwaba(&masarat, &hali)?;
     let sijill_iqrar = taarib_aman::iqrar::iqra(
         &masarat.jidhr_bayanat().join(crate::tathbeet_awamir::ISM_MALAF_IQRAR),
     )?;
@@ -2103,6 +2481,13 @@ pub fn sandooq_thabbit(
     };
     let jidhr_hajr = masarat.hajr();
     let mukawwinat = masarat.mukawwinat();
+    // The plan, decided before the install runs and against the sandbox copy
+    // rather than the player's game. The sandbox exists to be the real recipe,
+    // so it takes the same plan-then-execute path `thabbit_ruqaa` takes: a
+    // review that ran a different install from the one a user will run is a
+    // review of something else.
+    let mukhattat = taarib_tathbeet::tarkib::khutta(&taqreer, &luba_muhallala, &mukawwinat)
+        .map_err(Khata::from)?;
     // The same resolution and the same refusal the real install path uses. The
     // copy in the sandbox is not the player's game, but the anti-cheat gate runs
     // over it all the same, and a gate that reached a verdict here with Steam's
@@ -2133,10 +2518,10 @@ pub fn sandooq_thabbit(
     let natija = thabbit_bilnaqra(
         talab,
         |muthabbit| {
-            let _ = taarib_tathbeet::tarkib::nashr(
+            let _ = taarib_tathbeet::tarkib::nashr_bi_khutta(
+                &mukhattat,
                 &luba_muhallala,
                 &halat_idadat,
-                &taqreer,
                 &mukawwinat,
                 muthabbit,
             )?;
@@ -2144,12 +2529,10 @@ pub fn sandooq_thabbit(
         },
         |_marhala| {},
     )
-    .map_err(|fashal| {
-        Khata::min_tafsir(&crate::tathbeet_awamir::KhataTathbeetAmr::TathbeetFashil {
-            arabi: fashal.arabi(),
-            injilizi: fashal.injilizi(),
-        })
-    })?;
+    // The refusal's own code rather than the generic install failure: the
+    // sandbox exists to show the owner what a user would see, and a user sees
+    // the revocation and the anti-cheat refusals by name.
+    .map_err(|fashal| crate::tathbeet_awamir::khata_naqra(&fashal, &luba.ism))?;
 
     Ok(TaqreerSandooqHie {
         hasila_arabi: format!(
@@ -2160,6 +2543,7 @@ pub fn sandooq_thabbit(
         salim: natija.tahaqquq.salim(),
         mustaada: 0,
         mutabaqqi: Vec::new(),
+        sahb: Some(crate::tathbeet_awamir::sahb_hie(&qaima)),
     })
 }
 
@@ -2339,6 +2723,30 @@ pub enum KhataTaqdeemAmr {
         /// The game's name, as its launcher gives it.
         ism: String,
     },
+
+    /// The registry has revoked the key this machine signs contributions with.
+    ///
+    /// Checked before a submission moves, against the list refreshed for it:
+    /// the owner's review would refuse the package anyway, and a contributor
+    /// is better told here, with the reason, than after the upload.
+    #[error("the contributor signing key is revoked: {sabab}")]
+    MiftahMusahimMulgha {
+        /// Why, as the list words it.
+        sabab: String,
+    },
+
+    /// The registry has withdrawn the lineage this submission builds on.
+    ///
+    /// Its own refusal rather than a shared one, because the way out differs:
+    /// a revoked key is the owner's to reissue, a withdrawn lineage is the
+    /// contributor's to leave behind by starting a new one.
+    #[error("patch lineage {ruqaa} is withdrawn: {sabab}")]
+    TaqdeemMulgha {
+        /// The lineage.
+        ruqaa: String,
+        /// Why, as the list words it.
+        sabab: String,
+    },
 }
 
 impl Tafsir for KhataTaqdeemAmr {
@@ -2365,17 +2773,26 @@ impl Tafsir for KhataTaqdeemAmr {
                     Self::TawthiqNaqis => 76,
                     Self::TalabNaqis => 77,
                     Self::LughaRasmiyaMawjuda { .. } => 78,
+                    // 79 is the last number in this block; 80 to 84 belong to
+                    // the overlay surface, so the second refusal takes the
+                    // first free number after them.
+                    Self::MiftahMusahimMulgha { .. } => 79,
+                    Self::TaqdeemMulgha { .. } => 85,
                 },
         )
     }
 
     fn khutura(&self) -> Khutura {
         match self {
+            // The last two are the registry withdrawing trust, which nothing on
+            // this screen restores; like the rest here, neither is routine.
             Self::MalikFaqat
             | Self::KhututNaqisa { .. }
             | Self::SandooqNaqis { .. }
             | Self::LughaRasmiyaMawjuda { .. }
-            | Self::HuzmaMafquda { .. } => Khutura::Khatar,
+            | Self::HuzmaMafquda { .. }
+            | Self::MiftahMusahimMulgha { .. }
+            | Self::TaqdeemMulgha { .. } => Khutura::Khatar,
             Self::TaqdeemGhayrMawjud { .. }
             | Self::TaqdeemMuallaq { .. }
             | Self::RukhsaMajhula { .. }
@@ -2469,6 +2886,16 @@ impl Tafsir for KhataTaqdeemAmr {
                      لمتطوّعين ينفقون أمسياتهم على عمل ترجمه محترفون بالفعل."
                 )
             }
+            Self::MiftahMusahimMulgha { sabab } => format!(
+                "أبطل المستودع مفتاح التوقيع الذي تُوقَّع به مساهماتك: {sabab}. لا يُقبل تقديم \
+                 موقّع بمفتاح مُبطَل، ولم يُرسل شيء. تواصل مع مالك المستودع لتسوية الأمر \
+                 وإصدار مفتاح جديد."
+            ),
+            Self::TaqdeemMulgha { ruqaa, sabab } => format!(
+                "سحب المستودع سلسلة الرقعة {ruqaa} التي يبني عليها هذا التقديم: {sabab}. لا \
+                 تُعاد سلسلة مسحوبة تحت الاسم نفسه، ولم يُرسل شيء. اسحب هذا التقديم ثم جهّز \
+                 تقديمًا جديدًا من المشروع ليأخذ سلسلة جديدة."
+            ),
         }
     }
 
@@ -2547,6 +2974,17 @@ impl Tafsir for KhataTaqdeemAmr {
                      on work professionals have already done."
                 )
             }
+            Self::MiftahMusahimMulgha { sabab } => format!(
+                "The registry has revoked the signing key your contributions are signed with: \
+                 {sabab}. A submission signed with a revoked key is not accepted, and nothing \
+                 was sent. Contact the registry owner to sort it out and issue a new key."
+            ),
+            Self::TaqdeemMulgha { ruqaa, sabab } => format!(
+                "The registry has withdrawn the patch lineage {ruqaa} this submission builds \
+                 on: {sabab}. A withdrawn lineage is not resubmitted under the same name, and \
+                 nothing was sent. Withdraw this submission, then prepare a new one from the \
+                 project so it takes a new lineage."
+            ),
         }
     }
 
@@ -2568,10 +3006,17 @@ impl Tafsir for KhataTaqdeemAmr {
             | Self::HuzmaMafquda { .. }
             | Self::TawthiqNaqis
             | Self::TalabNaqis => Khutwa::AadaMuhawala,
-            Self::LughaRasmiyaMawjuda { .. } => Khutwa::LaShay,
+            // Two refusals with no button, for two different reasons: the
+            // publisher's own Arabic is lifted only by a setting chosen
+            // deliberately elsewhere, and a withdrawn lineage is left behind by
+            // the contributor's own next submission, which its sentence names.
+            Self::LughaRasmiyaMawjuda { .. } | Self::TaqdeemMulgha { .. } => Khutwa::LaShay,
             Self::IrsalGhayrMuhayya { .. } | Self::MustawdaGhayrMafhum { .. } => {
                 Khutwa::FathIdadat { qism: QismIdadat::Masadir }
             }
+            // A revoked key is the owner's to reissue, so the way out is the
+            // owner rather than anything on this machine.
+            Self::MiftahMusahimMulgha { .. } => Khutwa::IblaghLilMalik,
         }
     }
 
@@ -2584,7 +3029,9 @@ impl Tafsir for KhataTaqdeemAmr {
             Self::MashruGhayrMawjud { ism } | Self::MuharrikMajhul { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
             }
-            Self::KhututNaqisa { sabab } | Self::SandooqNaqis { sabab } => {
+            Self::KhututNaqisa { sabab }
+            | Self::SandooqNaqis { sabab }
+            | Self::MiftahMusahimMulgha { sabab } => {
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
             }
             Self::RukhsaMajhula { rukhsa } => {
@@ -2622,9 +3069,290 @@ impl Tafsir for KhataTaqdeemAmr {
             Self::LughaRasmiyaMawjuda { ism } => {
                 let _ = siyaq.insert("luba".to_owned(), QeemaSiyaq::Nass(ism.clone()));
             }
+            Self::TaqdeemMulgha { ruqaa, sabab } => {
+                let _ = siyaq.insert("ruqaa".to_owned(), QeemaSiyaq::Nass(ruqaa.clone()));
+                let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
+            }
         }
         siyaq
     }
 }
 
 khata_min!(KhataTaqdeemAmr);
+
+#[cfg(test)]
+mod ikhtibarat_tajawuz {
+    use std::path::{Path, PathBuf};
+    use std::sync::Arc;
+
+    use taarib_mustalahat::muraja::SijillMuraja;
+    use taarib_mustalahat::nass::{MasdarIstikhraj, QuyudNass, SiyaqNass, TasnifNass};
+    use taarib_saff::natija::TakhtitNass;
+    use taarib_saff::talab::{KhiyaratTakhtit, TalabTakhtit};
+    use taarib_saff::{MawridKhatt, Saff, SilsilatKhutut};
+    use taarib_tarqee::taqrir_tajawuz::{BaniTaqrirTajawuz, MudkhalQiyas};
+
+    use super::*;
+
+    /// What every test here answers with, so a fixture failure propagates with
+    /// `?`. `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar<T = ()> = Result<T, Box<dyn std::error::Error>>;
+
+    /// The size every fixture is drawn at, in pixels.
+    const HAJM: f32 = 20.0;
+
+    /// Three letters in a wide box.
+    const YASA: &str = "حفظ";
+    /// A sentence in a box built for one short word, unwrappable.
+    const LA_YASA: &str = "العودة إلى القائمة الرئيسية للعبة";
+    /// The state every string is in after static extraction: no box at all.
+    const BILA_ARD: &str = "خيارات";
+
+    /// The staged Arabic face, found by walking up from this crate.
+    fn masar_khatt() -> NatijatIkhtibar<PathBuf> {
+        const MURASHAH: &str = "apps/studio/src/khutut/IBMPlexSansArabic-Regular.ttf";
+        let mut dalil: Option<&Path> = Some(Path::new(env!("CARGO_MANIFEST_DIR")));
+        while let Some(jidhr) = dalil {
+            let murashah = jidhr.join(MURASHAH);
+            if murashah.is_file() {
+                return Ok(murashah);
+            }
+            dalil = jidhr.parent();
+        }
+        Err(format!("no Arabic font at or above {}", env!("CARGO_MANIFEST_DIR")).into())
+    }
+
+    fn silsila() -> NatijatIkhtibar<SilsilatKhutut> {
+        let bayt = std::fs::read(masar_khatt()?)?;
+        let mawrid = MawridKhatt::jadeed(Arc::new(bayt), 0).map_err(|khata| khata.injilizi)?;
+        Ok(SilsilatKhutut::wahid(Arc::new(mawrid)).map_err(|khata| khata.injilizi)?)
+    }
+
+    /// One single-line button, with the box a capture session recorded or none.
+    fn mudkhal(masdar: &str, hadaf: &str, ard: Option<f32>) -> MudkhalNass {
+        MudkhalNass {
+            id: NassId::min_mawqi("ui/menu.txt", "0", masdar),
+            masdar: masdar.to_owned(),
+            hadaf: Some(hadaf.to_owned()),
+            muraja: SijillMuraja::jadeed(),
+            siyaq: SiyaqNass {
+                hawiya: "ui/menu.txt".to_owned(),
+                mawqi: "0".to_owned(),
+                ..SiyaqNass::default()
+            },
+            quyud: QuyudNass {
+                hajm_khatt: Some(HAJM),
+                aqsa_ard: ard,
+                satr_wahid: true,
+                ..QuyudNass::default()
+            },
+            nasq_masdar: Vec::new(),
+            nasq_hadaf: Vec::new(),
+            takrar: 1,
+            majmua: None,
+            alamat: Vec::new(),
+            tareeqa: Some(TareeqaTarjama::AaliyaFaqat),
+            muzawwid: None,
+            muharrir: None,
+            akhir_tabdeel: None,
+            tasnif: TasnifNass::Qaima,
+            thiqat_tasnif: 90,
+            masdar_istikhraj: MasdarIstikhraj::Sakin,
+            tarmiz: None,
+        }
+    }
+
+    /// The string's Arabic, shaped through the real engine at its real box.
+    fn khattit(
+        saff: &mut Saff,
+        khutut: &SilsilatKhutut,
+        mudkhal: &MudkhalNass,
+    ) -> NatijatIkhtibar<TakhtitNass> {
+        let hadaf = mudkhal.hadaf.as_deref().ok_or("a translated fixture")?;
+        let khiyarat =
+            KhiyaratTakhtit { satr_wahid: mudkhal.quyud.satr_wahid, ..KhiyaratTakhtit::default() };
+        let takhtit = saff
+            .khattit(&TalabTakhtit {
+                nass: hadaf,
+                khutut,
+                hajm: HAJM,
+                ard_mutah: mudkhal.quyud.aqsa_ard,
+                irtifa_mutah: mudkhal.quyud.aqsa_irtifa,
+                nitaqat: &[],
+                khiyarat: &khiyarat,
+            })
+            .map_err(|khata| khata.injilizi)?;
+        Ok(takhtit)
+    }
+
+    /// A report over real layouts, the way precomputation builds it.
+    fn taqrir(nusus: &[MudkhalNass]) -> NatijatIkhtibar<TaqrirTajawuz> {
+        let khutut = silsila()?;
+        let mut saff = Saff::jadeed();
+        let takhtitat: Vec<TakhtitNass> = nusus
+            .iter()
+            .map(|mudkhal| khattit(&mut saff, &khutut, mudkhal))
+            .collect::<NatijatIkhtibar<Vec<TakhtitNass>>>()?;
+        let mut bani = BaniTaqrirTajawuz::jadeed();
+        for (mudkhal, takhtit) in nusus.iter().zip(&takhtitat) {
+            bani.sajjil(&MudkhalQiyas {
+                madkhal: mudkhal,
+                hajm: HAJM,
+                takhtit: Some(takhtit),
+                takhtit_asl: None,
+            });
+        }
+        Ok(bani.ikhtim())
+    }
+
+    /// The overflow row exactly as the gate emits it when its count is zero.
+    fn satr_ijtaz() -> SatrFahs {
+        SatrFahs {
+            band: BandFahs::Tahdheer(Tahdheer::TajawuzKatheer),
+            hala: HalatBand::Ijtaz,
+            nusus: Vec::new(),
+            adad: 0,
+            tafsil_arabi: "0 عبارة تستحقّ إعادة الصياغة قبل الإرسال.".to_owned(),
+            tafsil_injilizi: "0 string(s) overrun badly enough to be worth rewriting.".to_owned(),
+        }
+    }
+
+    /// One report holding one string of each kind crosses the wire as three
+    /// distinguishable outcomes, not as one list that happens to be short.
+    #[test]
+    fn al_ahwal_althalatha_tatamayaz_ala_alsilk() -> NatijatIkhtibar {
+        let nusus = vec![
+            mudkhal("Save", YASA, Some(400.0)),
+            mudkhal("Back to the main menu", LA_YASA, Some(40.0)),
+            mudkhal("Options", BILA_ARD, None),
+        ];
+        let taqrir = taqrir(&nusus)?;
+
+        let qiyas = qiyas_tajawuz_hie(&taqrir);
+        assert_eq!(qiyas.hala, "juzi", "{}", qiyas.wasf_injilizi);
+        assert_eq!(qiyas.maqis, 2);
+        assert_eq!(qiyas.salim, 1);
+        assert_eq!(qiyas.mutajawiz, 1);
+        assert_eq!(qiyas.ghayr_mutahaqqaq, 1);
+        assert_eq!(qiyas.nusus_ghayr_mutahaqqaqa, 1);
+        let Some(sabab) = qiyas.asbab.first() else { return Err("a cause is listed".into()) };
+        assert_eq!(sabab.miftah, "bila_ard_mutah");
+        assert_eq!(sabab.adad, 1);
+        assert!(!sabab.ilaj_injilizi.is_empty(), "a known cause carries its remedy");
+        assert!(
+            qiyas.wasf_injilizi.contains("could not be verified"),
+            "the sentence leads with what was not measured: {}",
+            qiyas.wasf_injilizi
+        );
+
+        let mutajawiz = tajawuz_hie(&taqrir);
+        assert_eq!(mutajawiz.len(), 1, "one string overran; the one that fitted is not listed");
+        let Some(satr) = mutajawiz.first() else { return Err("the overrun row".into()) };
+        assert_eq!(satr.nass, LA_YASA);
+        assert!(satr.ard > satr.mutah, "{}px of shaped Arabic in {}px", satr.ard, satr.mutah);
+        assert!(matches!(satr.shidda.as_str(), "shadid" | "qati"), "{}", satr.shidda);
+
+        let ghayr = ghayr_maqis_hie(&taqrir);
+        assert_eq!(ghayr.len(), 1);
+        let Some(satr) = ghayr.first() else { return Err("the unmeasured row".into()) };
+        assert_eq!(satr.nass, BILA_ARD);
+        assert_eq!(satr.sabab, "bila_ard_mutah");
+        Ok(())
+    }
+
+    /// The same passing gate row over three reports leaves as three states.
+    ///
+    /// This is the finding: the gate's own row read as a green check whether
+    /// the project was measured clean, measured in part, or never measured.
+    #[test]
+    fn al_bawwaba_la_tusawi_bayn_almaqis_wa_ghayr_almaqis() -> NatijatIkhtibar {
+        let kamil = taqrir(&[mudkhal("Save", YASA, Some(400.0))])?;
+        let juzi = taqrir(&[
+            mudkhal("Save", YASA, Some(400.0)),
+            mudkhal("Options", BILA_ARD, None),
+        ])?;
+        let lam_yuqas = taqrir(&[mudkhal("Options", BILA_ARD, None)])?;
+
+        let satr = satr_ijtaz();
+        let hie_kamil = satr_fahs_hie(&satr, &kamil);
+        let hie_juzi = satr_fahs_hie(&satr, &juzi);
+        let hie_lam_yuqas = satr_fahs_hie(&satr, &lam_yuqas);
+
+        assert_eq!(hie_kamil.hala, "ijtaz", "measured clean is the only green check");
+        assert_eq!(hie_juzi.hala, HALA_MAQIS_JUZI);
+        assert_eq!(hie_lam_yuqas.hala, HALA_GHAYR_MAQIS);
+        assert_ne!(hie_kamil.hala_arabi, hie_lam_yuqas.hala_arabi);
+        assert_ne!(hie_kamil.hala_injilizi, hie_lam_yuqas.hala_injilizi);
+        assert_ne!(hie_juzi.tafsil_injilizi, hie_kamil.tafsil_injilizi);
+        assert!(
+            hie_lam_yuqas.tafsil_injilizi.starts_with("No overflow was measured"),
+            "{}",
+            hie_lam_yuqas.tafsil_injilizi
+        );
+        assert!(hie_kamil.tafsil_injilizi.contains("Every one of 1 measurement(s)"));
+        for hie in [&hie_kamil, &hie_juzi, &hie_lam_yuqas] {
+            assert!(!hie.hasim, "an unmeasured project is told, not blocked");
+            assert_eq!(hie.band, "tajawuz_katheer");
+        }
+        Ok(())
+    }
+
+    /// The report the old code handed over never reads as a pass again.
+    #[test]
+    fn al_taqrir_alfarigh_la_yaqra_najahan() {
+        let farigh = TaqrirTajawuz::farigh();
+        let qiyas = qiyas_tajawuz_hie(&farigh);
+        assert_eq!(qiyas.hala, "farigh");
+        assert!(qiyas.asbab.is_empty());
+        let hie = satr_fahs_hie(&satr_ijtaz(), &farigh);
+        assert_eq!(hie.hala, HALA_GHAYR_MAQIS);
+        assert_ne!(hie.hala, "ijtaz");
+    }
+
+    /// A warning the gate raised keeps its own state; the measurement only
+    /// changes what the sentence beside it says.
+    #[test]
+    fn al_tahdheer_alqaim_yabqa() -> NatijatIkhtibar {
+        let lam_yuqas = taqrir(&[mudkhal("Options", BILA_ARD, None)])?;
+        let satr = SatrFahs { hala: HalatBand::YantazirIqrar, ..satr_ijtaz() };
+        let hie = satr_fahs_hie(&satr, &lam_yuqas);
+        assert_eq!(hie.hala, "yantazir_iqrar", "the acknowledgement path is not overridden");
+        assert!(hie.tafsil_injilizi.contains("could not be verified"));
+        Ok(())
+    }
+
+    /// Every other row leaves the gate's words untouched.
+    #[test]
+    fn al_sufuf_alukhra_la_tumass() -> NatijatIkhtibar {
+        let lam_yuqas = taqrir(&[mudkhal("Options", BILA_ARD, None)])?;
+        let satr = SatrFahs {
+            band: BandFahs::Hasim(FahsHasim::Taghtiya),
+            hala: HalatBand::Ijtaz,
+            nusus: Vec::new(),
+            adad: 0,
+            tafsil_arabi: "التغطية كافية.".to_owned(),
+            tafsil_injilizi: "Coverage is sufficient.".to_owned(),
+        };
+        let hie = satr_fahs_hie(&satr, &lam_yuqas);
+        assert_eq!(hie.hala, "ijtaz");
+        assert_eq!(hie.tafsil_injilizi, "Coverage is sufficient.");
+        assert!(hie.hasim);
+        Ok(())
+    }
+
+    /// A summary key this build does not know is sent as its key, never worded
+    /// as some other cause and never given another cause's remedy.
+    #[test]
+    fn sabab_majhul_la_yusagh_bi_sabab_akhar() {
+        let mut mulakhkhas = MulakhkhasTajawuz::default();
+        let _ = mulakhkhas.hasab_sabab.insert("min_bina_ajdad".to_owned(), 3);
+        let _ = mulakhkhas.hasab_sabab.insert("bila_ard_mutah".to_owned(), 1);
+        let asbab = asbab_qiyas_hie(&mulakhkhas);
+        assert_eq!(asbab.len(), 2);
+        let Some(awwal) = asbab.first() else { return };
+        assert_eq!(awwal.miftah, "min_bina_ajdad", "most common first");
+        assert_eq!(awwal.wasf_injilizi, "min_bina_ajdad");
+        assert!(awwal.ilaj_injilizi.is_empty());
+        assert_eq!(aghlab_sabab(&mulakhkhas), None, "an unknown cause is not worded");
+    }
+}

@@ -10,7 +10,7 @@ use taarib_usus::khata::Tafsir as _;
 use taarib_usus::manassa::{self, HalatTashghil};
 use taarib_usus::masarat;
 
-use crate::bayan::{MahallIdad, Muthabbit, SijillIdad};
+use crate::bayan::{BayanTathbeet, MahallIdad, Muthabbit, SijillIdad};
 use crate::khata::{KhataTathbeet, NatijatTathbeet, min_khata_io};
 use crate::taraju::RadIdad;
 
@@ -26,6 +26,12 @@ pub const MANASSA_LUTRIS: &str = "lutris";
 /// The environment variable Wine and Proton read DLL overrides from.
 pub const MUTAGHAYYIR_TAJAWUZ: &str = "WINEDLLOVERRIDES";
 
+/// The environment variable a Linux game preloads a shared object from.
+pub const MUTAGHAYYIR_TAHMIL_LINUX: &str = "LD_PRELOAD";
+
+/// The environment variable a macOS game preloads a dynamic library from.
+pub const MUTAGHAYYIR_TAHMIL_MAC: &str = "DYLD_INSERT_LIBRARIES";
+
 /// The one override entry the framework's Windows loader needs: native first,
 /// builtin second.
 pub const TAJAWUZ_TAARIB: &str = "winhttp=n,b";
@@ -38,6 +44,24 @@ pub const MIFTAH_KHIYARAT: &str = "LaunchOptions";
 
 /// The file name of the account configuration Steam keeps launch options in.
 pub const ISM_MALAF_STEAM: &str = "localconfig.vdf";
+
+/// The directory under a Steam root that holds one profile per signed-in
+/// account.
+pub const MUJALLAD_HISABAT: &str = "userdata";
+
+/// The key prefix a per-account launch-options record carries.
+///
+/// One record per account file, never one per game: two accounts on one machine
+/// have two `localconfig.vdf` files with two different previous values, and a
+/// single record could only hold one of them. Restoring that one into both is
+/// how an uninstall writes one person's launch options into another person's
+/// account.
+///
+/// The record is also *self-describing*: [`MahallIdad::MalafIdad`] carries the
+/// account file's absolute path beside this key, so [`KhiyaratSteam::min_mahall`]
+/// rebuilds the writer from the record alone and an uninstall needs no side
+/// channel telling it where Steam is.
+pub const MIFTAH_SIJILL: &str = "steam:LaunchOptions";
 
 /// The directory Heroic keeps one JSON file per game in.
 pub const MUJALLAD_HEROIC: &str = "GamesConfig";
@@ -88,15 +112,48 @@ pub fn tajawuz_maa(hali: Option<&str>) -> String {
 /// leaving the value alone when it already carries it.
 #[must_use]
 pub fn dam_tajawuz(hali: Option<&str>, jadeed: &str) -> String {
+    dam_qaima(hali, jadeed, ';')
+}
+
+/// Merges one entry into a separated list value, leaving the value alone when
+/// it already carries that entry.
+///
+/// The one merge for every list-valued launch variable, so that adding a second
+/// separator is adding a character rather than a second implementation of
+/// «keep what the user has and add one thing».
+fn dam_qaima(hali: Option<&str>, jadeed: &str, fasil: char) -> String {
     let sabiq = hali.unwrap_or("").trim();
     let jadeed = jadeed.trim();
     if sabiq.is_empty() {
         return jadeed.to_owned();
     }
-    if jadeed.is_empty() || madakhil_tajawuz(sabiq).any(|madkhal| madkhal == jadeed) {
+    if jadeed.is_empty() || madakhil_qaima(sabiq, fasil).any(|madkhal| madkhal == jadeed) {
         return sabiq.to_owned();
     }
-    format!("{sabiq};{jadeed}")
+    format!("{sabiq}{fasil}{jadeed}")
+}
+
+/// The entries of a separated list value, empty ones dropped.
+fn madakhil_qaima(qeema: &str, fasil: char) -> impl Iterator<Item = &str> {
+    qeema.split(fasil).map(str::trim).filter(|madkhal| !madkhal.is_empty())
+}
+
+/// The separator a variable lists its entries with, for the variables whose
+/// value Taarib adds one entry to rather than replaces.
+///
+/// [`None`] means «this variable is not a list»: Taarib sets it outright and the
+/// value that was there is put back verbatim on uninstall. Guessing a separator
+/// for an unknown variable would turn `PROTON_NO_ESYNC=0` into `0:1`.
+const fn fasil_qaima(ism: &str) -> Option<char> {
+    if ism.eq_ignore_ascii_case(MUTAGHAYYIR_TAJAWUZ) {
+        Some(';')
+    } else if ism.eq_ignore_ascii_case(MUTAGHAYYIR_TAHMIL_LINUX)
+        || ism.eq_ignore_ascii_case(MUTAGHAYYIR_TAHMIL_MAC)
+    {
+        Some(':')
+    } else {
+        None
+    }
 }
 
 /// Removes Taarib's override entry from a `WINEDLLOVERRIDES` value.
@@ -109,17 +166,33 @@ pub fn bidun_tajawuz(hali: &str) -> Option<String> {
 
 /// The entries of a `WINEDLLOVERRIDES` value, empty ones dropped.
 fn madakhil_tajawuz(qeema: &str) -> impl Iterator<Item = &str> {
-    qeema.split(';').map(str::trim).filter(|madkhal| !madkhal.is_empty())
+    madakhil_qaima(qeema, ';')
 }
 
 /// Builds the launch-options value that adds Taarib's preload to what the user
 /// already had, extending an existing assignment in place.
 #[must_use]
 pub fn khiyarat_maa_tahmeel(sabiqa: Option<&str>) -> String {
-    let hali = sabiqa.unwrap_or("").trim();
-    let mawjuda = mawqi_tajawuz(hali).map(|(_, _, qeema)| qeema);
-    let dumija = dam_tajawuz(mawjuda.as_deref(), TAJAWUZ_TAARIB);
-    khiyarat_maa_mutaghayyir(sabiqa, MUTAGHAYYIR_TAJAWUZ, &dumija)
+    khiyarat_maa_isnad(sabiqa, MUTAGHAYYIR_TAJAWUZ, TAJAWUZ_TAARIB)
+}
+
+/// Builds the launch-options value that carries one environment assignment,
+/// merging into a list-valued variable and replacing any other.
+///
+/// Idempotent, and that is the property the whole install path rests on: a
+/// second install over the first must not put a second copy of Taarib's
+/// assignment in front of the game's command line.
+#[must_use]
+pub fn khiyarat_maa_isnad(sabiqa: Option<&str>, ism: &str, qeema: &str) -> String {
+    let mawjuda = sabiqa
+        .map(str::trim)
+        .and_then(|hali| mawqi_mutaghayyir(hali, ism))
+        .map(|(_, _, qeema)| qeema);
+    let matluba = match fasil_qaima(ism) {
+        Some(fasil) => dam_qaima(mawjuda.as_deref(), qeema, fasil),
+        None => qeema.to_owned(),
+    };
+    khiyarat_maa_mutaghayyir(sabiqa, ism, &matluba)
 }
 
 /// Builds the launch-options value that sets one environment variable in front
@@ -213,6 +286,141 @@ pub fn khiyarat_bidun_tahmeel(hali: &str, kan_fih_amr: bool) -> String {
 #[must_use]
 pub fn fihi_ramz_amr(qeema: &str) -> bool {
     mawqi_ramz_amr(qeema).is_some()
+}
+
+/// One environment assignment a recorded launch requirement puts in front of
+/// the game's own command line.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IsnadItlaq {
+    /// The variable's name.
+    pub ism: String,
+    /// The value, with the quoting a launch-options field carries it in
+    /// removed.
+    pub qeema: String,
+}
+
+/// Splits a launch-options value the way a launcher's own command-line parser
+/// does: on whitespace outside quotes, with the quotes removed.
+///
+/// `A="x y" B` is two words and not three, which is the whole reason this is
+/// not `split_whitespace`.
+fn wahdat_amr(nass: &str) -> Vec<String> {
+    let mut wahdat = Vec::new();
+    let mut hali = String::new();
+    let mut bada = false;
+    let mut iqtibas: Option<char> = None;
+    for harf in nass.chars() {
+        match iqtibas {
+            Some(fatih) if harf == fatih => iqtibas = None,
+            Some(_) => hali.push(harf),
+            None if harf == '"' || harf == '\'' => {
+                iqtibas = Some(harf);
+                bada = true;
+            }
+            None if harf.is_whitespace() => {
+                if bada {
+                    wahdat.push(std::mem::take(&mut hali));
+                    bada = false;
+                }
+            }
+            None => {
+                hali.push(harf);
+                bada = true;
+            }
+        }
+    }
+    if bada {
+        wahdat.push(hali);
+    }
+    wahdat
+}
+
+/// Reads a recorded launch-options requirement as the assignments it adds.
+///
+/// `matlub` is what the plan said the field must hold and `sabiq` is what the
+/// planner composed it against, so the difference between them is the part
+/// Taarib is asking for. Both are needed because the same recorded string is
+/// applied to several accounts and only the added part travels between them —
+/// one account's own `-dx11` must not be written into another's field.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::IdadGhayrMunaffadh`] when the requirement carries a word that
+/// is not an environment assignment, when it never names [`RAMZ_AMR`], when it
+/// asks for nothing at all, or when it assigns a variable the previous value
+/// also assigned — in which case the recorded string merged one account's value
+/// into the requirement and is not a requirement any other account can be given.
+pub fn isnadat_talab(
+    mahall: &str,
+    matlub: &str,
+    sabiq: Option<&str>,
+) -> NatijatTathbeet<Vec<IsnadItlaq>> {
+    if !fihi_ramz_amr(matlub) {
+        return Err(khata_tanfidh(
+            mahall,
+            format!(
+                "the recorded requirement `{matlub}` never names {RAMZ_AMR}, so it does not \
+                 say where the game's own command line goes"
+            ),
+        ));
+    }
+
+    let asmaa_sabiqa: Vec<String> = sabiq
+        .map(wahdat_amr)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|wahda| wahda.split_once('=').map(|(ism, _)| ism.to_ascii_uppercase()))
+        .collect();
+    let mut baqiya: Vec<String> = sabiq.map(wahdat_amr).unwrap_or_default();
+
+    let mut isnadat: Vec<IsnadItlaq> = Vec::new();
+    for wahda in wahdat_amr(matlub) {
+        // A word the field already held is the user's, whatever it looks like.
+        if let Some(mawqi) = baqiya.iter().position(|qadeem| *qadeem == wahda) {
+            let _ = baqiya.remove(mawqi);
+            continue;
+        }
+        if wahda.eq_ignore_ascii_case(RAMZ_AMR) {
+            continue;
+        }
+        let Some((ism, qeema)) = wahda.split_once('=') else {
+            return Err(khata_tanfidh(
+                mahall,
+                format!(
+                    "the recorded requirement carries the word `{wahda}`, which is not an \
+                     environment assignment; this build only knows how to put assignments in \
+                     front of a game's command line and refused rather than guess"
+                ),
+            ));
+        };
+        if ism.is_empty() || !ism.chars().all(|harf| harf.is_ascii_alphanumeric() || harf == '_') {
+            return Err(khata_tanfidh(
+                mahall,
+                format!("`{ism}` is not a name an environment variable can have"),
+            ));
+        }
+        if asmaa_sabiqa.iter().any(|qadeem| *qadeem == ism.to_ascii_uppercase()) {
+            return Err(khata_tanfidh(
+                mahall,
+                format!(
+                    "the recorded requirement assigns {ism}, which the value it was composed \
+                     against also assigned, so it carries one account's own setting; a value \
+                     merged for one account is not one another account may be given"
+                ),
+            ));
+        }
+        isnadat.push(IsnadItlaq { ism: ism.to_owned(), qeema: qeema.to_owned() });
+    }
+
+    if isnadat.is_empty() {
+        return Err(khata_tanfidh(
+            mahall,
+            "the recorded requirement adds nothing to what was already there, so there is \
+             nothing to write and nothing an uninstall could take back"
+                .to_owned(),
+        ));
+    }
+    Ok(isnadat)
 }
 
 /// Builds the command prefix a wrapper launcher runs the game through, in the
@@ -365,6 +573,16 @@ fn khata_shakl(masar: &Path, amal: &'static str, sabab: String) -> KhataTathbeet
         amal,
         sabab: std::io::Error::other(sabab),
     }
+}
+
+/// Builds the refusal raised when a recorded setting cannot be carried out.
+///
+/// The install-side twin of [`khata_idad`], and a distinct variant rather than a
+/// file error because the sentence a person reads has to name the setting and
+/// say why: [`KhataTathbeet::KhataMalaf`] carries its reason as a source and
+/// drops it on the way to the screen.
+fn khata_tanfidh(mahall: &str, sabab: String) -> KhataTathbeet {
+    KhataTathbeet::IdadGhayrMunaffadh { mahall: mahall.to_owned(), sabab }
 }
 
 /// Builds the refusal a [`RadIdad`] raises when a setting cannot be put back.
@@ -883,12 +1101,39 @@ impl KhiyaratSteam {
     }
 
     /// Where a change to these launch options is recorded.
+    ///
+    /// [`MahallIdad::MalafIdad`] and not [`MahallIdad::KhiyaratTashghil`],
+    /// because the record has to name the **account file** and not only the
+    /// game. `KhiyaratTashghil` keys on the launcher and the game, so a machine
+    /// with two signed-in accounts would collapse two different previous values
+    /// into one record — and an uninstall restoring that one record into both
+    /// files writes one person's launch options into the other person's
+    /// account. Steam's per-account configuration genuinely lives outside the
+    /// game, which is exactly what `MalafIdad` is for.
     #[must_use]
     pub fn mahall(&self) -> MahallIdad {
-        MahallIdad::KhiyaratTashghil {
-            manassa: MANASSA_STEAM.to_owned(),
-            muarrif_luba: self.app.clone(),
+        MahallIdad::MalafIdad {
+            masar: self.malaf.display().to_string(),
+            miftah: format!("{MIFTAH_SIJILL}:{}", self.app),
         }
+    }
+
+    /// The writer a record describes, or [`None`] for a record this module did
+    /// not write.
+    ///
+    /// The record carries the account file's absolute path and the application
+    /// identifier, so an uninstall reconstructs the writer from the manifest
+    /// alone. Nothing has to tell it where Steam is, which is what lets the
+    /// restore work on a machine whose Steam has since moved or whose settings
+    /// were never asked.
+    #[must_use]
+    pub fn min_mahall(mahall: &MahallIdad) -> Option<Self> {
+        let MahallIdad::MalafIdad { masar, miftah } = mahall else { return None };
+        let app = miftah.strip_prefix(MIFTAH_SIJILL)?.strip_prefix(':')?;
+        if app.is_empty() || masar.is_empty() {
+            return None;
+        }
+        Some(Self::jadeeda(PathBuf::from(masar), app))
     }
 
     /// The launch options this account currently has for this game.
@@ -908,16 +1153,71 @@ impl KhiyaratSteam {
     ///
     /// # Errors
     ///
+    /// As [`KhiyaratSteam::athbit_talab`].
+    pub fn athbit(&self, muthabbit: &mut dyn Muthabbit) -> NatijatTathbeet<bool> {
+        self.athbit_talab(muthabbit, &[IsnadItlaq {
+            ism: MUTAGHAYYIR_TAJAWUZ.to_owned(),
+            qeema: TAJAWUZ_TAARIB.to_owned(),
+        }])
+    }
+
+    /// Puts a set of environment assignments in front of this game's command
+    /// line, recording the previous value before the file is rewritten.
+    ///
+    /// # Errors
+    ///
     /// [`KhataTathbeet::MunassaTaamal`] while Steam is running and
     /// [`KhataTathbeet::HalatManassaMajhula`] when a sandbox hides whether it
     /// is, whatever recording the previous value raises, and
     /// [`KhataTathbeet::KhataMalaf`] when the file will not parse, has no
     /// `apps` block, or cannot be written.
-    pub fn athbit(&self, muthabbit: &mut dyn Muthabbit) -> NatijatTathbeet<bool> {
-        manassa_mughlaqa(&ASMAA_STEAM, ISM_STEAM, &self.malaf)?;
+    pub fn athbit_talab(
+        &self,
+        muthabbit: &mut dyn Muthabbit,
+        isnadat: &[IsnadItlaq],
+    ) -> NatijatTathbeet<bool> {
+        self.athbit_bi_hala(halat_manassa(&ASMAA_STEAM), muthabbit, isnadat)
+    }
+
+    /// The body of [`KhiyaratSteam::athbit_talab`] with the launcher verdict
+    /// supplied rather than observed.
+    ///
+    /// Split for the reason [`hukm_manassa`] is split, and for a second one: a
+    /// run that touches several accounts must reach one verdict and act on it,
+    /// not ask the process table once per file and edit the first three
+    /// accounts before the fourth notices Steam has just been opened.
+    fn athbit_bi_hala(
+        &self,
+        hala: HalatTashghil,
+        muthabbit: &mut dyn Muthabbit,
+        isnadat: &[IsnadItlaq],
+    ) -> NatijatTathbeet<bool> {
+        hukm_manassa(hala, ISM_STEAM, &self.malaf)?;
+        if isnadat.is_empty() {
+            return Ok(false);
+        }
+        // The record names this file as text, and an uninstall rebuilds the
+        // writer from that text. A path that does not survive the round trip
+        // would be recorded as something close to itself and restored into
+        // nothing, so it is refused while the file is still untouched.
+        if self.malaf.to_str().is_none() {
+            return Err(khata_tanfidh(
+                &self.mahall().wasf(),
+                format!(
+                    "the path of {} is not valid UTF-8, so the record of the change could not \
+                     name the file an uninstall would have to edit",
+                    self.malaf.display()
+                ),
+            ));
+        }
         let nass = iqra_idad(&self.malaf, "reading Steam's launch options")?;
         let sabiqa = self.qeema_min(&nass)?;
-        let jadeeda = khiyarat_maa_tahmeel(sabiqa.as_deref());
+
+        let mut jadeeda = sabiqa.clone();
+        for isnad in isnadat {
+            jadeeda = Some(khiyarat_maa_isnad(jadeeda.as_deref(), &isnad.ism, &isnad.qeema));
+        }
+        let Some(jadeeda) = jadeeda else { return Ok(false) };
         if sabiqa.as_deref() == Some(jadeeda.as_str()) {
             return Ok(false);
         }
@@ -939,31 +1239,32 @@ impl KhiyaratSteam {
         Ok(shajara.nass_bi_masar(&masar).map(str::to_owned))
     }
 
-    /// Refuses a record that belongs to another launcher or another game.
+    /// Refuses a record that belongs to another account file or another game.
     fn tahaqquq_min(&self, sijill: &SijillIdad) -> Result<(), KhataTathbeet> {
-        match &sijill.mahall {
-            MahallIdad::KhiyaratTashghil { manassa, muarrif_luba }
-                if manassa.eq_ignore_ascii_case(MANASSA_STEAM) && *muarrif_luba == self.app =>
-            {
-                Ok(())
-            }
-            _ => Err(khata_idad(
-                sijill,
-                format!(
-                    "this restorer was built for {MANASSA_STEAM} application {} and was handed \
-                     a record for something else, so it refused rather than edit the wrong \
-                     game's options",
-                    self.app
-                ),
-            )),
+        if sijill.mahall == self.mahall() {
+            return Ok(());
         }
+        Err(khata_idad(
+            sijill,
+            format!(
+                "this restorer was built for {MANASSA_STEAM} application {} in {} and was \
+                 handed a record for something else, so it refused rather than edit the wrong \
+                 account's options",
+                self.app,
+                self.malaf.display()
+            ),
+        ))
     }
-}
 
-impl RadIdad for KhiyaratSteam {
-    fn rudd(&mut self, sijill: &SijillIdad) -> Result<(), KhataTathbeet> {
+    /// The body of the restore with the launcher verdict supplied rather than
+    /// observed.
+    fn rudd_bi_hala(
+        &self,
+        hala: HalatTashghil,
+        sijill: &SijillIdad,
+    ) -> Result<(), KhataTathbeet> {
         self.tahaqquq_min(sijill)?;
-        manassa_mughlaqa(&ASMAA_STEAM, ISM_STEAM, &self.malaf)?;
+        hukm_manassa(hala, ISM_STEAM, &self.malaf)?;
 
         let nass = iqra_idad(&self.malaf, "reading Steam's launch options")
             .map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))?;
@@ -971,22 +1272,36 @@ impl RadIdad for KhiyaratSteam {
             .qeema_min(&nass)
             .map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))?;
 
-        // A field the user cleared is not one Taarib's record may resurrect.
-        let Some(hali) = hali else { return Ok(()) };
+        // A field the user cleared is not one Taarib's record may resurrect:
+        // what Taarib added is verifiably gone, and putting the rest back would
+        // resurrect options the person deleted themselves. Emptied and deleted
+        // are the same answer to that question — Steam's properties dialog
+        // produces the first and only a hand edit produces the second.
+        let Some(hali) = hali.filter(|qeema| !qeema.is_empty()) else { return Ok(()) };
 
-        let kharij = if sijill.qeema_maktuba.as_deref() == Some(hali.as_str()) {
-            match &sijill.qeema_sabiqa {
-                Some(sabiqa) => nass_bi_khiyarat(&self.malaf, &nass, &self.app, sabiqa),
-                None => nass_bila_khiyarat(&self.malaf, &nass, &self.app),
-            }
-        } else {
-            let kan_fih_amr = sijill.qeema_sabiqa.as_deref().is_some_and(fihi_ramz_amr);
-            let baqiya = khiyarat_bidun_tahmeel(&hali, kan_fih_amr);
-            if baqiya.is_empty() {
-                nass_bila_khiyarat(&self.malaf, &nass, &self.app)
-            } else {
-                nass_bi_khiyarat(&self.malaf, &nass, &self.app, &baqiya)
-            }
+        // Exact, or nothing. The alternative — subtracting what Taarib thinks
+        // it added from whatever is in the field now — decides on a stale
+        // record whether a `%command%` belongs to the user or to Taarib, and
+        // gets it wrong for anybody who added a wrapper after installing.
+        if sijill.qeema_maktuba.as_deref() != Some(hali.as_str()) {
+            return Err(khata_idad(
+                sijill,
+                format!(
+                    "the launch options for application {} in {} now read `{hali}` and not the \
+                     `{}` Taarib wrote, so the field was edited after the install. It was left \
+                     exactly as it is: removing a value Taarib did not write would take away \
+                     somebody's own setting. Clear Taarib's part by hand and run the uninstall \
+                     again.",
+                    self.app,
+                    self.malaf.display(),
+                    sijill.qeema_maktuba.as_deref().unwrap_or("<nothing>")
+                ),
+            ));
+        }
+
+        let kharij = match &sijill.qeema_sabiqa {
+            Some(sabiqa) => nass_bi_khiyarat(&self.malaf, &nass, &self.app, sabiqa),
+            None => nass_bila_khiyarat(&self.malaf, &nass, &self.app),
         }
         .map_err(|khata| khata_idad(sijill, khata_ila_sabab(&khata)))?;
 
@@ -995,10 +1310,146 @@ impl RadIdad for KhiyaratSteam {
     }
 }
 
+impl RadIdad for KhiyaratSteam {
+    fn rudd(&mut self, sijill: &SijillIdad) -> Result<(), KhataTathbeet> {
+        self.rudd_bi_hala(halat_manassa(&ASMAA_STEAM), sijill)
+    }
+}
+
 /// The English sentence of a failure, for a refusal that carries a reason
 /// rather than a source.
 fn khata_ila_sabab(khata: &KhataTathbeet) -> String {
     khata.injilizi()
+}
+
+// ---------------------------------------------------------------------------
+// Performing the launch-option requirements one installation recorded
+// ---------------------------------------------------------------------------
+
+/// The Steam application a recorded launch-option requirement is for, or
+/// [`None`] for a record that is not one.
+///
+/// `tarkib` records the requirement against the launcher's own identifier for
+/// the game — `steam:480` — because that is what [`MasdarLuba::muarrif`] says;
+/// the file itself keys on the bare number, so the prefix comes off here and in
+/// exactly one place.
+///
+/// [`MasdarLuba::muarrif`]: taarib_mustalahat::luba::MasdarLuba::muarrif
+#[must_use]
+pub fn app_talab_steam(mahall: &MahallIdad) -> Option<&str> {
+    let MahallIdad::KhiyaratTashghil { manassa, muarrif_luba } = mahall else { return None };
+    if !manassa.eq_ignore_ascii_case(MANASSA_STEAM) && !manassa.eq_ignore_ascii_case(ISM_STEAM) {
+        return None;
+    }
+    let app = muarrif_luba
+        .strip_prefix(MANASSA_STEAM)
+        .and_then(|baqi| baqi.strip_prefix(':'))
+        .unwrap_or(muarrif_luba);
+    if app.is_empty() { None } else { Some(app) }
+}
+
+/// Every launch-option requirement a manifest holds for Steam, in record order.
+///
+/// The deployment records what the launcher's field must hold and performs
+/// nothing; this is the list that has to be performed for the framework it just
+/// deployed to load at all.
+#[must_use]
+pub fn talabat_steam(bayan: &BayanTathbeet) -> Vec<SijillIdad> {
+    bayan
+        .idadat()
+        .filter(|sijill| app_talab_steam(&sijill.mahall).is_some())
+        .cloned()
+        .collect()
+}
+
+/// Applies every recorded Steam launch-option requirement, to every account on
+/// this machine that has a configuration file.
+///
+/// **Every account, and one verdict for all of them.** A machine with two
+/// signed-in accounts starts the game from whichever one is signed in, and a
+/// framework that loads for one person and not the other is an install that
+/// works on Tuesdays. Each account's own previous value is read from its own
+/// file and recorded against its own record, so an uninstall puts each of them
+/// back to what *that* account had.
+///
+/// The launcher guard is asked once, before anything is recorded or written,
+/// and its answer governs the whole run: Steam rewrites `localconfig.vdf` from
+/// memory when it exits, so an edit made while it is up is erased without a
+/// trace, and a build that cannot see the process table has not seen Steam
+/// closed.
+///
+/// Returns how many account files were changed. Zero is a real answer — every
+/// account already carried the assignment, which is what a second install over
+/// the first produces.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::MunassaTaamal`] while Steam is running,
+/// [`KhataTathbeet::HalatManassaMajhula`] when a sandbox hides whether it is,
+/// [`KhataTathbeet::IdadGhayrMunaffadh`] when there is no Steam root to apply the
+/// requirement in, when the root holds no account configuration at all, or when
+/// the recorded requirement is not a set of environment assignments, and
+/// [`KhataTathbeet::KhataMalaf`] when an account's file will not parse or cannot
+/// be written. Plus whatever recording the previous value raises.
+pub fn naffidh_talabat_steam(
+    muthabbit: &mut dyn Muthabbit,
+    talabat: &[SijillIdad],
+    jidhr_steam: Option<&Path>,
+) -> NatijatTathbeet<usize> {
+    naffidh_bi_hala(halat_manassa(&ASMAA_STEAM), muthabbit, talabat, jidhr_steam)
+}
+
+/// The body of [`naffidh_talabat_steam`] with the launcher verdict supplied
+/// rather than observed.
+fn naffidh_bi_hala(
+    hala: HalatTashghil,
+    muthabbit: &mut dyn Muthabbit,
+    talabat: &[SijillIdad],
+    jidhr_steam: Option<&Path>,
+) -> NatijatTathbeet<usize> {
+    if talabat.is_empty() {
+        return Ok(0);
+    }
+
+    // A requirement nobody can apply is not a requirement that quietly does not
+    // apply: the framework was just deployed and will not load without it.
+    let Some(jidhr) = jidhr_steam else {
+        let mahall = talabat.first().map_or_else(String::new, |talab| talab.mahall.wasf());
+        return Err(khata_tanfidh(
+            &mahall,
+            "this install was given no Steam root to apply the requirement in, so there is no \
+             account configuration to write it to"
+                .to_owned(),
+        ));
+    };
+    let hisabat = jidhr.join(MUJALLAD_HISABAT);
+    hukm_manassa(hala, ISM_STEAM, &hisabat)?;
+
+    let mut adad = 0_usize;
+    for talab in talabat {
+        let Some(app) = app_talab_steam(&talab.mahall) else { continue };
+        let Some(matlub) = talab.qeema_maktuba.as_deref() else { continue };
+        let mahall = talab.mahall.wasf();
+        let isnadat = isnadat_talab(&mahall, matlub, talab.qeema_sabiqa.as_deref())?;
+
+        let kuttab = KhiyaratSteam::li_kul_hisab(jidhr, app);
+        if kuttab.is_empty() {
+            return Err(khata_tanfidh(
+                &mahall,
+                format!(
+                    "no Steam account under {} has a {ISM_MALAF_STEAM}, so there is nowhere \
+                     to put the launch options application {app} needs",
+                    hisabat.display()
+                ),
+            ));
+        }
+        for katib in &kuttab {
+            if katib.athbit_bi_hala(hala, muthabbit, &isnadat)? {
+                adad = adad.saturating_add(1);
+            }
+        }
+    }
+    Ok(adad)
 }
 
 /// A launcher that puts itself between the user and the game's executable and
@@ -1792,6 +2243,53 @@ impl RadItlaq {
         Self::default()
     }
 
+    /// The restorer a manifest's own records describe, with nothing else told
+    /// to it.
+    ///
+    /// Every launch-options record this crate writes names the account file it
+    /// changed, so the set of writers an uninstall needs is derivable from the
+    /// manifest and from nothing on the machine. That is what lets the restore
+    /// run on a machine whose Steam has moved, whose settings were never asked,
+    /// or which has since signed a third account in — none of which may change
+    /// which files an uninstall is entitled to edit.
+    #[must_use]
+    pub fn min_sijillat(sijillat: &[SijillIdad]) -> Self {
+        let mut radd = Self::jadeed();
+        for sijill in sijillat {
+            if let Some(katib) = KhiyaratSteam::min_mahall(&sijill.mahall) {
+                radd.khiyarat.push(katib);
+            }
+        }
+        radd
+    }
+
+    /// Whether this restorer is the one that owns a recorded setting.
+    ///
+    /// Two answers are yes: a per-account record this module wrote, and the
+    /// launcher requirement the deployment recorded for a game whose accounts
+    /// this restorer already holds writers for — the requirement is what those
+    /// per-account records were written *from*, and undoing them is undoing it.
+    ///
+    /// Everything else is no, including a launch-options requirement with no
+    /// per-account record behind it. That combination means the requirement was
+    /// recorded and never performed, and answering it here would be reporting a
+    /// setting restored that was never applied.
+    #[must_use]
+    pub fn yamlik(&self, mahall: &MahallIdad) -> bool {
+        match mahall {
+            MahallIdad::MalafIdad { .. } => KhiyaratSteam::min_mahall(mahall).is_some(),
+            MahallIdad::KhiyaratTashghil { .. } => {
+                app_talab_steam(mahall).is_some_and(|app| self.yughatti(app))
+            }
+            MahallIdad::SijillWindows { .. } | MahallIdad::MutaghayyirBeea { .. } => false,
+        }
+    }
+
+    /// Whether a per-account writer for this application is held.
+    fn yughatti(&self, app: &str) -> bool {
+        self.khiyarat.iter().any(|katib| katib.app == app)
+    }
+
     /// Adds a Steam launch-options writer.
     #[must_use]
     pub fn bi_steam(mut self, khiyarat: KhiyaratSteam) -> Self {
@@ -1834,7 +2332,25 @@ impl RadItlaq {
 impl RadIdad for RadItlaq {
     fn rudd(&mut self, sijill: &SijillIdad) -> Result<(), KhataTathbeet> {
         match &sijill.mahall {
+            MahallIdad::MalafIdad { .. } => match KhiyaratSteam::min_mahall(&sijill.mahall) {
+                Some(mut katib) => katib.rudd(sijill),
+                None => Err(khata_idad(
+                    sijill,
+                    format!(
+                        "this setting is not one launch integration writes; it belongs to {}",
+                        sijill.mahall.masul()
+                    ),
+                )),
+            },
             MahallIdad::KhiyaratTashghil { manassa, muarrif_luba } => {
+                // The requirement the deployment recorded, already carried out
+                // by the per-account records this restorer holds writers for.
+                // Nothing is left to write here, and saying so is not the same
+                // as saying nothing happened: the account records are iterated
+                // in this same pass and each one puts its own file back.
+                if self.yamlik(&sijill.mahall) {
+                    return Ok(());
+                }
                 if manassa.eq_ignore_ascii_case(MANASSA_STEAM) {
                     if let Some(katib) =
                         self.khiyarat.iter_mut().find(|katib| katib.app == *muarrif_luba)
@@ -1875,7 +2391,7 @@ impl RadIdad for RadItlaq {
                     ),
                 ))
             }
-            MahallIdad::SijillWindows { .. } | MahallIdad::MalafIdad { .. } => Err(khata_idad(
+            MahallIdad::SijillWindows { .. } => Err(khata_idad(
                 sijill,
                 format!(
                     "this setting is not one launch integration writes; it belongs to {}",
@@ -1895,19 +2411,86 @@ impl RadIdad for RadItlaq {
               and honouring them here would mean a test that cannot fail"
 )]
 mod ikhtibarat {
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
-    use taarib_usus::khata::{Khutwa, Tafsir as _};
+    use taarib_usus::khata::{Khutwa, QismIdadat, Tafsir as _};
     use taarib_usus::manassa::{RuyatAmaliyat, Sunduq, ruyat_amaliyat};
 
-    use super::{ASMAA_STEAM, HalatTashghil, KhataTathbeet, halat_manassa, hukm_manassa};
+    use super::{
+        ASMAA_STEAM, HalatTashghil, IsnadItlaq, KhataTathbeet, KhiyaratSteam, MANASSA_STEAM,
+        MIFTAH_SIJILL, MUTAGHAYYIR_TAHMIL_LINUX, MUTAGHAYYIR_TAJAWUZ, MahallIdad, Muthabbit,
+        RAMZ_AMR, RadItlaq, SijillIdad, TAJAWUZ_TAARIB, app_talab_steam,
+        halat_manassa, hukm_manassa, isnadat_talab, khiyarat_maa_isnad, naffidh_bi_hala,
+        wahdat_amr,
+    };
 
     /// Executable names nothing on any machine is running.
     const ASMAA_MUSTAHILA: [&str; 2] =
         ["la-tujad-hadhihi-al-manassa", "wala-hadhihi-al-manassa-aydan"];
 
+    /// The two verdicts that must stop a launcher edit, whatever else is true.
+    const HALAT_RAFIDA: [HalatTashghil; 4] = [
+        HalatTashghil::Tashtaghil,
+        HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Flatpak },
+        HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Snap },
+        HalatTashghil::GhayrMaaruf { sunduq: Sunduq::Hawiya },
+    ];
+
     fn malaf() -> &'static Path {
         Path::new("/taarib/localconfig.vdf")
+    }
+
+    /// The setting description a refusal names, for the parser's own tests.
+    const MAHALL_IKHTIBAR: &str = "Steam launch options for steam:480";
+
+    /// A recorder that fails the test if anything at all is written through it.
+    ///
+    /// The guard tests are about what happens *before* a record exists, so the
+    /// proof that nothing was recorded is a recorder that cannot be used.
+    struct MuthabbitSamit;
+
+    impl Muthabbit for MuthabbitSamit {
+        fn iktub(&mut self, masar: &Path, _bayt: &[u8]) -> Result<(), KhataTathbeet> {
+            panic!("the guard let a write through to {}", masar.display())
+        }
+
+        fn ansha(&mut self, masar: &Path, _bayt: &[u8]) -> Result<(), KhataTathbeet> {
+            panic!("the guard let a file be added at {}", masar.display())
+        }
+
+        fn ansha_mujallad(&mut self, masar: &Path) -> Result<(), KhataTathbeet> {
+            panic!("the guard let a directory be created at {}", masar.display())
+        }
+
+        fn ihdhif(&mut self, masar: &Path) -> Result<bool, KhataTathbeet> {
+            panic!("the guard let a deletion through at {}", masar.display())
+        }
+
+        fn sajjil_idad(
+            &mut self,
+            mahall: MahallIdad,
+            _sabiqa: Option<String>,
+            _maktuba: Option<String>,
+        ) -> Result<(), KhataTathbeet> {
+            panic!("the guard recorded {} before refusing", mahall.wasf())
+        }
+    }
+
+    /// The requirement `tarkib` records for a Steam game behind Proton.
+    fn talab_wine(app: &str) -> SijillIdad {
+        let mahall = MahallIdad::KhiyaratTashghil {
+            manassa: MANASSA_STEAM.to_owned(),
+            muarrif_luba: format!("{MANASSA_STEAM}:{app}"),
+        };
+        SijillIdad {
+            muarrif: mahall.wasf(),
+            mahall,
+            qeema_sabiqa: None,
+            qeema_maktuba: Some(format!(
+                "{MUTAGHAYYIR_TAJAWUZ}=\"{TAJAWUZ_TAARIB}\" {RAMZ_AMR}"
+            )),
+            istiada_tammat: false,
+        }
     }
 
     #[test]
@@ -1972,5 +2555,355 @@ mod ikhtibarat {
         assert!(ASMAA_STEAM.contains(&"steam.exe"));
         assert!(ASMAA_STEAM.contains(&"steam"));
         assert!(ASMAA_STEAM.contains(&"steam_osx"));
+    }
+
+    // -----------------------------------------------------------------------
+    // The install guard
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn al_tathbeet_yarfud_wa_steam_yaamal() {
+        // Steam rewrites `localconfig.vdf` from memory when it exits, so an
+        // edit made while it is up is erased with no trace anywhere. The
+        // recorder here panics if it is touched at all, which is the proof
+        // that nothing was recorded either: a manifest line claiming a launch
+        // option was changed, for a change that was refused, is a line an
+        // uninstall would act on.
+        let jidhr = PathBuf::from("/taarib/steam");
+        for hala in HALAT_RAFIDA {
+            let khata = naffidh_bi_hala(
+                hala,
+                &mut MuthabbitSamit,
+                &[talab_wine("480")],
+                Some(jidhr.as_path()),
+            )
+            .expect_err("a launcher that was not seen closed must stop the install");
+            assert!(
+                matches!(
+                    khata,
+                    KhataTathbeet::MunassaTaamal { .. }
+                        | KhataTathbeet::HalatManassaMajhula { .. }
+                ),
+                "the refusal must name the launcher, not something else: {khata:?}"
+            );
+            assert!(khata.arabi().contains("Steam"), "and it must say so in Arabic too");
+        }
+    }
+
+    #[test]
+    fn talab_bila_jidhr_steam_yarfud() {
+        // A requirement nobody can apply is not a requirement that quietly does
+        // not apply. The framework was deployed a moment ago and will not load
+        // without this, so an install that shrugged here would report success
+        // over a game that runs exactly as it did before.
+        let khata = naffidh_bi_hala(
+            HalatTashghil::LaTashtaghil,
+            &mut MuthabbitSamit,
+            &[talab_wine("480")],
+            None,
+        )
+        .expect_err("a launch requirement with nowhere to apply it must stop the install");
+        assert!(matches!(khata, KhataTathbeet::IdadGhayrMunaffadh { .. }));
+        // The sentence a person reads has to carry the reason, in both
+        // languages: a refusal whose detail is only a `source` is a refusal the
+        // screen renders as "something went wrong".
+        assert!(khata.injilizi().contains("no Steam root"), "{}", khata.injilizi());
+        assert!(khata.injilizi().contains("would have loaded"), "{}", khata.injilizi());
+        assert!(khata.arabi().contains("لا تُحمَّل"), "{}", khata.arabi());
+        assert_eq!(khata.khutwa(), Khutwa::FathIdadat { qism: QismIdadat::Manassat });
+    }
+
+    #[test]
+    fn bila_talabat_la_shay_yuhras() {
+        // The overwhelmingly common install: no launch-time change at all. It
+        // must not consult the process table, must not refuse, and must not
+        // need a Steam root — including on a machine that has no Steam.
+        for hala in HALAT_RAFIDA {
+            assert_eq!(
+                naffidh_bi_hala(hala, &mut MuthabbitSamit, &[], None)
+                    .expect("an install with no launch requirement asks the launcher nothing"),
+                0
+            );
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // The restore guard
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn al_izala_tarfud_wa_steam_yaamal() {
+        let katib = KhiyaratSteam::jadeeda(malaf(), "480");
+        let mahall = katib.mahall();
+        let sijill = SijillIdad {
+            muarrif: mahall.wasf(),
+            mahall,
+            qeema_sabiqa: Some("-dx11".to_owned()),
+            qeema_maktuba: Some("x".to_owned()),
+            istiada_tammat: false,
+        };
+        for hala in HALAT_RAFIDA {
+            let khata = katib
+                .rudd_bi_hala(hala, &sijill)
+                .expect_err("an uninstall may not edit a file Steam would overwrite");
+            assert!(matches!(
+                khata,
+                KhataTathbeet::MunassaTaamal { .. } | KhataTathbeet::HalatManassaMajhula { .. }
+            ));
+        }
+    }
+
+    #[test]
+    fn al_izala_tarfud_sijillan_li_hisab_akhar() {
+        // The record names the account file, so a writer for another account is
+        // handed a record it must refuse rather than one it silently applies to
+        // the wrong person's launch options.
+        let katib = KhiyaratSteam::jadeeda("/steam/userdata/1/config/localconfig.vdf", "480");
+        let akhar = KhiyaratSteam::jadeeda("/steam/userdata/2/config/localconfig.vdf", "480");
+        let mahall = akhar.mahall();
+        let sijill = SijillIdad {
+            muarrif: mahall.wasf(),
+            mahall,
+            qeema_sabiqa: None,
+            qeema_maktuba: Some("x".to_owned()),
+            istiada_tammat: false,
+        };
+        let khata = katib
+            .rudd_bi_hala(HalatTashghil::LaTashtaghil, &sijill)
+            .expect_err("one account's writer must not act on another account's record");
+        assert!(matches!(khata, KhataTathbeet::IdadGhayrMustaad { .. }));
+        // The specific refusal, not merely *a* refusal: without this check the
+        // writer goes on to open its own file and fails for an unrelated
+        // reason, which reads identically from the outside and is not the same
+        // thing at all.
+        let sabab = khata.injilizi();
+        assert!(sabab.contains("handed a record for something else"), "{sabab}");
+        assert!(sabab.contains("userdata/1"), "and it names which account it was built for");
+    }
+
+    #[test]
+    fn al_kitaba_lil_hisab_tuhras_bi_nafsiha() {
+        // `athbit_talab` is a public entry point of its own, so it carries the
+        // guard rather than trusting whoever called it to have asked. The path
+        // here does not exist: reaching a read at all would mean the guard let
+        // the call past.
+        let katib = KhiyaratSteam::jadeeda(malaf(), "480");
+        let isnadat =
+            [IsnadItlaq { ism: MUTAGHAYYIR_TAJAWUZ.to_owned(), qeema: TAJAWUZ_TAARIB.to_owned() }];
+        for hala in HALAT_RAFIDA {
+            let khata = katib
+                .athbit_bi_hala(hala, &mut MuthabbitSamit, &isnadat)
+                .expect_err("a launcher that was not seen closed must stop the write");
+            assert!(
+                matches!(
+                    khata,
+                    KhataTathbeet::MunassaTaamal { .. }
+                        | KhataTathbeet::HalatManassaMajhula { .. }
+                ),
+                "the refusal must be the guard's rather than a file that was not there: {khata:?}"
+            );
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // The record, and the writer rebuilt from it
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn al_sijill_yasif_nafsahu() {
+        let katib = KhiyaratSteam::jadeeda("/steam/userdata/9/config/localconfig.vdf", "480");
+        let mahall = katib.mahall();
+        match &mahall {
+            MahallIdad::MalafIdad { masar, miftah } => {
+                assert!(masar.contains("userdata"), "the record names the account file");
+                assert_eq!(miftah, &format!("{MIFTAH_SIJILL}:480"));
+            }
+            akhar => panic!("a per-account record must be a MalafIdad, got {akhar:?}"),
+        }
+
+        let mabni = KhiyaratSteam::min_mahall(&mahall)
+            .expect("the writer is rebuildable from the record and nothing else");
+        assert_eq!(mabni.malaf(), katib.malaf());
+        assert_eq!(mabni.app(), katib.app());
+
+        // Two accounts are two records, which is the whole reason this is not
+        // keyed on the game: one record could hold only one previous value.
+        let thani = KhiyaratSteam::jadeeda("/steam/userdata/8/config/localconfig.vdf", "480");
+        assert_ne!(katib.mahall(), thani.mahall());
+        assert_ne!(katib.mahall().wasf(), thani.mahall().wasf());
+    }
+
+    #[test]
+    fn sijill_ghayr_khass_bina_la_yuntaj_katiban() {
+        for mahall in [
+            MahallIdad::MalafIdad {
+                masar: "/etc/environment".to_owned(),
+                miftah: "LD_PRELOAD".to_owned(),
+            },
+            MahallIdad::MutaghayyirBeea { ism: MUTAGHAYYIR_TAJAWUZ.to_owned() },
+            MahallIdad::SijillWindows { miftah: "HKCU\\X".to_owned(), qeema: String::new() },
+        ] {
+            assert!(
+                KhiyaratSteam::min_mahall(&mahall).is_none(),
+                "a record this module did not write is not one it may act on: {mahall:?}"
+            );
+            assert!(!RadItlaq::jadeed().yamlik(&mahall));
+        }
+    }
+
+    #[test]
+    fn al_talab_yulzim_hisabat_qablahu() {
+        // The requirement `tarkib` records is this restorer's to answer only
+        // once the per-account records it produced are in the same manifest.
+        // Without them the requirement was recorded and never performed, and
+        // answering it would report a setting restored that was never applied.
+        let talab = talab_wine("480").mahall;
+        assert!(!RadItlaq::jadeed().yamlik(&talab));
+
+        let hisab =
+            KhiyaratSteam::jadeeda("/steam/userdata/9/config/localconfig.vdf", "480").mahall();
+        let sijill = SijillIdad {
+            muarrif: hisab.wasf(),
+            mahall: hisab,
+            qeema_sabiqa: None,
+            qeema_maktuba: Some("x".to_owned()),
+            istiada_tammat: false,
+        };
+        let radd = RadItlaq::min_sijillat(std::slice::from_ref(&sijill));
+        assert_eq!(radd.adad(), 1);
+        assert!(radd.yamlik(&talab));
+        assert!(radd.yamlik(&sijill.mahall));
+
+        // …and not for a different game that happens to be in the same manifest.
+        assert!(!radd.yamlik(&talab_wine("620").mahall));
+    }
+
+    #[test]
+    fn muarrif_al_manassa_yunzau_min_amam_raqm_al_luba() {
+        // `tarkib` records the launcher's own identifier — `steam:480` — and the
+        // file keys on the bare number. Getting this wrong looks like an
+        // uninstall that finds no writer for a game it just patched.
+        assert_eq!(app_talab_steam(&talab_wine("480").mahall), Some("480"));
+        assert_eq!(
+            app_talab_steam(&MahallIdad::KhiyaratTashghil {
+                manassa: "Steam".to_owned(),
+                muarrif_luba: "480".to_owned(),
+            }),
+            Some("480")
+        );
+        assert_eq!(
+            app_talab_steam(&MahallIdad::KhiyaratTashghil {
+                manassa: "Heroic".to_owned(),
+                muarrif_luba: "epic:x".to_owned(),
+            }),
+            None
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Reading a recorded requirement
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn tajzia_amr_tahtarim_al_iqtibas() {
+        assert_eq!(wahdat_amr(r#"A="x y" B"#), vec!["A=x y".to_owned(), "B".to_owned()]);
+        assert_eq!(wahdat_amr("  "), Vec::<String>::new());
+        assert_eq!(wahdat_amr(r#"A="""#), vec!["A=".to_owned()]);
+        assert_eq!(wahdat_amr("-name 'The Player'"), vec![
+            "-name".to_owned(),
+            "The Player".to_owned()
+        ]);
+    }
+
+    #[test]
+    fn qiraat_al_talab_tuqbal_ma_yasjuluhu_al_nashr() {
+        let isnadat = isnadat_talab(MAHALL_IKHTIBAR, talab_wine("480").qeema_maktuba.as_deref().unwrap_or(""), None)
+            .expect("the shape the deployment records");
+        assert_eq!(isnadat, vec![IsnadItlaq {
+            ism: MUTAGHAYYIR_TAJAWUZ.to_owned(),
+            qeema: TAJAWUZ_TAARIB.to_owned(),
+        }]);
+    }
+
+    #[test]
+    fn qiraat_al_talab_tarfud_ma_la_tafhamuhu() {
+        // A word that is not an assignment, and a requirement that never says
+        // where the game's own command line goes. Both are refusals rather than
+        // best guesses: the value goes into a field the user owns.
+        let bila_ramz = format!("{MUTAGHAYYIR_TAJAWUZ}=\"{TAJAWUZ_TAARIB}\"");
+        assert!(isnadat_talab(MAHALL_IKHTIBAR, &bila_ramz, None).is_err());
+
+        let kalima = format!("sh ./run_bepinex.sh {RAMZ_AMR}");
+        let khata = isnadat_talab(MAHALL_IKHTIBAR, &kalima, None)
+            .expect_err("a wrapper command is not something this build composes");
+        assert!(khata.injilizi().contains("not an environment assignment"));
+
+        assert!(isnadat_talab(MAHALL_IKHTIBAR, RAMZ_AMR, None).is_err(), "a requirement that adds nothing");
+    }
+
+    #[test]
+    fn qiraat_al_talab_tatruh_ma_kan_lil_mustakhdim() {
+        // The recorded string is applied to several accounts, so only the part
+        // the planner *added* may travel between them.
+        let matlub = format!("-dx11 {MUTAGHAYYIR_TAJAWUZ}=\"{TAJAWUZ_TAARIB}\" {RAMZ_AMR}");
+        let isnadat = isnadat_talab(MAHALL_IKHTIBAR, &matlub, Some("-dx11"))
+            .expect("one account's own flag is not part of the requirement");
+        assert_eq!(isnadat.len(), 1);
+        assert_eq!(isnadat.first().map(|isnad| isnad.ism.as_str()), Some(MUTAGHAYYIR_TAJAWUZ));
+
+        // …and a variable the previous value also assigned has been merged with
+        // one account's own setting, which is not a value any other account may
+        // be given.
+        let mudmaj = format!("{MUTAGHAYYIR_TAJAWUZ}=\"d3d9=n;{TAJAWUZ_TAARIB}\" {RAMZ_AMR}");
+        let khata = isnadat_talab(MAHALL_IKHTIBAR, &mudmaj, Some(&format!("{MUTAGHAYYIR_TAJAWUZ}=\"d3d9=n\" {RAMZ_AMR}")))
+            .expect_err("a requirement carrying one account's own overrides must be refused");
+        assert!(khata.injilizi().contains("merged for one account"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Composing a value
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn tarkeeb_al_isnad_la_yatakarrar() {
+        // Idempotence is what a second install over the first rests on: a
+        // repeated composition must not put a second copy of the assignment in
+        // front of the game's command line.
+        let awwal = khiyarat_maa_isnad(None, MUTAGHAYYIR_TAJAWUZ, TAJAWUZ_TAARIB);
+        let thani = khiyarat_maa_isnad(Some(&awwal), MUTAGHAYYIR_TAJAWUZ, TAJAWUZ_TAARIB);
+        assert_eq!(awwal, thani);
+        assert_eq!(awwal.matches(MUTAGHAYYIR_TAJAWUZ).count(), 1);
+        assert_eq!(awwal.matches(RAMZ_AMR).count(), 1);
+    }
+
+    #[test]
+    fn tarkeeb_al_isnad_yahfaz_ma_lil_mustakhdim() {
+        // A wrapper somebody else's tool wrote stays outermost, and Taarib's
+        // assignment goes where the game's own command line starts.
+        let hali = "mangohud %command% -vulkan";
+        let baad = khiyarat_maa_isnad(Some(hali), MUTAGHAYYIR_TAJAWUZ, TAJAWUZ_TAARIB);
+        assert_eq!(baad, format!("mangohud {MUTAGHAYYIR_TAJAWUZ}=\"{TAJAWUZ_TAARIB}\" %command% -vulkan"));
+
+        // A user's own override list keeps every entry; Taarib adds one.
+        let mawjud = format!("{MUTAGHAYYIR_TAJAWUZ}=\"d3d9=n,b\" {RAMZ_AMR}");
+        let baad = khiyarat_maa_isnad(Some(&mawjud), MUTAGHAYYIR_TAJAWUZ, TAJAWUZ_TAARIB);
+        assert!(baad.contains("d3d9=n,b"), "the user's own override survives: {baad}");
+        assert!(baad.contains(TAJAWUZ_TAARIB));
+        assert_eq!(baad.matches(MUTAGHAYYIR_TAJAWUZ).count(), 1);
+    }
+
+    #[test]
+    fn al_mutaghayyir_ghayr_al_qaima_yustabdal_wa_la_yudmaj() {
+        // Guessing a separator for a variable that is not a list turns
+        // `PROTON_NO_ESYNC=0` into `0:1`. A path list is merged; anything else
+        // is replaced, and the value that was there is what an uninstall puts
+        // back.
+        let mawjud = format!("{MUTAGHAYYIR_TAHMIL_LINUX}=\"/a/b.so\" {RAMZ_AMR}");
+        let baad = khiyarat_maa_isnad(Some(&mawjud), MUTAGHAYYIR_TAHMIL_LINUX, "./c.so");
+        assert!(baad.contains("/a/b.so:./c.so"), "a preload list gains an entry: {baad}");
+
+        let mawjud = format!("PROTON_NO_ESYNC=\"0\" {RAMZ_AMR}");
+        let baad = khiyarat_maa_isnad(Some(&mawjud), "PROTON_NO_ESYNC", "1");
+        assert_eq!(baad, format!("PROTON_NO_ESYNC=\"1\" {RAMZ_AMR}"));
     }
 }

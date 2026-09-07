@@ -60,17 +60,17 @@ const ADAD_KHANAT: usize = 160;
 ///
 /// Never called through. It exists to be a distinguishable non-null address,
 /// which is what the assertions compare against.
-extern "system" fn asl_wahmi() -> usize {
+const extern "system" fn asl_wahmi() -> usize {
     0x0A5C_0000
 }
 
 /// Stands in for Taarib's thunk.
-extern "system" fn thunk_wahmi() -> usize {
+const extern "system" fn thunk_wahmi() -> usize {
     0x7AA5_1B00
 }
 
 /// Stands in for another product's hook, installed after Taarib's.
-extern "system" fn thunk_ghareeb() -> usize {
+const extern "system" fn thunk_ghareeb() -> usize {
     0x6417_E200
 }
 
@@ -101,7 +101,7 @@ fn jadwal_wahmi() -> Vec<*mut c_void> {
 }
 
 /// The slot index a vtable field's byte offset corresponds to.
-fn khana_min_izaha(izaha: usize) -> usize {
+const fn khana_min_izaha(izaha: usize) -> usize {
     #[expect(
         clippy::integer_division,
         reason = "a vtable is an array of function pointers, so a field's byte offset is exactly \
@@ -143,10 +143,12 @@ fn khanat_tutabiq_al_jadwal() {
     );
     // The extended table is the whole of the plain one plus its own methods, so
     // the stub has to be at least as long as the largest slot the hook touches.
-    assert!(
-        KHANAT_ISTIAADA_MUMTADDA < ADAD_KHANAT,
-        "the stub table is shorter than the slots this test writes into"
-    );
+    const {
+        assert!(
+            KHANAT_ISTIAADA_MUMTADDA < ADAD_KHANAT,
+            "the stub table is shorter than the slots this test writes into"
+        );
+    }
 }
 
 /// Installing replaces the slot and removing puts the original back.

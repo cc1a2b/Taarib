@@ -23,7 +23,7 @@ each step produces — but for an actual release build, run the script.
 | Python | 3 | `scripts/*.py`, standard library only |
 
 The toolchain file also requests the components `rustfmt`, `clippy`, `rust-src`
-and `llvm-tools`, and ten targets — the three Windows MSVC triples, three Linux
+and `llvm-tools`, and nine targets — the three Windows MSVC triples, three Linux
 GNU triples, both Darwin triples, and `wasm32-unknown-unknown`. `rustup` pulls
 all of them, so the first invocation is slow and every later one is not.
 
@@ -47,9 +47,10 @@ get a resolution that the lockfile did not describe.
 
 ## 2. The Rust workspace
 
-Twenty-nine members: the twenty-eight `crates/taarib-*` plus
-`apps/studio/src-tauri`. `vendor/retour` is excluded from the workspace and
-patched in over crates.io.
+Thirty-one members as this is written: the thirty `crates/taarib-*` plus
+`apps/studio/src-tauri`. The list that counts is `[workspace] members` in the
+root `Cargo.toml`. `vendor/retour` is excluded from the workspace and patched in
+over crates.io.
 
 ```bash
 git clone https://github.com/cc1a2b/taarib
@@ -58,7 +59,26 @@ cd taarib
 cargo build --workspace --release
 ```
 
-Two things about that build worth knowing before it fails on you:
+Four things about that build worth knowing before it fails on you, or before it
+succeeds and proves less than it seems to:
+
+**Three crates compile on Linux without compiling their substance.**
+`taarib-mudkhal` (the `version.dll` proxy), `taarib-tabaqa` (the Direct3D 8–12
+presentation hooks) and `taarib-haqn` (process injection) keep their real
+content behind `#[cfg(windows)]`. A Linux `cargo check --workspace` goes green
+having compiled none of it. The Windows halves of those three were first
+compiled on 2026-09-04, on a Windows toolchain; if you touch any of them, run
+`cargo check --workspace` on Windows and say so.
+
+**`target/` may not be where your artifacts are.** Every path in this file that
+says `target/` means cargo's target directory. If your `~/.cargo/config.toml`
+sets `[build] target-dir` — a common choice when the checkout sits on a slow or
+network-mounted drive — the artifacts land there instead, and two things follow:
+`taarib-tajmee` has to be told with `--ahdaf <that directory>`, and a
+`target/` directory left in the checkout from before the redirect holds stale
+binaries that look current. Ask cargo rather than trusting a path:
+`cargo build -p taarib-studio --message-format=json` prints the `executable` it
+produced.
 
 **`apps/studio/src-tauri/mawarid/` must exist.** `tauri.conf.json` declares
 `bundle.resources = ["mawarid"]`, and `tauri-build` checks that the declared
@@ -74,8 +94,11 @@ denies `unwrap_used`, `expect_used`, `panic`, `todo`, `unimplemented`,
 `allow_attributes_without_reason` and the three lossy-cast lints, on top of
 `pedantic` and `nursery` as warnings. `missing_docs` and `unreachable_pub` are
 denied at the `rustc` level. `clippy.toml` additionally disallows
-`std::env::var`, `std::process::exit`, and `std::sync::{Mutex, RwLock}` — the
-last two because the workspace uses `parking_lot`.
+`std::env::var`, `var_os` and `vars` (configuration is resolved once, by
+`taarib_usus::idadat`), `std::process::exit`, `std::fs::remove_dir_all`
+(recursive deletion goes through `taarib_usus::masarat::hadhf_mujallad`, whose
+target type cannot name a data root), and the types `std::sync::{Mutex, RwLock}`
+— those two because the workspace uses `parking_lot`.
 
 Every `#[expect]` needs a `reason`. This is not negotiable and it is not
 adjustable per crate.
@@ -100,7 +123,7 @@ tree-wide format lands, and not before.
 `read-fonts` in the graph is a build failure, and a native HarfBuzz or
 `rustybuzz` entering the graph is a build failure — because Decision 3 (the
 shaper and the rasterizer read the same font parser) is only true as long as
-that stays true. `[graph] targets` lists the same ten triples as the toolchain
+that stays true. `[graph] targets` lists the same nine triples as the toolchain
 file.
 
 ### Seeing the text engine work on its own
@@ -167,9 +190,16 @@ default**.
 
 ```bash
 cargo build --release --target x86_64-pc-windows-msvc \
-    -p taarib-tabaqa -p taarib-muhawwil-unreal -p taarib-muhawwil-godot \
-    -p taarib-mudkhal -p taarib-jisr --features hamula
+    -p taarib-jisr -p taarib-mudkhal -p taarib-tabaqa \
+    -p taarib-muhawwil-unreal -p taarib-muhawwil-godot \
+    --features taarib-tabaqa/hamula,taarib-muhawwil-unreal/hamula,taarib-muhawwil-godot/hamula
 ```
+
+The feature is written package-qualified on purpose. Only the three payload
+crates declare `hamula`; `taarib-jisr` and `taarib-mudkhal` have no such
+feature, and a bare `--features hamula` on a command that also selects those two
+is rejected by cargo for naming a feature they lack. This is the form
+`scripts/isdar.sh` and `taarib-tajmee --help` use.
 
 ### Why it is off by default
 
@@ -249,25 +279,39 @@ taarib-tajmee --hadaf <target-triple> [--jidhr <workspace>] [--ahdaf <target dir
 `aarch64-apple-darwin` or `x86_64-apple-darwin`; anything else is refused as an
 unknown target. `-h`/`--help` is the only short form on the whole tool.
 
-The prerequisites, from the tool's own help text:
+The prerequisites, as the tool's own `--help` states them. On a clean checkout
+it stages nothing, because fourteen files across rows B, E, F, G, H and I have
+to be built first; `scripts/isdar.sh --hadaf <target-triple> --jalb` is the one
+command that builds them in order and then runs the tool, and
+`.github/workflows/isdar.yml` is the same sequence on a runner. For rebuilding
+one row by hand:
 
 ```bash
-cargo build --release --target <triple>            # the studio and its cdylibs
-cargo build --release --target x86_64-pc-windows-msvc \
-    -p taarib-tabaqa -p taarib-muhawwil-unreal -p taarib-muhawwil-godot \
-    -p taarib-mudkhal -p taarib-jisr --features hamula   # game-side payloads
+# rows C1-C4 — the BepInEx-side assemblies
 dotnet build unity/Taarib.Unity.sln -c Release
-wasm-pack/wasm-bindgen --target no-modules --out-name taarib_core \
-    --out-dir target/wasm-bindgen
-esbuild adapters-script/rpgmaker/taarib.ts --bundle \
-    --outfile=target/adapters/rpgmaker/taarib.js
-esbuild adapters-script/electron/taarib.ts --bundle \
-    --outfile=target/adapters/electron/taarib.js
+
+# rows B, E, F, G — the game-side cdylibs, for EVERY triple in
+# hadaf::hamulat_alalaab: both Windows ones always, plus the host's own.
+cargo build --release --target <payload-triple> \
+    -p taarib-jisr -p taarib-mudkhal -p taarib-tabaqa \
+    -p taarib-muhawwil-unreal -p taarib-muhawwil-godot \
+    --features taarib-tabaqa/hamula,taarib-muhawwil-unreal/hamula,taarib-muhawwil-godot/hamula
+
+# row H1 — the wasm-bindgen CLI version must equal the wasm-bindgen crate in Cargo.lock
+cargo build --release --target wasm32-unknown-unknown -p taarib-wasm
+wasm-bindgen --target no-modules --out-name taarib_core \
+    --out-dir target/wasm-bindgen <the built .wasm>
+
+# rows I1, I2 — tsc for the RPG Maker plugin (it has to be ES5, which esbuild
+# cannot lower to); esbuild for the Electron runtime
+node adapters-script/ibni.mjs
 ```
 
-Note the second line: the Windows payloads are built on **every** host. A Linux
+Note the payload line: the Windows payloads are built on **every** host. A Linux
 or macOS client installing into a Wine or Proton game deploys the Windows-side
-payloads, so every desktop bundle carries the Windows game-side set.
+payloads, so every desktop bundle carries the Windows game-side set. Rows H1, I1
+and I2 are read from `<jidhr>/target` regardless of `--ahdaf`, because none of
+the three is a cargo output.
 
 The tool collects *every* absence and prints them together before exiting
 non-zero — an operator who has four things to rebuild learns that once, not four
@@ -275,8 +319,8 @@ times. Fetched inputs (the BepInEx redistributables, the bundled fonts) are
 pinned in `assets/aqfal/` as `{ rabt, isdar, hajm, sha256 }` and are refused if
 unlocked or mismatched; the tool never writes a hash it did not verify.
 
-The full artifact matrix — twenty rows, source and staged destination for each —
-is `docs/tawzee.md` §3.
+The full artifact matrix — every row identifier from A1 to N1, with source and
+staged destination for each — is `docs/tawzee.md` §3.
 
 ---
 
@@ -307,7 +351,11 @@ npm run build         # tsc, tsc, vite build -> apps/studio/dist
 
 **Step 2 — install the Tauri CLI on the Windows side.** The bundler runs
 natively. The Linux checkout's `node_modules/@tauri-apps/cli` is the Linux
-build; it cannot drive an NSIS bundle.
+build; it cannot drive an NSIS bundle. The Windows binary is `cargo-tauri.exe`
+from the tauri-apps release whose version matches `@tauri-apps/cli` in
+`apps/studio/package.json`, placed in `%USERPROFILE%\.cargo\bin\` so that
+`cargo tauri build` resolves it. The Windows cargo has to honour the same
+`rust-toolchain.toml` pin; a Windows rustup does, from inside the checkout.
 
 **Step 3 — stop Tauri from rebuilding the frontend.** `tauri.conf.json` sets
 `beforeBuildCommand: "npm run build"`. On the Windows side that re-runs the
@@ -379,9 +427,16 @@ it, a packaging run that forgot to inject `TAARIB_MIFTAH_ISDAR` would produce a
 binary that silently trusts the committed development key. A release client
 refuses a `MIFTAH_TATWIR` signature by name.
 
-Provisioning the owner key is `cargo run -p taarib-khatm --bin malik`, which
-reads a 64-hex-character seed from standard input, requires exactly that, stores
-the key, and prints the public half. It takes no arguments.
+Two owner-side tools sit beside each other in `crates/taarib-khatm/src/bin/`.
+`cargo run -p taarib-khatm --bin malik` *imports* an existing owner seed: it
+reads 64 hexadecimal characters from standard input, requires exactly that,
+stores the key in this machine's keychain, and prints the public half. It takes
+no arguments. `cargo run -p taarib-khatm --bin isdar -- --mirsa <file>` *mints*
+the release pair: the private half goes only into the OS keychain, behind the
+keychain's own passphrase, which the tool demands before it writes and again
+before it overwrites; the public anchor is written to `<file>` and an existing
+file is never overwritten. `--ism <account>` overrides the keychain account name.
+Neither tool ever writes a private key to a file or prints one.
 
 ---
 
@@ -414,16 +469,17 @@ afternoons:
 - **CI exists but has never run.** `.github/workflows/ci.yml` runs the gates of
   §2 on Ubuntu 24.04 and Windows Server 2025 — `cargo check`, `clippy` and
   `test` on both, plus the two TypeScript projects, `vite build` and
-  `cargo deny check` on Linux. It has never executed, because this workspace is
-  not yet a git repository and has no remote. Two things about it are worth
-  knowing before the first run: the Rust matrix depends on the frontend job and
-  downloads its `dist` artifact, because `tauri-codegen` panics outright without
-  `apps/studio/dist` and an empty one would embed an application with no
-  interface; and `cargo fmt --all --check` is present but `continue-on-error`,
-  because the tree is 5 358 hunks from formatted. `.github/workflows/`
-  `macos-probe.yml` is dispatch-only and can never be a required check.
-  Branch protection cannot be expressed in a file: after publication somebody
-  must mark the four real jobs required and must not mark the formatting one.
+  `cargo deny check` on Linux. It has never executed: the workspace is a git
+  repository, but no remote is configured, so nothing has ever triggered a run.
+  Two things about it are worth knowing before the first run: the Rust matrix
+  depends on the frontend job and downloads its `dist` artifact, because
+  `tauri-codegen` panics outright without `apps/studio/dist` and an empty one
+  would embed an application with no interface; and `cargo fmt --all --check`
+  is present but `continue-on-error`, because the tree is several thousand
+  hunks from formatted. `.github/workflows/macos-probe.yml` is dispatch-only and
+  can never be a required check. Branch protection cannot be expressed in a
+  file: after publication somebody must mark the four real jobs required and
+  must not mark the formatting one.
 - **No cross-compilation configuration.** `ROADMAP.md` §22 names `cargo-xwin`
   and `cross` as the intended technology; no such configuration file exists yet.
   Section 6 above is what is done instead.

@@ -148,6 +148,29 @@ pub fn istakhrij(jidhr: &Path, aila: AilatMuharrik) -> (JadwalNusus, TaqreerRafd
                 },
             );
         }
+        // Named, and read by nothing. Separate from the unknown family below
+        // because the reason differs and a maintainer reading a refusal report
+        // needs the difference: this build knows exactly which engine this is
+        // and has no reader for its containers, which is a gap somebody can go
+        // and close.
+        AilatMuharrik::Frostbite
+        | AilatMuharrik::BlackSpace
+        | AilatMuharrik::Alchemy
+        | AilatMuharrik::Dantelion
+        | AilatMuharrik::Rage
+        | AilatMuharrik::Snowdrop => {
+            taqreer.sajjil(
+                jidhr.display().to_string(),
+                None,
+                SababRafd::SighaMajhula {
+                    wujid: format!(
+                        "a {} game — an in-house engine this build can name and has no \
+                         container reader for, so no static extractor was chosen",
+                        aila.ism()
+                    ),
+                },
+            );
+        }
         AilatMuharrik::Majhul => {
             taqreer.sajjil(
                 jidhr.display().to_string(),

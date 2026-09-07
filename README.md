@@ -239,10 +239,11 @@ claim and a smaller one.
 [`docs/bidaya.md`](docs/bidaya.md) §6 and [`docs/tashghil.md`](docs/tashghil.md)
 record where each in-game path stops, function by function.
 
-**One engine puts readable Arabic in a running game today, and it is a partial
-one.** Everything else stops at a named point. The table says where, because
-"not supported yet" without a location is not something anyone can act on or
-verify.
+**One engine is reported by the application as complete today — Ren'Py at 7.4
+and above — and that verdict was reached by reading three crates, not by
+watching a screen.** Everything else stops at a named point. The table says
+where, because "not supported yet" without a location is not something anyone
+can act on or verify.
 
 Three different things are meant by "does not work", and they matter differently
 to you:
@@ -258,26 +259,29 @@ to you:
 
 | Engine | Designed tier | State | Where it stops |
 | --- | --- | --- | --- |
-| Ren'Py 7.4+ | 1 — text replaced in the game | **partial** | Translation, language selection and text direction all install, and the engine shapes Arabic correctly. No font is deployed — `khatt_renpy` is passed as `None` — so the game's own font decides whether you can read the result. On a DejaVu-based GUI it comes out fully Arabized; on a Latin-only font it does not. |
-| Ren'Py before 7.4 | 1 | **3 — visibly worse** | The older per-character path. `taarib_jisr` is loaded from beside the Python package, and the staging step ships the package alone. |
+| Ren'Py 7.4+ | 1 — text replaced in the game | **reported complete; unobserved** | Translation, language selection and text direction all install, and the engine shapes Arabic itself. The Ren'Py component now carries Noto Naskh Arabic, the deployment plan picks that face out of the component store and names it in the generated `.rpy`, and `imkaniyat::jahiziya` answers `Mukammala` — the only engine where it does. Two limits: a bundle staged without the face gets the same verdict and draws the translation in the game's own font (legible on a DejaVu-based GUI, empty boxes on a Latin-only one), and the one-button pipeline registers no face at all. No Ren'Py game has been launched with any of this. |
+| Ren'Py before 7.4 | 1 | **3 — visibly worse** | The older per-character path. `taarib_jisr` is loaded from beside the Python package, and the staging step ships the package and the face, never the library. |
 | GameMaker Studio | 1 | **3 — visibly worse** | `data.win`'s string pool really is rewritten. The glyph functions are never called, so Arabic lands in a pool whose baked `FONT` table holds no pictures for it. Blank menus, not English ones. |
-| RPG Maker MV / MZ | 1 | 2 | The data splice is real and now has a caller. The install then refuses: the runtime plugin comes from a bundling step that exists nowhere in this repository. |
-| Unity (IL2CPP) | 1 | 2 | The C# assembly compiles and stages, and matches the loader that ships. All twenty-nine of its native imports bind `taarib_jisr`, and no per-target build of that library is produced. |
+| RPG Maker MV / MZ | 1 | 2 | The data splice is real and has a caller. The install then refuses when the component store lacks the runtime plugin. `adapters-script/ibni.mjs` now builds that plugin and `scripts/isdar.sh` stages it, so a bundle built the documented way no longer hits the refusal — and no such bundle has been run against a game. |
+| Unity (IL2CPP) | 1 | 2 | The C# assembly compiles and stages, and matches the loader that ships. All twenty-nine of its native imports bind `taarib_jisr`; `scripts/isdar.sh` now builds that library per target and the staged tree carries it inside every BepInEx component. Nothing has been observed running. |
 | Unity (Mono) | 1 | 2 | The assembly compiles, but references BepInEx `6.0.0-be.780` while the lockfile stages `5.4.23.5`. The chainloader cannot bind it, so its entry point never runs. |
-| Electron / web | 1 | 2 | Wired end to end. The adapter refuses by name rather than writing a translation table into somebody's `app.asar` with no runtime to read it — the renderer runtime needs the same missing bundling step. |
+| Electron / web | 1 | 2 | Wired end to end. The adapter refuses by name when the store lacks the renderer runtime rather than writing a translation table into somebody's `app.asar` with no runtime to read it. The runtime is now built by `ibni.mjs` and staged; the adapter's own canvas rung still looks for a `globalThis.taaribNawat` that nothing sets, so even a perfect install leaves canvas text to the game. |
 | RPG Maker VX Ace | 1 | 1 | The install routine has no caller. |
 | Unreal 4 / 5 | 1 | 1 | The container writer has no caller outside its own tests, the install step writes nothing for Unreal, and the engine's shaping switch exists only behind a build feature no manifest enables. |
 | Godot 4 | 1 | 1 | No extension descriptor is written, so the module is never loaded. Four functions behind it have no callers. |
 | Godot 3 | 2 — Taarib draws the glyphs itself | 1 | Both install functions have zero callers, so delivery and takeover always take the refusal branch. |
-| Overlay — all backends | 3 — reading aid over the game | 1 | The draw batch and the glyph atlas are both closed now. Nothing captures text from the game, so no batch is ever produced. |
+| Capcom BIO4 | 1 | 1 | Resident Evil 4's engine is recognised and its dictionaries, font containers and code-point table are all readable and rebuildable. Nothing routes an install to any of it: the script-engine dispatcher has no arm for the family. |
+| Frostbite, BlackSpace, Alchemy, Dantelion, RAGE, Snowdrop | 3 | 1 | Named from their own files and then refused: no reader for their containers and no adapter exist, so the report says which engine it is and offers only the overlay. |
+| Overlay — Direct3D 8 through 12, OpenGL, Vulkan | 3 — reading aid over the game | 1 | The draw batch and the glyph atlas are both closed now. Nothing captures text from the game, so no batch is ever produced. |
 
 **How this was established, exactly.** Every verdict in that table comes from
 reading the code and following callers, and the application computes it from the
-same place rather than from a list written by hand. **No game of any of these
-engines is installed on this machine, and no engine's in-game half has been
-observed putting a glyph on a screen.** The round trips that exist prove writes,
-against containers built from the format specifications, and are labelled as
-such in the tests that drive them.
+same place rather than from a list written by hand. **Games on two of these
+engines — Unity and Unreal — are installed on the machine this was written on
+and were walked read-only; no game on any other engine is, and no engine's
+in-game half has been observed putting a glyph on a screen.** The round trips
+that exist prove writes, against containers built from the format
+specifications, and are labelled as such in the tests that drive them.
 
 The one result involving a real engine is Godot 3: the official 3.6.stable
 headless binary loaded a patched `.translation` and answered `tr("Hello")` with
@@ -360,9 +364,15 @@ x86-64, ARM64, and 32-bit x86 for game processes that need it. **macOS is not
 supported** — the bundle targets are configured and the workspace does not build
 for Apple; see the platform table below for what that actually costs. Games
 running under Proton or Wine are understood as such: Taarib resolves the prefix,
-maps `Z:\` and the drive letters to real paths, installs the Windows-side
-framework into the Windows-side game directory, and sets launch options through
-the launcher's own configuration rather than a wrapper script.
+maps `Z:\` and the drive letters to real paths, and installs the Windows-side
+framework into the Windows-side game directory. The launch option a Proton game
+needs (`WINEDLLOVERRIDES`) is written into Steam's own per-account
+configuration rather than through a wrapper script — the writer, the record of
+the previous value and the restore on uninstall live in
+`crates/taarib-tathbeet/src/itlaq.rs`, and as this is written the install and
+uninstall paths call both halves. That wiring landed days ago, is still being
+worked on, and has not been exercised against a real Steam account, so the Steam
+Deck notes below still tell you how to set the option by hand.
 
 **Launchers.** Steam, Epic Games Store, GOG Galaxy, EA app, Ubisoft Connect,
 Battle.net, Xbox and Microsoft Store, itch.io, Amazon Games, Rockstar, Riot,
@@ -385,7 +395,16 @@ should be read together.
 | Ren'Py | 1 | Translation scripts in the engine's own format plus a Python runtime hook |
 | GameMaker Studio | 1 | `data.win` patched, glyph pages generated by Taarib |
 | Electron / web | 1 | `app.asar` repacked with a preload runtime; canvas text routed through the WebAssembly core |
-| Anything else | 3 | Overlay: presentation hooked on D3D11/D3D12/OpenGL/Vulkan, screen read, Arabic composited over it |
+| Capcom BIO4 (Resident Evil 4, 2005) | 1 | Dictionary files rewritten and the baked glyph pages regenerated, with the text shaped before it is written because the engine has no shaper of its own. The readers and the font builder exist; nothing routes an install to them yet |
+| Frostbite, Pearl Abyss BlackSpace, Vicarious Visions Alchemy, FromSoftware Dantelion, Rockstar RAGE, Ubisoft Snowdrop | 3 | Recognised by name from the game's own files — a version resource, an archive magic, an assertion string — and then refused: no reader for their containers and no adapter exist, so the report names the engine and offers only the overlay. Naming them is what lets it say "not reachable yet" instead of "unknown" |
+| Anything unrecognised | 3 | Overlay: presentation hooked on Direct3D 8, 9, 10, 11 or 12, OpenGL (fixed-function or modern) or Vulkan, screen read, Arabic composited over it |
+
+Recognised is not the same as supported, and the line between the two is one
+function: `AilatMuharrik::qabil_lil_tarqee` in
+`crates/taarib-mustalahat/src/muharrik.rs`. Ten families answer yes, the six
+in-house engines answer no, and so does the unrecognised family. When one of the
+six gains a reader and an adapter it moves across that line, and the table above
+moves with it.
 
 The three tiers are named honestly everywhere they appear in the interface —
 **تعريب كامل** (text replaced inside the game), **تعريب بالرسم المباشر** (Taarib
@@ -399,11 +418,17 @@ reading aid, and it says so before you enable it).
 Taarib asks you to let it modify files inside games you paid for. Everything
 below is non-negotiable and has no override switch anywhere in the product:
 
-- **Anti-cheat is a refusal, not a warning.** Easy Anti-Cheat (including the
-  Epic Online Services variant), BattlEye, Denuvo Anti-Cheat, Vanguard,
-  GameGuard, XIGNCODE3, PunkBuster, FACEIT, ESEA, Ricochet and VAC association
-  are all detected by evidence, and installation is refused outright with the
-  name of what was found.
+- **Anti-cheat is a refusal, not a warning.** Easy Anti-Cheat (standalone and
+  the Epic Online Services variant), BattlEye, EA Javelin, Denuvo Anti-Cheat,
+  Riot Vanguard, nProtect GameGuard, XIGNCODE3, Tencent's Anti-Cheat Expert,
+  NetEase's NEAC Protect, Nexon Game Security, miHoYo Protect, PunkBuster,
+  FACEIT, ESEA, Activision Ricochet and a VAC association are all detected by
+  evidence — a file, a loaded module, a running service, a kernel driver, or
+  Steam's own catalogue — and installation is refused outright with the name of
+  what was found. Steam's catalogue can also declare an anti-cheat without
+  naming it, and that is refused too. The closed set is the `NawHimaya` enum in
+  `crates/taarib-aman/src/kashf_himaya.rs`; this sentence is a copy of it, and
+  the file wins when they differ.
 - **Multiplayer games warn explicitly**, per game, every time.
 - **Every patch is signed**, and the client refuses anything unsigned, mismatched
   or revoked. Signature verification cannot be disabled by configuration, by
@@ -469,19 +494,25 @@ owner and a tested update path, and those two would have neither.
 
 | Platform | Artifact | State |
 | --- | --- | --- |
-| Windows 10 1809+ | `Taarib_<version>_x64-setup.exe` — NSIS, per-user, no administrator rights | **Built, installed, run and uninstalled on a real Windows 11 machine.** 12.4 MB installer, 43 MB installed to `%LOCALAPPDATA%`, no admin rights, no registry trace left behind. Every DLL it imports is in-box; nothing from a developer install. It found Steam on `D:` and a library on `F:` from the registry alone. Specified in [`docs/tawzee/windows.md`](docs/tawzee/windows.md). |
+| Windows 10 1809+ | `Taarib_<version>_x64-setup.exe` — NSIS, per-user, no administrator rights | **Built, installed, run and uninstalled on a real Windows 11 machine on 2026-09-04** — a 10.6 MB installer whose component store was still empty, installed to `%LOCALAPPDATA%`, no admin rights, no registry trace left behind. Every DLL it imports is in-box; nothing from a developer install. It found Steam on `D:` and a library on `F:` from the registry alone. The record is [`docs/tawzee/tahaqquq.md`](docs/tawzee/tahaqquq.md); the specification is [`docs/tawzee/windows.md`](docs/tawzee/windows.md). An installer built the next day with the component store staged is about 66 MB and has not been through that audit. |
 | Linux x86-64 | `Taarib_<version>_amd64.AppImage` and `taarib-studio_<version>_amd64.deb` | **Built in an Ubuntu 22.04 container and started under xvfb on stock 22.04 and 24.04.** The glibc floor is **2.35**; an earlier build demanded 2.42, which no released SteamOS has ever carried. Specified in [`docs/tawzee/linux.md`](docs/tawzee/linux.md). |
 | Steam Deck | the same AppImage as Linux | The 2.35 floor clears every SteamOS release — 3.5 ships 2.37, 3.8.1x ships 2.41. Proton prefixes are handled throughout, per library, so an SD-card game finds its prefix on the SD card. Audited against SteamOS in [`docs/tawzee/steamdeck.md`](docs/tawzee/steamdeck.md). No Deck has physically run it. |
-| macOS 12+ | none | **Not supported, and not claimed.** The bundle targets are configured, but the workspace does not build for Apple: 7 of 29 crates compile for `aarch64-apple-darwin` and 22 do not. After a genuine portability fix in the foundation crate, none of the 22 failures are in Taarib's own code — they are third-party C build scripts failing on `cc: unrecognized command-line option '-arch'`, which proves the toolchain wall rather than portability. The real cost is unknown and only a Mac can measure it. See [`docs/tawzee/macos.md`](docs/tawzee/macos.md). |
+| macOS 12+ | none | **Not supported, and not claimed.** The bundle targets are configured, but the workspace does not build for Apple: when this was measured, 7 of the workspace's then 29 members compiled for `aarch64-apple-darwin` and 22 did not (the workspace has 31 members now and has not been re-measured). After a genuine portability fix in the foundation crate, none of the 22 failures were in Taarib's own code — they were third-party C build scripts failing on `cc: unrecognized command-line option '-arch'`, which proves the toolchain wall rather than portability. The real cost is unknown and only a Mac can measure it. See [`docs/tawzee/macos.md`](docs/tawzee/macos.md). |
 
-Nothing is fetched on first run — but **the shipped package is not yet
-complete**, and that is the single largest gap between this repository and a
-usable release. The fonts and the signature database are in it; the native
-libraries, the BepInEx payloads and two of the adapters are not, because the
-staging step that produces them stops with artifacts nobody has built. An
-installer built today starts, scans your library, translates and previews
-correctly, and then refuses every framework component by name. The staging tool
-enumerates exactly what is missing rather than shipping a fraction of it.
+Nothing is fetched on first run. What a bundle holds depends on how it was
+staged, and the two bundles that exist so far differ exactly there. The
+installer audited in `docs/tawzee/tahaqquq.md` shipped an **empty component
+store**: fonts and the signature database in; native libraries, BepInEx payloads
+and adapters out. It started, scanned the library, translated and previewed
+correctly, and refused every framework component by name — the staging tool
+enumerates what is missing rather than shipping a fraction of it. Since then
+`scripts/isdar.sh` builds every component in dependency order and
+`taarib-tajmee` stages it, and a Windows-target tree staged that way on
+2026-09-05 holds the BepInEx components with the Unity assemblies and the C-ABI
+core, the loader and the three native payloads for both Windows architectures,
+the RPG Maker and Electron runtimes, and the Ren'Py package with its face. No
+bundle built from a staged tree has been installed and exercised against a game
+yet.
 
 ### Platform notes that will actually come up
 
@@ -554,7 +585,10 @@ bounds, with measured widths and an overflow list. Compile, work through the
 pre-flight checklist until it goes green, and submit.
 
 Read [What works today](#what-works-today) before expecting the last step of the
-player flow to end in Arabic on screen.
+player flow to end in Arabic on screen. The translator flow above is the designed
+flow; of it, the read-only half — engine probe, static extraction, placeholder
+protection, preview and compile — is what has been exercised, and runtime
+capture has not.
 
 ---
 
@@ -564,7 +598,7 @@ player flow to end in Arabic on screen.
 taarib/
   ROADMAP.md          the build contract: 24 phases, every constraint, every decision
   docs/               architecture, the ABI, the packaging contract, per-platform notes
-  crates/             28 Rust crates
+  crates/             30 Rust crates (the list that counts is Cargo.toml's [workspace] members)
     taarib-usus/          foundations: errors, diagnostics, config, paths, platform
     taarib-mustalahat/    the shared vocabulary, source of TypeScript and JSON Schema
     taarib-saff/          the Arabic text engine
@@ -572,12 +606,13 @@ taarib/
     taarib-jisr/          the stable C ABI
     taarib-wasm/          the same engine, compiled for JavaScript
     taarib-kashf/         game discovery       taarib-muharrik/  engine probe
+    taarib-aql/           one game held whole: every crate's answer about a game, composed once
     taarib-istikhraj/     text extraction      taarib-tarjama/   translation pipeline
     taarib-ruqaa/         patch format         taarib-tarqee/    patch compiler
     taarib-tathbeet/      install and rollback taarib-aman/      safety
     taarib-mustawda/      registry client      taarib-taqdeem/   submission and review
     taarib-haqn/          injection and hooks  taarib-mudkhal/   the in-game loader
-    taarib-muhawwil-*/    Unreal, Godot and script-engine adapters
+    taarib-muhawwil-*/    Unreal, Godot, Capcom BIO4 and script-engine adapters
     taarib-tabaqa/        the universal overlay
     taarib-tilqai/        the one-button pipeline: probe, extract, translate, build, install
     taarib-khatm/         signing              taarib-makhzan/   the local store
@@ -622,11 +657,21 @@ dotnet build unity/Taarib.Unity.sln -c Release
 
 # Regenerate the JSON Schemas from the Rust vocabulary.
 cargo run -p taarib-mustalahat --features mukhattatat --bin mukhattatat
+
+# A release tree: every game-side artifact built in order, then staged.
+scripts/isdar.sh --hadaf x86_64-pc-windows-msvc --jalb
 ```
 
 The lockfile is `pnpm-lock.yaml`, but the Tauri build hooks say `npm`. Install
 with pnpm, build with the npm scripts — `docs/bina.md` §1 explains why that
 inconsistency exists and what happens if you resolve it the other way.
+
+Two things a green build on Linux does not prove. Three crates —
+`taarib-mudkhal`, `taarib-tabaqa` and `taarib-haqn` — keep their real content
+behind `#[cfg(windows)]` and compile on Linux with none of it; check them on a
+Windows toolchain. And if your `~/.cargo/config.toml` redirects `target-dir`,
+every `target/` path in the documentation means that directory instead, and
+`taarib-tajmee` has to be told with `--ahdaf`.
 
 ### The one flag you must not forget
 
@@ -637,10 +682,14 @@ the cargo feature `hamula`, which is off by default.**
 
 ```bash
 cargo build --release --target x86_64-pc-windows-msvc \
-    -p taarib-tabaqa -p taarib-muhawwil-unreal -p taarib-muhawwil-godot \
-    -p taarib-mudkhal -p taarib-jisr --features hamula
+    -p taarib-jisr -p taarib-mudkhal -p taarib-tabaqa \
+    -p taarib-muhawwil-unreal -p taarib-muhawwil-godot \
+    --features taarib-tabaqa/hamula,taarib-muhawwil-unreal/hamula,taarib-muhawwil-godot/hamula
 ```
 
+The feature is spelled package-qualified because only the three payload crates
+declare it; `taarib-jisr` and `taarib-mudkhal` have no `hamula`, and a bare
+`--features hamula` on a command that also selects them is rejected by cargo.
 It is off by default because all three payloads export the same symbol and
 `taarib-studio` links all three as `rlib`s — an always-on export is a
 duplicate-symbol link failure on the desktop binary.
@@ -665,10 +714,17 @@ lands on the build machine instead of on a user whose install reported success.
 
 ## Command reference
 
-Taarib is a desktop application, not a CLI; `taarib-studio` parses no arguments.
-The command-line surface is the developer and build-machine tooling.
+Taarib is a desktop application, not a CLI. `taarib-studio` takes two things on
+its command line and nothing else: `--istiada`, which runs the library-wide
+restore before the application is removed (the uninstaller invokes it), and the
+path of a `.ruqaa` file, which the operating system passes when the registered
+file type is opened. The rest of the command-line surface is the developer and
+build-machine tooling.
 
 ```
+# Build every game-side artifact in dependency order, then stage the tree below.
+scripts/isdar.sh --hadaf <target-triple> [--jalb]
+
 # Stage a release resource tree. Builds nothing; refuses on any missing artifact.
 taarib-tajmee --hadaf <target-triple> [--jidhr <workspace>] [--ahdaf <target dir>]
               [--kharij <out dir>] [--jalb]
@@ -684,8 +740,15 @@ taarib-tajmee --hadaf <target-triple> [--jidhr <workspace>] [--ahdaf <target dir
 # Regenerate schemas/*.json from the Rust vocabulary. Takes no arguments.
 cargo run -p taarib-mustalahat --features mukhattatat --bin mukhattatat
 
-# Provision the owner signing key. Reads a 64-hex seed on stdin, prints the public half.
+# Import the owner signing seed on this machine. Reads 64 hex characters on stdin,
+# stores the key in the keychain, prints the public half.
 cargo run -p taarib-khatm --bin malik
+
+# Mint the release signing key. The private half goes only to the OS keychain,
+# behind its passphrase; the public anchor is written to <file>, never overwritten.
+cargo run -p taarib-khatm --bin isdar -- wallid --mirsa <file> [--ism <account>]
+cargo run -p taarib-khatm --bin isdar -- mirsa [--ism <account>]      # print the anchor
+cargo run -p taarib-khatm --bin isdar -- tahaqquq --mirsa <file>     # key still derives it?
 
 # Stage the webview fonts against assets/aqfal/qufl_khutut.json.
 python3 scripts/ijlib_khutut.py [--tahaqquq] [--sakit]
@@ -735,12 +798,13 @@ installed on the user's machine, discovered through the launcher that installed
 them. It downloads no game, contains no game, and cannot install a patch for a
 game that is not present.
 
-**Taarib refuses games carrying anti-cheat.** Easy Anti-Cheat, BattlEye, Denuvo
-Anti-Cheat, Vanguard, GameGuard, XIGNCODE3, PunkBuster, FACEIT, ESEA, Ricochet
-and VAC association are detected by evidence and installation is refused outright,
-naming what was found. This is a refusal, not a warning, and there is no override
-switch — not in configuration, not behind a build flag, not in developer mode.
-Multiplayer games without anti-cheat still warn explicitly, per game, every time.
+**Taarib refuses games carrying anti-cheat.** Every anti-cheat named in
+[Safety](#safety) above — the closed set in
+`crates/taarib-aman/src/kashf_himaya.rs` — is detected by evidence and
+installation is refused outright, naming what was found. This is a refusal, not
+a warning, and there is no override switch — not in configuration, not behind a
+build flag, not in developer mode. Multiplayer games without anti-cheat still
+warn explicitly, per game, every time.
 
 **There is a takedown path and it is honoured.** If you hold rights in a game and
 want a patch removed from the registry, open an issue at
@@ -778,14 +842,15 @@ Two kinds of contribution, with different routes. Both are covered in full in
 
 **Translations go through the application, not through pull requests.** Taarib
 validates a submission locally against a checklist and the submit action stays
-inactive until it passes: the compiler's hard checks, the asset gate's
-certificate, coverage against the publishable floor (60% of strings overall, 85%
-of what a player meets in the first hour), no duplicate of your own published
-patch for the same build, and no undecided import mappings. Four further
-conditions warn rather than block — many strings overrunning their space, a
-quarter or more of the game still untranslated, machine translation declared with
-no human review, and terminology that disagrees with the glossary — and each must
-be acknowledged before the gate will mint a submission.
+inactive until it passes: the game does not already ship official Arabic, the
+compiler's hard checks, the asset gate's certificate, coverage against the
+publishable floor (60% of strings overall, 85% of what a player meets in the
+first hour), no duplicate of your own published patch for the same build, and no
+undecided import mappings. Four further conditions warn rather than block —
+twenty or more strings overrunning their space, a quarter or more of the game
+still untranslated, machine translation declared with no human review, and
+terminology that disagrees with the glossary — and each must be acknowledged
+before the gate will mint a submission.
 
 **Code contributions are pull requests.** Before opening one:
 
@@ -793,10 +858,14 @@ be acknowledged before the gate will mint a submission.
   and a change that contradicts one of the eight architectural decisions in
   section 2 will be declined regardless of how well it is written.
 - Match the naming law in section 4.1. Domain names, not abstractions.
-- `cargo fmt`, `cargo clippy --workspace --all-targets`, and `cargo deny check`
-  must all pass. The lint configuration is strict on purpose: `unwrap`, `panic`,
-  `todo`, `unimplemented`, indexing, and undocumented `unsafe` are denied
-  workspace-wide, and every `#[expect]` needs a reason.
+- `cargo check --workspace --all-targets`, `cargo clippy --workspace
+  --all-targets`, `cargo test --workspace` and `cargo deny check` must all pass.
+  `cargo fmt --check` is deliberately not a gate — the tree is several thousand
+  hunks from what rustfmt wants and the reformat is pending, so do not run
+  `cargo fmt` over files your change does not touch. The lint configuration is
+  strict on purpose: `unwrap`, `panic`, `todo`, `unimplemented`, indexing, and
+  undocumented `unsafe` are denied workspace-wide, and every `#[expect]` needs a
+  reason.
 - Commits follow the conventional format.
 
 Everyone who takes part is expected to behave according to

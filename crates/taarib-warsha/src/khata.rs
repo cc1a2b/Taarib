@@ -86,6 +86,22 @@ pub enum KhataWarsha {
     #[error("the share is not signed by the key it was checked against")]
     TawqeeGhayrSalih,
 
+    /// A rescue was asked of a string file whose every line reads.
+    #[error("every row of the string file reads; there is nothing to set aside")]
+    LaTalaf,
+
+    /// The preserved copy of a damaged string file did not read back as the
+    /// original, so the live table was left untouched.
+    #[error(
+        "the preserved copy at {} does not match the original byte for byte; the string file \
+         was left untouched",
+        masar.display()
+    )]
+    InqadhGhayrMuthbat {
+        /// The copy that disagreed.
+        masar: PathBuf,
+    },
+
     /// The underlying project, memory or glossary refused.
     #[error("{sabab}")]
     Mawrid {
@@ -111,6 +127,8 @@ impl Tafsir for KhataWarsha {
                     Self::IdhnGhayrMutabiq => 9,
                     Self::MusharakaFarigha => 10,
                     Self::TawqeeGhayrSalih => 11,
+                    Self::LaTalaf => 12,
+                    Self::InqadhGhayrMuthbat { .. } => 13,
                 },
         )
     }
@@ -123,7 +141,8 @@ impl Tafsir for KhataWarsha {
             Self::TabadulGhayrMutabiq { .. } | Self::IdhnGhayrMutabiq => Khutura::Fadih,
             Self::NizaatMuallaqa { .. }
             | Self::TahdheeratMuallaqa { .. }
-            | Self::MusharakaFarigha => Khutura::Tanbeeh,
+            | Self::MusharakaFarigha
+            | Self::LaTalaf => Khutura::Tanbeeh,
             _ => Khutura::Khatar,
         }
     }
@@ -159,6 +178,13 @@ impl Tafsir for KhataWarsha {
             Self::TawqeeGhayrSalih => {
                 "توقيع ملف الذاكرة لا يطابق المفتاح المتوقّع، ورُفض.".to_owned()
             }
+            Self::LaTalaf => {
+                "كل أسطر ملف النصوص تُقرأ؛ لا شيء يُبقى جانبًا ولم يُكتب شيء.".to_owned()
+            }
+            Self::InqadhGhayrMuthbat { masar } => format!(
+                "النسخة المحفوظة في {} لا تطابق الأصل بايتًا ببايت، فتُرك ملف النصوص كما هو.",
+                masar.display()
+            ),
             Self::Mawrid { sabab } => sabab.clone(),
         }
     }
@@ -177,9 +203,11 @@ impl Tafsir for KhataWarsha {
             Self::TabadulGhayrMutabiq { .. }
             | Self::QararBilaNizaa
             | Self::IdhnGhayrMutabiq => Khutwa::IblaghLilMalik,
+            Self::LaTalaf => Khutwa::LaShay,
             Self::HuzmaTalifa { .. }
             | Self::MashruMukhtalif
             | Self::TawqeeGhayrSalih
+            | Self::InqadhGhayrMuthbat { .. }
             | Self::Mawrid { .. } => Khutwa::FathTashkhis,
         }
     }
@@ -202,7 +230,11 @@ impl Tafsir for KhataWarsha {
             | Self::QararBilaNizaa
             | Self::IdhnGhayrMutabiq
             | Self::MusharakaFarigha
-            | Self::TawqeeGhayrSalih => {}
+            | Self::TawqeeGhayrSalih
+            | Self::LaTalaf => {}
+            Self::InqadhGhayrMuthbat { masar } => {
+                daa("masar", QeemaSiyaq::Masar(masar.clone()));
+            }
             Self::TahdheeratMuallaqa { asma } => {
                 daa("tahdheerat", QeemaSiyaq::Nass(asma.join("; ")));
             }

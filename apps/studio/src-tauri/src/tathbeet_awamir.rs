@@ -2,29 +2,39 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
+use std::time::Duration;
 
+use jiff::{SignedDuration, Timestamp};
+use taarib_aman::KhataAman;
 use taarib_aman::iqrar::{self, SijillIqrar};
+use taarib_aman::qaimat_sahb::{QaimaMuraqaba, QaimatSahb};
+use taarib_khatm::MiftahAam;
 use taarib_makhzan::sijillat::{SijillMuharrik, SijillRuqaa, SijillTathbeet};
 use taarib_makhzan::wasl::{Makhzan, alaan};
 use taarib_mustalahat::bina::MutabaqaBina;
 use taarib_mustalahat::luba::{Luba, LubaId};
-use taarib_mustalahat::muharrik::Tabaqa;
+use taarib_mustalahat::muharrik::{Tabaqa, TaqreerImkaniyat};
 use taarib_mustalahat::ruqaa::{MulakhkhasRuqaa, RuqaaId, RuqaaRevision};
 use taarib_mustalahat::taghtiya::Taghtiya;
 use taarib_mustawda::masadir::{MasdarMustawda, SilsilatMasadir};
 use taarib_mustawda::mutabaqa::MutabiqBina;
+use taarib_mustawda::sahb::{NatijatTajdid, jaddid_qaimat_sahb, jaddid_qaimat_sahb_bi_bayan};
 use taarib_mustawda::tanzeel::{self, MukhbirTaqaddum, TalabTanzeel, Taqaddum, nazzil};
 use taarib_mustawda::tarteeb::{FiatTaqyeem, KhiyaratTarteeb, MudkhalTarteeb, rattib};
-use taarib_mustawda::{MarhalatTanzeel, jalb_fahras};
+use taarib_mustawda::{FahrasMajlub, MarhalatTanzeel, jalb_fahras};
 use taarib_tathbeet::bayan::{NawTathbeet, Tathbeet};
 use taarib_tathbeet::khata::KhataTathbeet;
 use taarib_tathbeet::masar_tathbeet::la_tashtaghil;
 use taarib_tathbeet::tahaqquq::{TaqreerTahaqquq, tahaqquq_kamil};
 use taarib_tathbeet::taraju::{
-    RadLaShay, SiyasatIstiada, TaqreerIstiada, TaqreerKul, istiada_kul, istiada_nass,
-    istiada_sawt, nazzif_nusakh,
+    KhuttatIstiada, RadLaShay, SiyasatIstiada, TaqreerIstiada, TaqreerKul, istiada_kul,
+    istiada_nass, istiada_sawt, nazzif_nusakh,
 };
+use taarib_tathbeet::tarkib::{
+    HajatItar, KhuttatTarkib, LubaMuhallala, NawMudkhal, TalabItlaq,
+};
+use taarib_tathbeet::wukala::WakeelQaim;
 use taarib_usus::ISDAR;
 use taarib_usus::idadat::{Idadat, MakhzanIdadat};
 use taarib_usus::khata::{
@@ -310,6 +320,87 @@ pub struct HasilatIzala {
     pub sutur: Vec<String>,
 }
 
+/// What one directory Taarib created still holds that Taarib never put there.
+///
+/// Named rather than counted, because the choice the sweep offers is a choice
+/// about *these files*: a framework's own log, a mod's configuration, a save a
+/// loader wrote beside itself. A number cannot be consented to.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct BaqiyaMujalladHie {
+    /// The directory, relative to the game root.
+    pub mujallad: String,
+    /// The unrecorded entries inside it, sorted, a directory carrying a trailing
+    /// slash. Capped by the installer, so this may be shorter than
+    /// [`Self::adad`].
+    pub madakhil: Vec<String>,
+    /// How many unrecorded entries there are in total.
+    pub adad: u32,
+}
+
+/// What removing one installation would do, computed before it is done.
+///
+/// A projection of one [`taarib_tathbeet::taraju::KhuttatIstiada`]. The dry run
+/// existed and was called by nothing, so the removal confirmation asked for a
+/// decision — sweep the directories or keep them — while showing neither what
+/// would be swept nor what the store had already replaced.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct KhuttatIzalaHie {
+    /// Which installation this is about.
+    pub naw: NawTathbeetHie,
+    /// When it was installed, RFC 3339.
+    pub waqt_tathbeet: String,
+    /// How many of the game's own files would be written back.
+    pub li_istiada: u32,
+    /// How many files Taarib added would be deleted.
+    pub li_hadhf: u32,
+    /// How many created directories would be considered for removal.
+    pub mujalladat: u32,
+    /// Paths the store has already replaced since the install, which a removal
+    /// leaves exactly as they are.
+    pub mustabdala: Vec<String>,
+    /// Recorded paths that are not on disk at all.
+    pub mafquda: Vec<String>,
+    /// What is inside the created directories that no manifest line names.
+    pub baqaya: Vec<BaqiyaMujalladHie>,
+    /// How many bytes the preserved originals occupy, which removing frees.
+    #[specta(type = specta_typescript::Number)]
+    pub hajm_nusakh: u64,
+    /// The same size as the interface writes it.
+    pub hajm_nusakh_maqru: String,
+    /// Whether removing this would leave the game byte-for-byte as it shipped.
+    pub nazif: bool,
+    /// The dry run's own report text, line for line.
+    pub sutur: Vec<String>,
+}
+
+impl KhuttatIzalaHie {
+    /// One dry run, projected for the confirmation that asks about it.
+    fn min_asli(naw: NawTathbeet, khutta: &KhuttatIstiada) -> Self {
+        Self {
+            naw: NawTathbeetHie::min_asli(naw),
+            waqt_tathbeet: khutta.waqt_tathbeet.clone(),
+            li_istiada: adad(khutta.li_istiada),
+            li_hadhf: adad(khutta.li_hadhf),
+            mujalladat: adad(khutta.mujalladat),
+            mustabdala: khutta.mustabdala.clone(),
+            mafquda: khutta.mafquda.clone(),
+            baqaya: khutta
+                .baqaya
+                .iter()
+                .map(|baqiya| BaqiyaMujalladHie {
+                    mujallad: baqiya.mujallad.clone(),
+                    madakhil: baqiya.madakhil.clone(),
+                    adad: adad(baqiya.adad),
+                })
+                .collect(),
+            hajm_nusakh: khutta.hajm_nusakh,
+            hajm_nusakh_maqru: tanzeel::hajm_maqru(khutta.hajm_nusakh),
+            nazif: khutta.nazif(),
+            sutur: khutta.taqreer(),
+        }
+    }
+}
+
 /// Whether the game's own executable is running right now.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct HalatTashghil {
@@ -394,6 +485,12 @@ pub async fn ruqaa_luba(
         silsila.masadir().iter().map(MasdarMustawda::wasf).collect();
 
     let fahras = jalb_fahras(&silsila, &[id], &makhbaa, None).await?;
+    // The revocation list rides on the manifest fetch that just happened. The
+    // page that offers the install button is the moment before the install,
+    // and the gate behind that button reads the cache on a thread that must
+    // not wait for a network; this is where the cache is made current for it.
+    let _ = jaddid_sahb_bi_bayan(&masarat, &silsila, &fahras).await;
+    dhamin_mujaddid_sahb(&masarat, &idadat);
     let mulakhkhasat: Vec<MulakhkhasRuqaa> = fahras
         .shareeha_luba(id)
         .map(|shareeha| shareeha.ruqaa(id).to_vec())
@@ -468,6 +565,10 @@ pub async fn nazzil_ruqaa(
 
     let silsila = silsilat_masadir(&hali)?;
     let fahras = jalb_fahras(&silsila, &[id], &makhbaa, None).await?;
+    // The download is the last asynchronous step before the one-click install,
+    // so the list the install's gate reads is at most this fetch old.
+    let _ = jaddid_sahb_bi_bayan(&masarat, &silsila, &fahras).await;
+    dhamin_mujaddid_sahb(&masarat, &idadat);
     let mulakhkhas = fahras
         .shareeha_luba(id)
         .and_then(|shareeha| shareeha.ruqaa(id).iter().find(|wahid| wahid.id == matlub))
@@ -633,6 +734,54 @@ pub fn azil_ruqaa(
     }
 
     Ok(HasilatIzala { najahat, nass, sawt, akhta, hajm_muharrar, sutur })
+}
+
+/// What removing an installation would do, before it is done.
+///
+/// The dry run [`taarib_tathbeet::taraju::khutta`] has always computed and
+/// nobody has ever been shown. It matters most for the one choice on this screen
+/// that can destroy something the user did not put there: the removal offers to
+/// sweep the directories Taarib created, and a sweep can only be consented to if
+/// what is inside them is named first. It also names the paths the store has
+/// replaced since the install, which a removal deliberately leaves alone — so
+/// "the game is back to how it shipped" is claimed only when it is true.
+///
+/// Nothing is written. An installation that is not there is simply absent from
+/// the answer rather than an error, because the confirmation asks about
+/// whichever of the two are present.
+///
+/// # Errors
+///
+/// Whatever reading a manifest raises. A game with no installation at all
+/// answers with an empty list.
+#[tauri::command]
+#[specta::specta]
+pub fn khuttat_izala(
+    muarrif: String,
+    matlab: MatlabIzala,
+    masarat: tauri::State<'_, Masarat>,
+    makhzan: tauri::State<'_, Makhzan>,
+) -> Result<Vec<KhuttatIzalaHie>, Khata> {
+    let id = huwiya(muarrif)?;
+    let luba = ijlib_luba(&makhzan, id)?;
+    let nusakh = jidhr_nusakh(&masarat, &makhzan, id)?;
+
+    let matlub: &[NawTathbeet] = match matlab {
+        MatlabIzala::Nass => &[NawTathbeet::Nass],
+        MatlabIzala::Sawt => &[NawTathbeet::Sawt],
+        MatlabIzala::Kul => &[NawTathbeet::Nass, NawTathbeet::Sawt],
+    };
+
+    let mut khutat = Vec::with_capacity(matlub.len());
+    for naw in matlub {
+        if !Tathbeet::mawjud(&nusakh, *naw) {
+            continue;
+        }
+        let khutta = taarib_tathbeet::taraju::khutta(&luba.jidhr, &nusakh, *naw)
+            .map_err(Khata::from)?;
+        khutat.push(KhuttatIzalaHie::min_asli(*naw, &khutta));
+    }
+    Ok(khutat)
 }
 
 /// Whether the game's own executable is running right now.
@@ -1142,6 +1291,22 @@ pub enum KhataTathbeetAmr {
         sabab: String,
     },
 
+    /// No anti-cheat scan was run on the game at all.
+    ///
+    /// Distinct from [`Self::FahsHimayaLamYajri`], and kept distinct for the
+    /// remedy rather than for the taxonomy: that one is fixed by naming Steam's
+    /// folder, and offering the same advice here would send someone to correct a
+    /// setting that is not wrong. Nothing walked the directory, which on the
+    /// install path means a caller assembled the inputs without the scan — so
+    /// the way out is a diagnostics bundle, not a preference.
+    #[error("{ism}: no anti-cheat scan was run on {jidhr}")]
+    MashHimayaLamYajri {
+        /// The game.
+        ism: String,
+        /// The folder nothing walked.
+        jidhr: String,
+    },
+
     /// The game is multiplayer and the acknowledgement was not given.
     ///
     /// One of the two refusals here the user can answer and then press again,
@@ -1183,6 +1348,25 @@ pub enum KhataTathbeetAmr {
         /// Why it was revoked, as the list words it.
         sabab: String,
     },
+
+    /// The registry is answering and its revocation list is not.
+    ///
+    /// Not a revocation and not a network failure. An unreachable registry is
+    /// an offline machine, which installs from its local copy with the list's
+    /// state said out loud; this is a registry that served its manifest and
+    /// withheld, or corrupted, the one document able to withdraw a patch. On a
+    /// machine that can ask, "we could not check" is not allowed to become
+    /// "nothing is revoked", so nothing is installed until a later refresh
+    /// finds the list.
+    #[error("the registry {masdar} answered and did not serve its revocation list: {sabab}")]
+    QaimatSahbMahjuba {
+        /// The source that answered the manifest.
+        masdar: String,
+        /// Why no list was accepted.
+        sabab: String,
+        /// When that attempt was made, RFC 3339.
+        waqt: String,
+    },
 }
 
 impl Tafsir for KhataTathbeetAmr {
@@ -1204,12 +1388,22 @@ impl Tafsir for KhataTathbeetAmr {
                     Self::IqrarNaqis => 34,
                     Self::TawqeeMarfud { .. } => 35,
                     Self::RuqaaMulgha { .. } => 36,
+                    // Not aligned with anything, and it takes one of the three
+                    // reserved numbers below rather than 40, because the
+                    // alignment those three protect is worth more than
+                    // contiguity: 40 would be the first code past the block that
+                    // the automatic path has no twin for.
+                    Self::MashHimayaLamYajri { .. } => 33,
+                    // The second of the reserved three, for the same reason.
+                    // Its automatic-path twin is `9137`; the `9130` that would
+                    // have aligned with it was taken by the sharing surface.
+                    Self::QaimatSahbMahjuba { .. } => 31,
                     // The last digit is the automatic path's, deliberately: the
                     // two install routes refuse for the same three reasons out
                     // of the same scan, and `9037`/`9038`/`9039` against
                     // `9127`/`9128`/`9129` says so at a glance in a log, a
-                    // diagnostics bundle and a support thread. 31 to 33 stay
-                    // free so the alignment costs no headroom.
+                    // diagnostics bundle and a support thread. 32 stays free so
+                    // the alignment costs no headroom.
                     Self::HimayaMuktashafa { .. } => 37,
                     Self::FahsHimayaLamYajri { .. } => 38,
                     Self::ShabakaBilaIqrar { .. } => 39,
@@ -1250,7 +1444,14 @@ impl Tafsir for KhataTathbeetAmr {
             // The account is what is at stake in both, so neither is routine:
             // one names anti-cheat evidence, the other names a check that could
             // not be completed and must not be read as a pass.
-            Self::HimayaMuktashafa { .. } | Self::FahsHimayaLamYajri { .. } => Khutura::Tanbeeh,
+            Self::HimayaMuktashafa { .. }
+            | Self::FahsHimayaLamYajri { .. }
+            | Self::MashHimayaLamYajri { .. } => Khutura::Tanbeeh,
+            // A check that could not be completed and must not be read as a
+            // pass, on the same reading as the catalogue one above — but about
+            // the registry rather than the account, which is why it is its own
+            // arm and not folded into theirs.
+            Self::QaimatSahbMahjuba { .. } => Khutura::Tanbeeh,
         }
     }
 
@@ -1318,6 +1519,11 @@ impl Tafsir for KhataTathbeetAmr {
                      براءة. {mawdi}. حدِّد مجلد ستيم في الإعدادات ← المنصّات ثم أعد المحاولة."
                 )
             }
+            Self::MashHimayaLamYajri { jidhr, .. } => format!(
+                "لم يُجرَ فحص مكافحة الغش على {jidhr} أصلًا، فلم يُثبَّت شيء. خلوّ الأدلّة هنا \
+                 يعني أنّ أحدًا لم ينظر، لا أنّ اللعبة سليمة. أعد فتح صفحة اللعبة ليُجرى \
+                 الفحص؛ فإن تكرّر هذا فأرسل حزمة التشخيص."
+            ),
             Self::ShabakaBilaIqrar { wasf_arabi, .. } => format!(
                 "هذه لعبة متعدّدة اللاعبين، ويلزم إقرارك بمخاطر التعديل قبل التثبيت. تعديل \
                  لعبة تُلعب مع آخرين قد يُفقدك حسابك أو يمنعك من الخوادم، والقرار قرارك وحدك. \
@@ -1330,6 +1536,12 @@ impl Tafsir for KhataTathbeetAmr {
             Self::RuqaaMulgha { sabab } => format!(
                 "أُبطلت هذه الحزمة أو مفتاح توقيعها في قائمة الإبطال: {sabab}. الإبطال قرار \
                  من المستودع لا يُلغى من هذا الجهاز؛ اختر رقعة أخرى لهذه اللعبة."
+            ),
+            Self::QaimatSahbMahjuba { masdar, sabab, waqt } => format!(
+                "أجاب المستودع ({masdar}) في {waqt} لكنّه لم يقدّم قائمة الإبطال ({sabab})، \
+                 فلم يُثبَّت شيء. ما دام المستودع يجيب فلا يُثبَّت شيء قبل قراءة قائمته، لأنّ \
+                 الرقعة التي سُحبت لا تُعرف إلا منها. أعد المحاولة بعد قليل؛ وإن كان المصدر \
+                 مجلّدًا محليًا فتأكّد من أنّ ملف القائمة موجود فيه."
             ),
         }
     }
@@ -1397,6 +1609,12 @@ impl Tafsir for KhataTathbeetAmr {
                      Settings, under Launchers, and try again."
                 )
             }
+            Self::MashHimayaLamYajri { jidhr, .. } => format!(
+                "No anti-cheat scan was run on {jidhr} at all, so nothing was installed. An \
+                 empty evidence list here means nobody looked, not that the game is clean. \
+                 Reopen the game's page so the scan runs; if this repeats, send a diagnostics \
+                 bundle."
+            ),
             Self::ShabakaBilaIqrar { wasf_injilizi, .. } => format!(
                 "This is a multiplayer game, and the modification risk has to be acknowledged \
                  before anything is installed. Modifying a game played with other people can \
@@ -1411,6 +1629,13 @@ impl Tafsir for KhataTathbeetAmr {
                 "This package or its signing key is on the revocation list: {sabab}. A \
                  revocation is the registry's decision and cannot be lifted from this machine; \
                  choose another patch for this game."
+            ),
+            Self::QaimatSahbMahjuba { masdar, sabab, waqt } => format!(
+                "The registry ({masdar}) answered at {waqt} but did not serve its revocation \
+                 list ({sabab}), so nothing was installed. While the registry is reachable \
+                 nothing is installed until its list can be read, because a withdrawn patch is \
+                 known only from it. Try again shortly; if the source is a local folder, make \
+                 sure the list file is in it."
             ),
         }
     }
@@ -1430,13 +1655,20 @@ impl Tafsir for KhataTathbeetAmr {
             Self::LaTathbeet { .. } => Khutwa::LaShay,
             Self::GhayrMuttasil => Khutwa::FathIdadat { qism: QismIdadat::Masadir },
             Self::MuhimmaMutawaqqifa { .. } | Self::HuzmaTalifa { .. } => Khutwa::AadaMuhawala,
+            // Lifted by the next refresh that finds the list, which the next
+            // press of the same button runs; nothing on this machine is wrong.
+            Self::QaimatSahbMahjuba { .. } => Khutwa::AadaMuhawala,
             Self::TanfidhiMajhul { .. } | Self::BinaMajhula { .. } => Khutwa::AadaFahsMuharrik,
             Self::FuruqGhayrMaduma { .. } => Khutwa::TahdithTaarib,
             // The package is in hand and refused; the diagnostics bundle is
             // what a report of any of the three carries, and none of them is
             // fixed by pressing the button again.
+            // The last of these is not a fault in the world but a fault in us:
+            // nothing walked the folder, and no setting the reader can reach
+            // changes that.
             Self::TathbeetFashil { .. }
             | Self::TawqeeMarfud { .. }
+            | Self::MashHimayaLamYajri { .. }
             | Self::RuqaaMulgha { .. } => Khutwa::FathTashkhis,
             // The remedy is a setting, and it is the only one this refusal has.
             Self::LughaRasmiyaMawjuda { .. } => Khutwa::FathIdadat { qism: QismIdadat::Lugha },
@@ -1493,6 +1725,11 @@ impl Tafsir for KhataTathbeetAmr {
             Self::RuqaaMulgha { sabab } => {
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
             }
+            Self::QaimatSahbMahjuba { masdar, sabab, waqt } => {
+                let _ = siyaq.insert("masdar".to_owned(), QeemaSiyaq::Nass(masdar.clone()));
+                let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
+                let _ = siyaq.insert("waqt".to_owned(), QeemaSiyaq::Nass(waqt.clone()));
+            }
             // The same keys the automatic path writes for the same three facts,
             // so one log filter reads both routes.
             Self::HimayaMuktashafa { ism, anwa, .. } => {
@@ -1505,6 +1742,10 @@ impl Tafsir for KhataTathbeetAmr {
                 if let Some(mawdi) = mawdi {
                     let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(mawdi.clone()));
                 }
+            }
+            Self::MashHimayaLamYajri { ism, jidhr } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(jidhr.clone()));
             }
             Self::ShabakaBilaIqrar { ism, wasf_injilizi, .. } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
@@ -1520,27 +1761,236 @@ khata_min!(KhataTathbeetAmr);
 
 /// The bundled revocation list, signed by the owner key at sequence 1.
 ///
-/// The starting point every client verifies before the registry has served a
-/// newer one; `QaimatSahb::min_bayt` refuses it unless the signature holds.
+/// The floor, not the answer. Every client verifies it, and the registry's
+/// current list supersedes it the moment one is fetched; it cannot be updated
+/// without shipping a new binary, which is why no install path reads it
+/// directly any more — see [`qaimat_sahb_lil_bawwaba`].
 const QAIMAT_SAHB_ASLIYA: &[u8] = include_bytes!("../../../../assets/qaimat_sahb.json");
 
-/// The bundled revocation list, verified against the owner anchor.
+/// The compiled-in list and the anchor that verifies it.
+pub(crate) struct AsasSahb {
+    /// The owner key every list is verified against.
+    pub(crate) miftah: MiftahAam,
+    /// The list this build shipped, verified.
+    pub(crate) asliya: QaimatSahb,
+}
+
+/// The compiled anchor and the bundled list, verified against each other.
 ///
-/// One function rather than the two lines at each gate, because both the
-/// one-click install and the automatic pipeline hand the same list to the same
-/// safety gate, and a second spelling of "which anchor verifies it" is a second
-/// place for that answer to drift.
+/// One function rather than two lines at each gate, because every gate hands
+/// the same floor to the same store, and a second spelling of "which anchor
+/// verifies it" is a second place for that answer to drift.
 ///
 /// # Errors
 ///
-/// [`Khata`] when the compiled anchor is not a public key, or when the bundled
-/// list does not verify against it — which would mean the build itself is
-/// inconsistent, not that the user did anything.
-pub(crate) fn qaimat_sahb() -> Result<taarib_aman::qaimat_sahb::QaimatSahb, Khata> {
-    let miftah_aam = taarib_khatm::MiftahAam::min_bayt(&taarib_khatm::MIRSAT_MALIK.miftah)
-        .map_err(|q| Khata::min_tafsir(&q))?;
-    taarib_aman::qaimat_sahb::QaimatSahb::min_bayt(QAIMAT_SAHB_ASLIYA, &miftah_aam)
-        .map_err(|q| Khata::min_tafsir(&q))
+/// [`KhataAman::QaimatSahbFashila`] when the compiled anchor is not a public
+/// key, or when the bundled list does not verify against it — which would mean
+/// the build itself is inconsistent, not that the user did anything.
+pub(crate) fn asas_sahb() -> Result<AsasSahb, KhataAman> {
+    let miftah = MiftahAam::min_bayt(&taarib_khatm::MIRSAT_MALIK.miftah).map_err(|khata| {
+        KhataAman::QaimatSahbFashila { amal: "anchored", sabab: khata.to_string() }
+    })?;
+    let asliya = QaimatSahb::min_bayt(QAIMAT_SAHB_ASLIYA, &miftah)?;
+    Ok(AsasSahb { miftah, asliya })
+}
+
+/// The refresh window: how long a successful fetch counts as current.
+///
+/// The same interval the settings name for the manifest refresh. The list is
+/// fetched with the manifest, on the same schedule, and there is no reason for
+/// the two to disagree. The settings layer already refuses anything under five
+/// minutes; the floor is repeated here so a hand-edited file cannot turn the
+/// background loop into a busy one.
+fn nafidhat_sahb(hali: &Idadat) -> SignedDuration {
+    SignedDuration::from_mins(i64::from(hali.masadir.fatra_tahdith.max(5)))
+}
+
+/// The revocation list this machine holds, beside where it stands. No network.
+///
+/// What every synchronous gate reads: the newer of the verified cache and the
+/// compiled-in floor, with the refresh record's account of whether the
+/// registry confirmed it and when. Synchronous commands run on the thread the
+/// window is driven from, so the fetch that keeps the cache current lives at
+/// the asynchronous moments before an install — the page that lists the
+/// patches, the download, the start of an automatic run, the submission — and
+/// in the background loop, never here.
+///
+/// # Errors
+///
+/// Only when the build's own anchor or list is inconsistent; every way the
+/// cache can be wrong is a state the result carries, not an error.
+pub(crate) fn iqra_qaimat_sahb(masarat: &Masarat, hali: &Idadat) -> Result<QaimaMuraqaba, Khata> {
+    let asas = asas_sahb().map_err(|khata| Khata::min_tafsir(&khata))?;
+    let qaima = QaimaMuraqaba::iqra(
+        masarat,
+        &asas.miftah,
+        asas.asliya,
+        Timestamp::now(),
+        nafidhat_sahb(hali),
+    );
+    tracing::info!(
+        hala = qaima.hala().ism(),
+        tasalsul = qaima.qaima().tasalsul(),
+        adad = qaima.qaima().adad(),
+        "{}",
+        qaima.wasf_injilizi()
+    );
+    Ok(qaima)
+}
+
+/// [`iqra_qaimat_sahb`], refusing when the state earns a refusal.
+///
+/// The one refusal: the latest attempt within the window reached the registry
+/// and came back without a usable list. Stale, unreachable and never-fetched
+/// all pass, with their state carried into the result the screen shows —
+/// this product is built to install from a local copy with no network at all,
+/// and a machine that cannot ask is not a machine that was answered.
+///
+/// # Errors
+///
+/// [`KhataTathbeetAmr::QaimatSahbMahjuba`], and whatever [`iqra_qaimat_sahb`]
+/// raises.
+pub(crate) fn qaimat_sahb_lil_bawwaba(
+    masarat: &Masarat,
+    hali: &Idadat,
+) -> Result<QaimaMuraqaba, Khata> {
+    let qaima = iqra_qaimat_sahb(masarat, hali)?;
+    if let Some(rafd) = qaima.rafd() {
+        return Err(Khata::min_tafsir(&KhataTathbeetAmr::QaimatSahbMahjuba {
+            masdar: rafd.masdar.clone(),
+            sabab: rafd.sabab.clone(),
+            waqt: rafd.waqt.to_string(),
+        }));
+    }
+    Ok(qaima)
+}
+
+/// One refresh of the revocation list from the configured sources.
+///
+/// The outcome is written beside the cache by the registry client and logged
+/// here; it is returned for a caller that acts on it and ignored by the ones
+/// that only want the cache current. Offline mode with no local copy is
+/// recorded as an attempt that had no source to ask, so the next gate says
+/// that rather than "no refresh has been attempted".
+pub(crate) async fn jaddid_sahb(masarat: &Masarat, hali: &Idadat) -> NatijatTajdid {
+    // Offline mode with no local copy is a chain with nothing in it rather than
+    // a branch of its own: the chain answers "no registry source is
+    // configured", which the refresh records as an attempt that had nothing to
+    // ask — so the next gate says exactly that instead of "no refresh has been
+    // attempted", which would be a different and untrue statement.
+    let silsila = silsilat_masadir(hali).unwrap_or_else(|_| SilsilatMasadir::jadida(Vec::new()));
+    let natija = match asas_sahb() {
+        Ok(asas) => {
+            jaddid_qaimat_sahb(&silsila, masarat, &asas.miftah, &asas.asliya, Timestamp::now())
+                .await
+        }
+        Err(khata) => NatijatTajdid::Khata(khata),
+    };
+    sajjil_natijat_tajdid(&natija);
+    natija
+}
+
+/// As [`jaddid_sahb`], riding on a manifest the caller has just fetched, so
+/// the registry is asked once for it rather than twice.
+pub(crate) async fn jaddid_sahb_bi_bayan(
+    masarat: &Masarat,
+    silsila: &SilsilatMasadir,
+    fahras: &FahrasMajlub,
+) -> NatijatTajdid {
+    let natija = match asas_sahb() {
+        Ok(asas) => {
+            jaddid_qaimat_sahb_bi_bayan(
+                silsila,
+                &fahras.bayan,
+                &fahras.masdar_bayan,
+                masarat,
+                &asas.miftah,
+                &asas.asliya,
+                Timestamp::now(),
+            )
+            .await
+        }
+        Err(khata) => NatijatTajdid::Khata(khata),
+    };
+    sajjil_natijat_tajdid(&natija);
+    natija
+}
+
+/// The log line every refresh ends on, at the level its outcome deserves.
+fn sajjil_natijat_tajdid(natija: &NatijatTajdid) {
+    match natija {
+        // Offline is a normal state of this product, not a fault.
+        NatijatTajdid::Najah { .. } | NatijatTajdid::MustawdaGhayrMutah { .. } => {
+            tracing::info!("{}", natija.wasf());
+        }
+        NatijatTajdid::QaimaMutaadhdhira { .. } | NatijatTajdid::Aqdam { .. } => {
+            tracing::warn!("{}", natija.wasf());
+        }
+        NatijatTajdid::Khata(_) => tracing::error!("{}", natija.wasf()),
+    }
+}
+
+/// The background refresh, started once per process by the first command that
+/// needs the list current.
+///
+/// Started from the commands rather than from the application's setup hook
+/// because that file is not this change's to edit; the first listing, download
+/// or install starts it and every later call is a no-op. It refreshes at once,
+/// then at the interval the settings name, re-reading the settings on every
+/// tick so a source added or offline mode switched on takes effect at the
+/// next one. Only the command wrappers call it, so no test starts a loop.
+pub(crate) fn dhamin_mujaddid_sahb(masarat: &Masarat, idadat: &Arc<MakhzanIdadat>) {
+    static MUJADDID: OnceLock<()> = OnceLock::new();
+    let masarat = masarat.clone();
+    let idadat = Arc::clone(idadat);
+    MUJADDID.get_or_init(|| {
+        drop(tauri::async_runtime::spawn(async move {
+            loop {
+                let hali = idadat.hali();
+                let _ = jaddid_sahb(&masarat, &hali).await;
+                let thawani = u64::try_from(nafidhat_sahb(&hali).as_secs()).unwrap_or(300);
+                tokio::time::sleep(Duration::from_secs(thawani)).await;
+            }
+        }));
+        // The cell holds nothing; reaching it at all is the whole record.
+    });
+}
+
+/// Where the revocation list a gate consulted stood, as the interface shows it.
+///
+/// Carried on every result an install produces, because "nothing is revoked"
+/// is a different sentence from "nothing was checked against the registry",
+/// and the result used to say the first whenever it meant the second.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct HalatSahbHie {
+    /// The state as a stable key: `muhaddatha`, `mukhazzana`, `muntahiya`,
+    /// `lam_tujlab` or `talifa`.
+    pub hala: String,
+    /// Whether the registry confirmed the list within the refresh window — the
+    /// only state under which a clean revocation answer is a statement about
+    /// the registry rather than about this machine.
+    pub muhaddatha: bool,
+    /// The list's sequence.
+    #[specta(type = specta_typescript::Number)]
+    pub tasalsul: u64,
+    /// How many revocations it carries.
+    pub adad: u32,
+    /// The whole standing, in Arabic.
+    pub arabi: String,
+    /// The same, in English.
+    pub injilizi: String,
+}
+
+/// One gate's list and state, projected for the screen.
+pub(crate) fn sahb_hie(qaima: &QaimaMuraqaba) -> HalatSahbHie {
+    HalatSahbHie {
+        hala: qaima.hala().ism().to_owned(),
+        muhaddatha: qaima.hala().muhaddatha(),
+        tasalsul: qaima.qaima().tasalsul(),
+        adad: adad(qaima.qaima().adad()),
+        arabi: qaima.wasf_arabi(),
+        injilizi: qaima.wasf_injilizi(),
+    }
 }
 
 /// One install stage, as the progress event names it.
@@ -1557,6 +2007,215 @@ pub struct NatijatTathbeetHie {
     pub tahaqquq_arabi: String,
     /// Whether that verification found every path exactly as written.
     pub tahaqquq_salim: bool,
+    /// The revocation list the safety gate checked against, and where it stood.
+    pub sahb: HalatSahbHie,
+}
+
+/// One loader slot beside the game that a third-party mod already holds.
+///
+/// Three fields, and two of them are whole sentences the installer wrote.
+/// [`WakeelQaim`] composes its own line — the file, its size, what is beside it
+/// and which product the evidence named — in both languages, and the confirmation
+/// screen shows that line rather than rebuilding one out of the parts. A
+/// projection that carried the parts instead would be a second place for the
+/// wording to be decided, and the wording is the whole value here: "an ASI plugin
+/// loader, from the string \"Alexander Blade\" inside it" is an answer, and
+/// "`dinput8.dll`, 131072, `muhammil_asi`" is a puzzle.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct WakeelQaimHie {
+    /// The file exactly as it is spelled on disk, which is the key a reader
+    /// looks for in their own game directory.
+    pub ism: String,
+    /// The whole finding as one Arabic line, [`WakeelQaim`]'s own.
+    pub arabi: String,
+    /// The same line in English.
+    pub injilizi: String,
+}
+
+impl WakeelQaimHie {
+    /// One surveyed slot, rendered once in each language.
+    fn min_asli(wakeel: &WakeelQaim) -> Self {
+        Self {
+            ism: wakeel.ism.clone(),
+            arabi: wakeel.wasf_arabi(),
+            injilizi: wakeel.wasf_injilizi(),
+        }
+    }
+}
+
+/// One file the plan would write, and whether the game already has it.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct MudkhalKhuttaHie {
+    /// The destination relative to the game root, as the plan names it.
+    pub nisbi: String,
+    /// Whether the game already has this file.
+    ///
+    /// The distinction the confirmation screen is built around: an added file is
+    /// invisible to the store's integrity check and survives it, and a modified
+    /// one has its original preserved first and is put straight back by that
+    /// same check. Both halves matter, and they part company — see
+    /// [`KhuttatTathbeetHie::malhuzat_tahaqquq_arabi`].
+    pub tadeel: bool,
+}
+
+/// What the plan learned about the launcher that owns this game's launch
+/// options, when the plan needs a launch-time change.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct MalhuzatManassaHie {
+    /// The launcher, as a person reading the plan knows it.
+    ///
+    /// Carried beside the finished sentences, not instead of them: a screen that
+    /// wants to offer "close {ism}" as a button needs the bare name, and a
+    /// screen that builds the sentence out of it is how the two languages drift.
+    pub ism: String,
+    /// The whole note, in Arabic, as the installer words it.
+    ///
+    /// The two sandbox names this used to carry are gone. They existed so the
+    /// screen could assemble one of two sentences from them, and the assembly
+    /// lived in TypeScript while the same two sentences lived in Rust —
+    /// [`MalhuzatManassa::wasf_arabi`] is now the only place either exists.
+    pub wasf_arabi: String,
+    /// The same note in English, from the same producer.
+    pub wasf_injilizi: String,
+}
+
+/// The whole deployment plan for one game, before anything is written.
+///
+/// A projection of one [`taarib_tathbeet::tarkib::KhuttatTarkib`] and of nothing
+/// else. Every sentence in it was written by the installer — the reason no
+/// framework is needed, each launch requirement, each loader already in the game
+/// — and is carried in both languages because the installer writes both. What
+/// this layer adds is the *shape*: counts the screen groups by, and paths, which
+/// have no language.
+///
+/// [`Self::sutur`] is the plan's own report text, unedited. It is the artifact a
+/// user pastes into a bug report and the one the install log carries, and it is
+/// here for the same reason [`HasilatIzala::sutur`] is there.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct KhuttatTathbeetHie {
+    /// The tier this plan was built under, 1 to 3.
+    pub tabaqa_raqm: u8,
+    /// The tier's name in Arabic.
+    pub tabaqa_arabi: String,
+    /// The tier's name in English.
+    pub tabaqa_injilizi: String,
+    /// Whether the game's own files are changed at all.
+    ///
+    /// False at tier 3 and nowhere else, and read from the plan's own decision
+    /// rather than from an empty file list: a plan that writes nothing because
+    /// the component store is thin is not the same statement as a plan that
+    /// writes nothing because the product does not touch this game.
+    pub tughayyar_al_luba: bool,
+    /// Whether the plan writes nothing into the game at all.
+    pub faragha: bool,
+    /// Why no framework is deployed, when none is, in Arabic.
+    pub sabab_faragh_arabi: Option<String>,
+    /// The same reason in English.
+    pub sabab_faragh_injilizi: Option<String>,
+    /// The framework component to deploy, as the component table describes it.
+    ///
+    /// English only, and deliberately not translated here: it is a build
+    /// identifier — "BepInEx for Unity 2019.1-2021.3 (Mono, x64)" — and the
+    /// three things it names are proper nouns in every language.
+    pub itar: Option<String>,
+    /// Where that framework's loader lands, relative to the game root.
+    pub jidhr_muhammil: Option<String>,
+    /// Directories the additive layer creates, in creation order.
+    pub mujalladat: Vec<String>,
+    /// The additive layer's files, in write order.
+    pub mudkhalat: Vec<MudkhalKhuttaHie>,
+    /// How many files the game does not have yet.
+    pub adad_idafat: u32,
+    /// How many files the game already has, whose originals are preserved first.
+    pub adad_tadeelat: u32,
+    /// The Arabic face deployed into a Ren'Py game, relative to `game/`.
+    pub khatt_renpy: Option<String>,
+    /// What launching the game will require afterwards, in Arabic.
+    pub talabat_arabi: Vec<String>,
+    /// The same requirements in English.
+    pub talabat_injilizi: Vec<String>,
+    /// Loader slots beside the game that a third-party mod already holds.
+    ///
+    /// Empty is the normal answer. A game with `BepInEx`, `ReShade`, an ASI
+    /// loader or `re4_tweaks` already in it is not the game the publisher
+    /// shipped, and this is the field that says so before the user agrees
+    /// rather than after.
+    pub huqn_qaim: Vec<WakeelQaimHie>,
+    /// The launcher note, when the plan needs a launch-time change.
+    pub manassa: Option<MalhuzatManassaHie>,
+    /// The store-verify note, in Arabic, when the plan warrants one.
+    ///
+    /// The sentence rather than the boolean that used to stand here. A verify
+    /// compares the tree against the depot manifest, so it restores every
+    /// modified file and leaves every added one — the halves come apart, and the
+    /// game launches with Taarib loaded and its own original text. The screen
+    /// used to hold its own Arabic for that and key it off a `bool`, which meant
+    /// two sentences describing one thing with nothing tying them together;
+    /// [`KhuttatTarkib::malhuzat_tahaqquq_arabi`] is now the only one.
+    pub malhuzat_tahaqquq_arabi: Option<String>,
+    /// The same note in English, from the same producer.
+    pub malhuzat_tahaqquq_injilizi: Option<String>,
+    /// The plan's own report text, line for line, in the installer's words.
+    pub sutur: Vec<String>,
+}
+
+impl KhuttatTathbeetHie {
+    /// One plan, projected for the screen that has to show it.
+    fn min_asli(mukhattat: &KhuttatTarkib) -> Self {
+        let tabaqa = mukhattat.qarar().tabaqa();
+        let itar = match &mukhattat.hajat {
+            HajatItar::Matlub(mukawwin) => {
+                Some(format!("{} — {}", mukawwin.wasf, mukawwin.tahmil.wasf()))
+            }
+            HajatItar::LaHaja(_) => None,
+        };
+        Self {
+            tabaqa_raqm: tabaqa.raqm(),
+            tabaqa_arabi: tabaqa.ism_arabi().to_owned(),
+            tabaqa_injilizi: tabaqa.ism_injilizi().to_owned(),
+            tughayyar_al_luba: mukhattat.qarar().tughayyar_al_luba(),
+            faragha: mukhattat.faragha(),
+            sabab_faragh_arabi: mukhattat
+                .sabab_faragh()
+                .map(|sabab| sabab.wasf_arabi().to_owned()),
+            sabab_faragh_injilizi: mukhattat
+                .sabab_faragh()
+                .map(|sabab| sabab.wasf_injilizi().to_owned()),
+            itar,
+            jidhr_muhammil: mukhattat.jidhr_muhammil.as_ref().map(ToString::to_string),
+            mujalladat: mukhattat.mujalladat.iter().map(|m| m.nisbi.clone()).collect(),
+            mudkhalat: mukhattat
+                .mudkhalat
+                .iter()
+                .map(|mudkhal| MudkhalKhuttaHie {
+                    nisbi: mudkhal.nisbi.clone(),
+                    tadeel: matches!(mudkhal.naw, NawMudkhal::Tadeel),
+                })
+                .collect(),
+            adad_idafat: adad(mukhattat.adad_idafat()),
+            adad_tadeelat: adad(mukhattat.adad_tadeelat()),
+            khatt_renpy: mukhattat.khatt_renpy.clone(),
+            talabat_arabi: mukhattat.talabat.iter().map(TalabItlaq::wasf_arabi).collect(),
+            talabat_injilizi: mukhattat
+                .talabat
+                .iter()
+                .map(TalabItlaq::wasf_injilizi)
+                .collect(),
+            huqn_qaim: mukhattat.huqn_qaim.iter().map(WakeelQaimHie::min_asli).collect(),
+            manassa: mukhattat.manassa_taamil.as_ref().map(|malhuza| MalhuzatManassaHie {
+                ism: malhuza.ism.clone(),
+                wasf_arabi: malhuza.wasf_arabi(),
+                wasf_injilizi: malhuza.wasf_injilizi(),
+            }),
+            malhuzat_tahaqquq_arabi: mukhattat
+                .malhuzat_tahaqquq_arabi()
+                .map(ToOwned::to_owned),
+            malhuzat_tahaqquq_injilizi: mukhattat
+                .malhuzat_tahaqquq()
+                .map(ToOwned::to_owned),
+            sutur: mukhattat.taqreer(),
+        }
+    }
 }
 
 /// One one-click install failure, as the interface's error type.
@@ -1565,7 +2224,7 @@ pub struct NatijatTathbeetHie {
 /// else keeps the single [`KhataTathbeetAmr::TathbeetFashil`] it always had,
 /// because the quarantine and installer errors underneath it already carry their
 /// own sentences and there is nothing here to discriminate between.
-fn khata_naqra(
+pub(crate) fn khata_naqra(
     fashal: &taarib_mustawda::tathbeet_bilnaqra::FashalTathbeet,
     ism: &str,
 ) -> Khata {
@@ -1573,6 +2232,11 @@ fn khata_naqra(
 
     match fashal {
         FashalTathbeet::Aman(rafd) => Khata::min_tafsir(&khata_rafd(rafd, ism)),
+        FashalTathbeet::Sahb(rafd) => Khata::min_tafsir(&KhataTathbeetAmr::QaimatSahbMahjuba {
+            masdar: rafd.masdar.clone(),
+            sabab: rafd.sabab.clone(),
+            waqt: rafd.waqt.to_string(),
+        }),
         FashalTathbeet::Mustawda(_) | FashalTathbeet::Tathbeet(_) => {
             Khata::min_tafsir(&KhataTathbeetAmr::TathbeetFashil {
                 arabi: fashal.arabi(),
@@ -1587,15 +2251,18 @@ fn khata_naqra(
 /// Every arm of [`taarib_aman::fahs::Rafd`] gets its own code rather than the
 /// one `TAARIB-E-9029` they all used to collapse into. The reason is not tidiness:
 /// a code is the only thing on the wire a screen can branch on — `siyaq` is
-/// rendered, never matched, everywhere in this product — and the six refusals
+/// rendered, never matched, everywhere in this product — and the seven refusals
 /// have four different remedies between them. Without the split the manual
 /// install path could not tell "you have not accepted the multiplayer risk",
 /// which one tick and one press fixes, from a revoked signing key, which nothing
 /// on this machine fixes; so it offered the same generic affordance for both.
 ///
-/// The match is exhaustive on purpose. A seventh refusal added to the safety
-/// layer must be answered here rather than falling silently into a bucket that
-/// tells the user nothing.
+/// The match is exhaustive on purpose, and it has since earned it:
+/// [`Rafd::MashHimayaLamYajri`] was added to the safety layer and the compiler
+/// stopped the build here, which is exactly the intent — the seventh refusal got
+/// its own sentence and its own way out instead of falling into a bucket that
+/// would have sent the reader to a Steam setting that was not the problem.
+/// An eighth must be answered here too.
 ///
 /// None of this lifts anything. Every arm still refuses, the sentences still
 /// name the evidence, and anti-cheat still ends at [`Khutwa::LaShay`] with no
@@ -1616,6 +2283,10 @@ fn khata_rafd(rafd: &taarib_aman::fahs::Rafd, ism: &str) -> KhataTathbeetAmr {
             ism: ism.to_owned(),
             mawdi: masar.as_ref().map(|masar| masar.display().to_string()),
             sabab: sabab.clone(),
+        },
+        Rafd::MashHimayaLamYajri { jidhr } => KhataTathbeetAmr::MashHimayaLamYajri {
+            ism: ism.to_owned(),
+            jidhr: jidhr.display().to_string(),
         },
         Rafd::Tawqee(sabab) => {
             KhataTathbeetAmr::TawqeeMarfud { arabi: sabab.arabi(), injilizi: sabab.injilizi() }
@@ -1732,14 +2403,17 @@ pub fn thabbit_ruqaa(
         .ok_or_else(|| {
             Khata::min_tafsir(&KhataTathbeetAmr::BinaMajhula { ism: luba.ism.clone() })
         })?;
-    let Some(tanfidhi) = luba.tanfidhi.clone() else {
-        return Err(Khata::min_tafsir(&KhataTathbeetAmr::TanfidhiMajhul { ism: luba.ism }));
-    };
-    let Some(masdar) = luba.masadir.first().cloned() else {
-        return Err(Khata::min_tafsir(&KhataTathbeetAmr::LaTathbeet { ism: luba.ism }));
-    };
+    // Built once, here, and handed to both the plan and the manifest. It used to
+    // be assembled inline further down, which meant the description of the game
+    // the planner saw was constructed separately from the one the preview beside
+    // the button had constructed.
+    let luba_muhallala = luba_lil_tarkib(&luba, &taqreer)?;
 
-    let qaima = qaimat_sahb()?;
+    // The cache as the page and the download left it; this command runs on the
+    // window's thread and does not fetch. The loop is started here as well, for
+    // the imported-file install that reaches this gate without either.
+    dhamin_mujaddid_sahb(&masarat, &idadat);
+    let qaima = qaimat_sahb_lil_bawwaba(&masarat, &hali)?;
     let sijill_iqrar = iqrar::iqra(&masar_iqrar(&masarat))?;
 
     let bayt_ruqaa = std::fs::read(&malaf_munazzal).map_err(|q| {
@@ -1751,7 +2425,7 @@ pub fn thabbit_ruqaa(
 
     let tarif = taarib_tathbeet::bayan::TarifLuba {
         luba: id,
-        masdar: masdar.clone(),
+        masdar: luba_muhallala.masdar.clone(),
         ism: luba.ism.clone(),
         jidhr: luba.jidhr.clone(),
         ruqaa: ruqaa_id,
@@ -1759,7 +2433,8 @@ pub fn thabbit_ruqaa(
         basma_bina: Some(bina.basma),
     };
 
-    let ism_tanfidhi = tanfidhi
+    let ism_tanfidhi = luba_muhallala
+        .masar_tanfidhi
         .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or_default()
@@ -1773,20 +2448,21 @@ pub fn thabbit_ruqaa(
     // Steam's catalogue and out of nowhere else.
     let jidhr_steam = crate::luba_awamir::jidhr_steam_lil_fahs(&masarat, &hali, &luba)?;
 
-    let luba_muhallala = taarib_tathbeet::tarkib::LubaMuhallala {
-        jidhr: luba.jidhr.clone(),
-        masar_tanfidhi: tanfidhi,
-        muharrik: taqreer.muharrik.clone(),
-        beea: luba.beea.clone(),
-        nizam: taarib_usus::manassa::NizamTashghil::hali(),
-        masdar,
-    };
     let halat_idadat = taarib_tathbeet::tarkib::HalatIdadat {
         khiyarat_tashghil: None,
         tajawuzat_dll: None,
         tahmil_musbaq: None,
         malaf_idadat_manassa: None,
     };
+
+    // The plan, decided before the confirmation rather than inside the writer.
+    // `nashr` would have built one here anyway and thrown it away unseen; built
+    // here it is the same value `khuttat_tathbeet` renders beside the button, so
+    // the lines the user was shown are the lines that execute. It is also the
+    // point where a missing component or an unbuilt compatibility prefix is
+    // refused — before a backup is taken, rather than half way through one.
+    let mukhattat = taarib_tathbeet::tarkib::khutta(&taqreer, &luba_muhallala, &mukawwinat)
+        .map_err(Khata::from)?;
 
     let talab = TalabNaqra {
         luba: id,
@@ -1811,10 +2487,10 @@ pub fn thabbit_ruqaa(
     let natija = thabbit_bilnaqra(
         talab,
         |muthabbit| {
-            let _ = taarib_tathbeet::tarkib::nashr(
+            let _ = taarib_tathbeet::tarkib::nashr_bi_khutta(
+                &mukhattat,
                 &luba_muhallala,
                 &halat_idadat,
-                &taqreer,
                 &mukawwinat,
                 muthabbit,
             )?;
@@ -1831,7 +2507,84 @@ pub fn thabbit_ruqaa(
         adad_muhtawa: u32::try_from(natija.adad_muhtawa).unwrap_or(u32::MAX),
         tahaqquq_arabi: natija.tahaqquq.arabi().to_owned(),
         tahaqquq_salim: natija.tahaqquq.salim(),
+        sahb: sahb_hie(&qaima),
     })
+}
+
+/// The game as [`taarib_tathbeet::tarkib`] needs it, assembled from the store.
+///
+/// Shared by the install and by the plan shown beside its button, deliberately.
+/// A plan is a promise about what pressing install will do, and it is only that
+/// if both were built from the same description of the game; two constructions
+/// of [`LubaMuhallala`] in two commands is a second place for the executable,
+/// the compatibility environment or the launcher identity to drift, and every
+/// instance of this defect in this project has been exactly that shape.
+///
+/// # Errors
+///
+/// [`KhataTathbeetAmr::TanfidhiMajhul`] when no executable was ever resolved for
+/// the game — the loader directory is read off it — and
+/// [`KhataTathbeetAmr::LaTathbeet`] when the game carries no launcher identity,
+/// which is what a launch-time requirement would have to be recorded against.
+fn luba_lil_tarkib(luba: &Luba, taqreer: &TaqreerImkaniyat) -> Result<LubaMuhallala, Khata> {
+    let Some(masar_tanfidhi) = luba.tanfidhi.clone() else {
+        return Err(Khata::min_tafsir(&KhataTathbeetAmr::TanfidhiMajhul {
+            ism: luba.ism.clone(),
+        }));
+    };
+    let Some(masdar) = luba.masadir.first().cloned() else {
+        return Err(Khata::min_tafsir(&KhataTathbeetAmr::LaTathbeet { ism: luba.ism.clone() }));
+    };
+    Ok(LubaMuhallala {
+        jidhr: luba.jidhr.clone(),
+        masar_tanfidhi,
+        muharrik: taqreer.muharrik.clone(),
+        beea: luba.beea.clone(),
+        nizam: taarib_usus::manassa::NizamTashghil::hali(),
+        masdar,
+    })
+}
+
+/// What installing into this game would write, before anything is written.
+///
+/// The same [`taarib_tathbeet::tarkib::khutta`] call [`thabbit_ruqaa`] makes,
+/// over the same game description, so this is not a description of the install
+/// — it is the install's own plan, read early. It answers the four questions a
+/// person is entitled to have answered before they agree: which files are
+/// created and which of the game's own are replaced, what else is already
+/// hooked into this game, whether verifying the game through its store would
+/// undo it, and what launching it will need afterwards.
+///
+/// It walks the game directory — the loader survey opens every module in the
+/// slot list to identify it — so a screen asks for it deliberately rather than
+/// on mount, the way it asks for the evidence chain.
+///
+/// # Errors
+///
+/// [`KhataTathbeetAmr::LaTathbeet`] when the game has never been probed, so
+/// there is no capability report to plan against, and whatever the planner
+/// raises: a report the safety layer refused, a compatibility prefix that has
+/// never been built, a component the store does not hold. Each of those is a
+/// reason this install would fail, said before it is attempted instead of
+/// during it.
+#[tauri::command]
+#[specta::specta]
+pub fn khuttat_tathbeet(
+    muarrif: String,
+    masarat: tauri::State<'_, Masarat>,
+    makhzan: tauri::State<'_, Makhzan>,
+) -> Result<KhuttatTathbeetHie, Khata> {
+    let id = huwiya(muarrif)?;
+    let luba = ijlib_luba(&makhzan, id)?;
+    let taqreer = makhzan
+        .bil_qira(|ittisal| SijillMuharrik::jadeed(ittisal).wahid(id))?
+        .ok_or_else(|| Khata::min_tafsir(&KhataTathbeetAmr::LaTathbeet { ism: luba.ism.clone() }))?;
+
+    let luba_muhallala = luba_lil_tarkib(&luba, &taqreer)?;
+    let mukhattat =
+        taarib_tathbeet::tarkib::khutta(&taqreer, &luba_muhallala, &masarat.mukawwinat())
+            .map_err(Khata::from)?;
+    Ok(KhuttatTathbeetHie::min_asli(&mukhattat))
 }
 
 fn qeema_bayan<T: serde::de::DeserializeOwned>(
@@ -1867,6 +2620,7 @@ mod ikhtibarat {
     use std::collections::BTreeSet;
 
     use taarib_aman::fahs::Rafd;
+    use taarib_aman::qaimat_sahb::{MuhawalatTajdid, NatijatMuhawala};
     use taarib_aman::kashf_himaya::{
         DaleelHimaya, IjmaaHimaya, NawDaleel as NawDaleelHimaya, NawHimaya, Thiqa,
     };
@@ -2156,6 +2910,127 @@ mod ikhtibarat {
         assert_eq!(
             khata.siyaq.get("masar"),
             Some(&QeemaSiyaq::Nass("/steam/appcache/appinfo.vdf".to_owned()))
+        );
+    }
+
+    /// A scratch data root that removes itself, so an assertion that fails does
+    /// not leave a cache behind in the machine's temporary directory.
+    struct JidhrMuaqqat(PathBuf);
+
+    impl Drop for JidhrMuaqqat {
+        fn drop(&mut self) {
+            // Best effort. A test that has already failed must not fail twice.
+            #[expect(
+                clippy::disallowed_methods,
+                reason = "a scratch directory under `std::env::temp_dir()` removing itself, \
+                          never a data root or a game directory"
+            )]
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// A data root of its own, with nothing in it.
+    fn jidhr_muaqqat() -> (Masarat, JidhrMuaqqat) {
+        let jidhr = std::env::temp_dir().join(format!("taarib-sahb-{}", uuid::Uuid::new_v4()));
+        let haris = JidhrMuaqqat(jidhr.clone());
+        (Masarat::min_judhur(jidhr.join("bayanat"), jidhr.join("idadat")), haris)
+    }
+
+    /// The three states a machine that has not fetched can be in, and which of
+    /// them installs.
+    ///
+    /// The whole of the finding this gate exists for: a machine that never went
+    /// online, and one whose registry could not be reached, both install — this
+    /// product is built to work with no internet — and neither is told the
+    /// revocation check passed. A registry that answers and withholds its list
+    /// is the one case that refuses.
+    #[test]
+    fn bawwabat_al_sahb_tasmah_lil_ghayr_muttasil_wa_tarfud_al_mahjuba() -> NatijatIkhtibar {
+        let (masarat, _haris) = jidhr_muaqqat();
+        let hali = Idadat::default();
+
+        // Never fetched: installs, and says so rather than claiming a pass.
+        let qaima = qaimat_sahb_lil_bawwaba(&masarat, &hali)?;
+        assert_eq!(qaima.hala().ism(), "lam_tujlab");
+        assert!(!qaima.hala().muhaddatha(), "a list nobody fetched is not a confirmed one");
+        assert!(sahb_hie(&qaima).injilizi.contains("has ever been fetched"));
+
+        // Offline: still installs, and the reason is now on the record.
+        QaimatSahb::sajjil_muhawala(
+            &masarat,
+            MuhawalatTajdid {
+                waqt: Timestamp::now(),
+                natija: NatijatMuhawala::MustawdaGhayrMutah {
+                    sabab: "dns error: no such host".to_owned(),
+                },
+            },
+        )?;
+        let qaima = qaimat_sahb_lil_bawwaba(&masarat, &hali)?;
+        assert!(!qaima.hala().muhaddatha());
+        assert!(sahb_hie(&qaima).injilizi.contains("could not reach the registry"));
+
+        // Reachable and withholding: refused, with its own code and remedy.
+        QaimatSahb::sajjil_muhawala(
+            &masarat,
+            MuhawalatTajdid {
+                waqt: Timestamp::now(),
+                natija: NatijatMuhawala::QaimaMutaadhdhira {
+                    masdar: "forge https://example.invalid".to_owned(),
+                    sabab: "sahb/qaima.json answered 404".to_owned(),
+                },
+            },
+        )?;
+        let khata = qaimat_sahb_lil_bawwaba(&masarat, &hali)
+            .err()
+            .ok_or("a reachable registry withholding its list must refuse")?;
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 31);
+        assert_eq!(khata.khutwa, Khutwa::AadaMuhawala);
+        assert!(khata.injilizi.contains("404"), "{}", khata.injilizi);
+        assert!(fiha_arabi(&khata.arabi));
+        assert!(!fiha_arabi(&khata.injilizi), "{}", khata.injilizi);
+        assert_eq!(
+            khata.siyaq.get("masdar"),
+            Some(&QeemaSiyaq::Nass("forge https://example.invalid".to_owned()))
+        );
+        Ok(())
+    }
+
+    /// The withheld-list refusal is told apart from every safety refusal, and
+    /// from the generic install failure, by its code alone.
+    #[test]
+    fn rafd_al_sahb_lahu_ramz_yakhussuhu() {
+        let fashal = taarib_mustawda::tathbeet_bilnaqra::FashalTathbeet::Sahb(
+            taarib_aman::qaimat_sahb::RafdQaima {
+                masdar: "mirror https://example.invalid".to_owned(),
+                sabab: "the list did not verify".to_owned(),
+                waqt: Timestamp::now(),
+            },
+        );
+
+        let khata = khata_naqra(&fashal, ISM);
+
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 31);
+        // Not the bucket every non-safety failure collapses into: a withheld
+        // revocation list and a game that is running are not one situation.
+        assert_ne!(khata.ramz.raqm(), arqam::STUDIO + 29);
+        // Nor any of the seven safety refusals.
+        let rufud = [
+            Rafd::IqrarNaqis,
+            Rafd::Himaya(Box::new(ijmaa_himaya())),
+            Rafd::FahsMatjarLamYajri { masar: None, sabab: "NotFound".to_owned() },
+            Rafd::MashHimayaLamYajri { jidhr: PathBuf::from("/luba-ikhtibar") },
+            Rafd::Tawqee(SababTawqee::GhayrMuwaqqaa),
+            Rafd::Mulgha { sabab: "the signing key was withdrawn".to_owned() },
+            Rafd::ShabakaBilaIqrar(Box::new(ijmaa_shabaka())),
+        ];
+        for rafd in &rufud {
+            assert_ne!(khata_rafd(rafd, ISM).ramz().raqm(), khata.ramz.raqm());
+        }
+        // "The registry withheld its list" and "this patch is revoked" are
+        // opposite findings and must never wear one code.
+        assert_ne!(
+            khata.ramz.raqm(),
+            khata_rafd(&Rafd::Mulgha { sabab: String::new() }, ISM).ramz().raqm()
         );
     }
 

@@ -205,15 +205,29 @@ impl Matjar for MatjarGog {
         let qaida =
             jidhr.as_ref().and_then(|jidhr| malaf_qaida(jidhr).map(|masar| (jidhr, masar)));
         let mustaqilla = tathbitat_mustaqilla();
+        let jidhr_mawjud = jidhr.clone().filter(|masar| masar.is_dir());
         if qaida.is_none() && mustaqilla.is_empty() {
-            return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+            // Galaxy's folder is here and its database is not: what `mawqi`
+            // calls installed, this must not call absent.
+            let Some(jidhr_mawjud) = jidhr_mawjud else {
+                return Ok(NatijatMatjar::ghayr_mutah(MUARRIF));
+            };
+            let matlub = [jidhr_mawjud.join("storage").join(ISM_QAIDA), jidhr_mawjud.join(ISM_QAIDA)]
+                .iter()
+                .map(|masar| masar.display().to_string())
+                .collect::<Vec<String>>()
+                .join(", ");
+            return Ok(NatijatMatjar::naqisa(
+                MUARRIF,
+                Some(jidhr_mawjud),
+                matlub,
+                "GOG Galaxy is installed here but its database is not, and the registry lists \
+                 no standalone GOG install, so no GOG game could be listed; open Galaxy once so \
+                 it recreates the database, or correct the configured root",
+            ));
         }
 
-        let mut natija = NatijatMatjar {
-            matjar: MUARRIF,
-            jidhr_matjar: jidhr.clone().filter(|masar| masar.is_dir()),
-            ..NatijatMatjar::default()
-        };
+        let mut natija = NatijatMatjar::muthabbat(MUARRIF, jidhr_mawjud);
         let mut fahras: BTreeMap<u64, LubaMuktashafa> = BTreeMap::new();
         let mut mawaqi: BTreeSet<String> = BTreeSet::new();
 
@@ -427,7 +441,7 @@ fn tathbitat_galaxy(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec
         }
     }
     let Some((jadwal, asmaa)) = mawjud else {
-        tanbihat.push(TanbihFahs::jadeed(
+        tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             JADAWIL_TATHBEET.join(" / "),
             "Galaxy's database has no installed-product table under any name Taarib knows, so \
@@ -440,7 +454,7 @@ fn tathbitat_galaxy(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec
     let (Some(amud_muarrif), Some(amud_masar)) =
         (amud_mutah(&asmaa, &AAMIDA_MUARRIF), amud_mutah(&asmaa, &AAMIDA_MASAR))
     else {
-        tanbihat.push(TanbihFahs::jadeed(
+        tanbihat.push(TanbihFahs::fahras(
             MUARRIF,
             jadwal.to_owned(),
             format!(
@@ -483,7 +497,7 @@ fn tathbitat_galaxy(ittisal: &Connection, tanbihat: &mut Vec<TanbihFahs>) -> Vec
             },
             Ok(None) => break,
             Err(khata) => {
-                tanbihat.push(TanbihFahs::jadeed(
+                tanbihat.push(TanbihFahs::fahras(
                     MUARRIF,
                     jadwal.to_owned(),
                     format!("reading {jadwal} stopped early: {khata}"),
@@ -1383,6 +1397,34 @@ mod ikhtibarat {
         // machine asked; a context with no machine-wide data folder now says so.
         let siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
         assert_eq!(MatjarGog::jadeed().mawqi(&siyaq), None);
+        Ok(())
+    }
+
+    /// Galaxy's folder is present and its database is not. `mawqi` calls that
+    /// installed, so `ifhas` must not call it absent — the shape that let the
+    /// absence sweep run over a launcher nobody had read.
+    #[test]
+    fn jidhr_bila_qaida_naqis_la_ghayr_muthabbat() -> NatijatIkhtibar {
+        use crate::fahs::HalatFahsMatjar;
+
+        let masrah = tempfile::tempdir()?;
+        let bayanat = masrah.path().join("ProgramData");
+        let jidhr = bayanat.join("GOG.com").join("Galaxy");
+        fs::create_dir_all(jidhr.join("storage"))?;
+        let mut siyaq = SiyaqFahs::lil_ikhtibar(NizamTashghil::Windows, masrah.path());
+        siyaq.bayanat_barnamij = Some(bayanat);
+
+        let matjar = MatjarGog::jadeed();
+        assert_eq!(matjar.mawqi(&siyaq).as_deref(), Some(jidhr.as_path()));
+        let natija = matjar.ifhas(&siyaq)?;
+        assert_ne!(natija.hala(), HalatFahsMatjar::GhayrMuthabbat);
+        assert_eq!(natija.jidhr_matjar.as_deref(), Some(jidhr.as_path()));
+        // Every host but a Windows machine with standalone GOG installs in its
+        // registry reaches the exact case; that one still passes the two above.
+        if tathbitat_mustaqilla().is_empty() {
+            assert_eq!(natija.hala(), HalatFahsMatjar::Naqisa);
+            assert!(natija.tanbihat.iter().any(TanbihFahs::yukhfi_alaab));
+        }
         Ok(())
     }
 

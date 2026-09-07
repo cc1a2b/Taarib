@@ -81,7 +81,7 @@ use taarib_muhawwil_unreal::mawarid::pak::HawiyatPak;
 use taarib_muhawwil_unreal::mawarid::{Mawrid as _, TarmizNass};
 
 use crate::jadwal::{JadwalNusus, MawqiNass};
-use crate::rafd::{SababRafd, TaqreerRafd};
+use crate::rafd::{MujammiRafd, SababRafd, TaqreerRafd};
 use crate::tasnif::{TalabMudkhal, ansha_mudkhal};
 
 /// How deep the walk for loose localization files goes.
@@ -429,7 +429,22 @@ fn min_hawiyat_pak(
         .collect();
 
     if masarat_meta.is_empty() && masarat_res.is_empty() && masarat_hizam.is_empty() {
-        taqreer.sajjil(hawiya, None, SababRafd::BilaNusus);
+        // A version 10 or 11 container whose full-directory index was pruned
+        // at cook time names nothing, so every list above is empty by
+        // construction. That is not "holds no text" — it is a container this
+        // build cannot search by name — and the two get different reasons
+        // because they have different remedies: capture recovers the strings a
+        // pruned index hides, and there is nothing to recover from textures.
+        let sabab = if qari.fahras().dalil_kamil() {
+            SababRafd::BilaNusus
+        } else {
+            SababRafd::SighaMajhula {
+                wujid: "a pak whose full-directory index was pruned at cook time, so the \
+                        files inside it cannot be searched by path"
+                    .to_owned(),
+            }
+        };
+        taqreer.sajjil(hawiya, None, sabab);
         return;
     }
 
@@ -475,6 +490,13 @@ fn min_hawiyat_pak(
 
     let jumla = masarat_hizam.iter().map(|(_, tul)| *tul).fold(0_u64, u64::saturating_add);
     let mut mizaniya = MizaniyatHizam::jadeeda(jumla);
+    // Packages the reader refused are folded per reason rather than dropped:
+    // a container whose only text is in string tables and whose payloads are
+    // AES-locked would otherwise contribute zero reads and zero refusals, and
+    // be absent from the report in both directions. Packages read and found
+    // to hold no table are counted for the same reason, from the other side.
+    let mut mujammi = MujammiRafd::jadeed(hawiya.clone());
+    let mut bila_jadwal = 0_usize;
     for (asl, tul) in &masarat_hizam {
         match mizaniya.qarrir(*tul) {
             QararHizma::Iqra => {}
@@ -484,9 +506,17 @@ fn min_hawiyat_pak(
                 break;
             }
         }
-        let Ok(bayt) = qari.iqra_masar(asl) else { continue };
-        sajjil_jadwal(jadwal, taqreer, &hawiya, Some(asl), &bayt);
+        match qari.iqra_masar(asl) {
+            Ok(bayt) => {
+                if !sajjil_jadwal(jadwal, taqreer, &hawiya, Some(asl), &bayt) {
+                    bila_jadwal = bila_jadwal.saturating_add(1);
+                }
+            }
+            Err(khata) => mujammi.sajjil(asl.clone(), sabab_min_khata(&khata, NawMadkhal::Nass)),
+        }
     }
+    mujammi.ikhtim(taqreer);
+    sajjil_hizam_bila_jadwal(taqreer, &hawiya, bila_jadwal);
 }
 
 /// Reads every localization resource out of one IoStore container.
@@ -589,6 +619,8 @@ fn min_hawiyat_iostore(
     // split into a package and a sibling export block the way a loose asset is.
     let jumla = masarat_hizam.iter().map(|(_, tul)| *tul).fold(0_u64, u64::saturating_add);
     let mut mizaniya = MizaniyatHizam::jadeeda(jumla);
+    let mut mujammi = MujammiRafd::jadeed(hawiya.clone());
+    let mut bila_jadwal = 0_usize;
     for (asl, tul) in &masarat_hizam {
         match mizaniya.qarrir(*tul) {
             QararHizma::Iqra => {}
@@ -598,9 +630,34 @@ fn min_hawiyat_iostore(
                 break;
             }
         }
-        let Ok(bayt) = qari.iqra_masar(asl) else { continue };
-        sajjil_jadwal(jadwal, taqreer, &hawiya, Some(asl), &bayt);
+        match qari.iqra_masar(asl) {
+            Ok(bayt) => {
+                if !sajjil_jadwal(jadwal, taqreer, &hawiya, Some(asl), &bayt) {
+                    bila_jadwal = bila_jadwal.saturating_add(1);
+                }
+            }
+            Err(khata) => mujammi.sajjil(asl.clone(), sabab_min_khata(&khata, NawMadkhal::Nass)),
+        }
     }
+    mujammi.ikhtim(taqreer);
+    sajjil_hizam_bila_jadwal(taqreer, &hawiya, bila_jadwal);
+}
+
+/// Records the packages a container search read and found no table in.
+///
+/// One line for the whole container, with a count, so that a container whose
+/// packages were all opened is told apart from one whose packages were never
+/// reached — and so that it is not four thousand lines, which is the number a
+/// real game has and the number nobody reads.
+fn sajjil_hizam_bila_jadwal(taqreer: &mut TaqreerRafd, hawiya: &str, adad: usize) {
+    if adad == 0 {
+        return;
+    }
+    taqreer.sajjil_qira(
+        hawiya.to_owned(),
+        0,
+        format!("{adad} package(s) searched for a StringTable payload, none holding one"),
+    );
 }
 
 /// Reads one `.locmeta` and records the native culture it declares.

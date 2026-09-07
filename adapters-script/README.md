@@ -14,8 +14,33 @@ in whatever interpreter the game happens to ship.
 | `renpy/` (the rest of the package) | The Ren'Py runtime module: version detection, the text filter, the custom displayable | Phase 10 |
 | `vxace/taarib_rgss3.rb` | Ruby 1.9.2 (RGSS3), `Win32API` over the native ABI, 32-bit Windows only | Phase 3 |
 | `vxace/` (the injected window code) | `Bitmap#draw_text` and `Window_Base` replacements that draw through the binding | Phase 10 |
-| `rpgmaker/` | TypeScript compiled to `js/plugins/taarib.js` for MV and MZ, over the WASM core | Phase 10 |
+| `rpgmaker/` | TypeScript, compiled to one ES5 file that the installer places as the game's `js/plugins/taarib.js`, for MV and MZ, over the WASM core | Phase 10 |
 | `electron/` | TypeScript preload and renderer runtime for Electron games, over the WASM core | Phase 10 |
+
+## Building the two JavaScript sides
+
+The Python and Ruby files ship as they are. The two TypeScript trees are
+compiled by `ibni.mjs` in this directory, which `scripts/isdar.sh` runs as one
+step of the release build:
+
+```sh
+(cd adapters-script && pnpm install)
+node adapters-script/ibni.mjs --ahdaf target   # from the workspace root, as isdar.sh runs it;
+                                               # writes target/adapters/{rpgmaker,electron}/taarib.js
+```
+
+`--ahdaf` defaults to the workspace's own `target/`; pass it when cargo's target
+directory lives elsewhere, and note that `taarib-tajmee` still reads rows H1, I1
+and I2 from `<workspace>/target` regardless of its own `--ahdaf`.
+
+The two are compiled differently on purpose. The RPG Maker plugin goes through
+`tsc` with `tsconfig.rpgmaker.json`, because MV's NW.js needs ES5 and `esbuild`
+cannot lower `const`/`let` to `var`; the Electron runtime goes through `esbuild`,
+because it has to load both as a CommonJS module and as a bare `<script>`. The
+TypeScript and esbuild versions are pinned in `package.json` with the reason for
+each. `taarib-tajmee` then stages the outputs as matrix rows I2 and I1 beside
+the `wasm-bindgen` pair (row H1), and it reads them from `<workspace>/target`
+whatever `--ahdaf` says, because neither is a cargo output.
 
 Phase 3 builds the two native-ABI bindings because they are part of the ABI's
 own definition of done: the C surface is not finished until something that is
