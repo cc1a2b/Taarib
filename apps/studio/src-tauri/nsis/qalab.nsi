@@ -99,6 +99,8 @@ InstallDir "${PLACEHOLDER_INSTALL_DIR}"
 VIProductVersion "${VERSIONWITHBUILD}"
 VIAddVersionKey "ProductName" "${PRODUCTNAME}"
 VIAddVersionKey "FileDescription" "${PRODUCTNAME}"
+; Upstream leaves the setup's Company detail blank; the publisher belongs there too.
+VIAddVersionKey "CompanyName" "${MANUFACTURER}"
 VIAddVersionKey "LegalCopyright" "${COPYRIGHT}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
