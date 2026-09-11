@@ -194,7 +194,7 @@ lz4_flex = { version = "0.11.5", default-features = false, features = [
     "checked-decode",
 ] }
 aes = "0.8"
-cbc = "0.1"
+cbc = "0.2"
 base64 = "0.22"
 hex = "0.4"
 # The platform secret stores, which is where every user-supplied credential
