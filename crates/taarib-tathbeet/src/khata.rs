@@ -391,6 +391,26 @@ pub enum KhataTathbeet {
         sabab: String,
     },
 
+    /// A font the package names is not in this build's font store, or the one
+    /// there is not the file the package was shaped against.
+    ///
+    /// A Unity takeover rasterises text itself, through the faces the patch
+    /// records by name and fingerprint, and it reads them from beside the
+    /// package. A face that is absent leaves it nothing to shape with; a face
+    /// with a different fingerprint under the same name would shape differently
+    /// from every layout the package precomputed. Both are refused before the
+    /// backup is taken, because an install that placed the package without its
+    /// face would be a game that logs a refusal at launch and stays English.
+    #[error("the font {ism} the package names is not in the store at {jidhr}")]
+    KhattMafqud {
+        /// The file name the package records.
+        ism: String,
+        /// The font root that was searched.
+        jidhr: PathBuf,
+        /// Absent, or present with the wrong fingerprint.
+        sabab: String,
+    },
+
     /// The restore stopped part of the way through.
     ///
     /// Not a success with a caveat. The manifest still records every path that
@@ -641,6 +661,7 @@ impl KhataTathbeet {
             Self::MunassaTaamal { malaf, .. } | Self::HalatManassaMajhula { malaf, .. } => {
                 Some(malaf)
             },
+            Self::KhattMafqud { jidhr, .. } => Some(jidhr),
             Self::HajmMufrit { .. }
             | Self::IdadGhayrMustaad { .. }
             | Self::IdadGhayrMunaffadh { .. }
@@ -712,6 +733,7 @@ impl Tafsir for KhataTathbeet {
                     Self::IdhnGhayrMutabiq => 80,
                     Self::NususMarfuda { .. } => 81,
                     Self::HalatLubaMajhula { .. } => 82,
+                    Self::KhattMafqud { .. } => 83,
                 },
         )
     }
@@ -818,6 +840,12 @@ impl Tafsir for KhataTathbeet {
             Self::IdadGhayrMunaffadh { mahall, .. } => format!(
                 "تعذّر ضبط إعداد التشغيل ({mahall})، وبدونه لا تُحمَّل ملفات تعريب في اللعبة \
                  أصلًا. أُوقف التثبيت بدل أن يُقال إنه نجح واللعبة تعمل كما كانت."
+            ),
+            Self::KhattMafqud { ism, .. } => format!(
+                "الخطّ «{ism}» الذي تسمّيه الرقعة ليس في مخزن خطوط هذا الإصدار من تعريب، أو \
+                 أنّ الموجود باسمه ليس الملف الذي شُكِّلت الرقعة به. لم يُكتب شيء: رقعة تُوضع \
+                 بلا خطّها تترك اللعبة بلغتها الأصلية وتسجّل رفضًا عند التشغيل. حدِّث تعريب \
+                 ثم أعد المحاولة."
             ),
             Self::LubaTashtaghil { amaliya, .. } => format!(
                 "اللعبة تعمل الآن ({amaliya}). أغلقها تمامًا ثم أعد المحاولة؛ لا يُعدَّل ملف \
@@ -1050,6 +1078,13 @@ impl Tafsir for KhataTathbeet {
                  deployed would have loaded without it, so the install stopped rather than \
                  report success over a game that runs exactly as it did before."
             ),
+            Self::KhattMafqud { ism, jidhr, sabab } => format!(
+                "The font {ism} the package names is not in this build's font store at {} \
+                 ({sabab}). Nothing was written: a package placed without its face leaves the \
+                 game in its original language and logs a refusal at launch. Update Taarib and \
+                 try again.",
+                jidhr.display()
+            ),
             Self::LubaTashtaghil { amaliya, tanfidhi } => format!(
                 "{amaliya} is running ({}) and the game cannot be modified until it exits \
                  completely. Close it and try again.",
@@ -1241,7 +1276,8 @@ impl Tafsir for KhataTathbeet {
 
             Self::IsdarBayanMajhul { .. }
             | Self::MukawwinMafqud { .. }
-            | Self::MukawwinNaqis { .. } => Khutwa::TahdithTaarib,
+            | Self::MukawwinNaqis { .. }
+            | Self::KhattMafqud { .. } => Khutwa::TahdithTaarib,
 
             // A manifest that names a path outside the game, one that
             // contradicts itself, or a proof for the wrong subject reaching the
@@ -1426,6 +1462,11 @@ impl Tafsir for KhataTathbeet {
             },
             Self::IdadGhayrMunaffadh { mahall, sabab } => {
                 daa("mahall", QeemaSiyaq::Nass(mahall.clone()));
+                daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
+            },
+            Self::KhattMafqud { ism, jidhr, sabab } => {
+                daa("khatt", QeemaSiyaq::Nass(ism.clone()));
+                daa("masar", QeemaSiyaq::Masar(jidhr.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             },
             Self::HalatLubaMajhula { sunduq, tanfidhi } => {

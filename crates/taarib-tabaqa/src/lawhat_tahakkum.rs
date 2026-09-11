@@ -99,12 +99,20 @@ pub enum Amr {
     ArdIfsah,
     /// Close the panel, leaving the overlay as it was.
     Ighlaq,
+    /// Open the panel on its main page, or close it if it is open.
+    ///
+    /// The one chord that reaches the state rows — what the reader is doing,
+    /// whether a translator is attached, what the cache answered — from a game
+    /// with no mouse over the overlay. The three page commands above open the
+    /// panel too, each on its own page; this is the one that opens it on the
+    /// page that says why the overlay is blank.
+    Lawha,
 }
 
 impl Amr {
     /// Every command, in the order the main page lists them.
     #[must_use]
-    pub const fn jamee() -> [Self; 11] {
+    pub const fn jamee() -> [Self; 12] {
         [
             Self::Tabdeel,
             Self::TarjimAlan,
@@ -117,6 +125,7 @@ impl Amr {
             Self::AnqisHajmKhat,
             Self::ArdIfsah,
             Self::Ighlaq,
+            Self::Lawha,
         ]
     }
 
@@ -135,6 +144,7 @@ impl Amr {
             Self::Iqaf => "pause",
             Self::ArdIfsah => "show disclosure",
             Self::Ighlaq => "close",
+            Self::Lawha => "panel",
         }
     }
 
@@ -153,6 +163,7 @@ impl Amr {
             Self::Iqaf => "إيقاف مؤقّت",
             Self::ArdIfsah => "عرض شرح الطبقة",
             Self::Ighlaq => "إغلاق اللوحة",
+            Self::Lawha => "لوحة التحكّم",
         }
     }
 
@@ -197,6 +208,10 @@ impl Amr {
                 "Closes the panel and gives every key back to the game. The overlay keeps \
                  doing whatever it was doing."
             },
+            Self::Lawha => {
+                "Opens the panel on its main page — what is being read, whether a translator \
+                 is attached, what the cache answered — or closes it if it is open."
+            },
         }
     }
 
@@ -233,6 +248,7 @@ impl Amr {
             Self::Iqaf => Watar::jadeed(tahakkum_sift, RamzMiftah::HARF_P),
             Self::ArdIfsah => Watar::jadeed(tahakkum_sift, RamzMiftah::HARF_I),
             Self::Ighlaq => Watar::jadeed(Muaddil::LA, RamzMiftah::HURUB),
+            Self::Lawha => Watar::jadeed(tahakkum_sift, RamzMiftah::HARF_O),
         }
     }
 }
@@ -359,6 +375,8 @@ impl RamzMiftah {
     pub const HARF_H: Self = Self(0x0B);
     /// The `I` position.
     pub const HARF_I: Self = Self(0x0C);
+    /// The `O` position.
+    pub const HARF_O: Self = Self(0x12);
     /// The `P` position.
     pub const HARF_P: Self = Self(0x13);
     /// The `R` position.
@@ -1188,6 +1206,16 @@ impl HalatLawha {
                 self.akhfi();
                 AtharAmr::Ughliqat
             },
+            Amr::Lawha => {
+                if self.zahira {
+                    self.akhfi();
+                    AtharAmr::Ughliqat
+                } else {
+                    self.irfa();
+                    self.ruh_ila(SafhatLawha::Raisiya);
+                    AtharAmr::Intaqalat(SafhatLawha::Raisiya)
+                }
+            },
         }
     }
 }
@@ -1504,6 +1532,36 @@ const fn unwan_hala(hala: HalatTabaqa) -> &'static str {
     }
 }
 
+/// What the panel says about translation, assembled by the loop from the parts
+/// that own each number.
+///
+/// Sentences rather than numbers, because every one of them is produced by the
+/// type that owns the counter — the cache's own `wasf_arabi`, the session's,
+/// the worker's — and a panel that re-derived a hit rate from two integers it
+/// copied would be a second place the arithmetic could be wrong. Each has a
+/// short form for the main page's two-column row and a full form the budget
+/// page quotes verbatim.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct HalatTarjamaLawha {
+    /// Whether a translator the overlay can reach is attached.
+    pub mutarjim_mutah: bool,
+    /// The translator, in a few words: its name, or that there is none.
+    pub mutarjim_qasir: String,
+    /// The translator's state, in full.
+    pub mutarjim: String,
+    /// The cache, in a few words: its hit rate and how many pairs it holds.
+    pub dhakira_qasir: String,
+    /// The cache's counters, in full.
+    pub dhakira: String,
+    /// The session's counters, in full.
+    pub qissa: String,
+    /// The capture side's counters, in full.
+    pub iltiqat: String,
+    /// The gate's sentence about the most recent refused read, when there is
+    /// one.
+    pub akhir_rafd: Option<String>,
+}
+
 /// The in-game control panel.
 ///
 /// Holds its own state and *snapshots* of everything else it shows. It never
@@ -1524,6 +1582,9 @@ pub struct LawhatTahakkum {
     /// The recognition worker's last word about itself; [`None`] until the hook
     /// has polled it once, which is a different fact from "healthy".
     khayt: Option<HalatKhayt>,
+    /// What the loop last said about the translator, the cache and the gates;
+    /// [`None`] until it has said anything.
+    tarjama: Option<HalatTarjamaLawha>,
 }
 
 impl LawhatTahakkum {
@@ -1572,6 +1633,7 @@ impl LawhatTahakkum {
             sijill: Vec::new(),
             taqreer: None,
             khayt: None,
+            tarjama: None,
         }
     }
 
@@ -1634,6 +1696,24 @@ impl LawhatTahakkum {
     #[must_use]
     pub const fn khayt(&self) -> Option<&HalatKhayt> {
         self.khayt.as_ref()
+    }
+
+    /// Refreshes what the loop says about the translator, the cache and the
+    /// refusal gates.
+    ///
+    /// This is the other half of the sentence a blank overlay owes: the worker
+    /// says whether it can *read*, and this says whether what it read can be
+    /// *translated* — no provider, an unreachable one, a cache that answered
+    /// everything, a read the gates turned away. Without it a panel over a
+    /// blank overlay could name only the first of the two ways it got blank.
+    pub fn hadith_tarjama(&mut self, hala: HalatTarjamaLawha) {
+        self.tarjama = Some(hala);
+    }
+
+    /// What the loop last said about translation, if it has said anything.
+    #[must_use]
+    pub const fn tarjama(&self) -> Option<&HalatTarjamaLawha> {
+        self.tarjama.as_ref()
     }
 
     /// Refreshes the region list from the live set.
@@ -1975,6 +2055,23 @@ impl LawhatTahakkum {
                 ataama,
             ));
         }
+        if let Some(tarjama) = self.tarjama.as_ref() {
+            Self::saf_thunai(takhtit, ansur, "المترجم", &tarjama.mutarjim_qasir, ataama);
+            Self::saf_thunai(takhtit, ansur, "الخزينة", &tarjama.dhakira_qasir, ataama);
+            // A missing translator is the second way an overlay is blank, and
+            // it goes on the main page for the same reason a stopped reader
+            // does: it is what the player needs before they press anything.
+            if !tarjama.mutarjim_mutah
+                && let Some(saf) = takhtit.saf(2.0)
+            {
+                ansur.push(AnsurLawha::bi_nass(
+                    saf,
+                    DawrAnsur::Qeema,
+                    tarjama.mutarjim.clone(),
+                    ataama,
+                ));
+            }
+        }
 
         if let Some(saf) = takhtit.saf(0.25) {
             ansur.push(AnsurLawha::zukhrufi(saf, DawrAnsur::Fasil, ataama));
@@ -2182,6 +2279,41 @@ impl LawhatTahakkum {
                     khayt.wasf_arabi(),
                     ataama,
                 ));
+            }
+        }
+        // And the loop's own sentences, each quoted rather than summarised:
+        // the translator, the cache with its hit rate, the session's counters,
+        // the capture side's, and the gate's reason for the last refusal.
+        if let Some(tarjama) = self.tarjama.as_ref() {
+            let fuqrat: [(&str, &str); 4] = [
+                ("المترجم:", &tarjama.mutarjim),
+                ("الخزينة:", &tarjama.dhakira),
+                ("الجلسة:", &tarjama.qissa),
+                ("الالتقاط:", &tarjama.iltiqat),
+            ];
+            for (wasm, nass) in fuqrat {
+                if let Some(saf) = takhtit.saf(0.25) {
+                    ansur.push(AnsurLawha::zukhrufi(saf, DawrAnsur::Fasil, ataama));
+                }
+                if let Some(saf) = takhtit.saf(1.0) {
+                    ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Wasm, wasm, ataama));
+                }
+                if let Some(saf) = takhtit.saf(2.0) {
+                    ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, nass, ataama));
+                }
+            }
+            if let Some(rafd) = tarjama.akhir_rafd.as_deref() {
+                if let Some(saf) = takhtit.saf(1.0) {
+                    ansur.push(AnsurLawha::bi_nass(
+                        saf,
+                        DawrAnsur::Wasm,
+                        "آخر قراءة مرفوضة:",
+                        ataama,
+                    ));
+                }
+                if let Some(saf) = takhtit.saf(2.0) {
+                    ansur.push(AnsurLawha::bi_nass(saf, DawrAnsur::Qeema, rafd, ataama));
+                }
             }
         }
     }

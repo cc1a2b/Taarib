@@ -12,7 +12,10 @@ import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
 import type { Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t } from '@/lugha/lugha';
+import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
+import { Mashhad } from '@/mukawwinat/mashhad';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type {
   Idadat,
   JalsaHie,
@@ -44,6 +47,113 @@ type TarteebTabur = 'intizar' | 'taghtiya';
 
 /** The first guess only: every row is measured from the DOM once it mounts. */
 const IRTIFA_MUBDAI_SAFF = 44;
+
+/** How many queue rows the placeholder stands in for: a short queue's worth. */
+const SUFUF_HAYKAL = 5;
+
+/** A bulk decision's progress: how many of the selected rows it has reached. */
+interface TaqaddumJumla {
+  readonly tamma: number;
+  readonly majmu: number;
+}
+
+/**
+ * The queue drawn empty: the real column heads over rows of bars at the row's
+ * own height, so the first row lands on the first placeholder. Still: a
+ * shimmer is an animation on a data update.
+ */
+function HaykalTabur({ lugha }: { readonly lugha: Lugha }): JSX.Element {
+  return (
+    <table className="muraja__jadwal-tabur" aria-hidden="true">
+      <thead>
+        <tr>
+          <th />
+          <th>{t('muraja.tabur.unwan_amud', lugha)}</th>
+          <th>{t('muraja.tabur.luba', lugha)}</th>
+          <th>{t('muraja.tabur.musahim', lugha)}</th>
+          <th className="muraja__khaliya-raqm">{t('muraja.tabur.taghtiya', lugha)}</th>
+          <th>{t('muraja.tabur.fuhus', lugha)}</th>
+          <th>{t('muraja.tabur.intizar', lugha)}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {Array.from({ length: SUFUF_HAYKAL }, (_, fihris) => (
+          <tr key={fihris} className="muraja__saff muraja__saff--haykal">
+            <td>
+              <span className="muraja__haykal-murabba" />
+            </td>
+            <td>
+              <span
+                className="muraja__haykal-satr"
+                style={{ inlineSize: `${String(50 + ((fihris * 19) % 45))}%` }}
+              />
+            </td>
+            <td>
+              <span className="muraja__haykal-satr" style={{ inlineSize: '70%' }} />
+            </td>
+            <td>
+              <span className="muraja__haykal-satr" style={{ inlineSize: '60%' }} />
+            </td>
+            <td className="muraja__khaliya-raqm">
+              <span className="muraja__haykal-satr muraja__haykal-satr--raqm" />
+            </td>
+            <td>
+              <span className="muraja__haykal-satr" style={{ inlineSize: '5ch' }} />
+            </td>
+            <td>
+              <span className="muraja__haykal-satr" style={{ inlineSize: '6ch' }} />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** The case pane drawn empty: the title, its line of facts, and a first section. */
+function HaykalTafasil(): JSX.Element {
+  return (
+    <div aria-hidden="true">
+      <section className="muraja__qism muraja__qism--ras">
+        <span className="muraja__haykal-satr muraja__haykal-satr--unwan" />
+        <span className="muraja__haykal-satr" style={{ inlineSize: '40%' }} />
+        <span className="muraja__haykal-satr muraja__haykal-satr--sharh" />
+        <span className="muraja__haykal-satr muraja__haykal-satr--sharh" style={{ inlineSize: '55%' }} />
+      </section>
+      <section className="muraja__qism">
+        <span className="muraja__haykal-satr" style={{ inlineSize: '14ch' }} />
+        {Array.from({ length: 3 }, (_, fihris) => (
+          <span
+            key={fihris}
+            className="muraja__haykal-satr muraja__haykal-satr--sharh"
+            style={{ inlineSize: `${String(72 - fihris * 9)}%` }}
+          />
+        ))}
+      </section>
+    </div>
+  );
+}
+
+/** The whole console drawn empty, under the strip: the filter row, the queue, the case. */
+function HaykalMuraja({ lugha }: { readonly lugha: Lugha }): JSX.Element {
+  return (
+    <div className="muraja__badan" aria-hidden="true">
+      <div className="muraja__tasfiya">
+        <span className="muraja__haql muraja__haql--bahth muraja__haykal-haql" />
+        <span className="muraja__haql muraja__haykal-haql muraja__haykal-haql--qasir" />
+        <span className="muraja__haql muraja__haykal-haql muraja__haykal-haql--qasir" />
+      </div>
+      <div className="muraja__amida">
+        <div className="muraja__tabur">
+          <HaykalTabur lugha={lugha} />
+        </div>
+        <div className="muraja__tafasil">
+          <HaykalTafasil />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** Where one query stands, with the switched-off case separated from the rest. */
 type HalatIstifsar = 'muattal' | 'jari' | 'khata' | 'farigh' | 'jahiz';
@@ -497,14 +607,19 @@ export function Muraja(): JSX.Element {
     onSuccess: aidTahmil,
   });
 
+  const [taqaddumJumla, setTaqaddumJumla] = useState<TaqaddumJumla | null>(null);
+
   const jumla = useMutation<number, KhataJisr, { ijra: string }>({
     mutationFn: async ({ ijra }) => {
       let adad = 0;
+      const majmu = muhaddada.size;
+      setTaqaddumJumla({ tamma: 0, majmu });
       for (const ruqaa of muhaddada) {
         // One record per identity, exactly as the single action writes it.
         // eslint-disable-next-line no-await-in-loop
         await nadi('qarrir_muraja', { ruqaa, ijra, sabab });
         adad += 1;
+        setTaqaddumJumla({ tamma: adad, majmu });
       }
       return adad;
     },
@@ -512,6 +627,9 @@ export function Muraja(): JSX.Element {
       setMuhaddada(new Set());
       setSabab('');
       aidTahmil();
+    },
+    onSettled: () => {
+      setTaqaddumJumla(null);
     },
   });
 
@@ -628,74 +746,89 @@ export function Muraja(): JSX.Element {
     setNassMukhtar(fihris);
   };
 
-  if (jalsa.isPending || idadat.isPending) {
-    return (
-      <div className="muraja">
-        <p className="muraja__jari">{t('amm.tahmil', lugha)}</p>
-      </div>
-    );
-  }
-
-  // A session that failed to answer is not a session that answered "no": until
-  // this was read, a backend that never replied looked exactly like a refusal.
-  if (jalsa.error !== null) {
-    return (
-      <div className="muraja">
-        <div className="muraja__hala">
-          <KutlatKhata
-            unwan={t('amm.khata', lugha)}
-            khata={jalsa.error}
-            lugha={lugha}
-            aada={() => {
-              void jalsa.refetch();
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (!malik) {
-    return (
-      <div className="muraja">
-        <div className="muraja__hala">
-          <div className="muraja__faragh">
-            <h2 className="muraja__faragh-unwan">{t('shasha.muraja', lugha)}</h2>
-            <p className="muraja__faragh-nass">{t('muraja.mamnu', lugha)}</p>
-            <Link to="/" className="zir">
-              {t('muraja.raji', lugha)}
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const bayanat = tafasil.data;
   const murashshah = bahth !== '' || fuhus !== 'kul';
   const halatTabur = halatIstifsar(tabur, sufuf.length === 0);
   const sijillSufuf = sijillKull.data ?? [];
   const halatSijill = halatIstifsar(sijillKull, sijillSufuf.length === 0);
 
-  return (
-    <div className="muraja">
-      <header className="muraja__shareet-alawi">
-        <Link to="/" className="muraja__raji">
-          {t('muraja.raji', lugha)}
-        </Link>
-        <span className="muraja__fasl">{t('shasha.muraja', lugha)}</span>
-        {tabur.data !== undefined ? (
-          <span className="muraja__ihsa">
-            {t('muraja.ihsa', lugha, {
+  // A session that failed to answer is not a session that answered "no": until
+  // this was read, a backend that never replied looked exactly like a refusal.
+  const wajh =
+    jalsa.isPending || idadat.isPending
+      ? 'tahmil'
+      : jalsa.error !== null
+        ? 'khata'
+        : malik
+          ? 'jahiz'
+          : 'mamnu';
+
+  const raas = (
+    <RaasShasha
+      rujoo={{ ila: 'maktaba' }}
+      nassRujoo={t('muraja.raji', lugha)}
+      unwan={t('shasha.muraja', lugha)}
+      tafasil={
+        tabur.data === undefined
+          ? null
+          : t('muraja.ihsa', lugha, {
               majmu: munassiq.raqm(tabur.data.majmu),
               najahat: munassiq.raqm(tabur.data.najahat),
               akhfaqat: munassiq.raqm(tabur.data.akhfaqat),
               lam_tujra: munassiq.raqm(tabur.data.lam_tujra),
-            })}
-          </span>
-        ) : null}
-      </header>
+            })
+      }
+    />
+  );
 
+  if (wajh !== 'jahiz') {
+    return (
+      <div className="muraja">
+        {raas}
+        <Mashhad miftah={wajh} className="muraja__mashhad">
+          {wajh === 'tahmil' ? (
+            <HaykalMuraja lugha={lugha} />
+          ) : jalsa.error !== null ? (
+            <div className="muraja__hala">
+              <KutlatKhata
+                unwan={t('amm.khata', lugha)}
+                khata={jalsa.error}
+                lugha={lugha}
+                aada={() => {
+                  void jalsa.refetch();
+                }}
+              />
+            </div>
+          ) : (
+            <div className="muraja__hala">
+              <HalatFarigha shasha unwan={t('shasha.muraja', lugha)} nass={t('muraja.mamnu', lugha)}>
+                <Link to="/" className="zir">
+                  {t('muraja.raji', lugha)}
+                </Link>
+              </HalatFarigha>
+            </div>
+          )}
+        </Mashhad>
+      </div>
+    );
+  }
+
+  const wajhTabur = tabur.error !== null ? 'khata' : halatTabur;
+  const wajhTafasil =
+    mukhtar === null
+      ? 'la_ikhtiyar'
+      : tafasil.isPending
+        ? `tahmil:${mukhtar}`
+        : tafasil.error !== null
+          ? `khata:${mukhtar}`
+          : `jahiz:${mukhtar}`;
+
+  return (
+    <div className="muraja">
+      {raas}
+
+      <Mashhad miftah="jahiz" className="muraja__mashhad">
+      <div className="muraja__badan">
       <div className="muraja__tasfiya">
         <input
           className="muraja__haql muraja__haql--bahth"
@@ -734,6 +867,37 @@ export function Muraja(): JSX.Element {
         {muhaddada.size > 0 ? (
           <div className="muraja__jumla">
             <span>{jam('muraja.jumla.adad', lugha, muhaddada.size, munassiq)}</span>
+            {/* The bulk decision walks the selection one record at a time, so
+                its progress has a real denominator and draws against it. */}
+            {jumla.isPending && taqaddumJumla !== null ? (
+              <span className="muraja__miqyas">
+                <span
+                  className="muraja__miqyas-masar"
+                  role="progressbar"
+                  aria-label={t('muraja.jumla.jari', lugha)}
+                  aria-valuemin={0}
+                  aria-valuemax={taqaddumJumla.majmu}
+                  aria-valuenow={taqaddumJumla.tamma}
+                >
+                  <span
+                    className="muraja__miqyas-malu"
+                    style={{
+                      inlineSize: `${String(
+                        taqaddumJumla.majmu === 0
+                          ? 0
+                          : (taqaddumJumla.tamma / taqaddumJumla.majmu) * 100,
+                      )}%`,
+                    }}
+                  />
+                </span>
+                <span className="muraja__miqyas-nass">
+                  {t('amm.taqaddum.min', lugha, {
+                    tamma: munassiq.raqm(taqaddumJumla.tamma),
+                    majmu: munassiq.raqm(taqaddumJumla.majmu),
+                  })}
+                </span>
+              </span>
+            ) : null}
             <button
               type="button"
               className="zir"
@@ -770,6 +934,7 @@ export function Muraja(): JSX.Element {
 
       <div className="muraja__amida">
         <div className="muraja__tabur">
+          <Mashhad miftah={wajhTabur} className="muraja__mashhad-tabur">
           {tabur.error !== null ? (
             <KutlatKhata
               unwan={t('muraja.khata.tabur', lugha)}
@@ -780,18 +945,18 @@ export function Muraja(): JSX.Element {
               }}
             />
           ) : halatTabur === 'jari' ? (
-            <p className="muraja__jari">{t('amm.tahmil', lugha)}</p>
+            <HaykalTabur lugha={lugha} />
           ) : halatTabur === 'muattal' ? (
-            <p className="muraja__jari">{t('muraja.mamnu', lugha)}</p>
+            <HalatFarigha unwan={t('shasha.muraja', lugha)} nass={t('muraja.mamnu', lugha)} />
           ) : halatTabur === 'farigh' ? (
-            <div className="muraja__faragh">
-              <h2 className="muraja__faragh-unwan">{t('shasha.muraja', lugha)}</h2>
-              {/* Two different facts: a queue with nothing in it, and a queue
-                  whose every row the reviewer's own filter has hidden. The
-                  first sentence would be a lie in the second case. */}
-              <p className="muraja__faragh-nass">
-                {t(murashshah ? 'muraja.tabur.la_mutabaqa' : 'muraja.tabur.farigh', lugha)}
-              </p>
+            /* Two different facts: a queue with nothing in it, and a queue whose
+               every row the reviewer's own filter has hidden. The first sentence
+               would be a lie in the second case. */
+            <HalatFarigha
+              shasha
+              unwan={t('shasha.muraja', lugha)}
+              nass={t(murashshah ? 'muraja.tabur.la_mutabaqa' : 'muraja.tabur.farigh', lugha)}
+            >
               <button
                 type="button"
                 className="zir"
@@ -806,7 +971,7 @@ export function Muraja(): JSX.Element {
               >
                 {t(murashshah ? 'muraja.tasfiya.kul' : 'muraja.lawha.hadith_tabur', lugha)}
               </button>
-            </div>
+            </HalatFarigha>
           ) : (
             <JadwalTabur
               sufuf={sufuf}
@@ -844,6 +1009,7 @@ export function Muraja(): JSX.Element {
               }}
             />
           )}
+          </Mashhad>
 
           <details className="muraja__sijill-kull">
             <summary>{t('muraja.sijill.unwan', lugha)}</summary>
@@ -882,10 +1048,13 @@ export function Muraja(): JSX.Element {
         </div>
 
         <div className="muraja__tafasil">
+          <Mashhad miftah={wajhTafasil} className="muraja__mashhad-tafasil">
           {mukhtar === null ? (
-            <div className="muraja__faragh">
-              <h2 className="muraja__faragh-unwan">{t('muraja.afal.unwan', lugha)}</h2>
-              <p className="muraja__faragh-nass">{t('muraja.tafasil.la_ikhtiyar', lugha)}</p>
+            <HalatFarigha
+              shasha
+              unwan={t('muraja.afal.unwan', lugha)}
+              nass={t('muraja.tafasil.la_ikhtiyar', lugha)}
+            >
               <button
                 type="button"
                 className="zir"
@@ -899,9 +1068,9 @@ export function Muraja(): JSX.Element {
               >
                 {t('muraja.lawha.iftah_awwal', lugha)}
               </button>
-            </div>
+            </HalatFarigha>
           ) : tafasil.isPending ? (
-            <p className="muraja__jari">{t('amm.tahmil', lugha)}</p>
+            <HaykalTafasil />
           ) : tafasil.error !== null ? (
             <KutlatKhata
               unwan={t('muraja.khata.tafasil', lugha)}
@@ -1345,8 +1514,11 @@ export function Muraja(): JSX.Element {
               </section>
             </>
           )}
+          </Mashhad>
         </div>
       </div>
+      </div>
+      </Mashhad>
     </div>
   );
 }

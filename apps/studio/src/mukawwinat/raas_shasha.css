@@ -1,0 +1,135 @@
+/* رأس الشاشة — one strip, one alignment, nothing in it can overlap or escape. */
+
+.raas-shasha {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-12);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-16) var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+  /* The strip is a fixed band: whatever cannot fit ellipsises inside it. */
+  overflow: hidden;
+}
+
+/* The way back keeps its width whatever else the strip holds — it is the one
+   control a lost reader is looking for, and a back link that ellipsises is a
+   back link that has stopped saying where it goes. */
+.raas-shasha__rujoo {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--misafa-6);
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-8);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  border-radius: var(--nisf-tahakkum);
+  white-space: nowrap;
+  transition:
+    color var(--zaman-hala) var(--munhana),
+    background-color var(--zaman-hala) var(--munhana);
+}
+
+.raas-shasha__rujoo:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  transition: none;
+}
+
+.raas-shasha__ramz {
+  flex: none;
+  color: var(--nass-3);
+}
+
+.raas-shasha__rujoo:hover .raas-shasha__ramz {
+  color: var(--nass-1);
+}
+
+.raas-shasha__fasil {
+  flex: none;
+  inline-size: var(--samk-hadd);
+  block-size: var(--misafa-16);
+  background-color: var(--hadd);
+}
+
+/* The name and its subject share one line and one baseline. The name keeps
+   its width; the subject is what gives way. */
+.raas-shasha__hawiya {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: var(--misafa-8);
+  min-inline-size: 0;
+}
+
+.raas-shasha__unwan {
+  flex: none;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  white-space: nowrap;
+}
+
+.raas-shasha__mawdu {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* The subject is a game's name in whatever script the publisher wrote it,
+     boxed at the strip's own direction so its ellipsis lands at the far end. */
+  unicode-bidi: isolate;
+}
+
+.raas-shasha__tafasil {
+  flex: none;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sibling screens of the same subject: quiet links, welded into one run so the
+   strip reads as three parts rather than seven. */
+.raas-shasha__rawabit {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-2);
+}
+
+.raas-shasha__rabt {
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  border-radius: var(--nisf-tahakkum);
+  white-space: nowrap;
+  transition:
+    color var(--zaman-hala) var(--munhana),
+    background-color var(--zaman-hala) var(--munhana);
+}
+
+.raas-shasha__rabt:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  transition: none;
+}
+
+.raas-shasha__adawat {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  margin-inline-start: auto;
+}

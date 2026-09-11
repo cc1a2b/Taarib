@@ -1181,8 +1181,8 @@ impl KhattafD3D12 {
             // is inside the heap created for exactly `adad_ilqa` descriptors.
             unsafe {
                 self.jihaz
-                    .CreateRenderTargetView(&khalfiya, None, mawdi_hadaf)
-            };
+                    .CreateRenderTargetView(&khalfiya, None, mawdi_hadaf);
+            }
 
             // SAFETY: `jihaz` is live. Both calls return owned interfaces or
             // errors; `CreateCommandList` hands back a list already in the

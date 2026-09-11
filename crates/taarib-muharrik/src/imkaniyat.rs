@@ -159,7 +159,25 @@ use crate::tahdid::{maghlufa, mutaarid};
 /// actually sits in. Raising this number re-probes every stored scan on every
 /// machine for every engine, which is the price of a detector reaching games
 /// that were already examined.
-pub const ISDAR_FAHS: u32 = 7;
+///
+/// Eight: the overlay's sentence changed, because the overlay changed. Through
+/// seven it said the layer attaches and draws and nothing feeds it text, which
+/// was true — `Tabaqa::iltaqit` had no caller and there was no worker. Now the
+/// per-frame loop in `taarib-tabaqa`'s `halaqa` module captures, recognizes
+/// through the refusal gates, answers from the patch and an on-disk cache
+/// before any provider, shapes and draws — proven offscreen by reading the
+/// pixels back, and never yet watched over a running game. Every stored
+/// report for a tier-3 game carried the old sentence, so every one is stale.
+///
+/// Nine: the Unreal verdict and sentence changed, because the install changed.
+/// Through eight the arm answered "absent" and said nothing is written into
+/// the game. Now `taarib_tathbeet::tarkib`'s Unreal arm plans the additive
+/// container and its deployment step builds it from the game's own `.locres`
+/// and the package — so the arm answers "partial" and [`naqs_unreal`] says the
+/// container is written, the engine draws it on its own, and no launch has
+/// been watched. Every stored report for an Unreal title carries the old
+/// verdict, and the verdict is what the one-button run gates on.
+pub const ISDAR_FAHS: u32 = 9;
 
 /// The confidence below which the report tells the user the identification may
 /// be wrong.
@@ -651,7 +669,10 @@ fn tabaqa_godot(muharrik: &Muharrik) -> (Tabaqa, String, String) {
 pub fn jahiziya(muharrik: &Muharrik) -> (JahiziyatTashghil, Option<Hadd>) {
     let (jahiziya, naqs) = match muharrik.aila {
         AilatMuharrik::Unity => (JahiziyatTashghil::Ghaiba, naqs_unity(muharrik)),
-        AilatMuharrik::Unreal => (JahiziyatTashghil::Ghaiba, naqs_unreal()),
+        // The container that carries the Arabic is written; the in-process
+        // corrections are not reached and no launch has been watched, so
+        // partial rather than complete.
+        AilatMuharrik::Unreal => (JahiziyatTashghil::Naqisa, naqs_unreal()),
         AilatMuharrik::Godot => (
             JahiziyatTashghil::Ghaiba,
             if godot_arbaa(muharrik) {
@@ -775,41 +796,47 @@ const fn sadr_jahiziya(jahiziya: JahiziyatTashghil) -> Option<(&'static str, &'s
 /// unreachable call for different reports from them.
 fn naqs_unity(muharrik: &Muharrik) -> Hadd {
     match muharrik.khalfiya {
-        // `unity/Taarib.Unity.Mono` references BepInEx.Unity.Mono 6.0.0-be.780
-        // and `assets/aqfal/qufl_bepinex.json` stages 5.4.23.5 for this backend.
-        // Under BepInEx 5 the base types live in assemblies the plugin does not
-        // name, so the chainloader cannot load it and `Awake` is never entered.
+        // Four gaps closed in one phase, each observed in a real game's BepInEx
+        // log before the next became visible: the plugin was built against
+        // BepInEx 6 while 5 ships (never loaded); it looked for the patch beside
+        // itself while the installer placed it under `taarib/` (not found); the
+        // installer placed no font (refused at the chain); and the container was
+        // placed sealed while the plugin reads only an uncompressed working copy
+        // (refused at the string table). The fifth was never a wiring gap: the
+        // plugin asked `Shader.Find` for two shaders of Taarib's own that were
+        // never built or shipped, so it now draws through the engine's own
+        // `UI/Default`. That last step is the one nobody has watched in a game.
         KhalfiyaBarmajiya::Mono => hadd(
-            "الجزء الذي يعمل داخل لعبة Unity أثناء تشغيلها لم يكتمل في هذا الإصدار من تعريب: \
-             المكوّن مبنيّ، لكنه يطلب جيلًا من مُحمّل الإضافات لا تشحنه هذه الحزمة، فلا \
-             يُشغّله المُحمّل أصلًا. يمكنك تثبيت الرقعة الآن — تُحفظ ملفاتك الأصلية وتُستعاد \
-             كما كانت بالضبط — لكن اللعبة ستبقى بلغتها الأصلية حتى يصل التحديث الذي يُكمله.",
-            "The part that runs inside a Unity game while you play is not finished in this \
-             build of Taarib: the component is built, but it asks for a generation of the \
-             plugin loader this package does not ship, so the loader never starts it. You \
-             can install the patch now — your original files are kept and restored exactly \
-             — but the game will stay in its original language until the update that \
-             completes it arrives.",
+            "وصل الجزء الذي يعمل داخل لعبة Unity إلى آخر خطوة ولم يُشاهَد بعدُ يرسم: يُحمَّل \
+             المكوّن، ويفتح الرقعة وخطّها، ويرسم عبر صدفة المحرّك نفسه — وكلّ ذلك ثبت من \
+             سجلّ اللعبة إلا الرسم، فلم يُرَ نصّ عربي على الشاشة في هذا الإصدار بعد. يمكنك \
+             تثبيت الرقعة الآن — تُحفظ ملفاتك الأصلية وتُستعاد كما كانت بالضبط — وإن بقيت \
+             اللعبة بلغتها الأصلية فسجلّ BepInEx يسمّي الخطوة التي توقّفت عندها.",
+            "The part that runs inside a Unity game has reached its last step and has not yet \
+             been watched drawing: the component loads, opens the patch and its font, and \
+             draws through the engine's own shader — every step but the drawing is proven \
+             from the game's log, and no Arabic has been seen on screen in this build yet. \
+             You can install the patch now — your original files are kept and restored \
+             exactly — and if the game stays in its original language, the BepInEx log names \
+             the step it stopped at.",
         ),
-        // Built, staged, and matched to the loader the bundle ships — the
-        // IL2CPP lock entries are BepInEx 6.0.0-pre.2, which is the generation
-        // the assembly names. What is absent is underneath it: all twenty-nine
-        // of `Taarib.Unity.Jisr`'s `DllImport`s bind `taarib_jisr`, which is
-        // staging rows B1 to B3 out of the `taarib-jisr` cdylib, and no target
-        // build of it is produced. A managed assembly with no native library
-        // beneath it enters and then fails at its first call.
+        // The native library is staged now — the release script's payload
+        // stage produces it and the plugin loads it by absolute path — and the
+        // same three installer gaps as Mono are closed on this backend by the
+        // same code. What separates the two is observation: every Mono step up
+        // to drawing was watched in a game's log; the IL2CPP chain, which loads
+        // through BepInEx 6 and an interop layer the Mono one does not have, has
+        // not been watched at all in this build.
         KhalfiyaBarmajiya::Il2cpp => hadd(
-            "الجزء الذي يعمل داخل لعبة Unity أثناء تشغيلها لم يكتمل في هذا الإصدار من تعريب: \
-             المكوّن مبنيّ ومشحون ويطابق مُحمّل الإضافات، لكن المكتبة الأصليّة التي يستدعيها \
-             ليست في هذه الحزمة، فلا يصل النص العربي إلى الشاشة. يمكنك تثبيت الرقعة الآن — \
-             تُحفظ ملفاتك الأصلية وتُستعاد كما كانت بالضبط — لكن اللعبة ستبقى بلغتها \
-             الأصلية حتى يصل التحديث الذي يُكمله.",
-            "The part that runs inside a Unity game while you play is not finished in this \
-             build of Taarib: the component is built, shipped, and matched to the plugin \
-             loader, but the native library it calls into is not in this package, so no \
-             Arabic reaches the screen. You can install the patch now — your original files \
-             are kept and restored exactly — but the game will stay in its original language \
-             until the update that completes it arrives.",
+            "الجزء الذي يعمل داخل لعبة Unity على IL2CPP مبنيّ ومشحون بكامله — المكوّن \
+             ومكتبته الأصلية والرقعة وخطّها — ولم يُشاهَد يعمل داخل لعبة في هذا الإصدار. \
+             يمكنك تثبيت الرقعة الآن — تُحفظ ملفاتك الأصلية وتُستعاد كما كانت بالضبط — وإن \
+             بقيت اللعبة بلغتها الأصلية فسجلّ BepInEx يسمّي الخطوة التي توقّفت عندها.",
+            "The part that runs inside a Unity game on IL2CPP is built and shipped whole — the \
+             component, its native library, the patch and its font — and has not been watched \
+             running inside a game in this build. You can install the patch now — your \
+             original files are kept and restored exactly — and if the game stays in its \
+             original language, the BepInEx log names the step it stopped at.",
         ),
         // The probe could not tell which backend this game uses, so neither
         // sentence above can be asserted. Say only what holds for both.
@@ -827,27 +854,32 @@ fn naqs_unity(muharrik: &Muharrik) -> Hadd {
     }
 }
 
-/// Unreal: nothing is written into the game, and the shaping switch is not
-/// thrown either.
+/// Unreal: the container is written, the engine draws it on its own, and nobody
+/// has yet watched it happen.
 ///
-/// This sentence used to claim that installing switches the engine's Arabic
-/// shaping on. It does not: `taarib_tathbeet::tarkib::mulhaqat_muharrik`
-/// answers `Ok(())` for Unreal without writing anything, and the only code that
-/// sets `Slate.DefaultTextShapingMethod` lives behind `--features hamula` and
-/// applies at the game's *next* launch. Naming a part that works when none does
-/// is worse than naming none, because it sends the reader looking for the half
-/// that supposedly succeeded.
+/// This sentence has said two different things before. First that installing
+/// switches the engine's shaping on, which it did not; then that nothing at all
+/// is written, which was true until `taarib_tathbeet::tarkib::mulhaqat_muharrik`
+/// grew an Unreal arm. That arm now plans one added file — the additive
+/// container — and the deployment step builds it through
+/// `taarib_muhawwil_unreal::hawiya::ibni` out of the game's own `.locres` and
+/// the package: every shipped culture rewritten with the Arabic, an `ar`
+/// culture beside them, and the face carried and named where the engine reads
+/// a localized fallback-font name. The engine mounts a `_P` container by name
+/// and Slate shapes right-to-left text in full under its default method, so no
+/// switch has to be thrown. What has not happened is a launch: no build of the
+/// product has been watched drawing it, and the sentence says exactly that.
 fn naqs_unreal() -> Hadd {
     hadd(
-        "الجزء الذي يستبدل نصوص أنريل داخل اللعبة لم يكتمل في هذا الإصدار من تعريب: \
-         لا يُكتب شيء في اللعبة عند التثبيت، ولا يُفعَّل تشكيل العربية داخل المحرّك. \
-         يمكنك تثبيت الرقعة الآن — تُحفظ ملفاتك الأصلية وتُستعاد كما كانت بالضبط — لكن \
-         اللعبة ستبقى بلغتها الأصلية حتى يصل التحديث الذي يُكمله.",
-        "The part that replaces Unreal's text inside the game is not finished in this build \
-         of Taarib: nothing is written into the game at install, and the engine's Arabic \
-         shaping is not switched on either. You can install the patch now — your original \
-         files are kept and restored exactly — but the game will stay in its original \
-         language until the update that completes it arrives.",
+        "يكتب تعريب في هذه اللعبة حاوية إضافية بجانب حاويات المحرّك: نصوص اللعبة \
+         المترجمة في كل لغة تشحنها، ولغة عربية بجانبها، والخطّ حيث يقرأ المحرّك اسمه. \
+         يركّبها المحرّك بنفسه ويرسم منها دون تدخّل، ولم يُشاهَد ذلك بعد في لعبة تعمل. \
+         تُحفظ ملفاتك الأصلية وتُستعاد كما كانت بالضبط.",
+        "Taarib writes an additive container beside this game's own: the game's text \
+         translated in every language it ships, an Arabic language beside them, and the \
+         font where the engine reads its name. The engine mounts it by itself and draws \
+         from it with no help, and this has not yet been watched in a running game. Your \
+         original files are kept and restored exactly.",
     )
 }
 
@@ -1131,39 +1163,47 @@ fn naqs_electron() -> Hadd {
     )
 }
 
-/// The overlay: it attaches, it can draw, and it is given nothing to draw.
+/// The overlay: built end to end, proven offscreen, never yet watched in a game.
 ///
-/// Two of this row's three breaks are closed. `taarib-tabaqa`'s `talqeem` module
-/// builds a real draw batch and uploads a real atlas, proved by rendering
-/// through the production path against a software rasterizer rather than by
-/// argument. The third is untouched and is sufficient on its own:
-/// `Tabaqa::iltaqit` has no caller, the capture and OCR modules have no inbound
-/// edge from the bootstrap, and there is no worker thread — so nothing produces
-/// the lines the batch builder consumes.
+/// Every one of this row's breaks is now closed in code. `taarib-tabaqa`'s
+/// `halaqa` module runs on every present: it reads the screen back, recognizes
+/// through both refusal gates, answers from the installed patch and an on-disk
+/// cache before any provider is asked, shapes the Arabic and draws it over the
+/// original. That is proved the way this project proves things — rendered
+/// offscreen through the production path and the pixels read back — and it is
+/// not proved the other way, over a running game, because nobody has watched
+/// it there yet.
 ///
-/// The sentence therefore names the reading half specifically. Saying "it draws
-/// nothing" would now be wrong about the part that works, and would send a
-/// reader to the renderer instead of to the missing source.
+/// So the sentence says exactly that, and names the two things a player will
+/// meet first: reading errs, and translation needs a local provider or a cache
+/// that an earlier session filled. Saying "it stays empty" would now be false
+/// about the code, and saying "it works" would be false about the evidence.
 fn naqs_tabaqa() -> Hadd {
     hadd(
-        "طبقة الترجمة تفتح مع اللعبة وتلتصق بصورتها فعلًا وتستطيع الرسم فوقها، لكن لا شيء \
-         يزوّدها بالنصّ بعد في هذا الإصدار من تعريب: الجزء الذي يقرأ ما على الشاشة ويسلّمه \
-         إليها لم يكتمل، فتبقى فارغة. لن يظهر شيء فوق اللعبة حتى يصل التحديث الذي يُكمله.",
-        "The translation overlay does open with the game, attach to its picture and draw over \
-         it, but nothing feeds it any text yet in this build of Taarib: the part that reads \
-         what is on screen and hands it over is not finished, so it stays empty. Nothing will \
-         appear over the game until the update that completes it arrives.",
+        "طبقة الترجمة تفتح مع اللعبة وتلتصق بصورتها، وتقرأ ما على الشاشة وتترجمه وترسم \
+         العربية فوقه — وهذا مثبَت بالرسم خارج الشاشة وقراءة البكسلات لا بالدعوى — لكنها لم \
+         تُشاهَد بعد وهي تعمل فوق لعبة حقيقية. توقّع أن يظهر شيء فوق اللعبة، وتوقّع أخطاء: \
+         القراءة الآلية تخطئ، والترجمة تحتاج إلى مزوّد محلّي أو إلى خزينة سبق ملؤها، ولوحة \
+         التحكّم (Ctrl+Shift+O) تقول لماذا حين لا يظهر شيء.",
+        "The translation overlay opens with the game, attaches to its picture, reads what is \
+         on screen, translates it and draws Arabic over it — proven by drawing offscreen and \
+         reading the pixels back, not by argument — but it has never yet been watched running \
+         over a real game. Expect something to appear over the game, and expect mistakes: \
+         automatic reading errs, translation needs a local provider or a cache an earlier \
+         session filled, and the control panel (Ctrl+Shift+O) says why when nothing appears.",
     )
 }
 
-/// A newly-named in-house engine: nothing runs, and the gap has two halves.
+/// A newly-named in-house engine: the overlay runs, and the engine's own half
+/// of the gap is still open.
 ///
 /// The first half is the overlay's, and it is exactly [`naqs_tabaqa`]'s: the
-/// layer attaches and draws and nothing feeds it text. The second half is this
-/// engine's own, and it is what a reader of a *named* engine's report will
-/// actually want — Taarib knows what this game is, and the reason that changes
-/// nothing today is that there is no reader for the containers its text sits in
-/// and no adapter that loads into its process.
+/// layer reads, translates and draws, proven offscreen and not yet watched in a
+/// game. The second half is this engine's own, and it is what a reader of a
+/// *named* engine's report will actually want — Taarib knows what this game
+/// is, and the reason that changes nothing beyond the overlay today is that
+/// there is no reader for the containers its text sits in and no adapter that
+/// loads into its process.
 ///
 /// Naming the second half matters more here than anywhere else in this table. A
 /// player who sees their game identified as Frostbite or as RAGE and then reads
@@ -1178,20 +1218,25 @@ fn naqs_khassa(aila: AilatMuharrik) -> Hadd {
         format!(
             "يعرف تعريب أن محرّك هذه اللعبة {ism}، لكن لا شيء في هذا الإصدار يدخل إليه: نصوص \
              اللعبة {ayn_arabi} ولا يوجد قارئ لها، ولا توجد وحدة تعمل داخل هذه اللعبة أثناء \
-             تشغيلها. وطبقة الترجمة تفتح مع اللعبة وتلتصق بصورتها وتستطيع الرسم فوقها، لكن \
-             الجزء الذي يقرأ ما على الشاشة ويسلّمه إليها لم يكتمل، فتبقى فارغة. لن يُكتب في \
-             لعبتك شيء ولن يتغيّر منها شيء حتى يصل التحديث الذي يبني أحد الطرفين — والمعرفة \
-             باسم المحرّك هي أول خطوة في ذلك الطريق، لا نهايته."
+             تشغيلها. ما تحصل عليه هو طبقة الترجمة: تفتح مع اللعبة وتقرأ ما على الشاشة \
+             وتترجمه وترسم العربية فوقه — مثبَت بالرسم خارج الشاشة وقراءة البكسلات، ولم \
+             يُشاهَد بعد فوق لعبة حقيقية — فتوقّع أن يظهر شيء وتوقّع أخطاء في القراءة، وتحتاج \
+             الترجمة إلى مزوّد محلّي أو خزينة سبق ملؤها. لن يُكتب في لعبتك شيء ولن يتغيّر منها \
+             شيء حتى يصل التحديث الذي يبني قارئًا لنصوصها أو وحدة تعمل داخلها — والمعرفة باسم \
+             المحرّك هي أول خطوة في ذلك الطريق، لا نهايته."
         ),
         format!(
             "Taarib knows this game's engine is {ism}, and nothing in this build gets inside \
              it: the game's text sits {ayn_injilizi} with no reader for it, and there is no \
-             module that runs inside this game while you play. The translation overlay does \
-             open with the game, attach to its picture and draw over it, but the part that \
-             reads what is on screen and hands it over is not finished, so it stays empty. \
-             Nothing is written into your game and nothing about it changes until the update \
-             that builds one of those two arrives — and naming the engine is the first step \
-             along that road rather than the end of it."
+             module that runs inside this game while you play. What you get is the \
+             translation overlay: it opens with the game, reads what is on screen, translates \
+             it and draws Arabic over it — proven by drawing offscreen and reading the pixels \
+             back, and not yet watched over a real game — so expect something to appear and \
+             expect reading mistakes, and translation needs a local provider or a cache an \
+             earlier session filled. Nothing is written into your game and nothing about it \
+             changes until the update that builds a reader for its text or a module that \
+             runs inside it arrives — and naming the engine is the first step along that \
+             road rather than the end of it."
         ),
     )
 }

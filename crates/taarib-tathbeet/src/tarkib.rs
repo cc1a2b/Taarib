@@ -3,11 +3,17 @@
 use std::fmt;
 use std::path::{Component, Path, PathBuf};
 
+use object::Object as _;
+use taarib_muhawwil_unreal::hawiya::{self, KhattHawiya, TaqreerHawiya};
+use taarib_muhawwil_unreal::isdar::{Bina, Tabaa, afhas};
+use taarib_muhawwil_unreal::khata::KhataUnreal;
+use taarib_muhawwil_unreal::{DALIL_HAWIYA, ISM_HAWIYA};
 use taarib_mustalahat::bina::Basma;
 use taarib_mustalahat::luba::MasdarLuba;
 use taarib_mustalahat::muharrik::{
     AilatMuharrik, KhalfiyaBarmajiya, Muharrik, Tabaqa, TaqreerImkaniyat,
 };
+use taarib_usus::khata::Tafsir as _;
 use taarib_usus::manassa::{BeeatTawafuq, HalatTashghil, Mimariya, NizamTashghil};
 use taarib_usus::masarat;
 use walkdir::WalkDir;
@@ -16,7 +22,7 @@ use crate::bayan::{MahallIdad, Muthabbit, basma_bayt};
 use crate::itlaq::{ASMAA_STEAM, ISM_STEAM, halat_manassa, manassa_mughlaqa};
 use crate::khata::{KhataTathbeet, NatijatTathbeet, min_khata_io, tul_u64};
 use crate::mawdi::{MUJALLAD_TAARIB, WajhatLuba, WajhatNizam};
-use crate::nusus::{IdhnNusus, Nashir};
+use crate::nusus::{self, IdhnNusus, Nashir};
 use crate::wukala::{self, WakeelQaim};
 
 /// The largest framework component this build will deploy, in bytes.
@@ -111,6 +117,36 @@ const TARTIB_KHATT_RENPY: [&str; 4] = [
 /// The largest loader registry Taarib will read in order to append its own
 /// registration.
 const SAQF_HAJM_TASJIL: u64 = 16 * 1024 * 1024;
+
+/// The component store's tree for the Unreal additive layer: the face the
+/// container carries, under [`MUJALLAD_KHATT_UNREAL`].
+const MUKAWWIN_UNREAL: &str = "mulhaq/unreal";
+
+/// Where inside that component the faces live.
+const MUJALLAD_KHATT_UNREAL: &str = "khutut/";
+
+/// The order an Unreal face is chosen in when the component ships more than
+/// one, most preferred first, matched against the file name's leading
+/// characters.
+///
+/// Interface text — menus, prompts, settings — drawn at the sizes a game draws
+/// them, so a sans leads and the Naskh faces follow it. The list ranks and
+/// does not filter, for the reason [`TARTIB_KHATT_RENPY`] gives.
+const TARTIB_KHATT_UNREAL: [&str; 4] = [
+    "IBMPlexSansArabic",
+    "Tajawal",
+    "Amiri",
+    "NotoNaskhArabic",
+];
+
+/// The base name of the Unreal payload, as its crate builds it.
+const ASAS_UNREAL: &str = "taarib_muhawwil_unreal";
+
+/// How many executables beside a loader are read for their import tables.
+const AQSA_TANFIDHIYAT: usize = 8;
+
+/// The largest executable mapped to read its import table.
+const AQSA_HAJM_TANFIDHI: u64 = 1024 * 1024 * 1024;
 
 /// The `$plugins` entry that registers Taarib in an RPG Maker `plugins.js`.
 const MADKHAL_PLUGINS: &str =
@@ -322,6 +358,13 @@ pub enum SababLaHaja {
     /// Ace's script archive, a GameMaker `data.win` — which is Phase 14 patch
     /// content and not something this module deploys.
     DakhilAlRuqaa,
+
+    /// The game's executable does not import the module Taarib's proxy loader
+    /// stands in for, so Windows would never load the proxy and nothing placed
+    /// behind it would ever run. The translation reaches the game another way
+    /// — the additive container the engine mounts on its own — and a loader
+    /// that cannot load is not deployed beside it.
+    WakeelGhayrMustawrad,
 }
 
 impl SababLaHaja {
@@ -329,6 +372,11 @@ impl SababLaHaja {
     #[must_use]
     pub const fn wasf_injilizi(self) -> &'static str {
         match self {
+            Self::WakeelGhayrMustawrad => {
+                "this game's executable does not import the module Taarib's loader stands in \
+                 for, so the loader would never be loaded and is not deployed; the translation \
+                 travels in the additive container the engine mounts on its own"
+            },
             Self::BayanatWaMulhaq => {
                 "this engine loads the translated data and Taarib's additional package on its \
                  own, so no framework is installed into the game"
@@ -359,6 +407,11 @@ impl SababLaHaja {
     #[must_use]
     pub const fn wasf_arabi(self) -> &'static str {
         match self {
+            Self::WakeelGhayrMustawrad => {
+                "الملف التنفيذي لهذه اللعبة لا يستورد الوحدة التي ينوب عنها مُحمِّل تعريب، فلن \
+                 يُحمَّل المُحمِّل أبدًا ولا يُثبَّت؛ تصل الترجمة داخل الحاوية الإضافية التي \
+                 يركّبها المحرّك بنفسه."
+            },
             Self::BayanatWaMulhaq => {
                 "هذا المحرّك يحمّل البيانات المعرّبة وحزمة تعريب الإضافية بنفسه، فلا يُثبَّت داخل \
                  اللعبة أي إطار."
@@ -2006,6 +2059,38 @@ pub enum MasdarMudkhal {
         /// Which registry format the edit understands.
         naw: NawTasjeel,
     },
+
+    /// The Unreal additive container, built *at write time* from the game's
+    /// own containers and the package's string table — the two inputs a plan
+    /// does not hold — and from one face out of the component store.
+    ///
+    /// At write time for the same reason [`Self::TasjeelIdafi`] is: the bytes
+    /// are a function of the game's files as they stand when the button is
+    /// pressed, and of a package the planner is never handed.
+    HawiyatUnreal {
+        /// The face the container carries, when the store ships one.
+        khatt: Option<KhattMakhzan>,
+    },
+}
+
+/// One face inside the component store, named the way the deployment reads it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KhattMakhzan {
+    /// The component's path inside the store.
+    pub mukawwin: String,
+    /// The face's path inside that component.
+    pub fi_makhzan: String,
+}
+
+impl KhattMakhzan {
+    /// The file stem, which is what an engine is told.
+    #[must_use]
+    pub fn ism(&self) -> String {
+        Path::new(&self.fi_makhzan)
+            .file_stem()
+            .and_then(|ism| ism.to_str())
+            .map_or_else(|| self.fi_makhzan.clone(), str::to_owned)
+    }
 }
 
 /// One directory the additive layer needs before its files can be written.
@@ -2473,6 +2558,10 @@ pub struct TaqreerMulhaqat {
     /// Registrations that were already there — from a previous installation or
     /// from the user's own hand — and were therefore left alone.
     pub mutakhatta: Vec<String>,
+
+    /// What each Unreal container written carries: which targets and cultures
+    /// were rewritten, how many strings, and what became of the face.
+    pub hawiyat_unreal: Vec<TaqreerHawiya>,
 }
 
 impl TaqreerMulhaqat {
@@ -2931,12 +3020,12 @@ fn mulhaqat_muharrik(
                 Ok(())
             }
         },
+        AilatMuharrik::Unreal => unreal(mawadi, jidhr_makhzan, mukhattat),
         // Nothing additive: each of these is reached from inside its process by
         // the module the framework step placed, and the proprietary native
         // engines — which load no plugin of any kind — are the clearest case of
         // it.
         AilatMuharrik::Unity
-        | AilatMuharrik::Unreal
         | AilatMuharrik::RpgMakerVxAce
         | AilatMuharrik::GameMaker
         | AilatMuharrik::Electron
@@ -3079,9 +3168,15 @@ pub fn khatt_renpy(jidhr_makhzan: &Path) -> NatijatTathbeet<Option<String>> {
 /// ranked by [`TARTIB_KHATT_RENPY`] and then by name, so the same store gives
 /// the same answer on every machine and in both of the two places that ask.
 fn ikhtar_khatt_renpy(asmaa: &[String]) -> Option<&str> {
+    ikhtar_khatt(asmaa, MUJALLAD_KHATT_RENPY, &TARTIB_KHATT_RENPY)
+}
+
+/// Picks one face out of a component's file listing: the font files directly
+/// under `mujallad`, ranked by `tartib` and then by name.
+fn ikhtar_khatt<'a>(asmaa: &'a [String], mujallad: &str, tartib: &[&str]) -> Option<&'a str> {
     let mut mufaddal: Option<(usize, &str)> = None;
     for ism in asmaa {
-        let Some(dhayl) = ism.strip_prefix(MUJALLAD_KHATT_RENPY) else {
+        let Some(dhayl) = ism.strip_prefix(mujallad) else {
             continue;
         };
         if dhayl.contains('/') {
@@ -3099,10 +3194,10 @@ fn ikhtar_khatt_renpy(asmaa: &[String]) -> Option<&str> {
         }
         // A face the preference list does not name still ranks, after every one
         // it does; `len()` is one past the last named rank.
-        let rutba = TARTIB_KHATT_RENPY
+        let rutba = tartib
             .iter()
             .position(|badiya| dhayl.starts_with(badiya))
-            .unwrap_or(TARTIB_KHATT_RENPY.len());
+            .unwrap_or(tartib.len());
         let afdal = mufaddal.is_none_or(|(hali, ism_hali)| {
             rutba < hali || (rutba == hali && ism.as_str() < ism_hali)
         });
@@ -3216,6 +3311,294 @@ fn nass_override_jadeed() -> String {
     format!("{QISM_GDNATIVE}\n{MIFTAH_SINGLETONS}[ \"{MAWRID_GDNLIB}\" ]\n")
 }
 
+/// Unreal: the additive container the engine mounts by name, the loader's
+/// payload beside the loader, and the one question the framework table could
+/// not ask — whether the executable imports the proxy's module at all.
+///
+/// The container is the whole of what changes on screen. It is planned here as
+/// one added file and built at write time by
+/// [`taarib_muhawwil_unreal::hawiya::ibni`] out of the game's own containers
+/// and the package — see [`MasdarMudkhal::HawiyatUnreal`] — so the plan
+/// promises the file and the write decides its bytes.
+///
+/// The payload placement is a bridge. `taarib-mudkhal` opens payloads beside
+/// itself and nowhere else, and the split component lands them under the game's
+/// own Taarib directory, so a loader that did load would find nothing; one copy
+/// of the Unreal payload beside the loader is what lets the chain be observed
+/// at all. When the loader learns the Taarib directory, this entry goes.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::KhataMalaf`] when the game has no Unreal content layout
+/// or its containers are encrypted — a container built from text this install
+/// cannot read is a container that resolves nothing — and whatever the store
+/// listing or the executable survey raise.
+fn unreal(
+    mawadi: &MawadiTarkib,
+    jidhr_makhzan: &Path,
+    mukhattat: &mut KhuttatTarkib,
+) -> NatijatTathbeet<()> {
+    let jidhr = mawadi.jidhr_luba();
+    let bina = afhas(jidhr).map_err(|khata| khata_unreal(jidhr, &khata))?;
+    if bina.tabaa == Tabaa::Majhul {
+        return Err(KhataTathbeet::KhataMalaf {
+            masar: jidhr.to_path_buf(),
+            amal: "locating the Unreal project's content",
+            sabab: std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "no <Project>/Content directory exists under the game root, so there is \
+                 nowhere the engine would mount a container from",
+            ),
+        });
+    }
+    if bina.mushaffar {
+        return Err(KhataTathbeet::KhataMalaf {
+            masar: jidhr.to_path_buf(),
+            amal: "reading the game's containers",
+            sabab: std::io::Error::other(
+                "the game's containers are encrypted and this install takes no key, so its \
+                 text cannot be read in order to be replaced",
+            ),
+        });
+    }
+
+    let dalil = dalil_hawiyat_unreal(jidhr, &bina)?;
+    let mawqi_dalil = mawadi.wajha(&dalil)?;
+    if !mawqi_dalil.mutlaq(jidhr)?.is_dir() {
+        mukhattat.mujalladat.push(MujalladTarkib {
+            mawqi: mawqi_dalil,
+            nisbi: dalil.clone(),
+        });
+    }
+    let nisbi = format!("{dalil}/{ISM_HAWIYA}");
+    mukhattat.mudkhalat.push(MudkhalTarkib {
+        mawqi: mawadi.wajha(&nisbi)?,
+        nisbi,
+        naw: NawMudkhal::Idafa,
+        masdar: MasdarMudkhal::HawiyatUnreal {
+            khatt: khatt_unreal(jidhr_makhzan)?,
+        },
+    });
+
+    let HajatItar::Matlub(mukawwin) = &mukhattat.hajat else {
+        return Ok(());
+    };
+    let mukawwin = mukawwin.as_ref().clone();
+    if yastawrid_wakeel(mawadi, &mukawwin)? == Some(false) {
+        // The framework step is answered here rather than in the table
+        // because the table reads the engine and this reads the executable:
+        // a proxy the executable never imports is a file Windows never opens.
+        mukhattat.hajat = HajatItar::LaHaja(SababLaHaja::WakeelGhayrMustawrad);
+        mukhattat.slot_muhammil = None;
+        mukhattat.jidhr_muhammil = None;
+        mukhattat.talabat.clear();
+        return Ok(());
+    }
+
+    let asmaa = asmaa_mukawwin(jidhr_makhzan, &mukawwin.ism)?;
+    let Some(hamula) = asmaa.iter().find(|ism| {
+        !ism.contains('/')
+            && Path::new(ism)
+                .file_stem()
+                .is_some_and(|asas| asas == ASAS_UNREAL)
+    }) else {
+        return Err(KhataTathbeet::MukawwinMafqud {
+            mukawwin: format!("{}/{ASAS_UNREAL}", mukawwin.ism),
+            masar: jidhr_makhzan.join(&mukawwin.ism),
+        });
+    };
+    let nisbi = mawadi.bijanib(hamula);
+    mukhattat.mudkhalat.push(MudkhalTarkib {
+        mawqi: mawadi.wajha(&nisbi)?,
+        nisbi,
+        naw: NawMudkhal::Idafa,
+        masdar: MasdarMudkhal::MinMakhzan {
+            mukawwin: mukawwin.ism.clone(),
+            fi_makhzan: hamula.clone(),
+        },
+    });
+    Ok(())
+}
+
+/// Where the container goes, relative to the game root: the directory the
+/// game's own containers are in, or `<Project>/Content/Paks` for a game whose
+/// content is loose.
+fn dalil_hawiyat_unreal(jidhr: &Path, bina: &Bina) -> NatijatTathbeet<String> {
+    if let Some(hawiya) = bina.hawiyat.first()
+        && let Some(dalil) = hawiya.parent()
+        && let Ok(nisbi) = dalil.strip_prefix(jidhr)
+        && let Some(nass) = nisbi_nass(nisbi)
+        && !nass.is_empty()
+    {
+        return Ok(nass);
+    }
+
+    let khata = || KhataTathbeet::KhataMalaf {
+        masar: jidhr.to_path_buf(),
+        amal: "locating the Unreal project's container directory",
+        sabab: std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "no <Project>/Content directory exists under the game root, so there is nowhere \
+             the engine would mount a container from",
+        ),
+    };
+    let madakhil = std::fs::read_dir(jidhr).map_err(|_| khata())?;
+    for madkhal in madakhil.flatten().take(4_096) {
+        let masar = madkhal.path();
+        let ism = madkhal.file_name().to_string_lossy().into_owned();
+        if !masar.is_dir() || ism.eq_ignore_ascii_case("Engine") {
+            continue;
+        }
+        let Ok(abnaa) = std::fs::read_dir(&masar) else {
+            continue;
+        };
+        let muhtawa = abnaa
+            .flatten()
+            .take(4_096)
+            .find(|ibn| ibn.path().is_dir() && ibn.file_name().eq_ignore_ascii_case("Content"))
+            .map(|ibn| ibn.file_name().to_string_lossy().into_owned());
+        if let Some(muhtawa) = muhtawa {
+            let paks = Path::new(DALIL_HAWIYA)
+                .file_name()
+                .and_then(|ism| ism.to_str())
+                .unwrap_or("Paks");
+            return Ok(format!("{ism}/{muhtawa}/{paks}"));
+        }
+    }
+    Err(khata())
+}
+
+/// The face the Unreal container will carry, when the store ships one.
+///
+/// [`None`] for a store without the component, as [`khatt_renpy`] answers for
+/// its own: the container is still written and the report says what the
+/// engine will draw Arabic with instead.
+///
+/// # Errors
+///
+/// Whatever [`asmaa_mukawwin`] raises other than an absent or short component.
+fn khatt_unreal(jidhr_makhzan: &Path) -> NatijatTathbeet<Option<KhattMakhzan>> {
+    match asmaa_mukawwin(jidhr_makhzan, MUKAWWIN_UNREAL) {
+        Ok(asmaa) => Ok(
+            ikhtar_khatt(&asmaa, MUJALLAD_KHATT_UNREAL, &TARTIB_KHATT_UNREAL).map(|ism| {
+                KhattMakhzan {
+                    mukawwin: MUKAWWIN_UNREAL.to_owned(),
+                    fi_makhzan: ism.to_owned(),
+                }
+            }),
+        ),
+        Err(KhataTathbeet::MukawwinMafqud { .. } | KhataTathbeet::MukawwinNaqis { .. }) => Ok(None),
+        Err(khata) => Err(khata),
+    }
+}
+
+/// Whether an executable beside the loader imports the module the proxy stands
+/// in for.
+///
+/// `Some(true)` when one does, `Some(false)` when every executable there was
+/// read and none does, and [`None`] when the question could not be answered —
+/// no executable, an unreadable one, or a loader that is not a proxy at all —
+/// which the caller treats as the table's own answer rather than as a no.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::MasarKharij`] when the loader's directory does not stay
+/// inside the game root.
+fn yastawrid_wakeel(
+    mawadi: &MawadiTarkib,
+    mukawwin: &MukawwinItar,
+) -> NatijatTathbeet<Option<bool>> {
+    let (TahmilMusbaq::WakeelWindows { wahda } | TahmilMusbaq::TajawuzWine { wahda }) =
+        &mukawwin.tahmil
+    else {
+        return Ok(None);
+    };
+    let matlub = format!("{}.dll", wahda.to_ascii_lowercase());
+    let dalil = mawadi.jidhr_muhammil()?.mutlaq(mawadi.jidhr_luba())?;
+    let Ok(madakhil) = std::fs::read_dir(&dalil) else {
+        return Ok(None);
+    };
+
+    let mut ra_tanfidhi = false;
+    let mut majhul = false;
+    for madkhal in madakhil.flatten().take(4_096) {
+        let masar = madkhal.path();
+        let tanfidhi = masar
+            .extension()
+            .and_then(|imtidad| imtidad.to_str())
+            .is_some_and(|imtidad| imtidad.eq_ignore_ascii_case("exe"));
+        if !tanfidhi || !masar.is_file() {
+            continue;
+        }
+        match istiradat_tanfidhi(&masar) {
+            Some(asmaa) => {
+                ra_tanfidhi = true;
+                if asmaa.iter().any(|ism| ism == &matlub) {
+                    return Ok(Some(true));
+                }
+            },
+            None => majhul = true,
+        }
+    }
+    if majhul || !ra_tanfidhi {
+        return Ok(None);
+    }
+    Ok(Some(false))
+}
+
+/// The modules one executable imports, lower-cased, by file name.
+///
+/// [`None`] when the file cannot be mapped or is not an image this build
+/// reads. Mapped rather than read: a shipping Unreal executable is a hundred
+/// megabytes and the import directory is in its first few.
+fn istiradat_tanfidhi(masar: &Path) -> Option<Vec<String>> {
+    let malaf = std::fs::File::open(masar).ok()?;
+    let hajm = malaf.metadata().ok()?.len();
+    if hajm == 0 || hajm > AQSA_HAJM_TANFIDHI {
+        return None;
+    }
+    // SAFETY: a read-only mapping of a file the game owns and this crate never
+    // writes. The store may replace the file underneath a running install, and
+    // a torn image then fails to parse and answers `None`, which the caller
+    // treats as "unknown" — never as a value read from the bytes.
+    let khareeta = unsafe { memmap2::Mmap::map(&malaf) }.ok()?;
+    let kaen = object::File::parse(&*khareeta).ok()?;
+    let mut asmaa: Vec<String> = Vec::with_capacity(AQSA_TANFIDHIYAT);
+    for mustawrad in kaen.imports().ok()? {
+        // One malformed entry is a fact about the file and not a reason to
+        // lose the rest of the table.
+        let Ok(mustawrad) = mustawrad else { continue };
+        let kamil = String::from_utf8_lossy(mustawrad.library()).to_ascii_lowercase();
+        let ism = kamil
+            .rsplit(['/', '\\'])
+            .next()
+            .unwrap_or(&kamil)
+            .to_owned();
+        if !ism.is_empty() && !asmaa.contains(&ism) {
+            asmaa.push(ism);
+        }
+    }
+    Some(asmaa)
+}
+
+/// A refusal of the Unreal adapter, restated with the game's path and the
+/// adapter's own sentence.
+fn khata_unreal(jidhr: &Path, khata: &KhataUnreal) -> KhataTathbeet {
+    KhataTathbeet::KhataMalaf {
+        masar: jidhr.to_path_buf(),
+        amal: "reading the game's containers",
+        sabab: std::io::Error::other(khata.injilizi()),
+    }
+}
+
+/// The refusal the container build raises when it cannot be completed.
+fn hawiya_marfuda(jidhr: &Path, khata: &KhataUnreal) -> KhataTathbeet {
+    KhataTathbeet::NususMarfuda {
+        masar: jidhr.to_path_buf(),
+        sabab: khata.injilizi(),
+    }
+}
+
 /// Writes the additive layer of a plan, through the manifest and through
 /// nothing else.
 ///
@@ -3236,11 +3619,37 @@ pub fn nashr_mulhaqat(
     jidhr_makhzan: &Path,
     muthabbit: &mut dyn Muthabbit,
 ) -> NatijatTathbeet<TaqreerMulhaqat> {
+    nashr_mulhaqat_bi_mutarjim(mukhattat, jidhr_luba, jidhr_makhzan, muthabbit, None)
+}
+
+/// [`nashr_mulhaqat`], with the package's string table for the one entry that
+/// needs it.
+///
+/// The Unreal container is built from the package's translations at write
+/// time, and this is the only way they reach it: [`nashr_bi_khutta`] opens the
+/// table through [`nusus::maa_mutarjim`] and passes it here. A plan holding an
+/// Unreal container and a call that brought no table is refused by name rather
+/// than written empty, because a container that resolves nothing mounts
+/// cleanly and looks exactly like success.
+///
+/// # Errors
+///
+/// As [`nashr_mulhaqat`], plus [`KhataTathbeet::NususMarfuda`] when the plan
+/// holds an Unreal container and no table was given, or when the container
+/// could not be built from the game's own resources.
+pub fn nashr_mulhaqat_bi_mutarjim(
+    mukhattat: &KhuttatTarkib,
+    jidhr_luba: &Path,
+    jidhr_makhzan: &Path,
+    muthabbit: &mut dyn Muthabbit,
+    mutarjim: Option<&dyn hawiya::Mutarjim>,
+) -> NatijatTathbeet<TaqreerMulhaqat> {
     let mut taqreer = TaqreerMulhaqat {
         mujalladat: Vec::new(),
         mudafa: Vec::new(),
         muaddala: Vec::new(),
         mutakhatta: Vec::new(),
+        hawiyat_unreal: Vec::new(),
     };
     if mukhattat.mudkhalat.is_empty() && mukhattat.mujalladat.is_empty() {
         return Ok(taqreer);
@@ -3254,7 +3663,7 @@ pub fn nashr_mulhaqat(
     // One component is read once however many of its files the plan places,
     // because reading a payload per entry turns a twelve-file adapter into
     // twelve walks of the same directory.
-    let mut makhzan: Vec<(String, Vec<(String, Vec<u8>)>)> = Vec::new();
+    let mut makhzan_cache: Vec<(String, Vec<(String, Vec<u8>)>)> = Vec::new();
 
     for mudkhal in &mukhattat.mudkhalat {
         let mutlaq = mudkhal.mawqi.mutlaq(jidhr_luba)?;
@@ -3263,7 +3672,8 @@ pub fn nashr_mulhaqat(
                 mukawwin,
                 fi_makhzan,
             } => {
-                let bayt = bayt_min_makhzan(&mut makhzan, jidhr_makhzan, mukawwin, fi_makhzan)?;
+                let bayt =
+                    bayt_min_makhzan(&mut makhzan_cache, jidhr_makhzan, mukawwin, fi_makhzan)?;
                 iktub_aw_ansha(muthabbit, &mutlaq, &bayt, mudkhal.naw)?;
                 sajjil_munashar(&mut taqreer, mudkhal, &bayt);
             },
@@ -3309,6 +3719,46 @@ pub fn nashr_mulhaqat(
                     },
                     None => taqreer.mutakhatta.push(mudkhal.nisbi.clone()),
                 }
+            },
+            MasdarMudkhal::HawiyatUnreal { khatt } => {
+                let Some(mutarjim) = mutarjim else {
+                    return Err(KhataTathbeet::NususMarfuda {
+                        masar: jidhr_luba.to_path_buf(),
+                        sabab: "the Unreal container carries the package's translations and \
+                                this write was handed no string table"
+                            .to_owned(),
+                    });
+                };
+                let khatt = match khatt {
+                    Some(makhzan) => {
+                        let bayt = bayt_min_makhzan(
+                            &mut makhzan_cache,
+                            jidhr_makhzan,
+                            &makhzan.mukawwin,
+                            &makhzan.fi_makhzan,
+                        )?;
+                        Some(
+                            KhattHawiya::jadeed(makhzan.ism(), bayt)
+                                .map_err(|khata| hawiya_marfuda(jidhr_luba, &khata))?,
+                        )
+                    },
+                    None => None,
+                };
+                // The game's containers are read now, not at plan time: the
+                // container's bytes are a function of the game as it stands
+                // when the button is pressed.
+                let bina = afhas(jidhr_luba).map_err(|khata| khata_unreal(jidhr_luba, &khata))?;
+                let (katib, taqreer_hawiya) = hawiya::ibni(&bina, mutarjim, khatt)
+                    .map_err(|khata| hawiya_marfuda(jidhr_luba, &khata))?;
+                let bayt = katib
+                    .ila_bayt()
+                    .map_err(|khata| hawiya_marfuda(jidhr_luba, &khata))?;
+                iktub_aw_ansha(muthabbit, &mutlaq, &bayt, mudkhal.naw)?;
+                sajjil_munashar(&mut taqreer, mudkhal, &bayt);
+                for satr in taqreer_hawiya.taqreer() {
+                    tracing::info!(satr, "the Unreal container");
+                }
+                taqreer.hawiyat_unreal.push(taqreer_hawiya);
             },
         }
     }
@@ -3532,7 +3982,19 @@ pub fn nashr_bi_khutta(
 ) -> NatijatTathbeet<(NatijatTarkib, TaqreerMulhaqat)> {
     nashir.raqqi(IdhnNusus::min_khutta(mukhattat), Some(mukawwinat))?;
     let itar = rakkib_itar(mukhattat, luba, halat, mukawwinat, nashir.muthabbit())?;
-    let mulhaqat = nashr_mulhaqat(mukhattat, &luba.jidhr, mukawwinat, nashir.muthabbit())?;
+    // The package's string table is opened for the additive layer because one
+    // entry of it — the Unreal container — is built from the translations, and
+    // a plan is never handed the package.
+    let ruqaa = nashir.ruqaa();
+    let mulhaqat = nusus::maa_mutarjim(ruqaa, &luba.jidhr, |mutarjim| {
+        nashr_mulhaqat_bi_mutarjim(
+            mukhattat,
+            &luba.jidhr,
+            mukawwinat,
+            nashir.muthabbit(),
+            mutarjim.map(|mutarjim| -> &dyn hawiya::Mutarjim { mutarjim }),
+        )
+    })?;
     Ok((itar, mulhaqat))
 }
 

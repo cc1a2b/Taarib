@@ -4,6 +4,7 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   block-size: 100%;
+  min-block-size: var(--adna-irtifa-shasha);
   background-color: var(--sath-0);
 
   /* The per-game accent. `--tamyeez-luba` is written onto this element by the
@@ -15,35 +16,7 @@
   --lawn-luba: var(--tamyeez-luba, var(--tamyeez));
 }
 
-/* --- the top strip --------------------------------------------------------- */
-
-.luba__shareet-alawi {
-  display: flex;
-  align-items: center;
-  gap: var(--misafa-16);
-  block-size: var(--irtifa-shareet);
-  padding-inline: var(--misafa-24);
-  background-color: var(--sath-1);
-  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
-}
-
-.luba__raji {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-2);
-  transition: color var(--zaman-hala) var(--munhana);
-}
-
-.luba__raji:hover {
-  color: var(--nass-1);
-  transition: none;
-}
-
-.luba__fasl {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
-}
+/* The strip is `mukawwinat/raas_shasha`, shared with every other sub-screen. */
 
 /* --- the scrolling body ---------------------------------------------------- */
 
@@ -205,6 +178,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A left-to-right run — a path, a hash — inside a right-to-left row. As a
+   block it filled the cell and aligned its text to its own left edge, which
+   stranded `F:\Games\…` at the far side of the screen from the label naming
+   it. Shrunk to its content, the run sits where the label's value belongs, at
+   the cell's reading start, and still ellipsises against the cell's width. */
+.luba__qat.mono-ltr {
+  inline-size: fit-content;
+  max-inline-size: 100%;
 }
 
 /* --- chips ----------------------------------------------------------------- */
@@ -906,6 +889,36 @@
   font-size: var(--qiyas-3);
   line-height: var(--irtifa-3);
   color: var(--nass-2);
+}
+
+/* The download meter: two hairlines tall, square, drawn only against the
+   bytes the listing declared — the idiom every countable wait in the product
+   draws, so an install's one countable stretch is never a spinner. */
+.luba__miqyas {
+  display: grid;
+  gap: var(--misafa-6);
+  max-inline-size: 56ch;
+}
+
+.luba__miqyas-masar {
+  block-size: var(--samk-hadd-barz);
+  background-color: var(--sath-3);
+  border-radius: var(--nisf-hadd);
+  overflow: hidden;
+}
+
+.luba__miqyas-malu {
+  display: block;
+  block-size: 100%;
+  background-color: var(--lawn-luba);
+  transition: inline-size var(--zaman-lawha) var(--munhana);
+}
+
+.luba__miqyas-nass {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
 }
 
 .luba__natija {

@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { kasr } from '@/mustalahat/arqam';
-import { Link } from '@tanstack/react-router';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -12,7 +11,10 @@ import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { useTaraju } from '@/hayat/taraju';
 import type { MiftahLugha } from '@/lugha/lugha';
 import { munassiqat, t } from '@/lugha/lugha';
+import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
+import { Mashhad } from '@/mukawwinat/mashhad';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type {
   Idadat,
   IdadatManassat,
@@ -195,6 +197,38 @@ function halatMuzawwidin(muzawwidun: Idadat['muzawwidun']): HalatMuzawwidin {
   return iftiradi !== null && iftiradi !== muntakhab.muarrif ? 'badeel' : 'mukhtar';
 }
 
+/** How many rows each placeholder section holds: the display section's own count. */
+const SUFUF_HAYKAL = 4;
+
+/**
+ * The settings document drawn empty: two sections on the screen's own two
+ * columns, each row a label bar beside a field-shaped box at the field's own
+ * height, so the first real row lands on the first placeholder rather than on
+ * a paragraph's worth of bars above it.
+ */
+function HaykalIdadat(): JSX.Element {
+  return (
+    <div className="idadat__haykal" aria-hidden="true">
+      {Array.from({ length: 2 }, (_, qism) => (
+        <section key={qism} className="idadat__qism">
+          <div className="idadat__raas-qism">
+            <span className="idadat__haykal-satr idadat__haykal-satr--unwan" />
+          </div>
+          {Array.from({ length: SUFUF_HAYKAL }, (_, saff) => (
+            <div key={saff} className="idadat__saff">
+              <span
+                className="idadat__haykal-satr idadat__haykal-satr--tasmiya"
+                style={{ inlineSize: `${String(40 + ((saff * 23 + qism * 11) % 45))}%` }}
+              />
+              <span className="idadat__haykal-haql" />
+            </div>
+          ))}
+        </section>
+      ))}
+    </div>
+  );
+}
+
 /** Defensive number parsing: empty keeps the old value, NaN is ignored. */
 function raqmAw(khaam: string, qadeem: number): number {
   if (khaam.trim() === '') {
@@ -288,11 +322,9 @@ function QaimatMasarat({
   return (
     <div className="idadat__qaima-masarat">
       {qeem.length === 0 ? (
-        <div className="idadat__farigh">
-          <p className="idadat__farigh-unwan">{t('idadat.qaima.farigha', lugha)}</p>
-          <p className="idadat__farigh-nass">{mawdi}</p>
+        <HalatFarigha unwan={t('idadat.qaima.farigha', lugha)} nass={mawdi}>
           {saffIdafa}
-        </div>
+        </HalatFarigha>
       ) : (
         <>
           <ul className="idadat__masarat">
@@ -686,16 +718,24 @@ export function IdadatShasha(): JSX.Element {
     </div>
   );
 
+  const wajh = idadat.error !== null && nuskha === null ? 'khata' : nuskha === null ? 'tahmil' : 'jahiz';
+
   return (
     <div className="idadat">
-      <header className="idadat__shareet-alawi">
-        <Link to="/" className="idadat__raji">
-          {t('idadat.raji', lugha)}
-        </Link>
-        <span className="idadat__fasl">{t('shasha.idadat', lugha)}</span>
-      </header>
+      <RaasShasha
+        rujoo={{ ila: 'maktaba' }}
+        nassRujoo={t('idadat.raji', lugha)}
+        unwan={t('shasha.idadat', lugha)}
+        tafasil={
+          mutaghayyir ? (
+            <span className="idadat__hala-hifz idadat__hala-hifz--mutaghayyir">
+              {t('idadat.hifz.mutaghayyir', lugha)}
+            </span>
+          ) : null
+        }
+      />
 
-      <div className="idadat__jism">
+      <Mashhad miftah={wajh} className="idadat__jism">
         {idadat.error !== null && nuskha === null ? (
           <KutlatKhata unwan={t('idadat.khata.tahmil', lugha)} khata={idadat.error} lugha={lugha}>
             <button
@@ -709,12 +749,7 @@ export function IdadatShasha(): JSX.Element {
             </button>
           </KutlatKhata>
         ) : nuskha === null ? (
-          <div className="haykal" aria-hidden="true">
-            <span className="haykal__satr haykal__satr--qasir" />
-            <span className="haykal__satr haykal__satr--tawil" />
-            <span className="haykal__satr haykal__satr--mutawassit" />
-            <span className="haykal__satr haykal__satr--tawil" />
-          </div>
+          <HaykalIdadat />
         ) : (
           <>
             <section className="idadat__qism" aria-labelledby="idadat-unwan-ard">
@@ -1028,11 +1063,12 @@ export function IdadatShasha(): JSX.Element {
                       lugha={lugha}
                     />
                   ) : khutut.data === undefined || khutut.data.length === 0 ? (
-                    <div className="idadat__farigh">
-                      <p className="idadat__farigh-unwan">{t('idadat.khutut.la_shay', lugha)}</p>
-                      <p className="idadat__farigh-nass">{t('idadat.khutut.istirad', lugha)}</p>
+                    <HalatFarigha
+                      unwan={t('idadat.khutut.la_shay', lugha)}
+                      nass={t('idadat.khutut.istirad', lugha)}
+                    >
                       {saffIstirad}
-                    </div>
+                    </HalatFarigha>
                   ) : (
                     <>
                       <ul className="idadat__khutut">
@@ -1088,15 +1124,14 @@ export function IdadatShasha(): JSX.Element {
                   is the whole section; the other two carry it above the list,
                   which is what they are about. */}
               {nuskha.muzawwidun.qaima.length === 0 ? (
-                <div className="idadat__farigh">
-                  <p className="idadat__farigh-unwan">{t('idadat.muzawwidun.la_shay', lugha)}</p>
-                  <p className="idadat__farigh-nass">
-                    {t('idadat.muzawwidun.athar_faragh', lugha)}
-                  </p>
+                <HalatFarigha
+                  unwan={t('idadat.muzawwidun.la_shay', lugha)}
+                  nass={t('idadat.muzawwidun.athar_faragh', lugha)}
+                >
                   <button type="button" className="zir" onClick={adifMuzawwid}>
                     {t('idadat.muzawwidun.adif', lugha)}
                   </button>
-                </div>
+                </HalatFarigha>
               ) : (
                 <>
                   {athar === null ? null : (
@@ -1778,7 +1813,7 @@ export function IdadatShasha(): JSX.Element {
             </div>
           </>
         )}
-      </div>
+      </Mashhad>
 
       <p className="khafi" role="status">
         {yuhammil ? t('amm.tahmil', lugha) : ''}

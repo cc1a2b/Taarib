@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Taarib.Unity.Mono — the BepInEx 6 plugin for Unity games whose managed code
+    Taarib.Unity.Mono — the BepInEx 5 plugin for Unity games whose managed code
     still runs on Mono, where Assembly-CSharp.dll is real IL and reflection
     works the ordinary way.
 
@@ -23,7 +23,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>Taarib.Unity.Mono</AssemblyName>
     <RootNamespace>Taarib.Unity.Mono</RootNamespace>
-    <Description>BepInEx 6 plugin taking over text rendering in Unity games on the Mono scripting backend.</Description>
+    <Description>BepInEx 5 plugin taking over text rendering in Unity games on the Mono scripting backend.</Description>
   </PropertyGroup>
 
   <PropertyGroup Label="PluginInfo">
@@ -38,7 +38,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BepInEx.Unity.Mono" Version="6.0.0-be.780" PrivateAssets="all" />
+    <!--
+      BepInEx 5, not 6. The bundle stages BepInEx 5.4.23.5 for every Mono
+      generation (assets/aqfal/qufl_bepinex.json), because 5 is the only line
+      with a stable release and the one every Mono game in the wild loads. A
+      plugin built against 6.0.0-be.780 references BepInEx.Core.dll and
+      BepInEx.Unity.Mono.dll, neither of which exists under a 5.x chainloader,
+      so the type load failed silently and Awake was never entered. That is why
+      Hollow Knight and R.E.P.O. installed and stayed English.
+    -->
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" PrivateAssets="all" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" PrivateAssets="all" />
     <PackageReference Include="UnityEngine.Modules" Version="2021.3.0" PrivateAssets="all" IncludeAssets="compile" />
   </ItemGroup>

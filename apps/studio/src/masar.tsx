@@ -15,9 +15,9 @@ import { useEffect, useRef } from 'react';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
 import { ittijah, t, wasm } from '@/lugha/lugha';
-// The router's own two states are drawn in the failure block's vocabulary, and
-// through its own parts, so the two cannot drift apart.
-import { NassKhaam, SatrRamz } from '@/mukawwinat/kutlat_khata';
+// The router's own two states are drawn through the failure block's own parts,
+// so the two cannot drift apart from every other failure in the product.
+import { KutlatFashal, SatrRamz } from '@/mukawwinat/kutlat_khata';
 import { LawhatAwamir } from '@/mukawwinat/lawhat_awamir';
 import type { Idadat, Kathafa, Lugha, Sima } from '@/mustalahat/awamir';
 import { HARAKAT_MASAR, haraka } from '@/nizam/haraka';
@@ -246,25 +246,6 @@ tabbiqQiyas(
    =========================================================================== */
 
 /**
- * The two sentences the router needs and the string set does not carry.
- *
- * `ar.json` and `en.json` are outside this change's file set, so these live
- * here rather than being half-added there. They keep `t`'s own contract —
- * every entry present in both languages — so lifting them into the string set
- * under `masar.la_masar.*` is a copy rather than a rewrite.
- */
-const NUSUS_MASAR: Readonly<Record<'unwan' | 'sharh', Readonly<Record<Lugha, string>>>> = {
-  unwan: {
-    arabi: 'لا توجد شاشة بهذا العنوان',
-    injilizi: 'There is no screen at this address',
-  },
-  sharh: {
-    arabi: 'هذا العنوان ليس في جدول مسارات هذه الجلسة، فليست له شاشة تُفتح.',
-    injilizi: "This address is not in this session's route table, so there is no screen to open.",
-  },
-};
-
-/**
  * The session's language, from the cache the root layout has already filled.
  *
  * The two components below are instantiated by the router rather than by the
@@ -298,14 +279,16 @@ interface KhasaisHalat {
 }
 
 /**
- * One page for both router states, in the failure block's vocabulary.
+ * One page for both router states, in the product's own two vocabularies.
  *
  * An unmatched address and a route that threw are the two screens a person is
  * most likely to be looking at when they decide whether this product is
- * finished, and neither of them is an exception page: both have the same three
- * parts as every other failure in Taarib — the machine's name for it, one
- * sentence, and the one thing to do next — so both are built from the same
- * shell, header and block the screens themselves use.
+ * finished, and neither of them is an exception page. A throw is a failure and
+ * takes the failure card — the sentence, the way on, and the machine's name
+ * for it kept at the foot. An address nobody routed is not a failure and takes
+ * the empty state, with the address itself where the code would be. Both sit
+ * in the library's own shell, in a region that scrolls, because these two
+ * pages have no grid of their own to hand the scrolling to.
  */
 function HalatMasar({
   lugha,
@@ -321,17 +304,26 @@ function HalatMasar({
       <header className="raas">
         <h1 className="raas__unwan">{t('tatbiq.ism', lugha)}</h1>
       </header>
-      <div className="jism">
-        <div
-          className={fashal ? 'halat halat--khata halat--fashal' : 'halat halat--khata'}
-          {...(fashal ? ({ role: 'alert' } as const) : {})}
-        >
-          <SatrRamz ramz={ramz} fashal={fashal} />
-          <p className="halat__unwan">{unwan}</p>
-          <p className="halat__nass">{sharh}</p>
-          {khaam === null ? null : <NassKhaam nass={khaam} lugha={lugha} />}
-          <div className="halat__afal">{children}</div>
-        </div>
+      <div className="jism jism--mutadahrij">
+        {fashal ? (
+          <KutlatFashal
+            unwan={unwan}
+            nass={sharh}
+            khaam={khaam}
+            ramz={ramz}
+            tafsil={khaam}
+            lugha={lugha}
+          >
+            {children}
+          </KutlatFashal>
+        ) : (
+          <div className="halat halat--farigh halat--shasha" role="status">
+            <p className="halat__unwan">{unwan}</p>
+            <p className="halat__nass">{sharh}</p>
+            <div className="halat__afal">{children}</div>
+            <SatrRamz ramz={ramz} lugha={lugha} tasmiya={t('masar.unwan', lugha)} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -347,8 +339,8 @@ function LaMasar(): JSX.Element {
     <HalatMasar
       lugha={lugha}
       ramz={mawqi}
-      unwan={NUSUS_MASAR.unwan[lugha]}
-      sharh={NUSUS_MASAR.sharh[lugha]}
+      unwan={t('masar.la_masar.unwan', lugha)}
+      sharh={t('masar.la_masar.sharh', lugha)}
       khaam={null}
       fashal={false}
     >

@@ -52,6 +52,34 @@ const KHATT_RENPY: [(&str, &str); 2] = [
     ("NotoNaskhArabic/rukhsa", "OFL.txt"),
 ];
 
+/// Where inside the Unreal component the face it ships lives.
+///
+/// Mirrors `taarib_tathbeet::tarkib::MUJALLAD_KHATT_UNREAL`, which is private.
+/// `tarkib::khatt_unreal` reads the face back from exactly this path and the
+/// deployment carries it inside the additive container it writes beside the
+/// game's own; the two spellings must not drift, or the container names no
+/// face and Arabic draws from the engine's last-resort font as boxes.
+const DAKHIL_KHATT_UNREAL: &str = "khutut";
+
+/// The face the Unreal component ships and the licence that travels with it.
+///
+/// IBM Plex Sans Arabic because `tarkib::TARTIB_KHATT_UNREAL` ranks it first:
+/// a game's menus and prompts are interface text drawn at interface sizes, and
+/// a sans reads at those sizes where a book Naskh does not. A static face, not
+/// a variable one, because the engine that reads a localized fallback-font
+/// name is Unreal 4.13 to about 4.19, whose `FreeType` predates variation
+/// tables; a variable face would load its default instance on some of those
+/// and nothing on others.
+///
+/// The licence is not optional, for the reason [`KHATT_RENPY`] gives.
+const KHATT_UNREAL: [(&str, &str); 2] = [
+    (
+        "IBMPlexSansArabic/IBMPlexSansArabic-Regular.ttf",
+        "IBMPlexSansArabic-Regular.ttf",
+    ),
+    ("IBMPlexSansArabic/rukhsa", "IBMPlex-OFL.txt"),
+];
+
 /// The staging inputs that are not built by cargo.
 #[derive(Debug, Clone)]
 pub(crate) struct MasadirTajmee {
@@ -280,6 +308,22 @@ fn saf_mulhaq(
             "J1",
             muarrif,
             &format!("mukawwinat/mulhaq/renpy/{DAKHIL_KHATT_RENPY}/{ism}"),
+            &masadir.jidhr,
+            masadir.jalb,
+            mustaqarr,
+        )?;
+    }
+
+    // The face the Unreal additive container carries. `tarkib::unreal` reads
+    // it out of this component and the deployment writes it inside the
+    // container beside the game's own, under the directory the engine reads
+    // its fallback face from; there is no other step that would put a face
+    // where that engine looks. Row J1 again, for the same reason as above.
+    for (muarrif, ism) in KHATT_UNREAL {
+        khutut.ifragh(
+            "J1",
+            muarrif,
+            &format!("mukawwinat/mulhaq/unreal/{DAKHIL_KHATT_UNREAL}/{ism}"),
             &masadir.jidhr,
             masadir.jalb,
             mustaqarr,

@@ -27,10 +27,17 @@
 //!    `dlopen` with `RTLD_NOLOAD`, which answers for shared objects and not for
 //!    the program image, and declining every Linux Unreal game on the strength
 //!    of that would be the exact defect this contract closes.
-//! 3. **The patch.** `<own dir>/*.ruqaa`, opened through
-//!    [`taarib_ruqaa::qari::MalafRuqaa`], which maps it and validates its
-//!    framing and content hash before a byte of the body is read. No patch is a
-//!    logged decline: nothing to apply, and the game is left alone.
+//! 3. **The patch.** `<own dir>/*.ruqaa`, and failing that
+//!    `<game root>/taarib/*.ruqaa` — the installer places the package under
+//!    the game's own Taarib directory and this module beside the loader, so
+//!    the two are one directory only when the loader sits at the root. Opened
+//!    through [`taarib_ruqaa::qari::MalafRuqaa`], which maps it and validates
+//!    its framing and content hash before a byte of the body is read. No patch
+//!    is a logged decline: nothing to apply, and the game is left alone.
+//!    Beside it, the additive container the installer wrote next to the game's
+//!    own — [`crate::ISM_HAWIYA`] — is looked for and recorded, because it, and
+//!    not this process, is what carries the Arabic: the engine mounts it by
+//!    name and draws from it with no help from here.
 //! 4. **The disclosure** is tier 3's, and this is not tier 3. `Iqrar::baad_ard`
 //!    and `sidq::mahfuz_salih` govern the overlay, which draws over a game it
 //!    did not write; an engine adapter that switches Slate's own shaping method
@@ -103,6 +110,7 @@ use taarib_haqn::mawqi::{mujallad_nafsi, qaidat_wahda};
 use taarib_ruqaa::IMTIDAD;
 use taarib_ruqaa::qari::MalafRuqaa;
 
+use crate::ISM_HAWIYA;
 use crate::isdar::{Bina, Tabaa, afhas};
 use crate::qiyas::HadafKhatf;
 use crate::slate::{DiqqatMuttajih, IsdarSlate, MasdarWasl, Unwan, WaslSlate};
@@ -420,20 +428,27 @@ fn ibda(mujallad: &Path) -> (HalatBidaya, String) {
     }
 
     // 3 — the patch.
-    let ruqaat = ruqaat(mujallad);
+    let (mujallad_ruqaa, ruqaat) = ruqaat_hawl(mujallad, &bina.jidhr);
     if ruqaat.is_empty() {
         let tafsil = format!(
-            "no *.{IMTIDAD} patch is installed beside this module, so there is nothing to \
-             apply and nothing was touched"
+            "no *.{IMTIDAD} patch is installed beside this module or under {}, so there is \
+             nothing to apply and nothing was touched",
+            bina.jidhr.join(MUJALLAD_TAARIB).display()
         );
         sajjil(mujallad, HalatBidaya::Imtina, "ruqaa", &tafsil);
         return (HalatBidaya::Imtina, tafsil);
     }
+    athar(
+        mujallad,
+        "ruqaa",
+        &format!("the patch directory is {}", mujallad_ruqaa.display()),
+    );
     let Some(malaf) = iftah_ruqaa(mujallad, &ruqaat) else {
         let tafsil = format!(
-            "{} patch file(s) are installed beside this module and none of them validated; \
+            "{} patch file(s) are installed under {} and none of them validated; \
              reinstalling the patch is what fixes it",
-            ruqaat.len()
+            ruqaat.len(),
+            mujallad_ruqaa.display()
         );
         sajjil(mujallad, HalatBidaya::Rafd, "ruqaa", &tafsil);
         return (HalatBidaya::Rafd, tafsil);
@@ -443,6 +458,31 @@ fn ibda(mujallad: &Path) -> (HalatBidaya, String) {
     // reads it on a frame path, so the address space goes back to the game here
     // rather than being held for the rest of the bootstrap.
     drop(malaf);
+
+    // 3b — the container. The installer builds it from the game's own
+    //      containers and the patch, and the engine mounts it by name; it is
+    //      the thing that changes what the engine draws, and this process only
+    //      confirms it is there.
+    let Some(hawiya) = hawiya_mawjuda(&bina) else {
+        let tafsil = format!(
+            "no {ISM_HAWIYA} is beside the game's own containers under {}; the installer \
+             writes it and the engine mounts it, and without it nothing the engine draws \
+             changes — reinstalling the patch is what fixes it",
+            bina.jidhr.display()
+        );
+        sajjil(mujallad, HalatBidaya::Rafd, "hawiya", &tafsil);
+        return (HalatBidaya::Rafd, tafsil);
+    };
+    let hajm = std::fs::metadata(&hawiya).map_or(0, |bayan| bayan.len());
+    athar(
+        mujallad,
+        "hawiya",
+        &format!(
+            "{} is beside the game's own containers ({hajm} bytes); the engine mounts it by \
+             name and draws Taarib's Arabic from it without this process's help",
+            hawiya.display()
+        ),
+    );
 
     // 4 — the disclosure is tier 3's, and this is tier 1. Nothing to do, and
     //     nothing here that could route around it.
@@ -545,7 +585,47 @@ fn jid_bina(mujallad: &Path) -> Result<Bina, String> {
 // Step 3 — the patch
 // ---------------------------------------------------------------------------
 
-/// The patches installed beside this module, in a stable order.
+/// The game's own Taarib directory, where the installer places the package.
+///
+/// Spelled here because this crate cannot depend on the installer; it is
+/// `taarib_tathbeet::mawdi::MUJALLAD_TAARIB`, and the two must not drift.
+const MUJALLAD_TAARIB: &str = "taarib";
+
+/// The patches installed for this game, and the directory they were found in.
+///
+/// Beside this module first, because that is where a single component puts
+/// them; then under the game's own Taarib directory, because that is where the
+/// installer's split component puts the package while this module lands
+/// beside the loader — in `<Project>/Binaries/<platform>/` for a packaged
+/// Unreal title, which is not the root.
+fn ruqaat_hawl(mujallad: &Path, jidhr: &Path) -> (PathBuf, Vec<PathBuf>) {
+    let bijanib = ruqaat(mujallad);
+    if !bijanib.is_empty() {
+        return (mujallad.to_path_buf(), bijanib);
+    }
+    let taarib = jidhr.join(MUJALLAD_TAARIB);
+    let taht = ruqaat(&taarib);
+    (taarib, taht)
+}
+
+/// The additive container beside the game's own, when the installer wrote it.
+///
+/// Answered from what [`afhas`] already listed rather than by a second walk:
+/// the container directory it found is the one the engine mounts from, and a
+/// file of Taarib's name anywhere else is a file the engine never sees.
+fn hawiya_mawjuda(bina: &Bina) -> Option<PathBuf> {
+    bina.hawiyat
+        .iter()
+        .find(|masar| {
+            masar
+                .file_name()
+                .and_then(OsStr::to_str)
+                .is_some_and(|ism| ism.eq_ignore_ascii_case(ISM_HAWIYA))
+        })
+        .cloned()
+}
+
+/// The patches in one directory, in a stable order.
 fn ruqaat(mujallad: &Path) -> Vec<PathBuf> {
     let Ok(madakhil) = std::fs::read_dir(mujallad) else {
         return Vec::new();
@@ -800,14 +880,20 @@ fn slim_lil_muhawwil(
     musaddir: &'static wasl::WaslAwamir,
 ) -> (HalatBidaya, String) {
     let Some(ini) = jid_ini(&bina.jidhr) else {
+        // Declined rather than refused: nothing is wrong. The container carries
+        // the Arabic and Slate shapes right-to-left text in full under its
+        // default method, so the configuration rung is a belt over braces —
+        // and a shipped game keeps its Engine.ini under the player's profile,
+        // where this payload will not invent a path inside a running game.
         let tafsil = format!(
-            "no Engine.ini was found under {}, so the shaping correction had nowhere to be \
-             written; Unreal writes <Project>/Saved/Config/<platform>/Engine.ini during its \
-             first run, and this payload will not invent that path inside a running game",
+            "nothing was written in this process, and nothing needed to be: the additive \
+             container carries the Arabic and the engine draws it on its own. No Engine.ini \
+             exists under {} for the shaping override; Unreal keeps a shipped game's under \
+             the player's profile, and this payload will not invent that path",
             bina.jidhr.display()
         );
-        sajjil(mujallad, HalatBidaya::Rafd, "tashghil", &tafsil);
-        return (HalatBidaya::Rafd, tafsil);
+        sajjil(mujallad, HalatBidaya::Imtina, "tashghil", &tafsil);
+        return (HalatBidaya::Imtina, tafsil);
     };
     athar(
         mujallad,

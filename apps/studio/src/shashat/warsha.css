@@ -2,13 +2,9 @@
 
 .warsha {
   display: grid;
-
-  /* Four collapsible tracks of chrome above one scrolling body. The body track
-     is named because the skeleton and the error block have to land in it: an
-     unnamed sibling is auto-placed into the next `auto` track, which pins it
-     under the header and leaves the body empty until data arrives. */
-  grid-template-rows: auto auto auto auto [jism] minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   block-size: 100%;
+  min-block-size: var(--adna-irtifa-shasha);
   background-color: var(--sath-0);
 
   /* Structural constants, in the spirit of --ard-janib: pane widths are a
@@ -22,57 +18,31 @@
   --irtifa-satr-warsha: calc(var(--irtifa-satr) + var(--misafa-20));
 }
 
-/* --- the top strip --------------------------------------------------------- */
+/* --- the body ---------------------------------------------------------------
+   Three collapsible tracks of chrome — the two panels and the filter strip —
+   above one body track. The body track is named because every one of the four
+   bodies has to land in it: an unnamed sibling is auto-placed into the next
+   `auto` track, which pins it under the strip and leaves the body empty. */
 
-.warsha__shareet-alawi {
-  display: flex;
-  align-items: baseline;
-  gap: var(--misafa-12);
-  block-size: var(--irtifa-shareet);
-  padding-inline: var(--misafa-24);
-  background-color: var(--sath-1);
-  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+.warsha__badan {
+  display: grid;
+  grid-template-rows: auto auto auto [jism] minmax(0, 1fr);
+  min-block-size: 0;
 }
 
-.warsha__raji {
-  align-self: center;
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-2);
-  transition: color var(--zaman-hala) var(--munhana);
+/* Whichever body is showing fills the track; the transition wrapper is the
+   grid child and hands the whole track to the one body inside it. */
+.warsha__mashhad {
+  grid-row: jism;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-block-size: 0;
 }
 
-.warsha__raji:hover {
-  color: var(--nass-1);
-  transition: none;
-}
-
-.warsha__fasl {
-  font-size: var(--qiyas-1);
-  line-height: var(--irtifa-1);
-  color: var(--nass-3);
-}
-
-.warsha__unwan-luba {
-  font-size: var(--qiyas-4);
-  line-height: var(--irtifa-4);
-  font-weight: var(--wazn-mutawassit);
-  color: var(--nass-1);
-}
-
-/* The count is context, not headline: it stays out of the way of the name. */
-.warsha__adad-luba {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
-  font-variant-numeric: tabular-nums;
-}
-
-.warsha__adawat {
-  display: flex;
-  align-self: center;
-  gap: var(--misafa-8);
-  margin-inline-start: auto;
+/* The filter strip while the table loads: standing, at its real height, and
+   visibly not yet a control. */
+.warsha__adawat-jism--muattal {
+  opacity: 0.45;
 }
 
 /* --- collapsible panels ---------------------------------------------------- */
@@ -210,7 +180,6 @@
 
 .warsha__amida {
   display: grid;
-  grid-row: jism;
   grid-template-columns: var(--amida-warsha);
   min-block-size: 0;
 }
@@ -777,6 +746,29 @@
   gap: var(--misafa-8);
 }
 
+/* The batch meter: two hairlines tall, square, and drawn only over the rows the
+   batch set out to translate — the same idiom the automatic run uses for its
+   stages, because a bar without a denominator is a claim nobody measured. */
+.warsha__miqyas {
+  display: grid;
+  gap: var(--misafa-6);
+  inline-size: 100%;
+}
+
+.warsha__miqyas-masar {
+  block-size: var(--samk-hadd-barz);
+  background-color: var(--sath-3);
+  border-radius: var(--nisf-hadd);
+  overflow: hidden;
+}
+
+.warsha__miqyas-malu {
+  display: block;
+  block-size: 100%;
+  background-color: var(--tamyeez);
+  transition: inline-size var(--zaman-lawha) var(--munhana);
+}
+
 .warsha__tahdheer {
   font-size: var(--qiyas-2);
   line-height: var(--irtifa-qira);
@@ -1017,10 +1009,8 @@
 }
 
 .warsha__jism-khata {
-  grid-row: jism;
   min-block-size: 0;
   overflow-y: auto;
-  align-content: start;
   padding: var(--misafa-24);
 }
 
@@ -1031,7 +1021,6 @@
 
 .warsha__haykal {
   display: grid;
-  grid-row: jism;
   grid-template-columns: var(--amida-warsha);
   min-block-size: 0;
   overflow: hidden;

@@ -50,10 +50,10 @@
     <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0</AssemblyVersion>
     <FileVersion>1.0.0</FileVersion>
-    <Company>cc1a2b</Company>
+    <Company>CC1A2B, Inc.</Company>
     <Authors>cc1a2b</Authors>
     <Product>Taarib</Product>
-    <Copyright>Copyright (c) 2026 cc1a2b</Copyright>
+    <Copyright>Copyright (c) 2026 CC1A2B, Inc.</Copyright>
   </PropertyGroup>
 
   <PropertyGroup>

@@ -15,7 +15,10 @@ import { mafatih } from '@/hayat/istifsar';
 import { useTaraju } from '@/hayat/taraju';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t } from '@/lugha/lugha';
+import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
+import { Mashhad } from '@/mukawwinat/mashhad';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type {
   AlamatMashruHie,
   DamjHie,
@@ -86,6 +89,21 @@ const MIFTAH_HALA: Readonly<Record<HalatSaff, MiftahLugha>> = {
  * estimate and nothing else — it happens to be exact at the default density.
  */
 const IRTIFA_SATR_MUBDAI = 56;
+
+/**
+ * The refusal that means: nobody has started translating this game yet.
+ *
+ * It arrives as a rejected command because the project store has nothing to
+ * open, but it is not a failure of anything — it is the workshop's empty
+ * state, and the one thing to do about it is to start the run that creates a
+ * project. Matched on the permanent code, because that is the one part of a
+ * refusal that does not move; the backend also files it at the informational
+ * severity, so nothing downstream records it as a warning.
+ */
+const RAMZ_LA_MASHRU = 'TAARIB-E-9040';
+
+/** Which of the four bodies the screen is showing. */
+type WajhWarsha = 'tahmil' | 'farigh' | 'khata' | 'jahiz';
 
 type MurashshihAlamat = 'kul' | 'ay' | 'khatir';
 type MurashshihMasdar = 'kul' | 'aali' | 'bashari' | 'dhakira';
@@ -220,6 +238,9 @@ function SaffQaima({
 /**
  * The screen it stands in for, drawn empty: the same three columns, the same
  * surfaces and hairlines, and rows of the same height, in the same grid track.
+ * The filter strip above it is not part of this — the real strip is drawn
+ * while the table loads, inert, so the columns land exactly where the
+ * placeholder columns were rather than one strip's height below them.
  */
 function HaykalWarsha(): JSX.Element {
   return (
@@ -630,6 +651,10 @@ export function Warsha(): JSX.Element {
   const [qararat, setQararat] = useState<Readonly<Record<string, QararHie>>>({});
   const [saqfDufa, setSaqfDufa] = useState('');
   const [taqaddumDufa, setTaqaddumDufa] = useState<DufaHie | null>(null);
+  // The batch's denominator: how many rows had no translation when it started.
+  // The progress event counts what landed and what failed and never says out
+  // of how many, so the total is taken here, at the press, from the table.
+  const [hadafDufa, setHadafDufa] = useState(0);
 
   const sufuf = useMemo(() => warsha.data?.sufuf ?? [], [warsha.data]);
   const musahimi = warsha.data?.musahimi ?? '';
@@ -756,21 +781,62 @@ export function Warsha(): JSX.Element {
 
   const sajjilTaraju = useTaraju((halat) => halat.sajjil);
 
-  const hifz = useMutation<SafWarshaHie, KhataJisr, { nass: string; hadaf: string; sabiq: string }>(
-    {
-      mutationFn: ({ nass, hadaf }) => nadi('haddith_tarjama', { muarrif, nass, hadaf }),
-      onSuccess: (saf, { nass, sabiq }) => {
-        badalSaf(saf);
-        sajjilTaraju({
-          wasf: t('warsha.taraju.tadeel_tarjama', lugha),
-          taraju: () =>
-            nadi('haddith_tarjama', { muarrif, nass, hadaf: sabiq }).then((qadeem) => {
-              badalSaf(qadeem);
-            }),
-        });
-      },
+  /**
+   * Writes a row's translation into the cache before the backend answers.
+   *
+   * The table the user is looking at shows the text they just typed the moment
+   * they save it, and the row the backend returns replaces it quietly when it
+   * lands — the same text, plus the flags and provenance only the backend can
+   * compute. The table as it stood is handed back so a refused write can put it
+   * back exactly.
+   */
+  const iktubMutafail = useCallback(
+    async (nass: string, hadaf: string | null): Promise<WarshaHie | undefined> => {
+      await makhzan.cancelQueries({ queryKey: mafatih.warsha(muarrif) });
+      const sabiqa = makhzan.getQueryData<WarshaHie>(mafatih.warsha(muarrif));
+      makhzan.setQueryData<WarshaHie>(mafatih.warsha(muarrif), (qadeem) =>
+        qadeem === undefined
+          ? qadeem
+          : {
+              ...qadeem,
+              sufuf: qadeem.sufuf.map((saf) =>
+                saf.nass === nass
+                  ? { ...saf, hadaf, hala: hadaf === null ? 'lam_tutarjam' : 'musawwada' }
+                  : saf,
+              ),
+            },
+      );
+      return sabiqa;
     },
+    [makhzan, muarrif],
   );
+
+  const hifz = useMutation<
+    SafWarshaHie,
+    KhataJisr,
+    { nass: string; hadaf: string; sabiq: string },
+    { sabiqa: WarshaHie | undefined }
+  >({
+    mutationFn: ({ nass, hadaf }) => nadi('haddith_tarjama', { muarrif, nass, hadaf }),
+    onMutate: async ({ nass, hadaf }) => ({
+      sabiqa: await iktubMutafail(nass, hadaf.trim() === '' ? null : hadaf),
+    }),
+    onError: (_khata, _talab, siyaq) => {
+      if (siyaq?.sabiqa !== undefined) {
+        makhzan.setQueryData(mafatih.warsha(muarrif), siyaq.sabiqa);
+      }
+    },
+    onSuccess: (saf, { nass, sabiq }) => {
+      badalSaf(saf);
+      sajjilTaraju({
+        wasf: t('warsha.taraju.tadeel_tarjama', lugha),
+        taraju: () =>
+          nadi('haddith_tarjama', { muarrif, nass, hadaf: sabiq }).then((qadeem) => {
+            badalSaf(qadeem);
+          }),
+      });
+    },
+  });
 
   const alaHifz = useCallback((): void => {
     if (safMukhtar === null || hifz.isPending) {
@@ -789,13 +855,38 @@ export function Warsha(): JSX.Element {
     enabled: mukhtar !== null,
   });
 
+  /** The stored Arabic of one offered record, for the optimistic write. */
+  const nassIqtirah = useCallback(
+    (qayd: number): string | null => {
+      const bayanat = iqtirahat.data;
+      if (bayanat === undefined) {
+        return null;
+      }
+      if (bayanat.tatbiq !== null && bayanat.tatbiq.qayd === qayd) {
+        return bayanat.tatbiq.hadaf;
+      }
+      return bayanat.iqtirahat.find((iqtirah) => iqtirah.qayd === qayd)?.hadaf ?? null;
+    },
+    [iqtirahat.data],
+  );
+
   const tatbiq = useMutation<
     SafWarshaHie,
     KhataJisr,
-    { nass: string; qayd: number; sabiq: string }
+    { nass: string; qayd: number; sabiq: string },
+    { sabiqa: WarshaHie | undefined }
   >(
     {
       mutationFn: ({ nass, qayd }) => nadi('tatbiq_iqtirah', { muarrif, nass, qayd }),
+      onMutate: async ({ nass, qayd }) => {
+        const hadaf = nassIqtirah(qayd);
+        return { sabiqa: hadaf === null ? undefined : await iktubMutafail(nass, hadaf) };
+      },
+      onError: (_khata, _talab, siyaq) => {
+        if (siyaq?.sabiqa !== undefined) {
+          makhzan.setQueryData(mafatih.warsha(muarrif), siyaq.sabiqa);
+        }
+      },
       onSuccess: (saf, { nass, sabiq }) => {
         badalSaf(saf);
         void makhzan.invalidateQueries({ queryKey: mafatih.iqtirahat(muarrif, saf.nass) });
@@ -973,67 +1064,70 @@ export function Warsha(): JSX.Element {
 
   const yuhammil = warsha.isPending || idadat.isPending;
   const khata = warsha.error ?? idadat.error;
+  const bayanat = warsha.data;
+  const muzawwid = bayanat?.muzawwid ?? null;
+  const laMashru = warsha.error?.khata?.ramz === RAMZ_LA_MASHRU;
+  const wajh: WajhWarsha = yuhammil
+    ? 'tahmil'
+    : laMashru
+      ? 'farigh'
+      : khata !== null
+        ? 'khata'
+        : bayanat === undefined
+          ? 'tahmil'
+          : 'jahiz';
+  const tahmil = wajh === 'tahmil';
+  const munjazDufa = (taqaddumDufa?.mutarjama ?? 0) + (taqaddumDufa?.fashila ?? 0);
 
   return (
     <div className="warsha">
-      <header className="warsha__shareet-alawi">
-        <Link to="/luba/$muarrif" params={{ muarrif }} className="warsha__raji">
-          {t('warsha.raji', lugha)}
-        </Link>
-        <span className="warsha__fasl">{t('shasha.warsha', lugha)}</span>
-        {warsha.data !== undefined ? (
-          <>
-            <span className="warsha__unwan-luba">{warsha.data.ism_luba}</span>
-            <span className="warsha__adad-luba">
-              {jam('warsha.adad', lugha, warsha.data.adad, munassiq)}
-            </span>
-            {talaf !== null ? (
-              <span className="warsha__adad-luba warsha__tahdheer" role="status">
-                {ikhtar(lugha, talaf.mukhtasar_arabi, talaf.mukhtasar_injilizi)}
-              </span>
-            ) : null}
-          </>
-        ) : null}
-        <div className="warsha__adawat">
-          <button
-            type="button"
-            className="zir"
-            aria-expanded={lawhatJawda}
-            onClick={() => {
-              setLawhatJawda((hali) => !hali);
-            }}
-          >
-            {t('warsha.jawda.zir', lugha)}
-          </button>
-          <button
-            type="button"
-            className="zir"
-            aria-expanded={lawhatDamj}
-            onClick={() => {
-              setLawhatDamj((hali) => !hali);
-            }}
-          >
-            {t('warsha.damj.zir', lugha)}
-          </button>
-        </div>
-      </header>
+      <RaasShasha
+        rujoo={{ ila: 'luba', muarrif }}
+        nassRujoo={t('warsha.raji', lugha)}
+        unwan={t('shasha.warsha', lugha)}
+        mawdu={bayanat?.ism_luba ?? null}
+        tafasil={
+          bayanat === undefined ? null : (
+            <>
+              {jam('warsha.adad', lugha, bayanat.adad, munassiq)}
+              {talaf !== null ? (
+                <span className="warsha__tahdheer" role="status">
+                  {' · '}
+                  {ikhtar(lugha, talaf.mukhtasar_arabi, talaf.mukhtasar_injilizi)}
+                </span>
+              ) : null}
+            </>
+          )
+        }
+        adawat={
+          wajh === 'jahiz' ? (
+            <>
+              <button
+                type="button"
+                className="zir"
+                aria-expanded={lawhatJawda}
+                onClick={() => {
+                  setLawhatJawda((hali) => !hali);
+                }}
+              >
+                {t('warsha.jawda.zir', lugha)}
+              </button>
+              <button
+                type="button"
+                className="zir"
+                aria-expanded={lawhatDamj}
+                onClick={() => {
+                  setLawhatDamj((hali) => !hali);
+                }}
+              >
+                {t('warsha.damj.zir', lugha)}
+              </button>
+            </>
+          ) : null
+        }
+      />
 
-      {yuhammil ? (
-        <HaykalWarsha />
-      ) : khata !== null ? (
-        <div className="warsha__jism-khata">
-          <KutlatKhata
-            unwan={t('warsha.khata.tahmil', lugha)}
-            khata={khata}
-            lugha={lugha}
-            muarrif={muarrif}
-            aada={() => {
-              void warsha.refetch();
-              void idadat.refetch();
-            }}
-          />
-        </div>
-      ) : warsha.data === undefined ? null : (
+      <div className="warsha__badan">
         <>
           <AnimatePresence initial={false}>
             {lawhatJawda ? (
@@ -1259,8 +1353,14 @@ export function Warsha(): JSX.Element {
 
           {/* One grid child: the workshop's grid has exactly four chrome tracks above the
               body, so the damage panel shares the filter strip's track rather than taking
-              a fifth and pushing the strip below the table. */}
-          <div>
+              a fifth and pushing the strip below the table. Drawn while the table loads
+              as well, inert, so the strip is already standing where it will stand and
+              the columns beneath it do not step down when the rows arrive. */}
+          {wajh === 'jahiz' || tahmil ? (
+          <div
+            className={tahmil ? 'warsha__adawat-jism warsha__adawat-jism--muattal' : 'warsha__adawat-jism'}
+            inert={tahmil}
+          >
             {salama !== null && talaf !== null ? (
               <LawhatTalaf
                 salama={salama}
@@ -1411,14 +1511,46 @@ export function Warsha(): JSX.Element {
                     : 'warsha__adad-zahir'
                 }
               >
-                {t('warsha.adad_zahir', lugha, {
-                  adad: munassiq.raqm(zahira.length),
-                  kulli: munassiq.raqm(sufuf.length),
-                })}
+                {tahmil
+                  ? ''
+                  : t('warsha.adad_zahir', lugha, {
+                      adad: munassiq.raqm(zahira.length),
+                      kulli: munassiq.raqm(sufuf.length),
+                    })}
               </span>
             </div>
           </div>
+          ) : null}
 
+          <Mashhad miftah={wajh} className="warsha__mashhad">
+          {tahmil ? (
+            <HaykalWarsha />
+          ) : wajh === 'farigh' ? (
+            <div className="warsha__jism-khata">
+              <HalatFarigha
+                shasha
+                unwan={t('warsha.faragh.mashru.unwan', lugha)}
+                nass={t('warsha.faragh.mashru.nass', lugha)}
+              >
+                <Link to="/tilqai/$muarrif" params={{ muarrif }} className="zir zir--tamyeez">
+                  {t('tilqai.luba.zirr', lugha)}
+                </Link>
+              </HalatFarigha>
+            </div>
+          ) : wajh === 'khata' && khata !== null ? (
+            <div className="warsha__jism-khata">
+              <KutlatKhata
+                unwan={t('warsha.khata.tahmil', lugha)}
+                khata={khata}
+                lugha={lugha}
+                muarrif={muarrif}
+                aada={() => {
+                  void warsha.refetch();
+                  void idadat.refetch();
+                }}
+              />
+            </div>
+          ) : (
           <div className="warsha__amida">
             {zahira.length === 0 ? (
               <div className="warsha__qaima warsha__qaima--faragh">
@@ -1785,22 +1917,16 @@ export function Warsha(): JSX.Element {
 
               <section className="warsha__dufa" aria-label={t('warsha.dufa.unwan', lugha)}>
                 <h2 className="warsha__unwan-qism">{t('warsha.dufa.unwan', lugha)}</h2>
-                {warsha.data.muzawwid.hala !== 'mukhtar' ? (
+                {muzawwid !== null && muzawwid.hala !== 'mukhtar' ? (
                   // Said here, before a run is started: which provider a run would bill,
                   // in the settings crate's own words — a stale default most of all.
                   <p
                     className={
-                      warsha.data.muzawwid.hala === 'badeel'
-                        ? 'warsha__tahdheer'
-                        : 'warsha__nass-hadi'
+                      muzawwid.hala === 'badeel' ? 'warsha__tahdheer' : 'warsha__nass-hadi'
                     }
                     role="status"
                   >
-                    {ikhtar(
-                      lugha,
-                      warsha.data.muzawwid.wasf_arabi,
-                      warsha.data.muzawwid.wasf_injilizi,
-                    )}
+                    {ikhtar(lugha, muzawwid.wasf_arabi, muzawwid.wasf_injilizi)}
                   </p>
                 ) : null}
                 <label className="warsha__tasmiya" htmlFor="warsha-saqf">
@@ -1826,6 +1952,8 @@ export function Warsha(): JSX.Element {
                     onClick={() => {
                       const saqf = Number(saqfDufa);
                       if (!dufa.isPending && Number.isFinite(saqf) && saqf > 0) {
+                        setHadafDufa(sufuf.filter((saf) => saf.hadaf === null).length);
+                        setTaqaddumDufa(null);
                         dufa.mutate({ saqf });
                       }
                     }}
@@ -1834,6 +1962,34 @@ export function Warsha(): JSX.Element {
                   </button>
                 </div>
                 <div aria-live="polite">
+                  {/* A bar only over a real denominator: the rows that had no
+                      translation when the batch was started. Every batch has
+                      one, so this meter is never indeterminate. */}
+                  {dufa.isPending && hadafDufa > 0 ? (
+                    <div className="warsha__miqyas">
+                      <div
+                        className="warsha__miqyas-masar"
+                        role="progressbar"
+                        aria-label={t('warsha.dufa.taqaddum', lugha)}
+                        aria-valuemin={0}
+                        aria-valuemax={hadafDufa}
+                        aria-valuenow={Math.min(munjazDufa, hadafDufa)}
+                      >
+                        <span
+                          className="warsha__miqyas-malu"
+                          style={{
+                            inlineSize: `${String(Math.min(100, (munjazDufa / hadafDufa) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="warsha__jari">
+                        {t('amm.taqaddum.min', lugha, {
+                          tamma: munassiq.raqm(Math.min(munjazDufa, hadafDufa)),
+                          majmu: munassiq.raqm(hadafDufa),
+                        })}
+                      </p>
+                    </div>
+                  ) : null}
                   {dufa.isPending && taqaddumDufa !== null ? (
                     <p className="warsha__jari">
                       {t('warsha.dufa.jari', lugha, {
@@ -1891,8 +2047,10 @@ export function Warsha(): JSX.Element {
               </section>
             </div>
           </div>
+          )}
+          </Mashhad>
         </>
-      )}
+      </div>
 
       <p className="khafi" role="status">
         {yuhammil ? t('amm.tahmil', lugha) : ''}

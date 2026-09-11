@@ -8,12 +8,46 @@ import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
 import { jam, munassiqat, t } from '@/lugha/lugha';
+import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
+import { Mashhad } from '@/mukawwinat/mashhad';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type { Idadat, LawhatTalabatHie, Lugha, NizamArqam } from '@/mustalahat/awamir';
 
 import './talabat.css';
 
 /** شاشة الطلبات — the demand-sorted requests board. */
+
+/** How many placeholder rows stand in for the board: a screen's worth, no more. */
+const SUFUF_HAYKAL = 7;
+
+/**
+ * The board drawn empty: the same three-column grid, the same row padding and
+ * rule, and a bar in each cell at that cell's own line height, so the first
+ * real row lands exactly where the first placeholder stood.
+ */
+function HaykalTalabat(): JSX.Element {
+  return (
+    <ol className="talabat__qaima" aria-hidden="true">
+      {Array.from({ length: SUFUF_HAYKAL }, (_, fihris) => (
+        <li key={fihris} className="talabat__saff">
+          <span className="talabat__ism">
+            <span
+              className="talabat__haykal-satr talabat__haykal-satr--ism"
+              style={{ inlineSize: `${String(36 + ((fihris * 17) % 40))}%` }}
+            />
+          </span>
+          <span className="talabat__adad">
+            <span className="talabat__haykal-satr talabat__haykal-satr--adad" />
+          </span>
+          <span className="talabat__waqt">
+            <span className="talabat__haykal-satr talabat__haykal-satr--waqt" />
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export function Talabat(): JSX.Element {
   const idadat = useQuery<Idadat, KhataJisr>({
@@ -47,17 +81,33 @@ export function Talabat(): JSX.Element {
   }, [idadat.data, lugha, aidLawha]);
   useSajjilAwamir(awamirShasha);
 
+  const sufuf = lawha.data?.sufuf ?? [];
+  const wajh = lawha.isPending
+    ? 'tahmil'
+    : lawha.error !== null
+      ? 'khata'
+      : sufuf.length === 0
+        ? 'farigh'
+        : 'jahiz';
+
   return (
     <div className="talabat">
-      <header className="talabat__shareet-alawi">
-        <Link to="/" className="talabat__raji">
-          {t('talabat.raji', lugha)}
-        </Link>
-        <span className="talabat__fasl">{t('shasha.talabat', lugha)}</span>
-      </header>
-      <div className="talabat__jism">
-        {lawha.isPending ? (
-          <p className="talabat__jari">{t('amm.tahmil', lugha)}</p>
+      <RaasShasha
+        rujoo={{ ila: 'maktaba' }}
+        nassRujoo={t('talabat.raji', lugha)}
+        unwan={t('shasha.talabat', lugha)}
+        tafasil={
+          lawha.data === undefined || sufuf.length === 0
+            ? null
+            : t('maktaba.adad_zahir', lugha, {
+                adad: munassiq.raqm(sufuf.length),
+                kulli: munassiq.raqm(sufuf.length),
+              })
+        }
+      />
+      <Mashhad miftah={wajh} className="talabat__jism">
+        {wajh === 'tahmil' ? (
+          <HaykalTalabat />
         ) : lawha.error !== null ? (
           <KutlatKhata
             unwan={t('talabat.taadhur', lugha)}
@@ -67,17 +117,15 @@ export function Talabat(): JSX.Element {
               void aidLawha();
             }}
           />
-        ) : lawha.data === undefined || lawha.data.sufuf.length === 0 ? (
-          <div className="talabat__faragh">
-            <h2 className="talabat__faragh-unwan">{t('shasha.talabat', lugha)}</h2>
-            <p className="talabat__faragh-nass">{t('talabat.farigh', lugha)}</p>
+        ) : wajh === 'farigh' ? (
+          <HalatFarigha shasha unwan={t('shasha.talabat', lugha)} nass={t('talabat.farigh', lugha)}>
             <Link to="/" className="zir">
               {t('talabat.raji', lugha)}
             </Link>
-          </div>
+          </HalatFarigha>
         ) : (
           <ol className="talabat__qaima">
-            {lawha.data.sufuf.map((saf) => (
+            {sufuf.map((saf) => (
               <li key={saf.muarrif} className="talabat__saff">
                 <Link
                   to="/luba/$muarrif"
@@ -98,7 +146,7 @@ export function Talabat(): JSX.Element {
             ))}
           </ol>
         )}
-      </div>
+      </Mashhad>
     </div>
   );
 }

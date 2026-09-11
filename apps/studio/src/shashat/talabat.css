@@ -4,36 +4,11 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   block-size: 100%;
+  min-block-size: var(--adna-irtifa-shasha);
   background-color: var(--sath-0);
 }
 
-.talabat__shareet-alawi {
-  display: flex;
-  align-items: center;
-  gap: var(--misafa-16);
-  block-size: var(--irtifa-shareet);
-  padding-inline: var(--misafa-24);
-  background-color: var(--sath-1);
-  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
-}
-
-.talabat__raji {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-2);
-  transition: color var(--zaman-hala) var(--munhana);
-}
-
-.talabat__raji:hover {
-  color: var(--nass-1);
-  transition: none;
-}
-
-.talabat__fasl {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
-}
+/* The strip is `mukawwinat/raas_shasha`, shared with every other sub-screen. */
 
 /* The measure is in rem rather than pixels so the column follows the density
    setting; no width token exists for a content column. */
@@ -42,12 +17,6 @@
   overflow-y: auto;
   padding: var(--misafa-24);
   max-inline-size: 45rem;
-}
-
-.talabat__jari {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-qira);
-  color: var(--nass-3);
 }
 
 /* The three cells are laid out by the list rather than by the row, so every
@@ -108,25 +77,29 @@
   white-space: nowrap;
 }
 
-.talabat__faragh {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: var(--misafa-12);
-  max-inline-size: 52ch;
-  padding-block: var(--misafa-32);
+/* --- the skeleton -----------------------------------------------------------
+   A bar per cell, each the height of the line it stands in for, so a
+   placeholder row measures exactly what a real row measures. Still: a shimmer
+   is an animation on a data update. */
+
+.talabat__haykal-satr {
+  display: block;
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
 }
 
-.talabat__faragh-unwan {
-  font-size: var(--qiyas-4);
-  line-height: var(--irtifa-4);
-  font-weight: var(--wazn-mutawassit);
-  color: var(--nass-1);
+.talabat__haykal-satr--ism {
+  block-size: var(--irtifa-3);
 }
 
-.talabat__faragh-nass {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-qira);
-  color: var(--nass-3);
-  text-wrap: pretty;
+.talabat__haykal-satr--adad {
+  inline-size: 6ch;
+  block-size: var(--irtifa-2);
+  margin-inline-start: auto;
+}
+
+.talabat__haykal-satr--waqt {
+  inline-size: 11ch;
+  block-size: var(--irtifa-1);
+  background-color: var(--sath-1);
 }

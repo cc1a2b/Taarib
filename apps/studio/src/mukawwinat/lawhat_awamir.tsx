@@ -8,6 +8,7 @@ import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { rashshih, useAwamirLawha, useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { IKHTISAR_LAWHA, hallilAw, yutabiq } from '@/hayat/ikhtisarat';
 import { useMiftahTaraju } from '@/hayat/taraju';
+import type { MiftahLugha } from '@/lugha/lugha';
 import { t } from '@/lugha/lugha';
 import type { Lugha } from '@/mustalahat/awamir';
 import { HARAKAT_LAWHA, haraka } from '@/nizam/haraka';
@@ -24,22 +25,18 @@ interface Majmua {
 /** One key the open list answers to, and what pressing it does. */
 interface MiftahQaima {
   readonly ramz: string;
-  readonly wasf: Readonly<Record<Lugha, string>>;
+  readonly wasf: MiftahLugha;
 }
 
 /**
- * The three keys the list answers to, shown where the list is.
- *
- * A palette that only rewards a user who already knows it is a palette most
- * people click through. `ar.json` and `en.json` are outside this change's file
- * set, so the three labels live here; each keeps `t`'s contract of being
- * present in both languages, so lifting them into the string set under
- * `lawha.miftah.*` is a copy rather than a rewrite.
+ * The three keys the list answers to, shown where the list is: a palette that
+ * only rewards a user who already knows it is a palette most people click
+ * through.
  */
 const MAFATIH_QAIMA: readonly MiftahQaima[] = [
-  { ramz: '↑↓', wasf: { arabi: 'تنقّل', injilizi: 'Move' } },
-  { ramz: '↵', wasf: { arabi: 'نفّذ', injilizi: 'Run' } },
-  { ramz: 'Esc', wasf: { arabi: 'أغلِق', injilizi: 'Close' } },
+  { ramz: '↑↓', wasf: 'lawha.miftah.tanaqqul' },
+  { ramz: '↵', wasf: 'lawha.miftah.nafidh' },
+  { ramz: 'Esc', wasf: 'lawha.miftah.ighlaq' },
 ];
 
 function jammi(nataij: readonly AmrLawha[]): Majmua[] {
@@ -285,7 +282,7 @@ export function LawhatAwamir({ lugha, ikhtisarLawha, ikhtisarTaraju }: KhasaisLa
                   {MAFATIH_QAIMA.map((miftah) => (
                     <li key={miftah.ramz} className="lawha-awamir__miftah">
                       <kbd className="lawha-awamir__ikhtisar">{miftah.ramz}</kbd>
-                      {miftah.wasf[lugha]}
+                      {t(miftah.wasf, lugha)}
                     </li>
                   ))}
                 </ul>

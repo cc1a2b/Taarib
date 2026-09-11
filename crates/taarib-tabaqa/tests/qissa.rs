@@ -246,10 +246,18 @@ fn luba() -> LubaId {
 const ISM_LUBA: &str = "Synthetic Frames (a test fixture, not a game)";
 
 /// Options with the settle policy left at its shipped defaults.
+///
+/// The refusal gates are off here, deliberately: every recognizer in this file
+/// is synthetic, and the one that reads pixels decodes a band's row position out
+/// of the raw capture — a position the gated path's upscale would double. The
+/// gates are proven on real reads in `tests/iltiqat_qira.rs` and joined to the
+/// loop in `tests/halaqa.rs`; this file is about what the session does with
+/// lines once it has them.
 fn khiyarat() -> KhiyaratQissa {
     KhiyaratQissa {
         tasnif: TasnifNass::Hiwar,
         yasjil: false,
+        fahs: None,
         ..KhiyaratQissa::iftiradiya()
     }
 }

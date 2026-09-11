@@ -923,13 +923,14 @@ namespace Taarib.Unity.Il2cpp.Anzimat
 
             // SOUND: the object was allocated one statement ago and nothing
             // between here and the constructor call allocates, so the collector
-            // has had no opportunity to move or reclaim it. TextureFormat.R8 is
-            // 63 and FilterMode.Bilinear is 1 and TextureWrapMode.Clamp is 1 in
-            // every engine version this plugin runs in; they are enum values in
-            // the engine's own public API, which is versioned and does not
-            // renumber.
+            // has had no opportunity to move or reclaim it. TextureFormat.Alpha8
+            // is 1 and FilterMode.Bilinear is 1 and TextureWrapMode.Clamp is 1
+            // in every engine version this plugin runs in; they are enum values
+            // in the engine's own public API, which is versioned and does not
+            // renumber. Alpha8 rather than R8 because the page is drawn through
+            // the engine's own UI shader, which reads coverage from alpha.
             ((delegate* unmanaged[Cdecl]<IntPtr, int, int, int, byte, byte, IntPtr, void>)
-                lawhaBani.Unwan)(kaen, ard, irtifa, 63, 0, 1, lawhaBani.Tabia);
+                lawhaBani.Unwan)(kaen, ard, irtifa, 1, 0, 1, lawhaBani.Tabia);
 
             if (lawhaTasfiya.Wujid)
             {
@@ -1999,10 +2000,10 @@ namespace Taarib.Unity.Il2cpp.Anzimat
     public sealed class MasdarAshkal : IDisposable
     {
         /// <summary>Taarib's coverage shader, by name.</summary>
-        public const string IsmSudfatTaghtiya = "Taarib/Taghtiya";
+        public const string IsmSudfatTaghtiya = "UI/Default";
 
         /// <summary>Taarib's signed-distance-field shader, by name.</summary>
-        public const string IsmSudfatMisafa = "Taarib/Misafa";
+        public const string IsmSudfatMisafa = "TextMeshPro/Distance Field";
 
         private readonly WaslMuharrik wasl;
         private readonly Ruqaa ruqaa;
@@ -2011,6 +2012,7 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         private readonly ManualLogSource sijill;
         private readonly float misafa;
         private readonly int muarrifLawha;
+        private readonly int muarrifJamAyina;
         private readonly int muarrifMisafa;
         private readonly int muarrifQiyas;
 
@@ -2040,6 +2042,7 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             this.sijill = sijill;
             this.misafa = misafa;
             muarrifLawha = wasl.MuarrifKhasiya("_MainTex");
+            muarrifJamAyina = wasl.MuarrifKhasiya("_TextureSampleAdd");
             muarrifMisafa = wasl.MuarrifKhasiya("_TaaribMisafa");
             muarrifQiyas = wasl.MuarrifKhasiya("_TaaribQiyas");
             lawhatRuqaa = Array.Empty<Marja?>();
@@ -2132,28 +2135,45 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 return null;
             }
 
+            // The shader is the engine's own. Shader.Find returns only what the
+            // game compiled in, and this assembly ships no asset bundle, so the
+            // two names this class used to look up existed nowhere and every
+            // IL2CPP game refused here. A coverage atlas is uploaded as Alpha8
+            // and drawn through UI/Default with _TextureSampleAdd lifting the
+            // sampled RGB to white — the arrangement Unity's own legacy Text
+            // uses for its font atlases. A distance-field atlas needs the
+            // TextMeshPro distance-field path, which this build does not wire.
             bool misafi = ruqaa.Namat == NamatLawha.Misafa;
-            if (misafi && !wasl.YadamMisafa)
+            if (misafi)
             {
                 sijill.LogWarning(
-                    "لا يمكن ضبط وسائط صدفة المسافة في هذا المحرّك؛ أُوقف الاستيلاء بدل رسم لوحة مسافة بوسائط غير مضبوطة. | "
-                    + "The distance-field shader parameters cannot be set on this engine "
-                    + "build, so the takeover is off rather than drawing a distance-field "
-                    + "atlas with unset parameters, which renders every glyph as a "
-                    + "rectangle.");
+                    "هذه الرقعة تحمل لوحة مسافة، وهذا البناء يرسم لوحات التغطية فقط عبر صدفة المحرّك (" + IsmSudfatTaghtiya + ")؛ لوحة المسافة تحتاج مسار " + IsmSudfatMisafa + " ولم يُوصَل بعد. | "
+                    + "This patch carries a distance-field atlas, and this build draws only "
+                    + "coverage atlases through the engine's " + IsmSudfatTaghtiya + " shader; "
+                    + "a distance field needs the " + IsmSudfatMisafa + " path, which is not "
+                    + "wired yet. The takeover is off rather than drawing a distance field "
+                    + "as if it were coverage.");
+                return null;
+            }
+            if (!wasl.YadamMisafa)
+            {
+                sijill.LogWarning(
+                    "لا يمكن ضبط وسائط المادّة في هذا المحرّك؛ أُوقف الاستيلاء بدل الرسم بمادّة لا تُضبط. | "
+                    + "Material parameters cannot be set on this engine build, so the "
+                    + "takeover is off rather than drawing through a material whose "
+                    + "sample-add cannot be set — which would render every glyph as a "
+                    + "solid rectangle.");
                 return null;
             }
 
-            string ism = misafi ? IsmSudfatMisafa : IsmSudfatTaghtiya;
-            IntPtr sudfa = wasl.Sudfa(ism);
+            IntPtr sudfa = wasl.Sudfa(IsmSudfatTaghtiya);
             if (sudfa == IntPtr.Zero)
             {
                 sijill.LogWarning(
-                    "لم تُوجد صدفة تعريب (" + ism + ")؛ أُوقف الاستيلاء بدل الرسم بصدفة تقرأ القنوات الأربع من لوحة أحادية القناة. | "
-                    + "Taarib's own shader (" + ism + ") was not found; the takeover is off "
-                    + "rather than drawing a single-channel atlas through a shader that "
-                    + "samples four channels, which would render every glyph as a solid "
-                    + "rectangle.");
+                    "لم تُوجد صدفة المحرّك " + IsmSudfatTaghtiya + " في هذا البناء من اللعبة؛ أُوقف الاستيلاء بدل الرسم بصدفة مجهولة. | "
+                    + "The engine's " + IsmSudfatTaghtiya + " shader is not in this game's "
+                    + "build; the takeover is off rather than drawing through a shader "
+                    + "nobody chose.");
                 return null;
             }
 
@@ -2563,6 +2583,15 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 abyad.Azraq = 1f;
                 abyad.Shaffafiya = 1f;
                 wasl.DaAlLawn(maddaKaen, abyad);
+                // Alpha8 samples as (0, 0, 0, a); UI/Default adds this before
+                // multiplying by the vertex colour, so coverage is the alpha and
+                // the colour is the component's own.
+                Muttajih4 jamAyina;
+                jamAyina.S = 1f;
+                jamAyina.A = 1f;
+                jamAyina.Z = 1f;
+                jamAyina.W = 0f;
+                wasl.DaAlMuttajih(maddaKaen, muarrifJamAyina, jamAyina);
                 if (ruqaa.Namat == NamatLawha.Misafa)
                 {
                     wasl.DaAlAshari(maddaKaen, muarrifMisafa, misafa);

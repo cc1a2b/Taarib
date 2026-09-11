@@ -4,6 +4,7 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   block-size: 100%;
+  min-block-size: var(--adna-irtifa-shasha);
   background-color: var(--sath-0);
 
   /* The structural constants this screen needs and the token layer does not
@@ -23,33 +24,7 @@
   --bad-tahakkum: calc(var(--ard-tasmiya) + var(--fajwat-saff));
 }
 
-.idadat__shareet-alawi {
-  display: flex;
-  align-items: center;
-  gap: var(--misafa-16);
-  block-size: var(--irtifa-shareet);
-  padding-inline: var(--misafa-24);
-  background-color: var(--sath-1);
-  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
-}
-
-.idadat__raji {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-2);
-  transition: color var(--zaman-hala) var(--munhana);
-}
-
-.idadat__raji:hover {
-  color: var(--nass-1);
-  transition: none;
-}
-
-.idadat__fasl {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
-}
+/* The strip is `mukawwinat/raas_shasha`, shared with every other sub-screen. */
 
 .idadat__jism {
   min-block-size: 0;
@@ -260,38 +235,46 @@
   text-wrap: pretty;
 }
 
-/* --- empty states --------------------------------------------------------- */
+/* --- empty states -----------------------------------------------------------
+   The shared `.halat`, unboxed, inside the control column. The one thing added
+   here: an empty list's action is a field and a button, and it takes the
+   block's width rather than shrinking to its content the way a lone button
+   does. */
 
-.idadat__farigh {
+.halat__afal > .idadat__saff-idafa {
+  flex: 1 1 100%;
+}
+
+/* --- the skeleton -----------------------------------------------------------
+   The document's own two columns and the field's own box, so the first real
+   row lands on the first placeholder. Still: a shimmer is an animation on a
+   data update. */
+
+.idadat__haykal {
   display: flex;
   flex-direction: column;
-  align-items: start;
-  gap: var(--misafa-12);
-  padding: var(--misafa-16);
+}
+
+.idadat__haykal-satr {
+  display: block;
+  block-size: var(--irtifa-3);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.idadat__haykal-satr--unwan {
+  inline-size: 8ch;
+  block-size: var(--irtifa-4);
+}
+
+.idadat__haykal-haql {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: var(--ard-haql);
+  block-size: var(--irtifa-band);
   background-color: var(--sath-1);
   border: var(--samk-hadd) solid var(--hadd-daif);
-  border-radius: var(--nisf-lawha);
-}
-
-.idadat__farigh-unwan {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  font-weight: var(--wazn-mutawassit);
-  color: var(--nass-1);
-}
-
-.idadat__farigh-nass {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-qira);
-  color: var(--nass-3);
-  max-inline-size: 60ch;
-  text-wrap: pretty;
-}
-
-/* The empty state's action is a field and a button, and it takes the block's
-   width rather than shrinking to its content the way a lone button does. */
-.idadat__farigh .idadat__saff-idafa {
-  align-self: stretch;
+  border-radius: var(--nisf-tahakkum);
 }
 
 /* --- editable path lists -------------------------------------------------- */

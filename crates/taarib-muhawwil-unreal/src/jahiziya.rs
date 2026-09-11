@@ -50,12 +50,17 @@
 //!
 //! Reading works and is driven — `taarib-istikhraj`'s Unreal extractor and the
 //! Studio's game view both go through [`crate::mawarid`]. Writing the patch
-//! container works and is driven by nothing. The three runtime corrections are
-//! unreached, and the measurement corrections are unreachable. So the verdict is
-//! [`JahiziyatTashghil::Ghaiba`]: the offline half of the Unreal path is real,
-//! and no part of it has yet put a glyph on a screen.
+//! container works and is driven: `taarib_tathbeet::tarkib`'s Unreal arm plans
+//! it and its deployment step builds it through [`crate::hawiya::ibni`] and
+//! writes it through the install recorder. The face travels in that container
+//! and is named through the engine's own localized fallback-font string on the
+//! engines that read one. The three in-process corrections are unreached and
+//! the measurement corrections are unreachable. So the verdict is
+//! [`JahiziyatTashghil::Naqisa`]: the container that carries the Arabic reaches
+//! the game, and no part of the path has yet been watched putting a glyph on a
+//! screen.
 //!
-//! "Works" above means these four rungs, and stops there:
+//! "Works" above means these five rungs, and stops there:
 //!
 //! 1. **Constants checked against real bytes.** The `.pak`, `.locres`,
 //!    `.locmeta` and `.utoc` magics and the package tag were compared against
@@ -68,7 +73,10 @@
 //! 3. **A container written.** [`crate::mawarid::pak::KatibPak`] built an
 //!    additive patch `.pak` holding an edited Arabic `.locres` and a `.locmeta`
 //!    naming `ar`, and this crate's own reader read it back and resolved both.
-//! 4. **A real game loading it: not reached.** No engine has been observed
+//! 4. **A container written into a game.** The installer's Unreal arm placed
+//!    [`crate::hawiya`]'s container beside a shipped 4.13 title's own, built
+//!    from that title's containers, and the product's reader read it back.
+//! 5. **A real game drawing it: not reached.** No engine has been observed
 //!    mounting a container this build wrote. That rung needs a Windows machine
 //!    running the game, and nothing below it substitutes for it.
 
@@ -196,9 +204,9 @@ pub const fn hala(qudra: Qudra) -> HalatQudra {
         // `taarib-istikhraj`'s Unreal extractor and the Studio's game view both
         // drive `mawarid`, and both were run against shipped titles.
         Qudra::Qiraa => HalatQudra::Amila,
-        // `KatibPak::ila_bayt` and `KatibPak::uktub_fi_luba` have no caller in
-        // this workspace, so the container is authored for nobody.
-        Qudra::Kitaba => HalatQudra::Mahjuba,
+        // `hawiya::ibni` builds the container and `taarib_tathbeet::tarkib`'s
+        // Unreal deployment arm writes it into the game.
+        Qudra::Kitaba => HalatQudra::Amila,
         // `Tashghil::shaghghil` is called from `bidaya`, and from nowhere else.
         // With no bootstrap there is no offline caller either: the installer
         // writes the patch and never touches `Engine.ini`.
@@ -209,9 +217,15 @@ pub const fn hala(qudra: Qudra) -> HalatQudra {
                 HalatQudra::Ghaiba
             }
         },
-        // `Khatt::sajjil` and `Alam::faal` have no caller anywhere — not in the
-        // installer, and not in the bootstrap either.
-        Qudra::Khatt | Qudra::Alam => HalatQudra::Mahjuba,
+        // The face travels in the container and is named through the engine's
+        // own localized fallback-font string, which `hawiya::ibni` writes on
+        // every engine whose resources carry it. `Khatt::sajjil`, the
+        // in-process registration, still has no caller.
+        Qudra::Khatt => HalatQudra::Amila,
+        // `Alam::faal` has no caller anywhere. The container adds an `ar`
+        // culture and overrides every shipped one, so which culture is active
+        // stops mattering, and nothing activates one.
+        Qudra::Alam => HalatQudra::Mahjuba,
         // `TasheehQiyas::rakkib` needs an `AhdafQiyas`, which is constructed
         // nowhere, and this crate refuses to invent an address. Unreachable
         // rather than merely unreached.
@@ -234,12 +248,13 @@ pub const fn bayan(qudra: Qudra) -> BayanQudra {
              name.",
         ),
         Qudra::Kitaba => (
-            "كتابة حاوية الرقعة الإضافية مكتملة ومُتحقَّق منها: تُبنى ثم تُقرأ مرة أخرى \
-             بنفس القارئ الذي يقرأ حاويات اللعبة. ولا يستدعيها شيء في هذه الحزمة، فلا تصل \
-             إلى لعبة.",
-            "Writing the additive patch container is complete and checked: it is built and \
-             then read back by the same reader that reads a game's own containers. Nothing in \
-             this package calls it, so it never reaches a game.",
+            "كتابة حاوية الرقعة الإضافية تعمل ويستدعيها المثبِّت: تُبنى من حاويات اللعبة \
+             نفسها، تُستبدل فيها النصوص المترجمة في كل ثقافة تشحنها اللعبة، وتُضاف ثقافة \
+             عربية بجانبها، ثم تُكتب بجانب حاويات اللعبة حيث يركّبها المحرّك باسمها.",
+            "Writing the additive patch container works and the installer calls it: it is \
+             built from the game's own containers, the translated strings are replaced in \
+             every culture the game ships, an Arabic culture is added beside them, and it is \
+             written beside the game's containers where the engine mounts it by name.",
         ),
         Qudra::Tashghil => {
             if hamula_mabniya() {
@@ -260,16 +275,21 @@ pub const fn bayan(qudra: Qudra) -> BayanQudra {
             }
         },
         Qudra::Khatt => (
-            "تسجيل خطّ الرقعة في نظام الخطوط مكتمل، ولا يستدعيه شيء — لا المثبِّت ولا \
-             نقطة البدء.",
-            "Registering the patch's font with Slate's font system is complete, and nothing \
-             calls it — not the installer and not the bootstrap.",
+            "خطّ الرقعة يسافر داخل الحاوية ويُسمَّى خطَّ الاحتياط في Slate عبر نصّ المحرّك \
+             المترجم نفسه، وذلك على المحرّكات التي تقرأ هذا النصّ (أنريل 4.13 حتى نحو 4.19)؛ \
+             المحرّكات الأحدث تحمل خطًّا عربيًّا في احتياطها المركّب ولا تحتاج إليه. أمّا \
+             التسجيل داخل العملية فلا يستدعيه شيء.",
+            "The patch's face travels in the container and is named as Slate's fallback face \
+             through the engine's own localized string, on the engines that read one \
+             (Unreal 4.13 to about 4.19); later engines carry an Arabic face in their \
+             fallback composite and need none. The in-process registration has no caller.",
         ),
         Qudra::Alam => (
-            "تسجيل العربية ثقافةً وتفعيلها مكتمل، ولا يستدعيه شيء — لا المثبِّت ولا نقطة \
-             البدء.",
-            "Registering Arabic as a culture and activating it is complete, and nothing calls \
-             it — not the installer and not the bootstrap.",
+            "تُضاف العربية ثقافةً داخل الحاوية وتُستبدل النصوص في كل ثقافة تشحنها اللعبة، \
+             فلا يعود مهمًّا أيّ ثقافة نشطة؛ أمّا تفعيلها داخل العملية فلا يستدعيه شيء.",
+            "Arabic is added as a culture inside the container and the strings are replaced \
+             in every culture the game ships, so which culture is active stops mattering; \
+             activating one in the process has no caller.",
         ),
         Qudra::Qiyas => (
             "تصحيحات الاتجاه والمحاذاة واللفّ لا تعمل في أي بناء: تحتاج عناوين دوال \
@@ -327,18 +347,17 @@ pub fn naqs() -> Option<Hadd> {
         return None;
     }
     Some(Hadd {
-        arabi: "يقرأ هذا الإصدار موارد الترجمة في ألعاب أنريل ويكتب حاوية الرقعة كما \
-                يقرؤها المحرّك، لكن لا شيء في هذه الحزمة يضع تلك الحاوية داخل اللعبة، \
-                والجزء الذي يعمل داخل اللعبة غير مبنيّ فيها. يمكنك استخراج نصوص اللعبة \
-                وترجمتها الآن — ملفاتك الأصلية تبقى كما هي — وستبقى اللعبة بلغتها \
-                الأصلية حتى يصل التحديث الذي يُكمل التثبيت."
+        arabi: "يكتب هذا الإصدار حاوية الرقعة بجانب حاويات اللعبة: نصوص اللعبة المترجمة \
+                في كل ثقافة تشحنها، وثقافة عربية بجانبها، والخطّ حيث يقرأ المحرّك اسمه. \
+                يركّبها المحرّك باسمها ويرسم منها بنفسه، ولم يُشاهَد ذلك بعد في لعبة تعمل؛ \
+                ملفاتك الأصلية تبقى كما هي وتُستعاد بالضبط."
             .to_owned(),
-        injilizi: "This build reads an Unreal game's localization resources and writes the \
-                   patch container the engine would mount, and nothing in this package puts \
-                   that container into a game; the part that runs inside the game is not \
-                   built into it. You can extract and translate the game's text now — your \
-                   original files are left as they are — and the game will stay in its \
-                   original language until the update that completes the install arrives."
+        injilizi: "This build writes the patch container beside the game's own containers: \
+                   the game's text translated in every culture it ships, an Arabic culture \
+                   beside them, and the face where the engine reads its name. The engine \
+                   mounts it by name and draws from it on its own, and that has not yet been \
+                   watched happening in a running game; your original files are left as they \
+                   are and are restored exactly."
             .to_owned(),
     })
 }

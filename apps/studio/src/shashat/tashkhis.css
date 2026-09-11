@@ -4,6 +4,7 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   block-size: 100%;
+  min-block-size: var(--adna-irtifa-shasha);
   background-color: var(--sath-0);
 
   /* The structural constants this screen needs and the token layer does not
@@ -21,33 +22,7 @@
   --irtifa-dhayl: calc(var(--irtifa-2) * 22);
 }
 
-.tashkhis__shareet-alawi {
-  display: flex;
-  align-items: center;
-  gap: var(--misafa-16);
-  block-size: var(--irtifa-shareet);
-  padding-inline: var(--misafa-24);
-  background-color: var(--sath-1);
-  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
-}
-
-.tashkhis__raji {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-2);
-  transition: color var(--zaman-hala) var(--munhana);
-}
-
-.tashkhis__raji:hover {
-  color: var(--nass-1);
-  transition: none;
-}
-
-.tashkhis__fasl {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
-}
+/* The strip is `mukawwinat/raas_shasha`, shared with every other sub-screen. */
 
 .tashkhis__jism {
   min-block-size: 0;
@@ -150,26 +125,68 @@
   margin: 0;
 }
 
-/* --- empty states --------------------------------------------------------- */
+/* --- a section's changing part ----------------------------------------------
+   Each section's state — placeholder, answer, empty, failure — arrives through
+   the shared transition wrapper; it keeps the section's own rhythm. */
 
-.tashkhis__farigh {
+.tashkhis__mashhad {
   display: flex;
   flex-direction: column;
-  align-items: start;
   gap: var(--misafa-12);
-  padding: var(--misafa-16);
-  background-color: var(--sath-1);
-  border: var(--samk-hadd) solid var(--hadd-daif);
-  border-radius: var(--nisf-lawha);
 }
 
-.tashkhis__farigh-unwan {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  font-weight: var(--wazn-mutawassit);
-  color: var(--nass-1);
-  max-inline-size: 60ch;
-  text-wrap: pretty;
+/* --- the skeleton -----------------------------------------------------------
+   The same rows and the same box the answer takes, so nothing steps when it
+   lands. Still: a shimmer is an animation on a data update. */
+
+.tashkhis__haykal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+}
+
+.tashkhis__haykal-satr {
+  display: block;
+  block-size: var(--irtifa-2);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.tashkhis__haykal-satr--ism {
+  inline-size: 24ch;
+}
+
+.tashkhis__haykal-satr--hajm {
+  inline-size: 5ch;
+  justify-self: end;
+}
+
+.tashkhis__haykal-satr--waqt {
+  inline-size: 11ch;
+  justify-self: end;
+  background-color: var(--sath-1);
+}
+
+.tashkhis__haykal-satr--tasmiya {
+  inline-size: 6ch;
+}
+
+.tashkhis__haykal-haql {
+  display: block;
+  inline-size: var(--ard-haql);
+  block-size: var(--irtifa-band);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.tashkhis__haykal-haql--zir {
+  inline-size: 10ch;
+  background-color: var(--sath-2);
+}
+
+.tashkhis__dhayl--haykal {
+  block-size: var(--irtifa-dhayl);
 }
 
 /* --- the log files --------------------------------------------------------
@@ -185,7 +202,7 @@
 .tashkhis__malaf {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--ard-hajm) var(--ard-waqt-malaf);
-  align-items: baseline;
+  align-items: center;
   gap: var(--misafa-12);
   min-block-size: var(--irtifa-band);
   padding-block: var(--misafa-4);

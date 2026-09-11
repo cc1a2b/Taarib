@@ -4,43 +4,11 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   block-size: 100%;
+  min-block-size: var(--adna-irtifa-shasha);
   background-color: var(--sath-0);
 }
 
-.taqdeem__shareet-alawi {
-  display: flex;
-  align-items: center;
-  gap: var(--misafa-16);
-  block-size: var(--irtifa-shareet);
-  padding-inline: var(--misafa-24);
-  background-color: var(--sath-1);
-  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
-}
-
-.taqdeem__raji {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-2);
-  transition: color var(--zaman-hala) var(--munhana);
-}
-
-.taqdeem__raji:hover {
-  color: var(--nass-1);
-  transition: none;
-}
-
-.taqdeem__fasl {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
-}
-
-.taqdeem__jalsa {
-  margin-inline-start: auto;
-  font-size: var(--qiyas-1);
-  line-height: var(--irtifa-1);
-  color: var(--nass-3);
-}
+/* The strip is `mukawwinat/raas_shasha`, shared with every other sub-screen. */
 
 .taqdeem__jism {
   min-block-size: 0;
@@ -632,26 +600,56 @@
   color: var(--nass-3);
 }
 
-/* --- the trail ------------------------------------------------------------ */
+/* --- the skeleton -----------------------------------------------------------
+   The spine's own markers and the form's own boxes, at their own heights: a
+   field placeholder is the field's padding around the field's line, and a
+   textarea placeholder is three bands, exactly as `.taqdeem__nassi` is. Still:
+   a shimmer is an animation on a data update. */
 
-.taqdeem__faragh {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: var(--misafa-16);
-  padding: var(--misafa-24);
+.taqdeem__haykal-satr {
+  display: block;
+  block-size: var(--irtifa-2);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.taqdeem__haykal-satr--khatwa {
+  inline-size: 60%;
+  block-size: var(--irtifa-3);
+}
+
+.taqdeem__haykal-satr--unwan {
+  inline-size: 14ch;
+  block-size: var(--irtifa-4);
+}
+
+.taqdeem__haykal-satr--tasmiya {
+  inline-size: 10ch;
+}
+
+.taqdeem__haykal-satr--unwan-musahama {
+  inline-size: 40%;
+  block-size: var(--irtifa-3);
+}
+
+.taqdeem__haykal-satr--luba {
+  inline-size: 24%;
+  background-color: var(--sath-1);
+}
+
+.taqdeem__haykal-haql {
+  display: block;
+  block-size: calc(var(--irtifa-3) + var(--misafa-16) + var(--samk-hadd) * 2);
   background-color: var(--sath-1);
   border: var(--samk-hadd) solid var(--hadd-daif);
-  border-radius: var(--nisf-lawha);
+  border-radius: var(--nisf-tahakkum);
 }
 
-.taqdeem__faragh-nass {
-  max-inline-size: 52ch;
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-qira);
-  color: var(--nass-2);
-  text-wrap: pretty;
+.taqdeem__haykal-haql--nassi {
+  block-size: calc(3 * var(--irtifa-band) + var(--samk-hadd) * 2);
 }
+
+/* --- the trail ------------------------------------------------------------ */
 
 .taqdeem__musahamat {
   display: flex;

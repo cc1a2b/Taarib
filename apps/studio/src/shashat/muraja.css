@@ -2,49 +2,38 @@
 
 .muraja {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   block-size: 100%;
+  min-block-size: var(--adna-irtifa-shasha);
   background-color: var(--sath-0);
 }
 
+/* The strip is `mukawwinat/raas_shasha`, shared with every other sub-screen. */
+
 /* --------------------------------------------------------------------------
-   The strip and the filter row.
+   The body, and the filter row.
+
+   The filter row and the two columns are one grid under the strip, so the
+   whole-screen states — the placeholder, a refused session, a failed probe —
+   can take the same track and arrive through the same transition.
    -------------------------------------------------------------------------- */
 
-.muraja__shareet-alawi {
-  display: flex;
-  align-items: center;
-  gap: var(--misafa-16);
-  block-size: var(--irtifa-shareet);
-  padding-inline: var(--misafa-24);
-  background-color: var(--sath-1);
-  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+.muraja__mashhad,
+.muraja__badan {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-block-size: 0;
 }
 
-.muraja__raji {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-2);
-  transition: color var(--zaman-hala) var(--munhana);
+.muraja__badan {
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
-.muraja__raji:hover {
-  color: var(--nass-1);
-  transition: none;
-}
-
-.muraja__fasl {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
-}
-
-.muraja__ihsa {
-  margin-inline-start: auto;
-  font-size: var(--qiyas-1);
-  line-height: var(--irtifa-1);
-  color: var(--nass-3);
-  font-variant-numeric: tabular-nums lining-nums;
+/* The two panes change state on their own — a queue that is loading beside a
+   case that is not — and each transition is scoped to its own pane. */
+.muraja__mashhad-tabur,
+.muraja__mashhad-tafasil {
+  min-block-size: 0;
 }
 
 /* The inset a whole-screen state needs, because the screen it replaces is the
@@ -58,6 +47,88 @@
   font-size: var(--qiyas-2);
   line-height: var(--irtifa-qira);
   color: var(--nass-3);
+}
+
+/* --- the bulk meter ---------------------------------------------------------
+   Two hairlines tall, square, and drawn only over the rows the decision walks:
+   the same idiom every countable wait in the product draws. */
+
+.muraja__miqyas {
+  display: inline-grid;
+  gap: var(--misafa-4);
+  inline-size: 12rem;
+}
+
+.muraja__miqyas-masar {
+  display: block;
+  block-size: var(--samk-hadd-barz);
+  background-color: var(--sath-3);
+  border-radius: var(--nisf-hadd);
+  overflow: hidden;
+}
+
+.muraja__miqyas-malu {
+  display: block;
+  block-size: 100%;
+  background-color: var(--tamyeez);
+  transition: inline-size var(--zaman-lawha) var(--munhana);
+}
+
+.muraja__miqyas-nass {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the skeleton -----------------------------------------------------------
+   The queue's own table, the case's own sections, and a bar in each at the
+   line height it stands in for. Still: a shimmer is an animation on a data
+   update. */
+
+.muraja__haykal-satr {
+  display: block;
+  block-size: var(--irtifa-2);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.muraja__haykal-satr--raqm {
+  inline-size: 4ch;
+  margin-inline-start: auto;
+}
+
+.muraja__haykal-satr--unwan {
+  inline-size: 60%;
+  block-size: var(--irtifa-5);
+}
+
+.muraja__haykal-satr--sharh {
+  inline-size: 90%;
+  block-size: var(--irtifa-3);
+  background-color: var(--sath-2);
+}
+
+.muraja__haykal-murabba {
+  display: block;
+  inline-size: var(--hajm-ramz-satri);
+  block-size: var(--hajm-ramz-satri);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.muraja__saff--haykal {
+  cursor: default;
+}
+
+.muraja__haykal-haql {
+  display: block;
+  background-color: var(--sath-1);
+  border-color: var(--hadd-daif);
+}
+
+.muraja__haykal-haql--qasir {
+  inline-size: 9rem;
 }
 
 /* No fill of its own: the strip above is the only chrome band, and a second one
@@ -824,32 +895,8 @@
   color: var(--najah);
 }
 
-/* --------------------------------------------------------------------------
-   Nothing to show: a heading, one sentence, and the one thing worth doing.
-   -------------------------------------------------------------------------- */
-
-.muraja__faragh {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: var(--misafa-12);
-  max-inline-size: 52ch;
-  padding-block: var(--misafa-32);
-}
-
-.muraja__faragh-unwan {
-  font-size: var(--qiyas-4);
-  line-height: var(--irtifa-4);
-  font-weight: var(--wazn-mutawassit);
-  color: var(--nass-1);
-}
-
-.muraja__faragh-nass {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-qira);
-  color: var(--nass-3);
-  text-wrap: pretty;
-}
+/* Nothing to show is the base layer's `.halat--shasha`: a heading, one
+   sentence, and the one thing worth doing, on the pane's own ground. */
 
 .muraja__nass-hadi {
   font-size: var(--qiyas-2);

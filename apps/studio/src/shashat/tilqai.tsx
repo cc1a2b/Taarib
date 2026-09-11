@@ -14,7 +14,8 @@ import { khatarMin, maniAwwal, nassLugha } from '@/maktaba/aql';
 import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
 import { jahiziyaMin, naqsJahiziya, tasil } from '@/maktaba/jahiziya';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
-import { SatrRamz } from '@/mukawwinat/kutlat_khata';
+import { KutlatFashal, SatrRamz } from '@/mukawwinat/kutlat_khata';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type { AqlLubaHie, Idadat, Lugha, NizamArqam, TafasilLuba } from '@/mustalahat/awamir';
 import { HARAKAT_LAWHA, haraka } from '@/nizam/haraka';
 import type {
@@ -464,17 +465,20 @@ interface KhasaisKutla {
  *
  * `KutlatKhata` cannot be reused directly: it takes a `KhataJisr`, and a run's
  * failure does not arrive as a rejected command — it arrives inside a snapshot.
- * The parts are the same three the rest of Taarib shows, in the same order and
- * through the same shared classes, so the two cannot drift apart visually.
+ * The card underneath is the same one every other failure is drawn through, so
+ * the two cannot drift apart.
  */
 function KutlatTilqai({ unwan, khata, lugha, children }: KhasaisKutla): JSX.Element {
   return (
-    <div className="halat halat--khata halat--fashal" role="alert">
-      <SatrRamz ramz={khata.ramz} fashal />
-      <p className="halat__unwan">{unwan}</p>
-      <p className="halat__nass">{lugha === 'arabi' ? khata.arabi : khata.injilizi}</p>
-      {children === undefined ? null : <div className="halat__afal">{children}</div>}
-    </div>
+    <KutlatFashal
+      unwan={unwan}
+      nass={lugha === 'arabi' ? khata.arabi : khata.injilizi}
+      ramz={khata.ramz}
+      tafsil={khata.injilizi}
+      lugha={lugha}
+    >
+      {children}
+    </KutlatFashal>
   );
 }
 
@@ -871,18 +875,22 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
 
   return (
     <div className="tilqai">
-      <header className="tilqai__shareet-alawi">
-        <Link to="/luba/$muarrif" params={{ muarrif }} className="tilqai__raji">
-          {t('tilqai.raji', lugha)}
-        </Link>
-        <span className="tilqai__fasl">{t('shasha.tilqai', lugha)}</span>
-        <Link to="/" className="tilqai__raji">
-          {t('shasha.maktaba', lugha)}
-        </Link>
-        <Link to="/warsha/$muarrif" params={{ muarrif }} className="tilqai__raji">
-          {t('shasha.warsha', lugha)}
-        </Link>
-      </header>
+      <RaasShasha
+        rujoo={{ ila: 'luba', muarrif }}
+        nassRujoo={t('tilqai.raji', lugha)}
+        unwan={t('shasha.tilqai', lugha)}
+        mawdu={hukm?.ism ?? null}
+        rawabit={
+          <>
+            <Link to="/" className="raas-shasha__rabt">
+              {t('shasha.maktaba', lugha)}
+            </Link>
+            <Link to="/warsha/$muarrif" params={{ muarrif }} className="raas-shasha__rabt">
+              {t('shasha.warsha', lugha)}
+            </Link>
+          </>
+        }
+      />
 
       <div className="tilqai__jism">
         {wajh === 'tahmil' ? (
@@ -906,7 +914,7 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                     this is, and an eyebrow that repeats it is a line of text
                     that never changes above a line that does. */}
                 {yajri ? <p className="tilqai__fawq">{t('tilqai.jari.unwan', lugha)}</p> : null}
-                <h1 className="tilqai__ism">{ism}</h1>
+                <h2 className="tilqai__ism">{ism}</h2>
                 {hukm === null ? null : (
                   <p className="tilqai__tabaqa">
                     {t('tilqai.hukm.tabaqa', lugha, {
@@ -1224,14 +1232,18 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   <section className="tilqai__qism tilqai__qism--khatar">
                     <h2 className="tilqai__unwan">{t('tilqai.fashal.unwan', lugha)}</h2>
                     {laqta?.khata == null ? null : (
-                      <>
-                        <SatrRamz ramz={laqta.khata.ramz} fashal />
-                        <p className="tilqai__nass">
-                          {lugha === 'arabi' ? laqta.khata.arabi : laqta.khata.injilizi}
-                        </p>
-                      </>
+                      <p className="tilqai__nass">
+                        {lugha === 'arabi' ? laqta.khata.arabi : laqta.khata.injilizi}
+                      </p>
                     )}
                     <p className="tilqai__nass">{t('tilqai.fashal.sharh', lugha)}</p>
+                    {laqta?.khata == null ? null : (
+                      <SatrRamz
+                        ramz={laqta.khata.ramz}
+                        lugha={lugha}
+                        tafsil={laqta.khata.injilizi}
+                      />
+                    )}
                   </section>
                 ) : null}
 

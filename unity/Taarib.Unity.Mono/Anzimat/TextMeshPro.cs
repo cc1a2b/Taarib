@@ -546,25 +546,40 @@ namespace Taarib.Unity.Mono.Anzimat
     /// that could touch one.
     /// </para>
     /// <para>
-    /// <b>The shader is Taarib's own, and a missing one is a refusal.</b> The
-    /// atlas is a single-channel <c>R8</c> texture. Unity's stock
-    /// <c>UI/Default</c> samples all four channels, so an <c>R8</c> page drawn
-    /// through it renders every glyph as an opaque red rectangle — visibly
-    /// worse than the untranslated game. So when Taarib's shader cannot be
-    /// found this whole takeover switches itself off and says so, rather than
-    /// falling back to a shader that would draw the wrong thing confidently.
+    /// <b>The shader is the engine's own, because a shader of Taarib's own can
+    /// never be found.</b> <c>Shader.Find</c> returns only shaders compiled into
+    /// the game's build, and this assembly ships no asset bundle — so the two
+    /// names this class used to look up, <c>Taarib/Taghtiya</c> and
+    /// <c>Taarib/Misafa</c>, existed nowhere and every Unity game refused at
+    /// this exact line while reporting nothing. A coverage atlas is uploaded as
+    /// <c>Alpha8</c> and drawn through <c>UI/Default</c>, which every Unity
+    /// build includes, with <c>_TextureSampleAdd</c> set to lift the sampled
+    /// RGB to white: exactly the arrangement Unity's own legacy <c>Text</c>
+    /// uses for its font atlases, so the glyph's coverage lands in alpha and the
+    /// vertex colour supplies the colour. A distance-field atlas needs the
+    /// TextMeshPro distance-field path, which this build does not yet wire, and
+    /// it refuses saying so rather than drawing a distance field as coverage.
     /// </para>
     /// </remarks>
     public sealed class MasdarAshkal : IDisposable
     {
-        /// <summary>Taarib's coverage shader, by name.</summary>
-        public const string IsmSudfatTaghtiya = "Taarib/Taghtiya";
+        /// <summary>
+        /// The engine's own UI shader, in every Unity build's always-included
+        /// list. It draws an <c>Alpha8</c> page as coverage once
+        /// <see cref="MuarrifJamAyina"/> lifts the sampled RGB to white.
+        /// </summary>
+        public const string IsmSudfatTaghtiya = "UI/Default";
 
-        /// <summary>Taarib's signed-distance-field shader, by name.</summary>
-        public const string IsmSudfatMisafa = "Taarib/Misafa";
+        /// <summary>
+        /// The TextMeshPro distance-field shader every TMP game carries. Named
+        /// so the refusal can say what a distance-field patch would need; this
+        /// build does not draw through it yet.
+        /// </summary>
+        public const string IsmSudfatMisafa = "TextMeshPro/Distance Field";
 
         private static readonly int MuarrifLawha = Shader.PropertyToID("_MainTex");
         private static readonly int MuarrifLawn = Shader.PropertyToID("_Color");
+        private static readonly int MuarrifJamAyina = Shader.PropertyToID("_TextureSampleAdd");
         private static readonly int MuarrifMisafa = Shader.PropertyToID("_TaaribMisafa");
         private static readonly int MuarrifQiyas = Shader.PropertyToID("_TaaribQiyas");
 
@@ -677,27 +692,36 @@ namespace Taarib.Unity.Mono.Anzimat
                 return null;
             }
 
-            if (!SystemInfo.SupportsTextureFormat(TextureFormat.R8))
+            if (!SystemInfo.SupportsTextureFormat(TextureFormat.Alpha8))
             {
                 Rabt.Ballagh(
-                    "لا يدعم هذا الجهاز صيغة R8 التي تُرفع بها لوحة تعريب؛ أُوقف الاستيلاء على النص بدل رسم اللوحة بقناة خاطئة. | "
-                    + "This device does not support the R8 texture format Taarib's atlas is "
-                    + "uploaded as; the takeover is off rather than sampling the atlas from "
-                    + "the wrong channel.");
+                    "لا يدعم هذا الجهاز صيغة Alpha8 التي تُرفع بها لوحة تعريب؛ أُوقف الاستيلاء على النص بدل رسم اللوحة بقناة خاطئة. | "
+                    + "This device does not support the Alpha8 texture format Taarib's atlas "
+                    + "is uploaded as; the takeover is off rather than sampling the atlas "
+                    + "from the wrong channel.");
                 return null;
             }
 
             bool misafi = ruqaa.Namat == NamatLawha.Misafa;
-            string ism = misafi ? IsmSudfatMisafa : IsmSudfatTaghtiya;
-            Shader? sudfa = Shader.Find(ism);
+            if (misafi)
+            {
+                Rabt.Ballagh(
+                    "هذه الرقعة تحمل لوحة مسافة، وهذا البناء يرسم لوحات التغطية فقط عبر صدفة المحرّك (" + IsmSudfatTaghtiya + ")؛ لوحة المسافة تحتاج مسار " + IsmSudfatMisafa + " ولم يُوصَل بعد. أُوقف الاستيلاء بدل رسم حقل مسافة كأنه تغطية. | "
+                    + "This patch carries a distance-field atlas, and this build draws only "
+                    + "coverage atlases through the engine's " + IsmSudfatTaghtiya + " shader; "
+                    + "a distance field needs the " + IsmSudfatMisafa + " path, which is not "
+                    + "wired yet. The takeover is off rather than drawing a distance field as "
+                    + "if it were coverage.");
+                return null;
+            }
+            Shader? sudfa = Shader.Find(IsmSudfatTaghtiya);
             if (sudfa is null)
             {
                 Rabt.Ballagh(
-                    "لم تُوجد صدفة تعريب (" + ism + ")؛ أُوقف الاستيلاء بدل الرسم بصدفة تقرأ القنوات الأربع من لوحة أحادية القناة. | "
-                    + "Taarib's own shader (" + ism + ") was not found; the takeover is off "
-                    + "rather than drawing a single-channel atlas through a shader that "
-                    + "samples four channels, which would render every glyph as a solid "
-                    + "rectangle.");
+                    "لم تُوجد صدفة المحرّك " + IsmSudfatTaghtiya + " في هذا البناء من اللعبة؛ أُوقف الاستيلاء بدل الرسم بصدفة مجهولة. | "
+                    + "The engine's " + IsmSudfatTaghtiya + " shader is not in this game's "
+                    + "build; the takeover is off rather than drawing through a shader "
+                    + "nobody chose.");
                 return null;
             }
 
@@ -1122,7 +1146,7 @@ namespace Taarib.Unity.Mono.Anzimat
             }
             // Same format and linearity as the pages: Graphics.CopyTexture
             // refuses a copy between textures whose formats differ.
-            Texture2D jadida = new Texture2D(budS, budA, TextureFormat.R8, false, true);
+            Texture2D jadida = new Texture2D(budS, budA, TextureFormat.Alpha8, false, true);
             jadida.filterMode = FilterMode.Bilinear;
             jadida.wrapMode = TextureWrapMode.Clamp;
             jadida.hideFlags = HideFlags.HideAndDontSave;
@@ -1167,7 +1191,7 @@ namespace Taarib.Unity.Mono.Anzimat
                     // both of which are quantities rather than colours. Marking
                     // it sRGB would push every value through a gamma curve and
                     // make thin strokes visibly lighter than thick ones.
-                    lawhat2d = new Texture2D(ard, irtifa, TextureFormat.R8, false, true);
+                    lawhat2d = new Texture2D(ard, irtifa, TextureFormat.Alpha8, false, true);
                     lawhat2d.filterMode = FilterMode.Bilinear;
                     lawhat2d.wrapMode = TextureWrapMode.Clamp;
                     lawhat2d.hideFlags = HideFlags.HideAndDontSave;
@@ -1189,6 +1213,11 @@ namespace Taarib.Unity.Mono.Anzimat
                 }
                 madda.SetTexture(MuarrifLawha, lawhat2d);
                 madda.SetColor(MuarrifLawn, Color.white);
+                // Alpha8 samples as (0, 0, 0, a). UI/Default adds this before
+                // multiplying by the vertex colour, so the glyph's coverage is
+                // the alpha and the colour is the component's own — the same
+                // vector Unity's canvas sets for its legacy font atlases.
+                madda.SetVector(MuarrifJamAyina, new Vector4(1f, 1f, 1f, 0f));
                 if (ruqaa.Namat == NamatLawha.Misafa)
                 {
                     madda.SetFloat(MuarrifMisafa, misafa);

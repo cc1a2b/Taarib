@@ -7,7 +7,10 @@ import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
 import { jam, munassiqat, t } from '@/lugha/lugha';
+import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
+import { Mashhad } from '@/mukawwinat/mashhad';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type {
   HasilatMaktaba,
   Idadat,
@@ -22,6 +25,9 @@ import './tashkhis.css';
 /** شاشة التشخيص — the log trail, the compatibility report, and the maintainer bundle. */
 
 const SUTUR: readonly number[] = [100, 400, 1000];
+
+/** How many log files the placeholder stands in for: the rotation keeps about this many. */
+const MALAFFAT_HAYKAL = 3;
 
 /**
  * The five level names `tracing` writes, and the modifier each one takes.
@@ -135,6 +141,39 @@ function hallilSatr(khaam: string): SatrSijill {
   };
 }
 
+/**
+ * The log section drawn empty: three file rows at the row's own height and the
+ * tail box at the tail's own height, so the section does not grow by a box
+ * when the answer lands.
+ */
+function HaykalSijillat(): JSX.Element {
+  return (
+    <div className="tashkhis__haykal" aria-hidden="true">
+      <ul className="tashkhis__malaffat">
+        {Array.from({ length: MALAFFAT_HAYKAL }, (_, fihris) => (
+          <li key={fihris} className="tashkhis__malaf">
+            <span className="tashkhis__haykal-satr tashkhis__haykal-satr--ism" />
+            <span className="tashkhis__haykal-satr tashkhis__haykal-satr--hajm" />
+            <span className="tashkhis__haykal-satr tashkhis__haykal-satr--waqt" />
+          </li>
+        ))}
+      </ul>
+      <div className="tashkhis__dhayl tashkhis__dhayl--haykal" />
+    </div>
+  );
+}
+
+/** The report section's controls drawn empty: a select and a button, at band height. */
+function HaykalAdawat(): JSX.Element {
+  return (
+    <div className="tashkhis__adawat tashkhis__haykal" aria-hidden="true">
+      <span className="tashkhis__haykal-satr tashkhis__haykal-satr--tasmiya" />
+      <span className="tashkhis__haykal-haql" />
+      <span className="tashkhis__haykal-haql tashkhis__haykal-haql--zir" />
+    </div>
+  );
+}
+
 export function Tashkhis(): JSX.Element {
   const makhzan = useQueryClient();
 
@@ -229,14 +268,29 @@ export function Tashkhis(): JSX.Element {
     </button>
   );
 
+  const wajhSijillat = sijillat.isPending
+    ? 'tahmil'
+    : sijillat.error !== null
+      ? 'khata'
+      : sijillat.data === undefined || sijillat.data.malaffat.length === 0
+        ? 'farigh'
+        : 'jahiz';
+
+  const wajhMaktaba = maktaba.isPending
+    ? 'tahmil'
+    : maktaba.error !== null
+      ? 'khata'
+      : alaab === undefined || alaab.length === 0
+        ? 'farigh'
+        : 'jahiz';
+
   return (
     <div className="tashkhis">
-      <header className="tashkhis__shareet-alawi">
-        <Link to="/" className="tashkhis__raji">
-          {t('tashkhis.raji', lugha)}
-        </Link>
-        <span className="tashkhis__fasl">{t('shasha.tashkhis', lugha)}</span>
-      </header>
+      <RaasShasha
+        rujoo={{ ila: 'maktaba' }}
+        nassRujoo={t('tashkhis.raji', lugha)}
+        unwan={t('shasha.tashkhis', lugha)}
+      />
 
       <div className="tashkhis__jism">
         <section className="tashkhis__qism" aria-labelledby="tashkhis-unwan-sijillat">
@@ -268,89 +322,81 @@ export function Tashkhis(): JSX.Element {
             </select>
             {zirTahdith}
           </div>
-          {sijillat.isPending ? (
-            <div className="haykal" aria-hidden="true">
-              <span className="haykal__satr haykal__satr--tawil" />
-              <span className="haykal__satr haykal__satr--mutawassit" />
-              <span className="haykal__satr haykal__satr--qasir" />
-            </div>
-          ) : sijillat.error !== null ? (
-            <KutlatKhata
-              unwan={t('tashkhis.sijillat.taadhur', lugha)}
-              khata={sijillat.error}
-              lugha={lugha}
-              aada={() => {
-                void sijillat.refetch();
-              }}
-            />
-          ) : sijillat.data === undefined ? null : sijillat.data.malaffat.length === 0 ? (
-            <div className="tashkhis__farigh">
-              <p className="tashkhis__farigh-unwan">
-                {t('tashkhis.sijillat.la_malaffat', lugha)}
-              </p>
-              {zirTahdith}
-            </div>
-          ) : (
-            <>
-              <ul className="tashkhis__malaffat">
-                {sijillat.data.malaffat.map((malaf) => (
-                  <li key={malaf.ism} className="tashkhis__malaf">
-                    <span className="tashkhis__malaf-ism mono-ltr">{malaf.ism}</span>
-                    <span className="tashkhis__malaf-hajm">{munassiq.hajm(malaf.hajm)}</span>
-                    <span className="tashkhis__malaf-waqt mono-ltr" dir="ltr">
-                      {lahzaQaseera(malaf.waqt)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {sutur.length === 0 ? (
-                <div className="tashkhis__farigh">
-                  <p className="tashkhis__farigh-unwan">
-                    {t('tashkhis.sijillat.la_akhir', lugha)}
-                  </p>
-                  {zirTahdith}
-                </div>
-              ) : (
-                <div
-                  className="tashkhis__dhayl"
-                  dir="ltr"
-                  tabIndex={0}
-                  role="group"
-                  aria-label={t('tashkhis.sijillat.dhayl', lugha)}
-                >
-                  <ol className="tashkhis__sutur">
-                    {sutur.map((band, fihris) => (
-                      <li
-                        key={fihris}
-                        className={`tashkhis__satr tashkhis__satr--${band.fia}`}
-                      >
-                        <span className="tashkhis__satr-mustawa">{band.mustawa ?? ''}</span>
-                        <span className="tashkhis__satr-waqt">
-                          {band.waqt === null ? '' : waqtQaseer(band.waqt)}
-                        </span>
-                        <span className="tashkhis__satr-jism">
-                          {band.hadaf === null ? null : (
-                            <span className="tashkhis__satr-hadaf">{band.hadaf}</span>
-                          )}
-                          <span className="tashkhis__satr-risala">{band.risala}</span>
-                          {band.nitaq.length === 0 ? null : (
-                            <span className="tashkhis__satr-nitaq">
-                              {band.nitaq.join(' > ')}
-                            </span>
-                          )}
-                          {band.huqul.map(([ism, qeema]) => (
-                            <span key={ism} className="tashkhis__satr-haql">
-                              <span className="tashkhis__satr-haql-ism">{ism}</span>={qeema}
-                            </span>
-                          ))}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-            </>
-          )}
+          <Mashhad miftah={wajhSijillat} className="tashkhis__mashhad">
+            {wajhSijillat === 'tahmil' ? (
+              <HaykalSijillat />
+            ) : sijillat.error !== null ? (
+              <KutlatKhata
+                unwan={t('tashkhis.sijillat.taadhur', lugha)}
+                khata={sijillat.error}
+                lugha={lugha}
+                aada={() => {
+                  void sijillat.refetch();
+                }}
+              />
+            ) : sijillat.data === undefined || wajhSijillat === 'farigh' ? (
+              <HalatFarigha unwan={t('tashkhis.sijillat.la_malaffat', lugha)}>
+                {zirTahdith}
+              </HalatFarigha>
+            ) : (
+              <>
+                <ul className="tashkhis__malaffat">
+                  {sijillat.data.malaffat.map((malaf) => (
+                    <li key={malaf.ism} className="tashkhis__malaf">
+                      <span className="tashkhis__malaf-ism mono-ltr">{malaf.ism}</span>
+                      <span className="tashkhis__malaf-hajm">{munassiq.hajm(malaf.hajm)}</span>
+                      <span className="tashkhis__malaf-waqt mono-ltr" dir="ltr">
+                        {lahzaQaseera(malaf.waqt)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {sutur.length === 0 ? (
+                  <HalatFarigha unwan={t('tashkhis.sijillat.la_akhir', lugha)}>
+                    {zirTahdith}
+                  </HalatFarigha>
+                ) : (
+                  <div
+                    className="tashkhis__dhayl"
+                    dir="ltr"
+                    tabIndex={0}
+                    role="group"
+                    aria-label={t('tashkhis.sijillat.dhayl', lugha)}
+                  >
+                    <ol className="tashkhis__sutur">
+                      {sutur.map((band, fihris) => (
+                        <li
+                          key={fihris}
+                          className={`tashkhis__satr tashkhis__satr--${band.fia}`}
+                        >
+                          <span className="tashkhis__satr-mustawa">{band.mustawa ?? ''}</span>
+                          <span className="tashkhis__satr-waqt">
+                            {band.waqt === null ? '' : waqtQaseer(band.waqt)}
+                          </span>
+                          <span className="tashkhis__satr-jism">
+                            {band.hadaf === null ? null : (
+                              <span className="tashkhis__satr-hadaf">{band.hadaf}</span>
+                            )}
+                            <span className="tashkhis__satr-risala">{band.risala}</span>
+                            {band.nitaq.length === 0 ? null : (
+                              <span className="tashkhis__satr-nitaq">
+                                {band.nitaq.join(' > ')}
+                              </span>
+                            )}
+                            {band.huqul.map(([ism, qeema]) => (
+                              <span key={ism} className="tashkhis__satr-haql">
+                                <span className="tashkhis__satr-haql-ism">{ism}</span>={qeema}
+                              </span>
+                            ))}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </>
+            )}
+          </Mashhad>
         </section>
 
         <section className="tashkhis__qism" aria-labelledby="tashkhis-unwan-tawafuq">
@@ -359,79 +405,77 @@ export function Tashkhis(): JSX.Element {
               {t('tashkhis.tawafuq.unwan', lugha)}
             </h2>
           </div>
-          {maktaba.isPending ? (
-            <div className="haykal" aria-hidden="true">
-              <span className="haykal__satr haykal__satr--mutawassit" />
-              <span className="haykal__satr haykal__satr--qasir" />
-            </div>
-          ) : maktaba.error !== null ? (
-            <KutlatKhata
-              unwan={t('tashkhis.tawafuq.taadhur_maktaba', lugha)}
-              khata={maktaba.error}
-              lugha={lugha}
-              aada={() => {
-                void maktaba.refetch();
-              }}
-            />
-          ) : alaab === undefined || alaab.length === 0 ? (
-            <div className="tashkhis__farigh">
-              <p className="tashkhis__farigh-unwan">{t('tashkhis.tawafuq.la_alab', lugha)}</p>
-              <Link to="/" className="zir">
-                {t('tashkhis.raji', lugha)}
-              </Link>
-            </div>
-          ) : (
-            <>
-              <div className="tashkhis__adawat">
-                <label className="tashkhis__tasmiya" htmlFor="tashkhis-luba">
-                  {t('tashkhis.tawafuq.luba', lugha)}
-                </label>
-                <select
-                  id="tashkhis-luba"
-                  className="tashkhis__haql"
-                  value={muarrif}
-                  onChange={(hadath) => {
-                    setMuarrif(hadath.target.value);
-                  }}
-                >
-                  {alaab.map((luba) => (
-                    <option key={luba.muarrif} value={luba.muarrif}>
-                      {luba.ism}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="zir zir--tamyeez"
-                  aria-disabled={taqreer.isPending || muarrif === ''}
-                  onClick={() => {
-                    if (!taqreer.isPending && muarrif !== '') {
-                      taqreer.mutate();
-                    }
-                  }}
-                >
-                  {t(taqreer.isPending ? 'tashkhis.tawafuq.jari' : 'tashkhis.tawafuq.anshi', lugha)}
-                </button>
-              </div>
-              {taqreer.error !== null ? (
-                <KutlatKhata
-                  unwan={t('luba.khata.amal', lugha)}
-                  khata={taqreer.error}
-                  lugha={lugha}
-                  muarrif={muarrif}
-                  aada={() => {
-                    taqreer.mutate();
-                  }}
-                />
-              ) : null}
-              {taqreer.data !== undefined ? (
-                <div className="tashkhis__natija" role="status">
-                  <p>{t('tashkhis.tawafuq.tamma', lugha)}</p>
-                  <p className="tashkhis__natija-masar mono-ltr">{taqreer.data}</p>
+          <Mashhad miftah={wajhMaktaba} className="tashkhis__mashhad">
+            {wajhMaktaba === 'tahmil' ? (
+              <HaykalAdawat />
+            ) : maktaba.error !== null ? (
+              <KutlatKhata
+                unwan={t('tashkhis.tawafuq.taadhur_maktaba', lugha)}
+                khata={maktaba.error}
+                lugha={lugha}
+                aada={() => {
+                  void maktaba.refetch();
+                }}
+              />
+            ) : alaab === undefined || alaab.length === 0 ? (
+              <HalatFarigha unwan={t('tashkhis.tawafuq.la_alab', lugha)}>
+                <Link to="/" className="zir">
+                  {t('tashkhis.raji', lugha)}
+                </Link>
+              </HalatFarigha>
+            ) : (
+              <>
+                <div className="tashkhis__adawat">
+                  <label className="tashkhis__tasmiya" htmlFor="tashkhis-luba">
+                    {t('tashkhis.tawafuq.luba', lugha)}
+                  </label>
+                  <select
+                    id="tashkhis-luba"
+                    className="tashkhis__haql"
+                    value={muarrif}
+                    onChange={(hadath) => {
+                      setMuarrif(hadath.target.value);
+                    }}
+                  >
+                    {alaab.map((luba) => (
+                      <option key={luba.muarrif} value={luba.muarrif}>
+                        {luba.ism}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="zir zir--tamyeez"
+                    aria-disabled={taqreer.isPending || muarrif === ''}
+                    onClick={() => {
+                      if (!taqreer.isPending && muarrif !== '') {
+                        taqreer.mutate();
+                      }
+                    }}
+                  >
+                    {t(taqreer.isPending ? 'tashkhis.tawafuq.jari' : 'tashkhis.tawafuq.anshi', lugha)}
+                  </button>
                 </div>
-              ) : null}
-            </>
-          )}
+                {taqreer.error !== null ? (
+                  <KutlatKhata
+                    unwan={t('luba.khata.amal', lugha)}
+                    khata={taqreer.error}
+                    lugha={lugha}
+                    muarrif={muarrif}
+                    aada={() => {
+                      taqreer.mutate();
+                    }}
+                  />
+                ) : null}
+                {taqreer.data !== undefined ? (
+                  <div className="tashkhis__natija" role="status">
+                    <p>{t('tashkhis.tawafuq.tamma', lugha)}</p>
+                    <p className="tashkhis__natija-masar mono-ltr">{taqreer.data}</p>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </Mashhad>
         </section>
 
         <section className="tashkhis__qism" aria-labelledby="tashkhis-unwan-huzma">

@@ -13,7 +13,10 @@
   margin: var(--misafa-40) auto;
   padding: var(--misafa-24);
   background-color: var(--sath-1);
-  border: var(--samk-hadd) solid var(--khatar);
+  /* The failure card's own grammar, restated in base terms: a hairline all
+     round and the danger hue on the leading edge alone, never a red frame. */
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--samk-hadd-barz) solid var(--khatar);
   border-radius: var(--nisf-lawha);
 }
 
@@ -62,5 +65,6 @@
   background-color: var(--sath-3);
   border: var(--samk-hadd) solid var(--tamyeez);
   border-radius: var(--nisf-tahakkum);
+  box-shadow: inset 0 var(--samk-hadd) 0 var(--hadd-daif);
   text-decoration: none;
 }

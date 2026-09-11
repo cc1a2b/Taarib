@@ -87,7 +87,7 @@ use crate::mutarjim::{
     DhakiraJalsaMushtaraka, DhakiraTabaqa, MutarjimTabaqa, QaydTabaqa, RaddSatr, TASNIF_IFTIRADI,
     TalabDhakira, TalabSatr,
 };
-use crate::qira::{IkhtiyarQari, SatrMaqru};
+use crate::qira::{HududQubul, HukmQira, IkhtiyarQari, SatrMaqru};
 use crate::sijill_qira::{MuarrifMadkhal, SijillMushtarak, TaqreerSijill, ThiqatSatr};
 use crate::talqeem::SatrMulaqqam;
 use crate::tatabbu::{
@@ -191,6 +191,20 @@ pub struct KhiyaratQissa {
 
     /// The Hamming distance below which a region counts as unchanged.
     pub masafat_basma: u32,
+
+    /// The thresholds the two refusal gates judge a read by, or [`None`] to
+    /// take the engine's raw read as it comes.
+    ///
+    /// [`Some`] routes every recognition through
+    /// [`IkhtiyarQari::iqra_mufattasha`]: the capture is preprocessed and
+    /// upscaled, the read is refused when its shape is not the shape of text,
+    /// and a read that survives is corroborated by a second pass over
+    /// different pixels. That is what stops a region of grass from becoming a
+    /// fluent Arabic sentence, and it is the shipped default. [`None`] is the
+    /// raw path — one pass over the capture's own pixels, no gate — kept for a
+    /// harness whose synthetic recognizer decodes pixel positions that
+    /// preprocessing would move.
+    pub fahs: Option<HududQubul>,
 }
 
 impl KhiyaratQissa {
@@ -206,6 +220,7 @@ impl KhiyaratQissa {
             tahsin: IdadatTahsin::default(),
             istiqrar: SiyasatIstiqrar::iftiradiya(),
             masafat_basma: MuqayyidMuadal::MASAFA_IFTIRADIYA,
+            fahs: Some(HududQubul::default()),
         }
     }
 }
@@ -245,6 +260,12 @@ pub struct IhsaatQissa {
     pub ikhfaqat_hifz: u64,
     /// Snapshots published to the render thread.
     pub laqtat: u64,
+    /// Reads the refusal gates turned away as not text.
+    ///
+    /// Each one is a region of sky, grass or texture the engine returned words
+    /// for, and each one would otherwise have been a sentence on screen that
+    /// the game never said. See [`KhiyaratQissa::fahs`].
+    pub marfuda: u64,
 }
 
 impl IhsaatQissa {
@@ -272,6 +293,9 @@ impl IhsaatQissa {
             self.talabat,
             self.isabat_dhakira
         );
+        if self.marfuda > 0 {
+            let _ = write!(wasf, ", {} read(s) refused as not text", self.marfuda);
+        }
         if self.thiqa_dunya > 0 {
             let _ = write!(
                 wasf,
@@ -288,6 +312,31 @@ impl IhsaatQissa {
                 ", {} pair(s) the memory would not store",
                 self.ikhfaqat_hifz
             );
+        }
+        wasf
+    }
+
+    /// The same sentence in Arabic, for the in-game panel.
+    #[must_use]
+    pub fn wasf_arabi(&self) -> String {
+        let mut wasf = format!(
+            "{} التقاطة: قُرئت {} وحُجبت {} لعدم التغيّر. {} سطرًا مقروءًا أنتج {} طلبًا للمزوّد \
+             و{} إصابة في الذاكرة",
+            self.iltiqatat,
+            self.mumarrara,
+            self.mahjuba,
+            self.maqruaat,
+            self.talabat,
+            self.isabat_dhakira
+        );
+        if self.marfuda > 0 {
+            let _ = write!(wasf, "، ورُفضت {} قراءة لأنها ليست نصًا", self.marfuda);
+        }
+        if self.thiqa_dunya > 0 {
+            let _ = write!(wasf, "، وتُخطّي {} لضعف الثقة", self.thiqa_dunya);
+        }
+        if self.ikhfaqat > 0 {
+            let _ = write!(wasf, "، وأخفقت {} ترجمة", self.ikhfaqat);
         }
         wasf
     }
@@ -390,6 +439,8 @@ pub struct Qissa {
     sath: Option<WasfSath>,
     jeel: u64,
     ihsaat: IhsaatQissa,
+    /// Why the most recent read was refused, in the gate's own sentence.
+    akhir_rafd: Option<String>,
     athar: Vec<String>,
 }
 
@@ -441,6 +492,7 @@ impl Qissa {
             sath: None,
             jeel: 0,
             ihsaat: IhsaatQissa::default(),
+            akhir_rafd: None,
             athar: Vec::new(),
         }
     }
@@ -498,6 +550,16 @@ impl Qissa {
     #[must_use]
     pub const fn ihsaat(&self) -> &IhsaatQissa {
         &self.ihsaat
+    }
+
+    /// Why the most recent read was refused, when one was.
+    ///
+    /// The gate's own sentence — "8 of its 12 tokens are malformed", "two
+    /// preprocessing paths read this region differently" — which is what a
+    /// panel shows beside a region that is drawing nothing.
+    #[must_use]
+    pub fn akhir_rafd(&self) -> Option<&str> {
+        self.akhir_rafd.as_deref()
     }
 
     /// The line tracker, for a panel showing what is on screen.
@@ -577,8 +639,16 @@ impl Qissa {
 
     /// Runs one whole pass over one captured region.
     ///
-    /// Gate, recognize, track, translate what settled, publish. The call a
-    /// worker makes and the one every step of the budget rule is expressed in.
+    /// Gate, recognize, judge, track, translate what settled, publish. The
+    /// call a worker makes and the one every step of the budget rule is
+    /// expressed in.
+    ///
+    /// With [`KhiyaratQissa::fahs`] set — the default — the recognition is
+    /// [`IkhtiyarQari::iqra_mufattasha`]: preprocessed, structurally judged,
+    /// and corroborated by a second pass over different pixels. A read the
+    /// gates refuse is fed to the tracker as an empty pass, counted in
+    /// [`IhsaatQissa::marfuda`], and its reason kept for the panel. Without
+    /// it the engine's raw merged read is taken as it comes.
     ///
     /// # Errors
     ///
@@ -608,15 +678,7 @@ impl Qissa {
         }
         self.ihsaat.mumarrara = self.ihsaat.mumarrara.saturating_add(1);
 
-        let sutur = match qari.iqra_mudmaj(sura, None) {
-            Ok(sutur) => sutur,
-            // Nothing readable is the ordinary answer for a region between
-            // lines. It is fed through as an empty pass rather than returned as
-            // an error, because an empty pass is information: it is what ends
-            // the line that was on screen a moment ago.
-            Err(KhataTabaqa::LaNassMaqru { .. }) => Vec::new(),
-            Err(khata) => return Err(khata),
-        };
+        let sutur = self.iqra(ism_mintaqa, sura, qari)?;
         let mulahazat: Vec<QiraaMulahaza> = sutur
             .iter()
             .map(|satr| QiraaMulahaza::min_maqru(satr, sura.ila_sath(satr.mawdi)))
@@ -625,6 +687,46 @@ impl Qissa {
         khulasa.taghayyarat = true;
         khulasa.maqru = sutur.len();
         Ok(khulasa)
+    }
+
+    /// One recognition of one capture, judged or raw, in the capture's own
+    /// coordinates.
+    ///
+    /// Nothing readable is the ordinary answer for a region between lines and
+    /// comes back as an empty vector rather than an error, because an empty
+    /// pass is information: it is what ends the line that was on screen a
+    /// moment ago. A refused read is the same empty pass with its reason kept.
+    fn iqra(
+        &mut self,
+        ism_mintaqa: &str,
+        sura: &SuraMultaqata,
+        qari: &mut IkhtiyarQari,
+    ) -> Result<Vec<SatrMaqru>, KhataTabaqa> {
+        let Some(hudud) = self.khiyarat.fahs else {
+            return match qari.iqra_mudmaj(sura, None) {
+                Ok(sutur) => Ok(sutur),
+                Err(KhataTabaqa::LaNassMaqru { .. }) => Ok(Vec::new()),
+                Err(khata) => Err(khata),
+            };
+        };
+        let natija = qari.iqra_mufattasha(sura, &self.khiyarat.tahsin, &hudud)?;
+        match natija.hukm {
+            HukmQira::Maqbul => Ok(natija.sutur),
+            HukmQira::Marfud { sabab } => {
+                // A region the engine read nothing in is refused too, and that
+                // is the ordinary case; only a refusal of words the engine did
+                // return is worth counting and naming, because that is the
+                // sentence the panel shows beside a region drawing nothing.
+                if !natija.sutur.is_empty() {
+                    self.ihsaat.marfuda = self.ihsaat.marfuda.saturating_add(1);
+                    self.akhir_rafd = Some(format!(
+                        "{ism_mintaqa}: read as \"{}\" and refused — {sabab}",
+                        muqtataf(&SatrMaqru::fiqra(&natija.sutur))
+                    ));
+                }
+                Ok(Vec::new())
+            },
+        }
     }
 
     /// Confirms a region whose picture the change gate found unchanged.
@@ -1022,6 +1124,19 @@ impl Qissa {
     }
 }
 
+/// The first sixty characters of a read, for a sentence on the panel.
+///
+/// Sixty is a line of the panel at its default width; a refused read of a
+/// texture can run to thousands of characters, and the panel exists to say why
+/// a region is blank rather than to reproduce the noise that made it so.
+fn muqtataf(nass: &str) -> String {
+    let mut kharj: String = nass.chars().take(60).collect();
+    if nass.chars().count() > 60 {
+        kharj.push('…');
+    }
+    kharj
+}
+
 /// What settling one line ended up costing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum NatijatSatr {
@@ -1359,6 +1474,13 @@ struct AdaadKhayt {
     /// atomic rather than taking a lock.
     mutawaqqif: AtomicBool,
     hala: Mutex<HalatKhayt>,
+    /// The session's counters as of the last completed pass, copied out so the
+    /// render half can show them without reaching into the worker.
+    ihsaat: Mutex<IhsaatQissa>,
+    /// The tracker's counters, likewise.
+    tatabbu: Mutex<IhsaatTatabbu>,
+    /// The gate's sentence about the most recent refused read.
+    akhir_rafd: Mutex<Option<String>>,
 }
 
 /// The worker thread that runs everything off the presentation path.
@@ -1415,7 +1537,17 @@ impl KhaytQissa {
                             lahza_mikro,
                             sura,
                         } => {
-                            match qissa.aalij(mintaqa, &ism, qaida, lahza_mikro, &sura, &mut qari) {
+                            let natija =
+                                qissa.aalij(mintaqa, &ism, qaida, lahza_mikro, &sura, &mut qari);
+                            // Mirrored after every pass, refused or not, so the
+                            // panel's numbers are the session's numbers rather
+                            // than a copy taken when something last went right.
+                            *adaad_khayt.ihsaat.lock() = *qissa.ihsaat();
+                            *adaad_khayt.tatabbu.lock() = *qissa.mutatabbi().ihsaat();
+                            if let Some(rafd) = qissa.akhir_rafd() {
+                                *adaad_khayt.akhir_rafd.lock() = Some(rafd.to_owned());
+                            }
+                            match natija {
                                 Ok(_) => {
                                     let _ = adaad_khayt.muaalaja.fetch_add(1, Ordering::Relaxed);
                                 },
@@ -1567,6 +1699,49 @@ impl KhaytQissa {
     #[must_use]
     pub fn hala(&self) -> HalatKhayt {
         self.adaad.hala.lock().clone()
+    }
+
+    /// The most recent refusal, or [`None`] rather than a wait when the worker
+    /// is writing it.
+    ///
+    /// The present path's accessor. The worker holds this lock for one
+    /// assignment, so a miss is rare and costs a frame of last-known state.
+    #[must_use]
+    pub fn hala_in_amkan(&self) -> Option<HalatKhayt> {
+        self.adaad.hala.try_lock().map(|hala| hala.clone())
+    }
+
+    /// The session's counters as of the last completed pass, or [`None`]
+    /// rather than a wait when the worker is writing them.
+    ///
+    /// The render half's accessor, and the reason it never blocks is the
+    /// reason nothing on the present path blocks: one frame of numbers a pass
+    /// old is invisible, one frame of hitch is not.
+    #[must_use]
+    pub fn ihsaat_in_amkan(&self) -> Option<IhsaatQissa> {
+        self.adaad.ihsaat.try_lock().map(|ihsaat| *ihsaat)
+    }
+
+    /// The tracker's counters, likewise.
+    #[must_use]
+    pub fn tatabbu_in_amkan(&self) -> Option<IhsaatTatabbu> {
+        self.adaad.tatabbu.try_lock().map(|ihsaat| *ihsaat)
+    }
+
+    /// The gate's sentence about the most recent refused read, likewise.
+    ///
+    /// The outer [`None`] is "the worker held the lock"; the inner is "nothing
+    /// has been refused". A panel that conflated the two would show a blank
+    /// where the reason belongs on exactly the frame somebody looked.
+    #[must_use]
+    #[expect(
+        clippy::option_option,
+        reason = "the two levels mean two different things — the lock was held, and nothing \
+                  was refused — and a caller keeping its last-known reason must tell them \
+                  apart; an enum would carry the same two states under two more names"
+    )]
+    pub fn akhir_rafd_in_amkan(&self) -> Option<Option<String>> {
+        self.adaad.akhir_rafd.try_lock().map(|rafd| rafd.clone())
     }
 
     /// The sentence the control panel shows about the worker itself.

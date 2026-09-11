@@ -1,14 +1,15 @@
+// كتلة الخطأ — the one failure block: the sentence first, the next step under it, the code kept at the foot for a report.
+
 import { Link } from '@tanstack/react-router';
 import type { JSX, ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { KhataJisr } from '@/hayat/jisr';
 import { t } from '@/lugha/lugha';
 import type { Khutwa, Lugha, MasarMatlub } from '@/mustalahat/awamir';
-import { RamzMaluma, RamzTanbeeh } from '@/mukawwinat/rumuz';
+import { RamzTahaqquq, RamzTanbeeh } from '@/mukawwinat/rumuz';
 
 import './kutlat_khata.css';
-
-/** كتلة الخطأ — the one error block: the code, the sentence, and the next step. */
 
 interface Khasais {
   readonly unwan: string;
@@ -25,44 +26,81 @@ interface Khasais {
   readonly children?: ReactNode;
 }
 
-/**
- * The label over a machine's own words.
- *
- * `ar.json` and `en.json` are outside this change's file set, so the one string
- * this block gained lives here. It keeps `t`'s contract — present in both
- * languages — so lifting it into the string set under `khata.khaam` is a copy
- * rather than a rewrite.
- */
-const TASMIYAT_KHAAM: Readonly<Record<Lugha, string>> = {
-  arabi: 'نصّ الخدمة، حرفيًّا',
-  injilizi: "The service's own words",
-};
+/** How long the copy confirmation stands before the control reads as a control again. */
+const MUDDAT_TAAKID = 1800;
+
+interface KhasaisSatrRamz {
+  /** The machine's own name for what happened: a code, a command, an address. */
+  readonly ramz: string;
+  readonly lugha: Lugha;
+  /** What travels with the code into the clipboard — the machine's English, the command. */
+  readonly tafsil?: string | null;
+  /** The label over the code, when it is not an error code. */
+  readonly tasmiya?: string;
+}
 
 /**
- * The block's first line: the state, then the machine's name for it.
+ * The code, at the foot of the block, and the one control that copies it.
  *
- * The code leads the block because it is the only part of a failure that reads
- * the same in both languages and the only part worth typing into a search or a
- * report — but a code alone says nothing at a glance, so the family's state
- * glyph carries what kind of thing this is. It is the warning triangle rather
- * than the family's error cross: a cross is the shape of every close control in
- * every product, and a marker people try to click is worse than no marker.
- *
- * Exported alongside {@link NassKhaam} because the router's own two states are
- * the same three parts in the same order, and two copies of this would drift.
+ * It used to lead the block with a warning glyph beside it, which made every
+ * failure read as a developer dialog: the first thing a person saw was the
+ * one thing written for a machine. The code is still the only part of a
+ * failure that reads the same in both languages, and the only part worth
+ * putting in a report, so it stays — quiet, last, and one press from the
+ * clipboard.
  */
-export function SatrRamz({
-  ramz,
-  fashal,
-}: {
-  readonly ramz: string;
-  /** A failure, as against a state that is merely not the one that was asked for. */
-  readonly fashal: boolean;
-}): JSX.Element {
+export function SatrRamz({ ramz, lugha, tafsil, tasmiya }: KhasaisSatrRamz): JSX.Element {
+  const [nusikha, setNusikha] = useState(false);
+  const muaqqit = useRef<number | null>(null);
+  const marjaRamz = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(
+    () => () => {
+      if (muaqqit.current !== null) {
+        window.clearTimeout(muaqqit.current);
+      }
+    },
+    [],
+  );
+
+  const insakh = async (): Promise<void> => {
+    const matn = tafsil === undefined || tafsil === null ? ramz : `${ramz} · ${tafsil}`;
+    try {
+      await navigator.clipboard.writeText(matn);
+      setNusikha(true);
+      if (muaqqit.current !== null) {
+        window.clearTimeout(muaqqit.current);
+      }
+      muaqqit.current = window.setTimeout(() => {
+        setNusikha(false);
+      }, MUDDAT_TAAKID);
+    } catch {
+      // A webview that refuses the clipboard still lets the reader copy by
+      // hand, so the code is selected for them instead of failing silently.
+      const ikhtiyar = window.getSelection();
+      if (ikhtiyar !== null && marjaRamz.current !== null) {
+        ikhtiyar.selectAllChildren(marjaRamz.current);
+      }
+    }
+  };
+
   return (
-    <p className="halat__ramz">
-      {fashal ? <RamzTanbeeh /> : <RamzMaluma />}
-      <span className="mono-ltr">{ramz}</span>
+    <p className="halat__hamish">
+      <span className="halat__hamish-tasmiya">{tasmiya ?? t('khata.ramz', lugha)}</span>
+      <span ref={marjaRamz} className="halat__ramz mono-ltr">
+        {ramz}
+      </span>
+      <button
+        type="button"
+        className={nusikha ? 'halat__nasakh halat__nasakh--tamm' : 'halat__nasakh'}
+        aria-live="polite"
+        onClick={() => {
+          void insakh();
+        }}
+      >
+        {nusikha ? <RamzTahaqquq /> : null}
+        {t(nusikha ? 'khata.nusikha' : 'khata.nasakh', lugha)}
+      </button>
     </p>
   );
 }
@@ -82,9 +120,52 @@ export function NassKhaam({
 }): JSX.Element {
   return (
     <figure className="halat__khaam">
-      <figcaption className="halat__khaam-tasmiya">{TASMIYAT_KHAAM[lugha]}</figcaption>
+      <figcaption className="halat__khaam-tasmiya">{t('khata.khaam', lugha)}</figcaption>
       <pre className="halat__khaam-nass mono-ltr">{nass}</pre>
     </figure>
+  );
+}
+
+export interface KhasaisKutlatFashal {
+  readonly unwan: string;
+  readonly nass: string;
+  /** The machine's own text, when the sentence above is a stand-in for one. */
+  readonly khaam?: string | null;
+  readonly ramz: string;
+  /** What is copied beside the code for a report. */
+  readonly tafsil?: string | null;
+  readonly lugha: Lugha;
+  readonly children?: ReactNode;
+}
+
+/**
+ * The failure card, in reading order: what happened, what to do, and — last —
+ * what to tell a maintainer. Every failure in the product is drawn through
+ * this, whether it arrived as a rejected command, a snapshot's own error, or a
+ * route that threw, so the three cannot drift apart.
+ */
+export function KutlatFashal({
+  unwan,
+  nass,
+  khaam,
+  ramz,
+  tafsil,
+  lugha,
+  children,
+}: KhasaisKutlatFashal): JSX.Element {
+  return (
+    <div className="halat halat--khata halat--fashal" role="alert">
+      <p className="halat__unwan">
+        <RamzTanbeeh className="halat__ramz-hala" />
+        <span>{unwan}</span>
+      </p>
+      <p className="halat__nass">{nass}</p>
+      {khaam === undefined || khaam === null ? null : <NassKhaam nass={khaam} lugha={lugha} />}
+      {children === undefined || children === null ? null : (
+        <div className="halat__afal">{children}</div>
+      )}
+      <SatrRamz ramz={ramz} lugha={lugha} tafsil={tafsil ?? null} />
+    </div>
   );
 }
 
@@ -182,8 +263,8 @@ function Zirr({ khasais }: { readonly khasais: Khasais }): JSX.Element | null {
 }
 
 /**
- * The permanent code, the sentence, the one promised action, and anything the
- * caller adds.
+ * The sentence, the one promised action, anything the caller adds, and the
+ * permanent code kept at the foot.
  *
  * When the rejection never reached a command there is no code and no sentence
  * written for a person: Tauri rejects a malformed invoke with a bare string, so
@@ -192,26 +273,45 @@ function Zirr({ khasais }: { readonly khasais: Khasais }): JSX.Element | null {
  * even then — the command it failed on, and whatever text the bridge produced —
  * and both are shown: the command in the code's place, and the text below the
  * sentence, marked as a machine's words rather than dressed up as one of ours.
- * A user who can copy that line can be helped; a user reading "an error
- * occurred" cannot.
+ *
+ * A rejection whose severity is `maluma` — worth recording, invisible to the
+ * user — is not a failure at all. It is a state the backend chose to answer
+ * with rather than with data, and it is drawn as one: no glyph, no code, no
+ * alert, just the sentence and the way on.
  */
 export function KutlatKhata(khasais: Khasais): JSX.Element {
   const { unwan, khata, lugha, children } = khasais;
-  const jumla = khata.nass(lugha);
+  const jumla = khata.nass(lugha) ?? t('faragh.jisr', lugha);
   const ramz = khata.khata?.ramz ?? khata.amr;
   // A rejection that carried no text at all has nothing to quote, and an empty
   // quotation under its own label reads as the block itself having failed.
-  const khaam = jumla === null && khata.message !== '' ? khata.message : null;
-  return (
-    <div className="halat halat--khata halat--fashal" role="alert">
-      <SatrRamz ramz={ramz} fashal />
-      <p className="halat__unwan">{unwan}</p>
-      <p className="halat__nass">{jumla ?? t('faragh.jisr', lugha)}</p>
-      {khaam === null ? null : <NassKhaam nass={khaam} lugha={lugha} />}
-      <div className="halat__afal">
-        <Zirr khasais={khasais} />
-        {children}
+  const khaam = khata.khata === null && khata.message !== '' ? khata.message : null;
+
+  if (khata.khata?.khutura === 'maluma') {
+    return (
+      <div className="halat halat--farigh" role="status">
+        <p className="halat__unwan">{unwan}</p>
+        <p className="halat__nass">{jumla}</p>
+        <div className="halat__afal">
+          <Zirr khasais={khasais} />
+          {children}
+        </div>
       </div>
-    </div>
+    );
+  }
+
+  const tafsil = [khata.amr, khata.khata?.injilizi ?? khaam ?? ''].filter((juz) => juz !== '').join(' · ');
+  return (
+    <KutlatFashal
+      unwan={unwan}
+      nass={jumla}
+      khaam={khaam}
+      ramz={ramz}
+      tafsil={tafsil === '' ? null : tafsil}
+      lugha={lugha}
+    >
+      <Zirr khasais={khasais} />
+      {children}
+    </KutlatFashal>
   );
 }

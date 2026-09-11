@@ -56,6 +56,12 @@ body {
 #jidhr {
   block-size: 100%;
   isolation: isolate;
+  /* Every screen declares a floor below which its layout stops making sense.
+     A window shorter than that floor scrolls the whole screen here rather
+     than cutting it off — the one case the "never scroll as a page" rule
+     yields to, because a clipped screen has no way back at all. */
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 /* --- typography reset -----------------------------------------------------
@@ -263,6 +269,7 @@ svg {
 .zir {
   display: inline-flex;
   align-items: center;
+  gap: var(--misafa-6);
   block-size: var(--irtifa-band);
   padding-inline: var(--misafa-12);
   font-size: var(--qiyas-3);
@@ -271,9 +278,15 @@ svg {
   background-color: var(--sath-3);
   border: var(--samk-hadd) solid var(--hadd);
   border-radius: var(--nisf-tahakkum);
+  /* The one hairline of light along the top edge is what a raised surface
+     catches, and it is the whole difference between a control that sits on
+     the panel and an outlined rectangle drawn on it. Luminance and a
+     hairline, like every other elevation in the product — never a shadow. */
+  box-shadow: inset 0 var(--samk-hadd) 0 var(--hadd-daif);
   transition:
     background-color var(--zaman-hala) var(--munhana),
-    border-color var(--zaman-hala) var(--munhana);
+    border-color var(--zaman-hala) var(--munhana),
+    box-shadow var(--zaman-hala) var(--munhana);
 }
 
 .zir:hover {
@@ -282,8 +295,11 @@ svg {
   transition: none;
 }
 
+/* Pressed, the control goes down one step and loses its top light: the two
+   together are what a press feels like, and neither alone reads. */
 .zir:active {
   background-color: var(--sath-2);
+  box-shadow: none;
 }
 
 /* A refused control has to look refused. This was declared five times, once per
@@ -297,24 +313,33 @@ svg {
   color: var(--nass-3);
   background-color: var(--sath-2);
   border-color: var(--hadd-daif);
+  box-shadow: none;
   cursor: not-allowed;
 }
 
-/* The measure is capped because a line of Arabic past about sixty characters
+/* ---------------------------------------------------------------------------
+   The empty state.
+
+   Not a failure and never dressed as one: no box, no glyph, no code. It is
+   the treatment the library gives an empty grid — a heading, one sentence,
+   and the one thing to do next, set on the ground at the start of its region
+   — and it is the base here so that every screen's "nothing yet" reads as the
+   same state. The failure card in `mukawwinat/kutlat_khata.css` is the one
+   variant that adds a surface back, because a failure is a thing and a
+   thing has an edge.
+
+   The measure is capped because a line of Arabic past about sixty characters
    stops being a sentence somebody reads and becomes a paragraph somebody
    skips. Aligned to the start of its region, never floated in the middle of
-   it. */
+   it.
+   --------------------------------------------------------------------------- */
 
 .halat {
   display: flex;
   flex-direction: column;
   align-items: start;
-  gap: var(--misafa-12);
+  gap: var(--misafa-8);
   max-inline-size: 56ch;
-  padding: var(--misafa-20);
-  background-color: var(--sath-2);
-  border: var(--samk-hadd) solid var(--hadd-daif);
-  border-radius: var(--nisf-lawha);
 }
 
 .halat__unwan {
@@ -322,6 +347,7 @@ svg {
   line-height: var(--irtifa-4);
   font-weight: var(--wazn-mutawassit);
   color: var(--nass-1);
+  text-wrap: balance;
 }
 
 .halat__nass {
@@ -329,6 +355,31 @@ svg {
   line-height: var(--irtifa-qira);
   color: var(--nass-2);
   text-wrap: pretty;
+}
+
+/* A state that stands for a whole screen rather than one panel of it takes
+   the library's own weight: the heading one step up and bold, and air above
+   it so it sits where the eye lands rather than pressed under the strip. */
+.halat--shasha {
+  gap: var(--misafa-12);
+  padding-block-start: var(--misafa-32);
+}
+
+.halat--shasha .halat__unwan {
+  font-size: var(--qiyas-5);
+  line-height: var(--irtifa-5);
+  font-weight: var(--wazn-bariz);
+}
+
+.halat__afal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-4);
+}
+
+.halat__afal:empty {
+  display: none;
 }
 
 .halat .halat__ramz {

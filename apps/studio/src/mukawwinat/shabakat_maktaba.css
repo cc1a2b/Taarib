@@ -315,28 +315,12 @@
    on this same inset. Where the cards would have been is not an alignment; it
    is an accident of how many of them fit. */
 .shabaka__halat {
-  padding-block-start: var(--misafa-32);
   padding-inline: var(--hashiyat-shabaka);
 }
 
-.shabaka__halat > .halat {
-  gap: var(--misafa-8);
-  padding: 0;
-  background: none;
-  border: 0;
-  border-radius: var(--nisf-hadd);
-}
-
-.shabaka__halat > .halat > .halat__unwan {
-  font-size: var(--qiyas-5);
-  line-height: var(--irtifa-5);
-  font-weight: var(--wazn-bariz);
-}
-
-/* `.halat__afal` — one spelling, declared once, in `kutlat_khata.css`. This
-   file used to spell it `afaal` and redeclare it, so the grid's empty state got
-   a near-identical rule that happened to miss the `:empty` collapse and left an
-   empty flex row holding open space below the sentence. */
+/* The block itself is the base layer's `.halat--shasha`: this treatment — no
+   box, the heading one step up and bold, air above it — began here and is now
+   what every screen's whole-screen empty state wears, so nothing is restated. */
 
 /* --------------------------------------------------------------------------
    The bulk action bar.

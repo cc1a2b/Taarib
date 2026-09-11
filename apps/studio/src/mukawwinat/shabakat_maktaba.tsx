@@ -835,7 +835,7 @@ function FaraghMaktaba(khasais: {
   const fasila = lugha === 'arabi' ? '، ' : ', ';
 
   return (
-    <div className="halat">
+    <div className="halat halat--farigh halat--shasha" role="status">
       <p className="halat__unwan">{t('maktaba.faragh.unwan', lugha)}</p>
       <p className="halat__nass">
         {manassat.length === 0
@@ -863,7 +863,7 @@ function FaraghTasfiya(khasais: {
 }): JSX.Element {
   const { adadKulli, lugha, munassiq, ala_imsah } = khasais;
   return (
-    <div className="halat">
+    <div className="halat halat--farigh halat--shasha" role="status">
       <p className="halat__unwan">{t('maktaba.faragh.tasfiya.unwan', lugha)}</p>
       <p className="halat__nass">
         {t('maktaba.faragh.tasfiya.nass', lugha, { kulli: munassiq.raqm(adadKulli) })}

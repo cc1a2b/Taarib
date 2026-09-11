@@ -1,68 +1,50 @@
 /* ==========================================================================
    كتلة الخطأ — the failure variant of the shared `.halat` block.
 
-   `.halat` itself belongs to the empty states and is left exactly as it is:
-   everything below is scoped to `.halat--khata`, doubled up as
-   `.halat.halat--khata` so it wins on specificity rather than on which
-   stylesheet the bundler happened to emit last.
+   `.halat` itself is the empty state and carries no box: everything below is
+   scoped to `.halat--khata`, doubled up as `.halat.halat--khata` so it wins on
+   specificity rather than on which stylesheet the bundler emitted last.
 
-   The block reads as three parts rather than four evenly spaced lines. The
-   single gap is dropped and each part carries its own step: the code sits
-   immediately above the heading it names, the sentence one step below it, and
-   the actions a clear step below that. The surface, the hairline and the
-   corner are the family's own, so an error block and an empty state on the
-   same screen read as two states of one thing; only the leading edge says
-   which. Elevation is still the luminance step and the hairline, never a
-   shadow.
+   The card is the library's card: one surface step above the ground, a
+   hairline, the panel corner, and no shadow. What makes it a failure is a
+   single rule on its leading edge in the danger hue and the state glyph beside
+   the title — never a fill. The parts read top to bottom in the order a person
+   needs them: what happened, what to do, and, ruled off at the foot, what to
+   tell a maintainer.
    ========================================================================== */
 
 .halat.halat--khata {
   gap: 0;
-  padding-block: var(--misafa-16);
+  padding-block: var(--misafa-16) var(--misafa-12);
   padding-inline: var(--misafa-20);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
 }
 
 /* The one edge that carries the danger hue, at the product's rule weight
-   rather than the hairline's. A failure has to be readable as a failure before
-   it is read at all, and a single hairline of red on a near-black ground is
-   not; two are, and they still fill no panel with colour, which the direction
-   reserves. */
+   rather than the hairline's: a single hairline of red on a near-black ground
+   is not readable as a failure, two are, and they still fill no panel. */
 .halat.halat--khata.halat--fashal {
   border-inline-start-width: var(--samk-hadd-barz);
   border-inline-start-color: var(--khatar);
 }
 
-/* --- the state and the code -----------------------------------------------
-   The glyph says what kind of thing this is; the code says which one. The code
-   itself stays quiet — it leads the block because it is the part a person
-   copies, not because it is the part they read first. */
+/* --- the title, with the state glyph inline ------------------------------
+   The glyph says what kind of thing this is at a glance, and it sits inside
+   the title's own line rather than on a line of its own above it. The triangle
+   rather than the family's cross: a cross is the shape of every close control
+   in every product, and a marker people try to click is worse than none. */
 
-.halat.halat--khata .halat__ramz {
+.halat.halat--khata .halat__unwan {
   display: flex;
   align-items: center;
   gap: var(--misafa-8);
-  align-self: stretch;
-  min-inline-size: 0;
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
 }
 
-.halat.halat--khata .halat__ramz > svg {
+.halat.halat--khata .halat__ramz-hala {
   flex: none;
-}
-
-.halat.halat--khata.halat--fashal .halat__ramz > svg {
   color: var(--khatar);
-}
-
-.halat.halat--khata .halat__ramz > .mono-ltr {
-  min-inline-size: 0;
-  overflow-wrap: anywhere;
-}
-
-.halat.halat--khata .halat__unwan {
-  margin-block-start: var(--misafa-4);
 }
 
 .halat.halat--khata .halat__nass {
@@ -97,7 +79,7 @@
   padding-block: var(--misafa-8);
   padding-inline: var(--misafa-12);
   color: var(--nass-2);
-  background-color: var(--sath-2);
+  background-color: var(--sath-0);
   border: var(--samk-hadd) solid var(--hadd-daif);
   border-radius: var(--nisf-tahakkum);
   overflow: auto;
@@ -106,18 +88,71 @@
   user-select: text;
 }
 
-/* --- the actions ---------------------------------------------------------- */
-
-.halat__afal {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--misafa-8);
-}
-
 .halat.halat--khata .halat__afal {
   margin-block-start: var(--misafa-16);
 }
 
-.halat__afal:empty {
-  display: none;
+/* --- the foot: the code, and the one control that copies it -----------------
+   Ruled off from the sentence and the action above it, in the smallest step
+   the scale has: it is for the reader who is filing a report, not for the one
+   deciding what to do. */
+
+.halat__hamish {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-self: stretch;
+  gap: var(--misafa-6) var(--misafa-12);
+  margin-block-start: var(--misafa-16);
+  padding-block-start: var(--misafa-8);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.halat__hamish-tasmiya {
+  flex: none;
+}
+
+.halat__hamish .halat__ramz {
+  min-inline-size: 0;
+  font-size: var(--qiyas-1);
+  color: var(--nass-2);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/* The copy control steps down from `.zir`: it is the least important thing on
+   the card and must not compete with the action above it. */
+.halat__nasakh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--misafa-4);
+  margin-inline-start: auto;
+  block-size: calc(var(--irtifa-band) - var(--misafa-4));
+  padding-inline: var(--misafa-8);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--zaman-hala) var(--munhana),
+    border-color var(--zaman-hala) var(--munhana),
+    background-color var(--zaman-hala) var(--munhana);
+}
+
+.halat__nasakh:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  border-color: var(--hadd);
+  transition: none;
+}
+
+.halat__nasakh--tamm {
+  color: var(--najah);
+  border-color: var(--najah);
 }

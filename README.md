@@ -99,6 +99,7 @@ installation, and reviewed by a person before publication.
 
 - [About](#about)
 - [What works today](#what-works-today)
+- [Development and upcoming](#development-and-upcoming)
 - [How it works](#how-it-works)
 - [Coverage](#coverage)
 - [Safety](#safety)
@@ -125,9 +126,13 @@ Taarib is built to do; this describes what has been observed doing it.
 Discovery, engine identification, extraction, placeholder-protected
 translation, layout, atlas generation, patch compilation and sealing have been
 run against **real installed games**. Install, verification and byte-identical
-restore have been run against a **synthetic fixture** — deliberately, because
-writing into a game nobody consented to touch is not something to do for a
-demonstration.
+restore were first proven against a synthetic fixture and then, on 7 September
+2026, against a **real installed game**: R.E.P.O., through the product's own
+pipeline — probe, plan, safety gate, recording installer — twice, with the
+product's own restore returning the game directory to its shipped state each
+time and naming the one thing it did not delete (BepInEx's own log and cache,
+which Taarib did not place). The section [Development and upcoming](#development-and-upcoming)
+records exactly what that run observed.
 
 The real-game walk went from a game directory to a signed package. The game was
 R.E.P.O., appid 3241660, build 23363152, Unity 2022.3.67f2 on the Mono backend,
@@ -191,13 +196,12 @@ replace-a-container path ended the same way:
 
 ### Four caveats on the paragraph above, so it is not read as more than it is
 
-1. **Install and restore were proven on a synthetic fixture, not on a real
-   installed game.** The real-game walks stop before writing anything, by
-   design, and say so: *"the owner has not consented to the game being touched.
-   A byte-identical restore proven on the synthetic fixture is not consent.
-   Nothing under the game root was created, modified, renamed or deleted by this
-   walk."* Before-and-after snapshots of each real game directory were taken and
-   compared; all pairs are byte-identical.
+1. **Install and restore were proven on a synthetic fixture first, and on one
+   real game since.** The earlier real-game walks stopped before writing
+   anything, by design, and said so: *"the owner has not consented to the game
+   being touched."* On 7 September 2026 the owner did, for R.E.P.O., and the
+   install and restore below were run against it. No other installed game has
+   been written into.
 2. **No language model was called.** The translation step in the recorded runs
    used a fixed English-to-Arabic lookup table. What was genuinely exercised is
    the *placeholder protection around* the model call — tokenization, the reply
@@ -222,11 +226,13 @@ replace-a-container path ended the same way:
 This is the honest state of the in-game half, and it is the gap between what
 Taarib compiles and what a player would see.
 
-No adapter has been deployed into a real game process. No overlay has attached to
-a swap chain. **No Arabic produced by this product has been observed on screen
-inside a game.** The harnesses that produced the output above say so in their own
-headers — *"nothing here observes Arabic rendering, because nothing here renders
-anything"*.
+One adapter has now been deployed into a real game process and watched there: the
+Unity Mono plugin, inside R.E.P.O., through BepInEx's own log. It loaded, loaded
+its native library and verified the ABI, found the installed package under
+`taarib/`, opened it — *60 strings, 60 layouts, 315 glyphs* — and refused at the
+glyph source. **No Arabic produced by this product has been observed on screen
+inside a game.** That sentence is still true, and the distance between it and
+the one before it is measured in [Development and upcoming](#development-and-upcoming).
 
 That sentence is narrower than it sounds, and the table below is where the
 nuance lives. Parts of the in-game half now genuinely work: a Ren'Py game on a
@@ -263,8 +269,8 @@ to you:
 | Ren'Py before 7.4 | 1 | **3 — visibly worse** | The older per-character path. `taarib_jisr` is loaded from beside the Python package, and the staging step ships the package and the face, never the library. |
 | GameMaker Studio | 1 | **3 — visibly worse** | `data.win`'s string pool really is rewritten. The glyph functions are never called, so Arabic lands in a pool whose baked `FONT` table holds no pictures for it. Blank menus, not English ones. |
 | RPG Maker MV / MZ | 1 | 2 | The data splice is real and has a caller. The install then refuses when the component store lacks the runtime plugin. `adapters-script/ibni.mjs` now builds that plugin and `scripts/isdar.sh` stages it, so a bundle built the documented way no longer hits the refusal — and no such bundle has been run against a game. |
-| Unity (IL2CPP) | 1 | 2 | The C# assembly compiles and stages, and matches the loader that ships. All twenty-nine of its native imports bind `taarib_jisr`; `scripts/isdar.sh` now builds that library per target and the staged tree carries it inside every BepInEx component. Nothing has been observed running. |
-| Unity (Mono) | 1 | 2 | The assembly compiles, but references BepInEx `6.0.0-be.780` while the lockfile stages `5.4.23.5`. The chainloader cannot bind it, so its entry point never runs. |
+| Unity (IL2CPP) | 1 | 2 | The C# assembly compiles and stages and matches the loader that ships; all twenty-nine native imports resolve against the staged `taarib_jisr`. The four installer gaps closed on Mono are closed here by the same code, and the shader route below is the same. Nothing on this backend has been observed running. |
+| Unity (Mono) | 1 | **2, one step from 3** | Observed in R.E.P.O. through BepInEx's log on 7 September 2026: the plugin loads (retargeted to BepInEx 5), loads `taarib_jisr` and verifies the ABI, finds the package under `taarib/`, opens it, and refused because it asked `Shader.Find` for a shader of Taarib's own that was never built or shipped. It now draws through the engine's `UI/Default` with an `Alpha8` atlas — the arrangement Unity's own legacy text uses — and that drawing step is the one nobody has watched. |
 | Electron / web | 1 | 2 | Wired end to end. The adapter refuses by name when the store lacks the renderer runtime rather than writing a translation table into somebody's `app.asar` with no runtime to read it. The runtime is now built by `ibni.mjs` and staged; the adapter's own canvas rung still looks for a `globalThis.taaribNawat` that nothing sets, so even a perfect install leaves canvas text to the game. |
 | RPG Maker VX Ace | 1 | 1 | The install routine has no caller. |
 | Unreal 4 / 5 | 1 | 1 | The container writer has no caller outside its own tests, the install step writes nothing for Unreal, and the engine's shaping switch exists only behind a build feature no manifest enables. |
@@ -291,6 +297,84 @@ format work is right and nothing calls it.
 
 [`docs/tashghil.md`](docs/tashghil.md) names the exact function where each chain
 ends. The application states this per game before you install anything.
+
+## Development and upcoming
+
+What is in development is stated by observation, not by plan. Each line below
+says what was executed, what was read from a log rather than seen, and what has
+not happened at all.
+
+### Observed on 7 September 2026, R.E.P.O. (Unity 2022.3.67f2, Mono, x64)
+
+Through the product's own install pipeline, driven from a harness that makes the
+same calls the Studio's one-click command makes:
+
+```
+engine         : Unity 2022.3.67f2, backend Mono, x64, confidence 99
+binding verdict: MuarrifWaBasma          (exact build match, steam build 23363152)
+content        : taarib/01a06d42-….ruqaa (16877472 bytes, uncompressed working copy)
+content        : taarib/khutut/IBMPlexSansArabic-Regular.ttf (236708 bytes)
+plan           : framework: BepInEx for Unity 2022.1 and newer (Mono, x64) into .
+result         : compat Tamma, 2 content file(s), 0 launch setting(s), verify Salim
+```
+
+The game was then launched through Steam's own path, and BepInEx's log recorded
+the plugin's progress:
+
+```
+[Info   :   BepInEx] Loading [Taarib 0.1.0]
+[Info   :    Taarib] jisr 1.0.0 loaded from …\BepInEx\plugins\Taarib\jisr\x64\taarib_jisr.dll.
+[Info   :    Taarib] Opened 01a06d42-….ruqaa: 60 strings, 60 layouts, 315 glyphs.
+[Error  :    Taarib] TAARIB-E-6300: The glyph source could not be prepared; no text can be drawn.
+```
+
+Four gaps stood between the installer and that log, each visible only once the
+one before it was closed, and each is now closed in the tree:
+
+| gap | what happened | fix |
+| --- | --- | --- |
+| loader generation | the plugin was built against BepInEx 6.0.0-be.780; the bundle ships 5.4.23.5, whose chainloader cannot bind it | retargeted to BepInEx 5.4 |
+| where the patch is | the plugin looked beside itself; the installer places content under `<game>/taarib/` | the plugin reads the installer's directory first |
+| the font | the package names a face by hash and nothing placed it | the installer places every named face beside the package, fingerprint-verified |
+| compression | the package is sealed with zstd sections; the plugin reads only uncompressed tables | the installer places a decompressed working copy for Unity, under its own content hash, signature block carried verbatim |
+
+The fifth stop was never a wiring gap. The glyph source asked `Shader.Find` for
+`Taarib/Taghtiya` and `Taarib/Misafa` — shaders that exist nowhere in this
+repository and were never shipped in an asset bundle — and the refusal reason
+was computed and dropped, because the sink it reported to was never assigned.
+Both are fixed: the atlas is uploaded as `Alpha8` and drawn through the engine's
+own `UI/Default` with the texture-sample-add Unity's legacy text sets, and every
+such refusal now reaches BepInEx's log.
+
+### Not observed
+
+- **Arabic on screen.** The rewritten glyph source has compiled and staged and
+  has not been watched inside a game. The next launch of R.E.P.O. either shows
+  Arabic in its menu or names, in `BepInEx/LogOutput.log`, the step it stopped
+  at.
+- **IL2CPP** (Among Us, Gang Beasts). Same installer fixes, same shader route,
+  a different loader generation and an interop layer Mono does not have. Not
+  launched.
+- **Distance-field atlases.** The compiler defaults to coverage atlases; a
+  patch compiled as a distance field is refused by the plugin with a sentence
+  saying so, rather than drawn as if it were coverage. Drawing those through
+  TextMeshPro's own distance-field shader is upcoming.
+- **The automatic pipeline's fonts.** `taarib-tilqai` places the package but
+  not its face; a patch it produces for a Unity game installs and the plugin
+  refuses at the font chain, naming the file. Wiring the same placement there is
+  upcoming.
+
+### Upcoming, in the order it is being worked
+
+1. Watch R.E.P.O. draw, and fix what the log names.
+2. Among Us through the same chain on IL2CPP.
+3. Unreal: the payload's entry into the process and the shaping switch, on
+   Little Nightmares Enhanced Edition first.
+4. The overlay's per-frame producer — capture, recognise, translate with a
+   persistent cache, shape, draw — which is the tier that covers every engine
+   without an adapter.
+5. Launch-option handling is wired both ways now (install and restore share one
+   per-account record) and has not been exercised against a live Steam client.
 
 The read-only halves of several of these *are* exercised. The Unreal path was
 walked over two real games: Little Nightmares (UE4, pak format 3, 9.6 GB) gave

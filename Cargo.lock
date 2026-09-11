@@ -6143,12 +6143,15 @@ name = "taarib-tathbeet"
 version = "1.0.0"
 dependencies = [
  "blake3",
+ "memmap2",
+ "object",
  "serde",
  "serde_json",
  "taarib-aman",
  "taarib-kashf",
  "taarib-khatm",
  "taarib-muhawwil-nusus",
+ "taarib-muhawwil-unreal",
  "taarib-mustalahat",
  "taarib-ruqaa",
  "taarib-tarqee",

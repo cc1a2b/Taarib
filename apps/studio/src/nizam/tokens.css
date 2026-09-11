@@ -260,6 +260,12 @@
   --ard-qadeeb: 56px;
   --samk-hadd: 1px;
 
+  /* The floor under every screen. Below it the strip, one row of content and
+     one control no longer fit together, so a shorter window scrolls the whole
+     screen at the root rather than cutting the bottom of it off. In rem, so a
+     larger density raises the floor with the rows it has to hold. */
+  --adna-irtifa-shasha: 30rem;
+
   /* --- icons: one stroke weight, two sizes, no second family ------------- */
   --samk-ramz: 1.5px;
   --hajm-ramz-satri: 16px;

@@ -37,8 +37,8 @@ use taarib_mustalahat::nass::{
     MasdarIstikhraj, MudkhalNass, NassId, QuyudNass, SiyaqNass, TasnifNass,
 };
 use taarib_mustalahat::ruqaa::{RukhsaRuqaa, RuqaaId, RuqaaRevision, TareeqaTarjama};
-use taarib_ruqaa::aqsam::NawQism;
-use taarib_ruqaa::katib::Katib;
+use taarib_ruqaa::aqsam::{NawDaght, NawQism};
+use taarib_ruqaa::katib::{Katib, nuskha_muarra};
 use taarib_ruqaa::qari::{self, Ruqaa, miftah_min_nass};
 use taarib_saff::{MawridKhatt, SilsilatKhutut};
 use taarib_tarqee::irtibat::BasmatKhatt;
@@ -402,5 +402,64 @@ fn ikhtibar_al_takhtit_yatbaa_al_tarjama_al_fayiza() {
         huruf.len(),
         AWDA.chars().count(),
         "and not the one that was set aside — no ligature makes these two lengths agree"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The uncompressed working copy
+// ---------------------------------------------------------------------------
+
+/// The working copy holds every table the sealed package holds, stored plain,
+/// under its own content hash, carrying the sealed package's signature block.
+///
+/// This is the file the Unity takeover reads. It refuses a compressed section by
+/// name — the assembly carries no decompressor — and it used to be handed the
+/// sealed package, so every Unity install ended at `TAARIB-E-6007` with the
+/// game in English. The project here is made large and repetitive on purpose:
+/// the writer compresses only what pays, and a package with nothing compressed
+/// would let this test pass against a copy that decompressed nothing.
+#[test]
+fn ikhtibar_al_nuskha_al_muarra_tuqra_bila_fakk() {
+    let mut nusus = Vec::with_capacity(90);
+    for raqm in 0..90_u32 {
+        nusus.push(mudkhal(
+            &format!("h{raqm}"),
+            &format!("Extraction point {raqm} has been activated and is ready"),
+            &format!("تم تفعيل نقطة الاستخراج رقم {raqm} وهي جاهزة الآن للاستخدام"),
+        ));
+    }
+    let huzma = ijmi(&nusus);
+    let makhtum = huzma.bayt.bayt();
+    let asl = Ruqaa::iftah(makhtum).expect("the sealed package reopens");
+    assert!(
+        asl.jadwal().madkhalat().any(|madkhal| madkhal.daght == NawDaght::Zstd),
+        "the sealed package must compress something, or this test proves nothing"
+    );
+
+    let muarra = nuskha_muarra(makhtum).expect("the working copy is produced");
+    let nuskha = Ruqaa::iftah(muarra.bayt()).expect("the working copy reopens under its own hash");
+    for madkhal in nuskha.jadwal().madkhalat() {
+        assert_eq!(madkhal.daght, NawDaght::Bila, "{:?} is stored compressed", madkhal.naw);
+        assert_eq!(madkhal.tul_makhzun, madkhal.tul_khaam, "{:?} claims to expand", madkhal.naw);
+    }
+
+    let jard_asl: Vec<NawQism> = asl.jadwal().madkhalat().map(|madkhal| madkhal.naw).collect();
+    let jard_nuskha: Vec<NawQism> = nuskha.jadwal().madkhalat().map(|madkhal| madkhal.naw).collect();
+    assert_eq!(jard_asl, jard_nuskha, "the working copy holds the same sections in the same order");
+    for naw in jard_asl {
+        if naw == NawQism::Tawqee {
+            continue;
+        }
+        let bayt_asl = asl.qism(naw).expect("the sealed section reads");
+        let bayt_nuskha = nuskha.qism(naw).expect("the working section reads");
+        assert_eq!(bayt_asl.bayt(), bayt_nuskha.bayt(), "{naw:?} differs once decompressed");
+    }
+    assert_eq!(asl.tawqee(), nuskha.tawqee(), "the signature block travels verbatim");
+
+    let qism = nuskha.qism(NawQism::Nusus).expect("a string section");
+    let jadwal = qari::nusus(qism.bayt()).expect("the plain string section reads back");
+    assert_eq!(
+        jadwal.tarjama(miftah_min_nass("Extraction point 7 has been activated and is ready")),
+        Some("تم تفعيل نقطة الاستخراج رقم 7 وهي جاهزة الآن للاستخدام")
     );
 }

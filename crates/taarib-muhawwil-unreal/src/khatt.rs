@@ -765,3 +765,103 @@ impl Khatt {
         tarajua_madakhil(&self.ini)
     }
 }
+
+// ---------------------------------------------------------------------------
+// The container rung: naming the face through the engine's own localized key
+// ---------------------------------------------------------------------------
+//
+// The rung that reaches a shipped game without a process to enter. Slate draws
+// every glyph a game's own fonts lack from one fallback face, and Unreal 4.13
+// through 4.19 resolve that face's file name through a localized engine string:
+// `NSLOCTEXT("Slate", "FallbackFont", "DroidSansFallback")`, joined onto
+// `Engine/Content/Slate/Fonts/` with `.ttf` appended. The string is looked up
+// like any other, so a `.locres` entry under that namespace and key — carried
+// in the additive container beside the face it names — is the engine's own,
+// documented way of choosing a fallback per culture. Nothing is hooked, and
+// the face is Taarib's, read from Taarib's container. Both halves were read
+// off a shipping 4.13 binary: the three literals are in it, and its engine
+// resource carries the entry with the source fingerprint `basmat_asl` computes.
+//
+// Engines from about 4.20 dropped the string and build their fallback as a
+// fixed composite that already carries an Arabic sub-font, so on those the
+// entry is inert and `crate::hawiya` writes neither it nor the face.
+
+/// The namespace of the engine text that names Slate's fallback face.
+pub const FADAA_IRTIDA: &str = "Slate";
+
+/// The key of that text.
+pub const MIFTAH_IRTIDA: &str = "FallbackFont";
+
+/// Its source string: the engine's own fallback face, which covers CJK and
+/// carries no Arabic glyph at all.
+pub const ASL_IRTIDA: &str = "DroidSansFallback";
+
+/// Where the engine reads the face that text names, relative to a container's
+/// mount point.
+pub const DALIL_KHUTUT_SLATE: &str = "Engine/Content/Slate/Fonts";
+
+/// The Arabic face the engine ships beside its own fallback, named when the
+/// patch carries no face of its own.
+pub const KHATT_MUHARRIK_ARABI: &str = "NotoNaskhArabicUI-Regular";
+
+/// The one localized entry that points Slate's fallback face at a file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MadkhalIrtida {
+    /// [`FADAA_IRTIDA`].
+    pub fadaa: &'static str,
+    /// [`MIFTAH_IRTIDA`].
+    pub miftah: &'static str,
+    /// [`ASL_IRTIDA`], which the entry's source fingerprint is computed over.
+    pub asl: &'static str,
+    /// The face's file stem, which the engine turns into `<stem>.ttf`.
+    pub tarjama: String,
+}
+
+/// Whether a face name is one the engine can append `.ttf` to and find.
+///
+/// A bare file stem: no separator, no extension, nothing empty. The engine
+/// builds the path itself, so a name carrying any of those would resolve to a
+/// file that is not there and the fallback would silently draw nothing.
+#[must_use]
+pub fn ism_irtida_salih(ism: &str) -> bool {
+    !ism.is_empty()
+        && !ism.contains(['/', '\\', '.', '\0'])
+        && ism.trim() == ism
+        && ism.chars().all(|harf| !harf.is_control())
+}
+
+/// The entry that names a face as Slate's fallback.
+///
+/// # Errors
+///
+/// [`KhataUnreal::KhattMarfud`] when the name is not a bare file stem — see
+/// [`ism_irtida_salih`].
+pub fn madkhal_irtida(ism: &str) -> Result<MadkhalIrtida, KhataUnreal> {
+    if !ism_irtida_salih(ism) {
+        return Err(KhataUnreal::KhattMarfud {
+            sabab: format!(
+                "\"{ism}\" is not a bare file stem; the engine appends .ttf itself and joins \
+                 the name onto its own font directory"
+            ),
+        });
+    }
+    Ok(MadkhalIrtida {
+        fadaa: FADAA_IRTIDA,
+        miftah: MIFTAH_IRTIDA,
+        asl: ASL_IRTIDA,
+        tarjama: ism.to_owned(),
+    })
+}
+
+/// Where a face of that name lives inside a container, relative to its mount
+/// point.
+///
+/// `dalil` is the directory the engine's own fallback face was found under,
+/// when a caller read one out of the game, and [`DALIL_KHUTUT_SLATE`]
+/// otherwise; naming the same directory the engine already reads is what makes
+/// the face findable without any configuration.
+#[must_use]
+pub fn masar_khatt_slate(dalil: &str, ism: &str) -> String {
+    let dalil = dalil.trim_end_matches('/');
+    format!("{dalil}/{ism}.ttf")
+}

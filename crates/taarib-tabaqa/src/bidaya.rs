@@ -20,10 +20,14 @@
 //! can be built here.
 //!
 //! So this module installs the hook that catches the first present, and the
-//! backend plus [`crate::wajiha::Tabaqa::shaghghil`] run from inside it. That
-//! is the whole reason the frame hook exists at bootstrap: not to draw — there
-//! is nothing to draw yet — but to be the first moment at which a backend can
-//! honestly be constructed.
+//! backend plus [`crate::wajiha::Tabaqa::shaghghil`] run from inside it. On
+//! that same first frame the loop in [`crate::halaqa`] is built over the
+//! started overlay — the font, the recognizer, the cache, the translator, the
+//! regions and the history are all resolved then, because that is the first
+//! moment there is a surface to resolve them against — and every present after
+//! it runs [`Halaqa::itar`] through [`itar_min_thunk`]. Before the loop
+//! existed the hook returned the moment the overlay had started, and the
+//! overlay stayed empty; that return is the one this module no longer makes.
 //!
 //! ## Vulkan is not reached from here
 //!
@@ -46,15 +50,24 @@
 use core::ffi::c_void;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, OnceLock};
+use std::time::Instant;
 
 use parking_lot::Mutex;
 use taarib_haqn::khatf::Masar;
 use taarib_haqn::mawqi::{mujallad_nafsi, qaidat_wahda, ramz_wahda};
+use taarib_mustalahat::luba::{LubaId, MasdarLuba};
+use taarib_ruqaa::NawQism;
 use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_usus::masarat::Masarat;
 
+use crate::halaqa::{self, Halaqa, KhiyaratHalaqa, LUGHA_IFTIRADIYA, MakunatHalaqa};
+use crate::khata::KhataTabaqa;
 use crate::khataf::{AaddadDukhul, AslMahfuz, HirasatDukhul};
+use crate::khazina::DhakiraRuqaa;
+use crate::mutarjim::{DhakiraJalsaMushtaraka, DhakiraTabaqa};
+use crate::qissa::{KhiyaratQissa, Qissa};
 use crate::sidq::{BasmatIfsah, Iqrar, mahfuz_salih};
 use crate::wajiha::{Khattaf, Tabaqa, WajihatRusum};
 
@@ -758,6 +771,7 @@ fn rakkib_d3d8(mabni: &mut Tarkib) -> Result<(), Radd> {
 #[cfg(windows)]
 fn nida_taqdeem_8(jihaz: *mut c_void) {
     shaghghil_min_itar(MasdarKhalfiya::D3D8(jihaz));
+    itar_min_thunk();
 }
 
 /// What `crate::d3d8`'s `Reset` thunk calls before the game's own reset.
@@ -772,9 +786,9 @@ fn nida_tasfir_8() {
         // `try_lock`: this runs on a render thread, and blocking it behind a
         // start attempt on another thread would be a visible stall in the game.
         if let Some(mut hirasa) = TARKIB.try_lock()
-            && let Some(tabaqa) = hirasa.as_mut().and_then(|mabni| mabni.tabaqa.as_mut())
+            && let Some(halaqa) = hirasa.as_mut().and_then(|mabni| mabni.halaqa.as_mut())
         {
-            let _ = tabaqa.qabl_taghyeer_hajm();
+            let _ = halaqa.qabl_taghyeer_hajm();
         }
     }));
 }
@@ -1246,20 +1260,228 @@ fn jarrib_tashghil(masdar: MasdarKhalfiya) -> Nateeja {
         return Nateeja::Radd;
     };
 
-    match Tabaqa::shaghghil(khattaf, iqrar) {
+    let tabaqa = match Tabaqa::shaghghil(khattaf, iqrar) {
         Ok(tabaqa) => {
             for satr in tabaqa.athar() {
                 sajjil(&mujallad, &format!("started: {satr}"));
             }
-            mabni.tabaqa = Some(tabaqa);
-            Nateeja::Bada
+            tabaqa
         },
         Err(khata) => {
             let radd = Radd::fashal(format!("the overlay refused to start: {khata}"));
             sajjil(&mujallad, &radd.satr());
+            return Nateeja::Radd;
+        },
+    };
+
+    // The overlay has attached. Now the loop that feeds it, resolved against
+    // the surface that exists as of this frame; a loop that cannot be built is
+    // a refusal with a reason, and the overlay is torn down with it rather
+    // than left attached and empty — which is the state this whole path
+    // replaced.
+    match ibni_halaqa(&mujallad, tabaqa, &mabni.ruqaa) {
+        Ok(mut halaqa) => {
+            for satr in halaqa.khudh_athar() {
+                sajjil(&mujallad, &format!("loop: {satr}"));
+            }
+            mabni.halaqa = Some(halaqa);
+            sajjil(
+                &mujallad,
+                "running: the overlay reads the screen, caches and draws from this frame on",
+            );
+            Nateeja::Bada
+        },
+        Err(radd) => {
+            sajjil(&mujallad, &radd.satr());
             Nateeja::Radd
         },
     }
+}
+
+/// Resolves everything the loop needs and starts it over a started overlay.
+///
+/// Every part has a fallback except two. The recognizer and the translator can
+/// be absent — the loop then draws the panel and the sentence that says so —
+/// but a font and a data root cannot: without a face there is nothing to shape
+/// the sentence with, and without the data root there is no cache, no history
+/// and no acknowledgement, which the bootstrap already refused over.
+fn ibni_halaqa(mujallad: &Path, tabaqa: Tabaqa, ruqaa: &MalafRuqaa) -> Result<Halaqa, Radd> {
+    let mut athar: Vec<String> = Vec::new();
+    let masarat = Masarat::iktashif().map_err(|khata| {
+        Radd::rafd(format!(
+            "Taarib's data directory cannot be resolved from inside this game: {khata}"
+        ))
+    })?;
+    let (idadat, sabab_idadat) = halaqa::idadat(&masarat);
+    if let Some(sabab) = sabab_idadat.as_deref() {
+        athar.push(format!("settings: unreadable, defaults apply: {sabab}"));
+    }
+    let mujallad_tabaqa = halaqa::mujallad_tabaqa(&masarat);
+
+    // The game's identity and language, from the patch's manifest when it has
+    // them, and from the payload's own directory when it does not.
+    let bayan = ruqaa
+        .ruqaa()
+        .ok()
+        .and_then(|ruqaa| ruqaa.bayan_json().ok());
+    let (luba_bayan, ism_bayan, lugha_bayan) = bayan
+        .as_ref()
+        .map_or((None, None, None), halaqa::luba_min_bayan);
+    let ism = ism_bayan.unwrap_or_else(|| ism_luba(mujallad));
+    let luba = luba_bayan.unwrap_or_else(|| {
+        LubaId::min_masdar(
+            &MasdarLuba::Yadawi(mujallad.display().to_string()),
+            &ism,
+        )
+    });
+    let lugha = lugha_bayan.unwrap_or_else(|| LUGHA_IFTIRADIYA.to_owned());
+    athar.push(format!("game: {ism} ({luba}), source language {lugha}"));
+
+    let mujalladat = halaqa::mujalladat_khutut(&masarat, &idadat, mujallad);
+    let (khutut, masar_khatt) = halaqa::ijad_khutut(&mujalladat).map_err(|khata| {
+        Radd::rafd(format!(
+            "the overlay has nothing to draw Arabic with: {khata}"
+        ))
+    })?;
+    athar.push(format!("font: {}", masar_khatt.display()));
+
+    let qari = halaqa::ikhtar_qari(&masarat, &idadat, mujallad, &lugha);
+
+    // The patch's strings first, the on-disk cache second, a provider last.
+    // The table is copied inside the closure that holds the section: the
+    // section may own decompressed bytes, and the layer must outlive them.
+    let ruqaa_layer = ruqaa
+        .ruqaa()
+        .ok()
+        .and_then(|ruqaa| ruqaa.qism(NawQism::Nusus).ok())
+        .and_then(|qism| {
+            taarib_ruqaa::nusus(qism.bayt())
+                .ok()
+                .map(|jadwal| Arc::new(DhakiraRuqaa::min_jadwal(&jadwal)))
+        });
+    if let Some(layer) = ruqaa_layer.as_ref() {
+        athar.push(format!("patch strings: {}", layer.adad()));
+    }
+    let khazina = match halaqa::iftah_khazina(&mujallad_tabaqa, &lugha) {
+        Ok(khazina) => Some(khazina),
+        Err(khata) => {
+            athar.push(format!(
+                "cache: not opened, so nothing survives this session: {khata}"
+            ));
+            None
+        },
+    };
+    let dhakira: Arc<dyn DhakiraTabaqa> = match (khazina.clone(), ruqaa_layer) {
+        (Some(khazina), ruqaa_layer) => halaqa::dhakira_murakkaba(ruqaa_layer, khazina),
+        (None, Some(ruqaa_layer)) => ruqaa_layer,
+        (None, None) => Arc::new(DhakiraJalsaMushtaraka::iftiradiya()),
+    };
+
+    let (mutarjim, hala_mutarjim) = halaqa::mutarjim_min_idadat(&idadat, sabab_idadat.as_deref());
+    let saa_sijill = usize::try_from(idadat.tabaqa.tul_sijill_qira).unwrap_or(500);
+    let sijill = halaqa::sijill_li(&mujallad_tabaqa, luba, saa_sijill, &mut athar);
+    let manatiq = halaqa::manatiq_li(&mujallad_tabaqa, luba, &ism, &mut athar);
+    let ikhtisarat = halaqa::ikhtisarat_li(&mujallad_tabaqa, &mut athar);
+
+    let mut qissa = Qissa::jadeeda(luba, &ism, KhiyaratQissa::iftiradiya()).bi_dhakira(dhakira);
+    if let Some(mutarjim) = mutarjim {
+        qissa = qissa.bi_mutarjim(mutarjim);
+    }
+    if let Some(sijill) = sijill.as_ref() {
+        qissa = qissa.bi_sijill(sijill.clone());
+    }
+    if let Ok(qari) = qari.as_ref() {
+        qissa = qissa.bi_qari(qari.ism());
+    }
+
+    let makunat = MakunatHalaqa {
+        khutut,
+        qari,
+        qissa,
+        hala_mutarjim,
+        khazina,
+        sijill,
+        manatiq,
+        ikhtisarat,
+        ism_luba: ism,
+        athar,
+    };
+    // The feeder's defaults, plate opaque included. The Studio's plate-opacity
+    // setting is deliberately not applied here: `crate::talqeem` documents why
+    // a translucent plate under a translation leaves two languages saying one
+    // thing in one rectangle, and honouring the setting would reintroduce
+    // exactly that on a tier whose whole job is covering the original.
+    Halaqa::ibda(tabaqa, makunat, KhiyaratHalaqa::iftiradiya())
+        .map_err(|khata| Radd::fashal(format!("the loop could not be built: {khata}")))
+}
+
+/// Runs one frame of the loop, from inside a present hook.
+///
+/// Called by every present thunk after the start attempt. It does nothing
+/// until the overlay has started and nothing again after the loop has disabled
+/// itself, and it never waits: a frame that arrives while another thread holds
+/// the installation — a start attempt, a resize — is a frame the overlay does
+/// not draw on, which is the rule everywhere in this crate.
+///
+/// A panic inside the loop disables it for the session rather than being
+/// retried: the next frame would panic in the same place, and unwinding out of
+/// an `extern "system"` thunk aborts the player's game.
+fn itar_min_thunk() {
+    if !INTAHAT.load(Ordering::Acquire) || HALAQA_MUATTALA.load(Ordering::Acquire) {
+        return;
+    }
+    let natija = std::panic::catch_unwind(AssertUnwindSafe(|| {
+        let Some(mut hirasa) = TARKIB.try_lock() else {
+            return;
+        };
+        let Some(mabni) = hirasa.as_mut() else {
+            return;
+        };
+        let mujallad = mabni.mujallad.clone();
+        let Some(halaqa) = mabni.halaqa.as_mut() else {
+            return;
+        };
+        match halaqa.itar(&saa_mikro, &[]) {
+            Ok(()) => {},
+            Err(khata @ KhataTabaqa::HalaGhayrMustaada { .. }) => {
+                HALAQA_MUATTALA.store(true, Ordering::Release);
+                sajjil(&mujallad, &format!("stopped: {khata}"));
+            },
+            Err(khata) => {
+                // The first twenty in full, then one in a thousand: a surface
+                // mid-transition refuses a frame at a time for a few frames,
+                // and a backend that refuses every frame would otherwise fill
+                // the log with the same sentence at sixty lines a second.
+                let raqm = AKHTA_HALAQA.fetch_add(1, Ordering::Relaxed);
+                if raqm < 20 || raqm.is_multiple_of(1_000) {
+                    sajjil(&mujallad, &format!("frame {raqm} refused: {khata}"));
+                }
+            },
+        }
+        for satr in halaqa.khudh_athar() {
+            sajjil(&mujallad, &format!("loop: {satr}"));
+        }
+    }));
+    if natija.is_err() {
+        HALAQA_MUATTALA.store(true, Ordering::Release);
+        if let Some(mujallad) = mujallad_nafsi() {
+            sajjil(
+                &mujallad,
+                "stopped: the loop panicked inside a frame and will not run again this session",
+            );
+        }
+    }
+}
+
+/// The hook's clock: microseconds since the first time it was read.
+///
+/// The one clock this crate reads, and it is read here rather than in any
+/// module below because this is the hook: the loop measures its own cost with
+/// whatever the caller hands it, and a caller with no clock hands it a counter.
+fn saa_mikro() -> u64 {
+    static BIDAYA: OnceLock<Instant> = OnceLock::new();
+    let mundhu = BIDAYA.get_or_init(Instant::now).elapsed();
+    u64::try_from(mundhu.as_micros()).unwrap_or(u64::MAX)
 }
 
 /// The Direct3D 11 backend, over the swap chain the game just presented.
@@ -1376,7 +1598,7 @@ fn khattaf_d3d10(mujallad: &Path, silsila: *mut c_void) -> Result<Option<Box<dyn
     }
     let imtinaa = match KhattafD3D10::min_silsila(wajiha) {
         Ok(khattaf) => return Ok(Some(Box::new(khattaf))),
-        Err(khata @ crate::khata::KhataTabaqa::ApiGhayrMadum { .. }) => khata,
+        Err(khata @ KhataTabaqa::ApiGhayrMadum { .. }) => khata,
         Err(khata) => {
             return Err(Radd::fashal(format!(
                 "the D3D10 backend could not be built: {khata}"
@@ -1480,6 +1702,7 @@ type DallatTabdil = unsafe extern "C" fn(*mut c_void, core::ffi::c_ulong);
 unsafe extern "system" fn thunk_present(silsila: *mut c_void, fasil: u32, alam: u32) -> HRESULT {
     let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
     shaghghil_min_itar(MasdarKhalfiya::Dxgi(silsila));
+    itar_min_thunk();
 
     let asl = ASL_PRESENT.iqra();
     if asl.is_null() {
@@ -1504,6 +1727,7 @@ unsafe extern "system" fn thunk_present1(
 ) -> HRESULT {
     let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
     shaghghil_min_itar(MasdarKhalfiya::Dxgi(silsila));
+    itar_min_thunk();
 
     let asl = ASL_PRESENT1.iqra();
     if asl.is_null() {
@@ -1536,9 +1760,9 @@ unsafe extern "system" fn thunk_taghyeer(
         // `try_lock`: this runs on a render thread, and blocking it behind a
         // start attempt on another thread would be a visible stall in the game.
         if let Some(mut hirasa) = TARKIB.try_lock()
-            && let Some(tabaqa) = hirasa.as_mut().and_then(|mabni| mabni.tabaqa.as_mut())
+            && let Some(halaqa) = hirasa.as_mut().and_then(|mabni| mabni.halaqa.as_mut())
         {
-            let _ = tabaqa.qabl_taghyeer_hajm();
+            let _ = halaqa.qabl_taghyeer_hajm();
         }
     }));
 
@@ -1646,6 +1870,7 @@ unsafe extern "system" fn thunk_taqdeem9(
 ) -> HRESULT {
     let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
     shaghghil_min_itar(MasdarKhalfiya::D3D9(jihaz));
+    itar_min_thunk();
 
     let asl = ASL_TAQDEEM9.iqra();
     if asl.is_null() {
@@ -1672,6 +1897,7 @@ unsafe extern "system" fn thunk_taqdeem_mumtadd(
 ) -> HRESULT {
     let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
     shaghghil_min_itar(MasdarKhalfiya::D3D9(jihaz));
+    itar_min_thunk();
 
     let asl = ASL_TAQDEEM_MUMTADD.iqra();
     if asl.is_null() {
@@ -1747,9 +1973,9 @@ unsafe extern "system" fn thunk_istiaada_mumtadda(
 fn atliq_qabl_istiaada() {
     let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
         if let Some(mut hirasa) = TARKIB.try_lock()
-            && let Some(tabaqa) = hirasa.as_mut().and_then(|mabni| mabni.tabaqa.as_mut())
+            && let Some(halaqa) = hirasa.as_mut().and_then(|mabni| mabni.halaqa.as_mut())
         {
-            let _ = tabaqa.qabl_taghyeer_hajm();
+            let _ = halaqa.qabl_taghyeer_hajm();
         }
     }));
 }
@@ -1759,6 +1985,7 @@ fn atliq_qabl_istiaada() {
 unsafe extern "system" fn thunk_tabdil(siyaq: *mut c_void) -> BOOL {
     let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
     shaghghil_min_itar(MasdarKhalfiya::Gl);
+    itar_min_thunk();
 
     let asl = ASL_TABDIL.iqra();
     if asl.is_null() {
@@ -1778,6 +2005,7 @@ unsafe extern "system" fn thunk_tabdil(siyaq: *mut c_void) -> BOOL {
 unsafe extern "C" fn thunk_tabdil(aard: *mut c_void, satih: core::ffi::c_ulong) {
     let _hirasa = HirasatDukhul::udkhul(&DUKHUL);
     shaghghil_min_itar(MasdarKhalfiya::Gl);
+    itar_min_thunk();
 
     let asl = ASL_TABDIL.iqra();
     if asl.is_null() {
@@ -1872,8 +2100,8 @@ struct Tarkib {
     masar: Option<Masar>,
     /// The acknowledgement, until the one overlay it enables consumes it.
     iqrar: Option<Iqrar>,
-    /// The overlay, once the first frame produced one.
-    tabaqa: Option<Tabaqa>,
+    /// The loop over the overlay, once the first frame produced one.
+    halaqa: Option<Halaqa>,
 }
 
 impl Tarkib {
@@ -1896,7 +2124,7 @@ impl Tarkib {
             thabit8: None,
             masar: None,
             iqrar: Some(iqrar),
-            tabaqa: None,
+            halaqa: None,
         }
     }
 
@@ -1908,8 +2136,8 @@ impl Tarkib {
     /// already past the entry — which is the same reason
     /// [`crate::khataf::AaddadDukhul`] exists.
     fn fukk(&mut self) {
-        if let Some(tabaqa) = self.tabaqa.as_mut() {
-            let _ = tabaqa.aghliq();
+        if let Some(halaqa) = self.halaqa.as_mut() {
+            let _ = halaqa.aghliq();
         }
         #[cfg(windows)]
         if let Some(thabit8) = self.thabit8.as_mut() {
@@ -2051,8 +2279,19 @@ fn sajjil(mujallad: &Path, satr: &str) {
 /// thunk that is already inside a start attempt on the same thread.
 pub fn bi_tabaqa<T>(amal: impl FnOnce(&mut Tabaqa) -> T) -> Option<T> {
     let mut hirasa = TARKIB.lock();
-    let tabaqa = hirasa.as_mut()?.tabaqa.as_mut()?;
-    Some(amal(tabaqa))
+    let halaqa = hirasa.as_mut()?.halaqa.as_mut()?;
+    Some(amal(halaqa.tabaqa_mut()))
+}
+
+/// Runs `amal` against the live loop, or answers [`None`] when there is none.
+///
+/// For a caller that wants the loop's own account — its counters, the panel,
+/// the last refusal — rather than the overlay under it. The same closure rule
+/// as [`bi_tabaqa`], for the same reason.
+pub fn bi_halaqa<T>(amal: impl FnOnce(&mut Halaqa) -> T) -> Option<T> {
+    let mut hirasa = TARKIB.lock();
+    let halaqa = hirasa.as_mut()?.halaqa.as_mut()?;
+    Some(amal(halaqa))
 }
 
 /// Runs `amal` against the patch this payload holds open beside itself.
@@ -2074,7 +2313,7 @@ pub fn hal_bada() -> bool {
     TARKIB
         .lock()
         .as_ref()
-        .is_some_and(|mabni| mabni.tabaqa.is_some())
+        .is_some_and(|mabni| mabni.halaqa.is_some())
 }
 
 /// Which graphics API this payload attached to, once it has attached to one.
@@ -2086,10 +2325,12 @@ pub fn hal_bada() -> bool {
 /// is the only one there is.
 #[must_use]
 pub fn wajiha_hiya() -> Option<WajihatRusum> {
-    TARKIB
-        .lock()
-        .as_ref()
-        .map(|mabni| mabni.tabaqa.as_ref().map_or(mabni.wajiha, Tabaqa::wajiha))
+    TARKIB.lock().as_ref().map(|mabni| {
+        mabni
+            .halaqa
+            .as_ref()
+            .map_or(mabni.wajiha, |halaqa| halaqa.tabaqa().wajiha())
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -2110,6 +2351,15 @@ static INTAHAT: AtomicBool = AtomicBool::new(false);
 
 /// Whether the wait-for-a-queue line has already been written.
 static NUBBIHA: AtomicBool = AtomicBool::new(false);
+
+/// Whether the loop has disabled itself for the session.
+///
+/// Set on the terminal fault and on a panic inside a frame, and never cleared:
+/// the frame after either would fail in the same place.
+static HALAQA_MUATTALA: AtomicBool = AtomicBool::new(false);
+
+/// How many frames the loop has refused, for throttling the log.
+static AKHTA_HALAQA: AtomicU64 = AtomicU64::new(0);
 
 /// The live installation.
 static TARKIB: Mutex<Option<Tarkib>> = Mutex::new(None);

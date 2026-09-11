@@ -68,7 +68,7 @@ use crate::jadawil::{
 };
 use crate::khata::KhataRuqaa;
 use crate::muhadhah::BaytMuhadhah;
-use crate::qari::miftah_min_nass;
+use crate::qari::{Ruqaa, miftah_min_nass};
 use crate::tarwisa::{
     ALAM_ILTIQAT, ALAM_MASAFA, ALAM_MIRAT, ALAM_TAGHTIYA, AQSA_AQSAM, AQSA_MAJMU_KHAAM,
     AQSA_QISM_KHAAM, HAJM_TARWISA, ISDAR_SIYAGHA, JadwalAqsam, Tarwisa, hajm_usize, sittasi,
@@ -779,144 +779,205 @@ impl Katib {
         }
     }
 
-    /// Lays the sections out, writes the framing, and hashes the result.
+    /// Compresses what pays, then lays the sections out under a signature
+    /// reservation.
+    ///
+    /// The reservation is written under the contributor role, not the
+    /// owner's. Nothing turns on it — `Khwarizmiya::Ghayr` is what makes
+    /// `KutlatTawqee::tahaqquq` refuse the block, whatever the role says, and
+    /// the sealer overwrites all one hundred and twenty-eight bytes including
+    /// this one. It is the less privileged of the two values, and a byte
+    /// claiming ownership that nobody put there is not a byte worth writing.
     fn urkub(&self, khaam: Vec<(NawQism, Vec<u8>)>) -> Result<BaytMuhadhah, KhataRuqaa> {
         let mut makhzuna: Vec<(NawQism, NawDaght, Vec<u8>, u64)> = Vec::with_capacity(8);
-        let mut majmu_khaam: u64 = 0;
         for (naw, bayt) in khaam {
             let tul_khaam = tul_u64(bayt.len());
-            if tul_khaam > AQSA_QISM_KHAAM {
-                return Err(KhataRuqaa::HajmKhaamMufrit {
-                    naw: naw.raqm(),
-                    muallan: tul_khaam,
-                    saqf: AQSA_QISM_KHAAM,
-                });
-            }
-            majmu_khaam = majmu_khaam.checked_add(tul_khaam).ok_or(mufrit_majmu())?;
             let (daght, makhzun) = self.idghat(naw, &bayt)?;
             makhzuna.push((naw, daght, makhzun, tul_khaam));
         }
-
-        // The signature block counts toward the total the reader checks, so it
-        // is added here rather than being quietly exempt. A ceiling the writer
-        // and the reader compute differently is a ceiling that eventually lets
-        // through a file one of them refuses.
-        majmu_khaam = majmu_khaam
-            .checked_add(tul_u64(HAJM_KUTLA))
-            .ok_or(mufrit_majmu())?;
-        if majmu_khaam > AQSA_MAJMU_KHAAM {
-            return Err(KhataRuqaa::MajmuKhaamMufrit {
-                majmu: majmu_khaam,
-                saqf: AQSA_MAJMU_KHAAM,
-            });
-        }
-
-        let adad = makhzuna.len().saturating_add(1);
-        let adad_aqsam = u32::try_from(adad)
-            .ok()
-            .filter(|adad| *adad <= AQSA_AQSAM)
-            .ok_or(KhataRuqaa::AdadAqsamGhayrSalih {
-                adad: u32::MAX,
-                aqsa: AQSA_AQSAM,
-            })?;
-        let mut izaha = tul_u64(HAJM_TARWISA)
-            .checked_add(u64::from(adad_aqsam).saturating_mul(tul_u64(HAJM_MADKHAL)))
-            .ok_or(mufrit_majmu())?;
-
-        let mut madkhalat: Vec<MadkhalQism> = Vec::with_capacity(adad);
-        let mut jism: Vec<(u64, Vec<u8>)> = Vec::with_capacity(adad);
-        for (naw, daght, bayt, tul_khaam) in makhzuna {
-            izaha = muhadhah(izaha)?;
-            let tul_makhzun = tul_u64(bayt.len());
-            madkhalat.push(MadkhalQism {
-                naw,
-                izaha,
-                tul_makhzun,
-                tul_khaam,
-                daght,
-            });
-            jism.push((izaha, bayt));
-            izaha = izaha.checked_add(tul_makhzun).ok_or(mufrit_majmu())?;
-        }
-
-        let izahat_tawqee = muhadhah(izaha)?;
-        madkhalat.push(MadkhalQism {
-            naw: NawQism::Tawqee,
-            izaha: izahat_tawqee,
-            tul_makhzun: tul_u64(HAJM_KUTLA),
-            tul_khaam: tul_u64(HAJM_KUTLA),
-            daght: NawDaght::Bila,
-        });
-        let hajm_kulli = izahat_tawqee
-            .checked_add(tul_u64(HAJM_KUTLA))
-            .ok_or(mufrit_majmu())?;
-        let siaa = hajm_usize(hajm_kulli).ok_or(KhataRuqaa::MajmuKhaamMufrit {
-            majmu: hajm_kulli,
-            saqf: AQSA_MAJMU_KHAAM,
-        })?;
-
-        let mut muhadhah_malaf = BaytMuhadhah::sifr(siaa);
-        let malaf = muhadhah_malaf.bayt_mut();
-
-        for (fahras, madkhal) in madkhalat.iter().enumerate() {
-            let bidaya = HAJM_TARWISA.saturating_add(fahras.saturating_mul(HAJM_MADKHAL));
-            let nihaya = bidaya.saturating_add(HAJM_MADKHAL);
-            let nafidha = malaf
-                .get_mut(bidaya..nihaya)
-                .ok_or_else(|| KhataRuqaa::MalafQaseer {
-                    haql: "the section table",
-                    tul: hajm_kulli,
-                    matlub: tul_u64(nihaya),
-                })?;
-            madkhal.ila_bayt(nafidha)?;
-        }
-
-        for (izaha, bayt) in jism {
-            unsakh(malaf, izaha, &bayt, hajm_kulli)?;
-        }
-
-        // The reservation is written under the contributor role, not the
-        // owner's. Nothing turns on it — `Khwarizmiya::Ghayr` is what makes
-        // `KutlatTawqee::tahaqquq` refuse the block, whatever the role says, and
-        // the sealer overwrites all one hundred and twenty-eight bytes including
-        // this one. It is the less privileged of the two values, and a byte
-        // claiming ownership that nobody put there is not a byte worth writing.
         let mut hajz = [0u8; HAJM_KUTLA];
         KutlatTawqee::hajz(DawrMiftah::Musahim).ila_bayt(&mut hajz);
-        unsakh(malaf, izahat_tawqee, &hajz, hajm_kulli)?;
+        urkub_makhzuna(self.alam, makhzuna, &hajz)
+    }
+}
 
-        let nihayat_muhtawa = hajm_usize(izahat_tawqee).ok_or(KhataRuqaa::MalafQaseer {
-            haql: "the signature block",
+/// The uncompressed working copy of a sealed patch, for an adapter that reads
+/// tables by casting them out of a memory map.
+///
+/// The Unity takeover carries no decompressor — .NET Standard 2.1 has no zstd
+/// and that assembly takes no package by design — so it refuses any section
+/// stored compressed, by name, and reads only what the installer placed
+/// uncompressed. This is what the installer places: every section the sealed
+/// container holds, decompressed, laid out by the same routine that lays out a
+/// compiled patch, under a fresh content hash.
+///
+/// The signature block travels verbatim. It was made over the sealed
+/// container's hash and does not verify over this one, and that is the point
+/// rather than a defect: the installer verified the seal before writing this
+/// file, and the block is kept so the adapter can still report who sealed the
+/// package — the adapter checks the signer's key against the one the installer
+/// recorded and never verifies the signature itself, as its own header states.
+/// A verifier handed this file instead of the sealed one refuses it, which is
+/// correct: this file is not the artifact anybody signed.
+///
+/// # Errors
+///
+/// Whatever [`Ruqaa::iftah`] refuses about the sealed container, whatever
+/// decompressing a section refuses, and whatever the layout refuses — a
+/// decompressed section that exceeds the per-section or total ceilings.
+pub fn nuskha_muarra(bayt: &[u8]) -> Result<BaytMuhadhah, KhataRuqaa> {
+    let ruqaa = Ruqaa::iftah(bayt)?;
+    let mut makhzuna: Vec<(NawQism, NawDaght, Vec<u8>, u64)> = Vec::with_capacity(8);
+    for madkhal in ruqaa.jadwal().madkhalat() {
+        if madkhal.naw == NawQism::Tawqee {
+            continue;
+        }
+        let khaam = ruqaa.qism(madkhal.naw)?.bayt().to_vec();
+        let tul_khaam = tul_u64(khaam.len());
+        makhzuna.push((madkhal.naw, NawDaght::Bila, khaam, tul_khaam));
+    }
+    makhzuna.sort_by_key(|(naw, _, _, _)| naw.raqm());
+    let mut kutla = [0u8; HAJM_KUTLA];
+    ruqaa.tawqee().ila_bayt(&mut kutla);
+    urkub_makhzuna(ruqaa.tarwisa().alam, makhzuna, &kutla)
+}
+
+/// Lays stored sections out, writes the framing and the signature block, and
+/// hashes the result.
+///
+/// `makhzuna` carries each section as it will be stored, with the length it
+/// has once read; `kutla` is the one hundred and twenty-eight bytes that end
+/// the file. Every decision about where a section lands and what the hash
+/// covers is here and nowhere else, which is what lets a compiled patch and its
+/// working copy be framed by one routine.
+fn urkub_makhzuna(
+    alam: u16,
+    makhzuna: Vec<(NawQism, NawDaght, Vec<u8>, u64)>,
+    kutla: &[u8; HAJM_KUTLA],
+) -> Result<BaytMuhadhah, KhataRuqaa> {
+    let mut majmu_khaam: u64 = 0;
+    for (naw, _, _, tul_khaam) in &makhzuna {
+        if *tul_khaam > AQSA_QISM_KHAAM {
+            return Err(KhataRuqaa::HajmKhaamMufrit {
+                naw: naw.raqm(),
+                muallan: *tul_khaam,
+                saqf: AQSA_QISM_KHAAM,
+            });
+        }
+        majmu_khaam = majmu_khaam.checked_add(*tul_khaam).ok_or(mufrit_majmu())?;
+    }
+
+    // The signature block counts toward the total the reader checks, so it
+    // is added here rather than being quietly exempt. A ceiling the writer
+    // and the reader compute differently is a ceiling that eventually lets
+    // through a file one of them refuses.
+    majmu_khaam = majmu_khaam
+        .checked_add(tul_u64(HAJM_KUTLA))
+        .ok_or(mufrit_majmu())?;
+    if majmu_khaam > AQSA_MAJMU_KHAAM {
+        return Err(KhataRuqaa::MajmuKhaamMufrit {
+            majmu: majmu_khaam,
+            saqf: AQSA_MAJMU_KHAAM,
+        });
+    }
+
+    let adad = makhzuna.len().saturating_add(1);
+    let adad_aqsam = u32::try_from(adad)
+        .ok()
+        .filter(|adad| *adad <= AQSA_AQSAM)
+        .ok_or(KhataRuqaa::AdadAqsamGhayrSalih {
+            adad: u32::MAX,
+            aqsa: AQSA_AQSAM,
+        })?;
+    let mut izaha = tul_u64(HAJM_TARWISA)
+        .checked_add(u64::from(adad_aqsam).saturating_mul(tul_u64(HAJM_MADKHAL)))
+        .ok_or(mufrit_majmu())?;
+
+    let mut madkhalat: Vec<MadkhalQism> = Vec::with_capacity(adad);
+    let mut jism: Vec<(u64, Vec<u8>)> = Vec::with_capacity(adad);
+    for (naw, daght, bayt, tul_khaam) in makhzuna {
+        izaha = muhadhah(izaha)?;
+        let tul_makhzun = tul_u64(bayt.len());
+        madkhalat.push(MadkhalQism {
+            naw,
+            izaha,
+            tul_makhzun,
+            tul_khaam,
+            daght,
+        });
+        jism.push((izaha, bayt));
+        izaha = izaha.checked_add(tul_makhzun).ok_or(mufrit_majmu())?;
+    }
+
+    let izahat_tawqee = muhadhah(izaha)?;
+    madkhalat.push(MadkhalQism {
+        naw: NawQism::Tawqee,
+        izaha: izahat_tawqee,
+        tul_makhzun: tul_u64(HAJM_KUTLA),
+        tul_khaam: tul_u64(HAJM_KUTLA),
+        daght: NawDaght::Bila,
+    });
+    let hajm_kulli = izahat_tawqee
+        .checked_add(tul_u64(HAJM_KUTLA))
+        .ok_or(mufrit_majmu())?;
+    let siaa = hajm_usize(hajm_kulli).ok_or(KhataRuqaa::MajmuKhaamMufrit {
+        majmu: hajm_kulli,
+        saqf: AQSA_MAJMU_KHAAM,
+    })?;
+
+    let mut muhadhah_malaf = BaytMuhadhah::sifr(siaa);
+    let malaf = muhadhah_malaf.bayt_mut();
+
+    for (fahras, madkhal) in madkhalat.iter().enumerate() {
+        let bidaya = HAJM_TARWISA.saturating_add(fahras.saturating_mul(HAJM_MADKHAL));
+        let nihaya = bidaya.saturating_add(HAJM_MADKHAL);
+        let nafidha = malaf
+            .get_mut(bidaya..nihaya)
+            .ok_or_else(|| KhataRuqaa::MalafQaseer {
+                haql: "the section table",
+                tul: hajm_kulli,
+                matlub: tul_u64(nihaya),
+            })?;
+        madkhal.ila_bayt(nafidha)?;
+    }
+
+    for (izaha, bayt) in jism {
+        unsakh(malaf, izaha, &bayt, hajm_kulli)?;
+    }
+
+    unsakh(malaf, izahat_tawqee, kutla, hajm_kulli)?;
+
+    let nihayat_muhtawa = hajm_usize(izahat_tawqee).ok_or(KhataRuqaa::MalafQaseer {
+        haql: "the signature block",
+        tul: hajm_kulli,
+        matlub: izahat_tawqee,
+    })?;
+    let muhtawa = malaf
+        .get(HAJM_TARWISA..nihayat_muhtawa)
+        .ok_or(KhataRuqaa::MalafQaseer {
+            haql: "the hashed content",
             tul: hajm_kulli,
             matlub: izahat_tawqee,
         })?;
-        let muhtawa = malaf
-            .get(HAJM_TARWISA..nihayat_muhtawa)
-            .ok_or(KhataRuqaa::MalafQaseer {
-                haql: "the hashed content",
-                tul: hajm_kulli,
-                matlub: izahat_tawqee,
-            })?;
-        let basma = *blake3::hash(muhtawa).as_bytes();
+    let basma = *blake3::hash(muhtawa).as_bytes();
 
-        let tarwisa = Tarwisa {
-            isdar: ISDAR_SIYAGHA,
-            alam: self.alam,
-            adad_aqsam,
-            hajm_kulli,
-            basma,
-        };
-        let ras = malaf
-            .get_mut(..HAJM_TARWISA)
-            .ok_or_else(|| KhataRuqaa::MalafQaseer {
-                haql: "the header",
-                tul: hajm_kulli,
-                matlub: tul_u64(HAJM_TARWISA),
-            })?;
-        tarwisa.ila_bayt(ras)?;
+    let tarwisa = Tarwisa {
+        isdar: ISDAR_SIYAGHA,
+        alam,
+        adad_aqsam,
+        hajm_kulli,
+        basma,
+    };
+    let ras = malaf
+        .get_mut(..HAJM_TARWISA)
+        .ok_or_else(|| KhataRuqaa::MalafQaseer {
+            haql: "the header",
+            tul: hajm_kulli,
+            matlub: tul_u64(HAJM_TARWISA),
+        })?;
+    tarwisa.ila_bayt(ras)?;
 
-        Ok(muhadhah_malaf)
-    }
+    Ok(muhadhah_malaf)
 }
 
 /// Fills a built container's signature reservation, in place.

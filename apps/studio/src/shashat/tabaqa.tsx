@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { kasr } from '@/mustalahat/arqam';
-import { Link, getRouteApi } from '@tanstack/react-router';
+import { getRouteApi } from '@tanstack/react-router';
 import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -11,7 +11,10 @@ import { mafatih } from '@/hayat/istifsar';
 import { useTaraju } from '@/hayat/taraju';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { munassiqat, t } from '@/lugha/lugha';
+import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
+import { Mashhad } from '@/mukawwinat/mashhad';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type {
   Idadat,
   IfsahHie,
@@ -32,7 +35,66 @@ const wajihat = getRouteApi('/tabaqa/$muarrif');
 
 const HADD_SIJILL = 200;
 
+/** How many region rows and history entries the placeholder stands in for. */
+const SUFUF_HAYKAL = 3;
+
 const QAWAID: readonly QaidaHie[] = ['taghayyur', 'muaqqit', 'yadawi'];
+
+/**
+ * The two columns drawn empty: the region table's rows at their own height,
+ * the history's entries at theirs, in the same grid, so the answer lands
+ * where the placeholders stood. The gate is the other body this can become,
+ * and it is a page of reading text; the columns are the shape the screen
+ * settles into, so they are the shape it waits in.
+ */
+function HaykalTabaqa(): JSX.Element {
+  return (
+    <div className="tabaqa__amida" aria-hidden="true">
+      <div className="tabaqa__amud">
+        <section className="tabaqa__qism">
+          <div className="tabaqa__qism-raas">
+            <span className="tabaqa__haykal-satr tabaqa__haykal-satr--unwan" />
+          </div>
+          <span className="tabaqa__haykal-satr tabaqa__haykal-satr--nass" />
+          <div className="tabaqa__jadwal">
+            <ul className="tabaqa__manatiq">
+              {Array.from({ length: SUFUF_HAYKAL }, (_, fihris) => (
+                <li key={fihris} className="tabaqa__mintaqa">
+                  <span className="tabaqa__haykal-murabba" />
+                  <span className="tabaqa__mintaqa-tarif">
+                    <span className="tabaqa__haykal-satr tabaqa__haykal-satr--ism" />
+                    <span className="tabaqa__haykal-satr tabaqa__haykal-satr--qaida" />
+                  </span>
+                  <span className="tabaqa__haykal-satr tabaqa__haykal-satr--raqm" />
+                  <span className="tabaqa__haykal-satr tabaqa__haykal-satr--raqm" />
+                  <span className="tabaqa__haykal-satr tabaqa__haykal-satr--raqm" />
+                  <span className="tabaqa__haykal-satr tabaqa__haykal-satr--raqm" />
+                  <span className="tabaqa__haykal-zir" />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      </div>
+      <aside className="tabaqa__janib">
+        <section className="tabaqa__qism">
+          <div className="tabaqa__qism-raas">
+            <span className="tabaqa__haykal-satr tabaqa__haykal-satr--unwan" />
+          </div>
+          <ul className="tabaqa__sijill">
+            {Array.from({ length: SUFUF_HAYKAL }, (_, fihris) => (
+              <li key={fihris} className="tabaqa__madkhal">
+                <span className="tabaqa__haykal-satr tabaqa__haykal-satr--nass" />
+                <span className="tabaqa__haykal-satr tabaqa__haykal-satr--arabi" />
+                <span className="tabaqa__haykal-satr tabaqa__haykal-satr--waqt" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      </aside>
+    </div>
+  );
+}
 
 const MIFTAH_QAIDA: Readonly<Record<QaidaHie, MiftahLugha>> = {
   taghayyur: 'tabaqa.qaida.taghayyur',
@@ -390,23 +452,28 @@ export function Tabaqa(): JSX.Element {
   const yuhammil = idadat.isPending || ifsah.isPending;
   const khataBawwaba = ifsah.error ?? idadat.error;
   const bayanatManatiq = manatiq.data;
+  const wajh = yuhammil
+    ? 'tahmil'
+    : khataBawwaba !== null
+      ? 'khata'
+      : ifsah.data === undefined
+        ? 'tahmil'
+        : muqarr
+          ? 'jahiz'
+          : 'bawwaba';
 
   return (
     <div className="tabaqa">
-      <header className="tabaqa__shareet-alawi">
-        <Link to="/luba/$muarrif" params={{ muarrif }} className="tabaqa__raji">
-          {t('tabaqa.raji', lugha)}
-        </Link>
-        <span className="tabaqa__fasl">{t('shasha.tabaqa', lugha)}</span>
-        {bayanatManatiq !== undefined ? (
-          <span className="tabaqa__unwan-luba">{bayanatManatiq.ism_luba}</span>
-        ) : null}
-      </header>
+      <RaasShasha
+        rujoo={{ ila: 'luba', muarrif }}
+        nassRujoo={t('tabaqa.raji', lugha)}
+        unwan={t('shasha.tabaqa', lugha)}
+        mawdu={bayanatManatiq?.ism_luba ?? null}
+      />
 
-      {yuhammil ? (
-        <div className="tabaqa__jism">
-          <p className="tabaqa__jari">{t('amm.tahmil', lugha)}</p>
-        </div>
+      <Mashhad miftah={wajh} className="tabaqa__mashhad">
+      {wajh === 'tahmil' ? (
+        <HaykalTabaqa />
       ) : khataBawwaba !== null ? (
         <div className="tabaqa__jism">
           <KutlatKhata
@@ -488,7 +555,7 @@ export function Tabaqa(): JSX.Element {
                   }}
                 />
               ) : bayanatManatiq === undefined ? null : bayanatManatiq.manatiq.length === 0 ? (
-                <p className="tabaqa__faragh">{t('tabaqa.manatiq.faragh', lugha)}</p>
+                <HalatFarigha unwan={t('tabaqa.manatiq.faragh', lugha)} />
               ) : (
                 <div className="tabaqa__jadwal">
                   {/* Column headings for the geometry, not a data row: every
@@ -688,7 +755,7 @@ export function Tabaqa(): JSX.Element {
                   }}
                 />
               ) : sijill.data === undefined ? null : sijill.data.sutur.length === 0 ? (
-                <p className="tabaqa__faragh">{t('tabaqa.sijill.faragh', lugha)}</p>
+                <HalatFarigha unwan={t('tabaqa.sijill.faragh', lugha)} />
               ) : (
                 <>
                   <ul className="tabaqa__sijill">
@@ -764,6 +831,7 @@ export function Tabaqa(): JSX.Element {
           </aside>
         </div>
       )}
+      </Mashhad>
 
       <p className="khafi" role="status">
         {yuhammil ? t('amm.tahmil', lugha) : ''}

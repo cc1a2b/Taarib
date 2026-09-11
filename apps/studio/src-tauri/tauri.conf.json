@@ -54,9 +54,9 @@
     "category": "Utility",
     "shortDescription": "تعريب الألعاب: اكتشاف، ترجمة، معاينة، وتثبيت.",
     "longDescription": "تعريب يفحص الألعاب المثبَّتة على الجهاز، ويتعرّف على محرّكاتها، ويستخرج نصوصها، ويترجمها إلى العربية بتشكيل واتجاه صحيحين، ثم يبني رقعة موقَّعة يمكن تثبيتها والتراجع عنها بأمان.",
-    "copyright": "Copyright (c) cc1a2b",
+    "copyright": "Copyright (c) 2026 CC1A2B, Inc.",
     "license": "MPL-2.0",
-    "publisher": "cc1a2b",
+    "publisher": "CC1A2B, Inc.",
     "homepage": "https://github.com/cc1a2b/taarib",
     "icon": [
       "ayqunat/32x32.png",

@@ -74,7 +74,9 @@
 //! decision — and it does not deploy the runtime adapters, which is `tarkib`'s
 //! table. A game on none of the four engines gets [`None`] and no writes, which
 //! is the answer for every Unity, Unreal and Godot game the installer will ever
-//! see.
+//! see. Unreal's translations still leave the package here, by a second door:
+//! [`maa_mutarjim`] opens the same table for `tarkib`'s additive layer, whose
+//! Unreal container is compiled from it at write time.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -206,6 +208,16 @@ impl<'a> Nashir<'a> {
         self.muthabbit
     }
 
+    /// The package, for the one additive entry built from its translations.
+    ///
+    /// Returned at the package's own lifetime rather than this handle's, so a
+    /// caller can hold the table open while it borrows the recorder mutably —
+    /// which is exactly what writing the Unreal container needs to do.
+    #[must_use]
+    pub const fn ruqaa(&self) -> &'a MalafRuqaa {
+        self.ruqaa
+    }
+
     /// Writes the package's translations into the game's own engine data, under
     /// the permit it is given.
     ///
@@ -274,6 +286,48 @@ impl Mutarjim for MutarjimRuqaa<'_> {
     fn tarjim(&self, asl: &str) -> Option<&str> {
         self.jadwal.tarjama(qari::miftah_min_nass(asl))
     }
+}
+
+// The Unreal container asks the same question the script engines ask, through
+// its own crate's trait, because that crate cannot see this one.
+impl taarib_muhawwil_unreal::hawiya::Mutarjim for MutarjimRuqaa<'_> {
+    fn arabi(&self, asl: &str) -> Option<&str> {
+        self.jadwal.tarjama(qari::miftah_min_nass(asl))
+    }
+}
+
+/// Opens a package's string table for the duration of one call.
+///
+/// The table borrows the package's mapped section, so it cannot be handed out
+/// of the function that opened it; the work that needs it is passed in
+/// instead. `amal` receives [`None`] when the package carries no string table
+/// or an empty one — a font-only patch is a real thing — and the caller decides
+/// what that means for the entry it was building.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::NususMarfuda`] when the package or its table cannot be
+/// read, and whatever `amal` raises.
+pub fn maa_mutarjim<T>(
+    ruqaa: &MalafRuqaa,
+    jidhr_luba: &Path,
+    amal: impl FnOnce(Option<&MutarjimRuqaa<'_>>) -> NatijatTathbeet<T>,
+) -> NatijatTathbeet<T> {
+    let mafateeh = ruqaa
+        .ruqaa()
+        .map_err(|khata| marfud(jidhr_luba, &khata.to_string()))?;
+    if !mafateeh.yahwi(NawQism::Nusus) {
+        return amal(None);
+    }
+    let qism = mafateeh
+        .qism(NawQism::Nusus)
+        .map_err(|khata| marfud(jidhr_luba, &khata.to_string()))?;
+    let jadwal =
+        qari::nusus(qism.bayt()).map_err(|khata| marfud(jidhr_luba, &khata.to_string()))?;
+    if jadwal.khali() {
+        return amal(None);
+    }
+    amal(Some(&MutarjimRuqaa::jadeed(jadwal)))
 }
 
 /// The engine crate's write guard, backed by this crate's recorder.

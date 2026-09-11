@@ -16,38 +16,11 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   block-size: 100%;
+  min-block-size: var(--adna-irtifa-shasha);
   background-color: var(--sath-0);
 }
 
-/* --- the top strip --------------------------------------------------------- */
-
-.tilqai__shareet-alawi {
-  display: flex;
-  align-items: center;
-  gap: var(--misafa-16);
-  block-size: var(--irtifa-shareet);
-  padding-inline: var(--misafa-24);
-  background-color: var(--sath-1);
-  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
-}
-
-.tilqai__raji {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-2);
-  transition: color var(--zaman-hala) var(--munhana);
-}
-
-.tilqai__raji:hover {
-  color: var(--nass-1);
-  transition: none;
-}
-
-.tilqai__fasl {
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
-}
+/* The strip is `mukawwinat/raas_shasha`, shared with every other sub-screen. */
 
 /* --- the scrolling body ---------------------------------------------------- */
 
@@ -294,29 +267,12 @@
   text-wrap: pretty;
 }
 
-/* The failure code, when a run's own failure is reported inside a panel rather
-   than inside a `.halat` block — a run does not fail by rejecting a command, so
-   it has no error block to sit in. The parts and their weights are the family's,
-   because a code leading a failure is the product's rule and this would
-   otherwise be the one place it is not. */
-.tilqai__qism .halat__ramz {
-  display: flex;
-  align-items: center;
-  gap: var(--misafa-8);
-  min-inline-size: 0;
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-3);
-}
-
-.tilqai__qism .halat__ramz > svg {
-  flex: none;
-  color: var(--khatar);
-}
-
-.tilqai__qism .halat__ramz > .mono-ltr {
-  min-inline-size: 0;
-  overflow-wrap: anywhere;
+/* A run's own failure is reported inside its panel rather than inside the
+   failure card — a run does not fail by rejecting a command — and the code
+   takes the card's own foot, `.halat__hamish`, which is unscoped for exactly
+   this: the code is last here too, and copyable here too. */
+.tilqai__qism .halat__hamish {
+  margin-block-start: var(--misafa-4);
 }
 
 .tilqai__hudud {

@@ -2391,9 +2391,12 @@ impl Tafsir for KhataWarshaAmr {
 
     fn khutura(&self) -> Khutura {
         match self {
+            // Not a failure. A game nobody has started translating yet is the
+            // workshop's empty state, and the screen has to be able to tell it
+            // from a warning by the severity rather than by matching the code.
+            Self::MashruGhayrMawjud { .. } => Khutura::Maluma,
             // Asked about something that is not there; nothing was touched.
-            Self::MashruGhayrMawjud { .. }
-            | Self::NassGhayrMawjud { .. }
+            Self::NassGhayrMawjud { .. }
             | Self::IqtirahGhayrMawjud { .. }
             | Self::TadarubGhayrMawjud { .. }
             | Self::LaDamjMaftuh

@@ -19,6 +19,7 @@
 //! | `qiyas` (`qiyas_unreal` in the roadmap) | hooks on Slate's measurement and layout services to correct flow direction, alignment resolution and wrapping where Slate's own resolution is wrong or the game hard-coded left alignment |
 //! | `mawarid` | localization resources: `.locres` v1 through v3 including the city-hash string table form, `.locmeta`, `StringTable` assets, `.pak` v1–v11 with AES-256 where a key is supplied, and UE5 IoStore `.utoc`/`.ucas` |
 //! | `alam` | culture registration: add `ar`, make it active at startup, and either surface it in the game's own language menu or bypass that menu, depending on what the game's UI allows |
+//! | `hawiya` | the additive container itself: every culture's `.locres` rewritten with the patch's Arabic, an `ar` culture added beside them, and the face carried and named where the engine reads a localized fallback-font name |
 //! | `jahiziya` | what this build of the adapter *actually* does, capability by capability, and the one verdict a caller may gate on |
 //!
 //! ## Readiness is answered here, not inferred from this file
@@ -28,9 +29,9 @@
 //! gates on the Unreal path must read — a gate that refuses a one-button run for
 //! an engine that cannot be patched is acting on it, so a hopeful answer there is
 //! a user waiting for a translation that will not arrive. As this is written it
-//! answers [`taarib_mustalahat::muharrik::JahiziyatTashghil::Ghaiba`]: the
-//! offline half reads and writes real containers, and nothing in this package
-//! puts one into a game.
+//! answers [`taarib_mustalahat::muharrik::JahiziyatTashghil::Naqisa`]: the
+//! installer writes [`hawiya`]'s container into the game, the engine mounts it
+//! by name, and no build of the product has yet been watched drawing it.
 //!
 //! ## The one place a font is handed to an engine
 //!
@@ -83,6 +84,7 @@ pub mod alam;
 /// The in-process bootstrap. See this crate's `hamula` feature.
 #[cfg(feature = "hamula")]
 pub mod bidaya;
+pub mod hawiya;
 pub mod isdar;
 pub mod jahiziya;
 pub mod khata;

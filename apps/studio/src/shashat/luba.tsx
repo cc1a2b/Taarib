@@ -28,6 +28,8 @@ import {
 } from '@/maktaba/tabaqat';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
+import { Mashhad } from '@/mukawwinat/mashhad';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type {
   AqlLubaHie,
   BinaHie,
@@ -50,6 +52,7 @@ import type {
   RuqaaLuba,
   ShahidHie,
   TafasilLuba,
+  TaqaddumTanzeel,
   TaqreerHie,
   TaqreerTahaqquqHie,
 } from '@/mustalahat/awamir';
@@ -1877,12 +1880,18 @@ function QismRuqaa({
   });
 
   const [marhala, setMarhala] = useState<string | null>(null);
+  // The download is the one countable stretch of an install: the listing
+  // declares the bytes, so the bar draws against them and stops at the last
+  // report. The install stages after it are named, not counted.
+  const [tanzil, setTanzil] = useState<TaqaddumTanzeel | null>(null);
   useEffect(() => {
     const ilgha = listen<string>(HADATH_MARHALAT_TATHBEET, (hadath) => {
       setMarhala(hadath.payload);
+      setTanzil(null);
     });
-    const ilghaTanzeel = listen<{ marhala_arabi: string }>(HADATH_TAQADDUM_TANZEEL, (hadath) => {
+    const ilghaTanzeel = listen<TaqaddumTanzeel>(HADATH_TAQADDUM_TANZEEL, (hadath) => {
       setMarhala(hadath.payload.marhala_arabi);
+      setTanzil(hadath.payload.tamma ? null : hadath.payload);
     });
     return () => {
       void ilgha.then((f) => { f(); });
@@ -1902,6 +1911,7 @@ function QismRuqaa({
     },
     onSettled: () => {
       setMarhala(null);
+      setTanzil(null);
     },
     onSuccess: () => {
       void makhzan.invalidateQueries({ queryKey: mafatih.tafasil(muarrif) });
@@ -2349,6 +2359,31 @@ function QismRuqaa({
             {tathbeet.isPending ? (
               <p className="luba__jari">{marhala ?? t('luba.ruqaa.jari_tathbeet', lugha)}</p>
             ) : null}
+            {tathbeet.isPending && tanzil !== null && tanzil.majmu > 0 ? (
+              <div className="luba__miqyas">
+                <div
+                  className="luba__miqyas-masar"
+                  role="progressbar"
+                  aria-label={t('luba.ruqaa.tanzil', lugha)}
+                  aria-valuemin={0}
+                  aria-valuemax={tanzil.majmu}
+                  aria-valuenow={Math.min(tanzil.manqul, tanzil.majmu)}
+                >
+                  <span
+                    className="luba__miqyas-malu"
+                    style={{
+                      inlineSize: `${String(Math.min(100, (tanzil.manqul / tanzil.majmu) * 100))}%`,
+                    }}
+                  />
+                </div>
+                <p className="luba__miqyas-nass">
+                  {t('amm.taqaddum.min', lugha, {
+                    tamma: tanzil.manqul_maqru,
+                    majmu: tanzil.majmu_maqru,
+                  })}
+                </p>
+              </div>
+            ) : null}
             {tathbeet.error !== null ? (
               <KutlatKhata
                 unwan={t('luba.khata.amal', lugha)}
@@ -2658,25 +2693,31 @@ export function Luba(): JSX.Element {
     void idadat.refetch();
   };
 
+  const wajh = yuhammil ? 'tahmil' : khata !== null ? 'khata' : bayanat === undefined ? 'tahmil' : 'jahiz';
+
   return (
     <div className="luba" style={uslubLuba}>
-      <header className="luba__shareet-alawi">
-        <Link to="/" className="luba__raji">
-          {t('luba.raji', lugha)}
-        </Link>
-        <span className="luba__fasl">{t('shasha.luba', lugha)}</span>
-        <Link to="/warsha/$muarrif" params={{ muarrif }} className="luba__raji">
-          {t('shasha.warsha', lugha)}
-        </Link>
-        <Link to="/taqdeem/$muarrif" params={{ muarrif }} className="luba__raji">
-          {t('shasha.taqdeem', lugha)}
-        </Link>
-        <Link to="/tabaqa/$muarrif" params={{ muarrif }} className="luba__raji">
-          {t('shasha.tabaqa', lugha)}
-        </Link>
-      </header>
+      <RaasShasha
+        rujoo={{ ila: 'maktaba' }}
+        nassRujoo={t('luba.raji', lugha)}
+        unwan={t('shasha.luba', lugha)}
+        mawdu={bayanat?.ism ?? null}
+        rawabit={
+          <>
+            <Link to="/warsha/$muarrif" params={{ muarrif }} className="raas-shasha__rabt">
+              {t('shasha.warsha', lugha)}
+            </Link>
+            <Link to="/taqdeem/$muarrif" params={{ muarrif }} className="raas-shasha__rabt">
+              {t('shasha.taqdeem', lugha)}
+            </Link>
+            <Link to="/tabaqa/$muarrif" params={{ muarrif }} className="raas-shasha__rabt">
+              {t('shasha.tabaqa', lugha)}
+            </Link>
+          </>
+        }
+      />
 
-      <div className="luba__jism">
+      <Mashhad miftah={wajh} className="luba__jism">
         {yuhammil ? (
           <div className="luba__haykal" aria-hidden="true">
             <div className="luba__haykal-mirsa">
@@ -2721,7 +2762,7 @@ export function Luba(): JSX.Element {
                 />
               )}
               <div className="luba__mirsa-nass">
-                <h1 className="luba__ism">{bayanat.ism}</h1>
+                <h2 className="luba__ism">{bayanat.ism}</h2>
                 <dl className="luba__jadwal">
                   <Saff unwan={t('luba.mirsa.masar', lugha)}>
                     <span className="mono-ltr luba__qat" title={bayanat.jidhr}>
@@ -3199,11 +3240,11 @@ export function Luba(): JSX.Element {
             </div>
           </>
         )}
+      </Mashhad>
 
-        <p className="khafi" role="status">
-          {yuhammil ? t('amm.tahmil', lugha) : ''}
-        </p>
-      </div>
+      <p className="khafi" role="status">
+        {yuhammil ? t('amm.tahmil', lugha) : ''}
+      </p>
     </div>
   );
 }

@@ -10,7 +10,10 @@ import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t } from '@/lugha/lugha';
+import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
+import { Mashhad } from '@/mukawwinat/mashhad';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type {
   Idadat,
   IrsalHie,
@@ -49,6 +52,52 @@ const MIFTAH_TAREEQA: Readonly<Record<string, MiftahLugha>> = {
 
 /** The `sallim_taqdeem` refusal that means: no device authorization ran yet. */
 const RAMZ_TAWTHIQ_NAQIS = 'TAARIB-E-9076';
+
+/** The three stages the spine holds, so the placeholder holds three too. */
+const KHUTUWAT_HAYKAL = 3;
+
+/**
+ * The wizard drawn empty: the spine with its three markers, and the first
+ * section's heading and fields at the heights the real ones take, so the form
+ * lands where the placeholder stood rather than a sentence's height under it.
+ */
+function HaykalTaqdeem(): JSX.Element {
+  return (
+    <div className="taqdeem__lawh" aria-hidden="true">
+      <aside className="taqdeem__janib">
+        <ol className="taqdeem__masar">
+          {Array.from({ length: KHUTUWAT_HAYKAL }, (_, fihris) => (
+            <li key={fihris} className="taqdeem__khatwa">
+              <span className="taqdeem__khatwa-ramz" />
+              <span className="taqdeem__haykal-satr taqdeem__haykal-satr--khatwa" />
+            </li>
+          ))}
+        </ol>
+      </aside>
+      <div className="taqdeem__amud">
+        <section className="taqdeem__qism">
+          <div className="taqdeem__unwan-qism">
+            <span className="taqdeem__haykal-satr taqdeem__haykal-satr--unwan" />
+          </div>
+          <div className="taqdeem__namudhaj">
+            <div className="taqdeem__haql-majmua">
+              <span className="taqdeem__haykal-satr taqdeem__haykal-satr--tasmiya" />
+              <span className="taqdeem__haykal-haql" />
+            </div>
+            <div className="taqdeem__haql-majmua">
+              <span className="taqdeem__haykal-satr taqdeem__haykal-satr--tasmiya" />
+              <span className="taqdeem__haykal-haql taqdeem__haykal-haql--nassi" />
+            </div>
+            <div className="taqdeem__haql-majmua">
+              <span className="taqdeem__haykal-satr taqdeem__haykal-satr--tasmiya" />
+              <span className="taqdeem__haykal-haql taqdeem__haykal-haql--nassi" />
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
 
 /**
  * The gate's verdicts are drawn as three distinct shapes, not three hues.
@@ -400,21 +449,25 @@ export function Taqdeem(): JSX.Element {
     [bayanat, jahiza, ursilat],
   );
 
+  const wajh = yuhammil ? 'tahmil' : musawwada.error !== null ? 'khata' : 'jahiz';
+
   return (
     <div className="taqdeem">
-      <header className="taqdeem__shareet-alawi">
-        <Link to="/luba/$muarrif" params={{ muarrif }} className="taqdeem__raji">
-          {t('taqdeem.raji', lugha)}
-        </Link>
-        <span className="taqdeem__fasl">{t('shasha.taqdeem', lugha)}</span>
-        {jalsa.data !== undefined ? (
-          <span className="taqdeem__jalsa mono-ltr">{jalsa.data.musahim}</span>
-        ) : null}
-      </header>
+      <RaasShasha
+        rujoo={{ ila: 'luba', muarrif }}
+        nassRujoo={t('taqdeem.raji', lugha)}
+        unwan={t('shasha.taqdeem', lugha)}
+        mawdu={bayanat?.ism_luba ?? null}
+        tafasil={
+          jalsa.data === undefined ? null : (
+            <span className="mono-ltr">{jalsa.data.musahim}</span>
+          )
+        }
+      />
 
-      <div className="taqdeem__jism">
-        {yuhammil ? (
-          <p className="taqdeem__jari">{t('amm.tahmil', lugha)}</p>
+      <Mashhad miftah={wajh} className="taqdeem__jism">
+        {wajh === 'tahmil' ? (
+          <HaykalTaqdeem />
         ) : musawwada.error !== null ? (
           <KutlatKhata
             unwan={t('taqdeem.khata.tahmil', lugha)}
@@ -805,7 +858,14 @@ export function Taqdeem(): JSX.Element {
                   {t('taqdeem.musahamat.unwan', lugha)}
                 </h2>
                 {musahamat.isPending ? (
-                  <p className="taqdeem__jari">{t('amm.tahmil', lugha)}</p>
+                  <ul className="taqdeem__musahamat" aria-hidden="true">
+                    {Array.from({ length: 2 }, (_, fihris) => (
+                      <li key={fihris} className="taqdeem__musahama">
+                        <span className="taqdeem__haykal-satr taqdeem__haykal-satr--unwan-musahama" />
+                        <span className="taqdeem__haykal-satr taqdeem__haykal-satr--luba" />
+                      </li>
+                    ))}
+                  </ul>
                 ) : musahamat.error !== null ? (
                   <KutlatKhata
                     unwan={t('taqdeem.khata.tahmil', lugha)}
@@ -817,14 +877,11 @@ export function Taqdeem(): JSX.Element {
                     }}
                   />
                 ) : musahamat.data === undefined || musahamat.data.length === 0 ? (
-                  <div className="taqdeem__faragh">
-                    <p className="taqdeem__faragh-nass">
-                      {t('taqdeem.musahamat.la_shay', lugha)}
-                    </p>
+                  <HalatFarigha unwan={t('taqdeem.musahamat.la_shay', lugha)}>
                     <Link to="/warsha/$muarrif" params={{ muarrif }} className="zir">
                       {t('khutwa.fath_nusus', lugha)}
                     </Link>
-                  </div>
+                  </HalatFarigha>
                 ) : (
                   <ul className="taqdeem__musahamat">
                     {musahamat.data.map((musahama) => (
@@ -864,7 +921,7 @@ export function Taqdeem(): JSX.Element {
             </div>
           </div>
         )}
-      </div>
+      </Mashhad>
 
       <p className="khafi" role="status">
         {yuhammil ? t('amm.tahmil', lugha) : ''}

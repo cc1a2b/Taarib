@@ -214,6 +214,14 @@
   margin-inline: var(--misafa-24);
 }
 
+/* The two pages the router draws for itself — an address nothing routes and a
+   route that threw — put a block in this region with no grid under it to hand
+   the scrolling to, so the region scrolls for them. The library's own path
+   never takes this modifier and keeps its single scroller. */
+.jism--mutadahrij {
+  overflow-y: auto;
+}
+
 /* `.halat`, `.zir` and their parts used to be declared here. They are base-layer
    components that nine screens use, so they now live in `nizam/qaida.css` —
    above the `.zir--*` variants, which a screen stylesheet emitted after this
@@ -775,6 +783,37 @@
   margin-inline: var(--misafa-24);
   font-size: var(--qiyas-2);
   color: var(--nass-2);
+}
+
+/* The bulk install's meter, against the games that were selected: the same
+   two-hairline bar every countable wait in the product draws. */
+.maktaba__miqyas {
+  display: grid;
+  gap: var(--misafa-6);
+  max-inline-size: 56ch;
+  margin-block-start: var(--misafa-8);
+  margin-inline: var(--misafa-24);
+}
+
+.maktaba__miqyas-masar {
+  block-size: var(--samk-hadd-barz);
+  background-color: var(--sath-3);
+  border-radius: var(--nisf-hadd);
+  overflow: hidden;
+}
+
+.maktaba__miqyas-malu {
+  display: block;
+  block-size: 100%;
+  background-color: var(--tamyeez);
+  transition: inline-size var(--zaman-lawha) var(--munhana);
+}
+
+.maktaba__miqyas-nass {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
 }
 
 /* The failed actions, stacked as the shared error block, under the grid.

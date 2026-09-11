@@ -239,9 +239,15 @@
 //! * Every engine from 4.17 through UE5 loads a version 5 index through its
 //!   legacy path, which it must keep for the patch paks its own users shipped.
 //!
-//! A game whose engine predates 4.17 is outside the writer, not outside the
-//! reader: versions 1 through 4 are read here and are not written, and
-//! [`ISDAR_KITABA`] is the one constant that would change.
+//! A game whose engine predates 4.17 declares a lower version in its own
+//! containers, and an engine refuses a container newer than it can read — a
+//! 4.13 title reads version 3 and would leave a version 5 patch unmounted with
+//! one line in its log. So [`KatibPak::bi_isdar`] follows the game down:
+//! [`IsdarPak::lil_kitaba`] takes the game's own version, caps it at
+//! [`ISDAR_KITABA`], and refuses below 3, where entries cannot even say "not
+//! compressed, not encrypted". Between 3 and 5 the entry bytes this writer
+//! emits are identical; only the footer's flag byte, which arrived at 4, comes
+//! and goes.
 //!
 //! ## `_P`, and why the patch is one deletable file
 //!
@@ -289,13 +295,21 @@ pub const SIHR: u32 = 0x5A6F_12E1;
 /// The highest container version this build reads.
 pub const AQSA_ISDAR: u32 = 11;
 
-/// The container version [`KatibPak`] writes.
+/// The highest container version [`KatibPak`] writes, and its default.
 ///
 /// Five. The justification is in this module's header, and it is short: version
 /// 5 is the lowest version whose entries mean the same thing to every engine
 /// from 4.17 through UE5, and every version above it adds a structure a patch
-/// does not need and could get wrong.
+/// does not need and could get wrong. A game whose own containers are older
+/// gets its own version instead — see [`IsdarPak::lil_kitaba`].
 pub const ISDAR_KITABA: u32 = 5;
+
+/// The lowest container version [`KatibPak`] writes.
+///
+/// Three is where an entry first carries its encryption flag and block size,
+/// which is what lets a writer state "raw, unencrypted" in fields the engine
+/// reads rather than in fields it infers from the version.
+pub const ADNA_ISDAR_KITABA: u32 = 3;
 
 /// How many bytes at the end of a `.pak` the footer search reads.
 ///
@@ -450,6 +464,34 @@ impl IsdarPak {
             });
         }
         Ok(Self(raqm))
+    }
+
+    /// The version [`KatibPak`] writes for a game whose containers declare
+    /// this one.
+    ///
+    /// The game's own version, capped at [`ISDAR_KITABA`]: an engine reads
+    /// every version up to its own and none above it, so a patch written at the
+    /// game's version is always mountable and a patch written above it never
+    /// is. Version 5 stays the ceiling for the reasons in this module's header.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataUnreal::MawridTalif`] below [`ADNA_ISDAR_KITABA`]: a version 1 or
+    /// 2 entry has no encryption flag and no block size, and this writer does
+    /// not produce a layout it cannot state those two facts in.
+    pub fn lil_kitaba(self) -> Result<Self, KhataUnreal> {
+        if self.0 < ADNA_ISDAR_KITABA {
+            return Err(talif(
+                "the container version, below the lowest this writer can express",
+                u64::from(self.0),
+                u64::from(ADNA_ISDAR_KITABA),
+            ));
+        }
+        Ok(Self(if self.0 > ISDAR_KITABA {
+            ISDAR_KITABA
+        } else {
+            self.0
+        }))
     }
 
     /// Version 2. Entries no longer carry an `int64` timestamp.
@@ -2920,11 +2962,12 @@ pub fn ism_dhu_awlawiya(ism: &str) -> bool {
 /// those would be a structure this module could get wrong in a way that mounts
 /// and then misbehaves.
 ///
-/// It writes pak version [`ISDAR_KITABA`]; the justification is in this module's
-/// header.
+/// It writes pak version [`ISDAR_KITABA`] unless [`Self::bi_isdar`] lowers it
+/// to the game's own; the justification is in this module's header.
 #[derive(Debug, Clone)]
 pub struct KatibPak {
     nuqtat_wasl: String,
+    isdar: IsdarPak,
     malafat: BTreeMap<String, Vec<u8>>,
 }
 
@@ -2955,8 +2998,29 @@ impl KatibPak {
         }
         Self {
             nuqtat_wasl: wasl,
+            isdar: IsdarPak(ISDAR_KITABA),
             malafat: BTreeMap::new(),
         }
+    }
+
+    /// Writes the container at the version a game's own containers declare.
+    ///
+    /// The value to pass is the game's, straight from [`TadhyeelPak::isdar`];
+    /// [`IsdarPak::lil_kitaba`] does the capping and the refusing, so a caller
+    /// never chooses a number itself.
+    ///
+    /// # Errors
+    ///
+    /// Whatever [`IsdarPak::lil_kitaba`] refuses.
+    pub fn bi_isdar(mut self, isdar_luba: IsdarPak) -> Result<Self, KhataUnreal> {
+        self.isdar = isdar_luba.lil_kitaba()?;
+        Ok(self)
+    }
+
+    /// The version this container will declare.
+    #[must_use]
+    pub const fn isdar(&self) -> IsdarPak {
+        self.isdar
     }
 
     /// Adds one file, replacing any file already at that path.
@@ -3011,10 +3075,15 @@ impl KatibPak {
         self.malafat.is_empty()
     }
 
+    /// Every path it holds, in the order it will store them.
+    pub fn masarat(&self) -> impl Iterator<Item = &str> + '_ {
+        self.malafat.keys().map(String::as_str)
+    }
+
     /// Serializes the whole container.
     ///
     /// ```text
-    /// the container this writes — version 5, little-endian
+    /// the container this writes — version 3, 4 or 5, little-endian
     ///
     ///   for each file, in sorted path order:
     ///     53 bytes  the entry header, with its offset written as zero
@@ -3024,10 +3093,10 @@ impl KatibPak {
     ///     i32       how many entries follow
     ///     for each: FString path, then the same 53-byte header with the
     ///               absolute offset of that file's own header
-    ///   the footer, 45 bytes:
-    ///     u8        the index encryption flag, zero
+    ///   the footer, 44 bytes at version 3 and 45 from version 4:
+    ///     u8        the index encryption flag, zero — version 4 and later
     ///     u32       the magic
-    ///     u32       5
+    ///     u32       the version
     ///     i64 i64   where the index is and how long
     ///     [u8; 20]  its SHA-1
     /// ```
@@ -3046,7 +3115,7 @@ impl KatibPak {
     /// because "cannot happen" is not a thing a serializer should assume about
     /// input it did not choose.
     pub fn ila_bayt(&self) -> Result<Vec<u8>, KhataUnreal> {
-        let isdar = IsdarPak::min_raqm(ISDAR_KITABA)?;
+        let isdar = self.isdar;
         let mut katib = Katib::jadeed();
         let mut mawaqi: Vec<(&str, u64, u64, [u8; HAJM_BASMA])> =
             Vec::with_capacity(self.malafat.len());
@@ -3086,7 +3155,11 @@ impl KatibPak {
         let basmat_fahras = basma_bayt(&bayt_fahras);
         katib.uktub_bayt(&bayt_fahras);
 
-        katib.uktub_u8(0);
+        // The flag byte exists from version 4; a version 3 reader seeks
+        // forty-four bytes from the end and would find the magic one byte late.
+        if isdar.tashfeer_fahras() {
+            katib.uktub_u8(0);
+        }
         katib.uktub_u32(SIHR);
         katib.uktub_u32(isdar.raqm());
         katib.uktub_i64(musir(izahat_fahras, "the index offset")?);

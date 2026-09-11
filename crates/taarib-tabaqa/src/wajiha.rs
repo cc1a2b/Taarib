@@ -1029,6 +1029,44 @@ impl Tabaqa {
         self.khattaf.iltaqit(bikselat)
     }
 
+    /// Captures a pixel rectangle of the presented frame, checked against the
+    /// surface this overlay last validated.
+    ///
+    /// The pixel form of [`Tabaqa::iltaqit`], for a caller that already
+    /// resolved its regions against [`Tabaqa::sath`] this frame and must not
+    /// have them re-derived from a surface the backend may report differently a
+    /// microsecond later. The rectangle is checked here rather than trusted:
+    /// a rectangle past the surface's edge is what a capture path reads
+    /// somebody else's memory with.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataTabaqa::MintaqaKharij`] when the rectangle has no area or does
+    /// not lie on the validated surface, [`KhataTabaqa::SathTaghayyar`] when
+    /// no surface has been validated yet, plus whatever [`Khattaf::iltaqit`]
+    /// refuses.
+    pub fn iltaqit_bikselat(
+        &mut self,
+        mintaqa: MustatilBiksel,
+        ism: &str,
+    ) -> Result<Vec<u8>, KhataTabaqa> {
+        let Some(sath) = self.sath else {
+            return Err(KhataTabaqa::SathTaghayyar {
+                sabab: "no surface has been validated yet this session".to_owned(),
+            });
+        };
+        let yameen = mintaqa.yasar.saturating_add(mintaqa.ard);
+        let asfal = mintaqa.aala.saturating_add(mintaqa.irtifa);
+        if mintaqa.ard == 0 || mintaqa.irtifa == 0 || yameen > sath.ard || asfal > sath.irtifa {
+            return Err(KhataTabaqa::MintaqaKharij {
+                mintaqa: ism.to_owned(),
+                ard: sath.ard,
+                irtifa: sath.irtifa,
+            });
+        }
+        self.khattaf.iltaqit(mintaqa)
+    }
+
     /// Uploads a new glyph atlas.
     ///
     /// # Errors

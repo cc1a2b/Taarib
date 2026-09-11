@@ -40,6 +40,10 @@
 //! | `watira` | the refresh governor: when the per-frame budget is exceeded the overlay gives up how often it reads the screen, never the frames it draws, and says so |
 //! | `mutarjim` | the two seams to a translation provider and to the shared translation memory, taken as trait objects so no HTTP stack or database is linked into a game's process |
 //! | `qissa` | the session: capture on the frame, recognize and translate off it, draw the most recent completed result |
+//! | `khazina` | the translation cache that outlives the process — one append-only file per source language under the data root, consulted before any provider — and the patch's own string table as the layer in front of it |
+//! | `mutarjim_mahalli` | the one provider a payload can reach with the standard library alone: a local OpenAI-compatible server over plain HTTP, and the stated sentence for every provider it cannot reach |
+//! | `dakhl` | the panel's chords read off the keyboard from inside a frame, on Windows, by polling — and the honest account of what a poll cannot do |
+//! | `halaqa` | the per-frame loop that joins all of the above: pick up the worker's result, read the chords, capture what is due, draw what finished, and say on screen why nothing is drawn when nothing is |
 //!
 //! ## Five APIs, five honest implementations
 //!
@@ -134,13 +138,17 @@
 /// The in-process bootstrap. See this crate's `hamula` feature.
 #[cfg(feature = "hamula")]
 pub mod bidaya;
+pub mod dakhl;
+pub mod halaqa;
 pub mod iltiqat_shasha;
 pub mod istitlaa;
 pub mod khata;
 pub mod khataf;
+pub mod khazina;
 pub mod lawhat_tahakkum;
 pub mod manatiq;
 pub mod mutarjim;
+pub mod mutarjim_mahalli;
 pub mod qira;
 pub mod qissa;
 pub mod qudra;
@@ -208,11 +216,14 @@ pub mod d3d8;
 #[cfg(windows)]
 pub mod d3d10;
 
+pub use crate::halaqa::{Halaqa, IhsaatHalaqa, KhiyaratHalaqa, MakunatHalaqa};
 pub use crate::khata::KhataTabaqa;
+pub use crate::khazina::{DhakiraMalaf, DhakiraMurakkaba, DhakiraRuqaa, IhsaatKhazina};
 pub use crate::mutarjim::{
     DhakiraJalsa, DhakiraJalsaMushtaraka, DhakiraTabaqa, MutarjimTabaqa, QaydTabaqa, RaddSatr,
     TalabSatr,
 };
+pub use crate::mutarjim_mahalli::{HalatMutarjim, MutarjimMahalli};
 pub use crate::qissa::{
     HalatDaf, HalatKhayt, KhaytQissa, KhiyaratQissa, LaqtaTarjama, Munassiq, Qissa,
 };

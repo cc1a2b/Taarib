@@ -26,6 +26,17 @@ taarib-khatm = { workspace = true }
 # manifest is durable and the game is proven not to be running; `nusus` is the
 # single dispatch point and nothing else here reaches into that crate.
 taarib-muhawwil-nusus = { workspace = true }
+# The Unreal container. The deployment step builds the additive `.pak` the
+# engine mounts — the game's own `.locres` rewritten with the package's Arabic
+# and the face beside them — through the adapter's own assembler, and writes it
+# through this crate's recorder so an uninstall deletes it.
+taarib-muhawwil-unreal = { workspace = true }
+# The one question the framework table cannot ask about an Unreal game: whether
+# its shipping executable imports the module Taarib's proxy stands in for. Read
+# off the import table, mapped rather than read, because a shipping executable
+# is a hundred megabytes and the answer is in its first few.
+object = { workspace = true }
+memmap2 = { workspace = true }
 
 # The fingerprints the whole reversibility contract rests on. Every original is
 # hashed before it is preserved and every restore is verified against that hash,

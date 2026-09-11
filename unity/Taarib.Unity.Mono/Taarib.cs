@@ -56,12 +56,13 @@ using System.IO;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
-// BepInEx 6 moved BaseUnityPlugin out of the BepInEx root namespace, unlike
-// BepInPlugin, ConfigEntry and ManualLogSource above.
-using BepInEx.Unity.Mono;
+// BaseUnityPlugin lives in the BepInEx root namespace on the 5.x line this
+// assembly now targets; the 6.x line moved it to BepInEx.Unity.Mono, and a
+// build against that namespace is one BepInEx 5 cannot load at all.
 using HarmonyLib;
 using Taarib.Unity.Jisr;
 using Taarib.Unity.Mono.Anzimat;
+using Taarib.Unity.Mono.Suluk;
 using Taarib.Unity.Mushtarak;
 using UnityEngine;
 
@@ -219,8 +220,15 @@ namespace Taarib.Unity.Mono
         /// <summary>The plugin's version.</summary>
         public const string Isdar = "0.1.0";
 
-        /// <summary>The folder, beside the plugin, that the installer writes into.</summary>
+        /// <summary>The folder, beside the plugin, a hand-assembled layout may use.</summary>
         public const string DalilTaarib = "Taarib";
+
+        /// <summary>
+        /// The folder under the game root the installer writes package content
+        /// into: <c>taarib-tathbeet</c>'s <c>MUJALLAD_TAARIB</c>, lower-case, and
+        /// the same for every engine.
+        /// </summary>
+        public const string DalilRuqaaFiAlLuba = "taarib";
 
         /// <summary>The subfolder holding the font files the patch names.</summary>
         public const string DalilKhutut = "khutut";
@@ -256,6 +264,7 @@ namespace Taarib.Unity.Mono
         private SiyaqIstila? istila;
         private MawaridIstila? mawarid;
         private string dalil = string.Empty;
+        private string dalilMulhaq = string.Empty;
 
         /// <summary>What state the takeover reached.</summary>
         public HalatTaarib Halat { get; private set; } = HalatTaarib.Bila;
@@ -276,6 +285,11 @@ namespace Taarib.Unity.Mono
         {
             try
             {
+                // Every behaviour and adapter reports why it switched itself
+                // off through this one sink. It was never assigned, so every
+                // such sentence — including the one naming the missing shader
+                // that stopped every Unity game — was computed and dropped.
+                Rabt.Sijill = sabab => Logger.LogWarning(sabab);
                 IqraIdadat();
                 if (!mufaal.Value)
                 {
@@ -284,7 +298,8 @@ namespace Taarib.Unity.Mono
                     return;
                 }
 
-                dalil = DalilAlMulhaq();
+                dalilMulhaq = DalilAlMulhaq();
+                dalil = DalilAlRuqaa(dalilMulhaq);
                 Hammil();
 
                 // Built into locals and published to the fields afterwards. The
@@ -451,27 +466,57 @@ namespace Taarib.Unity.Mono
                 + "it has not drawn recently rather than growing inside the game's memory.");
         }
 
+        /// <summary>The directory this plugin assembly was loaded from.</summary>
+        /// <remarks>
+        /// Where the native library lives — <c>jisr/&lt;arch&gt;/</c> is staged
+        /// beside the managed assemblies and nowhere else — and deliberately not
+        /// where the patch is looked for. The two were one value once, and that
+        /// is one of the reasons nothing ever reached the screen: the installer
+        /// places the package under the game root and this plugin looked beside
+        /// itself.
+        /// </remarks>
         private string DalilAlMulhaq()
         {
             string? mawdi = Info?.Location;
             string? qaida = string.IsNullOrEmpty(mawdi)
                 ? Paths.PluginPath
                 : Path.GetDirectoryName(mawdi);
-            if (string.IsNullOrEmpty(qaida))
-            {
-                qaida = Paths.PluginPath;
-            }
+            return string.IsNullOrEmpty(qaida) ? Paths.PluginPath : qaida;
+        }
 
-            // The installer writes into <plugins>/Taarib/. When the plugin
-            // assembly itself already sits in that folder, the patch is beside
-            // it rather than one level down.
-            string maa = Path.Combine(qaida, DalilTaarib);
-            return Directory.Exists(maa) ? maa : qaida;
+        /// <summary>The directory the installed patch and its fonts are read from.</summary>
+        /// <remarks>
+        /// The installer writes package content to <c>&lt;game root&gt;/taarib/</c>
+        /// for every engine it patches at tier one — that is the directory its
+        /// manifest records and its restore path deletes — so that is looked at
+        /// first. The two plugin-relative locations are kept for a hand-assembled
+        /// layout, in the order the original design named them. The first that
+        /// holds a patch file wins; when none does, the game-root location is
+        /// returned so the refusal names the place the installer should have
+        /// written to.
+        /// </remarks>
+        private static string DalilAlRuqaa(string dalilMulhaqHali)
+        {
+            string[] murashshaha =
+            {
+                Path.Combine(Paths.GameRootPath, DalilRuqaaFiAlLuba),
+                Path.Combine(dalilMulhaqHali, DalilTaarib),
+                dalilMulhaqHali,
+            };
+            foreach (string murashshah in murashshaha)
+            {
+                if (Directory.Exists(murashshah)
+                    && Directory.GetFiles(murashshah, "*" + ImtidadRuqaa, SearchOption.TopDirectoryOnly).Length > 0)
+                {
+                    return murashshah;
+                }
+            }
+            return murashshaha[0];
         }
 
         private void Hammil()
         {
-            Muhammil.Tahmeel(dalil);
+            Muhammil.Tahmeel(dalilMulhaq);
             Muhammil.Taakkad();
             Logger.LogInfo(
                 $"jisr {Muhammil.IsdarNass()} حُمِّلت من {Muhammil.MasarMaktaba}. | jisr "

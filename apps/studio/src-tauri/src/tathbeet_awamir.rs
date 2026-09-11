@@ -2510,10 +2510,29 @@ pub fn thabbit_ruqaa(
     })?;
     let wajha = WajhatLuba::dakhil_taarib(&format!("{ruqaa_id}.ruqaa"))
         .map_err(|q| Khata::min_tafsir(&q))?;
-    let muhtawa = vec![WadaMuhtawa {
+    // Placed as this engine's adapter reads it: sealed bytes for every engine
+    // but Unity, whose takeover reads only an uncompressed working copy.
+    let bayt_ruqaa = taarib_tathbeet::masar_tathbeet::muhtawa_ruqaa(
+        taqreer.muharrik.aila,
+        bayt_ruqaa,
+        &malaf_munazzal,
+    )
+    .map_err(Khata::from)?;
+    let mut muhtawa = vec![WadaMuhtawa {
         wajha,
         bayt: bayt_ruqaa,
     }];
+    // The faces the package was shaped against travel with it, from this
+    // machine's font store, for the one engine whose adapter draws text itself.
+    // Refused here, before the backup, when the store cannot supply them.
+    muhtawa.extend(
+        taarib_tathbeet::masar_tathbeet::muhtawa_khutut(
+            taqreer.muharrik.aila,
+            &irtibat.khutut,
+            &masarat.khutut(),
+        )
+        .map_err(Khata::from)?,
+    );
 
     let tarif = taarib_tathbeet::bayan::TarifLuba {
         luba: id,

@@ -107,10 +107,15 @@ fn the_shaping_rung_tracks_the_feature_that_carries_it() {
 }
 
 #[test]
-fn reading_is_the_one_thing_this_build_actually_does() {
+fn reading_and_writing_are_what_this_build_actually_does() {
     // If this ever stops holding, the extractor has lost its Unreal path and
     // the row above it is the first thing to check.
     assert_eq!(hala(Qudra::Qiraa), HalatQudra::Amila);
-    // And the honest headline: nothing reaches a screen yet.
-    assert_eq!(jahiziya(), JahiziyatTashghil::Ghaiba);
+    // The container reaches the game through the installer's Unreal arm.
+    assert_eq!(hala(Qudra::Kitaba), HalatQudra::Amila);
+    // And the honest headline: the container is written, the engine draws it
+    // on its own, and nobody has yet watched it happen — so not complete.
+    assert_eq!(jahiziya(), JahiziyatTashghil::Naqisa);
+    // The in-process corrections still reach nothing, and the row says so.
+    assert_eq!(hala(Qudra::Qiyas), HalatQudra::Ghaiba);
 }

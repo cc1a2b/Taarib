@@ -5,10 +5,12 @@ use std::path::{Path, PathBuf};
 use taarib_aman::IdhnTathbeet;
 use taarib_muhawwil_nusus::tarkeeb::TaqreerTarkeeb;
 use taarib_mustalahat::bina::{Basma, BinaId};
+use taarib_mustalahat::muharrik::AilatMuharrik;
 use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_ruqaa::tawqee::MudaqqiqTawqee;
-use taarib_tarqee::irtibat::{IrtibatBina, SababMutabaqa};
+use taarib_tarqee::irtibat::{BasmatKhatt, IrtibatBina, SababMutabaqa};
 use taarib_usus::manassa::{self, HalatTashghil};
+use walkdir::WalkDir;
 
 use crate::bayan::{Muthabbit, NawTathbeet, TarifLuba, Tathbeet};
 use crate::itlaq;
@@ -97,10 +99,11 @@ pub struct NatijatTathbeetKamil {
     /// What the script-engine write did, when the game is on one of the four
     /// engines Taarib patches as data.
     ///
-    /// [`None`] for every other game, which is most of them: a Unity or Unreal
-    /// install reads its translations out of the placed package at run time and
-    /// has nothing written into its own files. Also [`None`] at tier 3, where
-    /// the game's own text is never replaced at all.
+    /// [`None`] for every other game, which is most of them: a Unity install
+    /// reads its translations out of the placed package at run time, and an
+    /// Unreal install's are compiled into the additive container by the
+    /// deployment step rather than written into the game's own files. Also
+    /// [`None`] at tier 3, where the game's own text is never replaced at all.
     pub nusus: Option<TaqreerTarkeeb>,
     /// Whether the patch content was deliberately **not** placed inside the
     /// game.
@@ -341,6 +344,130 @@ fn ida_muhtawa(tathbeet: &mut Tathbeet, muhtawa: &[WadaMuhtawa]) -> NatijatTathb
         adad = adad.saturating_add(1);
     }
     Ok(adad)
+}
+
+/// The bytes of the package as one engine's adapter can read them.
+///
+/// For every engine but Unity this is the sealed container itself, byte for
+/// byte. For Unity it is [`taarib_ruqaa::katib::nuskha_muarra`]'s working copy:
+/// the takeover assembly reads tables by casting them out of a memory map and
+/// carries no decompressor, so it refuses a compressed section by name and
+/// reads only what the installer placed uncompressed. The sealed container was
+/// verified — hash and signature — before this is ever called, which is what
+/// makes a derived copy safe to place.
+///
+/// The gap this closes was the last of four between the installer and the
+/// Unity plugin: the plugin loaded, its native library loaded, it found the
+/// package and the face, and refused at `TAARIB-E-6007` because the string
+/// table was zstd.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::RuqaaMarfuda`] carrying the format crate's own refusal when
+/// the sealed container cannot be re-emitted.
+pub fn muhtawa_ruqaa(aila: AilatMuharrik, bayt: Vec<u8>, masar: &Path) -> NatijatTathbeet<Vec<u8>> {
+    if aila != AilatMuharrik::Unity {
+        return Ok(bayt);
+    }
+    taarib_ruqaa::katib::nuskha_muarra(&bayt)
+        .map(|muarra| muarra.ila_shuaa())
+        .map_err(|khata| khata_ruqaa(masar, &khata))
+}
+
+/// The font files a package names, read out of the font store so they can be
+/// placed beside the package.
+///
+/// Only an engine whose adapter draws text itself takes fonts this way. The
+/// Unity takeover rasterises through `taarib_jisr` with the faces the patch was
+/// shaped against, and reads them from `taarib/khutut/<name>` under the game
+/// root — the directory the package itself lands in, so that one manifest
+/// records both and one restore removes both. Every other engine either ships
+/// its own text stack or is handed a face by its own deployment step (Ren'Py's
+/// arrives inside its component), and for those this returns nothing.
+///
+/// A face is found by its exact file name anywhere under the store's font root
+/// and accepted only when its BLAKE3 equals the fingerprint the package
+/// recorded. The fingerprint is not a formality: a face replaced under the same
+/// name shapes differently from every layout the package precomputed, and the
+/// adapter would draw with metrics that belong to a different file.
+///
+/// This existed as a gap for two phases. The Unity plugin looked for
+/// `khutut/` beside the package and refused at launch when it was absent, and
+/// no step anywhere placed it — so a Unity game installed cleanly, logged the
+/// refusal, and stayed English.
+///
+/// # Errors
+///
+/// [`KhataTathbeet::KhattMafqud`] naming the face when the store holds no file
+/// of that name or the one it holds has a different fingerprint, and
+/// [`KhataTathbeet::MasarKharij`] when a recorded name is not a bare file name.
+pub fn muhtawa_khutut(
+    aila: AilatMuharrik,
+    khutut: &[BasmatKhatt],
+    jidhr_khutut: &Path,
+) -> NatijatTathbeet<Vec<WadaMuhtawa>> {
+    if aila != AilatMuharrik::Unity {
+        return Ok(Vec::new());
+    }
+    let mut muhtawa = Vec::with_capacity(khutut.len());
+    for khatt in khutut {
+        let wajha = WajhatLuba::dakhil_taarib(&format!("{MUJALLAD_KHUTUT}/{}", khatt.ism))?;
+        // A validated destination whose file name is not the recorded name is
+        // a recorded name that carried a directory in it, which no store entry
+        // has; refusing it here keeps the search below to bare names.
+        if wajha.ism() != khatt.ism {
+            return Err(KhataTathbeet::MasarKharij {
+                masar: PathBuf::from(&khatt.ism),
+                jidhr: jidhr_khutut.to_path_buf(),
+                sabab: "a font name in the package is not a bare file name".to_owned(),
+            });
+        }
+        let masar = jid_khatt(jidhr_khutut, &khatt.ism).ok_or_else(|| {
+            KhataTathbeet::KhattMafqud {
+                ism: khatt.ism.clone(),
+                jidhr: jidhr_khutut.to_path_buf(),
+                sabab: "no file of that name is in the store".to_owned(),
+            }
+        })?;
+        let bayt = std::fs::read(&masar).map_err(|sabab| KhataTathbeet::KhattMafqud {
+            ism: khatt.ism.clone(),
+            jidhr: jidhr_khutut.to_path_buf(),
+            sabab: format!("{} could not be read: {sabab}", masar.display()),
+        })?;
+        if blake3::hash(&bayt).as_bytes() != khatt.basma.bayt() {
+            return Err(KhataTathbeet::KhattMafqud {
+                ism: khatt.ism.clone(),
+                jidhr: jidhr_khutut.to_path_buf(),
+                sabab: format!(
+                    "{} is not the file the package was shaped against (fingerprint differs)",
+                    masar.display()
+                ),
+            });
+        }
+        muhtawa.push(WadaMuhtawa { wajha, bayt });
+    }
+    Ok(muhtawa)
+}
+
+/// The directory under `taarib/` a Unity takeover reads its faces from.
+///
+/// `Taarib.Unity.Mono`'s `DalilKhutut`, spelled once on this side.
+const MUJALLAD_KHUTUT: &str = "khutut";
+
+/// How deep the font store is searched. The store is `<family>/<file>`; the
+/// bound exists so a store somebody has put something else into is a miss
+/// rather than a walk.
+const UMQ_KHUTUT: usize = 3;
+
+/// Finds one face by exact file name under the font root.
+fn jid_khatt(jidhr: &Path, ism: &str) -> Option<PathBuf> {
+    WalkDir::new(jidhr)
+        .max_depth(UMQ_KHUTUT)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(Result::ok)
+        .find(|madkhal| madkhal.file_type().is_file() && madkhal.file_name() == ism)
+        .map(walkdir::DirEntry::into_path)
 }
 
 fn khata_ruqaa(jidhr: &Path, khata: &taarib_ruqaa::khata::KhataRuqaa) -> KhataTathbeet {

@@ -671,7 +671,31 @@ export function Maktaba(): JSX.Element {
    * Sequential, because the backend writes one store and forty concurrent
    * writes are forty attempts at the same lock for no gain at this size.
    */
-  const ikhfa = useMutation<readonly string[], KhataJisr, readonly string[]>({
+  const ikhfa = useMutation<
+    readonly string[],
+    KhataJisr,
+    readonly string[],
+    { sabiqa: HasilatMaktaba | undefined }
+  >({
+    // The cards leave the grid at the press, not at the answer: a hide is the
+    // user's own decision about their own library, and the grid the backend
+    // sends back is the same grid minus the same cards. A refused write puts
+    // the grid back exactly as it stood.
+    onMutate: async (muarrifat) => {
+      await makhzanIstifsar.cancelQueries({ queryKey: mafatih.maktaba });
+      const sabiqa = makhzanIstifsar.getQueryData<HasilatMaktaba>(mafatih.maktaba);
+      makhzanIstifsar.setQueryData<HasilatMaktaba>(mafatih.maktaba, (qadeem) =>
+        qadeem === undefined
+          ? qadeem
+          : { ...qadeem, alaab: qadeem.alaab.filter((saf) => !muarrifat.includes(saf.muarrif)) },
+      );
+      return { sabiqa };
+    },
+    onError: (_khata, _muarrifat, siyaq) => {
+      if (siyaq?.sabiqa !== undefined) {
+        makhzanIstifsar.setQueryData(mafatih.maktaba, siyaq.sabiqa);
+      }
+    },
     mutationFn: async (muarrifat) => {
       const mukhfat: string[] = [];
       try {
@@ -712,13 +736,22 @@ export function Maktaba(): JSX.Element {
   });
 
   const [jamaiHala, setJamaiHala] = useState<string | null>(null);
+  // The selection is the denominator: the bar draws against the games chosen,
+  // and moves as each one is either patched or left for its own screen.
+  const [taqaddumJamai, setTaqaddumJamai] = useState<{ tamma: number; majmu: number } | null>(
+    null,
+  );
 
   const jamai = useMutation<HasilatJamai, KhataJisr, readonly string[]>({
     mutationFn: async (muarrifat) => {
       let muthabbat = 0;
       let matruk = 0;
+      let jari = 0;
+      setTaqaddumJamai({ tamma: 0, majmu: muarrifat.length });
       for (const muarrif of muarrifat) {
-        setJamaiHala(t('maktaba.jamai.jari', lugha, { adad: munassiq.raqm(muthabbat + 1) }));
+        jari += 1;
+        setTaqaddumJamai({ tamma: jari - 1, majmu: muarrifat.length });
+        setJamaiHala(t('maktaba.jamai.jari', lugha, { adad: munassiq.raqm(jari) }));
         // Sequential on purpose: two installs writing one store would race.
         // eslint-disable-next-line no-await-in-loop
         const ruqaa = await nadi('ruqaa_luba', { muarrif });
@@ -745,10 +778,12 @@ export function Maktaba(): JSX.Element {
         });
         muthabbat += 1;
       }
+      setTaqaddumJamai({ tamma: muarrifat.length, majmu: muarrifat.length });
       return { muthabbat, matruk };
     },
     onSettled: () => {
       setJamaiHala(null);
+      setTaqaddumJamai(null);
       void makhzanIstifsar.invalidateQueries({ queryKey: mafatih.maktaba });
     },
   });
@@ -1043,7 +1078,7 @@ export function Maktaba(): JSX.Element {
             arrives.
           */}
           <p className="maktaba__adad">
-            {maktaba.data === undefined
+            {yuhammil || maktaba.data === undefined
               ? null
               : natija.munaqqa
                 ? t('maktaba.adad_zahir', lugha, {
@@ -1052,28 +1087,31 @@ export function Maktaba(): JSX.Element {
                   })
                 : t('maktaba.adad', lugha, { adad: munassiq.raqm(natija.adadKulli) })}
           </p>
-          {yuhammil ? (
-            <div className="haykal" aria-hidden="true">
-              <span className="haykal__satr haykal__satr--tawil" />
-              <span className="haykal__satr haykal__satr--mutawassit" />
-              <span className="haykal__satr haykal__satr--qasir" />
+          {khata !== null ? (
+            <div className="jism__mutadahrij">
+              <KutlatKhata
+                unwan={t('amm.khata', lugha)}
+                khata={khata}
+                lugha={lugha}
+                aada={aidIstifsar}
+              />
             </div>
-          ) : khata !== null ? (
-            <KutlatKhata
-              unwan={t('amm.khata', lugha)}
-              khata={khata}
-              lugha={lugha}
-              aada={aidIstifsar}
-            />
           ) : (
+            /* While the settings are still unread the grid draws its own
+               placeholder — rows of card-shaped boxes on the grid's own
+               arithmetic — rather than a second, unmeasured skeleton: the two
+               used to disagree by a whole row, and the first real artwork
+               stepped down the screen the moment the scan landed. Handing the
+               grid no rows keeps the language gate intact, since a placeholder
+               has no text to paint in the wrong language. */
             <ShabakatMaktaba
-              majmuat={natija.majmuat}
+              majmuat={yuhammil ? [] : natija.majmuat}
               adadKulli={natija.adadKulli}
               munaqqa={natija.munaqqa}
               ghaiba={ghaiba}
               mutaadhira={maktaba.data?.mutaadhira ?? []}
               manassat={asmaManassat(maktaba.data?.manassat ?? [])}
-              yafhas={maktaba.isPending}
+              yafhas={yuhammil || maktaba.isPending}
               kathafa={hajmBitaqa}
               ghiyabMatwi={ghiyabMatwi}
               lugha={lugha}
@@ -1230,6 +1268,31 @@ export function Maktaba(): JSX.Element {
 
           <div aria-live="polite">
             {jamaiHala !== null ? <p className="maktaba__jamai">{jamaiHala}</p> : null}
+            {jamai.isPending && taqaddumJamai !== null && taqaddumJamai.majmu > 0 ? (
+              <div className="maktaba__miqyas">
+                <div
+                  className="maktaba__miqyas-masar"
+                  role="progressbar"
+                  aria-label={t('maktaba.ikhtiyar.tathbeet', lugha)}
+                  aria-valuemin={0}
+                  aria-valuemax={taqaddumJamai.majmu}
+                  aria-valuenow={taqaddumJamai.tamma}
+                >
+                  <span
+                    className="maktaba__miqyas-malu"
+                    style={{
+                      inlineSize: `${String((taqaddumJamai.tamma / taqaddumJamai.majmu) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <p className="maktaba__miqyas-nass">
+                  {t('amm.taqaddum.min', lugha, {
+                    tamma: munassiq.raqm(taqaddumJamai.tamma),
+                    majmu: munassiq.raqm(taqaddumJamai.majmu),
+                  })}
+                </p>
+              </div>
+            ) : null}
             {jamai.data !== undefined ? (
               <p className="maktaba__jamai" role="status">
                 {jam('maktaba.jamai.tamma', lugha, jamai.data.muthabbat, munassiq)}
