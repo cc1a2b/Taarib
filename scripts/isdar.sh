@@ -12,6 +12,10 @@
 #
 #   scripts/isdar.sh --hadaf x86_64-pc-windows-msvc [--jalb]
 #
+# Set TAARIB_MIFTAH_ISDAR to the release public key for a release bundle;
+# without it the bundle trusts the development key committed in the tree and
+# says so at the end.
+#
 # Stages, in dependency order:
 #
 #   unity   rows C1–C4   dotnet build      the BepInEx-side assemblies
@@ -54,7 +58,7 @@ while [ "$#" -gt 0 ]; do
     --hadaf) hadaf="${2-}"; shift 2 ;;
     --ahdaf) ahdaf="${2-}"; shift 2 ;;
     --jalb) jalb=1; shift ;;
-    -h|--help) sed -n '2,27p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,32p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) printf 'isdar: unknown argument %s\n' "$1" >&2; exit 2 ;;
   esac
 done
@@ -79,6 +83,31 @@ TAURI="${TAARIB_TAURI:-cargo-tauri}"
 # bare name `dotnet` resolves to nothing at all.
 DOTNET="${TAARIB_DOTNET:-dotnet}"
 TAKHATTI="${TAARIB_TAKHATTI:-}"
+
+# The trust anchor this bundle is built against: the release *public* key, as 64
+# hex characters. `taarib_khatm::MIRSAT_MALIK` reads it through `option_env!`, so
+# exporting it is what decides whether the client trusts the release identity or
+# the development key committed in the tree. The private half is minted by
+# `taarib-khatm --bin isdar wallid` inside the owner's keychain and never leaves
+# it — nothing here reads, writes or needs it.
+#
+# Checked here rather than only at compile time so that a typo fails in a second
+# instead of after the unity and payload stages, and because a build that quietly
+# falls back to the development anchor produces an installer that reports
+# `tatwir` in its provenance and refuses every patch the owner actually signed.
+MIRSA="${TAARIB_MIFTAH_ISDAR:-}"
+if [ -n "$MIRSA" ]; then
+  if ! printf '%s' "$MIRSA" | grep -Eq '^[0-9a-fA-F]{64}$'; then
+    printf 'isdar: TAARIB_MIFTAH_ISDAR is not 64 hex characters.\n' >&2
+    printf '       It is the release public key printed by:\n' >&2
+    printf '           cargo run -p taarib-khatm --bin isdar -- wallid\n' >&2
+    exit 2
+  fi
+  export TAARIB_MIFTAH_ISDAR="$MIRSA"
+  SIMAT_ISDAR=(--features taarib-khatm/isdar)
+else
+  SIMAT_ISDAR=()
+fi
 
 cd "$JIDHR"
 
@@ -287,12 +316,24 @@ if ! tuhmal huzma; then
   # gate that refuses to turn an unstaged `mawarid/` into an installer.
   mkdir -p target
   printf '{"build":{"beforeBuildCommand":""}}' > target/isdar-tajawuz.json
+  # `taarib-khatm/isdar` is passed only when an anchor was injected, and it is
+  # not decoration: the feature's own `const` assertion fails the compile if the
+  # variable went missing between here and the crate, which is the one failure
+  # mode that would otherwise ship silently.
   ( cd apps/studio \
-      && "$TAURI" build --target "$hadaf" --config ../../target/isdar-tajawuz.json )
+      && "$TAURI" build --target "$hadaf" --config ../../target/isdar-tajawuz.json \
+        ${SIMAT_ISDAR[@]+"${SIMAT_ISDAR[@]}"} )
 fi
 
 marhala "تمّ"
 printf 'isdar: %s\n' "$hadaf"
+if [ -n "$MIRSA" ]; then
+  printf '  anchor:   release — %s\n' "$MIRSA"
+else
+  printf '  anchor:   development — this bundle trusts the key committed in the\n'
+  printf '            tree and refuses a patch signed by the owner. Set\n'
+  printf '            TAARIB_MIFTAH_ISDAR to build a release bundle.\n'
+fi
 printf '  manifest: apps/studio/src-tauri/mawarid/bayan_mukawwinat.json\n'
 # `--target` is passed to the bundler, so the artifacts land one directory
 # deeper than an untargeted build would put them.

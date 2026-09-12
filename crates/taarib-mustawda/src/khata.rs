@@ -130,6 +130,29 @@ pub enum KhataMustawda {
         /// The destination.
         masar: PathBuf,
     },
+
+    /// The community index is not one this build reads.
+    #[error("the community translations index could not be read: {sabab}")]
+    FahrasMujtamaTalif {
+        /// Why.
+        sabab: String,
+    },
+
+    /// The community index is larger than any this build will hold.
+    #[error("the community translations index is {hajm} bytes, over the {hadd} this build accepts")]
+    FahrasMujtamaKabir {
+        /// The size served.
+        hajm: u64,
+        /// The cap.
+        hadd: u64,
+    },
+
+    /// No source served the community index and no copy is cached.
+    #[error("the community translations index could not be fetched and none is cached: {sabab}")]
+    FahrasMujtamaGhayrMutah {
+        /// What the last attempt reported.
+        sabab: String,
+    },
 }
 
 impl Tafsir for KhataMustawda {
@@ -150,6 +173,9 @@ impl Tafsir for KhataMustawda {
                     Self::KhataMalaf { .. } => 10,
                     Self::LaMutabaqa => 11,
                     Self::MisahaGhayrKafiya { .. } => 12,
+                    Self::FahrasMujtamaTalif { .. } => 13,
+                    Self::FahrasMujtamaKabir { .. } => 14,
+                    Self::FahrasMujtamaGhayrMutah { .. } => 15,
                 },
         )
     }
@@ -162,6 +188,11 @@ impl Tafsir for KhataMustawda {
             | Self::TanzeelGhayrMutabiq { .. }
             | Self::TasalsulLilkhalf { .. } => Khutura::Fadih,
             Self::LaMutabaqa => Khutura::Maluma,
+            // Nothing installs from the community index, so losing it costs a
+            // credit the screen cannot show and nothing the product does.
+            Self::FahrasMujtamaTalif { .. }
+            | Self::FahrasMujtamaKabir { .. }
+            | Self::FahrasMujtamaGhayrMutah { .. } => Khutura::Tanbeeh,
             _ => Khutura::Khatar,
         }
     }
@@ -196,6 +227,19 @@ impl Tafsir for KhataMustawda {
                 mijabayt_matluba(*matlub),
                 mijabayt_mutaha(*mutah)
             ),
+            Self::FahrasMujtamaTalif { .. } => {
+                "تعذّرت قراءة فهرس تعريبات المجتمع كما وصل من المستودع. أعِد المحاولة لاحقًا، وإن \
+                 تكرّر ذلك فحدِّث تعريب."
+                    .to_owned()
+            },
+            Self::FahrasMujtamaKabir { .. } => {
+                "فهرس تعريبات المجتمع أكبر مما تقبله هذه النسخة من تعريب، ولم يُقرأ.".to_owned()
+            },
+            Self::FahrasMujtamaGhayrMutah { .. } => {
+                "تعذّر جلب فهرس تعريبات المجتمع من أيّ مصدر، ولا نسخة محفوظة منه لديك. أعِد \
+                 المحاولة عند توفّر الاتصال."
+                    .to_owned()
+            },
         }
     }
 
@@ -205,9 +249,15 @@ impl Tafsir for KhataMustawda {
 
     fn khutwa(&self) -> Khutwa {
         match self {
-            Self::LaMasdar { .. } | Self::IstijabaFashila { .. } | Self::TanzeelFashil { .. } => {
-                Khutwa::AadaMuhawala
-            },
+            // The community index joins the transient class: a mirror lagging
+            // behind the forge, or a source that is down, both resolve by
+            // asking again. An index over the cap does not, and sits with the
+            // other answer nothing can act on.
+            Self::LaMasdar { .. }
+            | Self::IstijabaFashila { .. }
+            | Self::TanzeelFashil { .. }
+            | Self::FahrasMujtamaTalif { .. }
+            | Self::FahrasMujtamaGhayrMutah { .. } => Khutwa::AadaMuhawala,
             Self::BayanTalif { .. } => Khutwa::TahdithTaarib,
             Self::TasalsulLilkhalf { .. }
             | Self::BasmaGhayrMutabaqa { .. }
@@ -216,7 +266,7 @@ impl Tafsir for KhataMustawda {
             | Self::ShareehaTalifa { .. }
             | Self::HajmMufrit { .. } => Khutwa::FathTashkhis,
             Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladManassa),
-            Self::LaMutabaqa => Khutwa::LaShay,
+            Self::LaMutabaqa | Self::FahrasMujtamaKabir { .. } => Khutwa::LaShay,
             Self::MisahaGhayrKafiya { .. } => Khutwa::FathIdadat {
                 qism: QismIdadat::Takhzin,
             },
@@ -237,8 +287,15 @@ impl Tafsir for KhataMustawda {
         };
         match self {
             Self::KhataMalaf { .. } | Self::LaMutabaqa => {},
-            Self::LaMasdar { sabab } | Self::BayanTalif { sabab } => {
-                daa("sabab", QeemaSiyaq::Nass(sabab.clone()))
+            Self::LaMasdar { sabab }
+            | Self::BayanTalif { sabab }
+            | Self::FahrasMujtamaTalif { sabab }
+            | Self::FahrasMujtamaGhayrMutah { sabab } => {
+                daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
+            },
+            Self::FahrasMujtamaKabir { hajm, hadd } => {
+                daa("hajm", QeemaSiyaq::Hajm(*hajm));
+                daa("hadd", QeemaSiyaq::Hajm(*hadd));
             },
             Self::IstijabaFashila { rabt, ramz } => {
                 daa("rabt", QeemaSiyaq::Nass(rabt.clone()));

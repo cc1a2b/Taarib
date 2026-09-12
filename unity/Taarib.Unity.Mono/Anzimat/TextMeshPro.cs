@@ -765,6 +765,14 @@ namespace Taarib.Unity.Mono.Anzimat
             return fahras < madat.Length ? madat[fahras] : null;
         }
 
+        /// <summary>How many atlas pages one source has, for the diagnostics line.</summary>
+        /// <param name="minRuqaa">Whether to count the patch atlas's pages.</param>
+        /// <returns>The page count.</returns>
+        public int AdadSafahat(bool minRuqaa)
+        {
+            return (minRuqaa ? lawhatRuqaa : lawhatHayya).Length;
+        }
+
         /// <summary>The texture one atlas page was uploaded into.</summary>
         /// <param name="minRuqaa">Whether the page belongs to the patch atlas.</param>
         /// <param name="fahras">The page index.</param>
@@ -1045,10 +1053,9 @@ namespace Taarib.Unity.Mono.Anzimat
                         && talab.Wasikh.Ard == talab.Ard
                         && talab.Wasikh.Irtifa == talab.Irtifa);
 
+                ReadOnlySpan<byte> texelat = hayya.Texelat(fahras);
                 bool najah = kamil
-                    ? Arfa(
-                        lawhatHayya, maddatHayya, fahras,
-                        hayya.Texelat(fahras), talab.Ard, talab.Irtifa)
+                    ? Arfa(lawhatHayya, maddatHayya, fahras, texelat, talab.Ard, talab.Irtifa)
                     : ArfaJuzi(hayya, fahras, talab);
                 if (!najah)
                 {
@@ -1823,7 +1830,11 @@ namespace Taarib.Unity.Mono.Anzimat
         private readonly MaqbadSilsila? silsila;
         private readonly MakhzanRusum makhzan;
         private readonly NassMuhaddar muhaddar;
-        private readonly HashSet<int> mamlukat;
+        /// <summary>
+        /// Every component this takeover owns, and which atlas its mesh was
+        /// last built from — the patch's or this session's.
+        /// </summary>
+        private readonly Dictionary<int, bool> mamlukat;
         private readonly Dictionary<MeshRenderer, Material> maddatAsliya;
         private readonly List<MethodInfo> hidaf;
         private readonly Harmony harmoni;
@@ -1850,7 +1861,7 @@ namespace Taarib.Unity.Mono.Anzimat
             this.takhtit = takhtit;
             makhzan = new MakhzanRusum();
             muhaddar = new NassMuhaddar();
-            mamlukat = new HashSet<int>();
+            mamlukat = new Dictionary<int, bool>();
             maddatAsliya = new Dictionary<MeshRenderer, Material>();
             hidaf = new List<MethodInfo>(4);
             amil = true;
@@ -1934,13 +1945,19 @@ namespace Taarib.Unity.Mono.Anzimat
             NizamTmp nizam = new NizamTmp(harmoni, wasl, masdar, ruqaa, siyaq, silsila, takhtit);
             hali = nizam;
 
+            // Which declarations the two takeover points resolved to, so a
+            // build of TextMeshPro that moved generation into the base class —
+            // where a declared-only lookup on the subclass finds nothing — is
+            // named in the log instead of leaving every menu in English with
+            // "installed" above it.
+
             bool shayun = false;
-            shayun |= nizam.Rakkib(
-                wasl.HadafNasijSath, typeof(TarqeeNasijSath), nameof(TarqeeNasijSath.Sabiq),
-                "TextMeshProUGUI.GenerateTextMesh");
-            shayun |= nizam.Rakkib(
-                wasl.HadafNasijAalam, typeof(TarqeeNasijAalam), nameof(TarqeeNasijAalam.Sabiq),
-                "TextMeshPro.GenerateTextMesh");
+            shayun |= nizam.RakkibBaad(
+                wasl.HadafNasijSath, typeof(TarqeeNasijSathBaad),
+                nameof(TarqeeNasijSathBaad.Baad), "TextMeshProUGUI.GenerateTextMesh");
+            shayun |= nizam.RakkibBaad(
+                wasl.HadafNasijAalam, typeof(TarqeeNasijAalamBaad),
+                nameof(TarqeeNasijAalamBaad.Baad), "TextMeshPro.GenerateTextMesh");
             nizam.Rakkib(
                 wasl.HadafMaddaSath, typeof(TarqeeMaddaSath), nameof(TarqeeMaddaSath.Sabiq),
                 "TextMeshProUGUI.UpdateMaterial");
@@ -1973,7 +1990,7 @@ namespace Taarib.Unity.Mono.Anzimat
             {
                 return false;
             }
-            return mamlukat.Contains(juz.GetInstanceID());
+            return mamlukat.ContainsKey(juz.GetInstanceID());
         }
 
         /// <summary>
@@ -2033,11 +2050,14 @@ namespace Taarib.Unity.Mono.Anzimat
         /// <returns>Whether the material was bound.</returns>
         public bool Aabbir(object? mukawwin, bool sathi)
         {
-            if (!amil || mukawwin is not Component juz || !mamlukat.Contains(juz.GetInstanceID()))
+            if (!amil || mukawwin is not Component juz
+                || !mamlukat.TryGetValue(juz.GetInstanceID(), out bool minRuqaa))
             {
                 return false;
             }
-            Material? madda = masdar.Madda(true, 0) ?? masdar.Madda(false, 0);
+            // The material that goes with the atlas this component's mesh was
+            // last built against; see the note on Wassil.
+            Material? madda = masdar.Madda(minRuqaa, 0);
             if (madda is null)
             {
                 return false;
@@ -2126,6 +2146,7 @@ namespace Taarib.Unity.Mono.Anzimat
                 try
                 {
                     harmoni.Unpatch(hidaf[i], HarmonyPatchType.Prefix, harmoni.Id);
+                    harmoni.Unpatch(hidaf[i], HarmonyPatchType.Postfix, harmoni.Id);
                 }
                 catch (Exception khata)
                 {
@@ -2174,7 +2195,8 @@ namespace Taarib.Unity.Mono.Anzimat
             // dialogue, which is redrawn when it changes rather than per frame,
             // and refusing to hash it would mean refusing to translate exactly
             // the longest strings a patch exists for.
-            int fahras = ruqaa.JidNass(Ruqaa.MiftahMinNass(khaam!));
+            ulong miftah = Ruqaa.MiftahMinNass(khaam!);
+            int fahras = ruqaa.JidNass(miftah);
             if (fahras < 0)
             {
                 // A miss means the game is drawing something this patch does
@@ -2182,6 +2204,7 @@ namespace Taarib.Unity.Mono.Anzimat
                 // never saw. Leave it alone: do not lay it out, do not draw it,
                 // and do not guess at a translation. TextMeshPro renders it
                 // exactly as it always did.
+                Rabt.Fawt(khaam!, miftah);
                 Utruk(mukawwin);
                 return false;
             }
@@ -2317,13 +2340,13 @@ namespace Taarib.Unity.Mono.Anzimat
             makhzan.Amsah(in natija);
             Aktub(nasij, in natija);
             NazzifFuruu(juz, sathi);
-            if (!Wassil(juz, nasij, sathi))
+            if (!Wassil(juz, nasij, sathi, minRuqaa))
             {
                 Utruk(mukawwin);
                 return false;
             }
 
-            mamlukat.Add(juz.GetInstanceID());
+            mamlukat[juz.GetInstanceID()] = minRuqaa;
             return true;
         }
 
@@ -2472,10 +2495,19 @@ namespace Taarib.Unity.Mono.Anzimat
         private void Aktub(Mesh nasij, in NatijaNasij natija)
         {
             nasij.Clear(false);
-            nasij.vertices = makhzan.Ruus;
-            nasij.uv = makhzan.Malamis;
-            nasij.colors32 = makhzan.Alwan;
-            nasij.triangles = makhzan.Muthallathat;
+            // Only what this string actually built. The buffers are grown to a
+            // block size and reused, so assigning them whole hands the engine
+            // the tail of the previous, longer string as well: its triangles
+            // still index vertices this string never wrote, and R.E.P.O. drew
+            // them as a black wedge across the menu.
+            int adadRuus = natija.AdadRuus;
+            // Six indices per glyph: the field counts indices, not triangles.
+            int adadFahras = natija.AdadMuthallathat;
+            nasij.SetVertices(makhzan.Ruus, 0, adadRuus);
+            nasij.SetUVs(0, makhzan.Malamis, 0, adadRuus);
+            nasij.SetColors(makhzan.Alwan, 0, adadRuus);
+            nasij.SetIndices(
+                makhzan.Muthallathat, 0, adadFahras, MeshTopology.Triangles, 0, false);
             nasij.bounds = new Bounds(
                 new Vector3(
                     natija.Hudud.Yasar + (natija.Hudud.Ard * 0.5f),
@@ -2484,10 +2516,24 @@ namespace Taarib.Unity.Mono.Anzimat
                 new Vector3(natija.Hudud.Ard, natija.Hudud.Irtifa, 0f));
         }
 
-        private bool Wassil(Component juz, Mesh nasij, bool sathi)
+        /// <summary>
+        /// Binds the mesh, and the material and atlas page it was built
+        /// against.
+        /// </summary>
+        /// <remarks>
+        /// <paramref name="minRuqaa"/> is not a preference. A mesh laid out
+        /// from the patch indexes the patch's own atlas, and one laid out at
+        /// runtime indexes the atlas this session rasterized into; the two are
+        /// different pictures with different glyphs at different coordinates.
+        /// Binding the patch's texture to a runtime-laid mesh — which is what
+        /// preferring the patch here used to do — samples whatever happens to
+        /// sit at those coordinates, and R.E.P.O. drew every translated line as
+        /// a row of solid white blocks because of it.
+        /// </remarks>
+        private bool Wassil(Component juz, Mesh nasij, bool sathi, bool minRuqaa)
         {
-            Material? madda = masdar.Madda(true, 0) ?? masdar.Madda(false, 0);
-            Texture2D? lawha = masdar.LawhatSafha(true, 0) ?? masdar.LawhatSafha(false, 0);
+            Material? madda = masdar.Madda(minRuqaa, 0);
+            Texture2D? lawha = masdar.LawhatSafha(minRuqaa, 0);
             if (madda is null)
             {
                 return false;
@@ -2596,6 +2642,47 @@ namespace Taarib.Unity.Mono.Anzimat
             }
         }
 
+        /// <summary>
+        /// Installs a takeover that runs <em>after</em> the engine's own
+        /// generation rather than in place of it.
+        /// </summary>
+        /// <remarks>
+        /// Skipping <c>GenerateTextMesh</c> leaves TextMeshPro's own dirty
+        /// flags set, and a canvas whose element never reports itself clean is
+        /// rebuilt again inside the same frame, for ever: R.E.P.O. spins at
+        /// full load and never presents another frame. Letting the engine
+        /// generate and replacing the mesh afterwards costs one layout the
+        /// player never sees and keeps every field the game itself reads —
+        /// `textInfo`, the character count a menu animates over — consistent.
+        /// </remarks>
+        private bool RakkibBaad(MethodInfo? hadaf, Type hamil, string ism, string wasf)
+        {
+            if (hadaf is null)
+            {
+                return false;
+            }
+            try
+            {
+                MethodInfo? tariqa = hamil.GetMethod(
+                    ism, BindingFlags.Public | BindingFlags.Static);
+                if (tariqa is null)
+                {
+                    Rabt.Ballagh("The patch method for " + wasf + " is missing from this build.");
+                    return false;
+                }
+                harmoni.Patch(hadaf, postfix: new HarmonyMethod(tariqa));
+                hidaf.Add(hadaf);
+                return true;
+            }
+            catch (Exception khata)
+            {
+                Rabt.Ballagh(
+                    "Patching " + wasf + " failed; that one interception is off and the rest "
+                    + "of the TextMeshPro takeover continues", khata);
+                return false;
+            }
+        }
+
         private bool Rakkib(MethodInfo? hadaf, Type hamil, string ism, string wasf)
         {
             if (hadaf is null)
@@ -2686,45 +2773,25 @@ namespace Taarib.Unity.Mono.Anzimat
     }
 
     /// <summary>
-    /// ترقيع نسيج السطح — the prefix on
-    /// <c>TMPro.TextMeshProUGUI.GenerateTextMesh</c>, the point where a
-    /// canvas-space TextMeshPro component decides what to draw.
+    /// The takeover that runs after <c>TMPro.TextMeshProUGUI.GenerateTextMesh</c>,
+    /// replacing the mesh the engine just built.
     /// </summary>
-    public static class TarqeeNasijSath
+    public static class TarqeeNasijSathBaad
     {
-        /// <summary>
-        /// Draws the component through Taarib when the patch covers its string.
-        /// </summary>
-        /// <param name="__instance">
-        /// The component, injected by Harmony and typed as
-        /// <see cref="object"/> because this assembly cannot name
-        /// <c>TMP_Text</c> at compile time.
-        /// </param>
-        /// <returns>
-        /// <c>false</c> to skip TextMeshPro's own generation entirely, which is
-        /// what stops a pipeline with no Arabic OpenType layout in it from
-        /// shaping the string; <c>true</c> to let it run untouched.
-        /// </returns>
-        public static bool Sabiq(object __instance)
+        /// <param name="__instance">The component, injected by Harmony.</param>
+        public static void Baad(object __instance)
         {
-            NizamTmp? nizam = NizamTmp.Hali;
-            return nizam is null || !nizam.Yarsum(__instance, sathi: true);
+            NizamTmp.Hali?.Yarsum(__instance, sathi: true);
         }
     }
 
-    /// <summary>
-    /// ترقيع نسيج العالم — the prefix on
-    /// <c>TMPro.TextMeshPro.GenerateTextMesh</c>, the world-space component.
-    /// </summary>
-    public static class TarqeeNasijAalam
+    /// <summary>The same, for the world-space component.</summary>
+    public static class TarqeeNasijAalamBaad
     {
-        /// <summary>Draws the component through Taarib when the patch covers it.</summary>
         /// <param name="__instance">The component, injected by Harmony.</param>
-        /// <returns><c>false</c> to skip TextMeshPro's own generation.</returns>
-        public static bool Sabiq(object __instance)
+        public static void Baad(object __instance)
         {
-            NizamTmp? nizam = NizamTmp.Hali;
-            return nizam is null || !nizam.Yarsum(__instance, sathi: false);
+            NizamTmp.Hali?.Yarsum(__instance, sathi: false);
         }
     }
 

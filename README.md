@@ -668,6 +668,18 @@ preview: every line rendered through the real engine, at real size, inside real
 bounds, with measured widths and an overflow list. Compile, work through the
 pre-flight checklist until it goes green, and submit.
 
+Machine translation needs no account to start. Out of the box it goes through
+Google Translate's free web endpoint — the same unofficial `translate_a/single`
+request the browser widget and every Unity translation mod make (shape last
+checked 2026-09-12). It is free and keyless, and it is honest about the rest:
+sentence-level quality with no glossary or context, one request per string
+under a 5 000-character cap, undocumented rate limits that Taarib respects by
+spacing requests and stopping when the service refuses them. A provider you
+configure in Settings, under Providers — Anthropic, an OpenAI-compatible
+endpoint, Gemini, DeepL, Microsoft Translator, or a local Ollama model — takes
+precedence the moment it is enabled. The in-game overlay is the exception: from
+inside a game it reaches only a local model server.
+
 Read [What works today](#what-works-today) before expecting the last step of the
 player flow to end in Arabic on screen. The translator flow above is the designed
 flow; of it, the read-only half — engine probe, static extraction, placeholder

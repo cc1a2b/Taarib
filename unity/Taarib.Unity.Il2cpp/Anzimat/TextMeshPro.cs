@@ -1201,10 +1201,10 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         /// <param name="muthallathat">The index array.</param>
         /// <param name="hudud">The bounding box, as a centre and a half-extent.</param>
         /// <remarks>
-        /// The bounds are assigned rather than recalculated. The arrays are
-        /// quantized and their cleared tail sits at the origin, so a recalculated
-        /// box would stretch from the text to the pivot and the label would
-        /// disappear at the edge of the view frustum.
+        /// Each array is exactly the length the build wrote, because every
+        /// setter here derives its count from the array it is given. The bounds
+        /// are assigned rather than recalculated, so the second pass over the
+        /// vertices a recalculation costs is never paid.
         /// </remarks>
         public void AktubNasij(
             IntPtr nasij,
@@ -1646,27 +1646,30 @@ namespace Taarib.Unity.Il2cpp.Anzimat
     /// Unity's mesh setters take IL2CPP arrays, which live in the other heap
     /// and cannot be spanned into from managed code without being rooted. So
     /// the geometry is built into the managed arrays and copied once per stream
-    /// per draw into IL2CPP arrays that are created only when the capacity
-    /// grows. One bulk copy of a few kilobytes is cheaper than pinning four
-    /// objects for the life of the takeover, which is what writing straight
-    /// into the IL2CPP arrays would require and which a compacting collector
-    /// has to arrange the whole heap around.
+    /// per draw into IL2CPP arrays. One bulk copy of a few kilobytes is cheaper
+    /// than pinning four objects for the life of the takeover, which is what
+    /// writing straight into the IL2CPP arrays would require and which a
+    /// compacting collector has to arrange the whole heap around.
     /// </para>
     /// <para>
-    /// <b>Why the capacity is quantized.</b> Unity's oldest and most portable
-    /// mesh API derives the vertex count from the array's length, so a buffer
-    /// that is merely large enough would draw its tail as garbage. Growing to
-    /// an exact fit would allocate four arrays in each heap every time a label
-    /// gains or loses a glyph, which on a dialogue box is every frame. So
-    /// capacity is rounded up to a multiple of <see cref="Kutla"/> glyphs and
-    /// the tail past what was written is cleared: cleared positions collapse to
-    /// the origin, cleared colours are transparent, and cleared indices name a
-    /// degenerate triangle the rasterizer discards.
+    /// <b>Why the two sets are sized differently.</b> The managed capacity is
+    /// quantized to a multiple of <see cref="Kutla"/> glyphs, because growing it
+    /// to an exact fit would allocate four arrays every time a label gained or
+    /// lost a glyph, which on a dialogue box is every frame. The IL2CPP arrays
+    /// are sized to exactly what a build wrote, because the mesh setters this
+    /// adapter reaches — <c>set_vertices</c>, <c>set_uv</c>, <c>set_colors32</c>,
+    /// <c>set_triangles</c> — take a whole array and derive the count from its
+    /// length, so a quantized one hands the engine the tail of the previous,
+    /// longer string as well: its triangles index vertices this string never
+    /// wrote, and R.E.P.O. drew them as a black wedge across the menu from the
+    /// Mono twin of this path. They are reallocated only when the exact count
+    /// changes, which for a label redrawing the same string is never.
     /// </para>
     /// <para>
-    /// <b>What allocates.</b> <see cref="Wassi"/> and <see cref="Hawwil"/>,
-    /// and only when something is longer than anything before it. Every other
-    /// member here is copy-only.
+    /// <b>What allocates.</b> <see cref="Wassi"/> and <see cref="Hawwil"/>, and
+    /// only when something is longer than anything before it; and
+    /// <see cref="Anfidh"/>, only when a string's glyph count differs from the
+    /// last one drawn through these buffers. Every other member is copy-only.
     /// </para>
     /// </remarks>
     public sealed class MakhzanRusum : IDisposable
@@ -1692,6 +1695,8 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         private Marja? masfufatMuthallathat;
 
         private int siaatAshkal;
+        private int tulMasfufatRuus;
+        private int tulMasfufatFahras;
 
         /// <summary>Creates the buffers empty; the first draw sizes them.</summary>
         public MakhzanRusum()
@@ -1732,26 +1737,22 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         public ReadOnlySpan<int> MuthallathatMahalliya => muthallathat;
 
         /// <summary>
-        /// Grows both sets of buffers so that <paramref name="adadHuruf"/>
-        /// glyphs fit, rounded up to <see cref="Kutla"/>.
+        /// Grows the managed buffers so that <paramref name="adadHuruf"/> glyphs
+        /// fit, rounded up to <see cref="Kutla"/>.
         /// </summary>
         /// <param name="adadHuruf">How many glyphs the layout holds.</param>
-        /// <param name="wasl">The engine binding, for the IL2CPP arrays.</param>
-        /// <returns>Whether both sets are present at the requested capacity.</returns>
         /// <remarks>
         /// <see cref="Nasij"/> demands four vertices and six indices per glyph
         /// as an upper bound, because knowing the exact count would cost an
-        /// atlas lookup per glyph before the first vertex is written.
+        /// atlas lookup per glyph before the first vertex is written. The IL2CPP
+        /// arrays are not sized here: they are sized to what the build actually
+        /// wrote, by <see cref="Anfidh"/>.
         /// </remarks>
-        public bool Wassi(int adadHuruf, WaslMuharrik wasl)
+        public void Wassi(int adadHuruf)
         {
-            if (wasl is null)
+            if (adadHuruf <= siaatAshkal)
             {
-                throw new ArgumentNullException(nameof(wasl));
-            }
-            if (adadHuruf <= siaatAshkal && masfufatRuus is not null)
-            {
-                return true;
+                return;
             }
 
             int matlub = ((adadHuruf + Kutla - 1) / Kutla) * Kutla;
@@ -1759,42 +1760,11 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             {
                 matlub = Kutla;
             }
-            int adadRuus = matlub * Nasij.RuusLiShakl;
-            int adadFahras = matlub * Nasij.FahrasLiShakl;
-
-            ruus = new NuqtaRasm[adadRuus];
-            malamis = new NuqtaMulmas[adadRuus];
-            alwan = new LawnRasm[adadRuus];
-            muthallathat = new int[adadFahras];
-
-            Marja? jadidRuus = Ihjiz(wasl, wasl.SanfMuttajih3, adadRuus);
-            Marja? jadidMalamis = Ihjiz(wasl, wasl.SanfMuttajih2, adadRuus);
-            Marja? jadidAlwan = Ihjiz(wasl, wasl.SanfLawn32, adadRuus);
-            Marja? jadidFahras = Ihjiz(wasl, wasl.SanfSahih, adadFahras);
-            if (jadidRuus is null || jadidMalamis is null
-                || jadidAlwan is null || jadidFahras is null)
-            {
-                jadidRuus?.Dispose();
-                jadidMalamis?.Dispose();
-                jadidAlwan?.Dispose();
-                jadidFahras?.Dispose();
-                return false;
-            }
-
-            // The previous roots are released only once the new ones exist, so
-            // a failed growth leaves the takeover drawing at the old capacity
-            // rather than holding four null arrays.
-            masfufatRuus?.Dispose();
-            masfufatMalamis?.Dispose();
-            masfufatAlwan?.Dispose();
-            masfufatMuthallathat?.Dispose();
-
-            masfufatRuus = jadidRuus;
-            masfufatMalamis = jadidMalamis;
-            masfufatAlwan = jadidAlwan;
-            masfufatMuthallathat = jadidFahras;
+            ruus = new NuqtaRasm[matlub * Nasij.RuusLiShakl];
+            malamis = new NuqtaMulmas[matlub * Nasij.RuusLiShakl];
+            alwan = new LawnRasm[matlub * Nasij.RuusLiShakl];
+            muthallathat = new int[matlub * Nasij.FahrasLiShakl];
             siaatAshkal = matlub;
-            return true;
         }
 
         /// <summary>
@@ -1813,42 +1783,76 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         }
 
         /// <summary>
-        /// Clears everything past what a build wrote, so the fixed-length arrays
-        /// a mesh upload takes carry no stale geometry from the previous string.
-        /// </summary>
-        /// <param name="natija">What the build wrote.</param>
-        public void Amsah(in NatijaNasij natija)
-        {
-            int baqiRuus = ruus.Length - natija.AdadRuus;
-            if (baqiRuus > 0)
-            {
-                Array.Clear(ruus, natija.AdadRuus, baqiRuus);
-                Array.Clear(malamis, natija.AdadRuus, baqiRuus);
-                Array.Clear(alwan, natija.AdadRuus, baqiRuus);
-            }
-            int baqiFahras = muthallathat.Length - natija.AdadMuthallathat;
-            if (baqiFahras > 0)
-            {
-                Array.Clear(muthallathat, natija.AdadMuthallathat, baqiFahras);
-            }
-        }
-
-        /// <summary>
-        /// Copies the built geometry into the IL2CPP arrays the mesh setters
-        /// take.
+        /// Sizes the IL2CPP arrays to exactly what a build wrote and copies that
+        /// much into them.
         /// </summary>
         /// <param name="wasl">The engine binding.</param>
+        /// <param name="natija">What the build wrote.</param>
         /// <returns>Whether all four streams crossed.</returns>
-        public bool Anfidh(WaslMuharrik wasl)
+        /// <remarks>
+        /// Exactly, never merely enough: the mesh setters derive the vertex and
+        /// index counts from the arrays' lengths, so a longer array is the
+        /// previous string's tail drawn as garbage. The reallocation is skipped
+        /// whenever the counts are the ones the arrays already carry, which is
+        /// every redraw of a label whose string did not change length.
+        /// </remarks>
+        public bool Anfidh(WaslMuharrik wasl, in NatijaNasij natija)
         {
             if (wasl is null)
             {
                 throw new ArgumentNullException(nameof(wasl));
             }
-            return wasl.Ansikh<NuqtaRasm>(Ruus, ruus)
-                && wasl.Ansikh<NuqtaMulmas>(Malamis, malamis)
-                && wasl.Ansikh<LawnRasm>(Alwan, alwan)
-                && wasl.Ansikh<int>(Muthallathat, muthallathat);
+            int adadRuus = natija.AdadRuus;
+            // Six indices per glyph: the field counts indices, not triangles.
+            int adadFahras = natija.AdadMuthallathat;
+            if (adadRuus <= 0 || adadFahras <= 0
+                || adadRuus > ruus.Length || adadFahras > muthallathat.Length)
+            {
+                return false;
+            }
+
+            if (masfufatRuus is null || tulMasfufatRuus != adadRuus)
+            {
+                Marja? jadidRuus = Ihjiz(wasl, wasl.SanfMuttajih3, adadRuus);
+                Marja? jadidMalamis = Ihjiz(wasl, wasl.SanfMuttajih2, adadRuus);
+                Marja? jadidAlwan = Ihjiz(wasl, wasl.SanfLawn32, adadRuus);
+                if (jadidRuus is null || jadidMalamis is null || jadidAlwan is null)
+                {
+                    // The previous roots are released only once the new ones
+                    // exist, so a failed allocation leaves the takeover holding
+                    // the arrays it had rather than three null ones.
+                    jadidRuus?.Dispose();
+                    jadidMalamis?.Dispose();
+                    jadidAlwan?.Dispose();
+                    return false;
+                }
+                masfufatRuus?.Dispose();
+                masfufatMalamis?.Dispose();
+                masfufatAlwan?.Dispose();
+                masfufatRuus = jadidRuus;
+                masfufatMalamis = jadidMalamis;
+                masfufatAlwan = jadidAlwan;
+                tulMasfufatRuus = adadRuus;
+            }
+
+            if (masfufatMuthallathat is null || tulMasfufatFahras != adadFahras)
+            {
+                Marja? jadidFahras = Ihjiz(wasl, wasl.SanfSahih, adadFahras);
+                if (jadidFahras is null)
+                {
+                    return false;
+                }
+                masfufatMuthallathat?.Dispose();
+                masfufatMuthallathat = jadidFahras;
+                tulMasfufatFahras = adadFahras;
+            }
+
+            return wasl.Ansikh<NuqtaRasm>(Ruus, new ReadOnlySpan<NuqtaRasm>(ruus, 0, adadRuus))
+                && wasl.Ansikh<NuqtaMulmas>(
+                    Malamis, new ReadOnlySpan<NuqtaMulmas>(malamis, 0, adadRuus))
+                && wasl.Ansikh<LawnRasm>(Alwan, new ReadOnlySpan<LawnRasm>(alwan, 0, adadRuus))
+                && wasl.Ansikh<int>(
+                    Muthallathat, new ReadOnlySpan<int>(muthallathat, 0, adadFahras));
         }
 
         /// <summary>
@@ -1926,6 +1930,8 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             masfufatAlwan = null;
             masfufatMuthallathat = null;
             siaatAshkal = 0;
+            tulMasfufatRuus = 0;
+            tulMasfufatFahras = 0;
         }
 
         private static Marja? Ihjiz(WaslMuharrik wasl, IntPtr sanf, int adad)
@@ -2231,22 +2237,6 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         {
             Marja?[] lawhat = minRuqaa ? lawhatRuqaa : lawhatHayya;
             return fahras < lawhat.Length ? lawhat[fahras]?.Kaen ?? IntPtr.Zero : IntPtr.Zero;
-        }
-
-        /// <summary>The first material and page that exist, patch atlas first.</summary>
-        /// <param name="madda">The material, or zero.</param>
-        /// <param name="lawhaSafha">The texture, or zero.</param>
-        /// <returns>Whether a material was found.</returns>
-        public bool AwwalMadda(out IntPtr madda, out IntPtr lawhaSafha)
-        {
-            madda = Madda(true, 0);
-            lawhaSafha = LawhatSafha(true, 0);
-            if (madda == IntPtr.Zero)
-            {
-                madda = Madda(false, 0);
-                lawhaSafha = LawhatSafha(false, 0);
-            }
-            return madda != IntPtr.Zero;
         }
 
         /// <summary>Where one glyph sits in the atlas it belongs to.</summary>
@@ -3363,13 +3353,16 @@ namespace Taarib.Unity.Il2cpp.Anzimat
     /// <b>The four interception points.</b>
     /// <c>TextMeshProUGUI.GenerateTextMesh</c> and
     /// <c>TextMeshPro.GenerateTextMesh</c> are where each component decides what
-    /// to draw, and suppressing them is what stops TMP's own shaper from running
-    /// for a string Taarib owns. <c>UpdateMaterial</c> on both is the second
-    /// pair and is not optional: on the canvas path it runs <em>after</em> the
-    /// geometry in the same rebuild, so a takeover that only intercepted the
-    /// geometry would put Taarib's vertices on screen with the game's font atlas
-    /// bound, and every glyph would sample a rectangle belonging to a Latin
-    /// letter.
+    /// to draw, and both are taken <em>after</em> the engine has drawn:
+    /// TextMeshPro clears the flag its auto-size loop waits on inside that
+    /// method, so suppressing it leaves the loop spinning inside one frame and
+    /// the game never presents another. The mesh TMP built is replaced instead,
+    /// which costs one layout nobody sees. <c>UpdateMaterial</c> on both is the
+    /// second pair, is taken before rather than after, and is not optional: on
+    /// the canvas path it runs after the geometry in the same rebuild, so a
+    /// takeover that only intercepted the geometry would put Taarib's vertices
+    /// on screen with the game's font atlas bound, and every glyph would sample
+    /// a rectangle belonging to a Latin letter.
     /// </para>
     /// <para>
     /// <b>The re-entrancy guard.</b> A patch that can trigger the thing it
@@ -3413,7 +3406,13 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         private static IntPtr muaqqatMaddaAalam;
 
         private readonly List<Mirbat> marabit = new List<Mirbat>(4);
-        private readonly HashSet<int> mamlukat = new HashSet<int>();
+
+        /// <summary>
+        /// Every component this takeover owns, and which atlas its mesh was last
+        /// built from — the patch's or this session's.
+        /// </summary>
+        private readonly Dictionary<int, bool> mamlukat = new Dictionary<int, bool>();
+
         private readonly Dictionary<int, MaddaAsliya> maddatAsliya =
             new Dictionary<int, MaddaAsliya>();
 
@@ -3515,16 +3514,23 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             amil = true;
             hali = this;
 
+            // The two generation points are taken after the engine has generated,
+            // never in place of it. Skipping GenerateTextMesh leaves TextMeshPro
+            // holding the flag its own auto-size loop waits on, and the loop then
+            // never ends: R.E.P.O. spun at full load on a black screen and never
+            // presented another frame. Letting the engine generate and replacing
+            // the mesh afterwards costs one layout the player never sees and
+            // keeps every field the game itself reads consistent.
             bool shayun = false;
             shayun |= Rabbit(
                 in binding.HadafNasijSath, typeof(TarqeeNasijSath),
-                nameof(TarqeeNasijSath.Sabiq), false,
+                nameof(TarqeeNasijSath.Baad), true,
                 (IntPtr)(void*)(delegate* unmanaged[Cdecl]<IntPtr, IntPtr, void>)
                     &BadilNasijSath,
                 tarqee, ref muaqqatNasijSath);
             shayun |= Rabbit(
                 in binding.HadafNasijAalam, typeof(TarqeeNasijAalam),
-                nameof(TarqeeNasijAalam.Sabiq), false,
+                nameof(TarqeeNasijAalam.Baad), true,
                 (IntPtr)(void*)(delegate* unmanaged[Cdecl]<IntPtr, IntPtr, void>)
                     &BadilNasijAalam,
                 tarqee, ref muaqqatNasijAalam);
@@ -3608,8 +3614,8 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         /// <param name="kaen">The text component, as an IL2CPP object pointer.</param>
         /// <param name="sathi">Whether this is the canvas-space component.</param>
         /// <returns>
-        /// Whether Taarib drew. <c>false</c> means the component is untouched and
-        /// TextMeshPro's own generation must run, which is the correct answer for
+        /// Whether Taarib drew. <c>false</c> means the mesh TextMeshPro just
+        /// generated is left exactly as it is, which is the correct answer for
         /// every string this patch does not cover.
         /// </returns>
         /// <remarks>
@@ -3668,11 +3674,15 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             {
                 return false;
             }
-            if (!mamlukat.Contains(engine.Muarrif(kaen)))
+            if (!mamlukat.TryGetValue(engine.Muarrif(kaen), out bool minRuqaa))
             {
                 return false;
             }
-            if (!source.AwwalMadda(out IntPtr madda, out IntPtr lawhaSafha))
+            // The material and page that go with the atlas this component's mesh
+            // was last built against; see the note on Wassil.
+            IntPtr madda = source.Madda(minRuqaa, 0);
+            IntPtr lawhaSafha = source.LawhatSafha(minRuqaa, 0);
+            if (madda == IntPtr.Zero)
             {
                 return false;
             }
@@ -3846,20 +3856,12 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             // size, so nothing is snapped and every bucket is zero.
             talab.Tathbit = tathbit;
 
-            if (!buffers.Wassi(huruf.Length, engine))
-            {
-                Utruk(kaen);
-                return false;
-            }
+            buffers.Wassi(huruf.Length);
             NatijaNasij natija = Nasij.Ibni(
                 in talab, source.Khareeta(minRuqaa), buffers.Makhzan());
             if (!natija.Kafa)
             {
-                if (!buffers.Wassi(natija.MatlubRuus / Nasij.RuusLiShakl, engine))
-                {
-                    Utruk(kaen);
-                    return false;
-                }
+                buffers.Wassi(natija.MatlubRuus / Nasij.RuusLiShakl);
                 natija = Nasij.Ibni(in talab, source.Khareeta(minRuqaa), buffers.Makhzan());
                 if (!natija.Kafa)
                 {
@@ -3876,8 +3878,10 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 BallighSafahat();
             }
 
-            buffers.Amsah(in natija);
-            if (!buffers.Anfidh(engine))
+            // Only what this string actually built crosses into the IL2CPP
+            // arrays, and they are sized to exactly that; the mesh setters
+            // derive their counts from the arrays' lengths.
+            if (!buffers.Anfidh(engine, in natija))
             {
                 Utruk(kaen);
                 return false;
@@ -3888,13 +3892,13 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 Hudud(in natija));
 
             NazzifFuruu(engine, kaen, sathi);
-            if (!Wassil(engine, source, kaen, nasij, sathi))
+            if (!Wassil(engine, source, kaen, nasij, sathi, minRuqaa))
             {
                 Utruk(kaen);
                 return false;
             }
 
-            mamlukat.Add(engine.Muarrif(kaen));
+            mamlukat[engine.Muarrif(kaen)] = minRuqaa;
             return true;
         }
 
@@ -4059,10 +4063,30 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             return true;
         }
 
+        /// <summary>
+        /// Binds the mesh, and the material and atlas page it was built against.
+        /// </summary>
+        /// <remarks>
+        /// <paramref name="minRuqaa"/> is not a preference. A mesh laid out from
+        /// the patch indexes the patch's own atlas, and one laid out at runtime
+        /// indexes the atlas this session rasterized into; the two are different
+        /// pictures with different glyphs at different coordinates. Binding the
+        /// patch's texture to a runtime-laid mesh samples whatever happens to sit
+        /// at those coordinates, and R.E.P.O. drew every translated line as a row
+        /// of solid white blocks because the Mono twin of this path preferred the
+        /// patch's atlas here.
+        /// </remarks>
         private bool Wassil(
-            WaslMuharrik engine, MasdarAshkal source, IntPtr kaen, IntPtr nasij, bool sathi)
+            WaslMuharrik engine,
+            MasdarAshkal source,
+            IntPtr kaen,
+            IntPtr nasij,
+            bool sathi,
+            bool minRuqaa)
         {
-            if (!source.AwwalMadda(out IntPtr madda, out IntPtr lawhaSafha))
+            IntPtr madda = source.Madda(minRuqaa, 0);
+            IntPtr lawhaSafha = source.LawhatSafha(minRuqaa, 0);
+            if (madda == IntPtr.Zero)
             {
                 return false;
             }
@@ -4360,22 +4384,19 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         // code terminates the game rather than being logged.
         // -------------------------------------------------------------------
 
+        /// <summary>
+        /// The detour form of the canvas-space generation takeover: the engine
+        /// generates first, and Taarib replaces the mesh afterwards.
+        /// </summary>
+        /// <remarks>
+        /// The ordering is the whole point and it matches the managed postfix.
+        /// Returning without calling the trampoline would leave TextMeshPro
+        /// holding the flag its auto-size loop waits on, and that loop never
+        /// ends — a game at full load on a black screen.
+        /// </remarks>
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static unsafe void BadilNasijSath(IntPtr kaen, IntPtr tabia)
         {
-            try
-            {
-                NizamTmp? nizam = hali;
-                if (nizam is not null && nizam.Yarsum(kaen, sathi: true))
-                {
-                    return;
-                }
-            }
-            catch (Exception)
-            {
-                // Yarsum already reports and disables itself; anything reaching
-                // here is beyond reporting and must still let TMP draw.
-            }
             IntPtr muaqqat = muaqqatNasijSath;
             if (muaqqat != IntPtr.Zero)
             {
@@ -4385,27 +4406,33 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 // with — the same arguments, including the trailing MethodInfo*.
                 ((delegate* unmanaged[Cdecl]<IntPtr, IntPtr, void>)muaqqat)(kaen, tabia);
             }
-        }
-
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        private static unsafe void BadilNasijAalam(IntPtr kaen, IntPtr tabia)
-        {
             try
             {
-                NizamTmp? nizam = hali;
-                if (nizam is not null && nizam.Yarsum(kaen, sathi: false))
-                {
-                    return;
-                }
+                hali?.Yarsum(kaen, sathi: true);
             }
             catch (Exception)
             {
+                // Yarsum already reports and disables itself; anything reaching
+                // here is beyond reporting, and TMP's own mesh is already drawn.
             }
+        }
+
+        /// <summary>The same, for the world-space component.</summary>
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        private static unsafe void BadilNasijAalam(IntPtr kaen, IntPtr tabia)
+        {
             IntPtr muaqqat = muaqqatNasijAalam;
             if (muaqqat != IntPtr.Zero)
             {
                 // SOUND: as BadilNasijSath.
                 ((delegate* unmanaged[Cdecl]<IntPtr, IntPtr, void>)muaqqat)(kaen, tabia);
+            }
+            try
+            {
+                hali?.Yarsum(kaen, sathi: false);
+            }
+            catch (Exception)
+            {
             }
         }
 
@@ -4467,10 +4494,17 @@ namespace Taarib.Unity.Il2cpp.Anzimat
     }
 
     /// <summary>
-    /// ترقيع نسيج السطح — the managed prefix on
+    /// ترقيع نسيج السطح — the managed postfix on
     /// <c>TMPro.TextMeshProUGUI.GenerateTextMesh</c>, used when rung one
     /// resolved it and HarmonyX can weave the generated method.
     /// </summary>
+    /// <remarks>
+    /// After the engine's generation rather than in place of it. TextMeshPro
+    /// clears the flag its auto-size loop waits on inside that method, so a
+    /// prefix that skipped it left the loop spinning inside one frame and the
+    /// game never presented another. Replacing the mesh afterwards costs one
+    /// layout the player never sees.
+    /// </remarks>
     public static class TarqeeNasijSath
     {
         /// <summary>Draws the component through Taarib when the patch covers it.</summary>
@@ -4478,31 +4512,23 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         /// The component, injected by Harmony as the Il2CppInterop proxy whose
         /// <c>Pointer</c> is the native object this adapter works in terms of.
         /// </param>
-        /// <returns>
-        /// <c>false</c> to skip TextMeshPro's own generation entirely, which is
-        /// what stops a pipeline with no Arabic OpenType layout in it from
-        /// shaping the string; <c>true</c> to let it run untouched.
-        /// </returns>
-        public static bool Sabiq(Il2CppObjectBase __instance)
+        public static void Baad(Il2CppObjectBase __instance)
         {
-            NizamTmp? nizam = NizamTmp.Hali;
-            return nizam is null || !nizam.Yarsum(__instance.Pointer, sathi: true);
+            NizamTmp.Hali?.Yarsum(__instance.Pointer, sathi: true);
         }
     }
 
     /// <summary>
-    /// ترقيع نسيج العالم — the managed prefix on
+    /// ترقيع نسيج العالم — the managed postfix on
     /// <c>TMPro.TextMeshPro.GenerateTextMesh</c>, the world-space component.
     /// </summary>
     public static class TarqeeNasijAalam
     {
         /// <summary>Draws the component through Taarib when the patch covers it.</summary>
         /// <param name="__instance">The component, injected by Harmony.</param>
-        /// <returns><c>false</c> to skip TextMeshPro's own generation.</returns>
-        public static bool Sabiq(Il2CppObjectBase __instance)
+        public static void Baad(Il2CppObjectBase __instance)
         {
-            NizamTmp? nizam = NizamTmp.Hali;
-            return nizam is null || !nizam.Yarsum(__instance.Pointer, sathi: false);
+            NizamTmp.Hali?.Yarsum(__instance.Pointer, sathi: false);
         }
     }
 

@@ -783,21 +783,27 @@ namespace Taarib.Unity.Mono.Anzimat
         }
 
         /// <summary>Taarib's atlas material for one label.</summary>
+        /// <remarks>
+        /// The other atlas is never offered in its place. Quads laid out from
+        /// the patch index the patch's own atlas and quads laid out at run time
+        /// index the atlas this session rasterized into; the two are different
+        /// pictures with different glyphs at different coordinates, so a label
+        /// built from one and sampled from the other paints solid blocks. A
+        /// label whose own atlas has no material yet is left to NGUI instead.
+        /// </remarks>
         /// <param name="lawha">The label, which decides which atlas it was drawn from.</param>
-        /// <returns>The material, or <c>null</c> when nothing is resident.</returns>
+        /// <returns>The material, or <c>null</c> when that atlas is not resident.</returns>
         public Material? Madda(object? lawha)
         {
-            bool minRuqaa = MinRuqaa(lawha);
-            return masdar.Madda(minRuqaa, 0) ?? masdar.Madda(!minRuqaa, 0);
+            return masdar.Madda(MinRuqaa(lawha), 0);
         }
 
         /// <summary>Taarib's atlas page for one label.</summary>
         /// <param name="lawha">The label.</param>
-        /// <returns>The texture, or <c>null</c> when no page is resident.</returns>
+        /// <returns>The texture, or <c>null</c> when that atlas's page is not resident.</returns>
         public Texture2D? Lawha(object? lawha)
         {
-            bool minRuqaa = MinRuqaa(lawha);
-            return masdar.LawhatSafha(minRuqaa, 0) ?? masdar.LawhatSafha(!minRuqaa, 0);
+            return masdar.LawhatSafha(MinRuqaa(lawha), 0);
         }
 
         /// <summary>
@@ -906,9 +912,11 @@ namespace Taarib.Unity.Mono.Anzimat
             // whether Taarib owns a label allocates nothing at all — which
             // matters because it runs for every label the panel rebuilds,
             // including all the ones the patch does not cover.
-            int fahras = ruqaa.JidNass(Ruqaa.MiftahMinNass(khaam!));
+            ulong miftah = Ruqaa.MiftahMinNass(khaam!);
+            int fahras = ruqaa.JidNass(miftah);
             if (fahras < 0)
             {
+                Rabt.Fawt(khaam!, miftah);
                 Utruk(lawha);
                 return false;
             }

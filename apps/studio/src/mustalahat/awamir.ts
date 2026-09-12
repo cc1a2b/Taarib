@@ -130,6 +130,19 @@ export const commands = {
 	 */
 	adifMujalladFahs: (masar: string) => typedError<number, Khata>(__TAURI_INVOKE("adif_mujallad_fahs", { masar })),
 	/**
+	 *  Where the background engine sweep stands, for a screen that has just
+	 *  mounted and missed the events.
+	 * 
+	 *  Whether one is running, how many games it is over, how many are done, and
+	 *  every game it could not probe — the same record the sweep announces on
+	 *  [`ISM_HADATH_JAWLA`].
+	 * 
+	 *  # Errors
+	 * 
+	 *  Cannot currently fail; the signature is the uniform command contract.
+	 */
+	halatJawla: () => typedError<HalatJawlaHie, Khata>(__TAURI_INVOKE("halat_jawla")),
+	/**
 	 *  Everything the detail screen draws for one game.
 	 * 
 	 *  The capability report is served from the store when one is cached and was
@@ -284,6 +297,11 @@ export const commands = {
 	 *  them is refused by the installer itself while any record is still
 	 *  outstanding, so an interrupted removal keeps everything it still needs.
 	 * 
+	 *  `siyasa` carries how far the user said the removal may go. The sweeping
+	 *  answer is the only one that can take a file no manifest names, and the
+	 *  screen may only send it after showing what `khuttat_izala` found — which is
+	 *  why it is asked for per removal rather than stored as a setting.
+	 * 
 	 *  # Errors
 	 * 
 	 *  [`KhataTathbeetAmr::LaTathbeet`] when the game has no installation of the
@@ -291,7 +309,7 @@ export const commands = {
 	 *  running. A restore that fails is carried inside the result rather than
 	 *  raised, because the other kind's outcome is still owed to the user.
 	 */
-	azilRuqaa: (muarrif: string, matlab: MatlabIzala, sarim: boolean) => typedError<HasilatIzala, Khata>(__TAURI_INVOKE("azil_ruqaa", { muarrif, matlab, sarim })),
+	azilRuqaa: (muarrif: string, matlab: MatlabIzala, siyasa: SiyasatIzala) => typedError<HasilatIzala, Khata>(__TAURI_INVOKE("azil_ruqaa", { muarrif, matlab, siyasa })),
 	/**
 	 *  Whether the game's own executable is running right now.
 	 * 
@@ -440,9 +458,10 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  [`KhataWarshaAmr::LaMuzawwid`], [`KhataWarshaAmr::LaItimad`], and whatever the project
-	 *  store or the journal raise. A provider-side failure is answered, not raised: it comes
-	 *  back as `najahat: false` with its recorded reason.
+	 *  [`KhataWarshaAmr::LaItimad`] when the elected provider's key is not in the keychain,
+	 *  [`KhataWarshaAmr::MuzawwidGhayrMadum`] when it cannot be built as configured, and
+	 *  whatever the project store or the journal raise. A provider-side failure is answered,
+	 *  not raised: it comes back as `najahat: false` with its recorded reason.
 	 */
 	tarjimNass: (muarrif: string, nass: string) => typedError<NatijatTarjamaHie, Khata>(__TAURI_INVOKE("tarjim_nass", { muarrif, nass })),
 	/**
@@ -450,9 +469,9 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  [`KhataWarshaAmr::SaqfGhayrSalih`], [`KhataWarshaAmr::LaMuzawwid`],
-	 *  [`KhataWarshaAmr::LaItimad`], and whatever the project store or the journal raise. A
-	 *  stopped run is not an error: what stopped it is in the returned accounting.
+	 *  [`KhataWarshaAmr::SaqfGhayrSalih`], [`KhataWarshaAmr::LaItimad`],
+	 *  [`KhataWarshaAmr::MuzawwidGhayrMadum`], and whatever the project store or the journal
+	 *  raise. A stopped run is not an error: what stopped it is in the returned accounting.
 	 */
 	tarjimDufa: (muarrif: string, saqf: number | null) => typedError<DufaHie, Khata>(__TAURI_INVOKE("tarjim_dufa", { muarrif, saqf })),
 	/**
@@ -1126,8 +1145,8 @@ export const commands = {
 	 *  [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the game is a Steam
 	 *  game and Steam's own root cannot be found, so the install gate this run ends
 	 *  at could not read the catalogue VAC is declared in,
-	 *  [`crate::warsha_awamir::KhataWarshaAmr::LaMuzawwid`] when no provider is
-	 *  configured, [`KhataTilqaiAmr::LaKhattArabi`] when no font on this machine can
+	 *  [`crate::warsha_awamir::KhataWarshaAmr::LaItimad`] when the elected
+	 *  provider's key is not in the keychain, [`KhataTilqaiAmr::LaKhattArabi`] when no font on this machine can
 	 *  carry Arabic, [`KhataTilqaiAmr::LaIstinaf`] when a resume was asked for and
 	 *  there is nothing to resume, and whatever the store, the keychain and the
 	 *  acknowledgement record raise.
@@ -1145,6 +1164,39 @@ export const commands = {
 	 *  [`KhataTilqaiAmr::LaMashwar`] when this process has no run for the game.
 	 */
 	alghiTilqai: (muarrif: string) => typedError<LaqtatTilqaiHie, Khata>(__TAURI_INVOKE("alghi_tilqai", { muarrif })),
+	/**
+	 *  Every community translation the index lists for one game, credited.
+	 * 
+	 *  The index is answered from the cache while it is current, fetched through
+	 *  the configured sources when it is not, and served stale when every source
+	 *  refuses. An empty answer therefore means the index was read and lists
+	 *  nothing for this game; a machine with no index at all is refused instead,
+	 *  so the screen never says "nothing is known" when nobody could look.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`taarib_mustawda::KhataMustawda::FahrasMujtamaGhayrMutah`] when no source
+	 *  answered and nothing is cached, whatever the index parser refuses when the
+	 *  one answer that came was unreadable, and whatever the game lookup raises.
+	 */
+	tarjamatMujtama: (muarrif: string) => typedError<TarjamaMujtamaHie[], Khata>(__TAURI_INVOKE("tarjamat_mujtama", { muarrif })),
+	/**
+	 *  Opens a community translation's page in the default browser.
+	 * 
+	 *  The address is checked before anything is launched: `https` only, within
+	 *  the length the index holds its own addresses to, no whitespace or control
+	 *  characters, no credentials, and a host the cached index links to or one of
+	 *  the platforms in [`MUDIFUN_MARUFA`]. The interface only ever sends addresses
+	 *  it received from [`tarjamat_mujtama`], so a refusal here is a defect and not
+	 *  a user error, but a command that opens whatever it is handed is a command
+	 *  that opens whatever a compromised webview hands it.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataMujtamaAmr::RabtMarfud`] when the address fails any check above, and
+	 *  [`KhataMujtamaAmr::FathRabtFashil`] when the platform would not open it.
+	 */
+	iftahRabt: (rabt: string) => typedError<boolean, Khata>(__TAURI_INVOKE("iftah_rabt", { rabt })),
 };
 
 /* Types */
@@ -1466,6 +1518,44 @@ export type FahsAkhirHie = {
 	matajir: MatjarMaktabaHie[],
 };
 
+/**  One game's finished probe, as the library row reads it. */
+export type FahsMuharrikHie = {
+	/**  Taarib's identity for the game, matching the library row's `muarrif`. */
+	muarrif: string,
+	/**  The name its launcher gives it, so a log line and a notice can name it. */
+	ism: string,
+	/**
+	 *  Whether the probe has examined this game — always true for a game this
+	 *  event names, and sent anyway so the row's own flag is overwritten rather
+	 *  than inferred by the interface.
+	 */
+	mafhusa: boolean,
+	/**  The identified engine family. */
+	muharrik: AilatMuharrik,
+	/**  The tier the report awards. */
+	tabaqa: Tabaqa,
+	/**  Whether this build can drive that tier on that engine. */
+	jahiziya: JahiziyatTashghil,
+	/**
+	 *  The Arabization status the card badges, decided from the new report and
+	 *  the same install facts the scan reads, by the same rule.
+	 */
+	hala: HalatLuba,
+};
+
+/**  One game the sweep could not probe. */
+export type FashalJawlaHie = {
+	/**  Taarib's identity for the game. */
+	muarrif: string,
+	/**  Its name. */
+	ism: string,
+	/**
+	 *  What the probe raised, whole, so the code and the next step survive the
+	 *  crossing.
+	 */
+	khata: Khata,
+};
+
 /**  The four groups the unavailable section is organised into. */
 export type FiatGhiyab = 
 /**  The launcher is working on it now. */
@@ -1554,6 +1644,31 @@ export type HalatIqrar = {
 	waqt: string | null,
 	/**  Which build of Taarib asked. */
 	isdar_taarib: string | null,
+};
+
+/**
+ *  Where the sweep stands.
+ * 
+ *  The answer of [`halat_jawla`] and the payload of [`ISM_HADATH_JAWLA`] are
+ *  one shape, so a screen that mounts mid-sweep and a screen that watched it
+ *  start hold the same record.
+ */
+export type HalatJawlaHie = {
+	/**  Whether a sweep is running. */
+	jariya: boolean,
+	/**  How many games this round has probed. */
+	tamma: number,
+	/**  How many games this round is over. */
+	majmu: number,
+	/**  How many games this round could not probe. */
+	fashila: number,
+	/**  Every game this round could not probe, in the order they failed. */
+	akhta: FashalJawlaHie[],
+	/**
+	 *  A failure of the sweep itself rather than of one game — the store would
+	 *  not say which games are owed a probe — when there was one.
+	 */
+	khata: Khata | null,
 };
 
 /**
@@ -1730,6 +1845,19 @@ export type HalatSawt =
 "mutabbaqa" | 
 /**  A pack is installed and a newer revision exists. */
 "tahdith";
+
+/**  Where a translation stands, as its page states. */
+export type HalatTarjamaMujtama = 
+/**  Released. */
+"nashita" | 
+/**  An initial or beta release. */
+"awwaliya" | 
+/**  Work in progress with no release yet. */
+"qayd_altatwir" | 
+/**  Discontinued by its author. */
+"mahjura" | 
+/**  A status this build does not know. */
+"majhul";
 
 /**  Whether the game's own executable is running right now. */
 export type HalatTashghil = {
@@ -2213,10 +2341,10 @@ export type IdadatMuzawwid = {
  * 
  *  The default is an empty list with no elected provider, and that is the state
  *  a fresh installation is in. It is a real state rather than a missing one:
- *  installing a published patch never reaches a provider, so most of the product
- *  works exactly as it does with ten of them configured, and what does not work
- *  is new machine translation. [`Self::hala`] is where that distinction is
- *  stated, once, so that no surface has to decide it again.
+ *  installing a published patch never reaches a provider, and new machine
+ *  translation goes through the built-in free provider until the user adds one
+ *  of their own — see [`Self::muntakhab_aw_majjani`]. [`Self::hala`] is where
+ *  the list's state is stated, once, so that no surface has to decide it again.
  */
 export type IdadatMuzawwidin = {
 	/**  Every provider the user has set up. */
@@ -3147,6 +3275,32 @@ export type MuayanaHie = {
 	tajawuz_nisba: number | null,
 };
 
+/**  Where a translation's home page lives. */
+export type MudifTarjama = 
+/**  A Steam Workshop item. */
+"steam_workshop" | 
+/**  A Nexus Mods page. */
+"nexusmods" | 
+/**  A Thunderstore package. */
+"thunderstore" | 
+/**  A `GameBanana` page. */
+"gamebanana" | 
+/**  A GitHub repository or release. */
+"github" | 
+/**  An itch.io page. */
+"itch" | 
+/**  The Outer Wilds mod database. */
+"outerwildsmods" | 
+/**  The team's own site. */
+"mawqi_alfariq" | 
+/**  A blog. */
+"mudawwana" | 
+/**
+ *  A host kind this build does not know: the index grew a kind after this
+ *  build shipped. The page's own address still says where it is.
+ */
+"majhul";
+
 /**  One file the plan would write, and whether the game already has it. */
 export type MudkhalKhuttaHie = {
 	/**  The destination relative to the game root, as the plan names it. */
@@ -3460,14 +3614,18 @@ export type MutabaqaBina =
  * 
  *  The election is the settings crate's and so is the sentence; the workspace
  *  only carries them, so a stale default that quietly bills a different
- *  provider is read on the screen where the run is started, not discovered on
- *  the invoice.
+ *  provider — or the built-in free provider standing in for an empty list — is
+ *  read on the screen where the run is started, not discovered on the invoice
+ *  or in the quality of the Arabic.
  */
 export type MuzawwidWarshaHie = {
 	/**  Which of the four states the list is in. */
 	hala: HalatMuzawwidinHie,
-	/**  The elected provider's identifier, when one is elected. */
-	ism: string | null,
+	/**
+	 *  The identifier of the provider a new translation uses: the elected one,
+	 *  or the built-in free one when the list elects nothing.
+	 */
+	ism: string,
 	/**  The state's own sentence, in Arabic. */
 	wasf_arabi: string,
 	/**  The same sentence in English. */
@@ -3513,7 +3671,37 @@ export type NawMuzawwid =
 /**  Microsoft's translation API. */
 "microsoft_tarjama" | 
 /**  A local model behind an Ollama-compatible endpoint. */
-"mahalli";
+"mahalli" | 
+/**
+ *  Google Translate's free web endpoint — the one the browser widget and
+ *  every Unity translation mod use. No credential, no cost, and unofficial:
+ *  sentence-level quality and undocumented rate limits. Built into every
+ *  installation as the provider of last resort, see
+ *  [`IdadatMuzawwid::google_majjani`]; it can also be added to the list by
+ *  hand, which is how somebody makes it win over a keyed provider they
+ *  would rather keep switched on.
+ */
+"google_majjani";
+
+/**  Under what terms a translation is offered. */
+export type NawRukhsa = 
+/**  The page states no terms. */
+"ghayr_musarraha" | 
+/**  Terms stated in the page's own words. */
+"musarraha" | 
+/**  A recognised licence, named by its SPDX identifier. */
+"spdx" | 
+/**  A licence kind this build does not know. */
+"majhul";
+
+/**  What a page's download figure counts. */
+export type NawTanzeelat = 
+/**  Downloads. */
+"tanzeelat" | 
+/**  Workshop subscribers. */
+"mushtarikun" | 
+/**  A count kind this build does not know. */
+"majhul";
 
 /**  Which of the two installations a command is about. */
 export type NawTathbeetHie = 
@@ -4284,6 +4472,18 @@ export type SijillMaktaba = {
 	lawn: LawnBariz | null,
 	/**  The generated plate, present whenever `ghilaf` is `None`. */
 	lawha: LawhaBadila | null,
+	/**
+	 *  How many Arabic translations other teams have published for this game,
+	 *  as the cached community index lists them.
+	 * 
+	 *  Read from the cache alone, never from the network: this scan runs on the
+	 *  thread the window is driven from, and the refresh that keeps the cache
+	 *  current runs in the background. Zero therefore means either that the
+	 *  index lists nothing for this game or that no index is cached yet, and
+	 *  the card draws neither — the mark is for the game that has one. The game
+	 *  screen, which can wait for a fetch, is where the two are told apart.
+	 */
+	tarjamat_mujtama: number,
 };
 
 /**
@@ -4330,6 +4530,32 @@ export type Sima =
 "fatih" | 
 /**  Follow the operating system. */
 "nizam";
+
+/**
+ *  How far a removal may go, as the user answered it.
+ * 
+ *  Three, because the installer has three and the middle one was the only one
+ *  the interface could ask for. A game that ran once with a vendored loader
+ *  comes back holding that loader's log, cache and configuration — written
+ *  after the manifest was sealed, so no record names them — and the
+ *  conservative answer leaves the directory and keeps the record open forever.
+ *  [`SiyasatIzala::Kanasa`] is what finishes it, and it is a separate value
+ *  rather than a flag on the other two because the screen must have seen
+ *  `khuttat_izala`'s residue list before a person can mean it.
+ */
+export type SiyasatIzala = 
+/**
+ *  Leave a file the store replaced, and leave a directory that still holds
+ *  files Taarib did not write. The default answer.
+ */
+"muhafiza" | 
+/**  Refuse the whole removal when the store has replaced a patched file. */
+"sarima" | 
+/**
+ *  Also take what is left inside a directory Taarib created, and the
+ *  directory with it.
+ */
+"kanasa";
 
 /**  A contributor's standing, as the console shows it. */
 export type SumaaHie = {
@@ -4488,6 +4714,21 @@ export type Taghtiya = {
 	/**  Of those, how many are translated. */
 	mutarjam_awwal: number,
 };
+
+/**  How much of the game a translation covers, as its page states it. */
+export type TaghtiyaMujtama = 
+/**  Interface and dialogue both. */
+"kamila" | 
+/**  The interface only. */
+"wajiha" | 
+/**  Dialogue or subtitles only. */
+"hiwar" | 
+/**  Part of the game, by the page's own account. */
+"juziya" | 
+/**  The page does not say. */
+"ghayr_musarraha" | 
+/**  A coverage kind this build does not know. */
+"majhul";
 
 /**
  *  One warning the user must acknowledge by name before anything leaves.
@@ -4828,6 +5069,79 @@ export type TaqreerTahaqquqHie = {
 	zaida: string[],
 };
 
+/**
+ *  How a translation was made, when its page says so.
+ * 
+ *  The same three values Taarib's own listings carry in
+ *  `taarib_mustalahat::ruqaa::TareeqaTarjama`, plus the honest fourth: most
+ *  pages do not say, and the index records only what a page states or what
+ *  named translators imply.
+ */
+export type TareeqaMujtama = 
+/**  Translated by people, start to finish. */
+"bashariya_kamila" | 
+/**  Machine-translated, then reviewed by people. */
+"aaliya_thum_bashariya" | 
+/**  Machine-translated with no review. */
+"aaliya_faqat" | 
+/**  The page does not say. */
+"ghayr_musarraha" | 
+/**  A method this build does not know. */
+"majhul";
+
+/**
+ *  One community translation, as the game screen draws it.
+ * 
+ *  Every field is what the translation's own page stated on the day
+ *  [`Self::waqt_tahaqquq`] names, carried through the index verbatim. The
+ *  team's two names arrive resolved rather than as the index's reference,
+ *  because the screen credits the makers first and a reference is not a name.
+ */
+export type TarjamaMujtamaHie = {
+	/**  The entry's identifier in the index, for the row's key. */
+	muarrif: string,
+	/**  The team's name in Latin script, when the entry belongs to a listed team. */
+	fariq: string | null,
+	/**  The team's Arabic name, when it has one. */
+	fariq_arabi: string | null,
+	/**  The author or team as the page names them. */
+	muallif: string,
+	/**  Where the page lives, as a kind. */
+	mudif: MudifTarjama,
+	/**  The page's host, for the kinds that are somebody's own site. */
+	mudif_ism: string,
+	/**  The page itself, `https` only. */
+	rabt: string,
+	/**  Coverage, as a kind. */
+	taghtiya: TaghtiyaMujtama,
+	/**  Coverage, in the page's own words. */
+	taghtiya_nass: string | null,
+	/**  How it was translated. */
+	tareeqa: TareeqaMujtama,
+	/**  How its terms are stated. */
+	rukhsa: NawRukhsa,
+	/**  The SPDX identifier, when the terms are a recognised licence. */
+	rukhsa_muarrif: string | null,
+	/**  The terms as written. */
+	rukhsa_nass: string | null,
+	/**  Free, sold, or subscription-only. */
+	tawzee: TawzeeTarjama,
+	/**  Where it stands. */
+	hala: HalatTarjamaMujtama,
+	/**  The version the page states. */
+	isdar: string | null,
+	/**  When it was published, `YYYY-MM-DD`. */
+	waqt_alnashr: string | null,
+	/**  When it was last updated, `YYYY-MM-DD`. */
+	akhir_tahdith: string | null,
+	/**  The download or subscriber count the page shows. */
+	tanzeelat: number | null,
+	/**  What that count counts. */
+	tanzeelat_naw: NawTanzeelat | null,
+	/**  The day the page was read, `YYYY-MM-DD`. */
+	waqt_tahaqquq: string,
+};
+
 /**  A signed share, written. */
 export type TasdirMusharakaHie = {
 	/**  The file, absolute. */
@@ -4857,6 +5171,23 @@ export type TashkhisHie = {
 	/**  Their total size in bytes. */
 	hajm: number,
 };
+
+/**
+ *  Whether a translation is free, sold, or behind a subscription.
+ * 
+ *  Carried to the screen because it is the one fact a person meets the moment
+ *  they follow the link, and a list that hid it would be sending people to a
+ *  checkout without saying so.
+ */
+export type TawzeeTarjama = 
+/**  Free to download. */
+"majjani" | 
+/**  Sold through a checkout. */
+"madfua" | 
+/**  Subscription-only. */
+"vip" | 
+/**  A distribution kind this build does not know. */
+"majhul";
 
 /**
  *  What a recognizer said about how sure it was — or that it said nothing.

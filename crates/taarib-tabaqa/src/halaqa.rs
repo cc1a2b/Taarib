@@ -130,7 +130,6 @@ impl KhiyaratHalaqa {
             lugha: LUGHA_IFTIRADIYA.to_owned(),
         }
     }
-
 }
 
 impl Default for KhiyaratHalaqa {
@@ -653,8 +652,12 @@ impl Halaqa {
         }
         self.muaqqit_shasha.ansa();
         self.sath_akhir = Some(sath);
-        self.athar
-            .push(format!("surface {}×{} {}", sath.ard, sath.irtifa, sath.sigha.ism()));
+        self.athar.push(format!(
+            "surface {}×{} {}",
+            sath.ard,
+            sath.irtifa,
+            sath.sigha.ism()
+        ));
     }
 
     /// Applies one command to the panel and the overlay.
@@ -775,7 +778,8 @@ impl Halaqa {
         };
         if let Some(hala) = khayt.hala_in_amkan() {
             if hala.mutawaqqifa() && !self.hala_khayt.mutawaqqifa() {
-                self.athar.push(format!("recognition stopped: {}", hala.wasf()));
+                self.athar
+                    .push(format!("recognition stopped: {}", hala.wasf()));
             }
             self.hala_khayt = hala;
         }
@@ -858,10 +862,7 @@ impl Halaqa {
         {
             format!(
                 "تعريب: قُرئ نصّ ولا مترجم يترجمه — {}",
-                match &self.hala_mutarjim {
-                    HalatMutarjim::Ghaib(hala) => hala.arabi().to_owned(),
-                    hala => hala.wasf_arabi(),
-                }
+                self.hala_mutarjim.wasf_arabi()
             )
         } else {
             let mundhu = lahza_mikro.saturating_sub(self.bidayat_mikro.unwrap_or(lahza_mikro));
@@ -939,7 +940,11 @@ pub fn idadat(masarat: &Masarat) -> (Arc<Idadat>, Option<String>) {
 /// where an installer that wanted a particular face for a particular game would
 /// put it.
 #[must_use]
-pub fn mujalladat_khutut(masarat: &Masarat, idadat: &Idadat, mujallad_hamula: &Path) -> Vec<PathBuf> {
+pub fn mujalladat_khutut(
+    masarat: &Masarat,
+    idadat: &Idadat,
+    mujallad_hamula: &Path,
+) -> Vec<PathBuf> {
     let mut mujalladat = vec![
         mujallad_hamula.to_path_buf(),
         masarat.khutut(),
@@ -1083,10 +1088,8 @@ pub fn mutarjim_min_idadat(
             },
         );
     }
-    let (mutarjim, hala) = MutarjimMahalli::min_idadat(
-        idadat.muzawwidun.muntakhab(),
-        idadat.muzawwidun.hala(),
-    );
+    let (mutarjim, hala) =
+        MutarjimMahalli::min_idadat(idadat.muzawwidun.muntakhab(), idadat.muzawwidun.hala());
     let mutarjim: Option<Box<dyn MutarjimTabaqa>> = match mutarjim {
         Some(mutarjim) => Some(Box::new(mutarjim)),
         None => None,
@@ -1112,7 +1115,10 @@ pub fn dhakira_murakkaba(
 /// # Errors
 ///
 /// As [`DhakiraMalaf::iftah`].
-pub fn iftah_khazina(mujallad_tabaqa: &Path, lugha: &str) -> Result<Arc<DhakiraMalaf>, KhataTabaqa> {
+pub fn iftah_khazina(
+    mujallad_tabaqa: &Path,
+    lugha: &str,
+) -> Result<Arc<DhakiraMalaf>, KhataTabaqa> {
     DhakiraMalaf::iftah(masar_khazina(mujallad_tabaqa, lugha), lugha).map(Arc::new)
 }
 
@@ -1228,4 +1234,3 @@ pub fn ikhtisarat_li(mujallad_tabaqa: &Path, athar: &mut Vec<String>) -> Ikhtisa
         },
     }
 }
-

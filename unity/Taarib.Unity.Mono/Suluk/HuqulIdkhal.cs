@@ -92,27 +92,66 @@ namespace Taarib.Unity.Mono.Suluk
         private static readonly Dictionary<string, Type?> Anwa = new Dictionary<string, Type?>(32);
 
         /// <summary>
+        /// The sink a missed lookup is reported through while diagnostics are
+        /// on, and null otherwise. Set by the plugin from its <c>tashkhis</c>
+        /// setting, which promised this line for a build and never delivered it.
+        /// </summary>
+        public static Action<string>? SijillFawt { get; set; }
+
+        private static readonly HashSet<ulong> Fawtat = new HashSet<ulong>();
+
+        /// <summary>
+        /// How many distinct misses are reported before the log goes quiet. A
+        /// game that draws thousands of uncovered strings — every number, every
+        /// player name — would otherwise turn the log into the string table.
+        /// </summary>
+        private const int HaddFawtat = 400;
+
+        /// <summary>
+        /// Reports a string the patch had no entry for, once per distinct
+        /// string. Once, because the lookup runs on every rebuild and a menu
+        /// rebuilt every frame would write the same line sixty times a second.
+        /// </summary>
+        /// <param name="nass">The string the game drew.</param>
+        /// <param name="miftah">Its key, so the same string is not hashed twice.</param>
+        public static void Fawt(string nass, ulong miftah)
+        {
+            Action<string>? sijill = SijillFawt;
+            if (sijill is null)
+            {
+                return;
+            }
+            bool jadeed;
+            lock (Fawtat)
+            {
+                if (Fawtat.Count >= HaddFawtat)
+                {
+                    return;
+                }
+                jadeed = Fawtat.Add(miftah);
+            }
+            if (!jadeed)
+            {
+                return;
+            }
+            try
+            {
+                sijill("نصّ ليس في الرقعة | not in the patch: " + nass);
+            }
+            catch (Exception)
+            {
+                // A logging sink that throws is the host's problem, and a miss
+                // report is the last thing worth a second failure.
+            }
+        }
+
+        /// <summary>
         /// Where a degradation is reported. Assigned once by the plugin to its
         /// BepInEx log sink; left <c>null</c> the reports are discarded, which
         /// is what a unit of this code running outside a game wants.
         /// </summary>
-        /// <remarks>
-        /// Typed as a delegate rather than as BepInEx's own logger so that
-        /// nothing in this namespace carries a compile-time dependency on the
-        /// host — the same reason <c>Mushtarak</c> names no Unity type.
-        /// </remarks>
         public static Action<string>? Sijill { get; set; }
 
-        /// <summary>
-        /// Reports that one behaviour has switched itself off, naming the
-        /// reason. Never throws: a reporting path that can fail turns a
-        /// degradation into a crash in the game's own frame.
-        /// </summary>
-        /// <param name="sabab">
-        /// What failed and what it costs, in one sentence — "TMP_InputField
-        /// has no stringPosition in this build; caret mapping is off for TMP
-        /// input fields" rather than "binding failed".
-        /// </param>
         public static void Ballagh(string sabab)
         {
             Action<string>? sijill = Sijill;

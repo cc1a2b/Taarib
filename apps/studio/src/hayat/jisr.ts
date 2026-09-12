@@ -73,6 +73,26 @@ export const HADATH_GHILAF_LUBA = 'taarib://ghilaf-luba';
 export const HADATH_TILQAI = 'taarib://tilqai';
 
 /**
+ * The window event one game's background engine probe is announced on.
+ *
+ * The library probes itself after every completed scan — every visible game
+ * whose capability report is missing or was written by an older probe — and
+ * announces each game here the moment its report is written. The payload is
+ * the game's identity and exactly the fields its library row derives from the
+ * report, so the grid patches that row in place: no rescan, no reflow, and the
+ * card's box never changes.
+ */
+export const HADATH_FAHS_MUHARRIK = 'taarib://fahs-muharrik';
+
+/**
+ * The window event the background sweep's own standing arrives on: once when a
+ * round starts, once after every game, and once when it ends — that last one
+ * with `jariya` false and every failure it met carried by name. `halat_jawla`
+ * answers the same shape for a screen that mounts mid-sweep.
+ */
+export const HADATH_JAWLA_MUHARRIK = 'taarib://jawla-muharrik';
+
+/**
  * The command surface: the name the backend registered, and the names its
  * parameters were declared under, in the order Rust declared them.
  *
@@ -96,6 +116,7 @@ interface TartibWusata {
   readonly hassil_suwar_maktaba: [];
   readonly iftah_manassa: ['muarrif'];
   readonly adif_mujallad_fahs: ['masar'];
+  readonly halat_jawla: [];
 
   // One game: what it is, and what it runs on.
   readonly tafasil_luba: ['muarrif'];
@@ -114,7 +135,7 @@ interface TartibWusata {
   readonly ruqaa_luba: ['muarrif'];
   readonly nazzil_ruqaa: ['muarrif', 'ruqaa'];
   readonly tahaqquq_ruqaa: ['muarrif'];
-  readonly azil_ruqaa: ['muarrif', 'matlab', 'sarim'];
+  readonly azil_ruqaa: ['muarrif', 'matlab', 'siyasa'];
   readonly hal_tashtaghil: ['muarrif'];
   readonly iqrar_aman: [];
   readonly sajjil_iqrar_aman: [];
@@ -216,6 +237,12 @@ interface TartibWusata {
   readonly saddir_musharaka: ['muarrif', 'basma', 'iqrarat'];
   readonly afhas_musharaka: ['masar', 'miftah'];
   readonly idmij_musharaka: ['basma', 'khiyarat'];
+
+  // What other teams already made for a game, credited and linked, and the one
+  // control that opens a maker's page in the browser after the backend has
+  // checked the address against the index it came from.
+  readonly tarjamat_mujtama: ['muarrif'];
+  readonly iftah_rabt: ['rabt'];
 }
 
 /** A command name the backend actually registered. */

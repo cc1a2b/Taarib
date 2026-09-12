@@ -120,9 +120,12 @@ impl HalatMutarjim {
                 asas,
             } => format!("translating through {ism} ({namudhaj}) at {asas}"),
             Self::Ghaib(hala) => format!(
-                "no translator: {} Lines already in the cache or in the installed patch are \
+                "no translator inside the game: {} The overlay reaches only a local model \
+                 server with an OpenAI-compatible endpoint, elected in Settings, under \
+                 Providers; the studio's built-in free service and every keyed provider are \
+                 out of its reach. Lines already in the cache or in the installed patch are \
                  still drawn.",
-                hala.injilizi()
+                sabab_ghiyab(*hala)
             ),
             Self::GhayrQabil { ism, sabab, .. } => format!(
                 "the elected provider {ism} cannot be reached from inside a game: {sabab} Lines \
@@ -144,8 +147,11 @@ impl HalatMutarjim {
                 asas,
             } => format!("الترجمة عبر {ism} ({namudhaj}) على {asas}"),
             Self::Ghaib(hala) => format!(
-                "لا مترجم: {} تُرسم السطور الموجودة في الخزينة أو في الرقعة المثبّتة كما هي.",
-                hala.arabi()
+                "لا مترجم داخل اللعبة: {} لا تصل الطبقة إلا إلى خادم نموذج محلي بواجهة متوافقة مع \
+                 OpenAI يُختار في الإعدادات ← المزوّدون؛ أمّا خدمة الاستوديو المجانية المضمّنة \
+                 وكلّ مزوّد بمفتاح فخارج متناولها. تُرسم السطور الموجودة في الخزينة أو في \
+                 الرقعة المثبّتة كما هي.",
+                sabab_ghiyab_arabi(*hala)
             ),
             Self::GhayrQabil {
                 ism, sabab_arabi, ..
@@ -157,6 +163,36 @@ impl HalatMutarjim {
                 format!("تعذّرت قراءة الإعدادات فلم يُربط مترجم: {sabab}")
             },
         }
+    }
+}
+
+/// Why nothing is elected, as the overlay says it.
+///
+/// Not the settings crate's own sentence for the state: that one names the
+/// studio's built-in free provider as the thing doing the translating, which
+/// is true in the studio and false inside a game, where the overlay speaks
+/// plain HTTP to loopback and nothing else. The two states the election
+/// leaves empty get their own clause; the other two cannot reach this arm —
+/// an elected provider the overlay cannot use is [`HalatMutarjim::GhayrQabil`]
+/// — and are worded honestly rather than left to a panic.
+const fn sabab_ghiyab(hala: HalatMuzawwidin) -> &'static str {
+    match hala {
+        HalatMuzawwidin::Faragh => "no provider has been added on this machine.",
+        HalatMuzawwidin::Muattala => "every provider on this machine is switched off.",
+        HalatMuzawwidin::Mukhtar | HalatMuzawwidin::Badeel => {
+            "the elected provider is not one the overlay can reach."
+        },
+    }
+}
+
+/// The same clause in Arabic.
+const fn sabab_ghiyab_arabi(hala: HalatMuzawwidin) -> &'static str {
+    match hala {
+        HalatMuzawwidin::Faragh => "لم يُضَف أيّ مزوّد على هذا الجهاز.",
+        HalatMuzawwidin::Muattala => "كلّ المزوّدين على هذا الجهاز معطَّلون.",
+        HalatMuzawwidin::Mukhtar | HalatMuzawwidin::Badeel => {
+            "المزوّد المختار ليس ممّا تصل إليه الطبقة."
+        },
     }
 }
 
@@ -549,9 +585,7 @@ fn fukk_tajzia(khaam: &[u8]) -> Result<Vec<u8>, String> {
         let hajm_nass = satr.split(';').next().unwrap_or_default().trim();
         let hajm = usize::from_str_radix(hajm_nass, 16)
             .map_err(|_| format!("\"{hajm_nass}\" is not a chunk size"))?;
-        mawdi = mawdi
-            .saturating_add(nihayat_satr)
-            .saturating_add(2);
+        mawdi = mawdi.saturating_add(nihayat_satr).saturating_add(2);
         if hajm == 0 {
             break;
         }
@@ -643,24 +677,21 @@ mod ikhtibarat {
 
     #[test]
     fn unwan_yuqra_bi_manfadh_wa_masar() {
-        let unwan = Unwan::min_asas("http://127.0.0.1:11434/").unwrap_or_else(|(s, _)| {
-            Unwan {
-                mudeef: s,
-                manfadh: 0,
-                masar: String::new(),
-            }
+        let unwan = Unwan::min_asas("http://127.0.0.1:11434/").unwrap_or_else(|(s, _)| Unwan {
+            mudeef: s,
+            manfadh: 0,
+            masar: String::new(),
         });
         assert_eq!(unwan.mudeef, "127.0.0.1");
         assert_eq!(unwan.manfadh, 11434);
         assert_eq!(unwan.masar, "");
 
-        let unwan = Unwan::min_asas("http://box.local/gateway/v1/").unwrap_or_else(|(s, _)| {
-            Unwan {
+        let unwan =
+            Unwan::min_asas("http://box.local/gateway/v1/").unwrap_or_else(|(s, _)| Unwan {
                 mudeef: s,
                 manfadh: 0,
                 masar: String::new(),
-            }
-        });
+            });
         assert_eq!(unwan.mudeef, "box.local");
         assert_eq!(unwan.manfadh, 80);
         assert_eq!(unwan.masar, "/gateway/v1");
@@ -676,10 +707,7 @@ mod ikhtibarat {
     fn jasad_al_radd_bi_tajzia_yufakk() {
         let khaam = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n1\r\n \
                       \r\n5\r\nworld\r\n0\r\n\r\n";
-        assert_eq!(
-            jasad_min_radd(khaam).as_deref(),
-            Ok("hello world")
-        );
+        assert_eq!(jasad_min_radd(khaam).as_deref(), Ok("hello world"));
     }
 
     #[test]

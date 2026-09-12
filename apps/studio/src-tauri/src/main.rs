@@ -63,8 +63,10 @@
 // Declared `pub` rather than private because `#[tauri::command]` emits `pub`
 // items beside every command it wraps, and a `pub` item inside a private module
 // is what `unreachable_pub` refuses.
+pub mod jawla_awamir;
 pub mod luba_awamir;
 pub mod maktaba_awamir;
+pub mod mujtama_awamir;
 pub mod tathbeet_awamir;
 // No commands inside these three, so they stay private.
 pub mod aql_awamir;
@@ -314,6 +316,16 @@ struct SijillMaktaba {
     lawn: Option<LawnBariz>,
     /// The generated plate, present whenever `ghilaf` is `None`.
     lawha: Option<LawhaBadila>,
+    /// How many Arabic translations other teams have published for this game,
+    /// as the cached community index lists them.
+    ///
+    /// Read from the cache alone, never from the network: this scan runs on the
+    /// thread the window is driven from, and the refresh that keeps the cache
+    /// current runs in the background. Zero therefore means either that the
+    /// index lists nothing for this game or that no index is cached yet, and
+    /// the card draws neither — the mark is for the game that has one. The game
+    /// screen, which can wait for a fetch, is where the two are told apart.
+    tarjamat_mujtama: u32,
 }
 
 /// What a library row takes from a game's stored probe report.
@@ -462,13 +474,15 @@ struct HasilatMaktaba {
 #[tauri::command]
 #[specta::specta]
 fn maktaba(
+    tatbiq: tauri::AppHandle,
     makhzan: tauri::State<'_, Arc<MakhzanIdadat>>,
     masarat: tauri::State<'_, Masarat>,
     qaida: tauri::State<'_, Makhzan>,
     dhakira: tauri::State<'_, suwar_awamir::DhakiratSuwar>,
+    jawla: tauri::State<'_, Arc<jawla_awamir::HalatJawla>>,
 ) -> Result<HasilatMaktaba, Khata> {
     use taarib_makhzan::sijillat::{IdkhalLuba, SijillFahs, SijillRuqaa, SimaMukhzana, sima};
-    use taarib_mustalahat::luba::{HalatLuba, LubaId};
+    use taarib_mustalahat::luba::LubaId;
     use taarib_mustalahat::sawt::HalatSawt;
     use taarib_tathbeet::bayan::NawTathbeet;
 
@@ -563,6 +577,10 @@ fn maktaba(
     let khazina = suwar_awamir::khazina(&masarat).ok();
     let suwar_makhzuna = suwar_awamir::suwar_makhzuna(&qaida);
     let mut dhakhira_suwar: BTreeMap<LubaId, suwar_awamir::TalabSuwar> = BTreeMap::new();
+    // The community index on the same terms: the cached copy or nothing, read
+    // once for every row. The background refresh started below is what fills
+    // it for the next scan when there is none yet.
+    let fahras_mujtama = mujtama_awamir::fahras_mukhazzan(&masarat);
 
     for luba in muwahhada {
         let asasi = &luba.asasi;
@@ -678,17 +696,15 @@ fn maktaba(
                 SijillRuqaa::jadeed(ittisal)
                     .li_luba(asasi.masdar.aila().slug(), &asasi.masdar.muarrif())
             })?;
-            let hala = if marfuda {
-                HalatLuba::Marfuda
-            } else if nass_muthabbat {
-                HalatLuba::Mutabbaqa
-            } else if !ruqa_makhbua.is_empty() {
-                HalatLuba::Mutaha
-            } else if tabaqa == Tabaqa::TarjamaFawqiya {
-                HalatLuba::TabaqaFaqat
-            } else {
-                HalatLuba::MadumBilaRuqaa
-            };
+            // One rule, shared with the sweep that patches this row in place
+            // once its probe has run: the badge a scan draws and the badge a
+            // probe event redraws must not be decided twice.
+            let hala = jawla_awamir::halat_luba(jawla_awamir::HaqaiqHala {
+                marfuda,
+                nass_muthabbat,
+                ruqaa_mutaha: !ruqa_makhbua.is_empty(),
+                tabaqa,
+            });
             let nass_hala = if nass_muthabbat {
                 HalatSawt::Mutabbaqa
             } else if !ruqa_makhbua.is_empty() {
@@ -752,6 +768,9 @@ fn maktaba(
                 batl: makhzuna.batl,
                 lawn: makhzuna.lawn,
                 lawha: Some(lawha),
+                tarjamat_mujtama: fahras_mujtama
+                    .as_ref()
+                    .map_or(0, |fahras| mujtama_awamir::adad_li_luba(fahras, &sajl)),
             })
         })();
         match mahsula {
@@ -802,6 +821,9 @@ fn maktaba(
     })?;
 
     dhakira.ikhzin(dhakhira_suwar);
+    // After the rows are built, never before: the scan reads the cache and
+    // nothing else, and this is the refresh that fills it for the next one.
+    mujtama_awamir::dhamin_mujaddid_mujtama(&masarat, &makhzan);
 
     tracing::info!(
         alaab = alaab.len(),
@@ -810,6 +832,16 @@ fn maktaba(
         bi_ghilaf = alaab.iter().filter(|saf| saf.ghilaf.is_some()).count(),
         muddat_ms = bidaya.elapsed().as_millis(),
         "the library scan finished"
+    );
+
+    // The answer is complete; the probes this scan did not run go to a task of
+    // their own, so a card says "not probed yet" for seconds rather than for
+    // ever and nothing above waits on a single executable being read.
+    jawla_awamir::ibda_jawla(
+        tatbiq,
+        Arc::clone(&jawla),
+        Makhzan::clone(&qaida),
+        masarat.inner().clone(),
     );
 
     Ok(HasilatMaktaba {
@@ -987,6 +1019,7 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             suwar_awamir::hassil_suwar_maktaba,
             iftah_manassa,
             adif_mujallad_fahs,
+            jawla_awamir::halat_jawla,
             luba_awamir::tafasil_luba,
             luba_awamir::afhas_muharrik,
             luba_awamir::dalail_muharrik,
@@ -1064,6 +1097,8 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             tilqai_awamir::laqtat_tilqai,
             tilqai_awamir::ibda_tilqai,
             tilqai_awamir::alghi_tilqai,
+            mujtama_awamir::tarjamat_mujtama,
+            mujtama_awamir::iftah_rabt,
         ])
         // A type the interface consumes that no command returns. The library
         // screen groups unavailable games into four headings and derives the
@@ -1077,7 +1112,12 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
         // signature mentions the payload and nothing would generate it. The
         // interface subscribes with `listen<GhilafHie>`, and this is what makes
         // that type the one Rust declared rather than one written twice.
-        .typ::<suwar_awamir::GhilafHie>();
+        .typ::<suwar_awamir::GhilafHie>()
+        // And again: the background engine sweep announces each finished game
+        // on a window event, and the grid patches the row from that payload.
+        // Its standing is a command's answer and generates itself; this one is
+        // not, so it is registered here.
+        .typ::<jawla_awamir::FahsMuharrikHie>();
 
     // Debug only: a release build ships the bindings that were generated when
     // it was developed, and must never write into the source tree it was
@@ -1135,12 +1175,24 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
                 istaqbil_ruqaa(tatbiq, masar);
             }
         }))
+        // The one way this process hands an address to the browser. The
+        // interface never calls the plugin's own command; it calls
+        // `mujtama_awamir::iftah_rabt`, which checks the address against the
+        // community index before this plugin ever sees it. The capability still
+        // grants the plugin's command for `https://**` alone, so that if the
+        // interface ever did call it, nothing but an https page could open.
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(banni.invoke_handler())
         .manage(masarat)
         .manage(makhzan)
         .manage(qaida)
         .manage(haris)
         .manage(suwar_awamir::DhakiratSuwar::default())
+        // The one background engine sweep this process may run, and where it
+        // stands. Behind an `Arc` because the task that runs it outlives the
+        // command that started it and must share the same counters the
+        // `halat_jawla` command reads.
+        .manage(Arc::new(jawla_awamir::HalatJawla::default()))
         .manage(warsha_awamir::JalasatDamj::default())
         .manage(taqdeem_awamir::JihazMuallaq::default())
         .manage(taqdeem_awamir::QuflTaqdeem::default())

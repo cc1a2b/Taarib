@@ -215,7 +215,7 @@ namespace Taarib.Unity.Il2cpp
         public const string IsmMaruud = "Taarib";
 
         /// <summary>The plugin's version.</summary>
-        public const string Isdar = "0.1.0";
+        public const string Isdar = "1.0.1";
 
         /// <summary>The folder, beside the plugin, that the installer writes into.</summary>
         public const string DalilTaarib = "Taarib";

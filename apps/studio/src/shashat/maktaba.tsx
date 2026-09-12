@@ -3,9 +3,11 @@ import { useNavigate } from '@tanstack/react-router';
 import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { listen } from '@tauri-apps/api/event';
+
 import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
-import { KhataJisr, nadi } from '@/hayat/jisr';
+import { HADATH_FAHS_MUHARRIK, HADATH_JAWLA_MUHARRIK, KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
 import { ansha } from '@/hayat/tanbihat';
 import { useTaraju } from '@/hayat/taraju';
@@ -27,6 +29,8 @@ import { RamzSahmAala, RamzSahmAsfal, ramz } from '@/mukawwinat/rumuz';
 import { ShabakatMaktaba } from '@/mukawwinat/shabakat_maktaba';
 import { Zuhur } from '@/mukawwinat/zuhur';
 import type {
+  FahsMuharrikHie,
+  HalatJawlaHie,
   HalatLuba,
   HasilatMaktaba,
   Idadat,
@@ -158,6 +162,7 @@ function sijillLuba(saf: SijillMaktaba): SijillLuba {
     // the library — it is read here rather than re-derived, and a row from a
     // build that does not send it yet answers null and the card draws no mark.
     jahiziya: jahiziyaSaf(saf),
+    tarjamat_mujtama: saf.tarjamat_mujtama,
     hajm: saf.hajm,
     akhir_laab: milli(saf.akhir_laab),
     akhir_tathbeet: milli(saf.akhir_tathbeet),
@@ -439,6 +444,109 @@ export function Maktaba(): JSX.Element {
 
   const [qaimatSiyaq, setQaimatSiyaq] = useState<QaimatSiyaq | null>(null);
   const [masarIdafa, setMasarIdafa] = useState<string | null>(null);
+
+  /** Where the background engine sweep stands, or null until the backend has said. */
+  const [jawla, setJawla] = useState<HalatJawlaHie | null>(null);
+
+  /**
+   * The session's language and formatters, as the sweep's listeners read them.
+   *
+   * The listeners below are registered once and live as long as the screen, so
+   * they cannot close over `lugha` without going stale the moment the setting
+   * changes — a notice raised half an hour into a session would come out in the
+   * language the screen opened in. Kept current from an effect, never written
+   * during render.
+   */
+  const marjaSiyaq = useRef({ lugha, munassiq });
+  useEffect(() => {
+    marjaSiyaq.current = { lugha, munassiq };
+  }, [lugha, munassiq]);
+
+  // The library probes itself after every scan, on the backend's own task, and
+  // that task is usually already running by the time the grid has drawn: the
+  // scan's answer is what starts it. So the standing is read once on mount, for
+  // a screen that arrives mid-sweep, and every change after that arrives on two
+  // events. A finished game patches its own row in the cache in place — the row
+  // keeps its shape, nothing else in the answer is touched, and no rescan is
+  // asked for — so one card's badges redraw and no card's box changes.
+  useEffect(() => {
+    let hayy = true;
+    void nadi('halat_jawla').then(
+      (hala) => {
+        if (hayy) {
+          setJawla(hala);
+        }
+      },
+      (khata: unknown) => {
+        const { lugha: lughaHaliya } = marjaSiyaq.current;
+        ansha({
+          naw: 'tanbeeh',
+          nass: t('maktaba.jawla.khata', lughaHaliya),
+          tafsil: khata instanceof KhataJisr ? khata.nass(lughaHaliya) : null,
+        });
+      },
+    );
+    const ilghaFahs = listen<FahsMuharrikHie>(HADATH_FAHS_MUHARRIK, (hadath) => {
+      const fahs = hadath.payload;
+      makhzanIstifsar.setQueryData<HasilatMaktaba>(mafatih.maktaba, (qadeem) =>
+        qadeem === undefined
+          ? qadeem
+          : {
+              ...qadeem,
+              alaab: qadeem.alaab.map((saf) =>
+                saf.muarrif === fahs.muarrif
+                  ? {
+                      ...saf,
+                      mafhusa: fahs.mafhusa,
+                      muharrik: fahs.muharrik,
+                      tabaqa: fahs.tabaqa,
+                      jahiziya: fahs.jahiziya,
+                      hala: fahs.hala,
+                    }
+                  : saf,
+              ),
+            },
+      );
+    });
+    const ilghaJawla = listen<HalatJawlaHie>(HADATH_JAWLA_MUHARRIK, (hadath) => {
+      const hala = hadath.payload;
+      setJawla(hala);
+      if (hala.jariya) {
+        return;
+      }
+      // The sweep is over. Its failures are the backend's to log and this
+      // screen's to say: a probe that was refused leaves a card reading "not
+      // probed yet" for a reason, and the reason has to reach the person.
+      const { lugha: lughaHaliya, munassiq: munassiqHali } = marjaSiyaq.current;
+      if (hala.khata !== null) {
+        ansha({
+          naw: 'tanbeeh',
+          nass: t('maktaba.jawla.khata', lughaHaliya),
+          tafsil: lughaHaliya === 'arabi' ? hala.khata.arabi : hala.khata.injilizi,
+        });
+      }
+      if (hala.fashila > 0) {
+        const awwal = hala.akhta[0];
+        ansha({
+          naw: 'tanbeeh',
+          nass: jam('maktaba.jawla.fashila', lughaHaliya, hala.fashila, munassiqHali),
+          tafsil:
+            awwal === undefined
+              ? null
+              : `${awwal.ism}: ${lughaHaliya === 'arabi' ? awwal.khata.arabi : awwal.khata.injilizi}`,
+        });
+      }
+    });
+    return () => {
+      hayy = false;
+      void ilghaFahs.then((f) => {
+        f();
+      });
+      void ilghaJawla.then((f) => {
+        f();
+      });
+    };
+  }, [makhzanIstifsar]);
 
   // A menu opened from the keyboard has to close from it: the pointer leaving
   // is the only other way out, and a keyboard has no pointer to leave with.
@@ -871,6 +979,22 @@ export function Maktaba(): JSX.Element {
                     kulli: munassiq.raqm(natija.adadKulli),
                   })
                 : t('maktaba.adad', lugha, { adad: munassiq.raqm(natija.adadKulli) })}
+            {/*
+              The sweep's own line, beside the count and only while it runs:
+              the grid is filling in which product each game gets, and this is
+              the one place that says so. It leaves with the sweep, so a library
+              whose every game is probed reads exactly as it always did. A
+              refused game counts as examined here — it was looked at — and is
+              reported by name when the sweep ends.
+            */}
+            {jawla !== null && jawla.jariya && jawla.majmu > 0 ? (
+              <span className="maktaba__jawla">
+                {t('maktaba.jawla.jariya', lugha, {
+                  tamma: munassiq.raqm(jawla.tamma + jawla.fashila),
+                  majmu: munassiq.raqm(jawla.majmu),
+                })}
+              </span>
+            ) : null}
           </p>
           {khata !== null ? (
             <div className="jism__mutadahrij">

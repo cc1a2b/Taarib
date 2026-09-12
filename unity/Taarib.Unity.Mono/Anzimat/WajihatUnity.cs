@@ -372,7 +372,11 @@ namespace Taarib.Unity.Mono.Anzimat
         private readonly MaqbadSilsila? silsila;
         private readonly MakhzanRusum makhzan;
         private readonly NassMuhaddar muhaddar;
-        private readonly HashSet<int> mamlukat;
+        /// <summary>
+        /// Every component this takeover owns, and which atlas its geometry was
+        /// last built from — the patch's or this session's.
+        /// </summary>
+        private readonly Dictionary<int, bool> mamlukat;
         private readonly Dictionary<Component, Material> maddatAsliya;
         private readonly List<UIVertex> ruusWajiha;
         private readonly List<int> fahrasWajiha;
@@ -402,7 +406,7 @@ namespace Taarib.Unity.Mono.Anzimat
             this.takhtit = takhtit;
             makhzan = new MakhzanRusum();
             muhaddar = new NassMuhaddar();
-            mamlukat = new HashSet<int>();
+            mamlukat = new Dictionary<int, bool>();
             maddatAsliya = new Dictionary<Component, Material>();
             ruusWajiha = new List<UIVertex>(256);
             fahrasWajiha = new List<int>(384);
@@ -516,14 +520,27 @@ namespace Taarib.Unity.Mono.Anzimat
             {
                 return false;
             }
-            return mamlukat.Contains(juz.GetInstanceID());
+            return mamlukat.ContainsKey(juz.GetInstanceID());
         }
 
-        /// <summary>The atlas page Taarib draws uGUI text from.</summary>
-        /// <returns>The texture, or <c>null</c> when no page is resident.</returns>
-        public Texture2D? Lawha()
+        /// <summary>The atlas page one component's geometry was built from.</summary>
+        /// <remarks>
+        /// The atlas is not a preference. Vertices laid out from the patch index
+        /// the patch's own atlas and vertices laid out at run time index the
+        /// atlas this session rasterized into; the two are different pictures
+        /// with different glyphs at different coordinates, so a component drawn
+        /// from one and sampled from the other paints solid blocks.
+        /// </remarks>
+        /// <param name="mukawwin">The text component.</param>
+        /// <returns>The texture, or <c>null</c> when that page is not resident.</returns>
+        public Texture2D? Lawha(object? mukawwin)
         {
-            return masdar.LawhatSafha(true, 0) ?? masdar.LawhatSafha(false, 0);
+            if (mukawwin is not Component juz
+                || !mamlukat.TryGetValue(juz.GetInstanceID(), out bool minRuqaa))
+            {
+                return null;
+            }
+            return masdar.LawhatSafha(minRuqaa, 0);
         }
 
         /// <summary>
@@ -670,12 +687,14 @@ namespace Taarib.Unity.Mono.Anzimat
             // than that is a paragraph, redrawn when it changes rather than per
             // frame, and refusing to hash it would mean refusing to translate
             // exactly the longest strings a patch exists for.
-            int fahras = ruqaa.JidNass(Ruqaa.MiftahMinNass(khaam!));
+            ulong miftah = Ruqaa.MiftahMinNass(khaam!);
+            int fahras = ruqaa.JidNass(miftah);
             if (fahras < 0)
             {
                 // A miss means the game is drawing something this patch does
                 // not cover. Leave it alone: do not lay it out, do not draw it,
                 // and do not guess. uGUI renders it exactly as it always did.
+                Rabt.Fawt(khaam!, miftah);
                 Utruk(mukawwin);
                 return false;
             }
@@ -795,13 +814,13 @@ namespace Taarib.Unity.Mono.Anzimat
                 BallighSafahat();
             }
 
-            if (!Aabbir(juz, mukawwin))
+            if (!Aabbir(juz, mukawwin, minRuqaa))
             {
                 Utruk(mukawwin);
                 return false;
             }
             Imla(musaid, in natija);
-            mamlukat.Add(juz.GetInstanceID());
+            mamlukat[juz.GetInstanceID()] = minRuqaa;
             return true;
         }
 
@@ -1035,12 +1054,12 @@ namespace Taarib.Unity.Mono.Anzimat
         }
 
         /// <summary>
-        /// Gives the component Taarib's material, recording its own the first
-        /// time so it can be handed back.
+        /// Gives the component the material of the atlas its geometry was built
+        /// from, recording its own the first time so it can be handed back.
         /// </summary>
-        private bool Aabbir(Component juz, object mukawwin)
+        private bool Aabbir(Component juz, object mukawwin, bool minRuqaa)
         {
-            Material? madda = masdar.Madda(true, 0) ?? masdar.Madda(false, 0);
+            Material? madda = masdar.Madda(minRuqaa, 0);
             Action<object, Material>? katib = wasl.KatibMadda;
             Func<object, Material>? qari = wasl.QariMadda;
             if (madda is null || katib is null)
@@ -1240,7 +1259,7 @@ namespace Taarib.Unity.Mono.Anzimat
             {
                 return;
             }
-            Texture2D? lawha = nizam.Lawha();
+            Texture2D? lawha = nizam.Lawha(__instance);
             if (lawha is not null)
             {
                 __result = lawha;

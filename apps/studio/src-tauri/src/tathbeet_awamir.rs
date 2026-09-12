@@ -85,6 +85,40 @@ pub enum MatlabIzala {
     Kul,
 }
 
+/// How far a removal may go, as the user answered it.
+///
+/// Three, because the installer has three and the middle one was the only one
+/// the interface could ask for. A game that ran once with a vendored loader
+/// comes back holding that loader's log, cache and configuration — written
+/// after the manifest was sealed, so no record names them — and the
+/// conservative answer leaves the directory and keeps the record open forever.
+/// [`SiyasatIzala::Kanasa`] is what finishes it, and it is a separate value
+/// rather than a flag on the other two because the screen must have seen
+/// `khuttat_izala`'s residue list before a person can mean it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum SiyasatIzala {
+    /// Leave a file the store replaced, and leave a directory that still holds
+    /// files Taarib did not write. The default answer.
+    Muhafiza,
+    /// Refuse the whole removal when the store has replaced a patched file.
+    Sarima,
+    /// Also take what is left inside a directory Taarib created, and the
+    /// directory with it.
+    Kanasa,
+}
+
+impl SiyasatIzala {
+    /// The installer's policy for this answer.
+    const fn asliya(self) -> SiyasatIstiada {
+        match self {
+            Self::Muhafiza => SiyasatIstiada::Muhafiza,
+            Self::Sarima => SiyasatIstiada::Sarima,
+            Self::Kanasa => SiyasatIstiada::Kanasa,
+        }
+    }
+}
+
 /// One patch the registry offers for a game.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct MudkhalRuqaaHie {
@@ -666,6 +700,11 @@ pub fn tahaqquq_ruqaa(
 /// them is refused by the installer itself while any record is still
 /// outstanding, so an interrupted removal keeps everything it still needs.
 ///
+/// `siyasa` carries how far the user said the removal may go. The sweeping
+/// answer is the only one that can take a file no manifest names, and the
+/// screen may only send it after showing what `khuttat_izala` found — which is
+/// why it is asked for per removal rather than stored as a setting.
+///
 /// # Errors
 ///
 /// [`KhataTathbeetAmr::LaTathbeet`] when the game has no installation of the
@@ -677,7 +716,7 @@ pub fn tahaqquq_ruqaa(
 pub fn azil_ruqaa(
     muarrif: String,
     matlab: MatlabIzala,
-    sarim: bool,
+    siyasa: SiyasatIzala,
     masarat: tauri::State<'_, Masarat>,
     makhzan: tauri::State<'_, Makhzan>,
     idadat: tauri::State<'_, Arc<MakhzanIdadat>>,
@@ -693,11 +732,7 @@ pub fn azil_ruqaa(
         la_tashtaghil(nass)?;
     }
 
-    let siyasa = if sarim {
-        SiyasatIstiada::Sarima
-    } else {
-        SiyasatIstiada::Muhafiza
-    };
+    let siyasa = siyasa.asliya();
     let mut radd = RadLaShay;
     let kul = match matlab {
         MatlabIzala::Kul => istiada_kul(&luba.jidhr, &nusakh, siyasa, &mut radd),
@@ -895,7 +930,7 @@ pub fn sajjil_iqrar_aman(
 ///
 /// Local copies first: they cost nothing, they work with no network, and a user
 /// who configured one did so to be asked before the forge is.
-fn silsilat_masadir(idadat: &Idadat) -> Natija<SilsilatMasadir> {
+pub(crate) fn silsilat_masadir(idadat: &Idadat) -> Natija<SilsilatMasadir> {
     let mut masadir: Vec<MasdarMustawda> = idadat
         .masadir
         .mahalliya
@@ -1174,7 +1209,7 @@ fn adad(qeema: usize) -> u32 {
 /// `taarib-makhzan` is synchronous by design and says so: every call into it
 /// blocks the thread it is on, and choosing which thread that is belongs to the
 /// application rather than to the store.
-async fn bil_hajb<T, F>(amal: F) -> Natija<T>
+pub(crate) async fn bil_hajb<T, F>(amal: F) -> Natija<T>
 where
     F: FnOnce() -> Natija<T> + Send + 'static,
     T: Send + 'static,

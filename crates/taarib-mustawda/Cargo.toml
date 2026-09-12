@@ -12,7 +12,15 @@ publish = false
 [lints]
 workspace = true
 
+[features]
+default = []
+# Derive specta::Type on the community index's vocabulary — the host, coverage,
+# method, licence and status kinds a listing carries — so the Studio's
+# TypeScript names them from these definitions rather than a second copy.
+wajiha = ["dep:specta", "taarib-usus/wajiha", "taarib-mustalahat/wajiha"]
+
 [dependencies]
+specta = { workspace = true, optional = true }
 taarib-usus = { workspace = true }
 taarib-mustalahat = { workspace = true }
 taarib-ruqaa = { workspace = true }

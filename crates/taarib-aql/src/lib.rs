@@ -359,7 +359,10 @@ impl Aql {
         mawani.extend(self.mani_ghayr_hadira());
         mawani.extend(self.mani_lam_yufhas());
         mawani.extend(self.mani_jahiziya());
-        mawani.extend(self.mani_la_muzawwid());
+        // `NawMani::LaMuzawwid` has no producer here any more: the settings
+        // crate's built-in free provider stands in whenever the list elects
+        // nothing, so no state of that list withholds translation. The variant
+        // stays in the order and on the wire; see its documentation.
         // Pushed in rank order above; sorted anyway so that the guarantee is the
         // type's rather than this function's reading order, and so that adding a
         // blocker in the wrong place here cannot change what a surface shows.
@@ -830,35 +833,6 @@ impl Aql {
                 naqs.injilizi.clone(),
             ),
             shawahid,
-        ))
-    }
-
-    /// No provider is configured, so no new translation can start on this
-    /// machine.
-    ///
-    /// The one blocker here that is a fact about the machine rather than about
-    /// the game, and the reason it belongs in the core at all is that it was
-    /// already being answered outside it: `tilqai_awamir::hukm` composed its own
-    /// sentence for this case, so the automatic-run screen said it and the game
-    /// screen — reading the same core — said nothing. Two surfaces, one machine,
-    /// different answers, which is the whole of what this crate exists to stop.
-    ///
-    /// The sentences are [`HalatMuzawwidin`]'s own. Nothing is worded here.
-    fn mani_la_muzawwid(&self) -> Option<Musnad<Mani>> {
-        // `None` is "nobody asked", not "nothing is configured". A default
-        // `MawqifMustakhdim` must not manufacture a blocker out of a question
-        // that was never put — the same distinction `HalatMash` draws for the
-        // anti-cheat scan, for the same reason.
-        let hala = self.mudkhalat.mawqif.muzawwidun?;
-        if hala.yutarjim() {
-            return None;
-        }
-        Some(Musnad::jadeed(
-            Mani::jadeed(NawMani::LaMuzawwid, hala.arabi(), hala.injilizi()),
-            vec![Shahid::jadeed(
-                MasdarMarifa::Idadat,
-                format!("the settings' provider list is in state {}", hala.ism()),
-            )],
         ))
     }
 

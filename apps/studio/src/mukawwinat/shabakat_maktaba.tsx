@@ -1739,6 +1739,7 @@ export function ShabakatMaktaba(khasais: KhasaisShabakatMaktaba): JSX.Element {
                         nass={sijill.nass}
                         sawt={sijill.sawt}
                         lugha_rasmiya={sijill.lugha_rasmiya}
+                        tarjamat_mujtama={sijill.tarjamat_mujtama}
                         jahiziya={sijill.jahiziya}
                         // Whether any of the three below is an answer at all.
                         // The row carries a tier, an engine and a readiness

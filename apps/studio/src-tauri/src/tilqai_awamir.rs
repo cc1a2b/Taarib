@@ -30,7 +30,7 @@ use taarib_tilqai::{
     Taqaddum, WasfTilqai, arrib, ijrud, naqs_jahiziya, tahaqquq_jahiziya,
 };
 use taarib_usus::ISDAR;
-use taarib_usus::idadat::{Idadat, MakhzanIdadat, NawMuzawwid};
+use taarib_usus::idadat::{HalatMuzawwidin, Idadat, MakhzanIdadat, NawMuzawwid};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
@@ -436,16 +436,21 @@ pub(crate) fn hukm(
         hudud_arabi.push(naqs.arabi.clone());
         hudud_injilizi.push(naqs.injilizi.clone());
     }
-    // No sentence here about a missing provider. The core answers that
-    // question through `taarib_aql::NawMani::LaMuzawwid`, whose four states
-    // include the one a local sentence could not express — a chosen default
-    // switched off while another provider is silently the one billed — and
-    // the screen reads it from `aql_luba` like every other blocker.
+    // Which provider the run would use, in the settings crate's own sentence —
+    // the same one the workshop shows before a batch, so the two surfaces
+    // cannot disagree about one machine. It covers the two states a local
+    // sentence used to miss: the built-in free provider standing in for an
+    // empty or switched-off list, and a chosen default switched off while
+    // another provider is silently the one billed. The one state that needs no
+    // sentence is the one doing what it says.
     let tarif = muzawwid_muntakhab(&hali);
+    let halat_muzawwidin = hali.muzawwidun.hala();
+    if halat_muzawwidin != HalatMuzawwidin::Mukhtar {
+        hudud_arabi.push(halat_muzawwidin.arabi().to_owned());
+        hudud_injilizi.push(halat_muzawwidin.injilizi().to_owned());
+    }
     let saqf = tarif
-        .as_ref()
-        .ok()
-        .and_then(|tarif| tarif.mizaniya)
+        .mizaniya
         .filter(|mablagh| mablagh.is_finite() && *mablagh > 0.0)
         .unwrap_or(0.0);
     // The same condition `jahhiz` refuses on, reported here rather than only
@@ -455,13 +460,8 @@ pub(crate) fn hukm(
     // that does not exist and the button then refuses with a code the reader had
     // no warning of. `nano_min_dolar` rejects the same values this filter drops,
     // so the two commands cannot disagree about which budgets count.
-    if tarif
-        .as_ref()
-        .is_ok_and(|tarif| yatqada_ajran(tarif.naw) && saqf <= 0.0)
-    {
-        let ism = tarif
-            .as_ref()
-            .map_or_else(|_| String::new(), |tarif| tarif.muarrif.clone());
+    if yatqada_ajran(tarif.naw) && saqf <= 0.0 {
+        let ism = tarif.muarrif;
         hudud_arabi.push(format!(
             "المزوّد «{ism}» يتقاضى أجرًا على الترجمة ولم يُضبط له سقف إنفاق، والتعريب \
              التلقائي لا يبدأ بدون سقف. اضبط «الميزانية» لهذا المزوّد في الإعدادات ← \
@@ -701,11 +701,13 @@ fn mahmiya_bil_lugha(
 /// provider and reading `qudrat().taklifa` — because building one opens the
 /// keychain, and a screen may not unlock a credential on mount. It is decided
 /// from the kind instead, and the two agree because `bin_muzawwid` is what makes
-/// them agree: [`NawMuzawwid::Mahalli`] is the one arm it builds through
+/// them agree: [`NawMuzawwid::Mahalli`] is built through
 /// `MuzawwidMuwafiqOpenAI::mahalli`, which forces a free meter whatever the
-/// configuration claimed, and every other arm it builds is metered.
+/// configuration claimed, [`NawMuzawwid::GoogleMajjani`] is built on
+/// `TakalifJarya::majani` with no account behind it to bill, and every other
+/// arm it builds is metered.
 const fn yatqada_ajran(naw: NawMuzawwid) -> bool {
-    !matches!(naw, NawMuzawwid::Mahalli)
+    !matches!(naw, NawMuzawwid::Mahalli | NawMuzawwid::GoogleMajjani)
 }
 
 /// Which of the three routes a game takes.
@@ -1051,8 +1053,8 @@ fn asbab_rafd(mujallad: &Path) -> Vec<SatrRafdHie> {
 /// [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the game is a Steam
 /// game and Steam's own root cannot be found, so the install gate this run ends
 /// at could not read the catalogue VAC is declared in,
-/// [`crate::warsha_awamir::KhataWarshaAmr::LaMuzawwid`] when no provider is
-/// configured, [`KhataTilqaiAmr::LaKhattArabi`] when no font on this machine can
+/// [`crate::warsha_awamir::KhataWarshaAmr::LaItimad`] when the elected
+/// provider's key is not in the keychain, [`KhataTilqaiAmr::LaKhattArabi`] when no font on this machine can
 /// carry Arabic, [`KhataTilqaiAmr::LaIstinaf`] when a resume was asked for and
 /// there is nothing to resume, and whatever the store, the keychain and the
 /// acknowledgement record raise.
@@ -1495,7 +1497,7 @@ fn jahhiz(
         })
     })?;
     let hali = idadat.hali();
-    let tarif = muzawwid_muntakhab(&hali)?;
+    let tarif = muzawwid_muntakhab(&hali);
     let lahza = lahza_alaan();
     let saqf_nano = tarif
         .mizaniya
@@ -1997,8 +1999,7 @@ const fn marhala_hie(marhala: MarhalaTilqai) -> Option<MarhalatTilqaiHie> {
 /// Money and its ceiling, with the ceiling taken from the elected provider.
 fn takalif_hie(munfaq: u64, hali: &Idadat) -> TakalifHie {
     let saqf = muzawwid_muntakhab(hali)
-        .ok()
-        .and_then(|tarif| tarif.mizaniya)
+        .mizaniya
         .filter(|mablagh| mablagh.is_finite() && *mablagh > 0.0)
         .unwrap_or(0.0);
     TakalifHie {
@@ -2475,11 +2476,24 @@ mod ikhtibarat {
     /// the refusal and to nothing else.
     const ATHAR_RAFD: &str = "the one-button run is not offered here";
 
-    /// The code for "no machine-translation provider is configured", which is
-    /// the next thing `jahhiz` asks for after the gate. A run that stops here
-    /// is a run the gate let past, which is the only way to prove the open
-    /// direction without a provider, a keychain and somebody's money.
+    /// The code for "no machine-translation provider is configured".
+    ///
+    /// No longer reachable from a default settings value: the free endpoint is
+    /// built in, so a fresh installation always has a provider. It stays because
+    /// several tests below assert the run did **not** stop here, and that is
+    /// still worth proving.
     const RAMZ_LA_MUZAWWID: u16 = arqam::STUDIO + 42;
+
+    /// The code for "no font on this machine can carry Arabic", which is the
+    /// first thing `jahhiz` refuses on once the gate has let a game past.
+    ///
+    /// It took the provider refusal's place in that role, and the reason is a
+    /// product change rather than a test convenience: the provider check comes
+    /// first in `jahhiz` and cannot fail any more, because the built-in free
+    /// endpoint is always there. A run that stops *here* is a run the gate let
+    /// past, which is what these tests are for — and it needs no provider, no
+    /// keychain and nobody's money to prove.
+    const RAMZ_LA_KHATT: u16 = arqam::STUDIO + 123;
 
     /// The safety layer's own refusal code, as `taarib_tilqai::khata` allocates
     /// it. The most serious of the three and the one no release lifts.
@@ -2562,6 +2576,31 @@ mod ikhtibarat {
         masrah_bi(jahiziya, &[], &[])
     }
 
+    /// The engine every fixture below is built on.
+    ///
+    /// IL2CPP, not Mono. Unity on Mono has been watched drawing Arabic in a
+    /// running game, so its arm answers `mukammala` and carries no gap sentence
+    /// — and a fixture that forced `ghaiba` onto it produced a refusal with
+    /// nothing to say, which is a report `imkaniyat` would never write. IL2CPP is
+    /// the backend whose in-game half really has not been watched, so the
+    /// refusing direction is the table's own answer in the table's own words.
+    ///
+    /// Shared with the tests rather than built inside the fixture, because one
+    /// of them asserts on the sentence the readiness table gives *this* engine
+    /// and must not quote it from here.
+    fn muharrik_masrah() -> Muharrik {
+        Muharrik {
+            aila: AilatMuharrik::Unity,
+            isdar: None,
+            khalfiya: KhalfiyaBarmajiya::Il2cpp,
+            itarat: Vec::new(),
+            rusum: Vec::new(),
+            mimariya: Mimariya::X8664,
+            thiqa: 95,
+            dalail: Vec::new(),
+        }
+    }
+
     /// A game folder, some launcher hints, and a stored report, all at once.
     ///
     /// `simat` reaches both halves of the record a real scan writes: the game
@@ -2621,22 +2660,13 @@ mod ikhtibarat {
             })
         })?;
 
-        let muharrik = Muharrik {
-            aila: AilatMuharrik::Unity,
-            isdar: None,
-            khalfiya: KhalfiyaBarmajiya::Mono,
-            itarat: Vec::new(),
-            rusum: Vec::new(),
-            mimariya: Mimariya::X8664,
-            thiqa: 95,
-            dalail: Vec::new(),
-        };
+        let muharrik = muharrik_masrah();
         let mut taqreer =
             taarib_muharrik::imkaniyat::taqreer(muharrik, simat, "2026-01-01T00:00:00Z".to_owned());
-        // Forced rather than probed, because every arm of the real readiness
-        // table answers `ghaiba` in this build for Unity and the open direction
-        // would otherwise be untestable. Everything downstream of the field —
-        // the gate, the sentence, both commands — is the production path.
+        // Forced rather than probed for the open direction only: this build's
+        // IL2CPP arm answers `ghaiba`, and a fixture cannot wait for a backend to
+        // be finished. Everything downstream of the field — the gate, the
+        // sentence, both commands — is the production path.
         //
         // One artefact of forcing it: `sabab_*` was already written with the
         // `ghaiba` preamble in front, so a `mukammala` fixture carries a reason
@@ -2718,10 +2748,20 @@ mod ikhtibarat {
         );
         // The limits list still carries the report's own account of the gap, so
         // nothing the user could have read before the gate existed is lost.
+        //
+        // Read out of the readiness table rather than quoted here. The phrase
+        // this used to look for — "not finished in this build" — belongs to
+        // `naqs_jahiziya`'s wrapper and reaches `sabab_*`, never the limits, so
+        // the assertion passed on the wrapper and proved nothing about the list.
+        let jumla = taarib_muharrik::imkaniyat::jahiziya(&muharrik_masrah())
+            .1
+            .map_or_else(String::new, |naqs| naqs.injilizi);
         assert!(
-            hukm.hudud_injilizi
-                .iter()
-                .any(|hadd| hadd.contains("not finished in this build")),
+            !jumla.is_empty(),
+            "the fixture's engine carries no sentence"
+        );
+        assert!(
+            hukm.hudud_injilizi.iter().any(|hadd| hadd == &jumla),
             "{:?}",
             hukm.hudud_injilizi
         );
@@ -2851,7 +2891,7 @@ mod ikhtibarat {
         .map(|khata| khata.ramz);
 
         assert_ne!(ramz, Some(Ramz::jadeed(RAMZ_GHAYR_JAHIZ)));
-        assert_eq!(ramz, Some(Ramz::jadeed(RAMZ_LA_MUZAWWID)));
+        assert_eq!(ramz, Some(Ramz::jadeed(RAMZ_LA_KHATT)));
         Ok(())
     }
 
@@ -2875,7 +2915,7 @@ mod ikhtibarat {
         );
         let mutawaqqa =
             if crate::luba_awamir::jidhr_steam(&masrah.masarat, &masrah.idadat.hali())?.is_some() {
-                RAMZ_LA_MUZAWWID
+                RAMZ_LA_KHATT
             } else {
                 RAMZ_JIDHR_STEAM
             };
@@ -3036,7 +3076,7 @@ mod ikhtibarat {
         .err()
         .map(|khata| khata.ramz);
 
-        assert_eq!(ramz, Some(Ramz::jadeed(RAMZ_LA_MUZAWWID)));
+        assert_eq!(ramz, Some(Ramz::jadeed(RAMZ_LA_KHATT)));
         Ok(())
     }
 
@@ -3507,6 +3547,50 @@ mod ikhtibarat {
         );
         assert!(yatqada_ajran(NawMuzawwid::Anthropic));
         assert!(!yatqada_ajran(NawMuzawwid::Mahalli));
+        assert!(!yatqada_ajran(NawMuzawwid::GoogleMajjani));
+        Ok(())
+    }
+
+    /// A machine with no provider of its own gets a verdict, not a refusal: the
+    /// built-in free provider is named in the limits, in the settings crate's own
+    /// sentence, and no spend ceiling is demanded of a service that bills nothing.
+    #[test]
+    fn hukm_yusammi_almajjani_ind_ghiyab_almuzawwid() -> NatijatIkhtibar {
+        let masrah = masrah(JahiziyatTashghil::Mukammala)?;
+        assert!(
+            masrah.idadat.hali().muzawwidun.qaima.is_empty(),
+            "the stage is a fresh installation's settings"
+        );
+        let hukm = hukm(
+            masrah.id.to_string(),
+            &masrah.masarat,
+            &masrah.makhzan,
+            &masrah.idadat,
+        )?;
+
+        assert!(
+            hukm.hudud_injilizi
+                .iter()
+                .any(|hadd| hadd == HalatMuzawwidin::Faragh.injilizi()),
+            "{:?}",
+            hukm.hudud_injilizi
+        );
+        assert!(
+            hukm.hudud_arabi
+                .iter()
+                .any(|hadd| hadd == HalatMuzawwidin::Faragh.arabi()),
+            "{:?}",
+            hukm.hudud_arabi
+        );
+        assert!(
+            !hukm
+                .hudud_injilizi
+                .iter()
+                .any(|hadd| hadd.contains(ATHAR_SAQF)),
+            "{:?}",
+            hukm.hudud_injilizi
+        );
+        assert!(hukm.takalif.saqf.abs() < f64::EPSILON);
         Ok(())
     }
 }

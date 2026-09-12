@@ -16,7 +16,7 @@
 //!
 //! | module | what it owns |
 //! | --- | --- |
-//! | `muzawwidun` | providers behind one trait — Anthropic, `OpenAI` and any OpenAI-compatible endpoint, Google Gemini, `DeepL`, Google and Microsoft translation, and local models through an Ollama-compatible endpoint — each with its own model list, pricing table, rate limits and context window |
+//! | `muzawwidun` | providers behind one trait — Anthropic, `OpenAI` and any OpenAI-compatible endpoint, Google Gemini, `DeepL`, Google and Microsoft translation, local models through an Ollama-compatible endpoint, and Google Translate's free web endpoint, which needs no key and is what a fresh installation translates with — each with its own model list, pricing table, rate limits and context window |
 //! | `siyaq` | game-appropriate prompting: name, genre, speaker, surrounding lines, interface context, the character or pixel constraint, the applicable glossary entries, the declared tone, and the placeholder atoms that must survive |
 //! | `hima` | placeholder and markup protection in three enforced steps — extract to opaque atoms, present them in a form the model will not translate, and validate every returned string |
 //! | `dhakira` | translation memory: source-target pairs with fuzzy matching, scoring and provenance, per project and across projects |
@@ -63,7 +63,10 @@
 //!
 //! - Credentials live in the OS keychain. No credential ever appears in a
 //!   configuration file, a log, an error, a crash report, or a diagnostics
-//!   bundle.
+//!   bundle. The one provider that needs none — Google Translate's free web
+//!   endpoint — is unofficial and says so in every sentence it produces:
+//!   sentence-level quality, undocumented limits, and a keyed provider takes
+//!   precedence the moment one is configured.
 //! - No translation with a broken placeholder is ever accepted into a project.
 //! - Every machine translation is marked as machine-produced and carries its
 //!   provider, model and prompt version until a human confirms it. Prompts are

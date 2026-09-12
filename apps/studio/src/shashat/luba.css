@@ -830,6 +830,37 @@
   gap: var(--misafa-8);
 }
 
+/* The one control on this screen that authorises deleting something the user
+   made, so it sits away from the buttons and reads as a sentence rather than a
+   toggle label. */
+.luba__kans {
+  display: flex;
+  gap: var(--misafa-8);
+  align-items: flex-start;
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  cursor: pointer;
+}
+
+.luba__kans input {
+  margin-block-start: 0.2em;
+  accent-color: var(--khatar);
+  flex: none;
+}
+
+.luba__kans-tahdheer {
+  max-inline-size: 56ch;
+  padding: var(--misafa-8) var(--misafa-12);
+  border-inline-start: 2px solid var(--khatar);
+  background: var(--sath-2);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
 /* --- the install panel ----------------------------------------------------- */
 
 .luba__ruqaa {
@@ -1242,4 +1273,65 @@
 .luba__baqaya {
   display: grid;
   gap: var(--misafa-12);
+}
+
+/* --- community translations -------------------------------------------------
+   Other people's work, credited and linked. The rows wear the install panel's
+   own dress — `luba__lawhat-tathbeet`, with the game's accent on the leading
+   edge — so the two listings on this screen read as two answers to one
+   question, and differ in what each row offers: a button that installs there, a
+   button that leaves for the makers' page here. Nothing on a row is Taarib's to
+   promise, so nothing on it is coloured as a verdict. */
+
+.luba__mujtama {
+  display: grid;
+  gap: var(--misafa-12);
+}
+
+/* The hosting sentence, under the heading and before whatever the query
+   answers: it is true in every state, and a reader who lands on the empty
+   state still needs to know that the list they did not get was never Taarib's
+   own. */
+.luba__mujtama-sharh {
+  margin-block-end: var(--misafa-16);
+}
+
+/* The page's own words beside the kind the index filed them under — coverage
+   as the page put it, the licence statement as written. Quieter than the kind,
+   set on their own line, and in their own direction: the index quotes Arabic
+   pages and English ones alike. */
+.luba__mujtama-nass {
+  display: block;
+  margin-block-start: var(--misafa-2);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* When the facts were read. The last line before the control, because every
+   fact above it is only as current as this date. */
+.luba__mujtama-tahaqquq {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.luba__mujtama-afal {
+  align-items: center;
+}
+
+/* The address beside the button that opens it, so the reader sees where the
+   button leads before pressing and can copy it when the browser will not open.
+   Left to right whatever the panel's direction, ellipsised at the end the
+   reader finishes at, and never a link: the webview has no browser of its own. */
+.luba__mujtama-rabt {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
 }

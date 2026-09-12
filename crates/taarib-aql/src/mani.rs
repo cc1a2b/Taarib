@@ -66,13 +66,17 @@ pub enum NawMani {
     /// The part of Taarib that delivers this game's tier is unfinished in this
     /// build, so the automatic run would end in an unchanged game.
     JahiziyaGhaiba,
-    /// No translation provider is configured, or every configured one is off.
+    /// No translation provider was configured, or every configured one was off.
     ///
-    /// Last, and the only entry that is a fact about the machine rather than
-    /// about the game. It ranks below an unfinished adapter deliberately: it is
-    /// the one blocker a reader clears in half a minute, and putting it above a
-    /// fact about the game would bury the thing they cannot change under the
-    /// thing they can.
+    /// **Retired, and no longer produced.** The settings crate's built-in free
+    /// provider — `taarib_usus::idadat::IdadatMuzawwid::google_majjani` —
+    /// stands in whenever the list elects nothing, so an empty or switched-off
+    /// list translates too, and its state is said in a sentence beside the run
+    /// rather than as a refusal in front of it. The variant stays because the
+    /// order, the wire form and the surfaces that match on it are stable
+    /// contracts, and because a blocker's rank is a fact worth keeping even
+    /// for a blocker nothing raises: it sat last, below an unfinished adapter,
+    /// as the one thing a reader could clear in half a minute.
     LaMuzawwid,
 }
 

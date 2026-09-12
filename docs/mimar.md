@@ -105,7 +105,7 @@ full lexicon is `ROADMAP.md` section 4.1.
 
 | crate | Arabic | what it is |
 | --- | --- | --- |
-| `taarib-tarjama` | ترجمة | the translation pipeline: machine translation, glossary, translation memory, context |
+| `taarib-tarjama` | ترجمة | the translation pipeline: machine translation, glossary, translation memory, context. Seven providers behind one trait — Anthropic, OpenAI-compatible, Gemini, DeepL, Google Cloud Translation, Microsoft Translator, a local Ollama model — plus Google Translate's free web endpoint, which needs no key and is what a fresh installation translates with (unofficial, sentence-level, rate limited; shape checked 2026-09-12); a configured provider takes precedence over it |
 | `taarib-warsha` | ورشة | the collaborative workspace — translating together without a server |
 | `taarib-ruqaa` | رقعة | the `.ruqaa` patch container: reader, writer, tables, manifest |
 | `taarib-tarqee` | ترقيع | the patch compiler, including the provenance gate |

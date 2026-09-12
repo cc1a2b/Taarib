@@ -940,7 +940,40 @@ namespace Taarib.Unity.Mushtarak
             in MakhzanNasij makhzan)
             where TKhareeta : IKhareetatAshkal
         {
-            return Nafidh(in talab, khareeta, in makhzan, uktub: true);
+            NatijaNasij natija = Nafidh(in talab, khareeta, in makhzan, uktub: true);
+            QallibMulmas(in makhzan, natija.AdadRuus);
+            return natija;
+        }
+
+        /// <summary>
+        /// Turns the atlas's own coordinate the right way up for the engine.
+        /// </summary>
+        /// <param name="makhzan">The buffers the build just wrote into.</param>
+        /// <param name="adadRuus">How many vertices it wrote.</param>
+        /// <remarks>
+        /// Every rectangle in the glyph map is measured from the top of the
+        /// page, because that is where the rasterizer starts and how the
+        /// patch's baked pages are stored. Unity puts the first uploaded row at
+        /// the *bottom* of a texture, so a coordinate handed over unchanged
+        /// samples the page upside down — which in a real game means every
+        /// translated line reads from a part of the atlas no glyph was ever
+        /// written into and draws nothing at all. R.E.P.O. showed exactly that:
+        /// the takeover ran, the atlas held the shaped Arabic, and the menu
+        /// entry it owned simply disappeared.
+        ///
+        /// It is done here, once per string, rather than in each adapter,
+        /// because every consumer of this builder draws through Unity. The
+        /// overlay does not: it composites its own picture and never calls
+        /// this.
+        /// </remarks>
+        private static void QallibMulmas(in MakhzanNasij makhzan, int adadRuus)
+        {
+            Span<NuqtaMulmas> malamis = makhzan.Malamis;
+            int hadd = adadRuus < malamis.Length ? adadRuus : malamis.Length;
+            for (int i = 0; i < hadd; i++)
+            {
+                malamis[i].V = 1f - malamis[i].V;
+            }
         }
 
         /// <summary>

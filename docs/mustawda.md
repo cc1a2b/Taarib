@@ -28,6 +28,9 @@ Verified end to end against a real client on 2026-09-04: see §8.
     qaima.json                     the owner-signed revocation list
   isdar/
     <ruqaa-id>/<slug>-r<n>.ruqaa   release assets (see §5 for the forge form)
+  fahras/
+    tarjamat.json                  the community index: other teams' work, linked (§9)
+    mukhattat.json                 its JSON Schema; the client does not fetch it
 ```
 
 | path | who reads it | constant |
@@ -36,6 +39,7 @@ Verified end to end against a real client on 2026-09-04: see §8.
 | `sharaih/{raqm:02x}.json` | `jalb::jalb_shareeha` | `masadir::masar_shareeha` |
 | the revocation list | `jalb::jalb_qaimat_sahb` | named by `bayan.rabt_qaimat_sahb` |
 | release assets | `tanzeel::nazzil` | named by each listing's `rabt` |
+| `fahras/tarjamat.json` | `mujtama::jalb_fahras_mujtama` | `mujtama::MASAR_FAHRAS_MUJTAMA` |
 
 Every repository path a source resolves must satisfy
 `masadir::masar_salih`: at most 256 characters, no leading or trailing `/`, no
@@ -454,3 +458,65 @@ been fetched, matched or installed through it.
 The signing key throughout is `MIFTAH_TATWIR`, the committed development key.
 What a release-anchored client does with a *validly release-signed* package is
 covered by 8.2 only in the negative — it refuses the development key by name.
+
+## 9. `fahras/` — the community index, as the client reads it
+
+`fahras/tarjamat.json` lists Arabic translations of PC games that other teams
+published on their own pages — the Steam Workshop, Nexus Mods, GitHub, a team's
+own site — with the facts each page states about itself: who made it, coverage,
+method, terms, version, dates, downloads, and the day the page was read.
+`fahras/mukhattat.json` is its JSON Schema. **The registry links; it hosts
+nothing listed here.** No entry is a patch, nothing is downloaded from one, and
+nothing is installed from one; the client shows a credit and opens a page.
+
+That is why this document is outside every guarantee §1–§4 make. No manifest
+hash vouches for it, no signature is checked over it, and the revocation list
+never sees it: there is no install for any of that to protect. What the client
+keeps from the shard path is the rest of the discipline, and
+`crates/taarib-mustawda/src/mujtama.rs` is the reader every line below is
+derived from.
+
+**Fetched** repository-relative at `mujtama::MASAR_FAHRAS_MUJTAMA` through the
+same `SilsilatMasadir` as the manifest — local copies, then the forge, then the
+mirrors, in the order §1 gives — so a bundled or LAN mirror that carries
+`fahras/tarjamat.json` serves it with no network at all, and offline mode leaves
+the chain empty rather than refusing.
+
+**Refused** when the body passes `mujtama::HADD_HAJM_FAHRAS_MUJTAMA` (4 MiB,
+judged after the chain's own 8 MiB transfer cap), when `isdar` is not
+`mujtama::ISDAR_FAHRAS_MUJTAMA` (1), or when a field the client reads does not
+hold: an entry naming a team `firaq` does not list, an address that is not
+`https`, an identifier outside `^[a-z0-9][a-z0-9-]*$`, a date that is not
+`YYYY-MM-DD`, an SPDX licence with no identifier, a duplicate identifier.
+Fields the client does not read are ignored, and a value this build does not
+know in `mudif`, `taghtiya`, `tareeqa`, `rukhsa.naw`, `tawzee`, `hala` or
+`tanzeelat_naw` reads as `Majhul` rather than refusing the index — the schema
+is maintained by hand and grows faster than builds ship.
+
+**Cached** under the data root at `makhbaa/mustawda/fahras/tarjamat.json` — the
+index's own repository path beneath the shard cache, so a cached copy and a
+bundled mirror's copy are the same file in the same place — with a refresh
+record beside it at `tarjamat.sijill.json` naming the last source that served
+it, when, and what the latest attempt found. The window is
+`mujtama::NAFIDHAT_FAHRAS_MUJTAMA`, 24 hours: inside it the cache is answered
+and no source is asked; outside it the chain is asked, and when every source
+refuses or answers something unreadable the stale cache is served with its age
+and the refusal (`AslFahrasMujtama::MakhbaaQadeem`). Only a machine with no
+cache and no answering source is refused (`KhataMustawda::FahrasMujtamaGhayrMutah`),
+so an empty list always means "the index was read and lists nothing", never
+"nobody could look". The Studio reads the cache synchronously for the library
+grid and refreshes it in the background; the game screen fetches on demand.
+
+**Matched** to a game by `mujtama::tarjamat_li_luba`: entries carrying the
+game's Steam application id first, then entries with no id at all whose
+`luba.ism` normalises — through the same `taarib_mustalahat::wahhid_ism` the
+store keys `ism_muwahhad` on — to the game's name. An entry carrying a
+*different* Steam id is never matched by name: same title, other application. A
+game with no Steam id takes every entry its name matches.
+
+The Studio surfaces this in two places: a "community Arabic" mark on a library
+card when the cached index lists anything for the game, and a section on the
+game screen that credits the makers first, states what the page states, and
+opens the page — through `mujtama_awamir::iftah_rabt`, which refuses anything
+but an `https` address on a host the cached index links to or one of the known
+mod platforms, and only then hands it to `tauri-plugin-opener`.

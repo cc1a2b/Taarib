@@ -19,7 +19,8 @@
 // THOSE TWO DECISIONS ARE TWO METHODS. `TextField.BuildLines` is where FairyGUI
 // parses its markup, measures each character against its own font, breaks the
 // text into lines and records the size the text wants to be. `OnPopulateMesh`
-// is where those lines become vertices. Both are prefixed here, and both do the
+// is where those lines become vertices. The first is postfixed and the second
+// prefixed — see NizamFairyGui.Rakkib for why the two differ — and both do the
 // same lookup independently rather than one stashing a result for the other:
 // the layout each needs is either two slices of a memory-mapped patch or one
 // call into a layout cache that already holds the answer, so recomputing is
@@ -579,14 +580,15 @@ namespace Taarib.Unity.Mono.Anzimat
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>The two patch targets.</b> A prefix on <c>TextField.BuildLines</c>,
-    /// which measures Taarib's layout and records the size the text wants
-    /// instead of letting FairyGUI measure against a font with no Arabic in it;
-    /// and a prefix on <c>TextField.OnPopulateMesh</c>, which binds Taarib's
-    /// atlas to the field's <c>NGraphics</c> and writes the quads into the
-    /// <c>VertexBuffer</c> FairyGUI already owns. Each returns <c>false</c>
-    /// only when it did its own work, so a field Taarib declines is a field
-    /// FairyGUI renders exactly as it always did.
+    /// <b>The two patch targets.</b> A postfix on <c>TextField.BuildLines</c>,
+    /// which overwrites the size FairyGUI just measured against a font with no
+    /// Arabic in it with the size Taarib's layout actually needs; and a prefix
+    /// on <c>TextField.OnPopulateMesh</c>, which binds Taarib's atlas to the
+    /// field's <c>NGraphics</c> and writes the quads into the
+    /// <c>VertexBuffer</c> FairyGUI already owns. The prefix returns
+    /// <c>false</c> only when it did its own work and the postfix writes
+    /// nothing unless it did, so a field Taarib declines is a field FairyGUI
+    /// renders exactly as it always did.
     /// </para>
     /// <para>
     /// <b>Why skipping FairyGUI's measurement is not an optimisation.</b>
@@ -603,8 +605,8 @@ namespace Taarib.Unity.Mono.Anzimat
     /// <see cref="Ruqaa.MiftahMinNass(string)"/> and looked up in the installed
     /// patch. A miss means this field is drawing something the patch does not
     /// cover — a score, a player's own name, a string the compiler never saw —
-    /// and both prefixes stand aside. Nothing here reaches for a nearby string,
-    /// a normalised form or a nearest size.
+    /// and both interceptions stand aside. Nothing here reaches for a nearby
+    /// string, a normalised form or a nearest size.
     /// </para>
     /// <para>
     /// <b>Inline elements.</b> A translated string's atoms — an
@@ -756,10 +758,10 @@ namespace Taarib.Unity.Mono.Anzimat
 
             bool mala = nizam.Rakkib(
                 wasl.HadafMala, typeof(TarqeeMalaFairy), nameof(TarqeeMalaFairy.Sabiq),
-                "TextField.OnPopulateMesh");
+                "TextField.OnPopulateMesh", sabiq: true);
             nizam.Rakkib(
-                wasl.HadafSutur, typeof(TarqeeSuturFairy), nameof(TarqeeSuturFairy.Sabiq),
-                "TextField.BuildLines");
+                wasl.HadafSutur, typeof(TarqeeSuturFairy), nameof(TarqeeSuturFairy.Baad),
+                "TextField.BuildLines", sabiq: false);
 
             if (!mala)
             {
@@ -779,8 +781,8 @@ namespace Taarib.Unity.Mono.Anzimat
         /// </summary>
         /// <param name="haql">The text field being measured.</param>
         /// <returns>
-        /// Whether Taarib owns this string and has recorded its size, in which
-        /// case FairyGUI's own line building must not run.
+        /// Whether Taarib owns this string and has recorded its size over the
+        /// one FairyGUI's own line building just wrote.
         /// </returns>
         public bool Yaqis(object? haql)
         {
@@ -1130,8 +1132,14 @@ namespace Taarib.Unity.Mono.Anzimat
             // whether Taarib owns a field allocates nothing at all — which
             // matters because it runs for every field FairyGUI rebuilds,
             // including all the ones the patch does not cover.
-            fahras = ruqaa.JidNass(Ruqaa.MiftahMinNass(khaam!));
-            return fahras >= 0;
+            ulong miftah = Ruqaa.MiftahMinNass(khaam!);
+            fahras = ruqaa.JidNass(miftah);
+            if (fahras < 0)
+            {
+                Rabt.Fawt(khaam!, miftah);
+                return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -1267,6 +1275,15 @@ namespace Taarib.Unity.Mono.Anzimat
         /// reference counts it, so building a fresh one per draw would churn
         /// materials every frame a field rebuilt.
         /// </summary>
+        /// <remarks>
+        /// Only the atlas the quads were built against. A field laid out from
+        /// the patch indexes the patch's own atlas and one laid out at run time
+        /// indexes this session's; the two are different pictures with different
+        /// glyphs at different coordinates, so wrapping whichever page happened
+        /// to exist would paint the field as solid blocks — and, because the
+        /// wrapper is cached under the slot it was asked for, would keep doing
+        /// it for the rest of the session.
+        /// </remarks>
         private object? Lawha(bool minRuqaa)
         {
             int fahras = minRuqaa ? 0 : 1;
@@ -1275,7 +1292,7 @@ namespace Taarib.Unity.Mono.Anzimat
             {
                 return mawjud;
             }
-            Texture2D? asl = masdar.LawhatSafha(minRuqaa, 0) ?? masdar.LawhatSafha(!minRuqaa, 0);
+            Texture2D? asl = masdar.LawhatSafha(minRuqaa, 0);
             if (asl == null)
             {
                 return null;
@@ -1323,8 +1340,20 @@ namespace Taarib.Unity.Mono.Anzimat
             }
         }
 
-        /// <summary>Installs one prefix and records its target for removal.</summary>
-        private bool Rakkib(MethodInfo? hadaf, Type hamil, string ism, string wasf)
+        /// <summary>Installs one interception and records its target for removal.</summary>
+        /// <remarks>
+        /// <paramref name="sabiq"/> is not a style choice. FairyGUI clears
+        /// <c>_textChanged</c> as the first statement of <c>BuildLines</c> and
+        /// marks its graphics' mesh dirty as the last, so a prefix that skipped
+        /// the method left the field permanently dirty and never let the mesh
+        /// population that draws Taarib's glyphs run at all. Measuring after the
+        /// engine has measured costs one pass the player never sees and leaves
+        /// every flag FairyGUI owns in the state FairyGUI expects. The mesh
+        /// population is the opposite case and must stay a prefix: its output is
+        /// the buffer it was handed, and letting the engine fill it first would
+        /// leave FairyGUI's own quads in front of Taarib's.
+        /// </remarks>
+        private bool Rakkib(MethodInfo? hadaf, Type hamil, string ism, string wasf, bool sabiq)
         {
             if (hadaf is null)
             {
@@ -1339,7 +1368,15 @@ namespace Taarib.Unity.Mono.Anzimat
                     Rabt.Ballagh("The patch method for " + wasf + " is missing from this build.");
                     return false;
                 }
-                Harmoni.Patch(hadaf, prefix: new HarmonyMethod(tariqa));
+                HarmonyMethod tarqee = new HarmonyMethod(tariqa);
+                if (sabiq)
+                {
+                    Harmoni.Patch(hadaf, prefix: tarqee);
+                }
+                else
+                {
+                    Harmoni.Patch(hadaf, postfix: tarqee);
+                }
                 hidaf.Add(hadaf);
                 return true;
             }
@@ -1431,31 +1468,29 @@ namespace Taarib.Unity.Mono.Anzimat
     }
 
     /// <summary>
-    /// ترقيع السطور — the prefix on <c>TextField.BuildLines</c>.
+    /// ترقيع السطور — the postfix on <c>TextField.BuildLines</c>.
     /// </summary>
     /// <remarks>
     /// FairyGUI decides here how wide and how tall the text wants to be, by
     /// measuring each character against the field's own font. For a string
     /// Taarib owns that measurement is meaningless — the font has no Arabic in
     /// it — and worse than meaningless, because the container above the field
-    /// lays itself out against the answer. Taarib measures instead, records the
-    /// two numbers on the field, and skips FairyGUI's pass.
+    /// lays itself out against the answer. Taarib measures and overwrites the
+    /// two numbers the engine just recorded. It runs after that pass rather
+    /// than in place of it because the method clears the field's own changed
+    /// flag and marks its graphics dirty, and a field that never reports itself
+    /// measured never reaches the mesh population where the Arabic is drawn.
     /// </remarks>
     public static class TarqeeSuturFairy
     {
         /// <summary>
-        /// Measures through Taarib when the patch covers the field's string.
+        /// Measures through Taarib when the patch covers the field's string,
+        /// and leaves FairyGUI's own answer standing otherwise.
         /// </summary>
         /// <param name="__instance">The text field, injected by Harmony.</param>
-        /// <returns>
-        /// <c>false</c> to skip FairyGUI's own line building; <c>true</c> to
-        /// let it run untouched, which is the answer for every string the patch
-        /// does not cover.
-        /// </returns>
-        public static bool Sabiq(object __instance)
+        public static void Baad(object __instance)
         {
-            NizamFairyGui? nizam = NizamFairyGui.Hali;
-            return nizam is null || !nizam.Yaqis(__instance);
+            NizamFairyGui.Hali?.Yaqis(__instance);
         }
     }
 

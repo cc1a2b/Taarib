@@ -63,7 +63,11 @@ impl Itar {
         let saf = usize::try_from(a).ok()?;
         let amud = usize::try_from(s).ok()?;
         let ard = usize::try_from(self.ard).ok()?;
-        Some(saf.saturating_mul(ard).saturating_add(amud).saturating_mul(4))
+        Some(
+            saf.saturating_mul(ard)
+                .saturating_add(amud)
+                .saturating_mul(4),
+        )
     }
 
     /// One pixel's linear RGB, or black off the frame.
@@ -72,13 +76,15 @@ impl Itar {
         let Some(fahras) = self.fahras(s, a) else {
             return [0.0; 3];
         };
-        self.biksel.get(fahras..fahras.saturating_add(3)).map_or([0.0; 3], |qanawat| {
-            [
-                qanawat.first().copied().unwrap_or(0.0),
-                qanawat.get(1).copied().unwrap_or(0.0),
-                qanawat.get(2).copied().unwrap_or(0.0),
-            ]
-        })
+        self.biksel
+            .get(fahras..fahras.saturating_add(3))
+            .map_or([0.0; 3], |qanawat| {
+                [
+                    qanawat.first().copied().unwrap_or(0.0),
+                    qanawat.get(1).copied().unwrap_or(0.0),
+                    qanawat.get(2).copied().unwrap_or(0.0),
+                ]
+            })
     }
 
     /// Writes one pixel, opaquely.
@@ -125,7 +131,14 @@ impl Itar {
     }
 
     /// Fills a rectangle, opaquely.
-    pub(crate) fn mustatil(&mut self, yasar: u32, aala: u32, ard: u32, irtifa: u32, lawn: [f32; 3]) {
+    pub(crate) fn mustatil(
+        &mut self,
+        yasar: u32,
+        aala: u32,
+        ard: u32,
+        irtifa: u32,
+        lawn: [f32; 3],
+    ) {
         for a in aala..aala.saturating_add(irtifa) {
             for s in yasar..yasar.saturating_add(ard) {
                 self.uktub(s, a, lawn);
@@ -244,8 +257,8 @@ impl Itar {
                 bayt_kull.push(bayt(ila_sirgb(*qanat)));
             }
         }
-        let surah: image::RgbImage =
-            image::ImageBuffer::from_raw(self.ard, self.irtifa, bayt_kull).ok_or_else(|| {
+        let surah: image::RgbImage = image::ImageBuffer::from_raw(self.ard, self.irtifa, bayt_kull)
+            .ok_or_else(|| {
                 Box::<dyn Error>::from("the frame's byte count did not match its size")
             })?;
         surah.save(masar)?;
@@ -416,8 +429,8 @@ impl Khattaf for KhattafBarmaji {
                 for amud in 0..qita.mawdi.ard {
                     let asas = match qita.khareeta {
                         Some(khareeta) => {
-                            let u = khareeta.yasar
-                                + khareeta.ard * (madaa(amud) + 0.5) / madaa(ard);
+                            let u =
+                                khareeta.yasar + khareeta.ard * (madaa(amud) + 0.5) / madaa(ard);
                             let v = khareeta.aala
                                 + khareeta.irtifa * (madaa(saf) + 0.5) / madaa(irtifa);
                             self.ayina(u, v)

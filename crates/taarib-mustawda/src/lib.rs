@@ -29,11 +29,19 @@
 //!
 //! No client fetches the whole catalogue: only the shards covering identifiers
 //! the user owns are requested, and an unchanged manifest hits zero network.
+//!
+//! One more document rides the same chain and none of the guarantees above:
+//! [`mujtama`] reads `fahras/tarjamat.json`, the registry's index of Arabic
+//! translations other teams published on their own pages. It is a list of
+//! credits and addresses, hosted by nobody here and installed from by nothing
+//! here, so it is capped, validated and cached like a shard and vouched for by
+//! no manifest — there is no install for a hash to protect.
 
 pub mod fahras;
 pub mod jalb;
 pub mod khata;
 pub mod masadir;
+pub mod mujtama;
 pub mod mutabaqa;
 pub mod sahb;
 pub mod sumaa;
@@ -52,6 +60,10 @@ pub use jalb::{
 };
 pub use khata::{KhataMustawda, NatijatMustawda};
 pub use masadir::{MasdarMustawda, SilsilatMasadir};
+pub use mujtama::{
+    AslFahrasMujtama, FahrasMujtama, FahrasMujtamaMajlub, FahrasMukhazzan, Tarjama,
+    jalb_fahras_mujtama, tarjamat_li_luba,
+};
 pub use mutabaqa::{
     IdafatIrtibat, MutabaqatLuba, MutabaqatRuqaa, MutabiqBina, SababGhayrTawafuq, afdal,
     ghayr_mutawafiqa, mutawafiqa,

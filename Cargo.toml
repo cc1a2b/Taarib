@@ -41,7 +41,7 @@ members = [
 exclude = ["vendor/retour"]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 rust-version = "1.95"
 license = "MPL-2.0"
@@ -341,6 +341,13 @@ version = "2.4"
 # second launch hands its arguments to the first and exits.
 [workspace.dependencies.tauri-plugin-single-instance]
 version = "2.4.4"
+
+# The one route from this process to the user's browser: the game screen's
+# "open the page" control for a community translation goes through
+# `mujtama_awamir::iftah_rabt`, which validates the address against the
+# community index before handing it here. Nothing else opens anything.
+[workspace.dependencies.tauri-plugin-opener]
+version = "2.5.5"
 
 [workspace.dependencies.tauri-specta]
 version = "2.0.0-rc.25"

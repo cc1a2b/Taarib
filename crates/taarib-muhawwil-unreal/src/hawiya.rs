@@ -273,9 +273,9 @@ impl HalatKhatt {
                 "الخط: يحمل الحاوية الخطَّ {ism} في {masar} ويُسمَّى خطَّ الاحتياط في Slate، \
                  وهو الذي يرسم كل حرف تفتقده خطوط اللعبة نفسها"
             ),
-            Self::MinAlMuharrik { ism } => format!(
-                "الخط: يُسمَّى خطُّ المحرّك نفسه {ism} خطَّ الاحتياط في Slate، ولا يُحمل خط"
-            ),
+            Self::MinAlMuharrik { ism } => {
+                format!("الخط: يُسمَّى خطُّ المحرّك نفسه {ism} خطَّ الاحتياط في Slate، ولا يُحمل خط")
+            },
             Self::GhayrMaqru { ism } => match ism {
                 Some(ism) => format!(
                     "الخط: هذا المحرّك لا يقرأ اسم خطّ احتياط مترجمًا، فلم يُحمل {ism}؛ خطّ \
@@ -746,7 +746,9 @@ fn ijma_ahdaf(hawiyat: &[HawiyatPak]) -> Result<BTreeMap<String, HadafKhaam>, Kh
     for (fahras, hawiya) in hawiyat.iter().enumerate() {
         for masar in hawiya.masarat_locres() {
             let Some(ajza) = hallil(masar) else { continue };
-            let Some(thaqafa) = ajza.thaqafa else { continue };
+            let Some(thaqafa) = ajza.thaqafa else {
+                continue;
+            };
             let hadaf = madkhal_hadaf(&mut ahdaf, ajza.hadaf, &ajza.badiya)?;
             let _ = hadaf.thaqafat.insert(
                 thaqafa.to_owned(),
@@ -915,7 +917,8 @@ fn thaqafa_asliya(
             Some((sabiq, mutabiq_sabiq, kull_sabiq)) => {
                 let hadha = u128::from(mutabiq).saturating_mul(u128::from(kull_sabiq));
                 let dhak = u128::from(mutabiq_sabiq).saturating_mul(u128::from(kull));
-                hadha > dhak || (hadha == dhak && thaqafa.eq_ignore_ascii_case("en") && sabiq != "en")
+                hadha > dhak
+                    || (hadha == dhak && thaqafa.eq_ignore_ascii_case("en") && sabiq != "en")
             },
         };
         if ahsan {

@@ -143,7 +143,12 @@ impl Qari for QariMustatilat {
         let mut sutur: Vec<MustatilBiksel> = Vec::new();
         let mut bidaya: Option<usize> = None;
         let mut faragh = 0_usize;
-        for (fahras, mahbur) in sufuf.iter().copied().chain(std::iter::once(false)).enumerate() {
+        for (fahras, mahbur) in sufuf
+            .iter()
+            .copied()
+            .chain(std::iter::once(false))
+            .enumerate()
+        {
             if mahbur {
                 if bidaya.is_none() {
                     bidaya = Some(fahras);
@@ -163,7 +168,8 @@ impl Qari for QariMustatilat {
                 let mut yasar = usize::MAX;
                 let mut yameen = 0_usize;
                 for saf in awwal..akhir {
-                    let Some(satr) = ramadi.get(saf.saturating_mul(ard)..saf.saturating_add(1).saturating_mul(ard))
+                    let Some(satr) = ramadi
+                        .get(saf.saturating_mul(ard)..saf.saturating_add(1).saturating_mul(ard))
                     else {
                         continue;
                     };
@@ -265,7 +271,11 @@ impl Mashhad {
         self.sanadiq.clear();
         for (fahras, takhtit) in self.takhtitat.iter().enumerate() {
             let aala = AALA_QAIMA
-                .saturating_add(u32::try_from(fahras).unwrap_or(0).saturating_mul(KHUTWAT_QAIMA))
+                .saturating_add(
+                    u32::try_from(fahras)
+                        .unwrap_or(0)
+                        .saturating_mul(KHUTWAT_QAIMA),
+                )
                 .saturating_add(izaha);
             let sunduq = itar.utbua(&self.rassam, takhtit, YASAR_QAIMA, aala, LAWN_INJILIZI)?;
             self.sanadiq.push(sunduq);
@@ -529,14 +539,21 @@ fn arabi_yursam_fawq_al_injilizi_wa_al_khazina_tujib_thaniyan() -> Natija {
         jalsa.mutarjim.adad()
     );
     let ihsaat = jalsa.khazina.ihsaat();
-    assert_eq!(ihsaat.kutibat, QAIMA.len() as u64, "{}", jalsa.khazina.wasf());
+    assert_eq!(
+        ihsaat.kutibat,
+        QAIMA.len() as u64,
+        "{}",
+        jalsa.khazina.wasf()
+    );
     assert!(
         jalsa.qiraat.load(Ordering::Relaxed) >= 2,
         "the corroborating read runs the recognizer twice per accepted capture"
     );
     let athar = jalsa.halaqa.khudh_athar();
     assert!(
-        athar.iter().any(|satr| satr.starts_with("first Arabic drawn")),
+        athar
+            .iter()
+            .any(|satr| satr.starts_with("first Arabic drawn")),
         "the loop's trace must record the first frame with Arabic on it: {athar:?}"
     );
     let sutur_malaf = fs::read_to_string(&masar)?;
@@ -716,7 +733,9 @@ fn qari_mayyit_yasil_ila_al_lawha() -> Natija {
     );
     let athar = halaqa.khudh_athar();
     assert!(
-        athar.iter().any(|satr| satr.contains("recognition stopped")),
+        athar
+            .iter()
+            .any(|satr| satr.contains("recognition stopped")),
         "the trace names the stop: {athar:?}"
     );
     halaqa.aghliq()?;

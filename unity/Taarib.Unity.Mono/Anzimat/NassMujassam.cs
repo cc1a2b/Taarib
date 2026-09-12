@@ -331,11 +331,19 @@ namespace Taarib.Unity.Mono.Anzimat
         }
 
         /// <summary>Taarib's atlas material for the atlas a label was drawn from.</summary>
+        /// <remarks>
+        /// The other atlas is never offered in its place. A mesh built from the
+        /// patch's compiled atlas indexes that atlas's rectangles and one built
+        /// at run time indexes this session's; binding the wrong page samples
+        /// whatever happens to sit at those coordinates and paints the label as
+        /// solid blocks. A label whose own atlas carries no material is left to
+        /// the engine's renderer instead.
+        /// </remarks>
         /// <param name="minRuqaa">Whether the glyphs came from the patch's compiled atlas.</param>
-        /// <returns>The material, or <c>null</c> when nothing is resident.</returns>
+        /// <returns>The material, or <c>null</c> when that atlas is not resident.</returns>
         public Material? Madda(bool minRuqaa)
         {
-            return masdar.Madda(minRuqaa, 0) ?? masdar.Madda(!minRuqaa, 0);
+            return masdar.Madda(minRuqaa, 0);
         }
 
         /// <summary>
@@ -413,9 +421,11 @@ namespace Taarib.Unity.Mono.Anzimat
             // MiftahMinNass encodes the string to UTF-8 to hash it: under 512
             // bytes that encode is a stackalloc, so the lookup that decides
             // whether Taarib owns a label allocates nothing at all.
-            int fahras = ruqaa.JidNass(Ruqaa.MiftahMinNass(nass));
+            ulong miftah = Ruqaa.MiftahMinNass(nass);
+            int fahras = ruqaa.JidNass(miftah);
             if (fahras < 0)
             {
+                Rabt.Fawt(nass, miftah);
                 return false;
             }
 
@@ -571,15 +581,14 @@ namespace Taarib.Unity.Mono.Anzimat
         /// Hands the built geometry to the mesh.
         /// </summary>
         /// <remarks>
-        /// The whole arrays are assigned, not an exact-length copy of them.
-        /// <see cref="MakhzanRusum.Amsah"/> has already zeroed everything past
-        /// what the build wrote, so the extra vertices sit at the origin and
-        /// the extra indices are degenerate triangles that rasterize nothing.
-        /// The one thing zeroed vertices would still affect is the bounding
-        /// box — and bounds that are wrong are text that vanishes when the
-        /// camera moves — so the bounds are written explicitly from the box
-        /// Nasij measured while it walked the glyphs, which also saves the
-        /// second pass a <c>RecalculateBounds</c> would make.
+        /// Only the range the build wrote is uploaded. The buffers are grown to
+        /// a block size and reused, so handing the mesh the whole array hands it
+        /// the tail of the previous, longer label as well — and its triangles
+        /// index vertices this label never wrote, which R.E.P.O. drew as a black
+        /// wedge across the screen from the TextMeshPro takeover. The bounds are
+        /// written explicitly from the box Nasij measured while it walked the
+        /// glyphs, which also saves the second pass a <c>RecalculateBounds</c>
+        /// would make.
         /// </remarks>
         private void Aktub(Mesh nasij, in NatijaNasij natija)
         {
@@ -588,10 +597,14 @@ namespace Taarib.Unity.Mono.Anzimat
             // one is how a shorter string produces an index out of range inside
             // the engine.
             nasij.Clear();
-            nasij.vertices = makhzan.Ruus;
-            nasij.uv = makhzan.Malamis;
-            nasij.colors32 = makhzan.Alwan;
-            nasij.triangles = makhzan.Muthallathat;
+            int adadRuus = natija.AdadRuus;
+            // Six indices per glyph: the field counts indices, not triangles.
+            int adadFahras = natija.AdadMuthallathat;
+            nasij.SetVertices(makhzan.Ruus, 0, adadRuus);
+            nasij.SetUVs(0, makhzan.Malamis, 0, adadRuus);
+            nasij.SetColors(makhzan.Alwan, 0, adadRuus);
+            nasij.SetIndices(
+                makhzan.Muthallathat, 0, adadFahras, MeshTopology.Triangles, 0, false);
 
             MustatilRasm hudud = natija.Hudud;
             float markazS = hudud.Yasar + (hudud.Ard * 0.5f);

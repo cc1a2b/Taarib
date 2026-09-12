@@ -177,7 +177,12 @@ use crate::tahdid::{maghlufa, mutaarid};
 /// container is written, the engine draws it on its own, and no launch has
 /// been watched. Every stored report for an Unreal title carries the old
 /// verdict, and the verdict is what the one-button run gates on.
-pub const ISDAR_FAHS: u32 = 9;
+///
+/// Ten: Unity on Mono answers "complete", because it was watched drawing. Every
+/// stored report for a Mono title says the in-game part has reached its last
+/// step and has never been seen putting Arabic on a screen — which stopped the
+/// one-button run before it began, and is no longer true of any of them.
+pub const ISDAR_FAHS: u32 = 10;
 
 /// The confidence below which the report tells the user the identification may
 /// be wrong.
@@ -668,7 +673,7 @@ fn tabaqa_godot(muharrik: &Muharrik) -> (Tabaqa, String, String) {
 #[must_use]
 pub fn jahiziya(muharrik: &Muharrik) -> (JahiziyatTashghil, Option<Hadd>) {
     let (jahiziya, naqs) = match muharrik.aila {
-        AilatMuharrik::Unity => (JahiziyatTashghil::Ghaiba, naqs_unity(muharrik)),
+        AilatMuharrik::Unity => jahiziyat_unity(muharrik),
         // The container that carries the Arabic is written; the in-process
         // corrections are not reached and no launch has been watched, so
         // partial rather than complete.
@@ -782,49 +787,43 @@ const fn sadr_jahiziya(jahiziya: JahiziyatTashghil) -> Option<(&'static str, &'s
     }
 }
 
-/// Unity: the managed component now builds, and neither backend is complete.
+/// Unity's verdict, which its scripting backend decides.
 ///
-/// This used to say the component "is not built into this package, so nothing
-/// enters the game at all", which was true of both backends until the C# was
-/// compiled for the first time. It now builds, and the two backends fail at
-/// different rungs — so one sentence for both would be false for whichever one
-/// it did not describe.
+/// Mono is the one backend in this table that has been watched putting shaped
+/// Arabic on a real game's screen, so it answers [`JahiziyatTashghil::Mukammala`]
+/// and IL2CPP does not. Splitting the engine by backend is the same move
+/// [`jahiziyat_renpy`] makes, and for the same reason: one verdict for both
+/// would be false for whichever half it did not describe.
+fn jahiziyat_unity(muharrik: &Muharrik) -> (JahiziyatTashghil, Hadd) {
+    match muharrik.khalfiya {
+        // Watched on 2026-09-12 in R.E.P.O. (Unity 2022 Mono, BepInEx 5.4.23.5):
+        // the menu drew "تخصيص", Customize drew "تأكيد", and the quit dialog drew
+        // "إغلاق التطبيق بالكامل؟" — shaped, joined and right-to-left, from the
+        // installed `.ruqaa` and its own font, through the engine's `UI/Default`.
+        // Five separate defects stood between "the log says it worked" and that
+        // screen, every one of them invisible in the log: a Harmony prefix that
+        // skipped generation and hung the canvas rebuild, a mesh bound to the
+        // wrong atlas, whole reusable buffers uploaded instead of the built
+        // range, an unflipped V against Unity's bottom-origin textures, and a
+        // host object the game destroys at frame 0. That is why this arm may not
+        // be moved by reading code — only by watching a game.
+        KhalfiyaBarmajiya::Mono => (JahiziyatTashghil::Mukammala, naqs_unity_mono_taghtiya()),
+        _ => (JahiziyatTashghil::Ghaiba, naqs_unity(muharrik)),
+    }
+}
+
+/// Unity: IL2CPP is shipped whole and unwatched, and the backend may be unknown.
 ///
-/// Both are still [`JahiziyatTashghil::Ghaiba`]: nothing has been shown to reach
-/// a screen on either. What changed is *why*, and the reader deserves the real
-/// reason, because a component that is absent and one that is present but
-/// unreachable call for different reports from them.
+/// This used to carry a Mono arm too. Mono now answers through
+/// [`jahiziyat_unity`] instead, because it is finished; what is left here are
+/// the two cases that are not.
 fn naqs_unity(muharrik: &Muharrik) -> Hadd {
     match muharrik.khalfiya {
-        // Four gaps closed in one phase, each observed in a real game's BepInEx
-        // log before the next became visible: the plugin was built against
-        // BepInEx 6 while 5 ships (never loaded); it looked for the patch beside
-        // itself while the installer placed it under `taarib/` (not found); the
-        // installer placed no font (refused at the chain); and the container was
-        // placed sealed while the plugin reads only an uncompressed working copy
-        // (refused at the string table). The fifth was never a wiring gap: the
-        // plugin asked `Shader.Find` for two shaders of Taarib's own that were
-        // never built or shipped, so it now draws through the engine's own
-        // `UI/Default`. That last step is the one nobody has watched in a game.
-        KhalfiyaBarmajiya::Mono => hadd(
-            "وصل الجزء الذي يعمل داخل لعبة Unity إلى آخر خطوة ولم يُشاهَد بعدُ يرسم: يُحمَّل \
-             المكوّن، ويفتح الرقعة وخطّها، ويرسم عبر صدفة المحرّك نفسه — وكلّ ذلك ثبت من \
-             سجلّ اللعبة إلا الرسم، فلم يُرَ نصّ عربي على الشاشة في هذا الإصدار بعد. يمكنك \
-             تثبيت الرقعة الآن — تُحفظ ملفاتك الأصلية وتُستعاد كما كانت بالضبط — وإن بقيت \
-             اللعبة بلغتها الأصلية فسجلّ BepInEx يسمّي الخطوة التي توقّفت عندها.",
-            "The part that runs inside a Unity game has reached its last step and has not yet \
-             been watched drawing: the component loads, opens the patch and its font, and \
-             draws through the engine's own shader — every step but the drawing is proven \
-             from the game's log, and no Arabic has been seen on screen in this build yet. \
-             You can install the patch now — your original files are kept and restored \
-             exactly — and if the game stays in its original language, the BepInEx log names \
-             the step it stopped at.",
-        ),
         // The native library is staged now — the release script's payload
         // stage produces it and the plugin loads it by absolute path — and the
         // same three installer gaps as Mono are closed on this backend by the
-        // same code. What separates the two is observation: every Mono step up
-        // to drawing was watched in a game's log; the IL2CPP chain, which loads
+        // same code. What separates the two is observation: Mono has been
+        // watched drawing Arabic in a game; the IL2CPP chain, which loads
         // through BepInEx 6 and an interop layer the Mono one does not have, has
         // not been watched at all in this build.
         KhalfiyaBarmajiya::Il2cpp => hadd(
@@ -854,6 +853,27 @@ fn naqs_unity(muharrik: &Muharrik) -> Hadd {
     }
 }
 
+/// Unity Mono's remaining caveat, which the finished-tier rule discards.
+///
+/// Kept and written honestly because [`jahiziya`] drops it only while the arm
+/// answers `Mukammala`; the day a defect moves that arm back, this is the
+/// sentence the screen would show, and a placeholder here would ship as a lie.
+///
+/// What it names is the one real limit of a working takeover: it replaces the
+/// strings the patch carries, and a game draws some text the patch never saw —
+/// a name typed by a player, a number, a line baked into a texture.
+fn naqs_unity_mono_taghtiya() -> Hadd {
+    hadd(
+        "يعمل التعريب داخل لعبة Unity على Mono: يُبدَّل النصّ وهي تعمل، ويُشكَّل ويُوصَل \
+         ويُقرأ من اليمين إلى اليسار بخطّ الرقعة نفسه. ما يبقى بلغته الأصلية هو ما ليس في \
+         الرقعة: ما يكتبه اللاعب، والأرقام، والنصّ المرسوم داخل الصور.",
+        "Arabic works inside a Unity game on Mono: the text is replaced while the game runs, \
+         shaped, joined and read right-to-left in the patch's own font. What stays in the \
+         original language is whatever the patch does not carry: text a player types, \
+         numbers, and words drawn inside pictures.",
+    )
+}
+
 /// Unreal: the container is written, the engine draws it on its own, and nobody
 /// has yet watched it happen.
 ///
@@ -874,12 +894,14 @@ fn naqs_unreal() -> Hadd {
         "يكتب تعريب في هذه اللعبة حاوية إضافية بجانب حاويات المحرّك: نصوص اللعبة \
          المترجمة في كل لغة تشحنها، ولغة عربية بجانبها، والخطّ حيث يقرأ المحرّك اسمه. \
          يركّبها المحرّك بنفسه ويرسم منها دون تدخّل، ولم يُشاهَد ذلك بعد في لعبة تعمل. \
-         تُحفظ ملفاتك الأصلية وتُستعاد كما كانت بالضبط.",
+         تُحفظ ملفاتك الأصلية وتُستعاد كما كانت بالضبط، وإن بقيت اللعبة بلغتها الأصلية \
+         فالتحديث القادم يُغلق ما نقص.",
         "Taarib writes an additive container beside this game's own: the game's text \
          translated in every language it ships, an Arabic language beside them, and the \
          font where the engine reads its name. The engine mounts it by itself and draws \
          from it with no help, and this has not yet been watched in a running game. Your \
-         original files are kept and restored exactly.",
+         original files are kept and restored exactly, and if the game stays in its \
+         original language, the next update closes what is missing.",
     )
 }
 
@@ -1184,13 +1206,15 @@ fn naqs_tabaqa() -> Hadd {
          العربية فوقه — وهذا مثبَت بالرسم خارج الشاشة وقراءة البكسلات لا بالدعوى — لكنها لم \
          تُشاهَد بعد وهي تعمل فوق لعبة حقيقية. توقّع أن يظهر شيء فوق اللعبة، وتوقّع أخطاء: \
          القراءة الآلية تخطئ، والترجمة تحتاج إلى مزوّد محلّي أو إلى خزينة سبق ملؤها، ولوحة \
-         التحكّم (Ctrl+Shift+O) تقول لماذا حين لا يظهر شيء.",
+         التحكّم (Ctrl+Shift+O) تقول لماذا حين لا يظهر شيء. وما يبقى ناقصًا في هذه الطبقة \
+         يُغلقه تحديث قادم.",
         "The translation overlay opens with the game, attaches to its picture, reads what is \
          on screen, translates it and draws Arabic over it — proven by drawing offscreen and \
          reading the pixels back, not by argument — but it has never yet been watched running \
          over a real game. Expect something to appear over the game, and expect mistakes: \
          automatic reading errs, translation needs a local provider or a cache an earlier \
-         session filled, and the control panel (Ctrl+Shift+O) says why when nothing appears.",
+         session filled, and the control panel (Ctrl+Shift+O) says why when nothing appears. \
+         Whatever stays short in this layer is closed by a later update.",
     )
 }
 
@@ -2141,6 +2165,11 @@ mod ikhtibarat {
     fn kul_jumla_taqul_inna_tahdithan_yughliquha() {
         for aila in KUL_AILAT {
             let (arabi, injilizi) = jumlatan(&muharrik(aila));
+            // A finished arm carries no sentence at all, which `jahiziya`
+            // enforces and its own test pins; there is nothing here to close.
+            if arabi.is_empty() {
+                continue;
+            }
             assert!(arabi.contains("تحديث"), "{aila:?}: {arabi}");
             assert!(injilizi.contains("update"), "{aila:?}: {injilizi}");
         }
@@ -2165,36 +2194,39 @@ mod ikhtibarat {
     // The pins, one per engine
     // -----------------------------------------------------------------------
 
-    /// Unity on either backend, and on neither. Three arms, three sentences: a
-    /// component that cannot bind the loader and one that binds it and finds no
-    /// native library are different reports, and collapsing them would send a
+    /// Unity's two backends part company. Mono has been watched drawing shaped
+    /// Arabic in a running game and is finished; IL2CPP is shipped whole and
+    /// unwatched, and an unidentified backend cannot claim either — a component
+    /// that binds the loader and finds no native library is a different report
+    /// from one that has been seen working, and collapsing them would send a
     /// reader to the wrong half.
     #[test]
-    fn unity_ghaiba_ala_alkhalfiyatayn() {
+    fn unity_mono_mukammala_wa_il2cpp_ghaiba() {
+        let mut asas = muharrik(AilatMuharrik::Unity);
+        asas.khalfiya = KhalfiyaBarmajiya::Mono;
+        assert_eq!(hukm(&asas), JahiziyatTashghil::Mukammala);
+
         let mut jumal: Vec<String> = Vec::new();
-        for khalfiya in [
-            KhalfiyaBarmajiya::Mono,
-            KhalfiyaBarmajiya::Il2cpp,
-            KhalfiyaBarmajiya::Majhula,
-        ] {
-            let mut asas = muharrik(AilatMuharrik::Unity);
-            asas.khalfiya = khalfiya;
-            assert_eq!(hukm(&asas), JahiziyatTashghil::Ghaiba, "{khalfiya:?}");
-            jumal.push(jumlatan(&asas).1);
+        for khalfiya in [KhalfiyaBarmajiya::Il2cpp, KhalfiyaBarmajiya::Majhula] {
+            let mut ghayr = muharrik(AilatMuharrik::Unity);
+            ghayr.khalfiya = khalfiya;
+            assert_eq!(hukm(&ghayr), JahiziyatTashghil::Ghaiba, "{khalfiya:?}");
+            jumal.push(jumlatan(&ghayr).1);
         }
-        jumal.sort();
-        let adad = jumal.len();
-        jumal.dedup();
-        assert_eq!(jumal.len(), adad, "two Unity backends share one sentence");
+        assert_ne!(
+            jumal[0], jumal[1],
+            "the unwatched backend and the unknown one share one sentence"
+        );
     }
 
-    /// Unreal: `KatibPak::uktub_fi_luba` has no caller outside its own test, so
-    /// no container carrying Arabic is ever put into a game.
+    /// Unreal: the install now writes the additive container and the engine
+    /// mounts and draws it unaided, so the arm is no longer "absent" — it is
+    /// partial, and stays partial until a launch is watched.
     #[test]
-    fn unreal_ghaiba() {
+    fn unreal_naqisa() {
         assert_eq!(
             hukm(&muharrik(AilatMuharrik::Unreal)),
-            JahiziyatTashghil::Ghaiba
+            JahiziyatTashghil::Naqisa
         );
     }
 

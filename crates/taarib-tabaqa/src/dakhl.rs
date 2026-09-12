@@ -33,9 +33,7 @@ impl RasidDakhl {
     /// A reader with nothing held.
     #[must_use]
     pub const fn jadeed() -> Self {
-        Self {
-            sabiqa: Vec::new(),
-        }
+        Self { sabiqa: Vec::new() }
     }
 
     /// Whether this platform's reader can see keys at all.

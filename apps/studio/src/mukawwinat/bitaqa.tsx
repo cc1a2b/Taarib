@@ -195,6 +195,18 @@ export interface KhasaisBitaqa {
    */
   readonly lugha_rasmiya?: HalatLughaRasmiya | null;
   /**
+   * How many Arabic translations other teams have published for this game,
+   * as the cached community index lists them.
+   *
+   * A fact about the game rather than a patch state, on the same terms as
+   * {@link lugha_rasmiya}: it marks the card only when there is one, absence
+   * and zero draw nothing, and a consumer that does not pass it draws a correct
+   * card rather than an empty mark. The count itself is not drawn — the card
+   * says that such work exists; the game screen says whose, and under what
+   * terms.
+   */
+  readonly tarjamat_mujtama?: number | null;
+  /**
    * Whether Taarib can actually patch this game's engine in this build.
    *
    * A fact about Taarib rather than about the game, and the reason the card
@@ -345,6 +357,28 @@ function WasmLugha(khasais: {
   return (
     <span className="bitaqa__wasm-lugha" aria-hidden="true">
       {t(miftah, khasais.lugha)}
+    </span>
+  );
+}
+
+/**
+ * The stamp on a game other people have already translated.
+ *
+ * Set beside {@link WasmLugha} at the trailing edge of the strip, because it is
+ * the same kind of fact — Arabic exists for this game, and not from Taarib —
+ * and set apart from the tabs for the same reason: it is not a patch state,
+ * nothing is installed, and nothing here is Taarib's to install. The card says
+ * only that such work exists; the game screen credits the makers, names the
+ * host and the terms, and opens the page.
+ *
+ * Neutral ground and the neutral hairline, with no accent at all. Teal on this
+ * card means Taarib goes inside the game, and this work is neither Taarib's nor
+ * installed by it; `--najah` would claim an outcome that is somebody else's.
+ */
+function WasmMujtama(khasais: { readonly lugha: Lugha }): JSX.Element {
+  return (
+    <span className="bitaqa__wasm-mujtama" aria-hidden="true">
+      {t('bitaqa.mujtama.wasm', khasais.lugha)}
     </span>
   );
 }
@@ -751,6 +785,7 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
     nass,
     sawt,
     lugha_rasmiya,
+    tarjamat_mujtama,
     jahiziya,
     mafhusa,
     tabaqa,
@@ -837,6 +872,15 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
     lugha_rasmiya === undefined || lugha_rasmiya === null ? undefined : WASM_LUGHA[lugha_rasmiya];
   if (miftahLugha !== undefined) {
     halat.push(t(miftahLugha, lugha));
+  }
+  // Other people's Arabic next, before Taarib's own patch states: like the
+  // publisher's, it is a fact about the game rather than about what Taarib has
+  // done to it, and as a whole clause so "community Arabic" after two patch
+  // states is not heard as a third one.
+  const mujtami =
+    tarjamat_mujtama !== undefined && tarjamat_mujtama !== null && tarjamat_mujtama > 0;
+  if (mujtami) {
+    halat.push(t('bitaqa.mujtama.wasf', lugha));
   }
   if (yarsim(nass)) {
     halat.push(t(murakkaba(nass) ? 'bitaqa.nass.mutabbaqa' : 'bitaqa.nass.mutaha', lugha));
@@ -988,18 +1032,19 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
           Over the artwork rather than in the caption, and after it in the tree
           so they stack above without a z-index. The strip is absolutely
           positioned inside the reserve and holds them apart — readiness at the
-          leading edge, the publisher's Arabic at the trailing edge — so a card
-          carrying one, the other, both or neither is the same box in all four
-          cases; see the governing rule at the top of this file. A strip rather
-          than two independently anchored marks because two of them on a compact
-          card were free to overlap, and the one thing worse than a mark nobody
-          reads is two marks printed on top of each other.
+          leading edge, the publisher's Arabic and other people's Arabic at the
+          trailing edge — so a card carrying any of them or none is the same box
+          in every case; see the governing rule at the top of this file. A strip
+          rather than independently anchored marks because two of them on a
+          compact card were free to overlap, and the one thing worse than a mark
+          nobody reads is two marks printed on top of each other.
         */}
-        {miftahLugha === undefined && wasmJahiziya === undefined ? null : (
+        {miftahLugha === undefined && wasmJahiziya === undefined && !mujtami ? null : (
           <div className="bitaqa__wusum" aria-hidden="true">
             {wasmJahiziya === undefined || jahiziya === undefined || jahiziya === null ? null : (
               <WasmJahiziya hala={jahiziya} lugha={lugha} />
             )}
+            {mujtami ? <WasmMujtama lugha={lugha} /> : null}
             {lugha_rasmiya === undefined || lugha_rasmiya === null ? null : (
               <WasmLugha hala={lugha_rasmiya} lugha={lugha} />
             )}

@@ -349,7 +349,13 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         private static IntPtr muaqqatLawha;
 
         private readonly List<Mirbat> marabit = new List<Mirbat>(2);
-        private readonly HashSet<int> mamlukat = new HashSet<int>();
+
+        /// <summary>
+        /// Every component this takeover owns, and which atlas its geometry was
+        /// last built from — the patch's or this session's.
+        /// </summary>
+        private readonly Dictionary<int, bool> mamlukat = new Dictionary<int, bool>();
+
         private readonly Dictionary<int, MaddaAsliya> maddatAsliya =
             new Dictionary<int, MaddaAsliya>();
 
@@ -584,20 +590,29 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             {
                 return false;
             }
-            return mamlukat.Contains(engine.Muarrif(kaen));
+            return mamlukat.ContainsKey(engine.Muarrif(kaen));
         }
 
-        /// <summary>The atlas page Taarib draws uGUI text from.</summary>
-        /// <returns>The texture object, or zero when no page is resident.</returns>
-        public IntPtr Lawha()
+        /// <summary>The atlas page one component's geometry was built from.</summary>
+        /// <remarks>
+        /// The atlas is not a preference. Vertices laid out from the patch index
+        /// the patch's own atlas and vertices laid out at run time index the
+        /// atlas this session rasterized into; the two are different pictures
+        /// with different glyphs at different coordinates, so a component drawn
+        /// from one and sampled from the other paints solid blocks.
+        /// </remarks>
+        /// <param name="kaen">The text component.</param>
+        /// <returns>The texture object, or zero when that page is not resident.</returns>
+        public IntPtr Lawha(IntPtr kaen)
         {
+            WaslMuharrik? engine = wasl;
             MasdarAshkal? source = masdar;
-            if (source is null)
+            if (engine is null || source is null || kaen == IntPtr.Zero
+                || !mamlukat.TryGetValue(engine.Muarrif(kaen), out bool minRuqaa))
             {
                 return IntPtr.Zero;
             }
-            source.AwwalMadda(out _, out IntPtr lawhaSafha);
-            return lawhaSafha;
+            return source.LawhatSafha(minRuqaa, 0);
         }
 
         private bool Rassim(IntPtr kaen, IntPtr musaid)
@@ -731,20 +746,12 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             // snapped and every bucket is zero.
             talab.Tathbit = tathbit;
 
-            if (!buffers.Wassi(huruf.Length, engine))
-            {
-                Utruk(kaen);
-                return false;
-            }
+            buffers.Wassi(huruf.Length);
             NatijaNasij natija = Nasij.Ibni(
                 in talab, source.Khareeta(minRuqaa), buffers.Makhzan());
             if (!natija.Kafa)
             {
-                if (!buffers.Wassi(natija.MatlubRuus / Nasij.RuusLiShakl, engine))
-                {
-                    Utruk(kaen);
-                    return false;
-                }
+                buffers.Wassi(natija.MatlubRuus / Nasij.RuusLiShakl);
                 natija = Nasij.Ibni(in talab, source.Khareeta(minRuqaa), buffers.Makhzan());
                 if (!natija.Kafa)
                 {
@@ -761,15 +768,14 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 BallighSafahat();
             }
 
-            if (!Aabbir(engine, binding, source, kaen))
+            if (!Aabbir(engine, binding, source, kaen, minRuqaa))
             {
                 Utruk(kaen);
                 return false;
             }
 
-            buffers.Amsah(in natija);
             Imla(binding, musaid, in natija);
-            mamlukat.Add(engine.Muarrif(kaen));
+            mamlukat[engine.Muarrif(kaen)] = minRuqaa;
             return true;
         }
 
@@ -911,13 +917,18 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         }
 
         /// <summary>
-        /// Gives the component Taarib's material, recording its own the first
-        /// time so it can be handed back.
+        /// Gives the component the material of the atlas its geometry was built
+        /// from, recording its own the first time so it can be handed back.
         /// </summary>
         private bool Aabbir(
-            WaslMuharrik engine, WaslWajiha binding, MasdarAshkal source, IntPtr kaen)
+            WaslMuharrik engine,
+            WaslWajiha binding,
+            MasdarAshkal source,
+            IntPtr kaen,
+            bool minRuqaa)
         {
-            if (!source.AwwalMadda(out IntPtr madda, out _) || !binding.KatibMadda.Wujid)
+            IntPtr madda = source.Madda(minRuqaa, 0);
+            if (madda == IntPtr.Zero || !binding.KatibMadda.Wujid)
             {
                 return false;
             }
@@ -1222,7 +1233,7 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 {
                     return asli;
                 }
-                IntPtr lawha = nizam.Lawha();
+                IntPtr lawha = nizam.Lawha(kaen);
                 return lawha != IntPtr.Zero ? lawha : asli;
             }
             catch (Exception)

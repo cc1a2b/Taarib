@@ -132,12 +132,7 @@ const MUJALLAD_KHATT_UNREAL: &str = "khutut/";
 /// Interface text — menus, prompts, settings — drawn at the sizes a game draws
 /// them, so a sans leads and the Naskh faces follow it. The list ranks and
 /// does not filter, for the reason [`TARTIB_KHATT_RENPY`] gives.
-const TARTIB_KHATT_UNREAL: [&str; 4] = [
-    "IBMPlexSansArabic",
-    "Tajawal",
-    "Amiri",
-    "NotoNaskhArabic",
-];
+const TARTIB_KHATT_UNREAL: [&str; 4] = ["IBMPlexSansArabic", "Tajawal", "Amiri", "NotoNaskhArabic"];
 
 /// The base name of the Unreal payload, as its crate builds it.
 const ASAS_UNREAL: &str = "taarib_muhawwil_unreal";

@@ -128,4 +128,6 @@ export const mafatih = {
   tahdith: ['tahdith'] as const,
   /** The diagnostics log view. */
   sijillat: ['sijillat'] as const,
+  /** Every community translation the registry's index lists for one game. */
+  mujtama: (muarrif: string) => ['mujtama', muarrif] as const,
 } as const;

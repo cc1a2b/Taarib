@@ -1,7 +1,7 @@
 //! المزوّدون — every translation service behind one trait, and the three rules
 //! none of them may break.
 //!
-//! Six providers, one contract. A provider receives a [`NassMahmi`] — the
+//! Seven providers, one contract. A provider receives a [`NassMahmi`] — the
 //! tokenised text from [`crate::hima`], which is the *only* type that can sit
 //! in that argument position and which has no accessor to the raw source — a
 //! [`SiyaqTalab`] of context, and nothing else. It returns a
@@ -30,9 +30,16 @@
 //! Every paid provider's constructor takes an [`Itimad`] and an [`IdhnInfaq`]
 //! by value. There is no constructor without them, so "ask a provider with no
 //! key to translate" is not a runtime error — it is a program that does not
-//! compile. The one credential-free constructor in this module,
-//! [`MuzawwidMuwafiqOpenAI::mahalli`], refuses any endpoint that is not
-//! loopback, so it cannot be pointed at a paid service to skip the rule.
+//! compile. Two constructors in this module take neither, and each is fenced
+//! so that it cannot be pointed at a paid service to skip the rule:
+//! [`MuzawwidMuwafiqOpenAI::mahalli`] refuses any endpoint that is not
+//! loopback, and [`MuzawwidGoogleMajjani::jadeed`] speaks one fixed public
+//! endpoint that has no account behind it to bill — Google Translate's free web
+//! endpoint, the one every Unity translation mod uses. It is the provider a
+//! fresh installation translates with, and it is honest about what that buys:
+//! sentence-level quality, undocumented rate limits, and a service that may
+//! refuse a machine it has flagged ([`KhataTarjama::MajjaniMahjub`]). A keyed
+//! provider the user configures always takes precedence over it.
 //!
 //! Cost is enforced before sending, not discovered from a bill:
 //! [`TakalifJarya`] reserves an upper-bound estimate against the confirmed
@@ -86,6 +93,7 @@
 //! | `DeepL` | `POST /v2/translate` | translation API — the envelope is the structure | none; characters counted locally |
 //! | Google Cloud Translation | `POST /v3/projects/{p}:translateText` | translation API | none; characters counted locally |
 //! | Microsoft Translator | `POST /translate?api-version=3.0` | translation API | `X-metered-usage` header, billable characters |
+//! | Google Translate, free web endpoint | `GET /translate_a/single?client=gtx&dt=t` | undocumented JSON array, read positionally | none; nothing is billed |
 //!
 //! ## Model identifiers and prices are data with a date on them
 //!
@@ -96,7 +104,9 @@
 //! retire identifiers on sixty days' notice, deprecate request parameters
 //! outright, and change prices without notice at all, so all three are
 //! overridable configuration and none of them is a constant in the sense of
-//! being permanent.
+//! being permanent. The free web endpoint has no published page at all, so its
+//! request and reply shapes were checked live instead, on
+//! [`TAREEKH_ASAR_GOOGLE_MAJJANI`].
 //!
 //! Two invariants make the staleness safe rather than merely visible. A price
 //! table prices an identifier it does not recognise at its **highest** entry,
@@ -1001,6 +1011,20 @@ struct JawharIrsal {
     takalif: TakalifJarya,
     /// Which rate-limit headers to read off replies.
     asma: AsmaHudud,
+    /// The shortest wait before retrying a `429`, whatever the backoff schedule
+    /// or the provider's own `Retry-After` says. Zero for every keyed provider
+    /// — their limits are documented and their headers are honest — and raised
+    /// by [`JawharIrsal::bi_ard_muadal`] for a service whose `429` means abuse
+    /// detection, where retrying after half a second is what keeps it tripped.
+    ard_muadal: Duration,
+    /// Whether this provider presents no credential at all.
+    ///
+    /// Changes what a `401`/`403` *means*: for a keyed provider it is a key the
+    /// service will not accept, for a credential-free service it is the service
+    /// refusing this client. Set by [`JawharIrsal::bila_itimad`], and only the
+    /// free web endpoint sets it — the loopback constructor also sends no key,
+    /// but a `403` from a local server is a misconfigured server, not a block.
+    bila_itimad: bool,
 }
 
 impl fmt::Debug for JawharIrsal {
@@ -1057,7 +1081,84 @@ impl JawharIrsal {
             hadd: RateLimiter::direct(Quota::per_minute(hadd_talabat)),
             takalif,
             asma,
+            ard_muadal: Duration::ZERO,
+            bila_itimad: false,
         })
+    }
+
+    /// Replaces the per-minute limiter with a fixed gap between requests.
+    ///
+    /// A per-minute quota admits its whole minute as a burst, which is what a
+    /// documented API limit means and the wrong shape for a public web endpoint
+    /// that watches request *spacing*: four hundred requests in the first
+    /// second of a minute is the traffic pattern its abuse detection exists to
+    /// catch. One permit per `fasl`, no burst, is the honest translation of
+    /// "a floor between requests". A zero gap is no limiter at all and is
+    /// accepted as such, because the caller that asks for it is a test.
+    fn bi_fasl(mut self, fasl: Duration) -> Self {
+        // `Quota::with_period` is `None` only for a zero period.
+        if let Some(hissa) = Quota::with_period(fasl) {
+            self.hadd = RateLimiter::direct(hissa.allow_burst(NonZeroU32::MIN));
+        } else {
+            self.hadd = RateLimiter::direct(Quota::per_second(NonZeroU32::MAX));
+        }
+        self
+    }
+
+    /// Sets the floor on the wait after a `429`; see [`JawharIrsal::ard_muadal`].
+    const fn bi_ard_muadal(mut self, ard: Duration) -> Self {
+        self.ard_muadal = ard;
+        self
+    }
+
+    /// Declares that this provider sends no credential; see
+    /// [`JawharIrsal::bila_itimad`].
+    const fn bila_itimad(mut self) -> Self {
+        self.bila_itimad = true;
+        self
+    }
+
+    /// The refusal a `401`/`403` amounts to for this provider.
+    fn khata_rafd(&self, hala: reqwest::StatusCode) -> KhataTarjama {
+        if self.bila_itimad {
+            KhataTarjama::MajjaniMahjub {
+                muzawwid: self.ism.clone(),
+                sabab: format!("the service refused this client (HTTP {})", hala.as_u16()),
+            }
+        } else {
+            KhataTarjama::MuzawwidGhayrMutah {
+                muzawwid: self.ism.clone(),
+                sabab: format!("the credential was refused (HTTP {})", hala.as_u16()),
+            }
+        }
+    }
+
+    /// The failure rate limiting amounts to once every attempt has been spent.
+    ///
+    /// For a keyed provider it is [`KhataTarjama::HaddMuadal`], which the batch
+    /// layer answers with a bounded number of further waits honouring the
+    /// provider's own `Retry-After`. For a credential-free service it is the
+    /// block itself: its `429` carries no schedule, comes from abuse detection
+    /// rather than a quota, and clears in minutes or hours — so the run stops
+    /// with a sentence that says so rather than waiting on a header that will
+    /// not come.
+    fn khata_muadal(&self, thawani: Option<u64>) -> KhataTarjama {
+        if self.bila_itimad {
+            KhataTarjama::MajjaniMahjub {
+                muzawwid: self.ism.clone(),
+                sabab: format!(
+                    "rate limiting (HTTP 429) outlasted {ADAD_MUHAWALAT} attempts{}",
+                    thawani.map_or_else(String::new, |thawani| format!(
+                        ", the last asking for a {thawani}-second wait"
+                    ))
+                ),
+            }
+        } else {
+            KhataTarjama::HaddMuadal {
+                muzawwid: self.ism.clone(),
+                thawani,
+            }
+        }
     }
 
     /// Sends one request under the shared discipline.
@@ -1066,11 +1167,13 @@ impl JawharIrsal {
     /// provider's rate-limit headers, then decide. Success returns the
     /// response unread. `429` retries after the provider's own `Retry-After`
     /// when it sent one — the server stated its schedule and retrying on a
-    /// guessed one instead is how clients get banned — and `5xx`/`408` and
-    /// transport failures retry on doubling backoff. `401`/`403` stop the run
-    /// at once: a refused credential fails every string identically and
-    /// retrying it is asking the same question louder. Any other `4xx` fails
-    /// this string with the provider's own words.
+    /// guessed one instead is how clients get banned — never sooner than
+    /// [`JawharIrsal::ard_muadal`], and `5xx`/`408` and transport failures
+    /// retry on doubling backoff. `401`/`403` stop the run at once: a refused
+    /// credential fails every string identically and retrying it is asking
+    /// the same question louder; for a credential-free service the same
+    /// statuses are the service refusing this client, [`KhataTarjama::MajjaniMahjub`].
+    /// Any other `4xx` fails this string with the provider's own words.
     ///
     /// The request is rebuilt through `ibn` on every attempt because a sent
     /// `reqwest` request is consumed; the closure owns the body data and
@@ -1081,8 +1184,10 @@ impl JawharIrsal {
     /// [`KhataTarjama::HaddMuadal`] when rate limiting outlasted every
     /// attempt, [`KhataTarjama::MuzawwidGhayrMutah`] when the transport or
     /// the provider's servers did, or when the credential or quota was
-    /// refused outright, and [`KhataTarjama::MudkhalMarfud`] when the
-    /// provider refused this particular input.
+    /// refused outright, [`KhataTarjama::MajjaniMahjub`] for either of those
+    /// two refusals from a credential-free service, and
+    /// [`KhataTarjama::MudkhalMarfud`] when the provider refused this
+    /// particular input.
     async fn irsal<F>(&self, ibn: F) -> Result<reqwest::Response, KhataTarjama>
     where
         F: Fn(&reqwest::Client) -> reqwest::RequestBuilder + Send + Sync,
@@ -1091,11 +1196,13 @@ impl JawharIrsal {
 
         for muhawala in 0..ADAD_MUHAWALAT {
             if muhawala > 0 {
-                let talab_khadim = match &sabab_akhir {
-                    SababIada::Muadal(thawani) => *thawani,
-                    SababIada::Khadim(_) | SababIada::Naql(_) => None,
+                let mudda = match &sabab_akhir {
+                    SababIada::Muadal(thawani) => {
+                        muddat_taraju(muhawala, *thawani).max(self.ard_muadal)
+                    },
+                    SababIada::Khadim(_) | SababIada::Naql(_) => muddat_taraju(muhawala, None),
                 };
-                tokio::time::sleep(muddat_taraju(muhawala, talab_khadim)).await;
+                tokio::time::sleep(mudda).await;
             }
             self.hadd.until_ready().await;
 
@@ -1124,10 +1231,7 @@ impl JawharIrsal {
                 continue;
             }
             if hala == reqwest::StatusCode::UNAUTHORIZED || hala == reqwest::StatusCode::FORBIDDEN {
-                return Err(KhataTarjama::MuzawwidGhayrMutah {
-                    muzawwid: self.ism.clone(),
-                    sabab: format!("the credential was refused (HTTP {})", hala.as_u16()),
-                });
+                return Err(self.khata_rafd(hala));
             }
             // DeepL's own status for an exhausted character quota. Terminal
             // for the run: the account, not the request, is out of budget.
@@ -1154,10 +1258,7 @@ impl JawharIrsal {
         }
 
         Err(match sabab_akhir {
-            SababIada::Muadal(thawani) => KhataTarjama::HaddMuadal {
-                muzawwid: self.ism.clone(),
-                thawani,
-            },
+            SababIada::Muadal(thawani) => self.khata_muadal(thawani),
             SababIada::Khadim(hala) => KhataTarjama::MuzawwidGhayrMutah {
                 muzawwid: self.ism.clone(),
                 sabab: format!("HTTP {hala} persisted across {ADAD_MUHAWALAT} attempts"),
@@ -3536,6 +3637,364 @@ impl Muzawwid for MuzawwidMicrosoft {
 }
 
 // ---------------------------------------------------------------------------
+// Google Translate's free web endpoint — translate_a/single?client=gtx
+// ---------------------------------------------------------------------------
+
+/// The free web endpoint: the request translate.google.com's own widget makes,
+/// and the one Unity translation mods have made for a decade.
+pub const UNWAN_GOOGLE_MAJJANI: &str = "https://translate.googleapis.com/translate_a/single";
+
+/// The day the free endpoint's request and reply shapes were last checked
+/// live.
+///
+/// A `GET` carrying `client=gtx&sl=auto&tl=ar&dt=t&q=…` answered a JSON array
+/// whose first element is a list of `[translated, source, …]` sentence
+/// segments and whose third is the detected source language, and a `⟦0⟧`
+/// token in the text came back intact. There is no published page to check
+/// against and no contract behind the shape; a release far past this date
+/// should send one request by hand before trusting [`tarjama_min_gtx`].
+pub const TAREEKH_ASAR_GOOGLE_MAJJANI: &str = "2026-09-12";
+
+/// The most text one request carries, in characters.
+///
+/// Five thousand, the figure the widget's own text box stops at. The text
+/// travels in the query string of a `GET`, so the ceiling is also what keeps
+/// the URL inside what the endpoint accepts. A longer string is refused before
+/// anything is sent — [`KhataTarjama::MajjaniTawil`] — so it costs no round
+/// trip and does not disturb the spacing the other strings depend on.
+pub const AQSA_AHRUF_GOOGLE_MAJJANI: usize = 5000;
+
+/// The shortest gap between two requests.
+///
+/// A hundred and fifty milliseconds. The endpoint's limits are undocumented
+/// and enforced by abuse detection that watches spacing, not a quota that
+/// counts a minute; the mods that have run against it for years settle at a
+/// few requests a second, and this stays under that.
+pub const FASL_GOOGLE_MAJJANI: Duration = Duration::from_millis(150);
+
+/// The per-minute ceiling [`FASL_GOOGLE_MAJJANI`] amounts to, for the batch
+/// layer's own limiter, which counts per minute.
+pub const HADD_TALABAT_GOOGLE_MAJJANI: u32 = 400;
+
+/// How many requests may be in flight at once, whatever the caller's own
+/// concurrency is.
+pub const TAWAZI_GOOGLE_MAJJANI: usize = 4;
+
+/// The shortest wait before a `429` is retried.
+///
+/// Five seconds. The endpoint's `429` carries no `Retry-After`, so the shared
+/// schedule alone would come back after half a second — which, against abuse
+/// detection, is the behaviour that turns a warning into a block.
+pub const ARD_MUADAL_GOOGLE_MAJJANI: Duration = Duration::from_secs(5);
+
+/// The `sl` value that asks the endpoint to detect the source language.
+pub const LUGHAT_MASDAR_TILQAIYA: &str = "auto";
+
+/// Configuration for the free web endpoint.
+///
+/// Small on purpose: there is no model to pick, no price to override and no
+/// credential to file. The address is configuration only so that a test can
+/// stand a loopback server in its place, and the two timing values so that the
+/// same test does not wait five seconds per retry.
+#[derive(Debug, Clone)]
+pub struct IdadatGoogleMajjani {
+    /// The endpoint. Loopback over plain HTTP is accepted, for tests; any
+    /// other host must be `https`.
+    pub asas: String,
+    /// The source language code sent as `sl`, or [`LUGHAT_MASDAR_TILQAIYA`]
+    /// to let the endpoint detect it — the default, because nothing in the
+    /// settings says what language a game is in, and the detected code comes
+    /// back on every reply anyway.
+    pub lughat_masdar: String,
+    /// The gap between requests; see [`FASL_GOOGLE_MAJJANI`].
+    pub fasl: Duration,
+    /// The floor on the wait after a `429`; see [`ARD_MUADAL_GOOGLE_MAJJANI`].
+    pub ard_muadal: Duration,
+}
+
+impl Default for IdadatGoogleMajjani {
+    fn default() -> Self {
+        Self {
+            asas: UNWAN_GOOGLE_MAJJANI.to_owned(),
+            lughat_masdar: LUGHAT_MASDAR_TILQAIYA.to_owned(),
+            fasl: FASL_GOOGLE_MAJJANI,
+            ard_muadal: ARD_MUADAL_GOOGLE_MAJJANI,
+        }
+    }
+}
+
+/// Google Translate's free web endpoint.
+///
+/// ## What it is, and is not
+///
+/// It is the request the translate.google.com widget makes, reached without a
+/// key by a client that identifies itself. It is not an API: nothing is
+/// documented, nothing is promised, and the shape read below was observed on
+/// [`TAREEKH_ASAR_GOOGLE_MAJJANI`] rather than read off a contract. It is in
+/// this module because the alternative was a product that could not translate
+/// one string until its user held a paid account, and because the mods this
+/// product replaces have run against exactly this endpoint for years. It is
+/// what a fresh installation translates with; a provider the user configures
+/// takes precedence the moment it is switched on.
+///
+/// ## One string per request
+///
+/// The reply splits the text into sentence segments and nothing marks where
+/// one input would end and the next begin, so joining several strings into one
+/// request and splitting the answer back would attach translations to the
+/// wrong strings — silently, the failure [`Muzawwid::tarjim_dufa`] warns of.
+/// So `dufaat` is `false` and every string is its own request, spaced by
+/// [`FASL_GOOGLE_MAJJANI`] and held to [`TAWAZI_GOOGLE_MAJJANI`] in flight by
+/// the provider's own semaphore: the batch layer bounds a run as well, but the
+/// endpoint's tolerance is this provider's fact to enforce, not a caller's to
+/// remember.
+///
+/// ## What is not sent
+///
+/// No instruction, no glossary, no surrounding lines: the endpoint has nowhere
+/// to put them, and [`QudratMuzawwid::yaqbal_tawjih`] says so rather than
+/// pretending. Placeholders reach it as `hima` tokens exactly as they reach
+/// every other provider — protection is applied by the caller around
+/// [`Muzawwid::tarjim`], and this provider neither adds a layer nor skips one.
+///
+/// ## Confidence and cost
+///
+/// The reply carries no confidence and none is invented. The meter is
+/// [`TakalifJarya::majani`] and every result settles at zero.
+#[derive(Debug)]
+pub struct MuzawwidGoogleMajjani {
+    /// The configuration this instance was built with.
+    idadat: IdadatGoogleMajjani,
+    /// The shared wire core, with the request gap, the `429` floor and the
+    /// credential-free refusal mapping set.
+    jawhar: JawharIrsal,
+    /// The declared capabilities, built once.
+    qudrat: QudratMuzawwid,
+    /// The in-flight bound.
+    tawazi: tokio::sync::Semaphore,
+    /// The `User-Agent` sent on every request: the conventional compatible
+    /// form, naming this product and its version. The endpoint is a web
+    /// endpoint and is spoken to as one, by a client that says who it is.
+    wakeel: String,
+}
+
+impl MuzawwidGoogleMajjani {
+    /// The provider's stable name.
+    pub const ISM: &'static str = "google-majjani";
+
+    /// The "model" recorded as provenance: the endpoint's own client
+    /// identifier, which is the only one it has.
+    pub const NAMUDHAJ: &'static str = "gtx";
+
+    /// Builds the provider — no credential and no confirmation, because there
+    /// is no account to bill.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataTarjama::MuzawwidGhayrMutah`] when the endpoint address does not
+    /// parse, names a remote host over plaintext — the text of a game is not
+    /// the network's to read in transit — or when the HTTP client cannot be
+    /// built.
+    pub fn jadeed(idadat: IdadatGoogleMajjani) -> Result<Self, KhataTarjama> {
+        let rabt = rabt_salih(Self::ISM, &idadat.asas)?;
+        // Same list, same reason, as `MuzawwidMuwafiqOpenAI::mahalli`: loopback
+        // by name, because a hostname that resolves locally today is a config
+        // edit away from somewhere else tomorrow.
+        let mudif = rabt.host_str().unwrap_or_default();
+        let mahalli = matches!(mudif, "127.0.0.1" | "localhost" | "::1" | "[::1]");
+        if !mahalli && rabt.scheme() != "https" {
+            return Err(KhataTarjama::MuzawwidGhayrMutah {
+                muzawwid: Self::ISM.to_owned(),
+                sabab: "a remote endpoint must be https; plaintext would put the game's text \
+                        on the wire readable"
+                    .to_owned(),
+            });
+        }
+        let jawhar = JawharIrsal::jadeed(
+            Self::ISM.to_owned(),
+            mahalli,
+            hadd_thabit(HADD_TALABAT_GOOGLE_MAJJANI),
+            TakalifJarya::majani(),
+            AsmaHudud {
+                baqi_talabat: None,
+                iadat_dabt: None,
+            },
+        )?
+        .bi_fasl(idadat.fasl)
+        .bi_ard_muadal(idadat.ard_muadal)
+        .bila_itimad();
+        let qudrat = QudratMuzawwid {
+            dufaat: false,
+            // The ceiling is in characters, and a character is at most four
+            // bytes of UTF-8; stated in bytes here because that is the unit
+            // the capability speaks, and stated loosely because the exact
+            // refusal is `tarjim`'s, in characters.
+            aqsa_hajm_talab: AQSA_AHRUF_GOOGLE_MAJJANI.saturating_mul(4),
+            hadd_talabat: hadd_thabit(HADD_TALABAT_GOOGLE_MAJJANI),
+            yublighu_thiqa: false,
+            yaqbal_tawjih: false,
+            taklifa: NamudhajTaklifa::Majani,
+        };
+        Ok(Self {
+            idadat,
+            jawhar,
+            qudrat,
+            tawazi: tokio::sync::Semaphore::new(TAWAZI_GOOGLE_MAJJANI),
+            wakeel: format!("Mozilla/5.0 (compatible; Taarib/{})", taarib_usus::ISDAR),
+        })
+    }
+}
+
+/// The free endpoint's reply, reduced to what this module reads.
+#[derive(Debug, PartialEq, Eq)]
+struct RaddGtx {
+    /// Every sentence segment's translation, concatenated in order.
+    tarjama: String,
+    /// What the endpoint believed the source language was. Logged only; it
+    /// is not a confidence and is not treated as one.
+    lugha_muktashafa: Option<String>,
+}
+
+/// Reads the free endpoint's positional reply.
+///
+/// `[[[translated, source, …], …], null, detected, …]`: the translation is the
+/// concatenation of every segment's first element over the first array, and
+/// the detected language sits third. Segments whose first element is not text
+/// are skipped rather than failed — the endpoint pads with `null` entries for
+/// data this module does not request — and an array with no text at all is
+/// reported as an empty translation, which the caller refuses. [`None`] when
+/// the value is not the shape at all: no leading array, or a first element
+/// that is not a list.
+fn tarjama_min_gtx(qeema: &Value) -> Option<RaddGtx> {
+    let maqati = qeema.get(0)?.as_array()?;
+    let mut tarjama = String::new();
+    for maqta in maqati {
+        if let Some(juz) = maqta.get(0).and_then(Value::as_str) {
+            tarjama.push_str(juz);
+        }
+    }
+    let lugha_muktashafa = qeema.get(2).and_then(Value::as_str).map(str::to_owned);
+    Some(RaddGtx {
+        tarjama,
+        lugha_muktashafa,
+    })
+}
+
+/// Whether a `2xx` body is markup rather than the JSON array.
+///
+/// The endpoint's block page — "our systems have detected unusual traffic" —
+/// is HTML, and it has been seen behind a success status as well as behind a
+/// `429`. The JSON reply always opens with `[`, so a body opening with `<` is
+/// a page, whatever its status said.
+fn safha_la_json(jasad: &str) -> bool {
+    jasad.trim_start().starts_with('<')
+}
+
+#[async_trait::async_trait]
+impl Muzawwid for MuzawwidGoogleMajjani {
+    fn ism(&self) -> &str {
+        Self::ISM
+    }
+
+    fn namudhaj(&self) -> &'static str {
+        Self::NAMUDHAJ
+    }
+
+    fn qudrat(&self) -> QudratMuzawwid {
+        self.qudrat.clone()
+    }
+
+    fn takalif(&self) -> &TakalifJarya {
+        &self.jawhar.takalif
+    }
+
+    async fn tarjim(
+        &self,
+        mahmi: &NassMahmi,
+        _talab: &SiyaqTalab,
+    ) -> Result<NatijatTarjama, KhataTarjama> {
+        let ahruf = mahmi.matn().chars().count();
+        if ahruf > AQSA_AHRUF_GOOGLE_MAJJANI {
+            return Err(KhataTarjama::MajjaniTawil {
+                muzawwid: Self::ISM.to_owned(),
+                ahruf,
+                saqf: AQSA_AHRUF_GOOGLE_MAJJANI,
+            });
+        }
+
+        // Held for the whole request, including its retries: the bound is on
+        // what is in flight against the endpoint, not on what has been asked.
+        // The semaphore is never closed, so the failure arm is unreachable in
+        // practice; it is mapped rather than unwrapped because this crate runs
+        // inside other people's game processes and does not panic there.
+        let _idhn = self
+            .tawazi
+            .acquire()
+            .await
+            .map_err(|_| KhataTarjama::MuzawwidGhayrMutah {
+                muzawwid: Self::ISM.to_owned(),
+                sabab: "the in-flight bound was closed".to_owned(),
+            })?;
+
+        // No reservation: the meter is the free one and nothing settles
+        // against it. `tl` is lowercase `ar` — the endpoint's own spelling,
+        // not the ISO uppercase `DeepL` takes.
+        let radd = self
+            .jawhar
+            .irsal(|amil| {
+                amil.get(&self.idadat.asas)
+                    .query(&[
+                        ("client", Self::NAMUDHAJ),
+                        ("sl", self.idadat.lughat_masdar.as_str()),
+                        ("tl", "ar"),
+                        ("dt", "t"),
+                        ("q", mahmi.matn()),
+                    ])
+                    .header("user-agent", &self.wakeel)
+            })
+            .await?;
+
+        let nass_radd = jasad_najah(radd, Self::ISM).await?;
+        if nass_radd.trim().is_empty() {
+            return Err(KhataTarjama::RaddGhayrMufassal {
+                muzawwid: Self::ISM.to_owned(),
+                radd: "(the reply body is empty)".to_owned(),
+            });
+        }
+        if safha_la_json(&nass_radd) {
+            return Err(KhataTarjama::MajjaniMahjub {
+                muzawwid: Self::ISM.to_owned(),
+                sabab: "the reply is an HTML page where JSON was expected, which is the block \
+                        page the service serves a client it has flagged"
+                    .to_owned(),
+            });
+        }
+        let ghayr_mufassal = || KhataTarjama::RaddGhayrMufassal {
+            muzawwid: Self::ISM.to_owned(),
+            radd: nass_radd.chars().take(64).collect(),
+        };
+        let qeema: Value = serde_json::from_str(&nass_radd).map_err(|_| ghayr_mufassal())?;
+        let RaddGtx {
+            tarjama,
+            lugha_muktashafa,
+        } = tarjama_min_gtx(&qeema).ok_or_else(ghayr_mufassal)?;
+        if tarjama.trim().is_empty() {
+            return Err(KhataTarjama::RaddGhayrMufassal {
+                muzawwid: Self::ISM.to_owned(),
+                radd: "(the translation came back empty)".to_owned(),
+            });
+        }
+        if let Some(lugha) = &lugha_muktashafa {
+            tracing::trace!(muzawwid = Self::ISM, lugha, "detected source language");
+        }
+
+        // Nothing in the reply measures the translation, so nothing is
+        // carried — the refusal the module header names, one more time.
+        Ok(NatijatTarjama::bila_thiqa(tarjama, 0))
+    }
+}
+
+// ---------------------------------------------------------------------------
 // الاختبارات — the money and the credential, proved without spending either
 // ---------------------------------------------------------------------------
 
@@ -4026,5 +4485,424 @@ mod ikhtibarat {
         );
         // The shift is bounded, so a long retry chain cannot overflow it.
         assert!(muddat_taraju(u32::MAX, None) <= Duration::from_millis(ASAS_TARAJU_MILLI << 6));
+    }
+
+    // -----------------------------------------------------------------------
+    // The free web endpoint, against a loopback stand-in
+    // -----------------------------------------------------------------------
+
+    use std::io::{Read as _, Write as _};
+    use std::sync::Arc;
+
+    use taarib_mustalahat::nass::{QuyudNass, SiyaqNass, TasnifNass};
+    use taarib_usus::khata::{Khutwa, QismIdadat, Tafsir as _};
+
+    use crate::hima::ihmi;
+
+    /// Anything a test can fail on: the crate's own error, the stub's I/O, or a
+    /// runtime refusal.
+    type NatijatIkhtibar = Result<(), Box<dyn std::error::Error>>;
+
+    /// One scripted reply from the stand-in.
+    struct RaddWahmi {
+        /// The status code.
+        hala: u16,
+        /// Extra header lines, each ending in `\r\n`.
+        ruus: &'static str,
+        /// The body.
+        jasad: String,
+    }
+
+    impl RaddWahmi {
+        fn json(jasad: &str) -> Self {
+            Self {
+                hala: 200,
+                ruus: "Content-Type: application/json; charset=utf-8\r\n",
+                jasad: jasad.to_owned(),
+            }
+        }
+
+        fn html(hala: u16) -> Self {
+            Self {
+                hala,
+                ruus: "Content-Type: text/html; charset=utf-8\r\n",
+                jasad: "<!DOCTYPE html><html><body>Our systems have detected unusual \
+                        traffic from your computer network.</body></html>"
+                    .to_owned(),
+            }
+        }
+
+        /// A `429` that states no wait, so the floor is the only wait there is.
+        fn muadal() -> Self {
+            Self {
+                hala: 429,
+                ruus: "Retry-After: 0\r\n",
+                jasad: String::new(),
+            }
+        }
+    }
+
+    /// The reason phrase the stub writes; the client reads the number.
+    const fn sabab_hala(hala: u16) -> &'static str {
+        match hala {
+            200 => "OK",
+            403 => "Forbidden",
+            429 => "Too Many Requests",
+            _ => "Status",
+        }
+    }
+
+    /// A loopback HTTP/1.1 server answering a fixed script of replies, one
+    /// connection each, and keeping every request line it saw.
+    ///
+    /// The listener is dropped when the script runs out, so a client that asks
+    /// once more than scripted meets a refused connection — a fast, named
+    /// transport failure — rather than a socket that hangs until the request
+    /// timeout.
+    struct KhadimWahmi {
+        /// The endpoint address to point the provider at.
+        asas: String,
+        /// Every request line, in arrival order.
+        talabat: Arc<parking_lot::Mutex<Vec<String>>>,
+    }
+
+    impl KhadimWahmi {
+        fn shaghghil(rudud: Vec<RaddWahmi>) -> std::io::Result<Self> {
+            let mustami = std::net::TcpListener::bind("127.0.0.1:0")?;
+            let unwan = mustami.local_addr()?;
+            let talabat = Arc::new(parking_lot::Mutex::new(Vec::new()));
+            let sijill = Arc::clone(&talabat);
+            drop(std::thread::spawn(move || {
+                for radd in rudud {
+                    let Ok((mut maqbas, _)) = mustami.accept() else {
+                        return;
+                    };
+                    let _ = maqbas.set_read_timeout(Some(Duration::from_secs(5)));
+                    let mut ras: Vec<u8> = Vec::new();
+                    let mut hajira = [0_u8; 1024];
+                    while let Ok(maqru) = maqbas.read(&mut hajira) {
+                        if maqru == 0 {
+                            break;
+                        }
+                        ras.extend_from_slice(hajira.get(..maqru).unwrap_or_default());
+                        if ras.windows(4).any(|nafidha| nafidha == b"\r\n\r\n") {
+                            break;
+                        }
+                    }
+                    let satr = String::from_utf8_lossy(&ras)
+                        .lines()
+                        .next()
+                        .unwrap_or_default()
+                        .to_owned();
+                    sijill.lock().push(satr);
+                    let jawab = format!(
+                        "HTTP/1.1 {} {}\r\nContent-Length: {}\r\nConnection: close\r\n{}\r\n{}",
+                        radd.hala,
+                        sabab_hala(radd.hala),
+                        radd.jasad.len(),
+                        radd.ruus,
+                        radd.jasad
+                    );
+                    let _ = maqbas.write_all(jawab.as_bytes());
+                    let _ = maqbas.flush();
+                }
+            }));
+            Ok(Self {
+                asas: format!("http://{unwan}/translate_a/single"),
+                talabat,
+            })
+        }
+
+        fn talabat(&self) -> Vec<String> {
+            self.talabat.lock().clone()
+        }
+    }
+
+    /// The reply the endpoint gave on `TAREEKH_ASAR_GOOGLE_MAJJANI`, verbatim
+    /// but for the per-segment metadata this module never reads.
+    const RADD_GTX: &str = r#"[[["اضغط على أي مفتاح للمتابعة. ","Press any key to continue. ",null,null,3,null,null,[[]],[[["a40074848905d12c107f984aac5d9776","en_ar_2023q1.md"]]]],["درجاتك هي ⟦0⟧ نقطة.","Your score is ⟦0⟧ points.",null,null,3,null,null,[[]],[[["a40074848905d12c107f984aac5d9776","en_ar_2023q1.md"]]]]],null,"en",null,null,null,1,[],[["en"],null,[1],["en"]]]"#;
+
+    /// The provider pointed at a stand-in, with no request spacing and no
+    /// `429` floor unless a test sets one.
+    fn majjani(
+        khadim: &KhadimWahmi,
+        ard_muadal: Duration,
+    ) -> Result<MuzawwidGoogleMajjani, KhataTarjama> {
+        MuzawwidGoogleMajjani::jadeed(IdadatGoogleMajjani {
+            asas: khadim.asas.clone(),
+            lughat_masdar: LUGHAT_MASDAR_TILQAIYA.to_owned(),
+            fasl: Duration::ZERO,
+            ard_muadal,
+        })
+    }
+
+    /// A context with nothing in it, which is all this provider can use.
+    fn talab_farigh() -> SiyaqTalab {
+        SiyaqTalab {
+            tasnif: TasnifNass::Majhul,
+            siyaq: SiyaqNass::default(),
+            quyud: QuyudNass::default(),
+            mustalahat: Vec::new(),
+            dhakira: Vec::new(),
+            ism_luba: None,
+            thiqat_tasnif: 0,
+        }
+    }
+
+    #[test]
+    fn almajjani_yaqra_alradd_almawdi_kama_huwa() -> NatijatIkhtibar {
+        // The shape observed live: the translation is the first element of
+        // every segment in the first array, the detected language sits third,
+        // and everything else is skipped rather than parsed.
+        let qeema: Value = serde_json::from_str(RADD_GTX)?;
+        let radd = tarjama_min_gtx(&qeema).ok_or("the live shape must parse")?;
+        assert_eq!(
+            radd.tarjama,
+            "اضغط على أي مفتاح للمتابعة. درجاتك هي ⟦0⟧ نقطة."
+        );
+        assert_eq!(radd.lugha_muktashafa.as_deref(), Some("en"));
+
+        // Segments padded with `null` where text would be are skipped, not
+        // failed; a shape with no leading array is not the shape.
+        let mubattan: Value =
+            serde_json::from_str(r#"[[["حفظ","Save"],[null,null,"transliteration"]],null,"en"]"#)?;
+        assert_eq!(
+            tarjama_min_gtx(&mubattan).map(|radd| radd.tarjama),
+            Some("حفظ".to_owned())
+        );
+        assert_eq!(tarjama_min_gtx(&json!({"error": "x"})), None);
+        assert_eq!(tarjama_min_gtx(&json!(["nope", null, "en"])), None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn almajjani_yutarjim_bila_miftah_wa_bila_thaman() -> NatijatIkhtibar {
+        let khadim = KhadimWahmi::shaghghil(vec![RaddWahmi::json(RADD_GTX)])?;
+        let muzawwid = majjani(&khadim, Duration::ZERO)?;
+
+        // Everything the provider claims about itself, checked once: free,
+        // no confidence, no batching, no instruction, and the names the
+        // journal will record.
+        assert_eq!(muzawwid.ism(), "google-majjani");
+        assert_eq!(muzawwid.namudhaj(), "gtx");
+        let qudrat = muzawwid.qudrat();
+        assert_eq!(qudrat.taklifa, NamudhajTaklifa::Majani);
+        assert!(!qudrat.taklifa.madfu());
+        assert!(!qudrat.yublighu_thiqa());
+        assert!(qudrat.dalil_thiqa().is_none());
+        assert!(!qudrat.dufaat);
+        assert_eq!(qudrat.aqsa_nusus(), 1);
+        assert!(!qudrat.yaqbal_tawjih);
+        assert_eq!(muzawwid.takalif().saqf(), 0);
+
+        let mahmi = ihmi("Press any key to continue. Your score is ⟦0⟧ points.", &[])?;
+        let natija = muzawwid.tarjim(&mahmi, &talab_farigh()).await?;
+        assert_eq!(
+            natija.matn(),
+            "اضغط على أي مفتاح للمتابعة. درجاتك هي ⟦0⟧ نقطة."
+        );
+        assert_eq!(natija.taklifa(), 0);
+        assert_eq!(natija.thiqa(), None);
+        assert!(!natija.maqisa());
+        assert_eq!(muzawwid.takalif().munfaq(), 0);
+
+        // The wire: a GET with the widget's own parameters, the text
+        // percent-encoded in the query string, Arabic as the target.
+        let talabat = khadim.talabat();
+        let satr = talabat.first().ok_or("one request reached the stand-in")?;
+        assert!(satr.starts_with("GET /translate_a/single?"), "{satr}");
+        for juz in ["client=gtx", "sl=auto", "tl=ar", "dt=t", "q=Press"] {
+            assert!(satr.contains(juz), "{juz} missing from {satr}");
+        }
+        assert!(
+            satr.contains("%E2%9F%A6"),
+            "the protection token travels percent-encoded: {satr}"
+        );
+        assert_eq!(talabat.len(), 1, "one string, one request");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn almajjani_yarfud_jasadan_farighan_wa_ghayr_mufassal() -> NatijatIkhtibar {
+        let khadim = KhadimWahmi::shaghghil(vec![
+            RaddWahmi::json(""),
+            RaddWahmi::json("[[[\"\",\"Save\"]],null,\"en\"]"),
+            RaddWahmi::json("[\"not\", \"the\", \"shape\"]"),
+        ])?;
+        let muzawwid = majjani(&khadim, Duration::ZERO)?;
+        let talab = talab_farigh();
+
+        for sabab in ["an empty body", "an empty translation", "a foreign shape"] {
+            let mahmi = ihmi("Save", &[])?;
+            let khata = muzawwid.tarjim(&mahmi, &talab).await.err().ok_or(sabab)?;
+            assert!(
+                matches!(khata, KhataTarjama::RaddGhayrMufassal { .. }),
+                "{sabab}: {khata}"
+            );
+            // Fails the string, not the run: the next string may parse fine.
+            assert!(!khata.yuqif_aljawla(), "{sabab}");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn almajjani_yusammi_safhat_alhajb() -> NatijatIkhtibar {
+        // The block page behind a success status, and behind the 403 the
+        // service also uses. Both are the service refusing this client, both
+        // stop the run, and both say so in a sentence that names the free
+        // service and points at Settings.
+        let khadim = KhadimWahmi::shaghghil(vec![RaddWahmi::html(200), RaddWahmi::html(403)])?;
+        let muzawwid = majjani(&khadim, Duration::ZERO)?;
+        let talab = talab_farigh();
+
+        for hala in [200_u16, 403] {
+            let mahmi = ihmi("Load", &[])?;
+            let khata = muzawwid
+                .tarjim(&mahmi, &talab)
+                .await
+                .err()
+                .ok_or("a block page is a refusal")?;
+            assert!(
+                matches!(khata, KhataTarjama::MajjaniMahjub { .. }),
+                "HTTP {hala}: {khata}"
+            );
+            assert!(khata.yuqif_aljawla(), "HTTP {hala}");
+            assert!(khata.arabi().contains("الإعدادات ← المزوّدون"), "HTTP {hala}");
+            assert!(khata.arabi().contains("google-majjani"), "HTTP {hala}");
+            assert!(
+                khata.injilizi().contains("Settings, under Providers"),
+                "HTTP {hala}"
+            );
+            assert!(khata.injilizi().contains("google-majjani"), "HTTP {hala}");
+            assert!(
+                matches!(
+                    khata.khutwa(),
+                    Khutwa::FathIdadat {
+                        qism: QismIdadat::Muzawwidun
+                    }
+                ),
+                "HTTP {hala}"
+            );
+        }
+        assert_eq!(khadim.talabat().len(), 2, "a 403 is not retried");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn almajjani_yuid_baad_429_thumma_yatawaqqaf_bismih() -> NatijatIkhtibar {
+        // Every attempt answered 429: the shared retry discipline spends all
+        // of them, and what comes out is the free service's own refusal, not
+        // the keyed providers' "backoff did not clear it".
+        let mahjub =
+            KhadimWahmi::shaghghil((0..ADAD_MUHAWALAT).map(|_| RaddWahmi::muadal()).collect())?;
+        let muzawwid = majjani(&mahjub, Duration::ZERO)?;
+        let mahmi = ihmi("Quit", &[])?;
+        let khata = muzawwid
+            .tarjim(&mahmi, &talab_farigh())
+            .await
+            .err()
+            .ok_or("a 429 on every attempt is a refusal")?;
+        assert!(
+            matches!(khata, KhataTarjama::MajjaniMahjub { .. }),
+            "{khata}"
+        );
+        assert!(khata.to_string().contains("429"), "{khata}");
+        assert_eq!(
+            mahjub.talabat().len(),
+            hajm_usize(u64::from(ADAD_MUHAWALAT)),
+            "exactly the attempt budget, no more"
+        );
+
+        // One 429 then a reply: the string succeeds on the retry, and the
+        // retry waited at least the floor even though the server asked for no
+        // wait at all — the floor is what stops a warning becoming a block.
+        let ard = Duration::from_millis(200);
+        let mutaaffi =
+            KhadimWahmi::shaghghil(vec![RaddWahmi::muadal(), RaddWahmi::json(RADD_GTX)])?;
+        let muzawwid = majjani(&mutaaffi, ard)?;
+        let mahmi = ihmi("Quit", &[])?;
+        let bidaya = std::time::Instant::now();
+        let natija = muzawwid.tarjim(&mahmi, &talab_farigh()).await?;
+        assert!(bidaya.elapsed() >= ard, "the 429 floor was not honoured");
+        assert!(natija.matn().contains("⟦0⟧"));
+        assert_eq!(mutaaffi.talabat().len(), 2);
+        // With no floor, a stated wait of zero is honoured as zero: the floor
+        // above is the only reason the retry waited.
+        assert_eq!(muddat_taraju(1, Some(0)), Duration::ZERO);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn almajjani_yarfud_ma_fawq_alsaqf_qabl_alirsal() -> NatijatIkhtibar {
+        // Nothing listens here; the refusal has to happen before a connection
+        // is attempted, or the test fails on the transport instead.
+        let muzawwid = MuzawwidGoogleMajjani::jadeed(IdadatGoogleMajjani {
+            asas: "http://127.0.0.1:9/translate_a/single".to_owned(),
+            ..IdadatGoogleMajjani::default()
+        })?;
+        let tawil: String = "ع".repeat(AQSA_AHRUF_GOOGLE_MAJJANI.saturating_add(1));
+        let mahmi = ihmi(&tawil, &[])?;
+        let khata = muzawwid
+            .tarjim(&mahmi, &talab_farigh())
+            .await
+            .err()
+            .ok_or("a string over the ceiling is refused")?;
+        match &khata {
+            KhataTarjama::MajjaniTawil { ahruf, saqf, .. } => {
+                assert_eq!(*ahruf, AQSA_AHRUF_GOOGLE_MAJJANI.saturating_add(1));
+                assert_eq!(*saqf, AQSA_AHRUF_GOOGLE_MAJJANI);
+            },
+            ghayr => return Err(format!("expected MajjaniTawil, got {ghayr}").into()),
+        }
+        // One string, not the run — and the sentence says where longer
+        // strings get translated.
+        assert!(!khata.yuqif_aljawla());
+        assert!(khata.arabi().contains("الإعدادات ← المزوّدون"));
+        assert!(khata.injilizi().contains("Settings, under Providers"));
+        assert!(khata.injilizi().contains("5001"));
+        Ok(())
+    }
+
+    #[test]
+    fn almajjani_yarfud_annass_alwadih_illa_ila_alwasl_addakhili() {
+        // No credential rides on these requests, but a game's text does, and
+        // the same loopback-by-name rule the local constructor keeps applies.
+        for asas in [
+            "http://translate.googleapis.com/translate_a/single",
+            "http://127.0.0.1.evil.example/translate_a/single",
+        ] {
+            let mabni = MuzawwidGoogleMajjani::jadeed(IdadatGoogleMajjani {
+                asas: asas.to_owned(),
+                ..IdadatGoogleMajjani::default()
+            });
+            assert!(
+                matches!(mabni, Err(KhataTarjama::MuzawwidGhayrMutah { .. })),
+                "{asas} was accepted"
+            );
+        }
+        assert!(MuzawwidGoogleMajjani::jadeed(IdadatGoogleMajjani::default()).is_ok());
+        assert!(
+            MuzawwidGoogleMajjani::jadeed(IdadatGoogleMajjani {
+                asas: "http://localhost:1/translate_a/single".to_owned(),
+                ..IdadatGoogleMajjani::default()
+            })
+            .is_ok()
+        );
+        // The shipped default is the endpoint checked on the recorded date,
+        // over TLS, with detection left to the service.
+        let iftiradi = IdadatGoogleMajjani::default();
+        assert_eq!(iftiradi.asas, UNWAN_GOOGLE_MAJJANI);
+        assert!(iftiradi.asas.starts_with("https://"));
+        assert_eq!(iftiradi.lughat_masdar, LUGHAT_MASDAR_TILQAIYA);
+        assert_eq!(iftiradi.fasl, FASL_GOOGLE_MAJJANI);
+        assert_eq!(iftiradi.ard_muadal, ARD_MUADAL_GOOGLE_MAJJANI);
+    }
+
+    #[test]
+    fn safhat_alhajb_tuqra_min_awwal_harf() {
+        assert!(safha_la_json("<!DOCTYPE html><html>"));
+        assert!(safha_la_json("  \n<html lang=\"en\">"));
+        assert!(!safha_la_json("[[[\"حفظ\",\"Save\"]],null,\"en\"]"));
+        assert!(!safha_la_json(""));
     }
 }

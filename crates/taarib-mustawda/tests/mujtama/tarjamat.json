@@ -1,0 +1,407 @@
+{
+ "isdar": 1,
+ "waqt": "2026-09-11T00:00:00Z",
+ "muallif": "cc1a2b",
+ "wasf": "Index of community-made Arabic translations of PC games: links to where each lives, with the facts its own page states. Nothing here is hosted or redistributed by the registry.",
+ "firaq": [
+  {
+   "muarrif": "eternal-dream",
+   "ism": "Eternal Dream Arabization",
+   "ism_arabi": "الحلم المتجدد للتعريب",
+   "rabt": "https://etrdream.com/",
+   "discord": "https://discord.com/invite/EYm63fwn4B",
+   "x": "https://x.com/EternalDreamAR",
+   "wasf": "Volunteer team (translators, editors, designers, testers); free patches with per-game credits and changelogs; also on Nexus and Thunderstore.",
+   "tawzee": "majjani",
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "safha",
+    "rabt": "https://etrdream.com/%D9%85%D9%83%D8%AA%D8%A8%D8%A9_%D8%A7%D9%84%D8%AA%D8%B9%D8%B1%D9%8A%D8%A8%D8%A7%D8%AA/",
+    "mulahaza": null
+   }
+  },
+  {
+   "muarrif": "play-in-arabic",
+   "ism": "Play in Arabic",
+   "ism_arabi": "العب بالعربي",
+   "rabt": "https://www.playinarabic.com/fan",
+   "discord": "https://discord.com/invite/k48RMMyEKr",
+   "x": "https://x.com/play_in_arabic",
+   "wasf": "Team of named translators (Abdulrhman Shafiea, Hamed Al-shammri, Faisal Marawi and others); most patches are sold through a checkout, a few older ones are free.",
+   "tawzee": "mukhtalit",
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "safha",
+    "rabt": "https://playinarabic.com/Team",
+    "mulahaza": null
+   }
+  },
+  {
+   "muarrif": "hesham",
+   "ism": "Arabic_Hesham (HeshamLocalization)",
+   "ism_arabi": "تعريبات هشام",
+   "rabt": "https://arabichesham.com/",
+   "discord": null,
+   "x": "https://x.com/Arabic_Hesham",
+   "wasf": "One translator; 'engine-level' localizations with one-click installers, mostly published on Nexus Mods; the site counts 30 games and 11.6 million words.",
+   "tawzee": "majjani",
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "safha",
+    "rabt": "https://arabichesham.com/",
+    "mulahaza": null
+   }
+  }
+ ],
+ "tarjamat": [
+  {
+   "muarrif": "007-first-light-hesham",
+   "luba": {
+    "ism": "007 First Light",
+    "ism_arabi": null
+   },
+   "steam_appid": 3768760,
+   "manassa": [
+    "PC"
+   ],
+   "arabiya_rasmiya": {
+    "hala": "la",
+    "masdar": "steam_appdetails",
+    "waqt": "2026-09-11",
+    "ism_steam": "007 First Light"
+   },
+   "fariq": "hesham",
+   "muallif": "HeshamLocalization",
+   "mudif": "nexusmods",
+   "rabt": "https://www.nexusmods.com/007firstlight/mods/11",
+   "taghtiya": "kamila",
+   "taghtiya_nass": "Menus, settings, UI, subtitles, speaker names, video subtitles",
+   "nisba": null,
+   "shakl_tiqani": [
+    "munassib",
+    "khatt"
+   ],
+   "tareeqa": "ghayr_musarraha",
+   "rukhsa": {
+    "naw": "ghayr_musarraha",
+    "muarrif": null,
+    "nass": null
+   },
+   "tawzee": "majjani",
+   "hala": "nashita",
+   "isdar": "10",
+   "waqt_alnashr": "2026-05-27",
+   "akhir_tahdith": "2026-06-15",
+   "tanzeelat": 35452,
+   "tanzeelat_naw": "tanzeelat",
+   "muharrik": "glacier",
+   "mulahazat": null,
+   "rawabit_ukhra": [],
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "api_nexus",
+    "rabt": "https://api.nexusmods.com/v2/graphql",
+    "mulahaza": "Nexus Mods answers non-browser page requests with HTTP 403; the record was read through Nexus's own v2 GraphQL API (legacyModsByDomain, by game domain and mod id). The permissions block is not exposed by that API. Page: https://www.nexusmods.com/007firstlight/mods/11"
+   }
+  },
+  {
+   "muarrif": "007-first-light-play-in-arabic",
+   "luba": {
+    "ism": "007 First Light",
+    "ism_arabi": null
+   },
+   "steam_appid": 3768760,
+   "manassa": [
+    "PC"
+   ],
+   "arabiya_rasmiya": {
+    "hala": "la",
+    "masdar": "steam_appdetails",
+    "waqt": "2026-09-11",
+    "ism_steam": "007 First Light"
+   },
+   "fariq": "play-in-arabic",
+   "muallif": "Play in Arabic",
+   "mudif": "mawqi_alfariq",
+   "rabt": "https://www.playinarabic.com/translations/007-first-light",
+   "taghtiya": "kamila",
+   "taghtiya_nass": "تعريب شامل يشمل جميع النصوص والقوائم والحوارات لنسخة ستيم",
+   "nisba": null,
+   "shakl_tiqani": [
+    "ghayr_musarrah"
+   ],
+   "tareeqa": "ghayr_musarraha",
+   "rukhsa": {
+    "naw": "ghayr_musarraha",
+    "muarrif": null,
+    "nass": null
+   },
+   "tawzee": "majjani",
+   "hala": "nashita",
+   "isdar": null,
+   "waqt_alnashr": "2026-05-28",
+   "akhir_tahdith": null,
+   "tanzeelat": null,
+   "tanzeelat_naw": null,
+   "muharrik": null,
+   "mulahazat": null,
+   "rawabit_ukhra": [],
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "safha",
+    "rabt": "https://www.playinarabic.com/translations/007-first-light",
+    "mulahaza": null
+   }
+  },
+  {
+   "muarrif": "afterimage-eternal-dream",
+   "luba": {
+    "ism": "Afterimage",
+    "ism_arabi": null
+   },
+   "steam_appid": 1701520,
+   "manassa": [
+    "PC",
+    "PS4",
+    "Switch"
+   ],
+   "arabiya_rasmiya": {
+    "hala": "la",
+    "masdar": "steam_appdetails",
+    "waqt": "2026-09-11",
+    "ism_steam": "Afterimage"
+   },
+   "fariq": "eternal-dream",
+   "muallif": "Eternal Dream Arabization; translation: Allen Wouka • Zojaj • Levan",
+   "mudif": "mawqi_alfariq",
+   "rabt": "https://etrdream.com/game/afterimage/",
+   "taghtiya": "ghayr_musarraha",
+   "taghtiya_nass": null,
+   "nisba": null,
+   "shakl_tiqani": [
+    "istibdal_malafat",
+    "khatt"
+   ],
+   "tareeqa": "bashariya_kamila",
+   "rukhsa": {
+    "naw": "ghayr_musarraha",
+    "muarrif": null,
+    "nass": null
+   },
+   "tawzee": "majjani",
+   "hala": "nashita",
+   "isdar": "1.1",
+   "waqt_alnashr": "2025-04-03",
+   "akhir_tahdith": "2025-04-04",
+   "tanzeelat": null,
+   "tanzeelat_naw": null,
+   "muharrik": null,
+   "mulahazat": null,
+   "rawabit_ukhra": [],
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "safha",
+    "rabt": "https://etrdream.com/game/afterimage/",
+    "mulahaza": null
+   }
+  },
+  {
+   "muarrif": "am2r-metroid-2-fan-remake-eternal-dream",
+   "luba": {
+    "ism": "AM2R (Metroid 2 fan remake)",
+    "ism_arabi": null
+   },
+   "steam_appid": null,
+   "manassa": [
+    "PC",
+    "Switch"
+   ],
+   "arabiya_rasmiya": {
+    "hala": "ghayr_maruf",
+    "masdar": null,
+    "waqt": "2026-09-11",
+    "ism_steam": null
+   },
+   "fariq": "eternal-dream",
+   "muallif": "Eternal Dream Arabization",
+   "mudif": "mawqi_alfariq",
+   "rabt": "https://etrdream.com/game/am2r-metroid-2-fan-remake/",
+   "taghtiya": "ghayr_musarraha",
+   "taghtiya_nass": null,
+   "nisba": null,
+   "shakl_tiqani": [
+    "istibdal_malafat",
+    "khatt"
+   ],
+   "tareeqa": "ghayr_musarraha",
+   "rukhsa": {
+    "naw": "ghayr_musarraha",
+    "muarrif": null,
+    "nass": null
+   },
+   "tawzee": "majjani",
+   "hala": "nashita",
+   "isdar": "1.0",
+   "waqt_alnashr": "2021-07-20",
+   "akhir_tahdith": null,
+   "tanzeelat": null,
+   "tanzeelat_naw": null,
+   "muharrik": null,
+   "mulahazat": null,
+   "rawabit_ukhra": [],
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "safha",
+    "rabt": "https://etrdream.com/game/am2r-metroid-2-fan-remake/",
+    "mulahaza": null
+   }
+  },
+  {
+   "muarrif": "balatro-bloodyarz",
+   "luba": {
+    "ism": "Balatro",
+    "ism_arabi": null
+   },
+   "steam_appid": 2379780,
+   "manassa": [
+    "PC"
+   ],
+   "arabiya_rasmiya": {
+    "hala": "la",
+    "masdar": "steam_appdetails",
+    "waqt": "2026-09-11",
+    "ism_steam": "Balatro"
+   },
+   "fariq": null,
+   "muallif": "BloodyARZ",
+   "mudif": "github",
+   "rabt": "https://github.com/BloodyARZ/BALATRO-ARABIC",
+   "taghtiya": "juziya",
+   "taghtiya_nass": "'Experimental; many texts not translated; not thoroughly proofread'",
+   "nisba": null,
+   "shakl_tiqani": [
+    "istibdal_malafat"
+   ],
+   "tareeqa": "ghayr_musarraha",
+   "rukhsa": {
+    "naw": "spdx",
+    "muarrif": "CC0-1.0",
+    "nass": "Repository licence file: CC0-1.0"
+   },
+   "tawzee": "majjani",
+   "hala": "awwaliya",
+   "isdar": "beta for game 1.0.1o",
+   "waqt_alnashr": "2025-04-06",
+   "akhir_tahdith": "2026-01-27",
+   "tanzeelat": null,
+   "tanzeelat_naw": null,
+   "muharrik": null,
+   "mulahazat": "Patch applied by copying files into BALATRO.exe (a 7-Zip archive) or through Patch_Beta.bat; Eternal Dream links this repository from its own Balatro page.",
+   "rawabit_ukhra": [],
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "api_github",
+    "rabt": "https://api.github.com/repos/BloodyARZ/BALATRO-ARABIC",
+    "mulahaza": null
+   }
+  },
+  {
+   "muarrif": "black-mesa-unofficial-arabic",
+   "luba": {
+    "ism": "Black Mesa",
+    "ism_arabi": null
+   },
+   "steam_appid": 362890,
+   "manassa": [
+    "PC"
+   ],
+   "arabiya_rasmiya": {
+    "hala": "la",
+    "masdar": "steam_appdetails",
+    "waqt": "2026-09-11",
+    "ism_steam": "Black Mesa"
+   },
+   "fariq": null,
+   "muallif": "Workshop author (unnamed on the page)",
+   "mudif": "steam_workshop",
+   "rabt": "https://steamcommunity.com/sharedfiles/filedetails/?id=2893890254",
+   "taghtiya": "hiwar",
+   "taghtiya_nass": "Subtitles/captions (alpha); a right-aligned version and pre-patch builds in the linked guide",
+   "nisba": null,
+   "shakl_tiqani": [
+    "workshop"
+   ],
+   "tareeqa": "ghayr_musarraha",
+   "rukhsa": {
+    "naw": "ghayr_musarraha",
+    "muarrif": null,
+    "nass": null
+   },
+   "tawzee": "majjani",
+   "hala": "awwaliya",
+   "isdar": null,
+   "waqt_alnashr": "2022-11-26",
+   "akhir_tahdith": null,
+   "tanzeelat": 762,
+   "tanzeelat_naw": "mushtarikun",
+   "muharrik": "source",
+   "mulahazat": "Built for the 12.5.2025 patch; a gameinfo.txt edit enlarges the subtitles; 'Unofficial Arabic' must be picked as caption language.",
+   "rawabit_ukhra": [],
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "safha",
+    "rabt": "https://steamcommunity.com/sharedfiles/filedetails/?id=2893890254",
+    "mulahaza": null
+   }
+  },
+  {
+   "muarrif": "hearts-of-iron-iv-arabic-language-workshop",
+   "luba": {
+    "ism": "Hearts of Iron IV",
+    "ism_arabi": null
+   },
+   "steam_appid": 394360,
+   "manassa": [
+    "PC"
+   ],
+   "arabiya_rasmiya": {
+    "hala": "la",
+    "masdar": "steam_appdetails",
+    "waqt": "2026-09-11",
+    "ism_steam": "Hearts of Iron IV"
+   },
+   "fariq": null,
+   "muallif": "Workshop author (unnamed on the page)",
+   "mudif": "steam_workshop",
+   "rabt": "https://steamcommunity.com/sharedfiles/filedetails/?id=3402098254",
+   "taghtiya": "kamila",
+   "taghtiya_nass": null,
+   "nisba": null,
+   "shakl_tiqani": [
+    "workshop"
+   ],
+   "tareeqa": "aaliya_faqat",
+   "rukhsa": {
+    "naw": "ghayr_musarraha",
+    "muarrif": null,
+    "nass": null
+   },
+   "tawzee": "majjani",
+   "hala": "mahjura",
+   "isdar": null,
+   "waqt_alnashr": "2025-01-06",
+   "akhir_tahdith": null,
+   "tanzeelat": 2981,
+   "tanzeelat_naw": "mushtarikun",
+   "muharrik": null,
+   "mulahazat": "Page states: translated with Google Translate, not manual, may contain errors; 'officially discontinued, no future updates'.",
+   "rawabit_ukhra": [],
+   "tahaqquq": {
+    "waqt": "2026-09-11",
+    "tareeqa": "safha",
+    "rabt": "https://steamcommunity.com/sharedfiles/filedetails/?id=3402098254",
+    "mulahaza": null
+   }
+  }
+ ]
+}

@@ -57,6 +57,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The background sweep's own line, beside the count and only while it runs.
+   Set off by a middle dot rather than put on a second line, so the row keeps
+   its height and the first row of artwork does not step down the screen when
+   the sweep starts or up again when it ends. */
+.maktaba__jawla::before {
+  content: '\00B7';
+  margin-inline: var(--misafa-8);
+}
+
 /* One region, one scroll container, one inset. The grid inside carries both —
    its own `--hashiyat-shabaka` is the library's only margin and its own
    viewport is the library's only scroller — so this region contributes

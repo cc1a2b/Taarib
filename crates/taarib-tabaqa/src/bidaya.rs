@@ -1320,19 +1320,13 @@ fn ibni_halaqa(mujallad: &Path, tabaqa: Tabaqa, ruqaa: &MalafRuqaa) -> Result<Ha
 
     // The game's identity and language, from the patch's manifest when it has
     // them, and from the payload's own directory when it does not.
-    let bayan = ruqaa
-        .ruqaa()
-        .ok()
-        .and_then(|ruqaa| ruqaa.bayan_json().ok());
+    let bayan = ruqaa.ruqaa().ok().and_then(|ruqaa| ruqaa.bayan_json().ok());
     let (luba_bayan, ism_bayan, lugha_bayan) = bayan
         .as_ref()
         .map_or((None, None, None), halaqa::luba_min_bayan);
     let ism = ism_bayan.unwrap_or_else(|| ism_luba(mujallad));
     let luba = luba_bayan.unwrap_or_else(|| {
-        LubaId::min_masdar(
-            &MasdarLuba::Yadawi(mujallad.display().to_string()),
-            &ism,
-        )
+        LubaId::min_masdar(&MasdarLuba::Yadawi(mujallad.display().to_string()), &ism)
     });
     let lugha = lugha_bayan.unwrap_or_else(|| LUGHA_IFTIRADIYA.to_owned());
     athar.push(format!("game: {ism} ({luba}), source language {lugha}"));

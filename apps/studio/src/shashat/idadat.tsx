@@ -115,6 +115,7 @@ const ANWA_MUZAWWID: readonly NawMuzawwid[] = [
   'google_tarjama',
   'microsoft_tarjama',
   'mahalli',
+  'google_majjani',
 ];
 const MIFTAH_NAW: Readonly<Record<NawMuzawwid, MiftahLugha>> = {
   anthropic: 'idadat.naw.anthropic',
@@ -124,7 +125,18 @@ const MIFTAH_NAW: Readonly<Record<NawMuzawwid, MiftahLugha>> = {
   google_tarjama: 'idadat.naw.google_tarjama',
   microsoft_tarjama: 'idadat.naw.microsoft_tarjama',
   mahalli: 'idadat.naw.mahalli',
+  google_majjani: 'idadat.naw.google_majjani',
 };
+
+/**
+ * The built-in free provider's identifier and model, mirroring
+ * `taarib_usus::idadat::MUARRIF_GOOGLE_MAJJANI` and `NAMUDHAJ_GOOGLE_MAJJANI`.
+ * It is not in the settings tree — nothing deletes it, no key unlocks it, no
+ * field tunes it — so the screen draws it from these rather than from the
+ * working copy, and the backend refuses a user row that borrows the name.
+ */
+const MUARRIF_GOOGLE_MAJJANI = 'google-majjani';
+const NAMUDHAJ_GOOGLE_MAJJANI = 'gtx';
 
 const MUSTAWAYAT: readonly MustawaSijill[] = ['khata', 'tanbeeh', 'maluma', 'tafsil', 'tatabbu'];
 const MIFTAH_MUSTAWA: Readonly<Record<MustawaSijill, MiftahLugha>> = {
@@ -199,6 +211,46 @@ function halatMuzawwidin(muzawwidun: Idadat['muzawwidun']): HalatMuzawwidin {
     return qaima.length === 0 ? 'faragh' : 'muattala';
   }
   return iftiradi !== null && iftiradi !== muntakhab.muarrif ? 'badeel' : 'mukhtar';
+}
+
+/**
+ * The one permanent provider row: the built-in free Google Translate service,
+ * which a new translation falls back to whenever the list above it elects
+ * nothing. It carries a state word in place of a Remove button and says, in
+ * one paragraph, exactly what it is worth — unofficial, sentence-level, rate
+ * limited, free — because a row that looked like the others would read as a
+ * provider somebody chose.
+ */
+function MuzawwidMudmaj({ lugha, yustakhdam }: { lugha: Lugha; yustakhdam: boolean }): JSX.Element {
+  return (
+    <li className="idadat__muzawwid idadat__muzawwid--mudmaj">
+      <div className="idadat__muzawwid-raas">
+        <h3 className="idadat__muzawwid-unwan">{t('idadat.naw.google_majjani', lugha)}</h3>
+        <span className="idadat__muzawwid-muarrif mono-ltr">{MUARRIF_GOOGLE_MAJJANI}</span>
+        <span className="idadat__muzawwid-thabit">{t('idadat.muzawwidun.mudmaj.thabit', lugha)}</span>
+      </div>
+      <p
+        className={
+          yustakhdam
+            ? 'idadat__mudakhkhal idadat__muzawwid-hala idadat__muzawwid-hala--yustakhdam'
+            : 'idadat__mudakhkhal idadat__muzawwid-hala'
+        }
+        role="status"
+      >
+        {t(
+          yustakhdam ? 'idadat.muzawwidun.mudmaj.yustakhdam' : 'idadat.muzawwidun.mudmaj.ihtiyat',
+          lugha,
+        )}
+      </p>
+      <div className="idadat__saff">
+        <span className="idadat__tasmiya">{t('idadat.muzawwidun.namudhaj', lugha)}</span>
+        <span className="idadat__muzawwid-qeema mono-ltr">{NAMUDHAJ_GOOGLE_MAJJANI}</span>
+      </div>
+      <p className="idadat__mudakhkhal idadat__nass-hadi">
+        {t('idadat.muzawwidun.mudmaj.wasf', lugha)}
+      </p>
+    </li>
+  );
 }
 
 /** How many rows each placeholder section holds: the display section's own count. */
@@ -675,10 +727,11 @@ export function IdadatShasha(): JSX.Element {
     [nuskha, bayanat],
   );
 
-  const athar = useMemo(
-    () => (nuskha === null ? null : ATHAR_MUZAWWIDIN[halatMuzawwidin(nuskha.muzawwidun)]),
+  const halatQaima = useMemo(
+    () => (nuskha === null ? null : halatMuzawwidin(nuskha.muzawwidun)),
     [nuskha],
   );
+  const athar = halatQaima === null ? null : ATHAR_MUZAWWIDIN[halatQaima];
 
   const hifz = useMutation<Idadat, KhataJisr, TalabHifz>({
     mutationFn: ({ jadeed }) => nadi('haddith_idadat', { idadat: jadeed }),
@@ -1374,195 +1427,186 @@ export function IdadatShasha(): JSX.Element {
               alaTabdeel={tabdeelQism}
             >
               {/* What the current list means, drawn from the working copy so it
-                  follows an enable, a rename and a removal without a save. The
-                  empty state carries it inside its own block because that block
-                  is the whole section; the other two carry it above the list,
-                  which is what they are about. */}
-              {nuskha.muzawwidun.qaima.length === 0 ? (
-                <HalatFarigha
-                  unwan={t('idadat.muzawwidun.la_shay', lugha)}
-                  nass={t('idadat.muzawwidun.athar_faragh', lugha)}
-                >
-                  <button type="button" className="zir" onClick={adifMuzawwid}>
-                    {t('idadat.muzawwidun.adif', lugha)}
-                  </button>
-                </HalatFarigha>
-              ) : (
-                <>
-                  <Zuhur
-                    maftuh={athar !== null}
-                    asl="fawq"
-                    className="idadat__mudakhkhal idadat__athar"
-                    role="status"
-                  >
-                    {athar === null ? null : t(athar, lugha)}
-                  </Zuhur>
-                  <ul className="idadat__muzawwidun">
-                    {nuskha.muzawwidun.qaima.map((muzawwid, fihris) => (
-                      <li key={String(fihris)} className="idadat__muzawwid">
-                        <div className="idadat__muzawwid-raas">
-                          <h3 className="idadat__muzawwid-unwan">
-                            {t(MIFTAH_NAW[muzawwid.naw], lugha)}
-                          </h3>
-                          {muzawwid.muarrif.trim() === '' ? null : (
-                            <span className="idadat__muzawwid-muarrif mono-ltr">
-                              {muzawwid.muarrif}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            className="zir idadat__muzawwid-izala"
-                            onClick={() => {
-                              ihdhifMuzawwid(fihris);
-                            }}
-                          >
-                            {t('idadat.muzawwidun.izala', lugha)}
-                          </button>
-                        </div>
-                        <label className="idadat__saff">
-                          <span className="idadat__tasmiya">
-                            {t('idadat.muzawwidun.muarrif', lugha)}
-                          </span>
-                          <input
-                            className="idadat__haql mono-ltr"
-                            dir="ltr"
-                            value={muzawwid.muarrif}
-                            onChange={(hadath) => {
-                              haddidMuarrifMuzawwid(fihris, hadath.target.value);
-                            }}
-                          />
-                        </label>
-                        <label className="idadat__saff">
-                          <span className="idadat__tasmiya">
-                            {t('idadat.muzawwidun.naw', lugha)}
-                          </span>
-                          <select
-                            className="idadat__haql"
-                            value={muzawwid.naw}
-                            onChange={(hadath) => {
-                              haddidMuzawwid(fihris, {
-                                naw: hadath.target.value as NawMuzawwid,
-                              });
-                            }}
-                          >
-                            {ANWA_MUZAWWID.map((naw) => (
-                              <option key={naw} value={naw}>
-                                {t(MIFTAH_NAW[naw], lugha)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="idadat__saff">
-                          <span className="idadat__tasmiya">
-                            {t('idadat.muzawwidun.namudhaj', lugha)}
-                          </span>
-                          <input
-                            className="idadat__haql mono-ltr"
-                            dir="ltr"
-                            value={muzawwid.namudhaj}
-                            onChange={(hadath) => {
-                              haddidMuzawwid(fihris, { namudhaj: hadath.target.value });
-                            }}
-                          />
-                        </label>
-                        <label className="idadat__saff">
-                          <span className="idadat__tasmiya">
-                            {t('idadat.muzawwidun.asas', lugha)}
-                          </span>
-                          <input
-                            className="idadat__haql mono-ltr"
-                            dir="ltr"
-                            value={muzawwid.asas ?? ''}
-                            onChange={(hadath) => {
-                              const qeema = hadath.target.value;
-                              haddidMuzawwid(fihris, { asas: qeema === '' ? null : qeema });
-                            }}
-                          />
-                        </label>
-                        <label className="idadat__saff">
-                          <span className="idadat__tasmiya">
-                            {t('idadat.muzawwidun.hadd', lugha)}
-                          </span>
-                          <input
-                            className="idadat__haql idadat__haql--raqm mono-ltr"
-                            type="number"
-                            dir="ltr"
-                            min="1"
-                            value={String(muzawwid.hadd_talabat)}
-                            onChange={(hadath) => {
-                              haddidMuzawwid(fihris, {
-                                hadd_talabat: raqmAw(hadath.target.value, muzawwid.hadd_talabat),
-                              });
-                            }}
-                          />
-                        </label>
-                        <label className="idadat__saff">
-                          <span className="idadat__tasmiya">
-                            {t('idadat.muzawwidun.mizaniya', lugha)}
-                          </span>
-                          <input
-                            className="idadat__haql idadat__haql--raqm mono-ltr"
-                            type="number"
-                            dir="ltr"
-                            min="0"
-                            step="0.5"
-                            value={muzawwid.mizaniya === null ? '' : String(muzawwid.mizaniya)}
-                            onChange={(hadath) => {
-                              const khaam = hadath.target.value;
-                              if (khaam.trim() === '') {
-                                haddidMuzawwid(fihris, { mizaniya: null });
-                                return;
-                              }
-                              const qeema = Number(khaam);
-                              if (Number.isFinite(qeema)) {
-                                haddidMuzawwid(fihris, { mizaniya: qeema });
-                              }
-                            }}
-                          />
-                        </label>
-                        <label className="idadat__ikhtiyar">
-                          <input
-                            type="checkbox"
-                            checked={muzawwid.mufaal}
-                            onChange={(hadath) => {
-                              haddidMuzawwid(fihris, { mufaal: hadath.target.checked });
-                            }}
-                          />
-                          {t('idadat.muzawwidun.mufaal', lugha)}
-                        </label>
-                        <label className="idadat__ikhtiyar">
-                          <input
-                            type="radio"
-                            name="idadat-muzawwid-iftiradi"
-                            checked={
-                              muzawwid.muarrif !== '' &&
-                              nuskha.muzawwidun.iftiradi === muzawwid.muarrif
-                            }
-                            onChange={() => {
-                              if (muzawwid.muarrif !== '') {
-                                haddid((hali) => ({
-                                  ...hali,
-                                  muzawwidun: {
-                                    ...hali.muzawwidun,
-                                    iftiradi: muzawwid.muarrif,
-                                  },
-                                }));
-                              }
-                            }}
-                          />
-                          {t('idadat.muzawwidun.iftiradi', lugha)}
-                        </label>
-                        <KutlatItimad muzawwid={muzawwid.muarrif} lugha={lugha} />
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="idadat__saff-afal">
-                    <button type="button" className="zir" onClick={adifMuzawwid}>
-                      {t('idadat.muzawwidun.adif', lugha)}
-                    </button>
-                  </div>
-                </>
-              )}
+                  follows an enable, a rename and a removal without a save. There
+                  is no empty state: the built-in free provider is always the last
+                  row, so a list with nothing of the user's own is a list of one,
+                  and the sentence above it says that the one is doing the work. */}
+              <Zuhur
+                maftuh={athar !== null}
+                asl="fawq"
+                className="idadat__mudakhkhal idadat__athar"
+                role="status"
+              >
+                {athar === null ? null : t(athar, lugha)}
+              </Zuhur>
+              <ul className="idadat__muzawwidun">
+                {nuskha.muzawwidun.qaima.map((muzawwid, fihris) => (
+                  <li key={String(fihris)} className="idadat__muzawwid">
+                    <div className="idadat__muzawwid-raas">
+                      <h3 className="idadat__muzawwid-unwan">
+                        {t(MIFTAH_NAW[muzawwid.naw], lugha)}
+                      </h3>
+                      {muzawwid.muarrif.trim() === '' ? null : (
+                        <span className="idadat__muzawwid-muarrif mono-ltr">
+                          {muzawwid.muarrif}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="zir idadat__muzawwid-izala"
+                        onClick={() => {
+                          ihdhifMuzawwid(fihris);
+                        }}
+                      >
+                        {t('idadat.muzawwidun.izala', lugha)}
+                      </button>
+                    </div>
+                    <label className="idadat__saff">
+                      <span className="idadat__tasmiya">
+                        {t('idadat.muzawwidun.muarrif', lugha)}
+                      </span>
+                      <input
+                        className="idadat__haql mono-ltr"
+                        dir="ltr"
+                        value={muzawwid.muarrif}
+                        onChange={(hadath) => {
+                          haddidMuarrifMuzawwid(fihris, hadath.target.value);
+                        }}
+                      />
+                    </label>
+                    <label className="idadat__saff">
+                      <span className="idadat__tasmiya">
+                        {t('idadat.muzawwidun.naw', lugha)}
+                      </span>
+                      <select
+                        className="idadat__haql"
+                        value={muzawwid.naw}
+                        onChange={(hadath) => {
+                          haddidMuzawwid(fihris, {
+                            naw: hadath.target.value as NawMuzawwid,
+                          });
+                        }}
+                      >
+                        {ANWA_MUZAWWID.map((naw) => (
+                          <option key={naw} value={naw}>
+                            {t(MIFTAH_NAW[naw], lugha)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="idadat__saff">
+                      <span className="idadat__tasmiya">
+                        {t('idadat.muzawwidun.namudhaj', lugha)}
+                      </span>
+                      <input
+                        className="idadat__haql mono-ltr"
+                        dir="ltr"
+                        value={muzawwid.namudhaj}
+                        onChange={(hadath) => {
+                          haddidMuzawwid(fihris, { namudhaj: hadath.target.value });
+                        }}
+                      />
+                    </label>
+                    <label className="idadat__saff">
+                      <span className="idadat__tasmiya">
+                        {t('idadat.muzawwidun.asas', lugha)}
+                      </span>
+                      <input
+                        className="idadat__haql mono-ltr"
+                        dir="ltr"
+                        value={muzawwid.asas ?? ''}
+                        onChange={(hadath) => {
+                          const qeema = hadath.target.value;
+                          haddidMuzawwid(fihris, { asas: qeema === '' ? null : qeema });
+                        }}
+                      />
+                    </label>
+                    <label className="idadat__saff">
+                      <span className="idadat__tasmiya">
+                        {t('idadat.muzawwidun.hadd', lugha)}
+                      </span>
+                      <input
+                        className="idadat__haql idadat__haql--raqm mono-ltr"
+                        type="number"
+                        dir="ltr"
+                        min="1"
+                        value={String(muzawwid.hadd_talabat)}
+                        onChange={(hadath) => {
+                          haddidMuzawwid(fihris, {
+                            hadd_talabat: raqmAw(hadath.target.value, muzawwid.hadd_talabat),
+                          });
+                        }}
+                      />
+                    </label>
+                    <label className="idadat__saff">
+                      <span className="idadat__tasmiya">
+                        {t('idadat.muzawwidun.mizaniya', lugha)}
+                      </span>
+                      <input
+                        className="idadat__haql idadat__haql--raqm mono-ltr"
+                        type="number"
+                        dir="ltr"
+                        min="0"
+                        step="0.5"
+                        value={muzawwid.mizaniya === null ? '' : String(muzawwid.mizaniya)}
+                        onChange={(hadath) => {
+                          const khaam = hadath.target.value;
+                          if (khaam.trim() === '') {
+                            haddidMuzawwid(fihris, { mizaniya: null });
+                            return;
+                          }
+                          const qeema = Number(khaam);
+                          if (Number.isFinite(qeema)) {
+                            haddidMuzawwid(fihris, { mizaniya: qeema });
+                          }
+                        }}
+                      />
+                    </label>
+                    <label className="idadat__ikhtiyar">
+                      <input
+                        type="checkbox"
+                        checked={muzawwid.mufaal}
+                        onChange={(hadath) => {
+                          haddidMuzawwid(fihris, { mufaal: hadath.target.checked });
+                        }}
+                      />
+                      {t('idadat.muzawwidun.mufaal', lugha)}
+                    </label>
+                    <label className="idadat__ikhtiyar">
+                      <input
+                        type="radio"
+                        name="idadat-muzawwid-iftiradi"
+                        checked={
+                          muzawwid.muarrif !== '' &&
+                          nuskha.muzawwidun.iftiradi === muzawwid.muarrif
+                        }
+                        onChange={() => {
+                          if (muzawwid.muarrif !== '') {
+                            haddid((hali) => ({
+                              ...hali,
+                              muzawwidun: {
+                                ...hali.muzawwidun,
+                                iftiradi: muzawwid.muarrif,
+                              },
+                            }));
+                          }
+                        }}
+                      />
+                      {t('idadat.muzawwidun.iftiradi', lugha)}
+                    </label>
+                    <KutlatItimad muzawwid={muzawwid.muarrif} lugha={lugha} />
+                  </li>
+                ))}
+                <MuzawwidMudmaj
+                  lugha={lugha}
+                  yustakhdam={halatQaima === 'faragh' || halatQaima === 'muattala'}
+                />
+              </ul>
+              <div className="idadat__saff-afal">
+                <button type="button" className="zir" onClick={adifMuzawwid}>
+                  {t('idadat.muzawwidun.adif', lugha)}
+                </button>
+              </div>
             </QismIdadat>
 
             <QismIdadat

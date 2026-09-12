@@ -175,6 +175,39 @@ pub enum KhataTarjama {
         thawani: Option<u64>,
     },
 
+    /// A string is longer than the free web service takes in one request.
+    ///
+    /// Fails one string. The free endpoint is a `GET` whose text rides in the
+    /// query string, and the ceiling is the endpoint's, not this crate's: a
+    /// longer string is refused before it is sent, so it costs no round trip
+    /// and does not disturb the request spacing the other strings depend on.
+    #[error("{muzawwid} takes at most {saqf} characters per request; this string is {ahruf}")]
+    MajjaniTawil {
+        /// Which provider.
+        muzawwid: String,
+        /// The string's length, in characters.
+        ahruf: usize,
+        /// The per-request ceiling, in characters.
+        saqf: usize,
+    },
+
+    /// A credential-free service is refusing this machine's requests.
+    ///
+    /// Stops the run. A `403`, a block page served where JSON was expected, or
+    /// rate limiting that outlasted every retry all mean the same thing for a
+    /// service with no account behind it: it has flagged this client, and the
+    /// next string would meet the same wall. Distinct from
+    /// [`KhataTarjama::MuzawwidGhayrMutah`] because the remedy differs — there
+    /// is no credential to fix and no status page to wait on, only time, or a
+    /// keyed provider.
+    #[error("the free service {muzawwid} is refusing this machine's requests: {sabab}")]
+    MajjaniMahjub {
+        /// Which provider.
+        muzawwid: String,
+        /// What the wire said.
+        sabab: String,
+    },
+
     // --- runs ---------------------------------------------------------------
     /// The run reached the cost ceiling the user set.
     ///
@@ -231,6 +264,7 @@ impl KhataTarjama {
             self,
             Self::BilaItimad { .. }
                 | Self::HaddMuadal { .. }
+                | Self::MajjaniMahjub { .. }
                 | Self::SaqfTakalif { .. }
                 | Self::MuzawwidGhayrMutah { .. }
                 | Self::MasradTalif { .. }
@@ -281,6 +315,8 @@ impl Tafsir for KhataTarjama {
                     Self::MasradTalif { .. } => 13,
                     Self::DhakiraMughlaqa { .. } => 14,
                     Self::KhataMalaf { .. } => 15,
+                    Self::MajjaniTawil { .. } => 16,
+                    Self::MajjaniMahjub { .. } => 17,
                 },
         )
     }
@@ -297,6 +333,7 @@ impl Tafsir for KhataTarjama {
             | Self::RamzTalif { .. }
             | Self::RumuzKathira { .. }
             | Self::MudkhalMarfud { .. }
+            | Self::MajjaniTawil { .. }
             | Self::RaddGhayrMufassal { .. } => Khutura::Tanbeeh,
 
             // The user set a ceiling and it was honoured. Information, not a
@@ -309,6 +346,7 @@ impl Tafsir for KhataTarjama {
             Self::NitaqKharij { .. }
             | Self::MuzawwidGhayrMutah { .. }
             | Self::HaddMuadal { .. }
+            | Self::MajjaniMahjub { .. }
             | Self::MasradTalif { .. }
             | Self::DhakiraMughlaqa { .. }
             | Self::KhataMalaf { .. } => Khutura::Khatar,
@@ -357,6 +395,20 @@ impl Tafsir for KhataTarjama {
             Self::HaddMuadal { muzawwid, .. } => {
                 format!("تجاوزت الطلبات حدّ خدمة ({muzawwid})، ولم تنفع إعادة المحاولة.")
             },
+            Self::MajjaniTawil {
+                muzawwid,
+                ahruf,
+                saqf,
+            } => format!(
+                "هذه العبارة {ahruf} حرفًا، وخدمة الترجمة المجانية ({muzawwid}) لا تقبل أكثر من \
+                 {saqf} حرفًا في الطلب الواحد. تُركت بلا ترجمة؛ مزوّد بمفتاح تضيفه في الإعدادات \
+                 ← المزوّدون يترجم العبارات الأطول."
+            ),
+            Self::MajjaniMahjub { muzawwid, sabab } => format!(
+                "خدمة الترجمة المجانية ({muzawwid}) ترفض طلبات هذا الجهاز الآن: {sabab}. هي خدمة \
+                 غير رسمية بحدود غير معلنة، وقد يدوم الحجب دقائق أو ساعات. ما تُرجم محفوظ؛ انتظر \
+                 ثم أعد المحاولة، أو أضف مزوّدًا بمفتاح في الإعدادات ← المزوّدون فيتقدّم عليها."
+            ),
             Self::SaqfTakalif { .. } => {
                 "بلغت الجولة سقف التكلفة الذي حدّدته وتوقّفت عنده. ما تُرجم محفوظ، ويمكن \
                  المتابعة برفع السقف."
@@ -369,7 +421,26 @@ impl Tafsir for KhataTarjama {
     }
 
     fn injilizi(&self) -> String {
-        self.to_string()
+        match self {
+            // The two free-service refusals say where the better provider is
+            // chosen; `Display` stays the terse form the log wants.
+            Self::MajjaniTawil {
+                muzawwid,
+                ahruf,
+                saqf,
+            } => format!(
+                "This string is {ahruf} characters and the free service ({muzawwid}) takes at \
+                 most {saqf} per request. It is left untranslated; a keyed provider added in \
+                 Settings, under Providers, handles longer strings."
+            ),
+            Self::MajjaniMahjub { muzawwid, sabab } => format!(
+                "The free service ({muzawwid}) is refusing this machine's requests: {sabab}. It \
+                 is unofficial, with undocumented limits, and a block can last minutes or \
+                 hours. Everything translated so far is kept; wait and retry, or add a keyed \
+                 provider in Settings, under Providers, which takes precedence."
+            ),
+            _ => self.to_string(),
+        }
     }
 
     fn khutwa(&self) -> Khutwa {
@@ -387,7 +458,12 @@ impl Tafsir for KhataTarjama {
             | Self::MuzawwidGhayrMutah { .. }
             | Self::HaddMuadal { .. } => Khutwa::AadaMuhawala,
 
-            Self::BilaItimad { .. } | Self::SaqfTakalif { .. } => Khutwa::FathIdadat {
+            // The free service has no key to fix and no account to top up; the
+            // one thing a user can change is which provider does the work.
+            Self::BilaItimad { .. }
+            | Self::SaqfTakalif { .. }
+            | Self::MajjaniTawil { .. }
+            | Self::MajjaniMahjub { .. } => Khutwa::FathIdadat {
                 qism: taarib_usus::khata::QismIdadat::Muzawwidun,
             },
 
@@ -442,9 +518,19 @@ impl Tafsir for KhataTarjama {
                 daa("madaa", QeemaSiyaq::Hajm(u64::from(*madaa)));
             },
             Self::MudkhalMarfud { muzawwid, sabab }
-            | Self::MuzawwidGhayrMutah { muzawwid, sabab } => {
+            | Self::MuzawwidGhayrMutah { muzawwid, sabab }
+            | Self::MajjaniMahjub { muzawwid, sabab } => {
                 daa("muzawwid", QeemaSiyaq::Nass(muzawwid.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
+            },
+            Self::MajjaniTawil {
+                muzawwid,
+                ahruf,
+                saqf,
+            } => {
+                daa("muzawwid", QeemaSiyaq::Nass(muzawwid.clone()));
+                daa("ahruf", QeemaSiyaq::Hajm(tul_u64(*ahruf)));
+                daa("saqf", QeemaSiyaq::Hajm(tul_u64(*saqf)));
             },
             Self::RaddGhayrMufassal { muzawwid, radd } => {
                 daa("muzawwid", QeemaSiyaq::Nass(muzawwid.clone()));

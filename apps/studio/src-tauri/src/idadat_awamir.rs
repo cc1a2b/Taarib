@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use taarib_saff::khatt::MawridKhatt;
 use taarib_tarjama::muzawwidun::Itimad;
-use taarib_usus::idadat::{Idadat, MakhzanIdadat, NawMuzawwid, Sima};
+use taarib_usus::idadat::{Idadat, MUARRIF_GOOGLE_MAJJANI, MakhzanIdadat, NawMuzawwid, Sima};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
@@ -47,6 +47,18 @@ fn tahaqqaq_idadat(idadat: &Idadat) -> Natija<()> {
         if !muarrifat.insert(tarif.muarrif.as_str()) {
             return Err(Khata::from(KhataIdadatAmr::MuzawwidMukarrar {
                 muarrif: tarif.muarrif.clone(),
+            }));
+        }
+        // The built-in free provider is not in this list and reports itself
+        // under this name; a row wearing it would make "which provider is
+        // about to be used" ambiguous on the one screen that says so.
+        if tarif.muarrif == MUARRIF_GOOGLE_MAJJANI {
+            return Err(Khata::from(KhataIdadatAmr::QeematGhayrSaliha {
+                haql: "muzawwidun.qaima.muarrif",
+                sabab: format!(
+                    "{MUARRIF_GOOGLE_MAJJANI} is the built-in free provider's own identifier \
+                     and is reserved"
+                ),
             }));
         }
         // Only for an enabled one. A half-filled entry that is switched off is a

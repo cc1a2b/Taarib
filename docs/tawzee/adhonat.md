@@ -18,6 +18,20 @@ shell, http or dialog plugin permission is held: every one of those goes
 through a Taarib command, which is not governed by that file at all and
 validates its paths against `taarib_usus::masarat` before touching the machine.
 
+One plugin permission is held: `opener:allow-open-url`, scoped to `https://**`
+and nothing else, for `tauri-plugin-opener`. It exists for the game screen's
+community-translations panel, whose one control opens a maker's own page in
+the default browser. The frontend does not call the plugin's command; it calls
+`mujtama_awamir::iftah_rabt` (`apps/studio/src-tauri/src/mujtama_awamir.rs`),
+which refuses anything that is not an `https` address of at most 2048
+characters, free of whitespace, control characters and credentials, on a host
+the cached community index links to or one of the known mod platforms — and
+only then hands the address to the plugin from Rust. The scope in the
+capability is the second fence behind that check: were the plugin's own
+command ever invoked from the webview, nothing but an `https` page could open.
+No `opener:allow-open-path` and no `opener:allow-reveal-item-in-dir` is held,
+so the plugin can open no file and reveal no directory.
+
 `core:webview:allow-internal-toggle-devtools` remains listed because it is a
 member of `core:webview:default` and cannot be withdrawn from a capability at
 tauri 2.11.5. The gate that actually matters is the cargo feature: the

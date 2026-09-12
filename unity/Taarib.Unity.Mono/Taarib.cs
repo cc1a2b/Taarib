@@ -205,8 +205,10 @@ namespace Taarib.Unity.Mono
     /// The BepInEx plugin: the Mono half of the Unity takeover.
     /// </summary>
     /// <remarks>
-    /// One instance, created by BepInEx. Everything it owns is disposed in
-    /// <see cref="OnDestroy"/> in the reverse order it was built.
+    /// One instance, created by BepInEx. Everything it owns is disposed by
+    /// <see cref="Fakkik"/> in the reverse order it was built, on a quit or a
+    /// failure — not when the game destroys the host object, which R.E.P.O.
+    /// does on its first scene load.
     /// </remarks>
     [BepInPlugin(Muarrif, IsmMaruud, Isdar)]
     public sealed class MulhaqTaarib : BaseUnityPlugin
@@ -218,7 +220,7 @@ namespace Taarib.Unity.Mono
         public const string IsmMaruud = "Taarib";
 
         /// <summary>The plugin's version.</summary>
-        public const string Isdar = "0.1.0";
+        public const string Isdar = "1.0.1";
 
         /// <summary>The folder, beside the plugin, a hand-assembled layout may use.</summary>
         public const string DalilTaarib = "Taarib";
@@ -291,6 +293,12 @@ namespace Taarib.Unity.Mono
                 // that stopped every Unity game — was computed and dropped.
                 Rabt.Sijill = sabab => Logger.LogWarning(sabab);
                 IqraIdadat();
+                // The miss line the setting has always described. Each string
+                // the game draws that the patch has no entry for is named once,
+                // so a patch that covers less than expected shows exactly what
+                // it missed instead of a screen that stays in English for no
+                // stated reason.
+                Rabt.SijillFawt = tashkhis.Value ? satr => Logger.LogInfo(satr) : null;
                 if (!mufaal.Value)
                 {
                     Halat = HalatTaarib.Muattal;
@@ -375,8 +383,47 @@ namespace Taarib.Unity.Mono
             }
         }
 
-        /// <summary>Tears the takeover down. Never throws.</summary>
+        /// <summary>
+        /// Set by <see cref="OnApplicationQuit"/>, which Unity raises before
+        /// any <see cref="OnDestroy"/> of a quit, so the teardown below can
+        /// tell the end of the process from the loss of its host object.
+        /// </summary>
+        private bool yukhrij;
+
+        private void OnApplicationQuit()
+        {
+            yukhrij = true;
+        }
+
+        /// <summary>
+        /// The host object's death is not the takeover's.
+        /// </summary>
+        /// <remarks>
+        /// R.E.P.O. destroys BepInEx's manager object at frame 0, on its first
+        /// scene load, and every plugin component with it. The takeover does
+        /// not live on that component: the Harmony prefixes, the atlas and the
+        /// mapped patch are static and keep working after it is gone, and the
+        /// only thing tearing them down here achieved was a game that loaded
+        /// the patch, said so, and then drew every string in English. So the
+        /// teardown runs on a quit — and on a failure, through
+        /// <see cref="Ista"/> — and a host destroyed mid-game is logged and
+        /// otherwise ignored.
+        /// </remarks>
         private void OnDestroy()
+        {
+            if (!yukhrij && (Halat == HalatTaarib.Amil || Halat == HalatTaarib.Iltiqat))
+            {
+                Logger.LogInfo(
+                    "دُمّر كائن المضيف في الإطار " + Time.frameCount
+                    + " وبقي التعريب يعمل. | The host object was destroyed at frame "
+                    + Time.frameCount + "; the takeover stays up.");
+                return;
+            }
+            Fakkik();
+        }
+
+        /// <summary>Tears the takeover down. Never throws.</summary>
+        private void Fakkik()
         {
             for (int i = anzima.Count - 1; i >= 0; i--)
             {
@@ -786,7 +833,7 @@ namespace Taarib.Unity.Mono
             // and an atlas for a game it is not translating.
             try
             {
-                OnDestroy();
+                Fakkik();
             }
             catch (Exception thani)
             {

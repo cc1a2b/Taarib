@@ -415,16 +415,60 @@ pub enum NawMuzawwid {
     MicrosoftTarjama,
     /// A local model behind an Ollama-compatible endpoint.
     Mahalli,
+    /// Google Translate's free web endpoint — the one the browser widget and
+    /// every Unity translation mod use. No credential, no cost, and unofficial:
+    /// sentence-level quality and undocumented rate limits. Built into every
+    /// installation as the provider of last resort, see
+    /// [`IdadatMuzawwid::google_majjani`]; it can also be added to the list by
+    /// hand, which is how somebody makes it win over a keyed provider they
+    /// would rather keep switched on.
+    GoogleMajjani,
+}
+
+/// The identifier the built-in free provider reports itself under.
+///
+/// Reserved: no entry in the user's list may carry it. The election reports the
+/// identifier of whatever it elected, and two providers under one name would
+/// make that report ambiguous on the one screen where it matters — the one
+/// that says which provider is about to be used.
+pub const MUARRIF_GOOGLE_MAJJANI: &str = "google-majjani";
+
+/// The model name the built-in free provider records as provenance: the
+/// endpoint's own client identifier, which is the only "model" it has.
+pub const NAMUDHAJ_GOOGLE_MAJJANI: &str = "gtx";
+
+impl IdadatMuzawwid {
+    /// The built-in free provider, as the entry the election falls back to.
+    ///
+    /// Not stored in the list and never written to a settings file: it exists
+    /// in every installation by construction, so nothing can delete it, and a
+    /// settings file written by a build from before it existed elects it exactly
+    /// as a fresh installation does. `hadd_talabat` is zero — the provider's own
+    /// request spacing applies, and it is not a number the user tunes — and
+    /// `mizaniya` is [`None`] because there is nothing to cap.
+    #[must_use]
+    pub fn google_majjani() -> Self {
+        Self {
+            muarrif: MUARRIF_GOOGLE_MAJJANI.to_owned(),
+            naw: NawMuzawwid::GoogleMajjani,
+            namudhaj: NAMUDHAJ_GOOGLE_MAJJANI.to_owned(),
+            asas: None,
+            hisab_miftah: None,
+            mufaal: true,
+            hadd_talabat: 0,
+            mizaniya: None,
+        }
+    }
 }
 
 /// The configured providers.
 ///
 /// The default is an empty list with no elected provider, and that is the state
 /// a fresh installation is in. It is a real state rather than a missing one:
-/// installing a published patch never reaches a provider, so most of the product
-/// works exactly as it does with ten of them configured, and what does not work
-/// is new machine translation. [`Self::hala`] is where that distinction is
-/// stated, once, so that no surface has to decide it again.
+/// installing a published patch never reaches a provider, and new machine
+/// translation goes through the built-in free provider until the user adds one
+/// of their own — see [`Self::muntakhab_aw_majjani`]. [`Self::hala`] is where
+/// the list's state is stated, once, so that no surface has to decide it again.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "wajiha", derive(specta::Type))]
 #[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
@@ -457,6 +501,23 @@ impl IdadatMuzawwidin {
             .or_else(|| self.qaima.iter().find(|tarif| tarif.mufaal))
     }
 
+    /// The provider a new translation actually uses: the elected one, or the
+    /// built-in free one when nothing is elected.
+    ///
+    /// The second half of the election rule, written beside the first so that
+    /// no caller composes its own. A keyed or local provider the user set up
+    /// and switched on always wins; the built-in one stands in only when the
+    /// list elects nothing — empty, or every entry off — which is why a fresh
+    /// installation translates and why adding a provider is a strict upgrade
+    /// rather than a switch. Owned rather than borrowed because the fallback
+    /// is not in the list to borrow from.
+    #[must_use]
+    pub fn muntakhab_aw_majjani(&self) -> IdadatMuzawwid {
+        self.muntakhab()
+            .cloned()
+            .unwrap_or_else(IdadatMuzawwid::google_majjani)
+    }
+
     /// What this list amounts to on this machine.
     #[must_use]
     pub fn hala(&self) -> HalatMuzawwidin {
@@ -474,25 +535,33 @@ impl IdadatMuzawwidin {
     }
 }
 
-/// What the configured provider list amounts to, and therefore what the product
-/// can offer right now.
+/// What the configured provider list amounts to, and therefore which provider
+/// a new translation goes through.
 ///
-/// Four states rather than a boolean, because "no provider" has two causes with
-/// two different remedies and the product used to give both of them the same
-/// sentence — telling somebody who has a provider switched off to go and add
-/// one. The fourth is not a refusal at all: it is a preference that is quietly
-/// not being honoured, which matters because the provider being used instead of
-/// the chosen one is the provider being charged for.
+/// Four states rather than a boolean, because "nothing of your own is elected"
+/// has two causes with two different remedies and the product used to give
+/// both of them the same sentence — telling somebody who has a provider
+/// switched off to go and add one. The fourth is not a refusal at all: it is a
+/// preference that is quietly not being honoured, which matters because the
+/// provider being used instead of the chosen one is the provider being charged
+/// for.
 ///
-/// Every sentence states both halves of the truth. An empty list does not stop
-/// the product working; it stops one part of it working, and a message that says
-/// only "no provider" reads as "nothing works" to somebody who came here to
-/// install a patch that needs none.
+/// None of the four withholds translation. The first two used to, and the
+/// sentence a user read then was a dead end: a fresh installation could not
+/// translate one string until a paid account existed somewhere. The built-in
+/// free provider — [`IdadatMuzawwid::google_majjani`] — now stands in for
+/// exactly those two states, so their sentences say which service is doing the
+/// work, what it is worth, and where a better one is chosen. Every sentence
+/// still states the other half of the truth as well: installing a published
+/// patch reaches no provider, and a message that reads as "no provider" reads
+/// as "nothing works" to somebody who came here to install one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum HalatMuzawwidin {
-    /// Not one provider has been added. The state a fresh installation is in.
+    /// Not one provider has been added. The state a fresh installation is in,
+    /// and the built-in free provider does the translating.
     Faragh,
-    /// Providers are configured and every one of them is switched off.
+    /// Providers are configured and every one of them is switched off, so the
+    /// built-in free provider does the translating.
     Muattala,
     /// A provider is elected, and it is the one the default names — or the only
     /// enabled one, with no default set.
@@ -503,28 +572,22 @@ pub enum HalatMuzawwidin {
 }
 
 impl HalatMuzawwidin {
-    /// Whether new machine translation can start at all.
-    ///
-    /// False does not mean the product is unusable. Installing a published patch
-    /// reaches no provider and is unaffected by every state here.
-    #[must_use]
-    pub const fn yutarjim(self) -> bool {
-        matches!(self, Self::Mukhtar | Self::Badeel)
-    }
-
     /// The sentence a user reads, in Arabic.
     #[must_use]
     pub const fn arabi(self) -> &'static str {
         match self {
             Self::Faragh => {
-                "لا مزوّد ترجمة آلية مضبوط على هذا الجهاز. تثبيت الرقع المنشورة يعمل كما هو \
-                 — فهي مترجَمة سلفًا ولا تمرّ بمزوّد — أمّا ترجمة نصّ جديد فلا تبدأ حتى تضيف \
-                 مزوّدًا في الإعدادات ← المزوّدون."
+                "لا مزوّد ترجمة من إعدادك على هذا الجهاز، فتمرّ ترجمة النصّ الجديد عبر خدمة \
+                 ترجمة Google المجانية المضمّنة: غير رسمية، بجودة الجملة الواحدة، بحدود طلبات \
+                 غير معلنة، ولا تكلّف شيئًا. مزوّد بمفتاح — أو نموذج محلي — تضيفه في الإعدادات \
+                 ← المزوّدون يتقدّم عليها متى فُعّل. تثبيت الرقع المنشورة يعمل كما هو ولا يمرّ \
+                 بمزوّد أصلًا."
             },
             Self::Muattala => {
-                "كلّ المزوّدين المضبوطين على هذا الجهاز معطَّلون. تثبيت الرقع المنشورة يعمل \
-                 كما هو، أمّا ترجمة نصّ جديد فلا تبدأ حتى تفعّل أحدهم في الإعدادات ← \
-                 المزوّدون."
+                "كلّ المزوّدين المضبوطين على هذا الجهاز معطَّلون، فتمرّ ترجمة النصّ الجديد عبر \
+                 خدمة ترجمة Google المجانية المضمّنة — غير رسمية، بجودة الجملة الواحدة، بحدود \
+                 غير معلنة — حتى تفعّل أحدهم في الإعدادات ← المزوّدون. تثبيت الرقع المنشورة \
+                 يعمل كما هو."
             },
             Self::Mukhtar => "المزوّد الافتراضي مفعّل، وهو الذي تستخدمه أيّ ترجمة جديدة.",
             Self::Badeel => {
@@ -540,15 +603,19 @@ impl HalatMuzawwidin {
     pub const fn injilizi(self) -> &'static str {
         match self {
             Self::Faragh => {
-                "No machine-translation provider is configured on this machine. Installing \
-                 published patches still works — they are already translated and never reach \
-                 a provider — but translating new text does not start until you add one in \
-                 Settings, under Providers."
+                "No provider of your own is configured on this machine, so new text is \
+                 translated through the built-in free Google Translate web service: \
+                 unofficial, sentence-level quality, undocumented rate limits, and no cost. A \
+                 keyed provider — or a local model — added in Settings, under Providers, takes \
+                 precedence once enabled. Installing published patches still works and never \
+                 reaches a provider at all."
             },
             Self::Muattala => {
-                "Every provider configured on this machine is switched off. Installing \
-                 published patches still works, but translating new text does not start \
-                 until you enable one in Settings, under Providers."
+                "Every provider configured on this machine is switched off, so new text is \
+                 translated through the built-in free Google Translate web service — \
+                 unofficial, sentence-level quality, undocumented rate limits — until you \
+                 enable one in Settings, under Providers. Installing published patches still \
+                 works."
             },
             Self::Mukhtar => {
                 "The default provider is enabled, and it is the one any new translation uses."
@@ -1066,7 +1133,10 @@ khata_min!(KhataIdadat);
 
 #[cfg(test)]
 mod ikhtibarat {
-    use super::{HalatMuzawwidin, Idadat, IdadatMuzawwid, IdadatMuzawwidin, NawMuzawwid};
+    use super::{
+        HalatMuzawwidin, Idadat, IdadatMuzawwid, IdadatMuzawwidin, MUARRIF_GOOGLE_MAJJANI,
+        NAMUDHAJ_GOOGLE_MAJJANI, NawMuzawwid,
+    };
 
     fn tarif(muarrif: &str, mufaal: bool) -> IdadatMuzawwid {
         IdadatMuzawwid {
@@ -1081,7 +1151,8 @@ mod ikhtibarat {
         }
     }
 
-    /// A fresh installation has no provider, and that is a state with a name.
+    /// A fresh installation has no provider of its own, and that is a state
+    /// with a name — and it still translates, through the built-in free one.
     #[test]
     fn al_tarkeeb_al_jadeed_faragh() {
         let idadat = Idadat::default();
@@ -1089,6 +1160,40 @@ mod ikhtibarat {
         assert_eq!(idadat.muzawwidun.iftiradi, None);
         assert_eq!(idadat.muzawwidun.hala(), HalatMuzawwidin::Faragh);
         assert_eq!(idadat.muzawwidun.muntakhab(), None);
+        let badeel = idadat.muzawwidun.muntakhab_aw_majjani();
+        assert_eq!(badeel.naw, NawMuzawwid::GoogleMajjani);
+        assert_eq!(badeel.muarrif, MUARRIF_GOOGLE_MAJJANI);
+        assert_eq!(badeel.namudhaj, NAMUDHAJ_GOOGLE_MAJJANI);
+        assert!(badeel.mufaal);
+        assert_eq!(badeel.mizaniya, None, "there is nothing to cap");
+        assert_eq!(badeel.hisab_miftah, None, "and no key to look up");
+    }
+
+    /// The built-in provider stands in only when the list elects nothing: a
+    /// provider the user set up and switched on always wins over it, and a
+    /// list of switched-off providers falls back to it exactly as an empty one
+    /// does.
+    #[test]
+    fn al_majjani_yaqif_makan_al_ghaib_faqat() {
+        let mufaal = IdadatMuzawwidin {
+            qaima: vec![tarif("ollama", true)],
+            iftiradi: None,
+        };
+        assert_eq!(mufaal.muntakhab_aw_majjani().muarrif, "ollama");
+
+        let muattal = IdadatMuzawwidin {
+            qaima: vec![tarif("ollama", false)],
+            iftiradi: Some("ollama".to_owned()),
+        };
+        assert_eq!(
+            muattal.muntakhab_aw_majjani().naw,
+            NawMuzawwid::GoogleMajjani
+        );
+        assert_eq!(
+            muattal.muntakhab_aw_majjani(),
+            IdadatMuzawwidin::default().muntakhab_aw_majjani(),
+            "off and absent fall back to the same entry"
+        );
     }
 
     /// Configured and switched off is not the same answer as nothing configured:
@@ -1155,10 +1260,12 @@ mod ikhtibarat {
         );
     }
 
-    /// Exactly the two states that stop new translation, and no others. Every
-    /// sentence carries both halves of the truth in both languages.
+    /// No state withholds translation any more, so the two that used to say
+    /// "does not start" now say which service is doing the work and where a
+    /// better one is chosen. Every sentence still carries the half a bare "no
+    /// provider" leaves out: installing a published patch reaches no provider.
     #[test]
-    fn al_halatan_allatan_tamnaan_al_tarjama() {
+    fn al_halatan_al_faraghiyatan_tusammiyan_al_majjani() {
         for hala in [
             HalatMuzawwidin::Faragh,
             HalatMuzawwidin::Muattala,
@@ -1169,18 +1276,17 @@ mod ikhtibarat {
             assert!(!hala.arabi().is_empty());
             assert!(!hala.injilizi().is_empty());
         }
-        assert!(!HalatMuzawwidin::Faragh.yutarjim());
-        assert!(!HalatMuzawwidin::Muattala.yutarjim());
-        assert!(HalatMuzawwidin::Mukhtar.yutarjim());
-        assert!(HalatMuzawwidin::Badeel.yutarjim());
-        // The half a bare "no provider configured" leaves out, and the half the
-        // reader came for: installing a published patch reaches no provider.
         for hala in [HalatMuzawwidin::Faragh, HalatMuzawwidin::Muattala] {
             assert!(
                 hala.injilizi()
                     .contains("Installing published patches still works")
             );
             assert!(hala.arabi().contains("تثبيت الرقع المنشورة يعمل"));
+            assert!(hala.injilizi().contains("free Google Translate"));
+            assert!(hala.injilizi().contains("Settings, under Providers"));
+            assert!(hala.arabi().contains("Google المجانية"));
+            assert!(hala.arabi().contains("الإعدادات ← المزوّدون"));
         }
+        assert!(!HalatMuzawwidin::Mukhtar.injilizi().contains("free"));
     }
 }

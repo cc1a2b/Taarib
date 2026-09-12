@@ -66,7 +66,11 @@ pub fn masar_khazina(mujallad_tabaqa: &Path, lugha: &str) -> PathBuf {
         .chars()
         .filter(|harf| harf.is_ascii_alphanumeric() || *harf == '-')
         .collect();
-    let ism = if ism.is_empty() { "asl".to_owned() } else { ism };
+    let ism = if ism.is_empty() {
+        "asl".to_owned()
+    } else {
+        ism
+    };
     mujallad_tabaqa
         .join(DALIL_KHAZINA)
         .join(format!("{}.jsonl", ism.to_ascii_lowercase()))
@@ -159,9 +163,10 @@ impl IhsaatKhazina {
     /// The sentence the panel and the log carry, in English.
     #[must_use]
     pub fn wasf(&self) -> String {
-        let nisba = self
-            .nisbat_isaba()
-            .map_or_else(|| "no lookups yet".to_owned(), |n| format!("{n:.0}% hit rate"));
+        let nisba = self.nisbat_isaba().map_or_else(
+            || "no lookups yet".to_owned(),
+            |n| format!("{n:.0}% hit rate"),
+        );
         let mut wasf = format!(
             "{} pair(s) on disk; {} hit(s), {} miss(es), {nisba}; {} written this session",
             self.adad, self.isabat, self.ikhfaqat, self.kutibat
@@ -300,7 +305,12 @@ impl DhakiraMalaf {
     /// The sentence the panel shows, in English.
     #[must_use]
     pub fn wasf(&self) -> String {
-        format!("{} ({}): {}", self.masar.display(), self.lugha, self.ihsaat().wasf())
+        format!(
+            "{} ({}): {}",
+            self.masar.display(),
+            self.lugha,
+            self.ihsaat().wasf()
+        )
     }
 
     /// The same sentence in Arabic.

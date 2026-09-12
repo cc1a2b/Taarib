@@ -345,6 +345,7 @@
    keeps a label legible over an arbitrary picture. */
 .bitaqa__wasm-lugha,
 .bitaqa__wasm-jahiziya,
+.bitaqa__wasm-mujtama,
 .bitaqa__wasm-muntaj {
   display: inline-flex;
   align-items: center;
@@ -391,6 +392,26 @@
 .bitaqa__wasm-jahiziya {
   color: var(--nass-2);
   border-inline-end: var(--samk-hadd-barz) solid var(--tanbeeh);
+}
+
+/* Other people's Arabic. The same kind of fact as the publisher's own Arabic,
+   so it shares the trailing edge with that mark and takes the trailing edge's
+   auto margin when it is the first mark there. The accent is the plate's own
+   hairline restated rather than the teal: teal on this card means Taarib goes
+   inside the game, and this work is neither Taarib's nor installed by it. The
+   label sits in `--nass-1` like the language mark's, not the readiness mark's
+   `--nass-2` — it is rare in a library, and good news when it appears. */
+.bitaqa__wasm-mujtama {
+  margin-inline-start: auto;
+  color: var(--nass-1);
+  border-inline-start: var(--samk-hadd-barz) solid var(--hadd-qawi);
+}
+
+/* Both trailing marks at once: the first takes the free space and the language
+   mark sits flush beside it, instead of the two splitting the run between them
+   and drifting into the middle of the picture. */
+.bitaqa__wasm-mujtama + .bitaqa__wasm-lugha {
+  margin-inline-start: 0;
 }
 
 /* --------------------------------------------------------------------------

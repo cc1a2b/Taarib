@@ -22,7 +22,7 @@ use taarib_mustalahat::luba::{
 use taarib_mustalahat::muharrik::{
     AilatMuharrik, Daleel, KhalfiyaBarmajiya, Muharrik, NawDaleel, TaqreerImkaniyat, WajihaRusum,
 };
-use taarib_usus::idadat::HalatMuzawwidin;
+use taarib_usus::idadat::Idadat;
 use taarib_usus::manassa::Mimariya;
 
 /// Every test returns this so that a fixture failure propagates with `?`.
@@ -574,76 +574,46 @@ fn sababa_lam_yajri_la_yatakarraran() {
     assert_eq!(adad, 1, "one cause reaches the screen, not both");
 }
 
-/// No provider configured blocks the automatic run and nothing else.
+/// A machine with no provider of its own is not blocked, and the retired
+/// blocker keeps its place in the order.
 ///
-/// The scope is the whole finding. A machine with no provider can still install
-/// a published patch — the patch is already translated and never reaches a
-/// provider — so a blocker that stopped everything would be a lie in the
-/// expensive direction, telling most users the product does not work for them.
-/// `NitaqMani::Tashghil` is what says that, and this pins it.
-///
-/// It also pins where the sentence comes from. Before this the automatic-run
-/// command composed its own, so that screen said it and the game screen, reading
-/// the same core, said nothing about the same machine.
+/// This used to pin the opposite: an empty provider list raised
+/// `NawMani::LaMuzawwid` against the automatic run. The settings crate's
+/// built-in free provider now stands in for an empty list, so a fresh
+/// installation's settings — the exact input a first-time user's machine hands
+/// this core — must raise nothing about providers, and the run must be as ready
+/// as the adapter makes it. The variant itself stays on the wire and in the
+/// order, scoped and ranked as it was, because surfaces match on it; what is
+/// pinned here is that nothing produces it.
 #[test]
-fn la_muzawwid_yamna_al_tashghil_wahdah() -> NatijatIkhtibar {
+fn la_muzawwid_lam_yaud_maniyan() {
     let huwiya = huwiya(367_520, "Hollow Knight", Vec::new());
     let taqreer = taqreer_min(
         muharrik(AilatMuharrik::Renpy, 99, vec![WajihaRusum::OpenGl]),
         &[],
     );
     let mut mudkhalat = mudkhalat(huwiya, HalatFahs::mafhusa(taqreer));
-    mudkhalat.mawqif.muzawwidun = Some(HalatMuzawwidin::Faragh);
+    let idadat = Idadat::default();
+    assert!(
+        idadat.muzawwidun.qaima.is_empty(),
+        "the fixture is a fresh installation's settings"
+    );
+    mudkhalat.mawqif = MawqifMustakhdim::min_idadat(&idadat, Vec::new());
     let aql = Aql::jadeed(mudkhalat);
 
-    let mani = aql
-        .mawani()
-        .into_iter()
-        .find(|mani| mani.qeema.naw == NawMani::LaMuzawwid)
-        .ok_or("an unconfigured provider list reaches the blocker list")?;
-    assert_eq!(
-        mani.qeema.nitaq(),
-        NitaqMani::Tashghil,
-        "it stops the automatic run and not a hand-installed patch"
-    );
-    assert!(!mani.qeema.nihai(), "and it is not a permanent fact");
-    assert!(
-        !aql.marfuda(),
-        "so the game itself is not refused for want of a provider"
-    );
-    assert!(
-        mani.qeema.injilizi.contains("published patches"),
-        "the sentence says what still works: {}",
-        mani.qeema.injilizi
-    );
-    assert!(mani.min(MasdarMarifa::Idadat));
-    Ok(())
-}
-
-/// A question nobody put is not a blocker.
-///
-/// `MawqifMustakhdim::default()` is a real input — `MudkhalatAql::ijma` uses it
-/// — so a default that asserted "no provider is configured" would put this
-/// blocker on every game assembled without the settings. That is the same
-/// mistake as reporting an un-run scan as a clean one, in a cheaper place.
-#[test]
-fn muzawwid_ghayr_masul_anhu_laysa_maniyan() {
-    let huwiya = huwiya(367_520, "Hollow Knight", Vec::new());
-    let taqreer = taqreer_min(
-        muharrik(AilatMuharrik::Renpy, 99, vec![WajihaRusum::OpenGl]),
-        &[],
-    );
-    let mudkhalat = mudkhalat(huwiya, HalatFahs::mafhusa(taqreer));
-    assert_eq!(
-        mudkhalat.mawqif.muzawwidun, None,
-        "the fixture leaves the question unasked, as `default` does"
-    );
-    let aql = Aql::jadeed(mudkhalat);
     assert!(
         !aql.mawani()
             .iter()
             .any(|mani| mani.qeema.naw == NawMani::LaMuzawwid),
-        "and an unasked question produces no blocker"
+        "an empty provider list raises no blocker: the built-in free provider translates"
+    );
+    assert!(!aql.marfuda());
+    assert_eq!(NawMani::LaMuzawwid.nitaq(), NitaqMani::Tashghil);
+    assert!(!NawMani::LaMuzawwid.nihai());
+    assert_eq!(
+        NawMani::KUL.last().copied(),
+        Some(NawMani::LaMuzawwid),
+        "retired, and still last in the one order"
     );
 }
 
@@ -842,7 +812,7 @@ fn unity_yanal_al_istibdal_wa_la_yasil_shay() -> NatijatIkhtibar {
     let huwiya = huwiya(945_360, "Among Us", Vec::new());
     let mut engine = muharrik(AilatMuharrik::Unity, 99, vec![WajihaRusum::OpenGl]);
     engine.khalfiya = KhalfiyaBarmajiya::Il2cpp;
-    let taqreer = taqreer_min(engine, &[]);
+    let taqreer = taqreer_min(engine.clone(), &[]);
     let aql = Aql::jadeed(mudkhalat(huwiya, HalatFahs::mafhusa(taqreer)));
 
     let waad = aql.waad();
@@ -858,9 +828,17 @@ fn unity_yanal_al_istibdal_wa_la_yasil_shay() -> NatijatIkhtibar {
         .naqs
         .as_ref()
         .ok_or("an unfinished tier names what is missing")?;
-    assert!(
-        naqs.injilizi
-            .contains("native library it calls into is not in this package"),
+    // Compared with the readiness table's own answer for this engine rather
+    // than with a phrase copied here. The quoted one — "native library it calls
+    // into is not in this package" — stopped being true when the release
+    // script's payload stage started producing that library, and a test holding
+    // a stale copy of a sentence fails for the one reason a reader cannot act
+    // on.
+    let jumla = taarib_muharrik::imkaniyat::jahiziya(&engine)
+        .1
+        .map_or_else(String::new, |hadd| hadd.injilizi);
+    assert_eq!(
+        naqs.injilizi, jumla,
         "the sentence is the probe's own: {}",
         naqs.injilizi
     );

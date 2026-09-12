@@ -422,13 +422,12 @@ pub fn muhtawa_khutut(
                 sabab: "a font name in the package is not a bare file name".to_owned(),
             });
         }
-        let masar = jid_khatt(jidhr_khutut, &khatt.ism).ok_or_else(|| {
-            KhataTathbeet::KhattMafqud {
+        let masar =
+            jid_khatt(jidhr_khutut, &khatt.ism).ok_or_else(|| KhataTathbeet::KhattMafqud {
                 ism: khatt.ism.clone(),
                 jidhr: jidhr_khutut.to_path_buf(),
                 sabab: "no file of that name is in the store".to_owned(),
-            }
-        })?;
+            })?;
         let bayt = std::fs::read(&masar).map_err(|sabab| KhataTathbeet::KhattMafqud {
             ism: khatt.ism.clone(),
             jidhr: jidhr_khutut.to_path_buf(),

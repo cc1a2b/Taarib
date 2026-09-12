@@ -132,6 +132,15 @@ export interface SijillLuba {
    * game nothing will change exactly like a game that will be translated whole.
    */
   readonly jahiziya: JahiziyaTashghil | null;
+  /**
+   * How many Arabic translations other teams have published for this game,
+   * as the cached community index lists them; zero when it lists none or no
+   * index is cached yet.
+   *
+   * A fact about the game on the same footing as {@link lugha_rasmiya}: it
+   * decides one mark on the card and nothing about the patch states beside it.
+   */
+  readonly tarjamat_mujtama: number;
   /** Size on disk in bytes, or zero when the launcher reports nothing. */
   readonly hajm: number;
   /** Last played, as epoch milliseconds, or null when never or unrecorded. */

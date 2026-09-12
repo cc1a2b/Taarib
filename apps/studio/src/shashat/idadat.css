@@ -504,6 +504,38 @@
   margin-inline-start: auto;
 }
 
+/* The built-in free provider: one permanent record at the foot of the list. It
+   is furniture, not a warning, so nothing about it is amber — a state word in
+   the head where the others carry Remove, a quiet status line that turns the
+   accent colour only while it is the provider actually doing the work, and a
+   read-only model value drawn in the field column so it lines up with the
+   inputs above it without pretending to be one. */
+.idadat__muzawwid-thabit {
+  margin-inline-start: auto;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.idadat__muzawwid-hala {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.idadat__muzawwid-hala--yustakhdam {
+  color: var(--tamyeez);
+}
+
+.idadat__muzawwid-qeema {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--irtifa-band);
+  color: var(--nass-2);
+  font-family: var(--khatt-uhadi);
+  font-size: var(--qiyas-2);
+}
+
 /* --- the credential -------------------------------------------------------
    The one block on this screen that touches the system keychain, and the only
    one whose two buttons act the moment they are pressed rather than at the next

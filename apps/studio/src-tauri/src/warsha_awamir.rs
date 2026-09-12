@@ -28,9 +28,10 @@ use taarib_tarjama::dufaat::{
 use taarib_tarjama::khata::KhataTarjama;
 use taarib_tarjama::masrad::{Masrad, MustalahMasrad, TadarubMustalah, wahhid_tadarub};
 use taarib_tarjama::muzawwidun::{
-    IdadatAnthropic, IdadatDeepL, IdadatGemini, IdadatMicrosoft, IdadatMuwafiqOpenAI, IdhnInfaq,
-    Itimad, Muzawwid, MuzawwidAnthropic, MuzawwidDeepL, MuzawwidGemini, MuzawwidMicrosoft,
-    MuzawwidMuwafiqOpenAI, taklifat_anthropic, taklifat_gemini,
+    IdadatAnthropic, IdadatDeepL, IdadatGemini, IdadatGoogleMajjani, IdadatMicrosoft,
+    IdadatMuwafiqOpenAI, IdhnInfaq, Itimad, Muzawwid, MuzawwidAnthropic, MuzawwidDeepL,
+    MuzawwidGemini, MuzawwidGoogleMajjani, MuzawwidMicrosoft, MuzawwidMuwafiqOpenAI,
+    taklifat_anthropic, taklifat_gemini,
 };
 use taarib_tathbeet::bayan::waqt_alaan;
 use taarib_usus::idadat::{HalatMuzawwidin, Idadat, IdadatMuzawwid, MakhzanIdadat, NawMuzawwid};
@@ -218,14 +219,16 @@ pub enum HalatMuzawwidinHie {
 ///
 /// The election is the settings crate's and so is the sentence; the workspace
 /// only carries them, so a stale default that quietly bills a different
-/// provider is read on the screen where the run is started, not discovered on
-/// the invoice.
+/// provider — or the built-in free provider standing in for an empty list — is
+/// read on the screen where the run is started, not discovered on the invoice
+/// or in the quality of the Arabic.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct MuzawwidWarshaHie {
     /// Which of the four states the list is in.
     pub hala: HalatMuzawwidinHie,
-    /// The elected provider's identifier, when one is elected.
-    pub ism: Option<String>,
+    /// The identifier of the provider a new translation uses: the elected one,
+    /// or the built-in free one when the list elects nothing.
+    pub ism: String,
     /// The state's own sentence, in Arabic.
     pub wasf_arabi: String,
     /// The same sentence in English.
@@ -997,10 +1000,7 @@ fn muzawwid_warsha_hie(hali: &Idadat) -> MuzawwidWarshaHie {
             HalatMuzawwidin::Mukhtar => HalatMuzawwidinHie::Mukhtar,
             HalatMuzawwidin::Badeel => HalatMuzawwidinHie::Badeel,
         },
-        ism: hali
-            .muzawwidun
-            .muntakhab()
-            .map(|tarif| tarif.muarrif.clone()),
+        ism: muzawwid_muntakhab(hali).muarrif,
         wasf_arabi: hala.arabi().to_owned(),
         wasf_injilizi: hala.injilizi().to_owned(),
     }
@@ -1439,23 +1439,24 @@ pub(crate) fn nano_min_dolar(mablagh: f64) -> Natija<u64> {
     Ok(nano)
 }
 
-/// The provider the settings elect, or the refusal that names which "no provider" state
-/// this machine is in.
+/// The provider a new translation uses: the one the settings elect, or the built-in free
+/// one when they elect nothing.
 ///
-/// The election is not re-implemented here: `IdadatMuzawwidin::muntakhab` decides, and
-/// `hala` says whether the choice is the user's own or a fallthrough from a stale default.
-/// The fallthrough is allowed, exactly as the core and the automatic pipeline allow it, but
-/// it is never silent — [`MuzawwidWarshaHie`] puts the state's own sentence on the screen
-/// before a run is started.
-pub(crate) fn muzawwid_muntakhab(hali: &Idadat) -> Natija<IdadatMuzawwid> {
-    hali.muzawwidun.muntakhab().cloned().ok_or_else(|| {
-        Khata::from(KhataWarshaAmr::LaMuzawwid {
-            hala: hali.muzawwidun.hala(),
-        })
-    })
+/// The election is not re-implemented here: `IdadatMuzawwidin::muntakhab_aw_majjani`
+/// decides, and `hala` says whether the choice is the user's own, a fallthrough from a stale
+/// default, or the free provider standing in for an empty or switched-off list. None of the
+/// three is silent — [`MuzawwidWarshaHie`] puts the state's own sentence on the screen
+/// before a run is started — and none of them refuses: the product used to answer "no
+/// provider" here and stop, which left a fresh installation unable to translate one string.
+pub(crate) fn muzawwid_muntakhab(hali: &Idadat) -> IdadatMuzawwid {
+    hali.muzawwidun.muntakhab_aw_majjani()
 }
 
 /// Builds the elected provider: credential from the keychain, ceiling as its confirmation.
+///
+/// The built-in free provider is the one arm that opens no keychain and takes no ceiling —
+/// there is no credential to fetch and nothing to cap — so the verdict screen may build it
+/// on mount where it may not build any other.
 pub(crate) fn bin_muzawwid(
     tarif: &IdadatMuzawwid,
     saqf: u64,
@@ -1564,6 +1565,12 @@ pub(crate) fn bin_muzawwid(
                              settings do not yet carry"
                 .to_owned(),
         })),
+        // The request spacing and the in-flight bound are the endpoint's tolerances,
+        // not the user's to tune, so the row's own request limit is not read: the
+        // provider's defaults are the configuration.
+        NawMuzawwid::GoogleMajjani => Ok(Box::new(
+            MuzawwidGoogleMajjani::jadeed(IdadatGoogleMajjani::default()).map_err(Khata::from)?,
+        )),
     }
 }
 
@@ -1608,9 +1615,10 @@ pub(crate) fn adad_u32(qeema: usize) -> u32 {
 ///
 /// # Errors
 ///
-/// [`KhataWarshaAmr::LaMuzawwid`], [`KhataWarshaAmr::LaItimad`], and whatever the project
-/// store or the journal raise. A provider-side failure is answered, not raised: it comes
-/// back as `najahat: false` with its recorded reason.
+/// [`KhataWarshaAmr::LaItimad`] when the elected provider's key is not in the keychain,
+/// [`KhataWarshaAmr::MuzawwidGhayrMadum`] when it cannot be built as configured, and
+/// whatever the project store or the journal raise. A provider-side failure is answered,
+/// not raised: it comes back as `najahat: false` with its recorded reason.
 #[tauri::command]
 #[specta::specta]
 pub async fn tarjim_nass(
@@ -1625,7 +1633,7 @@ pub async fn tarjim_nass(
     let _harasa = qufl.lock().await;
     let nass_id = huwiyat_nass(&nass)?;
     let hali = idadat.hali();
-    let tarif = muzawwid_muntakhab(&hali)?;
+    let tarif = muzawwid_muntakhab(&hali);
     let lahza = lahza_alaan();
     let saqf_nano = tarif
         .mizaniya
@@ -1711,9 +1719,9 @@ pub async fn tarjim_nass(
 ///
 /// # Errors
 ///
-/// [`KhataWarshaAmr::SaqfGhayrSalih`], [`KhataWarshaAmr::LaMuzawwid`],
-/// [`KhataWarshaAmr::LaItimad`], and whatever the project store or the journal raise. A
-/// stopped run is not an error: what stopped it is in the returned accounting.
+/// [`KhataWarshaAmr::SaqfGhayrSalih`], [`KhataWarshaAmr::LaItimad`],
+/// [`KhataWarshaAmr::MuzawwidGhayrMadum`], and whatever the project store or the journal
+/// raise. A stopped run is not an error: what stopped it is in the returned accounting.
 #[tauri::command]
 #[specta::specta]
 pub async fn tarjim_dufa(
@@ -1729,7 +1737,7 @@ pub async fn tarjim_dufa(
     let _harasa = qufl.lock().await;
     let saqf_nano = nano_min_dolar(saqf)?;
     let hali = idadat.hali();
-    let tarif = muzawwid_muntakhab(&hali)?;
+    let tarif = muzawwid_muntakhab(&hali);
     let lahza = lahza_alaan();
     let muzawwid = bin_muzawwid(&tarif, saqf_nano, lahza)?;
 
@@ -2294,14 +2302,6 @@ pub enum KhataWarshaAmr {
         nass: String,
     },
 
-    /// No machine-translation provider is elected: none is configured, or every one is
-    /// switched off — two states with two remedies, which the sentence keeps apart.
-    #[error("no machine-translation provider is elected; the provider list is {}", hala.ism())]
-    LaMuzawwid {
-        /// What the provider list amounts to.
-        hala: HalatMuzawwidin,
-    },
-
     /// The provider is configured but its credential is not in the keychain.
     #[error("no credential in the keychain for provider {muzawwid}")]
     LaItimad {
@@ -2375,7 +2375,9 @@ impl Tafsir for KhataWarshaAmr {
                 + match self {
                     Self::MashruGhayrMawjud { .. } => 40,
                     Self::NassGhayrMawjud { .. } => 41,
-                    Self::LaMuzawwid { .. } => 42,
+                    // 42 was "no provider is elected", retired when the built-in
+                    // free provider made every list elect something; the number
+                    // stays unused so an old diagnostics bundle still reads.
                     Self::LaItimad { .. } => 43,
                     Self::MuzawwidGhayrMadum { .. } => 44,
                     Self::IqtirahGhayrMawjud { .. } => 45,
@@ -2402,12 +2404,13 @@ impl Tafsir for KhataWarshaAmr {
             | Self::LaDamjMaftuh
             | Self::SaqfGhayrSalih
             | Self::HuzmaBihaTalaf { .. } => Khutura::Tanbeeh,
-            // A run was requested and cannot start; the user can fix the settings.
-            Self::LaMuzawwid { .. } | Self::LaItimad { .. } | Self::MuzawwidGhayrMadum { .. } => {
-                Khutura::Khatar
-            },
-            // A file beside somebody's work, or the work itself, does not read.
-            Self::MalafTalif { .. } | Self::MashruTalif { .. } => Khutura::Khatar,
+            // A run was requested and cannot start, and the user can fix the
+            // settings; or a file beside somebody's work, or the work itself,
+            // does not read.
+            Self::LaItimad { .. }
+            | Self::MuzawwidGhayrMadum { .. }
+            | Self::MalafTalif { .. }
+            | Self::MashruTalif { .. } => Khutura::Khatar,
         }
     }
 
@@ -2419,7 +2422,6 @@ impl Tafsir for KhataWarshaAmr {
             Self::NassGhayrMawjud { .. } => {
                 "هذا النص لم يعد في جدول المشروع. أعد فتح الورشة لتحميل الجدول الحالي.".to_owned()
             },
-            Self::LaMuzawwid { hala } => hala.arabi().to_owned(),
             Self::LaItimad { muzawwid } => format!(
                 "لا اعتماد في سلسلة مفاتيح النظام للمزوّد {muzawwid}. أدخل مفتاحه في \
                  الإعدادات ليُخزَّن في السلسلة."
@@ -2468,7 +2470,6 @@ impl Tafsir for KhataWarshaAmr {
                 "{nass} is no longer a string in this project. Reopen the workspace to \
                  load the current table."
             ),
-            Self::LaMuzawwid { hala } => hala.injilizi().to_owned(),
             Self::LaItimad { muzawwid } => format!(
                 "The system keychain holds no credential for provider {muzawwid}. Enter \
                  its key in Settings so it is stored there."
@@ -2520,10 +2521,8 @@ impl Tafsir for KhataWarshaAmr {
             | Self::LaDamjMaftuh
             | Self::SaqfGhayrSalih
             | Self::MalafTalif { .. } => Khutwa::AadaMuhawala,
-            Self::LaMuzawwid { .. } | Self::LaItimad { .. } | Self::MuzawwidGhayrMadum { .. } => {
-                Khutwa::FathIdadat {
-                    qism: QismIdadat::Muzawwidun,
-                }
+            Self::LaItimad { .. } | Self::MuzawwidGhayrMadum { .. } => Khutwa::FathIdadat {
+                qism: QismIdadat::Muzawwidun,
             },
         }
     }
@@ -2563,9 +2562,6 @@ impl Tafsir for KhataWarshaAmr {
                     QeemaSiyaq::Hajm(u64::try_from(*talifa).unwrap_or(u64::MAX)),
                 );
             },
-            Self::LaMuzawwid { hala } => {
-                let _ = siyaq.insert("hala".to_owned(), QeemaSiyaq::Nass(hala.ism().to_owned()));
-            },
             Self::LaDamjMaftuh | Self::SaqfGhayrSalih => {},
         }
         siyaq
@@ -2582,7 +2578,7 @@ mod ikhtibarat {
     use taarib_mustalahat::luba::MasdarLuba;
     use taarib_mustalahat::nass::{MasdarIstikhraj, QuyudNass, SiyaqNass};
     use taarib_tarjama::dufaat::{HasilatNass, QaydJawla};
-    use taarib_usus::idadat::IdadatMuzawwidin;
+    use taarib_usus::idadat::{IdadatMuzawwidin, MUARRIF_GOOGLE_MAJJANI};
 
     use super::*;
 
@@ -2917,45 +2913,51 @@ mod ikhtibarat {
         }
     }
 
-    /// The election is the settings crate's, and a refusal names which "no provider" state
-    /// the machine is in; a stale default is honoured as a fallthrough and said out loud.
+    /// The election is the settings crate's: an empty list and a list of switched-off
+    /// providers both hand the run the built-in free provider, and the screen is told which
+    /// of the two states it is in; a stale default is honoured as a fallthrough and said out
+    /// loud. Nothing here refuses — the refusal this used to pin is what left a fresh
+    /// installation unable to translate.
     #[test]
-    fn alintikhab_yufawwad_lil_idadat_wa_alrafd_yusammi_halatah() -> NatijatIkhtibar {
-        let faragh = muzawwid_muntakhab(&idadat_bi_muzawwidin(Vec::new(), None))
-            .err()
-            .ok_or("an empty list refuses")?;
-        assert_eq!(faragh.arabi, HalatMuzawwidin::Faragh.arabi());
-        assert_eq!(faragh.injilizi, HalatMuzawwidin::Faragh.injilizi());
+    fn alintikhab_yufawwad_lil_idadat_wa_almajjani_yaqif_makan_alghaib() {
+        let faragh = idadat_bi_muzawwidin(Vec::new(), None);
+        let badeel_faragh = muzawwid_muntakhab(&faragh);
+        assert_eq!(badeel_faragh.naw, NawMuzawwid::GoogleMajjani);
+        assert_eq!(badeel_faragh.muarrif, MUARRIF_GOOGLE_MAJJANI);
+        let hie_faragh = muzawwid_warsha_hie(&faragh);
+        assert_eq!(hie_faragh.hala, HalatMuzawwidinHie::Farigh);
+        assert_eq!(hie_faragh.ism, MUARRIF_GOOGLE_MAJJANI);
+        assert_eq!(hie_faragh.wasf_arabi, HalatMuzawwidin::Faragh.arabi());
+        assert_eq!(hie_faragh.wasf_injilizi, HalatMuzawwidin::Faragh.injilizi());
 
-        let muattala =
-            muzawwid_muntakhab(&idadat_bi_muzawwidin(vec![tarif("a", false)], Some("a")))
-                .err()
-                .ok_or("a list of disabled providers refuses")?;
-        assert_eq!(muattala.injilizi, HalatMuzawwidin::Muattala.injilizi());
-        assert_ne!(
-            muattala.injilizi, faragh.injilizi,
-            "two states, two remedies"
-        );
+        let muattala = idadat_bi_muzawwidin(vec![tarif("a", false)], Some("a"));
         assert_eq!(
-            muattala.ramz, faragh.ramz,
-            "one code, since one screen answers both"
+            muzawwid_muntakhab(&muattala).naw,
+            NawMuzawwid::GoogleMajjani
+        );
+        let hie_muattala = muzawwid_warsha_hie(&muattala);
+        assert_eq!(hie_muattala.hala, HalatMuzawwidinHie::Muattala);
+        assert_eq!(hie_muattala.ism, MUARRIF_GOOGLE_MAJJANI);
+        assert_ne!(
+            hie_muattala.wasf_injilizi, hie_faragh.wasf_injilizi,
+            "two states, two remedies"
         );
 
         let badeel = idadat_bi_muzawwidin(vec![tarif("a", false), tarif("b", true)], Some("a"));
         assert_eq!(
-            muzawwid_muntakhab(&badeel)?.muarrif,
+            muzawwid_muntakhab(&badeel).muarrif,
             "b",
             "the settings' own fallthrough"
         );
         let hie = muzawwid_warsha_hie(&badeel);
         assert_eq!(hie.hala, HalatMuzawwidinHie::Badeel);
-        assert_eq!(hie.ism.as_deref(), Some("b"));
+        assert_eq!(hie.ism, "b");
         assert_eq!(hie.wasf_injilizi, HalatMuzawwidin::Badeel.injilizi());
         assert_eq!(hie.wasf_arabi, HalatMuzawwidin::Badeel.arabi());
 
         let mukhtar = idadat_bi_muzawwidin(vec![tarif("a", true), tarif("b", true)], Some("b"));
         assert_eq!(
-            muzawwid_muntakhab(&mukhtar)?.muarrif,
+            muzawwid_muntakhab(&mukhtar).muarrif,
             "b",
             "the default wins when enabled"
         );
@@ -2963,6 +2965,18 @@ mod ikhtibarat {
             muzawwid_warsha_hie(&mukhtar).hala,
             HalatMuzawwidinHie::Mukhtar
         );
+    }
+
+    /// The built-in provider builds with no keychain, no credential and no ceiling, and
+    /// declares itself free — so the surfaces that build it on mount are not unlocking a
+    /// secret, and the spend gates have nothing to gate.
+    #[test]
+    fn almajjani_yubna_bila_khazina_wa_bila_thaman() -> NatijatIkhtibar {
+        let muzawwid = bin_muzawwid(&IdadatMuzawwid::google_majjani(), u64::MAX, 0)?;
+        assert_eq!(muzawwid.ism(), MUARRIF_GOOGLE_MAJJANI);
+        assert_eq!(muzawwid.namudhaj(), "gtx");
+        assert!(!muzawwid.qudrat().taklifa.madfu());
+        assert_eq!(muzawwid.takalif().saqf(), 0);
         Ok(())
     }
 

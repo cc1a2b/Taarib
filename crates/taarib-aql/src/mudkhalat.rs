@@ -15,7 +15,7 @@ use taarib_mustalahat::muharrik::TaqreerImkaniyat;
 use taarib_mustawda::mutabaqa::{MutabaqatLuba, MutabaqatRuqaa};
 use taarib_tathbeet::bayan_makhzan::{BayanMukawwinat, iqra_bayan, kamil_hasab_bayan};
 use taarib_tathbeet::wukala::WakeelQaim;
-use taarib_usus::idadat::{HalatMuzawwidin, Idadat};
+use taarib_usus::idadat::Idadat;
 
 use crate::khatar::NawKhatar;
 
@@ -469,15 +469,6 @@ pub struct MawqifMustakhdim {
     /// with it on, the publisher's Arabic stops being a blocker and becomes a
     /// risk the user has already chosen to take.
     pub istibdal_lugha_rasmiya: bool,
-    /// What the configured translation providers amount to, when anyone looked.
-    ///
-    /// [`None`] means nobody asked, and it is an [`Option`] for the reason
-    /// [`MudkhalatAql::lugha`] is one: [`Self::default`] is a real input in this
-    /// codebase — `MudkhalatAql::ijma` uses it — and a default that asserted
-    /// "no provider is configured" would put a blocker on every game assembled
-    /// without the settings, which is a verdict about a question that was never
-    /// put.
-    pub muzawwidun: Option<HalatMuzawwidin>,
     /// The risks acknowledged for this game.
     pub iqrarat: Vec<NawKhatar>,
 }
@@ -486,13 +477,15 @@ impl MawqifMustakhdim {
     /// Takes the settings half off the stored settings, leaving the
     /// acknowledgements to the caller that collected them.
     ///
-    /// Not `const`: [`IdadatMuzawwidin::hala`] walks the provider list. That is
-    /// the whole cost of the settings half and it is paid once per assembly.
+    /// The provider list is deliberately not among the inputs. It used to be,
+    /// so that an empty list could block the automatic run; the settings
+    /// crate's built-in free provider now stands in for an empty list, and a
+    /// question whose every answer is "yes" is not a question this core needs
+    /// to be handed.
     #[must_use]
-    pub fn min_idadat(idadat: &Idadat, iqrarat: Vec<NawKhatar>) -> Self {
+    pub const fn min_idadat(idadat: &Idadat, iqrarat: Vec<NawKhatar>) -> Self {
         Self {
             istibdal_lugha_rasmiya: idadat.istibdal_lugha_rasmiya,
-            muzawwidun: Some(idadat.muzawwidun.hala()),
             iqrarat,
         }
     }

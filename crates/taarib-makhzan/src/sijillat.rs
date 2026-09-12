@@ -1414,6 +1414,46 @@ impl<'a> SijillMuharrik<'a> {
         )
     }
 
+    /// The probe version stamped on every stored report, keyed by game.
+    ///
+    /// One query for the whole library, for the sweep that decides which games
+    /// to re-examine: a game with no report and a game an older probe examined
+    /// are the same decision, and [`Self::qadima`] answers only the second.
+    /// Answering the first with [`Self::wahid`] per game would parse a whole
+    /// document per row to learn whether the row exists.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the query cannot run, or a stored identity or version does
+    /// not decode.
+    pub fn isdarat(self) -> Natija<BTreeMap<LubaId, u32>> {
+        let mut jumla = self
+            .ittisal
+            .prepare("SELECT luba, isdar_fahs FROM bitaqa_muharrik")
+            .map_err(|q| khata_jumla("prepare versions", "bitaqa_muharrik", q))?;
+
+        let sufuf = jumla
+            .query_map(params![], |saf| {
+                Ok((saf.get::<_, String>(0)?, saf.get::<_, i64>(1)?))
+            })
+            .map_err(|q| khata_jumla("query versions", "bitaqa_muharrik", q))?;
+
+        let mut isdarat = BTreeMap::new();
+        for saf in sufuf {
+            let (luba, isdar) =
+                saf.map_err(|q| khata_jumla("read versions", "bitaqa_muharrik", q))?;
+            let isdar = u32::try_from(isdar).map_err(|_| {
+                Khata::from(KhataMakhzan::SafTalif {
+                    jadwal: "bitaqa_muharrik",
+                    amud: "isdar_fahs",
+                    qeema: isdar.to_string(),
+                })
+            })?;
+            let _ = isdarat.insert(min_ramz("bitaqa_muharrik", "luba", &luba)?, isdar);
+        }
+        Ok(isdarat)
+    }
+
     /// Every game the safety layer refuses outright.
     ///
     /// # Errors
@@ -3724,6 +3764,11 @@ impl<'a> SijillHalat<'a> {
 mod ikhtibarat {
     use std::error::Error;
 
+    use taarib_mustalahat::muharrik::{
+        AilatMuharrik, JahiziyatTashghil, JawdaMutawaqqaa, KhalfiyaBarmajiya, Muharrik,
+    };
+    use taarib_usus::manassa::Mimariya;
+
     use super::*;
 
     /// Every test returns this so that a fixture failure propagates with `?`.
@@ -3912,6 +3957,66 @@ mod ikhtibarat {
         let hasila = bila_khata(SijillAlaab::jadeed(&ittisal).allim_ghayr_mawjud(thani, "epic"))?;
         assert_eq!(hasila, HasilatMash::Jarat { adad: 1 });
         assert!(!mawjuda(&ittisal, luba.id)?);
+        Ok(())
+    }
+
+    /// A report that satisfies every constraint the ledger checks, stamped
+    /// with the probe version the caller wants.
+    fn taqreer(isdar_fahs: u32) -> TaqreerImkaniyat {
+        TaqreerImkaniyat {
+            muharrik: Muharrik {
+                aila: AilatMuharrik::Majhul,
+                isdar: None,
+                khalfiya: KhalfiyaBarmajiya::Majhula,
+                itarat: Vec::new(),
+                rusum: Vec::new(),
+                mimariya: Mimariya::X8664,
+                thiqa: 20,
+                dalail: Vec::new(),
+            },
+            tabaqa: Tabaqa::TarjamaFawqiya,
+            sabab_arabi: String::new(),
+            sabab_injilizi: String::new(),
+            jahiziya: JahiziyatTashghil::Ghaiba,
+            naqs: None,
+            anzimat_qabila: Vec::new(),
+            jawda: JawdaMutawaqqaa::Mahduda,
+            hudud: Vec::new(),
+            marfuda: false,
+            isdar_fahs,
+            waqt: "2026-01-01T00:00:00Z".to_owned(),
+        }
+    }
+
+    /// The version map answers for the whole library at once: a game with no
+    /// report is absent from it, and every stored report is keyed under its
+    /// game with the probe version that wrote it — which is what lets one read
+    /// decide both "never probed" and "probed by an older build".
+    #[test]
+    fn isdarat_altaqarir_tuqra_marra_wahida() -> NatijatIkhtibar {
+        let ittisal = qaida()?;
+        let fahs = bila_khata(SijillFahs::jadeed(&ittisal).ibda(true))?;
+        let qadima = luba(MasdarLuba::Steam(1), "Qadima");
+        let haditha = luba(MasdarLuba::Steam(2), "Haditha");
+        let bila_taqreer = luba(MasdarLuba::Steam(3), "Bila Taqreer");
+        for wahida in [&qadima, &haditha, &bila_taqreer] {
+            sajjil(&ittisal, wahida, fahs)?;
+        }
+        bila_khata(SijillMuharrik::jadeed(&ittisal).sajjil(qadima.id, &taqreer(3), None))?;
+        bila_khata(SijillMuharrik::jadeed(&ittisal).sajjil(haditha.id, &taqreer(9), None))?;
+
+        let isdarat = bila_khata(SijillMuharrik::jadeed(&ittisal).isdarat())?;
+        assert_eq!(isdarat.len(), 2);
+        assert_eq!(isdarat.get(&qadima.id), Some(&3));
+        assert_eq!(isdarat.get(&haditha.id), Some(&9));
+        assert!(!isdarat.contains_key(&bila_taqreer.id));
+
+        let qadima_faqat = bila_khata(SijillMuharrik::jadeed(&ittisal).qadima(9))?;
+        assert_eq!(
+            qadima_faqat,
+            vec![qadima.id],
+            "the two reads agree on which report an older probe wrote"
+        );
         Ok(())
     }
 }
