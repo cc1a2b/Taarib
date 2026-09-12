@@ -1,0 +1,210 @@
+/* ==========================================================================
+   الشريط الجانبي — a fixed rail on the leading edge, one step up from the
+   ground with a hairline, never a shadow. Every directional property is
+   logical, so it sits on the leading edge in both languages without a
+   mirrored rule.
+
+   Folded, it keeps every entry and every glyph and drops only the words: the
+   width is animated by the shell's grid, and the words are simply not there
+   at the narrow width rather than squeezed into it.
+   ========================================================================== */
+
+.janib {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  overflow: hidden;
+  background-color: var(--sath-1);
+  border-inline-end: var(--samk-hadd) solid var(--hadd-daif);
+  view-transition-name: janib;
+}
+
+/* The product's name, only where the window strip above does not already
+   carry it. */
+.janib__tarwisa {
+  display: flex;
+  flex: none;
+  align-items: center;
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-16);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.janib__ism {
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-bariz);
+  color: var(--nass-1);
+  white-space: nowrap;
+}
+
+.janib__tanaqqul {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* --- the three runs ------------------------------------------------------
+   Five of the screens are scoped to a game, so without one they are disabled
+   together. Naming the run and saying, once, what would enable it is what
+   turns five grey lines into an answer; hiding them until a game is open
+   would make the product look smaller than it is and move the rail under the
+   user every time they opened one. The runs are separated by a hairline
+   because the boundary between "needs a game" and "does not" is a real one. */
+
+.janib__majmua {
+  padding-block: var(--misafa-8);
+}
+
+.janib__majmua + .janib__majmua {
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.janib__fasl {
+  padding-inline: var(--misafa-16);
+  padding-block-end: var(--misafa-4);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-3);
+  white-space: nowrap;
+}
+
+/* Reading text, not interface text: it is a sentence and it wraps, so it
+   takes the looser Arabic leading the scale carries for exactly this. */
+.janib__tanbih {
+  padding-inline: var(--misafa-16);
+  padding-block-end: var(--misafa-8);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+/* The game the run is about, in whatever script its publisher wrote it,
+   boxed so its ellipsis lands at the far end. */
+.janib__luba {
+  padding-inline: var(--misafa-16);
+  padding-block-end: var(--misafa-6);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  unicode-bidi: isolate;
+}
+
+.band {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-12);
+  block-size: var(--irtifa-band);
+  padding-inline: var(--misafa-16);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+
+  /* The transition is declared on the resting state, so it plays on the way
+     out and not on the way in: a hover that eases in is a hover that arrives
+     late, and the pointer has already moved on by the time it lands. */
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    color var(--zaman-hala) var(--munhana);
+}
+
+.band:hover {
+  background-color: var(--sath-2);
+  color: var(--nass-1);
+  transition: none;
+}
+
+.band--matfi,
+.band--matfi:hover {
+  color: var(--nass-3);
+  background-color: transparent;
+}
+
+.band--nashit,
+.band--nashit:hover {
+  color: var(--nass-1);
+  background-color: var(--tamyeez-khafit);
+  font-weight: var(--wazn-mutawassit);
+}
+
+/* The ring is drawn inside the item: at the full width of the rail an outset
+   ring is cut in half by the rail's own border. */
+.band:focus-visible {
+  outline-offset: calc(var(--samk-hadd) * -2);
+}
+
+.band__mushir {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: var(--misafa-4);
+  inline-size: var(--misafa-2);
+  background-color: var(--tamyeez);
+}
+
+/* The glyph is the colour of the line it leads and nothing else: an icon that
+   holds its own colour turns a rail into a legend. */
+.band__ramz {
+  flex: none;
+  inline-size: var(--hajm-ramz-satri);
+  block-size: var(--hajm-ramz-satri);
+}
+
+.band__nass {
+  min-inline-size: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- the fold ------------------------------------------------------------ */
+
+.janib__tayy {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-12);
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-16);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+  cursor: pointer;
+  transition:
+    background-color var(--zaman-hala) var(--munhana),
+    color var(--zaman-hala) var(--munhana);
+}
+
+.janib__tayy:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  transition: none;
+}
+
+.janib__tayy:focus-visible {
+  outline-offset: calc(var(--samk-hadd) * -2);
+}
+
+/* --- folded --------------------------------------------------------------- */
+
+.janib--matwi .janib__tarwisa,
+.janib--matwi .janib__fasl,
+.janib--matwi .janib__tanbih,
+.janib--matwi .janib__luba,
+.janib--matwi .band__nass {
+  display: none;
+}
+
+.janib--matwi .band,
+.janib--matwi .janib__tayy {
+  justify-content: center;
+  padding-inline: 0;
+}

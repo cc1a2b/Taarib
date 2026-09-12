@@ -15,6 +15,7 @@
   --ard-waqt: 6rem;
   --ard-hajm: 6rem;
   --ard-waqt-malaf: 13rem;
+  --ard-hala: 8rem;
 
   /* The tail is a window on a file, not the file: about twenty of its own
      lines, said in the line height it is set in rather than as a pixel figure
@@ -169,6 +170,25 @@
 
 .tashkhis__haykal-satr--tasmiya {
   inline-size: 6ch;
+}
+
+.tashkhis__haykal-satr--qeema {
+  inline-size: 18ch;
+  max-inline-size: 100%;
+}
+
+.tashkhis__haykal-satr--hala {
+  inline-size: 7ch;
+}
+
+.tashkhis__haykal-satr--jumla {
+  inline-size: 28ch;
+  max-inline-size: 100%;
+}
+
+.tashkhis__haykal-satr--masar {
+  inline-size: 44ch;
+  max-inline-size: 100%;
 }
 
 .tashkhis__haykal-haql {
@@ -375,6 +395,187 @@
 .tashkhis__natija-masar {
   color: var(--nass-1);
   overflow-wrap: anywhere;
+}
+
+/* The answer's own switch: nothing, being written, written, refused. It holds
+   no space while there is nothing to hold it for, so a section without an
+   answer does not carry a blank gap under its buttons. */
+.tashkhis__natija-mashhad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+}
+
+.tashkhis__natija-mashhad:empty {
+  display: none;
+}
+
+/* Drawn empty, the box claims nothing: the success rule waits for a result. */
+.tashkhis__natija--haykal {
+  inline-size: 100%;
+  border-inline-start-color: var(--hadd-daif);
+}
+
+/* --- the last scan ----------------------------------------------------------
+   A record read back from the store, laid out as one: the facts on two
+   columns, the launchers as rows on one alignment, and the warnings last, each
+   tied to the launcher that raised it. */
+
+.tashkhis__bayan {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--misafa-16);
+  row-gap: var(--misafa-4);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+}
+
+.tashkhis__bayan-saff {
+  display: contents;
+}
+
+.tashkhis__bayan-tasmiya {
+  color: var(--nass-3);
+  white-space: nowrap;
+}
+
+.tashkhis__bayan-qeema {
+  color: var(--nass-1);
+  overflow-wrap: anywhere;
+}
+
+.tashkhis__bayan-qeema--tanbeeh {
+  color: var(--tanbeeh);
+}
+
+.tashkhis__jumla {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.tashkhis__unwan-far {
+  margin-block-start: var(--misafa-8);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.tashkhis__matajir {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Name, verdict, count, duration — the two figures at the end of their own
+   columns, as in the file list above, so a reader compares down rather than
+   across. The summary runs under its row at the caption step. */
+.tashkhis__matjar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--ard-hala) var(--ard-hajm) var(--ard-waqt);
+  align-items: baseline;
+  column-gap: var(--misafa-12);
+  row-gap: var(--misafa-2);
+  padding-block: var(--misafa-8);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.tashkhis__matjar:last-child {
+  border-block-end: 0;
+}
+
+.tashkhis__matjar-ism {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--nass-1);
+}
+
+.tashkhis__matjar-hala {
+  color: var(--nass-2);
+  white-space: nowrap;
+}
+
+.tashkhis__matjar-adad,
+.tashkhis__matjar-mudda {
+  justify-self: end;
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tashkhis__matjar-wasf {
+  grid-column: 1 / -1;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+/* The verdict is carried by the word first and the hue second; a launcher
+   that is not on this machine recedes whole, so the ones that are read first. */
+.tashkhis__matjar--tamma .tashkhis__matjar-hala {
+  color: var(--najah);
+}
+
+.tashkhis__matjar--naqisa .tashkhis__matjar-hala {
+  color: var(--tanbeeh);
+}
+
+.tashkhis__matjar--ghayr_muthabbat .tashkhis__matjar-ism,
+.tashkhis__matjar--ghayr_muthabbat .tashkhis__matjar-hala {
+  color: var(--nass-3);
+}
+
+.tashkhis__tanbihat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+}
+
+/* One warning: who raised it and where, then what was wrong, then — only when
+   the scan knew — whether it can be hiding games. The gutter rule is the same
+   amber the tail gives a WARN line, because it is the same kind of fact. */
+.tashkhis__tanbih {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-2);
+  padding-block: var(--misafa-4);
+  padding-inline-start: var(--misafa-12);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  border-inline-start: calc(var(--samk-hadd) * 2) solid var(--tanbeeh);
+}
+
+.tashkhis__tanbih-raas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--misafa-8);
+}
+
+.tashkhis__tanbih-matjar {
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+}
+
+.tashkhis__tanbih-mawdi {
+  color: var(--nass-1);
+  overflow-wrap: anywhere;
+}
+
+.tashkhis__tanbih-sabab {
+  color: var(--nass-2);
+  overflow-wrap: anywhere;
+}
+
+.tashkhis__tanbih-yukhfi {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--tanbeeh);
 }
 
 /* The refused-button rule that stood here is in `nizam/qaida.css` now, with the

@@ -1,0 +1,123 @@
+/* ==========================================================================
+   التنبيهات — a short column at the foot of the window, above the status
+   strip, that genuinely floats and so takes the product's one shadow.
+
+   A notice is the failure card's grammar at a glance: one surface step up, a
+   hairline, and its kind carried on the leading edge alone — never a fill.
+   The stack takes no pointer of its own so that a person can click through
+   the empty column to whatever is under it; only the notices themselves do.
+   ========================================================================== */
+
+.tanbihat {
+  position: fixed;
+  z-index: 35;
+  inset-block-end: calc(var(--irtifa-shareet) + var(--misafa-16));
+  inset-inline: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--misafa-8);
+  pointer-events: none;
+}
+
+.tanbih {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--misafa-12);
+  inline-size: min(var(--ard-tanbih), calc(100% - var(--misafa-32)));
+  padding-block: var(--misafa-12);
+  padding-inline: var(--misafa-16) var(--misafa-8);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-inline-start: var(--samk-hadd-barz) solid var(--maalumat);
+  border-radius: var(--nisf-hiwar);
+  box-shadow: var(--zill-tafu);
+}
+
+.tanbih--najah {
+  border-inline-start-color: var(--najah);
+}
+
+.tanbih--tanbeeh {
+  border-inline-start-color: var(--tanbeeh);
+}
+
+.tanbih--khatar {
+  border-inline-start-color: var(--khatar);
+}
+
+/* The glyph is the colour of the rule beside it and nothing else, so the two
+   say one thing. */
+.tanbih__ramz {
+  flex: none;
+  margin-block-start: var(--misafa-2);
+  color: var(--maalumat);
+}
+
+.tanbih--najah .tanbih__ramz {
+  color: var(--najah);
+}
+
+.tanbih--tanbeeh .tanbih__ramz {
+  color: var(--tanbeeh);
+}
+
+.tanbih--khatar .tanbih__ramz {
+  color: var(--khatar);
+}
+
+.tanbih__matn {
+  flex: 1 1 auto;
+  display: grid;
+  gap: var(--misafa-4);
+  min-inline-size: 0;
+  padding-block-start: var(--misafa-2);
+}
+
+.tanbih__jumla {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.tanbih__tafsil {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  overflow-wrap: anywhere;
+}
+
+.tanbih__ramz-khata {
+  font-size: var(--qiyas-1);
+  color: var(--nass-3);
+}
+
+/* The one control, at the button's own size but a step smaller in type, so
+   the sentence beside it stays the loudest thing in the notice. */
+.tanbih__amal {
+  flex: none;
+  font-size: var(--qiyas-2);
+}
+
+.tanbih__ighlaq {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--irtifa-band);
+  block-size: var(--irtifa-band);
+  color: var(--nass-3);
+  border-radius: var(--nisf-tahakkum);
+  cursor: pointer;
+  transition:
+    color var(--zaman-hala) var(--munhana),
+    background-color var(--zaman-hala) var(--munhana);
+}
+
+.tanbih__ighlaq:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-4);
+  transition: none;
+}

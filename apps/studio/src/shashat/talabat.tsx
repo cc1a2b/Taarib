@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { JSX } from 'react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
+import { ansha } from '@/hayat/tanbihat';
 import { jam, munassiqat, t } from '@/lugha/lugha';
 import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
@@ -28,7 +29,7 @@ const SUFUF_HAYKAL = 7;
  */
 function HaykalTalabat(): JSX.Element {
   return (
-    <ol className="talabat__qaima" aria-hidden="true">
+    <ol className="talabat__qaima zuhur-muakhkhar" aria-hidden="true">
       {Array.from({ length: SUFUF_HAYKAL }, (_, fihris) => (
         <li key={fihris} className="talabat__saff">
           <span className="talabat__ism">
@@ -63,7 +64,29 @@ export function Talabat(): JSX.Element {
     queryFn: () => nadi('lawhat_talabat'),
   });
 
-  const aidLawha = lawha.refetch;
+  // A refresh that finds the same board changes nothing on screen, so the
+  // notice is the only thing that says it ran — and, when it did not, why.
+  const alaTahdith = (): void => {
+    void lawha.refetch().then((natija) => {
+      if (natija.error !== null) {
+        ansha({
+          naw: 'khatar',
+          nass: natija.error.nass(lugha) ?? t('faragh.jisr', lugha),
+          ramz: natija.error.khata?.ramz ?? natija.error.amr,
+        });
+        return;
+      }
+      ansha({ naw: 'najah', nass: t('talabat.lawha.tamma_tahdith', lugha) });
+    });
+  };
+
+  // The palette registers once per id set, so its action reads through a ref
+  // that always holds the current handler and the current language.
+  const marjiTahdith = useRef(alaTahdith);
+  useEffect(() => {
+    marjiTahdith.current = alaTahdith;
+  });
+
   const awamirShasha = useMemo<readonly AmrLawha[]>(() => {
     if (idadat.data === undefined) {
       return [];
@@ -74,11 +97,11 @@ export function Talabat(): JSX.Element {
         unwan: t('talabat.lawha.tahdith', lugha),
         majal: t('shasha.talabat', lugha),
         nafidh: () => {
-          void aidLawha();
+          marjiTahdith.current();
         },
       },
     ];
-  }, [idadat.data, lugha, aidLawha]);
+  }, [idadat.data, lugha]);
   useSajjilAwamir(awamirShasha);
 
   const sufuf = lawha.data?.sufuf ?? [];
@@ -104,6 +127,11 @@ export function Talabat(): JSX.Element {
                 kulli: munassiq.raqm(sufuf.length),
               })
         }
+        adawat={
+          <button type="button" className="zir" aria-busy={lawha.isFetching} onClick={alaTahdith}>
+            {t('talabat.lawha.tahdith', lugha)}
+          </button>
+        }
       />
       <Mashhad miftah={wajh} className="talabat__jism">
         {wajh === 'tahmil' ? (
@@ -114,7 +142,7 @@ export function Talabat(): JSX.Element {
             khata={lawha.error}
             lugha={lugha}
             aada={() => {
-              void aidLawha();
+              void lawha.refetch();
             }}
           />
         ) : wajh === 'farigh' ? (

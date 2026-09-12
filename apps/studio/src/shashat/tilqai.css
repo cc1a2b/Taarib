@@ -314,19 +314,32 @@
   gap: var(--misafa-8);
 }
 
-/* Busy without `disabled`, so keyboard focus is not dropped mid-run; the guard
-   is in the click handler, exactly as on the game screen. */
-.tilqai .zir[aria-disabled='true'] {
-  cursor: progress;
+/* The body is one state at a time — the skeleton, the verdict's failure, or
+   the screen — and the state's wrapper keeps the body's own rhythm, since the
+   anchor, the bands and the columns used to be its direct children. */
+.tilqai__mashhad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-24);
 }
 
-/* Refused, not busy. `progress` above is right for a control that is mid-run
-   and wrong for one that is off because this build cannot drive the game's
-   engine at all — and those are exactly the buttons that name their reason with
-   `aria-describedby`, so the two are told apart by the thing that already
-   distinguishes them rather than by a second class on the element. */
-.tilqai .zir[aria-disabled='true'][aria-describedby] {
-  cursor: not-allowed;
+/* The cancel hint and its one link, arriving together under the stage list. */
+.tilqai__ilgha {
+  display: grid;
+  gap: var(--misafa-12);
+}
+
+/* A game's own words, a path in a stage's detail, a producer's evidence: any
+   of them can be one unbroken run, and a run that cannot break wraps anywhere
+   rather than widening the column past the window. */
+.tilqai__natija,
+.tilqai__nass,
+.tilqai__jawda,
+.tilqai__daleel,
+.tilqai__marhala-amal,
+.tilqai__sabab-nass,
+.tilqai__hudud li {
+  overflow-wrap: anywhere;
 }
 
 /* --- the band the resume offer lives in ------------------------------------ */

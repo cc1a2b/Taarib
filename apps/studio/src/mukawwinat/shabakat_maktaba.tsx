@@ -9,7 +9,9 @@ import {
   useRef,
   useState,
 } from 'react';
+import { flushSync } from 'react-dom';
 
+import { useHikal } from '@/hayat/hikal';
 import type { Munassiqat } from '@/lugha/lugha';
 import { ittijah, jam, t } from '@/lugha/lugha';
 import type { MinfathSuwar } from '@/maktaba/suwar';
@@ -1222,6 +1224,27 @@ export function ShabakatMaktaba(khasais: KhasaisShabakatMaktaba): JSX.Element {
   const [nashit, haddidNashit] = useState<string | null>(null);
   const talabTarkeez = useRef<string | null>(null);
 
+  /**
+   * The card whose artwork travels with the next navigation.
+   *
+   * On the way out it is the card that was opened, named synchronously before
+   * the router moves so the document's transition captures it under that
+   * name. On the way back it is the game the shell last held, so the cover on
+   * the game screen has a card to land on when the person returns.
+   */
+  const [muntaqal, haddidMuntaqal] = useState<string | null>(
+    () => useHikal.getState().akhir_luba?.muarrif ?? null,
+  );
+  const alaFathMuntaqal = useCallback(
+    (muarrif: string) => {
+      flushSync(() => {
+        haddidMuntaqal(muarrif);
+      });
+      ala_fath(muarrif);
+    },
+    [ala_fath],
+  );
+
   const mudawwir = useVirtualizer({
     count: sufuf.length,
     getScrollElement: () => masrah.current,
@@ -1735,9 +1758,10 @@ export function ShabakatMaktaba(khasais: KhasaisShabakatMaktaba): JSX.Element {
                         muharrik={sijill.muharrik}
                         hala={sijill.hala}
                         mukhtara={halat.mukhtara.has(sijill.muarrif)}
+                        muntaqal={sijill.muarrif === muntaqal}
                         kathafa={kathafa}
                         lugha={lugha}
-                        ala_fath={ala_fath}
+                        ala_fath={alaFathMuntaqal}
                         ala_ikhtiyar={baddil}
                         ala_qaima={ala_qaima}
                       />

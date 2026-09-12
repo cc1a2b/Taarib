@@ -1,17 +1,22 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { JSX } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
+import { ansha } from '@/hayat/tanbihat';
+import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t } from '@/lugha/lugha';
 import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
+import { Zuhur } from '@/mukawwinat/zuhur';
 import type {
+  FahsAkhirHie,
+  HalatMatjarHie,
   HasilatMaktaba,
   Idadat,
   Lugha,
@@ -22,12 +27,19 @@ import type {
 
 import './tashkhis.css';
 
-/** شاشة التشخيص — the log trail, the compatibility report, and the maintainer bundle. */
+/** شاشة التشخيص — the log trail, the compatibility report, the maintainer bundle, and the last scan. */
 
 const SUTUR: readonly number[] = [100, 400, 1000];
 
 /** How many log files the placeholder stands in for: the rotation keeps about this many. */
 const MALAFFAT_HAYKAL = 3;
+
+/** How many launcher rows the scan placeholder stands in for. */
+const MATAJIR_HAYKAL = 3;
+
+/** How many facts the scan record leads with: kind, number, start, finish. */
+const HUQUL_FAHS = 4;
+
 
 /**
  * The five level names `tracing` writes, and the modifier each one takes.
@@ -41,6 +53,17 @@ const FIAT_MUSTAWA: Readonly<Record<string, string>> = {
   DEBUG: 'tafsil',
   TRACE: 'tatabbu',
 };
+
+const MIFTAH_HALAT_MATJAR: Readonly<Record<HalatMatjarHie, MiftahLugha>> = {
+  tamma: 'tashkhis.fahs.hala.tamma',
+  naqisa: 'tashkhis.fahs.hala.naqisa',
+  ghayr_muthabbat: 'tashkhis.fahs.hala.ghayr_muthabbat',
+};
+
+/** Where an action was asked for, which decides where its failure has to be said. */
+interface MasdarAmal {
+  readonly minLawha: boolean;
+}
 
 /** One tail line as the viewer shows it. */
 interface SatrSijill {
@@ -142,13 +165,27 @@ function hallilSatr(khaam: string): SatrSijill {
 }
 
 /**
+ * A failure said where the eye is. Three of this screen's actions can be fired
+ * from the palette while the reader is looking at another section — or another
+ * screen's worth of log — so the block that explains them is not guaranteed to
+ * be in view when it appears.
+ */
+function anshaKhatar(khata: KhataJisr, lugha: Lugha): void {
+  ansha({
+    naw: 'khatar',
+    nass: khata.nass(lugha) ?? t('faragh.jisr', lugha),
+    ramz: khata.khata?.ramz ?? khata.amr,
+  });
+}
+
+/**
  * The log section drawn empty: three file rows at the row's own height and the
  * tail box at the tail's own height, so the section does not grow by a box
  * when the answer lands.
  */
 function HaykalSijillat(): JSX.Element {
   return (
-    <div className="tashkhis__haykal" aria-hidden="true">
+    <div className="tashkhis__haykal zuhur-muakhkhar" aria-hidden="true">
       <ul className="tashkhis__malaffat">
         {Array.from({ length: MALAFFAT_HAYKAL }, (_, fihris) => (
           <li key={fihris} className="tashkhis__malaf">
@@ -166,7 +203,7 @@ function HaykalSijillat(): JSX.Element {
 /** The report section's controls drawn empty: a select and a button, at band height. */
 function HaykalAdawat(): JSX.Element {
   return (
-    <div className="tashkhis__adawat tashkhis__haykal" aria-hidden="true">
+    <div className="tashkhis__adawat tashkhis__haykal zuhur-muakhkhar" aria-hidden="true">
       <span className="tashkhis__haykal-satr tashkhis__haykal-satr--tasmiya" />
       <span className="tashkhis__haykal-haql" />
       <span className="tashkhis__haykal-haql tashkhis__haykal-haql--zir" />
@@ -174,9 +211,152 @@ function HaykalAdawat(): JSX.Element {
   );
 }
 
-export function Tashkhis(): JSX.Element {
-  const makhzan = useQueryClient();
+/**
+ * An answer box drawn empty while the report or the bundle is being written:
+ * the sentence's line and the path's line, in the box the answer will take, so
+ * the result lands where the reader is already looking.
+ */
+function HaykalNatija(): JSX.Element {
+  return (
+    <div className="tashkhis__natija tashkhis__natija--haykal zuhur-muakhkhar" aria-hidden="true">
+      <span className="tashkhis__haykal-satr tashkhis__haykal-satr--jumla" />
+      <span className="tashkhis__haykal-satr tashkhis__haykal-satr--masar" />
+    </div>
+  );
+}
 
+/** The scan record drawn empty: its facts on two columns and three launcher rows. */
+function HaykalFahs(): JSX.Element {
+  return (
+    <div className="tashkhis__haykal zuhur-muakhkhar" aria-hidden="true">
+      <div className="tashkhis__bayan">
+        {Array.from({ length: HUQUL_FAHS }, (_, fihris) => (
+          <div key={fihris} className="tashkhis__bayan-saff">
+            <span className="tashkhis__haykal-satr tashkhis__haykal-satr--tasmiya" />
+            <span className="tashkhis__haykal-satr tashkhis__haykal-satr--qeema" />
+          </div>
+        ))}
+      </div>
+      <ul className="tashkhis__matajir">
+        {Array.from({ length: MATAJIR_HAYKAL }, (_, fihris) => (
+          <li key={fihris} className="tashkhis__matjar">
+            <span className="tashkhis__haykal-satr tashkhis__haykal-satr--ism" />
+            <span className="tashkhis__haykal-satr tashkhis__haykal-satr--hala" />
+            <span className="tashkhis__haykal-satr tashkhis__haykal-satr--hajm" />
+            <span className="tashkhis__haykal-satr tashkhis__haykal-satr--waqt" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+interface KhasaisFahs {
+  readonly bayanat: FahsAkhirHie;
+  readonly lugha: Lugha;
+  readonly munassiq: Munassiqat;
+}
+
+/**
+ * The last scan, read back: what kind it was, when, what it saw, and every
+ * warning the launchers left, each tied to the launcher that raised it. A
+ * warning that may hide games is called out by name, because that is the one
+ * fact a reader comes here for when a game is missing from the library.
+ */
+function FahsAkhir({ bayanat, lugha, munassiq }: KhasaisFahs): JSX.Element {
+  const arabi = lugha === 'arabi';
+  const tanbihat = bayanat.matajir.flatMap((matjar) =>
+    matjar.tanbihat.map((tanbih, fihris) => ({
+      miftah: `${matjar.muarrif}-${String(fihris)}`,
+      ism: arabi ? matjar.ism_arabi : matjar.ism_injilizi,
+      tanbih,
+    })),
+  );
+
+  return (
+    <>
+      <dl className="tashkhis__bayan">
+        <div className="tashkhis__bayan-saff">
+          <dt className="tashkhis__bayan-tasmiya">{t('tashkhis.fahs.raqm', lugha)}</dt>
+          <dd className="tashkhis__bayan-qeema">{munassiq.raqm(bayanat.raqm)}</dd>
+        </div>
+        <div className="tashkhis__bayan-saff">
+          <dt className="tashkhis__bayan-tasmiya">{t('tashkhis.fahs.naw', lugha)}</dt>
+          <dd className="tashkhis__bayan-qeema">
+            {t(bayanat.kamil ? 'tashkhis.fahs.kamil' : 'tashkhis.fahs.juzi', lugha)}
+          </dd>
+        </div>
+        <div className="tashkhis__bayan-saff">
+          <dt className="tashkhis__bayan-tasmiya">{t('tashkhis.fahs.bidaya', lugha)}</dt>
+          <dd className="tashkhis__bayan-qeema mono-ltr">{lahzaQaseera(bayanat.bidaya)}</dd>
+        </div>
+        <div className="tashkhis__bayan-saff">
+          <dt className="tashkhis__bayan-tasmiya">{t('tashkhis.fahs.nihaya', lugha)}</dt>
+          {bayanat.nihaya === null ? (
+            <dd className="tashkhis__bayan-qeema tashkhis__bayan-qeema--tanbeeh">
+              {t('tashkhis.fahs.lam_yantahi', lugha)}
+            </dd>
+          ) : (
+            <dd className="tashkhis__bayan-qeema mono-ltr">{lahzaQaseera(bayanat.nihaya)}</dd>
+          )}
+        </div>
+      </dl>
+      <p className="tashkhis__jumla">
+        {jam('tashkhis.fahs.alaab', lugha, bayanat.adad_alaab, munassiq)}
+      </p>
+      {bayanat.matajir.length === 0 ? null : (
+        <>
+          <h3 className="tashkhis__unwan-far">{t('tashkhis.fahs.manassat', lugha)}</h3>
+          <ul className="tashkhis__matajir">
+            {bayanat.matajir.map((matjar) => (
+              <li
+                key={matjar.muarrif}
+                className={`tashkhis__matjar tashkhis__matjar--${matjar.hala}`}
+              >
+                <span className="tashkhis__matjar-ism">
+                  {arabi ? matjar.ism_arabi : matjar.ism_injilizi}
+                </span>
+                <span className="tashkhis__matjar-hala">
+                  {t(MIFTAH_HALAT_MATJAR[matjar.hala], lugha)}
+                </span>
+                <span className="tashkhis__matjar-adad">{munassiq.raqm(matjar.adad_alaab)}</span>
+                <span className="tashkhis__matjar-mudda">
+                  {t('tashkhis.fahs.muddat_ms', lugha, { adad: munassiq.raqm(matjar.muddat_ms) })}
+                </span>
+                <span className="tashkhis__matjar-wasf">
+                  {arabi ? matjar.wasf_arabi : matjar.wasf_injilizi}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <h3 className="tashkhis__unwan-far">{t('tashkhis.fahs.tanbihat', lugha)}</h3>
+      {tanbihat.length === 0 ? (
+        <p className="tashkhis__jumla">{t('tashkhis.fahs.la_tanbihat', lugha)}</p>
+      ) : (
+        <ul className="tashkhis__tanbihat">
+          {tanbihat.map(({ miftah, ism, tanbih }) => (
+            <li key={miftah} className="tashkhis__tanbih">
+              <span className="tashkhis__tanbih-raas">
+                <span className="tashkhis__tanbih-matjar">{ism}</span>
+                <span className="tashkhis__tanbih-mawdi mono-ltr">{tanbih.mawdi}</span>
+              </span>
+              <span className="tashkhis__tanbih-sabab" dir="auto">
+                {tanbih.sabab}
+              </span>
+              {tanbih.yukhfi_alaab === true ? (
+                <span className="tashkhis__tanbih-yukhfi">{t('tashkhis.fahs.yukhfi', lugha)}</span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+export function Tashkhis(): JSX.Element {
   const idadat = useQuery<Idadat, KhataJisr>({
     queryKey: mafatih.idadat,
     queryFn: () => nadi('idadat_hali'),
@@ -203,6 +383,11 @@ export function Tashkhis(): JSX.Element {
     queryFn: () => nadi('maktaba'),
   });
 
+  const fahs = useQuery<FahsAkhirHie | null, KhataJisr>({
+    queryKey: mafatih.fahs_akhir,
+    queryFn: () => nadi('fahs_akhir'),
+  });
+
   const [muarrif, setMuarrif] = useState('');
   const alaab = maktaba.data?.alaab;
 
@@ -219,12 +404,56 @@ export function Tashkhis(): JSX.Element {
     mutationFn: () => nadi('taqreer_tawafuq', { muarrif }),
   });
 
-  const huzma = useMutation<TashkhisHie, KhataJisr, void>({
+  // The bundle and the folder are the two actions the palette can fire from
+  // anywhere. Their result blocks are in this screen's last section; a notice
+  // says what happened wherever the reader is. A failure is said twice only
+  // when the block can be out of view — from the palette — because a failure
+  // under the pointer already has its block.
+  const huzma = useMutation<TashkhisHie, KhataJisr, MasdarAmal>({
     mutationFn: () => nadi('huzmat_tashkhis'),
+    onSuccess: (natija) => {
+      ansha({
+        naw: 'najah',
+        nass: t('tashkhis.huzma.tamma_tanbih', lugha),
+        tafsil: natija.masar,
+      });
+    },
+    onError: (khata, { minLawha }) => {
+      if (minLawha) {
+        anshaKhatar(khata, lugha);
+      }
+    },
   });
 
-  const iftah = useMutation<boolean, KhataJisr, void>({
+  const iftah = useMutation<boolean, KhataJisr, MasdarAmal>({
     mutationFn: () => nadi('iftah_tashkhis'),
+    onSuccess: () => {
+      ansha({ naw: 'najah', nass: t('tashkhis.huzma.futiha', lugha) });
+    },
+    onError: (khata, { minLawha }) => {
+      if (minLawha) {
+        anshaKhatar(khata, lugha);
+      }
+    },
+  });
+
+  // A refresh that returns the same lines changes nothing on screen, so the
+  // notice is the only thing that says it ran.
+  const alaTahdith = (): void => {
+    void sijillat.refetch().then((natija) => {
+      if (natija.error !== null) {
+        anshaKhatar(natija.error, lugha);
+        return;
+      }
+      ansha({ naw: 'najah', nass: t('tashkhis.sijillat.tamma_tahdith', lugha) });
+    });
+  };
+
+  // The palette registers once per id set, so its action reads through a ref
+  // that always holds the current handler and the current language.
+  const marjiTahdith = useRef(alaTahdith);
+  useEffect(() => {
+    marjiTahdith.current = alaTahdith;
   });
 
   useSajjilAwamir([
@@ -233,7 +462,7 @@ export function Tashkhis(): JSX.Element {
       unwan: t('tashkhis.awamir.ibni', lugha),
       majal: t('shasha.tashkhis', lugha),
       nafidh: () => {
-        huzma.mutate();
+        huzma.mutate({ minLawha: true });
       },
     },
     {
@@ -241,7 +470,7 @@ export function Tashkhis(): JSX.Element {
       unwan: t('tashkhis.awamir.iftah', lugha),
       majal: t('shasha.tashkhis', lugha),
       nafidh: () => {
-        iftah.mutate();
+        iftah.mutate({ minLawha: true });
       },
     },
     {
@@ -249,7 +478,7 @@ export function Tashkhis(): JSX.Element {
       unwan: t('tashkhis.awamir.hadith', lugha),
       majal: t('shasha.tashkhis', lugha),
       nafidh: () => {
-        void makhzan.invalidateQueries({ queryKey: mafatih.sijillat });
+        marjiTahdith.current();
       },
     },
   ]);
@@ -257,13 +486,7 @@ export function Tashkhis(): JSX.Element {
   // The refresh is the toolbar's action and the action inside both of the log
   // section's empty states, so it is built once and placed in all three.
   const zirTahdith = (
-    <button
-      type="button"
-      className="zir"
-      onClick={() => {
-        void sijillat.refetch();
-      }}
-    >
+    <button type="button" className="zir" aria-busy={sijillat.isFetching} onClick={alaTahdith}>
       {t('tashkhis.sijillat.hadith', lugha)}
     </button>
   );
@@ -283,6 +506,33 @@ export function Tashkhis(): JSX.Element {
       : alaab === undefined || alaab.length === 0
         ? 'farigh'
         : 'jahiz';
+
+  const wajhFahs = fahs.isPending
+    ? 'tahmil'
+    : fahs.error !== null
+      ? 'khata'
+      : fahs.data === null || fahs.data === undefined
+        ? 'farigh'
+        : 'jahiz';
+
+  // An action's answer has four states of its own — nothing yet, being
+  // written, written, refused — and each replaces the last through the same
+  // switch the sections use, so a result never pops in under a button.
+  const wajhTaqreer = taqreer.isPending
+    ? 'jari'
+    : taqreer.error !== null
+      ? 'khata'
+      : taqreer.data !== undefined
+        ? 'natija'
+        : 'la_shay';
+
+  const wajhHuzma = huzma.isPending
+    ? 'jari'
+    : huzma.error !== null
+      ? 'khata'
+      : huzma.data !== undefined
+        ? 'natija'
+        : 'la_shay';
 
   return (
     <div className="tashkhis">
@@ -446,7 +696,8 @@ export function Tashkhis(): JSX.Element {
                   <button
                     type="button"
                     className="zir zir--tamyeez"
-                    aria-disabled={taqreer.isPending || muarrif === ''}
+                    aria-disabled={muarrif === ''}
+                    aria-busy={taqreer.isPending}
                     onClick={() => {
                       if (!taqreer.isPending && muarrif !== '') {
                         taqreer.mutate();
@@ -456,23 +707,26 @@ export function Tashkhis(): JSX.Element {
                     {t(taqreer.isPending ? 'tashkhis.tawafuq.jari' : 'tashkhis.tawafuq.anshi', lugha)}
                   </button>
                 </div>
-                {taqreer.error !== null ? (
-                  <KutlatKhata
-                    unwan={t('luba.khata.amal', lugha)}
-                    khata={taqreer.error}
-                    lugha={lugha}
-                    muarrif={muarrif}
-                    aada={() => {
-                      taqreer.mutate();
-                    }}
-                  />
-                ) : null}
-                {taqreer.data !== undefined ? (
-                  <div className="tashkhis__natija" role="status">
-                    <p>{t('tashkhis.tawafuq.tamma', lugha)}</p>
-                    <p className="tashkhis__natija-masar mono-ltr">{taqreer.data}</p>
-                  </div>
-                ) : null}
+                <Mashhad miftah={wajhTaqreer} className="tashkhis__natija-mashhad">
+                  {taqreer.isPending ? (
+                    <HaykalNatija />
+                  ) : taqreer.error !== null ? (
+                    <KutlatKhata
+                      unwan={t('luba.khata.amal', lugha)}
+                      khata={taqreer.error}
+                      lugha={lugha}
+                      muarrif={muarrif}
+                      aada={() => {
+                        taqreer.mutate();
+                      }}
+                    />
+                  ) : taqreer.data !== undefined ? (
+                    <div className="tashkhis__natija" role="status">
+                      <p>{t('tashkhis.tawafuq.tamma', lugha)}</p>
+                      <p className="tashkhis__natija-masar mono-ltr">{taqreer.data}</p>
+                    </div>
+                  ) : null}
+                </Mashhad>
               </>
             )}
           </Mashhad>
@@ -489,10 +743,10 @@ export function Tashkhis(): JSX.Element {
             <button
               type="button"
               className="zir zir--tamyeez"
-              aria-disabled={huzma.isPending}
+              aria-busy={huzma.isPending}
               onClick={() => {
                 if (!huzma.isPending) {
-                  huzma.mutate();
+                  huzma.mutate({ minLawha: false });
                 }
               }}
             >
@@ -501,46 +755,82 @@ export function Tashkhis(): JSX.Element {
             <button
               type="button"
               className="zir"
-              aria-disabled={iftah.isPending}
+              aria-busy={iftah.isPending}
               onClick={() => {
                 if (!iftah.isPending) {
-                  iftah.mutate();
+                  iftah.mutate({ minLawha: false });
                 }
               }}
             >
               {t('tashkhis.huzma.iftah', lugha)}
             </button>
           </div>
-          {huzma.error !== null ? (
-            <KutlatKhata
-              unwan={t('luba.khata.amal', lugha)}
-              khata={huzma.error}
-              lugha={lugha}
-              aada={() => {
-                huzma.mutate();
-              }}
-            />
-          ) : null}
-          {iftah.error !== null ? (
-            <KutlatKhata
-              unwan={t('luba.khata.amal', lugha)}
-              khata={iftah.error}
-              lugha={lugha}
-              aada={() => {
-                iftah.mutate();
-              }}
-            />
-          ) : null}
-          {huzma.data !== undefined ? (
-            <div className="tashkhis__natija" role="status">
-              <p>
-                {jam('tashkhis.huzma.tamma', lugha, huzma.data.adad_malaffat, munassiq, {
-                  hajm: munassiq.hajm(huzma.data.hajm),
-                })}
-              </p>
-              <p className="tashkhis__natija-masar mono-ltr">{huzma.data.masar}</p>
-            </div>
-          ) : null}
+          <Mashhad miftah={wajhHuzma} className="tashkhis__natija-mashhad">
+            {huzma.isPending ? (
+              <HaykalNatija />
+            ) : huzma.error !== null ? (
+              <KutlatKhata
+                unwan={t('luba.khata.amal', lugha)}
+                khata={huzma.error}
+                lugha={lugha}
+                aada={() => {
+                  huzma.mutate({ minLawha: false });
+                }}
+              />
+            ) : huzma.data !== undefined ? (
+              <div className="tashkhis__natija" role="status">
+                <p>
+                  {jam('tashkhis.huzma.tamma', lugha, huzma.data.adad_malaffat, munassiq, {
+                    hajm: munassiq.hajm(huzma.data.hajm),
+                  })}
+                </p>
+                <p className="tashkhis__natija-masar mono-ltr">{huzma.data.masar}</p>
+              </div>
+            ) : null}
+          </Mashhad>
+          <Zuhur maftuh={iftah.error !== null} asl="mahall">
+            {iftah.error === null ? null : (
+              <KutlatKhata
+                unwan={t('luba.khata.amal', lugha)}
+                khata={iftah.error}
+                lugha={lugha}
+                aada={() => {
+                  iftah.mutate({ minLawha: false });
+                }}
+              />
+            )}
+          </Zuhur>
+        </section>
+
+        <section className="tashkhis__qism" aria-labelledby="tashkhis-unwan-fahs">
+          <div className="tashkhis__raas-qism">
+            <h2 id="tashkhis-unwan-fahs" className="tashkhis__unwan-qism">
+              {t('tashkhis.fahs.unwan', lugha)}
+            </h2>
+            <p className="tashkhis__sharh-qism">{t('tashkhis.fahs.sharh', lugha)}</p>
+          </div>
+          <Mashhad miftah={wajhFahs} className="tashkhis__mashhad">
+            {wajhFahs === 'tahmil' ? (
+              <HaykalFahs />
+            ) : fahs.error !== null ? (
+              <KutlatKhata
+                unwan={t('tashkhis.fahs.taadhur', lugha)}
+                khata={fahs.error}
+                lugha={lugha}
+                aada={() => {
+                  void fahs.refetch();
+                }}
+              />
+            ) : fahs.data === null || fahs.data === undefined ? (
+              <HalatFarigha unwan={t('tashkhis.fahs.la_fahs', lugha)}>
+                <Link to="/" className="zir">
+                  {t('tashkhis.raji', lugha)}
+                </Link>
+              </HalatFarigha>
+            ) : (
+              <FahsAkhir bayanat={fahs.data} lugha={lugha} munassiq={munassiq} />
+            )}
+          </Mashhad>
         </section>
       </div>
     </div>

@@ -168,6 +168,12 @@
   --khatar: #d05353;
   --maalumat: #5b8dbe;
 
+  /* Text set on a danger fill — the window's close control under the pointer
+     is the one place the product fills with a status colour. White on every
+     palette, because every danger hue in this file is dark enough to carry it
+     and the platform's own control is drawn the same way. */
+  --nass-fawq-khatar: #ffffff;
+
   /* Overlays float; panels do not. This is the only shadow in the product,
      and it is tight and dark rather than soft and diffuse. */
   --zill-tafu: 0 6px 16px rgba(0, 0, 0, 0.46), 0 1px 3px rgba(0, 0, 0, 0.38);
@@ -259,6 +265,19 @@
   --ard-janib: 232px;
   --ard-qadeeb: 56px;
   --samk-hadd: 1px;
+
+  /* The strip the product draws along the top of its own window, where the
+     platform lets it hand the frame over. A window control is the width the
+     platform's own are — Windows draws each of its three at 46px and a hand
+     has learned that target — so this window is closed exactly where every
+     other one is. */
+  --irtifa-nafidha: 36px;
+  --ard-zirr-nafidha: 46px;
+
+  /* The measure of a floating notice. Pixels, for the dialog's reason: it
+     floats over the window and is sized to the window rather than to the
+     text inside it. */
+  --ard-tanbih: 400px;
 
   /* The floor under every screen. Below it the strip, one row of content and
      one control no longer fit together, so a shorter window scrolls the whole
@@ -374,6 +393,11 @@
   --zaman-lawha: 180ms;
   --zaman-masar: 240ms;
   --munhana: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* How long a placeholder waits before it draws. Not a duration and not
+     zeroed with them: a wait shorter than this is one the eye never finds,
+     and drawing a skeleton for it is a flash. */
+  --muhlat-haykal: 160ms;
 }
 
 /* ==========================================================================

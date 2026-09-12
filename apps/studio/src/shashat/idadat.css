@@ -35,12 +35,6 @@
   padding: var(--misafa-24);
 }
 
-.idadat__jari {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-3);
-}
-
 /* --- sections -------------------------------------------------------------
    A section is a heading, a sentence and a column of controls. It has no fill
    and no frame: the only boundary drawn on this screen is the one between two
@@ -84,6 +78,45 @@
   line-height: var(--irtifa-qira);
   color: var(--nass-3);
   text-wrap: pretty;
+}
+
+/* The heading is the fold's control. It keeps the heading's own face — the
+   step, the weight, the colour — and adds only the chevron, so a folded
+   document still reads as a list of headings rather than a stack of buttons. */
+.idadat__zir-qism {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  color: inherit;
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.idadat__zir-qism:hover {
+  color: var(--tamyeez);
+  transition: none;
+}
+
+/* Folded, the chevron points along the reading direction toward the body it
+   hides; open, it points down at it. The turn is the whole animation, and it
+   runs on the state tier. `--ittijah-mashhad` is the shell's own sign for the
+   reading direction, so the two languages share one rule. */
+.idadat__ramz-qism {
+  flex: none;
+  color: var(--nass-3);
+  rotate: calc(-90deg * var(--ittijah-mashhad));
+  transition: rotate var(--zaman-hala) var(--munhana);
+}
+
+.idadat__ramz-qism--maftuh {
+  rotate: 0deg;
+}
+
+/* The body carries the section's rhythm now that the heading is one child and
+   the body another: the same gap the section used to put between every row. */
+.idadat__jism-qism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
 }
 
 /* --- the two columns ------------------------------------------------------ */
@@ -265,6 +298,39 @@
 .idadat__haykal-satr--unwan {
   inline-size: 8ch;
   block-size: var(--irtifa-4);
+}
+
+.idadat__haykal-satr--tawil {
+  inline-size: 100%;
+}
+
+.idadat__haykal-satr--mutawassit {
+  inline-size: 72%;
+}
+
+/* One sentence's worth, for the update answer while the channel is asked. */
+.idadat__haykal-satr--jumla {
+  inline-size: 32ch;
+  max-inline-size: 100%;
+}
+
+/* One status word's worth, in the credential block's own line height. */
+.idadat__haykal-satr--hala {
+  display: inline-block;
+  inline-size: 12ch;
+  block-size: var(--irtifa-2);
+  vertical-align: middle;
+}
+
+/* A list drawn empty on the screen's own bars. The library's `.haykal` lays
+   its bars out as a grid of card-sized boxes, which is what the fonts list
+   used to borrow and show two covers' worth of placeholder for two lines. */
+.idadat__haykal-qaima {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  inline-size: 100%;
+  max-inline-size: var(--ard-haql);
 }
 
 .idadat__haykal-haql {
@@ -586,8 +652,11 @@
   cursor: not-allowed;
 }
 
-/* The update card's live answer: absent, offered, or downloading. */
-.idadat__tahdith-hala {
+/* The update card's live answer: absent, offered, or downloading. The inner
+   wrapper is the state switch; it keeps the same column so the answer does not
+   step when one state replaces another. */
+.idadat__tahdith-hala,
+.idadat__tahdith-mashhad {
   display: flex;
   flex-direction: column;
   align-items: start;

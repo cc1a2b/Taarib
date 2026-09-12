@@ -1,26 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   Link,
-  Outlet,
   createRootRoute,
   createRoute,
   createRouter,
   useRouterState,
 } from '@tanstack/react-router';
-import type { MotionStyle } from 'motion/react';
-import { motion } from 'motion/react';
 import type { JSX } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
 import { ittijah, t, wasm } from '@/lugha/lugha';
+import { Hikal } from '@/mukawwinat/hikal';
 // The router's own two states are drawn through the failure block's own parts,
 // so the two cannot drift apart from every other failure in the product.
 import { KutlatFashal, SatrRamz } from '@/mukawwinat/kutlat_khata';
-import { LawhatAwamir } from '@/mukawwinat/lawhat_awamir';
+import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import type { Idadat, Kathafa, Lugha, Sima } from '@/mustalahat/awamir';
-import { HARAKAT_MASAR, haraka } from '@/nizam/haraka';
+import { anwaIntiqal, yufaddilTaqleelHaraka } from '@/nizam/haraka';
 import { IdadatShasha } from '@/shashat/idadat';
 import { Luba } from '@/shashat/luba';
 import { Maktaba } from '@/shashat/maktaba';
@@ -173,6 +171,35 @@ function nizamFatih(): boolean {
   return globalThis.matchMedia('(prefers-color-scheme: light)').matches;
 }
 
+/** The document's own transition, in the shape the typed form takes. */
+interface WathiqaMuntaqila {
+  readonly startViewTransition?: (khiyarat: {
+    readonly update: () => void;
+    readonly types: readonly string[];
+  }) => unknown;
+}
+
+/**
+ * Applies a change of appearance through the document's transition, so the
+ * window cross-fades from one look to the other rather than snapping.
+ *
+ * Applied plainly when the engine has no transition, when the session asked
+ * for less motion, or when the engine has only the untyped form and refuses
+ * the typed one — the change itself never depends on the fade.
+ */
+function intiqalMazhar(taghyeer: () => void): void {
+  const wathiqa = document as Document & WathiqaMuntaqila;
+  if (typeof wathiqa.startViewTransition !== 'function' || yufaddilTaqleelHaraka()) {
+    taghyeer();
+    return;
+  }
+  try {
+    wathiqa.startViewTransition({ update: taghyeer, types: ['mazhar'] });
+  } catch {
+    taghyeer();
+  }
+}
+
 /**
  * The resolved palette, written out in full.
  *
@@ -300,11 +327,13 @@ function HalatMasar({
   children,
 }: KhasaisHalat): JSX.Element {
   return (
-    <div className="mutawa">
-      <header className="raas">
-        <h1 className="raas__unwan">{t('tatbiq.ism', lugha)}</h1>
-      </header>
-      <div className="jism jism--mutadahrij">
+    <div className="hala-masar">
+      <RaasShasha
+        rujoo={{ ila: 'maktaba' }}
+        nassRujoo={t('hajiz.rujoo', lugha)}
+        unwan={t('tatbiq.ism', lugha)}
+      />
+      <div className="hala-masar__jism">
         {fashal ? (
           <KutlatFashal
             unwan={unwan}
@@ -420,19 +449,8 @@ function KhataMasar({
    The layout.
    =========================================================================== */
 
-/** How far a screen travels on the way in. This is a tool, not a showcase. */
-const MASAFAT_MASHHAD = 6;
-
 /**
- * The transition wrapper is layout plumbing rather than design: it has to fill
- * the root and take no size of its own, and there is no token for "the whole
- * window".
- */
-const UISLUB_MASHHAD: MotionStyle = { blockSize: '100%', minBlockSize: 0 };
-
-/**
- * The root layout: the matched route, the two singletons every screen shares —
- * the command palette and its undo announcement line — and the one place the
+ * The root layout: the shell around the matched route, and the one place the
  * display settings become document state. Language, theme, density, contrast
  * and the reduced-motion override are all attributes on the root element, so
  * the token layer re-points itself and no component ever asks twice.
@@ -452,22 +470,40 @@ function JidhrTakhtit(): JSX.Element {
   const tabayun = idadat.data?.tabayun_aali ?? MAZHAR_MABDAI.tabayun;
   const ihtiramHaraka = idadat.data?.ihtiram_taqleel_haraka ?? MAZHAR_MABDAI.ihtiramHaraka;
 
+  // Each of the three is applied through the appearance transition only when
+  // it actually changes what is on the root element: the first run of every
+  // effect re-applies what the module scope already painted, and a fade
+  // between two identical frames is a snapshot taken for nothing.
   useEffect(() => {
-    tabbiqLugha(document.documentElement, lugha);
+    const jidhrWathiqa = document.documentElement;
+    if (jidhrWathiqa.lang === wasm(lugha) && jidhrWathiqa.dir === ittijah(lugha)) {
+      return;
+    }
+    intiqalMazhar(() => {
+      tabbiqLugha(jidhrWathiqa, lugha);
+    });
   }, [lugha]);
 
   // 'nizam' follows the platform, live: the token layer keys off data-sima, so
   // the listener translates the platform preference into the same attribute.
   useEffect(() => {
     const jidhrWathiqa = document.documentElement;
+    const tabbiq = (fatih: boolean): void => {
+      if (jidhrWathiqa.getAttribute('data-sima') === (fatih ? 'fatih' : 'daken')) {
+        return;
+      }
+      intiqalMazhar(() => {
+        tabbiqSima(jidhrWathiqa, fatih);
+      });
+    };
     if (sima !== 'nizam') {
-      tabbiqSima(jidhrWathiqa, sima === 'fatih');
+      tabbiq(sima === 'fatih');
       return undefined;
     }
     const tafdil = window.matchMedia('(prefers-color-scheme: light)');
-    tabbiqSima(jidhrWathiqa, tafdil.matches);
+    tabbiq(tafdil.matches);
     const alaTaghyeer = (hadath: MediaQueryListEvent): void => {
-      tabbiqSima(jidhrWathiqa, hadath.matches);
+      tabbiq(hadath.matches);
     };
     tafdil.addEventListener('change', alaTaghyeer);
     return () => {
@@ -476,7 +512,17 @@ function JidhrTakhtit(): JSX.Element {
   }, [sima]);
 
   useEffect(() => {
-    tabbiqQiyas(document.documentElement, kathafa, tabayun, ihtiramHaraka);
+    const jidhrWathiqa = document.documentElement;
+    const kama =
+      jidhrWathiqa.getAttribute('data-kathafa') === kathafa &&
+      jidhrWathiqa.hasAttribute('data-tabayun') === tabayun &&
+      jidhrWathiqa.hasAttribute('data-haraka') === !ihtiramHaraka;
+    if (kama) {
+      return;
+    }
+    intiqalMazhar(() => {
+      tabbiqQiyas(jidhrWathiqa, kathafa, tabayun, ihtiramHaraka);
+    });
   }, [kathafa, tabayun, ihtiramHaraka]);
 
   // Written only from a real answer. Mirroring the fallbacks would let a launch
@@ -496,36 +542,9 @@ function JidhrTakhtit(): JSX.Element {
     });
   }, [idadat.data]);
 
-  // The screen, not the address: moving from one game to the next is a data
-  // change, and motion in this product never plays on one.
-  const shasha = useRouterState({ select: (halat) => halat.matches.at(-1)?.routeId ?? '/' });
-
-  // The window opening is not a navigation. Without this the first screen the
-  // user ever sees slides into place, which is the one frame that should simply
-  // already be there.
-  const rukkiba = useRef(false);
-  useEffect(() => {
-    rukkiba.current = true;
-  }, []);
-
   const ikhtisarat = idadat.data?.ikhtisarat ?? { lawha: 'ctrl+k', taraju: 'ctrl+z' };
   return (
-    <>
-      <motion.div
-        key={shasha}
-        style={UISLUB_MASHHAD}
-        initial={rukkiba.current ? { opacity: 0, y: MASAFAT_MASHHAD } : false}
-        animate={{ opacity: 1, y: 0 }}
-        transition={haraka(HARAKAT_MASAR)}
-      >
-        <Outlet />
-      </motion.div>
-      <LawhatAwamir
-        lugha={lugha}
-        ikhtisarLawha={ikhtisarat.lawha}
-        ikhtisarTaraju={ikhtisarat.taraju}
-      />
-    </>
+    <Hikal lugha={lugha} ikhtisarLawha={ikhtisarat.lawha} ikhtisarTaraju={ikhtisarat.taraju} />
   );
 }
 
@@ -654,6 +673,11 @@ export function binniMuwajjih(malik: boolean) {
     // Returning to a list must return to where the user was in it, not to the
     // top of it. In a right-to-left layout that includes the horizontal offset.
     scrollRestoration: true,
+    // Every navigation is handed to the document's own transition, typed by
+    // which way it travels, so the content region moves and the shell does
+    // not; `nizam/qaida.css` draws it. An engine without the API, and a session
+    // that asked for less motion, get the plain swap.
+    defaultViewTransition: { types: anwaIntiqal },
     // Declared as router defaults rather than on the root route, because the
     // root route's own pair covers only the root: a throw inside any child
     // route resolves against these.

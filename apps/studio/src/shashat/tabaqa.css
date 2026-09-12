@@ -69,8 +69,9 @@
 }
 
 /* The opening paragraph carries what the tier costs, so it is read at a step
-   above the rest rather than buried in an even column of grey. */
-.tabaqa__ifsah-faqra:first-child {
+   above the rest rather than buried in an even column of grey. Only in the
+   gate: re-read from the sidebar it is a record, not a decision. */
+.tabaqa__ifsah-nass > .tabaqa__ifsah-faqra:first-child {
   font-size: var(--qiyas-4);
   color: var(--nass-1);
 }
@@ -91,6 +92,10 @@
 .tabaqa__amida {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(24rem, 34rem);
+  /* The one row is bounded by the track above it, not by its content, so on a
+     short window each column scrolls inside itself instead of pushing the add
+     form under the status strip. */
+  grid-template-rows: minmax(0, 1fr);
   min-block-size: 0;
 }
 
@@ -148,12 +153,6 @@
   font-size: var(--qiyas-2);
   line-height: var(--irtifa-qira);
   color: var(--nass-2);
-}
-
-.tabaqa__jari {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-3);
 }
 
 /* --- the skeleton -----------------------------------------------------------
@@ -238,9 +237,12 @@
    cannot be compared straight down the list. */
 
 .tabaqa__jadwal {
+  /* The last track holds two controls, edit and delete, at their standard
+     padding; fixed rather than max-content so the empty heading cell above
+     them lands on the same edge. */
   --amida-mintaqa:
     var(--hajm-ramz-tanaqqul) minmax(8rem, 2fr) repeat(4, minmax(var(--misafa-56), 1fr))
-    calc(var(--misafa-56) + var(--misafa-24));
+    calc(var(--misafa-56) * 2 + var(--misafa-32));
   overflow-x: auto;
 }
 
@@ -311,6 +313,46 @@
   inline-size: var(--hajm-ramz-satri);
   block-size: var(--hajm-ramz-satri);
   cursor: pointer;
+}
+
+/* The one toggle in flight: the box is refused by the input, and the label
+   says so where the pointer is. */
+.tabaqa__mumakkana[aria-busy='true'] {
+  cursor: progress;
+  accent-color: var(--nass-3);
+}
+
+.tabaqa__mintaqa-afal {
+  display: flex;
+  justify-content: end;
+  gap: var(--misafa-8);
+}
+
+/* --- the in-place editor ----------------------------------------------------
+   Spans the row it belongs to and steps down onto the panel surface, so the
+   fields read as the row opened rather than as a second form under the table. */
+
+.tabaqa__tahreer {
+  grid-column: 1 / -1;
+  margin-block-start: var(--misafa-4);
+  padding: var(--misafa-12) var(--misafa-16);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-lawha);
+}
+
+.tabaqa__tahreer-namudhaj {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+}
+
+.tabaqa__tahreer-afal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+  padding-block-start: var(--misafa-4);
 }
 
 .tabaqa__mintaqa-tarif {
@@ -494,11 +536,55 @@
 }
 
 .tabaqa__muqarr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
   padding-block-start: var(--misafa-12);
   font-size: var(--qiyas-1);
   line-height: var(--irtifa-1);
   color: var(--nass-3);
   border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* The acknowledged disclosure stays one control away: a quiet line that opens
+   the text it stands for, with the chevron turned while it is open. */
+.tabaqa__ifsah-zir {
+  display: inline-flex;
+  align-items: center;
+  align-self: start;
+  gap: var(--misafa-6);
+  cursor: pointer;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-2);
+  transition: color var(--zaman-hala) var(--munhana);
+}
+
+.tabaqa__ifsah-zir:hover,
+.tabaqa__ifsah-zir[aria-expanded='true'] {
+  color: var(--nass-1);
+}
+
+.tabaqa__ifsah-zir:hover {
+  transition: none;
+}
+
+.tabaqa__ifsah-ramz {
+  inline-size: var(--hajm-ramz-satri);
+  block-size: var(--hajm-ramz-satri);
+  transition: transform var(--zaman-hala) var(--munhana);
+}
+
+.tabaqa__ifsah-zir[aria-expanded='true'] .tabaqa__ifsah-ramz {
+  transform: rotate(180deg);
+}
+
+.tabaqa__ifsah-jism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+  padding-inline-start: var(--misafa-12);
+  border-inline-start: var(--misafa-2) solid var(--tanbeeh);
 }
 
 /* An action the screen refuses to run must not look like one it will run.

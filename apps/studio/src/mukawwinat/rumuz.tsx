@@ -221,6 +221,57 @@ export function RamzTabaqa(khasais: KhasaisRamz): JSX.Element {
   );
 }
 
+/** A game is a cover with a strip under it — the product's own card, at 24 units. */
+export function RamzLuba(khasais: KhasaisRamz): JSX.Element {
+  return ramz(
+    khasais,
+    <>
+      <rect x="5.5" y="2.5" width="13" height="19" rx="1" />
+      <path d="M5.5 16.5H18.5" />
+    </>,
+  );
+}
+
+/** The play head: the automatic run starts here and nowhere else in the rail. */
+export function RamzTilqai(khasais: KhasaisRamz): JSX.Element {
+  return ramz(khasais, <path d="M7 4.5L18.5 12L7 19.5Z" />);
+}
+
+/** The rail itself: a frame with its divider on the leading side, so it mirrors. */
+export function RamzJanib(khasais: KhasaisRamz): JSX.Element {
+  return ramzIttijahi(
+    khasais,
+    <>
+      <rect x="2.5" y="4" width="19" height="16" rx="1" />
+      <path d="M9 4V20" />
+    </>,
+  );
+}
+
+/* ==========================================================================
+   النافذة — the three window controls, drawn as the platform draws its own:
+   a line, a frame, and two frames one behind the other. The restore glyph's
+   rear frame is an open path so its corner does not cross the front one.
+   ========================================================================== */
+
+export function RamzTasgheer(khasais: KhasaisRamz): JSX.Element {
+  return ramz(khasais, <path d="M5 12.5H19" />);
+}
+
+export function RamzTakbeer(khasais: KhasaisRamz): JSX.Element {
+  return ramz(khasais, <rect x="5" y="5" width="14" height="14" rx="1" />);
+}
+
+export function RamzIstiada(khasais: KhasaisRamz): JSX.Element {
+  return ramz(
+    khasais,
+    <>
+      <rect x="4.5" y="8.5" width="11" height="11" rx="1" />
+      <path d="M8.5 8.5V5.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-3" />
+    </>,
+  );
+}
+
 /* ==========================================================================
    الاتجاه — the directional set. Every glyph below mirrors itself.
    ========================================================================== */

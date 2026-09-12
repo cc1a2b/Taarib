@@ -1,0 +1,145 @@
+/* ==========================================================================
+   الهيكل — the frame every screen sits in.
+
+   A three-row, two-column grid: the window strip across the top, the rail and
+   the content region beside each other, and the status strip across the
+   bottom. Only the middle cell scrolls, and only when a screen is shorter
+   than its own floor — so the chrome never moves and a scrollbar, when there
+   is one, runs the height of the content and nothing else.
+
+   The rail's width is one custom property, and folding the rail is a change
+   to that property the grid eases through: the content region widens by
+   exactly the amount the rail gave up, over the panel tier.
+   ========================================================================== */
+
+.hikal {
+  --ard-janib-hali: var(--ard-janib);
+
+  display: grid;
+  grid-template-columns: var(--ard-janib-hali) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  block-size: 100%;
+  background-color: var(--sath-0);
+  transition: grid-template-columns var(--zaman-lawha) var(--munhana);
+}
+
+.hikal--matwi {
+  --ard-janib-hali: var(--ard-qadeeb);
+}
+
+.hikal > .nafidha {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.hikal > .janib {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* The one cell that scrolls. Positioned, because the progress line is drawn
+   along its top edge and the line has to be inside the region a navigation
+   moves rather than on the frame around it. */
+.hikal__mutawa {
+  position: relative;
+  grid-column: 2;
+  grid-row: 2;
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  view-transition-name: mutawa;
+}
+
+/* --- the status strip ----------------------------------------------------- */
+
+.hikal > .shareet {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
+.shareet {
+  display: flex;
+  align-items: center;
+  block-size: var(--irtifa-shareet);
+  padding-inline: var(--misafa-24);
+  background-color: var(--sath-1);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+  view-transition-name: shareet;
+}
+
+.shareet__haykal {
+  display: flex;
+  align-items: center;
+  inline-size: 100%;
+}
+
+.shareet__satr {
+  display: block;
+  inline-size: 40%;
+  block-size: var(--misafa-12);
+  background-color: var(--sath-2);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.shareet__qaima {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-16);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.shareet__band {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-6);
+  min-inline-size: 0;
+}
+
+.shareet__band dd {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-2);
+  white-space: nowrap;
+}
+
+/* The development-identity badge. The one thing on this strip that is about
+   the running session rather than about the build's provenance, so the one
+   thing that carries a colour, a glyph and a border. */
+.shareet__wasm-tatwir {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-6);
+  padding-inline: var(--misafa-8);
+  padding-block: var(--misafa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--tanbeeh);
+  border: var(--samk-hadd) solid var(--tanbeeh);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* Provenance, not status: what is running, at the far end, in the quietest
+   step the scale has. The group is separated from the path by the strip's
+   own flexible space rather than by a rule, because there is no boundary
+   here — only a difference in how much any of it matters. */
+.shareet__band--tarif {
+  flex: none;
+}
+
+.shareet__band--tarif dd {
+  color: var(--nass-3);
+}
+
+/* The data folder takes whatever room is left and truncates rather than
+   pushing the rest of the strip off the edge. */
+.shareet__band--masar {
+  flex: 1 1 auto;
+}
+
+.shareet__band--masar dd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-inline-size: 0;
+  color: var(--nass-3);
+}

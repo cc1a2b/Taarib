@@ -196,6 +196,10 @@
 .muraja__amida {
   display: grid;
   grid-template-columns: minmax(24rem, 0.9fr) minmax(0, 1.1fr);
+  /* The one row is bounded by the track above it, not by its content, so on a
+     short window each pane scrolls inside itself instead of pushing the
+     decision under the status strip. */
+  grid-template-rows: minmax(0, 1fr);
   min-block-size: 0;
 }
 
@@ -208,7 +212,9 @@
 
 .muraja__tabur {
   min-block-size: 0;
-  overflow-y: auto;
+  /* Both axes: a queue wider than the narrow rail's column scrolls sideways
+     inside this pane rather than pushing the case pane off the window. */
+  overflow: auto;
   padding: 0 var(--misafa-24) var(--misafa-24);
   border-inline-end: var(--samk-hadd) solid var(--hadd-daif);
 }
@@ -322,7 +328,13 @@
   border-block-start: var(--samk-hadd) solid var(--hadd-daif);
 }
 
-.muraja__sijill-kull summary {
+/* A button rather than a <summary>, so the log's body can arrive through the
+   same panel transition every other sometimes-there thing uses; the native
+   disclosure snaps its content in between two frames. */
+.muraja__sijill-zir {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--misafa-6);
   cursor: pointer;
   font-size: var(--qiyas-2);
   line-height: var(--irtifa-2);
@@ -330,14 +342,27 @@
   transition: color var(--zaman-hala) var(--munhana);
 }
 
-.muraja__sijill-kull summary:hover {
+.muraja__sijill-zir:hover {
   color: var(--nass-1);
   transition: none;
 }
 
-.muraja__sijill-kull[open] summary {
-  margin-block-end: var(--misafa-12);
+.muraja__sijill-zir[aria-expanded='true'] {
   color: var(--nass-1);
+}
+
+.muraja__sijill-ramz {
+  inline-size: var(--hajm-ramz-satri);
+  block-size: var(--hajm-ramz-satri);
+  transition: transform var(--zaman-hala) var(--munhana);
+}
+
+.muraja__sijill-zir[aria-expanded='true'] .muraja__sijill-ramz {
+  transform: rotate(180deg);
+}
+
+.muraja__sijill-jism {
+  padding-block-start: var(--misafa-12);
 }
 
 /* --------------------------------------------------------------------------
@@ -787,6 +812,12 @@
   flex: 1 1 20ch;
 }
 
+/* The anchor chip's wrapper is a flex item of its own so the chip keeps its
+   measured width while it arrives and leaves. */
+.muraja__mirsat {
+  display: flex;
+}
+
 .muraja__riqaqa {
   min-inline-size: 0;
   max-inline-size: 24ch;
@@ -893,6 +924,60 @@
   font-size: var(--qiyas-2);
   line-height: var(--irtifa-2);
   color: var(--najah);
+}
+
+/* --- the second word ---------------------------------------------------------
+   The confirmation sits where the decision was pressed, on the step below the
+   frame, with the decision's own hue along its leading edge. The reason is read
+   back inside it because it is what the log will keep. */
+
+.muraja__taakid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  padding: var(--misafa-12) var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-inline-start: var(--misafa-2) solid var(--khatar);
+  border-radius: var(--nisf-lawha);
+}
+
+/* Inside the filter row: a full-width line under the bulk bar. */
+.muraja__taakid--jumla {
+  flex-basis: 100%;
+}
+
+.muraja__taakid-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.muraja__taakid-nass {
+  max-inline-size: 60ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.muraja__taakid-sabab {
+  max-inline-size: 60ch;
+  padding-inline-start: var(--misafa-12);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  border-inline-start: var(--samk-hadd) solid var(--hadd-qawi);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.muraja__taakid-azrar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-4);
 }
 
 /* Nothing to show is the base layer's `.halat--shasha`: a heading, one

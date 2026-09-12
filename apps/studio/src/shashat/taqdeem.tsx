@@ -8,12 +8,14 @@ import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
+import { ansha } from '@/hayat/tanbihat';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t } from '@/lugha/lugha';
 import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
+import { Zuhur } from '@/mukawwinat/zuhur';
 import type {
   Idadat,
   IrsalHie,
@@ -63,7 +65,7 @@ const KHUTUWAT_HAYKAL = 3;
  */
 function HaykalTaqdeem(): JSX.Element {
   return (
-    <div className="taqdeem__lawh" aria-hidden="true">
+    <div className="taqdeem__lawh zuhur-muakhkhar" aria-hidden="true">
       <aside className="taqdeem__janib">
         <ol className="taqdeem__masar">
           {Array.from({ length: KHUTUWAT_HAYKAL }, (_, fihris) => (
@@ -253,10 +255,20 @@ interface KhasaisFahs {
   readonly lugha: Lugha;
   readonly munassiq: Munassiqat;
   readonly yajri: boolean;
+  /** Whether this row's own acknowledgement is the one in flight. */
+  readonly mashghul: boolean;
   readonly alaIqrar: (tahdheer: string, qeema: boolean) => void;
 }
 
-function SaffFahs({ satr, muarrif, lugha, munassiq, yajri, alaIqrar }: KhasaisFahs): JSX.Element {
+function SaffFahs({
+  satr,
+  muarrif,
+  lugha,
+  munassiq,
+  yajri,
+  mashghul,
+  alaIqrar,
+}: KhasaisFahs): JSX.Element {
   const naw = nawBand(satr.hala);
   return (
     <li className={`taqdeem__band taqdeem__band--${naw}`}>
@@ -290,8 +302,14 @@ function SaffFahs({ satr, muarrif, lugha, munassiq, yajri, alaIqrar }: KhasaisFa
             </Link>
           </p>
         ) : null}
-        {!satr.hasim && (satr.hala === 'yantazir_iqrar' || satr.hala === 'muqarr') ? (
-          <label className="taqdeem__iqrar">
+        {/* A re-prepare can turn a warning into a pass or a pass into a
+            warning; the acknowledgement arrives and leaves with the state
+            instead of blinking into a row that was already being read. */}
+        <Zuhur
+          maftuh={!satr.hasim && (satr.hala === 'yantazir_iqrar' || satr.hala === 'muqarr')}
+          className="taqdeem__iqrar-hawiya"
+        >
+          <label className="taqdeem__iqrar" aria-busy={mashghul}>
             <input
               type="checkbox"
               checked={satr.hala === 'muqarr'}
@@ -302,7 +320,7 @@ function SaffFahs({ satr, muarrif, lugha, munassiq, yajri, alaIqrar }: KhasaisFa
             />
             {t('taqdeem.fahs.aqirr', lugha)}
           </label>
-        ) : null}
+        </Zuhur>
       </div>
     </li>
   );
@@ -341,6 +359,38 @@ export function Taqdeem(): JSX.Element {
   const [rukhsa, setRukhsa] = useState('cc_by_sa');
   const [rukhsaIsm, setRukhsaIsm] = useState('');
   const [tareeqa, setTareeqa] = useState('bashariya_kamila');
+  const [taakidIrsal, setTaakidIrsal] = useState(false);
+  /** The control that opened the confirmation, so closing it hands focus back. */
+  const fatihTaakid = useRef<HTMLElement | null>(null);
+
+  const iftahTaakid = (): void => {
+    fatihTaakid.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setTaakidIrsal(true);
+  };
+
+  const aghliqTaakid = (): void => {
+    setTaakidIrsal(false);
+    fatihTaakid.current?.focus();
+    fatihTaakid.current = null;
+  };
+
+  useEffect(() => {
+    if (!taakidIrsal) {
+      return undefined;
+    }
+    const alaMiftah = (hadath: globalThis.KeyboardEvent): void => {
+      if (hadath.key === 'Escape') {
+        setTaakidIrsal(false);
+        fatihTaakid.current?.focus();
+        fatihTaakid.current = null;
+      }
+    };
+    document.addEventListener('keydown', alaMiftah);
+    return () => {
+      document.removeEventListener('keydown', alaMiftah);
+    };
+  }, [taakidIrsal]);
 
   useEffect(() => {
     const bayanat = musawwada.data;
@@ -363,9 +413,16 @@ export function Taqdeem(): JSX.Element {
         rukhsaIsm: rukhsa === 'ukhra' ? rukhsaIsm : null,
         tareeqa,
       }),
+    // A rebuild from the form half-way down the page changes a hash at the
+    // top of it; the notice carries the new hash to where the eye is.
     onSuccess: (bayanat) => {
       makhzan.setQueryData(mafatih.musawwada(muarrif), bayanat);
       void makhzan.invalidateQueries({ queryKey: mafatih.musahamat });
+      ansha({
+        naw: 'najah',
+        nass: t('taqdeem.tanbih.juhhizat', lugha),
+        tafsil: bayanat.basmat_huzma,
+      });
     },
   });
 
@@ -379,9 +436,15 @@ export function Taqdeem(): JSX.Element {
 
   const irsal = useMutation<IrsalHie, KhataJisr, void>({
     mutationFn: () => nadi('sallim_taqdeem', { muarrif }),
-    onSuccess: () => {
+    onSuccess: (natija) => {
+      setTaakidIrsal(false);
       void makhzan.invalidateQueries({ queryKey: mafatih.musawwada(muarrif) });
       void makhzan.invalidateQueries({ queryKey: mafatih.musahamat });
+      ansha({
+        naw: 'najah',
+        nass: t('taqdeem.tanbih.sullimat', lugha),
+        tafsil: t('taqdeem.hala.murajaa', lugha, { raqm: munassiq.raqm(natija.murajaa) }),
+      });
     },
   });
 
@@ -449,6 +512,11 @@ export function Taqdeem(): JSX.Element {
     [bayanat, jahiza, ursilat],
   );
 
+  // The body moves only when the contributor's stage does. A re-prepare, an
+  // acknowledgement or a refetch changes data inside a stage, never this key,
+  // so nothing re-animates on a data update.
+  const khatwaHaliya = bayanat === null ? 'bayanat' : ursilat ? 'ursilat' : 'fahs';
+
   const wajh = yuhammil ? 'tahmil' : musawwada.error !== null ? 'khata' : 'jahiz';
 
   return (
@@ -502,6 +570,7 @@ export function Taqdeem(): JSX.Element {
             </aside>
 
             <div className="taqdeem__amud">
+              <Mashhad miftah={khatwaHaliya} className="taqdeem__khatwa-jism">
               {bayanat !== null ? (
                 <section className="taqdeem__qism" aria-labelledby="taqdeem-unwan-hala">
                   <h2 id="taqdeem-unwan-hala" className="taqdeem__unwan-qism">
@@ -634,7 +703,7 @@ export function Taqdeem(): JSX.Element {
                             );
                           })}
                         </select>
-                        {rukhsa === 'ukhra' ? (
+                        <Zuhur maftuh={rukhsa === 'ukhra'} className="taqdeem__rukhsa-ukhra">
                           <input
                             className="taqdeem__haql"
                             dir="auto"
@@ -644,7 +713,7 @@ export function Taqdeem(): JSX.Element {
                               setRukhsaIsm(hadath.target.value);
                             }}
                           />
-                        ) : null}
+                        </Zuhur>
                       </div>
                       <div className="taqdeem__ikhtiyar">
                         <label className="taqdeem__ikhtiyar-tasmiya" htmlFor="taqdeem-tareeqa">
@@ -676,6 +745,12 @@ export function Taqdeem(): JSX.Element {
                         className="zir zir--tamyeez"
                         aria-disabled={
                           jahhiz.isPending || unwan.trim() === '' || sharh.trim() === ''
+                        }
+                        aria-busy={jahhiz.isPending}
+                        title={
+                          unwan.trim() === '' || sharh.trim() === ''
+                            ? t('taqdeem.bayanat.matlub', lugha)
+                            : undefined
                         }
                         onClick={() => {
                           if (!jahhiz.isPending && unwan.trim() !== '' && sharh.trim() !== '') {
@@ -720,6 +795,7 @@ export function Taqdeem(): JSX.Element {
                         lugha={lugha}
                         munassiq={munassiq}
                         yajri={iqrar.isPending}
+                        mashghul={iqrar.isPending && iqrar.variables?.tahdheer === satr.band}
                         alaIqrar={(tahdheer, qeema) => {
                           iqrar.mutate({ tahdheer, qeema });
                         }}
@@ -748,9 +824,13 @@ export function Taqdeem(): JSX.Element {
                           type="button"
                           className="zir zir--tamyeez"
                           aria-disabled={!bayanat.qaima.jahiza || irsal.isPending}
+                          aria-busy={irsal.isPending}
+                          title={
+                            bayanat.qaima.jahiza ? undefined : t('taqdeem.irsal.mughlaqa', lugha)
+                          }
                           onClick={() => {
                             if (bayanat.qaima.jahiza && !irsal.isPending) {
-                              irsal.mutate();
+                              iftahTaakid();
                             }
                           }}
                         >
@@ -763,23 +843,61 @@ export function Taqdeem(): JSX.Element {
                           type="button"
                           className="zir"
                           aria-disabled={tawthiq.isPending}
+                          aria-busy={tawthiq.isPending}
                           onClick={alaTawthiq}
                         >
                           {t('taqdeem.tawthiq.zir', lugha)}
                         </button>
                       </div>
-                      {!bayanat.qaima.jahiza ? (
-                        <p className="taqdeem__mughlaqa">
-                          <span className="taqdeem__mughlaqa-ramz" aria-hidden="true">
-                            <RamzIntizar />
-                          </span>
-                          {t('taqdeem.irsal.mughlaqa', lugha)}
+                      <Zuhur
+                        maftuh={!bayanat.qaima.jahiza}
+                        className="taqdeem__mughlaqa"
+                        role="status"
+                      >
+                        <span className="taqdeem__mughlaqa-ramz" aria-hidden="true">
+                          <RamzIntizar />
+                        </span>
+                        {t('taqdeem.irsal.mughlaqa', lugha)}
+                      </Zuhur>
+                      {/* The last word before the package leaves the machine:
+                          what is sent, as which revision, and that no edit
+                          follows it. Focus lands on the way out, so Enter pressed
+                          once too often cancels rather than sends. */}
+                      <Zuhur
+                        maftuh={taakidIrsal}
+                        className="taqdeem__taakid"
+                        role="alertdialog"
+                        aria-labelledby="taqdeem-taakid-unwan"
+                        aria-describedby="taqdeem-taakid-nass"
+                      >
+                        <p id="taqdeem-taakid-unwan" className="taqdeem__taakid-unwan">
+                          {t('taqdeem.taakid.unwan', lugha)}
                         </p>
-                      ) : null}
+                        <p id="taqdeem-taakid-nass" className="taqdeem__taakid-nass">
+                          {t('taqdeem.taakid.nass', lugha, {
+                            unwan: bayanat.unwan,
+                            raqm: munassiq.raqm(bayanat.murajaa),
+                          })}
+                        </p>
+                        <div className="taqdeem__taakid-azrar">
+                          <button type="button" className="zir" autoFocus onClick={aghliqTaakid}>
+                            {t('taqdeem.taakid.ilgha', lugha)}
+                          </button>
+                          <button
+                            type="button"
+                            className="zir zir--tamyeez"
+                            aria-busy={irsal.isPending}
+                            onClick={() => {
+                              if (bayanat.qaima.jahiza && !irsal.isPending) {
+                                irsal.mutate();
+                              }
+                            }}
+                          >
+                            {t('taqdeem.irsal.sallim', lugha)}
+                          </button>
+                        </div>
+                      </Zuhur>
                     </div>
-                  ) : null}
-                  {tawthiq.isPending ? (
-                    <p className="taqdeem__jari">{t('amm.tahmil', lugha)}</p>
                   ) : null}
                   {tawthiq.error !== null ? (
                     <KutlatKhata
@@ -790,32 +908,38 @@ export function Taqdeem(): JSX.Element {
                       aada={alaTawthiq}
                     />
                   ) : null}
-                  {tawthiq.data !== undefined && irsal.data === undefined ? (
-                    <div className="taqdeem__tawthiq" role="status">
-                      <p className="taqdeem__tasmiya">{t('taqdeem.tawthiq.ramz', lugha)}</p>
-                      <p className="taqdeem__tawthiq-ramz mono-ltr">
-                        {tawthiq.data.ramz_mustakhdim}
-                      </p>
-                      <a
-                        className="zir zir--tamyeez"
-                        href={tawthiq.data.rabt_kamil ?? tawthiq.data.rabt}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {t('taqdeem.tawthiq.iftah', lugha)}
-                      </a>
-                      <p className="taqdeem__nass-hadi">
-                        {jam(
-                          'taqdeem.tawthiq.muddat',
-                          lugha,
-                          Math.max(1, Math.ceil(tawthiq.data.thawani / 60)),
-                          munassiq,
-                        )}
-                        {' — '}
-                        {t('taqdeem.tawthiq.sharh', lugha)}
-                      </p>
-                    </div>
-                  ) : null}
+                  <Zuhur
+                    maftuh={tawthiq.data !== undefined && irsal.data === undefined}
+                    className="taqdeem__tawthiq"
+                    role="status"
+                  >
+                    {tawthiq.data === undefined ? null : (
+                      <>
+                        <p className="taqdeem__tasmiya">{t('taqdeem.tawthiq.ramz', lugha)}</p>
+                        <p className="taqdeem__tawthiq-ramz mono-ltr">
+                          {tawthiq.data.ramz_mustakhdim}
+                        </p>
+                        <a
+                          className="zir zir--tamyeez"
+                          href={tawthiq.data.rabt_kamil ?? tawthiq.data.rabt}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {t('taqdeem.tawthiq.iftah', lugha)}
+                        </a>
+                        <p className="taqdeem__nass-hadi">
+                          {jam(
+                            'taqdeem.tawthiq.muddat',
+                            lugha,
+                            Math.max(1, Math.ceil(tawthiq.data.thawani / 60)),
+                            munassiq,
+                          )}
+                          {' — '}
+                          {t('taqdeem.tawthiq.sharh', lugha)}
+                        </p>
+                      </>
+                    )}
+                  </Zuhur>
                   {irsal.error !== null ? (
                     <KutlatKhata
                       unwan={t('taqdeem.irsal.taadhur', lugha)}
@@ -829,36 +953,39 @@ export function Taqdeem(): JSX.Element {
                       }}
                     />
                   ) : null}
-                  {irsal.data !== undefined ? (
-                    <p className="taqdeem__najah" role="status">
-                      <span className="taqdeem__najah-ramz" aria-hidden="true">
-                        <RamzSah />
-                      </span>
-                      {irsal.data.rabt_talab_damj !== null ? (
-                        <a
-                          className="taqdeem__rabt"
-                          href={irsal.data.rabt_talab_damj}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {t('taqdeem.irsal.rabt', lugha)}
-                        </a>
-                      ) : (
-                        t('taqdeem.irsal.tamma', lugha, {
-                          raqm: munassiq.raqm(irsal.data.murajaa),
-                        })
-                      )}
-                    </p>
-                  ) : null}
+                  <Zuhur maftuh={irsal.data !== undefined} className="taqdeem__najah" role="status">
+                    {irsal.data === undefined ? null : (
+                      <>
+                        <span className="taqdeem__najah-ramz" aria-hidden="true">
+                          <RamzSah />
+                        </span>
+                        {irsal.data.rabt_talab_damj !== null ? (
+                          <a
+                            className="taqdeem__rabt"
+                            href={irsal.data.rabt_talab_damj}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {t('taqdeem.irsal.rabt', lugha)}
+                          </a>
+                        ) : (
+                          t('taqdeem.irsal.tamma', lugha, {
+                            raqm: munassiq.raqm(irsal.data.murajaa),
+                          })
+                        )}
+                      </>
+                    )}
+                  </Zuhur>
                 </section>
               ) : null}
+              </Mashhad>
 
               <section className="taqdeem__qism" aria-labelledby="taqdeem-unwan-musahamat">
                 <h2 id="taqdeem-unwan-musahamat" className="taqdeem__unwan-qism">
                   {t('taqdeem.musahamat.unwan', lugha)}
                 </h2>
                 {musahamat.isPending ? (
-                  <ul className="taqdeem__musahamat" aria-hidden="true">
+                  <ul className="taqdeem__musahamat zuhur-muakhkhar" aria-hidden="true">
                     {Array.from({ length: 2 }, (_, fihris) => (
                       <li key={fihris} className="taqdeem__musahama">
                         <span className="taqdeem__haykal-satr taqdeem__haykal-satr--unwan-musahama" />

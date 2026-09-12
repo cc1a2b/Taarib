@@ -110,3 +110,60 @@ export function yufaddilTaqleelHaraka(): boolean {
 export function haraka(intiqal: Transition): Transition {
   return yufaddilTaqleelHaraka() ? FAWRI : intiqal;
 }
+
+/**
+ * How deep an address sits in the product.
+ *
+ * The library is the ground. The four tools and a game's own screen are one
+ * step in; a game's workshop, submission, overlay and automatic run are a
+ * second step, reached from the game. The route tier reads the difference
+ * between two depths to decide which way a screen arrives from.
+ */
+export function umqMasar(masar: string): number {
+  const ajza = masar.split('/').filter((juz) => juz !== '');
+  const awwal = ajza.at(0);
+  if (awwal === undefined) {
+    return 0;
+  }
+  return awwal === 'luba' || ajza.length === 1 ? 1 : 2;
+}
+
+/** Which way a navigation travels: deeper in, back out, or across. */
+export type NawIntiqal = 'amiq' | 'raji' | 'jar';
+
+/**
+ * The transition types the router hands the document for one navigation.
+ *
+ * `false` under reduced motion, which skips the document transition outright
+ * rather than running one at zero duration: a skipped transition never
+ * snapshots the page, so nothing is ever held still for it.
+ */
+export function anwaIntiqal(taghyeer: {
+  readonly fromLocation?: { readonly pathname: string } | undefined;
+  readonly toLocation: { readonly pathname: string };
+  readonly pathChanged: boolean;
+}): NawIntiqal[] | false {
+  if (yufaddilTaqleelHaraka() || !taghyeer.pathChanged) {
+    return false;
+  }
+  const min = taghyeer.fromLocation === undefined ? 0 : umqMasar(taghyeer.fromLocation.pathname);
+  const ila = umqMasar(taghyeer.toLocation.pathname);
+  return [ila > min ? 'amiq' : ila < min ? 'raji' : 'jar'];
+}
+
+/**
+ * The name a picture carries across a navigation, from one identity.
+ *
+ * A view transition needs one name per element and a name that is a CSS
+ * identifier, and a game's identity is neither guaranteed: a launcher's own
+ * identifier is whatever that launcher chose. The identity is folded into a
+ * short hash so the name is always well-formed, and the hash is wide enough
+ * that two games in one window sharing it is not a case worth handling.
+ */
+export function ismIntiqalGhilaf(muarrif: string): string {
+  let basma = 5381;
+  for (let mawqi = 0; mawqi < muarrif.length; mawqi += 1) {
+    basma = (Math.imul(basma, 33) ^ muarrif.charCodeAt(mawqi)) >>> 0;
+  }
+  return `ghilaf-${basma.toString(36)}`;
+}

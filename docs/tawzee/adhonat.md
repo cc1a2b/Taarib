@@ -7,11 +7,16 @@ recorded as a gap rather than described as a behaviour.
 ## 0. The webview's own permission set
 
 `apps/studio/src-tauri/capabilities/default.json` grants the main window the
-core defaults plus `core:event:allow-listen`/`allow-unlisten`, which are the
-only Tauri APIs the frontend imports besides `invoke`. No filesystem, shell,
-http or dialog plugin permission is held: every one of those goes through a
-Taarib command, which is not governed by that file at all and validates its
-paths against `taarib_usus::masarat` before touching the machine.
+core defaults plus `core:event:allow-listen`/`allow-unlisten`, and six
+`core:window` grants for the strip the product draws in place of the platform
+frame on Windows (`tauri.windows.conf.json` sets `decorations: false`):
+`start-dragging` and `internal-toggle-maximize` for the drag region, `minimize`,
+`toggle-maximize` and `close` for its three controls, and `is-maximized` for
+the middle control's glyph. Those, `listen` and `invoke` are the only Tauri
+APIs the frontend imports (`hayat/nafidha.ts`, `hayat/jisr.ts`). No filesystem,
+shell, http or dialog plugin permission is held: every one of those goes
+through a Taarib command, which is not governed by that file at all and
+validates its paths against `taarib_usus::masarat` before touching the machine.
 
 `core:webview:allow-internal-toggle-devtools` remains listed because it is a
 member of `core:webview:default` and cannot be withdrawn from a capability at

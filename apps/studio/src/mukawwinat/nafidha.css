@@ -1,0 +1,102 @@
+/* شريط النافذة — the same surface and hairline as the rail and the status
+   strip, so the window is framed by one material. Nothing on it is selectable:
+   a drag that selected the name would be a drag that did not move the window. */
+
+.nafidha {
+  display: flex;
+  align-items: center;
+  block-size: var(--irtifa-nafidha);
+  background-color: var(--sath-1);
+  border-block-end: var(--samk-hadd) solid var(--hadd-daif);
+  user-select: none;
+  -webkit-user-select: none;
+  view-transition-name: nafidha;
+}
+
+/* Physical, on purpose: the platform's three lights sit at the left of the
+   window in every reading direction, and the strip has to leave them room. */
+.nafidha--mac {
+  padding-left: 78px;
+}
+
+.nafidha__hawiya {
+  display: flex;
+  align-items: center;
+  gap: var(--misafa-8);
+  padding-inline: var(--misafa-12);
+  pointer-events: none;
+}
+
+.nafidha__shiar {
+  inline-size: var(--hajm-ramz-satri);
+  block-size: var(--hajm-ramz-satri);
+}
+
+.nafidha__ism {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+  white-space: nowrap;
+}
+
+.nafidha__fasil {
+  inline-size: var(--samk-hadd);
+  block-size: var(--misafa-12);
+  background-color: var(--hadd);
+}
+
+/* Where the person is, a step quieter than the name, in whatever script the
+   screen or the game is named in. It ellipsises rather than pushing the
+   controls, which keep their width whatever the game is called. */
+.nafidha__siyaq {
+  min-inline-size: 0;
+  max-inline-size: 40vw;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  unicode-bidi: isolate;
+}
+
+.nafidha__azrar {
+  display: flex;
+  block-size: 100%;
+  margin-inline-start: auto;
+}
+
+.nafidha__zirr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--ard-zirr-nafidha);
+  block-size: 100%;
+  color: var(--nass-2);
+  cursor: default;
+  transition:
+    color var(--zaman-hala) var(--munhana),
+    background-color var(--zaman-hala) var(--munhana);
+}
+
+.nafidha__zirr:hover {
+  color: var(--nass-1);
+  background-color: var(--sath-3);
+  transition: none;
+}
+
+.nafidha__zirr:active {
+  background-color: var(--sath-4);
+}
+
+/* The close control fills red under the pointer, as the platform's own does:
+   it is the one control on the strip whose press cannot be taken back. */
+.nafidha__zirr--ighlaq:hover {
+  color: var(--nass-fawq-khatar);
+  background-color: var(--khatar);
+}
+
+.nafidha__zirr:focus-visible {
+  outline-offset: calc(var(--samk-hadd) * -2);
+}

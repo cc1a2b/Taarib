@@ -8,6 +8,7 @@ import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { mafatih } from '@/hayat/istifsar';
 import { KhataJisr, nadi } from '@/hayat/jisr';
+import { ansha } from '@/hayat/tanbihat';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t, wasm } from '@/lugha/lugha';
 import { khatarMin, maniAwwal, nassLugha } from '@/maktaba/aql';
@@ -15,7 +16,9 @@ import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
 import { jahiziyaMin, naqsJahiziya, tasil } from '@/maktaba/jahiziya';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
 import { KutlatFashal, SatrRamz } from '@/mukawwinat/kutlat_khata';
+import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
+import { Zuhur } from '@/mukawwinat/zuhur';
 import type { AqlLubaHie, Idadat, Lugha, NizamArqam, TafasilLuba } from '@/mustalahat/awamir';
 import { HARAKAT_LAWHA, haraka } from '@/nizam/haraka';
 import type {
@@ -27,6 +30,7 @@ import type {
   MinfathTilqai,
   TaqaddumMarhala,
   TaqreerQira,
+  WadTilqai,
 } from '@/tilqai/aqd';
 import { MARAHIL } from '@/tilqai/aqd';
 import { useTilqai } from '@/tilqai/halat';
@@ -485,7 +489,7 @@ function KutlatTilqai({ unwan, khata, lugha, children }: KhasaisKutla): JSX.Elem
 /** The panel-shaped placeholder, sized like the panels that replace it. */
 function Haykal(): JSX.Element {
   return (
-    <div className="tilqai__haykal" aria-hidden="true">
+    <div className="tilqai__haykal zuhur-muakhkhar" aria-hidden="true">
       <div className="tilqai__haykal-mirsa">
         <span className="tilqai__haykal-ghilaf" />
         {/* Two lines under the title, not one: the anchor it stands in for holds
@@ -621,6 +625,12 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
 
   const halat = useTilqai(muarrif, khasais.minfath);
   const { hukm, laqta, khataHukm, khataAmal, yantazir } = halat;
+
+  // Which control is waiting on the backend, so the arc turns on the button
+  // that was pressed and not on its neighbour in the same band. Read only while
+  // a call is in flight; the value left behind by the last one is masked.
+  const [amalJari, setAmalJari] = useState<'ibda' | 'istinaf' | 'alghi' | null>(null);
+  const mashghul = yantazir ? amalJari : null;
 
   const umla = laqta?.takalif.umla ?? hukm?.takalif.umla ?? 'USD';
   const nassMablagh = useMemo(
@@ -760,14 +770,24 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
     if (yantazir || mamnuBadi) {
       return;
     }
+    setAmalJari(istinaf ? 'istinaf' : 'ibda');
     halat.ibda(istinaf, iqrarShabaka);
+  };
+
+  /** The one place a run is stopped from: the anchor's button and the palette's entry. */
+  const alghiMahmi = (): void => {
+    if (yantazir) {
+      return;
+    }
+    setAmalJari('alghi');
+    halat.alghi();
   };
 
   // The palette registers once per id set, so its actions reach the current
   // closures through a ref rather than through the registration.
-  const afal = useRef({ ibda: ibdaMahmi, alghi: halat.alghi });
+  const afal = useRef({ ibda: ibdaMahmi, alghi: alghiMahmi });
   useEffect(() => {
-    afal.current = { ibda: ibdaMahmi, alghi: halat.alghi };
+    afal.current = { ibda: ibdaMahmi, alghi: alghiMahmi };
   });
 
   const awamir = useMemo<readonly AmrLawha[]>(() => {
@@ -798,6 +818,73 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
   const kasrKulfa =
     takalif === null || takalif.saqf <= 0 ? 0 : nisbat(takalif.munfaq, takalif.saqf);
 
+  /*
+   * The run's end, said where the reader is looking.
+   *
+   * The completion panel stands in the column and the anchor's button changes,
+   * but a person who pressed once and went on to read the reading report, or
+   * scrolled the rail, is not looking there — and the notice stack floats over
+   * the whole window. Every snapshot passes through here; only the one that
+   * carries the same run from moving to stopped says anything, so a screen that
+   * mounts onto a run already over, or a resumed run's first report, is silent.
+   * An interruption is not an end and gets the resume band instead.
+   */
+  const wadSabiq = useRef<{ readonly tashghila: string; readonly wad: WadTilqai } | null>(null);
+  useEffect(() => {
+    const sabiq = wadSabiq.current;
+    wadSabiq.current = laqta === null ? null : { tashghila: laqta.tashghila, wad: laqta.wad };
+    if (
+      laqta === null ||
+      sabiq === null ||
+      sabiq.tashghila !== laqta.tashghila ||
+      sabiq.wad !== 'jariya' ||
+      laqta.wad === 'jariya' ||
+      laqta.wad === 'mutawaqqifa'
+    ) {
+      return;
+    }
+    switch (laqta.wad) {
+      case 'jahiz':
+        ansha({
+          naw: 'najah',
+          nass: t('tilqai.tanbih.jahiz', lugha, { ism }),
+          tafsil: t('tilqai.jawda.jumla', lugha),
+        });
+        return;
+      case 'mulgha':
+        ansha({
+          naw: 'najah',
+          nass: t('tilqai.tanbih.mulgha', lugha, { ism }),
+          tafsil: t('tilqai.tanbih.munfaq', lugha, { kulfa: nassMablagh(laqta.takalif.munfaq) }),
+        });
+        return;
+      case 'fashal':
+        ansha({
+          naw: 'khatar',
+          nass: t('tilqai.tanbih.fashal', lugha, { ism }),
+          tafsil:
+            laqta.khata === null ? null : lugha === 'arabi' ? laqta.khata.arabi : laqta.khata.injilizi,
+          ramz: laqta.khata?.ramz ?? null,
+        });
+        return;
+      case 'iltiqat':
+        ansha({ naw: 'tanbeeh', nass: t('tilqai.tanbih.iltiqat', lugha, { ism }) });
+        return;
+    }
+  }, [laqta, ism, lugha, nassMablagh]);
+
+  /** The reason a refused start button gives under the pointer, matching what `aria-describedby` points at. */
+  const sababNass =
+    mani !== null && maniQati
+      ? nassLugha(mani, lugha)
+      : mamnu
+        ? mani !== null && mani.naw === 'jahiziya_ghaiba'
+          ? nassLugha(mani, lugha)
+          : (naqs ?? t('tilqai.jahiziya.sharh', lugha))
+        : mamnuShabaka
+          ? t('tilqai.shabaka.matlub', lugha)
+          : undefined;
+
   // Which single action the anchor offers. One place, in every state, so the
   // user never has to look for the button they pressed a minute ago.
   const zirRaisi = ((): JSX.Element | null => {
@@ -806,8 +893,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
         <button
           type="button"
           className="zir zir--tamyeez"
-          aria-disabled={yantazir || mamnuBadi}
+          aria-busy={yantazir}
+          aria-disabled={mamnuBadi}
           aria-describedby={sababTawaqquf}
+          title={sababNass}
           onClick={() => {
             ibdaMahmi(false);
           }}
@@ -821,12 +910,8 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
         <button
           type="button"
           className="zir zir--khatar"
-          aria-disabled={yantazir}
-          onClick={() => {
-            if (!yantazir) {
-              halat.alghi();
-            }
-          }}
+          aria-busy={yantazir}
+          onClick={alghiMahmi}
         >
           {t(yantazir ? 'tilqai.ilgha.jari' : 'tilqai.ilgha.zirr', lugha)}
         </button>
@@ -857,8 +942,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
         <button
           type="button"
           className="zir zir--tamyeez"
-          aria-disabled={yantazir || mamnuBadi}
+          aria-busy={yantazir}
+          aria-disabled={mamnuBadi}
           aria-describedby={sababTawaqquf}
+          title={sababNass}
           onClick={() => {
             ibdaMahmi(wajh === 'fashal');
           }}
@@ -893,6 +980,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
       />
 
       <div className="tilqai__jism">
+        <Mashhad
+          miftah={wajh === 'tahmil' ? 'tahmil' : wajh === 'khata' ? 'khata' : 'jahiz'}
+          className="tilqai__mashhad"
+        >
         {wajh === 'tahmil' ? (
           <Haykal />
         ) : (
@@ -913,7 +1004,9 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                 {/* Only while it moves. The top strip already says which screen
                     this is, and an eyebrow that repeats it is a line of text
                     that never changes above a line that does. */}
-                {yajri ? <p className="tilqai__fawq">{t('tilqai.jari.unwan', lugha)}</p> : null}
+                <Zuhur maftuh={yajri}>
+                  <p className="tilqai__fawq">{t('tilqai.jari.unwan', lugha)}</p>
+                </Zuhur>
                 <h2 className="tilqai__ism">{ism}</h2>
                 {hukm === null ? null : (
                   <p className="tilqai__tabaqa">
@@ -925,7 +1018,12 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                 )}
                 <p className="tilqai__jawda-satr">{t('tilqai.jawda.jumla', lugha)}</p>
               </div>
-              {zirRaisi === null ? null : <div className="tilqai__mirsa-afal">{zirRaisi}</div>}
+              {/* One slot, keyed on the face: the button the reader pressed a
+                  minute ago is replaced where it stood rather than swapped
+                  between two frames. */}
+              <Mashhad miftah={wajh} className="tilqai__mirsa-afal">
+                {zirRaisi}
+              </Mashhad>
             </header>
 
             {/*
@@ -959,8 +1057,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
               demanded for nothing is how a person learns to tick without
               reading.
             */}
-            {yalzamShabaka && !mamnu && !maniQati && (yabda || mustanifa) ? (
-              <div className="tilqai__iqrar-shabaka">
+            <Zuhur
+              maftuh={yalzamShabaka && !mamnu && !maniQati && (yabda || mustanifa)}
+              className="tilqai__iqrar-shabaka"
+            >
                 {/* Revealing a panel is not an announcement. A press that was
                     refused has to say so to a reader who cannot see the panel
                     appear, and it has to say it in the run's own terms: nothing
@@ -993,10 +1093,9 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   alaTabdil={setIqrarShabaka}
                   matlub={t('tilqai.shabaka.matlub', lugha)}
                 />
-              </div>
-            ) : null}
+            </Zuhur>
 
-            {mamnu && (yabda || mustanifa) ? (
+            <Zuhur maftuh={mamnu && (yabda || mustanifa)}>
               <section
                 className="tilqai__band tilqai__band--tanbeeh"
                 aria-labelledby="tilqai-unwan-jahiziya"
@@ -1022,9 +1121,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   </Link>
                 </div>
               </section>
-            ) : null}
+            </Zuhur>
 
-            {mustanifa && laqta !== null ? (
+            <Zuhur maftuh={mustanifa && laqta !== null}>
+              {laqta === null ? null : (
               <section className="tilqai__band tilqai__band--tanbeeh">
                 <h2 className="tilqai__band-unwan">{t('tilqai.istinaf.unwan', lugha)}</h2>
                 <p className="tilqai__nass">
@@ -1034,8 +1134,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   <button
                     type="button"
                     className="zir zir--tamyeez"
-                    aria-disabled={yantazir || mamnuBadi}
+                    aria-busy={mashghul === 'istinaf'}
+                    aria-disabled={mamnuBadi || (yantazir && mashghul !== 'istinaf')}
                     aria-describedby={sababTawaqquf}
+                    title={sababNass}
                     onClick={() => {
                       ibdaMahmi(true);
                     }}
@@ -1045,8 +1147,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   <button
                     type="button"
                     className="zir"
-                    aria-disabled={yantazir || mamnuBadi}
+                    aria-busy={mashghul === 'ibda'}
+                    aria-disabled={mamnuBadi || (yantazir && mashghul !== 'ibda')}
                     aria-describedby={sababTawaqquf}
+                    title={sababNass}
                     onClick={() => {
                       ibdaMahmi(false);
                     }}
@@ -1055,7 +1159,8 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   </button>
                 </div>
               </section>
-            ) : null}
+              )}
+            </Zuhur>
 
             <div
               className={
@@ -1066,7 +1171,8 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                 {/* Shown in every face, not only its own: a verdict that failed
                     while an interrupted run is still resumable is a fact the
                     user is owed alongside the offer to resume it. */}
-                {khataHukm === null ? null : (
+                <Zuhur maftuh={khataHukm !== null} asl="mahall">
+                  {khataHukm === null ? null : (
                   <KutlatTilqai
                     unwan={t('tilqai.khata.hukm', lugha)}
                     khata={khataHukm}
@@ -1076,19 +1182,22 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                       {t('amm.iaada', lugha)}
                     </button>
                   </KutlatTilqai>
-                )}
+                  )}
+                </Zuhur>
 
                 {/* Every failure except the one the door raises that is a
                     question. That one has a panel of its own above, because the
                     generic block says "something failed" about a decision the
                     person has not been asked for yet. */}
-                {khataAmal === null || ramzBab !== null ? null : (
+                <Zuhur maftuh={khataAmal !== null && ramzBab === null} asl="mahall">
+                  {khataAmal === null ? null : (
                   <KutlatTilqai
                     unwan={t('tilqai.khata.amal', lugha)}
                     khata={khataAmal}
                     lugha={lugha}
                   />
-                )}
+                  )}
+                </Zuhur>
 
                 {/* The standing blocker, in the producer's own words.
                     `mawani[0]` and nothing else: the sentence is the safety
@@ -1111,7 +1220,8 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                     blocker that appeared after a run started — an anti-cheat
                     signature that landed in an update — is worth showing the
                     moment the run stops, and is noise across a progress list. */}
-                {mani !== null && mani.nitaq === 'kul' && !yajri ? (
+                <Zuhur maftuh={mani !== null && mani.nitaq === 'kul' && !yajri} asl="mahall">
+                  {mani === null ? null : (
                   <section
                     className={
                       mani.nihai
@@ -1158,12 +1268,14 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                       )}
                     </div>
                   </section>
-                ) : null}
+                  )}
+                </Zuhur>
 
                 {/* The verdict's own refusal, for a game the core could not
                     answer for. It keeps the sentence `hukm_tilqai` computed,
                     which is the same producer text by another route. */}
-                {mani === null && wajh === 'marfud' && hukm !== null ? (
+                <Zuhur maftuh={mani === null && wajh === 'marfud' && hukm !== null} asl="mahall">
+                  {hukm === null ? null : (
                   <section className="tilqai__qism tilqai__qism--khatar">
                     <h2 className="tilqai__unwan">{t('tilqai.marfud.unwan', lugha)}</h2>
                     <p className="tilqai__nass">
@@ -1176,9 +1288,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                       </Link>
                     </div>
                   </section>
-                ) : null}
+                  )}
+                </Zuhur>
 
-                {wajh === 'iltiqat' ? (
+                <Zuhur maftuh={wajh === 'iltiqat'} asl="mahall">
                   <section className="tilqai__qism tilqai__qism--tanbeeh">
                     <h2 className="tilqai__unwan">{t('tilqai.iltiqat.unwan', lugha)}</h2>
                     <p className="tilqai__nass">
@@ -1201,9 +1314,9 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                       </button>
                     </div>
                   </section>
-                ) : null}
+                </Zuhur>
 
-                {wajh === 'jahiz' ? (
+                <Zuhur maftuh={wajh === 'jahiz'} asl="mahall">
                   <section className="tilqai__qism tilqai__qism--najah">
                     <h2 className="tilqai__unwan">{t('tilqai.jahiz.unwan', lugha)}</h2>
                     <p className="tilqai__nass">{t('tilqai.jahiz.sharh', lugha)}</p>
@@ -1217,18 +1330,20 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                       </Link>
                     </div>
                   </section>
-                ) : null}
+                </Zuhur>
 
-                {wajh === 'mulgha' && takalif !== null ? (
+                <Zuhur maftuh={wajh === 'mulgha' && takalif !== null} asl="mahall">
+                  {takalif === null ? null : (
                   <section className="tilqai__qism">
                     <h2 className="tilqai__unwan">{t('tilqai.mulgha.unwan', lugha)}</h2>
                     <p className="tilqai__nass">
                       {t('tilqai.mulgha.sharh', lugha, { kulfa: nassMablagh(takalif.munfaq) })}
                     </p>
                   </section>
-                ) : null}
+                  )}
+                </Zuhur>
 
-                {wajh === 'fashal' ? (
+                <Zuhur maftuh={wajh === 'fashal'} asl="mahall">
                   <section className="tilqai__qism tilqai__qism--khatar">
                     <h2 className="tilqai__unwan">{t('tilqai.fashal.unwan', lugha)}</h2>
                     {laqta?.khata == null ? null : (
@@ -1245,9 +1360,10 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                       />
                     )}
                   </section>
-                ) : null}
+                </Zuhur>
 
-                {wajh === 'hukm' && hukm !== null ? (
+                <Zuhur maftuh={wajh === 'hukm' && hukm !== null} asl="mahall">
+                  {hukm === null ? null : (
                   <section className="tilqai__qism" aria-labelledby="tilqai-unwan-hukm">
                     <h2 id="tilqai-unwan-hukm" className="tilqai__unwan">
                       {t('tilqai.hukm.unwan', lugha)}
@@ -1294,9 +1410,11 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                     )}
                     <p className="tilqai__qarar">{t('tilqai.hukm.qarar', lugha)}</p>
                   </section>
-                ) : null}
+                  )}
+                </Zuhur>
 
-                {marahil === null || wajh === 'marfud' || wajh === 'hukm' ? null : (
+                <Zuhur maftuh={marahil !== null && wajh !== 'marfud' && wajh !== 'hukm'}>
+                  {marahil === null ? null : (
                   <section className="tilqai__qism" aria-labelledby="tilqai-unwan-marahil">
                     <div className="tilqai__raas-qism">
                       <h2 id="tilqai-unwan-marahil" className="tilqai__unwan">
@@ -1327,24 +1445,31 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                         />
                       ))}
                     </ol>
-                    {yajri && laqta !== null ? (
-                      <p className="tilqai__ilgha-nass">
-                        {t(laqta.muthabbata ? 'tilqai.ilgha.baad' : 'tilqai.ilgha.qabl', lugha)}
-                      </p>
-                    ) : null}
-                    {yajri && laqta !== null && laqta.muthabbata ? (
-                      <div className="tilqai__afal">
-                        <Link to="/luba/$muarrif" params={{ muarrif }} className="zir">
-                          {t('tilqai.ilgha.luba', lugha)}
-                        </Link>
-                      </div>
-                    ) : null}
+                    <Zuhur maftuh={yajri && laqta !== null} className="tilqai__ilgha">
+                      {laqta === null ? null : (
+                      <>
+                        <p className="tilqai__ilgha-nass">
+                          {t(laqta.muthabbata ? 'tilqai.ilgha.baad' : 'tilqai.ilgha.qabl', lugha)}
+                        </p>
+                        {laqta.muthabbata ? (
+                          <div className="tilqai__afal">
+                            <Link to="/luba/$muarrif" params={{ muarrif }} className="zir">
+                              {t('tilqai.ilgha.luba', lugha)}
+                            </Link>
+                          </div>
+                        ) : null}
+                      </>
+                      )}
+                    </Zuhur>
                   </section>
-                )}
+                  )}
+                </Zuhur>
 
-                {laqta?.qira == null ? null : (
-                  <LawhatQira qira={laqta.qira} lugha={lugha} munassiq={munassiq} />
-                )}
+                <Zuhur maftuh={laqta?.qira != null}>
+                  {laqta?.qira == null ? null : (
+                    <LawhatQira qira={laqta.qira} lugha={lugha} munassiq={munassiq} />
+                  )}
+                </Zuhur>
               </div>
 
               {/* Absent on the one face with nothing to put in it: a verdict
@@ -1416,6 +1541,7 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
             </div>
           </>
         )}
+        </Mashhad>
 
         <p className="khafi" role="status">
           {yajri && laqta?.marhala != null

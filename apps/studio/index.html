@@ -70,7 +70,18 @@
     <title>تعريب</title>
   </head>
   <body>
-    <div id="jidhr"></div>
+    <!--
+      The frame before the first screen: `main.tsx` waits on the session probe
+      before it renders anything, and React clears this the moment it does.
+      Classes rather than inline styles, because the values are the token
+      layer's and the stylesheet is render-blocking in a production build.
+    -->
+    <div id="jidhr">
+      <div class="iqlaa" aria-hidden="true">
+        <span class="iqlaa__ism">تعريب</span>
+        <span class="iqlaa__khatt"></span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

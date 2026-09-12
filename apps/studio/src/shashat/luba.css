@@ -27,6 +27,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--misafa-24);
+
+  /* The columns below measure themselves against this body, not the window:
+     the rail takes 232px or 56px of the same window, and only the body knows
+     which. */
+  container-type: inline-size;
 }
 
 /* --- the anchor ------------------------------------------------------------ */
@@ -89,7 +94,11 @@
   min-inline-size: 0;
 }
 
-@media (max-width: 900px) {
+/* At the minimum window with the rail open the body is about 790px, and two
+   columns would leave the main one under 26rem — where every install row and
+   fact table wraps each value under its label. The side panel goes below
+   instead; with the rail folded the same window keeps both columns. */
+@container (max-width: 52rem) {
   .luba__amida,
   .luba__haykal-amida {
     grid-template-columns: minmax(0, 1fr);
@@ -771,13 +780,9 @@
    there already reads `--lawn-luba`, which every button inside this screen
    inherits. A copy here would only shadow the shared rule. */
 
-/* Busy is signalled without `disabled`, so keyboard focus is not dropped
-   mid-operation; the guard lives in the click handler. */
-.luba .zir[aria-disabled='true'] {
-  color: var(--nass-3);
-  border-color: var(--hadd-daif);
-  cursor: progress;
-}
+/* Refused and busy are the base layer's two attributes, `aria-disabled` and
+   `aria-busy`, and every button here carries whichever is true of it; nothing
+   is re-drawn per screen. */
 
 /* --- expanding blocks ------------------------------------------------------ */
 
@@ -786,6 +791,14 @@
 }
 
 .luba__tawassu-dakhil {
+  padding-block-start: var(--misafa-4);
+}
+
+/* A disclosure body that arrives through `Zuhur`. Inside a grid that starts
+   its items it would shrink to its widest line; the body takes the column. */
+.luba__kashf {
+  justify-self: stretch;
+  min-inline-size: 0;
   padding-block-start: var(--misafa-4);
 }
 
@@ -836,6 +849,7 @@
 
 .luba__raas-lawha {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--misafa-12);
@@ -1071,6 +1085,13 @@
   border-radius: var(--nisf-tahakkum);
 }
 
+/* A panel's own query, waiting inside a panel that is already drawn: lines
+   only, at the gap the answer's rows will keep, and no second border. */
+.luba__haykal-sutur {
+  display: grid;
+  gap: var(--misafa-8);
+}
+
 .luba__talabat {
   display: flex;
   flex-direction: column;
@@ -1102,13 +1123,6 @@
   border-radius: var(--nisf-lawha);
 }
 
-/* Refused, not busy. The shared rule above answers `cursor: progress`, which is
-   right for a control that is mid-operation and wrong for one that is off
-   because this build cannot do the thing at all. */
-.luba__tilqai .zir[aria-disabled='true'] {
-  cursor: not-allowed;
-}
-
 /* --- the install plan, above the button that runs it ------------------------
    Two registers on purpose. The findings — a mod already in the game, a store
    verify that would undo half of this, a launcher that will overwrite what is
@@ -1121,10 +1135,16 @@
    added files and nothing else — and framing every install as a caution is how
    a screen teaches somebody to stop reading the ones that are not. */
 
+/* The wrapper is what comes and goes, so it carries the step off whatever
+   stands above it; the skeleton and the failure inside take the same step as
+   the plan they stand in for. */
+.luba__khutta-zuhur {
+  margin-block-start: var(--misafa-16);
+}
+
 .luba__khutta {
   display: grid;
   gap: var(--misafa-8);
-  margin-block-start: var(--misafa-16);
 }
 
 /* The one sentence in the panel that is a number: how many files appear and how
@@ -1204,6 +1224,14 @@
    Inside the confirmation, between the question and the button that answers it.
    The residue is named rather than counted because the sweep this control
    authorises deletes exactly those entries, and a number cannot be agreed to. */
+
+/* The confirmation is a wrapping row — the question at one end, the buttons at
+   the other. The dry run takes a row of its own between them in every state,
+   so a short answer cannot slide up beside the question it is answering. */
+.luba__khuttat-izala-mashhad {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
 
 .luba__khuttat-izala {
   display: grid;

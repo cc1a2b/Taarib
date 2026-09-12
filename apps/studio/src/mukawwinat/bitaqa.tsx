@@ -17,7 +17,7 @@ import type {
 } from '@/mustalahat/awamir';
 import { t } from '@/lugha/lugha';
 import { WASF_TABAQA, WASM_TABAQA } from '@/maktaba/tabaqat';
-import { HARAKAT_HALA, haraka } from '@/nizam/haraka';
+import { HARAKAT_HALA, haraka, ismIntiqalGhilaf } from '@/nizam/haraka';
 
 import './bitaqa.css';
 
@@ -266,6 +266,18 @@ export interface KhasaisBitaqa {
   readonly hala?: HalatLuba | null;
   /** Whether this card is in the current selection. */
   readonly mukhtara: boolean;
+  /**
+   * Whether this is the card a navigation is about to leave from, or has just
+   * come back to.
+   *
+   * The one card so marked names its artwork for the document's view
+   * transition, and the game screen names its own cover the same way, so
+   * opening a game carries the picture from the grid to the screen and
+   * returning carries it back. One card and never the whole window: a grid
+   * of named pictures would each be captured apart from the region around
+   * them and fade in place while it moved.
+   */
+  readonly muntaqal?: boolean;
   /** The grid's current density. */
   readonly kathafa: KathafatBitaqa;
   /** The language of the current session, for the accessible name and tab labels. */
@@ -745,6 +757,7 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
     muharrik,
     hala,
     mukhtara,
+    muntaqal,
     kathafa,
     lugha,
     ala_fath,
@@ -917,7 +930,10 @@ function BitaqaLubaBila(khasais: KhasaisBitaqa): JSX.Element {
         <span className={tabaqatHalqa('bitaqa__halqa-sawt', sawt)} aria-hidden="true" />
         <span className={tabaqatHalqa('bitaqa__halqa-nass', nass)} aria-hidden="true" />
 
-        <div className="bitaqa__sura">
+        <div
+          className="bitaqa__sura"
+          style={muntaqal === true ? { viewTransitionName: ismIntiqalGhilaf(muarrif) } : undefined}
+        >
           {/*
             The plate is drawn whenever one exists, and stays underneath the
             artwork rather than being swapped out for it. That is what makes the

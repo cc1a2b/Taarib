@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
-import { motion } from 'motion/react';
+import { useNavigate } from '@tanstack/react-router';
 import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -8,6 +7,7 @@ import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
+import { ansha } from '@/hayat/tanbihat';
 import { useTaraju } from '@/hayat/taraju';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t } from '@/lugha/lugha';
@@ -23,54 +23,34 @@ import type { FahrasBahth, LubaGhaiba, SijillLuba, TalabMaktaba } from '@/maktab
 import { ansha_fahrasat, nasseq } from '@/maktaba/tanqiya';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import type { KhasaisRamz } from '@/mukawwinat/rumuz';
-import {
-  RamzIdadat,
-  RamzMaktaba,
-  RamzMuraja,
-  RamzSahmAala,
-  RamzSahmAsfal,
-  RamzTabaqa,
-  RamzTalabat,
-  RamzTanbeeh,
-  RamzTaqdeem,
-  RamzTashkhis,
-  RamzWarsha,
-  ramz,
-} from '@/mukawwinat/rumuz';
+import { RamzSahmAala, RamzSahmAsfal, ramz } from '@/mukawwinat/rumuz';
 import { ShabakatMaktaba } from '@/mukawwinat/shabakat_maktaba';
+import { Zuhur } from '@/mukawwinat/zuhur';
 import type {
   HalatLuba,
   HasilatMaktaba,
   Idadat,
-  JalsaHie,
   Lugha,
-  MaalumatTaarib,
   Manassa,
   NizamArqam,
   SijillGhaib,
   SijillMaktaba,
 } from '@/mustalahat/awamir';
-import { HARAKAT_MASAR, haraka } from '@/nizam/haraka';
 
 import './maktaba.css';
 
 /**
- * المكتبة — the Library, and the shell every other screen is mounted inside.
- *
- * The shell is a two-column grid: a fixed rail of screens on the leading edge
- * and one content region beside it. Both edges between them are hairlines, not
- * shadows, because a surface in this product declares its level by luminance
- * and a single-pixel border and never by floating above the one underneath it.
+ * المكتبة — the Library: the grid of every game on this machine, and the row
+ * of controls that decides which of them are on screen and in what order. The
+ * rail, the window strip and the status strip around it belong to the shell
+ * in `mukawwinat/hikal.tsx`, which every screen shares.
  */
 
 /* ==========================================================================
-   The five glyphs this screen needs and the family in `rumuz.tsx` does not
-   carry yet. Built through that file's own `ramz` contract rather than as bare
+   The two glyphs this screen needs and the family in `rumuz.tsx` does not
+   carry. Built through that file's own `ramz` contract rather than as bare
    SVG, so the 24×24 grid, the single stroke weight, the round terminals and
-   the decorative default cannot drift away from the eight glyphs beside them.
-   They live here rather than in the family because the family is a shared file
-   this phase does not own; if a second screen ever wants one, that is the
-   moment they move.
+   the decorative default cannot drift away from the glyphs beside them.
    ========================================================================== */
 
 /** The lens is 13 units across and the pupil 6, so the counter survives 16px. */
@@ -87,130 +67,6 @@ function RamzBahth(khasais: KhasaisRamz): JSX.Element {
 /** A chevron, not an arrow: the arrows already mean sort direction in this row. */
 function RamzSuqut(khasais: KhasaisRamz): JSX.Element {
   return ramz(khasais, <path d="M5.5 9.5L12 16L18.5 9.5" />);
-}
-
-/** A game is a cover with a strip under it — the product's own card, at 24 units. */
-function RamzLuba(khasais: KhasaisRamz): JSX.Element {
-  return ramz(
-    khasais,
-    <>
-      <rect x="5.5" y="2.5" width="13" height="19" rx="1" />
-      <path d="M5.5 16.5H18.5" />
-    </>,
-  );
-}
-
-/** Handedness rather than direction, so it never mirrors. */
-function RamzMuayana(khasais: KhasaisRamz): JSX.Element {
-  return ramz(
-    khasais,
-    <>
-      <path d="M2.5 12C5 7 8.5 5 12 5s7 2 9.5 7c-2.5 5-6 7-9.5 7s-7-2-9.5-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </>,
-  );
-}
-
-/** The contributor, not the contribution: this screen lists people's work. */
-function RamzMusahamat(khasais: KhasaisRamz): JSX.Element {
-  return ramz(
-    khasais,
-    <>
-      <circle cx="12" cy="6" r="3.5" />
-      <path d="M4 20.5a8 8 0 0 1 16 0" />
-    </>,
-  );
-}
-
-/** One entry in the navigation rail. */
-interface BandTanaqqul {
-  /** Stable key, matching the screen's directory name. */
-  readonly muarrif: string;
-  /** The screen's name, in the string set. */
-  readonly miftah: MiftahLugha;
-  /** The route it navigates to, or null while the screen has no route. */
-  readonly masar: '/' | '/talabat' | '/muraja' | '/idadat' | '/tashkhis' | null;
-  /** Its glyph, at the rail's own size. */
-  readonly ramz: (khasais: KhasaisRamz) => JSX.Element;
-}
-
-/** A titled run of rail entries. */
-interface MajmuatTanaqqul {
-  /** Stable key. */
-  readonly muarrif: string;
-  /** The run's heading, or null when the run is the landing screen alone. */
-  readonly unwan: MiftahLugha | null;
-  /** One sentence under the heading saying why the run reads the way it does. */
-  readonly tanbih: MiftahLugha | null;
-  readonly shashat: readonly BandTanaqqul[];
-}
-
-/**
- * The eleven screens, in three runs.
- *
- * The runs are not decoration. Six of these screens are scoped to a game and
- * have no route until one is open, so on the landing screen they are all
- * disabled at once — and a rail that opens with six greyed lines and no reason
- * reads as a broken product rather than as an honest one. Naming the run and
- * saying, once, what would enable it turns the same six lines into an answer.
- * Nothing is hidden and nothing is promised: the entries are still listed,
- * still disabled, and still in the order the product presents them.
- */
-const MAJMUAT: readonly MajmuatTanaqqul[] = [
-  {
-    muarrif: 'jidhr',
-    unwan: null,
-    tanbih: null,
-    shashat: [{ muarrif: 'maktaba', miftah: 'shasha.maktaba', masar: '/', ramz: RamzMaktaba }],
-  },
-  {
-    muarrif: 'luba',
-    unwan: 'maktaba.tanaqqul.luba',
-    tanbih: 'maktaba.tanaqqul.bila_luba',
-    shashat: [
-      { muarrif: 'luba', miftah: 'shasha.luba', masar: null, ramz: RamzLuba },
-      { muarrif: 'warsha', miftah: 'shasha.warsha', masar: null, ramz: RamzWarsha },
-      { muarrif: 'muayana', miftah: 'shasha.muayana', masar: null, ramz: RamzMuayana },
-      { muarrif: 'taqdeem', miftah: 'shasha.taqdeem', masar: null, ramz: RamzTaqdeem },
-      { muarrif: 'musahamat', miftah: 'shasha.musahamat', masar: null, ramz: RamzMusahamat },
-      { muarrif: 'tabaqa', miftah: 'shasha.tabaqa', masar: null, ramz: RamzTabaqa },
-    ],
-  },
-  {
-    muarrif: 'taarib',
-    unwan: 'maktaba.tanaqqul.taarib',
-    tanbih: null,
-    shashat: [
-      { muarrif: 'muraja', miftah: 'shasha.muraja', masar: '/muraja', ramz: RamzMuraja },
-      { muarrif: 'talabat', miftah: 'shasha.talabat', masar: '/talabat', ramz: RamzTalabat },
-      { muarrif: 'idadat', miftah: 'shasha.idadat', masar: '/idadat', ramz: RamzIdadat },
-      { muarrif: 'tashkhis', miftah: 'shasha.tashkhis', masar: '/tashkhis', ramz: RamzTashkhis },
-    ],
-  },
-];
-
-/** The operating system's name, in the string set. */
-function miftahNizam(nizam: MaalumatTaarib['nizam']): MiftahLugha {
-  switch (nizam) {
-    case 'windows':
-      return 'nizam.windows';
-    case 'linux':
-      return 'nizam.linux';
-    case 'mac':
-      return 'nizam.mac';
-  }
-}
-
-/** The architecture's name, in the string set. */
-function miftahMimariya(mimariya: MaalumatTaarib['mimariya']): MiftahLugha {
-  switch (mimariya) {
-    case 'x86':
-      return 'mimariya.x86';
-    case 'x8664':
-      return 'mimariya.x8664';
-    case 'aarch64':
-      return 'mimariya.aarch64';
-  }
 }
 
 /** Every launcher family's Arabic name, for rows the backend names by slug. */
@@ -493,27 +349,25 @@ function MurashshihHala({
         {nashit ? <span className="raas__wasm">{munassiq.raqm(mukhtara.length)}</span> : null}
         <RamzSuqut className="raas__ramz" />
       </button>
-      {maftuh ? (
-        <div className="raas__lawha" role="group" aria-label={unwan}>
-          {HALAT.map((hala) => (
-            <label className="raas__khiyar" key={hala}>
-              <input
-                type="checkbox"
-                checked={mukhtara.includes(hala)}
-                onChange={() => {
-                  ala_tabdeel(hala);
-                }}
-              />
-              {t(`maktaba.hala.${hala}`, lugha)}
-            </label>
-          ))}
-          {nashit ? (
-            <button type="button" className="raas__imsah" onClick={ala_imsah}>
-              {t('maktaba.faragh.tasfiya.imsah', lugha)}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+      <Zuhur maftuh={maftuh} className="raas__lawha" role="group" aria-label={unwan}>
+        {HALAT.map((hala) => (
+          <label className="raas__khiyar" key={hala}>
+            <input
+              type="checkbox"
+              checked={mukhtara.includes(hala)}
+              onChange={() => {
+                ala_tabdeel(hala);
+              }}
+            />
+            {t(`maktaba.hala.${hala}`, lugha)}
+          </label>
+        ))}
+        {nashit ? (
+          <button type="button" className="raas__imsah" onClick={ala_imsah}>
+            {t('maktaba.faragh.tasfiya.imsah', lugha)}
+          </button>
+        ) : null}
+      </Zuhur>
     </div>
   );
 }
@@ -545,16 +399,6 @@ export function Maktaba(): JSX.Element {
   const makhzanIstifsar = useQueryClient();
   const intiqal = useNavigate();
 
-  const maalumat = useQuery<MaalumatTaarib, KhataJisr>({
-    queryKey: mafatih.maalumat,
-    queryFn: () => nadi('maalumat_taarib'),
-  });
-
-  const jalsa = useQuery<JalsaHie, KhataJisr>({
-    queryKey: mafatih.jalsa,
-    queryFn: () => nadi('jalsati'),
-  });
-
   const idadat = useQuery<Idadat, KhataJisr>({
     queryKey: mafatih.idadat,
     queryFn: () => nadi('idadat_hali'),
@@ -573,9 +417,6 @@ export function Maktaba(): JSX.Element {
   const lugha: Lugha = idadat.data?.lugha ?? 'arabi';
   const arqam: NizamArqam = idadat.data?.arqam ?? 'latini';
   const munassiq = useMemo(() => munassiqat(lugha, arqam), [lugha, arqam]);
-
-
-  const masarHali = useRouterState({ select: (halat) => halat.location.pathname });
 
   const hajmBitaqa = useKhiyaratMaktaba((hali) => hali.hajm_bitaqa);
   const tajmi = useKhiyaratMaktaba((hali) => hali.tajmi);
@@ -598,6 +439,23 @@ export function Maktaba(): JSX.Element {
 
   const [qaimatSiyaq, setQaimatSiyaq] = useState<QaimatSiyaq | null>(null);
   const [masarIdafa, setMasarIdafa] = useState<string | null>(null);
+
+  // A menu opened from the keyboard has to close from it: the pointer leaving
+  // is the only other way out, and a keyboard has no pointer to leave with.
+  useEffect(() => {
+    if (qaimatSiyaq === null) {
+      return undefined;
+    }
+    const alaMiftah = (hadath: KeyboardEvent): void => {
+      if (hadath.key === 'Escape') {
+        setQaimatSiyaq(null);
+      }
+    };
+    document.addEventListener('keydown', alaMiftah);
+    return () => {
+      document.removeEventListener('keydown', alaMiftah);
+    };
+  }, [qaimatSiyaq]);
 
   /** The search field, so the palette's focus command can reach it. */
   const marjaBahth = useRef<HTMLInputElement>(null);
@@ -696,6 +554,24 @@ export function Maktaba(): JSX.Element {
         makhzanIstifsar.setQueryData(mafatih.maktaba, siyaq.sabiqa);
       }
     },
+    // The cards are already gone from the grid, so the confirmation is the
+    // only thing on screen that says what happened — and it carries the way
+    // back, which pops the step `mutationFn` registered a moment ago.
+    onSuccess: (mukhfat) => {
+      if (mukhfat.length === 0) {
+        return;
+      }
+      ansha({
+        naw: 'najah',
+        nass: jam('maktaba.ikhfa.tamma', lugha, mukhfat.length, munassiq),
+        amal: {
+          unwan: t('taraju.zirr', lugha),
+          nafidh: () => {
+            void useTaraju.getState().taraju();
+          },
+        },
+      });
+    },
     mutationFn: async (muarrifat) => {
       const mukhfat: string[] = [];
       try {
@@ -781,6 +657,21 @@ export function Maktaba(): JSX.Element {
       setTaqaddumJamai({ tamma: muarrifat.length, majmu: muarrifat.length });
       return { muthabbat, matruk };
     },
+    // Said in a notice rather than under the grid, because the person who
+    // selected forty games has usually scrolled away from where the bar was
+    // by the time the fortieth finishes. The games left for their own screens
+    // are the second line: a selection of ten that installs eight is
+    // otherwise indistinguishable from one that installed all of them.
+    onSuccess: (hasila) => {
+      ansha({
+        naw: 'najah',
+        nass: jam('maktaba.jamai.tamma', lugha, hasila.muthabbat, munassiq),
+        tafsil:
+          hasila.matruk > 0
+            ? t('maktaba.jamai.matruk', lugha, { adad: munassiq.raqm(hasila.matruk) })
+            : null,
+      });
+    },
     onSettled: () => {
       setJamaiHala(null);
       setTaqaddumJamai(null);
@@ -793,6 +684,7 @@ export function Maktaba(): JSX.Element {
     onSuccess: () => {
       setMasarIdafa(null);
       void makhzanIstifsar.invalidateQueries({ queryKey: mafatih.maktaba });
+      void makhzanIstifsar.invalidateQueries({ queryKey: mafatih.fahs_akhir });
       void makhzanIstifsar.invalidateQueries({ queryKey: mafatih.idadat });
     },
   });
@@ -800,40 +692,19 @@ export function Maktaba(): JSX.Element {
   /** Stable per observer, so the palette's rescan closure never goes stale. */
   const aadaFahsMaktaba = maktaba.refetch;
 
-  /** The library's palette entries: three screens, the rescan, and the search field. */
+  /** The library's palette entries: the rescan and the search field. The screens are the shell's. */
   const awamirShasha = useMemo<readonly AmrLawha[]>(() => {
     const majal = t('shasha.maktaba', lugha);
     return [
-      {
-        muarrif: 'maktaba.iftah_idadat',
-        unwan: t('maktaba.lawha.iftah_idadat', lugha),
-        majal,
-        nafidh: () => {
-          void intiqal({ to: '/idadat' });
-        },
-      },
-      {
-        muarrif: 'maktaba.iftah_tashkhis',
-        unwan: t('maktaba.lawha.iftah_tashkhis', lugha),
-        majal,
-        nafidh: () => {
-          void intiqal({ to: '/tashkhis' });
-        },
-      },
-      {
-        muarrif: 'maktaba.iftah_talabat',
-        unwan: t('maktaba.lawha.iftah_talabat', lugha),
-        majal,
-        nafidh: () => {
-          void intiqal({ to: '/talabat' });
-        },
-      },
       {
         muarrif: 'maktaba.aada_fahs',
         unwan: t('maktaba.lawha.aada_fahs', lugha),
         majal,
         nafidh: () => {
           void aadaFahsMaktaba();
+          // The diagnostics screen's record of the last scan is about to be
+          // out of date, and it is not this screen's to redraw.
+          void makhzanIstifsar.invalidateQueries({ queryKey: mafatih.fahs_akhir });
         },
       },
       {
@@ -845,24 +716,18 @@ export function Maktaba(): JSX.Element {
         },
       },
     ];
-  }, [lugha, intiqal, aadaFahsMaktaba]);
+  }, [lugha, aadaFahsMaktaba, makhzanIstifsar]);
   useSajjilAwamir(awamirShasha);
 
   /**
-   * The sentence behind a probe that failed, or null when it did not.
+   * The sentence behind the settings read failing, or null when it did not.
    *
-   * Every one of these used to be dropped on the floor. The cost was not a
-   * missing error block — it was that something disappeared and there was no
-   * way to find out why: the review console's entry left the rail, the status
-   * bar shimmered for ever, and the interface offered the user nothing to read.
-   * A failure that only removes something must still be answerable.
+   * It used to be dropped on the floor, and the cost was that the screen
+   * carried on in the defaults with nothing on it that looked wrong. A failure
+   * that only removes something must still be answerable.
    */
-  const sabab = (fashal: KhataJisr | null): string | null =>
-    fashal === null ? null : (fashal.nass(lugha) ?? t('faragh.jisr', lugha));
-
-  const sababJalsa = sabab(jalsa.error);
-  const sababMaalumat = sabab(maalumat.error);
-  const sababIdadat = sabab(idadat.error);
+  const sababIdadat =
+    idadat.error === null ? null : (idadat.error.nass(lugha) ?? t('faragh.jisr', lugha));
 
   // The language has to be known before the first character is painted, or a
   // session set to English opens in Arabic and swaps a frame later. Nothing
@@ -877,7 +742,6 @@ export function Maktaba(): JSX.Element {
   const khata = maktaba.error;
 
   const aidIstifsar = (): void => {
-    void maalumat.refetch();
     void idadat.refetch();
     void maktaba.refetch();
   };
@@ -890,94 +754,15 @@ export function Maktaba(): JSX.Element {
     setMasarIdafa('');
   };
 
-  /** One rail entry, or nothing when the session genuinely has no such screen. */
-  const bandShasha = (shasha: BandTanaqqul): JSX.Element | null => {
-    const ism = t(shasha.miftah, lugha);
-    const Ramz = shasha.ramz;
-    if (shasha.muarrif === 'muraja' && jalsa.data?.malik !== true) {
-      // The console's route exists only in an owner session's table, so a
-      // session that is not one has nothing to link to and the entry is
-      // genuinely absent. A session whose probe *failed* is a third case and
-      // not that one: it is not "not an owner", it is "not known yet", and a
-      // genuine owner watching the console vanish from the rail concludes it
-      // was taken away. So it stays, disabled, carrying the reason it cannot be
-      // opened. A `title` on an element that already has text becomes its
-      // accessible description, so the reason is announced as well as hovered.
-      if (sababJalsa === null) {
-        return null;
-      }
-      return (
-        <li key={shasha.muarrif}>
-          <span className="band band--matfi" aria-disabled="true" title={sababJalsa}>
-            <Ramz className="band__ramz" />
-            {ism}
-          </span>
-        </li>
-      );
-    }
-    if (shasha.masar === null) {
-      return (
-        <li key={shasha.muarrif}>
-          <span className="band band--matfi" aria-disabled="true">
-            <Ramz className="band__ramz" />
-            {ism}
-          </span>
-        </li>
-      );
-    }
-    const nashit = shasha.masar === masarHali;
-    return (
-      <li key={shasha.muarrif}>
-        <Link
-          to={shasha.masar}
-          className={nashit ? 'band band--nashit' : 'band'}
-          {...(nashit ? ({ 'aria-current': 'page' } as const) : {})}
-        >
-          {nashit ? (
-            <motion.span
-              layoutId="mushir-tanaqqul"
-              className="band__mushir"
-              transition={haraka(HARAKAT_MASAR)}
-            />
-          ) : null}
-          <Ramz className="band__ramz" />
-          {ism}
-        </Link>
-      </li>
-    );
-  };
+  // The menu's place, as a style, only while it is open: the wrapper keeps
+  // the last style it was given for the frames the leaving menu takes.
+  const uslubQaima =
+    qaimatSiyaq === null
+      ? undefined
+      : { insetInlineStart: qaimatSiyaq.s, insetBlockStart: qaimatSiyaq.a };
 
   return (
-    <div className="hikal">
-      <aside className="janib">
-        <div className="janib__tarwisa">
-          <span className="janib__ism">{t('tatbiq.ism', lugha)}</span>
-        </div>
-
-        <nav className="janib__tanaqqul" aria-label={t('tanaqqul.unwan', lugha)}>
-          {MAJMUAT.map((majmua) => {
-            const bunud = majmua.shashat
-              .map(bandShasha)
-              .filter((band): band is JSX.Element => band !== null);
-            if (bunud.length === 0) {
-              return null;
-            }
-            return (
-              <div className="janib__majmua" key={majmua.muarrif}>
-                {majmua.unwan === null ? null : (
-                  <h2 className="janib__fasl">{t(majmua.unwan, lugha)}</h2>
-                )}
-                {majmua.tanbih === null ? null : (
-                  <p className="janib__tanbih">{t(majmua.tanbih, lugha)}</p>
-                )}
-                <ul>{bunud}</ul>
-              </div>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <main className="mutawa">
+    <div className="maktaba">
         <header className="raas">
           <h1 className="raas__unwan">{t('shasha.maktaba', lugha)}</h1>
           <div
@@ -1143,15 +928,17 @@ export function Maktaba(): JSX.Element {
             />
           )}
 
-          {qaimatSiyaq !== null ? (
-            <div
-              className="maktaba__qaima-siyaq"
-              role="menu"
-              style={{ insetInlineStart: qaimatSiyaq.s, insetBlockStart: qaimatSiyaq.a }}
-              onMouseLeave={() => {
-                setQaimatSiyaq(null);
-              }}
-            >
+          <Zuhur
+            maftuh={qaimatSiyaq !== null}
+            className="maktaba__qaima-siyaq"
+            role="menu"
+            {...(uslubQaima === undefined ? {} : { style: uslubQaima })}
+            onMouseLeave={() => {
+              setQaimatSiyaq(null);
+            }}
+          >
+            {qaimatSiyaq === null ? null : (
+            <>
               <button
                 type="button"
                 role="menuitem"
@@ -1216,15 +1003,19 @@ export function Maktaba(): JSX.Element {
               >
                 {t('maktaba.ikhtiyar.ikhfa', lugha)}
               </button>
-            </div>
-          ) : null}
+            </>
+            )}
+          </Zuhur>
 
-          {masarIdafa !== null ? (
-            <div
-              className="maktaba__idafa"
-              role="dialog"
-              aria-label={t('maktaba.faragh.fahs', lugha)}
-            >
+          <Zuhur
+            maftuh={masarIdafa !== null}
+            asl="taht"
+            className="maktaba__idafa"
+            role="dialog"
+            aria-label={t('maktaba.faragh.fahs', lugha)}
+          >
+            {masarIdafa === null ? null : (
+            <>
               <label className="maktaba__idafa-tasmiya" htmlFor="maktaba-masar-idafa">
                 {t('maktaba.idafa.masar', lugha)}
               </label>
@@ -1263,8 +1054,9 @@ export function Maktaba(): JSX.Element {
               {idafa.error !== null ? (
                 <p className="halat__nass">{idafa.error.nass(lugha) ?? t('faragh.jisr', lugha)}</p>
               ) : null}
-            </div>
-          ) : null}
+            </>
+            )}
+          </Zuhur>
 
           <div aria-live="polite">
             {jamaiHala !== null ? <p className="maktaba__jamai">{jamaiHala}</p> : null}
@@ -1292,21 +1084,6 @@ export function Maktaba(): JSX.Element {
                   })}
                 </p>
               </div>
-            ) : null}
-            {jamai.data !== undefined ? (
-              <p className="maktaba__jamai" role="status">
-                {jam('maktaba.jamai.tamma', lugha, jamai.data.muthabbat, munassiq)}
-              </p>
-            ) : null}
-            {/* Said out loud, because a selection of ten that installs eight is
-                otherwise indistinguishable from one that installed all of them
-                and found two already patched. */}
-            {jamai.data !== undefined && jamai.data.matruk > 0 ? (
-              <p className="maktaba__jamai">
-                {t('maktaba.jamai.matruk', lugha, {
-                  adad: munassiq.raqm(jamai.data.matruk),
-                })}
-              </p>
             ) : null}
           </div>
 
@@ -1348,78 +1125,6 @@ export function Maktaba(): JSX.Element {
             {yuhammil ? t('amm.tahmil', lugha) : (sababIdadat ?? '')}
           </p>
         </section>
-
-        <footer className="shareet">
-          {sababMaalumat !== null ? (
-            /*
-              A placeholder is a promise that something is coming. This probe is
-              not coming back on its own, so leaving the skeleton in place would
-              have the status bar shimmering for the rest of the session over a
-              failure nobody was told about. The reason takes the row instead,
-              truncated like the data path's own long value and readable in full
-              on hover.
-            */
-            <dl className="shareet__qaima">
-              <div className="shareet__band shareet__band--masar">
-                <dd title={sababMaalumat}>{sababMaalumat}</dd>
-              </div>
-            </dl>
-          ) : maalumat.data === undefined ? (
-            <div className="shareet__haykal" aria-hidden="true">
-              <span className="haykal__satr haykal__satr--qasir" />
-            </div>
-          ) : (
-            /*
-              Five facts at one weight is five things to read and no reason to
-              read any of them. Only one of the five is about this session — a
-              build that trusts the published development key rather than the
-              release key — so that one leads, carries the warning colour and
-              its glyph, and states itself in three words with the full sentence
-              behind them. The other four are provenance: what is running and
-              where it keeps its files. They stay, because nothing else in the
-              product displays them yet, but they lose their labels — a status
-              bar that names every value it shows says each thing twice — and
-              they sit at the far end in the quietest text the scale has.
-            */
-            <dl className="shareet__qaima">
-              {maalumat.data.hawiyat_thiqa === 'tatwir' ? (
-                <div className="shareet__band">
-                  <dt className="khafi">{t('maalumat.tatwir', lugha)}</dt>
-                  <dd className="shareet__wasm-tatwir">
-                    <RamzTanbeeh />
-                    {t('maktaba.shareet.tatwir', lugha)}
-                    <span className="khafi">{t('maalumat.tatwir', lugha)}</span>
-                  </dd>
-                </div>
-              ) : null}
-              <div className="shareet__band shareet__band--masar">
-                <dt className="khafi">{t('maalumat.bayanat', lugha)}</dt>
-                <dd className="mono-ltr" title={maalumat.data.jidhr_bayanat}>
-                  {maalumat.data.jidhr_bayanat}
-                </dd>
-              </div>
-              <div className="shareet__band shareet__band--tarif">
-                <dt className="khafi">{t('maalumat.isdar', lugha)}</dt>
-                <dd className="mono-ltr" title={t('maalumat.isdar', lugha)}>
-                  {maalumat.data.isdar}
-                </dd>
-              </div>
-              <div className="shareet__band shareet__band--tarif">
-                <dt className="khafi">{t('maalumat.nizam', lugha)}</dt>
-                <dd title={t('maalumat.nizam', lugha)}>
-                  {t(miftahNizam(maalumat.data.nizam), lugha)}
-                </dd>
-              </div>
-              <div className="shareet__band shareet__band--tarif">
-                <dt className="khafi">{t('maalumat.mimariya', lugha)}</dt>
-                <dd className="mono-ltr" title={t('maalumat.mimariya', lugha)}>
-                  {t(miftahMimariya(maalumat.data.mimariya), lugha)}
-                </dd>
-              </div>
-            </dl>
-          )}
-        </footer>
-      </main>
     </div>
   );
 }

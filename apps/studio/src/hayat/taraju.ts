@@ -1,6 +1,6 @@
 // التراجع — a stack bounded to the last fifty steps, and its window-level chord binding.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { create } from 'zustand';
 
 import { IKHTISAR_TARAJU, hallilAw, yutabiq } from '@/hayat/ikhtisarat';
@@ -12,9 +12,6 @@ export interface KhatwaTaraju {
 }
 
 const HADD_MAKDAS = 50;
-
-/** How long the last undone wasf is held for the announcement line. */
-const MUDDAT_ILAN = 3000;
 
 /** The stack, whether an undo is in flight, and everything that changes them. */
 export interface MakhzanTaraju {
@@ -56,11 +53,10 @@ export const useTaraju = create<MakhzanTaraju>()((haddid, iqra) => ({
   akhir: () => iqra().makdas.at(-1)?.wasf ?? null,
 }));
 
-/** What the caller renders and runs: the announcement, the busy flag, and the trigger. */
+/** What the caller runs: the busy flag, and the trigger. */
 export interface HalatMiftahTaraju {
-  readonly akhir: string | null;
   readonly jari: boolean;
-  /** Pops one step and announces it — what the chord and the palette action both run. */
+  /** Pops one step and reports it — what the chord and the palette action both run. */
   readonly shaghghil: () => void;
 }
 
@@ -69,28 +65,26 @@ export interface HalatMiftahTaraju {
  * consumer adds its own listener.
  *
  * @param ikhtisar the stored chord text; an unreadable one falls back to Ctrl+Z
+ * @param alaTamam told what was undone, so the caller can say so in its own words
  */
-export function useMiftahTaraju(ikhtisar: string): HalatMiftahTaraju {
+export function useMiftahTaraju(
+  ikhtisar: string,
+  alaTamam: (wasf: string) => void,
+): HalatMiftahTaraju {
   const taraju = useTaraju((halat) => halat.taraju);
   const jari = useTaraju((halat) => halat.jari);
-  const [akhir, setAkhir] = useState<string | null>(null);
-  const muaqqit = useRef<number | undefined>(undefined);
 
   const shaghghil = useCallback((): void => {
     void taraju()
       .then((wasf) => {
         if (wasf !== null) {
-          setAkhir(wasf);
-          window.clearTimeout(muaqqit.current);
-          muaqqit.current = window.setTimeout(() => {
-            setAkhir(null);
-          }, MUDDAT_ILAN);
+          alaTamam(wasf);
         }
       })
       .catch(() => {
         // The failed step is already back on the stack; there is nothing to announce.
       });
-  }, [taraju]);
+  }, [taraju, alaTamam]);
 
   useEffect(() => {
     const maqrua = hallilAw(ikhtisar, IKHTISAR_TARAJU);
@@ -115,12 +109,5 @@ export function useMiftahTaraju(ikhtisar: string): HalatMiftahTaraju {
     };
   }, [shaghghil, ikhtisar]);
 
-  useEffect(
-    () => () => {
-      window.clearTimeout(muaqqit.current);
-    },
-    [],
-  );
-
-  return { akhir, jari, shaghghil };
+  return { jari, shaghghil };
 }

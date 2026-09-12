@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { kasr } from '@/mustalahat/arqam';
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { hallil } from '@/hayat/ikhtisarat';
@@ -8,6 +8,7 @@ import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
 import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
+import { ansha } from '@/hayat/tanbihat';
 import { useTaraju } from '@/hayat/taraju';
 import type { MiftahLugha } from '@/lugha/lugha';
 import { munassiqat, t } from '@/lugha/lugha';
@@ -15,6 +16,9 @@ import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
+import type { KhasaisRamz } from '@/mukawwinat/rumuz';
+import { ramz } from '@/mukawwinat/rumuz';
+import { Zuhur } from '@/mukawwinat/zuhur';
 import type {
   Idadat,
   IdadatManassat,
@@ -208,7 +212,7 @@ const SUFUF_HAYKAL = 4;
  */
 function HaykalIdadat(): JSX.Element {
   return (
-    <div className="idadat__haykal" aria-hidden="true">
+    <div className="idadat__haykal zuhur-muakhkhar" aria-hidden="true">
       {Array.from({ length: 2 }, (_, qism) => (
         <section key={qism} className="idadat__qism">
           <div className="idadat__raas-qism">
@@ -226,6 +230,105 @@ function HaykalIdadat(): JSX.Element {
         </section>
       ))}
     </div>
+  );
+}
+
+/** A list skeleton on the screen's own bars, not the library's card boxes. */
+function HaykalQaima(): JSX.Element {
+  return (
+    <div className="idadat__haykal-qaima zuhur-muakhkhar" aria-hidden="true">
+      <span className="idadat__haykal-satr idadat__haykal-satr--tawil" />
+      <span className="idadat__haykal-satr idadat__haykal-satr--mutawassit" />
+    </div>
+  );
+}
+
+/**
+ * A failure said where the eye is. On a document this long the block that
+ * explains it can sit a screen away from the reader — under the save bar,
+ * inside a section they scrolled past, behind a palette action — so the
+ * notice carries the same sentence and the same code to wherever they are.
+ */
+function anshaKhatar(khata: KhataJisr, lugha: Lugha): void {
+  ansha({
+    naw: 'khatar',
+    nass: khata.nass(lugha) ?? t('faragh.jisr', lugha),
+    ramz: khata.khata?.ramz ?? khata.amr,
+  });
+}
+
+/** The eleven sections, each folding on its own. */
+type MiftahQism =
+  | 'ard'
+  | 'manassat'
+  | 'taareeb'
+  | 'takhzin'
+  | 'khutut'
+  | 'muzawwidun'
+  | 'masadir'
+  | 'tahdith'
+  | 'tashkhis'
+  | 'tabaqa'
+  | 'ikhtisarat';
+
+/**
+ * A plain chevron. Symmetric about the grid's centre line, so the reading
+ * direction never mirrors it; the fold state is what turns it.
+ */
+function RamzTayy(khasais: KhasaisRamz): JSX.Element {
+  return ramz(khasais, <path d="M6 9.5L12 15.5L18 9.5" />);
+}
+
+interface KhasaisQism {
+  readonly muarrif: MiftahQism;
+  readonly unwan: string;
+  readonly sharh?: string;
+  readonly maftuh: boolean;
+  readonly alaTabdeel: (muarrif: MiftahQism) => void;
+  readonly children: ReactNode;
+}
+
+/**
+ * One section of the document: a heading that folds its body. The sentence
+ * under the heading stays out when the body is folded, because it is what
+ * says whether this is the section the reader is looking for.
+ */
+function QismIdadat({
+  muarrif,
+  unwan,
+  sharh,
+  maftuh,
+  alaTabdeel,
+  children,
+}: KhasaisQism): JSX.Element {
+  const muarrifUnwan = `idadat-unwan-${muarrif}`;
+  return (
+    <section className="idadat__qism" aria-labelledby={muarrifUnwan}>
+      <div className="idadat__raas-qism">
+        <h2 className="idadat__unwan-qism">
+          <button
+            type="button"
+            id={muarrifUnwan}
+            className="idadat__zir-qism"
+            aria-expanded={maftuh}
+            onClick={() => {
+              alaTabdeel(muarrif);
+            }}
+          >
+            <RamzTayy
+              className={
+                maftuh ? 'idadat__ramz-qism idadat__ramz-qism--maftuh' : 'idadat__ramz-qism'
+              }
+            />
+            {unwan}
+          </button>
+        </h2>
+        {sharh === undefined ? null : <p className="idadat__sharh-qism">{sharh}</p>}
+      </div>
+      <Zuhur maftuh={maftuh} asl="fawq" className="idadat__jism-qism">
+        {children}
+      </Zuhur>
+    </section>
   );
 }
 
@@ -311,6 +414,11 @@ function QaimatMasarat({
           if (safi !== '') {
             alaTaghyeer([...qeem, safi]);
             setJadeed('');
+            ansha({
+              naw: 'najah',
+              nass: t('idadat.qaima.tamma_idafa', lugha, { tasmiya }),
+              tafsil: safi,
+            });
           }
         }}
       >
@@ -336,6 +444,11 @@ function QaimatMasarat({
                   className="zir"
                   onClick={() => {
                     alaTaghyeer(qeem.filter((_, ayn) => ayn !== fihris));
+                    ansha({
+                      naw: 'najah',
+                      nass: t('idadat.qaima.tamma_izala', lugha, { tasmiya }),
+                      tafsil: masar,
+                    });
                   }}
                 >
                   {t('idadat.qaima.izala', lugha)}
@@ -401,6 +514,7 @@ function KutlatItimad({ muzawwid, lugha }: KhasaisItimad): JSX.Element {
     onSuccess: () => {
       setSirr('');
       void makhzan.invalidateQueries({ queryKey: mafatih.itimad(safi) });
+      ansha({ naw: 'najah', nass: t('idadat.itimad.tamma_khzin', lugha) });
     },
   });
 
@@ -408,6 +522,7 @@ function KutlatItimad({ muzawwid, lugha }: KhasaisItimad): JSX.Element {
     mutationFn: () => nadi('imsah_itimad_muzawwid', { muzawwid: safi }),
     onSuccess: () => {
       void makhzan.invalidateQueries({ queryKey: mafatih.itimad(safi) });
+      ansha({ naw: 'najah', nass: t('idadat.itimad.tamma_imsah', lugha) });
     },
   });
 
@@ -429,7 +544,17 @@ function KutlatItimad({ muzawwid, lugha }: KhasaisItimad): JSX.Element {
           className={`idadat__itimad-natija idadat__itimad-natija--${WASM_HALAT_ITIMAD[hala]}`}
           role="status"
         >
-          {t(MIFTAH_HALAT_ITIMAD[hala], lugha)}
+          {hala === 'jari' ? (
+            <>
+              <span
+                className="idadat__haykal-satr idadat__haykal-satr--hala zuhur-muakhkhar"
+                aria-hidden="true"
+              />
+              <span className="khafi">{t(MIFTAH_HALAT_ITIMAD[hala], lugha)}</span>
+            </>
+          ) : (
+            t(MIFTAH_HALAT_ITIMAD[hala], lugha)
+          )}
         </span>
       </div>
       <div className="idadat__itimad-afal">
@@ -448,7 +573,8 @@ function KutlatItimad({ muzawwid, lugha }: KhasaisItimad): JSX.Element {
         <button
           type="button"
           className="zir"
-          aria-disabled={!faal || sirr === '' || khzin.isPending}
+          aria-disabled={!faal || sirr === ''}
+          aria-busy={khzin.isPending}
           onClick={() => {
             if (faal && sirr !== '' && !khzin.isPending) {
               khzin.mutate({ sirr });
@@ -462,7 +588,8 @@ function KutlatItimad({ muzawwid, lugha }: KhasaisItimad): JSX.Element {
         <button
           type="button"
           className="zir zir--khatar"
-          aria-disabled={!faal || imsah.isPending}
+          aria-disabled={!faal}
+          aria-busy={imsah.isPending}
           onClick={() => {
             if (faal && !imsah.isPending) {
               imsah.mutate();
@@ -472,12 +599,16 @@ function KutlatItimad({ muzawwid, lugha }: KhasaisItimad): JSX.Element {
           {t(imsah.isPending ? 'idadat.itimad.jari_imsah' : 'idadat.itimad.imsah', lugha)}
         </button>
       </div>
-      {khzin.error !== null ? (
-        <KutlatKhata unwan={t('luba.khata.amal', lugha)} khata={khzin.error} lugha={lugha} />
-      ) : null}
-      {imsah.error !== null ? (
-        <KutlatKhata unwan={t('luba.khata.amal', lugha)} khata={imsah.error} lugha={lugha} />
-      ) : null}
+      <Zuhur maftuh={khzin.error !== null} asl="mahall">
+        {khzin.error === null ? null : (
+          <KutlatKhata unwan={t('luba.khata.amal', lugha)} khata={khzin.error} lugha={lugha} />
+        )}
+      </Zuhur>
+      <Zuhur maftuh={imsah.error !== null} asl="mahall">
+        {imsah.error === null ? null : (
+          <KutlatKhata unwan={t('luba.khata.amal', lugha)} khata={imsah.error} lugha={lugha} />
+        )}
+      </Zuhur>
     </div>
   );
 }
@@ -513,6 +644,29 @@ export function IdadatShasha(): JSX.Element {
     setNuskha((hali) => (hali === null ? hali : tabdeel(hali)));
   }, []);
 
+  // Which sections are folded. Open is the default, so nothing is hidden from
+  // a reader who never touches a heading; the set holds only the exceptions.
+  const [maghluqa, setMaghluqa] = useState<ReadonlySet<MiftahQism>>(() => new Set());
+  const tabdeelQism = useCallback((muarrif: MiftahQism): void => {
+    setMaghluqa((hali) => {
+      const jadeed = new Set(hali);
+      if (!jadeed.delete(muarrif)) {
+        jadeed.add(muarrif);
+      }
+      return jadeed;
+    });
+  }, []);
+  const iftahQism = useCallback((muarrif: MiftahQism): void => {
+    setMaghluqa((hali) => {
+      if (!hali.has(muarrif)) {
+        return hali;
+      }
+      const jadeed = new Set(hali);
+      jadeed.delete(muarrif);
+      return jadeed;
+    });
+  }, []);
+
   const mutaghayyir = useMemo(
     () =>
       nuskha !== null &&
@@ -542,6 +696,34 @@ export function IdadatShasha(): JSX.Element {
       makhzan.setQueryData(mafatih.idadat, shajara);
       setNuskha(shajara);
       void makhzan.invalidateQueries({ queryKey: mafatih.idadat });
+      // Said in the language the save just chose, because the interface has
+      // switched to it by the time the notice is read. The one action is the
+      // undo step registered above; a failed undo is announced, never dropped.
+      const lughaJadeeda = shajara.lugha;
+      ansha({
+        naw: 'najah',
+        nass: t('idadat.hifz.tamma', lughaJadeeda),
+        amal: {
+          unwan: t('taraju.zirr', lughaJadeeda),
+          nafidh: () => {
+            useTaraju
+              .getState()
+              .taraju()
+              .catch((khata: unknown) => {
+                if (khata instanceof KhataJisr) {
+                  anshaKhatar(khata, lughaJadeeda);
+                } else {
+                  ansha({ naw: 'khatar', nass: t('faragh.jisr', lughaJadeeda) });
+                }
+              });
+          },
+        },
+      });
+    },
+    // The block that explains the failure sits above a bar anchored to the
+    // foot of the region, which is off-screen from anywhere but the very end.
+    onError: (khata) => {
+      anshaKhatar(khata, lugha);
     },
   });
 
@@ -562,6 +744,21 @@ export function IdadatShasha(): JSX.Element {
       nuskha?.muzawwidun.qaima.find((muzawwid) => muzawwid.muarrif.trim() !== '')?.muarrif ?? null;
   });
 
+  // A field asked for while its section is folded does not exist yet. The
+  // request waits here and is honoured on the first render that mounts it.
+  const marjiTarkeez = useRef<string | null>(null);
+  useEffect(() => {
+    const hadaf = marjiTarkeez.current;
+    if (hadaf === null) {
+      return;
+    }
+    const unsur = document.getElementById(hadaf);
+    if (unsur !== null) {
+      marjiTarkeez.current = null;
+      unsur.focus();
+    }
+  });
+
   const awamirShasha = useMemo<readonly AmrLawha[]>(
     () => [
       {
@@ -578,13 +775,21 @@ export function IdadatShasha(): JSX.Element {
         majal: t('shasha.idadat', lugha),
         nafidh: () => {
           const muarrif = marjiItimad.current;
-          if (muarrif !== null) {
-            document.getElementById(`idadat-itimad-${muarrif}`)?.focus();
+          if (muarrif === null) {
+            return;
           }
+          const hadaf = `idadat-itimad-${muarrif}`;
+          const unsur = document.getElementById(hadaf);
+          if (unsur !== null) {
+            unsur.focus();
+            return;
+          }
+          marjiTarkeez.current = hadaf;
+          iftahQism('muzawwidun');
         },
       },
     ],
-    [lugha],
+    [lugha, iftahQism],
   );
   useSajjilAwamir(awamirShasha);
 
@@ -601,16 +806,48 @@ export function IdadatShasha(): JSX.Element {
     staleTime: 5 * 60_000,
   });
 
+  // The check on its own asks nothing of the reader when the screen opens; an
+  // explicit check answers where they are, whichever way it came out.
+  const alaTahaqquq = (): void => {
+    void tahdith.refetch().then((natija) => {
+      if (natija.error !== null) {
+        anshaKhatar(natija.error, lugha);
+        return;
+      }
+      if (natija.data === null || natija.data === undefined) {
+        ansha({ naw: 'najah', nass: t('idadat.tahdith.ahdath', lugha) });
+        return;
+      }
+      ansha({
+        naw: 'maluma',
+        nass: t('idadat.tahdith.mutah', lugha, {
+          isdar: natija.data.isdar,
+          hajm: munassiq.hajm(natija.data.hajm),
+        }),
+      });
+    });
+  };
+
   const nazzil = useMutation<string, KhataJisr, void>({
     mutationFn: () => nadi('nazzil_tahdith'),
+    onSuccess: (masar) => {
+      ansha({ naw: 'najah', nass: t('idadat.tahdith.jahiz', lugha), tafsil: masar });
+    },
+    onError: (khata) => {
+      anshaKhatar(khata, lugha);
+    },
   });
 
   const [masarKhatt, setMasarKhatt] = useState('');
   const istirad = useMutation<KhattHie, KhataJisr, { masar: string }>({
     mutationFn: ({ masar }) => nadi('ikhtar_khatt', { masar }),
-    onSuccess: () => {
+    onSuccess: (khatt) => {
       setMasarKhatt('');
       void makhzan.invalidateQueries({ queryKey: mafatih.khutut });
+      ansha({ naw: 'najah', nass: t('idadat.khutut.tamma', lugha, { ism: khatt.ism }) });
+    },
+    onError: (khata) => {
+      anshaKhatar(khata, lugha);
     },
   });
 
@@ -705,7 +942,8 @@ export function IdadatShasha(): JSX.Element {
       <button
         type="button"
         className="zir"
-        aria-disabled={istirad.isPending || masarKhatt.trim() === ''}
+        aria-disabled={masarKhatt.trim() === ''}
+        aria-busy={istirad.isPending}
         onClick={() => {
           const safi = masarKhatt.trim();
           if (!istirad.isPending && safi !== '') {
@@ -719,6 +957,16 @@ export function IdadatShasha(): JSX.Element {
   );
 
   const wajh = idadat.error !== null && nuskha === null ? 'khata' : nuskha === null ? 'tahmil' : 'jahiz';
+
+  // The update answer moves only when its state does; a refetch of the same
+  // state keeps the key and so paints in place.
+  const wajhTahdith = tahdith.isPending
+    ? 'tahmil'
+    : tahdith.error !== null
+      ? 'khata'
+      : tahdith.data === null || tahdith.data === undefined
+        ? 'ahdath'
+        : 'mutah';
 
   return (
     <div className="idadat">
@@ -737,27 +985,24 @@ export function IdadatShasha(): JSX.Element {
 
       <Mashhad miftah={wajh} className="idadat__jism">
         {idadat.error !== null && nuskha === null ? (
-          <KutlatKhata unwan={t('idadat.khata.tahmil', lugha)} khata={idadat.error} lugha={lugha}>
-            <button
-              type="button"
-              className="zir"
-              onClick={() => {
-                void idadat.refetch();
-              }}
-            >
-              {t('amm.iaada', lugha)}
-            </button>
-          </KutlatKhata>
+          <KutlatKhata
+            unwan={t('idadat.khata.tahmil', lugha)}
+            khata={idadat.error}
+            lugha={lugha}
+            aada={() => {
+              void idadat.refetch();
+            }}
+          />
         ) : nuskha === null ? (
           <HaykalIdadat />
         ) : (
           <>
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-ard">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-ard" className="idadat__unwan-qism">
-                  {t('idadat.ard.unwan', lugha)}
-                </h2>
-              </div>
+            <QismIdadat
+              muarrif="ard"
+              unwan={t('idadat.ard.unwan', lugha)}
+              maftuh={!maghluqa.has('ard')}
+              alaTabdeel={tabdeelQism}
+            >
               <label className="idadat__saff">
                 <span className="idadat__tasmiya">{t('idadat.ard.lugha', lugha)}</span>
                 <select
@@ -848,15 +1093,15 @@ export function IdadatShasha(): JSX.Element {
                 />
                 {t('idadat.ard.taqleel_haraka', lugha)}
               </label>
-            </section>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-manassat">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-manassat" className="idadat__unwan-qism">
-                  {t('idadat.manassat.unwan', lugha)}
-                </h2>
-                <p className="idadat__sharh-qism">{t('idadat.manassat.sharh', lugha)}</p>
-              </div>
+            <QismIdadat
+              muarrif="manassat"
+              unwan={t('idadat.manassat.unwan', lugha)}
+              sharh={t('idadat.manassat.sharh', lugha)}
+              maftuh={!maghluqa.has('manassat')}
+              alaTabdeel={tabdeelQism}
+            >
               {MANASSAT.map((manassa) => (
                 <label key={manassa} className="idadat__saff">
                   <span className="idadat__tasmiya">{t(MIFTAH_MANASSA[manassa], lugha)}</span>
@@ -900,15 +1145,15 @@ export function IdadatShasha(): JSX.Element {
                   }}
                 />
               </div>
-            </section>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-taareeb">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-taareeb" className="idadat__unwan-qism">
-                  {t('idadat.taareeb.unwan', lugha)}
-                </h2>
-                <p className="idadat__sharh-qism">{t('idadat.taareeb.sharh', lugha)}</p>
-              </div>
+            <QismIdadat
+              muarrif="taareeb"
+              unwan={t('idadat.taareeb.unwan', lugha)}
+              sharh={t('idadat.taareeb.sharh', lugha)}
+              maftuh={!maghluqa.has('taareeb')}
+              alaTabdeel={tabdeelQism}
+            >
               <label className="idadat__ikhtiyar">
                 <input
                   type="checkbox"
@@ -926,19 +1171,22 @@ export function IdadatShasha(): JSX.Element {
               <p className="idadat__mudakhkhal idadat__nass-hadi">
                 {t('idadat.taareeb.athar', lugha)}
               </p>
-              {nuskha.istibdal_lugha_rasmiya ? (
-                <p className="idadat__mudakhkhal idadat__athar" role="status">
-                  {t('idadat.taareeb.mufaal', lugha)}
-                </p>
-              ) : null}
-            </section>
+              <Zuhur
+                maftuh={nuskha.istibdal_lugha_rasmiya}
+                asl="fawq"
+                className="idadat__mudakhkhal idadat__athar"
+                role="status"
+              >
+                {t('idadat.taareeb.mufaal', lugha)}
+              </Zuhur>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-takhzin">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-takhzin" className="idadat__unwan-qism">
-                  {t('idadat.takhzin.unwan', lugha)}
-                </h2>
-              </div>
+            <QismIdadat
+              muarrif="takhzin"
+              unwan={t('idadat.takhzin.unwan', lugha)}
+              maftuh={!maghluqa.has('takhzin')}
+              alaTabdeel={tabdeelQism}
+            >
               <label className="idadat__saff">
                 <span className="idadat__tasmiya">{t('idadat.takhzin.jidhr', lugha)}</span>
                 <input
@@ -989,14 +1237,14 @@ export function IdadatShasha(): JSX.Element {
                 />
                 {t('idadat.takhzin.ibqa', lugha)}
               </label>
-            </section>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-khutut">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-khutut" className="idadat__unwan-qism">
-                  {t('idadat.khutut.unwan', lugha)}
-                </h2>
-              </div>
+            <QismIdadat
+              muarrif="khutut"
+              unwan={t('idadat.khutut.unwan', lugha)}
+              maftuh={!maghluqa.has('khutut')}
+              alaTabdeel={tabdeelQism}
+            >
               <label className="idadat__saff">
                 <span className="idadat__tasmiya">{t('idadat.khutut.wajiha', lugha)}</span>
                 <input
@@ -1052,15 +1300,15 @@ export function IdadatShasha(): JSX.Element {
                 <span className="idadat__tasmiya">{t('idadat.khutut.mawjuda', lugha)}</span>
                 <div className="idadat__qaima-masarat">
                   {khutut.isPending ? (
-                    <div className="haykal" aria-hidden="true">
-                      <span className="haykal__satr haykal__satr--tawil" />
-                      <span className="haykal__satr haykal__satr--mutawassit" />
-                    </div>
+                    <HaykalQaima />
                   ) : khutut.error !== null ? (
                     <KutlatKhata
                       unwan={t('idadat.khutut.taadhur', lugha)}
                       khata={khutut.error}
                       lugha={lugha}
+                      aada={() => {
+                        void khutut.refetch();
+                      }}
                     />
                   ) : khutut.data === undefined || khutut.data.length === 0 ? (
                     <HalatFarigha
@@ -1096,28 +1344,35 @@ export function IdadatShasha(): JSX.Element {
                       {saffIstirad}
                     </>
                   )}
-                  {istirad.error !== null ? (
-                    <KutlatKhata
-                      unwan={t('idadat.khutut.taadhur_istirad', lugha)}
-                      khata={istirad.error}
-                      lugha={lugha}
-                    />
-                  ) : null}
-                  {istirad.data !== undefined ? (
-                    <p className="idadat__najah" role="status">
-                      {t('idadat.khutut.tamma', lugha, { ism: istirad.data.ism })}
-                    </p>
-                  ) : null}
+                  <Zuhur maftuh={istirad.error !== null} asl="mahall">
+                    {istirad.error === null ? null : (
+                      <KutlatKhata
+                        unwan={t('idadat.khutut.taadhur_istirad', lugha)}
+                        khata={istirad.error}
+                        lugha={lugha}
+                      />
+                    )}
+                  </Zuhur>
+                  <Zuhur
+                    maftuh={istirad.data !== undefined}
+                    asl="fawq"
+                    className="idadat__najah"
+                    role="status"
+                  >
+                    {istirad.data === undefined
+                      ? null
+                      : t('idadat.khutut.tamma', lugha, { ism: istirad.data.ism })}
+                  </Zuhur>
                 </div>
               </div>
-            </section>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-muzawwidun">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-muzawwidun" className="idadat__unwan-qism">
-                  {t('idadat.muzawwidun.unwan', lugha)}
-                </h2>
-              </div>
+            <QismIdadat
+              muarrif="muzawwidun"
+              unwan={t('idadat.muzawwidun.unwan', lugha)}
+              maftuh={!maghluqa.has('muzawwidun')}
+              alaTabdeel={tabdeelQism}
+            >
               {/* What the current list means, drawn from the working copy so it
                   follows an enable, a rename and a removal without a save. The
                   empty state carries it inside its own block because that block
@@ -1134,11 +1389,14 @@ export function IdadatShasha(): JSX.Element {
                 </HalatFarigha>
               ) : (
                 <>
-                  {athar === null ? null : (
-                    <p className="idadat__mudakhkhal idadat__athar" role="status">
-                      {t(athar, lugha)}
-                    </p>
-                  )}
+                  <Zuhur
+                    maftuh={athar !== null}
+                    asl="fawq"
+                    className="idadat__mudakhkhal idadat__athar"
+                    role="status"
+                  >
+                    {athar === null ? null : t(athar, lugha)}
+                  </Zuhur>
                   <ul className="idadat__muzawwidun">
                     {nuskha.muzawwidun.qaima.map((muzawwid, fihris) => (
                       <li key={String(fihris)} className="idadat__muzawwid">
@@ -1305,14 +1563,14 @@ export function IdadatShasha(): JSX.Element {
                   </div>
                 </>
               )}
-            </section>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-masadir">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-masadir" className="idadat__unwan-qism">
-                  {t('idadat.masadir.unwan', lugha)}
-                </h2>
-              </div>
+            <QismIdadat
+              muarrif="masadir"
+              unwan={t('idadat.masadir.unwan', lugha)}
+              maftuh={!maghluqa.has('masadir')}
+              alaTabdeel={tabdeelQism}
+            >
               <label className="idadat__saff">
                 <span className="idadat__tasmiya">{t('idadat.masadir.rasmi', lugha)}</span>
                 <input
@@ -1422,14 +1680,14 @@ export function IdadatShasha(): JSX.Element {
                 />
                 {t('idadat.masadir.ghayr_muttasil', lugha)}
               </label>
-            </section>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-tahdith">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-tahdith" className="idadat__unwan-qism">
-                  {t('idadat.tahdith.unwan', lugha)}
-                </h2>
-              </div>
+            <QismIdadat
+              muarrif="tahdith"
+              unwan={t('idadat.tahdith.unwan', lugha)}
+              maftuh={!maghluqa.has('tahdith')}
+              alaTabdeel={tabdeelQism}
+            >
               <label className="idadat__ikhtiyar">
                 <input
                   type="checkbox"
@@ -1478,72 +1736,92 @@ export function IdadatShasha(): JSX.Element {
                 />
                 {t('idadat.tahdith.fahs_ind_bad', lugha)}
               </label>
+              <div className="idadat__saff-afal idadat__mudakhkhal">
+                <button
+                  type="button"
+                  className="zir"
+                  aria-busy={tahdith.isFetching}
+                  onClick={alaTahaqquq}
+                >
+                  {t('idadat.tahdith.tahaqqaq', lugha)}
+                </button>
+              </div>
               <div className="idadat__tahdith-hala idadat__mudakhkhal" role="status">
-                {tahdith.isPending ? (
-                  <p className="idadat__jari">{t('idadat.tahdith.jari', lugha)}</p>
-                ) : tahdith.error !== null ? (
-                  <KutlatKhata
-                    unwan={t('idadat.tahdith.taadhur', lugha)}
-                    khata={tahdith.error}
-                    lugha={lugha}
-                    aada={() => {
-                      void tahdith.refetch();
-                    }}
-                  />
-                ) : tahdith.data === null || tahdith.data === undefined ? (
-                  <p className="idadat__nass-hadi">{t('idadat.tahdith.ahdath', lugha)}</p>
-                ) : (
-                  <>
-                    <p className="idadat__nass-hadi">
-                      {t('idadat.tahdith.mutah', lugha, {
-                        isdar: tahdith.data.isdar,
-                        hajm: munassiq.hajm(tahdith.data.hajm),
-                      })}
-                    </p>
-                    {tahdith.data.qabil_lil_tabdil ? (
-                      <div className="idadat__saff-afal">
-                        <button
-                          type="button"
-                          className="zir zir--tamyeez"
-                          aria-disabled={nazzil.isPending}
-                          onClick={() => {
-                            if (!nazzil.isPending) {
-                              nazzil.mutate();
-                            }
-                          }}
-                        >
-                          {t(
-                            nazzil.isPending
-                              ? 'idadat.tahdith.jari_tanzil'
-                              : 'idadat.tahdith.nazzil',
-                            lugha,
-                          )}
-                        </button>
-                      </div>
-                    ) : (
-                      <p className="idadat__nass-hadi">{t('idadat.tahdith.mudar', lugha)}</p>
-                    )}
-                    {nazzil.data !== undefined ? (
-                      <p className="idadat__najah">{t('idadat.tahdith.jahiz', lugha)}</p>
-                    ) : null}
-                    {nazzil.error !== null ? (
-                      <KutlatKhata
-                        unwan={t('idadat.tahdith.taadhur_tanzil', lugha)}
-                        khata={nazzil.error}
-                        lugha={lugha}
+                <Mashhad miftah={wajhTahdith} className="idadat__tahdith-mashhad">
+                  {tahdith.isPending ? (
+                    <>
+                      <span
+                        className="idadat__haykal-satr idadat__haykal-satr--jumla zuhur-muakhkhar"
+                        aria-hidden="true"
                       />
-                    ) : null}
-                  </>
-                )}
+                      <span className="khafi">{t('idadat.tahdith.jari', lugha)}</span>
+                    </>
+                  ) : tahdith.error !== null ? (
+                    <KutlatKhata
+                      unwan={t('idadat.tahdith.taadhur', lugha)}
+                      khata={tahdith.error}
+                      lugha={lugha}
+                      aada={() => {
+                        void tahdith.refetch();
+                      }}
+                    />
+                  ) : tahdith.data === null || tahdith.data === undefined ? (
+                    <p className="idadat__nass-hadi">{t('idadat.tahdith.ahdath', lugha)}</p>
+                  ) : (
+                    <>
+                      <p className="idadat__nass-hadi">
+                        {t('idadat.tahdith.mutah', lugha, {
+                          isdar: tahdith.data.isdar,
+                          hajm: munassiq.hajm(tahdith.data.hajm),
+                        })}
+                      </p>
+                      {tahdith.data.qabil_lil_tabdil ? (
+                        <div className="idadat__saff-afal">
+                          <button
+                            type="button"
+                            className="zir zir--tamyeez"
+                            aria-busy={nazzil.isPending}
+                            onClick={() => {
+                              if (!nazzil.isPending) {
+                                nazzil.mutate();
+                              }
+                            }}
+                          >
+                            {t(
+                              nazzil.isPending
+                                ? 'idadat.tahdith.jari_tanzil'
+                                : 'idadat.tahdith.nazzil',
+                              lugha,
+                            )}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="idadat__nass-hadi">{t('idadat.tahdith.mudar', lugha)}</p>
+                      )}
+                      <Zuhur maftuh={nazzil.data !== undefined} asl="fawq" className="idadat__najah">
+                        {nazzil.data === undefined ? null : t('idadat.tahdith.jahiz', lugha)}
+                      </Zuhur>
+                      <Zuhur maftuh={nazzil.error !== null} asl="mahall">
+                        {nazzil.error === null ? null : (
+                          <KutlatKhata
+                            unwan={t('idadat.tahdith.taadhur_tanzil', lugha)}
+                            khata={nazzil.error}
+                            lugha={lugha}
+                          />
+                        )}
+                      </Zuhur>
+                    </>
+                  )}
+                </Mashhad>
               </div>
-            </section>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-tashkhis">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-tashkhis" className="idadat__unwan-qism">
-                  {t('idadat.tashkhis.unwan', lugha)}
-                </h2>
-              </div>
+            <QismIdadat
+              muarrif="tashkhis"
+              unwan={t('idadat.tashkhis.unwan', lugha)}
+              maftuh={!maghluqa.has('tashkhis')}
+              alaTabdeel={tabdeelQism}
+            >
               <label className="idadat__saff">
                 <span className="idadat__tasmiya">{t('idadat.tashkhis.mustawa', lugha)}</span>
                 <select
@@ -1604,14 +1882,14 @@ export function IdadatShasha(): JSX.Element {
                   }}
                 />
               </label>
-            </section>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-tabaqa">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-tabaqa" className="idadat__unwan-qism">
-                  {t('idadat.tabaqa.unwan', lugha)}
-                </h2>
-              </div>
+            <QismIdadat
+              muarrif="tabaqa"
+              unwan={t('idadat.tabaqa.unwan', lugha)}
+              maftuh={!maghluqa.has('tabaqa')}
+              alaTabdeel={tabdeelQism}
+            >
               <label className="idadat__ikhtiyar">
                 <input
                   type="checkbox"
@@ -1728,15 +2006,15 @@ export function IdadatShasha(): JSX.Element {
                   }}
                 />
               </label>
-            </section>
+            </QismIdadat>
 
-            <section className="idadat__qism" aria-labelledby="idadat-unwan-ikhtisarat">
-              <div className="idadat__raas-qism">
-                <h2 id="idadat-unwan-ikhtisarat" className="idadat__unwan-qism">
-                  {t('idadat.ikhtisarat.unwan', lugha)}
-                </h2>
-                <p className="idadat__sharh-qism">{t('idadat.ikhtisarat.sharh', lugha)}</p>
-              </div>
+            <QismIdadat
+              muarrif="ikhtisarat"
+              unwan={t('idadat.ikhtisarat.unwan', lugha)}
+              sharh={t('idadat.ikhtisarat.sharh', lugha)}
+              maftuh={!maghluqa.has('ikhtisarat')}
+              alaTabdeel={tabdeelQism}
+            >
               <label className="idadat__saff">
                 <span className="idadat__tasmiya">{t('idadat.ikhtisarat.lawha', lugha)}</span>
                 <input
@@ -1767,23 +2045,26 @@ export function IdadatShasha(): JSX.Element {
                   }}
                 />
               </label>
-            </section>
+            </QismIdadat>
 
             {/* Above the bar, not below it: the bar is anchored to the foot of
                 the region, and a failure that appears under it is a failure the
                 reader has to scroll past the bar to find. */}
-            {hifz.error !== null ? (
-              <KutlatKhata
-                unwan={t('idadat.hifz.taadhur', lugha)}
-                khata={hifz.error}
-                lugha={lugha}
-              />
-            ) : null}
+            <Zuhur maftuh={hifz.error !== null} asl="mahall">
+              {hifz.error === null ? null : (
+                <KutlatKhata
+                  unwan={t('idadat.hifz.taadhur', lugha)}
+                  khata={hifz.error}
+                  lugha={lugha}
+                />
+              )}
+            </Zuhur>
             <div className="idadat__shareet-hifz">
               <button
                 type="button"
                 className="zir zir--tamyeez"
-                aria-disabled={!mutaghayyir || hifz.isPending}
+                aria-disabled={!mutaghayyir}
+                aria-busy={hifz.isPending}
                 onClick={alaHifz}
               >
                 {t(hifz.isPending ? 'idadat.hifz.jari' : 'idadat.hifz.zir', lugha)}

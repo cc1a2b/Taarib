@@ -1,12 +1,13 @@
-// لوحة الأوامر — the chord opens a filtered, grouped action list; one line announces the last undo.
+// لوحة الأوامر — the chord opens a filtered, grouped action list; an undo is reported through the notices.
 
 import { AnimatePresence, motion } from 'motion/react';
 import type { ChangeEvent, JSX, KeyboardEvent } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { rashshih, useAwamirLawha, useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { IKHTISAR_LAWHA, hallilAw, yutabiq } from '@/hayat/ikhtisarat';
+import { ansha } from '@/hayat/tanbihat';
 import { useMiftahTaraju } from '@/hayat/taraju';
 import type { MiftahLugha } from '@/lugha/lugha';
 import { t } from '@/lugha/lugha';
@@ -93,7 +94,15 @@ export function LawhatAwamir({ lugha, ikhtisarLawha, ikhtisarTaraju }: KhasaisLa
   const [fihris, setFihris] = useState(0);
   const qaima = useRef<HTMLUListElement | null>(null);
 
-  const { akhir, jari, shaghghil } = useMiftahTaraju(ikhtisarTaraju);
+  // What was undone is said where every other outcome is said, in the notice
+  // stack, rather than on a line of this palette's own.
+  const alaTamamTaraju = useCallback(
+    (wasf: string): void => {
+      ansha({ naw: 'maluma', nass: t('taraju.tamma', lugha, { wasf }) });
+    },
+    [lugha],
+  );
+  const { shaghghil } = useMiftahTaraju(ikhtisarTaraju, alaTamamTaraju);
 
   // Undo as a palette action, so the chord is discoverable where actions live.
   const awamirDhatiya = useMemo<readonly AmrLawha[]>(
@@ -181,9 +190,8 @@ export function LawhatAwamir({ lugha, ikhtisarLawha, ikhtisarTaraju }: KhasaisLa
   };
 
   return (
-    <>
-      <AnimatePresence>
-        {maftuha ? (
+    <AnimatePresence>
+      {maftuha ? (
           <div key="lawha-awamir" className="lawha-awamir" role="presentation">
             <motion.div
               className="lawha-awamir__sitar"
@@ -293,12 +301,6 @@ export function LawhatAwamir({ lugha, ikhtisarLawha, ikhtisarTaraju }: KhasaisLa
             </motion.div>
           </div>
         ) : null}
-      </AnimatePresence>
-
-      {/* Stays mounted and un-hidden so the live region announces; empty, it draws no box. */}
-      <p className="lawha-awamir__ilan" role="status" data-jari={jari ? '' : undefined}>
-        {akhir === null ? null : t('taraju.tamma', lugha, { wasf: akhir })}
-      </p>
-    </>
+    </AnimatePresence>
   );
 }

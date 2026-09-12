@@ -56,12 +56,77 @@ body {
 #jidhr {
   block-size: 100%;
   isolation: isolate;
-  /* Every screen declares a floor below which its layout stops making sense.
-     A window shorter than that floor scrolls the whole screen here rather
-     than cutting it off — the one case the "never scroll as a page" rule
-     yields to, because a clipped screen has no way back at all. */
-  overflow: auto;
-  overscroll-behavior: contain;
+  /* The shell holds the window: its own strip, the rail and the status strip
+     stay where they are, and the one region between them is what scrolls
+     when a screen is shorter than its floor (`.hikal__mutawa`). A root that
+     scrolled instead carried the chrome away with the content, which is what
+     put a bare scrollbar down the far edge of a game screen on a short
+     window. */
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   The first frame.
+
+   `main.tsx` waits on the session probe before it renders anything — up to
+   four seconds when a keychain is slow — and until then the mount point holds
+   whatever `index.html` put in it. This is that: the name on the ground and
+   one rule under it, in the product's own tokens, replaced by React the moment
+   there is a screen. Nothing here moves except the rule, which breathes so a
+   slow start reads as a start rather than as a hang.
+   --------------------------------------------------------------------------- */
+
+.iqlaa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--misafa-12);
+  block-size: 100%;
+  background-color: var(--sath-0);
+}
+
+.iqlaa__ism {
+  font-size: var(--qiyas-5);
+  line-height: var(--irtifa-5);
+  font-weight: var(--wazn-bariz);
+  color: var(--nass-2);
+}
+
+.iqlaa__khatt {
+  display: block;
+  inline-size: var(--misafa-40);
+  block-size: var(--samk-hadd-barz);
+  background-color: var(--tamyeez);
+  animation: iqlaa-nabd 1.2s var(--munhana) infinite alternate;
+}
+
+@keyframes iqlaa-nabd {
+  from {
+    opacity: 0.35;
+    transform: scaleX(0.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* --- available to a screen reader, absent from the layout -----------------
+   Seven screens announce through this. It lived in the library's stylesheet,
+   which held only because nothing is code-split. */
+
+.khafi {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip-path: inset(50%);
 }
 
 /* --- typography reset -----------------------------------------------------
@@ -315,6 +380,198 @@ svg {
   border-color: var(--hadd-daif);
   box-shadow: none;
   cursor: not-allowed;
+}
+
+/* A control that is doing what it was pressed to do says so where it was
+   pressed: the label stays, the surface goes quiet, and the family's arc turns
+   beside it. `aria-busy` rather than a class, because the attribute is the
+   fact — a screen reader is told what the eye is — and because a busy control
+   is also a refused one, which one selector enforces with no second class to
+   forget on the way. */
+.zir[aria-busy='true'] {
+  color: var(--nass-2);
+  pointer-events: none;
+  cursor: progress;
+}
+
+.zir[aria-busy='true']::before {
+  content: '';
+  flex: none;
+  inline-size: var(--misafa-12);
+  block-size: var(--misafa-12);
+  border: var(--samk-hadd-barz) solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: dawaran 0.8s linear infinite;
+}
+
+@keyframes dawaran {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A placeholder that appears and is replaced within the same tenth of a
+   second is a flash, not a placeholder. Every skeleton waits out that window
+   before it draws, so a warm answer paints straight onto the ground and only a
+   real wait shows the shapes. The delay is not motion and is not zeroed with
+   the durations below. */
+.haykal,
+.shabaka__haykal,
+.zuhur-muakhkhar {
+  animation: zuhur-muakhkhar var(--zaman-hala) var(--munhana) var(--muhlat-haykal) both;
+}
+
+@keyframes zuhur-muakhkhar {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Moving between screens.
+
+   The router hands each navigation to the document's view transition where
+   the engine has one, and the shell names its parts so that only the content
+   region moves: the window strip, the rail and the status strip are captured
+   as groups of their own, and two identical captures cross-fading is nothing
+   the eye can see. The content leaves as it arrived — a short travel along the
+   reading axis, a deeper screen arriving from the far edge and a return from
+   the near one — on the route tier, so a screen change and a panel change
+   inside one screen never feel like the same event.
+
+   A cover on a library card and the cover on the game screen share one name,
+   so opening a game carries the picture from where it was to where it lands.
+   The travel is written against the reading direction and mirrored by one
+   number, because a transform has no logical form.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --ittijah-mashhad: 1;
+}
+
+:root[dir='rtl'] {
+  --ittijah-mashhad: -1;
+}
+
+::view-transition-old(root),
+::view-transition-new(root),
+::view-transition-old(nafidha),
+::view-transition-new(nafidha),
+::view-transition-old(janib),
+::view-transition-new(janib),
+::view-transition-old(shareet),
+::view-transition-new(shareet) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-group(*) {
+  animation-duration: var(--zaman-masar);
+  animation-timing-function: var(--munhana);
+}
+
+::view-transition-old(mutawa) {
+  animation: mashhad-khuruj var(--zaman-hala) var(--munhana) both;
+}
+
+::view-transition-new(mutawa) {
+  animation: mashhad-dukhul var(--zaman-masar) var(--munhana) both;
+}
+
+:root:active-view-transition-type(amiq)::view-transition-new(mutawa) {
+  animation-name: mashhad-dukhul-amiq;
+}
+
+:root:active-view-transition-type(raji)::view-transition-new(mutawa) {
+  animation-name: mashhad-dukhul-raji;
+}
+
+@keyframes mashhad-khuruj {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes mashhad-dukhul {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mashhad-dukhul-amiq {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--misafa-16) * var(--ittijah-mashhad)));
+  }
+}
+
+@keyframes mashhad-dukhul-raji {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--misafa-16) * var(--ittijah-mashhad) * -1));
+  }
+}
+
+/* A change of appearance — the palette, the language and its direction, the
+   density — is the one transition in which the whole window moves at once,
+   shell included, so it cross-fades as a whole: the alternative is every
+   surface snapping to a new colour, or the entire layout mirroring, between
+   two frames. `masar.tsx` starts it under this type. */
+:root:active-view-transition-type(mazhar)::view-transition-old(*) {
+  animation: mashhad-khuruj var(--zaman-masar) var(--munhana) both;
+  mix-blend-mode: plus-lighter;
+}
+
+:root:active-view-transition-type(mazhar)::view-transition-new(*) {
+  animation: mashhad-dukhul var(--zaman-masar) var(--munhana) both;
+  mix-blend-mode: plus-lighter;
+}
+
+/* A native disclosure opens between two frames. Its body arrives on the
+   panel tier instead, so the seven of them across the product read as the
+   same event as a panel the interface opens itself. */
+details[open] > :not(summary) {
+  animation: zuhur-taht var(--zaman-lawha) var(--munhana) both;
+}
+
+@keyframes zuhur-taht {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--misafa-4) * -1));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-haraka='hurr'])::view-transition-group(*),
+  :root:not([data-haraka='hurr'])::view-transition-old(*),
+  :root:not([data-haraka='hurr'])::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The router's own two pages sit in the shell like any screen: the shared
+   strip, then one block in a region that scrolls, because neither page has a
+   grid of its own to hand the scrolling to.
+   --------------------------------------------------------------------------- */
+
+.hala-masar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100%;
+  min-block-size: var(--adna-irtifa-shasha);
+}
+
+.hala-masar__jism {
+  min-block-size: 0;
+  overflow-y: auto;
+  padding-block: var(--misafa-24);
+  padding-inline: var(--misafa-24);
 }
 
 /* ---------------------------------------------------------------------------

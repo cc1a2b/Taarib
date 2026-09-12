@@ -10,12 +10,14 @@ import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
-import type { Munassiqat } from '@/lugha/lugha';
+import { ansha } from '@/hayat/tanbihat';
+import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t } from '@/lugha/lugha';
 import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
+import { Zuhur } from '@/mukawwinat/zuhur';
 import type {
   Idadat,
   JalsaHie,
@@ -45,6 +47,50 @@ interface MirsatTaaliq {
 type MurashshihFuhus = 'kul' | 'najahat' | 'akhfaqat' | 'lam_tujra';
 type TarteebTabur = 'intizar' | 'taghtiya';
 
+/** The three decisions a written reason unlocks, as `qarrir_muraja` names them. */
+type IjraQarar = 'talab_taadil' | 'rafd' | 'sahb';
+
+/**
+ * The decisions that ask once more before they run. A request for changes
+ * is answered by the next revision; these three are not — a signature is
+ * published, a rejection and a revocation are written into the audit log —
+ * so a mis-click has to be caught here, not in the log afterwards.
+ */
+type QararMuakkad = 'iaatimad' | 'rafd' | 'sahb';
+
+/** The bulk decisions, which run once per selected row. */
+type IjraJumla = 'talab_taadil' | 'rafd';
+
+/** Which decision is waiting on the reviewer's second word, and over what. */
+type Taakid =
+  | { readonly nitaq: 'wahid'; readonly ijra: QararMuakkad }
+  | { readonly nitaq: 'jumla'; readonly ijra: IjraJumla };
+
+const MIFTAH_TANBIH_QARAR: Readonly<Record<IjraQarar, MiftahLugha>> = {
+  talab_taadil: 'muraja.tanbih.talab_taadil',
+  rafd: 'muraja.tanbih.rafd',
+  sahb: 'muraja.tanbih.sahb',
+};
+
+const MIFTAH_TAAKID: Readonly<Record<QararMuakkad, MiftahLugha>> = {
+  iaatimad: 'muraja.taakid.iaatimad',
+  rafd: 'muraja.taakid.rafd',
+  sahb: 'muraja.taakid.sahb',
+};
+
+const MIFTAH_TAAKID_JUMLA: Readonly<Record<IjraJumla, MiftahLugha>> = {
+  talab_taadil: 'muraja.taakid.jumla_talab_taadil',
+  rafd: 'muraja.taakid.jumla_rafd',
+};
+
+/** The confirming button repeats the decision's own verb, never a generic "yes". */
+const MIFTAH_ZIR_QARAR: Readonly<Record<QararMuakkad | 'talab_taadil', MiftahLugha>> = {
+  iaatimad: 'muraja.afal.iaatimad',
+  talab_taadil: 'muraja.afal.talab_taadil',
+  rafd: 'muraja.afal.rafd',
+  sahb: 'muraja.afal.sahb',
+};
+
 /** The first guess only: every row is measured from the DOM once it mounts. */
 const IRTIFA_MUBDAI_SAFF = 44;
 
@@ -64,7 +110,7 @@ interface TaqaddumJumla {
  */
 function HaykalTabur({ lugha }: { readonly lugha: Lugha }): JSX.Element {
   return (
-    <table className="muraja__jadwal-tabur" aria-hidden="true">
+    <table className="muraja__jadwal-tabur zuhur-muakhkhar" aria-hidden="true">
       <thead>
         <tr>
           <th />
@@ -113,7 +159,7 @@ function HaykalTabur({ lugha }: { readonly lugha: Lugha }): JSX.Element {
 /** The case pane drawn empty: the title, its line of facts, and a first section. */
 function HaykalTafasil(): JSX.Element {
   return (
-    <div aria-hidden="true">
+    <div className="zuhur-muakhkhar" aria-hidden="true">
       <section className="muraja__qism muraja__qism--ras">
         <span className="muraja__haykal-satr muraja__haykal-satr--unwan" />
         <span className="muraja__haykal-satr" style={{ inlineSize: '40%' }} />
@@ -137,7 +183,7 @@ function HaykalTafasil(): JSX.Element {
 /** The whole console drawn empty, under the strip: the filter row, the queue, the case. */
 function HaykalMuraja({ lugha }: { readonly lugha: Lugha }): JSX.Element {
   return (
-    <div className="muraja__badan" aria-hidden="true">
+    <div className="muraja__badan zuhur-muakhkhar" aria-hidden="true">
       <div className="muraja__tasfiya">
         <span className="muraja__haql muraja__haql--bahth muraja__haykal-haql" />
         <span className="muraja__haql muraja__haykal-haql muraja__haykal-haql--qasir" />
@@ -152,6 +198,44 @@ function HaykalMuraja({ lugha }: { readonly lugha: Lugha }): JSX.Element {
         </div>
       </div>
     </div>
+  );
+}
+
+/** How many audit lines the placeholder stands in for: a screen's worth of a short log. */
+const SUTUR_HAYKAL_SIJILL = 3;
+
+/** The whole audit log drawn empty, in the log's own three columns. */
+function HaykalSijill(): JSX.Element {
+  return (
+    <ul className="muraja__sijill muraja__sijill--kamil zuhur-muakhkhar" aria-hidden="true">
+      {Array.from({ length: SUTUR_HAYKAL_SIJILL }, (_, fihris) => (
+        <li key={fihris}>
+          <span className="muraja__haykal-satr" style={{ inlineSize: '11ch' }} />
+          <span className="muraja__haykal-satr" style={{ inlineSize: '6ch' }} />
+          <span
+            className="muraja__haykal-satr"
+            style={{ inlineSize: `${String(72 - fihris * 14)}%` }}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A chevron on the disclosure control; it turns when the log is open. */
+function RamzSuqut(): JSX.Element {
+  return (
+    <svg
+      className="muraja__sijill-ramz"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5.5 9.5L12 16L18.5 9.5" />
+    </svg>
   );
 }
 
@@ -477,13 +561,49 @@ export function Muraja(): JSX.Element {
   const [nassMukhtar, setNassMukhtar] = useState<number | null>(null);
   const [rabt, setRabt] = useState(false);
   const [mirsat, setMirsat] = useState<MirsatTaaliq | null>(null);
+  const [taakid, setTaakid] = useState<Taakid | null>(null);
+  const [sijillMaftuh, setSijillMaftuh] = useState(false);
+  /** The control that opened the confirmation, so closing it hands focus back. */
+  const fatihTaakid = useRef<HTMLElement | null>(null);
 
-  // Anchors and string selection belong to one submission's draft, never to the next one's.
+  const iftahTaakid = (jadeed: Taakid): void => {
+    fatihTaakid.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setTaakid(jadeed);
+  };
+
+  const aghliqTaakid = (): void => {
+    setTaakid(null);
+    fatihTaakid.current?.focus();
+    fatihTaakid.current = null;
+  };
+
+  // Anchors, string selection and a pending confirmation belong to one
+  // submission's draft, never to the next one's. The bulk confirmation is
+  // about the selection, not the open row, so it survives a change of row.
   useEffect(() => {
     setNassMukhtar(null);
     setRabt(false);
     setMirsat(null);
+    setTaakid((hali) => (hali?.nitaq === 'wahid' ? null : hali));
   }, [mukhtar]);
+
+  useEffect(() => {
+    if (taakid === null) {
+      return undefined;
+    }
+    const alaMiftah = (hadath: globalThis.KeyboardEvent): void => {
+      if (hadath.key === 'Escape') {
+        setTaakid(null);
+        fatihTaakid.current?.focus();
+        fatihTaakid.current = null;
+      }
+    };
+    document.addEventListener('keydown', alaMiftah);
+    return () => {
+      document.removeEventListener('keydown', alaMiftah);
+    };
+  }, [taakid]);
 
   const sufuf = useMemo(() => {
     const kul = tabur.data?.sufuf ?? [];
@@ -517,12 +637,7 @@ export function Muraja(): JSX.Element {
       }
       if (hadath.key === 'Enter') {
         // Enter never steals activation from a focused control; it confirms the queue selection.
-        if (
-          hadafHtml === 'BUTTON' ||
-          hadafHtml === 'SELECT' ||
-          hadafHtml === 'A' ||
-          hadafHtml === 'SUMMARY'
-        ) {
+        if (hadafHtml === 'BUTTON' || hadafHtml === 'SELECT' || hadafHtml === 'A') {
           return;
         }
         const saf = sufuf.find((wahid) => wahid.ruqaa === mukhtar) ?? sufuf.at(0);
@@ -591,25 +706,33 @@ export function Muraja(): JSX.Element {
       setMirsat(null);
       setRabt(false);
       aidTahmil();
+      ansha({ naw: 'najah', nass: t('muraja.tanbih.taaliq', lugha) });
     },
   });
 
-  const qarar = useMutation<MusawwadaHie, KhataJisr, { ruqaa: string; ijra: string }>({
+  const qarar = useMutation<MusawwadaHie, KhataJisr, { ruqaa: string; ijra: IjraQarar }>({
     mutationFn: ({ ruqaa, ijra }) => nadi('qarrir_muraja', { ruqaa, ijra, sabab }),
-    onSuccess: () => {
+    // The decision lands at the foot of a pane that is usually scrolled well
+    // above it, and the row it was about may leave the queue on the refetch;
+    // the notice is the one place the reviewer is sure to see it.
+    onSuccess: (natija, { ijra }) => {
       setSabab('');
       aidTahmil();
+      ansha({ naw: 'najah', nass: t(MIFTAH_TANBIH_QARAR[ijra], lugha), tafsil: natija.unwan });
     },
   });
 
   const iaatimad = useMutation<MusawwadaHie, KhataJisr, { ruqaa: string }>({
     mutationFn: ({ ruqaa }) => nadi('iaatimad_muraja', { ruqaa }),
-    onSuccess: aidTahmil,
+    onSuccess: (natija) => {
+      aidTahmil();
+      ansha({ naw: 'najah', nass: t('muraja.tanbih.iaatimad', lugha), tafsil: natija.unwan });
+    },
   });
 
   const [taqaddumJumla, setTaqaddumJumla] = useState<TaqaddumJumla | null>(null);
 
-  const jumla = useMutation<number, KhataJisr, { ijra: string }>({
+  const jumla = useMutation<number, KhataJisr, { ijra: IjraJumla }>({
     mutationFn: async ({ ijra }) => {
       let adad = 0;
       const majmu = muhaddada.size;
@@ -623,13 +746,16 @@ export function Muraja(): JSX.Element {
       }
       return adad;
     },
-    onSuccess: () => {
+    // The selection is gone by the time this runs, so the count in the notice
+    // is the only record on screen of how many rows the decision reached. On a
+    // failure the progress is kept instead: the rows already decided stay
+    // decided, and the error block below says how many that was.
+    onSuccess: (adad) => {
       setMuhaddada(new Set());
       setSabab('');
-      aidTahmil();
-    },
-    onSettled: () => {
       setTaqaddumJumla(null);
+      aidTahmil();
+      ansha({ naw: 'najah', nass: jam('muraja.tanbih.jumla', lugha, adad, munassiq) });
     },
   });
 
@@ -641,16 +767,33 @@ export function Muraja(): JSX.Element {
   const sandooqThabbit = useMutation<TaqreerSandooqHie, KhataJisr, void>({
     mutationFn: () =>
       nadi('sandooq_thabbit', { ruqaa: mukhtar ?? '', muarrif: muarrifMukhtar ?? '' }),
-    onSuccess: setSandooq,
+    // An install whose post-write verification did not hold is not a success
+    // said quietly: it is the one outcome the sandbox exists to catch.
+    onSuccess: (natija) => {
+      setSandooq(natija);
+      ansha({
+        naw: natija.salim ? 'najah' : 'tanbeeh',
+        nass: t(
+          natija.salim ? 'muraja.tanbih.sandooq_thabbit' : 'muraja.tanbih.sandooq_naqis',
+          lugha,
+        ),
+        tafsil: natija.hasila_arabi,
+      });
+    },
   });
   const sandooqAtliq = useMutation<boolean, KhataJisr, void>({
     mutationFn: () =>
       nadi('sandooq_atliq', { ruqaa: mukhtar ?? '', muarrif: muarrifMukhtar ?? '' }),
+    // The game opens in a window of its own; nothing on this screen changes.
+    onSuccess: () => {
+      ansha({ naw: 'najah', nass: t('muraja.tanbih.sandooq_atliq', lugha) });
+    },
   });
   const sandooqImsah = useMutation<boolean, KhataJisr, void>({
     mutationFn: () => nadi('sandooq_imsah', { ruqaa: mukhtar ?? '' }),
     onSuccess: () => {
       setSandooq(null);
+      ansha({ naw: 'najah', nass: t('muraja.tanbih.sandooq_imsah', lugha) });
     },
   });
 
@@ -665,9 +808,11 @@ export function Muraja(): JSX.Element {
         setMukhtar(saf.ruqaa);
       }
     },
+    // The palette reaches the same confirmation the buttons do; a keyboard
+    // shortcut is not a shorter road past the second word.
     iaatimad: (): void => {
       if (mukhtar !== null && !iaatimad.isPending) {
-        iaatimad.mutate({ ruqaa: mukhtar });
+        iftahTaakid({ nitaq: 'wahid', ijra: 'iaatimad' });
       }
     },
     talabTaadil: (): void => {
@@ -677,7 +822,7 @@ export function Muraja(): JSX.Element {
     },
     rafd: (): void => {
       if (mukhtar !== null && sabab.trim() !== '' && !qarar.isPending) {
-        qarar.mutate({ ruqaa: mukhtar, ijra: 'rafd' });
+        iftahTaakid({ nitaq: 'wahid', ijra: 'rafd' });
       }
     },
   };
@@ -744,6 +889,26 @@ export function Muraja(): JSX.Element {
       return;
     }
     setNassMukhtar(fihris);
+  };
+
+  const naffidhTaakid = (): void => {
+    if (taakid === null) {
+      return;
+    }
+    if (taakid.nitaq === 'jumla') {
+      if (!jumla.isPending && sabab.trim() !== '') {
+        jumla.mutate({ ijra: taakid.ijra });
+      }
+    } else if (mukhtar !== null) {
+      if (taakid.ijra === 'iaatimad') {
+        if (!iaatimad.isPending) {
+          iaatimad.mutate({ ruqaa: mukhtar });
+        }
+      } else if (!qarar.isPending && sabab.trim() !== '') {
+        qarar.mutate({ ruqaa: mukhtar, ijra: taakid.ijra });
+      }
+    }
+    aghliqTaakid();
   };
 
   const bayanat = tafasil.data;
@@ -864,13 +1029,13 @@ export function Muraja(): JSX.Element {
           <option value="intizar">{t('muraja.tasfiya.intizar', lugha)}</option>
           <option value="taghtiya">{t('muraja.tasfiya.taghtiya', lugha)}</option>
         </select>
-        {muhaddada.size > 0 ? (
-          <div className="muraja__jumla">
-            <span>{jam('muraja.jumla.adad', lugha, muhaddada.size, munassiq)}</span>
-            {/* The bulk decision walks the selection one record at a time, so
-                its progress has a real denominator and draws against it. */}
-            {jumla.isPending && taqaddumJumla !== null ? (
-              <span className="muraja__miqyas">
+        <Zuhur maftuh={muhaddada.size > 0} className="muraja__jumla">
+          <span>{jam('muraja.jumla.adad', lugha, muhaddada.size, munassiq)}</span>
+          {/* The bulk decision walks the selection one record at a time, so
+              its progress has a real denominator and draws against it. */}
+          <Zuhur maftuh={jumla.isPending && taqaddumJumla !== null} className="muraja__miqyas">
+            {taqaddumJumla === null ? null : (
+              <>
                 <span
                   className="muraja__miqyas-masar"
                   role="progressbar"
@@ -896,38 +1061,88 @@ export function Muraja(): JSX.Element {
                     majmu: munassiq.raqm(taqaddumJumla.majmu),
                   })}
                 </span>
-              </span>
-            ) : null}
-            <button
-              type="button"
-              className="zir"
-              aria-disabled={jumla.isPending || sabab.trim() === ''}
-              onClick={() => {
-                if (!jumla.isPending && sabab.trim() !== '') {
-                  jumla.mutate({ ijra: 'talab_taadil' });
-                }
-              }}
-            >
-              {t('muraja.afal.talab_taadil', lugha)}
-            </button>
-            <span className="muraja__fasil-afal" aria-hidden="true" />
-            <button
-              type="button"
-              className="zir zir--khatar muraja__qarar--rafd"
-              aria-disabled={jumla.isPending || sabab.trim() === ''}
-              onClick={() => {
-                if (!jumla.isPending && sabab.trim() !== '') {
-                  jumla.mutate({ ijra: 'rafd' });
-                }
-              }}
-            >
-              {t('muraja.afal.rafd', lugha)}
-            </button>
-          </div>
-        ) : null}
+              </>
+            )}
+          </Zuhur>
+          <button
+            type="button"
+            className="zir"
+            aria-disabled={jumla.isPending || sabab.trim() === ''}
+            aria-busy={jumla.isPending && jumla.variables?.ijra === 'talab_taadil'}
+            title={sabab.trim() === '' ? t('muraja.afal.sabab_matlub', lugha) : undefined}
+            onClick={() => {
+              if (!jumla.isPending && sabab.trim() !== '') {
+                iftahTaakid({ nitaq: 'jumla', ijra: 'talab_taadil' });
+              }
+            }}
+          >
+            {t('muraja.afal.talab_taadil', lugha)}
+          </button>
+          <span className="muraja__fasil-afal" aria-hidden="true" />
+          <button
+            type="button"
+            className="zir zir--khatar muraja__qarar--rafd"
+            aria-disabled={jumla.isPending || sabab.trim() === ''}
+            aria-busy={jumla.isPending && jumla.variables?.ijra === 'rafd'}
+            title={sabab.trim() === '' ? t('muraja.afal.sabab_matlub', lugha) : undefined}
+            onClick={() => {
+              if (!jumla.isPending && sabab.trim() !== '') {
+                iftahTaakid({ nitaq: 'jumla', ijra: 'rafd' });
+              }
+            }}
+          >
+            {t('muraja.afal.rafd', lugha)}
+          </button>
+        </Zuhur>
+        <Zuhur
+          maftuh={taakid?.nitaq === 'jumla' && muhaddada.size > 0}
+          className="muraja__taakid muraja__taakid--jumla"
+          role="alertdialog"
+          aria-labelledby="muraja-taakid-jumla-unwan"
+          aria-describedby="muraja-taakid-jumla-nass"
+        >
+          {taakid === null || taakid.nitaq !== 'jumla' ? null : (
+            <>
+              <p id="muraja-taakid-jumla-unwan" className="muraja__taakid-unwan">
+                {t('muraja.taakid.unwan', lugha)}
+              </p>
+              <p id="muraja-taakid-jumla-nass" className="muraja__taakid-nass">
+                {t(MIFTAH_TAAKID_JUMLA[taakid.ijra], lugha)}
+              </p>
+              <p className="muraja__taakid-sabab" dir="rtl">
+                {sabab}
+              </p>
+              <div className="muraja__taakid-azrar">
+                {/* Focus lands on the way out, so Enter pressed once too often
+                    cancels rather than confirms. */}
+                <button type="button" className="zir" autoFocus onClick={aghliqTaakid}>
+                  {t('muraja.taakid.ilgha', lugha)}
+                </button>
+                <button
+                  type="button"
+                  className={
+                    taakid.ijra === 'rafd' ? 'zir zir--khatar muraja__qarar--rafd' : 'zir'
+                  }
+                  onClick={naffidhTaakid}
+                >
+                  {t(MIFTAH_ZIR_QARAR[taakid.ijra], lugha)}
+                </button>
+              </div>
+            </>
+          )}
+        </Zuhur>
         {jumla.error !== null ? (
           <div className="muraja__khata-jumla">
             <KutlatKhata unwan={t('luba.khata.amal', lugha)} khata={jumla.error} lugha={lugha} />
+            {/* The rows already decided stay decided; without this line a
+                failure on the fourth of ten reads as a failure of all ten. */}
+            {taqaddumJumla === null ? null : (
+              <p className="muraja__nass-hadi">
+                {t('muraja.jumla.tamma_qabl', lugha, {
+                  adad: munassiq.raqm(taqaddumJumla.tamma),
+                })}
+              </p>
+            )}
           </div>
         ) : null}
       </div>
@@ -1011,40 +1226,56 @@ export function Muraja(): JSX.Element {
           )}
           </Mashhad>
 
-          <details className="muraja__sijill-kull">
-            <summary>{t('muraja.sijill.unwan', lugha)}</summary>
-            {sijillKull.error !== null ? (
-              <KutlatKhata
-                unwan={t('amm.khata', lugha)}
-                khata={sijillKull.error}
-                lugha={lugha}
-                aada={() => {
-                  void sijillKull.refetch();
-                }}
-              />
-            ) : halatSijill === 'jari' ? (
-              <p className="muraja__nass-hadi">{t('amm.tahmil', lugha)}</p>
-            ) : halatSijill === 'muattal' ? (
-              <p className="muraja__nass-hadi">{t('muraja.mamnu', lugha)}</p>
-            ) : halatSijill === 'farigh' ? (
-              <p className="muraja__nass-hadi">{t('muraja.sijill.farigh', lugha)}</p>
-            ) : (
-              <ul className="muraja__sijill muraja__sijill--kamil">
-                {sijillSufuf.map((satr, fihris) => (
-                  <li key={`${satr.waqt}-${String(fihris)}`}>
-                    <span className="muraja__sijill-waqt" dir="ltr">
-                      {satr.waqt}
-                    </span>
-                    <span className="mono-ltr muraja__basma">{satr.ruqaa.slice(0, 8)}</span>
-                    <span className="muraja__sijill-nass">
-                      {satr.wasf_arabi}
-                      {satr.sabab !== null ? `: ${satr.sabab}` : ''}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </details>
+          <div className="muraja__sijill-kull">
+            <button
+              type="button"
+              className="muraja__sijill-zir"
+              aria-expanded={sijillMaftuh}
+              aria-controls="muraja-sijill-kull"
+              onClick={() => {
+                setSijillMaftuh((hali) => !hali);
+              }}
+            >
+              <RamzSuqut />
+              {t('muraja.sijill.unwan', lugha)}
+            </button>
+            <Zuhur maftuh={sijillMaftuh} id="muraja-sijill-kull" className="muraja__sijill-jism">
+              {sijillKull.error !== null ? (
+                <KutlatKhata
+                  unwan={t('amm.khata', lugha)}
+                  khata={sijillKull.error}
+                  lugha={lugha}
+                  aada={() => {
+                    void sijillKull.refetch();
+                  }}
+                />
+              ) : halatSijill === 'jari' ? (
+                <HaykalSijill />
+              ) : halatSijill === 'muattal' ? (
+                <p className="muraja__nass-hadi">{t('muraja.mamnu', lugha)}</p>
+              ) : halatSijill === 'farigh' ? (
+                <HalatFarigha
+                  unwan={t('muraja.sijill.unwan', lugha)}
+                  nass={t('muraja.sijill.farigh', lugha)}
+                />
+              ) : (
+                <ul className="muraja__sijill muraja__sijill--kamil">
+                  {sijillSufuf.map((satr, fihris) => (
+                    <li key={`${satr.waqt}-${String(fihris)}`}>
+                      <span className="muraja__sijill-waqt" dir="ltr">
+                        {satr.waqt}
+                      </span>
+                      <span className="mono-ltr muraja__basma">{satr.ruqaa.slice(0, 8)}</span>
+                      <span className="muraja__sijill-nass">
+                        {satr.wasf_arabi}
+                        {satr.sabab !== null ? `: ${satr.sabab}` : ''}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Zuhur>
+          </div>
         </div>
 
         <div className="muraja__tafasil">
@@ -1059,6 +1290,7 @@ export function Muraja(): JSX.Element {
                 type="button"
                 className="zir"
                 aria-disabled={sufuf.length === 0}
+                title={sufuf.length === 0 ? t('muraja.tabur.la_saff', lugha) : undefined}
                 onClick={() => {
                   const saf = sufuf.at(0);
                   if (saf !== undefined) {
@@ -1274,7 +1506,7 @@ export function Muraja(): JSX.Element {
                   </ul>
                 )}
                 <div className="muraja__taaliq-talab">
-                  {mirsat !== null || nassMukhtar !== null ? (
+                  <Zuhur maftuh={mirsat !== null || nassMukhtar !== null} className="muraja__mirsat">
                     <button
                       type="button"
                       className={
@@ -1297,7 +1529,7 @@ export function Muraja(): JSX.Element {
                           ? t('muraja.taaliq.murtabit', lugha)
                           : t('muraja.taaliq.aam', lugha)}
                     </button>
-                  ) : null}
+                  </Zuhur>
                   <input
                     className="muraja__haql"
                     dir="rtl"
@@ -1311,6 +1543,8 @@ export function Muraja(): JSX.Element {
                     type="button"
                     className="zir"
                     aria-disabled={taaliq.isPending || matn.trim() === ''}
+                    aria-busy={taaliq.isPending}
+                    title={matn.trim() === '' ? t('muraja.taaliq.matlub', lugha) : undefined}
                     onClick={() => {
                       if (!taaliq.isPending && matn.trim() !== '') {
                         taaliq.mutate({ matn });
@@ -1336,6 +1570,7 @@ export function Muraja(): JSX.Element {
                     type="button"
                     className="zir"
                     aria-disabled={sandooqThabbit.isPending}
+                    aria-busy={sandooqThabbit.isPending}
                     onClick={() => {
                       if (!sandooqThabbit.isPending) {
                         sandooqThabbit.mutate();
@@ -1353,6 +1588,7 @@ export function Muraja(): JSX.Element {
                     type="button"
                     className="zir"
                     aria-disabled={sandooqAtliq.isPending}
+                    aria-busy={sandooqAtliq.isPending}
                     onClick={() => {
                       if (!sandooqAtliq.isPending) {
                         sandooqAtliq.mutate();
@@ -1365,6 +1601,7 @@ export function Muraja(): JSX.Element {
                     type="button"
                     className="zir"
                     aria-disabled={sandooqImsah.isPending}
+                    aria-busy={sandooqImsah.isPending}
                     onClick={() => {
                       if (!sandooqImsah.isPending) {
                         sandooqImsah.mutate();
@@ -1374,11 +1611,9 @@ export function Muraja(): JSX.Element {
                     {t('muraja.sandooq.imsah', lugha)}
                   </button>
                 </div>
-                {sandooq !== null ? (
-                  <p className="muraja__nass-hadi" role="status">
-                    {sandooq.hasila_arabi}
-                  </p>
-                ) : null}
+                <Zuhur maftuh={sandooq !== null} className="muraja__nass-hadi" role="status">
+                  {sandooq === null ? null : sandooq.hasila_arabi}
+                </Zuhur>
                 {sandooqThabbit.error !== null ? (
                   <KutlatKhata
                     unwan={t('luba.khata.amal', lugha)}
@@ -1423,9 +1658,10 @@ export function Muraja(): JSX.Element {
                     type="button"
                     className="zir zir--tamyeez muraja__qarar--iaatimad"
                     aria-disabled={iaatimad.isPending}
+                    aria-busy={iaatimad.isPending}
                     onClick={() => {
                       if (!iaatimad.isPending) {
-                        iaatimad.mutate({ ruqaa: mukhtar });
+                        iftahTaakid({ nitaq: 'wahid', ijra: 'iaatimad' });
                       }
                     }}
                   >
@@ -1435,6 +1671,8 @@ export function Muraja(): JSX.Element {
                     type="button"
                     className="zir"
                     aria-disabled={qarar.isPending || sabab.trim() === ''}
+                    aria-busy={qarar.isPending && qarar.variables?.ijra === 'talab_taadil'}
+                    title={sabab.trim() === '' ? t('muraja.afal.sabab_matlub', lugha) : undefined}
                     onClick={() => {
                       if (!qarar.isPending && sabab.trim() !== '') {
                         qarar.mutate({ ruqaa: mukhtar, ijra: 'talab_taadil' });
@@ -1450,9 +1688,11 @@ export function Muraja(): JSX.Element {
                     type="button"
                     className="zir zir--khatar muraja__qarar--rafd"
                     aria-disabled={qarar.isPending || sabab.trim() === ''}
+                    aria-busy={qarar.isPending && qarar.variables?.ijra === 'rafd'}
+                    title={sabab.trim() === '' ? t('muraja.afal.sabab_matlub', lugha) : undefined}
                     onClick={() => {
                       if (!qarar.isPending && sabab.trim() !== '') {
-                        qarar.mutate({ ruqaa: mukhtar, ijra: 'rafd' });
+                        iftahTaakid({ nitaq: 'wahid', ijra: 'rafd' });
                       }
                     }}
                   >
@@ -1462,15 +1702,60 @@ export function Muraja(): JSX.Element {
                     type="button"
                     className="zir zir--khatar muraja__qarar--rafd"
                     aria-disabled={qarar.isPending || sabab.trim() === ''}
+                    aria-busy={qarar.isPending && qarar.variables?.ijra === 'sahb'}
+                    title={sabab.trim() === '' ? t('muraja.afal.sabab_matlub', lugha) : undefined}
                     onClick={() => {
                       if (!qarar.isPending && sabab.trim() !== '') {
-                        qarar.mutate({ ruqaa: mukhtar, ijra: 'sahb' });
+                        iftahTaakid({ nitaq: 'wahid', ijra: 'sahb' });
                       }
                     }}
                   >
                     {t('muraja.afal.sahb', lugha)}
                   </button>
                 </div>
+                <Zuhur
+                  maftuh={taakid?.nitaq === 'wahid'}
+                  className="muraja__taakid"
+                  role="alertdialog"
+                  aria-labelledby="muraja-taakid-unwan"
+                  aria-describedby="muraja-taakid-nass"
+                >
+                  {taakid === null || taakid.nitaq !== 'wahid' ? null : (
+                    <>
+                      <p id="muraja-taakid-unwan" className="muraja__taakid-unwan">
+                        {t('muraja.taakid.unwan', lugha)}
+                      </p>
+                      <p id="muraja-taakid-nass" className="muraja__taakid-nass">
+                        {t(MIFTAH_TAAKID[taakid.ijra], lugha, {
+                          unwan: bayanat.musawwada.unwan,
+                        })}
+                      </p>
+                      {/* The reason is read back because it is what gets written
+                          into the log, and a typo there is permanent. */}
+                      {taakid.ijra === 'iaatimad' ? null : (
+                        <p className="muraja__taakid-sabab" dir="rtl">
+                          {sabab}
+                        </p>
+                      )}
+                      <div className="muraja__taakid-azrar">
+                        <button type="button" className="zir" autoFocus onClick={aghliqTaakid}>
+                          {t('muraja.taakid.ilgha', lugha)}
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            taakid.ijra === 'iaatimad'
+                              ? 'zir zir--tamyeez muraja__qarar--iaatimad'
+                              : 'zir zir--khatar muraja__qarar--rafd'
+                          }
+                          onClick={naffidhTaakid}
+                        >
+                          {t(MIFTAH_ZIR_QARAR[taakid.ijra], lugha)}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </Zuhur>
                 {qarar.error !== null ? (
                   <KutlatKhata
                     unwan={t('luba.khata.amal', lugha)}
@@ -1485,11 +1770,9 @@ export function Muraja(): JSX.Element {
                     lugha={lugha}
                   />
                 ) : null}
-                {iaatimad.data !== undefined ? (
-                  <p className="muraja__najah" role="status">
-                    {t('muraja.afal.nushirat', lugha)}
-                  </p>
-                ) : null}
+                <Zuhur maftuh={iaatimad.data !== undefined} className="muraja__najah" role="status">
+                  {iaatimad.data === undefined ? null : t('muraja.afal.nushirat', lugha)}
+                </Zuhur>
               </section>
 
               <section className="muraja__qism">

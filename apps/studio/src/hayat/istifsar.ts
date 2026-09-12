@@ -56,6 +56,8 @@ export const mafatih = {
   maalumat: ['maalumat'] as const,
   /** The whole library. */
   maktaba: ['maktaba'] as const,
+  /** The record of the last library scan, which every rescan makes stale. */
+  fahs_akhir: ['fahs_akhir'] as const,
   /** One game's engine, capability report and build. */
   tafasil: (muarrif: string) => ['tafasil', muarrif] as const,
   /**

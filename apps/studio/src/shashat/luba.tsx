@@ -12,6 +12,7 @@ import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { HADATH_MARHALAT_TATHBEET, HADATH_TAQADDUM_TANZEEL, KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
+import { ansha } from '@/hayat/tanbihat';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t, wasm } from '@/lugha/lugha';
 import type { HalatHimaya } from '@/maktaba/aql';
@@ -26,10 +27,12 @@ import {
   tabaqaMudkhal,
   tabaqaTaqreer,
 } from '@/maktaba/tabaqat';
+import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
+import { Zuhur } from '@/mukawwinat/zuhur';
 import type {
   AqlLubaHie,
   BinaHie,
@@ -56,7 +59,7 @@ import type {
   TaqreerHie,
   TaqreerTahaqquqHie,
 } from '@/mustalahat/awamir';
-import { HARAKAT_LAWHA, haraka } from '@/nizam/haraka';
+import { HARAKAT_LAWHA, haraka, ismIntiqalGhilaf } from '@/nizam/haraka';
 
 import './luba.css';
 
@@ -68,6 +71,13 @@ const MIFTAH_TAAKID: Readonly<Record<MatlabIzala, MiftahLugha>> = {
   nass: 'luba.taakid.izalat_nass',
   sawt: 'luba.taakid.izalat_sawt',
   kul: 'luba.taakid.istiada',
+};
+
+/** What a removal that came off whole is confirmed with, per request. */
+const MIFTAH_TANBIH_IZALA: Readonly<Record<MatlabIzala, MiftahLugha>> = {
+  nass: 'luba.tanbih.izalat_nass',
+  sawt: 'luba.tanbih.izalat_sawt',
+  kul: 'luba.istiada.najah_kul',
 };
 
 /**
@@ -126,6 +136,20 @@ function munassiqWaqt(lugha: Lugha, arqam: NizamArqam): Intl.DateTimeFormat {
     timeStyle: 'short',
     numberingSystem: ANZIMAT_ARQAM[arqam],
   });
+}
+
+/**
+ * Which of a query's faces is showing, as the key `Mashhad` switches on.
+ *
+ * Empty and filled are one face: the two never replace each other for the same
+ * answer, and a refetch that changes the count is a data update, which nothing
+ * on this screen animates.
+ */
+function wajhIstifsar(istifsar: {
+  readonly isPending: boolean;
+  readonly error: unknown;
+}): 'tahmil' | 'khata' | 'jahiz' {
+  return istifsar.isPending ? 'tahmil' : istifsar.error !== null ? 'khata' : 'jahiz';
 }
 
 /* ---------------------------------------------------------------------------
@@ -763,6 +787,37 @@ function HaykalQism({ sutur }: { readonly sutur: number }): JSX.Element {
   );
 }
 
+/**
+ * The lines a panel's own query reserves while it runs.
+ *
+ * Inside a panel that is already drawn, so no second border: a few lines where
+ * the answer will stand, after the same delay every skeleton waits so a warm
+ * answer never flashes them. The sentence a screen reader hears is the one the
+ * text line used to show; the shapes are for the eye alone.
+ */
+function HaykalSutur({
+  sutur,
+  nass,
+}: {
+  readonly sutur: number;
+  readonly nass: string;
+}): JSX.Element {
+  return (
+    <div className="luba__haykal-sutur zuhur-muakhkhar">
+      <span className="khafi" role="status">
+        {nass}
+      </span>
+      {Array.from({ length: sutur }, (_, fihris) => (
+        <span
+          key={fihris}
+          aria-hidden="true"
+          className={`haykal__satr haykal__satr--${TULAT_SATR[fihris % 3] ?? 'tawil'}`}
+        />
+      ))}
+    </div>
+  );
+}
+
 interface KhasaisTaqreer {
   readonly muarrif: string;
   readonly muharrik: MuharrikHie;
@@ -890,7 +945,7 @@ function QismMuharrik({
       </div>
       <div className="luba__fahs luba__fahs--dhayl">
         <div className="luba__saff-afal">
-          <button type="button" className="zir" aria-disabled={yajriFahs} onClick={alaAadaFahs}>
+          <button type="button" className="zir" aria-busy={yajriFahs} onClick={alaAadaFahs}>
             {t(yajriFahs ? 'luba.muharrik.jari_fahs' : 'luba.muharrik.aada_fahs', lugha)}
           </button>
           <button
@@ -914,42 +969,44 @@ function QismMuharrik({
             aada={alaAadaFahs}
           />
         ) : null}
-        {dalailZahira ? (
-          dalail.isPending ? (
-            <p className="luba__jari">{t('luba.dalail.jari', lugha)}</p>
-          ) : dalail.error !== null ? (
-            <KutlatKhata
-              unwan={t('luba.dalail.taadhur', lugha)}
-              khata={dalail.error}
-              lugha={lugha}
-              muarrif={muarrif}
-              aada={() => {
-                void dalail.refetch();
-              }}
-            />
-          ) : dalail.data === undefined || dalail.data.length === 0 ? (
-            <p className="luba__nass-hadi">{t('luba.dalail.la_shay', lugha)}</p>
-          ) : (
-            <ul id="luba-dalail" className="luba__adilla">
-              {dalail.data.map((daleel, fihris) => (
-                <li
-                  key={`${daleel.naw}-${String(fihris)}`}
-                  className="luba__daleel luba__daleel--muharrik"
-                >
-                  <p className="luba__daleel-nass">{daleel.wasf}</p>
-                  {daleel.mawqi === null ? null : (
-                    <p className="mono-ltr luba__daleel-masar luba__qat" title={daleel.mawqi}>
-                      {daleel.mawqi}
+        <Zuhur maftuh={dalailZahira} id="luba-dalail" className="luba__kashf">
+          <Mashhad miftah={wajhIstifsar(dalail)}>
+            {dalail.isPending ? (
+              <HaykalSutur sutur={3} nass={t('luba.dalail.jari', lugha)} />
+            ) : dalail.error !== null ? (
+              <KutlatKhata
+                unwan={t('luba.dalail.taadhur', lugha)}
+                khata={dalail.error}
+                lugha={lugha}
+                muarrif={muarrif}
+                aada={() => {
+                  void dalail.refetch();
+                }}
+              />
+            ) : dalail.data === undefined || dalail.data.length === 0 ? (
+              <HalatFarigha unwan={t('luba.dalail.la_shay', lugha)} />
+            ) : (
+              <ul className="luba__adilla">
+                {dalail.data.map((daleel, fihris) => (
+                  <li
+                    key={`${daleel.naw}-${String(fihris)}`}
+                    className="luba__daleel luba__daleel--muharrik"
+                  >
+                    <p className="luba__daleel-nass">{daleel.wasf}</p>
+                    {daleel.mawqi === null ? null : (
+                      <p className="mono-ltr luba__daleel-masar luba__qat" title={daleel.mawqi}>
+                        {daleel.mawqi}
+                      </p>
+                    )}
+                    <p className="luba__daleel-wazn">
+                      {t('luba.dalail.wazn', lugha, { adad: munassiq.raqm(daleel.wazn) })}
                     </p>
-                  )}
-                  <p className="luba__daleel-wazn">
-                    {t('luba.dalail.wazn', lugha, { adad: munassiq.raqm(daleel.wazn) })}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )
-        ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Mashhad>
+        </Zuhur>
       </div>
     </section>
   );
@@ -1129,121 +1186,125 @@ function QismAql({ muarrif, lugha }: KhasaisAqlQism): JSX.Element {
           {t(zahir ? 'luba.aql.ikhfa' : 'luba.aql.zirr', lugha)}
         </button>
       </div>
-      {!zahir ? null : aql.isPending ? (
-        <p className="luba__jari">{t('luba.aql.jari', lugha)}</p>
-      ) : aql.error !== null ? (
-        <KutlatKhata
-          unwan={t('luba.aql.taadhur', lugha)}
-          khata={aql.error}
-          lugha={lugha}
-          muarrif={muarrif}
-          aada={() => {
-            void aql.refetch();
-          }}
-        />
-      ) : bayanat === undefined ? null : (
-        <div id="luba-aql" className="luba__aql">
-          <h3 className="luba__unwan-farii">{t('luba.aql.muntaj', lugha)}</h3>
-          <p className="luba__aql-jumla" dir="auto">
-            {nassLugha({ arabi: bayanat.ism_arabi, injilizi: bayanat.ism_injilizi }, lugha)}
-          </p>
-          <p className="luba__sabab" dir="auto">
-            {nassLugha({ arabi: bayanat.sabab_arabi, injilizi: bayanat.sabab_injilizi }, lugha)}
-          </p>
-          <Shawahid shawahid={bayanat.shawahid_muntaj} lugha={lugha} />
+      <Zuhur maftuh={zahir} id="luba-aql" className="luba__kashf">
+        <Mashhad miftah={wajhIstifsar(aql)}>
+          {aql.isPending ? (
+            <HaykalSutur sutur={5} nass={t('luba.aql.jari', lugha)} />
+          ) : aql.error !== null ? (
+            <KutlatKhata
+              unwan={t('luba.aql.taadhur', lugha)}
+              khata={aql.error}
+              lugha={lugha}
+              muarrif={muarrif}
+              aada={() => {
+                void aql.refetch();
+              }}
+            />
+          ) : bayanat === undefined ? null : (
+            <div className="luba__aql">
+              <h3 className="luba__unwan-farii">{t('luba.aql.muntaj', lugha)}</h3>
+              <p className="luba__aql-jumla" dir="auto">
+                {nassLugha({ arabi: bayanat.ism_arabi, injilizi: bayanat.ism_injilizi }, lugha)}
+              </p>
+              <p className="luba__sabab" dir="auto">
+                {nassLugha({ arabi: bayanat.sabab_arabi, injilizi: bayanat.sabab_injilizi }, lugha)}
+              </p>
+              <Shawahid shawahid={bayanat.shawahid_muntaj} lugha={lugha} />
 
-          <h3 className="luba__unwan-farii">{t('luba.aql.mawani', lugha)}</h3>
-          {bayanat.mawani.length === 0 ? (
-            <p className="luba__nass-hadi">{t('luba.aql.la_mawani', lugha)}</p>
-          ) : (
-            // An ordered list, because the order is the answer: this is the one
-            // ranking in the product and every surface reads it rather than
-            // making one.
-            <ol className="luba__aql-qaima">
-              {bayanat.mawani.map((mani) => (
-                <li key={mani.naw} className="luba__aql-madkhal">
-                  <p className="luba__aql-jumla" dir="auto">
-                    {nassLugha(mani, lugha)}
-                  </p>
-                  <p className="luba__aql-wusum">
-                    <span className="luba__riqaqa">
-                      {t(
-                        mani.nitaq === 'kul' ? 'luba.aql.nitaq_kul' : 'luba.aql.nitaq_tashghil',
-                        lugha,
-                      )}
-                    </span>
-                    <span className="luba__riqaqa">
-                      {t(mani.nihai ? 'luba.aql.nihai' : 'luba.aql.ghayr_nihai', lugha)}
-                    </span>
-                  </p>
-                  <Shawahid shawahid={mani.shawahid} lugha={lugha} />
-                </li>
-              ))}
-            </ol>
-          )}
+              <h3 className="luba__unwan-farii">{t('luba.aql.mawani', lugha)}</h3>
+              {bayanat.mawani.length === 0 ? (
+                <p className="luba__nass-hadi">{t('luba.aql.la_mawani', lugha)}</p>
+              ) : (
+                // An ordered list, because the order is the answer: this is the one
+                // ranking in the product and every surface reads it rather than
+                // making one.
+                <ol className="luba__aql-qaima">
+                  {bayanat.mawani.map((mani) => (
+                    <li key={mani.naw} className="luba__aql-madkhal">
+                      <p className="luba__aql-jumla" dir="auto">
+                        {nassLugha(mani, lugha)}
+                      </p>
+                      <p className="luba__aql-wusum">
+                        <span className="luba__riqaqa">
+                          {t(
+                            mani.nitaq === 'kul' ? 'luba.aql.nitaq_kul' : 'luba.aql.nitaq_tashghil',
+                            lugha,
+                          )}
+                        </span>
+                        <span className="luba__riqaqa">
+                          {t(mani.nihai ? 'luba.aql.nihai' : 'luba.aql.ghayr_nihai', lugha)}
+                        </span>
+                      </p>
+                      <Shawahid shawahid={mani.shawahid} lugha={lugha} />
+                    </li>
+                  ))}
+                </ol>
+              )}
 
-          <h3 className="luba__unwan-farii">{t('luba.aql.makhatir', lugha)}</h3>
-          {bayanat.makhatir.length === 0 ? (
-            <p className="luba__nass-hadi">{t('luba.aql.la_makhatir', lugha)}</p>
-          ) : (
-            <ol className="luba__aql-qaima">
-              {bayanat.makhatir.map((khatar) => (
-                <li key={khatar.naw} className="luba__aql-madkhal">
-                  <p className="luba__aql-jumla" dir="auto">
-                    {nassLugha(khatar, lugha)}
-                  </p>
-                  <p className="luba__aql-wusum">
-                    <span className="luba__riqaqa">
-                      {t(khatar.muqarr ? 'luba.aql.muqarr' : 'luba.aql.muallaq', lugha)}
-                    </span>
-                  </p>
-                  <Shawahid shawahid={khatar.shawahid} lugha={lugha} />
-                </li>
-              ))}
-            </ol>
-          )}
+              <h3 className="luba__unwan-farii">{t('luba.aql.makhatir', lugha)}</h3>
+              {bayanat.makhatir.length === 0 ? (
+                <p className="luba__nass-hadi">{t('luba.aql.la_makhatir', lugha)}</p>
+              ) : (
+                <ol className="luba__aql-qaima">
+                  {bayanat.makhatir.map((khatar) => (
+                    <li key={khatar.naw} className="luba__aql-madkhal">
+                      <p className="luba__aql-jumla" dir="auto">
+                        {nassLugha(khatar, lugha)}
+                      </p>
+                      <p className="luba__aql-wusum">
+                        <span className="luba__riqaqa">
+                          {t(khatar.muqarr ? 'luba.aql.muqarr' : 'luba.aql.muallaq', lugha)}
+                        </span>
+                      </p>
+                      <Shawahid shawahid={khatar.shawahid} lugha={lugha} />
+                    </li>
+                  ))}
+                </ol>
+              )}
 
-          <h3 className="luba__unwan-farii">{t('luba.aql.hudud', lugha)}</h3>
-          {bayanat.hudud.length === 0 ? (
-            <p className="luba__nass-hadi">{t('luba.aql.la_hudud', lugha)}</p>
-          ) : (
-            <ul className="luba__aql-qaima">
-              {bayanat.hudud.map((hadd, martaba) => (
-                <li key={`${String(martaba)}:${hadd.arabi}`} className="luba__aql-madkhal">
-                  <p className="luba__aql-jumla" dir="auto">
-                    {nassLugha(hadd, lugha)}
-                  </p>
-                  <Shawahid shawahid={hadd.shawahid} lugha={lugha} />
-                </li>
-              ))}
-            </ul>
-          )}
+              <h3 className="luba__unwan-farii">{t('luba.aql.hudud', lugha)}</h3>
+              {bayanat.hudud.length === 0 ? (
+                <p className="luba__nass-hadi">{t('luba.aql.la_hudud', lugha)}</p>
+              ) : (
+                <ul className="luba__aql-qaima">
+                  {bayanat.hudud.map((hadd, martaba) => (
+                    <li key={`${String(martaba)}:${hadd.arabi}`} className="luba__aql-madkhal">
+                      <p className="luba__aql-jumla" dir="auto">
+                        {nassLugha(hadd, lugha)}
+                      </p>
+                      <Shawahid shawahid={hadd.shawahid} lugha={lugha} />
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-          <h3 className="luba__unwan-farii">{t('luba.aql.himaya', lugha)}</h3>
-          {/* Named from the verdict rather than from the evidence list, because
-              an empty list is what a clean game and an unread catalogue both
-              produce and the difference is the whole point of the third answer.
-              A verdict this build cannot name falls through to its chain, which
-              still says what was looked at. */}
-          {halaHimaya === null ? null : (
-            <p className="luba__nass-hadi">{t(ISM_HALAT_HIMAYA[halaHimaya], lugha)}</p>
-          )}
-          <Shawahid shawahid={bayanat.shawahid_himaya} lugha={lugha} />
-          {bayanat.ikhtilaf_himaya === null ? null : (
-            <div className="luba__aql-ikhtilaf">
-              <p className="luba__nass-hadi luba__tahdheer">{t('luba.aql.ikhtilaf', lugha)}</p>
-              <dl className="luba__jadwal">
-                <Saff unwan={t('luba.aql.min_kashf', lugha)}>
-                  <Riqaqat qaima={bayanat.ikhtilaf_himaya.min_kashf} />
-                </Saff>
-                <Saff unwan={t('luba.aql.min_iktishaf', lugha)}>
-                  <Riqaqat qaima={bayanat.ikhtilaf_himaya.min_iktishaf} />
-                </Saff>
-              </dl>
+              <h3 className="luba__unwan-farii">{t('luba.aql.himaya', lugha)}</h3>
+              {/* Named from the verdict rather than from the evidence list, because
+                  an empty list is what a clean game and an unread catalogue both
+                  produce and the difference is the whole point of the third answer.
+                  A verdict this build cannot name falls through to its chain, which
+                  still says what was looked at. */}
+              {halaHimaya === null ? null : (
+                <p className="luba__nass-hadi">{t(ISM_HALAT_HIMAYA[halaHimaya], lugha)}</p>
+              )}
+              <Shawahid shawahid={bayanat.shawahid_himaya} lugha={lugha} />
+              {bayanat.ikhtilaf_himaya === null ? null : (
+                <div className="luba__aql-ikhtilaf">
+                  <p className="luba__nass-hadi luba__tahdheer">{t('luba.aql.ikhtilaf', lugha)}</p>
+                  <dl className="luba__jadwal">
+                    <Saff unwan={t('luba.aql.min_kashf', lugha)}>
+                      <Riqaqat qaima={bayanat.ikhtilaf_himaya.min_kashf} />
+                    </Saff>
+                    <Saff unwan={t('luba.aql.min_iktishaf', lugha)}>
+                      <Riqaqat qaima={bayanat.ikhtilaf_himaya.min_iktishaf} />
+                    </Saff>
+                  </dl>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
+        </Mashhad>
+      </Zuhur>
     </section>
   );
 }
@@ -1493,41 +1554,51 @@ function QaimatMasarat({
   );
 }
 
-function QismKhutta({ muarrif, lugha, munassiq, mumakkan }: KhasaisKhutta): JSX.Element | null {
+function QismKhutta({ muarrif, lugha, munassiq, mumakkan }: KhasaisKhutta): JSX.Element {
   const khutta = useQuery<KhuttatTathbeetHie, KhataJisr>({
     queryKey: mafatih.khutta(muarrif),
     queryFn: () => nadi('khuttat_tathbeet', { muarrif }),
     enabled: mumakkan,
   });
 
-  if (!mumakkan) {
-    return null;
-  }
-  if (khutta.isPending) {
-    return <p className="luba__jari">{t('luba.khutta.jari', lugha)}</p>;
-  }
-  // A plan that cannot be built is an install that would not have run. The
-  // component that is missing, the compatibility prefix that was never built,
-  // the report the safety layer refused — each of those is the install's own
-  // refusal, said before a backup is taken instead of half way through one.
-  if (khutta.error !== null) {
-    return (
-      <KutlatKhata
-        unwan={t('luba.khutta.taadhur', lugha)}
-        khata={khutta.error}
-        lugha={lugha}
-        muarrif={muarrif}
-        aada={() => {
-          void khutta.refetch();
-        }}
-      />
-    );
-  }
-  const bayanat = khutta.data;
-  if (bayanat === undefined) {
-    return null;
-  }
+  return (
+    <Zuhur maftuh={mumakkan} className="luba__khutta-zuhur">
+      <Mashhad miftah={wajhIstifsar(khutta)}>
+        {khutta.isPending ? (
+          <HaykalSutur sutur={4} nass={t('luba.khutta.jari', lugha)} />
+        ) : khutta.error !== null ? (
+          // A plan that cannot be built is an install that would not have run.
+          // The component that is missing, the compatibility prefix that was
+          // never built, the report the safety layer refused — each of those is
+          // the install's own refusal, said before a backup is taken instead of
+          // half way through one.
+          <KutlatKhata
+            unwan={t('luba.khutta.taadhur', lugha)}
+            khata={khutta.error}
+            lugha={lugha}
+            muarrif={muarrif}
+            aada={() => {
+              void khutta.refetch();
+            }}
+          />
+        ) : khutta.data === undefined ? null : (
+          <KhuttaJahiza bayanat={khutta.data} lugha={lugha} munassiq={munassiq} />
+        )}
+      </Mashhad>
+    </Zuhur>
+  );
+}
 
+/** The plan once the installer has written it: the counts, the findings, the inventory. */
+function KhuttaJahiza({
+  bayanat,
+  lugha,
+  munassiq,
+}: {
+  readonly bayanat: KhuttatTathbeetHie;
+  readonly lugha: Lugha;
+  readonly munassiq: Munassiqat;
+}): JSX.Element {
   const sababFaragh =
     lugha === 'arabi' ? bayanat.sabab_faragh_arabi : bayanat.sabab_faragh_injilizi;
   const talabat = lugha === 'arabi' ? bayanat.talabat_arabi : bayanat.talabat_injilizi;
@@ -1686,99 +1757,94 @@ function KhuttatIzala({
   matlab,
   lugha,
   munassiq,
-}: KhasaisKhuttatIzala): JSX.Element | null {
+}: KhasaisKhuttatIzala): JSX.Element {
   const khutta = useQuery<KhuttatIzalaHie[], KhataJisr>({
     queryKey: mafatih.khuttat_izala(muarrif, matlab),
     queryFn: () => nadi('khuttat_izala', { muarrif, matlab }),
   });
-
-  if (khutta.isPending) {
-    return <p className="luba__jari">{t('luba.izala.khutta_jari', lugha)}</p>;
-  }
-  if (khutta.error !== null) {
-    return (
-      <KutlatKhata
-        unwan={t('luba.izala.khutta_taadhur', lugha)}
-        khata={khutta.error}
-        lugha={lugha}
-        muarrif={muarrif}
-        aada={() => {
-          void khutta.refetch();
-        }}
-      />
-    );
-  }
   const khutat = khutta.data;
-  if (khutat === undefined) {
-    return null;
-  }
-  if (khutat.length === 0) {
-    return <p className="luba__nass-hadi">{t('luba.izala.khutta_la_shay', lugha)}</p>;
-  }
 
   return (
-    <div className="luba__khuttat-izala">
-      <h3 className="luba__unwan-farii">{t('luba.izala.khutta_unwan', lugha)}</h3>
-      {khutat.map((khutwa) => (
-        <div key={khutwa.naw} className="luba__natija-band">
-          <p className="luba__natija-nass">
-            <span
-              className={
-                khutwa.nazif ? 'luba__nuqta luba__nuqta--najah' : 'luba__nuqta luba__nuqta--khatar'
-              }
-              aria-hidden="true"
-            />
-            {t(miftahNaw(khutwa.naw === 'nass' ? 'nass' : 'sawt'), lugha)}
-            {' — '}
-            {t(khutwa.nazif ? 'luba.izala.nazif' : 'luba.izala.ghayr_nazif', lugha)}
-          </p>
-          <ul className="luba__adad-natija">
-            <li>{t('luba.izala.li_istiada', lugha, { adad: munassiq.raqm(khutwa.li_istiada) })}</li>
-            <li>{t('luba.izala.li_hadhf', lugha, { adad: munassiq.raqm(khutwa.li_hadhf) })}</li>
-            <li>{t('luba.izala.mujalladat', lugha, { adad: munassiq.raqm(khutwa.mujalladat) })}</li>
-            <li>{t('luba.izala.hajm', lugha, { hajm: khutwa.hajm_nusakh_maqru })}</li>
-          </ul>
-          <QaimatMasarat
-            unwan={t('luba.izala.mustabdala', lugha)}
-            masarat={khutwa.mustabdala}
-          />
-          <QaimatMasarat unwan={t('luba.izala.mafquda', lugha)} masarat={khutwa.mafquda} />
-          {khutwa.baqaya.length === 0 ? null : (
-            <>
-              <h4 className="luba__unwan-farii">{t('luba.izala.baqaya', lugha)}</h4>
-              <ul className="luba__baqaya">
-                {khutwa.baqaya.map((baqiya) => (
-                  <li key={baqiya.mujallad}>
-                    <p className="luba__nass-hadi" dir="auto">
-                      {baqiya.adad === 0
-                        ? t('luba.izala.baqaya_dakhil', lugha, { mujallad: baqiya.mujallad })
-                        : t('luba.izala.baqaya_mujallad', lugha, {
-                            mujallad: baqiya.mujallad,
-                            adad: munassiq.raqm(baqiya.adad),
-                          })}
-                    </p>
-                    <ul className="luba__sutur">
-                      {baqiya.madakhil.map((madkhal) => (
-                        <li key={madkhal} className="mono-ltr luba__satr-masar" title={madkhal}>
-                          {madkhal}
-                        </li>
-                      ))}
-                      {baqiya.adad > baqiya.madakhil.length ? (
-                        <li className="luba__nass-hadi">
-                          {t('luba.izala.baqaya_mazid', lugha, {
-                            adad: munassiq.raqm(baqiya.adad - baqiya.madakhil.length),
-                          })}
-                        </li>
-                      ) : null}
-                    </ul>
-                  </li>
-                ))}
+    <Mashhad miftah={wajhIstifsar(khutta)} className="luba__khuttat-izala-mashhad">
+      {khutta.isPending ? (
+        <HaykalSutur sutur={3} nass={t('luba.izala.khutta_jari', lugha)} />
+      ) : khutta.error !== null ? (
+        <KutlatKhata
+          unwan={t('luba.izala.khutta_taadhur', lugha)}
+          khata={khutta.error}
+          lugha={lugha}
+          muarrif={muarrif}
+          aada={() => {
+            void khutta.refetch();
+          }}
+        />
+      ) : khutat === undefined ? null : khutat.length === 0 ? (
+        <HalatFarigha unwan={t('luba.izala.khutta_la_shay', lugha)} />
+      ) : (
+        <div className="luba__khuttat-izala">
+          <h3 className="luba__unwan-farii">{t('luba.izala.khutta_unwan', lugha)}</h3>
+          {khutat.map((khutwa) => (
+            <div key={khutwa.naw} className="luba__natija-band">
+              <p className="luba__natija-nass">
+                <span
+                  className={
+                    khutwa.nazif ? 'luba__nuqta luba__nuqta--najah' : 'luba__nuqta luba__nuqta--khatar'
+                  }
+                  aria-hidden="true"
+                />
+                {t(miftahNaw(khutwa.naw === 'nass' ? 'nass' : 'sawt'), lugha)}
+                {' — '}
+                {t(khutwa.nazif ? 'luba.izala.nazif' : 'luba.izala.ghayr_nazif', lugha)}
+              </p>
+              <ul className="luba__adad-natija">
+                <li>{t('luba.izala.li_istiada', lugha, { adad: munassiq.raqm(khutwa.li_istiada) })}</li>
+                <li>{t('luba.izala.li_hadhf', lugha, { adad: munassiq.raqm(khutwa.li_hadhf) })}</li>
+                <li>{t('luba.izala.mujalladat', lugha, { adad: munassiq.raqm(khutwa.mujalladat) })}</li>
+                <li>{t('luba.izala.hajm', lugha, { hajm: khutwa.hajm_nusakh_maqru })}</li>
               </ul>
-            </>
-          )}
+              <QaimatMasarat
+                unwan={t('luba.izala.mustabdala', lugha)}
+                masarat={khutwa.mustabdala}
+              />
+              <QaimatMasarat unwan={t('luba.izala.mafquda', lugha)} masarat={khutwa.mafquda} />
+              {khutwa.baqaya.length === 0 ? null : (
+                <>
+                  <h4 className="luba__unwan-farii">{t('luba.izala.baqaya', lugha)}</h4>
+                  <ul className="luba__baqaya">
+                    {khutwa.baqaya.map((baqiya) => (
+                      <li key={baqiya.mujallad}>
+                        <p className="luba__nass-hadi" dir="auto">
+                          {baqiya.adad === 0
+                            ? t('luba.izala.baqaya_dakhil', lugha, { mujallad: baqiya.mujallad })
+                            : t('luba.izala.baqaya_mujallad', lugha, {
+                                mujallad: baqiya.mujallad,
+                                adad: munassiq.raqm(baqiya.adad),
+                              })}
+                        </p>
+                        <ul className="luba__sutur">
+                          {baqiya.madakhil.map((madkhal) => (
+                            <li key={madkhal} className="mono-ltr luba__satr-masar" title={madkhal}>
+                              {madkhal}
+                            </li>
+                          ))}
+                          {baqiya.adad > baqiya.madakhil.length ? (
+                            <li className="luba__nass-hadi">
+                              {t('luba.izala.baqaya_mazid', lugha, {
+                                adad: munassiq.raqm(baqiya.adad - baqiya.madakhil.length),
+                              })}
+                            </li>
+                          ) : null}
+                        </ul>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
+      )}
+    </Mashhad>
   );
 }
 
@@ -1824,11 +1890,8 @@ interface KhasaisRuqaa {
   readonly mahmiya: boolean;
   /** Actions are locked while the game runs or the first-run statement is unacknowledged. */
   readonly muqfal: boolean;
-  readonly yashtaghil: boolean;
-  /** Whether {@link yashtaghil} is a precaution rather than an observation. */
-  readonly tashghilMajhul: boolean;
-  readonly amaliya: string | null;
-  readonly yahtajIqrar: boolean;
+  /** Why they are locked, in the reader's language, or null when they are not. */
+  readonly sababQafl: string | null;
   /**
    * Whether the publisher already ships Arabic, once that has been decided.
    *
@@ -1842,6 +1905,8 @@ interface KhasaisRuqaa {
   readonly yajriFahsLugha: boolean;
   /** Why it could not run, when it could not. */
   readonly khataLugha: KhataJisr | null;
+  /** Runs the probe again after it could not. */
+  readonly alaAadaLugha: () => void;
   /** The user's own override, from settings. */
   readonly istibdal: boolean;
 }
@@ -1853,13 +1918,11 @@ function QismRuqaa({
   taqreer,
   mahmiya,
   muqfal,
-  yashtaghil,
-  tashghilMajhul,
-  amaliya,
-  yahtajIqrar,
+  sababQafl,
   hukmLugha,
   yajriFahsLugha,
   khataLugha,
+  alaAadaLugha,
   istibdal,
 }: KhasaisRuqaa): JSX.Element {
   const makhzan = useQueryClient();
@@ -1876,6 +1939,10 @@ function QismRuqaa({
     mutationFn: () => nadi('utlub_tarjama', { muarrif, mulahaza: null }),
     onSuccess: (adad) => {
       makhzan.setQueryData(mafatih.talabat_luba(muarrif), adad);
+      ansha({
+        naw: 'najah',
+        nass: t('luba.talabat.sujjil', lugha, { adad: munassiq.raqm(adad) }),
+      });
     },
   });
 
@@ -1902,6 +1969,13 @@ function QismRuqaa({
   const tathbeet = useMutation<NatijatTathbeetHie, KhataJisr, TalabTathbeet>({
     mutationFn: async ({ ruqaa: idRuqaa, iqrarShabaka, iqrarTaqribi }) => {
       const hasila = await nadi('nazzil_ruqaa', { muarrif, ruqaa: idRuqaa });
+      // The one countable stretch is over and the named stages begin; a reader
+      // who scrolled away from the meter is told so where they are.
+      ansha({
+        naw: 'najah',
+        nass: t('luba.tanbih.tanzil_tamma', lugha),
+        tafsil: munassiq.hajm(hasila.hajm),
+      });
       return nadi('thabbit_ruqaa', {
         muarrif,
         masarMalaf: hasila.masar,
@@ -1913,7 +1987,15 @@ function QismRuqaa({
       setMarhala(null);
       setTanzil(null);
     },
-    onSuccess: () => {
+    onSuccess: (natija) => {
+      // The result block stands at the foot of a long section. A write that
+      // verified is confirmed; one that did not is not dressed as a success,
+      // and the notice sends the reader to the block that says what happened.
+      ansha(
+        natija.tahaqquq_salim
+          ? { naw: 'najah', nass: t('luba.tanbih.tathbeet_tamma', lugha) }
+          : { naw: 'tanbeeh', nass: t('luba.tanbih.tathbeet_ghayr_salim', lugha) },
+      );
       void makhzan.invalidateQueries({ queryKey: mafatih.tafasil(muarrif) });
       // The plan described the game before this install. Its loader slot is now
       // taken, its files are now there, and a plan still saying otherwise would
@@ -2059,7 +2141,7 @@ function QismRuqaa({
         withdrew it would have offered one.
       */}
       {yajriFahsLugha && hukmLugha === null ? (
-        <p className="luba__jari">{t('luba.lugha.jari', lugha)}</p>
+        <p className="luba__jari zuhur-muakhkhar">{t('luba.lugha.jari', lugha)}</p>
       ) : null}
       {khataLugha === null ? null : (
         <KutlatKhata
@@ -2067,6 +2149,7 @@ function QismRuqaa({
           khata={khataLugha}
           lugha={lugha}
           muarrif={muarrif}
+          aada={alaAadaLugha}
         />
       )}
       {hukmLugha !== null && hukmLugha.yatakallam_arabi ? (
@@ -2145,245 +2228,266 @@ function QismRuqaa({
             munassiq={munassiq}
             mumakkan={!mahmiya && (ruqaa.data?.mudkhalat.length ?? 0) > 0}
           />
-          {yashtaghil ? (
-            <p className="luba__nass-hadi luba__tahdheer">
-              {tashghilMajhul
-                ? t('luba.tashghil.majhul', lugha)
-                : t('luba.tashghil.tahdheer', lugha, { amaliya: amaliya ?? '' })}
-            </p>
-          ) : yahtajIqrar ? (
-            <p className="luba__nass-hadi luba__tahdheer">{t('luba.iqrar.qabl', lugha)}</p>
-          ) : null}
-          {ruqaa.isPending ? (
-            <p className="luba__jari">{t('luba.ruqaa.jari', lugha)}</p>
-          ) : ruqaa.error !== null ? (
-            <KutlatKhata
-              unwan={t('luba.ruqaa.taadhur', lugha)}
-              khata={ruqaa.error}
-              lugha={lugha}
-              muarrif={muarrif}
-              aada={() => {
-                void ruqaa.refetch();
-              }}
-            />
-          ) : ruqaa.data === undefined || ruqaa.data.mudkhalat.length === 0 ? (
-            <div className="luba__talabat">
-              <p className="luba__nass-hadi">{t('luba.ruqaa.la_shay', lugha)}</p>
-              <TilqaiMutah
-                muarrif={muarrif}
+          {sababQafl === null ? null : (
+            <p className="luba__nass-hadi luba__tahdheer">{sababQafl}</p>
+          )}
+          <Mashhad miftah={wajhIstifsar(ruqaa)}>
+            {ruqaa.isPending ? (
+              <HaykalSutur sutur={5} nass={t('luba.ruqaa.jari', lugha)} />
+            ) : ruqaa.error !== null ? (
+              <KutlatKhata
+                unwan={t('luba.ruqaa.taadhur', lugha)}
+                khata={ruqaa.error}
                 lugha={lugha}
-                jahiziya={hukmJahiziya}
-                naqs={naqs}
-              />
-              {talabat.data !== undefined && talabat.data > 0 ? (
-                <p className="luba__nass-hadi">
-                  {jam('luba.talabat.adad', lugha, talabat.data, munassiq)}
-                </p>
-              ) : null}
-              <button
-                type="button"
-                className="zir"
-                aria-disabled={talab.isPending}
-                onClick={() => {
-                  if (!talab.isPending) {
-                    talab.mutate();
-                  }
+                muarrif={muarrif}
+                aada={() => {
+                  void ruqaa.refetch();
                 }}
-              >
-                {t('luba.talabat.utlub', lugha)}
-              </button>
-              {talab.data !== undefined ? (
-                <p className="luba__nass-hadi" role="status">
-                  {t('luba.talabat.sujjil', lugha, { adad: munassiq.raqm(talab.data) })}
-                </p>
-              ) : null}
-              {talab.error !== null ? (
-                <KutlatKhata
-                  unwan={t('luba.khata.amal', lugha)}
-                  khata={talab.error}
-                  lugha={lugha}
+              />
+            ) : ruqaa.data === undefined || ruqaa.data.mudkhalat.length === 0 ? (
+              <div className="luba__talabat">
+                <HalatFarigha
+                  unwan={t('luba.ruqaa.la_shay_unwan', lugha)}
+                  nass={t('luba.ruqaa.la_shay', lugha)}
+                />
+                <TilqaiMutah
                   muarrif={muarrif}
-                  aada={() => {
+                  lugha={lugha}
+                  jahiziya={hukmJahiziya}
+                  naqs={naqs}
+                />
+                {talabat.data !== undefined && talabat.data > 0 ? (
+                  <p className="luba__nass-hadi">
+                    {jam('luba.talabat.adad', lugha, talabat.data, munassiq)}
+                  </p>
+                ) : null}
+                {talabat.error === null ? null : (
+                  <KutlatKhata
+                    unwan={t('luba.talabat.taadhur', lugha)}
+                    khata={talabat.error}
+                    lugha={lugha}
+                    muarrif={muarrif}
+                    aada={() => {
+                      void talabat.refetch();
+                    }}
+                  />
+                )}
+                <button
+                  type="button"
+                  className="zir"
+                  aria-busy={talab.isPending}
+                  onClick={() => {
                     if (!talab.isPending) {
                       talab.mutate();
                     }
                   }}
-                />
-              ) : null}
-            </div>
-          ) : (
-            <ul className="luba__ruqaa">
-              {ruqaa.data.mudkhalat.map((mudkhal) => {
-                const mifta = miftahMudkhal(mudkhal);
-                // Open for this row either because the patch matches only
-                // approximately, or because an install of it was refused and the
-                // reader asked to see the questions again.
-                const maftuh = sual === mifta;
-                const yasal = mudkhal.yahtaj_iqrar || maftuh;
-                return (
-                  <li key={mifta} className="luba__lawhat-tathbeet">
-                    <div className="luba__raas-lawha">
-                      <span className="luba__ruqaa-unwan">{mudkhal.unwan}</span>
-                      <span className="luba__ruqaa-musahim">{mudkhal.musahim}</span>
-                    </div>
-                    <dl className="luba__ruqaa-tafsil">
-                      <Saff unwan={t('luba.ruqaa.taghtiya', lugha)}>
-                        {munassiq.nisba(kasr(mudkhal.nisbat_taghtiya))}
-                      </Saff>
-                      <Saff unwan={t('luba.ruqaa.nusus', lugha)}>
-                        {munassiq.raqm(mudkhal.adad_nusus)}
-                      </Saff>
-                      <Saff unwan={t('luba.ruqaa.hajm', lugha)}>
-                        <span dir="auto">{mudkhal.hajm_maqru}</span>
-                      </Saff>
-                      <Saff unwan={t('luba.ruqaa.tareeqa', lugha)}>{mudkhal.tareeqa_arabi}</Saff>
-                      {/* What pressing this row's own install button produces,
-                          in the reader's language; see `tabaqatMudkhal`. */}
-                      <Saff unwan={t('luba.muharrik.tabaqa', lugha)}>
-                        <span dir="auto">{tabaqatMudkhal(mudkhal, lugha, munassiq)}</span>
-                      </Saff>
-                    </dl>
-                    {mahmiya ? null : (
-                      <>
-                        <div className="luba__saff-afal">
-                          <button
-                            type="button"
-                            className="zir zir--tamyeez"
-                            ref={(uqda) => {
-                              azrarTathbeet.current.set(mifta, uqda);
-                            }}
-                            aria-disabled={tathbeet.isPending || muqfal}
-                            aria-expanded={yasal ? maftuh : undefined}
-                            onClick={() => {
-                              alaTalabTathbeet(mudkhal);
-                            }}
-                          >
-                            {t('luba.ruqaa.tathbeet', lugha)}
-                          </button>
-                          {wasfMutabaqa(mudkhal, lugha) === null ? null : (
-                            <span className="luba__nass-hadi">{wasfMutabaqa(mudkhal, lugha)}</span>
-                          )}
-                        </div>
-                        <AnimatePresence initial={false}>
-                          {maftuh ? (
-                            <motion.div
-                              key="iqrar"
-                              className="luba__tawassu"
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={haraka(HARAKAT_LAWHA)}
+                >
+                  {t('luba.talabat.utlub', lugha)}
+                </button>
+                {talab.data !== undefined ? (
+                  <p className="luba__nass-hadi" role="status">
+                    {t('luba.talabat.sujjil', lugha, { adad: munassiq.raqm(talab.data) })}
+                  </p>
+                ) : null}
+                {talab.error !== null ? (
+                  <KutlatKhata
+                    unwan={t('luba.khata.amal', lugha)}
+                    khata={talab.error}
+                    lugha={lugha}
+                    muarrif={muarrif}
+                    aada={() => {
+                      if (!talab.isPending) {
+                        talab.mutate();
+                      }
+                    }}
+                  />
+                ) : null}
+              </div>
+            ) : (
+              <ul className="luba__ruqaa">
+                {ruqaa.data.mudkhalat.map((mudkhal) => {
+                  const mifta = miftahMudkhal(mudkhal);
+                  // Open for this row either because the patch matches only
+                  // approximately, or because an install of it was refused and the
+                  // reader asked to see the questions again.
+                  const maftuh = sual === mifta;
+                  const yasal = mudkhal.yahtaj_iqrar || maftuh;
+                  // Busy on the row that was pressed alone. The other rows are
+                  // refused for the duration, not busy: nothing is happening to
+                  // them, and an arc turning on every row says otherwise.
+                  const yuthabbat = tathbeet.isPending && tathbeet.variables?.mifta === mifta;
+                  return (
+                    <li key={mifta} className="luba__lawhat-tathbeet">
+                      <div className="luba__raas-lawha">
+                        <span className="luba__ruqaa-unwan">{mudkhal.unwan}</span>
+                        <span className="luba__ruqaa-musahim">{mudkhal.musahim}</span>
+                      </div>
+                      <dl className="luba__ruqaa-tafsil">
+                        <Saff unwan={t('luba.ruqaa.taghtiya', lugha)}>
+                          {munassiq.nisba(kasr(mudkhal.nisbat_taghtiya))}
+                        </Saff>
+                        <Saff unwan={t('luba.ruqaa.nusus', lugha)}>
+                          {munassiq.raqm(mudkhal.adad_nusus)}
+                        </Saff>
+                        <Saff unwan={t('luba.ruqaa.hajm', lugha)}>
+                          <span dir="auto">{mudkhal.hajm_maqru}</span>
+                        </Saff>
+                        <Saff unwan={t('luba.ruqaa.tareeqa', lugha)}>{mudkhal.tareeqa_arabi}</Saff>
+                        {/* What pressing this row's own install button produces,
+                            in the reader's language; see `tabaqatMudkhal`. */}
+                        <Saff unwan={t('luba.muharrik.tabaqa', lugha)}>
+                          <span dir="auto">{tabaqatMudkhal(mudkhal, lugha, munassiq)}</span>
+                        </Saff>
+                      </dl>
+                      {mahmiya ? null : (
+                        <>
+                          <div className="luba__saff-afal">
+                            <button
+                              type="button"
+                              className="zir zir--tamyeez"
+                              ref={(uqda) => {
+                                azrarTathbeet.current.set(mifta, uqda);
+                              }}
+                              aria-disabled={muqfal || (tathbeet.isPending && !yuthabbat)}
+                              aria-busy={yuthabbat}
+                              title={sababQafl ?? undefined}
+                              aria-expanded={yasal ? maftuh : undefined}
+                              onClick={() => {
+                                alaTalabTathbeet(mudkhal);
+                              }}
                             >
-                              <div
-                                className="luba__tawassu-dakhil luba__iqrarat"
-                                onKeyDown={(hadath: KeyboardEvent<HTMLDivElement>) => {
-                                  if (hadath.key === 'Escape') {
-                                    hadath.stopPropagation();
-                                    alaIlghaSual();
-                                  }
-                                }}
+                              {t('luba.ruqaa.tathbeet', lugha)}
+                            </button>
+                            {wasfMutabaqa(mudkhal, lugha) === null ? null : (
+                              <span className="luba__nass-hadi">{wasfMutabaqa(mudkhal, lugha)}</span>
+                            )}
+                          </div>
+                          <AnimatePresence initial={false}>
+                            {maftuh ? (
+                              <motion.div
+                                key="iqrar"
+                                className="luba__tawassu"
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={haraka(HARAKAT_LAWHA)}
                               >
-                                {/* Only for the patches it is true of. Shown beside
-                                    an exact match it would be a sentence about a
-                                    risk that is not there, which is the fastest way
-                                    to teach somebody that these boxes are furniture. */}
-                                {mudkhal.yahtaj_iqrar ? (
+                                <div
+                                  className="luba__tawassu-dakhil luba__iqrarat"
+                                  onKeyDown={(hadath: KeyboardEvent<HTMLDivElement>) => {
+                                    if (hadath.key === 'Escape') {
+                                      hadath.stopPropagation();
+                                      alaIlghaSual();
+                                    }
+                                  }}
+                                >
+                                  {/* Only for the patches it is true of. Shown beside
+                                      an exact match it would be a sentence about a
+                                      risk that is not there, which is the fastest way
+                                      to teach somebody that these boxes are furniture. */}
+                                  {mudkhal.yahtaj_iqrar ? (
+                                    <IqrarKhatar
+                                      muarrif={`luba-taqribi-${mifta}`}
+                                      unwan={t('luba.khatar.taqribi.unwan', lugha)}
+                                      tahdheer={t('luba.khatar.taqribi.tahdheer', lugha)}
+                                      // The registry's own verdict on this patch
+                                      // against this build, in the reader's language.
+                                      tafsil={wasfMutabaqa(mudkhal, lugha)}
+                                      nassIqrar={t('luba.khatar.taqribi.iqrar', lugha)}
+                                      muqirr={iqrarTaqribi}
+                                      alaTabdil={setIqrarTaqribi}
+                                      matlub={t('luba.khatar.taqribi.matlub', lugha)}
+                                    />
+                                  ) : null}
+                                  {/* Never required, because nothing on this screen
+                                      knows whether this game is played with other
+                                      people — the patch listing carries no such
+                                      field. An untouched box is a "no" the backend
+                                      acts on, which is the correct value; what it
+                                      must never be is a yes nobody said. */}
                                   <IqrarKhatar
-                                    muarrif={`luba-taqribi-${mifta}`}
-                                    unwan={t('luba.khatar.taqribi.unwan', lugha)}
-                                    tahdheer={t('luba.khatar.taqribi.tahdheer', lugha)}
-                                    // The registry's own verdict on this patch
-                                    // against this build, in the reader's language.
-                                    tafsil={wasfMutabaqa(mudkhal, lugha)}
-                                    nassIqrar={t('luba.khatar.taqribi.iqrar', lugha)}
-                                    muqirr={iqrarTaqribi}
-                                    alaTabdil={setIqrarTaqribi}
-                                    matlub={t('luba.khatar.taqribi.matlub', lugha)}
+                                    muarrif={`luba-shabaka-${mifta}`}
+                                    unwan={t('luba.khatar.shabaka.unwan', lugha)}
+                                    tahdheer={t('luba.khatar.shabaka.tahdheer', lugha)}
+                                    nassIqrar={t('luba.khatar.shabaka.iqrar', lugha)}
+                                    muqirr={iqrarShabaka}
+                                    alaTabdil={setIqrarShabaka}
                                   />
-                                ) : null}
-                                {/* Never required, because nothing on this screen
-                                    knows whether this game is played with other
-                                    people — the patch listing carries no such
-                                    field. An untouched box is a "no" the backend
-                                    acts on, which is the correct value; what it
-                                    must never be is a yes nobody said. */}
-                                <IqrarKhatar
-                                  muarrif={`luba-shabaka-${mifta}`}
-                                  unwan={t('luba.khatar.shabaka.unwan', lugha)}
-                                  tahdheer={t('luba.khatar.shabaka.tahdheer', lugha)}
-                                  nassIqrar={t('luba.khatar.shabaka.iqrar', lugha)}
-                                  muqirr={iqrarShabaka}
-                                  alaTabdil={setIqrarShabaka}
-                                />
-                                <div className="luba__saff-afal">
-                                  <button
-                                    type="button"
-                                    className="zir zir--khatar"
-                                    aria-disabled={
-                                      tathbeet.isPending ||
-                                      muqfal ||
-                                      (mudkhal.yahtaj_iqrar && !iqrarTaqribi)
-                                    }
-                                    aria-describedby={
-                                      mudkhal.yahtaj_iqrar && !iqrarTaqribi
-                                        ? muarrifMatlub(`luba-taqribi-${mifta}`)
-                                        : undefined
-                                    }
-                                    onClick={() => {
-                                      alaTanfidhSual(mudkhal);
-                                    }}
-                                  >
-                                    {t('luba.khatar.tathbeet', lugha)}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="zir"
-                                    ref={zirIlghaIqrarRef}
-                                    onClick={alaIlghaSual}
-                                  >
-                                    {t('luba.khatar.ilgha', lugha)}
-                                  </button>
+                                  <div className="luba__saff-afal">
+                                    <button
+                                      type="button"
+                                      className="zir zir--khatar"
+                                      aria-disabled={
+                                        tathbeet.isPending ||
+                                        muqfal ||
+                                        (mudkhal.yahtaj_iqrar && !iqrarTaqribi)
+                                      }
+                                      aria-describedby={
+                                        mudkhal.yahtaj_iqrar && !iqrarTaqribi
+                                          ? muarrifMatlub(`luba-taqribi-${mifta}`)
+                                          : undefined
+                                      }
+                                      onClick={() => {
+                                        alaTanfidhSual(mudkhal);
+                                      }}
+                                    >
+                                      {t('luba.khatar.tathbeet', lugha)}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="zir"
+                                      ref={zirIlghaIqrarRef}
+                                      onClick={alaIlghaSual}
+                                    >
+                                      {t('luba.khatar.ilgha', lugha)}
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            </motion.div>
-                          ) : null}
-                        </AnimatePresence>
-                      </>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                              </motion.div>
+                            ) : null}
+                          </AnimatePresence>
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Mashhad>
           <div className="luba__mintaqa" aria-live="polite">
             {tathbeet.isPending ? (
               <p className="luba__jari">{marhala ?? t('luba.ruqaa.jari_tathbeet', lugha)}</p>
             ) : null}
-            {tathbeet.isPending && tanzil !== null && tanzil.majmu > 0 ? (
-              <div className="luba__miqyas">
-                <div
-                  className="luba__miqyas-masar"
-                  role="progressbar"
-                  aria-label={t('luba.ruqaa.tanzil', lugha)}
-                  aria-valuemin={0}
-                  aria-valuemax={tanzil.majmu}
-                  aria-valuenow={Math.min(tanzil.manqul, tanzil.majmu)}
-                >
-                  <span
-                    className="luba__miqyas-malu"
-                    style={{
-                      inlineSize: `${String(Math.min(100, (tanzil.manqul / tanzil.majmu) * 100))}%`,
-                    }}
-                  />
-                </div>
-                <p className="luba__miqyas-nass">
-                  {t('amm.taqaddum.min', lugha, {
-                    tamma: tanzil.manqul_maqru,
-                    majmu: tanzil.majmu_maqru,
-                  })}
-                </p>
-              </div>
-            ) : null}
+            <Zuhur
+              maftuh={tathbeet.isPending && tanzil !== null && tanzil.majmu > 0}
+              className="luba__miqyas"
+            >
+              {tanzil === null ? null : (
+                <>
+                  <div
+                    className="luba__miqyas-masar"
+                    role="progressbar"
+                    aria-label={t('luba.ruqaa.tanzil', lugha)}
+                    aria-valuemin={0}
+                    aria-valuemax={tanzil.majmu}
+                    aria-valuenow={Math.min(tanzil.manqul, tanzil.majmu)}
+                  >
+                    <span
+                      className="luba__miqyas-malu"
+                      style={{
+                        inlineSize: `${String(Math.min(100, (tanzil.manqul / tanzil.majmu) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="luba__miqyas-nass">
+                    {t('amm.taqaddum.min', lugha, {
+                      tamma: tanzil.manqul_maqru,
+                      majmu: tanzil.majmu_maqru,
+                    })}
+                  </p>
+                </>
+              )}
+            </Zuhur>
             {tathbeet.error !== null ? (
               <KutlatKhata
                 unwan={t('luba.khata.amal', lugha)}
@@ -2405,23 +2509,25 @@ function QismRuqaa({
                 )}
               </KutlatKhata>
             ) : null}
-            {tathbeet.data === undefined ? null : (
-              <div className="luba__natija">
-                <p className="luba__natija-nass">
-                  <span
-                    className={
-                      tathbeet.data.tahaqquq_salim
-                        ? 'luba__nuqta luba__nuqta--najah'
-                        : 'luba__nuqta luba__nuqta--khatar'
-                    }
-                    aria-hidden="true"
-                  />
-                  {jam('luba.ruqaa.tamma', lugha, tathbeet.data.adad_muhtawa, munassiq)}
-                </p>
-                <p className="luba__nass-hadi">{tathbeet.data.tawafuq_arabi}</p>
-                <p className="luba__nass-hadi">{tathbeet.data.tahaqquq_arabi}</p>
-              </div>
-            )}
+            <Zuhur maftuh={tathbeet.data !== undefined} className="luba__natija">
+              {tathbeet.data === undefined ? null : (
+                <>
+                  <p className="luba__natija-nass">
+                    <span
+                      className={
+                        tathbeet.data.tahaqquq_salim
+                          ? 'luba__nuqta luba__nuqta--najah'
+                          : 'luba__nuqta luba__nuqta--khatar'
+                      }
+                      aria-hidden="true"
+                    />
+                    {jam('luba.ruqaa.tamma', lugha, tathbeet.data.adad_muhtawa, munassiq)}
+                  </p>
+                  <p className="luba__nass-hadi">{tathbeet.data.tawafuq_arabi}</p>
+                  <p className="luba__nass-hadi">{tathbeet.data.tahaqquq_arabi}</p>
+                </>
+              )}
+            </Zuhur>
           </div>
         </>
       )}
@@ -2470,6 +2576,15 @@ export function Luba(): JSX.Element {
 
   const himaya = useMutation<HimayaHie, KhataJisr, void>({
     mutationFn: () => nadi('fahs_himaya', { muarrif }),
+    // The palette can start this from anywhere on the screen, so the verdict
+    // is said where the reader is as well as in the panel that shows it.
+    onSuccess: (hukm) => {
+      ansha(
+        hukm.mahmiya
+          ? { naw: 'tanbeeh', nass: t('luba.tanbih.aman_mahmiya', lugha) }
+          : { naw: 'najah', nass: t('luba.tanbih.aman_salima', lugha) },
+      );
+    },
   });
 
   const tahaqquq = useMutation<TaqreerTahaqquqHie[], KhataJisr, void>({
@@ -2478,7 +2593,15 @@ export function Luba(): JSX.Element {
 
   const izala = useMutation<HasilatIzala, KhataJisr, MatlabIzala>({
     mutationFn: (matlab) => nadi('azil_ruqaa', { muarrif, matlab, sarim: false }),
-    onSuccess: () => {
+    onSuccess: (hasila, matlab) => {
+      // The result block stands at the foot of the screen. A removal that came
+      // off whole is confirmed; one that did not is not dressed as a success,
+      // and the notice sends the reader to the block that lists why.
+      ansha(
+        hasila.najahat
+          ? { naw: 'najah', nass: t(MIFTAH_TANBIH_IZALA[matlab], lugha) }
+          : { naw: 'tanbeeh', nass: t('luba.tanbih.izala_naqisa', lugha) },
+      );
       void makhzan.invalidateQueries({ queryKey: mafatih.tafasil(muarrif) });
       // Both plans described the game as it was a moment ago. The removal put
       // files back and deleted others, so what an install would write and what a
@@ -2502,14 +2625,19 @@ export function Luba(): JSX.Element {
     mutationFn: () => nadi('sajjil_iqrar_aman'),
     onSuccess: (hala) => {
       makhzan.setQueryData(mafatih.iqrar, hala);
+      // The panel leaves the screen the moment this lands, so the notice is
+      // what says the press worked and what it unlocked.
+      ansha({ naw: 'najah', nass: t('luba.tanbih.iqrar_sujjil', lugha) });
     },
   });
 
   const fahsMuharrik = useMutation<TaqreerHie, KhataJisr, void>({
     mutationFn: () => nadi('afhas_muharrik', { muarrif }),
     // The command overwrote the stored report, so a fresh detail read is the
-    // report it just wrote.
+    // report it just wrote. A probe that lands on the same verdict changes
+    // nothing visible, which is why the notice says it ran.
     onSuccess: () => {
+      ansha({ naw: 'najah', nass: t('luba.tanbih.fahs_muharrik_tamma', lugha) });
       void makhzan.invalidateQueries({ queryKey: mafatih.tafasil(muarrif) });
     },
   });
@@ -2528,6 +2656,15 @@ export function Luba(): JSX.Element {
   const tashghilMajhul = tashghil.data?.majhul === true || tashghil.isError;
   const yahtajIqrar = iqrar.data?.yahtaj !== false;
   const muqfal = yashtaghil || yahtajIqrar;
+  // The reason, once, for every control the lock refuses: the sentence under
+  // the buttons and the title on each of them are the same words.
+  const sababQafl = yashtaghil
+    ? tashghilMajhul
+      ? t('luba.tashghil.majhul', lugha)
+      : t('luba.tashghil.tahdheer', lugha, { amaliya: tashghil.data?.amaliya ?? '' })
+    : yahtajIqrar
+      ? t('luba.iqrar.qabl', lugha)
+      : null;
 
   const [taakid, setTaakid] = useState<MatlabIzala | null>(null);
   const [suturZahira, setSuturZahira] = useState(false);
@@ -2719,7 +2856,7 @@ export function Luba(): JSX.Element {
 
       <Mashhad miftah={wajh} className="luba__jism">
         {yuhammil ? (
-          <div className="luba__haykal" aria-hidden="true">
+          <div className="luba__haykal zuhur-muakhkhar" aria-hidden="true">
             <div className="luba__haykal-mirsa">
               <span className="luba__haykal-ghilaf" />
               <div className="luba__haykal-mirsa-nass">
@@ -2750,8 +2887,17 @@ export function Luba(): JSX.Element {
         ) : bayanat === undefined ? null : (
           <>
             <header className="luba__mirsa">
+              {/*
+                Named for the document's view transition under the same name
+                the library gives this game's card, so the cover travels from
+                the grid to here on the way in and back on the way out.
+              */}
               {bayanat.ghilaf === null ? (
-                <span className="luba__ghilaf luba__ghilaf--faragh" aria-hidden="true" />
+                <span
+                  className="luba__ghilaf luba__ghilaf--faragh"
+                  aria-hidden="true"
+                  style={{ viewTransitionName: ismIntiqalGhilaf(muarrif) }}
+                />
               ) : (
                 <img
                   className="luba__ghilaf"
@@ -2759,6 +2905,7 @@ export function Luba(): JSX.Element {
                   alt=""
                   aria-hidden="true"
                   draggable={false}
+                  style={{ viewTransitionName: ismIntiqalGhilaf(muarrif) }}
                 />
               )}
               <div className="luba__mirsa-nass">
@@ -2818,46 +2965,52 @@ export function Luba(): JSX.Element {
                       void iqrar.refetch();
                     }}
                   />
-                ) : yahtajIqrar && iqrar.data !== undefined ? (
-                  <section
-                    className="luba__qism luba__qism--iqrar"
-                    aria-labelledby="luba-unwan-iqrar"
-                  >
-                    <h2 id="luba-unwan-iqrar" className="luba__unwan-qism">
-                      {t('luba.iqrar.unwan', lugha)}
-                    </h2>
-                    <p className="luba__sabab" dir="rtl" lang="ar">
-                      {iqrar.data.nass_arabi}
-                    </p>
-                    <div className="luba__saff-afal">
-                      <button
-                        type="button"
-                        className="zir zir--tamyeez"
-                        aria-disabled={sajjilIqrar.isPending}
-                        onClick={() => {
-                          if (!sajjilIqrar.isPending) {
-                            sajjilIqrar.mutate();
-                          }
-                        }}
-                      >
-                        {t(sajjilIqrar.isPending ? 'luba.iqrar.jari' : 'luba.iqrar.zirr', lugha)}
-                      </button>
-                    </div>
-                    {sajjilIqrar.error !== null ? (
-                      <KutlatKhata
-                        unwan={t('luba.khata.amal', lugha)}
-                        khata={sajjilIqrar.error}
-                        lugha={lugha}
-                        muarrif={muarrif}
-                        aada={() => {
-                          if (!sajjilIqrar.isPending) {
-                            sajjilIqrar.mutate();
-                          }
-                        }}
-                      />
-                    ) : null}
-                  </section>
                 ) : null}
+                <Zuhur
+                  maftuh={iqrar.error === null && yahtajIqrar && iqrar.data !== undefined}
+                  asl="mahall"
+                >
+                  {iqrar.data === undefined ? null : (
+                    <section
+                      className="luba__qism luba__qism--iqrar"
+                      aria-labelledby="luba-unwan-iqrar"
+                    >
+                      <h2 id="luba-unwan-iqrar" className="luba__unwan-qism">
+                        {t('luba.iqrar.unwan', lugha)}
+                      </h2>
+                      <p className="luba__sabab" dir="rtl" lang="ar">
+                        {iqrar.data.nass_arabi}
+                      </p>
+                      <div className="luba__saff-afal">
+                        <button
+                          type="button"
+                          className="zir zir--tamyeez"
+                          aria-busy={sajjilIqrar.isPending}
+                          onClick={() => {
+                            if (!sajjilIqrar.isPending) {
+                              sajjilIqrar.mutate();
+                            }
+                          }}
+                        >
+                          {t(sajjilIqrar.isPending ? 'luba.iqrar.jari' : 'luba.iqrar.zirr', lugha)}
+                        </button>
+                      </div>
+                      {sajjilIqrar.error !== null ? (
+                        <KutlatKhata
+                          unwan={t('luba.khata.amal', lugha)}
+                          khata={sajjilIqrar.error}
+                          lugha={lugha}
+                          muarrif={muarrif}
+                          aada={() => {
+                            if (!sajjilIqrar.isPending) {
+                              sajjilIqrar.mutate();
+                            }
+                          }}
+                        />
+                      ) : null}
+                    </section>
+                  )}
+                </Zuhur>
 
                 <QismRuqaa
                   muarrif={muarrif}
@@ -2866,13 +3019,13 @@ export function Luba(): JSX.Element {
                   taqreer={bayanat.taqreer}
                   mahmiya={mahmiya}
                   muqfal={muqfal}
-                  yashtaghil={yashtaghil}
-                  tashghilMajhul={tashghilMajhul}
-                  amaliya={tashghil.data?.amaliya ?? null}
-                  yahtajIqrar={yahtajIqrar}
+                  sababQafl={sababQafl}
                   hukmLugha={lughaRasmiya.data ?? null}
                   yajriFahsLugha={lughaRasmiya.isPending}
                   khataLugha={lughaRasmiya.error}
+                  alaAadaLugha={() => {
+                    void lughaRasmiya.refetch();
+                  }}
                   istibdal={idadat.data?.istibdal_lugha_rasmiya === true}
                 />
 
@@ -2898,26 +3051,16 @@ export function Luba(): JSX.Element {
                           <button
                             type="button"
                             className="zir"
-                            aria-disabled={tahaqquq.isPending}
+                            aria-busy={tahaqquq.isPending}
                             onClick={alaTahaqquq}
                           >
                             {t('luba.afal.tahaqquq', lugha)}
                           </button>
                         </div>
 
-                        {yashtaghil ? (
-                          <p className="luba__nass-hadi luba__tahdheer">
-                            {tashghilMajhul
-                              ? t('luba.tashghil.majhul', lugha)
-                              : t('luba.tashghil.tahdheer', lugha, {
-                                  amaliya: tashghil.data?.amaliya ?? '',
-                                })}
-                          </p>
-                        ) : yahtajIqrar ? (
-                          <p className="luba__nass-hadi luba__tahdheer">
-                            {t('luba.iqrar.qabl', lugha)}
-                          </p>
-                        ) : null}
+                        {sababQafl === null ? null : (
+                          <p className="luba__nass-hadi luba__tahdheer">{sababQafl}</p>
+                        )}
                         <div
                           className="luba__saff-afal"
                           role="group"
@@ -2928,7 +3071,9 @@ export function Luba(): JSX.Element {
                               type="button"
                               className="zir"
                               ref={zirIzalatNassRef}
-                              aria-disabled={izala.isPending || muqfal}
+                              aria-disabled={muqfal || (izala.isPending && izala.variables !== 'nass')}
+                              aria-busy={izala.isPending && izala.variables === 'nass'}
+                              title={sababQafl ?? undefined}
                               onClick={() => {
                                 alaTalabTaakid('nass');
                               }}
@@ -2941,7 +3086,9 @@ export function Luba(): JSX.Element {
                               type="button"
                               className="zir"
                               ref={zirIzalatSawtRef}
-                              aria-disabled={izala.isPending || muqfal}
+                              aria-disabled={muqfal || (izala.isPending && izala.variables !== 'sawt')}
+                              aria-busy={izala.isPending && izala.variables === 'sawt'}
+                              title={sababQafl ?? undefined}
                               onClick={() => {
                                 alaTalabTaakid('sawt');
                               }}
@@ -2953,7 +3100,9 @@ export function Luba(): JSX.Element {
                             type="button"
                             className="zir zir--khatar"
                             ref={zirIstiadaRef}
-                            aria-disabled={izala.isPending || muqfal}
+                            aria-disabled={muqfal || (izala.isPending && izala.variables !== 'kul')}
+                            aria-busy={izala.isPending && izala.variables === 'kul'}
+                            title={sababQafl ?? undefined}
                             onClick={() => {
                               alaTalabTaakid('kul');
                             }}

@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { kasr } from '@/mustalahat/arqam';
 import { Link, getRouteApi } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { AnimatePresence, motion } from 'motion/react';
 import type { JSX, KeyboardEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -12,6 +11,7 @@ import type { AmrLawha } from '@/hayat/awamir_lawha';
 import { useSajjilAwamir } from '@/hayat/awamir_lawha';
 import { HADATH_TAQADDUM_DUFA, KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
+import { ansha } from '@/hayat/tanbihat';
 import { useTaraju } from '@/hayat/taraju';
 import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t } from '@/lugha/lugha';
@@ -19,6 +19,7 @@ import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
+import { Zuhur } from '@/mukawwinat/zuhur';
 import type {
   AlamatMashruHie,
   DamjHie,
@@ -37,7 +38,6 @@ import type {
   TaaliqWarshaHie,
   WarshaHie,
 } from '@/mustalahat/awamir';
-import { HARAKAT_LAWHA, haraka } from '@/nizam/haraka';
 
 import './warsha.css';
 
@@ -244,7 +244,7 @@ function SaffQaima({
  */
 function HaykalWarsha(): JSX.Element {
   return (
-    <div className="warsha__haykal" aria-hidden="true">
+    <div className="warsha__haykal zuhur-muakhkhar" aria-hidden="true">
       <div className="warsha__haykal-amud warsha__haykal-amud--qaima">
         {Array.from({ length: 14 }, (_, fihris) => (
           <div key={fihris} className="warsha__haykal-satr">
@@ -261,6 +261,21 @@ function HaykalWarsha(): JSX.Element {
         <span className="warsha__haykal-kutla warsha__haykal-kutla--janib" />
         <span className="warsha__haykal-kutla warsha__haykal-kutla--janib" />
       </div>
+    </div>
+  );
+}
+
+/**
+ * One panel's placeholder: three lines where its answer will stand. The label
+ * is what a reader hears, since the shapes say nothing; the delayed reveal
+ * keeps a warm answer from flashing a placeholder it never needed.
+ */
+function HaykalQism({ tasmiya }: { readonly tasmiya: string }): JSX.Element {
+  return (
+    <div className="warsha__haykal-qism zuhur-muakhkhar" role="status" aria-label={tasmiya}>
+      <span className="haykal__satr haykal__satr--tawil" />
+      <span className="haykal__satr haykal__satr--mutawassit" />
+      <span className="haykal__satr haykal__satr--qasir" />
     </div>
   );
 }
@@ -332,6 +347,7 @@ function BitaqatNizaa({ nizaa, qarar, lugha, alaQarar }: KhasaisNizaa): JSX.Elem
   };
 
   const thalith_makhtar = qarar !== undefined && qarar.qarar === 'thalith';
+  const thalith_farigh = thalith.trim() === '';
   return (
     <li className="warsha__nizaa">
       <p className="warsha__nizaa-naw">
@@ -361,9 +377,10 @@ function BitaqatNizaa({ nizaa, qarar, lugha, alaQarar }: KhasaisNizaa): JSX.Elem
           <button
             type="button"
             className="zir"
-            aria-disabled={thalith.trim() === ''}
+            aria-disabled={thalith_farigh}
+            title={thalith_farigh ? t('warsha.damj.thalith_matlub', lugha) : undefined}
             onClick={() => {
-              if (thalith.trim() !== '') {
+              if (!thalith_farigh) {
                 alaQarar({ nass: nizaa.nass, qarar: 'thalith', hadaf: thalith });
               }
             }}
@@ -423,7 +440,7 @@ function LawhatTalaf({
           <button
             type="button"
             className="zir zir--tamyeez"
-            aria-disabled={yajri}
+            aria-busy={yajri}
             onClick={() => {
               if (!yajri) {
                 alaInqadh();
@@ -451,7 +468,8 @@ interface KhasaisIqtirahat {
   readonly mutabbaq: boolean;
   readonly lugha: Lugha;
   readonly munassiq: Munassiqat;
-  readonly yajri: boolean;
+  /** The record being applied right now, so only its own button turns the arc. */
+  readonly qaydJari: number | null;
   readonly alaTatbiq: (qayd: number) => void;
 }
 
@@ -460,10 +478,11 @@ function LawhatIqtirahat({
   mutabbaq,
   lugha,
   munassiq,
-  yajri,
+  qaydJari,
   alaTatbiq,
 }: KhasaisIqtirahat): JSX.Element {
   const tamm = bayanat.tatbiq;
+  const yajri = qaydJari !== null;
   return (
     <>
       {bayanat.mustalahat.length > 0 ? (
@@ -499,7 +518,8 @@ function LawhatIqtirahat({
           <button
             type="button"
             className="zir zir--tamyeez"
-            aria-disabled={yajri}
+            aria-busy={qaydJari === tamm.qayd}
+            aria-disabled={yajri && qaydJari !== tamm.qayd}
             onClick={() => {
               if (!yajri) {
                 alaTatbiq(tamm.qayd);
@@ -532,7 +552,8 @@ function LawhatIqtirahat({
           <button
             type="button"
             className="zir"
-            aria-disabled={yajri}
+            aria-busy={qaydJari === iqtirah.qayd}
+            aria-disabled={yajri && qaydJari !== iqtirah.qayd}
             onClick={() => {
               if (!yajri) {
                 alaTatbiq(iqtirah.qayd);
@@ -696,6 +717,19 @@ export function Warsha(): JSX.Element {
   const haqlBahth = useRef<HTMLInputElement | null>(null);
   const haqlTahrir = useRef<HTMLTextAreaElement | null>(null);
   const hawiyatQaima = useRef<HTMLDivElement | null>(null);
+  const zirJawda = useRef<HTMLButtonElement | null>(null);
+  const zirDamj = useRef<HTMLButtonElement | null>(null);
+
+  // Escape inside a panel closes it and hands focus back to the control that
+  // opened it, so the keyboard is never left on an element that just vanished.
+  const aghliqJawda = useCallback((): void => {
+    setLawhatJawda(false);
+    zirJawda.current?.focus();
+  }, []);
+  const aghliqDamj = useCallback((): void => {
+    setLawhatDamj(false);
+    zirDamj.current?.focus();
+  }, []);
 
   const iftahSaf = useCallback((nass: string) => {
     setMukhtar(nass);
@@ -782,6 +816,42 @@ export function Warsha(): JSX.Element {
   const sajjilTaraju = useTaraju((halat) => halat.sajjil);
 
   /**
+   * A failure with nowhere on screen to stand: a batch that died while the
+   * reader was editing three panes away, an undo that the backend refused.
+   * Said as a notice that stays until dismissed, with the permanent code.
+   */
+  const ablighKhata = useCallback(
+    (khata: unknown): void => {
+      const jisr = khata instanceof KhataJisr ? khata : null;
+      ansha({
+        naw: 'khatar',
+        nass: jisr?.nass(lugha) ?? t('faragh.jisr', lugha),
+        ramz: jisr === null ? null : (jisr.khata?.ramz ?? jisr.amr),
+      });
+    },
+    [lugha],
+  );
+
+  /** The one control a row write's confirmation carries: the step registered a moment before it. */
+  const amalTaraju = useMemo(
+    () => ({
+      unwan: t('taraju.zirr', lugha),
+      nafidh: (): void => {
+        useTaraju
+          .getState()
+          .taraju()
+          .then(
+            () => undefined,
+            (khata: unknown) => {
+              ablighKhata(khata);
+            },
+          );
+      },
+    }),
+    [lugha, ablighKhata],
+  );
+
+  /**
    * Writes a row's translation into the cache before the backend answers.
    *
    * The table the user is looking at shows the text they just typed the moment
@@ -835,8 +905,13 @@ export function Warsha(): JSX.Element {
             badalSaf(qadeem);
           }),
       });
+      ansha({ naw: 'najah', nass: t('warsha.tanbih.hufizat', lugha), amal: amalTaraju });
     },
   });
+
+  // The editor holds exactly what the row holds, so a save would write nothing:
+  // the button says so rather than accepting a press that does nothing.
+  const laTaghyeer = safMukhtar !== null && (safMukhtar.hadaf ?? '') === nassMuharrar;
 
   const alaHifz = useCallback((): void => {
     if (safMukhtar === null || hifz.isPending) {
@@ -873,7 +948,10 @@ export function Warsha(): JSX.Element {
   const tatbiq = useMutation<
     SafWarshaHie,
     KhataJisr,
-    { nass: string; qayd: number; sabiq: string },
+    // `tilqai` marks the memory match the screen applies on its own: the rail
+    // already states that one in place, and a confirmation for a press nobody
+    // made would announce the wrong thing.
+    { nass: string; qayd: number; sabiq: string; tilqai: boolean },
     { sabiqa: WarshaHie | undefined }
   >(
     {
@@ -887,7 +965,7 @@ export function Warsha(): JSX.Element {
           makhzan.setQueryData(mafatih.warsha(muarrif), siyaq.sabiqa);
         }
       },
-      onSuccess: (saf, { nass, sabiq }) => {
+      onSuccess: (saf, { nass, sabiq, tilqai: tilqaiya }) => {
         badalSaf(saf);
         void makhzan.invalidateQueries({ queryKey: mafatih.iqtirahat(muarrif, saf.nass) });
         sajjilTaraju({
@@ -897,6 +975,9 @@ export function Warsha(): JSX.Element {
               badalSaf(qadeem);
             }),
         });
+        if (!tilqaiya) {
+          ansha({ naw: 'najah', nass: t('warsha.tanbih.tubbiqa', lugha), amal: amalTaraju });
+        }
       },
     },
   );
@@ -916,7 +997,12 @@ export function Warsha(): JSX.Element {
       // An exact memory match fills an untranslated string on arrival, marked
       // memory-sourced and queued for review; a fuzzy match never applies itself.
       tilqai.current.add(mukhtar);
-      tatbiq.mutate({ nass: mukhtar, qayd: tamm.qayd, sabiq: safMukhtar.hadaf ?? '' });
+      tatbiq.mutate({
+        nass: mukhtar,
+        qayd: tamm.qayd,
+        sabiq: safMukhtar.hadaf ?? '',
+        tilqai: true,
+      });
     }
   }, [iqtirahat.data, mukhtar, safMukhtar, tatbiq]);
 
@@ -924,6 +1010,13 @@ export function Warsha(): JSX.Element {
     mutationFn: ({ nass }) => nadi('tarjim_nass', { muarrif, nass }),
     onSuccess: (natija) => {
       badalSaf(natija.saf);
+      // A translation that landed shows itself in the editor, and a refusal with
+      // a reason is quoted under it. The one outcome with no line of its own is
+      // a refusal the provider gave no reason for, and silence there reads as
+      // the button having done nothing.
+      if (!natija.najahat && natija.sabab_arabi === null) {
+        ansha({ naw: 'tanbeeh', nass: t('warsha.tarjama.lam_tanjah', lugha) });
+      }
     },
   });
 
@@ -1006,6 +1099,21 @@ export function Warsha(): JSX.Element {
 
   const dufa = useMutation<DufaHie, KhataJisr, { saqf: number }>({
     mutationFn: ({ saqf }) => nadi('tarjim_dufa', { muarrif, saqf }),
+    // A batch runs for minutes while the reader edits rows three panes away
+    // from the meter, so its end is said where they are looking as well as
+    // where it was started; a stop at the ceiling is a warning, not a success.
+    onSuccess: (natija) => {
+      ansha({
+        naw: natija.tawaqqafat_lil_saqf ? 'tanbeeh' : 'najah',
+        nass: t('warsha.dufa.tamma', lugha, {
+          mutarjama: munassiq.raqm(natija.mutarjama),
+          fashila: munassiq.raqm(natija.fashila),
+          taklifa: kasr(natija.taklifa).toFixed(2),
+        }),
+        tafsil: natija.tawaqqafat_lil_saqf ? t('warsha.dufa.saqf_waqf', lugha) : null,
+      });
+    },
+    onError: ablighKhata,
     onSettled: () => {
       setTaqaddumDufa(null);
       void makhzan.invalidateQueries({ queryKey: mafatih.warsha(muarrif) });
@@ -1014,9 +1122,14 @@ export function Warsha(): JSX.Element {
 
   const inqadh = useMutation<InqadhHie, KhataJisr, void>({
     mutationFn: () => nadi('anqidh_mashru', { muarrif }),
-    onSuccess: () => {
+    onSuccess: (natija) => {
       void makhzan.invalidateQueries({ queryKey: mafatih.warsha(muarrif) });
       void makhzan.invalidateQueries({ queryKey: mafatih.alamat(muarrif) });
+      ansha({
+        naw: 'najah',
+        nass: t('warsha.tanbih.unqidha', lugha),
+        tafsil: ikhtar(lugha, natija.wasf_arabi, natija.wasf_injilizi),
+      });
     },
   });
 
@@ -1028,26 +1141,42 @@ export function Warsha(): JSX.Element {
 
   const tawheed = useMutation<number, KhataJisr, { mustalah: string; shakl: string }>({
     mutationFn: ({ mustalah, shakl }) => nadi('wahhid_mustalah', { muarrif, mustalah, shakl }),
-    onSuccess: () => {
+    onSuccess: (adad) => {
       void makhzan.invalidateQueries({ queryKey: mafatih.warsha(muarrif) });
       void makhzan.invalidateQueries({ queryKey: mafatih.alamat(muarrif) });
+      ansha({ naw: 'najah', nass: jam('warsha.jawda.wahhidat', lugha, adad, munassiq) });
     },
   });
 
   const idmaj = useMutation<NizaatHie, KhataJisr, { masar: string }>({
     mutationFn: ({ masar }) => nadi('idmaj_huzma', { muarrif, masar }),
-    onSuccess: () => {
+    onSuccess: (natija) => {
       setQararat({});
+      ansha({
+        naw: 'najah',
+        nass: t('warsha.tanbih.ustawridat', lugha),
+        tafsil:
+          natija.nizaat.length > 0
+            ? t('warsha.damj.nizaat', lugha, { adad: munassiq.raqm(natija.nizaat.length) })
+            : null,
+      });
     },
   });
 
   const hasm = useMutation<DamjHie, KhataJisr, { qararat: QararHie[] }>({
     mutationFn: ({ qararat: talabat }) => nadi('qarrir_nizaat', { muarrif, qararat: talabat }),
-    onSuccess: () => {
+    onSuccess: (natija) => {
       idmaj.reset();
       setQararat({});
       void makhzan.invalidateQueries({ queryKey: mafatih.warsha(muarrif) });
       void makhzan.invalidateQueries({ queryKey: mafatih.taaliqat(muarrif) });
+      ansha({
+        naw: 'najah',
+        nass: t('warsha.damj.tamma', lugha, {
+          nusus: jam('warsha.damj.nusus', lugha, natija.sufuf, munassiq),
+          husum: jam('warsha.damj.husum', lugha, natija.husum, munassiq),
+        }),
+      });
     },
   });
 
@@ -1061,6 +1190,30 @@ export function Warsha(): JSX.Element {
   const nizaat = idmaj.data?.nizaat ?? [];
   const baqiya = nizaat.filter((nizaa) => qararat[nizaa.nass] === undefined).length;
   const taaliqatMukhtar = mukhtar === null ? [] : (taaliqatBilNass.get(mukhtar) ?? []);
+  const saqfSalih = Number.isFinite(Number(saqfDufa)) && Number(saqfDufa) > 0;
+
+  // Each editor result belongs to the row it was asked about. A refusal or a
+  // failure left standing under the next row the reader opens would be read
+  // as being about that row.
+  const liSafMukhtar = (nass: string | undefined): boolean =>
+    safMukhtar !== null && nass === safMukhtar.nass;
+  const rafdTarjama =
+    tarjama.data !== undefined && !tarjama.data.najahat && liSafMukhtar(tarjama.variables?.nass)
+      ? tarjama.data.sabab_arabi
+      : null;
+  const khataHifz = liSafMukhtar(hifz.variables?.nass) ? hifz.error : null;
+  const khataTarjama = liSafMukhtar(tarjama.variables?.nass) ? tarjama.error : null;
+  const khataTatbiq = tatbiq.variables?.nass === mukhtar ? tatbiq.error : null;
+  const qaydJari = tatbiq.isPending ? (tatbiq.variables?.qayd ?? null) : null;
+
+  const wajhIqtirahat =
+    mukhtar === null
+      ? 'la_ikhtiyar'
+      : iqtirahat.isPending
+        ? 'tahmil'
+        : iqtirahat.error !== null
+          ? 'khata'
+          : 'jahiz';
 
   const yuhammil = warsha.isPending || idadat.isPending;
   const khata = warsha.error ?? idadat.error;
@@ -1103,9 +1256,11 @@ export function Warsha(): JSX.Element {
           wajh === 'jahiz' ? (
             <>
               <button
+                ref={zirJawda}
                 type="button"
                 className="zir"
                 aria-expanded={lawhatJawda}
+                aria-controls="warsha-lawhat-jawda"
                 onClick={() => {
                   setLawhatJawda((hali) => !hali);
                 }}
@@ -1113,9 +1268,11 @@ export function Warsha(): JSX.Element {
                 {t('warsha.jawda.zir', lugha)}
               </button>
               <button
+                ref={zirDamj}
                 type="button"
                 className="zir"
                 aria-expanded={lawhatDamj}
+                aria-controls="warsha-lawhat-damj"
                 onClick={() => {
                   setLawhatDamj((hali) => !hali);
                 }}
@@ -1129,20 +1286,22 @@ export function Warsha(): JSX.Element {
 
       <div className="warsha__badan">
         <>
-          <AnimatePresence initial={false}>
-            {lawhatJawda ? (
-              <motion.section
-                key="jawda"
-                className="warsha__lawha"
-                aria-label={t('warsha.jawda.unwan', lugha)}
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={haraka(HARAKAT_LAWHA)}
-              >
+          <Zuhur
+            maftuh={lawhatJawda}
+            id="warsha-lawhat-jawda"
+            className="warsha__lawha"
+            role="region"
+            aria-label={t('warsha.jawda.unwan', lugha)}
+            onKeyDown={(hadath) => {
+              if (hadath.key === 'Escape') {
+                hadath.stopPropagation();
+                aghliqJawda();
+              }
+            }}
+          >
                 <div className="warsha__lawha-dakhil">
                   {jawda.isPending ? (
-                    <p className="warsha__jari">{t('warsha.jawda.jari', lugha)}</p>
+                    <HaykalQism tasmiya={t('warsha.jawda.jari', lugha)} />
                   ) : jawda.error !== null ? (
                     <KutlatKhata
                       unwan={t('warsha.jawda.taadhur', lugha)}
@@ -1173,21 +1332,29 @@ export function Warsha(): JSX.Element {
                                 })}
                               </p>
                               <div className="warsha__tadarub-ashkal">
-                                {tadarub.ashkal.map((shakl) => (
-                                  <button
-                                    key={shakl}
-                                    type="button"
-                                    className="zir"
-                                    aria-disabled={tawheed.isPending}
-                                    onClick={() => {
-                                      if (!tawheed.isPending) {
-                                        tawheed.mutate({ mustalah: tadarub.mustalah, shakl });
-                                      }
-                                    }}
-                                  >
-                                    {shakl}
-                                  </button>
-                                ))}
+                                {tadarub.ashkal.map((shakl) => {
+                                  const jari =
+                                    tawheed.isPending &&
+                                    tawheed.variables !== undefined &&
+                                    tawheed.variables.mustalah === tadarub.mustalah &&
+                                    tawheed.variables.shakl === shakl;
+                                  return (
+                                    <button
+                                      key={shakl}
+                                      type="button"
+                                      className="zir"
+                                      aria-busy={jari}
+                                      aria-disabled={tawheed.isPending && !jari}
+                                      onClick={() => {
+                                        if (!tawheed.isPending) {
+                                          tawheed.mutate({ mustalah: tadarub.mustalah, shakl });
+                                        }
+                                      }}
+                                    >
+                                      {shakl}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </li>
                           ))}
@@ -1209,21 +1376,21 @@ export function Warsha(): JSX.Element {
                     </>
                   )}
                 </div>
-              </motion.section>
-            ) : null}
-          </AnimatePresence>
+          </Zuhur>
 
-          <AnimatePresence initial={false}>
-            {lawhatDamj ? (
-              <motion.section
-                key="damj"
-                className="warsha__lawha"
-                aria-label={t('warsha.damj.zir', lugha)}
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={haraka(HARAKAT_LAWHA)}
-              >
+          <Zuhur
+            maftuh={lawhatDamj}
+            id="warsha-lawhat-damj"
+            className="warsha__lawha"
+            role="region"
+            aria-label={t('warsha.damj.zir', lugha)}
+            onKeyDown={(hadath) => {
+              if (hadath.key === 'Escape') {
+                hadath.stopPropagation();
+                aghliqDamj();
+              }
+            }}
+          >
                 <div className="warsha__lawha-dakhil">
                   <div className="warsha__damj-talab">
                     <label className="warsha__tasmiya" htmlFor="warsha-masar-huzma">
@@ -1241,7 +1408,11 @@ export function Warsha(): JSX.Element {
                     <button
                       type="button"
                       className="zir zir--tamyeez"
-                      aria-disabled={idmaj.isPending || masarHuzma.trim() === ''}
+                      aria-busy={idmaj.isPending}
+                      aria-disabled={masarHuzma.trim() === ''}
+                      title={
+                        masarHuzma.trim() === '' ? t('warsha.damj.masar_matlub', lugha) : undefined
+                      }
                       onClick={() => {
                         if (!idmaj.isPending && masarHuzma.trim() !== '') {
                           idmaj.mutate({ masar: masarHuzma.trim() });
@@ -1251,9 +1422,9 @@ export function Warsha(): JSX.Element {
                       {t('warsha.damj.istawrid', lugha)}
                     </button>
                   </div>
-                  {idmaj.isPending ? (
-                    <p className="warsha__jari">{t('warsha.damj.jari', lugha)}</p>
-                  ) : null}
+                  <Zuhur maftuh={idmaj.isPending} className="warsha__jari" role="status">
+                    {t('warsha.damj.jari', lugha)}
+                  </Zuhur>
                   {idmaj.error !== null ? (
                     <KutlatKhata
                       unwan={t('warsha.damj.taadhur', lugha)}
@@ -1262,8 +1433,9 @@ export function Warsha(): JSX.Element {
                       muarrif={muarrif}
                     />
                   ) : null}
-                  {idmaj.data !== undefined ? (
-                    <div className="warsha__damj-natija">
+                  <Zuhur maftuh={idmaj.data !== undefined} className="warsha__damj-natija">
+                    {idmaj.data === undefined ? null : (
+                    <>
                       <p className="warsha__nass-hadi">
                         {t(
                           idmaj.data.thulathi ? 'warsha.damj.thulathi' : 'warsha.damj.thunai',
@@ -1315,7 +1487,9 @@ export function Warsha(): JSX.Element {
                       <button
                         type="button"
                         className="zir zir--tamyeez"
-                        aria-disabled={baqiya > 0 || hasm.isPending}
+                        aria-busy={hasm.isPending}
+                        aria-disabled={baqiya > 0}
+                        title={baqiya > 0 ? jam('warsha.damj.baqi', lugha, baqiya, munassiq) : undefined}
                         onClick={() => {
                           if (baqiya === 0 && !hasm.isPending) {
                             hasm.mutate({
@@ -1328,8 +1502,9 @@ export function Warsha(): JSX.Element {
                       >
                         {t('warsha.damj.hasm', lugha)}
                       </button>
-                    </div>
-                  ) : null}
+                    </>
+                    )}
+                  </Zuhur>
                   {hasm.error !== null ? (
                     <KutlatKhata
                       unwan={t('luba.khata.amal', lugha)}
@@ -1347,9 +1522,7 @@ export function Warsha(): JSX.Element {
                     </p>
                   ) : null}
                 </div>
-              </motion.section>
-            ) : null}
-          </AnimatePresence>
+          </Zuhur>
 
           {/* One grid child: the workshop's grid has exactly four chrome tracks above the
               body, so the damage panel shares the filter strip's track rather than taking
@@ -1374,15 +1547,15 @@ export function Warsha(): JSX.Element {
                 }}
               />
             ) : null}
-            {inqadh.data !== undefined ? (
-              <section className="warsha__lawha" role="status">
+            <Zuhur maftuh={inqadh.data !== undefined} className="warsha__lawha" role="status">
+              {inqadh.data === undefined ? null : (
                 <div className="warsha__lawha-dakhil">
                   <p className="warsha__nass-hadi">
                     {ikhtar(lugha, inqadh.data.wasf_arabi, inqadh.data.wasf_injilizi)}
                   </p>
                 </div>
-              </section>
-            ) : null}
+              )}
+            </Zuhur>
             <div className="warsha__tasfiya" role="search">
               <input
                 ref={haqlBahth}
@@ -1568,7 +1741,7 @@ export function Warsha(): JSX.Element {
                       <button
                         type="button"
                         className="zir zir--tamyeez"
-                        aria-disabled={inqadh.isPending}
+                        aria-busy={inqadh.isPending}
                         onClick={() => {
                           if (!inqadh.isPending) {
                             inqadh.mutate();
@@ -1688,7 +1861,13 @@ export function Warsha(): JSX.Element {
                       <button
                         type="button"
                         className="zir zir--tamyeez"
-                        aria-disabled={hifz.isPending}
+                        aria-busy={hifz.isPending}
+                        aria-disabled={laTaghyeer && !hifz.isPending}
+                        title={
+                          laTaghyeer && !hifz.isPending
+                            ? t('warsha.muharrir.la_taghyeer', lugha)
+                            : undefined
+                        }
                         onClick={alaHifz}
                       >
                         {t(hifz.isPending ? 'warsha.muharrir.jari' : 'warsha.muharrir.hifz', lugha)}
@@ -1696,7 +1875,7 @@ export function Warsha(): JSX.Element {
                       <button
                         type="button"
                         className="zir"
-                        aria-disabled={tarjama.isPending}
+                        aria-busy={tarjama.isPending}
                         onClick={() => {
                           if (!tarjama.isPending) {
                             tarjama.mutate({ nass: safMukhtar.nass });
@@ -1709,29 +1888,25 @@ export function Warsha(): JSX.Element {
                         )}
                       </button>
                     </div>
-                    {hifz.error !== null ? (
+                    {khataHifz !== null ? (
                       <KutlatKhata
                         unwan={t('luba.khata.amal', lugha)}
-                        khata={hifz.error}
+                        khata={khataHifz}
                         lugha={lugha}
                         muarrif={muarrif}
                       />
                     ) : null}
-                    {tarjama.error !== null ? (
+                    {khataTarjama !== null ? (
                       <KutlatKhata
                         unwan={t('luba.khata.amal', lugha)}
-                        khata={tarjama.error}
+                        khata={khataTarjama}
                         lugha={lugha}
                         muarrif={muarrif}
                       />
                     ) : null}
-                    {tarjama.data !== undefined &&
-                    !tarjama.data.najahat &&
-                    tarjama.data.sabab_arabi !== null ? (
-                      <p className="warsha__rafd" role="status">
-                        {tarjama.data.sabab_arabi}
-                      </p>
-                    ) : null}
+                    <Zuhur maftuh={rafdTarjama !== null} className="warsha__rafd" role="status">
+                      {rafdTarjama}
+                    </Zuhur>
                     {safMukhtar.alamat.length > 0 ? (
                       <ul className="warsha__alamat">
                         {safMukhtar.alamat.map((alam) => (
@@ -1835,7 +2010,8 @@ export function Warsha(): JSX.Element {
                         }}
                       />
                     ) : null}
-                    {taaliqatMukhtar.length > 0 ? (
+                    <Zuhur maftuh={taaliqatMukhtar.length > 0} className="warsha__taaliqat-kutla">
+                      {taaliqatMukhtar.length === 0 ? null : (
                       <>
                         <p className="warsha__tasmiya">{t('warsha.taaliq.unwan', lugha)}</p>
                         <ul className="warsha__taaliqat">
@@ -1865,7 +2041,8 @@ export function Warsha(): JSX.Element {
                           ))}
                         </ul>
                       </>
-                    ) : null}
+                      )}
+                    </Zuhur>
                   </section>
                 </>
               )}
@@ -1877,10 +2054,13 @@ export function Warsha(): JSX.Element {
                 aria-label={t('warsha.iqtirah.unwan', lugha)}
               >
                 <h2 className="warsha__unwan-qism">{t('warsha.iqtirah.unwan', lugha)}</h2>
+                {/* Keyed on the state alone, so a row change that lands from the
+                    cache swaps the cards in place and only a real wait moves. */}
+                <Mashhad miftah={wajhIqtirahat} className="warsha__qism-jism">
                 {mukhtar === null ? (
                   <p className="warsha__nass-hadi">{t('warsha.muharrir.la_ikhtiyar', lugha)}</p>
                 ) : iqtirahat.isPending ? (
-                  <p className="warsha__jari">{t('warsha.iqtirah.jari', lugha)}</p>
+                  <HaykalQism tasmiya={t('warsha.iqtirah.jari', lugha)} />
                 ) : iqtirahat.error !== null ? (
                   <KutlatKhata
                     unwan={t('warsha.iqtirah.taadhur', lugha)}
@@ -1898,21 +2078,27 @@ export function Warsha(): JSX.Element {
                       mutabbaq={safMukhtar?.muzawwid === 'الذاكرة'}
                       lugha={lugha}
                       munassiq={munassiq}
-                      yajri={tatbiq.isPending}
+                      qaydJari={qaydJari}
                       alaTatbiq={(qayd) => {
-                        tatbiq.mutate({ nass: mukhtar, qayd, sabiq: safMukhtar?.hadaf ?? '' });
+                        tatbiq.mutate({
+                          nass: mukhtar,
+                          qayd,
+                          sabiq: safMukhtar?.hadaf ?? '',
+                          tilqai: false,
+                        });
                       }}
                     />
-                    {tatbiq.error !== null ? (
+                    {khataTatbiq !== null ? (
                       <KutlatKhata
                         unwan={t('luba.khata.amal', lugha)}
-                        khata={tatbiq.error}
+                        khata={khataTatbiq}
                         lugha={lugha}
                         muarrif={muarrif}
                       />
                     ) : null}
                   </>
                 )}
+                </Mashhad>
               </section>
 
               <section className="warsha__dufa" aria-label={t('warsha.dufa.unwan', lugha)}>
@@ -1948,7 +2134,9 @@ export function Warsha(): JSX.Element {
                   <button
                     type="button"
                     className="zir zir--tamyeez"
-                    aria-disabled={dufa.isPending || Number(saqfDufa) <= 0}
+                    aria-busy={dufa.isPending}
+                    aria-disabled={!saqfSalih}
+                    title={saqfSalih ? undefined : t('warsha.dufa.saqf_matlub', lugha)}
                     onClick={() => {
                       const saqf = Number(saqfDufa);
                       if (!dufa.isPending && Number.isFinite(saqf) && saqf > 0) {
@@ -1961,12 +2149,11 @@ export function Warsha(): JSX.Element {
                     {t('warsha.dufa.bad', lugha)}
                   </button>
                 </div>
-                <div aria-live="polite">
+                <div className="warsha__dufa-hala" aria-live="polite">
                   {/* A bar only over a real denominator: the rows that had no
                       translation when the batch was started. Every batch has
                       one, so this meter is never indeterminate. */}
-                  {dufa.isPending && hadafDufa > 0 ? (
-                    <div className="warsha__miqyas">
+                  <Zuhur maftuh={dufa.isPending && hadafDufa > 0} className="warsha__miqyas">
                       <div
                         className="warsha__miqyas-masar"
                         role="progressbar"
@@ -1978,7 +2165,9 @@ export function Warsha(): JSX.Element {
                         <span
                           className="warsha__miqyas-malu"
                           style={{
-                            inlineSize: `${String(Math.min(100, (munjazDufa / hadafDufa) * 100))}%`,
+                            inlineSize: `${String(
+                              hadafDufa > 0 ? Math.min(100, (munjazDufa / hadafDufa) * 100) : 0,
+                            )}%`,
                           }}
                         />
                       </div>
@@ -1988,18 +2177,17 @@ export function Warsha(): JSX.Element {
                           majmu: munassiq.raqm(hadafDufa),
                         })}
                       </p>
-                    </div>
-                  ) : null}
-                  {dufa.isPending && taqaddumDufa !== null ? (
-                    <p className="warsha__jari">
-                      {t('warsha.dufa.jari', lugha, {
-                        mutarjama: munassiq.raqm(taqaddumDufa.mutarjama),
-                        fashila: munassiq.raqm(taqaddumDufa.fashila),
-                        taklifa: kasr(taqaddumDufa.taklifa).toFixed(2),
-                        saqf: kasr(taqaddumDufa.saqf).toFixed(2),
-                      })}
-                    </p>
-                  ) : null}
+                  </Zuhur>
+                  <Zuhur maftuh={dufa.isPending && taqaddumDufa !== null} className="warsha__jari">
+                    {taqaddumDufa === null
+                      ? null
+                      : t('warsha.dufa.jari', lugha, {
+                          mutarjama: munassiq.raqm(taqaddumDufa.mutarjama),
+                          fashila: munassiq.raqm(taqaddumDufa.fashila),
+                          taklifa: kasr(taqaddumDufa.taklifa).toFixed(2),
+                          saqf: kasr(taqaddumDufa.saqf).toFixed(2),
+                        })}
+                  </Zuhur>
                   {dufa.error !== null ? (
                     <KutlatKhata
                       unwan={t('warsha.dufa.taadhur', lugha)}
@@ -2008,7 +2196,8 @@ export function Warsha(): JSX.Element {
                       muarrif={muarrif}
                     />
                   ) : null}
-                  {dufa.data !== undefined ? (
+                  <Zuhur maftuh={dufa.data !== undefined} className="warsha__dufa-natija">
+                    {dufa.data === undefined ? null : (
                     <>
                       <p className="warsha__nass-hadi">
                         {t('warsha.dufa.tamma', lugha, {
@@ -2021,7 +2210,8 @@ export function Warsha(): JSX.Element {
                         <p className="warsha__tahdheer">{t('warsha.dufa.saqf_waqf', lugha)}</p>
                       ) : null}
                     </>
-                  ) : null}
+                    )}
+                  </Zuhur>
                 </div>
               </section>
 
@@ -2030,7 +2220,7 @@ export function Warsha(): JSX.Element {
                 {mukhtar === null ? (
                   <p className="warsha__nass-hadi">{t('warsha.muharrir.la_ikhtiyar', lugha)}</p>
                 ) : muayana.isPending ? (
-                  <p className="warsha__jari">{t('warsha.muayana.jari', lugha)}</p>
+                  <HaykalQism tasmiya={t('warsha.muayana.jari', lugha)} />
                 ) : muayana.error !== null ? (
                   <KutlatKhata
                     unwan={t('warsha.muayana.taadhur', lugha)}

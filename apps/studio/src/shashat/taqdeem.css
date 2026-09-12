@@ -148,6 +148,15 @@
   gap: var(--misafa-40);
 }
 
+/* The stage the contributor is on — details, gate, or sent — is one body that
+   the transition wrapper swaps; inside it the sections keep the column's own
+   rhythm. The trail below is not a stage and stays outside the swap. */
+.taqdeem__khatwa-jism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-40);
+}
+
 .taqdeem__qism {
   display: flex;
   flex-direction: column;
@@ -321,6 +330,13 @@
 .taqdeem__muntaqi:hover {
   border-color: var(--hadd-qawi);
   transition: none;
+}
+
+/* The wrapper the other-licence field arrives in, laid out like the column
+   around it so the field takes the full measure. */
+.taqdeem__rukhsa-ukhra {
+  display: flex;
+  flex-direction: column;
 }
 
 /* --- the gate -------------------------------------------------------------
@@ -504,6 +520,18 @@
   block-size: var(--hajm-ramz-satri);
 }
 
+/* A row, so the acknowledgement keeps its own width while it arrives. */
+.taqdeem__iqrar-hawiya {
+  display: flex;
+}
+
+/* The one acknowledgement in flight: the box is refused by the input, and the
+   label says so where the eye is. */
+.taqdeem__iqrar[aria-busy='true'] {
+  color: var(--nass-3);
+  cursor: progress;
+}
+
 /* --- the handoff ---------------------------------------------------------- */
 
 .taqdeem__irsal {
@@ -545,6 +573,43 @@
 .taqdeem__mughlaqa-ramz svg {
   inline-size: var(--hajm-ramz-satri);
   block-size: var(--hajm-ramz-satri);
+}
+
+/* --- the last word ----------------------------------------------------------
+   Set as the gate's own kind of object — a surface, the accent along the
+   leading edge — because it is the one thing on this screen that sends. */
+
+.taqdeem__taakid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  padding: var(--misafa-12) var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-inline-start: var(--misafa-2) solid var(--tamyeez);
+  border-radius: var(--nisf-lawha);
+}
+
+.taqdeem__taakid-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.taqdeem__taakid-nass {
+  max-inline-size: 60ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.taqdeem__taakid-azrar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-4);
 }
 
 /* The code is the one thing the user carries to the other window, so it is the
@@ -592,12 +657,6 @@
   line-height: var(--irtifa-qira);
   color: var(--nass-2);
   max-inline-size: 60ch;
-}
-
-.taqdeem__jari {
-  font-size: var(--qiyas-3);
-  line-height: var(--irtifa-3);
-  color: var(--nass-3);
 }
 
 /* --- the skeleton -----------------------------------------------------------

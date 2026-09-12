@@ -233,38 +233,3 @@
   text-overflow: ellipsis;
 }
 
-/* --- the undo announcement ------------------------------------------------- */
-
-.lawha-awamir__ilan {
-  position: fixed;
-  inset-block-end: var(--misafa-24);
-  inset-inline: 0;
-  z-index: 30;
-  margin-inline: auto;
-  inline-size: fit-content;
-  max-inline-size: var(--ard-hiwar);
-  padding-block: var(--misafa-8);
-  padding-inline: var(--misafa-16);
-  font-size: var(--qiyas-2);
-  line-height: var(--irtifa-2);
-  color: var(--nass-1);
-  background-color: var(--sath-2);
-  border: var(--samk-hadd) solid var(--hadd);
-  border-radius: var(--nisf-hiwar);
-  box-shadow: var(--zill-tafu);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  transition: opacity var(--zaman-hala) var(--munhana);
-}
-
-/* The live region stays in the tree; empty, it simply has no box to draw. */
-.lawha-awamir__ilan:empty {
-  padding: 0;
-  border: none;
-  box-shadow: none;
-}
-
-.lawha-awamir__ilan[data-jari] {
-  opacity: 0.6;
-}

@@ -45,10 +45,17 @@
   opacity: 0.45;
 }
 
-/* --- collapsible panels ---------------------------------------------------- */
+/* --- collapsible panels ----------------------------------------------------
+   Each panel is an `auto` track above the table, so a panel holding three
+   hundred conflicts would otherwise take the whole body and leave the table
+   nothing. It is capped at half the screen's own floor and scrolls inside
+   that, which is what keeps the strip above it standing and the table beneath
+   it open on the shortest window the product supports. */
 
 .warsha__lawha {
-  overflow: hidden;
+  min-inline-size: 0;
+  max-block-size: calc(var(--adna-irtifa-shasha) / 2);
+  overflow-y: auto;
   background-color: var(--sath-1);
   border-block-end: var(--samk-hadd) solid var(--hadd-daif);
 }
@@ -58,6 +65,7 @@
   flex-direction: column;
   align-items: start;
   gap: var(--misafa-16);
+  max-inline-size: 100%;
   padding: var(--misafa-16) var(--misafa-24) var(--misafa-24);
 }
 
@@ -432,6 +440,22 @@
   text-wrap: pretty;
 }
 
+/* A game string is whatever the game holds: a URL, a format key, a path with
+   no space in it. Prose wraps at spaces; a run with none breaks anywhere
+   rather than pushing its pane into a sideways scroll. */
+.warsha__masdar,
+.warsha__nass-hadi,
+.warsha__tahdheer,
+.warsha__jiwar,
+.warsha__iqtirah-hadaf,
+.warsha__iqtirah-masdar,
+.warsha__janib-hadaf,
+.warsha__nizaa-masdar,
+.warsha__taaliq-matn,
+.warsha__rafd {
+  overflow-wrap: anywhere;
+}
+
 /* Write here. A well cut into the pane rather than a panel on top of it, and
    the only place on the screen that uses the fourth type step: the Arabic the
    contributor is producing is the largest thing they look at. */
@@ -556,6 +580,14 @@
   color: var(--nass-2);
 }
 
+/* The comments arrive and leave with the row; the wrapper keeps the context
+   column's own rhythm between the label and the list. */
+.warsha__taaliqat-kutla {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-12);
+}
+
 .warsha__taaliqat {
   display: flex;
   flex-direction: column;
@@ -637,6 +669,31 @@
 .warsha__dufa,
 .warsha__muayana {
   border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* The body of a rail section is one state at a time, and the state's wrapper
+   has to span the section: the sections align their children to the start,
+   which would otherwise shrink the wrapper — and every card inside it — to the
+   width of its shortest line. */
+.warsha__qism-jism,
+.warsha__dufa-hala,
+.warsha__dufa-natija {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--misafa-12);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+/* Three lines where a section's answer will stand, at the section's own
+   width. Still, like every other skeleton on this screen. */
+.warsha__haykal-qism {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  inline-size: 100%;
+  padding-block: var(--misafa-4);
 }
 
 .warsha__mustalahat {
