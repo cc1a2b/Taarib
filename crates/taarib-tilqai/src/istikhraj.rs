@@ -194,6 +194,27 @@ pub fn ijri(
         });
     }
 
+    // Said out loud when the files gave *something* and the refusal report says
+    // capture would reach more.
+    //
+    // The run used to mention capture only when extraction came back empty, and
+    // the common case is the opposite: a Unity release build ships no type tree,
+    // so the localization tables read fine and every string living in a
+    // component does not. The player then gets a translated menu, an untouched
+    // game, a run that reported success, and no reason anywhere. Which is
+    // exactly the wrong way round — the more a game hides from a static reader,
+    // the more the person needs to be told that playing once with capture on is
+    // what reaches the rest.
+    if ihsa.yanfa_iltiqat && !multaqat {
+        muraqib.ballagh_bila_majmu(
+            MarhalaTilqai::Istikhraj,
+            maqrua,
+            format!(
+                "{} container(s) hold text no file reader can open on this game, so part of it                  will still be in its original language. Playing once with capture switched on                  records what the game actually draws, and running this again with that                  recording reaches the rest.",
+                ihsa.marfuda
+            ),
+        );
+    }
     muraqib.ikhtim(
         MarhalaTilqai::Istikhraj,
         maqrua,

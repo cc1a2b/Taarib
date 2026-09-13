@@ -112,7 +112,7 @@ namespace Taarib.Unity.Mono.Suluk
         /// <summary>
         /// How many newly-seen distinct strings pass between coverage lines.
         /// </summary>
-        private const int FasilTaghtiya = 100;
+        private const int FasilTaghtiya = 25;
 
         private static int munduAkhirTaqreer;
 
@@ -140,6 +140,24 @@ namespace Taarib.Unity.Mono.Suluk
                 {
                     return;
                 }
+            }
+            Taqreer();
+        }
+
+        /// <summary>
+        /// Writes the coverage line whatever the interval, for the end of a run.
+        /// </summary>
+        /// <remarks>
+        /// A session that saw fewer strings than the interval would otherwise
+        /// end having never reported the one number it exists to produce, which
+        /// is exactly the short session somebody runs to check whether the patch
+        /// is working.
+        /// </remarks>
+        public static void TaqreerNihai()
+        {
+            lock (Fawtat)
+            {
+                munduAkhirTaqreer = 0;
             }
             Taqreer();
         }

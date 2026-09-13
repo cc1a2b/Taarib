@@ -230,7 +230,7 @@ namespace Taarib.Unity.Il2cpp
         public const string ImtidadRuqaa = ".ruqaa";
 
         /// <summary>The name of the capture file a recording session writes.</summary>
-        public const string MalafIltiqat = "iltiqat.tsv";
+        public const string MalafIltiqat = "iltiqat.jsonl";
 
         private readonly List<INizamIl2cpp> anzima = new List<INizamIl2cpp>();
 

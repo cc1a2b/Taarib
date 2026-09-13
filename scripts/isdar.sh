@@ -121,6 +121,28 @@ cd "$JIDHR"
 marhala() { printf '\n\033[1m== %s ==\033[0m\n' "$1"; }
 tuhmal() { case ",${TAKHATTI}," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
 
+# A path in the form the tool that receives it can open.
+#
+# The staging tool is run through `$QARGO`, and on a WSL host building for
+# Windows that cargo is `cargo.exe`: a Windows program, which cannot open
+# `/mnt/e/Programming/Taarib` and joins it with backslashes into
+# `/mnt/e/Programming/Taarib\assets/aqfal/...` — a path that names nothing on
+# either side of the boundary. `wslpath -w` is the translation, applied only
+# when both halves hold: this is WSL, and the tool is a Windows executable. On a
+# Windows host, on Linux, on macOS, the path passes through untouched.
+masar_lil_adah() {
+  local adah="$1" masar="$2"
+  case "$adah" in
+    *.exe|*.EXE) ;;
+    *) printf '%s' "$masar"; return ;;
+  esac
+  if command -v wslpath >/dev/null 2>&1; then
+    wslpath -w "$masar"
+  else
+    printf '%s' "$masar"
+  fi
+}
+
 lazim() {
   if ! command -v "$1" >/dev/null 2>&1; then
     printf 'isdar: %s is not on PATH; %s\n' "$1" "$2" >&2
@@ -249,7 +271,7 @@ fi
 if ! tuhmal tajmee; then
   marhala "tajmee — rows D1, J1, K1, M1, N1, and the manifest"
   lazim curl "the pinned BepInEx and font downloads are fetched with it"
-  wusata=(--hadaf "$hadaf" --jidhr "$JIDHR" --ahdaf "$ahdaf")
+  wusata=(--hadaf "$hadaf" --jidhr "$(masar_lil_adah "$QARGO" "$JIDHR")" --ahdaf "$ahdaf")
   if [ "$jalb" -eq 1 ]; then wusata+=(--jalb); fi
   # Through `cargo run` rather than a path into the target directory: this
   # workspace's target directory can be redirected by a user-level cargo

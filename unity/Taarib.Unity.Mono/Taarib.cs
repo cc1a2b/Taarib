@@ -239,7 +239,7 @@ namespace Taarib.Unity.Mono
         public const string ImtidadRuqaa = ".ruqaa";
 
         /// <summary>The name of the capture file a recording session writes.</summary>
-        public const string MalafIltiqat = "iltiqat.tsv";
+        public const string MalafIltiqat = "iltiqat.jsonl";
 
         private readonly List<INizamNass> anzima = new List<INizamNass>();
         // Assigned by IqraIdadat, which is the first thing Awake does and the
@@ -450,6 +450,9 @@ namespace Taarib.Unity.Mono
             // a torn-down plugin would run the whole teardown a second time at
             // the end of the process.
             Application.quitting -= AlaKhurujTatbiq;
+            // The run's own answer to "how much of this game is Arabic", written
+            // once at the end whether or not the interval was ever crossed.
+            Rabt.TaqreerNihai();
 
             for (int i = anzima.Count - 1; i >= 0; i--)
             {

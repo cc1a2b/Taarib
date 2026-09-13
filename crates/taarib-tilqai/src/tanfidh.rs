@@ -193,9 +193,27 @@ async fn ijri(
     // The project rows. Built from the table on the first pass and read back on
     // every later one, because a resumed run's translations live on them and
     // rebuilding from the table would throw those away.
+    //
+    // Read back *and topped up*: a table can grow between runs, and the way it
+    // grows is the one that matters most. A capture session merges into the
+    // extraction above — on a Unity release build, which ships no type tree,
+    // that merge is the only way the text living in components ever arrives —
+    // and a resume that read the old rows and ignored the new table discarded
+    // exactly those strings. The run then reported the merge, translated
+    // nothing, and shipped the patch it already had.
     let masar_nusus = mashru.join(MALAF_NUSUS);
     let madakhil: Vec<MudkhalNass> = if masar_nusus.is_file() {
-        tarjama::iqra_nusus(&masar_nusus)?
+        let sabiqa = tarjama::iqra_nusus(&masar_nusus)?;
+        let (madakhil, jadeeda) = damm_jadeed(sabiqa, makhzun.jadwal.ila_mudkhalat());
+        if jadeeda > 0 {
+            tarjama::uktub_nusus(&masar_nusus, &madakhil)?;
+            muraqib.ballagh_bila_majmu(
+                MarhalaTilqai::Istikhraj,
+                tul(madakhil.len()),
+                format!("{jadeeda} string(s) the project did not have yet were added to it"),
+            );
+        }
+        madakhil
     } else {
         let madakhil = makhzun.jadwal.ila_mudkhalat();
         tarjama::uktub_nusus(&masar_nusus, &madakhil)?;
@@ -473,6 +491,37 @@ fn istanif(
         mustanafa: true,
     });
     taqreer.marhala = marhala;
+}
+
+/// Adds rows the table has and the project does not, keeping every row the
+/// project already carries.
+///
+/// Identity, not text: a row is the same row when its [`NassId`] is the same,
+/// which is what the extractor computes from where a string was found. A row
+/// that exists in both keeps the project's copy, translation and review state
+/// included — the table's copy has neither and would overwrite them with
+/// nothing.
+///
+/// Returns the rows and how many were added, because "the merge found
+/// twenty-three strings and the project grew by twenty-three" is the only way a
+/// reader can tell a merge that worked from one that was thrown away.
+fn damm_jadeed(sabiqa: Vec<MudkhalNass>, jadwal: Vec<MudkhalNass>) -> (Vec<MudkhalNass>, usize) {
+    let mawjuda: std::collections::HashSet<_> = sabiqa.iter().map(|mudkhal| mudkhal.id).collect();
+    let mut madakhil = sabiqa;
+    let mut jadeeda = 0_usize;
+    for mudkhal in jadwal {
+        if mawjuda.contains(&mudkhal.id) {
+            continue;
+        }
+        madakhil.push(mudkhal);
+        jadeeda = jadeeda.saturating_add(1);
+    }
+    (madakhil, jadeeda)
+}
+
+/// A count as the progress reporter's own width.
+fn tul(qeema: usize) -> u64 {
+    u64::try_from(qeema).unwrap_or(u64::MAX)
 }
 
 /// The package's numbers, rebuilt from the journal on a resumed run.

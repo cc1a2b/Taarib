@@ -1023,6 +1023,13 @@ namespace Taarib.Unity.Mushtarak
             hadaf[mawdi] = (byte)nizam;
         }
 
+        /// <summary>The name a session written from inside a game carries.</summary>
+        /// <returns>The name.</returns>
+        public static string IsmJalsa()
+        {
+            return "unity-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+        }
+
         /// <summary>
         /// Writes the version line, terminator included.
         /// </summary>
@@ -1043,18 +1050,24 @@ namespace Taarib.Unity.Mushtarak
             {
                 throw new ArgumentNullException(nameof(katib));
             }
-            katib.Write(Wasm);
-            katib.Write(Fasil);
+            // `taarib_istikhraj::iltiqat::SatrJalsa::Tarwisa`, which is an
+            // internally tagged enum: the discriminator and the header's own
+            // fields sit on one object.
+            katib.Write("{\"naw\":\"tarwisa\",\"isdar\":");
             AktubSaheeh(katib, IsdarSigha);
-            katib.Write(Fasil);
-            AktubSaheeh(katib, AdadHuqul);
-            katib.Write(Fasil);
-            AktubSaheeh(katib, adadSijillat);
-            katib.Write(Fasil);
-            katib.Write(tam ? '1' : '0');
-            katib.Write(Fasil);
-            AktubSaheeh(katib, adadMuhmal);
+            katib.Write(",\"jalsa\":");
+            AktubNass(katib, IsmJalsa());
+            katib.Write(",\"luba\":null,\"bada\":");
+            AktubNass(katib, DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture));
+            katib.Write(",\"adad_sakin\":null,\"aqsa_mulahazat\":");
+            AktubSaheeh(katib, adadSijillat > 0 ? adadSijillat : 1);
+            // The frame budget is the reader's field and a session written all
+            // at once never had one; zero is the honest value and the reader
+            // treats it as "no budget was in force".
+            katib.Write(",\"mizaniyat_itar_mikro\":0}");
             katib.Write(NihayatSatr);
+            _ = tam;
+            _ = adadMuhmal;
         }
 
         /// <summary>
@@ -1081,42 +1094,52 @@ namespace Taarib.Unity.Mushtarak
                 throw new ArgumentNullException(nameof(katib));
             }
 
-            AktubSitta(katib, sijill.Huwiya);
-            katib.Write(Fasil);
-            AktubSaheeh(katib, sijill.Tasalsul);
-            katib.Write(Fasil);
-            AktubSaheeh(katib, sijill.Itar);
-            katib.Write(Fasil);
-            AktubSaheeh(katib, sijill.Adad);
-            katib.Write(Fasil);
-            AktubSaheeh(katib, (long)sijill.Nizam);
-            katib.Write(Fasil);
-            AktubSaheeh(katib, sijill.Alam());
-            katib.Write(Fasil);
-            AktubKasr(katib, sijill.Hajm);
-            katib.Write(Fasil);
-            AktubKasr(katib, sijill.Mustatil.Yasar);
-            katib.Write(Fasil);
-            AktubKasr(katib, sijill.Mustatil.Asfal);
-            katib.Write(Fasil);
-            AktubKasr(katib, sijill.Mustatil.Ard);
-            katib.Write(Fasil);
-            AktubKasr(katib, sijill.Mustatil.Irtifa);
-            katib.Write(Fasil);
-            AktubSaheeh(katib, sijill.TulAsl);
-            katib.Write(Fasil);
-            AktubHaql(katib, sijill.Mashhad);
-            katib.Write(Fasil);
-            AktubHaql(katib, sijill.Masar);
-            katib.Write(Fasil);
-            if (sijill.Hassas)
+            // `taarib_istikhraj::iltiqat::MulahazaMutakarrira`, field for field.
+            katib.Write("{\"naw\":\"nass\",\"miftah\":");
+            AktubNass(katib, Miftah(in sijill));
+            katib.Write(",\"nass\":");
+            AktubNass(katib, sijill.Hassas ? Sitta(sijill.BasmatAsl) : (sijill.Asl ?? string.Empty));
+            katib.Write(",\"masar_mukawwin\":");
+            AktubNass(katib, sijill.Masar ?? string.Empty);
+            katib.Write(",\"mashhad\":");
+            if (string.IsNullOrEmpty(sijill.Mashhad))
             {
-                AktubSitta(katib, sijill.BasmatAsl);
+                katib.Write("null");
             }
             else
             {
-                AktubHaql(katib, sijill.Asl);
+                AktubNass(katib, sijill.Mashhad!);
             }
+            katib.Write(",\"shasha\":null,\"marrat\":");
+            AktubSaheeh(katib, sijill.Adad > 0 ? sijill.Adad : 1);
+            katib.Write(",\"awwal_tasalsul\":");
+            AktubSaheeh(katib, sijill.Tasalsul);
+            katib.Write(",\"awwal_waqt_mil\":0,\"akhir_waqt_mil\":0,\"quyud\":{\"aqsa_ahruf\":null,\"aqsa_ard\":");
+            AktubKasrAwNull(katib, sijill.Mustatil.Ard);
+            katib.Write(",\"aqsa_irtifa\":");
+            AktubKasrAwNull(katib, sijill.Mustatil.Irtifa);
+            katib.Write(",\"hajm_khatt\":");
+            AktubKasrAwNull(katib, sijill.Hajm);
+            katib.Write(",\"mustatil\":");
+            if (sijill.Mustatil.Ard > 0f || sijill.Mustatil.Irtifa > 0f)
+            {
+                katib.Write("{\"s\":");
+                AktubKasr(katib, sijill.Mustatil.Yasar);
+                katib.Write(",\"a\":");
+                AktubKasr(katib, sijill.Mustatil.Asfal);
+                katib.Write(",\"ard\":");
+                AktubKasr(katib, sijill.Mustatil.Ard);
+                katib.Write(",\"irtifa\":");
+                AktubKasr(katib, sijill.Mustatil.Irtifa);
+                katib.Write('}');
+            }
+            else
+            {
+                katib.Write("null");
+            }
+            katib.Write(",\"satr_wahid\":");
+            katib.Write(sijill.Yaltaff ? "false" : "true");
+            katib.Write("},\"laqta\":null,\"muayyana\":false}");
             katib.Write(NihayatSatr);
         }
 
@@ -1139,6 +1162,124 @@ namespace Taarib.Unity.Mushtarak
             return satr.EndsWith(NihayatSatr, StringComparison.Ordinal)
                 ? satr.Substring(0, satr.Length - NihayatSatr.Length)
                 : satr;
+        }
+
+        /// <summary>
+        /// Writes one JSON string: the quotes, and the escapes JSON requires.
+        /// </summary>
+        /// <param name="katib">The destination.</param>
+        /// <param name="nass">The text.</param>
+        /// <remarks>
+        /// Hand-written because this assembly takes no package by design and
+        /// netstandard2.1 has no JSON writer. The escape set is the whole of
+        /// what RFC 8259 requires — the two mandatory characters, the five with
+        /// short forms, and every remaining control character as <c>\u</c> —
+        /// which is exactly what `serde_json` accepts on the other side.
+        /// </remarks>
+        public static void AktubNass(TextWriter katib, string? nass)
+        {
+            if (katib is null)
+            {
+                throw new ArgumentNullException(nameof(katib));
+            }
+            katib.Write('"');
+            string qeema = nass ?? string.Empty;
+            for (int i = 0; i < qeema.Length; i++)
+            {
+                char harf = qeema[i];
+                switch (harf)
+                {
+                    case '"': katib.Write("\\\""); break;
+                    case '\\': katib.Write("\\\\"); break;
+                    case '\n': katib.Write("\\n"); break;
+                    case '\r': katib.Write("\\r"); break;
+                    case '\t': katib.Write("\\t"); break;
+                    case '\b': katib.Write("\\b"); break;
+                    case '\f': katib.Write("\\f"); break;
+                    default:
+                        if (harf < ' ')
+                        {
+                            katib.Write("\\u");
+                            katib.Write(((int)harf).ToString("x4", CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            katib.Write(harf);
+                        }
+                        break;
+                }
+            }
+            katib.Write('"');
+        }
+
+        /// <summary>Writes a finite number, or <c>null</c> for anything else.</summary>
+        /// <param name="katib">The destination.</param>
+        /// <param name="qeema">The value.</param>
+        /// <remarks>
+        /// JSON has no NaN and no infinity, and a field carrying one would make
+        /// the whole line unreadable — which costs the reader that string and
+        /// every constraint on it.
+        /// </remarks>
+        public static void AktubKasrAwNull(TextWriter katib, float qeema)
+        {
+            if (katib is null)
+            {
+                throw new ArgumentNullException(nameof(katib));
+            }
+            if (float.IsNaN(qeema) || float.IsInfinity(qeema) || !(qeema > 0f))
+            {
+                katib.Write("null");
+                return;
+            }
+            AktubKasr(katib, qeema);
+        }
+
+        /// <summary>
+        /// The session-local key for one record, as thirty-two lowercase hex.
+        /// </summary>
+        /// <remarks>
+        /// Opaque to the reader, which uses it only to fold repeat sightings of
+        /// one string inside one session and never re-derives it. That is what
+        /// lets this side compute it with its own hash instead of reproducing
+        /// Rust's, which would couple this assembly to the exact byte-chunking
+        /// of a hasher in somebody else's crate.
+        /// <para>
+        /// FNV-1a over the text and the component path, twice with different
+        /// offsets, because the field is two 64-bit halves written as one
+        /// string.
+        /// </para>
+        /// </remarks>
+        /// <param name="sijill">The record.</param>
+        /// <returns>The key.</returns>
+        public static string Miftah(in SijillIltiqat sijill)
+        {
+            const ulong Asas = 1469598103934665603UL;
+            const ulong Darb = 1099511628211UL;
+            ulong awwal = Asas;
+            ulong thani = Asas ^ 0x5A5A5A5A5A5A5A5AUL;
+            string nass = sijill.Asl ?? string.Empty;
+            string masar = sijill.Masar ?? string.Empty;
+            for (int i = 0; i < nass.Length; i++)
+            {
+                awwal = (awwal ^ nass[i]) * Darb;
+                thani = (thani ^ nass[i]) * Darb;
+            }
+            awwal = (awwal ^ 0x1FUL) * Darb;
+            thani = (thani ^ 0x1FUL) * Darb;
+            for (int i = 0; i < masar.Length; i++)
+            {
+                awwal = (awwal ^ masar[i]) * Darb;
+                thani = (thani ^ masar[i]) * Darb;
+            }
+            return Sitta(awwal) + Sitta(thani);
+        }
+
+        /// <summary>Sixteen lowercase hexadecimal characters.</summary>
+        /// <param name="qeema">The value.</param>
+        /// <returns>The text.</returns>
+        public static string Sitta(ulong qeema)
+        {
+            return qeema.ToString("x16", CultureInfo.InvariantCulture);
         }
 
         /// <summary>
