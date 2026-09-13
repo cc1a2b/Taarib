@@ -670,7 +670,17 @@ pub struct IdadatMasadir {
 impl Default for IdadatMasadir {
     fn default() -> Self {
         Self {
-            rasmi: "https://github.com/cc1a2b/taarib-registry".to_owned(),
+            // The raw-content endpoint, which is what `MasdarMustawda::Shabaka`
+            // documents this field as and what the client actually needs: it
+            // joins the root and a repository path directly, so a repository's
+            // web address produces `github.com/<owner>/<repo>/sahb/qaima.json`
+            // — a 404 on every fetch. The forge source therefore never answered,
+            // every read fell through to the CDN mirror, and the mirror caches
+            // its branch alias for hours: a registry that had just been updated
+            // kept serving the old revocation list, and the client refused to
+            // install anything because a list it cannot verify is worse than
+            // none.
+            rasmi: "https://raw.githubusercontent.com/cc1a2b/taarib-registry/main".to_owned(),
             maraya: vec!["https://cdn.jsdelivr.net/gh/cc1a2b/taarib-registry@main".to_owned()],
             mahalliya: Vec::new(),
             muarrif_amil: None,
