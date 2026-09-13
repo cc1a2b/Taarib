@@ -604,16 +604,29 @@ namespace Taarib.Unity.Mono
             {
                 return null;
             }
-            // Sorted so that a folder holding two patches resolves the same way
-            // every launch. Two is already a broken install; resolving it
-            // differently on alternate launches would make it unreportable.
-            Array.Sort(mawjud, StringComparer.Ordinal);
+            // Newest first, and the name only to break a tie.
+            //
+            // It used to be the name alone, which is deterministic and picks an
+            // arbitrary patch: a game holding a patch from an earlier install
+            // and the one just written loaded whichever name sorted first, and
+            // that was the old one. The install reported success, the log said a
+            // patch had opened, and the game stayed in its original language —
+            // the failure with no visible cause. Whatever else two patches mean,
+            // the one written last is the one somebody just asked for.
+            Array.Sort(mawjud, (awwal, thani) =>
+            {
+                int muqarana = File.GetLastWriteTimeUtc(thani)
+                    .CompareTo(File.GetLastWriteTimeUtc(awwal));
+                return muqarana != 0 ? muqarana : StringComparer.Ordinal.Compare(awwal, thani);
+            });
             if (mawjud.Length > 1)
             {
                 Logger.LogWarning(
-                    $"يوجد {mawjud.Length} ملف رقعة في {dalil}؛ استُخدم "
-                    + $"{Path.GetFileName(mawjud[0])}. | {mawjud.Length} patch files are in "
-                    + $"{dalil}; {Path.GetFileName(mawjud[0])} was used.");
+                    $"يوجد {mawjud.Length} ملف رقعة في {dalil}؛ استُخدم الأحدث كتابةً: "
+                    + $"{Path.GetFileName(mawjud[0])}. احذف ما لم يعد مستعملًا. | "
+                    + $"{mawjud.Length} patch files are in {dalil}; the most recently written "
+                    + $"was used: {Path.GetFileName(mawjud[0])}. Delete the ones you no longer "
+                    + "want.");
             }
             return mawjud[0];
         }

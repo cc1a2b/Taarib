@@ -188,6 +188,42 @@ fn maqasat(nusus: &[MudkhalNass], ahjam: &[f32]) -> TaqreerMaqasat {
     iktishaf.ahsi(nusus)
 }
 
+/// The fingerprint of every translation a package would be compiled from.
+///
+/// A resumed run has to decide whether the container beside it is still the
+/// container this table would produce, and the honest answer is "only if the
+/// translations have not moved since". Counting them would miss an edit that
+/// replaced one string without adding any — which is exactly what the review
+/// workspace does — so the identity and the target text of every translated row
+/// go into the hash.
+///
+/// Order-independent by construction: the rows are hashed into a set that is
+/// sorted before it is folded, because the table's order is the extractor's and
+/// a resume has no reason to preserve it.
+#[must_use]
+pub fn basmat_tarjamat(nusus: &[MudkhalNass]) -> String {
+    let mut basmat: Vec<[u8; 32]> = nusus
+        .iter()
+        .filter_map(|mudkhal| {
+            let hadaf = mudkhal.hadaf.as_deref()?;
+            if hadaf.trim().is_empty() {
+                return None;
+            }
+            let mut hasib = blake3::Hasher::new();
+            hasib.update(mudkhal.id.to_string().as_bytes());
+            hasib.update(b"\0");
+            hasib.update(hadaf.as_bytes());
+            Some(*hasib.finalize().as_bytes())
+        })
+        .collect();
+    basmat.sort_unstable();
+    let mut hasib = blake3::Hasher::new();
+    for basma in &basmat {
+        hasib.update(basma);
+    }
+    sittasi(hasib.finalize().as_bytes())
+}
+
 /// The extraction provenance the build binding is formed from.
 ///
 /// One recipe entry per container extraction actually read, each with its
@@ -514,4 +550,94 @@ const fn ism_aila(aila: taarib_mustalahat::muharrik::AilatMuharrik) -> &'static 
 /// A count as the report's own width.
 fn tul(qeema: usize) -> u64 {
     u64::try_from(qeema).unwrap_or(u64::MAX)
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use taarib_mustalahat::muraja::SijillMuraja;
+    use taarib_mustalahat::nass::{MasdarIstikhraj, NassId, QuyudNass, SiyaqNass, TasnifNass};
+
+    use super::*;
+
+    /// One table row, translated or not.
+    fn satr(mawqi: &str, hadaf: Option<&str>) -> MudkhalNass {
+        MudkhalNass {
+            id: NassId::min_mawqi("hawiya", mawqi, "masdar"),
+            masdar: format!("source {mawqi}"),
+            hadaf: hadaf.map(str::to_owned),
+            muraja: SijillMuraja::jadeed(),
+            siyaq: SiyaqNass::default(),
+            quyud: QuyudNass::default(),
+            nasq_masdar: Vec::new(),
+            nasq_hadaf: Vec::new(),
+            takrar: 1,
+            majmua: None,
+            alamat: Vec::new(),
+            tareeqa: None,
+            muzawwid: None,
+            muharrir: None,
+            akhir_tabdeel: None,
+            tasnif: TasnifNass::Ism,
+            thiqat_tasnif: 100,
+            masdar_istikhraj: MasdarIstikhraj::Sakin,
+            tarmiz: Some("UTF-8".to_owned()),
+        }
+    }
+
+    /// A translation added, and a translation changed, both move the
+    /// fingerprint. Between them they are every way a table can come to deserve
+    /// a package it does not have: a resumed run that translated more, and a
+    /// review that corrected one word.
+    #[test]
+    fn basma_tatabba_kulla_tarjama() {
+        let asas = vec![satr("a", Some("ألف")), satr("b", None)];
+        let awwal = basmat_tarjamat(&asas);
+
+        let azyad = vec![satr("a", Some("ألف")), satr("b", Some("باء"))];
+        assert_ne!(
+            awwal,
+            basmat_tarjamat(&azyad),
+            "a resumed run's new translation left the fingerprint alone, so its package \
+             would never be rebuilt"
+        );
+
+        let muharrar = vec![satr("a", Some("ألفٌ أخرى")), satr("b", None)];
+        assert_ne!(
+            awwal,
+            basmat_tarjamat(&muharrar),
+            "an edited translation left the fingerprint alone"
+        );
+    }
+
+    /// The order the table happens to be in is the extractor's, and a resume has
+    /// no reason to preserve it. An untranslated row contributes nothing, so a
+    /// run that only extracted more strings does not force a recompile.
+    #[test]
+    fn basma_la_tubali_bil_tarteeb_wala_bighayr_almutarjam() {
+        let awwal = vec![satr("a", Some("ألف")), satr("b", Some("باء"))];
+        let maqlub = vec![satr("b", Some("باء")), satr("a", Some("ألف"))];
+        assert_eq!(basmat_tarjamat(&awwal), basmat_tarjamat(&maqlub));
+
+        let mazeed = vec![
+            satr("a", Some("ألف")),
+            satr("b", Some("باء")),
+            satr("c", None),
+            satr("d", Some("   ")),
+        ];
+        assert_eq!(
+            basmat_tarjamat(&awwal),
+            basmat_tarjamat(&mazeed),
+            "a row with no translation, or only blanks, is not something to rebuild for"
+        );
+    }
+
+    /// Two rows that carry the same Arabic are not one row. Hashing the target
+    /// alone would collapse them, and a table that lost a row would keep the
+    /// package that still has it.
+    #[test]
+    fn satran_binafs_altarjama_yabqayan_ithnayn() {
+        let ithnan = vec![satr("a", Some("ألف")), satr("b", Some("ألف"))];
+        let wahid = vec![satr("a", Some("ألف"))];
+        assert_ne!(basmat_tarjamat(&ithnan), basmat_tarjamat(&wahid));
+    }
 }

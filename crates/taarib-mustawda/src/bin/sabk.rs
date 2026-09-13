@@ -570,13 +570,16 @@ struct TalabNashr {
 
 /// What the command line asked for.
 struct Khiyarat {
-    jidhr: PathBuf,
+    jidhr: Option<PathBuf>,
     tasalsul: u64,
-    asas: String,
+    asas: Option<String>,
     mira: Option<String>,
     talabat: Vec<TalabNashr>,
     ism_miftah: Option<String>,
     mulghayat: Vec<(String, String)>,
+    /// Where to write the compiled-in revocation seed, when that is all this
+    /// run is for.
+    badhra: Option<PathBuf>,
 }
 
 const ISTIMAL: &str = "\
@@ -586,6 +589,8 @@ const ISTIMAL: &str = "\
        [--mira <https://mirror/>] [--ism-miftah <keychain account>]
        [--huzma <file.ruqaa> --luba <game-uuid> --ism <title> [--tajawuz <why>]]...
        [--mulgha <64-hex key> --sabab <why>]...
+
+  sabk --badhra assets/qaimat_sahb.json --tasalsul <n> [--ism-miftah <account>]
 
   --jidhr       the repository working tree to write into (required)
   --tasalsul    the manifest sequence number; a client caches on it and will
@@ -606,6 +611,12 @@ const ISTIMAL: &str = "\
                 manifest, where every reader of the catalogue sees it
   --mulgha      a signing key to revoke, as 64 lowercase hex; repeatable, and
                 each one must be followed by its --sabab
+  --badhra      write only the compiled-in revocation seed to this path and
+                stop. The seed is signed by the same key as the served list, so
+                a build anchored to the release key needs one signed by it: a
+                seed the anchor cannot verify stops the safety layer at startup,
+                before a single game is scanned. Nothing else is written and no
+                repository is touched.
 
 Every listing field except the game's identity and title is read out of the
 package's own sealed metadata. A package with no signature is refused, and so is
@@ -617,6 +628,7 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
     let mut hujaj = std::env::args().skip(1);
     let (mut jidhr, mut tasalsul, mut asas, mut mira, mut ism_miftah) =
         (None, None, None, None, None);
+    let mut badhra: Option<PathBuf> = None;
     let mut talabat: Vec<TalabNashr> = Vec::new();
     let mut mulghayat: Vec<(String, String)> = Vec::new();
     let baad = |hujaj: &mut std::iter::Skip<std::env::Args>, wasm: &str| {
@@ -636,6 +648,7 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             "--asas" => asas = Some(baad(&mut hujaj, "--asas")?),
             "--mira" => mira = Some(baad(&mut hujaj, "--mira")?),
             "--ism-miftah" => ism_miftah = Some(baad(&mut hujaj, "--ism-miftah")?),
+            "--badhra" => badhra = Some(PathBuf::from(baad(&mut hujaj, "--badhra")?)),
             "--huzma" => {
                 talabat.push(TalabNashr {
                     huzma: PathBuf::from(baad(&mut hujaj, "--huzma")?),
@@ -709,14 +722,32 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             return Err(format!("--mulgha {miftah} was given no --sabab"));
         }
     }
+    // Seed mode writes one file and reads no repository, so the two arguments
+    // that name a repository are required for casting and meaningless here.
+    if badhra.is_some() {
+        if jidhr.is_some() || asas.is_some() || !talabat.is_empty() {
+            return Err(
+                "--badhra writes only the seed; it takes neither a repository nor a \
+                        package"
+                    .to_owned(),
+            );
+        }
+    } else if jidhr.is_none() || asas.is_none() {
+        return Err(if jidhr.is_none() {
+            "--jidhr is required".to_owned()
+        } else {
+            "--asas is required".to_owned()
+        });
+    }
     Ok(Some(Khiyarat {
-        jidhr: jidhr.ok_or_else(|| "--jidhr is required".to_owned())?,
+        jidhr,
         tasalsul: tasalsul.ok_or_else(|| "--tasalsul is required".to_owned())?,
-        asas: asas.ok_or_else(|| "--asas is required".to_owned())?,
+        asas,
         mira,
         talabat,
         ism_miftah,
         mulghayat,
+        badhra,
     }))
 }
 
@@ -757,14 +788,41 @@ fn nafidh() -> Result<(), String> {
     }
     .map_err(|khata| format!("no signing key in this machine's keychain: {khata}"))?;
 
+    if let Some(wijha) = khiyarat.badhra.as_deref() {
+        let waqt = Timestamp::from_second(unix_alan())
+            .map_err(|khata| format!("the clock reads outside the calendar: {khata}"))?
+            .to_string();
+        let qaima = qaimat_sahb(khiyarat.tasalsul, &waqt, &khass, &[])?;
+        if let Some(walid) = wijha.parent() {
+            fs::create_dir_all(walid).map_err(|khata| format!("{}: {khata}", walid.display()))?;
+        }
+        fs::write(wijha, &qaima).map_err(|khata| format!("{}: {khata}", wijha.display()))?;
+        println!("  seed      {}", wijha.display());
+        println!("    sequence  {}", khiyarat.tasalsul);
+        println!("    issued    {waqt}");
+        println!("    key       {}", hex::encode(khass.aam().bayt()));
+        return Ok(());
+    }
+
+    // Proved once here rather than unwrapped at each use: everything below
+    // writes a repository, and seed mode returned above.
+    let jidhr = khiyarat
+        .jidhr
+        .as_deref()
+        .ok_or_else(|| "--jidhr is required".to_owned())?;
+    let asas = khiyarat
+        .asas
+        .as_deref()
+        .ok_or_else(|| "--asas is required".to_owned())?;
+
     let mut madakhil = Vec::with_capacity(khiyarat.talabat.len());
     for talab in &khiyarat.talabat {
         let madkhal = madkhal_min_huzma(
             &talab.huzma,
             talab.luba,
             &talab.ism,
-            &khiyarat.jidhr,
-            &khiyarat.asas,
+            jidhr,
+            asas,
             khiyarat.mira.as_deref(),
             talab.tajawuz.as_deref(),
         )?;
@@ -794,7 +852,7 @@ fn nafidh() -> Result<(), String> {
     }
 
     let mustawda = ijri(
-        &khiyarat.jidhr,
+        jidhr,
         madakhil,
         BTreeMap::new(),
         khiyarat.tasalsul,

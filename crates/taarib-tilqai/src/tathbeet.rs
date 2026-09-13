@@ -116,6 +116,7 @@ pub fn ijri(
     talab: &TalabTilqai<'_>,
     imkaniyat: &TaqreerImkaniyat,
     masar_huzma: &Path,
+    jidhr_khutut: &Path,
     jidhr_nusakh: &Path,
     muraqib: &Muraqib<'_>,
 ) -> NatijatTilqai<IhsaTathbeet> {
@@ -193,14 +194,50 @@ pub fn ijri(
             || talab.luba.ism.to_owned(),
             |ism| ism.to_string_lossy().into_owned(),
         );
+    // Placed as this engine's adapter reads it: the sealed bytes for every
+    // engine but Unity, whose takeover carries no decompressor and reads only
+    // the uncompressed working copy.
+    //
+    // This pipeline wrote the sealed container straight into the game, and the
+    // one engine it is finished for is the one engine that cannot read it. The
+    // plugin refused the whole patch at `TAARIB-E-6007` — "section 1 is
+    // compressed" — so a run that extracted, translated, compiled, sealed and
+    // installed without a single failure left the game entirely in English,
+    // with the reason in the BepInEx log and nowhere else. The command the
+    // Studio's install button calls has always done this; the one-button run
+    // reached the same installer by another door and skipped it.
+    let bayt_ruqaa = taarib_tathbeet::masar_tathbeet::muhtawa_ruqaa(
+        imkaniyat.muharrik.aila,
+        malaf.bayt().to_vec(),
+        masar_huzma,
+    )
+    .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?;
+    let mut muhtawa = vec![WadaMuhtawa {
+        wajha,
+        bayt: bayt_ruqaa,
+    }];
+    // The faces the package was shaped against travel with it, out of the run's
+    // own font directory — the copies `bina::hayyi` validated and the compiler
+    // shaped against, so the fingerprints in the package match by construction.
+    //
+    // Skipped here as well until now, and for a Unity game it is not optional:
+    // the takeover rasterises through `taarib_jisr` with the patch's own faces
+    // and refuses at launch when `taarib/khutut/` is empty. This run installed
+    // into a game that already had one from an earlier install, which is the
+    // only reason it drew anything at all.
+    muhtawa.extend(
+        taarib_tathbeet::masar_tathbeet::muhtawa_khutut(
+            imkaniyat.muharrik.aila,
+            &maqru.irtibat.khutut,
+            jidhr_khutut,
+        )
+        .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?,
+    );
     let talab_tathbeet = TalabTathbeet {
         luba: &tarif,
         bina: &bina,
         irtibat: &maqru.irtibat,
-        muhtawa: vec![WadaMuhtawa {
-            wajha,
-            bayt: malaf.bayt().to_vec(),
-        }],
+        muhtawa,
         iqrar_taqribi: false,
         tanfidhi: &tanfidhi,
         // The same root the safety gate above was given, for the same reason:

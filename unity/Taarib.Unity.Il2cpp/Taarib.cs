@@ -458,7 +458,17 @@ namespace Taarib.Unity.Il2cpp
             {
                 return null;
             }
-            Array.Sort(mawjud, StringComparer.Ordinal);
+            // Newest first, the name only to break a tie — the Mono twin's rule
+            // and for its reason: sorting by name alone loads whichever patch
+            // happens to sort first, which in a game that has been patched twice
+            // is the older one, and the game then stays in its original language
+            // with nothing in the log to say why.
+            Array.Sort(mawjud, (awwal, thani) =>
+            {
+                int muqarana = File.GetLastWriteTimeUtc(thani)
+                    .CompareTo(File.GetLastWriteTimeUtc(awwal));
+                return muqarana != 0 ? muqarana : StringComparer.Ordinal.Compare(awwal, thani);
+            });
             return mawjud[0];
         }
 

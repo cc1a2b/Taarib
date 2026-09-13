@@ -23,8 +23,11 @@
 #   wasm    row  H1      cargo + wasm-bindgen
 #   mulhaq  rows I1,I2   node adapters-script/ibni.mjs
 #   tajmee  rows D1,J1,K1,M1,N1            stage, verify, write the manifest
+#   badhra  row  L1      sabk --badhra     the revocation seed, release only
 #   wajiha  row  A2      the frontend
 #   huzma   rows A1,A3   tauri build       the installer
+#
+# TAARIB_TASALSUL sets the seed's sequence number; it defaults to 1.
 #
 # Any stage may be skipped with TAARIB_TAKHATTI=unity,wasm — which is safe by
 # construction, because `tajmee` refuses to write a manifest over a tree that is
@@ -58,7 +61,7 @@ while [ "$#" -gt 0 ]; do
     --hadaf) hadaf="${2-}"; shift 2 ;;
     --ahdaf) ahdaf="${2-}"; shift 2 ;;
     --jalb) jalb=1; shift ;;
-    -h|--help) sed -n '2,32p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,41p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) printf 'isdar: unknown argument %s\n' "$1" >&2; exit 2 ;;
   esac
 done
@@ -256,6 +259,23 @@ if ! tuhmal tajmee; then
   # Rows H1, I1 and I2 are read from <jidhr>/target whatever this says, because
   # none of the three is a cargo output.
   "$QARGO" run --release -q -p taarib-tajmee -- "${wusata[@]}"
+fi
+
+if [ -n "$MIRSA" ] && ! tuhmal badhra; then
+  marhala "badhra — row L1, the revocation seed"
+  # The seed is compiled into the studio through `include_bytes!`, and it is
+  # verified at startup against whatever anchor the build carries. The committed
+  # one is signed by the development key, so a release build anchored elsewhere
+  # rejects it and the safety layer stops before a game is scanned — the failure
+  # says "the signature does not verify against the owner key" and names nothing
+  # about keys, which is why this ran into it the hard way once already.
+  #
+  # Written before `huzma` because the studio compiles it in, and the sequence
+  # tracks the manifest's: a seed older than the served list is replaced by it
+  # on first fetch, which is the direction that has to hold.
+  "$QARGO" run --release -q -p taarib-mustawda --bin sabk \
+    ${SIMAT_ISDAR[@]+"${SIMAT_ISDAR[@]}"} \
+    -- --badhra assets/qaimat_sahb.json --tasalsul "${TAARIB_TASALSUL:-1}"
 fi
 
 if ! tuhmal wajiha; then

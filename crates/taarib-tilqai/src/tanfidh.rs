@@ -279,7 +279,23 @@ async fn ijri(
 
     // --- 5 and 6 — compile and seal -----------------------------------------
     taqreer.marhala = MarhalaTilqai::Tarqee;
-    let sealed = sijill.tamma(MarhalaTilqai::Khatm) && masarat.huzma.is_file();
+    // A sealed container beside the journal is reused only when it was compiled
+    // from exactly these translations.
+    //
+    // It used to be reused whenever it existed and opened, and that quietly
+    // capped every resumed run at whatever the first one had translated: the
+    // free provider stops when the endpoint refuses the machine, the resume
+    // translates the rest, and the compile it needs was skipped because a
+    // package was already there. The run then installed the first pass's patch
+    // and reported success, so the only visible symptom was a game still in
+    // English — the failure this whole stage exists to prevent.
+    let basmat_nusus = bina::basmat_tarjamat(&madakhil);
+    let sealed = sijill.tamma(MarhalaTilqai::Khatm)
+        && masarat.huzma.is_file()
+        && matches!(
+            sijill.qayd(MarhalaTilqai::Tarqee),
+            Some(QaydMarhala::Tarqee { basmat_nusus: sabiq, .. }) if *sabiq == basmat_nusus
+        );
     if sealed && MalafRuqaa::iftah(&masarat.huzma).is_ok() {
         istanif(
             taqreer,
@@ -312,6 +328,7 @@ async fn ijri(
                 nusus: ihsa.nusus,
                 takhtitat: ihsa.takhtitat,
                 safahat: ihsa.safahat,
+                basmat_nusus,
             },
             tahdeer.azwaj,
             Some(tahdeer.azwaj),
@@ -358,7 +375,16 @@ async fn ijri(
     }
 
     let bidaya = Instant::now();
-    let mut ihsa = hajiz(|| tathbeet::ijri(talab, &imkaniyat, &masarat.huzma, &nusakh, muraqib))?;
+    let mut ihsa = hajiz(|| {
+        tathbeet::ijri(
+            talab,
+            &imkaniyat,
+            &masarat.huzma,
+            &masarat.khutut,
+            &nusakh,
+            muraqib,
+        )
+    })?;
     sajjil(
         &mut sijill,
         taqreer,
@@ -457,6 +483,7 @@ fn ihsa_min_sijill(sijill: &SijillMashwar, masar: &Path) -> Option<crate::taqree
             nusus,
             takhtitat,
             safahat,
+            ..
         } => (*hajm, *nusus, *takhtitat, *safahat),
         _ => return None,
     };

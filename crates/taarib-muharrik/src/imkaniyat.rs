@@ -2213,8 +2213,10 @@ mod ikhtibarat {
             assert_eq!(hukm(&ghayr), JahiziyatTashghil::Ghaiba, "{khalfiya:?}");
             jumal.push(jumlatan(&ghayr).1);
         }
-        assert_ne!(
-            jumal[0], jumal[1],
+        jumal.dedup();
+        assert_eq!(
+            jumal.len(),
+            2,
             "the unwatched backend and the unknown one share one sentence"
         );
     }

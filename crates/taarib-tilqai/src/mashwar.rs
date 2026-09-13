@@ -193,6 +193,22 @@ pub enum QaydMarhala {
         takhtitat: u64,
         /// Atlas pages it holds.
         safahat: u64,
+        /// The fingerprint of the translations this container was compiled
+        /// from, as [`crate::bina::basmat_tarjamat`] takes it.
+        ///
+        /// What makes a resumed run notice that the package on disk is behind
+        /// the table. Without it the run reused any sealed container it found:
+        /// a resume that translated another fifteen hundred strings recompiled
+        /// nothing, installed the package the first run had sealed, and left
+        /// the game in the language the user had just paid to leave.
+        ///
+        /// Defaulted so a journal written before this field existed reads as
+        /// the empty fingerprint, which matches no table and therefore
+        /// recompiles. That is the safe direction: the cost of being wrong is
+        /// one compile, and the cost of the other direction is a patch that
+        /// silently omits everything translated since.
+        #[serde(default)]
+        basmat_nusus: String,
     },
     /// The container was sealed in place.
     Khatm {
