@@ -158,7 +158,7 @@ namespace Taarib.Unity.Mono.Anzimat
         /// </remarks>
         /// <param name="asl">The string the game is about to draw.</param>
         /// <param name="miftah">Its key, so a sighting is counted once.</param>
-        private void Iltaqit(string asl, ulong miftah)
+        private void Iltaqit(string asl, ulong miftah, Component? juz)
         {
             JalsatIltiqat? hali = jalsa;
             if (hali is null || string.IsNullOrEmpty(asl))
@@ -170,7 +170,44 @@ namespace Taarib.Unity.Mono.Anzimat
             talab.Asl = asl;
             talab.Nizam = NizamNass.NassAalami;
             talab.Itar = Time.frameCount;
+            // The path and the scene are what make a capture actionable: the
+            // reader's fold key is (text, component path), so leaving the path
+            // empty collapses every widget that draws the same word into one
+            // record with one measurement, and a translator reading the session
+            // has no way back to the screen a string was on.
+            talab.Masar = Masar(juz);
+            talab.Mashhad = juz is null
+                ? null
+                : UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             hali.Sajjil(in talab);
+        }
+
+        /// <summary>The component's path in its scene, as a translator reads it.</summary>
+        /// <param name="juz">The component, or null when the caller has none.</param>
+        /// <returns>The path, or the empty string.</returns>
+        private static string Masar(Component? juz)
+        {
+            if (juz is null)
+            {
+                return string.Empty;
+            }
+            Transform? tahwil = juz.transform;
+            if (tahwil is null)
+            {
+                return string.Empty;
+            }
+            System.Text.StringBuilder bani = new System.Text.StringBuilder(64);
+            bani.Append(tahwil.name);
+            Transform? walid = tahwil.parent;
+            // Bounded because a path is a label, not a proof: a scene graph
+            // deeper than this is pathological and the top of the path is the
+            // part that identifies the screen.
+            for (int umq = 0; umq < 16 && walid is not null; umq++)
+            {
+                bani.Insert(0, '/').Insert(0, walid.name);
+                walid = walid.parent;
+            }
+            return bani.ToString();
         }
 
         private readonly MaqbadSiyaq? siyaq;
@@ -474,7 +511,7 @@ namespace Taarib.Unity.Mono.Anzimat
             // recorded nothing at all.
             if (jalsa is not null)
             {
-                Iltaqit(nass, miftah);
+                Iltaqit(nass, miftah, mujassam as Component);
                 return false;
             }
             int fahras = ruqaa.JidNass(miftah);

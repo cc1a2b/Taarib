@@ -1066,8 +1066,48 @@ namespace Taarib.Unity.Mushtarak
             // treats it as "no budget was in force".
             katib.Write(",\"mizaniyat_itar_mikro\":0}");
             katib.Write(NihayatSatr);
-            _ = tam;
-            _ = adadMuhmal;
+        }
+
+        /// <summary>
+        /// Writes the session's footer: that it ended, and what it counted.
+        /// </summary>
+        /// <param name="katib">The destination.</param>
+        /// <param name="adadSijillat">How many distinct strings were recorded.</param>
+        /// <param name="tam">Whether the session ended without filling.</param>
+        /// <param name="adadMuhmal">How many sightings were dropped after it filled.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="katib"/> is null.</exception>
+        /// <remarks>
+        /// Without it every session written from inside a game is reported as
+        /// one whose process was killed — the reading side's `iktamalat()` is
+        /// exactly "is there a footer" — and a capture that hit its cap and
+        /// stopped recording is indistinguishable from a complete one. Both
+        /// numbers were known on this side all along and neither crossed.
+        /// </remarks>
+        public static void AktubKhitam(
+            TextWriter katib, int adadSijillat, bool tam, long adadMuhmal)
+        {
+            if (katib is null)
+            {
+                throw new ArgumentNullException(nameof(katib));
+            }
+            katib.Write("{\"naw\":\"khitam\",\"intaha\":");
+            AktubNass(katib, DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture));
+            katib.Write(",\"ihsaat\":{\"ahdath\":");
+            AktubSaheeh(katib, adadSijillat + adadMuhmal);
+            katib.Write(",\"musajjala\":");
+            AktubSaheeh(katib, adadSijillat);
+            katib.Write(",\"nusus\":");
+            AktubSaheeh(katib, adadSijillat);
+            katib.Write(",\"marfuda_farigh\":0,\"marfuda_tawil\":0,\"marfuda_imtila\":");
+            AktubSaheeh(katib, tam ? 0L : adadMuhmal);
+            katib.Write(",\"marfuda_tasadum\":0,\"fajawat\":0,\"faqd_naql\":");
+            AktubSaheeh(katib, tam ? 0L : adadMuhmal);
+            katib.Write(",\"asturr_talifa\":0,\"mizaniya\":{\"itarat\":0,\"itarat_mutajawiza\":0,");
+            katib.Write("\"majmu_mikro\":0,\"aqsa_mikro\":0,\"aqsa_khutwa\":0,");
+            // Three closes: the budget object, the statistics object, and the
+            // line's own.
+            katib.Write("\"mahdhufa_mutakarrira\":0,\"mahdhufa_kulliya\":0}}}");
+            katib.Write(NihayatSatr);
         }
 
         /// <summary>
@@ -1094,11 +1134,23 @@ namespace Taarib.Unity.Mushtarak
                 throw new ArgumentNullException(nameof(katib));
             }
 
+            // A redacted sighting is not written at all. The reading side has no
+            // redaction concept — `MulahazaMutakarrira` is a string somebody is
+            // going to translate — so writing the hash into the text field would
+            // put rows like `3f2a91c04b7e8d15` into a translator's workspace as
+            // work to do. The sighting was deliberately not recorded in the
+            // clear; the honest way to carry that across a boundary that cannot
+            // express it is not to carry it.
+            if (sijill.Hassas)
+            {
+                return;
+            }
+
             // `taarib_istikhraj::iltiqat::MulahazaMutakarrira`, field for field.
             katib.Write("{\"naw\":\"nass\",\"miftah\":");
             AktubNass(katib, Miftah(in sijill));
             katib.Write(",\"nass\":");
-            AktubNass(katib, sijill.Hassas ? Sitta(sijill.BasmatAsl) : (sijill.Asl ?? string.Empty));
+            AktubNass(katib, sijill.Asl ?? string.Empty);
             katib.Write(",\"masar_mukawwin\":");
             AktubNass(katib, sijill.Masar ?? string.Empty);
             katib.Write(",\"mashhad\":");
@@ -1114,30 +1166,28 @@ namespace Taarib.Unity.Mushtarak
             AktubSaheeh(katib, sijill.Adad > 0 ? sijill.Adad : 1);
             katib.Write(",\"awwal_tasalsul\":");
             AktubSaheeh(katib, sijill.Tasalsul);
-            katib.Write(",\"awwal_waqt_mil\":0,\"akhir_waqt_mil\":0,\"quyud\":{\"aqsa_ahruf\":null,\"aqsa_ard\":");
-            AktubKasrAwNull(katib, sijill.Mustatil.Ard);
-            katib.Write(",\"aqsa_irtifa\":");
-            AktubKasrAwNull(katib, sijill.Mustatil.Irtifa);
-            katib.Write(",\"hajm_khatt\":");
+            // `aqsa_ard` and `aqsa_irtifa` stay null, and that is the whole point
+            // of them. `HadathIltiqat::quyud` on the reading side spends a page
+            // forbidding exactly the thing that is tempting here — filling them
+            // from the drawn rectangle. Most interface labels size themselves to
+            // their content, so that rectangle is the width of the *English*
+            // string; recording it as the available width asserts the Arabic
+            // must be no wider, which it usually is, and the overflow report
+            // then fires on nearly every correctly translated string. Those two
+            // fields take a bound the engine imposed, and a Unity takeover point
+            // does not have one to give.
+            //
+            // `mustatil` stays null for a second reason: this side measures in
+            // the engine's Y-up space, where the vertical field is the bottom
+            // edge, and `Mustatil::a` on the reading side is the top edge in
+            // Y-down screen space. Converting needs the viewport height, which a
+            // sighting does not carry. A rectangle off by its own height and
+            // mirrored about its middle reads as a plausible layout, which is
+            // the worst kind of wrong number to write down.
+            katib.Write(",\"awwal_waqt_mil\":0,\"akhir_waqt_mil\":0,\"quyud\":{\"aqsa_ahruf\":null,");
+            katib.Write("\"aqsa_ard\":null,\"aqsa_irtifa\":null,\"hajm_khatt\":");
             AktubKasrAwNull(katib, sijill.Hajm);
-            katib.Write(",\"mustatil\":");
-            if (sijill.Mustatil.Ard > 0f || sijill.Mustatil.Irtifa > 0f)
-            {
-                katib.Write("{\"s\":");
-                AktubKasr(katib, sijill.Mustatil.Yasar);
-                katib.Write(",\"a\":");
-                AktubKasr(katib, sijill.Mustatil.Asfal);
-                katib.Write(",\"ard\":");
-                AktubKasr(katib, sijill.Mustatil.Ard);
-                katib.Write(",\"irtifa\":");
-                AktubKasr(katib, sijill.Mustatil.Irtifa);
-                katib.Write('}');
-            }
-            else
-            {
-                katib.Write("null");
-            }
-            katib.Write(",\"satr_wahid\":");
+            katib.Write(",\"mustatil\":null,\"satr_wahid\":");
             katib.Write(sijill.Yaltaff ? "false" : "true");
             katib.Write("},\"laqta\":null,\"muayyana\":false}");
             katib.Write(NihayatSatr);
@@ -1282,337 +1332,6 @@ namespace Taarib.Unity.Mushtarak
             return qeema.ToString("x16", CultureInfo.InvariantCulture);
         }
 
-        /// <summary>
-        /// Writes one free-text field with the escaping the format defines.
-        /// </summary>
-        /// <param name="katib">The destination.</param>
-        /// <param name="nass">The field; null and empty both write nothing.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="katib"/> is null.</exception>
-        public static void AktubHaql(TextWriter katib, string? nass)
-        {
-            if (katib is null)
-            {
-                throw new ArgumentNullException(nameof(katib));
-            }
-            if (string.IsNullOrEmpty(nass))
-            {
-                return;
-            }
-
-            string n = nass!;
-            for (int i = 0; i < n.Length; i++)
-            {
-                char h = n[i];
-                switch (h)
-                {
-                    case '\\':
-                        katib.Write("\\\\");
-                        continue;
-                    case '\t':
-                        katib.Write("\\t");
-                        continue;
-                    case '\n':
-                        katib.Write("\\n");
-                        continue;
-                    case '\r':
-                        katib.Write("\\r");
-                        continue;
-                    default:
-                        break;
-                }
-
-                if (h < ' ' || h == '\u007F')
-                {
-                    katib.Write("\\x");
-                    katib.Write(Khanat[(h >> 4) & 0xF]);
-                    katib.Write(Khanat[h & 0xF]);
-                    continue;
-                }
-
-                if (char.IsHighSurrogate(h))
-                {
-                    if (i + 1 < n.Length && char.IsLowSurrogate(n[i + 1]))
-                    {
-                        katib.Write(h);
-                        katib.Write(n[i + 1]);
-                        i++;
-                        continue;
-                    }
-                    AktubWahda(katib, h);
-                    continue;
-                }
-                if (char.IsLowSurrogate(h))
-                {
-                    AktubWahda(katib, h);
-                    continue;
-                }
-
-                katib.Write(h);
-            }
-        }
-
-        /// <summary>
-        /// Undoes <see cref="AktubHaql"/>. The inverse is written out here, in
-        /// code, so the escape rule has one definition rather than a definition
-        /// and a description of it.
-        /// </summary>
-        /// <param name="haql">The field as it appears between two separators.</param>
-        /// <returns>The original text.</returns>
-        /// <exception cref="KhataTaarib">
-        /// The field ends in a lone backslash, or a backslash introduces a
-        /// sequence the format does not define. Refused rather than guessed:
-        /// guessing turns one corrupt row into a plausible one.
-        /// </exception>
-        public static string Fukk(ReadOnlySpan<char> haql)
-        {
-            if (haql.Length == 0)
-            {
-                return string.Empty;
-            }
-            if (haql.IndexOf('\\') < 0)
-            {
-                return new string(haql);
-            }
-
-            StringBuilder bani = new StringBuilder(haql.Length);
-            for (int i = 0; i < haql.Length; i++)
-            {
-                char h = haql[i];
-                if (h != '\\')
-                {
-                    bani.Append(h);
-                    continue;
-                }
-                if (i + 1 >= haql.Length)
-                {
-                    throw RafdSatr(
-                        "a field ends in a lone backslash",
-                        "ينتهي حقل بشرطة مائلة وحدها");
-                }
-
-                char baad = haql[i + 1];
-                i++;
-                switch (baad)
-                {
-                    case '\\':
-                        bani.Append('\\');
-                        continue;
-                    case 't':
-                        bani.Append('\t');
-                        continue;
-                    case 'n':
-                        bani.Append('\n');
-                        continue;
-                    case 'r':
-                        bani.Append('\r');
-                        continue;
-                    case 'x':
-                        bani.Append((char)Sitta(haql, ref i, 2));
-                        continue;
-                    case 'u':
-                        bani.Append((char)Sitta(haql, ref i, 4));
-                        continue;
-                    default:
-                        throw RafdSatr(
-                            $"a backslash introduces the undefined sequence \\{baad}",
-                            $"شرطة مائلة تبدأ تسلسلًا غير معرَّف \\{baad}");
-                }
-            }
-            return bani.ToString();
-        }
-
-        /// <summary>
-        /// Parses the version line and refuses anything this build cannot read.
-        /// </summary>
-        /// <param name="satr">The first line of a capture file, without its terminator.</param>
-        /// <returns>What the line declares.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="satr"/> is null.</exception>
-        /// <exception cref="KhataTaarib">
-        /// The line is not a capture version line, or declares a format version
-        /// or a field count this build does not read. This is the refusal the
-        /// version marker exists for, and it happens before one record is
-        /// parsed.
-        /// </exception>
-        public static RasIltiqat IqraRas(string satr)
-        {
-            if (satr is null)
-            {
-                throw new ArgumentNullException(nameof(satr));
-            }
-
-            Span<int> bidayat = stackalloc int[AdadHuqulRas];
-            Span<int> atwal = stackalloc int[AdadHuqulRas];
-            int adad = Iqsim(satr, bidayat, atwal);
-            if (adad != AdadHuqulRas)
-            {
-                throw Rafd(
-                    4302, Ramz.QeemaBatila, Khutwa.FathTashkhis,
-                    $"سطر إصدار ملف الالتقاط يحوي {adad} حقلًا والمتوقع {AdadHuqulRas}؛ "
-                    + "الملف ليس ملف التقاط أو بُتر أوله.",
-                    $"The capture file's version line has {adad} fields; {AdadHuqulRas} were "
-                    + "expected. The file is not a capture, or its start was truncated.");
-            }
-            if (!satr.AsSpan(bidayat[0], atwal[0]).SequenceEqual(Wasm.AsSpan()))
-            {
-                throw Rafd(
-                    4302, Ramz.QeemaBatila, Khutwa.FathTashkhis,
-                    $"سطر إصدار ملف الالتقاط يبدأ بـ \"{satr.Substring(bidayat[0], atwal[0])}\" "
-                    + $"بدل \"{Wasm}\".",
-                    $"The capture file's version line starts with "
-                    + $"\"{satr.Substring(bidayat[0], atwal[0])}\" rather than \"{Wasm}\".");
-            }
-
-            int isdar = (int)Saheeh(satr, bidayat[1], atwal[1], "isdar", int.MaxValue);
-            if (isdar != IsdarSigha)
-            {
-                bool ahdath = isdar > IsdarSigha;
-                throw Rafd(
-                    4302, Ramz.IsdarGhayrMutawafiq,
-                    ahdath ? Khutwa.TahdithTaarib : Khutwa.FathTashkhis,
-                    $"إصدار صيغة الالتقاط {isdar}، وهذا البناء يقرأ الإصدار {IsdarSigha} فقط.",
-                    $"The capture format version is {isdar}; this build reads version "
-                    + $"{IsdarSigha} only.");
-            }
-
-            int adadHuqul = (int)Saheeh(satr, bidayat[2], atwal[2], "adad_huqul", int.MaxValue);
-            if (adadHuqul != AdadHuqul)
-            {
-                throw Rafd(
-                    4302, Ramz.IsdarGhayrMutawafiq, Khutwa.TahdithTaarib,
-                    $"سطر الإصدار يعلن {adadHuqul} حقلًا لكل سجل، وهذا البناء يقرأ "
-                    + $"{AdadHuqul} حقلًا، والإصدار نفسه في الملفين.",
-                    $"The version line declares {adadHuqul} fields per record and this build "
-                    + $"reads {AdadHuqul}, at the same format version.");
-            }
-
-            int adadSijillat =
-                (int)Saheeh(satr, bidayat[3], atwal[3], "adad_sijillat", int.MaxValue);
-            long tamKhaam = Saheeh(satr, bidayat[4], atwal[4], "tam", 1);
-            long adadMuhmal =
-                Saheeh(satr, bidayat[5], atwal[5], "adad_muhmal", long.MaxValue);
-            return new RasIltiqat(isdar, adadHuqul, adadSijillat, tamKhaam != 0, adadMuhmal);
-        }
-
-        /// <summary>
-        /// Parses one record line.
-        /// </summary>
-        /// <param name="satr">The line, without its terminator.</param>
-        /// <returns>The record.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="satr"/> is null.</exception>
-        /// <exception cref="KhataTaarib">
-        /// The line has the wrong number of fields, or a field does not parse.
-        /// Refused by name rather than skipped, because a capture with rows
-        /// quietly dropped is the same failure the record cap refuses to
-        /// commit: a patch missing strings nobody knows are missing.
-        /// </exception>
-        public static SijillIltiqat IqraSatr(string satr)
-        {
-            if (satr is null)
-            {
-                throw new ArgumentNullException(nameof(satr));
-            }
-
-            Span<int> bidayat = stackalloc int[AdadHuqul];
-            Span<int> atwal = stackalloc int[AdadHuqul];
-            int adad = Iqsim(satr, bidayat, atwal);
-            if (adad != AdadHuqul)
-            {
-                throw Rafd(
-                    4303, Ramz.QeemaBatila, Khutwa.FathTashkhis,
-                    $"سطر في ملف الالتقاط يحوي {adad} حقلًا والمتوقع {AdadHuqul}.",
-                    $"A line in the capture file has {adad} fields; {AdadHuqul} were expected.");
-            }
-
-            SijillIltiqat sijill = default;
-            sijill.Huwiya = Sittaashar(satr, bidayat[0], atwal[0], "huwiya");
-            sijill.Tasalsul = Saheeh(satr, bidayat[1], atwal[1], "tasalsul", long.MaxValue);
-            sijill.Itar = Saheeh(satr, bidayat[2], atwal[2], "itar", long.MaxValue);
-            sijill.Adad = Saheeh(satr, bidayat[3], atwal[3], "adad", long.MaxValue);
-            sijill.Nizam = (NizamNass)Saheeh(satr, bidayat[4], atwal[4], "nizam", byte.MaxValue);
-
-            uint alam = (uint)Saheeh(satr, bidayat[5], atwal[5], "alam", uint.MaxValue);
-            sijill.Yaltaff = (alam & AlamatSijill.Iltifaf) != 0;
-            sijill.Hassas = (alam & AlamatSijill.Hassas) != 0;
-
-            sijill.Hajm = Kasr(satr, bidayat[6], atwal[6], "hajm");
-            sijill.Mustatil.Yasar = Kasr(satr, bidayat[7], atwal[7], "yasar");
-            sijill.Mustatil.Asfal = Kasr(satr, bidayat[8], atwal[8], "asfal");
-            sijill.Mustatil.Ard = Kasr(satr, bidayat[9], atwal[9], "ard");
-            sijill.Mustatil.Irtifa = Kasr(satr, bidayat[10], atwal[10], "irtifa");
-            sijill.TulAsl = (int)Saheeh(satr, bidayat[11], atwal[11], "tul", int.MaxValue);
-            sijill.Mashhad = Fukk(satr.AsSpan(bidayat[12], atwal[12]));
-            sijill.Masar = Fukk(satr.AsSpan(bidayat[13], atwal[13]));
-
-            if (sijill.Hassas)
-            {
-                sijill.Asl = string.Empty;
-                sijill.BasmatAsl = Sittaashar(satr, bidayat[14], atwal[14], "basma");
-            }
-            else
-            {
-                sijill.Asl = Fukk(satr.AsSpan(bidayat[14], atwal[14]));
-                sijill.BasmatAsl = 0;
-            }
-            return sijill;
-        }
-
-        /// <summary>
-        /// Reads a whole capture file into the caller's list.
-        /// </summary>
-        /// <param name="qari">The source, positioned at the version line.</param>
-        /// <param name="hadaf">Where the records go; appended to, never cleared.</param>
-        /// <returns>What the version line declared, so the caller can act on
-        /// <see cref="RasIltiqat.Tam"/>.</returns>
-        /// <exception cref="ArgumentNullException">Either argument is null.</exception>
-        /// <exception cref="KhataTaarib">
-        /// The version line is unreadable, a record line is malformed, or the
-        /// file holds fewer records than its own first line declares.
-        /// </exception>
-        /// <remarks>
-        /// The declared record count is authoritative: exactly that many lines
-        /// are read, and running out first is a refusal rather than a short
-        /// list. A capture cut off by a killed process is otherwise
-        /// indistinguishable from a complete one, and the whole reason the cap
-        /// refuses to evict is that a translator must never be handed a patch
-        /// whose missing strings are invisible. Anything after the declared
-        /// count is ignored, so a trailing blank line is harmless.
-        /// </remarks>
-        public static RasIltiqat Iqra(TextReader qari, List<SijillIltiqat> hadaf)
-        {
-            if (qari is null)
-            {
-                throw new ArgumentNullException(nameof(qari));
-            }
-            if (hadaf is null)
-            {
-                throw new ArgumentNullException(nameof(hadaf));
-            }
-
-            string? awwal = qari.ReadLine();
-            if (awwal is null)
-            {
-                throw Rafd(
-                    4302, Ramz.QeemaBatila, Khutwa.FathTashkhis,
-                    "ملف الالتقاط فارغ؛ لا سطر إصدار فيه.",
-                    "The capture file is empty; it has no version line.");
-            }
-
-            RasIltiqat ras = IqraRas(awwal);
-            for (int i = 0; i < ras.AdadSijillat; i++)
-            {
-                string? satr = qari.ReadLine();
-                if (satr is null)
-                {
-                    throw Rafd(
-                        4304, Ramz.QeemaBatila, Khutwa.FathTashkhis,
-                        $"ملف الالتقاط يعلن {ras.AdadSijillat} سجلًا ويحوي {i}؛ الملف مبتور.",
-                        $"The capture file declares {ras.AdadSijillat} records and holds {i}; "
-                        + "it is truncated.");
-                }
-                hadaf.Add(IqraSatr(satr));
-            }
-            return ras;
-        }
 
         /// <summary>Writes a 64-bit value as exactly sixteen lowercase hex digits.</summary>
         private static void AktubSitta(TextWriter katib, ulong qeema)
@@ -2256,6 +1975,7 @@ namespace Taarib.Unity.Mushtarak
                     }
                     maktub += nusikh;
                 }
+                Iltiqat.AktubKhitam(katib, adadAn, tamAn, muhmalAn);
                 katib.Flush();
                 return maktub;
             }

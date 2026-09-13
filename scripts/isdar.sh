@@ -285,6 +285,16 @@ fi
 
 if [ -n "$MIRSA" ] && ! tuhmal badhra; then
   marhala "badhra — row L1, the revocation seed"
+  # The seed is compiled in from a fixed source path, so a release build has to
+  # replace the committed one — and put it back. Left in place it makes the
+  # working tree dirty with a file signed by a key no development build trusts,
+  # and every `cargo test` afterwards fails on a revocation list that "does not
+  # verify against the owner key". Restored on any exit, including a failure
+  # part-way through the bundler.
+  BADHRA_ASLIYA="$(mktemp)"
+  cp assets/qaimat_sahb.json "$BADHRA_ASLIYA"
+  # shellcheck disable=SC2064 # the path is expanded now, on purpose
+  trap "cp '$BADHRA_ASLIYA' '$JIDHR/assets/qaimat_sahb.json'; rm -f '$BADHRA_ASLIYA'" EXIT
   # The seed is compiled into the studio through `include_bytes!`, and it is
   # verified at startup against whatever anchor the build carries. The committed
   # one is signed by the development key, so a release build anchored elsewhere
