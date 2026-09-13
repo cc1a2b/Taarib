@@ -335,7 +335,7 @@ namespace Taarib.Unity.Mono
                 // are, so a game with both TextMeshPro and NGUI would double its
                 // text draw calls for nothing.
                 MawaridIstila? mushtaraka = MawaridIstila.Insha(
-                    maftuha, siyaqJadid, silsilaJadida, lawhaJadida);
+                    maftuha, siyaqJadid, silsilaJadida, lawhaJadida, jalsa);
                 if (mushtaraka is null)
                 {
                     throw new KhataTaarib(
@@ -351,6 +351,9 @@ namespace Taarib.Unity.Mono
                 tarqee = harmuni;
                 RakkibAnzima(siyaqIstila, harmuni, mushtaraka);
 
+                // Subscribed once the takeover is up, so a failure before this
+                // point leaves no handler pointing at a half-built plugin.
+                Application.quitting += AlaKhurujTatbiq;
                 Halat = istila.Yaltaqit ? HalatTaarib.Iltiqat : HalatTaarib.Amil;
                 if (anzima.Count == 0)
                 {
@@ -384,15 +387,33 @@ namespace Taarib.Unity.Mono
         }
 
         /// <summary>
-        /// Set by <see cref="OnApplicationQuit"/>, which Unity raises before
-        /// any <see cref="OnDestroy"/> of a quit, so the teardown below can
-        /// tell the end of the process from the loss of its host object.
+        /// Set when the process is ending, so the teardown below can tell the
+        /// end of the run from the loss of its host object.
         /// </summary>
         private bool yukhrij;
 
-        private void OnApplicationQuit()
+        /// <summary>
+        /// Unity's own end-of-run signal, taken from the static event rather
+        /// than the message.
+        /// </summary>
+        /// <remarks>
+        /// <c>OnApplicationQuit</c> is delivered to live components, and this
+        /// one is routinely dead: R.E.P.O. destroys BepInEx's manager object at
+        /// frame 0 and the takeover deliberately outlives it. So the message
+        /// never arrived, <see cref="Fakkik"/> never ran, and everything that
+        /// happens at teardown never happened — including writing the capture
+        /// file, which is the whole output of a capture session. A translator
+        /// played the game, the log said strings were being recorded, and the
+        /// file was not there afterwards.
+        /// <para>
+        /// <c>Application.quitting</c> is static, fires once for the process,
+        /// and does not care whether any particular object is alive.
+        /// </para>
+        /// </remarks>
+        private void AlaKhurujTatbiq()
         {
             yukhrij = true;
+            Fakkik();
         }
 
         /// <summary>
@@ -425,6 +446,11 @@ namespace Taarib.Unity.Mono
         /// <summary>Tears the takeover down. Never throws.</summary>
         private void Fakkik()
         {
+            // Removed first: the event is static and a handler left pointing at
+            // a torn-down plugin would run the whole teardown a second time at
+            // the end of the process.
+            Application.quitting -= AlaKhurujTatbiq;
+
             for (int i = anzima.Count - 1; i >= 0; i--)
             {
                 try

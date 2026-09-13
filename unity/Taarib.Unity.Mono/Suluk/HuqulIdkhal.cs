@@ -105,7 +105,82 @@ namespace Taarib.Unity.Mono.Suluk
         /// game that draws thousands of uncovered strings — every number, every
         /// player name — would otherwise turn the log into the string table.
         /// </summary>
-        private const int HaddFawtat = 400;
+        private const int HaddFawtat = 1500;
+
+        private static readonly HashSet<ulong> Isabat = new HashSet<ulong>();
+
+        /// <summary>
+        /// How many newly-seen distinct strings pass between coverage lines.
+        /// </summary>
+        private const int FasilTaghtiya = 100;
+
+        private static int munduAkhirTaqreer;
+
+        /// <summary>
+        /// Records a string the patch did cover, so the log can say how much of
+        /// what this game draws the patch actually reaches.
+        /// </summary>
+        /// <remarks>
+        /// The miss list on its own answers "what is missing" and not "how
+        /// much", and "how much" is the question somebody looking at a
+        /// half-Arabic screen is really asking. Distinct strings rather than
+        /// draws: a menu rebuilt sixty times a second would otherwise report
+        /// its own frame rate as coverage.
+        /// </remarks>
+        /// <param name="miftah">The key that hit.</param>
+        public static void Isaba(ulong miftah)
+        {
+            if (SijillFawt is null)
+            {
+                return;
+            }
+            lock (Fawtat)
+            {
+                if (!Isabat.Add(miftah))
+                {
+                    return;
+                }
+            }
+            Taqreer();
+        }
+
+        /// <summary>Writes a coverage line once every <see cref="FasilTaghtiya"/>
+        /// newly-seen strings.</summary>
+        private static void Taqreer()
+        {
+            Action<string>? sijill = SijillFawt;
+            if (sijill is null)
+            {
+                return;
+            }
+            int isabat;
+            int fawtat;
+            lock (Fawtat)
+            {
+                isabat = Isabat.Count;
+                fawtat = Fawtat.Count;
+                int majmu = isabat + fawtat;
+                if (majmu - munduAkhirTaqreer < FasilTaghtiya)
+                {
+                    return;
+                }
+                munduAkhirTaqreer = majmu;
+            }
+            try
+            {
+                int majmu = isabat + fawtat;
+                int miawiya = majmu == 0 ? 0 : (int)((long)isabat * 100 / majmu);
+                sijill(
+                    $"التغطية: {isabat} من {majmu} نصًّا مميَّزًا رُسمت من الرقعة ({miawiya}%)"
+                    + $" | coverage: {isabat} of {majmu} distinct string(s) drawn so far came from"
+                    + $" the patch ({miawiya}%).");
+            }
+            catch (Exception)
+            {
+                // Same reason as below: a sink that throws is the host's
+                // problem, and a coverage line is not worth a second failure.
+            }
+        }
 
         /// <summary>
         /// Reports a string the patch had no entry for, once per distinct
@@ -134,6 +209,7 @@ namespace Taarib.Unity.Mono.Suluk
             {
                 return;
             }
+            Taqreer();
             try
             {
                 sijill("نصّ ليس في الرقعة | not in the patch: " + nass);

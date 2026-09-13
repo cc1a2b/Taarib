@@ -633,6 +633,46 @@ namespace Taarib.Unity.Mono.Anzimat
         private readonly MasdarAshkal masdar;
         private readonly Ruqaa ruqaa;
         private readonly Takhtit? takhtit;
+
+        /// <summary>
+        /// The capture session, or <c>null</c> when this takeover is replacing
+        /// text rather than recording it. Non-null puts it in observe-only
+        /// posture: record what the game is about to draw, and let the game
+        /// draw it.
+        /// </summary>
+        private readonly JalsatIltiqat? jalsa;
+
+        /// <summary>
+        /// Records one sighting into the capture session.
+        /// </summary>
+        /// <remarks>
+        /// The string is recorded exactly as the game handed it over, markup
+        /// and all, because that is the string the takeover will be asked to
+        /// match next time — a capture that stored a cleaned form would build a
+        /// patch keyed on something no component ever draws.
+        /// <para>
+        /// Allocating a managed string per sighting is deliberate. Capture runs
+        /// instead of replacement, never beside it, so the frame budget it
+        /// spends is a translator's rather than a player's.
+        /// </para>
+        /// </remarks>
+        /// <param name="asl">The string the game is about to draw.</param>
+        /// <param name="miftah">Its key, so a sighting is counted once.</param>
+        private void Iltaqit(string asl, ulong miftah)
+        {
+            JalsatIltiqat? hali = jalsa;
+            if (hali is null || string.IsNullOrEmpty(asl))
+            {
+                return;
+            }
+            TalabIltiqat talab = default;
+            talab.Huwiya = miftah;
+            talab.Asl = asl;
+            talab.Nizam = NizamNass.Ngui;
+            talab.Itar = Time.frameCount;
+            hali.Sajjil(in talab);
+        }
+
         private readonly MaqbadSiyaq? siyaq;
         private readonly MaqbadSilsila? silsila;
         private readonly MakhzanRusum makhzan;
@@ -653,7 +693,8 @@ namespace Taarib.Unity.Mono.Anzimat
             Ruqaa ruqaa,
             MaqbadSiyaq? siyaq,
             MaqbadSilsila? silsila,
-            Takhtit? takhtit)
+            Takhtit? takhtit,
+            JalsatIltiqat? jalsa)
         {
             this.harmoni = harmoni;
             this.wasl = wasl;
@@ -662,6 +703,7 @@ namespace Taarib.Unity.Mono.Anzimat
             this.siyaq = siyaq;
             this.silsila = silsila;
             this.takhtit = takhtit;
+            this.jalsa = jalsa;
             makhzan = new MakhzanRusum();
             muhaddar = new NassMuhaddar();
             mamlukat = new Dictionary<int, bool>(64);
@@ -708,7 +750,8 @@ namespace Taarib.Unity.Mono.Anzimat
             MasdarAshkal masdar,
             MaqbadSiyaq? siyaq,
             MaqbadSilsila? silsila,
-            Takhtit? takhtit)
+            Takhtit? takhtit,
+            JalsatIltiqat? jalsa)
         {
             if (harmoni is null)
             {
@@ -743,7 +786,7 @@ namespace Taarib.Unity.Mono.Anzimat
             }
 
             NizamNGui nizam = new NizamNGui(
-                harmoni, wasl, masdar, ruqaa, siyaq, silsila, takhtit);
+                harmoni, wasl, masdar, ruqaa, siyaq, silsila, takhtit, jalsa);
             hali = nizam;
 
             bool mala = nizam.Rakkib(
@@ -913,6 +956,19 @@ namespace Taarib.Unity.Mono.Anzimat
             // matters because it runs for every label the panel rebuilds,
             // including all the ones the patch does not cover.
             ulong miftah = Ruqaa.MiftahMinNass(khaam!);
+
+            // Capture mode observes and never replaces: the session records what
+            // the game is about to draw and the game then draws it. This is the
+            // only way text reaches a patch for a game whose components no
+            // static reader can open — and on this backend the session existed,
+            // was announced, and was never handed to a text system, so it
+            // recorded nothing at all.
+            if (jalsa is not null)
+            {
+                Iltaqit(khaam!, miftah);
+                Utruk(lawha);
+                return false;
+            }
             int fahras = ruqaa.JidNass(miftah);
             if (fahras < 0)
             {
@@ -920,6 +976,10 @@ namespace Taarib.Unity.Mono.Anzimat
                 Utruk(lawha);
                 return false;
             }
+
+            // Counted so the log can answer "how much of this game does the
+            // patch cover", which a list of misses alone cannot.
+            Rabt.Isaba(miftah);
 
             float hajm = wasl.QariHajm!(lawha);
             if (!(hajm > 0f))

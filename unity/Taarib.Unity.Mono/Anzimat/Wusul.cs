@@ -54,13 +54,15 @@ namespace Taarib.Unity.Mono.Anzimat
             MasdarAshkal masdar,
             MaqbadSiyaq? siyaq,
             MaqbadSilsila? silsila,
-            Takhtit takhtit)
+            Takhtit takhtit,
+            JalsatIltiqat? jalsa)
         {
             Ruqaa = ruqaa;
             Masdar = masdar;
             Siyaq = siyaq;
             Silsila = silsila;
             Takhtit = takhtit;
+            Jalsa = jalsa;
         }
 
         /// <summary>The mapped patch.</summary>
@@ -89,6 +91,21 @@ namespace Taarib.Unity.Mono.Anzimat
         public Takhtit Takhtit { get; }
 
         /// <summary>
+        /// The capture session, or <c>null</c> when the takeover is replacing
+        /// text rather than recording it.
+        /// </summary>
+        /// <remarks>
+        /// It reaches the adapters through here because every adapter needs it
+        /// and none of them could reach it before: the plugin built the session,
+        /// put it in <c>SiyaqIstila</c>, and the five factories below were never
+        /// given it — so capture mode on this backend announced itself, replaced
+        /// nothing, recorded nothing, and wrote an empty file. On a game whose
+        /// text lives in components no static reader can open, that empty file
+        /// is the whole difference between a patch and nothing.
+        /// </remarks>
+        public JalsatIltiqat? Jalsa { get; }
+
+        /// <summary>
         /// Builds the shared resources, or returns <c>null</c> when the glyph
         /// source could not be prepared.
         /// </summary>
@@ -105,7 +122,11 @@ namespace Taarib.Unity.Mono.Anzimat
         /// refusal for the whole takeover rather than five identical ones.
         /// </remarks>
         public static MawaridIstila? Insha(
-            Ruqaa ruqaa, MaqbadSiyaq? siyaq, MaqbadSilsila? silsila, Lawha? lawha)
+            Ruqaa ruqaa,
+            MaqbadSiyaq? siyaq,
+            MaqbadSilsila? silsila,
+            Lawha? lawha,
+            JalsatIltiqat? jalsa)
         {
             if (ruqaa is null)
             {
@@ -116,7 +137,7 @@ namespace Taarib.Unity.Mono.Anzimat
             {
                 return null;
             }
-            return new MawaridIstila(ruqaa, masdar, siyaq, silsila, new Takhtit());
+            return new MawaridIstila(ruqaa, masdar, siyaq, silsila, new Takhtit(), jalsa);
         }
 
         /// <summary>Releases the glyph source.</summary>
@@ -235,7 +256,7 @@ namespace Taarib.Unity.Mono.Anzimat
                 new WasilatNizam(
                     "TextMeshPro", "TMPro.TMP_Text", "TAARIB-E-6301", mawarid,
                     (m, h) => NizamTmp.Ibda(
-                        h, m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit)),
+                        h, m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit, m.Jalsa)),
 
                 // UnityEngine.UI ships with Unity but is not in the engine
                 // module reference package, so it is probed by name like a
@@ -243,17 +264,17 @@ namespace Taarib.Unity.Mono.Anzimat
                 new WasilatNizam(
                     "UnityEngine.UI.Text", "UnityEngine.UI.Text", "TAARIB-E-6302", mawarid,
                     (m, h) => NizamWajiha.Ibda(
-                        h, m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit)),
+                        h, m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit, m.Jalsa)),
 
                 new WasilatNizam(
                     "NGUI", "UILabel", "TAARIB-E-6303", mawarid,
                     (m, h) => NizamNGui.Ibda(
-                        h, m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit)),
+                        h, m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit, m.Jalsa)),
 
                 new WasilatNizam(
                     "FairyGUI", "FairyGUI.TextField", "TAARIB-E-6304", mawarid,
                     (m, h) => NizamFairyGui.Ibda(
-                        h, m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit)),
+                        h, m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit, m.Jalsa)),
 
                 // TextMesh is an engine type, so it is always present and the
                 // probe is empty; whether the game uses it is something the
@@ -265,7 +286,7 @@ namespace Taarib.Unity.Mono.Anzimat
                 new WasilatNizam(
                     "UnityEngine.TextMesh", string.Empty, "TAARIB-E-6305", mawarid,
                     (m, _) => NizamMujassam.Ibda(
-                        m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit)),
+                        m.Ruqaa, m.Masdar, m.Siyaq, m.Silsila, m.Takhtit, m.Jalsa)),
             };
         }
     }
