@@ -16,14 +16,26 @@ use crate::taqaddum::MukhbirTaqaddum;
 
 /// The default sizes every string is laid out at, in pixels.
 ///
-/// Three sizes, not one, and not "whatever the game declares": a game that
+/// Several sizes, not one, and not "whatever the game declares": a game that
 /// exposes no font size anywhere still draws its menu at one size and its
 /// subtitles at another, and a patch carrying a single size has a bitmap for
 /// one of them and a rescale for the rest. These are the sizes the Studio's own
 /// engine-wide reports supply when nothing measured is available; a run with
 /// runtime capture behind it will find more in the table and lay out at those
 /// too.
-pub const AHJAM_IFTIRADIYA: &[f32] = &[18.0, 24.0, 32.0];
+///
+/// It was 18, 24 and 32 alone, and the top of that range is the problem: a
+/// title, a headline on an in-game screen, a large menu label are all drawn far
+/// above 32, and a glyph rasterised at 32 and magnified to 64 is visibly soft
+/// beside the engine's own text, which is an outline scaled to any size. The
+/// first game patched by somebody other than its author showed exactly that —
+/// a crisp English paragraph under a smudged Arabic heading.
+///
+/// Doubling upward rather than adding a few: each size is an atlas of its own,
+/// so the cost of one more is real, and powers of two mean any size a game
+/// picks is within a factor of √2 of one that was rasterised — the point at
+/// which magnification stops being visible.
+pub const AHJAM_IFTIRADIYA: &[f32] = &[18.0, 24.0, 32.0, 48.0, 64.0, 96.0];
 
 /// The name the patch is written under inside the game's `taarib/` folder.
 pub const WIJHAT_IFTIRADIYA: &str = "nusus.ruqaa";

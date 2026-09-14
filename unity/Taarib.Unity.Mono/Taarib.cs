@@ -752,7 +752,19 @@ namespace Taarib.Unity.Mono
                     Khutwa.IadatTarkibIttar);
             }
 
-            return MaqbadKhatt.MinDhakira(siyaqHali, bayt, (uint)fahras, fahsArabi: true);
+            // Face zero, always — not `fahras`.
+            //
+            // `fahras` is this font's position in the patch's chain; the
+            // argument is the face index *inside the file*, which only a `.ttc`
+            // collection has more than one of. Passing the chain position asked
+            // for face 1 of the second font, face 2 of the third, and so on, and
+            // every ordinary `.ttf` has exactly one — so a patch carrying a
+            // single font worked and a patch carrying four died on the second
+            // with TAARIB-E-2501, "the requested face is not in the file". The
+            // compiler shapes every face at index zero (`MawridKhatt::jadeed`
+            // takes `0`), and nothing in the patch records a face index at all,
+            // so zero is not a guess: it is the only value that can be right.
+            return MaqbadKhatt.MinDhakira(siyaqHali, bayt, 0, fahsArabi: true);
         }
 
         private Lawha IbniLawha(MaqbadSiyaq siyaqHali, Ruqaa maftuha)
