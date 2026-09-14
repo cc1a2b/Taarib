@@ -1191,6 +1191,16 @@ pub(crate) fn ibda(
     // entry in it all over again.
     let matjar = QiraatMatjar::iqra(appid_steam(&luba), jidhr_steam.as_deref());
     hima_al_bab(&luba, &matjar)?;
+    // The first-run statement, asked at the door for the same reason the
+    // multiplayer question is.
+    //
+    // It is the install gate's refusal, and the gate runs in stage 7 of 7 —
+    // after extraction, after every translated string, after the atlas, the
+    // compile and the seal. A person who had never been shown the statement
+    // therefore paid for a whole translation and was then told the install was
+    // refused, with the one thing that would satisfy it being a single tick on
+    // a different screen. Nothing about that answer needs the patch to exist.
+    iqrar_al_bab(masarat)?;
     // The multiplayer question last, for the reason `taarib_aman::fahs` puts it
     // last: it is the only refusal in the set with an answer the person can
     // give, and giving it is a tick rather than a wait or a lost account.
@@ -1339,6 +1349,24 @@ fn hima_al_bab(luba: &Luba, matjar: &QiraatMatjar) -> Natija<()> {
 ///
 /// [`KhataTilqaiAmr::ShabakaBilaIqrar`], carrying the evidence the scan found so
 /// the interface can show what is being acknowledged.
+/// Refuses before the run when the first-run statement is still unacknowledged.
+///
+/// The same record `taarib_aman::fahs` reads at the install and the same rule —
+/// `yahtaj_iqrar` decides in both places, so the door cannot drift from the
+/// gate and start letting through a run the gate will refuse.
+///
+/// # Errors
+///
+/// [`KhataTilqaiAmr::IqrarNaqis`] when the statement has not been acknowledged,
+/// or has been superseded by a newer one.
+fn iqrar_al_bab(masarat: &Masarat) -> Natija<()> {
+    let sijill = iqrar::iqra(&crate::tathbeet_awamir::masar_iqrar(masarat))?;
+    if iqrar::yahtaj_iqrar(sijill.as_ref()) {
+        return Err(Khata::from(KhataTilqaiAmr::IqrarNaqis));
+    }
+    Ok(())
+}
+
 fn shabakat_al_bab(luba: &Luba, matjar: &QiraatMatjar, iqrar_shabaka: bool) -> Natija<()> {
     if iqrar_shabaka {
         return Ok(());
@@ -2136,6 +2164,15 @@ pub enum KhataTilqaiAmr {
         wasf_injilizi: String,
     },
 
+    /// The first-run statement has not been acknowledged.
+    ///
+    /// The install gate's own refusal, raised at the door instead. It is the
+    /// one refusal in the set that has nothing to do with the game, the patch
+    /// or the machine: it is a sentence the person has not read yet, and
+    /// reading it costs a tick.
+    #[error("the first-run statement has not been acknowledged")]
+    IqrarNaqis,
+
     /// The registry is answering and its revocation list is not.
     ///
     /// The manual path's `9031`, raised here at the start of the run — after
@@ -2175,6 +2212,7 @@ impl Tafsir for KhataTilqaiAmr {
                     // the manual path's `9031` takes the first free number
                     // after them.
                     Self::QaimatSahbMahjuba { .. } => 137,
+                    Self::IqrarNaqis => 138,
                 },
         )
     }
@@ -2209,6 +2247,7 @@ impl Tafsir for KhataTilqaiAmr {
             // A check that could not be completed and must not be read as a
             // pass — about the registry rather than the account.
             Self::QaimatSahbMahjuba { .. } => Khutura::Tanbeeh,
+            Self::IqrarNaqis => Khutura::Maluma,
         }
     }
 
@@ -2276,6 +2315,11 @@ impl Tafsir for KhataTilqaiAmr {
                  قراءة قائمته، لأنّ الرقعة التي سُحبت لا تُعرف إلا منها. أعد المحاولة بعد \
                  قليل؛ وإن كان المصدر مجلّدًا محليًا فتأكّد من أنّ ملف القائمة موجود فيه."
             ),
+            Self::IqrarNaqis => "لم يُقرّ بعدُ بيان التشغيل الأوّل، وهو شرط تثبيت أي رقعة. \
+                 اقرأه ووافق عليه من شاشة اللعبة، ثم ابدأ من جديد. لم تبدأ الجولة ولم يُنفَق \
+                 شيء: السؤال عنه هنا — قبل الاستخراج والترجمة — لأنّ الإجابة عنه لا تحتاج \
+                 رقعةً أصلًا."
+                .to_owned(),
         }
     }
 
@@ -2351,6 +2395,12 @@ impl Tafsir for KhataTilqaiAmr {
                  because a withdrawn patch is known only from it. Try again shortly; if the \
                  source is a local folder, make sure the list file is in it."
             ),
+            Self::IqrarNaqis => "The first-run statement has not been acknowledged, and no \
+                 patch is installed until it is. Read it and accept it on the game's screen, \
+                 then start again. The run has not begun and nothing has been spent: it is \
+                 asked here, before extraction and translation, because answering it needs no \
+                 patch at all."
+                .to_owned(),
         }
     }
 
@@ -2389,6 +2439,9 @@ impl Tafsir for KhataTilqaiAmr {
             // Lifted by the next refresh that finds the list, which the next
             // press runs; nothing on this machine is wrong.
             Self::QaimatSahbMahjuba { .. } => Khutwa::AadaMuhawala,
+            // No remedy button: the statement lives on the game's screen and
+            // the person has to read it, which is the point of it.
+            Self::IqrarNaqis => Khutwa::LaShay,
         }
     }
 
@@ -2430,7 +2483,7 @@ impl Tafsir for KhataTilqaiAmr {
                     QeemaSiyaq::Nass(wasf_injilizi.clone()),
                 );
             },
-            Self::LaKhattArabi => {},
+            Self::LaKhattArabi | Self::IqrarNaqis => {},
             Self::QaimatSahbMahjuba {
                 masdar,
                 sabab,
@@ -2631,6 +2684,16 @@ mod ikhtibarat {
         for ism in milaffat {
             std::fs::write(jidhr_luba.join(ism), b"fixture")?;
         }
+
+        // The first-run statement, accepted. Every fixture below represents a
+        // machine somebody is already using, and on such a machine the
+        // statement was read at first launch — a fixture that had not accepted
+        // it would be testing the door's refusal rather than what is past it.
+        taarib_aman::iqrar::ahfaz(
+            &crate::tathbeet_awamir::masar_iqrar(&masarat),
+            "2026-01-01T00:00:00Z".to_owned(),
+            taarib_usus::ISDAR.to_owned(),
+        )?;
 
         let masdar = MasdarLuba::Steam(TATBEEQ_WAHMI);
         let luba = Luba {
@@ -2868,6 +2931,37 @@ mod ikhtibarat {
         bayt.extend(1_u32.to_le_bytes());
         bayt.extend(0_u32.to_le_bytes());
         std::fs::write(appcache.join("appinfo.vdf"), bayt)
+    }
+
+    /// The first-run statement is asked at the door, not at the install.
+    ///
+    /// It used to be the install gate's alone, and the install gate is stage 7
+    /// of 7: a person who had never seen the statement paid for a whole
+    /// translation and was then refused over a tick on another screen. The
+    /// refusal has to arrive before the run starts, and it has to be this
+    /// refusal rather than a later one.
+    #[test]
+    fn ibda_yasal_an_al_iqrar_ala_al_bab() -> NatijatIkhtibar {
+        let masrah = masrah(JahiziyatTashghil::Mukammala)?;
+        // Undo what the fixture accepted, which is the whole point of this one.
+        std::fs::remove_file(crate::tathbeet_awamir::masar_iqrar(&masrah.masarat))?;
+        let idadat = idadat_bi_steam(&masrah)?;
+
+        let ramz = ibda(
+            mudhee_samit(),
+            masrah.id.to_string(),
+            false,
+            false,
+            &masrah.masarat,
+            &masrah.makhzan,
+            &idadat,
+            &MashawirTilqai::default(),
+        )
+        .err()
+        .map(|khata| khata.ramz);
+
+        assert_eq!(ramz, Some(Ramz::jadeed(arqam::STUDIO + 138)));
+        Ok(())
     }
 
     /// The start command lets a ready engine through the gate. It still stops,
