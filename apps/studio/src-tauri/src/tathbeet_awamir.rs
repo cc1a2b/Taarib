@@ -664,7 +664,7 @@ pub async fn nazzil_ruqaa(
 /// cannot hash because the game is holding it open.
 #[tauri::command]
 #[specta::specta]
-pub fn tahaqquq_ruqaa(
+pub async fn tahaqquq_ruqaa(
     muarrif: String,
     masarat: tauri::State<'_, Masarat>,
     makhzan: tauri::State<'_, Makhzan>,
@@ -713,7 +713,7 @@ pub fn tahaqquq_ruqaa(
 /// raised, because the other kind's outcome is still owed to the user.
 #[tauri::command]
 #[specta::specta]
-pub fn azil_ruqaa(
+pub async fn azil_ruqaa(
     muarrif: String,
     matlab: MatlabIzala,
     siyasa: SiyasatIzala,
@@ -798,7 +798,7 @@ pub fn azil_ruqaa(
 /// answers with an empty list.
 #[tauri::command]
 #[specta::specta]
-pub fn khuttat_izala(
+pub async fn khuttat_izala(
     muarrif: String,
     matlab: MatlabIzala,
     masarat: tauri::State<'_, Masarat>,
@@ -2452,7 +2452,7 @@ fn sutur(satrat: impl Iterator<Item = String>) -> String {
     reason = "the two acknowledgements are separate keys in the IPC payload the interface \
               already sends; folding them into one struct would change that contract"
 )]
-pub fn thabbit_ruqaa(
+pub async fn thabbit_ruqaa(
     nafidha: tauri::Window,
     muarrif: String,
     masar_malaf: String,

@@ -29,7 +29,7 @@ use taarib_tathbeet::masar_tathbeet::{TalabTathbeet, WadaMuhtawa, thabbit};
 use taarib_tathbeet::mawdi::WajhatLuba;
 use taarib_tathbeet::nusus::{self, IdhnNusus, Nashir};
 use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass};
-use taarib_tathbeet::tarkib::QararTabaqa;
+use taarib_tathbeet::tarkib::{HalatIdadat, LubaMuhallala, QararTabaqa};
 
 use crate::khata::{KhataTilqai, NatijatTilqai, khata_malaf, marfuda};
 use crate::talab::TalabTilqai;
@@ -124,9 +124,8 @@ pub fn ijri(
     talab.miqbad.tahaqquq(MarhalaTilqai::Tathbeet)?;
 
     // The tier decision, taken once, from the report stage 2 already produced.
-    // This pipeline deploys nothing, so it has no plan — but the script-engine
-    // write it *does* perform still needs to know the tier and the refusal, and
-    // neither is a thing a game directory can be asked about.
+    // The script-engine write needs it, and so does the plan below when no
+    // component store was supplied and there is no framework to deploy.
     let qarar = QararTabaqa::min_taqreer(imkaniyat)
         .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?;
 
@@ -212,6 +211,35 @@ pub fn ijri(
         masar_huzma,
     )
     .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?;
+    // The plan, built before anything is written, exactly as the manual install
+    // builds it — so a missing component is refused before a backup is taken
+    // rather than half way through one.
+    let luba_muhallala = LubaMuhallala {
+        jidhr: talab.luba.jidhr.to_path_buf(),
+        masar_tanfidhi: talab
+            .luba
+            .tanfidhi
+            .map_or_else(|| talab.luba.jidhr.to_path_buf(), Path::to_path_buf),
+        muharrik: imkaniyat.muharrik.clone(),
+        beea: talab.luba.beea.clone(),
+        nizam: talab.luba.nizam,
+        masdar: talab.luba.masdar.clone(),
+    };
+    let halat_idadat = HalatIdadat {
+        khiyarat_tashghil: None,
+        tajawuzat_dll: None,
+        tahmil_musbaq: None,
+        malaf_idadat_manassa: None,
+    };
+    // `None` when the caller has no store, and then nothing below deploys a
+    // framework — the same behaviour this stage had before, kept deliberately
+    // for a caller that genuinely has no binaries to place.
+    let mukhattat = talab
+        .mukawwinat
+        .map(|mukawwinat| taarib_tathbeet::tarkib::khutta(imkaniyat, &luba_muhallala, mukawwinat))
+        .transpose()
+        .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?;
+
     let mut muhtawa = vec![WadaMuhtawa {
         wajha,
         bayt: bayt_ruqaa,
@@ -258,23 +286,32 @@ pub fn ijri(
         &MudaqqiqEd25519,
         jidhr_nusakh,
         format!("taarib-tilqai — automatic run {}", talab.id),
-        // No framework is deployed here. Deciding what framework and adapter
-        // build a tier belongs to is `taarib_tathbeet::tarkib`'s job against a
-        // component store, and a component store is something the caller either
-        // has or does not; inventing one would be inventing a binary to put in
-        // somebody's game.
+        // The framework is deployed when the caller supplied a store to take it
+        // from, and the script-engine write happens either way.
         //
-        // The script-engine write is still this step's, and it is now asked for
-        // explicitly rather than happening on its own beside it: an RPG Maker or
-        // Ren'Py game is patched by replacing its own shipped text, which is the
-        // write the tier governs. No Ren'Py face is registered, because no
-        // deployment step here places one and a settings file naming a font that
-        // was never deployed is a game rendered in boxes.
+        // It used to be neither: this stage wrote the package and its fonts and
+        // nothing else, on the grounds that inventing a component store would be
+        // inventing a binary to put in somebody's game. That part is right and
+        // still holds — the store is a parameter — but leaving it out entirely
+        // meant a Unity game came out of a successful run with `taarib/` full of
+        // exactly the right files and no loader to read them. It worked in
+        // testing only because the test game had been patched by hand first and
+        // still had its framework.
         |nashir: &mut Nashir<'_>| -> NatijatTathbeet<()> {
-            nashir.raqqi(
-                IdhnNusus::min_qarar(qarar),
-                nusus::makhzan_mukawwinat().as_deref(),
-            )
+            let (Some(mukawwinat), Some(mukhattat)) = (talab.mukawwinat, mukhattat.as_ref()) else {
+                return nashir.raqqi(
+                    IdhnNusus::min_qarar(qarar),
+                    nusus::makhzan_mukawwinat().as_deref(),
+                );
+            };
+            let _ = taarib_tathbeet::tarkib::nashr_bi_khutta(
+                mukhattat,
+                &luba_muhallala,
+                &halat_idadat,
+                mukawwinat,
+                nashir,
+            )?;
+            Ok(())
         },
     )
     .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?;

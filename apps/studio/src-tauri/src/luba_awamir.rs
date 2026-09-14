@@ -291,7 +291,7 @@ pub fn tafasil_luba(
 /// As [`tafasil_luba`].
 #[tauri::command]
 #[specta::specta]
-pub fn afhas_muharrik(
+pub async fn afhas_muharrik(
     muarrif: String,
     makhzan: tauri::State<'_, Makhzan>,
 ) -> Result<TaqreerHie, Khata> {
@@ -339,7 +339,7 @@ pub fn dalail_muharrik(
 /// that was never reachable at all.
 #[tauri::command]
 #[specta::specta]
-pub fn fahs_himaya(
+pub async fn fahs_himaya(
     muarrif: String,
     masarat: tauri::State<'_, Masarat>,
     makhzan: tauri::State<'_, Makhzan>,
@@ -1486,7 +1486,7 @@ const fn wasf_naw_lugha(naw: NawDaleelLugha) -> &'static str {
 /// [`LughaRasmiyaHie::majhul`].
 #[tauri::command]
 #[specta::specta]
-pub fn lugha_rasmiya(
+pub async fn lugha_rasmiya(
     muarrif: String,
     makhzan: tauri::State<'_, Makhzan>,
 ) -> Result<LughaRasmiyaHie, Khata> {

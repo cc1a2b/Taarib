@@ -171,6 +171,19 @@ pub struct TalabTilqai<'a> {
     /// cannot be read statically is told to play once with capture enabled, and
     /// this is where the file it produced comes back in.
     pub jalsat_iltiqat: Option<&'a Path>,
+
+    /// The component store the framework is deployed from, when the caller has
+    /// one.
+    ///
+    /// Deciding *what* framework and adapter a tier needs is
+    /// `taarib_tathbeet::tarkib`'s job, and it needs a store to take the
+    /// binaries from — which is why this is the caller's to supply and not this
+    /// crate's to invent. What was wrong was leaving it out altogether: without
+    /// it the run writes the patch and its fonts into the game and no loader,
+    /// so on a game that had never been patched before nothing reads what was
+    /// written, the run reports success, and the game starts in its original
+    /// language with the whole translation sitting on disk beside it.
+    pub mukawwinat: Option<&'a Path>,
     /// What the finished patch declares.
     pub wasf: WasfTilqai,
     /// The three records the install gate reads.
@@ -194,6 +207,7 @@ impl std::fmt::Debug for TalabTilqai<'_> {
             .field("muzawwid", &self.muzawwid.ism())
             .field("khutut", &self.khutut)
             .field("jalsat_iltiqat", &self.jalsat_iltiqat)
+            .field("mukawwinat", &self.mukawwinat)
             .field("wasf", &self.wasf)
             .field("khiyarat", &self.khiyarat)
             .finish_non_exhaustive()

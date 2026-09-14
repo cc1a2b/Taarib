@@ -1747,6 +1747,7 @@ async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mut mudkhalat: Mud
         })
     };
 
+    let mujallad_mukawwinat = mudkhalat.masarat.mukawwinat();
     let talab = TalabTilqai {
         id: mudkhalat.tashghila,
         jidhr_amal: &mudkhalat.jidhr_amal,
@@ -1766,6 +1767,11 @@ async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mut mudkhalat: Mud
         // invents one, because a session nobody produced is a file that is not
         // there.
         jalsat_iltiqat: None,
+        // The store this installation ships. Without it the run writes the
+        // patch and its fonts into the game and no loader, and a game that was
+        // never patched before starts in its original language with the whole
+        // translation sitting on disk beside it.
+        mukawwinat: Some(&mujallad_mukawwinat),
         wasf: mudkhalat.wasf.clone(),
         aman: MudkhalatAman {
             mirsa: &mudkhalat.mirsa,

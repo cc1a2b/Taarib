@@ -1657,7 +1657,9 @@ fn wajjih_ruqaa(tatbiq: &tauri::AppHandle, masar: &Path) {
         return;
     }
 
-    let mahsula = tathbeet_awamir::thabbit_ruqaa(
+    // Blocked on deliberately: this is the file-association handler, which runs
+    // outside any command and has no window to keep responsive yet.
+    let mahsula = tauri::async_runtime::block_on(tathbeet_awamir::thabbit_ruqaa(
         nafidha,
         luba.id.to_string(),
         masar.to_string_lossy().into_owned(),
@@ -1666,7 +1668,7 @@ fn wajjih_ruqaa(tatbiq: &tauri::AppHandle, masar: &Path) {
         tauri::Manager::state::<Masarat>(tatbiq),
         tauri::Manager::state::<Makhzan>(tatbiq),
         tauri::Manager::state::<Arc<MakhzanIdadat>>(tatbiq),
-    );
+    ));
     match mahsula {
         Ok(natija) => {
             tracing::info!(
