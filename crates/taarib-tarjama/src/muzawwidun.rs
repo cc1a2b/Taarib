@@ -3644,6 +3644,24 @@ impl Muzawwid for MuzawwidMicrosoft {
 /// and the one Unity translation mods have made for a decade.
 pub const UNWAN_GOOGLE_MAJJANI: &str = "https://translate.googleapis.com/translate_a/single";
 
+/// The free endpoint that answers several strings in one request.
+///
+/// A different host and a different `client` from [`UNWAN_GOOGLE_MAJJANI`], and
+/// the difference is the whole point: `translate_a/single` ignores every `q`
+/// after the first, while this one answers a flat JSON array with exactly one
+/// element per `q`, in order — verified against duplicates, an empty string, a
+/// bare number and a string carrying TextMeshPro markup, which came back with
+/// its tags intact.
+///
+/// It is what makes a free translation of a whole game take a minute instead of
+/// half an hour: a four-thousand-string game is eighty-odd requests here and
+/// four thousand there, against a service that refuses a machine for asking too
+/// often.
+pub const UNWAN_GOOGLE_DUFAA: &str = "https://clients5.google.com/translate_a/t";
+
+/// The `client` the batch endpoint answers a flat array for.
+pub const NAMUDHAJ_GOOGLE_DUFAA: &str = "dict-chrome-ex";
+
 /// The day the free endpoint's request and reply shapes were last checked
 /// live.
 ///
@@ -3722,6 +3740,12 @@ pub struct IdadatGoogleMajjani {
     /// settings says what language a game is in, and the detected code comes
     /// back on every reply anyway.
     pub lughat_masdar: String,
+    /// The endpoint that answers a whole chunk at once; see
+    /// [`UNWAN_GOOGLE_DUFAA`]. Held apart from [`IdadatGoogleMajjani::asas`]
+    /// because the two are different hosts with different reply shapes, and a
+    /// deployment that overrides one has no business silently redirecting the
+    /// other.
+    pub asas_dufaa: String,
     /// The gap between requests; see [`FASL_GOOGLE_MAJJANI`].
     pub fasl: Duration,
     /// The floor on the wait after a `429`; see [`ARD_MUADAL_GOOGLE_MAJJANI`].
@@ -3732,6 +3756,7 @@ impl Default for IdadatGoogleMajjani {
     fn default() -> Self {
         Self {
             asas: UNWAN_GOOGLE_MAJJANI.to_owned(),
+            asas_dufaa: UNWAN_GOOGLE_DUFAA.to_owned(),
             lughat_masdar: LUGHAT_MASDAR_TILQAIYA.to_owned(),
             fasl: FASL_GOOGLE_MAJJANI,
             ard_muadal: ARD_MUADAL_GOOGLE_MAJJANI,
@@ -3840,7 +3865,8 @@ impl MuzawwidGoogleMajjani {
         .bi_ard_muadal(idadat.ard_muadal)
         .bila_itimad();
         let qudrat = QudratMuzawwid {
-            dufaat: false,
+            // The batch endpoint below carries a whole chunk in one request.
+            dufaat: true,
             // The ceiling is in characters, and a character is at most four
             // bytes of UTF-8; stated in bytes here because that is the unit
             // the capability speaks, and stated loosely because the exact
@@ -4007,6 +4033,115 @@ impl Muzawwid for MuzawwidGoogleMajjani {
         // Nothing in the reply measures the translation, so nothing is
         // carried — the refusal the module header names, one more time.
         Ok(NatijatTarjama::bila_thiqa(tarjama, 0))
+    }
+
+    /// Translates a whole chunk in one request.
+    ///
+    /// The reply is a flat array with one element per `q`, in the order the
+    /// `q`s were sent, and this refuses any reply whose length does not equal
+    /// the chunk's — which is the only check that can catch a misalignment.
+    /// The batch layer maps results back by position, so a reply short by one
+    /// would attach every later translation to the wrong string, and each one
+    /// would be individually well-formed and therefore invisible downstream.
+    /// A refusal here costs the chunk a second pass as single strings; a silent
+    /// misalignment costs the patch its meaning.
+    async fn tarjim_dufa(
+        &self,
+        talabat: &[TalabTarjama<'_>],
+    ) -> Result<Vec<NatijatTarjama>, KhataTarjama> {
+        if talabat.is_empty() {
+            return Ok(Vec::new());
+        }
+        for talab in talabat {
+            let ahruf = talab.mahmi.matn().chars().count();
+            if ahruf > AQSA_AHRUF_GOOGLE_MAJJANI {
+                return Err(KhataTarjama::MajjaniTawil {
+                    muzawwid: Self::ISM.to_owned(),
+                    ahruf,
+                    saqf: AQSA_AHRUF_GOOGLE_MAJJANI,
+                });
+            }
+        }
+
+        let _idhn = self
+            .tawazi
+            .acquire()
+            .await
+            .map_err(|_| KhataTarjama::MuzawwidGhayrMutah {
+                muzawwid: Self::ISM.to_owned(),
+                sabab: "the in-flight bound was closed".to_owned(),
+            })?;
+
+        let radd = self
+            .jawhar
+            .irsal(|amil| {
+                let mut talab = amil
+                    .get(&self.idadat.asas_dufaa)
+                    .query(&[
+                        ("client", NAMUDHAJ_GOOGLE_DUFAA),
+                        ("sl", self.idadat.lughat_masdar.as_str()),
+                        ("tl", "ar"),
+                    ])
+                    .header("user-agent", &self.wakeel);
+                for wahid in talabat {
+                    talab = talab.query(&[("q", wahid.mahmi.matn())]);
+                }
+                talab
+            })
+            .await?;
+
+        let nass_radd = jasad_najah(radd, Self::ISM).await?;
+        if safha_la_json(&nass_radd) {
+            return Err(KhataTarjama::MajjaniMahjub {
+                muzawwid: Self::ISM.to_owned(),
+                sabab: "the reply is an HTML page where JSON was expected, which is the block \
+                        page the service serves a client it has flagged"
+                    .to_owned(),
+            });
+        }
+        let ghayr_mufassal = || KhataTarjama::RaddGhayrMufassal {
+            muzawwid: Self::ISM.to_owned(),
+            radd: nass_radd.chars().take(64).collect(),
+        };
+        let qeema: Value = serde_json::from_str(&nass_radd).map_err(|_| ghayr_mufassal())?;
+        let saf = qeema.as_array().ok_or_else(ghayr_mufassal)?;
+        if saf.len() != talabat.len() {
+            return Err(KhataTarjama::RaddGhayrMufassal {
+                muzawwid: Self::ISM.to_owned(),
+                radd: format!(
+                    "the reply carries {} translation(s) for {} string(s), so nothing in it can \
+                     be matched to what was sent",
+                    saf.len(),
+                    talabat.len()
+                ),
+            });
+        }
+
+        let mut natai = Vec::with_capacity(saf.len());
+        for (qeema, talab) in saf.iter().zip(talabat) {
+            // Two shapes, decided by `sl`. Asked to detect the language the
+            // endpoint answers a pair per string — the translation and the
+            // language it decided on — and told the language outright it
+            // answers the translation alone. Both are accepted because the
+            // setting that chooses between them is the caller's, and a parser
+            // that knew only the shape the default produces would break the day
+            // somebody set a source language.
+            let tarjama = qeema
+                .as_str()
+                .or_else(|| qeema.get(0).and_then(Value::as_str))
+                .ok_or_else(ghayr_mufassal)?;
+            // An empty source has an empty translation and that is correct; an
+            // empty translation of something is the reply refusing that string,
+            // and the chunk goes back as singles rather than shipping a blank.
+            if tarjama.trim().is_empty() && !talab.mahmi.matn().trim().is_empty() {
+                return Err(KhataTarjama::RaddGhayrMufassal {
+                    muzawwid: Self::ISM.to_owned(),
+                    radd: "(a translation in the chunk came back empty)".to_owned(),
+                });
+            }
+            natai.push(NatijatTarjama::bila_thiqa(tarjama.to_owned(), 0));
+        }
+        Ok(natai)
     }
 }
 
@@ -4646,6 +4781,7 @@ mod ikhtibarat {
     ) -> Result<MuzawwidGoogleMajjani, KhataTarjama> {
         MuzawwidGoogleMajjani::jadeed(IdadatGoogleMajjani {
             asas: khadim.asas.clone(),
+            asas_dufaa: khadim.asas.clone(),
             lughat_masdar: LUGHAT_MASDAR_TILQAIYA.to_owned(),
             fasl: Duration::ZERO,
             ard_muadal,
@@ -4697,8 +4833,10 @@ mod ikhtibarat {
         let muzawwid = majjani(&khadim, Duration::ZERO)?;
 
         // Everything the provider claims about itself, checked once: free,
-        // no confidence, no batching, no instruction, and the names the
-        // journal will record.
+        // no confidence, one instruction it does not take, and the names the
+        // journal will record. It *does* batch — through a second endpoint that
+        // answers one translation per `q` — which is what takes a whole game
+        // from four thousand requests to eighty.
         assert_eq!(muzawwid.ism(), "google-majjani");
         assert_eq!(muzawwid.namudhaj(), "gtx");
         let qudrat = muzawwid.qudrat();
@@ -4706,8 +4844,8 @@ mod ikhtibarat {
         assert!(!qudrat.taklifa.madfu());
         assert!(!qudrat.yublighu_thiqa());
         assert!(qudrat.dalil_thiqa().is_none());
-        assert!(!qudrat.dufaat);
-        assert_eq!(qudrat.aqsa_nusus(), 1);
+        assert!(qudrat.dufaat);
+        assert_eq!(qudrat.aqsa_nusus(), 50);
         assert!(!qudrat.yaqbal_tawjih);
         assert_eq!(muzawwid.takalif().saqf(), 0);
 
