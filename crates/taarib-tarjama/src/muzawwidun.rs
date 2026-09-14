@@ -3666,26 +3666,42 @@ pub const AQSA_AHRUF_GOOGLE_MAJJANI: usize = 5000;
 
 /// The shortest gap between two requests.
 ///
-/// A hundred and fifty milliseconds. The endpoint's limits are undocumented
-/// and enforced by abuse detection that watches spacing, not a quota that
-/// counts a minute; the mods that have run against it for years settle at a
-/// few requests a second, and this stays under that.
-pub const FASL_GOOGLE_MAJJANI: Duration = Duration::from_millis(150);
+/// Four hundred milliseconds, measured rather than guessed. At a hundred and
+/// fifty, with four requests in flight, a run bursts at twenty-odd a second and
+/// the endpoint's abuse detection refuses the machine within the first few
+/// hundred strings — which ends the run with nothing compiled, because a
+/// translation stage that answered no string has nothing to give the compiler.
+/// At this spacing, with the concurrency below, a whole game went through in
+/// one pass: three thousand seven hundred and eighteen strings, no refusal.
+///
+/// Slower is the point. A free endpoint that finishes in twenty-five minutes is
+/// worth more than one that stops in ninety seconds.
+pub const FASL_GOOGLE_MAJJANI: Duration = Duration::from_millis(400);
 
 /// The per-minute ceiling [`FASL_GOOGLE_MAJJANI`] amounts to, for the batch
 /// layer's own limiter, which counts per minute.
-pub const HADD_TALABAT_GOOGLE_MAJJANI: u32 = 400;
+pub const HADD_TALABAT_GOOGLE_MAJJANI: u32 = 150;
 
 /// How many requests may be in flight at once, whatever the caller's own
 /// concurrency is.
-pub const TAWAZI_GOOGLE_MAJJANI: usize = 4;
+///
+/// Two. Four multiplied the burst rate by four against a service that watches
+/// spacing, and the gap above is only a floor between *starts* — four in flight
+/// means four arrive inside one gap.
+pub const TAWAZI_GOOGLE_MAJJANI: usize = 2;
 
 /// The shortest wait before a `429` is retried.
 ///
-/// Five seconds. The endpoint's `429` carries no `Retry-After`, so the shared
+/// Two minutes. The endpoint's `429` carries no `Retry-After`, so the shared
 /// schedule alone would come back after half a second — which, against abuse
 /// detection, is the behaviour that turns a warning into a block.
-pub const ARD_MUADAL_GOOGLE_MAJJANI: Duration = Duration::from_secs(5);
+///
+/// It was five seconds, and five seconds is not a cool-down: this service's
+/// refusal clears in minutes, so four attempts twenty seconds apart all landed
+/// inside the same refusal and the run ended having translated nothing. Waiting
+/// two minutes between attempts costs a run that would have failed eight
+/// minutes, and saves the whole translation.
+pub const ARD_MUADAL_GOOGLE_MAJJANI: Duration = Duration::from_secs(120);
 
 /// The `sl` value that asks the endpoint to detect the source language.
 pub const LUGHAT_MASDAR_TILQAIYA: &str = "auto";
