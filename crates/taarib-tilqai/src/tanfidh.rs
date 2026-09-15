@@ -292,11 +292,15 @@ async fn ijri(
     if let Some(jidhr_warsha) = crate::warsha::masar(talab) {
         let nashr = crate::warsha::anshir(
             &jidhr_warsha,
-            &talab.luba,
-            &imkaniyat,
-            &makhzun,
+            talab.luba.huwiya(),
+            talab.luba.ism,
+            crate::warsha::bayan(
+                Some(&imkaniyat),
+                makhzun.rafd.clone(),
+                &talab.wasf.isdar_taarib,
+                &talab.khiyarat.waqt,
+            ),
             &madakhil,
-            &talab.wasf.isdar_taarib,
             &talab.khiyarat.waqt,
         )?;
         muraqib.ballagh_bila_majmu(

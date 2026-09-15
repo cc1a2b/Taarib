@@ -47,7 +47,7 @@ use crate::warsha_awamir::{bin_muzawwid, dolar, lahza_alaan, muzawwid_muntakhab,
 pub const ISM_HADATH_TILQAI: &str = "taarib://tilqai";
 
 /// Where automatic runs keep their directories, under the data root.
-const MUJALLAD_TILQAI: &str = "tilqai";
+pub(crate) const MUJALLAD_TILQAI: &str = "tilqai";
 
 /// The longest font chain a run is handed.
 ///
@@ -1642,7 +1642,7 @@ fn jahhiz(
 /// enumerates a directory and its listing carries the game's *name* and root but
 /// not its identity — so a shared root could not answer "what was I in the middle
 /// of for this game" without opening every run on the machine and guessing.
-fn jidhr_mashawir(masarat: &Masarat, id: LubaId) -> PathBuf {
+pub(crate) fn jidhr_mashawir(masarat: &Masarat, id: LubaId) -> PathBuf {
     masarat
         .jidhr_bayanat()
         .join(MUJALLAD_TILQAI)

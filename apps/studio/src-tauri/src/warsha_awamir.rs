@@ -9,6 +9,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::de::DeserializeOwned;
 use taarib_istikhraj::mashru::{MALAF_MASHRU, MALAF_NUSUS, MashruMaftuh};
+// The run's own table file, whose name collides with the project's; aliased so
+// the two cannot be confused at a call site.
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::muraja::{HalatMuraja, SijillMuraja};
 use taarib_mustalahat::musahim::MusahimId;
@@ -34,6 +36,7 @@ use taarib_tarjama::muzawwidun::{
     taklifat_anthropic, taklifat_gemini,
 };
 use taarib_tathbeet::bayan::waqt_alaan;
+use taarib_tilqai::mashwar::{MALAF_NUSUS as MALAF_NUSUS_MASHWAR, MUJALLAD_MASHRU, ijrud};
 use taarib_usus::idadat::{HalatMuzawwidin, Idadat, IdadatMuzawwid, MakhzanIdadat, NawMuzawwid};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
@@ -537,14 +540,133 @@ fn jidhr_mashru(masarat_hala: &Masarat, id: LubaId) -> PathBuf {
 }
 
 /// Opens the project for one game, refusing when none has been created yet.
+///
+/// A game with no project but with a finished automatic run behind it is
+/// recovered rather than refused; see [`istaid_min_mashwar`].
 fn iftah_mashru(masarat_hala: &Masarat, id: LubaId) -> Natija<MashruMaftuh> {
     let jidhr = jidhr_mashru(masarat_hala, id);
     if !jidhr.join(MALAF_MASHRU).is_file() {
+        if let Some(mashru) = istaid_min_mashwar(masarat_hala, id, &jidhr)? {
+            return Ok(mashru);
+        }
         return Err(Khata::from(KhataWarshaAmr::MashruGhayrMawjud {
             ism: id.to_string(),
         }));
     }
     MashruMaftuh::iftah(jidhr).map_err(Khata::from)
+}
+
+/// Builds the workshop's project out of this game's newest automatic run.
+///
+/// Runs written before the run learned to publish its rows — and every run this
+/// product shipped until it did — left their table under the run's own
+/// identifier and nothing under the game's. The workshop then told somebody who
+/// had finished a translation that no project existed and to start one. The
+/// rows are on disk the whole time; this is the one read that connects them.
+///
+/// Newest run, and only one: the runs under a game are the same table
+/// translated again, so the newest is the most complete, and folding older ones
+/// in would resurrect strings a later extraction stopped finding. Rows are taken
+/// whole — their translations, their review state, their provenance — because
+/// they are the same `MudkhalNass` the workshop writes.
+///
+/// `None` when there is no run, no table in it, or nothing readable in the
+/// table: those are genuinely "no project yet", and the refusal above is the
+/// honest answer.
+fn istaid_min_mashwar(
+    masarat_hala: &Masarat,
+    id: LubaId,
+    jidhr_mashru_hali: &Path,
+) -> Natija<Option<MashruMaftuh>> {
+    let jidhr_mashawir = crate::tilqai_awamir::jidhr_mashawir(masarat_hala, id);
+    let Some(mawjuz) = ijrud(&jidhr_mashawir).into_iter().next() else {
+        return Ok(None);
+    };
+    let masar_nusus = mawjuz
+        .mujallad
+        .join(MUJALLAD_MASHRU)
+        .join(MALAF_NUSUS_MASHWAR);
+    if !masar_nusus.is_file() {
+        return Ok(None);
+    }
+    let sufuf = match taarib_tilqai::tarjama::iqra_nusus(&masar_nusus) {
+        Ok(sufuf) => sufuf,
+        Err(sabab) => {
+            // Reported and not raised: an unreadable run table is a run's
+            // problem, and answering "no project yet" is both true and
+            // actionable — pressing translate again rebuilds it.
+            tracing::warn!(
+                masar = %masar_nusus.display(),
+                %sabab,
+                "a finished run's table would not read; the workshop is left with no project"
+            );
+            return Ok(None);
+        },
+    };
+    if sufuf.is_empty() {
+        return Ok(None);
+    }
+
+    let sijill = taarib_tilqai::mashwar::SijillMashwar::iftah(&mawjuz.mujallad).ok();
+    let imkaniyat = sijill.as_ref().and_then(|sijill| {
+        match sijill.qayd(taarib_tilqai::taqaddum::MarhalaTilqai::Fahs) {
+            Some(taarib_tilqai::mashwar::QaydMarhala::Fahs { imkaniyat }) => {
+                Some(imkaniyat.as_ref())
+            },
+            _ => None,
+        }
+    });
+    let bayan = taarib_tilqai::warsha::bayan(
+        imkaniyat,
+        rafd_mashwar(&mawjuz.mujallad),
+        taarib_usus::ISDAR,
+        &mawjuz.waqt,
+    );
+
+    let adad = sufuf.len();
+    taarib_tilqai::warsha::anshir(
+        jidhr_mashru_hali,
+        id,
+        &mawjuz.ism_luba,
+        bayan,
+        &sufuf,
+        &mawjuz.waqt,
+    )
+    .map_err(Khata::from)?;
+    tracing::info!(
+        luba = %id,
+        mashwar = %mawjuz.id,
+        adad,
+        "the workshop's project was recovered from a finished automatic run"
+    );
+    MashruMaftuh::iftah(jidhr_mashru_hali.to_path_buf())
+        .map(Some)
+        .map_err(Khata::from)
+}
+
+/// The refusal report a finished run stored beside its table, or an empty one.
+///
+/// Only the refusal report is deserialized: the same file holds the whole
+/// string table, and building a hundred thousand rows to fill in a field that
+/// answers "why does this project only have the menus" is a cost paid for
+/// nothing.
+fn rafd_mashwar(mujallad: &Path) -> taarib_istikhraj::rafd::TaqreerRafd {
+    /// The stored table, read for its refusal report and nothing else.
+    #[derive(serde::Deserialize)]
+    struct RafdFaqat {
+        /// What was read and what was refused.
+        rafd: taarib_istikhraj::rafd::TaqreerRafd,
+    }
+
+    let masar = mujallad
+        .join(MUJALLAD_MASHRU)
+        .join(taarib_tilqai::mashwar::MALAF_JADWAL);
+    let Ok(malaf) = std::fs::File::open(&masar) else {
+        return taarib_istikhraj::rafd::TaqreerRafd::default();
+    };
+    serde_json::from_reader::<_, RafdFaqat>(std::io::BufReader::new(malaf))
+        .map(|makhzun| makhzun.rafd)
+        .unwrap_or_default()
 }
 
 /// The table for a command that only reads it: the rows that read, with the damage beside them.
@@ -2656,6 +2778,125 @@ mod ikhtibarat {
             masdar_istikhraj: MasdarIstikhraj::Sakin,
             tarmiz: None,
         }
+    }
+
+    /// A finished automatic run for the test game, with `adad` rows in its own
+    /// table and nothing in the workshop's store.
+    ///
+    /// This is the shape every run this product shipped left behind before the
+    /// run learned to publish, so it is the shape recovery has to read.
+    fn mashwar_bi_sufuf(
+        masarat_hala: &Masarat,
+        adad: usize,
+    ) -> Result<LubaId, Box<dyn std::error::Error>> {
+        let id = luba_ikhtibar();
+        let mujallad = crate::tilqai_awamir::jidhr_mashawir(masarat_hala, id)
+            .join(uuid::Uuid::new_v4().to_string());
+        std::fs::create_dir_all(mujallad.join(MUJALLAD_MASHRU))?;
+
+        // The journal's header alone: `ijrud` needs it to see the directory as
+        // a run at all, and recovery reads the game's name and moment from it.
+        let mut sijill =
+            std::fs::File::create(mujallad.join(taarib_tilqai::mashwar::MALAF_SIJILL))?;
+        writeln!(
+            sijill,
+            "{}",
+            serde_json::json!({
+                "naw": "tarwisa",
+                "isdar": taarib_tilqai::mashwar::ISDAR_SIJILL,
+                "id": uuid::Uuid::new_v4().to_string(),
+                "ism_luba": "Spacewar",
+                "jidhr_luba": "/luba",
+                "waqt": WAQT,
+            })
+        )?;
+
+        let sufuf: Vec<MudkhalNass> = (0..adad)
+            .map(|raqm| {
+                let mut mudkhal = saf(&format!("menu/{raqm}"), &format!("Option {raqm}"));
+                mudkhal.hadaf = Some(format!("خيار {raqm}"));
+                mudkhal
+            })
+            .collect();
+        taarib_tilqai::tarjama::uktub_nusus(
+            &mujallad.join(MUJALLAD_MASHRU).join(MALAF_NUSUS_MASHWAR),
+            &sufuf,
+        )?;
+        Ok(id)
+    }
+
+    /// The defect a user met on every game: a finished translation, and a
+    /// workshop saying no project exists and to start one.
+    #[test]
+    fn alfath_yastaid_almashru_min_mashwar_muntah() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat = masarat_muaqqata(&haris);
+        let id = mashwar_bi_sufuf(&masarat, 3)?;
+        assert!(
+            !jidhr_mashru(&masarat, id).join(MALAF_MASHRU).is_file(),
+            "the run left nothing in the workshop's store, which is the case under test"
+        );
+
+        let mashru = iftah_mashru(&masarat, id)?;
+        let (sufuf, talifa) = mashru.iqra_nusus()?;
+        assert_eq!(talifa, 0);
+        assert_eq!(sufuf.len(), 3, "every row the run had reached the workshop");
+        let awwal = sufuf.first().ok_or("the first recovered row")?;
+        assert_eq!(
+            awwal.hadaf.as_deref(),
+            Some("خيار 0"),
+            "the run's translations travelled with its rows"
+        );
+        assert_eq!(mashru.rasm().ism_luba, "Spacewar");
+        assert!(
+            jidhr_mashru(&masarat, id).join(MALAF_MASHRU).is_file(),
+            "the recovered project is on disk, so the next open is an ordinary open"
+        );
+        Ok(())
+    }
+
+    /// Recovery must not reach for a run that is not there.
+    #[test]
+    fn alfath_yarfud_luban_bila_mashwar() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat = masarat_muaqqata(&haris);
+        let khata = iftah_mashru(&masarat, luba_ikhtibar())
+            .err()
+            .ok_or("a game with neither a project nor a run is refused")?;
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 40);
+        Ok(())
+    }
+
+    /// A run whose table is empty is "no project yet", not an empty project.
+    #[test]
+    fn alfath_yarfud_mashwaran_bila_sufuf() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat = masarat_muaqqata(&haris);
+        let id = mashwar_bi_sufuf(&masarat, 0)?;
+        let khata = iftah_mashru(&masarat, id)
+            .err()
+            .ok_or("a run that extracted nothing leaves no project to open")?;
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 40);
+        Ok(())
+    }
+
+    /// Recovery never runs over a project that already exists, whatever a run
+    /// beside it holds — that is where a person's edits live.
+    #[test]
+    fn alistiada_la_tamuss_mashruan_qaiman() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat = masarat_muaqqata(&haris);
+        let (id, _) = mashru_bi_sufuf(&masarat, 2)?;
+        let _ = mashwar_bi_sufuf(&masarat, 9)?;
+
+        let mashru = iftah_mashru(&masarat, id)?;
+        let (sufuf, _) = mashru.iqra_nusus()?;
+        assert_eq!(
+            sufuf.len(),
+            2,
+            "the existing project was opened, not replaced by the run's nine rows"
+        );
+        Ok(())
     }
 
     /// A project of `adad` rows, written where the workspace looks for it.

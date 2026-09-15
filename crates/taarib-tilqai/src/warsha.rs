@@ -18,12 +18,13 @@
 use std::path::Path;
 
 use taarib_istikhraj::mashru::{BayanIstikhraj, MALAF_MASHRU, MashruMaftuh};
+use taarib_istikhraj::rafd::TaqreerRafd;
+use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::muharrik::TaqreerImkaniyat;
 use taarib_mustalahat::nass::MudkhalNass;
 
-use crate::istikhraj::JadwalMakhzun;
 use crate::khata::{NatijatTilqai, marfuda};
-use crate::talab::{LubaTilqai, TalabTilqai};
+use crate::talab::TalabTilqai;
 use crate::taqaddum::MarhalaTilqai;
 
 /// What publishing did, so the run's progress line can say it.
@@ -52,11 +53,10 @@ pub struct NatijatNashr {
 /// [`KhataTilqai::MarhalaMarfuda`]: crate::khata::KhataTilqai::MarhalaMarfuda
 pub fn anshir(
     jidhr: &Path,
-    luba: &LubaTilqai<'_>,
-    imkaniyat: &TaqreerImkaniyat,
-    makhzun: &JadwalMakhzun,
+    luba: LubaId,
+    ism_luba: &str,
+    bayan: BayanIstikhraj,
     madakhil: &[MudkhalNass],
-    isdar_taarib: &str,
     waqt: &str,
 ) -> NatijatTilqai<NatijatNashr> {
     let rafd =
@@ -90,9 +90,9 @@ pub fn anshir(
 
     let mut mashru = MashruMaftuh::ansha(
         jidhr.to_path_buf(),
-        luba.huwiya(),
-        luba.ism.to_owned(),
-        bayan(imkaniyat, makhzun, isdar_taarib, waqt),
+        luba,
+        ism_luba.to_owned(),
+        bayan,
         waqt.to_owned(),
     )
     .map_err(rafd)?;
@@ -145,19 +145,29 @@ pub fn masar(talab: &TalabTilqai<'_>) -> Option<std::path::PathBuf> {
 /// The refusal report is carried over whole, because the question a
 /// contributor asks the workshop three weeks later — "why does this project
 /// only have the menus" — is answered by that report and by nothing else.
-fn bayan(
-    imkaniyat: &TaqreerImkaniyat,
-    makhzun: &JadwalMakhzun,
+///
+/// The probe report is optional because the second caller is recovery: a
+/// project rebuilt from a finished run reads what it can out of that run's
+/// journal, and a journal written by a build that recorded no probe still has
+/// rows worth opening. A project that names no engine is worse than one that
+/// names the right one and better than no project at all.
+#[must_use]
+pub fn bayan(
+    imkaniyat: Option<&TaqreerImkaniyat>,
+    rafd: TaqreerRafd,
     isdar_taarib: &str,
     waqt: &str,
 ) -> BayanIstikhraj {
     BayanIstikhraj {
-        aila: crate::bina::ism_aila(imkaniyat.muharrik.aila).to_owned(),
-        isdar: imkaniyat.muharrik.isdar.as_ref().map(ToString::to_string),
+        aila: imkaniyat.map_or_else(String::new, |taqreer| {
+            crate::bina::ism_aila(taqreer.muharrik.aila).to_owned()
+        }),
+        isdar: imkaniyat
+            .and_then(|taqreer| taqreer.muharrik.isdar.as_ref().map(ToString::to_string)),
         bina_manassa: None,
         basmat_luba: None,
         turuq: Vec::new(),
-        rafd: makhzun.rafd.clone(),
+        rafd,
         waqt: waqt.to_owned(),
         isdar_taarib: isdar_taarib.to_owned(),
     }
@@ -171,7 +181,7 @@ mod ikhtibarat {
     };
     use taarib_mustalahat::muraja::SijillMuraja;
     use taarib_mustalahat::nass::{MasdarIstikhraj, NassId, QuyudNass, SiyaqNass, TasnifNass};
-    use taarib_usus::manassa::{BeeatTawafuq, Mimariya, NizamTashghil};
+    use taarib_usus::manassa::Mimariya;
 
     use super::*;
 
@@ -229,33 +239,13 @@ mod ikhtibarat {
         }
     }
 
-    fn makhzun() -> JadwalMakhzun {
-        JadwalMakhzun {
-            jadwal: taarib_istikhraj::jadwal::JadwalNusus::default(),
-            rafd: taarib_istikhraj::rafd::TaqreerRafd::default(),
-            multaqat: false,
-        }
-    }
-
-    fn luba(jidhr: &Path) -> LubaTilqai<'_> {
-        LubaTilqai {
-            jidhr,
-            ism: "Luba Ikhtibar",
-            masdar: MasdarLuba::Steam(480),
-            tanfidhi: None,
-            nizam: NizamTashghil::Windows,
-            beea: &BeeatTawafuq::Asli,
-        }
-    }
-
     fn anshir_fi(jidhr: &Path, sufuf: &[MudkhalNass]) -> NatijatTilqai<NatijatNashr> {
         anshir(
             jidhr,
-            &luba(Path::new("/luba")),
-            &imkaniyat(),
-            &makhzun(),
+            LubaId::min_masdar(&MasdarLuba::Steam(480), "Luba Ikhtibar"),
+            "Luba Ikhtibar",
+            bayan(Some(&imkaniyat()), TaqreerRafd::default(), "1.0.1", WAQT),
             sufuf,
-            "1.0.1",
             WAQT,
         )
     }
