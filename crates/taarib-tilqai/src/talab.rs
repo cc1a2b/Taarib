@@ -196,6 +196,17 @@ pub struct TalabTilqai<'a> {
     /// written, the run reports success, and the game starts in its original
     /// language with the whole translation sitting on disk beside it.
     pub mukawwinat: Option<&'a Path>,
+
+    /// The workshop's project store, when the caller keeps one.
+    ///
+    /// The run writes its rows here, under the game's identity, as soon as the
+    /// translation stage has finished with them. Without it the run's table
+    /// lives only in the run directory under the run's own identifier, and the
+    /// workshop — which opens one project per game — has nothing to show: it
+    /// tells the user no project exists for this game yet and to start a
+    /// translation, immediately after they finished one. The rows the workshop
+    /// already holds are never overwritten; see [`crate::warsha::anshir`].
+    pub mashari: Option<&'a Path>,
     /// What the finished patch declares.
     pub wasf: WasfTilqai,
     /// The three records the install gate reads.
@@ -220,6 +231,7 @@ impl std::fmt::Debug for TalabTilqai<'_> {
             .field("khutut", &self.khutut)
             .field("jalsat_iltiqat", &self.jalsat_iltiqat)
             .field("mukawwinat", &self.mukawwinat)
+            .field("mashari", &self.mashari)
             .field("wasf", &self.wasf)
             .field("khiyarat", &self.khiyarat)
             .finish_non_exhaustive()

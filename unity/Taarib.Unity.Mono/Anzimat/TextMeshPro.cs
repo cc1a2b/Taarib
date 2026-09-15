@@ -635,16 +635,35 @@ namespace Taarib.Unity.Mono.Anzimat
         /// <see cref="TalabNasij.HajmLawha"/> takes.
         /// </summary>
         /// <param name="hajm">The size the text is being drawn at.</param>
+        /// <param name="bikselLilWahda">
+        /// Screen pixels per layout unit, from <see cref="QiyasShasha"/>. One
+        /// on an unscaled overlay canvas, and anything at all on a scaled
+        /// canvas or a world-space surface.
+        /// </param>
+        /// <param name="minRuqaa">
+        /// Whether this layout came out of the patch, and will therefore be
+        /// drawn from the patch's own glyph map — see <see cref="Khareeta"/>.
+        /// </param>
         /// <returns>
-        /// The drawn size itself for a coverage atlas, which holds one bitmap
-        /// per size; the atlas's own canonical size for a distance-field atlas,
-        /// which holds one bitmap for every size.
+        /// For a coverage atlas, which holds one bitmap per size, the size that
+        /// puts one atlas pixel on one screen pixel — chosen by
+        /// <see cref="Nasij.HajmLawhaMulaim"/> so both backends choose alike.
+        /// For a distance-field atlas, which holds one bitmap for every size,
+        /// the atlas's own canonical size, on which the drawn size has no
+        /// bearing at all.
         /// </returns>
-        public float HajmLawha(float hajm)
+        public float HajmLawha(float hajm, float bikselLilWahda, bool minRuqaa)
         {
             if (ruqaa.Namat != NamatLawha.Misafa)
             {
-                return hajm;
+                // A layout that came out of the patch is drawn from the patch's
+                // atlas, and that atlas holds the sizes the compiler chose and
+                // no others. Asking it for the size the glyph covers on screen
+                // would ask for a size it does not have, and the string would
+                // be missing rather than soft. Only a layout this process laid
+                // out, whose glyphs it also rasterizes on demand, can be given
+                // a size of its own.
+                return minRuqaa ? hajm : Nasij.HajmLawhaMulaim(hajm, bikselLilWahda);
             }
             ReadOnlySpan<TaaribMiftahShakl> mafatih = ruqaa.MafatihAshkal;
             return mafatih.IsEmpty ? hajm : mafatih[0].HajmRubi / 4.0f;
@@ -2369,8 +2388,9 @@ namespace Taarib.Unity.Mono.Anzimat
                 return false;
             }
 
-            float hajmLawha = masdar.HajmLawha(hajmFili);
-            bool tathbit = masdar.Namat == NamatLawha.Taghtiya;
+            float hajmLawha = masdar.HajmLawha(
+                hajmFili, QiyasShasha.BikselLilWahda(mustatil), minRuqaa);
+            bool tathbit = Nasij.YuthabbatQalam(masdar.Namat, hajmFili, hajmLawha);
             if (!minRuqaa && !masdar.Aqim(huruf, hajmLawha, tathbit))
             {
                 Utruk(mukawwin);

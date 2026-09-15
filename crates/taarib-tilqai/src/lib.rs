@@ -107,6 +107,7 @@ pub mod taqaddum;
 pub mod taqreer;
 pub mod tarjama;
 pub mod tathbeet;
+pub mod warsha;
 
 pub use crate::bina::{MasaratBina, MilliBina, Tahdeer};
 pub use crate::fahs::{naqs_jahiziya, tahaqquq_jahiziya};

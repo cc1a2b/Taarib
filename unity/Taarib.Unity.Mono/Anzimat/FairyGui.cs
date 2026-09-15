@@ -1018,8 +1018,9 @@ namespace Taarib.Unity.Mono.Anzimat
             }
 
             bool minRuqaa = MinRuqaa(fahras, hajm);
-            float hajmLawha = masdar.HajmLawha(hajmFili);
-            bool tathbit = masdar.Namat == NamatLawha.Taghtiya;
+            float hajmLawha = masdar.HajmLawha(
+                hajmFili, QiyasShasha.BikselLilWahda(haql), minRuqaa);
+            bool tathbit = Nasij.YuthabbatQalam(masdar.Namat, hajmFili, hajmLawha);
             if (!minRuqaa && !masdar.Aqim(huruf, hajmLawha, tathbit))
             {
                 return false;

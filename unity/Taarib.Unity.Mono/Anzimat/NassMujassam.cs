@@ -42,21 +42,32 @@
 // here asks the game's font for a glyph. Decision 5 forbids reading it in any
 // case; the point worth making is that there would be nothing worth reading.
 //
-// THE PIXEL SIZE A LAYOUT IS MEASURED AT IS NOT THE SIZE IT APPEARS AT. World
-// space text faces a camera. It is subject to perspective, it grows as the
-// player walks toward it and shrinks as they walk away, and one frame may draw
-// the same label at two hundred screen pixels tall and another at three. None
-// of that is a layout parameter. A layout is measured at the size the COMPONENT
-// declares — TextMesh.fontSize, in font pixels — and mapped into world units by
-// characterSize, which Unity defines as a tenth of a unit per font pixel. So
-// the quarter-pixel key this adapter looks a precomputed layout up by is
-// Nasij.HajmRubi(fontSize), and it is stable for as long as the component's own
-// fontSize is: the layout, the atlas key and the glyph images all stay put
-// while the player moves. Keying any of it on apparent screen size would
-// rasterize a fresh glyph set every frame the camera moved, would evict the
-// atlas continuously, and would make text visibly re-flow as a player walked
-// toward a sign — which nobody would report as a font bug, because it is not
-// one.
+// THE PIXEL SIZE A LAYOUT IS MEASURED AT IS NOT THE SIZE IT APPEARS AT, AND THE
+// TWO ARE ANSWERED SEPARATELY. World space text faces a camera. It is subject
+// to perspective, it grows as the player walks toward it and shrinks as they
+// walk away, and one frame may draw the same label at two hundred screen pixels
+// tall and another at three.
+//
+// None of that is a LAYOUT parameter. A layout is measured at the size the
+// COMPONENT declares — TextMesh.fontSize, in font pixels — and mapped into world
+// units by characterSize, which Unity defines as a tenth of a unit per font
+// pixel. So the quarter-pixel key this adapter looks a precomputed layout up by
+// is Nasij.HajmRubi(fontSize), and it is stable for as long as the component's
+// own fontSize is. Keying the layout on apparent size would make text visibly
+// re-flow as a player walked toward a sign, which nobody would report as a font
+// bug because it is not one.
+//
+// It is the ONLY thing the atlas can be keyed on. A coverage bitmap has one
+// resolution, and fontSize times characterSize is a size in world units — the
+// number eight there can be a heading covering a third of the screen.
+// Rasterizing it at eight pixels and letting the GPU magnify it is a smear, and
+// that is what this adapter shipped before QiyasShasha existed. So the
+// rasterization size, and only the rasterization size, is the apparent one:
+// QiyasShasha projects one layout unit into screen space, Nasij.HajmLawhaMulaim
+// puts the answer on a ten-rung ladder so a moving camera cannot mint a fresh
+// glyph set per frame, and Nasij.Ibni scales every glyph rectangle back down by
+// Hajm / HajmLawha. The geometry is unchanged. Only the bitmap sampled into it
+// gets sharper.
 //
 // A TextMesh whose fontSize is zero draws at the size its font asset was
 // imported at. This file does not read that number: Decision 5 forbids sampling
@@ -579,7 +590,13 @@ namespace Taarib.Unity.Mono.Anzimat
                 return false;
             }
 
-            float hajmLawha = masdar.HajmLawha(hajmFili);
+            // Two factors, because this system has two: one layout pixel is
+            // qiyas local units, and one local unit is however many screen
+            // pixels the camera makes of it. The atlas is asked for the size
+            // the glyph actually covers, which is their product — the layout
+            // itself is untouched, exactly as the comment on qiyas requires.
+            float hajmLawha = masdar.HajmLawha(
+                hajmFili, qiyas * QiyasShasha.BikselLilWahda(mujassam), minRuqaa);
             if (!minRuqaa && !masdar.Aqim(huruf, hajmLawha, tathbit: false))
             {
                 return false;

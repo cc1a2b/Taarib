@@ -15,6 +15,26 @@ pub const NASS_ARABI: &str = "\
 دقيقة تُمكّن من إرجاع اللعبة تمامًا إلى حالتها. لا يُثبَّت تعريب في لعبة تعمل بنظام \
 مكافحة غش، ويُحذّر صراحةً قبل تعديل لعبة متعدّدة اللاعبين.";
 
+/// The same statement, in English.
+///
+/// The two say the same four things in the same order, and both are shipped
+/// because this is the one sentence in the product a person is asked to *agree
+/// to* rather than merely read. A session running in English was shown the
+/// Arabic and asked to acknowledge it, which is asking somebody to accept terms
+/// they may not be able to read — and an acknowledgement given that way is worth
+/// nothing to the person giving it.
+///
+/// [`ISDAR_NASS`] is deliberately not bumped for this. The obligations are
+/// unchanged; only a second rendering of them was added, and re-asking every
+/// existing user to accept the same statement again would train them to click
+/// through it.
+pub const NASS_INJILIZI: &str = "\
+Taarib modifies the files of games you own in order to add Arabic to them. \
+Before any modification it saves an exact copy of the original, so the game can \
+be returned to precisely the state it was in. Taarib is never installed into a \
+game that runs an anti-cheat system, and it warns you explicitly before \
+modifying a multiplayer game.";
+
 /// A recorded acknowledgement.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SijillIqrar {

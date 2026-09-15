@@ -215,7 +215,27 @@ async fn ijri(
         }
         madakhil
     } else {
-        let madakhil = makhzun.jadwal.ila_mudkhalat();
+        // A first pass starts from the workshop's rows when the game has any,
+        // and only then fills in from the table. Without that, a user who
+        // corrected a hundred lines in the workshop and pressed translate again
+        // would get a patch built from a fresh machine pass, their corrections
+        // sitting in a project the run never read — and the only way to notice
+        // would be to read the game. Rows the workshop already holds also come
+        // with their translations, so the provider is never asked for them
+        // twice.
+        let asas = crate::warsha::masar(talab)
+            .map(|jidhr| crate::warsha::iqra(&jidhr))
+            .transpose()?
+            .unwrap_or_default();
+        let min_warsha = asas.len();
+        let (madakhil, _) = damm_jadeed(asas, makhzun.jadwal.ila_mudkhalat());
+        if min_warsha > 0 {
+            muraqib.ballagh_bila_majmu(
+                MarhalaTilqai::Istikhraj,
+                tul(madakhil.len()),
+                format!("{min_warsha} string(s) came from the workshop's existing translation"),
+            );
+        }
         tarjama::uktub_nusus(&masar_nusus, &madakhil)?;
         madakhil
     };
@@ -263,6 +283,38 @@ async fn ijri(
         return Err(khata);
     }
     let madakhil = hasila.madakhil;
+
+    // The rows are final here, and this is where the workshop gets them. Not
+    // after the install: a run that is stopped at the safety gate, or that was
+    // asked not to install, has still produced a translation somebody can open
+    // and correct, and putting the publish behind the last stage would throw
+    // exactly those away.
+    if let Some(jidhr_warsha) = crate::warsha::masar(talab) {
+        let nashr = crate::warsha::anshir(
+            &jidhr_warsha,
+            &talab.luba,
+            &imkaniyat,
+            &makhzun,
+            &madakhil,
+            &talab.wasf.isdar_taarib,
+            &talab.khiyarat.waqt,
+        )?;
+        muraqib.ballagh_bila_majmu(
+            MarhalaTilqai::Tarjama,
+            tul(madakhil.len()),
+            if nashr.munsha {
+                format!(
+                    "the workshop now has a project for this game, with {} string(s)",
+                    nashr.majmu
+                )
+            } else {
+                format!(
+                    "the workshop's project for this game gained {} string(s) and now has {}",
+                    nashr.jadeeda, nashr.majmu
+                )
+            },
+        );
+    }
 
     // --- 4 — fonts and sizes ------------------------------------------------
     taqreer.marhala = MarhalaTilqai::Takhtit;
@@ -505,7 +557,10 @@ fn istanif(
 /// Returns the rows and how many were added, because "the merge found
 /// twenty-three strings and the project grew by twenty-three" is the only way a
 /// reader can tell a merge that worked from one that was thrown away.
-fn damm_jadeed(sabiqa: Vec<MudkhalNass>, jadwal: Vec<MudkhalNass>) -> (Vec<MudkhalNass>, usize) {
+pub(crate) fn damm_jadeed(
+    sabiqa: Vec<MudkhalNass>,
+    jadwal: Vec<MudkhalNass>,
+) -> (Vec<MudkhalNass>, usize) {
     let mawjuda: std::collections::HashSet<_> = sabiqa.iter().map(|mudkhal| mudkhal.id).collect();
     let mut madakhil = sabiqa;
     let mut jadeeda = 0_usize;

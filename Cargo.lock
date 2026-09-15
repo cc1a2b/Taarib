@@ -6214,6 +6214,7 @@ dependencies = [
  "taarib-tarqee",
  "taarib-tathbeet",
  "taarib-usus",
+ "tempfile",
  "thiserror 2.0.20",
  "tokio",
  "tracing",

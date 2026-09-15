@@ -15,6 +15,7 @@ import { khatarMin, maniAwwal, nassLugha } from '@/maktaba/aql';
 import type { JahiziyaTashghil } from '@/maktaba/jahiziya';
 import { jahiziyaMin, naqsJahiziya, tasil } from '@/maktaba/jahiziya';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
+import { QismIqrar, muarrifSababIqrar, useIqrarAwwal } from '@/mukawwinat/qism_iqrar';
 import { KutlatFashal, SatrRamz } from '@/mukawwinat/kutlat_khata';
 import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
@@ -104,6 +105,9 @@ const MUARRIF_JAHIZIYA = 'tilqai-sabab-jahiziya';
 /** The multiplayer acknowledgement, for the ids the component derives. */
 const MUARRIF_SHABAKA = 'tilqai-iqrar-shabaka';
 
+/** The first-run statement's block on this screen. */
+const MUARRIF_IQRAR_AWWAL = 'tilqai-iqrar-awwal';
+
 /**
  * The standing blocker, which every withdrawn start button points at.
  *
@@ -146,7 +150,17 @@ const MUARRIF_MANI = 'tilqai-sabab-mani';
    --------------------------------------------------------------------------- */
 const RAMZ_SHABAKA = 'TAARIB-E-9129';
 
-const RUMUZ_BAB: ReadonlySet<string> = new Set([RAMZ_SHABAKA]);
+/**
+ * The door's refusal when the first-run statement has not been acknowledged.
+ *
+ * In `RUMUZ_BAB` with the multiplayer one because it is the same kind of
+ * refusal: the run never started, nothing was spent, and there is something on
+ * this screen the reader can do about it. Anything else is a failure and belongs
+ * in the failure block.
+ */
+const RAMZ_IQRAR = 'TAARIB-E-9138';
+
+const RUMUZ_BAB: ReadonlySet<string> = new Set([RAMZ_SHABAKA, RAMZ_IQRAR]);
 
 const ASMA_HALAT: Readonly<Record<HalatMarhala, MiftahLugha>> = {
   muntazira: 'tilqai.hala.muntazira',
@@ -718,6 +732,12 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
   // decision it belongs to.
   const mamnuShabaka = yalzamShabaka && !iqrarShabaka;
 
+  // The first-run statement, which is a precondition of every install and not
+  // of this screen — but this screen is where the one-button translation is
+  // pressed, and the door refuses on it. Read here so the button says so before
+  // the press rather than after the extraction and the whole machine pass.
+  const { yahtaj: mamnuIqrar } = useIqrarAwwal();
+
   /*
    * Whether the standing blocker withdraws the button, from the core's own two
    * fields rather than from a list of codes kept here.
@@ -750,12 +770,14 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
     ? MUARRIF_MANI
     : mamnu
       ? MUARRIF_JAHIZIYA
-      : mamnuShabaka
-        ? muarrifMatlub(MUARRIF_SHABAKA)
-        : undefined;
+      : mamnuIqrar
+        ? muarrifSababIqrar(MUARRIF_IQRAR_AWWAL)
+        : mamnuShabaka
+          ? muarrifMatlub(MUARRIF_SHABAKA)
+          : undefined;
 
-  /** Whether any of the three gates is holding the start. */
-  const mamnuBadi = mamnu || maniQati || mamnuShabaka;
+  /** Whether any of the four gates is holding the start. */
+  const mamnuBadi = mamnu || maniQati || mamnuIqrar || mamnuShabaka;
 
   /**
    * The one place a run is started from.
@@ -881,9 +903,11 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
         ? mani !== null && mani.naw === 'jahiziya_ghaiba'
           ? nassLugha(mani, lugha)
           : (naqs ?? t('tilqai.jahiziya.sharh', lugha))
-        : mamnuShabaka
-          ? t('tilqai.shabaka.matlub', lugha)
-          : undefined;
+        : mamnuIqrar
+          ? t('tilqai.iqrar.matlub', lugha)
+          : mamnuShabaka
+            ? t('tilqai.shabaka.matlub', lugha)
+            : undefined;
 
   // Which single action the anchor offers. One place, in every state, so the
   // user never has to look for the button they pressed a minute ago.
@@ -1057,6 +1081,45 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
               demanded for nothing is how a person learns to tick without
               reading.
             */}
+            {/*
+              The first-run statement.
+
+              Above the multiplayer question because it outranks it: the
+              statement is a precondition of every install in the product and the
+              risk question qualifies one run of one game, and the backend's door
+              checks them in exactly this order. Hidden while readiness or a
+              final blocker withdraws the run, for the reason the question below
+              is: a statement demanded for a run that cannot happen teaches
+              people to accept without reading.
+
+              This panel is the whole of the answer to a refusal that used to be
+              unanswerable from here. The door raised TAARIB-E-9138, the run
+              stopped, and the statement it named lived on a different screen —
+              so the reader was told to go and find it, with no link and no
+              button, after everything up to the install had already run.
+            */}
+            {/* No Zuhur around this one: the panel runs its own reveal, and a
+                second one outside it would animate a wrapper whose content is
+                already animating. */}
+            {!mamnu && !maniQati && (yabda || mustanifa) ? (
+              <>
+                {/* Revealing a panel is not an announcement: a press refused at
+                    the door has to say so to a reader who cannot see the panel
+                    appear, and say it in the run's own terms. */}
+                {ramzBab === RAMZ_IQRAR ? (
+                  <p className="khafi" role="status">
+                    {t('tilqai.iqrar.marfud', lugha)}
+                  </p>
+                ) : null}
+                <QismIqrar
+                  lugha={lugha}
+                  muarrif={MUARRIF_IQRAR_AWWAL}
+                  luba={muarrif}
+                  matlub={t('tilqai.iqrar.matlub', lugha)}
+                />
+              </>
+            ) : null}
+
             <Zuhur
               maftuh={yalzamShabaka && !mamnu && !maniQati && (yabda || mustanifa)}
               className="tilqai__iqrar-shabaka"

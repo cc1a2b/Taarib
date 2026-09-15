@@ -29,6 +29,7 @@ import {
 } from '@/maktaba/tabaqat';
 import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
+import { QismIqrar, useIqrarAwwal } from '@/mukawwinat/qism_iqrar';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
@@ -37,7 +38,6 @@ import type {
   AqlLubaHie,
   BinaHie,
   DaleelHie,
-  HalatIqrar,
   HalatTarjamaMujtama,
   HalatTashghil,
   HasilatIzala,
@@ -2981,21 +2981,6 @@ export function Luba(): JSX.Element {
     queryFn: () => nadi('hal_tashtaghil', { muarrif }),
   });
 
-  const iqrar = useQuery<HalatIqrar, KhataJisr>({
-    queryKey: mafatih.iqrar,
-    queryFn: () => nadi('iqrar_aman'),
-  });
-
-  const sajjilIqrar = useMutation<HalatIqrar, KhataJisr, void>({
-    mutationFn: () => nadi('sajjil_iqrar_aman'),
-    onSuccess: (hala) => {
-      makhzan.setQueryData(mafatih.iqrar, hala);
-      // The panel leaves the screen the moment this lands, so the notice is
-      // what says the press worked and what it unlocked.
-      ansha({ naw: 'najah', nass: t('luba.tanbih.iqrar_sujjil', lugha) });
-    },
-  });
-
   const fahsMuharrik = useMutation<TaqreerHie, KhataJisr, void>({
     mutationFn: () => nadi('afhas_muharrik', { muarrif }),
     // The command overwrote the stored report, so a fresh detail read is the
@@ -3019,7 +3004,7 @@ export function Luba(): JSX.Element {
   // them to close a window that may not be open. The refusal is the same either
   // way; only the explanation differs.
   const tashghilMajhul = tashghil.data?.majhul === true || tashghil.isError;
-  const yahtajIqrar = iqrar.data?.yahtaj !== false;
+  const { yahtaj: yahtajIqrar } = useIqrarAwwal();
   const muqfal = yashtaghil || yahtajIqrar;
   // The reason, once, for every control the lock refuses: the sentence under
   // the buttons and the title on each of them are the same words.
@@ -3045,7 +3030,6 @@ export function Luba(): JSX.Element {
   const aidIzala = izala.reset;
   const aidHimaya = himaya.reset;
   const aidFahsMuharrik = fahsMuharrik.reset;
-  const aidSajjilIqrar = sajjilIqrar.reset;
   useEffect(() => {
     setTaakid(null);
     setSuturZahira(false);
@@ -3053,8 +3037,7 @@ export function Luba(): JSX.Element {
     aidIzala();
     aidHimaya();
     aidFahsMuharrik();
-    aidSajjilIqrar();
-  }, [muarrif, aidTahaqquq, aidIzala, aidHimaya, aidFahsMuharrik, aidSajjilIqrar]);
+  }, [muarrif, aidTahaqquq, aidIzala, aidHimaya, aidFahsMuharrik]);
 
   useEffect(() => {
     if (taakid !== null) {
@@ -3345,62 +3328,11 @@ export function Luba(): JSX.Element {
                     than in a place they have to go looking for. */}
                 <QismAql muarrif={muarrif} lugha={lugha} />
 
-                {iqrar.error !== null ? (
-                  <KutlatKhata
-                    unwan={t('luba.khata.amal', lugha)}
-                    khata={iqrar.error}
-                    lugha={lugha}
-                    muarrif={muarrif}
-                    aada={() => {
-                      void iqrar.refetch();
-                    }}
-                  />
-                ) : null}
-                <Zuhur
-                  maftuh={iqrar.error === null && yahtajIqrar && iqrar.data !== undefined}
-                  asl="mahall"
-                >
-                  {iqrar.data === undefined ? null : (
-                    <section
-                      className="luba__qism luba__qism--iqrar"
-                      aria-labelledby="luba-unwan-iqrar"
-                    >
-                      <h2 id="luba-unwan-iqrar" className="luba__unwan-qism">
-                        {t('luba.iqrar.unwan', lugha)}
-                      </h2>
-                      <p className="luba__sabab" dir="rtl" lang="ar">
-                        {iqrar.data.nass_arabi}
-                      </p>
-                      <div className="luba__saff-afal">
-                        <button
-                          type="button"
-                          className="zir zir--tamyeez"
-                          aria-busy={sajjilIqrar.isPending}
-                          onClick={() => {
-                            if (!sajjilIqrar.isPending) {
-                              sajjilIqrar.mutate();
-                            }
-                          }}
-                        >
-                          {t(sajjilIqrar.isPending ? 'luba.iqrar.jari' : 'luba.iqrar.zirr', lugha)}
-                        </button>
-                      </div>
-                      {sajjilIqrar.error !== null ? (
-                        <KutlatKhata
-                          unwan={t('luba.khata.amal', lugha)}
-                          khata={sajjilIqrar.error}
-                          lugha={lugha}
-                          muarrif={muarrif}
-                          aada={() => {
-                            if (!sajjilIqrar.isPending) {
-                              sajjilIqrar.mutate();
-                            }
-                          }}
-                        />
-                      ) : null}
-                    </section>
-                  )}
-                </Zuhur>
+                <QismIqrar
+                  lugha={lugha}
+                  luba={muarrif}
+                  matlub={yahtajIqrar ? t('luba.iqrar.qabl', lugha) : null}
+                />
 
                 <QismRuqaa
                   muarrif={muarrif}

@@ -1,0 +1,64 @@
+/* ==========================================================================
+   قسم الإقرار — the first-run statement.
+
+   It sits on two screens that look nothing alike: the game's detail column,
+   where every panel is a raised card, and the automatic run's single flow,
+   where every band is a strip. Drawing it to match either one would make it
+   disappear into that screen's furniture, and this is the one panel in the
+   product that must not be scrolled past — nothing installs until it is
+   answered.
+
+   So it carries its own surface and the product's amber on its leading edge —
+   the same emphasis grammar the safety family already uses — and nothing else.
+   Amber and not red: this is a disclosure to read, not a risk being taken on.
+   Red is spoken for by the two prompts that put an account at stake, and
+   spending it here would flatten the difference between "read this" and "this
+   could get you banned".
+
+   The statement's own text is set at reading measure rather than the panel's
+   width. It is the only paragraph in the product somebody is asked to agree to,
+   and a four-line sentence running the full width of a desktop window is a
+   sentence people skim.
+   ========================================================================== */
+
+.iqrar-awwal {
+  display: grid;
+  gap: var(--misafa-12);
+  padding: var(--misafa-20);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--misafa-2) solid var(--tanbeeh);
+  border-radius: var(--nisf-lawha);
+}
+
+.iqrar-awwal__unwan {
+  margin: 0;
+  font-size: var(--qiyas-4);
+  line-height: var(--irtifa-4);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.iqrar-awwal__nass {
+  max-inline-size: 62ch;
+  margin: 0;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+}
+
+/* Why the control below is refused, in the holding screen's own words. Set
+   apart from the statement so it does not read as another clause of it. */
+.iqrar-awwal__matlub {
+  max-inline-size: 62ch;
+  margin: 0;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+}
+
+.iqrar-awwal__afal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-8);
+}

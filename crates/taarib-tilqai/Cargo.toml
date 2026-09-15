@@ -53,3 +53,8 @@ uuid = { workspace = true }
 walkdir = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+
+[dev-dependencies]
+# The workshop publish writes a real project store and reads it back through
+# the same reader the workshop screen uses; nothing about it is faked.
+tempfile = { workspace = true }

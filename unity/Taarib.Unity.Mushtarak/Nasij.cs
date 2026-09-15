@@ -841,6 +841,123 @@ namespace Taarib.Unity.Mushtarak
         }
 
         /// <summary>
+        /// The rasterization sizes a coverage atlas is allowed to use when the
+        /// drawn size is not the layout size.
+        /// </summary>
+        /// <remarks>
+        /// A ladder rather than the exact figure, because the exact figure on
+        /// a world-space surface changes with the camera and every distinct
+        /// value is a second copy of every glyph in the atlas. The rungs step
+        /// by roughly √2, so any size is served by a bitmap no more than 41%
+        /// larger — the point at which minification stops being visible — and
+        /// the whole ladder is ten sizes rather than unbounded. Same spacing as
+        /// the compiler's default size list, for the same reason.
+        /// </remarks>
+        private static readonly float[] SalalimLawha =
+        {
+            8f, 12f, 16f, 24f, 32f, 48f, 64f, 96f, 128f, 192f,
+        };
+
+        /// <summary>The smallest rung of <see cref="SalalimLawha"/>.</summary>
+        public const float HajmLawhaAdna = 8f;
+
+        /// <summary>The largest rung of <see cref="SalalimLawha"/>.</summary>
+        public const float HajmLawhaAqsa = 192f;
+
+        /// <summary>
+        /// The pixel size a coverage atlas should rasterize at, for text whose
+        /// one layout unit covers <paramref name="bikselLilWahda"/> screen
+        /// pixels.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A coverage bitmap has one resolution, so the only question that
+        /// matters is how large the glyph ends up on the player's screen — not
+        /// how large the number in the component's size field is. On an
+        /// unscaled overlay canvas those are the same number and this returns
+        /// the size unchanged, which is the pixel-exact path every interface
+        /// label has always taken. They are not the same number anywhere else:
+        /// a canvas with a scaler maps one layout unit to more than one pixel,
+        /// and a world-space component measures its size in world units, where
+        /// a heading on an in-game monitor can declare a size of 8 and cover a
+        /// third of the screen. Rasterizing that at 8 pixels and magnifying it
+        /// is the smear this exists to stop.
+        /// </para>
+        /// <para>
+        /// The result is what <see cref="TalabNasij.HajmLawha"/> takes, and the
+        /// <c>Hajm / HajmLawha</c> ratio in <see cref="Ibni{T}"/> scales every
+        /// rectangle and bearing back into layout units, so the geometry is
+        /// unchanged and only the sampled bitmap gets sharper.
+        /// </para>
+        /// <para>
+        /// This is what a coverage atlas can do. A distance-field atlas is the
+        /// real answer for text at an arbitrary on-screen size, and when this
+        /// build draws through one, <see cref="NamatLawha.Misafa"/> takes this
+        /// path out of the picture entirely.
+        /// </para>
+        /// </remarks>
+        /// <param name="hajm">The size the layout was measured at.</param>
+        /// <param name="bikselLilWahda">
+        /// Screen pixels per layout unit, as the adapter measured it, or one
+        /// when it could not be measured.
+        /// </param>
+        /// <returns>A size above zero.</returns>
+        public static float HajmLawhaMulaim(float hajm, float bikselLilWahda)
+        {
+            if (!(hajm > 0f))
+            {
+                return HajmLawhaAdna;
+            }
+            if (!(bikselLilWahda > 0f))
+            {
+                bikselLilWahda = 1f;
+            }
+
+            float matlub = hajm * bikselLilWahda;
+            // One unit to one pixel and a size already worth rasterizing: the
+            // exact bitmap is sharper than any rung, because sampling a rung
+            // means resampling, and an interface label drawn at its own size is
+            // the one case where no resampling is needed at all.
+            if (bikselLilWahda > 0.98f
+                && bikselLilWahda < 1.02f
+                && hajm >= HajmLawhaAdna
+                && hajm <= HajmLawhaAqsa)
+            {
+                return hajm;
+            }
+
+            float[] salalim = SalalimLawha;
+            for (int i = 0; i < salalim.Length; i++)
+            {
+                if (matlub <= salalim[i])
+                {
+                    return salalim[i];
+                }
+            }
+            return HajmLawhaAqsa;
+        }
+
+        /// <summary>
+        /// Whether the pen should be snapped to whole layout units, which is
+        /// what <see cref="TalabNasij.Tathbit"/> governs.
+        /// </summary>
+        /// <remarks>
+        /// True only for a coverage atlas rasterized at the layout size, where
+        /// one layout unit is one atlas pixel and the pen's fraction is already
+        /// folded into the bitmap. Once the two sizes differ — a scaled canvas,
+        /// a world-space surface — a whole layout unit is not a pixel of
+        /// anything, and snapping to it only makes letter spacing uneven.
+        /// </remarks>
+        /// <param name="namat">How the atlas was rasterized.</param>
+        /// <param name="hajm">The layout size.</param>
+        /// <param name="hajmLawha">The rasterization size.</param>
+        /// <returns>Whether to snap.</returns>
+        public static bool YuthabbatQalam(NamatLawha namat, float hajm, float hajmLawha)
+        {
+            return namat == NamatLawha.Taghtiya && hajmLawha == hajm;
+        }
+
+        /// <summary>
         /// The quantized pixel size that keys a glyph in the atlas: quarter
         /// pixels, matching <see cref="TaaribMiftahShakl.HajmRubi"/>.
         /// </summary>

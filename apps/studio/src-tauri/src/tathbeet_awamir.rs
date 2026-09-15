@@ -462,6 +462,9 @@ pub struct HalatIqrar {
     pub isdar_nass: u32,
     /// The statement itself, in Arabic.
     pub nass_arabi: String,
+    /// The same statement in English, so a session running in English is not
+    /// asked to accept words it cannot read.
+    pub nass_injilizi: String,
     /// When the acknowledgement was given, RFC 3339.
     pub waqt: Option<String>,
     /// Which build of Taarib asked.
@@ -1141,6 +1144,7 @@ fn iqrar_hie(sijill: Option<&SijillIqrar>) -> HalatIqrar {
         yahtaj: iqrar::yahtaj_iqrar(sijill),
         isdar_nass: iqrar::ISDAR_NASS,
         nass_arabi: iqrar::NASS_ARABI.to_owned(),
+        nass_injilizi: iqrar::NASS_INJILIZI.to_owned(),
         waqt: sijill.map(|wahid| wahid.waqt.clone()),
         isdar_taarib: sijill.map(|wahid| wahid.isdar_taarib.clone()),
     }
@@ -2443,10 +2447,6 @@ fn sutur(satrat: impl Iterator<Item = String>) -> String {
 /// then be missing the half of its evidence that only Steam's catalogue holds.
 #[tauri::command]
 #[specta::specta]
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "tauri commands receive owned arguments and managed state by value"
-)]
 #[expect(
     clippy::fn_params_excessive_bools,
     reason = "the two acknowledgements are separate keys in the IPC payload the interface \

@@ -707,8 +707,8 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 return false;
             }
 
-            float hajmLawha = source.HajmLawha(hajmFili);
-            bool tathbit = source.Namat == NamatLawha.Taghtiya;
+            float hajmLawha = source.HajmLawha(hajmFili, engine.BikselLilWahda(kaen), minRuqaa);
+            bool tathbit = Nasij.YuthabbatQalam(source.Namat, hajmFili, hajmLawha);
             if (!minRuqaa && !source.Aqim(huruf, hajmLawha, tathbit))
             {
                 Utruk(kaen);

@@ -524,7 +524,7 @@ pub fn sittasi(bayt: &[u8]) -> String {
 /// Written out rather than lower-casing `AilatMuharrik::ism`, because that
 /// method returns Arabic for the unknown family and a build recipe's engine
 /// field is an identifier other tools read.
-const fn ism_aila(aila: taarib_mustalahat::muharrik::AilatMuharrik) -> &'static str {
+pub(crate) const fn ism_aila(aila: taarib_mustalahat::muharrik::AilatMuharrik) -> &'static str {
     use taarib_mustalahat::muharrik::AilatMuharrik as A;
     match aila {
         A::Unity => "unity",

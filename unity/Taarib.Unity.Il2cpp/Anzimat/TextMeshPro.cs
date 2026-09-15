@@ -377,6 +377,14 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         private TabiaMahlula mustatil;
         private TabiaMahlula mihwar;
 
+        private TabiaMahlula mawqiTahwil;
+        private TabiaMahlula naqlMuttajih;
+        private TabiaMahlula mukawwinWalid;
+        private TabiaMahlula namatArdLawh;
+        private TabiaMahlula kamiraLawh;
+        private TabiaMahlula kamiraRaisiya;
+        private TabiaMahlula nuqtaShasha;
+
         private TabiaMahlula nasijImsah;
         private TabiaMahlula nasijRuus;
         private TabiaMahlula nasijMalamis;
@@ -402,6 +410,7 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         private IntPtr sanfRassam;
         private IntPtr sanfMurashshih;
         private IntPtr sanfMujassam;
+        private IntPtr sanfLawh;
 
         private bool maddaBiMuarrif;
         private bool rassamMaddaBiLawha;
@@ -1153,6 +1162,171 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             return Qeema<int, IntPtr>(in tifl, tahwilHali, fahras);
         }
 
+        /// <summary>
+        /// How many screen pixels one layout unit of a text component covers.
+        /// </summary>
+        /// <param name="juz">The text component.</param>
+        /// <returns>
+        /// A factor above zero, or one when the component is behind the camera,
+        /// degenerate, or the engine members this needs did not resolve.
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// A text component lays its string out in the units it measures in,
+        /// and the atlas holds one bitmap per pixel size. Those two are the same
+        /// number only on an unscaled screen-space-overlay canvas. On a canvas
+        /// with a scaler one layout unit is more than one pixel; on a
+        /// world-space component the size field is in world units, and a
+        /// heading that declares a size of eight can cover a third of the
+        /// screen — rasterized at eight pixels and magnified, which is a smear
+        /// rather than Arabic. So this projects one layout unit into screen
+        /// space and measures it, and
+        /// <see cref="Nasij.HajmLawhaMulaim"/> turns the answer into the size
+        /// the atlas is asked for. The Mono adapter measures the same quantity
+        /// the same way; the decision it feeds is shared.
+        /// </para>
+        /// <para>
+        /// Measured rather than classified: a canvas nested under a scaled
+        /// parent, a camera-space canvas with a plane distance, a world-space
+        /// canvas on a moving object are all arrangements a per-mode formula
+        /// gets wrong and a projection gets right, because a projection is what
+        /// the renderer itself does.
+        /// </para>
+        /// <para>
+        /// The camera pointer is fetched and used without anything allocating
+        /// in between, which is why it is not rooted: the two projections are
+        /// the next two calls, and both take structs.
+        /// </para>
+        /// </remarks>
+        public float BikselLilWahda(IntPtr juz)
+        {
+            const float muhayad = 1f;
+            const float saqf = 4096f;
+
+            if (juz == IntPtr.Zero || !tahwil.Wujid || !naqlMuttajih.Wujid)
+            {
+                return muhayad;
+            }
+            IntPtr tahwilHali = Tahwil(juz);
+            if (tahwilHali == IntPtr.Zero)
+            {
+                return muhayad;
+            }
+
+            // The component's own up axis, one local unit long, carried into
+            // world space with every scale and rotation above it applied. The
+            // up axis rather than a scale magnitude because a text component's
+            // size measures vertically, and a non-uniformly scaled parent
+            // stretches the two axes differently.
+            Muttajih3 raasi;
+            raasi.S = 0f;
+            raasi.A = 1f;
+            raasi.Z = 0f;
+            Muttajih3 wahda = Qeema<Muttajih3, Muttajih3>(in naqlMuttajih, tahwilHali, raasi);
+            float tul = Tul(in wahda);
+            if (!(tul > 0f))
+            {
+                return muhayad;
+            }
+
+            IntPtr lawh = Lawh(juz);
+            if (lawh != IntPtr.Zero && namatArdLawh.Wujid
+                && Qeema<int>(in namatArdLawh, lawh) == ArdFawqShasha)
+            {
+                // An overlay canvas is drawn straight into screen space with no
+                // camera at all: its world units are already pixels, and the
+                // scaler expresses itself as the canvas root's scale, which is
+                // what the transform above already accumulated.
+                return Mahdud(tul, saqf, muhayad);
+            }
+
+            if (!mawqiTahwil.Wujid || !nuqtaShasha.Wujid)
+            {
+                return Mahdud(tul, saqf, muhayad);
+            }
+            Muttajih3 asl = Qeema<Muttajih3>(in mawqiTahwil, tahwilHali);
+            Muttajih3 tarf;
+            tarf.S = asl.S + wahda.S;
+            tarf.A = asl.A + wahda.A;
+            tarf.Z = asl.Z + wahda.Z;
+
+            IntPtr kamira = Kamira(lawh);
+            if (kamira == IntPtr.Zero)
+            {
+                return Mahdud(tul, saqf, muhayad);
+            }
+
+            Muttajih3 bidaya = Qeema<Muttajih3, Muttajih3>(in nuqtaShasha, kamira, asl);
+            Muttajih3 nihaya = Qeema<Muttajih3, Muttajih3>(in nuqtaShasha, kamira, tarf);
+            // Behind the near plane the projection is a reflection, not a
+            // measurement: the pixels come back on the wrong side of the screen
+            // and their distance means nothing.
+            if (!(bidaya.Z > 0f) || !(nihaya.Z > 0f))
+            {
+                return Mahdud(tul, saqf, muhayad);
+            }
+
+            float ds = nihaya.S - bidaya.S;
+            float da = nihaya.A - bidaya.A;
+            return Mahdud((float)Math.Sqrt((ds * ds) + (da * da)), saqf, muhayad);
+        }
+
+        /// <summary><c>RenderMode.ScreenSpaceOverlay</c>.</summary>
+        private const int ArdFawqShasha = 0;
+
+        private static float Tul(in Muttajih3 muttajih)
+        {
+            float murabba = (muttajih.S * muttajih.S)
+                + (muttajih.A * muttajih.A)
+                + (muttajih.Z * muttajih.Z);
+            if (float.IsNaN(murabba) || float.IsInfinity(murabba) || !(murabba > 0f))
+            {
+                return 0f;
+            }
+            return (float)Math.Sqrt(murabba);
+        }
+
+        private static float Mahdud(float biksel, float saqf, float muhayad)
+        {
+            if (float.IsNaN(biksel) || !(biksel > 0f))
+            {
+                return muhayad;
+            }
+            return biksel > saqf ? saqf : biksel;
+        }
+
+        /// <summary>The canvas a component is drawn by, or zero.</summary>
+        private IntPtr Lawh(IntPtr juz)
+        {
+            if (!mukawwinWalid.Wujid || sanfLawh == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+            IntPtr naw = NawKaen(sanfLawh);
+            if (naw == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+            return Qeema<IntPtr, IntPtr>(in mukawwinWalid, juz, naw);
+        }
+
+        /// <summary>
+        /// The camera a component is projected through: the one its canvas
+        /// names, and the scene's main camera otherwise.
+        /// </summary>
+        private IntPtr Kamira(IntPtr lawh)
+        {
+            if (lawh != IntPtr.Zero && kamiraLawh.Wujid)
+            {
+                IntPtr khassa = Qeema<IntPtr>(in kamiraLawh, lawh);
+                if (khassa != IntPtr.Zero)
+                {
+                    return khassa;
+                }
+            }
+            return kamiraRaisiya.Wujid ? QeemaSakina<IntPtr>(in kamiraRaisiya) : IntPtr.Zero;
+        }
+
         /// <summary>A rect transform's local rectangle.</summary>
         /// <param name="mustatilHali">The rect transform.</param>
         /// <returns>The rectangle, or all zeroes.</returns>
@@ -1574,6 +1748,29 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             mihwar = Hall(
                 TajammuAsas, FadaaMuharrik, "RectTransform", "get_pivot", 0, string.Empty);
 
+            // The screen-size measurement. Every one of these is optional: a
+            // game that hides any of them gets the neutral factor and draws
+            // exactly as it did before the measurement existed, rather than
+            // losing its takeover over a size refinement. The arities are the
+            // unique ones — TransformVector also has a three-float overload and
+            // WorldToScreenPoint a two-argument one, and both are avoided here
+            // for the reason the class doc gives.
+            mawqiTahwil = Hall(
+                TajammuAsas, FadaaMuharrik, "Transform", "get_position", 0, string.Empty);
+            naqlMuttajih = Hall(
+                TajammuAsas, FadaaMuharrik, "Transform", "TransformVector", 1, string.Empty);
+            mukawwinWalid = Hall(
+                TajammuAsas, FadaaMuharrik, "Component", "GetComponentInParent", 1,
+                string.Empty);
+            namatArdLawh = Hall(
+                TajammuWajiha, FadaaMuharrik, "Canvas", "get_renderMode", 0, string.Empty);
+            kamiraLawh = Hall(
+                TajammuWajiha, FadaaMuharrik, "Canvas", "get_worldCamera", 0, string.Empty);
+            kamiraRaisiya = Hall(
+                TajammuAsas, FadaaMuharrik, "Camera", "get_main", 0, string.Empty);
+            nuqtaShasha = Hall(
+                TajammuAsas, FadaaMuharrik, "Camera", "WorldToScreenPoint", 1, string.Empty);
+
             nasijImsah = Hall(TajammuAsas, FadaaMuharrik, "Mesh", "Clear", 1, string.Empty);
             nasijRuus = Hall(
                 TajammuAsas, FadaaMuharrik, "Mesh", "set_vertices", 1, string.Empty);
@@ -1621,6 +1818,7 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             sanfRassam = Sanf(TajammuWajiha, FadaaMuharrik, "CanvasRenderer");
             sanfMurashshih = Sanf(TajammuAsas, FadaaMuharrik, "MeshFilter");
             sanfMujassam = Sanf(TajammuAsas, FadaaMuharrik, "MeshRenderer");
+            sanfLawh = Sanf(TajammuWajiha, FadaaMuharrik, "Canvas");
 
             Muakkad = jidSudfa.Wujid
                 && lawhaBani.Wujid
@@ -2071,16 +2269,36 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         /// <see cref="TalabNasij.HajmLawha"/> takes.
         /// </summary>
         /// <param name="hajm">The size the text is being drawn at.</param>
+        /// <param name="bikselLilWahda">
+        /// Screen pixels per layout unit, from
+        /// <see cref="WaslMuharrik.BikselLilWahda"/>. One on an unscaled
+        /// overlay canvas, and anything at all on a scaled canvas or a
+        /// world-space surface.
+        /// </param>
+        /// <param name="minRuqaa">
+        /// Whether this layout came out of the patch, and will therefore be
+        /// drawn from the patch's own glyph map — see <see cref="Khareeta"/>.
+        /// </param>
         /// <returns>
-        /// The drawn size itself for a coverage atlas, which holds one bitmap
-        /// per size; the atlas's own canonical size for a distance-field atlas,
-        /// which holds one bitmap for every size.
+        /// For a coverage atlas, which holds one bitmap per size, the size that
+        /// puts one atlas pixel on one screen pixel — chosen by
+        /// <see cref="Nasij.HajmLawhaMulaim"/> so both backends choose alike.
+        /// For a distance-field atlas, which holds one bitmap for every size,
+        /// the atlas's own canonical size, on which the drawn size has no
+        /// bearing at all.
         /// </returns>
-        public float HajmLawha(float hajm)
+        public float HajmLawha(float hajm, float bikselLilWahda, bool minRuqaa)
         {
             if (ruqaa.Namat != NamatLawha.Misafa)
             {
-                return hajm;
+                // A layout that came out of the patch is drawn from the patch's
+                // atlas, and that atlas holds the sizes the compiler chose and
+                // no others. Asking it for the size the glyph covers on screen
+                // would ask for a size it does not have, and the string would be
+                // missing rather than soft. Only a layout this process laid out,
+                // whose glyphs it also rasterizes on demand, can be given a size
+                // of its own.
+                return minRuqaa ? hajm : Nasij.HajmLawhaMulaim(hajm, bikselLilWahda);
             }
             ReadOnlySpan<TaaribMiftahShakl> mafatih = ruqaa.MafatihAshkal;
             return mafatih.IsEmpty ? hajm : mafatih[0].HajmRubi / 4.0f;
@@ -3815,8 +4033,8 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 return false;
             }
 
-            float hajmLawha = source.HajmLawha(hajmFili);
-            bool tathbit = source.Namat == NamatLawha.Taghtiya;
+            float hajmLawha = source.HajmLawha(hajmFili, engine.BikselLilWahda(kaen), minRuqaa);
+            bool tathbit = Nasij.YuthabbatQalam(source.Namat, hajmFili, hajmLawha);
             if (!minRuqaa && !source.Aqim(huruf, hajmLawha, tathbit))
             {
                 Utruk(kaen);

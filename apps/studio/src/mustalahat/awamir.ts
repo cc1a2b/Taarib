@@ -1640,6 +1640,11 @@ export type HalatIqrar = {
 	isdar_nass: number,
 	/**  The statement itself, in Arabic. */
 	nass_arabi: string,
+	/**
+	 *  The same statement in English, so a session running in English is not
+	 *  asked to accept words it cannot read.
+	 */
+	nass_injilizi: string,
 	/**  When the acknowledgement was given, RFC 3339. */
 	waqt: string | null,
 	/**  Which build of Taarib asked. */

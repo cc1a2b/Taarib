@@ -1748,6 +1748,7 @@ async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mut mudkhalat: Mud
     };
 
     let mujallad_mukawwinat = mudkhalat.masarat.mukawwinat();
+    let mujallad_mashari = mudkhalat.masarat.mashari();
     let talab = TalabTilqai {
         id: mudkhalat.tashghila,
         jidhr_amal: &mudkhalat.jidhr_amal,
@@ -1772,6 +1773,11 @@ async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mut mudkhalat: Mud
         // never patched before starts in its original language with the whole
         // translation sitting on disk beside it.
         mukawwinat: Some(&mujallad_mukawwinat),
+        // The same store the workshop opens from. Without it a finished run
+        // leaves the workshop saying no project exists for this game yet —
+        // which is what every game did, because nothing outside a test had ever
+        // created one.
+        mashari: Some(&mujallad_mashari),
         wasf: mudkhalat.wasf.clone(),
         aman: MudkhalatAman {
             mirsa: &mudkhalat.mirsa,
@@ -2322,9 +2328,9 @@ impl Tafsir for KhataTilqaiAmr {
                  قليل؛ وإن كان المصدر مجلّدًا محليًا فتأكّد من أنّ ملف القائمة موجود فيه."
             ),
             Self::IqrarNaqis => "لم يُقرّ بعدُ بيان التشغيل الأوّل، وهو شرط تثبيت أي رقعة. \
-                 اقرأه ووافق عليه من شاشة اللعبة، ثم ابدأ من جديد. لم تبدأ الجولة ولم يُنفَق \
-                 شيء: السؤال عنه هنا — قبل الاستخراج والترجمة — لأنّ الإجابة عنه لا تحتاج \
-                 رقعةً أصلًا."
+                 البيان معروض الآن على هذه الشاشة: اقرأه وأقرّ به، ثم ابدأ من جديد. لم تبدأ \
+                 الجولة ولم يُنفَق شيء: السؤال عنه هنا — قبل الاستخراج والترجمة — لأنّ \
+                 الإجابة عنه لا تحتاج رقعةً أصلًا."
                 .to_owned(),
         }
     }
@@ -2402,10 +2408,10 @@ impl Tafsir for KhataTilqaiAmr {
                  source is a local folder, make sure the list file is in it."
             ),
             Self::IqrarNaqis => "The first-run statement has not been acknowledged, and no \
-                 patch is installed until it is. Read it and accept it on the game's screen, \
-                 then start again. The run has not begun and nothing has been spent: it is \
-                 asked here, before extraction and translation, because answering it needs no \
-                 patch at all."
+                 patch is installed until it is. The statement is on this screen now: read it, \
+                 accept it, and start again. The run has not begun and nothing has been spent: \
+                 it is asked here, before extraction and translation, because answering it \
+                 needs no patch at all."
                 .to_owned(),
         }
     }
@@ -2429,9 +2435,15 @@ impl Tafsir for KhataTilqaiAmr {
             // at all: no override for it exists anywhere in this product, and
             // this would be the first one. Each sentence names its own way out,
             // or says plainly that there is none.
+            //
+            // The first-run statement joins them for the same reason: it lives
+            // on the game's screen and has to be read there, so a button that
+            // accepted it from here would be accepting it on the reader's
+            // behalf.
             Self::LughaRasmiya { .. }
             | Self::HimayaMuktashafa { .. }
-            | Self::ShabakaBilaIqrar { .. } => Khutwa::LaShay,
+            | Self::ShabakaBilaIqrar { .. }
+            | Self::IqrarNaqis => Khutwa::LaShay,
             // The one refusal here with a mechanical remedy: the ceiling is a
             // field on a screen, so send the reader straight to it.
             Self::BilaSaqfInfaq { .. } => Khutwa::FathIdadat {
@@ -2445,9 +2457,6 @@ impl Tafsir for KhataTilqaiAmr {
             // Lifted by the next refresh that finds the list, which the next
             // press runs; nothing on this machine is wrong.
             Self::QaimatSahbMahjuba { .. } => Khutwa::AadaMuhawala,
-            // No remedy button: the statement lives on the game's screen and
-            // the person has to read it, which is the point of it.
-            Self::IqrarNaqis => Khutwa::LaShay,
         }
     }
 
@@ -2695,10 +2704,10 @@ mod ikhtibarat {
         // machine somebody is already using, and on such a machine the
         // statement was read at first launch — a fixture that had not accepted
         // it would be testing the door's refusal rather than what is past it.
-        taarib_aman::iqrar::ahfaz(
+        iqrar::ahfaz(
             &crate::tathbeet_awamir::masar_iqrar(&masarat),
             "2026-01-01T00:00:00Z".to_owned(),
-            taarib_usus::ISDAR.to_owned(),
+            ISDAR.to_owned(),
         )?;
 
         let masdar = MasdarLuba::Steam(TATBEEQ_WAHMI);
