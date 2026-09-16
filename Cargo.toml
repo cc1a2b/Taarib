@@ -50,7 +50,7 @@ repository = "https://github.com/cc1a2b/taarib"
 homepage = "https://github.com/cc1a2b/taarib"
 keywords = ["arabic", "localization", "games", "shaping", "bidi"]
 categories = ["game-development", "internationalization", "text-processing"]
-# Taarib is one product built from twenty-seven crates, not a crate family
+# Taarib is one product built from thirty crates, not a crate family
 # anyone installs individually. Nothing here goes to crates.io, and saying so
 # is what stops an accidental `cargo publish` and what lets cargo-deny treat
 # the intra-workspace path dependencies as the private edges they are.

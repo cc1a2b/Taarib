@@ -26,9 +26,10 @@
 # `labels:` block anywhere here on purpose: Dependabot creates its own default
 # labels — `dependencies` plus one naming the ecosystem — when they are
 # missing, but a *custom* label that does not already exist in the repository is
-# silently dropped. This repository has not been published yet, so there is no
-# label to name; taking the defaults means the pull requests are labelled from
-# the first day rather than from whenever someone creates the labels by hand.
+# silently dropped. No label is named here because the defaults already say the
+# two things a reader of the pull request list needs — that it is a dependency
+# bump and which ecosystem it came from — and a custom one would have to be
+# created by hand in the repository before it meant anything.
 
 version: 2
 

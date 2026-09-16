@@ -5,8 +5,8 @@
 # `continue-on-error`, so it cannot turn a commit red and cannot be picked up
 # as a required status check.
 #
-# Why it exists at all: of the twenty-nine members of this workspace, seven
-# currently compile for Apple targets. The other twenty-two fail, and every one
+# Why it exists at all: of the thirty-one members of this workspace, seven
+# currently compile for Apple targets. The other twenty-four fail, and every one
 # of those failures is in a third-party C build script — not in code this
 # project wrote. That set is worth being able to re-measure on demand, because
 # the day it shrinks to zero is the day macOS becomes a real matrix leg in

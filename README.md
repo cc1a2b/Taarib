@@ -570,6 +570,20 @@ contributor's session — the argument it requires cannot be produced there.
 
 ## Installation
 
+Built installers are on the
+[releases page](https://github.com/cc1a2b/Taarib/releases). Take the newest tag,
+download the artifact for your platform from the table below, and check it
+against the `SHA256SUMS` published beside it. What changed in each version is in
+[`CHANGELOG.md`](CHANGELOG.md).
+
+Every release artifact is built locally against the owner's release trust
+anchor, never by CI. A build that lacks that anchor reports `tatwir` in its
+provenance and refuses every patch the owner signed, which is why
+[`.github/workflows/isdar.yml`](.github/workflows/isdar.yml) deliberately does
+not fire on a tag: the key is minted inside a passphrase-protected keychain and
+is never a repository secret. Each release names the anchor it was built
+against so you can check the one you are running.
+
 `bundle.targets` in `apps/studio/src-tauri/tauri.conf.json` is
 `["deb", "appimage", "nsis", "app", "dmg"]`, and that list is the complete set of
 formats this project ships. `msi` and `rpm` were removed deliberately:
@@ -579,7 +593,7 @@ owner and a tested update path, and those two would have neither.
 | Platform | Artifact | State |
 | --- | --- | --- |
 | Windows 10 1809+ | `Taarib_<version>_x64-setup.exe` — NSIS, per-user, no administrator rights | **Built, installed, run and uninstalled on a real Windows 11 machine on 2026-09-04** — a 10.6 MB installer whose component store was still empty, installed to `%LOCALAPPDATA%`, no admin rights, no registry trace left behind. Every DLL it imports is in-box; nothing from a developer install. It found Steam on `D:` and a library on `F:` from the registry alone. The record is [`docs/tawzee/tahaqquq.md`](docs/tawzee/tahaqquq.md); the specification is [`docs/tawzee/windows.md`](docs/tawzee/windows.md). An installer built the next day with the component store staged is about 66 MB and has not been through that audit. |
-| Linux x86-64 | `Taarib_<version>_amd64.AppImage` and `taarib-studio_<version>_amd64.deb` | **Built in an Ubuntu 22.04 container and started under xvfb on stock 22.04 and 24.04.** The glibc floor is **2.35**; an earlier build demanded 2.42, which no released SteamOS has ever carried. Specified in [`docs/tawzee/linux.md`](docs/tawzee/linux.md). |
+| Linux x86-64 | `Taarib_<version>_amd64.AppImage` and `Taarib_<version>_amd64.deb` | **Built in an Ubuntu 22.04 container and started under xvfb on stock 22.04 and 24.04.** The glibc floor is **2.35**; an earlier build demanded 2.42, which no released SteamOS has ever carried. Specified in [`docs/tawzee/linux.md`](docs/tawzee/linux.md). |
 | Steam Deck | the same AppImage as Linux | The 2.35 floor clears every SteamOS release — 3.5 ships 2.37, 3.8.1x ships 2.41. Proton prefixes are handled throughout, per library, so an SD-card game finds its prefix on the SD card. Audited against SteamOS in [`docs/tawzee/steamdeck.md`](docs/tawzee/steamdeck.md). No Deck has physically run it. |
 | macOS 12+ | none | **Not supported, and not claimed.** The bundle targets are configured, but the workspace does not build for Apple: when this was measured, 7 of the workspace's then 29 members compiled for `aarch64-apple-darwin` and 22 did not (the workspace has 31 members now and has not been re-measured). After a genuine portability fix in the foundation crate, none of the 22 failures were in Taarib's own code — they were third-party C build scripts failing on `cc: unrecognized command-line option '-arch'`, which proves the toolchain wall rather than portability. The real cost is unknown and only a Mac can measure it. See [`docs/tawzee/macos.md`](docs/tawzee/macos.md). |
 

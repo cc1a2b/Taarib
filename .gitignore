@@ -134,9 +134,10 @@ __pycache__/
 # the tree as rendered pixels, where no text search would ever have found it.
 # Project artwork lives in assets/huwiya/ and apps/studio/src-tauri/ayqunat/.
 #
-# `app.png` is excepted because README.md embeds it. Before committing a
-# replacement, read the image: the footer status strip prints the data root,
-# so capture it under a profile whose name is not yours, or redact that strip.
+# `app.png` is the one name excepted, reserved for a screenshot of the Studio
+# that the README would embed. Nothing is committed under it yet. Before the
+# first one is, read the image: the footer status strip prints the data root, so
+# capture it under a profile whose name is not yours, or redact that strip.
 /*.png
 /*.jpg
 /*.jpeg
