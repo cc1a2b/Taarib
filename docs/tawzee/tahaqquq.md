@@ -736,6 +736,26 @@ artifact must be built with `TAARIB_MIFTAH_ISDAR=<64 hex characters>` **and**
 published. This is the difference between a client that trusts the committed
 development key and one that trusts the owner's — it is not cosmetic.
 
+**Half of that is now mechanical, as of 2026-09-17.** `scripts/isdar.sh` had
+always validated the variable and added `--features taarib-khatm/isdar` for the
+Windows path. `apps/studio/src-tauri/linux/ibni.sh` — the documented one-command
+Linux build, `linux.md` §8 — passed **neither**, and a `docker run` inherits
+nothing from the shell that starts it, so the injection could not have reached
+`rustc` even if the operator had exported it. Every Linux artifact this path has
+produced, 1.0.0 and 1.0.1 alike, is therefore `tatwir`. That is deduced from the
+script rather than measured from the binaries: with no variable and no feature
+there is no other value `option_env!` could have returned.
+
+`ibni.sh` now validates the anchor before any work, names it on the `docker
+run`, adds `--features taarib-khatm/isdar` inside the container when it is
+present, and runs `cargo clean --release -p taarib-khatm` when the anchor
+differs from the one its staging tree last built under — cargo fingerprints no
+`option_env!`, so a reused tree would otherwise link the previous key. Like
+`scripts/isdar.sh` it still *builds* without an anchor, because this container is
+the only way to get a Linux artifact with the right glibc floor; it states the
+identity before the build, again after it, and in `dist-linux/hawiyat_thiqa.txt`
+beside the artifacts. `linux.md` §8 has the reasoning.
+
 ### 5.3 `apps/studio/src-tauri/linux/taarib.desktop:11` — **fixed 2026-09-05**
 
 `Icon=taarib` → `Icon=taarib-studio`. The bundler installs the application icon

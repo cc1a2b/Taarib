@@ -210,7 +210,10 @@ pub fn ijri(
             MarhalaTilqai::Istikhraj,
             maqrua,
             format!(
-                "{} container(s) hold text no file reader can open on this game, so part of it                  will still be in its original language. Playing once with capture switched on                  records what the game actually draws, and running this again with that                  recording reaches the rest.",
+                "{} container(s) hold text no file reader can open on this game, so part of it \
+                 will still be in its original language. Playing once with capture switched on \
+                 records what the game actually draws, and running this again with that \
+                 recording reaches the rest.",
                 ihsa.marfuda
             ),
         );

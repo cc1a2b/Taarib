@@ -1168,7 +1168,8 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         /// <param name="juz">The text component.</param>
         /// <returns>
         /// A factor above zero, or one when the component is behind the camera,
-        /// degenerate, or the engine members this needs did not resolve.
+        /// degenerate, destroyed, or the engine members this needs did not
+        /// resolve.
         /// </returns>
         /// <remarks>
         /// <para>
@@ -1200,17 +1201,37 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         /// </remarks>
         public float BikselLilWahda(IntPtr juz)
         {
-            const float muhayad = 1f;
-            const float saqf = 4096f;
-
             if (juz == IntPtr.Zero || !tahwil.Wujid || !naqlMuttajih.Wujid)
             {
-                return muhayad;
+                return Muhayad;
             }
+
+            try
+            {
+                return Qis(juz);
+            }
+            catch (Exception)
+            {
+                // The component was destroyed between the takeover deciding to
+                // draw it and this measurement, and every engine member below
+                // — Component.get_transform, GetComponentInParent — raises on a
+                // destroyed object. The Mono adapter has caught exactly this
+                // since it was written and returns the neutral factor; the two
+                // backends now agree, so a string that cannot be measured is
+                // rasterized at the size it was drawn at before either file
+                // existed, whichever backend the game is running.
+                return Muhayad;
+            }
+        }
+
+        private float Qis(IntPtr juz)
+        {
+            const float saqf = 4096f;
+
             IntPtr tahwilHali = Tahwil(juz);
             if (tahwilHali == IntPtr.Zero)
             {
-                return muhayad;
+                return Muhayad;
             }
 
             // The component's own up axis, one local unit long, carried into
@@ -1226,7 +1247,7 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             float tul = Tul(in wahda);
             if (!(tul > 0f))
             {
-                return muhayad;
+                return Muhayad;
             }
 
             IntPtr lawh = Lawh(juz);
@@ -1237,12 +1258,12 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 // camera at all: its world units are already pixels, and the
                 // scaler expresses itself as the canvas root's scale, which is
                 // what the transform above already accumulated.
-                return Mahdud(tul, saqf, muhayad);
+                return Mahdud(tul, saqf, Muhayad);
             }
 
             if (!mawqiTahwil.Wujid || !nuqtaShasha.Wujid)
             {
-                return Mahdud(tul, saqf, muhayad);
+                return Mahdud(tul, saqf, Muhayad);
             }
             Muttajih3 asl = Qeema<Muttajih3>(in mawqiTahwil, tahwilHali);
             Muttajih3 tarf;
@@ -1253,7 +1274,7 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             IntPtr kamira = Kamira(lawh);
             if (kamira == IntPtr.Zero)
             {
-                return Mahdud(tul, saqf, muhayad);
+                return Mahdud(tul, saqf, Muhayad);
             }
 
             Muttajih3 bidaya = Qeema<Muttajih3, Muttajih3>(in nuqtaShasha, kamira, asl);
@@ -1263,16 +1284,24 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             // and their distance means nothing.
             if (!(bidaya.Z > 0f) || !(nihaya.Z > 0f))
             {
-                return Mahdud(tul, saqf, muhayad);
+                return Mahdud(tul, saqf, Muhayad);
             }
 
             float ds = nihaya.S - bidaya.S;
             float da = nihaya.A - bidaya.A;
-            return Mahdud((float)Math.Sqrt((ds * ds) + (da * da)), saqf, muhayad);
+            return Mahdud((float)Math.Sqrt((ds * ds) + (da * da)), saqf, Muhayad);
         }
 
         /// <summary><c>RenderMode.ScreenSpaceOverlay</c>.</summary>
         private const int ArdFawqShasha = 0;
+
+        /// <summary>
+        /// The answer when nothing can be measured: one unit, one pixel, which
+        /// is the arrangement every interface label has always been drawn under
+        /// and the one value that cannot make anything worse. The Mono adapter's
+        /// <c>QiyasShasha.Muhayad</c> is the same number for the same reason.
+        /// </summary>
+        private const float Muhayad = 1f;
 
         private static float Tul(in Muttajih3 muttajih)
         {

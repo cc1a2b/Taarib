@@ -642,22 +642,38 @@ namespace Taarib.Unity.Mono
             // patch had opened, and the game stayed in its original language —
             // the failure with no visible cause. Whatever else two patches mean,
             // the one written last is the one somebody just asked for.
-            Array.Sort(mawjud, (awwal, thani) =>
+            //
+            // Every timestamp is read once, into the array that is then sorted.
+            // Read inside the comparator instead, it is a filesystem call the
+            // sort takes for a fixed value: the answer may change between two
+            // comparisons of the same pair, and .NET raises
+            // "IComparer.Compare() method returns inconsistent results" when the
+            // ordering stops being coherent — inside somebody's game, at load,
+            // with the patch about to be opened.
+            (DateTime Waqt, string Masar)[] murattaba =
+                new (DateTime, string)[mawjud.Length];
+            for (int i = 0; i < mawjud.Length; i++)
             {
-                int muqarana = File.GetLastWriteTimeUtc(thani)
-                    .CompareTo(File.GetLastWriteTimeUtc(awwal));
-                return muqarana != 0 ? muqarana : StringComparer.Ordinal.Compare(awwal, thani);
+                murattaba[i] = (File.GetLastWriteTimeUtc(mawjud[i]), mawjud[i]);
+            }
+            Array.Sort(murattaba, (awwal, thani) =>
+            {
+                int muqarana = thani.Waqt.CompareTo(awwal.Waqt);
+                return muqarana != 0
+                    ? muqarana
+                    : StringComparer.Ordinal.Compare(awwal.Masar, thani.Masar);
             });
-            if (mawjud.Length > 1)
+            string ahdath = murattaba[0].Masar;
+            if (murattaba.Length > 1)
             {
                 Logger.LogWarning(
-                    $"يوجد {mawjud.Length} ملف رقعة في {dalil}؛ استُخدم الأحدث كتابةً: "
-                    + $"{Path.GetFileName(mawjud[0])}. احذف ما لم يعد مستعملًا. | "
-                    + $"{mawjud.Length} patch files are in {dalil}; the most recently written "
-                    + $"was used: {Path.GetFileName(mawjud[0])}. Delete the ones you no longer "
+                    $"يوجد {murattaba.Length} ملف رقعة في {dalil}؛ استُخدم الأحدث كتابةً: "
+                    + $"{Path.GetFileName(ahdath)}. احذف ما لم يعد مستعملًا. | "
+                    + $"{murattaba.Length} patch files are in {dalil}; the most recently written "
+                    + $"was used: {Path.GetFileName(ahdath)}. Delete the ones you no longer "
                     + "want.");
             }
-            return mawjud[0];
+            return ahdath;
         }
 
         private static MaqbadSiyaq InshaSiyaq()

@@ -438,7 +438,10 @@ What still stands between that and a Deck:
   install still refuses by name (`tahaqquq.md` §5.1). Text-only and overlay-tier
   patches are unaffected.
 - **The artifacts are development-signed** (`tahaqquq.md` §5.2). A release needs
-  `TAARIB_MIFTAH_ISDAR` and `--features isdar`.
+  `TAARIB_MIFTAH_ISDAR` and `--features isdar`. Since 2026-09-17 `ibni.sh`
+  carries both once the variable is exported, and says which identity it built
+  when it is not — until then it passed neither, so no AppImage from this path
+  has ever been a release one.
 - **No Deck has run it.** FUSE on SteamOS, Valve's session compositor, and
   whether the KDE menu shows the bundler's English entry are all still untested
   on the device. Everything above was measured on ordinary Linux.

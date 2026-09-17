@@ -33,6 +33,14 @@ Tauri's Linux bundler runs `linuxdeploy` and pulls the WebKitGTK stack and its
 transitive libraries into the image, which is why the AppImage runs on hosts
 whose own `webkit2gtk-4.1` is older than the build machine's — or absent.
 
+It also carries `usr/bin/xdg-open`, copied out of the build image's `/usr/bin`
+by the bundler. `AppRun.wrapped` exports
+`PATH=$APPDIR/usr/bin/:…:$PATH` — read from the shipped binary's own format
+string, not assumed — so the bundled copy is the one found first and opening a
+link or a folder works from the image on a host that owns no `xdg-utils` at all.
+The bundler will not finish an AppImage without one to copy, which is why the
+build image installs the package (§8).
+
 What it does **not** carry, and therefore what the host must still provide:
 
 - **FUSE**, to mount the image at all. The documented fallback needs no install:
@@ -136,6 +144,7 @@ What it does **not** carry, and therefore what the host must still provide:
 | `depends` | `libwebkit2gtk-4.1-0`, `libgtk-3-0` | the two the webview cannot run without |
 | `depends` | `libgles2` | the GLES dispatch library the bundled libepoxy opens **by name**, so it is in no `DT_NEEDED` and its absence aborts the process rather than degrading it (§1). This is the one artifact that can state the requirement instead of documenting it |
 | `depends` | `shared-mime-info`, `desktop-file-utils`, `hicolor-icon-theme` | not libraries — **trigger owners**. Each registers a dpkg trigger on a directory this package writes into, so `update-mime-database`, `update-desktop-database` and the icon cache all run on install. That is why the package needs no `postinst`, and it is verified: the built package has `md5sums` and no maintainer scripts |
+| `depends` | `xdg-utils` | **added 2026-09-17.** Not a library and not a trigger owner — a program the product *runs*. `tashkhis_awamir::iftah_tashkhis` spawns `xdg-open` by name on Linux with **no fallback at all**, so without it "open the diagnostics folder" is a dead control; `tauri_plugin_opener`, which opens a community translation's page, tries `xdg-open` first and only then `gio open`, `gnome-open`, `kde-open`. The AppImage carries its own copy at `usr/bin/xdg-open` because the bundler puts it there (§8), so leaving this out would make the two artifacts behave differently in the same feature — the exact divergence the `libgles2` row exists to prevent. It is not the `gnome-keyring` case: `xdg-utils` is `Architecture: all`, 323 KB of POSIX shell scripts with no `Depends:` of its own, and nothing daemon-shaped comes with it |
 | `recommends` | `gnome-keyring \| libsecret-1-0` | a Secret Service provider. `Recommends` and not `Depends`: the product runs without one, with the keychain features refusing by name, and a hard dependency would drag a keyring daemon onto a machine that deliberately has none |
 | `files` | `/usr/share/applications/Taarib.desktop` ← `linux/taarib.desktop` | the Arabic desktop entry (§3), installed **over** the one the bundler generates rather than beside it |
 | `files` | `/usr/share/mime/packages/application-vnd.taarib.ruqaa.xml` ← `linux/application-vnd.taarib.ruqaa.xml` | what a `.ruqaa` **is**, for `shared-mime-info`: `TRQ1` magic at offset 0 at priority 70, plus the glob. Without it the desktop entry's `MimeType=` names a type nothing has declared |
@@ -155,7 +164,8 @@ two library entries appear twice, because the bundler generates them from the
 binary's own `DT_NEEDED` as well. dpkg does not mind. Dropping them from the
 configured list would leave the field clean; `libgles2` cannot be dropped that
 way, because the binary does not link it and the bundler therefore never
-derives it.
+derives it. `xdg-utils`, added since, joins the configured list for the same
+reason: the binary does not link it, it spawns it.
 
 ## 3. The desktop entry
 
@@ -451,9 +461,65 @@ Three files, all under `apps/studio/src-tauri/linux/`:
 
 | file | what it is |
 | --- | --- |
-| `Dockerfile` | the Ubuntu 22.04 build image: webkit2gtk-4.1, the GTK stack, the Rust channel from `rust-toolchain.toml`, a Node tarball for the Tauri CLI, and `APPIMAGE_EXTRACT_AND_RUN=1` because an unprivileged container has no FUSE for `linuxdeploy` to mount itself with |
-| `ibni.sh` | stages the tree onto a Linux filesystem, runs `tauri build` inside the image, collects the `.deb` and the AppImage into `dist-linux/`, then runs the three gates below |
+| `Dockerfile` | the Ubuntu 22.04 build image: webkit2gtk-4.1, the GTK stack, the Rust channel from `rust-toolchain.toml`, a Node tarball for the Tauri CLI, `xdg-utils` because the AppImage bundler copies `/usr/bin/xdg-open` into the AppDir and stops at `xdg-open binary not found` without it, and `APPIMAGE_EXTRACT_AND_RUN=1` because an unprivileged container has no FUSE for `linuxdeploy` to mount itself with |
+| `ibni.sh` | stages the tree onto a Linux filesystem, runs `tauri build` inside the image, collects the `.deb` and the AppImage into `dist-linux/`, then runs the four gates below |
 | `qias_qaa.sh` | the measurement of §5a plus the run-time-`dlopen` scan of §1, usable on its own against any AppDir or unpacked package |
+
+### The trust anchor — the half of "release" that is not the artifact
+
+```
+TAARIB_MIFTAH_ISDAR=<64 hex characters> apps/studio/src-tauri/linux/ibni.sh
+```
+
+`taarib_khatm::MIRSAT_MALIK` reads that variable through `option_env!` at
+compile time. Without it a build anchors to `MIFTAH_TATWIR`, the key committed
+in this repository, and the client it produces reports `tatwir` in its
+provenance and **refuses every patch the owner actually signed**. Nothing about
+such an artifact looks wrong: it installs, starts, scans games, and then says no
+to the whole registry. That is why the variable is worth a section.
+
+Until 2026-09-17 `ibni.sh` passed neither the variable nor the feature, and a
+`docker run` inherits nothing from the shell that started it, so **every Linux
+artifact this path has ever produced is `tatwir`** — 1.0.0 and 1.0.1 included.
+What it does now, in order:
+
+1. **validates before any work.** A `TAARIB_MIFTAH_ISDAR` that is not exactly 64
+   hexadecimal characters fails in a second, with the command that prints the
+   real one, rather than thirty minutes into a container build. Same check, same
+   wording as `scripts/isdar.sh`;
+2. **names the variable on the `docker run`**, which is the only way it reaches
+   cargo and therefore rustc;
+3. **adds `--features taarib-khatm/isdar`** inside the container whenever an
+   anchor is present. The feature is not decoration: it turns on a `const`
+   assertion that this build resolved to the release identity, so an anchor lost
+   anywhere between the shell and rustc becomes a compile error instead of a
+   silently mis-anchored client;
+4. **cleans `taarib-khatm` when the anchor changed.** cargo cannot see an
+   `option_env!`, so nothing it fingerprints moves when the key does, and the
+   staging tree under `~/.cache/taarib-bina-linux` is reused between runs by
+   design. Development ↔ release is caught for free, because the `isdar` feature
+   *is* part of the fingerprint; one release key ↔ another is caught by nothing,
+   so the script records the anchor it used beside the staging tree and runs
+   `cargo clean --release -p taarib-khatm` when this run's differs.
+
+**Without an anchor it builds anyway, and says so — it does not refuse.** That
+is `scripts/isdar.sh`'s answer to the same question and there is no reason for
+the two to disagree; the Linux case has the stronger argument for it, because
+this container is the *only* way to produce a Linux artifact with the right
+glibc floor (§5a). Refusing would leave the desktop registration, the AppImage,
+the `.deb` and the floor measurement itself with no way to be exercised by
+anyone who is not holding the release key. What is not acceptable is a *quiet*
+development build, so the identity is stated three times:
+
+- a yellow warning before the image is built, naming the consequence;
+- the same warning again after the artifacts are collected, because a
+  half-hour build scrolls the first one off the screen;
+- `dist-linux/hawiyat_thiqa.txt`, written beside the artifacts — the only one of
+  the three that is still there three days later, and the reason it exists.
+
+The private half of the release key is minted inside the owner's keychain by
+`cargo run -p taarib-khatm --bin isdar -- wallid` and never leaves it. Nothing
+in this directory reads, writes or needs it.
 
 ### What the build refuses to ship
 
@@ -473,7 +539,12 @@ they are asserted:
 3. **the GLES dependency** — if the `dlopen` scan names `libGLESv2.so.2`, the
    built package's `Depends:` must contain `libgles2`. If the scan stops naming
    it, the script says so instead, because that means the dependency needs
-   revisiting rather than keeping.
+   revisiting rather than keeping;
+4. **the `xdg-open` dependency**, the same shape — if the AppDir carries
+   `usr/bin/xdg-open`, the package's `Depends:` must contain `xdg-utils`. The
+   two artifacts satisfy one requirement in two different ways, the image by
+   carrying the program and the package by naming it (§2), and neither says
+   anything when the other stops.
 
 Two decisions in `ibni.sh` worth knowing about:
 

@@ -17,7 +17,9 @@
 //! the cache-miss path is exercised without a model. Nothing about OCR accuracy
 //! or translation quality is claimed by this file.
 //!
-//! The composited frame is written to `/mnt/e/Taarib/halaqa_burhan.png`.
+//! The composited frame is written beside the test's other scratch state,
+//! under `CARGO_TARGET_TMPDIR`; every failure that depends on what the picture
+//! shows names the file it landed in.
 
 #![allow(
     clippy::panic,
@@ -79,9 +81,6 @@ const QAIMA: &[(&str, &str)] = &[
 /// The colour the game draws its English in: pale blue, so a pixel of it can
 /// never be mistaken for a pixel of the overlay's near-white Arabic.
 const LAWN_INJILIZI: [f32; 3] = [0.40, 0.60, 0.95];
-
-/// Where the picture goes.
-const MASAR_SURA: &str = "/mnt/e/Taarib/halaqa_burhan.png";
 
 /// What every test here returns.
 type Natija = Result<(), Box<dyn Error>>;
@@ -287,6 +286,11 @@ impl Mashhad {
 /// The scratch directory this test writes under.
 fn mujallad_khidsh(ism: &str) -> PathBuf {
     Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("halaqa-{ism}-{}", std::process::id()))
+}
+
+/// Where the composited frame goes, inside that scratch directory.
+fn masar_sura(khidsh: &Path) -> PathBuf {
+    khidsh.join("halaqa_burhan.png")
 }
 
 /// The surface every frame is built against.
@@ -509,7 +513,8 @@ fn arabi_yursam_fawq_al_injilizi_wa_al_khazina_tujib_thaniyan() -> Natija {
         jalsa.halaqa.khulasa()
     );
     let murakkab = jalsa.murakkab.lock().clone();
-    murakkab.ihfaz(Path::new(MASAR_SURA))?;
+    let sura = masar_sura(&khidsh);
+    murakkab.ihfaz(&sura)?;
     for (sunduq, (injilizi_nass, arabi_nass)) in mashhad.sanadiq.iter().zip(QAIMA) {
         let arabi_baad = add(&murakkab, *sunduq, arabi);
         let injilizi_qabl = add(&mashhad.asl.lock(), *sunduq, injilizi);
@@ -517,7 +522,8 @@ fn arabi_yursam_fawq_al_injilizi_wa_al_khazina_tujib_thaniyan() -> Natija {
         assert!(
             arabi_baad >= 40,
             "\"{arabi_nass}\" left only {arabi_baad} Arabic ink pixel(s) inside the box \
-             \"{injilizi_nass}\" occupied ({sunduq:?}); see {MASAR_SURA}"
+             \"{injilizi_nass}\" occupied ({sunduq:?}); see {}",
+            sura.display()
         );
         assert!(
             injilizi_baad.saturating_mul(20) <= injilizi_qabl,

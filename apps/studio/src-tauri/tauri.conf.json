@@ -123,7 +123,8 @@
           "libgles2",
           "shared-mime-info",
           "desktop-file-utils",
-          "hicolor-icon-theme"
+          "hicolor-icon-theme",
+          "xdg-utils"
         ],
         "recommends": [
           "gnome-keyring | libsecret-1-0"

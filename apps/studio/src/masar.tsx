@@ -412,22 +412,50 @@ function khaamKhata(khata: Error): string | null {
   return khata.message === '' ? null : khata.message;
 }
 
+/**
+ * Whatever a boundary caught, as the one type the three readers above ask
+ * questions of.
+ *
+ * A `throw` carries the value it was given and the router hands that through
+ * untouched, so the caught value is an `Error` only by convention: a webview
+ * that failed to start rejects with a bare string, and a screen's own render
+ * can throw anything at all. Settling it once here is what lets `ramzKhata`
+ * and the other two keep reading `.name` and `.message` off a real error
+ * instead of off a string, where both are undefined.
+ */
+function hawwilKhata(qeema: unknown): Error {
+  if (qeema instanceof Error) {
+    return qeema;
+  }
+  if (typeof qeema === 'string') {
+    return new Error(qeema);
+  }
+  // A null-prototype object, and anything whose own `toString` throws, make
+  // `String` throw — which is the one thing a failure path may not do.
+  try {
+    return new Error(String(qeema));
+  } catch {
+    return new Error(Object.prototype.toString.call(qeema));
+  }
+}
+
 /** خطأ المسار — a route that threw before it could draw anything. */
 function KhataMasar({
   error,
   reset,
 }: {
-  readonly error: Error;
+  readonly error: unknown;
   readonly reset: () => void;
 }): JSX.Element {
   const lugha = useLughatJalsa();
+  const khata = hawwilKhata(error);
   return (
     <HalatMasar
       lugha={lugha}
-      ramz={ramzKhata(error)}
+      ramz={ramzKhata(khata)}
       unwan={t('amm.khata', lugha)}
-      sharh={sharhKhata(error, lugha)}
-      khaam={khaamKhata(error)}
+      sharh={sharhKhata(khata, lugha)}
+      khaam={khaamKhata(khata)}
       fashal
     >
       <>

@@ -28,6 +28,19 @@ use crate::talab::KhiyaratTilqai;
 use crate::taqaddum::{MarhalaTilqai, Muraqib};
 use crate::taqreer::IhsaTarjama;
 
+/// Largest run table accepted, in bytes.
+///
+/// A finished row — its source, its Arabic, the lines around it and the
+/// provenance of the translation — serializes to about a kilobyte, measured on
+/// the tables this pipeline writes. Two hundred and fifty-six mebibytes is
+/// therefore a quarter of a million strings: several times the script of the
+/// most dialogue-heavy game anyone would put through a paid run, and far past
+/// anything this pipeline has produced. It is judged from the directory entry
+/// before a byte is taken, because what it bounds is the read itself — the
+/// file's bytes, and then the rows parsed out of them — and a file past it is
+/// not a table a run of this build wrote.
+pub const HADD_HAJM_NUSUS: u64 = 256 * 1024 * 1024;
+
 /// What one translation stage produced.
 ///
 /// Returned whole even when the stage stopped, for the same reason
@@ -46,12 +59,28 @@ pub struct HasilatMarhala {
     pub khata: Option<KhataTilqai>,
 }
 
-/// Reads the project rows back.
+/// Reads the project rows back, refusing a table over the byte cap.
+///
+/// The size comes from the directory entry and is judged before the read, not
+/// after it: a run that died mid-write, or anything else able to write into the
+/// run directory, otherwise decides how much memory the next open allocates —
+/// and the workshop's recovery meets that same file on every open.
 ///
 /// # Errors
 ///
-/// [`KhataTilqai::KhataMalaf`] when the file cannot be read or does not parse.
+/// [`KhataTilqai::NususKabira`] when the file passes [`HADD_HAJM_NUSUS`], and
+/// [`KhataTilqai::KhataMalaf`] when it cannot be examined or read, or does not
+/// parse.
 pub fn iqra_nusus(masar: &Path) -> NatijatTilqai<Vec<MudkhalNass>> {
+    let bayan = fs::metadata(masar).map_err(|sabab| khata_malaf(masar, "examined", sabab))?;
+    let hajm = bayan.len();
+    if hajm > HADD_HAJM_NUSUS {
+        return Err(KhataTilqai::NususKabira {
+            masar: masar.to_path_buf(),
+            hajm,
+            hadd: HADD_HAJM_NUSUS,
+        });
+    }
     let bayt = fs::read(masar).map_err(|sabab| khata_malaf(masar, "read", sabab))?;
     serde_json::from_slice(&bayt)
         .map_err(|sabab| khata_malaf(masar, "parsed", std::io::Error::other(sabab)))
@@ -310,4 +339,52 @@ fn ballagh(muraqib: &mut Muraqib<'_>, hali: &TaqaddumJawla, muahhala: u64) {
 /// A count as the report's own width.
 fn tul(qeema: usize) -> u64 {
     u64::try_from(qeema).unwrap_or(u64::MAX)
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use taarib_usus::khata::{Ramz, Tafsir as _};
+
+    use super::*;
+
+    type NatijatIkhtibar<T = ()> = Result<T, Box<dyn std::error::Error>>;
+
+    /// A table past the cap is refused, and refused without reading it.
+    #[test]
+    fn iqra_nusus_yarfud_ma_fawq_alhadd() -> NatijatIkhtibar {
+        let muaqqat = tempfile::tempdir()?;
+        let masar = muaqqat.path().join("nusus.json");
+        // Extended rather than filled: the cap is judged from the directory
+        // entry before a byte is taken, so a test that proves it costs a sparse
+        // file and no memory — which is the property under test.
+        fs::File::create(&masar)?.set_len(HADD_HAJM_NUSUS + 1)?;
+
+        let khata = iqra_nusus(&masar).err().ok_or("a table past the cap")?;
+        let KhataTilqai::NususKabira { hajm, hadd, .. } = &khata else {
+            return Err(format!("the refusal names the size, not {khata}").into());
+        };
+        assert_eq!(*hajm, HADD_HAJM_NUSUS + 1);
+        assert_eq!(*hadd, HADD_HAJM_NUSUS);
+        assert_eq!(khata.ramz(), Ramz::jadeed(crate::khata::TILQAI + 14));
+        Ok(())
+    }
+
+    /// A table under the cap still round-trips, and an absent one is still a
+    /// file failure rather than the size refusal.
+    #[test]
+    fn iqra_nusus_yamurr_bila_tagheer() -> NatijatIkhtibar {
+        let muaqqat = tempfile::tempdir()?;
+        let masar = muaqqat.path().join("nusus.json");
+        uktub_nusus(&masar, &[])?;
+        assert!(iqra_nusus(&masar)?.is_empty());
+
+        let ghaib = iqra_nusus(&muaqqat.path().join("la-shay.json"))
+            .err()
+            .ok_or("an absent table")?;
+        assert!(
+            matches!(ghaib, KhataTilqai::KhataMalaf { .. }),
+            "an absent table is a file failure, not a table over the cap"
+        );
+        Ok(())
+    }
 }

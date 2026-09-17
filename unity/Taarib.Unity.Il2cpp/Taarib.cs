@@ -463,13 +463,27 @@ namespace Taarib.Unity.Il2cpp
             // happens to sort first, which in a game that has been patched twice
             // is the older one, and the game then stays in its original language
             // with nothing in the log to say why.
-            Array.Sort(mawjud, (awwal, thani) =>
+            //
+            // Every timestamp is read once, into the array that is then sorted,
+            // for the Mono twin's second reason: a filesystem call inside the
+            // comparator is a value the sort assumes is fixed and the filesystem
+            // does not promise to be, and .NET raises "IComparer.Compare()
+            // method returns inconsistent results" when the ordering stops being
+            // coherent — inside somebody's game, at load.
+            (DateTime Waqt, string Masar)[] murattaba =
+                new (DateTime, string)[mawjud.Length];
+            for (int i = 0; i < mawjud.Length; i++)
             {
-                int muqarana = File.GetLastWriteTimeUtc(thani)
-                    .CompareTo(File.GetLastWriteTimeUtc(awwal));
-                return muqarana != 0 ? muqarana : StringComparer.Ordinal.Compare(awwal, thani);
+                murattaba[i] = (File.GetLastWriteTimeUtc(mawjud[i]), mawjud[i]);
+            }
+            Array.Sort(murattaba, (awwal, thani) =>
+            {
+                int muqarana = thani.Waqt.CompareTo(awwal.Waqt);
+                return muqarana != 0
+                    ? muqarana
+                    : StringComparer.Ordinal.Compare(awwal.Masar, thani.Masar);
             });
-            return mawjud[0];
+            return murattaba[0].Masar;
         }
 
         private static MaqbadSiyaq InshaSiyaq()

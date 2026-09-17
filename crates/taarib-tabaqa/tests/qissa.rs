@@ -47,7 +47,9 @@ use taarib_tabaqa::manatiq::{MuarrifMintaqa, QaidatTarjama};
 use taarib_tabaqa::mutarjim::{
     DhakiraTabaqa, MutarjimTabaqa, QaydTabaqa, RaddSatr, TalabDhakira, TalabSatr,
 };
-use taarib_tabaqa::qissa::{HalatDaf, HalatKhayt, KhaytQissa, KhiyaratQissa, Munassiq, Qissa};
+use taarib_tabaqa::qissa::{
+    HalatDaf, HalatKhayt, KhaytQissa, KhiyaratQissa, Munassiq, Qissa, SAA_TABUR,
+};
 use taarib_tabaqa::tatabbu::QiraaMulahaza;
 use taarib_tabaqa::wajiha::{MeezaniyatItar, MustatilBiksel, SighatSath, WasfSath};
 use taarib_tabaqa::watira::{MunazzimWatira, NAFIDHAT_TADAHWUR, TaghyeerWatira};
@@ -1310,6 +1312,73 @@ fn rafd_aabir_la_yuqif_al_jalsa() {
     );
 
     khayt.awqif();
+}
+
+// ---------------------------------------------------------------------------
+// Shutting down behind a queue that is already full
+// ---------------------------------------------------------------------------
+
+/// A recognizer slow enough that the queue behind it fills.
+#[derive(Debug)]
+struct QariBati;
+
+impl taarib_tabaqa::qira::Qari for QariBati {
+    fn ism(&self) -> &'static str {
+        "deliberately slow"
+    }
+
+    fn mutah(&self) -> bool {
+        true
+    }
+
+    fn lughat(&self) -> &[&str] {
+        &["en"]
+    }
+
+    fn iqra(
+        &mut self,
+        _: &SuraMultaqata,
+    ) -> Result<Vec<taarib_tabaqa::qira::SatrMaqru>, KhataTabaqa> {
+        // Reads nothing rather than refusing, so the pass is ordinary and the
+        // door the terminal refusals close stays open for the next capture.
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        Ok(Vec::new())
+    }
+}
+
+/// Shutdown completes even when the worker's queue is full.
+///
+/// A worker that has fallen behind is the ordinary case under load — it is the
+/// entire reason the queue drops captures rather than growing. The stop must
+/// not be one of the things that can be dropped: a shutdown posted into a full
+/// queue and discarded leaves the worker parked on a message nobody will send
+/// and the caller parked on a thread that will never end.
+#[test]
+fn iqaf_al_amil_yantahi_wa_al_tabur_mumtali() {
+    let mut khayt = khayt_bi_qari(Box::new(QariBati));
+    for marra in 0..u64::try_from(SAA_TABUR.saturating_add(4)).unwrap_or(8) {
+        let _ = adfa_wahida(&khayt, marra.saturating_mul(KHUTWA_MIKRO));
+    }
+    assert!(
+        khayt.matruka() > 0,
+        "the queue has to be full for this to be testing anything: {}",
+        khayt.wasf()
+    );
+
+    let (mursil, mutalaqqi) = std::sync::mpsc::channel();
+    // Detached rather than scoped on purpose: a scope would join the stuck
+    // thread on the way out and turn the regression back into the hang this
+    // test exists to name.
+    let _ = std::thread::spawn(move || {
+        khayt.awqif();
+        let _ = mursil.send(());
+    });
+    if mutalaqqi
+        .recv_timeout(std::time::Duration::from_secs(30))
+        .is_err()
+    {
+        panic!("shutting down behind a full queue never returned: the worker was not joined");
+    }
 }
 
 // ---------------------------------------------------------------------------

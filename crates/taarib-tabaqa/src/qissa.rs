@@ -1374,7 +1374,15 @@ enum RisalatQissa {
     IqraAlan,
     /// Forget one region.
     Nisyan(MuarrifMintaqa),
-    /// Stop.
+    /// Wakes a worker parked on an empty queue so it reads
+    /// [`AdaadKhayt::khuruj`].
+    ///
+    /// The flag is what makes the stop reliable, not this message: the queue is
+    /// bounded and lossy, so losing this to a full queue has to be harmless —
+    /// and it is, because a full queue is a worker about to take a message and
+    /// read the flag with it. The arm that breaks on this message is therefore
+    /// unreachable, and stays anyway: the alternative is a loop whose only exit
+    /// is an atomic that has to be observed.
     Tawaqquf,
 }
 
@@ -1473,6 +1481,14 @@ struct AdaadKhayt {
     /// Mirrors [`HalatKhayt::mutawaqqifa`] so the present path reads one
     /// atomic rather than taking a lock.
     mutawaqqif: AtomicBool,
+    /// Whether the worker has been told to leave.
+    ///
+    /// Out of band, because the queue it would otherwise ride is bounded and
+    /// lossy on purpose: a shutdown posted into a full queue is discarded like
+    /// a stale capture, and then [`KhaytQissa::awqif`] waits on a thread that
+    /// is waiting for a message nobody will send. Dropping a capture under
+    /// load is the design; dropping the shutdown is a hang.
+    khuruj: AtomicBool,
     hala: Mutex<HalatKhayt>,
     /// The session's counters as of the last completed pass, copied out so the
     /// render half can show them without reaching into the worker.
@@ -1529,6 +1545,12 @@ impl KhaytQissa {
             .name("taarib-tabaqa-qissa".to_owned())
             .spawn(move || {
                 while let Ok(risala) = mutalaqqi.recv() {
+                    // Read before the message rather than after it, so a
+                    // shutdown that arrived while captures were still queued
+                    // costs the pass in flight and not the whole backlog.
+                    if adaad_khayt.khuruj.load(Ordering::Acquire) {
+                        break;
+                    }
                     match risala {
                         RisalatQissa::Iltiqat {
                             mintaqa,
@@ -1791,7 +1813,15 @@ impl KhaytQissa {
     /// Called on shutdown. A worker that is mid-recognition finishes that pass
     /// first, which is bounded by one recognition and is the difference between
     /// unloading cleanly and unloading a module a thread is still executing in.
+    ///
+    /// The stop is the flag, not the message. A full queue only costs the
+    /// wake-up, and a worker with a full queue is by definition not parked in
+    /// [`std::sync::mpsc::Receiver::recv`] — it is about to take a message, and
+    /// reads the flag before it acts on it. A queue empty enough for the
+    /// wake-up to land is a worker the wake-up reaches. Both paths leave the
+    /// loop within one message, so the join below is bounded either way.
     pub fn awqif(&mut self) {
+        self.adaad.khuruj.store(true, Ordering::Release);
         let _ = self.mursil.try_send(RisalatQissa::Tawaqquf);
         if let Some(khayt) = self.khayt.take() {
             let _ = khayt.join();

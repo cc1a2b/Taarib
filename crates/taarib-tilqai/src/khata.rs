@@ -149,6 +149,20 @@ pub enum KhataTilqai {
         sabab: std::io::Error,
     },
 
+    /// The run's string table is larger than this build will read.
+    #[error(
+        "the run's string table at {} is {hajm} bytes, over the {hadd} this build reads",
+        masar.display()
+    )]
+    NususKabira {
+        /// The table.
+        masar: PathBuf,
+        /// What the directory entry said.
+        hajm: u64,
+        /// The cap it passed.
+        hadd: u64,
+    },
+
     /// The run journal holds a record this build does not understand.
     #[error(
         "the run journal at {masar} is from a newer build (format {wujid}, this build {maqru})"
@@ -198,6 +212,7 @@ impl Tafsir for KhataTilqai {
                     // tidily would silently retarget every log line and bug
                     // report that already names one of them.
                     Self::MuharrikGhayrJahiz { .. } => 13,
+                    Self::NususKabira { .. } => 14,
                 },
         )
     }
@@ -244,6 +259,9 @@ impl Tafsir for KhataTilqai {
             },
             Self::TathbeetMarfud { .. } => "رفضت بوّابة الأمان تثبيت هذه الرقعة.".to_owned(),
             Self::KhataMalaf { .. } => "تعذّرت قراءة ملف في مجلّد الجولة أو الكتابة إليه.".to_owned(),
+            Self::NususKabira { .. } => {
+                "جدول نصوص هذه الجولة أكبر ممّا يقرأه هذا الإصدار، فلم يُقرأ منه شيء.".to_owned()
+            },
             Self::SijillAhdath { .. } => {
                 "سجلّ الجولة مكتوب بنسخة أحدث من تعريب؛ حدِّث البرنامج.".to_owned()
             },
@@ -280,7 +298,9 @@ impl Tafsir for KhataTilqai {
                 matlub: MasarMatlub::MujalladManassa,
             },
             Self::LaKhatt { .. } => Khutwa::IkhtiyarKhattAakhar,
-            Self::LaTarjama { .. } | Self::MarhalaMarfuda { .. } => Khutwa::FathTashkhis,
+            Self::LaTarjama { .. } | Self::MarhalaMarfuda { .. } | Self::NususKabira { .. } => {
+                Khutwa::FathTashkhis
+            },
             Self::TathbeetMarfud { .. } => Khutwa::TahaqquqSalamatLuba,
             Self::KhataMalaf { sabab, .. } => {
                 taarib_usus::khata::khutwa_io(sabab, MasarMatlub::MujalladManassa)
@@ -326,6 +346,11 @@ impl Tafsir for KhataTilqai {
             Self::JalsaGhayrMaqrua { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
+            },
+            Self::NususKabira { masar, hajm, hadd } => {
+                daa("masar", QeemaSiyaq::Masar(masar.clone()));
+                daa("hajm", QeemaSiyaq::Hajm(*hajm));
+                daa("hadd", QeemaSiyaq::Hajm(*hadd));
             },
             Self::MarhalaMarfuda { marhala, sabab } => {
                 daa("marhala", QeemaSiyaq::Nass(marhala.ramz().to_owned()));

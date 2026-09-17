@@ -51,6 +51,14 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
       patchelf \
       # desktop-file-validate, used by the bundler and by the verify script
       desktop-file-utils \
+      # xdg-open, which the AppImage bundler copies out of /usr/bin into the
+      # AppDir so the image can open a link on a host that has none of its own;
+      # without it bundling stops at "xdg-open binary not found" and only the
+      # .deb comes out. It cannot raise the floor this image exists to hold:
+      # xdg-utils is Architecture: all and every program in it is a POSIX shell
+      # script, so the AppDir gains no ELF and the glibc measurement sees
+      # nothing new.
+      xdg-utils \
       # squashfs tools for the AppImage payload
       squashfs-tools \
       # readelf/objdump — the floor measurement runs inside this image too

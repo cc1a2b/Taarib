@@ -36,6 +36,7 @@ use taarib_tarjama::muzawwidun::{
     taklifat_anthropic, taklifat_gemini,
 };
 use taarib_tathbeet::bayan::waqt_alaan;
+use taarib_tilqai::khata::KhataTilqai;
 use taarib_tilqai::mashwar::{MALAF_NUSUS as MALAF_NUSUS_MASHWAR, MUJALLAD_MASHRU, ijrud};
 use taarib_usus::idadat::{HalatMuzawwidin, Idadat, IdadatMuzawwid, MakhzanIdadat, NawMuzawwid};
 use taarib_usus::khata::{
@@ -572,7 +573,9 @@ fn iftah_mashru(masarat_hala: &Masarat, id: LubaId) -> Natija<MashruMaftuh> {
 ///
 /// `None` when there is no run, no table in it, or nothing readable in the
 /// table: those are genuinely "no project yet", and the refusal above is the
-/// honest answer.
+/// honest answer. A table past [`taarib_tilqai::tarjama::HADD_HAJM_NUSUS`] is
+/// not one of them — it is raised, because nothing on that path ever reaches a
+/// project and the user is the only one who can clear it.
 fn istaid_min_mashwar(
     masarat_hala: &Masarat,
     id: LubaId,
@@ -591,6 +594,17 @@ fn istaid_min_mashwar(
     }
     let sufuf = match taarib_tilqai::tarjama::iqra_nusus(&masar_nusus) {
         Ok(sufuf) => sufuf,
+        // Raised rather than reported, unlike every other table that will not
+        // read. This one was refused before a byte was taken, so "no project
+        // yet" would hide it behind a button whose whole job is to build a run
+        // — and the next open would meet the same file again.
+        Err(KhataTilqai::NususKabira { hajm, hadd, .. }) => {
+            return Err(Khata::from(KhataWarshaAmr::JadwalMashwarKabir {
+                masar: masar_nusus,
+                hajm,
+                hadd,
+            }));
+        },
         Err(sabab) => {
             // Reported and not raised: an unreadable run table is a run's
             // problem, and answering "no project yet" is both true and
@@ -2488,6 +2502,21 @@ pub enum KhataWarshaAmr {
         /// How many lines did not read.
         talifa: usize,
     },
+
+    /// The automatic run this game would be recovered from left a table past
+    /// the byte cap, so nothing was read out of it.
+    #[error(
+        "the run's string table at {} is {hajm} bytes, over the {hadd} this build reads",
+        masar.display()
+    )]
+    JadwalMashwarKabir {
+        /// The run's table.
+        masar: PathBuf,
+        /// What the directory entry said.
+        hajm: u64,
+        /// The cap it passed.
+        hadd: u64,
+    },
 }
 
 impl Tafsir for KhataWarshaAmr {
@@ -2509,6 +2538,7 @@ impl Tafsir for KhataWarshaAmr {
                     Self::MalafTalif { .. } => 49,
                     Self::MashruTalif { .. } => 50,
                     Self::HuzmaBihaTalaf { .. } => 51,
+                    Self::JadwalMashwarKabir { .. } => 52,
                 },
         )
     }
@@ -2532,7 +2562,8 @@ impl Tafsir for KhataWarshaAmr {
             Self::LaItimad { .. }
             | Self::MuzawwidGhayrMadum { .. }
             | Self::MalafTalif { .. }
-            | Self::MashruTalif { .. } => Khutura::Khatar,
+            | Self::MashruTalif { .. }
+            | Self::JadwalMashwarKabir { .. } => Khutura::Khatar,
         }
     }
 
@@ -2578,6 +2609,12 @@ impl Tafsir for KhataWarshaAmr {
                  ليس دمجًا. اطلب من الزميل فتح ورشته، فستدلّه على الأسطر التالفة، ثم إعادة \
                  التصدير.",
                 sutur_arabi(*talifa, false)
+            ),
+            Self::JadwalMashwarKabir { masar, .. } => format!(
+                "جدول نصوص آخر جولة تلقائية لهذه اللعبة أكبر ممّا يقرأه هذا الإصدار، فلم \
+                 يُقرأ منه شيء ولم يُستعد المشروع. انقل الملف {} جانبًا أو احذف مجلّد تلك \
+                 الجولة، ثمّ أعد الترجمة لتُبنى جولة جديدة.",
+                masar.display()
             ),
         }
     }
@@ -2630,13 +2667,22 @@ impl Tafsir for KhataWarshaAmr {
                  workshop, which will point at the damaged rows, and export again.",
                 sutur_injilizi(*talifa)
             ),
+            Self::JadwalMashwarKabir { masar, hajm, hadd } => format!(
+                "The last automatic run for this game left a string table of {hajm} bytes, over \
+                 the {hadd} this build reads, so nothing was read out of it and no project was \
+                 recovered. Move {} aside or delete that run's directory, then translate again \
+                 so a fresh run is built.",
+                masar.display()
+            ),
         }
     }
 
     fn khutwa(&self) -> Khutwa {
         match self {
             Self::MashruGhayrMawjud { .. } | Self::MashruTalif { .. } => Khutwa::FathNusus,
-            Self::HuzmaBihaTalaf { .. } => Khutwa::LaShay,
+            // Neither opens on this machine: one is the colleague's to fix, the
+            // other is a file the sentence already names and points at.
+            Self::HuzmaBihaTalaf { .. } | Self::JadwalMashwarKabir { .. } => Khutwa::LaShay,
             Self::NassGhayrMawjud { .. }
             | Self::IqtirahGhayrMawjud { .. }
             | Self::TadarubGhayrMawjud { .. }
@@ -2683,6 +2729,11 @@ impl Tafsir for KhataWarshaAmr {
                     "talifa".to_owned(),
                     QeemaSiyaq::Hajm(u64::try_from(*talifa).unwrap_or(u64::MAX)),
                 );
+            },
+            Self::JadwalMashwarKabir { masar, hajm, hadd } => {
+                let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Masar(masar.clone()));
+                let _ = siyaq.insert("hajm".to_owned(), QeemaSiyaq::Hajm(*hajm));
+                let _ = siyaq.insert("hadd".to_owned(), QeemaSiyaq::Hajm(*hadd));
             },
             Self::LaDamjMaftuh | Self::SaqfGhayrSalih => {},
         }
@@ -2877,6 +2928,46 @@ mod ikhtibarat {
             .err()
             .ok_or("a run that extracted nothing leaves no project to open")?;
         assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 40);
+        Ok(())
+    }
+
+    /// A run table past the cap is named, not hidden behind "no project yet":
+    /// the recovery meets that same file on every open, so a user told to start
+    /// a translation would press the button for ever.
+    #[test]
+    fn alfath_yusammi_jadwal_mashwar_kabiran() -> NatijatIkhtibar {
+        let haris = jidhr_muaqqat();
+        let masarat = masarat_muaqqata(&haris);
+        let id = mashwar_bi_sufuf(&masarat, 3)?;
+        let jidhr_mashawir = crate::tilqai_awamir::jidhr_mashawir(&masarat, id);
+        let mawjuz = ijrud(&jidhr_mashawir)
+            .into_iter()
+            .next()
+            .ok_or("the run this test wrote")?;
+        let masar = mawjuz
+            .mujallad
+            .join(MUJALLAD_MASHRU)
+            .join(MALAF_NUSUS_MASHWAR);
+        // Extended rather than filled: the cap is judged from the directory
+        // entry before a byte is taken, so the test costs a sparse file.
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(&masar)?
+            .set_len(taarib_tilqai::tarjama::HADD_HAJM_NUSUS + 1)?;
+
+        let khata = iftah_mashru(&masarat, id)
+            .err()
+            .ok_or("a run table past the cap is refused")?;
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 52);
+        assert_ne!(
+            khata.ramz.raqm(),
+            arqam::STUDIO + 40,
+            "not the empty state: there is a run, and its table is the problem"
+        );
+        assert!(
+            !jidhr_mashru(&masarat, id).join(MALAF_MASHRU).is_file(),
+            "nothing was published from a table that was never read"
+        );
         Ok(())
     }
 
@@ -3236,5 +3327,31 @@ mod ikhtibarat {
         assert!(huzma.arabi().contains("سطر واحد"));
         assert!(huzma.injilizi().contains("1 row"));
         assert_eq!(huzma.khutura(), Khutura::Tanbeeh);
+    }
+
+    /// The oversize refusal names the file in both languages and says what to
+    /// do with it, because nothing in the application can open it for them.
+    #[test]
+    fn rafd_aljadwal_alkabir_yusammi_almalaf() {
+        let khata = KhataWarshaAmr::JadwalMashwarKabir {
+            masar: PathBuf::from("/bayanat/tilqai/luba/jawla/mashru/nusus.json"),
+            hajm: 300 * 1024 * 1024,
+            hadd: taarib_tilqai::tarjama::HADD_HAJM_NUSUS,
+        };
+        assert_eq!(khata.ramz(), Ramz::jadeed(arqam::STUDIO + 52));
+        assert_eq!(khata.khutwa(), Khutwa::LaShay);
+        assert_eq!(khata.khutura(), Khutura::Khatar);
+        assert!(khata.arabi().contains("nusus.json"));
+        assert!(khata.injilizi().contains("nusus.json"));
+        assert!(
+            khata
+                .injilizi()
+                .contains(&taarib_tilqai::tarjama::HADD_HAJM_NUSUS.to_string()),
+            "the sentence says the cap, so the number is not a mystery"
+        );
+        assert_eq!(
+            khata.siyaq().get("hadd"),
+            Some(&QeemaSiyaq::Hajm(taarib_tilqai::tarjama::HADD_HAJM_NUSUS))
+        );
     }
 }
