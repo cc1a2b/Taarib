@@ -18,6 +18,12 @@ path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { workspace = true }
+# The build refuses to embed a revocation seed the anchor it is being given
+# cannot verify. Reusing the product's own reader is the point: a second
+# implementation of the canonical form in a build script is a second thing to
+# drift, and this check exists precisely to catch drift.
+taarib-aman = { workspace = true }
+taarib-khatm = { workspace = true }
 
 [dependencies]
 taarib-usus = { workspace = true, features = ["wajiha"] }
