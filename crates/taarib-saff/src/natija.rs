@@ -137,6 +137,30 @@ impl TaqreerTajawuz {
     }
 }
 
+/// What the font chain could not draw, counted from what shaping produced.
+///
+/// Not an error, and not a reason to refuse a layout. It is the answer to a
+/// question that previously had no answer anywhere in the product: a character
+/// that no font in the chain covers shapes to glyph 0, and glyph 0 is the empty
+/// rectangle a player reads as "this patch is broken". The layout reserves that
+/// character's width and draws nothing in it, which is the smaller wrong answer
+/// — and this record is how the decision stops being silent, so the patch
+/// compiler can name the string and the reviewer can add a font to the chain.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TaghtiyaNaqisa {
+    /// How many glyphs of this layout came back as `.notdef`.
+    ///
+    /// Glyphs and not characters: a character the chain cannot draw produces one
+    /// `.notdef` per place it appears, and a layout drawn at several sizes counts
+    /// each of them, because each is a place a rectangle would have been.
+    pub adad: u32,
+    /// The byte offset, in the logical text, of the first cluster that produced
+    /// one. The character itself is read from the caller's own string at this
+    /// offset — nothing downstream of shaping carries a codepoint, here as
+    /// everywhere.
+    pub awwal_anqud: u32,
+}
+
 /// A finished layout.
 ///
 /// Also a reusable buffer: [`TakhtitNass::amsah`] empties it while keeping its
@@ -161,6 +185,12 @@ pub struct TakhtitNass {
     pub tajawuz: Option<TaqreerTajawuz>,
     /// Whether the text was truncated by the overflow policy.
     pub maqsus: bool,
+    /// Present when the font chain could not draw every character of the text.
+    ///
+    /// The width of each such character is still reserved in the lines above and
+    /// nothing is drawn in it, so a layout carrying this is a layout with holes
+    /// in it, not a layout that is wrong.
+    pub taghtiya_naqisa: Option<TaghtiyaNaqisa>,
 }
 
 impl TakhtitNass {
@@ -176,6 +206,7 @@ impl TakhtitNass {
             hajm,
             tajawuz: None,
             maqsus: false,
+            taghtiya_naqisa: None,
         }
     }
 
@@ -188,6 +219,7 @@ impl TakhtitNass {
         self.irtifa = 0.0;
         self.tajawuz = None;
         self.maqsus = false;
+        self.taghtiya_naqisa = None;
     }
 
     /// Whether anything was laid out.

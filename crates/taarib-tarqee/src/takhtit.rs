@@ -58,11 +58,21 @@
 //! that will be asked for. That is the entire reason a Taarib atlas is small.
 //!
 //! The same rule bans the small conveniences. No `.notdef` is added for every
-//! font and size in case one is needed — when a chain fails to cover a
-//! character, shaping emits `.notdef` and the collector picks it up from the
-//! layout like any other glyph. No ellipsis is seeded for the truncation policy
-//! — truncation inserts it during layout, so it is in the output already. A
-//! glyph that is in the atlas is a glyph something drew.
+//! font and size in case one is needed, and none arrives from a layout either:
+//! the engine reserves the width of a character its chain cannot draw and puts
+//! nothing in it, so the box never reaches a page. No ellipsis is seeded for the
+//! truncation policy — truncation inserts it during layout, so it is in the
+//! output already. A glyph that is in the atlas is a glyph something drew.
+//!
+//! ## A character no font covers is a row in the report, not a box on screen
+//!
+//! [`TaqreerTakhtit::ghayr_mughattat`] names every string the font chain could
+//! not draw in full, the first character it could not draw, and how many places
+//! it would have shown. The engine has already tried every font it was given —
+//! `taarib_saff::SilsilatKhutut` picks the first that covers each character — so
+//! by the time a `.notdef` survives to here there is nothing left to fall back
+//! to, and the answer is the person compiling the patch, not the player. The
+//! row is what tells them which font to add.
 //!
 //! ## The overflow report is built here, from these layouts
 //!
@@ -350,6 +360,31 @@ pub struct NassBilaTakhtit {
     pub sabab: SababLaTakhtit,
 }
 
+/// A string holding a character no font in the chain can draw.
+///
+/// The layout still exists and is still shipped: every other character of it
+/// draws, and the one that does not has its width reserved and nothing put in
+/// it. This row is how the person compiling the patch learns that, because the
+/// alternative report — an empty rectangle in the running game — reaches the
+/// player instead of them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct NassGhayrMughatta {
+    /// The string.
+    pub nass: NassId,
+    /// The first character of it the chain could not draw.
+    ///
+    /// Read out of the translated text at the offset shaping reported, so the
+    /// report can name a character rather than a count. The layout engine itself
+    /// never carries a codepoint past shaping, by design.
+    pub harf: char,
+    /// Its Unicode scalar value, for a report that has to be read where the
+    /// character itself will not render.
+    pub raqm: u32,
+    /// How many glyph positions across every size of this string would have been
+    /// an empty box.
+    pub adad: u32,
+}
+
 /// What the runtime adapter does when the atlas runs out of room.
 ///
 /// Recorded in the package as data rather than compiled into an adapter,
@@ -611,6 +646,12 @@ pub struct TaqreerTakhtit {
     pub maqsusa: usize,
     /// Strings with no precomputed layout, and why.
     pub matwiya: Vec<NassBilaTakhtit>,
+    /// Strings the font chain could not draw in full, sorted by string.
+    ///
+    /// Empty is the expected state. A non-empty list is a patch that will draw
+    /// gaps where those characters are, and the fix is a font in the chain that
+    /// covers them — not a change to any of this.
+    pub ghayr_mughattat: Vec<NassGhayrMughatta>,
 }
 
 impl TaqreerTakhtit {
@@ -620,7 +661,8 @@ impl TaqreerTakhtit {
         format!(
             "{} layout(s) for {} string(s), {} of them unwrapped and {} carrying placeholders; \
              {} glyph image(s) at {} distinct size(s) across {} atlas page(s); {} overflowed, \
-             {} were shrunk, {} were truncated; {} string(s) were not precomputed",
+             {} were shrunk, {} were truncated; {} string(s) were not precomputed; {} string(s) \
+             hold a character no font in the chain can draw",
             self.takhtitat,
             self.nusus,
             self.bila_qayd_ard,
@@ -632,6 +674,7 @@ impl TaqreerTakhtit {
             self.musaghghara,
             self.maqsusa,
             self.matwiya.len(),
+            self.ghayr_mughattat.len(),
         )
     }
 
@@ -822,6 +865,11 @@ pub fn sabbiq(
     let mut jami = JamiAshkal::jadeed(khiyarat.namat);
     let mut takhtitat: Vec<TakhtitMabni> = Vec::with_capacity(natayij.len());
     let mut asma: BTreeSet<NassId> = BTreeSet::new();
+    // One row per string rather than one per size: the same character is
+    // uncoverable at every size the string was laid out at, and a report that
+    // repeated it once per size would bury how many strings are actually
+    // affected under how many layouts each of them has.
+    let mut naqis: BTreeMap<NassId, JamiGhayrMughatta> = BTreeMap::new();
     // Scanned in work-list order, so the failure reported is the first one in
     // the project and not the first one a worker happened to reach. The
     // indexed parallel map keeps results in work-list order, which is what
@@ -830,6 +878,7 @@ pub fn sabbiq(
         let natija = natija?;
         jami.idif_takhtit(&natija.takhtit, natija.hajm_matlub.biksal());
         let _ = asma.insert(natija.nass);
+        sajjil_ghayr_mughatta(&mut naqis, wahda, &natija);
         // Submitted with the requested size, not the settled one: the report
         // records what was asked for and reads the settled size off the layout.
         bani.sajjil(&MudkhalQiyas {
@@ -880,6 +929,15 @@ pub fn sabbiq(
         musaghghara: adad_bi_alam(&takhtitat, ALAM_TAKHTIT_MUSAGHGHAR),
         maqsusa: adad_bi_alam(&takhtitat, ALAM_TAKHTIT_MAQSUS),
         matwiya,
+        ghayr_mughattat: naqis
+            .into_iter()
+            .map(|(nass, jami)| NassGhayrMughatta {
+                nass,
+                harf: jami.harf,
+                raqm: u32::from(jami.harf),
+                adad: jami.adad,
+            })
+            .collect(),
     };
 
     tracing::info!(
@@ -889,9 +947,19 @@ pub fn sabbiq(
         safahat = taqreer.safahat,
         bila_qayd_ard = taqreer.bila_qayd_ard,
         matwiya = taqreer.matwiya.len(),
+        ghayr_mughattat = taqreer.ghayr_mughattat.len(),
         tajawuz = %tajawuz.wasf_injilizi(),
         "precomputation finished"
     );
+    for naqisa in &taqreer.ghayr_mughattat {
+        tracing::warn!(
+            nass = %naqisa.nass,
+            raqm = format!("U+{:04X}", naqisa.raqm),
+            adad = naqisa.adad,
+            "no font in the chain draws this character; the layout reserves its width and draws \
+             nothing there"
+        );
+    }
 
     Ok(TakhtitMusbaq {
         takhtitat,
@@ -1071,6 +1139,68 @@ fn fahs_nasq(nasq: &[NitaqNasq]) -> Result<bool, SababLaTakhtit> {
         }
     }
     Ok(dharrat)
+}
+
+/// One string's uncovered characters, accumulated across the sizes it was laid
+/// out at.
+///
+/// Kept separate from [`NassGhayrMughatta`] because merging needs the byte
+/// offset and the finished row does not: the offset is an index into a string
+/// the report does not carry, so publishing it would be publishing a number
+/// nobody can resolve.
+#[derive(Debug, Clone, Copy)]
+struct JamiGhayrMughatta {
+    mawqi: u32,
+    harf: char,
+    adad: u32,
+}
+
+/// Folds one layout's uncovered-character report into the per-string row.
+///
+/// The character is read from the translated text at the offset shaping gave,
+/// because that offset is all the layout carries: nothing downstream of shaping
+/// holds a codepoint, and this is the one place that still has both the offset
+/// and the string it indexes. An offset that does not resolve to a character is
+/// dropped rather than reported as a replacement character, which would name a
+/// character the string does not contain.
+///
+/// Layouts of one string at several sizes merge: the counts add, and the
+/// character kept is the one at the earliest offset, so the row names the first
+/// character in reading order the chain could not draw.
+fn sajjil_ghayr_mughatta(
+    naqis: &mut BTreeMap<NassId, JamiGhayrMughatta>,
+    wahda: &WahdatTakhtit<'_>,
+    natija: &NatijatWahda,
+) {
+    let Some(naqisa) = natija.takhtit.taghtiya_naqisa else {
+        return;
+    };
+    let Ok(mawqi) = usize::try_from(naqisa.awwal_anqud) else {
+        return;
+    };
+    let Some(harf) = wahda
+        .hadaf
+        .get(mawqi..)
+        .and_then(|baqi| baqi.chars().next())
+    else {
+        return;
+    };
+
+    let jadid = JamiGhayrMughatta {
+        mawqi: naqisa.awwal_anqud,
+        harf,
+        adad: naqisa.adad,
+    };
+    naqis
+        .entry(natija.nass)
+        .and_modify(|jami| {
+            jami.adad = jami.adad.saturating_add(jadid.adad);
+            if jadid.mawqi < jami.mawqi {
+                jami.mawqi = jadid.mawqi;
+                jami.harf = jadid.harf;
+            }
+        })
+        .or_insert(jadid);
 }
 
 /// Whether a character is a mandatory break under UAX #14.

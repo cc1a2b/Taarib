@@ -1,0 +1,24 @@
+<Project>
+
+  <!--
+    The Unity assemblies are loaded into a game process by BepInEx, which
+    already has a runtime and a dependency graph; unity/Directory.Build.targets
+    therefore switches off the runtime configuration and dependency files an
+    ordinary project emits, because a second copy of anything beside the plugin
+    is a second Harmony patching the same method.
+
+    This project is not one of those. It is a console program run by a person,
+    and `dotnet run` needs exactly the two files that were switched off. The
+    parent is imported first so every other rule it makes still applies, and
+    only what a runnable program cannot do without is put back.
+  -->
+
+  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets" />
+
+  <PropertyGroup>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+  </PropertyGroup>
+
+</Project>

@@ -138,7 +138,9 @@ pub use crate::maqta::{
     DhuMustawa, FursatQat, HarfMashkul, Kitaba, MaqtaMantiqi, MaqtaMashkul, SifatWasl,
 };
 pub use crate::nasq::{KhiyaratNasq, LahjatNasq, NassNaqi};
-pub use crate::natija::{Harf, MustatilNass, SatrMansuq, TakhtitNass, TaqreerTajawuz};
+pub use crate::natija::{
+    Harf, MustatilNass, SatrMansuq, TaghtiyaNaqisa, TakhtitNass, TaqreerTajawuz,
+};
 pub use crate::qiyas::QiyasNass;
 pub use crate::rasm::{NamatRasm, Rassam, SurahHarf};
 pub use crate::talab::{
@@ -254,6 +256,7 @@ impl Saff {
         hadaf.hajm = takhtit.hajm;
         hadaf.tajawuz = takhtit.tajawuz;
         hadaf.maqsus = takhtit.maqsus;
+        hadaf.taghtiya_naqisa = takhtit.taghtiya_naqisa;
         Ok(())
     }
 
@@ -430,6 +433,12 @@ impl NassMuhaddar {
         }
         for satr in &mut takhtit.sutur {
             satr.mantiqi = self.ila_asli(satr.mantiqi.start)..self.ila_asli(satr.mantiqi.end);
+        }
+        if let Some(naqisa) = takhtit.taghtiya_naqisa.as_mut() {
+            // The offset names the character a reviewer is meant to look up, so
+            // it has to point into the string they wrote rather than into the
+            // one the digit policy produced from it.
+            naqisa.awwal_anqud = self.ila_asli(naqisa.awwal_anqud);
         }
     }
 }

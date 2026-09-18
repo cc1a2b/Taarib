@@ -958,6 +958,75 @@ namespace Taarib.Unity.Mushtarak
         }
 
         /// <summary>
+        /// Half a layout unit, which is below what antialiasing already blurs:
+        /// a layout ending this far past its box does not read as outside it.
+        /// </summary>
+        private const float TasamuhArdAdna = 0.5f;
+
+        /// <summary>
+        /// The same tolerance as a fraction of the box, for a box wide enough
+        /// that summing a line's advances in single precision drifts by more
+        /// than half a unit.
+        /// </summary>
+        private const float TasamuhArdNisbi = 1f / 4096f;
+
+        /// <summary>
+        /// Whether a layout the patch compiler precomputed may be drawn into
+        /// the box the game is sizing this frame, or has to be laid out again
+        /// against it.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A precompiled layout is looked up by size, and a size match says
+        /// nothing about width. The compiler broke the lines at whatever width
+        /// it measured for the slot — or, when it measured none, at no width at
+        /// all — while the box on the player's screen is whatever the component
+        /// reports now. Accepting on the size alone is how a paragraph compiled
+        /// as one long line is drawn straight off the side of the panel it
+        /// belongs to.
+        /// </para>
+        /// <para>
+        /// Both widths are in layout units and are compared as they stand. The
+        /// rasterization size does not enter it: <see cref="HajmLawhaMulaim"/>
+        /// may put the glyph images at another resolution, and the
+        /// <c>Hajm / HajmLawha</c> ratio in <see cref="Ibni{TKhareeta}"/>
+        /// divides that straight back out, so what is drawn is as wide as the
+        /// layout says it is.
+        /// </para>
+        /// <para>
+        /// Width only. A layout taller than its box is not evidence that
+        /// anything was measured wrong — overflowing downward is what a text
+        /// component does by default — and laying the same string out again at
+        /// the same width returns the same height, so testing the height would
+        /// buy a layout on every draw and change nothing about what is drawn.
+        /// </para>
+        /// <para>
+        /// <paramref name="yaltaff"/> is the entitlement to be wider than the
+        /// box. A string the engine refuses to wrap is one line however long it
+        /// comes out; the runtime path lays such a string out with no width
+        /// bound at all and would hand back the same overflowing line, so the
+        /// compiled one is taken and nothing is spent re-deriving it.
+        /// </para>
+        /// </remarks>
+        /// <param name="ardTakhtit">The layout's widest line, in layout units.</param>
+        /// <param name="ardMutah">
+        /// The width the component actually has, after its margins. Zero or
+        /// less means it is not bounded horizontally at all.
+        /// </param>
+        /// <param name="yaltaff">Whether this string is wrapped to that width.</param>
+        /// <returns>Whether the precomputed layout may be drawn as it stands.</returns>
+        public static bool YulaimTakhtit(float ardTakhtit, float ardMutah, bool yaltaff)
+        {
+            if (!yaltaff || !(ardMutah > 0f))
+            {
+                return true;
+            }
+            float tasamuh = ardMutah * TasamuhArdNisbi;
+            return ardTakhtit
+                <= ardMutah + (tasamuh > TasamuhArdAdna ? tasamuh : TasamuhArdAdna);
+        }
+
+        /// <summary>
         /// The quantized pixel size that keys a glyph in the atlas: quarter
         /// pixels, matching <see cref="TaaribMiftahShakl.HajmRubi"/>.
         /// </summary>
@@ -1226,8 +1295,23 @@ namespace Taarib.Unity.Mushtarak
                         memoSalih = true;
                     }
 
+                    // The cluster must fall inside the span, not merely carry
+                    // its id. `uslub_ind` answers 0 both for "span zero" and for
+                    // "no span at all", so in any string whose span zero is an
+                    // atom — a speaker prefix like `[Jack]`, which is most
+                    // dialogue in a real game — every unspanned glyph in the
+                    // line inherited that id and was emitted as an atom instead
+                    // of as text. Measured on one shipped patch: 524,556 of
+                    // 1,477,890 glyphs, 35.5%, across 1,284 strings. In cursive
+                    // Arabic that does not read as missing letters, it reads as
+                    // fragments of words floating on the line. An atom span
+                    // covers exactly the one character it replaced, so the
+                    // range test is exact rather than a heuristic.
                     if (mawdiNitaq >= 0
-                        && (talab.Nitaqat[mawdiNitaq].Alam & Alamat.UslubDharra) != 0)
+                        && (talab.Nitaqat[mawdiNitaq].Alam & Alamat.UslubDharra) != 0
+                        && harf.Anqud >= talab.Nitaqat[mawdiNitaq].Bidaya
+                        && harf.Anqud
+                            < talab.Nitaqat[mawdiNitaq].Bidaya + talab.Nitaqat[mawdiNitaq].Tul)
                     {
                         TaaribNitaqUslub nitaq = talab.Nitaqat[mawdiNitaq];
                         if (uktub && natija.AdadDharrat < makhzan.Dharrat.Length)

@@ -67,7 +67,7 @@ use taarib_usus::khata::{Khata, Natija};
 use crate::ittijah::{TahleelIttijah, rattib_basariyan};
 use crate::khata::KhataSaff;
 use crate::maqta::{FursatQat, HarfMashkul, MaqtaMantiqi, MaqtaMashkul};
-use crate::natija::{Harf, SatrMansuq, TakhtitNass, TaqreerTajawuz};
+use crate::natija::{Harf, SatrMansuq, TaghtiyaNaqisa, TakhtitNass, TaqreerTajawuz};
 use crate::talab::{
     Dharra, Ittijah, KhiyaratTakhtit, LughaNass, Muhadhaha, NamatDabt, NitaqUslub, SiyasatTajawuz,
     TalabTakhtit, Uslub,
@@ -109,6 +109,13 @@ const DIQQA_HAJM: f32 = 0.25;
 /// [`DIQQA_HAJM`] is. It exists so that a font whose metrics behave
 /// non-monotonically under scaling cannot turn a search into a spin.
 const ADAD_TAQLIS: u32 = 16;
+
+/// The glyph identifier a font answers with when it cannot draw a character.
+///
+/// Zero, by the OpenType specification, and `.notdef` by convention: the empty
+/// rectangle. Named because [`mawqi_huruf`] tests for it and a bare `0` beside a
+/// glyph identifier reads as an index rather than as a verdict.
+const MUARRIF_MAFQUD: u32 = 0;
 
 /// HORIZONTAL ELLIPSIS, the mark truncation leaves behind.
 ///
@@ -1690,6 +1697,21 @@ fn ibni_asasi(
 /// the caller fills with whatever the placeholder stood for — a sprite, an icon,
 /// a value substituted at runtime. Its width was counted in every measurement,
 /// so the hole is exactly the size the layout reserved.
+///
+/// A `.notdef` draws nothing either, and for the same reason stated the other
+/// way round. This is the stage where a glyph identifier becomes something to
+/// draw, so it is the stage that decides that an empty rectangle is never that
+/// thing: glyph 0 is what a font returns when it cannot draw a character, and
+/// putting the box on screen tells a player the patch is broken while telling
+/// the person who could fix it nothing at all. The pen still advances by the
+/// character's own advance, because the character really is there and every
+/// width the line was measured by counted it; what changes is that the hole is
+/// left empty and [`TakhtitNass::taghtiya_naqisa`] says how many there are and
+/// where the first one is. Shaping cannot make this call — deleting the glyph
+/// there would delete the only evidence the chain has a hole — and a mesh
+/// builder cannot either: it holds a glyph identifier and nothing that says
+/// whether the character behind it was one no font covers or one nothing should
+/// draw. Deciding here is what keeps every adapter's answer the same.
 fn mawqi_huruf(nass: &str, bina: BinaSutur, talab: &TalabTakhtit<'_>) -> TakhtitNass {
     let BinaSutur {
         sutur,
@@ -1719,6 +1741,9 @@ fn mawqi_huruf(nass: &str, bina: BinaSutur, talab: &TalabTakhtit<'_>) -> Takhtit
     takhtit.maqsus = maqsus;
     takhtit.sutur.reserve(sutur.len());
 
+    let mut adad_naqis: u32 = 0;
+    let mut awwal_naqis: Option<u32> = None;
+
     for satr in sutur {
         let bidaya_huruf = u32::try_from(takhtit.huruf.len()).unwrap_or(u32::MAX);
         let mut qalam = satr.bidaya;
@@ -1732,6 +1757,18 @@ fn mawqi_huruf(nass: &str, bina: BinaSutur, talab: &TalabTakhtit<'_>) -> Takhtit
                 let (muarrif_nitaq, uslub) = uslub_ind(farii.nitaqat, harf.anqud);
                 let izaha_asas = uslub.izaha.unwrap_or(0.0);
                 let taqaddum = ard_harf(nass, harf, &farii);
+                if harf.muarrif == MUARRIF_MAFQUD {
+                    adad_naqis = adad_naqis.saturating_add(1);
+                    // The smallest offset, not the first one reached: glyphs
+                    // arrive in visual order, and a report that named whichever
+                    // of them the reordering happened to put first would name a
+                    // different character for the same defect in Arabic and in
+                    // Latin.
+                    awwal_naqis =
+                        Some(awwal_naqis.map_or(harf.anqud, |sabiq| sabiq.min(harf.anqud)));
+                    qalam += taqaddum;
+                    continue;
+                }
                 takhtit.huruf.push(Harf {
                     muarrif: harf.muarrif,
                     s: qalam + harf.izaha_s,
@@ -1762,6 +1799,10 @@ fn mawqi_huruf(nass: &str, bina: BinaSutur, talab: &TalabTakhtit<'_>) -> Takhtit
         });
     }
 
+    takhtit.taghtiya_naqisa = awwal_naqis.map(|awwal_anqud| TaghtiyaNaqisa {
+        adad: adad_naqis,
+        awwal_anqud,
+    });
     takhtit
 }
 

@@ -44,8 +44,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use taarib_saff::{
-    Harf, Ittijah, KhiyaratTakhtit, MawridKhatt, NamatRasm, Rassam, Saff, SilsilatKhutut,
-    TakhtitNass, TalabTakhtit,
+    Dharra, Harf, Ittijah, KhiyaratTakhtit, MawridKhatt, NamatRasm, NitaqUslub, Rassam, Saff,
+    SilsilatKhutut, TakhtitNass, TalabTakhtit, Uslub,
 };
 
 /// The size every test lays out at, in pixels.
@@ -122,6 +122,42 @@ fn khattit(nass: &str) -> TakhtitNass {
         }),
         &format!("laying out {nass:?}"),
     )
+}
+
+/// Lays one string out with style spans, and without asserting a line count.
+fn khattit_bi_nitaqat(nass: &str, nitaqat: &[NitaqUslub]) -> TakhtitNass {
+    let khutut = lazim(SilsilatKhutut::wahid(khatt()), "building the font chain");
+    let khiyarat = KhiyaratTakhtit::default();
+    let mut saff = Saff::jadeed();
+    lazim(
+        saff.khattit(&TalabTakhtit {
+            nass,
+            khutut: &khutut,
+            hajm: HAJM,
+            ard_mutah: None,
+            irtifa_mutah: None,
+            nitaqat,
+            khiyarat: &khiyarat,
+        }),
+        &format!("laying out {nass:?}"),
+    )
+}
+
+/// Lays one string out over as many lines as its own line separators ask for.
+fn khattit_mutaaddid(nass: &str) -> TakhtitNass {
+    khattit_bi_nitaqat(nass, &[])
+}
+
+/// Asserts that a layout draws no empty box anywhere.
+#[track_caller]
+fn ahsi_bila_tofu(takhtit: &TakhtitNass, nass: &str) {
+    for harf in &takhtit.huruf {
+        assert_ne!(
+            harf.muarrif, 0,
+            "{nass:?} drew .notdef at cluster {} — a tofu box on screen",
+            harf.anqud
+        );
+    }
 }
 
 /// Every glyph of a single-line layout, in visual order left to right.
@@ -697,6 +733,185 @@ fn no_glyph_is_notdef() {
                 harf.anqud
             );
         }
+    }
+}
+
+/// A line separator is an instruction, and an instruction is not drawn.
+///
+/// This is the defect the owner photographed on a world-space monitor in The
+/// Stalked 3: a page of Arabic paragraphs with an empty rectangle at the end of
+/// several sentences. Every one of them was a `\n`. A font has no glyph for a
+/// line feed, so `cmap` answers zero, and glyph zero is the box — which then
+/// also charged each line the box's own advance, so every line that ended in a
+/// newline measured wider than the text on it.
+#[test]
+fn a_line_separator_draws_no_glyph() {
+    const NASS: &str = "هل أنا مراقب؟\nبعد الآن.";
+    let takhtit = khattit_mutaaddid(NASS);
+
+    assert_eq!(
+        takhtit.sutur.len(),
+        2,
+        "the newline must end the first line: {:?}",
+        takhtit.sutur.len()
+    );
+    ahsi_bila_tofu(&takhtit, NASS);
+    assert_eq!(
+        takhtit.taghtiya_naqisa, None,
+        "a newline is not a coverage hole and must not be reported as one"
+    );
+
+    // Nothing in the layout points at the newline: it produced no glyph, so no
+    // glyph names its cluster.
+    let mawqi_satr = u32::try_from(
+        NASS.find('\n')
+            .unwrap_or_else(|| panic!("the sample contains a newline")),
+    )
+    .unwrap_or(u32::MAX);
+    for harf in &takhtit.huruf {
+        assert_ne!(
+            harf.anqud, mawqi_satr,
+            "a glyph was drawn for the line separator at byte {mawqi_satr}"
+        );
+    }
+}
+
+/// A blank line between two paragraphs holds nothing at all.
+///
+/// The second half of the same photograph: boxes sitting alone on their own
+/// lines, where a blank line should be. A paragraph break is two line
+/// separators, and the second one had a whole line to itself to put its box on.
+#[test]
+fn a_blank_line_holds_no_glyph() {
+    const NASS: &str = "أو من يقف وراءه.\n\nبعد الآن.";
+    let takhtit = khattit_mutaaddid(NASS);
+
+    assert_eq!(
+        takhtit.sutur.len(),
+        3,
+        "two separators make three lines, the middle one blank"
+    );
+    ahsi_bila_tofu(&takhtit, NASS);
+
+    let Some(wasat) = takhtit.sutur.get(1) else {
+        panic!("three lines expected");
+    };
+    assert!(
+        takhtit.huruf_satr(wasat).is_empty(),
+        "the blank line between two paragraphs holds {} glyph(s)",
+        takhtit.huruf_satr(wasat).len()
+    );
+}
+
+/// An atom occupies a position in the text and never becomes a glyph.
+///
+/// `nasq` represents every inline object — a sprite, a `{0}`, a runtime
+/// variable — as one U+FFFC carried by a style span that says it is an atom.
+/// The span is what keeps the placeholder out of shaping; this asserts the
+/// contract from the other end, that the position it reserves is a hole of the
+/// declared width and not a letterform.
+#[test]
+fn an_atom_draws_no_glyph() {
+    const NASS: &str = "الذهب: \u{FFFC} قطعة";
+    const ARD_DHARRA: f32 = 30.0;
+    let Some(mawqi) = NASS.find('\u{FFFC}') else {
+        panic!("the sample contains an atom");
+    };
+    let bidaya = u32::try_from(mawqi).unwrap_or(u32::MAX);
+
+    let takhtit = khattit_bi_nitaqat(
+        NASS,
+        &[NitaqUslub {
+            id: 1,
+            bidaya,
+            tul: u32::try_from('\u{FFFC}'.len_utf8()).unwrap_or(0),
+            uslub: Uslub {
+                dharra: Some(Dharra {
+                    ard: ARD_DHARRA,
+                    irtifa: 0.0,
+                    asas: 0.0,
+                    marja: 0,
+                }),
+                ..Uslub::default()
+            },
+        }],
+    );
+
+    ahsi_bila_tofu(&takhtit, NASS);
+    assert_eq!(
+        takhtit.taghtiya_naqisa, None,
+        "an atom is not a character the font failed to cover"
+    );
+    for harf in &takhtit.huruf {
+        assert_ne!(
+            harf.anqud, bidaya,
+            "a glyph was drawn for the atom at byte {bidaya}"
+        );
+    }
+
+    // The width it reserved is still in the line, because the game will put its
+    // sprite or its substituted value there.
+    let bila = khattit_mutaaddid("الذهب:  قطعة");
+    assert!(
+        takhtit.ard - bila.ard > ARD_DHARRA * 0.5,
+        "the atom reserved no room: {:.3} against {:.3} without it",
+        takhtit.ard,
+        bila.ard
+    );
+}
+
+/// A character no font in the chain can draw is reported, not boxed.
+///
+/// The honest answers to a coverage hole are to fall back, to draw nothing, or
+/// to say so. Falling back has already been tried and failed by the time a
+/// `.notdef` exists — the chain picks the first font that covers each character
+/// — so what is left is the other two, and this asserts both: the space is
+/// reserved and left empty, and the layout says how many there were and where
+/// the first one is.
+#[test]
+fn an_uncovered_character_is_reported_not_drawn() {
+    // A CJK ideograph and an object replacement character with no atom span to
+    // carry it. Neither is in an Arabic text face, and the second is exactly
+    // what a patch produces when a placeholder's span fails to reach layout.
+    for (nass, ghayr) in [("قبل 中 بعد", '\u{4E2D}'), ("قبل \u{FFFC} بعد", '\u{FFFC}')]
+    {
+        let khatt = khatt();
+        assert!(
+            !khatt.yughatti(ghayr),
+            "this test needs a character the staged face does not cover; it covers U+{:04X}",
+            u32::from(ghayr)
+        );
+
+        let takhtit = khattit_mutaaddid(nass);
+        ahsi_bila_tofu(&takhtit, nass);
+
+        let Some(naqisa) = takhtit.taghtiya_naqisa else {
+            panic!(
+                "{nass:?} holds U+{:04X}, which no font covers, and the layout reported no missing coverage",
+                u32::from(ghayr)
+            );
+        };
+        assert_eq!(
+            naqisa.adad, 1,
+            "one character is uncoverable in {nass:?}, not {}",
+            naqisa.adad
+        );
+        let mawqi = usize::try_from(naqisa.awwal_anqud).unwrap_or(usize::MAX);
+        assert_eq!(
+            nass.get(mawqi..).and_then(|baqi| baqi.chars().next()),
+            Some(ghayr),
+            "the reported offset {mawqi} must name the character the chain could not draw"
+        );
+
+        // The room is still reserved: the line is wider than the same sentence
+        // with the character taken out.
+        let bila = khattit_mutaaddid(&nass.replace(ghayr, ""));
+        assert!(
+            takhtit.ard > bila.ard,
+            "the uncovered character reserved no room: {:.3} against {:.3} without it",
+            takhtit.ard,
+            bila.ard
+        );
     }
 }
 

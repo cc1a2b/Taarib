@@ -109,6 +109,16 @@ namespace Taarib.Unity.Mono.Suluk
 
         private static readonly HashSet<ulong> Isabat = new HashSet<ulong>();
 
+        private static readonly HashSet<ulong> Tajawuzat = new HashSet<ulong>();
+
+        /// <summary>
+        /// How many distinct re-laid strings are named individually before the
+        /// log falls back to the running total alone. A patch whose compiler
+        /// measured no widths at all re-lays everything it carries, and naming
+        /// four thousand strings would bury the one line that matters.
+        /// </summary>
+        private const int HaddTajawuzat = 200;
+
         /// <summary>
         /// How many newly-seen distinct strings pass between coverage lines.
         /// </summary>
@@ -173,10 +183,12 @@ namespace Taarib.Unity.Mono.Suluk
             }
             int isabat;
             int fawtat;
+            int tajawuzat;
             lock (Fawtat)
             {
                 isabat = Isabat.Count;
                 fawtat = Fawtat.Count;
+                tajawuzat = Tajawuzat.Count;
                 int majmu = isabat + fawtat;
                 if (majmu - munduAkhirTaqreer < FasilTaghtiya)
                 {
@@ -188,10 +200,17 @@ namespace Taarib.Unity.Mono.Suluk
             {
                 int majmu = isabat + fawtat;
                 int miawiya = majmu == 0 ? 0 : (int)((long)isabat * 100 / majmu);
-                sijill(
+                string satr =
                     $"التغطية: {isabat} من {majmu} نصًّا مميَّزًا رُسمت من الرقعة ({miawiya}%)"
                     + $" | coverage: {isabat} of {majmu} distinct string(s) drawn so far came from"
-                    + $" the patch ({miawiya}%).");
+                    + $" the patch ({miawiya}%).";
+                if (tajawuzat > 0)
+                {
+                    satr += $" | أُعيد تخطيط {tajawuzat} منها لأن تخطيط المُصرِّف لم يتّسع"
+                        + $" | {tajawuzat} of them were laid out again at run time because the"
+                        + " compiled layout did not fit its box.";
+                }
+                sijill(satr);
             }
             catch (Exception)
             {
@@ -236,6 +255,73 @@ namespace Taarib.Unity.Mono.Suluk
             {
                 // A logging sink that throws is the host's problem, and a miss
                 // report is the last thing worth a second failure.
+            }
+        }
+
+        /// <summary>
+        /// Reports a string whose precompiled layout did not fit the box the
+        /// game sized, and which was therefore laid out again at run time.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The first one is a degradation and goes to the ordinary log, not to
+        /// the diagnostics sink: a patch measured against a width this game
+        /// does not use draws correctly only because every affected string is
+        /// re-laid on every draw, and an owner reading a plain log should learn
+        /// that from the log rather than from a frame-time graph. The rest are
+        /// diagnostics, and the running total rides along on the coverage line
+        /// for the same reason coverage does — "how many" is the question, and
+        /// a list of individual strings does not answer it.
+        /// </para>
+        /// <para>
+        /// Distinct strings rather than draws, like <see cref="Isaba"/>: this
+        /// runs on every rebuild, and counting draws would report the frame
+        /// rate.
+        /// </para>
+        /// </remarks>
+        /// <param name="miftah">The key of the string, so one string counts once.</param>
+        /// <param name="ardTakhtit">The compiled layout's widest line, in pixels.</param>
+        /// <param name="ardMutah">The width the component actually had, in pixels.</param>
+        public static void Tajawuz(ulong miftah, float ardTakhtit, float ardMutah)
+        {
+            bool jadeed;
+            int adad;
+            lock (Fawtat)
+            {
+                jadeed = Tajawuzat.Add(miftah);
+                adad = Tajawuzat.Count;
+            }
+            if (!jadeed)
+            {
+                return;
+            }
+            if (adad == 1)
+            {
+                Ballagh(
+                    "تخطيط مُصرَّف في هذه الرقعة أعرض من الصندوق الذي ترسمه اللعبة فيه؛ يُعاد "
+                    + "تخطيط تلك النصوص عند كل رسم بدل أن تخرج عن إطارها. | "
+                    + "A precompiled layout in this patch is wider than the box the game "
+                    + "draws it into, so that string — and any other like it — is laid out "
+                    + "again on every draw rather than spilling outside its frame. The patch "
+                    + "was measured against a width this game does not use; the fix is in the "
+                    + "compiler, not here.");
+            }
+            Action<string>? sijill = SijillFawt;
+            if (sijill is null || adad > HaddTajawuzat)
+            {
+                return;
+            }
+            try
+            {
+                sijill(
+                    $"تخطيط أعرض من صندوقه: {ardTakhtit:0.#} بدل {ardMutah:0.#} بكسل؛ أُعيد تخطيطه"
+                    + $" | layout wider than its box: {ardTakhtit:0.#} against {ardMutah:0.#}"
+                    + " px; laid out again at run time.");
+            }
+            catch (Exception)
+            {
+                // As above: a sink that throws is the host's problem, and this
+                // report is not worth a second failure on top of it.
             }
         }
 

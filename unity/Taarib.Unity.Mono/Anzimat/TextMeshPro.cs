@@ -58,6 +58,51 @@ using UnityEngine.Rendering;
 namespace Taarib.Unity.Mono.Anzimat
 {
     /// <summary>
+    /// أركان لون — four colours in the engine's own <see cref="Color"/>, laid
+    /// out so that TextMeshPro's <c>VertexGradient</c> can be read as one value.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Sequential and nothing else: <see cref="RabtZaid.QariArkan"/> reinterprets
+    /// the struct a resolved getter returned as this one, after checking at bind
+    /// time that the two are the same size and that the engine's is four public
+    /// <see cref="Color"/> fields. Which corner is which is deliberately not
+    /// recorded, because <see cref="ArkanTadarruj.Mutawassit"/> is the only thing
+    /// that ever reads them and the mean does not care about the order.
+    /// </para>
+    /// </remarks>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ArkanLawnTmp
+    {
+        /// <summary>One corner.</summary>
+        public Color Awwal;
+
+        /// <summary>Another corner.</summary>
+        public Color Thani;
+
+        /// <summary>Another corner.</summary>
+        public Color Thalith;
+
+        /// <summary>The last corner.</summary>
+        public Color Rabi;
+
+        /// <summary>
+        /// Four opaque whites — the gradient that multiplies to no change, which
+        /// is what an unreadable corner degrades to.
+        /// </summary>
+        /// <returns>The identity gradient.</returns>
+        public static ArkanLawnTmp Abyad()
+        {
+            ArkanLawnTmp natija;
+            natija.Awwal = Color.white;
+            natija.Thani = Color.white;
+            natija.Thalith = Color.white;
+            natija.Rabi = Color.white;
+            return natija;
+        }
+    }
+
+    /// <summary>
     /// ربط زائد — the reflection bindings this namespace needs beyond the four
     /// <see cref="Rabt"/> already provides: methods that take arguments, and
     /// the <see cref="MethodInfo"/> of a patch target.
@@ -216,6 +261,173 @@ namespace Taarib.Unity.Mono.Anzimat
         }
 
         /// <summary>
+        /// A property whose type this assembly cannot name, read as the four
+        /// colours it was checked to consist of — TextMeshPro's
+        /// <c>colorGradient</c>, whose <c>VertexGradient</c> type exists only in
+        /// the game's own build.
+        /// </summary>
+        /// <param name="naw">The declaring type, from <see cref="Rabt.Naw"/>.</param>
+        /// <param name="ism">The property name.</param>
+        /// <returns>The getter, or <c>null</c> when the property is absent or is
+        /// not four colours.</returns>
+        /// <remarks>
+        /// <para>
+        /// <see cref="Rabt.Qari{TQeema}"/> cannot express this: it demands an
+        /// exact value-type match, and no type in this assembly is
+        /// <c>VertexGradient</c>. Reading it as a boxed <see cref="object"/>
+        /// instead would put an allocation and a
+        /// <see cref="MethodBase.Invoke(object, object[])"/> on a path that runs
+        /// whenever a text object rebuilds, which is what everything else in this
+        /// class exists to avoid. So the getter is bound as a strongly typed
+        /// delegate over the game's own struct and its result is reinterpreted,
+        /// once the bind-time check below has established that the two layouts
+        /// are the same four floats four times over.
+        /// </para>
+        /// </remarks>
+        public static Func<object, ArkanLawnTmp>? QariArkan(Type? naw, string ism)
+        {
+            MethodInfo? tariqa = QariKhasiya(naw, ism);
+            if (tariqa is null || !ArbaatAlwan(tariqa.ReturnType))
+            {
+                return null;
+            }
+            return (Func<object, ArkanLawnTmp>?)Yabni(
+                nameof(QariArkanMuhkam), tariqa, new[] { tariqa.ReturnType }, ism);
+        }
+
+        /// <summary>
+        /// Four named colour fields of one type, read as one value —
+        /// <c>TMP_ColorGradient</c>'s corners, which TextMeshPro declares as
+        /// fields rather than properties.
+        /// </summary>
+        /// <param name="naw">The declaring type, from <see cref="Rabt.Naw"/>.</param>
+        /// <param name="asma">The four field names, in any order.</param>
+        /// <returns>The reader, or <c>null</c> when any of the four is absent.</returns>
+        /// <remarks>
+        /// A field has no accessor to build a delegate over, so this one reader
+        /// does allocate: four boxed colours per call. It is bound only for the
+        /// colour-gradient preset and called only for a component that has both
+        /// vertex gradients switched on and a preset asset assigned, which is a
+        /// heading rather than a line of dialogue — redrawn when its string
+        /// changes, not once a frame.
+        /// </remarks>
+        public static Func<object, ArkanLawnTmp>? QariHuqulArkan(Type? naw, params string[] asma)
+        {
+            if (naw is null || asma is null || asma.Length != 4)
+            {
+                return null;
+            }
+            FieldInfo[] huqul = new FieldInfo[4];
+            try
+            {
+                for (int i = 0; i < huqul.Length; i++)
+                {
+                    FieldInfo? haql = naw.GetField(asma[i], Alamat);
+                    if (haql is null || haql.FieldType != typeof(Color))
+                    {
+                        return null;
+                    }
+                    huqul[i] = haql;
+                }
+            }
+            catch (Exception khata)
+            {
+                Rabt.Ballagh("Binding " + naw.Name + "'s gradient corners failed", khata);
+                return null;
+            }
+            return hadaf =>
+            {
+                ArkanLawnTmp arkan;
+                arkan.Awwal = LawnHaql(huqul[0], hadaf);
+                arkan.Thani = LawnHaql(huqul[1], hadaf);
+                arkan.Thalith = LawnHaql(huqul[2], hadaf);
+                arkan.Rabi = LawnHaql(huqul[3], hadaf);
+                return arkan;
+            };
+        }
+
+        /// <summary>
+        /// One colour field, or white — which multiplies to no change, so a
+        /// field that refuses to read costs its own corner and nothing else.
+        /// </summary>
+        private static Color LawnHaql(FieldInfo haql, object hadaf)
+        {
+            try
+            {
+                return haql.GetValue(hadaf) is Color lawn ? lawn : Color.white;
+            }
+            catch (Exception)
+            {
+                return Color.white;
+            }
+        }
+
+        /// <summary>
+        /// The getter of a property, searched up the inheritance chain for the
+        /// same reason <see cref="Wajid"/> searches it.
+        /// </summary>
+        private static MethodInfo? QariKhasiya(Type? naw, string ism)
+        {
+            if (naw is null || string.IsNullOrEmpty(ism))
+            {
+                return null;
+            }
+            try
+            {
+                for (Type? hali = naw; hali is not null; hali = hali.BaseType)
+                {
+                    PropertyInfo? khasiya = hali.GetProperty(
+                        ism, Alamat | BindingFlags.DeclaredOnly);
+                    MethodInfo? tariqa = khasiya?.GetGetMethod(nonPublic: true);
+                    if (tariqa is not null && !tariqa.IsStatic)
+                    {
+                        return tariqa;
+                    }
+                }
+            }
+            catch (Exception khata)
+            {
+                Rabt.Ballagh("Binding " + naw.Name + "." + ism + " failed", khata);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Whether a type is exactly four public colour fields and nothing else,
+        /// which is what makes reinterpreting it as <see cref="ArkanLawnTmp"/>
+        /// sound. The size is checked as well as the fields, because a private
+        /// field would not appear in the first test and would move every corner
+        /// in the second.
+        /// </summary>
+        private static bool ArbaatAlwan(Type naw)
+        {
+            if (!naw.IsValueType)
+            {
+                return false;
+            }
+            try
+            {
+                FieldInfo[] huqul = naw.GetFields(BindingFlags.Instance | BindingFlags.Public);
+                if (huqul.Length != 4)
+                {
+                    return false;
+                }
+                for (int i = 0; i < huqul.Length; i++)
+                {
+                    if (huqul[i].FieldType != typeof(Color))
+                    {
+                        return false;
+                    }
+                }
+                return Marshal.SizeOf(naw) == Marshal.SizeOf<ArkanLawnTmp>();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// A method with the given signature, searched up the inheritance
         /// chain because TextMeshPro and uGUI both declare half of what these
         /// takeovers call on a base class.
@@ -274,6 +486,26 @@ namespace Taarib.Unity.Mono.Anzimat
                 Rabt.Ballagh("Building a delegate for " + ism + " failed", khata);
                 return null;
             }
+        }
+
+        private static Func<object, ArkanLawnTmp> QariArkanMuhkam<THadaf, TArkan>(
+            MethodInfo tariqa)
+            where THadaf : class
+            where TArkan : unmanaged
+        {
+            var mubashir =
+                (Func<THadaf, TArkan>)tariqa.CreateDelegate(typeof(Func<THadaf, TArkan>));
+            return hadaf =>
+            {
+                TArkan qeema = mubashir((THadaf)hadaf);
+                Span<ArkanLawnTmp> wahid = MemoryMarshal.Cast<TArkan, ArkanLawnTmp>(
+                    MemoryMarshal.CreateSpan(ref qeema, 1));
+                // ArbaatAlwan proved the two sizes equal before this delegate was
+                // built, so the cast yields exactly one element. The guard exists
+                // so that an impossible mismatch costs a gradient rather than
+                // tinting a heading with four transparent blacks.
+                return wahid.IsEmpty ? ArkanLawnTmp.Abyad() : wahid[0];
+            };
         }
 
         private static Action<object, T1> AmrMuhkam1<THadaf, T1>(MethodInfo tariqa)
@@ -1558,6 +1790,18 @@ namespace Taarib.Unity.Mono.Anzimat
             QariHajmAdna = Rabt.Qari<float>(NawNass, "fontSizeMin");
             AmrIttisakh = Rabt.Amr(NawNass, "SetAllDirty");
 
+            // The rest of what decides a glyph's tint. `color` alone is the
+            // component's base and not what TextMeshPro draws with: see LawnNass
+            // in Mushtarak for the composition these four feed.
+            QariLawnWajh = Rabt.Qari<Color32>(NawNass, "faceColor");
+            QariTadarrujMufaal = Rabt.Qari<bool>(NawNass, "enableVertexGradient");
+            QariTajahulWusum = Rabt.Qari<bool>(NawNass, "overrideColorTags");
+            QariArkanDakhili = RabtZaid.QariArkan(NawNass, "colorGradient");
+            QariQalibTadarruj = Rabt.Qari<UnityEngine.Object>(NawNass, "colorGradientPreset");
+            NawQalibTadarruj = Rabt.Naw("TMPro.TMP_ColorGradient");
+            QariArkanQalib = RabtZaid.QariHuqulArkan(
+                NawQalibTadarruj, "topLeft", "topRight", "bottomLeft", "bottomRight");
+
             HadafNasijSath = RabtZaid.HadafMuarraf(NawSath, "GenerateTextMesh");
             HadafNasijAalam = RabtZaid.HadafMuarraf(NawAalam, "GenerateTextMesh");
             HadafMaddaSath = RabtZaid.HadafMuarraf(NawSath, "UpdateMaterial");
@@ -1585,8 +1829,46 @@ namespace Taarib.Unity.Mono.Anzimat
         /// <summary>Reads its font size, in the component's own local units.</summary>
         public Func<object, float>? QariHajm { get; }
 
-        /// <summary>Reads its colour, which every glyph inherits unless a span sets one.</summary>
+        /// <summary>
+        /// Reads its <c>color</c>, the base every glyph inherits unless a span
+        /// sets one. Also its alpha: TextMeshPro's <c>alpha</c> property is a
+        /// second name for this colour's alpha channel rather than a fifth
+        /// number, so there is nothing separate to bind for it.
+        /// </summary>
         public Func<object, Color>? QariLawn { get; }
+
+        /// <summary>
+        /// Reads its <c>faceColor</c> — the material's <c>_FaceColor</c>, which
+        /// every TextMeshPro shader multiplies the vertex colour by and which
+        /// Taarib's own material has no equivalent of.
+        /// </summary>
+        /// <remarks>
+        /// The only binding in this class whose value comes from the game's own
+        /// shared material, and it is read for a tint rather than for glyph
+        /// imagery. Decision 5 is that Taarib never borrows the game's fonts,
+        /// atlases or shaders; a colour a designer chose is none of the three,
+        /// and this reads the component's public property rather than reaching
+        /// into the material itself.
+        /// </remarks>
+        public Func<object, Color32>? QariLawnWajh { get; }
+
+        /// <summary>Whether the component bakes a four-corner gradient into its vertices.</summary>
+        public Func<object, bool>? QariTadarrujMufaal { get; }
+
+        /// <summary>Whether it ignores the colour tags in its own string.</summary>
+        public Func<object, bool>? QariTajahulWusum { get; }
+
+        /// <summary>Reads its inline <c>colorGradient</c>, the four corners it serializes itself.</summary>
+        public Func<object, ArkanLawnTmp>? QariArkanDakhili { get; }
+
+        /// <summary>Reads the <c>colorGradientPreset</c> asset it points at, if any.</summary>
+        public Func<object, UnityEngine.Object>? QariQalibTadarruj { get; }
+
+        /// <summary>That asset's own type, needed to read the corners off it.</summary>
+        public Type? NawQalibTadarruj { get; }
+
+        /// <summary>Reads the four corners of a gradient preset asset.</summary>
+        public Func<object, ArkanLawnTmp>? QariArkanQalib { get; }
 
         /// <summary>
         /// Reads its alignment as an integer. The property is an enum whose two
@@ -1708,7 +1990,51 @@ namespace Taarib.Unity.Mono.Anzimat
                     + "which is right for every string the compiler measured and falls back "
                     + "to the leading edge for the rest.");
             }
+            string naqis = wasl.AlwanNaqisa();
+            if (naqis.Length != 0)
+            {
+                // Said once, by name, because the symptom of a missing colour
+                // source is text drawn in the wrong colour rather than text that
+                // fails to draw — and nobody looking at a pale heading would
+                // otherwise have anything to search the log for.
+                Rabt.Ballagh(
+                    "لم تُحلَّ مصادر لون في هذا الإصدار من تكست ميش برو (" + naqis
+                    + ")؛ يُرسم النص بلون المكوّن وحده، وقد يختلف عن لون اللعبة الأصلي. | "
+                    + "These TextMeshPro colour sources did not resolve in this build ("
+                    + naqis + "); text is drawn with the component's own colour alone, which "
+                    + "is what this takeover always did and may differ from the colour the "
+                    + "game itself would have drawn.");
+            }
             return wasl;
+        }
+
+        /// <summary>
+        /// The colour sources that did not resolve, named, or an empty string
+        /// when every one of them did.
+        /// </summary>
+        /// <returns>A comma-separated list of property names.</returns>
+        public string AlwanNaqisa()
+        {
+            System.Text.StringBuilder bani = new System.Text.StringBuilder();
+            Dhkur(bani, QariLawnWajh is null, "faceColor");
+            Dhkur(bani, QariTadarrujMufaal is null, "enableVertexGradient");
+            Dhkur(bani, QariArkanDakhili is null, "colorGradient");
+            Dhkur(bani, QariQalibTadarruj is null || QariArkanQalib is null, "colorGradientPreset");
+            Dhkur(bani, QariTajahulWusum is null, "overrideColorTags");
+            return bani.ToString();
+        }
+
+        private static void Dhkur(System.Text.StringBuilder bani, bool naqis, string ism)
+        {
+            if (!naqis)
+            {
+                return;
+            }
+            if (bani.Length != 0)
+            {
+                bani.Append(", ");
+            }
+            bani.Append(ism);
         }
 
         /// <summary>
@@ -2351,7 +2677,7 @@ namespace Taarib.Unity.Mono.Anzimat
 
             Func<object, int>? qariMuhadhaha = wasl.QariMuhadhaha;
             int muhadhaha = qariMuhadhaha is null ? WaslTmp.RasiAla : qariMuhadhaha(mukawwin);
-            Color lawnKamil = wasl.QariLawn!(mukawwin);
+            TarkeebLawnTmp tarkeebLawn = TarkeebLawn(mukawwin);
 
             ReadOnlySpan<TaaribHarf> huruf;
             ReadOnlySpan<TaaribSatr> sutur;
@@ -2363,9 +2689,18 @@ namespace Taarib.Unity.Mono.Anzimat
             // measured at one size into a box the game sizes at another is how
             // text that fitted in the compiler's measurement overflows on a
             // player's screen — and the compiler's overflow report, which said
-            // it fitted, would be wrong.
+            // it fitted, would be wrong. The size is half of that: a layout also
+            // carries the line breaks the compiler chose for a width, and the
+            // width this component has is only known here, so both halves are
+            // checked before the compiled layout is used.
             ushort hajmRubi = Nasij.HajmRubi(hajm);
             bool minRuqaa = ruqaa.JidTakhtit(fahras, hajmRubi, out MadkhalTakhtit madkhal);
+            if (minRuqaa
+                && !Nasij.YulaimTakhtit(madkhal.Ard, ardMutah, Yaltaff(fahras, mukawwin)))
+            {
+                Rabt.Tajawuz(miftah, madkhal.Ard, ardMutah);
+                minRuqaa = false;
+            }
             if (minRuqaa)
             {
                 huruf = ruqaa.HurufTakhtit(in madkhal);
@@ -2414,12 +2749,18 @@ namespace Taarib.Unity.Mono.Anzimat
             hayyiz.IzahaA = ((1f - mihwar.y) * itar.height) - hamish.y;
             hayyiz.Muhadhaha = WaslTmp.RasiyaMin(muhadhaha);
 
+            // Last, because the gradient is dropped for a string that carries a
+            // colour of its own, and which spans this string has is only settled
+            // once the layout above has chosen between the compiled one and a
+            // fresh one.
+            tarkeebLawn.LiNitaqatAlwan = LawnNass.LahuLawnNitaq(nitaqat);
+
             TalabNasij talab = default;
             talab.Huruf = huruf;
             talab.Sutur = sutur;
             talab.Nitaqat = nitaqat;
             talab.Hayyiz = hayyiz;
-            talab.Lawn = LawnRasm.Min(LawnMuazzam(lawnKamil));
+            talab.Lawn = LawnRasm.Min(LawnMuazzam(Lawn(LawnNass.Damj(in tarkeebLawn))));
             talab.Hajm = hajmFili;
             talab.HajmLawha = hajmLawha;
             talab.Safha = 0;
@@ -2465,6 +2806,30 @@ namespace Taarib.Unity.Mono.Anzimat
 
             mamlukat[juz.GetInstanceID()] = minRuqaa;
             return true;
+        }
+
+        /// <summary>
+        /// Whether this string is wrapped to the component's width at all.
+        /// </summary>
+        /// <remarks>
+        /// The same precedence <see cref="Khattit"/> lays text out by — the
+        /// patch's constraint row when the compiler measured this slot, the
+        /// component's own switch when it did not. Answering it one way here
+        /// and the other way there would either accept a compiled layout on
+        /// the grounds that nothing wraps and then wrap it, or re-lay a string
+        /// that was never going to break differently.
+        /// </remarks>
+        /// <param name="fahras">The string's index in the patch.</param>
+        /// <param name="mukawwin">The component being drawn.</param>
+        /// <returns>Whether the width is a bound on this string.</returns>
+        private bool Yaltaff(int fahras, object mukawwin)
+        {
+            if (ruqaa.JidQayd(fahras, out MadkhalQayd qayd))
+            {
+                return !qayd.SatrWahid;
+            }
+            Func<object, bool>? qariLaff = wasl.QariLaff;
+            return qariLaff is null || qariLaff(mukawwin);
         }
 
         /// <summary>
@@ -2524,7 +2889,12 @@ namespace Taarib.Unity.Mono.Anzimat
             if (ruqaa.JidQayd(fahras, out MadkhalQayd qayd))
             {
                 khiyarat = qayd.Khiyarat();
-                if (qayd.ArdMutah > 0f)
+                // The row's width is the slot as the compiler measured it; the
+                // rectangle is the slot as this player's game sizes it. Where
+                // they disagree the narrower one is the one the text has to fit
+                // in, or a string re-laid because the compiled layout was too
+                // wide for the box comes back exactly as wide as before.
+                if (qayd.ArdMutah > 0f && !(ardMutah > 0f && ardMutah < qayd.ArdMutah))
                 {
                     ardTalab = qayd.ArdMutah;
                 }
@@ -2826,6 +3196,94 @@ namespace Taarib.Unity.Mono.Anzimat
                     + "of the TextMeshPro takeover continues", khata);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Reads every colour source this build of TextMeshPro exposes off one
+        /// component, for <see cref="LawnNass.Damj"/> to compose.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The order of the reads is chosen so that a component with no gradient
+        /// — which is almost every component in almost every game — costs one
+        /// boolean read and stops. Only a component that actually bakes a
+        /// gradient pays for the two gradient sources, and only one that also
+        /// points at a preset asset pays for the four boxed field reads
+        /// <see cref="RabtZaid.QariHuqulArkan"/> makes.
+        /// </para>
+        /// <para>
+        /// Every source is optional and every absence is silent here, because
+        /// <see cref="WaslTmp.Iqran"/> already named the missing ones once at
+        /// startup. What is left when they are all absent is the component's own
+        /// colour, which is what this takeover drew before any of them were read.
+        /// </para>
+        /// </remarks>
+        private TarkeebLawnTmp TarkeebLawn(object mukawwin)
+        {
+            TarkeebLawnTmp tarkeeb = TarkeebLawnTmp.Min(Kasri(wasl.QariLawn!(mukawwin)));
+
+            Func<object, Color32>? qariWajh = wasl.QariLawnWajh;
+            if (qariWajh is not null)
+            {
+                tarkeeb.LahuWajh = true;
+                tarkeeb.Wajh = KasriBayt(qariWajh(mukawwin));
+            }
+
+            Func<object, bool>? qariTajahul = wasl.QariTajahulWusum;
+            tarkeeb.TajahulWusum = qariTajahul is not null && qariTajahul(mukawwin);
+
+            Func<object, bool>? qariMufaal = wasl.QariTadarrujMufaal;
+            if (qariMufaal is null || !qariMufaal(mukawwin))
+            {
+                return tarkeeb;
+            }
+            tarkeeb.TadarrujMufaal = true;
+
+            Func<object, UnityEngine.Object>? qariQalib = wasl.QariQalibTadarruj;
+            Func<object, ArkanLawnTmp>? qariArkanQalib = wasl.QariArkanQalib;
+            if (qariQalib is not null && qariArkanQalib is not null)
+            {
+                UnityEngine.Object? qalib = qariQalib(mukawwin);
+                // Two tests, neither redundant: the first is the one the
+                // compiler's null analysis reads, the second is Unity's own
+                // equality, which also answers null for an asset that has been
+                // destroyed since the component was serialized.
+                if (qalib is not null && qalib != null)
+                {
+                    tarkeeb.LahuQalib = true;
+                    tarkeeb.Qalib = Arkan(qariArkanQalib(qalib));
+                }
+            }
+
+            Func<object, ArkanLawnTmp>? qariArkanDakhili = wasl.QariArkanDakhili;
+            if (qariArkanDakhili is not null)
+            {
+                tarkeeb.LahuDakhili = true;
+                tarkeeb.Dakhili = Arkan(qariArkanDakhili(mukawwin));
+            }
+            return tarkeeb;
+        }
+
+        private static LawnKasri Kasri(Color lawn)
+        {
+            return LawnKasri.Min(lawn.r, lawn.g, lawn.b, lawn.a);
+        }
+
+        private static LawnKasri KasriBayt(Color32 lawn)
+        {
+            return LawnKasri.MinBayt(lawn.r, lawn.g, lawn.b, lawn.a);
+        }
+
+        private static ArkanTadarruj Arkan(ArkanLawnTmp arkan)
+        {
+            return ArkanTadarruj.Min(
+                Kasri(arkan.Awwal), Kasri(arkan.Thani),
+                Kasri(arkan.Thalith), Kasri(arkan.Rabi));
+        }
+
+        private static Color Lawn(LawnKasri lawn)
+        {
+            return new Color(lawn.Ahmar, lawn.Akhdar, lawn.Azraq, lawn.Shaffafiya);
         }
 
         /// <summary>

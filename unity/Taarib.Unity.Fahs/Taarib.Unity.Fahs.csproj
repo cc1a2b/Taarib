@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Taarib.Unity.Fahs — فحص, the check.
+
+    The parts of the Unity adapters that are arithmetic rather than engine calls,
+    exercised on the host. Taarib.Unity.Mushtarak names no Unity type and calls
+    no native library, so everything it decides can be run here: this project
+    covers LawnNass, which decides what colour a run of glyphs is tinted with out
+    of everything a TextMeshPro component can say about it.
+
+    It is deliberately NOT a member of Taarib.Unity.sln. That solution builds the
+    four assemblies the installer stages into somebody's game, and a test runner
+    is not one of them; scripts/isdar.sh and taarib-tajmee both build the
+    solution and neither should acquire a fifth project to ignore. Run it
+    directly, from this directory:
+
+        dotnet run -c Release
+
+    It prints one line per case and exits non-zero when any of them failed, so it
+    is usable from a shell without a test framework — and it needs no package
+    restore, which is what lets it run on a machine that only has the SDK.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Taarib.Unity.Fahs</AssemblyName>
+    <RootNamespace>Taarib.Unity.Fahs</RootNamespace>
+    <Description>Host-side checks over the rendering decisions Taarib.Unity.Mushtarak makes.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Taarib.Unity.Mushtarak\Taarib.Unity.Mushtarak.csproj" />
+  </ItemGroup>
+
+</Project>

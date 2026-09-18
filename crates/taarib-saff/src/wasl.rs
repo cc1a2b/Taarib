@@ -34,6 +34,27 @@
 //!   it visibly tears joined letters apart — so it belongs where the policy is
 //!   applied knowingly rather than as a silent constant added to every advance.
 //!
+//! ## What leaves here is ink, or it does not leave
+//!
+//! A character that the layout consumes rather than draws — a line separator, a
+//! paragraph separator, a bidirectional control, the byte-order mark — produces
+//! no glyph. [`crate::khatt::ghayr_marii`] is the engine's one definition of
+//! that set, and this is the last stage that can apply it: after this file a
+//! glyph carries no character, so no stage downstream could tell an instruction
+//! apart from a letter even if it wanted to. The adapters that draw a patch are
+//! written in C#, JavaScript, Python and Ruby as well as in Rust, and a rule
+//! left for each of them to remember is a rule one of them forgets — the
+//! symptom being the empty `.notdef` box a font returns for a newline, sitting
+//! at the end of every line of a patched paragraph and alone on every blank
+//! line between them. See [`ahdhif_ghayr_almarii`].
+//!
+//! What *is* text and still comes back as `.notdef` stays. That is a character
+//! no font in the chain covers — real information, and the only evidence of it
+//! that exists — so this stage keeps it and `qiyas` decides: the width is
+//! reserved, nothing is drawn in it, and the layout carries
+//! [`crate::natija::TaghtiyaNaqisa`] naming how many there were and where the
+//! first one is.
+//!
 //! ## Units
 //!
 //! HarfRust is asked for its output in **font units** — no scale is set on the
@@ -94,7 +115,7 @@ use smallvec::SmallVec;
 use taarib_usus::khata::{Khata, Natija};
 
 use crate::khata::{KhataKhatt, KhataSaff};
-use crate::khatt::{HuwiyatKhatt, MawridKhatt, SilsilatKhutut};
+use crate::khatt::{HuwiyatKhatt, MawridKhatt, SilsilatKhutut, ghayr_marii};
 use crate::lugha::{NawWasl, naw_wasl, rutbat_kashida};
 use crate::maqta::{HarfMashkul, Kitaba, MaqtaMantiqi, MaqtaMashkul, SifatWasl};
 use crate::talab::{Ittijah, KhiyaratTakhtit, LughaNass, NitaqUslub, SifaIdafiya, Uslub};
@@ -494,6 +515,15 @@ impl MushakkilKhatt {
 
         if maqta.kitaba.tasil() {
             asil_alwasl(nass, maqta, mawsufat, &mut huruf);
+        }
+
+        // Ordered after joining analysis on purpose: until here the glyph array
+        // and the shaper's output are index for index, and `asil_alwasl` reads
+        // both. It also needs these characters present — a line separator is
+        // `Non_Joining`, and it is what stops the last letter of one line
+        // joining to the first letter of the next.
+        if nass_maqta.chars().any(ghayr_marii) {
+            ahdhif_ghayr_almarii(nass, maqta, mawsufat, &mut huruf);
         }
 
         let qiyasat = self.khatt.qiyasat(maqta.hajm);
@@ -1118,6 +1148,64 @@ fn asil_alwasl(
 
         bidaya = nihaya;
     }
+}
+
+/// Removes the glyphs that stand for characters the layout consumes rather than
+/// draws.
+///
+/// A newline is not text. Neither is a paragraph separator, a bidirectional
+/// override, or the byte-order mark: each one is an instruction to a stage that
+/// has already read it — `taqtee` for the break, `ittijah` for the direction —
+/// and none of them has a letterform in any font. Handed to the shaper they map
+/// through `cmap` to nothing, come back as glyph 0, and are drawn as the empty
+/// box that glyph is, at that box's own advance. A patched dialogue page then
+/// carries a tofu at the end of every line and one alone on every blank line
+/// between paragraphs, and every line it ends measures wider than the text on
+/// it.
+///
+/// So the rule is stated on the *character*, not on the glyph: a cluster made
+/// entirely of [`ghayr_marii`] characters produces nothing, whatever the font
+/// answered for it. A font that maps a line feed to a blank glyph — plenty do —
+/// would otherwise still charge the line for its width.
+///
+/// A whole cluster has to be invisible before any of it goes. A cluster is the
+/// unit that maps glyphs back to characters, so one that mixed an invisible
+/// character with a real one would be a ligature over both, and dropping its
+/// glyph would delete the letter with it.
+fn ahdhif_ghayr_almarii(
+    nass: &str,
+    maqta: &MaqtaMantiqi,
+    mawsufat: &[GlyphInfo],
+    huruf: &mut Vec<HarfMashkul>,
+) {
+    let mut hudud: SmallVec<[u32; 32]> = mawsufat.iter().map(|wasf| wasf.cluster).collect();
+    hudud.sort_unstable();
+    hudud.dedup();
+
+    huruf.retain(|harf| {
+        // The cluster runs to the next distinct cluster start, or to the end of
+        // the run for the last one. Cluster values are byte offsets into the
+        // whole clean text, so the two ends are directly comparable.
+        let nihaya = hudud
+            .get(hudud.partition_point(|bidaya| *bidaya <= harf.anqud))
+            .copied()
+            .unwrap_or(maqta.nitaq.end);
+        !anqud_ghayr_marii(nass, harf.anqud, nihaya)
+    });
+}
+
+/// Whether every character of one cluster is one the layout consumes rather
+/// than draws.
+///
+/// An empty or unresolvable range answers `false`: a cluster nothing can be read
+/// from is not evidence that there is nothing to draw, and deleting a glyph on
+/// that basis would lose text.
+fn anqud_ghayr_marii(nass: &str, bidaya: u32, nihaya: u32) -> bool {
+    let (Ok(min), Ok(ila)) = (usize::try_from(bidaya), usize::try_from(nihaya)) else {
+        return false;
+    };
+    nass.get(min..ila)
+        .is_some_and(|juz| !juz.is_empty() && juz.chars().all(ghayr_marii))
 }
 
 /// Resolves a run's clusters back to the characters that produced them, and

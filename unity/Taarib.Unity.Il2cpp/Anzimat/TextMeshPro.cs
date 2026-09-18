@@ -9,19 +9,25 @@
 // what makes identical rendering between the two backends a structural fact
 // rather than a testing result.
 //
-// WHAT WOULD BREAK THAT PROPERTY, NAMED SO IT CAN BE WATCHED FOR. Four things,
-// and only four. (1) Computing a quantized size here instead of calling
+// WHAT WOULD BREAK THAT PROPERTY, NAMED SO IT CAN BE WATCHED FOR. Five things,
+// and only five. (1) Computing a quantized size here instead of calling
 // Nasij.HajmRubi, so the two adapters round differently and one draws a layout
 // the compiler measured at another size. (2) Filling HayyizRasm differently —
 // the pivot term folded into MihwarS/MihwarA on one side and into IzahaS/IzahaA
 // on the other, which moves a middle-aligned label by half its margin. (3)
-// Packing the colour by hand instead of through LawnMuazzam, because the ABI's
-// byte order is red-high and Unity's Color32 is not. (4) Reading layout options
+// Anything about the colour: packing it by hand instead of through LawnMuazzam,
+// because the ABI's byte order is red-high and Unity's Color32 is not, or
+// composing it out of the component's several colour sources here instead of
+// through LawnNass.Damj, which would tint gradients and face colours one way on
+// this backend and another way on Mono. (4) Reading layout options
 // off the component when the patch carries a constraint row, which would make
 // one runtime-laid-out string disagree with the precomputed text beside it
-// about direction, justification, diacritics and digits. Every one of those is
-// a place where this file could quietly diverge from the Mono adapter while
-// still rendering something, so every one of them is a single call to a shared
+// about direction, justification, diacritics and digits. (5) Deciding here
+// whether a precompiled layout fits the box it is about to be drawn into,
+// instead of calling Nasij.YulaimTakhtit, so one backend draws the compiler's
+// line breaks where the other wraps to the rectangle. Every one of those is a
+// place where this file could quietly diverge from the Mono adapter while still
+// rendering something, so every one of them is a single call to a shared
 // function here and nowhere else.
 //
 // WHY TMP'S PIPELINE IS BYPASSED RATHER THAN CORRECTED — the same reason as
@@ -179,6 +185,97 @@ namespace Taarib.Unity.Il2cpp.Anzimat
 
         /// <summary>Alpha, 0 to 1.</summary>
         public float Shaffafiya;
+    }
+
+    /// <summary>Four bytes, laid out as <c>UnityEngine.Color32</c>.</summary>
+    /// <remarks>
+    /// <c>Color32</c> is an explicit-layout union of one <c>int</c> and four
+    /// bytes at offsets zero to three, so the four bytes in this order are its
+    /// layout on every platform and no endianness question arises — which
+    /// reading it as a single <c>uint</c> instead would raise.
+    /// </remarks>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct LawnBayti
+    {
+        /// <summary>Red.</summary>
+        public byte Ahmar;
+
+        /// <summary>Green.</summary>
+        public byte Akhdar;
+
+        /// <summary>Blue.</summary>
+        public byte Azraq;
+
+        /// <summary>Alpha; 255 is opaque.</summary>
+        public byte Shaffafiya;
+    }
+
+    /// <summary>
+    /// Sixteen floats, laid out as TextMeshPro's <c>VertexGradient</c> — four
+    /// corner colours and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// Which corner is which is deliberately not recorded. The only thing that
+    /// ever reads these is <see cref="ArkanTadarruj.Mutawassit"/>, whose mean is
+    /// symmetric, so this adapter does not have to know the order a type it
+    /// cannot name declared its fields in — only that there are four of them and
+    /// that they are colours, which is fixed by TextMeshPro's public API.
+    /// </remarks>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ArkanKamila
+    {
+        /// <summary>One corner.</summary>
+        public LawnKamil Awwal;
+
+        /// <summary>Another corner.</summary>
+        public LawnKamil Thani;
+
+        /// <summary>Another corner.</summary>
+        public LawnKamil Thalith;
+
+        /// <summary>The last corner.</summary>
+        public LawnKamil Rabi;
+    }
+
+    /// <summary>
+    /// Where a <c>TMP_ColorGradient</c> keeps its four corner colours, as byte
+    /// offsets from the object pointer.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Wujidat"/> is carried rather than inferred from the offsets.
+    /// A default-constructed value would otherwise read as four corners at
+    /// offset zero, which is the object's own type pointer.
+    /// </remarks>
+    public readonly struct IzahatArkanTadarruj
+    {
+        /// <summary>Records four resolved offsets.</summary>
+        /// <param name="awwal">The first corner's offset.</param>
+        /// <param name="thani">The second corner's offset.</param>
+        /// <param name="thalith">The third corner's offset.</param>
+        /// <param name="rabi">The fourth corner's offset.</param>
+        public IzahatArkanTadarruj(int awwal, int thani, int thalith, int rabi)
+        {
+            Awwal = awwal;
+            Thani = thani;
+            Thalith = thalith;
+            Rabi = rabi;
+            Wujidat = true;
+        }
+
+        /// <summary>The first corner's offset.</summary>
+        public int Awwal { get; }
+
+        /// <summary>The second corner's offset.</summary>
+        public int Thani { get; }
+
+        /// <summary>The third corner's offset.</summary>
+        public int Thalith { get; }
+
+        /// <summary>The fourth corner's offset.</summary>
+        public int Rabi { get; }
+
+        /// <summary>Whether all four resolved.</summary>
+        public bool Wujidat { get; }
     }
 
     /// <summary>Four floats, laid out as <c>UnityEngine.Rect</c>.</summary>
@@ -3407,6 +3504,22 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             AmrIttisakh = wasl.Hall(
                 Tajammu, Fadaa, "TMP_Text", "SetAllDirty", 0, string.Empty);
 
+            // The rest of what decides a glyph's tint. `color` alone is the
+            // component's base and not what TextMeshPro draws with: see LawnNass
+            // in Mushtarak for the composition these feed, which is the same
+            // function the Mono adapter calls with the same four sources.
+            QariLawnWajh = wasl.Hall(
+                Tajammu, Fadaa, "TMP_Text", "get_faceColor", 0, string.Empty);
+            QariTadarrujMufaal = wasl.Hall(
+                Tajammu, Fadaa, "TMP_Text", "get_enableVertexGradient", 0, string.Empty);
+            QariTajahulWusum = wasl.Hall(
+                Tajammu, Fadaa, "TMP_Text", "get_overrideColorTags", 0, string.Empty);
+            QariArkanDakhili = wasl.Hall(
+                Tajammu, Fadaa, "TMP_Text", "get_colorGradient", 0, string.Empty);
+            QariQalibTadarruj = wasl.Hall(
+                Tajammu, Fadaa, "TMP_Text", "get_colorGradientPreset", 0, string.Empty);
+            IzahatQalib = IzahatArkan(wasl.Sanf(Tajammu, Fadaa, "TMP_ColorGradient"));
+
             HadafNasijSath = wasl.Hall(
                 Tajammu, Fadaa, "TextMeshProUGUI", "GenerateTextMesh", 0,
                 "tmp.ugui.generate");
@@ -3433,8 +3546,53 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         /// <summary>Reads its font size, in the component's own local units.</summary>
         public readonly TabiaMahlula QariHajm;
 
-        /// <summary>Reads its colour, which every glyph inherits unless a span sets one.</summary>
+        /// <summary>
+        /// Reads its <c>color</c>, the base every glyph inherits unless a span
+        /// sets one. Also its alpha: TextMeshPro's <c>alpha</c> property is a
+        /// second name for this colour's alpha channel rather than a fifth
+        /// number, so there is nothing separate to bind for it.
+        /// </summary>
         public readonly TabiaMahlula QariLawn;
+
+        /// <summary>
+        /// Reads its <c>faceColor</c> — the material's <c>_FaceColor</c>, which
+        /// every TextMeshPro shader multiplies the vertex colour by and which
+        /// Taarib's own material has no equivalent of.
+        /// </summary>
+        /// <remarks>
+        /// The only binding in this class whose value comes from the game's own
+        /// shared material, and it is read for a tint rather than for glyph
+        /// imagery. Decision 5 is that Taarib never borrows the game's fonts,
+        /// atlases or shaders; a colour a designer chose is none of the three,
+        /// and this resolves the component's public property rather than
+        /// reaching into the material itself.
+        /// </remarks>
+        public readonly TabiaMahlula QariLawnWajh;
+
+        /// <summary>Whether the component bakes a four-corner gradient into its vertices.</summary>
+        public readonly TabiaMahlula QariTadarrujMufaal;
+
+        /// <summary>Whether it ignores the colour tags in its own string.</summary>
+        public readonly TabiaMahlula QariTajahulWusum;
+
+        /// <summary>Reads its inline <c>colorGradient</c>, the four corners it serializes itself.</summary>
+        public readonly TabiaMahlula QariArkanDakhili;
+
+        /// <summary>Reads the <c>colorGradientPreset</c> asset it points at, if any.</summary>
+        public readonly TabiaMahlula QariQalibTadarruj;
+
+        /// <summary>
+        /// Where a gradient preset keeps its four corners, as byte offsets into
+        /// the object.
+        /// </summary>
+        /// <remarks>
+        /// Offsets rather than getters, because TextMeshPro declares
+        /// <c>TMP_ColorGradient</c>'s corners as public fields and a field has no
+        /// compiled entry point for the ladder to resolve. The offsets come from
+        /// the IL2CPP runtime's own metadata for this game's build, which is the
+        /// same authority every method address in this class comes from.
+        /// </remarks>
+        public readonly IzahatArkanTadarruj IzahatQalib;
 
         /// <summary>
         /// Reads its alignment as an integer. The property is an enum whose two
@@ -3535,7 +3693,101 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                     + "which is right for every string the compiler measured and falls back "
                     + "to the leading edge for the rest.");
             }
+            string naqis = waslTmp.AlwanNaqisa();
+            if (naqis.Length != 0)
+            {
+                // Said once, by name, because the symptom of a missing colour
+                // source is text drawn in the wrong colour rather than text that
+                // fails to draw — and nobody looking at a pale heading would
+                // otherwise have anything to search the log for.
+                wasl.Sijill.LogWarning(
+                    "لم تُحلَّ مصادر لون في هذا الإصدار من تكست ميش برو (" + naqis
+                    + ")؛ يُرسم النص بلون المكوّن وحده، وقد يختلف عن لون اللعبة الأصلي. | "
+                    + "These TextMeshPro colour sources did not resolve in this build ("
+                    + naqis + "); text is drawn with the component's own colour alone, which "
+                    + "is what this takeover always did and may differ from the colour the "
+                    + "game itself would have drawn.");
+            }
             return waslTmp;
+        }
+
+        /// <summary>
+        /// The colour sources that did not resolve, named, or an empty string
+        /// when every one of them did.
+        /// </summary>
+        /// <returns>A comma-separated list of property names.</returns>
+        public string AlwanNaqisa()
+        {
+            System.Text.StringBuilder bani = new System.Text.StringBuilder();
+            Dhkur(bani, !QariLawnWajh.Wujid, "faceColor");
+            Dhkur(bani, !QariTadarrujMufaal.Wujid, "enableVertexGradient");
+            Dhkur(bani, !QariArkanDakhili.Wujid, "colorGradient");
+            Dhkur(bani, !QariQalibTadarruj.Wujid || !IzahatQalib.Wujidat, "colorGradientPreset");
+            Dhkur(bani, !QariTajahulWusum.Wujid, "overrideColorTags");
+            return bani.ToString();
+        }
+
+        private static void Dhkur(System.Text.StringBuilder bani, bool naqis, string ism)
+        {
+            if (!naqis)
+            {
+                return;
+            }
+            if (bani.Length != 0)
+            {
+                bani.Append(", ");
+            }
+            bani.Append(ism);
+        }
+
+        /// <summary>
+        /// The byte offsets of a gradient preset's four corner fields, from the
+        /// IL2CPP runtime's own metadata.
+        /// </summary>
+        /// <remarks>
+        /// All four or none: a gradient with three corners read and one left at
+        /// whatever the stack held would tint a heading with an arbitrary colour,
+        /// which is worse than not honouring the preset at all.
+        /// </remarks>
+        private static IzahatArkanTadarruj IzahatArkan(IntPtr sanf)
+        {
+            if (sanf == IntPtr.Zero)
+            {
+                return default;
+            }
+            int awwal = Izaha(sanf, "topLeft");
+            int thani = Izaha(sanf, "topRight");
+            int thalith = Izaha(sanf, "bottomLeft");
+            int rabi = Izaha(sanf, "bottomRight");
+            if (awwal < 0 || thani < 0 || thalith < 0 || rabi < 0)
+            {
+                return default;
+            }
+            return new IzahatArkanTadarruj(awwal, thani, thalith, rabi);
+        }
+
+        /// <summary>
+        /// One instance field's offset, or <c>-1</c>. Zero counts as absent: the
+        /// first bytes of an IL2CPP object are its own header, so no instance
+        /// field can start there, and treating zero as an offset would read the
+        /// type pointer as a colour.
+        /// </summary>
+        private static int Izaha(IntPtr sanf, string ism)
+        {
+            try
+            {
+                IntPtr haql = IL2CPP.il2cpp_class_get_field_from_name(sanf, ism);
+                if (haql == IntPtr.Zero)
+                {
+                    return -1;
+                }
+                int izaha = (int)IL2CPP.il2cpp_field_get_offset(haql);
+                return izaha > 0 ? izaha : -1;
+            }
+            catch (Exception)
+            {
+                return -1;
+            }
         }
 
         /// <summary>
@@ -3662,6 +3914,14 @@ namespace Taarib.Unity.Il2cpp.Anzimat
 
         private readonly Dictionary<int, MaddaAsliya> maddatAsliya =
             new Dictionary<int, MaddaAsliya>();
+
+        /// <summary>
+        /// Every distinct string whose precompiled layout was too wide for the
+        /// box the game gave it, and which is therefore laid out again on every
+        /// draw. Not locked, for the same reason <see cref="mamlukat"/> is not:
+        /// a draw on this backend runs on the thread that owns the component.
+        /// </summary>
+        private readonly HashSet<ulong> tajawuzat = new HashSet<ulong>();
 
         private MasdarMushtarak? mushtarak;
         private MawaridIl2cpp? mawarid;
@@ -3811,6 +4071,15 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         public void Fukk()
         {
             amil = false;
+            if (tajawuzat.Count > 0)
+            {
+                mawarid?.Sijill.LogWarning(
+                    $"أُعيد تخطيط {tajawuzat.Count} نصًّا مميَّزًا عند التشغيل لأن تخطيط المُصرِّف "
+                    + "لم يتّسع لصندوق اللعبة. | "
+                    + $"{tajawuzat.Count} distinct string(s) were laid out again at run time "
+                    + "because the compiled layout did not fit the box the game drew it into.");
+            }
+            tajawuzat.Clear();
             for (int i = marabit.Count - 1; i >= 0; i--)
             {
                 marabit[i].Dispose();
@@ -4023,9 +4292,7 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             int muhadhaha = binding.QariMuhadhaha.Wujid
                 ? WaslMuharrik.Qeema<int>(in binding.QariMuhadhaha, kaen)
                 : WaslTmp.RasiAla;
-            LawnKamil lawnKamil = binding.QariLawn.Wujid
-                ? WaslMuharrik.Qeema<LawnKamil>(in binding.QariLawn, kaen)
-                : Abyad();
+            TarkeebLawnTmp tarkeebLawn = TarkeebLawn(binding, kaen);
 
             ReadOnlySpan<TaaribHarf> huruf;
             ReadOnlySpan<TaaribSatr> sutur;
@@ -4037,9 +4304,19 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             // Nasij.HajmRubi. Drawing a layout measured at one size into a box the
             // game sizes at another is how text that fitted in the compiler's
             // measurement overflows on a player's screen — and the compiler's
-            // overflow report, which said it fitted, would be wrong.
+            // overflow report, which said it fitted, would be wrong. The size is
+            // half of that: a layout also carries the line breaks the compiler
+            // chose for a width, and the width this component has is only known
+            // here, so both halves are checked before the layout is used.
             ushort hajmRubi = Nasij.HajmRubi(hajm);
             bool minRuqaa = shared.Ruqaa.JidTakhtit(fahras, hajmRubi, out MadkhalTakhtit madkhal);
+            if (minRuqaa
+                && !Nasij.YulaimTakhtit(
+                    madkhal.Ard, ardMutah, Yaltaff(shared, binding, kaen, fahras)))
+            {
+                Tajawuz(shared, miftah, madkhal.Ard, ardMutah);
+                minRuqaa = false;
+            }
             if (minRuqaa)
             {
                 huruf = shared.Ruqaa.HurufTakhtit(in madkhal);
@@ -4087,12 +4364,18 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             hayyiz.IzahaA = ((1f - mihwar.A) * itar.Irtifa) - hamish.A;
             hayyiz.Muhadhaha = WaslTmp.RasiyaMin(muhadhaha);
 
+            // Last, because the gradient is dropped for a string that carries a
+            // colour of its own, and which spans this string has is only settled
+            // once the layout above has chosen between the compiled one and a
+            // fresh one.
+            tarkeebLawn.LiNitaqatAlwan = LawnNass.LahuLawnNitaq(nitaqat);
+
             TalabNasij talab = default;
             talab.Huruf = huruf;
             talab.Sutur = sutur;
             talab.Nitaqat = nitaqat;
             talab.Hayyiz = hayyiz;
-            talab.Lawn = LawnRasm.Min(LawnMuazzam(lawnKamil));
+            talab.Lawn = LawnRasm.Min(LawnMuazzam(Lawn(LawnNass.Damj(in tarkeebLawn))));
             talab.Hajm = hajmFili;
             talab.HajmLawha = hajmLawha;
             talab.Safha = 0;
@@ -4150,6 +4433,69 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         }
 
         /// <summary>
+        /// Whether this string is wrapped to the component's width at all.
+        /// </summary>
+        /// <remarks>
+        /// The same precedence <see cref="Khattit"/> lays text out by — the
+        /// patch's constraint row when the compiler measured this slot, the
+        /// component's own switch when it did not. Answering it one way here and
+        /// the other way there would either accept a compiled layout on the
+        /// grounds that nothing wraps and then wrap it, or re-lay a string that
+        /// was never going to break differently.
+        /// </remarks>
+        /// <param name="shared">The session's shared resources, which hold the patch.</param>
+        /// <param name="binding">The resolved TextMeshPro members.</param>
+        /// <param name="kaen">The component being drawn.</param>
+        /// <param name="fahras">The string's index in the patch.</param>
+        /// <returns>Whether the width is a bound on this string.</returns>
+        private static bool Yaltaff(
+            MawaridIl2cpp shared, WaslTmp binding, IntPtr kaen, int fahras)
+        {
+            if (shared.Ruqaa.JidQayd(fahras, out MadkhalQayd qayd))
+            {
+                return !qayd.SatrWahid;
+            }
+            return !binding.QariLaff.Wujid
+                || WaslMuharrik.Qeema<byte>(in binding.QariLaff, kaen) != 0;
+        }
+
+        /// <summary>
+        /// Reports a string whose precompiled layout did not fit the box the
+        /// game sized, and which was therefore laid out again at run time.
+        /// </summary>
+        /// <remarks>
+        /// The first one is a degradation and is logged as one: a patch measured
+        /// against a width this game does not use draws correctly only because
+        /// every affected string is laid out again on every draw, and an owner
+        /// reading the log should learn that from the log rather than from a
+        /// frame-time graph. The rest are counted, and the total is written once
+        /// when the takeover comes down. Distinct strings rather than draws:
+        /// this runs on every rebuild, and counting draws would report the frame
+        /// rate.
+        /// </remarks>
+        /// <param name="shared">The session's shared resources, which hold the log.</param>
+        /// <param name="miftah">The key of the string, so one string counts once.</param>
+        /// <param name="ardTakhtit">The compiled layout's widest line, in pixels.</param>
+        /// <param name="ardMutah">The width the component actually had, in pixels.</param>
+        private void Tajawuz(
+            MawaridIl2cpp shared, ulong miftah, float ardTakhtit, float ardMutah)
+        {
+            if (!tajawuzat.Add(miftah) || tajawuzat.Count > 1)
+            {
+                return;
+            }
+            shared.Sijill.LogWarning(
+                "تخطيط مُصرَّف في هذه الرقعة أعرض من الصندوق الذي ترسمه اللعبة فيه؛ يُعاد "
+                + $"تخطيط تلك النصوص عند كل رسم بدل أن تخرج عن إطارها ({ardTakhtit:0.#} بدل "
+                + $"{ardMutah:0.#} بكسل). | "
+                + "A precompiled layout in this patch is wider than the box the game draws it "
+                + $"into ({ardTakhtit:0.#} against {ardMutah:0.#} px), so that string — and any "
+                + "other like it — is laid out again on every draw rather than spilling outside "
+                + "its frame. The patch was measured against a width this game does not use; "
+                + "the fix is in the compiler, not here.");
+        }
+
+        /// <summary>
         /// Lays a string out at run time, for a size the compiler never produced
         /// a layout at.
         /// </summary>
@@ -4203,7 +4549,12 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             if (shared.Ruqaa.JidQayd(fahras, out MadkhalQayd qayd))
             {
                 khiyarat = qayd.Khiyarat();
-                if (qayd.ArdMutah > 0f)
+                // The row's width is the slot as the compiler measured it; the
+                // rectangle is the slot as this player's game sizes it. Where
+                // they disagree the narrower one is the one the text has to fit
+                // in, or a string re-laid because the compiled layout was too
+                // wide for the box comes back exactly as wide as before.
+                if (qayd.ArdMutah > 0f && !(ardMutah > 0f && ardMutah < qayd.ArdMutah))
                 {
                     ardTalab = qayd.ArdMutah;
                 }
@@ -4541,6 +4892,119 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             lawn.Azraq = 1f;
             lawn.Shaffafiya = 1f;
             return lawn;
+        }
+
+        /// <summary>
+        /// Reads every colour source this build of TextMeshPro exposes off one
+        /// component, for <see cref="LawnNass.Damj"/> to compose — the same four
+        /// sources, read in the same order, as the Mono adapter reads.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The order is chosen so that a component with no gradient — which is
+        /// almost every component in almost every game — costs one boolean read
+        /// and stops. Only a component that actually bakes a gradient pays for
+        /// the sixty-four-byte struct return, and only one that also points at a
+        /// preset asset pays for the four field reads.
+        /// </para>
+        /// <para>
+        /// Every source is optional and every absence is silent here, because
+        /// <see cref="WaslTmp.Iqran"/> already named the missing ones once at
+        /// startup. What is left when they are all absent is the component's own
+        /// colour, which is what this takeover drew before any of them were read.
+        /// </para>
+        /// </remarks>
+        private static TarkeebLawnTmp TarkeebLawn(WaslTmp binding, IntPtr kaen)
+        {
+            LawnKamil asasi = binding.QariLawn.Wujid
+                ? WaslMuharrik.Qeema<LawnKamil>(in binding.QariLawn, kaen)
+                : Abyad();
+            TarkeebLawnTmp tarkeeb = TarkeebLawnTmp.Min(Kasri(asasi));
+
+            if (binding.QariLawnWajh.Wujid)
+            {
+                tarkeeb.LahuWajh = true;
+                tarkeeb.Wajh = KasriBayt(
+                    WaslMuharrik.Qeema<LawnBayti>(in binding.QariLawnWajh, kaen));
+            }
+
+            tarkeeb.TajahulWusum = binding.QariTajahulWusum.Wujid
+                && WaslMuharrik.Qeema<byte>(in binding.QariTajahulWusum, kaen) != 0;
+
+            if (!binding.QariTadarrujMufaal.Wujid
+                || WaslMuharrik.Qeema<byte>(in binding.QariTadarrujMufaal, kaen) == 0)
+            {
+                return tarkeeb;
+            }
+            tarkeeb.TadarrujMufaal = true;
+
+            if (binding.QariQalibTadarruj.Wujid && binding.IzahatQalib.Wujidat)
+            {
+                IntPtr qalib = WaslMuharrik.Qeema<IntPtr>(in binding.QariQalibTadarruj, kaen);
+                if (qalib != IntPtr.Zero)
+                {
+                    tarkeeb.LahuQalib = true;
+                    tarkeeb.Qalib = Arkan(ArkanQalib(qalib, in binding.IzahatQalib));
+                }
+            }
+
+            if (binding.QariArkanDakhili.Wujid)
+            {
+                tarkeeb.LahuDakhili = true;
+                tarkeeb.Dakhili = Arkan(
+                    WaslMuharrik.Qeema<ArkanKamila>(in binding.QariArkanDakhili, kaen));
+            }
+            return tarkeeb;
+        }
+
+        /// <summary>
+        /// The four corners of a gradient preset, read at the offsets the
+        /// runtime's metadata gave for this build.
+        /// </summary>
+        /// <remarks>
+        /// SOUND: <paramref name="qalib"/> is a live IL2CPP object reference the
+        /// property getter returned in this same call, the four offsets came from
+        /// that object's own class metadata, and nothing between the getter and
+        /// these four reads allocates — so there is no point at which the
+        /// collector could run, and the pointer is never stored.
+        /// </remarks>
+        private static unsafe ArkanKamila ArkanQalib(
+            IntPtr qalib, in IzahatArkanTadarruj izahat)
+        {
+            byte* asas = (byte*)qalib;
+            ArkanKamila arkan;
+            arkan.Awwal = *(LawnKamil*)(asas + izahat.Awwal);
+            arkan.Thani = *(LawnKamil*)(asas + izahat.Thani);
+            arkan.Thalith = *(LawnKamil*)(asas + izahat.Thalith);
+            arkan.Rabi = *(LawnKamil*)(asas + izahat.Rabi);
+            return arkan;
+        }
+
+        private static LawnKasri Kasri(LawnKamil lawn)
+        {
+            return LawnKasri.Min(lawn.Ahmar, lawn.Akhdar, lawn.Azraq, lawn.Shaffafiya);
+        }
+
+        private static LawnKasri KasriBayt(LawnBayti lawn)
+        {
+            return LawnKasri.MinBayt(lawn.Ahmar, lawn.Akhdar, lawn.Azraq, lawn.Shaffafiya);
+        }
+
+        private static ArkanTadarruj Arkan(ArkanKamila arkan)
+        {
+            return ArkanTadarruj.Min(
+                Kasri(arkan.Awwal), Kasri(arkan.Thani),
+                Kasri(arkan.Thalith), Kasri(arkan.Rabi));
+        }
+
+        private static LawnKamil Lawn(LawnKasri lawn)
+        {
+            LawnKamil natija;
+            natija.Ahmar = lawn.Ahmar;
+            natija.Akhdar = lawn.Akhdar;
+            natija.Azraq = lawn.Azraq;
+            natija.Shaffafiya = lawn.Shaffafiya;
+            return natija;
         }
 
         /// <summary>

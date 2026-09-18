@@ -704,15 +704,20 @@ impl SilsilatKhutut {
     /// The preferred font wins when it covers the character — that is how a
     /// style span pins a word to a particular face. Otherwise the first font in
     /// the chain that covers it wins. When no font covers it at all the answer
-    /// is index 0, which will render `.notdef`: an empty box, visible in the
-    /// game, traceable in the overflow report, and fixable by adding a font to
-    /// the chain.
+    /// is index 0, and shaping there produces `.notdef`.
     ///
     /// That last case is deliberate and it is not a fallback in disguise. The
     /// alternative — refusing to lay out the line — turns one missing character
     /// into a blank menu, and the alternative to *that* — substituting some
-    /// other glyph — is a lie in the player's face. A visible box is the honest
-    /// answer, and it is the one a translator can see and report.
+    /// other glyph — is a lie in the player's face.
+    ///
+    /// What the layout then does with that `.notdef` is
+    /// [`crate::qiyas::rattib_sutur`]'s decision, not this one's: the space is
+    /// reserved, nothing is drawn in it, and the layout carries
+    /// [`crate::natija::TaghtiyaNaqisa`] naming how many characters the chain
+    /// could not draw and where the first one is. The empty box this function
+    /// used to rely on as its own report was never read by anything, and a
+    /// player cannot act on a rectangle.
     #[must_use]
     pub fn ikhtiyar(&self, harf: char, mufaddal: Option<u8>) -> u8 {
         if let Some(fahras) = mufaddal
@@ -815,12 +820,17 @@ fn uluw_min_shakl(kharita: &Charmap<'_>, hudud: &GlyphMetrics<'_>, namadhij: &[c
     0.0
 }
 
-/// Characters the shaper consumes without ever asking the font for a glyph.
+/// Characters the layout consumes rather than draws.
 ///
-/// Bidirectional embeddings, overrides and isolates, the joiners, the word
-/// joiner, and the byte-order mark are all instructions to the layout rather
-/// than things to draw. A font is not incomplete for lacking them.
-fn ghayr_marii(harf: char) -> bool {
+/// Line and paragraph separators, the other control characters, bidirectional
+/// embeddings, overrides and isolates, the joiners, the word joiner, and the
+/// byte-order mark are all instructions rather than things to draw. A font is
+/// not incomplete for lacking them, which is why coverage skips them here — and
+/// a font that does map one is not thereby permitted to draw it, which is why
+/// [`crate::wasl`] removes their glyphs from every shaped run. One set, two
+/// consumers: a second list of "characters that are not ink" would be a second
+/// answer to drift away from this one.
+pub(crate) fn ghayr_marii(harf: char) -> bool {
     harf.is_control()
         || matches!(
             u32::from(harf),
