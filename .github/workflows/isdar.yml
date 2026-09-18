@@ -261,35 +261,61 @@ jobs:
           if [ "${{ inputs.jalb }}" = "true" ]; then wusata+=(--jalb); fi
           bash scripts/isdar.sh "${wusata[@]}"
 
-      # The proof, in the log: the manifest exists, and this is what it counts.
-      # `tajmee` already refused to write it if anything was missing, so this
-      # step is a summary rather than a check — but a release whose log does not
-      # say how many components it carries is a release nobody can audit later.
-      - name: Summarise the staged tree
+      # The proof, in the log: both manifests exist, and this is what they
+      # count. `tajmee` already refused to write either if anything was missing,
+      # so this step is a summary rather than a check — but a release whose log
+      # does not say how many components each bundle carries, and how much the
+      # slim one leaves to be fetched, is a release nobody can audit later.
+      - name: Summarise the staged trees
         run: |
           set -euo pipefail
-          bayan=apps/studio/src-tauri/mawarid/bayan_mukawwinat.json
-          test -f "$bayan"
-          node --input-type=module -e '
-            import { readFileSync } from "node:fs";
-            const b = JSON.parse(readFileSync(process.argv[1], "utf8"));
-            const juzur = new Map();
-            for (const m of b.milaffat) {
-              const q = m.masar.split("/");
-              const jidhr = q[0] === "mukawwinat" ? q.slice(0, 4).join("/") : q[0];
-              juzur.set(jidhr, (juzur.get(jidhr) ?? 0) + 1);
-            }
-            const kul = b.milaffat.reduce((a, m) => a + m.hajm, 0);
-            console.log(`schema ${b.mukhattat} | ${b.isdar} | ${b.hadaf}`);
-            console.log(`${b.milaffat.length} file(s), ${(kul / 1048576).toFixed(1)} MiB`);
-            for (const [k, v] of [...juzur].sort()) console.log(`  ${String(v).padStart(5)}  ${k}`);
-          ' "$bayan"
+          for taqm in nahif kamil; do
+            bayan="target/tajmee/mustaqarr/$taqm/bayan_mukawwinat.json"
+            test -f "$bayan"
+            printf -- '-- %s\n' "$taqm"
+            node --input-type=module -e '
+              import { readFileSync } from "node:fs";
+              import { dirname, join } from "node:path";
+              const b = JSON.parse(readFileSync(process.argv[1], "utf8"));
+              const juzur = new Map();
+              for (const m of b.milaffat) {
+                const q = m.masar.split("/");
+                const jidhr = q[0] === "mukawwinat" ? q.slice(0, 4).join("/") : q[0];
+                juzur.set(jidhr, (juzur.get(jidhr) ?? 0) + 1);
+              }
+              const kul = b.milaffat.reduce((a, m) => a + m.hajm, 0);
+              console.log(`schema ${b.mukhattat} | ${b.isdar} | ${b.hadaf} | ${b.taqm}`);
+              console.log(`${b.milaffat.length} file(s), ${(kul / 1048576).toFixed(1)} MiB`);
+              const f = JSON.parse(
+                readFileSync(join(dirname(process.argv[1]), "fihris_mukawwinat.json"), "utf8"),
+              );
+              const kharij = f.mukawwinat.filter((m) => !m.fi_alhuzma);
+              const jalb = kharij.reduce((a, m) => a + m.hajm, 0);
+              console.log(
+                `catalogue: ${f.mukawwinat.length} component(s), ` +
+                  `${kharij.length} not carried, ${(jalb / 1048576).toFixed(1)} MiB to fetch`,
+              );
+              for (const [k, v] of [...juzur].sort()) console.log(`  ${String(v).padStart(5)}  ${k}`);
+            ' "$bayan"
+          done
 
       - uses: actions/upload-artifact@v7
         with:
           name: huzma-${{ inputs.hadaf }}
           path: |
             target/${{ inputs.hadaf }}/release/bundle/**
-            apps/studio/src-tauri/mawarid/bayan_mukawwinat.json
+            target/tajmee/mustaqarr/*/bayan_mukawwinat.json
+            target/tajmee/mustaqarr/*/fihris_mukawwinat.json
+          if-no-files-found: error
+          retention-days: 7
+
+      # The component objects the slim bundle fetches. Separate from the bundle
+      # artifact because it is the same bytes for every target and for both
+      # variants, and because it is what a release publishes beside the
+      # installers rather than inside one.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mukawwinat-${{ inputs.hadaf }}
+          path: target/tajmee/tawzee/**
           if-no-files-found: error
           retention-days: 7

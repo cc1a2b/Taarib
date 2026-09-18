@@ -157,6 +157,25 @@ pub enum QaydMarhala {
         marfuda: u64,
         /// Whether a capture session was merged in.
         multaqat: bool,
+        /// The fingerprint of the capture session that was merged, empty when
+        /// none was.
+        ///
+        /// What makes a resumed run notice that the person has recorded a pass
+        /// since. Without it the resume took the journal's shortcut — the stage
+        /// closed, the table is on disk, skip it — and the session handed to
+        /// that resume was never opened: the run reported the merge it had made
+        /// the first time, translated nothing new, and shipped the patch it
+        /// already had. Which is the whole capture route failing while
+        /// reporting success, and the one thing capture exists to prevent.
+        ///
+        /// Defaulted so a journal written before this field existed reads as the
+        /// empty fingerprint, which matches no session and therefore re-extracts
+        /// the moment one is supplied. That is the safe direction: the cost of
+        /// being wrong is one static pass over the game's containers, and the
+        /// cost of the other direction is a recording the user made and the run
+        /// silently ignored.
+        #[serde(default)]
+        basmat_jalsa: String,
     },
     /// The translation run walked its whole list, or stopped at the ceiling.
     ///

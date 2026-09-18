@@ -73,10 +73,56 @@
 //! header — low — and is reported as an unknown format. That is the safe
 //! direction, and it is why the entropy test is only ever allowed to *raise* a
 //! refusal to `Mushaffar` and never to lower one.
+//!
+//! ## Which locale is the source
+//!
+//! A game using Unity Localization ships one `StringTable` per locale, all of
+//! them holding the same keys with the same entry ids. The Stalked 3 ships
+//! eleven, which is eleven renderings of three hundred and forty-eight strings;
+//! reading all of them put four thousand two hundred and sixty-five rows in
+//! front of a translator for a game that has three hundred and forty-eight, and
+//! a machine-translation run then paid for the other eleven twelfths.
+//!
+//! **Nothing in the game's files says which locale it draws**, and that is a
+//! finding rather than a gap in this reader. The locale set is in
+//! `localization-locales`, and every `Locale` in The Stalked 3 carries the same
+//! sort order and no default flag. The asset that *would* say —
+//! `LocalizationSettings`, with its startup selectors and project locale — is in
+//! the preloaded assets of `globalgamemanagers.assets`, whose type tree this
+//! build stripped, so it is unreadable there for the same reason the rest of the
+//! game's own components are. The Addressables catalog names the eleven `Locale`
+//! assets and no default among them. What the game's assembly does record is a
+//! `Languageselector` writing the player's pick to `PlayerPrefs` — per machine,
+//! per user, outside the install, and therefore something this walk must not
+//! read: extraction derives identity from what it sees, and a table that
+//! depended on the player's saved language would give two contributors of the
+//! same build two different projects.
+//!
+//! So the choice is Taarib's, it is stated, and it is made on what the game
+//! ships rather than assumed. [`ikhtar_lugha`] takes the locales seen and
+//! answers with [`LUGHAT_MASDAR`] when the game ships it, with the one locale in
+//! that language when the game ships a regional spelling of it and no other, and
+//! with nothing at all otherwise — and "nothing" means every locale is read,
+//! exactly as before, with the locale folded into the engine key so none of them
+//! collides with another. That last arm is what keeps this from being an
+//! assumption that games are written in English: a game shipping only Japanese
+//! and Korean has no locale this build can rank, and it is not ranked.
+//!
+//! The decision is taken **after** the walk, in [`ikhtim_tawtin`], and not while
+//! reading. Each locale is a separate Addressables bundle, so the file in hand
+//! knows its own locale and nothing about the ten beside it; deciding per file
+//! would mean depending on the order the package happens to name its groups in.
+//! The rows are held in [`kaain::MajmuatLugha`] until the full list exists.
+//!
+//! What was set aside is in the report, per container, as
+//! [`SababRafd::LughaGhayrMukhtara`] with its locale and its row count — and
+//! that refusal answers `false` to [`SababRafd::khasara`], because every key
+//! those rows carry is in the table once, under the locale that was read.
 
 pub mod hawiya;
 pub mod kaain;
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -87,7 +133,7 @@ use crate::jadwal::JadwalNusus;
 use crate::rafd::{SababRafd, TaqreerRafd};
 
 use hawiya::{AQSA_HAJM_MALAF, Huzma, KhataQira, Mulsal, TawqiHuzma, tul_u64};
-use kaain::istakhrij_mulsal;
+use kaain::{MajmuatLugha, istakhrij_mulsal};
 
 // ---------------------------------------------------------------------------
 // Ceilings
@@ -163,6 +209,27 @@ pub const ALAMAT_BAYANAT: &[&str] = &[
     "unity_builtin_extra",
 ];
 
+/// The locale Taarib reads a multi-locale Unity game's string tables from.
+///
+/// `en`. **This is a statement about Taarib, not about the game**, and the
+/// difference is the whole reason it is written down here rather than decided in
+/// [`ikhtar_lugha`]'s body. It is the source language this product already
+/// records for a project — `mashru.lugha_masdar` defaults to `'en'` in
+/// `taarib-makhzan`'s schema and `taarib-tarjama`'s memory carries the same
+/// column — so a Unity extraction that read some other locale would hand the
+/// translation runner text in a language the project says it is not translating
+/// from.
+///
+/// It is a *preference*, resolved against what the game actually ships, and it
+/// never becomes an assertion about a game's authoring language:
+/// [`ikhtar_lugha`] declines to choose at all when this locale is not on offer,
+/// and a game shipping only Japanese and Korean is read whole. Extraction will
+/// not be the place that decides a Japanese game was written in English.
+///
+/// Making it settable belongs to the project record rather than to this
+/// constant — see [`ikhtar_lugha`].
+pub const LUGHAT_MASDAR: &str = "en";
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -185,13 +252,24 @@ pub fn istakhrij(jidhr: &Path) -> (JadwalNusus, TaqreerRafd) {
     let mut taqreer = TaqreerRafd::jadeed();
     let mut hisab = Hisab::default();
 
+    let mut muallaqa: Vec<JadwalMuallaq> = Vec::new();
+
     let (judhur, wujidat) = judhur_bayanat(jidhr);
     for mabda in &judhur {
-        imshi(jidhr, mabda, &mut hisab, &mut jadwal, &mut taqreer);
+        imshi(
+            jidhr,
+            mabda,
+            &mut hisab,
+            &mut jadwal,
+            &mut taqreer,
+            &mut muallaqa,
+        );
         if hisab.tawaqqaf {
             break;
         }
     }
+
+    ikhtim_tawtin(muallaqa, &mut jadwal, &mut taqreer);
 
     if hisab.akhta > AQSA_AKHTA_MASH {
         taqreer.sajjil(
@@ -224,6 +302,20 @@ pub fn istakhrij(jidhr: &Path) -> (JadwalNusus, TaqreerRafd) {
     }
 
     (jadwal, taqreer)
+}
+
+/// One Unity Localization string table, held until the walk is over.
+///
+/// Carries where it came from — which the report needs — and the index of the
+/// container's own read entry, so that the rows that end up in the table are
+/// counted against the container they came out of rather than disappearing from
+/// the report's own arithmetic.
+#[derive(Debug)]
+struct JadwalMuallaq {
+    hawiya: String,
+    asl: Option<String>,
+    fahras_qira: usize,
+    majmua: MajmuatLugha,
 }
 
 /// The running totals one extraction keeps across every data directory.
@@ -315,6 +407,7 @@ fn imshi(
     hisab: &mut Hisab,
     jadwal: &mut JadwalNusus,
     taqreer: &mut TaqreerRafd,
+    muallaqa: &mut Vec<JadwalMuallaq>,
 ) {
     // Sorted, because identity and duplicate grouping depend on the order
     // containers are read in. See this module's header.
@@ -418,7 +511,7 @@ fn imshi(
         }
 
         hisab.maqrua = hisab.maqrua.saturating_add(1);
-        iqra_hawiya(bayt, &ism, &nisbi, jadwal, taqreer);
+        iqra_hawiya(bayt, &ism, &nisbi, jadwal, taqreer, muallaqa);
     }
 }
 
@@ -556,20 +649,27 @@ fn iqra_hawiya(
     hawiya: &str,
     jadwal: &mut JadwalNusus,
     taqreer: &mut TaqreerRafd,
+    muallaqa: &mut Vec<JadwalMuallaq>,
 ) {
     if TawqiHuzma::min_bayt(bayt).is_some() {
-        iqra_huzma(bayt, hawiya, jadwal, taqreer);
+        iqra_huzma(bayt, hawiya, jadwal, taqreer, muallaqa);
         return;
     }
     if Mulsal::yabdu_mulsalan(bayt) {
-        let _ = iqra_mulsal(bayt, hawiya, None, jadwal, taqreer);
+        let _ = iqra_mulsal(bayt, hawiya, None, jadwal, taqreer, muallaqa);
         return;
     }
     taqreer.sajjil(hawiya.to_owned(), None, sabab_majhul(bayt, ism));
 }
 
 /// Reads a bundle and every `SerializedFile` inside it.
-fn iqra_huzma(bayt: &[u8], hawiya: &str, jadwal: &mut JadwalNusus, taqreer: &mut TaqreerRafd) {
+fn iqra_huzma(
+    bayt: &[u8],
+    hawiya: &str,
+    jadwal: &mut JadwalNusus,
+    taqreer: &mut TaqreerRafd,
+    muallaqa: &mut Vec<JadwalMuallaq>,
+) {
     let huzma = match Huzma::iqra(bayt) {
         Ok(huzma) => huzma,
         Err(khata) => {
@@ -631,7 +731,14 @@ fn iqra_huzma(bayt: &[u8], hawiya: &str, jadwal: &mut JadwalNusus, taqreer: &mut
             continue;
         }
 
-        let _ = iqra_mulsal(mihtawa, hawiya, Some(&uqda.masar), jadwal, taqreer);
+        let _ = iqra_mulsal(
+            mihtawa,
+            hawiya,
+            Some(&uqda.masar),
+            jadwal,
+            taqreer,
+            muallaqa,
+        );
     }
 
     // The bundle itself is recorded as read even when every file inside it was
@@ -661,6 +768,7 @@ fn iqra_mulsal(
     asl: Option<&str>,
     jadwal: &mut JadwalNusus,
     taqreer: &mut TaqreerRafd,
+    muallaqa: &mut Vec<JadwalMuallaq>,
 ) -> usize {
     let mulsal = match Mulsal::iqra(bayt) {
         Ok(mulsal) => mulsal,
@@ -709,6 +817,20 @@ fn iqra_mulsal(
         None => asasi,
     };
     taqreer.sajjil_qira(hawiya.to_owned(), adad, wasf);
+    // The read entry this file's localization rows will be counted against once
+    // the source locale is chosen. Taken here, immediately after the entry was
+    // pushed, because that is the only moment its position is known without
+    // searching the report for a container name that is not unique — a bundle
+    // holding four `SerializedFile`s records four entries under one name.
+    let fahras_qira = taqreer.maqrua.len().saturating_sub(1);
+    for majmua in hasila.tawtin {
+        muallaqa.push(JadwalMuallaq {
+            hawiya: hawiya.to_owned(),
+            asl: asl.map(str::to_owned),
+            fahras_qira,
+            majmua,
+        });
+    }
     // Only when there *was* a tree. A stripped file has no index either, and
     // saying so twice — once as a missing layout and once as a truncated index —
     // would double-count one fact in the report.
@@ -728,6 +850,215 @@ fn iqra_mulsal(
         );
     }
     adad
+}
+
+// ---------------------------------------------------------------------------
+// Unity Localization: which locale the project gets
+// ---------------------------------------------------------------------------
+
+/// The locale a Unity game's string tables are read from, out of the ones it
+/// ships.
+///
+/// Three answers, in order:
+///
+/// 1. [`LUGHAT_MASDAR`] itself, when the game ships it.
+/// 2. The one locale whose language subtag is [`LUGHAT_MASDAR`]'s, when the game
+///    ships a regional spelling of it and no other — `en-GB` alone stands in for
+///    `en`. Two of them and no bare one is a choice this function will not make
+///    silently: picking `en-GB` over `en-AU` would put one region's spelling in
+///    the table as the source text of the whole game, which is the same refusal
+///    [`crate::unreal`] makes for a declared native culture with no file.
+/// 3. `None` — meaning **read every locale**, with the locale in the engine key,
+///    exactly as this reader did before it chose at all. This is the arm that
+///    keeps the whole mechanism from being an assumption that games are written
+///    in English.
+///
+/// Comparison is ASCII-case-insensitive because a locale code's region subtag is
+/// conventionally upper case and its language subtag is not — Unity writes
+/// `pt-BR` and `zh-Hans` — and a case-sensitive match would make `EN` a locale
+/// this build had never heard of.
+///
+/// ## Why the answer is not settable here
+///
+/// A contributor who owns a German copy, or who would rather translate from
+/// English on a German install, is asking for a *project* setting and not a
+/// parameter: re-extraction is a diff against the same project, so a source
+/// locale that this call took as an argument and nothing stored would revert to
+/// the default on the next scan and every row in the project would orphan at
+/// once. The place it belongs is the project record beside `lugha_masdar`, which
+/// is a change to [`crate::mashru`] and to what the workshop writes, and it is
+/// deferred to that rather than half-built here. Until then the report names
+/// both the locale that was read and the ones that were not, so the choice is
+/// visible even though it is not yet adjustable.
+#[must_use]
+pub fn ikhtar_lugha(mawjuda: &BTreeSet<String>) -> Option<String> {
+    if let Some(ramz) = mawjuda
+        .iter()
+        .find(|ramz| ramz.eq_ignore_ascii_case(LUGHAT_MASDAR))
+    {
+        return Some(ramz.clone());
+    }
+    let mut murashahun = mawjuda
+        .iter()
+        .filter(|ramz| lugha_min_ramz(ramz).eq_ignore_ascii_case(LUGHAT_MASDAR));
+    let awwal = murashahun.next()?;
+    if murashahun.next().is_some() {
+        return None;
+    }
+    Some(awwal.clone())
+}
+
+/// The language subtag of a locale code: `pt` out of `pt-BR`.
+fn lugha_min_ramz(ramz: &str) -> &str {
+    ramz.split(['-', '_']).next().unwrap_or(ramz)
+}
+
+/// What one container's string tables contributed, once the choice was made.
+#[derive(Debug, Default)]
+struct HisabTawtin {
+    lughat: BTreeSet<String>,
+    mahfuza: usize,
+    manhiya: usize,
+}
+
+/// Chooses the source locale and folds the string tables that survive it into
+/// the table.
+///
+/// Everything this function decides needs the whole walk to have happened, which
+/// is the only reason it is a second pass — see this module's header.
+fn ikhtim_tawtin(
+    muallaqa: Vec<JadwalMuallaq>,
+    jadwal: &mut JadwalNusus,
+    taqreer: &mut TaqreerRafd,
+) {
+    if muallaqa.is_empty() {
+        return;
+    }
+    let mawjuda: BTreeSet<String> = muallaqa
+        .iter()
+        .filter_map(|muallaq| muallaq.majmua.lugha.clone())
+        .collect();
+    let kathira = mawjuda.len() > 1;
+    let mukhtara = if kathira {
+        ikhtar_lugha(&mawjuda)
+    } else {
+        // One locale is not a choice, and saying it was one would put a decision
+        // in the report of every single-language game in the library.
+        None
+    };
+
+    let mut hisabat: BTreeMap<usize, HisabTawtin> = BTreeMap::new();
+    let mut manhiya: BTreeMap<(String, Option<String>, String), usize> = BTreeMap::new();
+
+    for muallaq in muallaqa {
+        let JadwalMuallaq {
+            hawiya,
+            asl,
+            fahras_qira,
+            majmua,
+        } = muallaq;
+        let hisab = hisabat.entry(fahras_qira).or_default();
+        if let Some(lugha) = &majmua.lugha {
+            let _ = hisab.lughat.insert(lugha.clone());
+        }
+
+        // A table with no locale code of its own is kept whatever was chosen: it
+        // cannot be compared against the choice, and setting aside a table
+        // because it failed to name itself would lose rows nothing else holds.
+        let hujiba = match (mukhtara.as_deref(), majmua.lugha.as_deref()) {
+            (Some(mukhtara), Some(lugha)) if !lugha.eq_ignore_ascii_case(mukhtara) => {
+                Some(lugha.to_owned())
+            },
+            _ => None,
+        };
+
+        let adad = majmua.madakhil.len();
+        if let Some(lugha) = hujiba {
+            hisab.manhiya = hisab.manhiya.saturating_add(adad);
+            *manhiya.entry((hawiya, asl, lugha)).or_insert(0_usize) += adad;
+            continue;
+        }
+        hisab.mahfuza = hisab.mahfuza.saturating_add(adad);
+        for madkhal in majmua.madakhil {
+            jadwal.adif(madkhal);
+        }
+    }
+
+    let asma_kull = asma_lughat(&mawjuda);
+    for (fahras, hisab) in hisabat {
+        let Some(qira) = taqreer.maqrua.get_mut(fahras) else {
+            continue;
+        };
+        qira.adad = qira.adad.saturating_add(hisab.mahfuza);
+        qira.wasf.push_str(&wasf_tawtin(
+            &hisab,
+            mukhtara.as_deref(),
+            kathira,
+            &asma_kull,
+        ));
+    }
+
+    // Nothing reaches `manhiya` unless a locale was chosen, so the outer `if` is
+    // what makes that a fact of the code rather than a comment about it.
+    if let Some(mukhtara) = mukhtara {
+        for ((hawiya, asl, lugha), adad) in manhiya {
+            taqreer.sajjil(
+                hawiya,
+                asl,
+                SababRafd::LughaGhayrMukhtara {
+                    lugha,
+                    mukhtara: mukhtara.clone(),
+                    adad,
+                },
+            );
+        }
+    }
+}
+
+/// The clause appended to a container's read entry, saying what its string
+/// tables were and what became of them.
+fn wasf_tawtin(
+    hisab: &HisabTawtin,
+    mukhtara: Option<&str>,
+    kathira: bool,
+    asma_kull: &str,
+) -> String {
+    let asma = asma_lughat(&hisab.lughat);
+    match mukhtara {
+        Some(mukhtara) if hisab.manhiya > 0 && hisab.mahfuza > 0 => format!(
+            "; Unity Localization string table(s) in [{asma}], of which {} string(s) were read \
+             in {mukhtara} and {} set aside",
+            hisab.mahfuza, hisab.manhiya
+        ),
+        Some(mukhtara) if hisab.manhiya > 0 => format!(
+            "; Unity Localization string table(s) in [{asma}], {} string(s) set aside — \
+             {mukhtara} is the locale being read",
+            hisab.manhiya
+        ),
+        Some(mukhtara) => {
+            format!(
+                "; Unity Localization string table(s) in [{asma}], read as the source locale ({mukhtara}) out of [{asma_kull}]"
+            )
+        },
+        None if kathira => format!(
+            "; Unity Localization string table(s) in [{asma}], read — this game ships \
+             [{asma_kull}] and none of them is the locale Taarib translates from \
+             ({LUGHAT_MASDAR}), so every locale is kept with the locale in the engine key"
+        ),
+        None => format!("; Unity Localization string table(s) in [{asma}]"),
+    }
+}
+
+/// A locale set as the report prints it.
+fn asma_lughat(lughat: &BTreeSet<String>) -> String {
+    if lughat.is_empty() {
+        return "no declared locale".to_owned();
+    }
+    lughat
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 // ---------------------------------------------------------------------------

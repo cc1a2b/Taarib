@@ -336,12 +336,17 @@ export const commands = {
 	 *  The timestamp comes from the store's own clock rather than the host's, so
 	 *  two records written in one session cannot disagree about when it was.
 	 * 
+	 *  `lugha` is the rendering the panel actually drew, which the caller sends
+	 *  rather than the backend reading it out of the settings: a session can be
+	 *  showing one language while the stored preference says another, and the
+	 *  record has to name the words the person read.
+	 * 
 	 *  # Errors
 	 * 
 	 *  [`taarib_aman::KhataAman`] when the record cannot be written, and whatever
 	 *  the store raises.
 	 */
-	sajjilIqrarAman: () => typedError<HalatIqrar, Khata>(__TAURI_INVOKE("sajjil_iqrar_aman")),
+	sajjilIqrarAman: (lugha: Lugha) => typedError<HalatIqrar, Khata>(__TAURI_INVOKE("sajjil_iqrar_aman", { lugha })),
 	/**
 	 *  Installs a downloaded or imported package into a game, end to end.
 	 * 
@@ -1107,6 +1112,20 @@ export const commands = {
 	/**  Whether anything has been written into the game yet. */
 	muthabbata: boolean,
 	/**
+	 *  Whether this game's files hold text no reader on this machine can open,
+	 *  so a recorded pass would reach strings this run did not.
+	 * 
+	 *  The fact that makes a finished run honest. A Unity release build ships no
+	 *  type tree, so its localization tables read and everything a component
+	 *  draws does not — and the run then installs a patch that Arabizes the
+	 *  menus and nothing else, reports success, and gives the reader no reason
+	 *  anywhere. It is true of a run that succeeded, which is why it lives on
+	 *  the snapshot beside the stages rather than inside a failure.
+	 */
+	yanfa_iltiqat: boolean,
+	/**  Whether a recorded pass has been folded into this run's own table. */
+	multaqat: boolean,
+	/**
 	 *  The revocation list the run's gate checks against, and where it stood
 	 *  the last time this run read it: as the door found the cache, then as
 	 *  the run's own refresh left it. Absent only for a snapshot read back from
@@ -1151,7 +1170,7 @@ export const commands = {
 	 *  there is nothing to resume, and whatever the store, the keychain and the
 	 *  acknowledgement record raise.
 	 */
-	ibdaTilqai: (muarrif: string, istinaf: boolean, iqrarShabaka: boolean) => typedError<LaqtatTilqaiHie, Khata>(__TAURI_INVOKE("ibda_tilqai", { muarrif, istinaf, iqrarShabaka })),
+	ibdaTilqai: (muarrif: string, istinaf: boolean, iqrarShabaka: boolean, dammIltiqat: boolean) => typedError<LaqtatTilqaiHie, Khata>(__TAURI_INVOKE("ibda_tilqai", { muarrif, istinaf, iqrarShabaka, dammIltiqat })),
 	/**
 	 *  Asks the run for one game to stop, and answers with the snapshot as it stands.
 	 * 
@@ -1165,19 +1184,58 @@ export const commands = {
 	 */
 	alghiTilqai: (muarrif: string) => typedError<LaqtatTilqaiHie, Khata>(__TAURI_INVOKE("alghi_tilqai", { muarrif })),
 	/**
+	 *  Whether a pass can be recorded for this game, and what is waiting.
+	 * 
+	 *  Three directory reads and, when a pass exists, one parse of it. Nothing here
+	 *  writes and nothing launches, so the screen may ask for it whenever it draws
+	 *  the panel.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`Khata`] when the identity is not a game, or the game is not in the store.
+	 */
+	halatIltiqat: (muarrif: string) => typedError<HalatIltiqatHie, Khata>(__TAURI_INVOKE("halat_iltiqat", { muarrif })),
+	/**
+	 *  Turns the recorder on or off for the next launch of one game.
+	 * 
+	 *  The one thing it writes is a single key in the adapter's own settings file,
+	 *  which is a file the adapter created and rewrites for itself. The adapter
+	 *  refuses to replace text while it records — a pass taken while Arabic was on
+	 *  screen would measure Taarib's boxes instead of the game's — so this switch is
+	 *  also what makes the next launch show the game in its original language, and
+	 *  the screen says so before the press rather than after it.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataTilqaiAmr::IltiqatGhayrMutah`] when no adapter that can record is
+	 *  installed in the game, and [`KhataTilqaiAmr::IdadatIltiqat`] when its
+	 *  settings file cannot be written.
+	 */
+	sajjilIltiqat: (muarrif: string, mufaal: boolean) => typedError<HalatIltiqatHie, Khata>(__TAURI_INVOKE("sajjil_iltiqat", { muarrif, mufaal })),
+	/**
 	 *  Every community translation the index lists for one game, credited.
 	 * 
 	 *  The index is answered from the cache while it is current, fetched through
 	 *  the configured sources when it is not, and served stale when every source
-	 *  refuses. An empty answer therefore means the index was read and lists
-	 *  nothing for this game; a machine with no index at all is refused instead,
-	 *  so the screen never says "nothing is known" when nobody could look.
+	 *  refuses — and verified against the owner's key in every one of those cases
+	 *  before a maker is credited or an address is offered. An empty answer
+	 *  therefore means the index was read and lists nothing for this game; a
+	 *  machine with no index at all, or one holding an index nobody signed, is
+	 *  refused by name instead, so the screen never says "nothing is known" when
+	 *  nobody could look and never shows a panel that is blank for no stated
+	 *  reason.
 	 * 
 	 *  # Errors
 	 * 
 	 *  [`taarib_mustawda::KhataMustawda::FahrasMujtamaGhayrMutah`] when no source
-	 *  answered and nothing is cached, whatever the index parser refuses when the
-	 *  one answer that came was unreadable, and whatever the game lookup raises.
+	 *  answered and nothing is cached,
+	 *  [`taarib_mustawda::KhataMustawda::FahrasMujtamaGhayrMuwaqqa`] when the copy
+	 *  this machine holds carries no owner signature — the state a machine
+	 *  upgrading from a build that did not sign the index starts in —
+	 *  [`taarib_mustawda::KhataMustawda::FahrasMujtamaTawqeeBatil`] when a
+	 *  signature was offered and refused, whatever the index parser refuses when
+	 *  the one answer that came was unreadable, and whatever the game lookup
+	 *  raises.
 	 */
 	tarjamatMujtama: (muarrif: string) => typedError<TarjamaMujtamaHie[], Khata>(__TAURI_INVOKE("tarjamat_mujtama", { muarrif })),
 	/**
@@ -1191,10 +1249,20 @@ export const commands = {
 	 *  a user error, but a command that opens whatever it is handed is a command
 	 *  that opens whatever a compromised webview hands it.
 	 * 
+	 *  The hosts the index contributes come out of a *verified* cache and nowhere
+	 *  else. That is the whole reason the index is signed: an allow-list read from
+	 *  a document anybody could serve would let a compromised source name any host
+	 *  it liked and have this command open it. A cache that does not verify
+	 *  contributes nothing, which leaves the compiled-in platforms and refuses the
+	 *  rest — the panel that fetched the index is where the refusal is named to the
+	 *  user, and this command is not the place to raise it a second time.
+	 * 
 	 *  # Errors
 	 * 
-	 *  [`KhataMujtamaAmr::RabtMarfud`] when the address fails any check above, and
-	 *  [`KhataMujtamaAmr::FathRabtFashil`] when the platform would not open it.
+	 *  [`KhataMujtamaAmr::RabtMarfud`] when the address fails any check above,
+	 *  [`KhataMujtamaAmr::FathRabtFashil`] when the platform would not open it, and
+	 *  [`taarib_khatm::KhataKhatm::MiftahTalif`] when this build's own trust anchor
+	 *  is unreadable.
 	 */
 	iftahRabt: (rabt: string) => typedError<boolean, Khata>(__TAURI_INVOKE("iftah_rabt", { rabt })),
 };
@@ -1632,6 +1700,22 @@ export type HaddHie = {
 	shawahid: ShahidHie[],
 };
 
+/**  Whether a pass can be recorded for one game, and what state it is in. */
+export type HalatIltiqatHie = {
+	/**
+	 *  Whether the adapter that records is in the game at all.
+	 * 
+	 *  False until a run has installed one, which is the honest ordering:
+	 *  recording happens inside the game, through the same adapter that draws
+	 *  the Arabic, so there is nothing to switch on before the first install.
+	 */
+	mutah: boolean,
+	/**  Whether the next launch records instead of replacing. */
+	musajjil: boolean,
+	/**  The pass waiting to be folded in, when there is one. */
+	jalsa: JalsatIltiqatHie | null,
+};
+
 /**  Where the first-run acknowledgement stands. */
 export type HalatIqrar = {
 	/**  Whether the statement still needs acknowledging. */
@@ -1649,6 +1733,11 @@ export type HalatIqrar = {
 	waqt: string | null,
 	/**  Which build of Taarib asked. */
 	isdar_taarib: string | null,
+	/**
+	 *  Which of the two renderings was on screen when it was given, or [`None`]
+	 *  for a record written before that was recorded.
+	 */
+	lugha_nass: Lugha | null,
 };
 
 /**
@@ -2557,6 +2646,24 @@ export type JalsaHie = {
 	ism: string,
 };
 
+/**  The recorded pass waiting on disk, as the screen reads it. */
+export type JalsatIltiqatHie = {
+	/**  How many distinct strings it holds. */
+	nusus: number,
+	/**
+	 *  Whether the game was closed while it was still writing.
+	 * 
+	 *  Not a failure and not hidden: everything before the cut is intact and is
+	 *  merged, and a person who alt-F4s out of a game should be told what that
+	 *  cost rather than left to wonder.
+	 */
+	mabtura: boolean,
+	/**  Whether this game's newest run has already folded this pass in. */
+	madmuja: boolean,
+	/**  When it was written, RFC 3339. */
+	waqt: string,
+};
+
 /**  One side of a merge conflict, with its full provenance. */
 export type JanibNizaaHie = {
 	/**  The translation text. */
@@ -2880,6 +2987,20 @@ export type LaqtatTilqaiHie = {
 	khata: KhataTilqaiHie | null,
 	/**  Whether anything has been written into the game yet. */
 	muthabbata: boolean,
+	/**
+	 *  Whether this game's files hold text no reader on this machine can open,
+	 *  so a recorded pass would reach strings this run did not.
+	 * 
+	 *  The fact that makes a finished run honest. A Unity release build ships no
+	 *  type tree, so its localization tables read and everything a component
+	 *  draws does not — and the run then installs a patch that Arabizes the
+	 *  menus and nothing else, reports success, and gives the reader no reason
+	 *  anywhere. It is true of a run that succeeded, which is why it lives on
+	 *  the snapshot beside the stages rather than inside a failure.
+	 */
+	yanfa_iltiqat: boolean,
+	/**  Whether a recorded pass has been folded into this run's own table. */
+	multaqat: boolean,
 	/**
 	 *  The revocation list the run's gate checks against, and where it stood
 	 *  the last time this run read it: as the door found the cache, then as
@@ -3576,6 +3697,11 @@ export type MustalahHie = {
 	arabi: string,
 	/**  The translator's note, when one was written. */
 	mulahaza: string | null,
+	/**
+	 *  Whether the product shipped this term rather than the project pinning
+	 *  it; a project entry for the same source form overrides the built-in one.
+	 */
+	mudmaj: boolean,
 };
 
 /**  How much detail the log records. */

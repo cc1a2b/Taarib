@@ -25,9 +25,27 @@
 #   tajmee  rows D1,J1,K1,M1,N1            stage, verify, write the manifest
 #   badhra  row  L1      sabk --badhra     the revocation seed, release only
 #   wajiha  row  A2      the frontend
-#   huzma   rows A1,A3   tauri build       the installer
+#   huzma   rows A1,A3   tauri build       the installer, once per component set
 #
 # TAARIB_TASALSUL sets the seed's sequence number; it defaults to 1.
+#
+# Two bundles, not one. `--taqm` picks which get built:
+#
+#   nahif   the slim bundle: every component but the six IL2CPP BepInEx ones,
+#           which are 449,711,337 of the component tree's 519,747,711 bytes.
+#   kamil   the offline bundle: the whole matrix, exactly as every build before
+#           this flag produced.
+#   kila    both, which is what a release publishes (the default).
+#
+# Both carry the same `fihris_mukawwinat.json`, and `--tawzee` writes the
+# release's content-addressed component objects once for both — 416 objects,
+# 184,008,262 bytes for the whole matrix, because the three Unity generations of
+# one backend and architecture are byte-identical trees that an object named by
+# its own hash stores once.
+#
+# Artifacts are renamed per set: `Taarib_<v>_<arch>-nahif.<ext>` and
+# `-kamil.<ext>`. Neither keeps the bare name, so a release page can never offer
+# one of them under a name that says nothing about which it is.
 #
 # Any stage may be skipped with TAARIB_TAKHATTI=unity,wasm — which is safe by
 # construction, because `tajmee` refuses to write a manifest over a tree that is
@@ -52,16 +70,22 @@ JIDHR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 hadaf=""
 jalb=0
+taqm="kila"
 # The staging tool reads cargo's outputs from here. It stays relative so that a
 # Windows cargo invoked from WSL and a WSL cargo agree on one directory.
 ahdaf="target"
+# Where the release's content-addressed component objects are written. Relative
+# for the reason `ahdaf` is, and under `target/` because it is build output.
+tawzee="target/tajmee/tawzee"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --hadaf) hadaf="${2-}"; shift 2 ;;
     --ahdaf) ahdaf="${2-}"; shift 2 ;;
+    --taqm) taqm="${2-}"; shift 2 ;;
+    --tawzee) tawzee="${2-}"; shift 2 ;;
     --jalb) jalb=1; shift ;;
-    -h|--help) sed -n '2,41p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,59p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) printf 'isdar: unknown argument %s\n' "$1" >&2; exit 2 ;;
   esac
 done
@@ -70,6 +94,13 @@ if [ -z "$hadaf" ]; then
   printf 'isdar: --hadaf is required; see --help\n' >&2
   exit 2
 fi
+
+case "$taqm" in
+  nahif) ATQUM=(nahif) ;;
+  kamil) ATQUM=(kamil) ;;
+  kila)  ATQUM=(nahif kamil) ;;
+  *) printf 'isdar: --taqm takes nahif, kamil or kila, not %s\n' "$taqm" >&2; exit 2 ;;
+esac
 
 # The cargo that builds the host-side binary and the wasm core.
 QARGO="${TAARIB_CARGO:-cargo}"
@@ -148,6 +179,95 @@ lazim() {
     printf 'isdar: %s is not on PATH; %s\n' "$1" "$2" >&2
     exit 1
   fi
+}
+
+# Where one component set's staged tree is kept between staging and bundling.
+#
+# Both sets are staged before either is bundled, and that is not a tidiness
+# preference. The studio compile writes into `$ahdaf/$hadaf/release/`, which on
+# a Windows release is the same directory the `hamula` cdylibs live in, and the
+# studio links three of those crates as plain rlibs — so the first `tauri build`
+# replaces `taarib_tabaqa.dll` with a copy exporting no `taarib_bidaya`. A
+# second staging pass after it would be refused by name, correctly, and the
+# release would fail half-published. Staging both first is what keeps the one
+# window where the bytes on disk are the payload bytes.
+mustaqarr_taqm() { printf '%s/tajmee/mustaqarr/%s' "$ahdaf" "$1"; }
+
+# Replaces `mawarid/` with one staged set, keeping the tracked README.
+#
+# `Mustaqarr::iftah` keeps that file when it stages in place; this copy has to
+# keep it for the same reason — `tauri-build` checks the directory exists on
+# every build, and the file is what explains the directory to whoever clones.
+insib_mawarid() {
+  local min="$1" ila="$JIDHR/apps/studio/src-tauri/mawarid"
+  mkdir -p "$ila"
+  find "$ila" -mindepth 1 -maxdepth 1 ! -name README.md -exec rm -rf {} +
+  cp -a "$min/." "$ila/"
+}
+
+# Renames every artifact this bundling run produced, tagging it with its set.
+#
+# Neither set keeps the bare name. A release page offering `Taarib_1.0.1_amd64.deb`
+# beside `Taarib_1.0.1_amd64-kamil.deb` reads as "the normal one and a variant",
+# which is exactly the guess a user should not have to make about whether their
+# download will work offline.
+samm_huzam() {
+  local taqm_hali="$1" jidhr_huzam="$2" masar ism asas baqi
+  [ -d "$jidhr_huzam" ] || return 0
+  while IFS= read -r masar; do
+    ism="$(basename "$masar")"
+    case "$ism" in
+      *-nahif.*|*-kamil.*) continue ;;
+    esac
+    # The suffix goes before the extension, and the extension is peeled one
+    # known part at a time. A plain `${ism%%.*}` cuts at the first dot, which in
+    # `Taarib_1.0.1_amd64.deb` is inside the version — the tag would land in the
+    # middle of the number. Only these names are peeled, so nothing that merely
+    # contains a dot is mistaken for an extension.
+    asas="$ism"
+    baqi=""
+    while :; do
+      case "$asas" in
+        *.sig|*.gz|*.zip|*.xz|*.tar|*.deb|*.rpm|*.exe|*.dmg|*.msi|*.AppImage|*.app|*.nsis)
+          baqi=".${asas##*.}$baqi"
+          asas="${asas%.*}"
+          ;;
+        *) break ;;
+      esac
+    done
+    [ -n "$baqi" ] || continue
+    mv "$masar" "$(dirname "$masar")/${asas}-${taqm_hali}${baqi}"
+  done < <(find "$jidhr_huzam" -mindepth 2 -maxdepth 2 -type f)
+}
+
+# Re-compresses a .deb's data member with xz, in place.
+#
+# Measured on the 1.0.1 payload: gzip -9 gives 256,758,475 bytes and solid xz -9
+# gives 169,962,756 — a third of the download, for bytes that are identical once
+# installed. The tauri bundler writes `data.tar.gz` and offers no setting for it,
+# and dpkg has read xz data members since 1.15.6 (2010), which is older than
+# every distribution this package targets.
+#
+# The tar itself is never rebuilt, only recompressed: ownership, permissions and
+# every path inside it survive bit for bit, which a `dpkg-deb -R` round trip run
+# by a non-root builder would not.
+adghat_deb() {
+  local deb muaqqat
+  # Absolute, because every step below runs from inside the scratch directory.
+  deb="$(cd -- "$(dirname -- "$1")" && pwd)/$(basename -- "$1")"
+  muaqqat="$(mktemp -d)"
+  ( cd "$muaqqat" && ar x "$deb" )
+  if [ ! -f "$muaqqat/data.tar.gz" ]; then
+    rm -rf "$muaqqat"
+    return 0
+  fi
+  gunzip -c "$muaqqat/data.tar.gz" | xz -9 -T0 -c > "$muaqqat/data.tar.xz"
+  rm -f "$muaqqat/data.tar.gz" "$deb"
+  # Member order is part of the format: debian-binary first, uncompressed, then
+  # the control member, then the data member. `D` makes the archive
+  # reproducible by zeroing the timestamps and ids `ar` would otherwise stamp.
+  ( cd "$muaqqat" && ar rcD "$deb" debian-binary control.tar.* data.tar.xz )
+  rm -rf "$muaqqat"
 }
 
 # The game-side payload platforms this bundle carries, mirroring
@@ -269,18 +389,34 @@ if ! tuhmal mulhaq; then
 fi
 
 if ! tuhmal tajmee; then
-  marhala "tajmee — rows D1, J1, K1, M1, N1, and the manifest"
+  marhala "tajmee — rows D1, J1, K1, M1, N1, the manifest and the catalogue"
   lazim curl "the pinned BepInEx and font downloads are fetched with it"
-  wusata=(--hadaf "$hadaf" --jidhr "$(masar_lil_adah "$QARGO" "$JIDHR")" --ahdaf "$ahdaf")
-  if [ "$jalb" -eq 1 ]; then wusata+=(--jalb); fi
-  # Through `cargo run` rather than a path into the target directory: this
-  # workspace's target directory can be redirected by a user-level cargo
-  # config, and cargo knows where it put the binary.
-  #
-  # `--ahdaf` stays as given, which is where the payload builds above wrote.
-  # Rows H1, I1 and I2 are read from <jidhr>/target whatever this says, because
-  # none of the three is a cargo output.
-  "$QARGO" run --release -q -p taarib-tajmee -- "${wusata[@]}"
+  # Every set, before any bundling — see `mustaqarr_taqm` for why the order is
+  # not negotiable. Each pass reads, hashes and refuses-if-absent the whole
+  # matrix; the set decides only which of it the bundle carries.
+  for taqm_hali in "${ATQUM[@]}"; do
+    printf -- '-- %s\n' "$taqm_hali"
+    # The staging root is not cleared here: `Mustaqarr::iftah` empties it, and
+    # one place that decides what survives a re-stage is the whole reason the
+    # tracked `mawarid/README.md` stopped being deleted every run.
+    wusata=(
+      --hadaf "$hadaf"
+      --jidhr "$(masar_lil_adah "$QARGO" "$JIDHR")"
+      --ahdaf "$ahdaf"
+      --kharij "$(mustaqarr_taqm "$taqm_hali")"
+      --taqm "$taqm_hali"
+      --tawzee "$tawzee"
+    )
+    if [ "$jalb" -eq 1 ]; then wusata+=(--jalb); fi
+    # Through `cargo run` rather than a path into the target directory: this
+    # workspace's target directory can be redirected by a user-level cargo
+    # config, and cargo knows where it put the binary.
+    #
+    # `--ahdaf` stays as given, which is where the payload builds above wrote.
+    # Rows H1, I1 and I2 are read from <jidhr>/target whatever this says,
+    # because none of the three is a cargo output.
+    "$QARGO" run --release -q -p taarib-tajmee -- "${wusata[@]}"
+  done
 fi
 
 if [ -n "$MIRSA" ] && ! tuhmal badhra; then
@@ -316,34 +452,11 @@ if ! tuhmal wajiha; then
   ( cd apps/studio && pnpm install --frozen-lockfile && pnpm build )
 fi
 
-if ! tuhmal huzma; then
-  marhala "huzma — rows A1, A3, and the installer"
-  lazim "$TAURI" "install it with: cargo install tauri-cli --version ^2 --locked"
+JIDHR_HUZAM="$ahdaf/$hadaf/release/bundle"
 
-  # What the bundler ships is whatever `mawarid/` holds when it walks it, which
-  # is not necessarily what this run staged: `TAARIB_TAKHATTI=tajmee` skips the
-  # staging outright, and a tree an earlier run left for another triple carries
-  # that triple's payloads under names this one will never look for.
-  # `tadqiq_mawarid.mjs` catches neither — it gates the fonts, and the fonts are
-  # the one part of the tree that is byte-identical on every target.
-  bayan="apps/studio/src-tauri/mawarid/bayan_mukawwinat.json"
-  if [ ! -f "$bayan" ]; then
-    printf 'isdar: %s is absent.\n' "$bayan" >&2
-    printf '       Its absence is the marker for a partial staging, and an\n' >&2
-    printf '       installer built over one refuses every component by name.\n' >&2
-    printf '       Run the tajmee stage before huzma.\n' >&2
-    exit 1
-  fi
-  # `awk` on the first `"hadaf"` line rather than a JSON parser: the manifest is
-  # pretty-printed, so the value is on the key's own line, and the only other
-  # keys in the file are `mukhattat`, `isdar`, `masar`, `hajm` and `sha256`.
-  mustaqirr="$(awk -F'"' '/^[[:space:]]*"hadaf"[[:space:]]*:/ { print $4; exit }' "$bayan")"
-  if [ "$mustaqirr" != "$hadaf" ]; then
-    printf 'isdar: mawarid/ is staged for %s, and this bundle is %s.\n' \
-      "$mustaqirr" "$hadaf" >&2
-    printf '       Re-run the tajmee stage for %s.\n' "$hadaf" >&2
-    exit 1
-  fi
+if ! tuhmal huzma; then
+  marhala "huzma — rows A1, A3, and one installer per component set"
+  lazim "$TAURI" "install it with: cargo install tauri-cli --version ^2 --locked"
 
   # `beforeBuildCommand` is emptied because the `wajiha` stage above already
   # built the frontend. Letting tauri run it again is not merely wasteful: it
@@ -368,13 +481,70 @@ if ! tuhmal huzma; then
   # gate that refuses to turn an unstaged `mawarid/` into an installer.
   mkdir -p target
   printf '{"build":{"beforeBuildCommand":""}}' > target/isdar-tajawuz.json
-  # `taarib-khatm/isdar` is passed only when an anchor was injected, and it is
-  # not decoration: the feature's own `const` assertion fails the compile if the
-  # variable went missing between here and the crate, which is the one failure
-  # mode that would otherwise ship silently.
-  ( cd apps/studio \
-      && "$TAURI" build --target "$hadaf" --config ../../target/isdar-tajawuz.json \
-        ${SIMAT_ISDAR[@]+"${SIMAT_ISDAR[@]}"} )
+
+  for taqm_hali in "${ATQUM[@]}"; do
+    marhala "huzma — $taqm_hali"
+    mustaqarr="$(mustaqarr_taqm "$taqm_hali")"
+    if [ ! -d "$mustaqarr" ]; then
+      printf 'isdar: %s is absent; run the tajmee stage for %s first.\n' \
+        "$mustaqarr" "$taqm_hali" >&2
+      exit 1
+    fi
+    insib_mawarid "$mustaqarr"
+
+    # What the bundler ships is whatever `mawarid/` holds when it walks it,
+    # which is not necessarily what this run staged: `TAARIB_TAKHATTI=tajmee`
+    # skips the staging outright, and a tree an earlier run left for another
+    # triple carries that triple's payloads under names this one will never look
+    # for. `tadqiq_mawarid.mjs` catches neither — it gates the fonts, and the
+    # fonts are the one part of the tree that is byte-identical on every target.
+    bayan="apps/studio/src-tauri/mawarid/bayan_mukawwinat.json"
+    if [ ! -f "$bayan" ]; then
+      printf 'isdar: %s is absent.\n' "$bayan" >&2
+      printf '       Its absence is the marker for a partial staging, and an\n' >&2
+      printf '       installer built over one refuses every component by name.\n' >&2
+      printf '       Run the tajmee stage before huzma.\n' >&2
+      exit 1
+    fi
+    # `awk` on the first line of each key rather than a JSON parser: the
+    # manifest is pretty-printed, so each value is on its own key's line.
+    mustaqirr="$(awk -F'"' '/^[[:space:]]*"hadaf"[[:space:]]*:/ { print $4; exit }' "$bayan")"
+    if [ "$mustaqirr" != "$hadaf" ]; then
+      printf 'isdar: mawarid/ is staged for %s, and this bundle is %s.\n' \
+        "$mustaqirr" "$hadaf" >&2
+      printf '       Re-run the tajmee stage for %s.\n' "$hadaf" >&2
+      exit 1
+    fi
+    mustaqirr_taqm="$(awk -F'"' '/^[[:space:]]*"taqm"[[:space:]]*:/ { print $4; exit }' "$bayan")"
+    if [ "$mustaqirr_taqm" != "$taqm_hali" ]; then
+      printf 'isdar: mawarid/ carries the %s set, and this bundle is %s.\n' \
+        "$mustaqirr_taqm" "$taqm_hali" >&2
+      exit 1
+    fi
+
+    # `taarib-khatm/isdar` is passed only when an anchor was injected, and it is
+    # not decoration: the feature's own `const` assertion fails the compile if
+    # the variable went missing between here and the crate, which is the one
+    # failure mode that would otherwise ship silently.
+    ( cd apps/studio \
+        && "$TAURI" build --target "$hadaf" --config ../../target/isdar-tajawuz.json \
+          ${SIMAT_ISDAR[@]+"${SIMAT_ISDAR[@]}"} )
+    samm_huzam "$taqm_hali" "$JIDHR_HUZAM"
+
+    # The .deb's data member, recompressed. Skipped with a named line rather
+    # than silently when the two tools are absent: a release that shipped a
+    # 257 MB package where a 170 MB one was intended is not a failure anybody
+    # would notice from the artifact list.
+    for deb in "$JIDHR_HUZAM/deb/"*-"$taqm_hali".deb; do
+      [ -f "$deb" ] || continue
+      if command -v ar >/dev/null 2>&1 && command -v xz >/dev/null 2>&1; then
+        adghat_deb "$deb"
+      else
+        printf 'isdar: ar or xz is not on PATH; %s keeps its gzip data member.\n' \
+          "$(basename "$deb")" >&2
+      fi
+    done
+  done
 fi
 
 marhala "تمّ"
@@ -387,6 +557,20 @@ else
   printf '            TAARIB_MIFTAH_ISDAR to build a release bundle.\n'
 fi
 printf '  manifest: apps/studio/src-tauri/mawarid/bayan_mukawwinat.json\n'
+printf '  catalogue: apps/studio/src-tauri/mawarid/fihris_mukawwinat.json\n'
 # `--target` is passed to the bundler, so the artifacts land one directory
 # deeper than an untargeted build would put them.
-printf '  bundle:   %s/%s/release/bundle/\n' "$ahdaf" "$hadaf"
+printf '  bundle:   %s/\n' "$JIDHR_HUZAM"
+if [ -d "$JIDHR_HUZAM" ]; then
+  # Every artifact with its size, because "which of these two do I upload, and
+  # how big is the one users get by default" is the question this whole split
+  # exists to answer, and it should not need a second command.
+  find "$JIDHR_HUZAM" -mindepth 2 -maxdepth 2 -type f -printf '  %12s  %p\n' \
+    | sort -k2
+fi
+if [ -d "$tawzee/mukawwinat" ]; then
+  printf '  objects:  %s — %s object(s), %s byte(s)\n' \
+    "$tawzee" \
+    "$(find "$tawzee/mukawwinat" -type f | wc -l)" \
+    "$(du -sb "$tawzee/mukawwinat" | cut -f1)"
+fi

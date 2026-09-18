@@ -46,6 +46,12 @@ blake3 = { workspace = true }
 # Backups are stored compressed; the recorded fingerprint is of the plaintext, so
 # nothing about verification depends on which release of this library is linked.
 zstd = { workspace = true }
+# The component catalogue is vouched for by a sha256 the staging manifest
+# carries, and `bayan_makhzan` proves that hash before it parses a byte of the
+# catalogue. BLAKE3 above is the install pipeline's own fingerprint; this one is
+# not a choice — it is the digest `taarib-tajmee` and `bayan_mukawwinat.json`
+# already speak, and a second algorithm here would mean re-hashing the release.
+sha2 = { workspace = true }
 walkdir = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

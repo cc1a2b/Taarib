@@ -28,7 +28,9 @@ use taarib_tarjama::dufaat::{
     KhiyaratJawla, SijillJawla, TaqaddumJawla, shaghghil_jawla, tabbiq_sijill, thiqat_min_sijill,
 };
 use taarib_tarjama::khata::KhataTarjama;
-use taarib_tarjama::masrad::{Masrad, MustalahMasrad, TadarubMustalah, wahhid_tadarub};
+use taarib_tarjama::masrad::{
+    Masrad, MustalahMasrad, NitaqMustalah, TadarubMustalah, wahhid_tadarub,
+};
 use taarib_tarjama::muzawwidun::{
     IdadatAnthropic, IdadatDeepL, IdadatGemini, IdadatGoogleMajjani, IdadatMicrosoft,
     IdadatMuwafiqOpenAI, IdhnInfaq, Itimad, Muzawwid, MuzawwidAnthropic, MuzawwidDeepL,
@@ -267,6 +269,9 @@ pub struct MustalahHie {
     pub arabi: String,
     /// The translator's note, when one was written.
     pub mulahaza: Option<String>,
+    /// Whether the product shipped this term rather than the project pinning
+    /// it; a project entry for the same source form overrides the built-in one.
+    pub mudmaj: bool,
 }
 
 /// One translation-memory suggestion.
@@ -1242,7 +1247,13 @@ pub fn anqidh_mashru(
     anqidh_dakhili(&masarat_hala, id, &waqt_alaan())
 }
 
-/// The glossary in force: terms harvested from the table plus the project's own file.
+/// The glossary in force: terms harvested from the table, the project's own
+/// file, and the built-in game-interface terminology underneath both.
+///
+/// The built-in list is merged last and still loses every collision — its
+/// scope ranks below both of the others — so it only ever fills a gap. That
+/// is why the harvested-then-file order above it is untouched: the project's
+/// file must keep beating a name the extractor guessed at.
 pub(crate) fn masrad_kamil(jidhr: &Path, sufuf: &[MudkhalNass]) -> Masrad {
     let mut masrad = Masrad::min_nusus(sufuf);
     let masar = jidhr.join(UDW_MASRAD);
@@ -1251,6 +1262,7 @@ pub(crate) fn masrad_kamil(jidhr: &Path, sufuf: &[MudkhalNass]) -> Masrad {
     {
         masrad.admij(mustalahat);
     }
+    masrad.admij(Masrad::min_mudmaj().mustalahat().cloned().collect());
     masrad
 }
 
@@ -1434,6 +1446,7 @@ pub fn iqtirahat_nass(
             masdar: mustalah.masdar.clone(),
             arabi: mustalah.arabi.clone(),
             mulahaza: mustalah.mulahaza.clone(),
+            mudmaj: mustalah.nitaq == NitaqMustalah::Mudmaj,
         })
         .collect();
 
@@ -1793,6 +1806,12 @@ pub async fn tarjim_nass(
         saqf_takalif: None,
         lahza,
         waqt: waqt.clone(),
+        // Somebody is looking at this one row and has pressed translate on it.
+        // The bulk run skips what the classifier called internal, because a
+        // provider asked about a key answers with prose; here the press is the
+        // override, and refusing it while the screen blamed the provider would
+        // be a lie about what happened.
+        yashmal_dakhili: true,
         ..KhiyaratJawla::default()
     };
     let jidhr = mashru.jidhr().to_path_buf();
@@ -1832,6 +1851,11 @@ pub async fn tarjim_nass(
         )
     } else if takhatti.farigha > 0 {
         (false, Some("النص الأصلي فارغ فلا شيء يُترجم.".to_owned()))
+    } else if takhatti.dakhiliya > 0 {
+        (
+            false,
+            Some("صُنّف هذا النص داخليًّا — مفتاحٌ أو رمز لا جملة — فلم يُرسَل.".to_owned()),
+        )
     } else if let Some(khata) = &taqreer.tawaqquf {
         (false, Some(khata.arabi()))
     } else {

@@ -107,6 +107,28 @@ pub enum SababRafd {
     /// archive contribute nothing" deserves the answer "because it is textures"
     /// rather than silence.
     BilaNusus,
+    /// The container holds one locale of a game that ships the same text in
+    /// several, and a different locale is the one being read.
+    ///
+    /// Not a loss, and the only refusal in this enum where that is true of
+    /// strings rather than of an empty container. A game shipping eleven locales
+    /// ships eleven renderings of *one* set of keys, the player reads one of
+    /// them at a time, and the table keeps every key once under the locale that
+    /// was read. Nothing became unreachable; eleven copies of the same work did
+    /// not get sent to a translator.
+    ///
+    /// It is recorded per container because the alternative — dropping ten
+    /// twelfths of an extraction in silence — is exactly the failure
+    /// [`TaqreerRafd`] exists to prevent. A user who wants a different source
+    /// locale has to be able to see which ones there were.
+    LughaGhayrMukhtara {
+        /// The locale this container holds.
+        lugha: String,
+        /// The locale that was read instead.
+        mukhtara: String,
+        /// How many strings were set aside with it.
+        adad: usize,
+    },
     /// This build will not read the member, and nothing the user does changes
     /// that.
     ///
@@ -175,11 +197,13 @@ impl SababRafd {
     /// Whether this refusal means strings were genuinely lost.
     ///
     /// False for [`SababRafd::BilaNusus`], which is a container that had nothing
-    /// to give. Counting it as a loss would make every extraction report look
-    /// worse than it was and train users to ignore the report.
+    /// to give, and for [`SababRafd::LughaGhayrMukhtara`], whose strings are the
+    /// same strings the table already holds in another locale. Counting either
+    /// as a loss would make every extraction report look worse than it was and
+    /// train users to ignore the report.
     #[must_use]
     pub const fn khasara(&self) -> bool {
-        !matches!(self, Self::BilaNusus)
+        !matches!(self, Self::BilaNusus | Self::LughaGhayrMukhtara { .. })
     }
 
     /// A stable short name for the kind of refusal, for grouping and logs.
@@ -193,6 +217,7 @@ impl SababRafd {
             Self::Talif { .. } => "talif",
             Self::TaadhurQira { .. } => "taadhur_qira",
             Self::BilaNusus => "bila_nusus",
+            Self::LughaGhayrMukhtara { .. } => "lugha_ghayr_mukhtara",
             Self::TajawuzHadd { .. } => "tajawuz_hadd",
             Self::HadUlBina { .. } => "had_ul_bina",
         }
@@ -203,9 +228,10 @@ impl SababRafd {
     ///
     /// The count goes into the field the sentence already prints rather than
     /// into a new one, so the shape every stored and displayed report has stays
-    /// what it was. Unchanged below two, and unchanged for the two reasons a
-    /// member count would not describe: a container read and empty, and a
-    /// Unity object count, which [`MujammiRafd`] sums instead.
+    /// what it was. Unchanged below two, and unchanged for the three reasons a
+    /// member count would not describe: a container read and empty, a Unity
+    /// object count, which [`MujammiRafd`] sums instead, and a set-aside locale,
+    /// which already counts strings rather than members.
     #[must_use]
     pub fn bi_adad(self, adad: usize) -> Self {
         if adad < 2 {
@@ -242,7 +268,9 @@ impl SababRafd {
                 qeema,
                 saqf,
             },
-            Self::BilaShajaratAnwa { .. } | Self::BilaNusus => self,
+            Self::BilaShajaratAnwa { .. } | Self::BilaNusus | Self::LughaGhayrMukhtara { .. } => {
+                self
+            },
         }
     }
 
@@ -269,6 +297,15 @@ impl SababRafd {
             Self::Talif { .. } => "الحاوية تالفة أو ناقصة، ولم يُستخرج منها شيء.".to_owned(),
             Self::TaadhurQira { .. } => "تعذّرت قراءة الملف.".to_owned(),
             Self::BilaNusus => "قُرئت الحاوية ولا تحتوي نصوصًا.".to_owned(),
+            Self::LughaGhayrMukhtara {
+                lugha,
+                mukhtara,
+                adad,
+            } => format!(
+                "تشحن هذه اللعبة النص نفسه بعدّة لغات وتعرض واحدة في كل مرة، وليس في ملفاتها ما \
+                 يسمّي اللغة المعروضة. قرأ تعريب ({mukhtara}) ونحّى {adad} نصًّا بلغة ({lugha}). \
+                 كل مفتاح تحمله هذه النصوص موجود في الجدول مرة واحدة بلغة ({mukhtara})."
+            ),
             Self::HadUlBina { wujid, sabab } => {
                 format!("{wujid}: لا تقرأه هذه النسخة من تعريب ({sabab}).")
             },
@@ -310,6 +347,16 @@ impl SababRafd {
             Self::Talif { sabab } => format!("The container is damaged: {sabab}"),
             Self::TaadhurQira { sabab } => format!("The file could not be read: {sabab}"),
             Self::BilaNusus => "Read, and holds no text.".to_owned(),
+            Self::LughaGhayrMukhtara {
+                lugha,
+                mukhtara,
+                adad,
+            } => format!(
+                "This game ships the same text in several locales and draws one of them at a \
+                 time, and nothing in its files names the one it draws. Taarib read {mukhtara} \
+                 and set {adad} {lugha} string(s) aside. Every key they carry is in the table \
+                 once, in {mukhtara}."
+            ),
             Self::HadUlBina { wujid, sabab } => {
                 format!("{wujid}: this build of Taarib does not read it ({sabab}).")
             },
@@ -332,6 +379,9 @@ impl SababRafd {
             Self::Talif { .. } => "اطلب من المتجر التحقّق من ملفات اللعبة.",
             Self::TaadhurQira { .. } => "تأكّد من صلاحيات الملف ومن أن اللعبة ليست قيد التشغيل.",
             Self::BilaNusus => "لا شيء مطلوب.",
+            Self::LughaGhayrMukhtara { .. } => {
+                "لا شيء مطلوب؛ المفاتيح نفسها في الجدول مرة واحدة باللغة التي قُرئت."
+            },
             Self::HadUlBina { .. } => "حدِّث تعريب؛ قد تقرأه نسخة أحدث. اللعبة سليمة.",
             Self::TajawuzHadd { .. } => "أبلغ عن هذه اللعبة؛ الحدّ هنا حدُّ تعريب لا عيبٌ في اللعبة.",
         }
@@ -351,6 +401,9 @@ impl SababRafd {
                 "Check the file's permissions, and that the game is not running."
             },
             Self::BilaNusus => "Nothing to do.",
+            Self::LughaGhayrMukhtara { .. } => {
+                "Nothing to do; the same keys are in the table once, in the locale that was read."
+            },
             Self::HadUlBina { .. } => "Update Taarib; a newer build may read it. The game is fine.",
             // Not "the container may be damaged". This ceiling is Taarib's own,
             // and a real game tripped it on a container that is perfectly

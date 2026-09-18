@@ -153,6 +153,28 @@ pub enum KhataMustawda {
         /// What the last attempt reported.
         sabab: String,
     },
+
+    /// The community index carries no owner signature at all.
+    ///
+    /// Either a revision cast before this scheme existed — the copy a machine
+    /// upgrading from 1.0.1 still holds in its cache — or a source serving a
+    /// body with the signature stripped off it. The two are the same refusal
+    /// because a client cannot tell them apart and must not try: an index
+    /// nobody signed decides nothing here, whatever its provenance.
+    #[error(
+        "the community translations index carries no owner signature, and nothing was read from it"
+    )]
+    FahrasMujtamaGhayrMuwaqqa,
+
+    /// The community index carries a signature that does not verify.
+    #[error(
+        "the community translations index signature was refused, and nothing was read from it: \
+         {sabab}"
+    )]
+    FahrasMujtamaTawqeeBatil {
+        /// Which check refused it.
+        sabab: String,
+    },
 }
 
 impl Tafsir for KhataMustawda {
@@ -176,23 +198,34 @@ impl Tafsir for KhataMustawda {
                     Self::FahrasMujtamaTalif { .. } => 13,
                     Self::FahrasMujtamaKabir { .. } => 14,
                     Self::FahrasMujtamaGhayrMutah { .. } => 15,
+                    Self::FahrasMujtamaGhayrMuwaqqa => 16,
+                    Self::FahrasMujtamaTawqeeBatil { .. } => 17,
                 },
         )
     }
 
     fn khutura(&self) -> Khutura {
         match self {
-            // Content that did not hash to what the manifest or the listing
-            // declared: a corrupted mirror, or a substitution.
+            // Content that did not hash to, or verify against, what the owner
+            // vouched for: a corrupted mirror, or a substitution. A community
+            // index whose signature fails is judged here and not with the rest
+            // of its family — nothing installs from that index, but its
+            // addresses are what the browser-open command is allowed to reach,
+            // and a body that no longer matches its signature is somebody
+            // choosing them.
             Self::BasmaGhayrMutabaqa { .. }
             | Self::TanzeelGhayrMutabiq { .. }
-            | Self::TasalsulLilkhalf { .. } => Khutura::Fadih,
+            | Self::TasalsulLilkhalf { .. }
+            | Self::FahrasMujtamaTawqeeBatil { .. } => Khutura::Fadih,
             Self::LaMutabaqa => Khutura::Maluma,
             // Nothing installs from the community index, so losing it costs a
-            // credit the screen cannot show and nothing the product does.
+            // credit the screen cannot show and nothing the product does. An
+            // unsigned one is the ordinary state of a cache written by an older
+            // build, which the next refresh replaces.
             Self::FahrasMujtamaTalif { .. }
             | Self::FahrasMujtamaKabir { .. }
-            | Self::FahrasMujtamaGhayrMutah { .. } => Khutura::Tanbeeh,
+            | Self::FahrasMujtamaGhayrMutah { .. }
+            | Self::FahrasMujtamaGhayrMuwaqqa => Khutura::Tanbeeh,
             _ => Khutura::Khatar,
         }
     }
@@ -240,6 +273,17 @@ impl Tafsir for KhataMustawda {
                  المحاولة عند توفّر الاتصال."
                     .to_owned()
             },
+            Self::FahrasMujtamaGhayrMuwaqqa => {
+                "فهرس تعريبات المجتمع لا يحمل توقيع المالك، فلم تُقرأ منه أيّ مشاركة. غالبًا نسخة \
+                 قديمة محفوظة من إصدار سابق لتعريب؛ أعِد المحاولة عند توفّر الاتصال ليُجلب الفهرس \
+                 الموقَّع ويحلّ محلّها."
+                    .to_owned()
+            },
+            Self::FahrasMujtamaTawqeeBatil { .. } => {
+                "توقيع فهرس تعريبات المجتمع لا يطابق مفتاح المالك في هذه النسخة، ولم يُقرأ منه \
+                 شيء ولم يُفتح منه رابط. قد يكون الفهرس قد عُدِّل بعد توقيعه أو وقّعه مفتاح آخر."
+                    .to_owned()
+            },
         }
     }
 
@@ -252,16 +296,20 @@ impl Tafsir for KhataMustawda {
             // The community index joins the transient class: a mirror lagging
             // behind the forge, or a source that is down, both resolve by
             // asking again. An index over the cap does not, and sits with the
-            // other answer nothing can act on.
+            // other answer nothing can act on. An unsigned index joins the
+            // transient class too: on an upgraded machine it is the cache an
+            // older build wrote, and asking again is what replaces it.
             Self::LaMasdar { .. }
             | Self::IstijabaFashila { .. }
             | Self::TanzeelFashil { .. }
             | Self::FahrasMujtamaTalif { .. }
-            | Self::FahrasMujtamaGhayrMutah { .. } => Khutwa::AadaMuhawala,
+            | Self::FahrasMujtamaGhayrMutah { .. }
+            | Self::FahrasMujtamaGhayrMuwaqqa => Khutwa::AadaMuhawala,
             Self::BayanTalif { .. } => Khutwa::TahdithTaarib,
             Self::TasalsulLilkhalf { .. }
             | Self::BasmaGhayrMutabaqa { .. }
-            | Self::TanzeelGhayrMutabiq { .. } => Khutwa::IblaghLilMalik,
+            | Self::TanzeelGhayrMutabiq { .. }
+            | Self::FahrasMujtamaTawqeeBatil { .. } => Khutwa::IblaghLilMalik,
             Self::ShareehaMajhula { .. }
             | Self::ShareehaTalifa { .. }
             | Self::HajmMufrit { .. } => Khutwa::FathTashkhis,
@@ -286,11 +334,12 @@ impl Tafsir for KhataMustawda {
             let _ = siyaq.insert(miftah.to_owned(), qeema);
         };
         match self {
-            Self::KhataMalaf { .. } | Self::LaMutabaqa => {},
+            Self::KhataMalaf { .. } | Self::LaMutabaqa | Self::FahrasMujtamaGhayrMuwaqqa => {},
             Self::LaMasdar { sabab }
             | Self::BayanTalif { sabab }
             | Self::FahrasMujtamaTalif { sabab }
-            | Self::FahrasMujtamaGhayrMutah { sabab } => {
+            | Self::FahrasMujtamaGhayrMutah { sabab }
+            | Self::FahrasMujtamaTawqeeBatil { sabab } => {
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             },
             Self::FahrasMujtamaKabir { hajm, hadd } => {

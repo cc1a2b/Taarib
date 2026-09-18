@@ -70,6 +70,7 @@ every desktop bundle carries the windows game-side set.
 | K1 | IL2CPP signature database | `assets/basmat/basmat.json` (committed) | inside D1's il2cpp components: `…/BepInEx/plugins/Taarib/basmat.json`, beside the assembly whose `Basmat/Qaida.cs` reads it | ✓ | ✓ | ✓ |
 | L1 | revocation list seed | `assets/qaimat_sahb.json` | — (compiled in via `include_bytes!`) | ✓ | ✓ | ✓ |
 | M1 | staging manifest | written by the staging tool | `bayan_mukawwinat.json` | ✓ | ✓ | ✓ |
+| M2 | component catalogue | written by the staging tool | `fihris_mukawwinat.json` — every component the release publishes, carried or not, with each file's size and sha256. Identical in both bundle variants; §4a | ✓ | ✓ | ✓ |
 | N1 | third-party notices | `assets/NOTICES.md` (committed) | `NOTICES.md` — the OFL-1.1 and LGPL-2.1 obligations of everything the bundle redistributes | ✓ | ✓ | ✓ |
 
 Wine/Proton reach: rows marked "as E" ship the **windows** build of that
@@ -119,14 +120,21 @@ drawn anything. Staging these payloads is correct — they are the real artifact
 
 The staging tool is the binary crate `crates/taarib-tajmee`. It never builds
 anything; it gathers already-built outputs into
-`apps/studio/src-tauri/mawarid/`, verifies, and writes `bayan_mukawwinat.json`.
-It exits non-zero listing **every** absent or hash-mismatched artifact, not the
-first. `tauri.conf.json` declares `bundle.resources = ["mawarid"]`, so the
-whole staged tree lands in the platform resource directory verbatim.
+`apps/studio/src-tauri/mawarid/`, verifies, and writes `fihris_mukawwinat.json`
+then `bayan_mukawwinat.json`. It exits non-zero listing **every** absent or
+hash-mismatched artifact, not the first, and writes neither document over an
+incomplete tree. `tauri.conf.json` declares `bundle.resources = ["mawarid"]`, so
+the whole staged tree lands in the platform resource directory verbatim.
 
 Fetched inputs (D1, J1) are pinned in `assets/aqfal/`: each lock entry is
 `{ rabt, isdar, hajm, sha256 }`. The tool refuses an unlocked or mismatched
 fetch; it never writes a hash it did not verify.
+
+`--taqm kamil|nahif` decides which components the bundle carries; `--tawzee
+<dir>` writes the release's content-addressed objects. Neither changes what is
+*verified*: every run reads, hashes and refuses-if-absent the whole matrix
+whichever set is asked for, because a slim bundle's catalogue is only
+trustworthy if the build machine held the real bytes it describes.
 
 `bayan_mukawwinat.json`:
 
@@ -135,12 +143,160 @@ fetch; it never writes a hash it did not verify.
   "mukhattat": 1,
   "isdar": "<workspace version>",
   "hadaf": "<target triple>",
+  "taqm": "kamil",
+  "fihris": { "hajm": 0, "sha256": "…" },
   "milaffat": [ { "masar": "mukawwinat/…", "hajm": 0, "sha256": "…" } ]
 }
 ```
 
-Paths are forward-slash, relative to `mawarid/`. The manifest is written last;
-its own absence marks a partial staging.
+Paths are forward-slash, relative to `mawarid/`. `taqm` and `fihris` default
+when absent — `kamil` and none — so a manifest written before the two variants
+existed still reads, and reads as what it is.
+
+The catalogue is written first and the manifest last. The manifest's own
+absence is what marks a partial staging, so it is strictly last; and the
+manifest is what vouches for the catalogue, so the catalogue has to exist and
+be hashed before the manifest can name it. `milaffat` lists only what **this**
+bundle carries, which for `nahif` is 214 of the matrix's 1,600 files.
+
+### Measured, on `x86_64-pc-windows-msvc`
+
+| | files | bytes |
+| --- | ---: | ---: |
+| whole component tree (`mukawwinat/`), 19 components | 1,565 | 519,747,711 |
+| the twelve BepInEx components | 1,542 | 475,472,457 |
+| — of which the six IL2CPP ones | 1,386 | 449,711,337 |
+| — of which the six Mono ones | 156 | 25,761,120 |
+| `mudkhal` and `mulhaq`, 7 components | 23 | 44,275,254 |
+| distinct blobs across the whole tree | 416 | 184,008,262 |
+
+Two facts drove the design. The six IL2CPP BepInEx components are **86.5%** of
+the component tree, because BepInEx's IL2CPP host ships a whole .NET 6 runtime
+beside itself and Unity's Mono host does not — one file,
+`dotnet/System.Private.CoreLib.dll`, is 10,631,320 bytes of each of them. And
+the `<jeel>` axis is **pure replication**: `il2cpp-qadeem-x64`,
+`il2cpp-wasat-x64` and `il2cpp-hadith-x64` are byte-identical trees, as are the
+three Mono ones, so 288 blobs appear in three components each — 399,022,359
+bytes shipped for 133,007,453 distinct. Only `<khalfiya>` and `<mimariya>`
+change a byte. Twelve component names, four distinct trees. **64.6% of the
+component tree is exact duplicate**, and no amount of on-demand fetching would
+have found that, because it is not a question about the user's library.
+
+That is why `--tawzee` names objects by their own hash rather than by component:
+one object store of 416 objects, 184,008,262 bytes, serves both variants and
+every platform. The store is additive and safe to share between runs and
+targets, because an object's name *is* its content; the catalogue is the
+authority on which objects a release needs, and an object no catalogue names is
+dead weight a refused run left behind.
+
+What that buys on the fetch side, measured over the same catalogue:
+
+| a library that needs | components | as logical bytes | objects | actually fetched |
+| --- | ---: | ---: | ---: | ---: |
+| one Unity 2022 IL2CPP x64 game | 1 | 77,919,018 | 231 | 77,919,018 |
+| IL2CPP x64, all three generations | 3 | 233,757,054 | 231 | 77,919,018 |
+| every IL2CPP variant | 6 | 449,711,337 | 374 | 142,461,976 |
+
+## 4a. The two bundle variants, and the catalogue
+
+A release publishes each target twice. The bundles differ in nothing but which
+components' bytes they carry:
+
+| set | carries | component tree | staged files | `.deb` data member, xz -9 |
+| --- | --- | ---: | ---: | ---: |
+| `nahif` | everything but the six IL2CPP BepInEx components | 70,036,374 | 214 | 25,284,320 |
+| `kamil` | the whole matrix — the offline bundle | 519,747,711 | 1,600 | 169,164,040 |
+
+Every number there is measured, not projected: two real staging runs, and the
+same `tar` and `xz -9` over each resulting `.deb` payload — the data member
+alone, so add the control member (32,369 bytes on 1.0.1) and the `ar` headers
+for the package. The shipped 1.0.1 `.deb` is 264,309,408 bytes with
+a gzip data member; recompressing that same package's data member to xz, which
+changes nothing a user installs, gives 170,765,526 — `dpkg-deb --info` and
+`--contents` both read the result, all 1,768 entries intact. `scripts/isdar.sh`
+does that recompression on every `.deb` it builds. The AppImage and the NSIS
+installer choose their own compressor inside tools this script does not
+configure, and are untouched.
+
+Artifacts are named `Taarib_<v>_<arch>-nahif.<ext>` and `-kamil.<ext>`. Neither
+keeps the bare name: a release page offering `Taarib_1.0.1_amd64.deb` beside
+`Taarib_1.0.1_amd64-kamil.deb` reads as "the normal one and a variant", which is
+exactly the guess a user should not have to make about whether their download
+will work with no network.
+
+`fihris_mukawwinat.json` is **identical in both**, and describes the whole
+release:
+
+```json
+{
+  "mukhattat": 1,
+  "isdar": "<workspace version>",
+  "hadaf": "<target triple>",
+  "mukawwinat": [
+    {
+      "ism": "bepinex/windows/il2cpp-hadith-x64",
+      "fi_alhuzma": false,
+      "hajm": 77919018,
+      "milaffat": [ { "masar": "BepInEx/core/…", "hajm": 0, "sha256": "…" } ]
+    }
+  ]
+}
+```
+
+`ism` is exactly what `tarkib::MukawwinItar::ism` builds, so the name a scanned
+game resolves to is the name the catalogue is keyed by, with no translation
+step in between. `masar` is relative to the component root, not to `mawarid/`.
+
+**What the library needs.** `taarib_kashf` finds the games, `taarib_muharrik`
+identifies engine, backend, architecture and version, and
+`tarkib::hajat_itar(muharrik, nizam, beea)` already answers which component
+each one requires — `HajatItar::Matlub(MukawwinItar)` or a named
+`SababLaHaja`. The set a library needs is that answer over every scanned game,
+deduplicated. Nothing new decides it. A machine with only Unity Mono x64 games
+resolves to at most three names out of nineteen; one with a single Unity 2022
+IL2CPP x64 game resolves to `bepinex/windows/il2cpp-hadith-x64` and needs
+77,919,018 bytes that the slim bundle does not carry. A game that appears later
+is the same question asked again — the catalogue is in the bundle, not fetched,
+so a rescan can answer it with no network.
+
+**Trust.** The catalogue is not signed, and does not need to be, because it
+never arrives over a network: it rides inside the installer, and
+`bayan_mukawwinat.json` — which rides in the same installer, under the same
+signature — records its size and sha256. `bayan_makhzan::iqra_fihris` proves
+that hash before it parses a byte. So a fetch trusts the network for *nothing*:
+the bytes it accepts are the ones whose sha256 the user's own installer already
+committed to, and a hostile or stale mirror can do nothing but fail the
+comparison. No second signing path is introduced, and `khatm` remains the only
+crate that builds a signature.
+
+That holds for as long as the set of components is fixed at release time, which
+it is. Adding a component *between* releases would need a document served from
+the registry root and signed detached by the `isdar` identity, exactly as
+`tahdith.json` is (§6) — the same mechanism, not a new one. Nothing in this
+design requires that, and nothing in it should be built until a release actually
+needs to add a component mid-cycle.
+
+**Failure behaviour.** Each case leaves the product in a state that explains
+itself, and the refusal being reused is the one that already existed rather than
+a second one beside it:
+
+| case | what happens |
+| --- | --- |
+| a component the bundle does not carry | `bayan_makhzan::kamil_hasab_bayan` already refuses a component the store's manifest never listed — `KhataTathbeet::MukawwinMafqud`, naming it. `hala_mukawwin` adds only the second question, so the message can be "not here, 77,919,018 bytes and 231 files away, and the offline bundle carries it" instead of "not here" |
+| no network | the component stays absent and the refusal above is what the user sees. Nothing is half-installed, because nothing is installed: `tahaqquq_mukawwin` proves the component and its loader are in the store *before* a confirmation screen promises anything |
+| a transfer that stops mid-way | an object is written to a `.juzii.<pid>` sibling and renamed onto its hash-named path only once its bytes hash to that name — `qufl::ijlib` and `Mustaqarr::uktub_kaghrad` both follow this rule. A partial never acquires a name that asserts a hash its contents do not have, so the next run refetches instead of reporting a supply-chain alarm |
+| a hash mismatch | the object is refused and the partial removed. The store is never written, so the component stays exactly as absent as it was, and the message names the expected and computed digests |
+| disk full | the write fails and is named with its path (`MakhzanGhayrKatib`, "check permissions and free space"). The catalogue carries the component's total size, so a surface can state the requirement before starting rather than discovering it part-way |
+
+**Not implemented.** The download itself. The verification, the selection, the
+catalogue, the object store and the refusal path are all here; what is missing
+is the code that reads the catalogue, fetches the absent objects and writes them
+into the store. It needs an HTTP client, and the two crates that have one are
+`taarib-mustawda` (the registry client) and `taarib-tarjama`; `taarib-tathbeet`
+is deliberately offline and must stay so. Until that lands, the published
+default is `kamil` and `nahif` is built and measured but not offered as a
+download — a slim bundle whose absent components cannot be fetched is a
+regression for every IL2CPP title, and the size win is not worth it.
 
 ## 5. Runtime resolution
 
@@ -192,7 +348,7 @@ unless they explicitly opt in to deleting it.
 | 2 linux | `docs/tawzee/linux.md`, `apps/studio/src-tauri/linux/taarib.desktop` |
 | 3 steamdeck | `docs/tawzee/steamdeck.md` |
 | 4 macos | `docs/tawzee/macos.md`, `apps/studio/src-tauri/macos/taarib.entitlements` |
-| 5 staging | `crates/taarib-tajmee/` (whole crate), `assets/aqfal/qufl_bepinex.json`, `assets/aqfal/qufl_khutut.json` |
+| 5 staging | `crates/taarib-tajmee/` (whole crate), `crates/taarib-tathbeet/src/bayan_makhzan.rs`, `scripts/isdar.sh`, `assets/aqfal/qufl_bepinex.json`, `assets/aqfal/qufl_khutut.json` |
 | 6 update core | `crates/taarib-tahdith/src/{lib,bayan,jalb}.rs`, `crates/taarib-tahdith/Cargo.toml` |
 | 7 update safety | `crates/taarib-tahdith/src/tabdil.rs` |
 | 8 restore-on-uninstall | `apps/studio/src-tauri/src/istiada_cli.rs` |

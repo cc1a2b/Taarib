@@ -33,13 +33,13 @@ use taarib_tathbeet::taraju::{
 };
 use taarib_tathbeet::tarkib::{HajatItar, KhuttatTarkib, LubaMuhallala, NawMudkhal, TalabItlaq};
 use taarib_tathbeet::wukala::WakeelQaim;
-use taarib_usus::ISDAR;
 use taarib_usus::idadat::{Idadat, MakhzanIdadat};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
 use taarib_usus::khata_min;
 use taarib_usus::masarat::Masarat;
+use taarib_usus::{ISDAR, Lugha};
 use tauri::Emitter as _;
 
 use crate::luba_awamir::{
@@ -469,6 +469,9 @@ pub struct HalatIqrar {
     pub waqt: Option<String>,
     /// Which build of Taarib asked.
     pub isdar_taarib: Option<String>,
+    /// Which of the two renderings was on screen when it was given, or [`None`]
+    /// for a record written before that was recorded.
+    pub lugha_nass: Option<Lugha>,
 }
 
 // ---------------------------------------------------------------------------
@@ -906,6 +909,11 @@ pub fn iqrar_aman(masarat: tauri::State<'_, Masarat>) -> Result<HalatIqrar, Khat
 /// The timestamp comes from the store's own clock rather than the host's, so
 /// two records written in one session cannot disagree about when it was.
 ///
+/// `lugha` is the rendering the panel actually drew, which the caller sends
+/// rather than the backend reading it out of the settings: a session can be
+/// showing one language while the stored preference says another, and the
+/// record has to name the words the person read.
+///
 /// # Errors
 ///
 /// [`taarib_aman::KhataAman`] when the record cannot be written, and whatever
@@ -915,11 +923,14 @@ pub fn iqrar_aman(masarat: tauri::State<'_, Masarat>) -> Result<HalatIqrar, Khat
 pub fn sajjil_iqrar_aman(
     masarat: tauri::State<'_, Masarat>,
     makhzan: tauri::State<'_, Makhzan>,
+    lugha: Lugha,
 ) -> Result<HalatIqrar, Khata> {
     let waqt = makhzan.bil_qira(alaan)?;
-    let sijill = iqrar::ahfaz(&masar_iqrar(&masarat), waqt, ISDAR.to_owned())?;
+    let sijill =
+        iqrar::ahfaz_bi_lugha(&masar_iqrar(&masarat), waqt, ISDAR.to_owned(), Some(lugha))?;
     tracing::info!(
         isdar_nass = sijill.isdar_nass,
+        lugha = lugha.wasm(),
         "the safety statement was acknowledged"
     );
     Ok(iqrar_hie(Some(&sijill)))
@@ -1147,6 +1158,7 @@ fn iqrar_hie(sijill: Option<&SijillIqrar>) -> HalatIqrar {
         nass_injilizi: iqrar::NASS_INJILIZI.to_owned(),
         waqt: sijill.map(|wahid| wahid.waqt.clone()),
         isdar_taarib: sijill.map(|wahid| wahid.isdar_taarib.clone()),
+        lugha_nass: sijill.and_then(|wahid| wahid.lugha_nass),
     }
 }
 
@@ -3249,5 +3261,49 @@ mod ikhtibarat {
         let khata = khata_naqra(&fashal, ISM);
 
         assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 29);
+    }
+
+    /// The whole re-ask, along the path `iqrar_aman` and `sajjil_iqrar_aman`
+    /// take: a record written by a build that shipped statement version one is
+    /// read off disk, reported as outstanding, and stops being outstanding only
+    /// once the current statement is acknowledged — and the new record names
+    /// the rendering that was read.
+    #[test]
+    fn iqrar_qadeem_yuad_talabuhu_thumma_yuqfal() -> NatijatIkhtibar {
+        let (masarat, _haris) = jidhr_muaqqat();
+        let malaf = masar_iqrar(&masarat);
+        std::fs::create_dir_all(masarat.jidhr_bayanat())?;
+        std::fs::write(
+            &malaf,
+            br#"{"isdar_nass":1,"waqt":"2026-01-01T00:00:00Z","isdar_taarib":"0.1.0"}"#,
+        )?;
+
+        let qadeem = iqrar_hie(iqrar::iqra(&malaf)?.as_ref());
+        assert!(
+            qadeem.yahtaj,
+            "a record of statement version one is asked for again"
+        );
+        assert_eq!(qadeem.isdar_nass, iqrar::ISDAR_NASS);
+        assert_eq!(qadeem.lugha_nass, None, "the old record names no rendering");
+        assert!(qadeem.nass_arabi.contains("خدمة ترجمة Google المجانية"));
+        assert!(
+            qadeem
+                .nass_injilizi
+                .contains("Google Translate web service")
+        );
+
+        let jadeed = iqrar_hie(Some(&iqrar::ahfaz_bi_lugha(
+            &malaf,
+            "2026-09-18T00:00:00Z".to_owned(),
+            ISDAR.to_owned(),
+            Some(Lugha::Injilizi),
+        )?));
+        assert!(!jadeed.yahtaj, "the current statement is not asked twice");
+        assert_eq!(jadeed.lugha_nass, Some(Lugha::Injilizi));
+
+        let baad_ilaqa = iqrar_hie(iqrar::iqra(&malaf)?.as_ref());
+        assert!(!baad_ilaqa.yahtaj, "and the answer survives a reread");
+        assert_eq!(baad_ilaqa.lugha_nass, Some(Lugha::Injilizi));
+        Ok(())
     }
 }

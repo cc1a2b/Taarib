@@ -36,9 +36,10 @@ taarib-khatm = { workspace = true }
 
 reqwest = { workspace = true }
 blake3 = { workspace = true }
-# Only the registry caster (`src/bin/sabk.rs`) uses these two: the signing key's
-# public half is written as hex into the revocation list's signature, and a game
-# identity arrives on its command line as a uuid.
+# Signatures travel as hexadecimal: the community index carries the owner's in
+# its own document, and the caster writes the signing key's public half beside
+# the revocation list's. `uuid` is the caster's alone — a game identity arrives
+# on its command line as one.
 hex = { workspace = true }
 uuid = { workspace = true }
 serde = { workspace = true }

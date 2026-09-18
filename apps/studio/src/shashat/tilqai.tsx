@@ -23,6 +23,7 @@ import { Zuhur } from '@/mukawwinat/zuhur';
 import type { AqlLubaHie, Idadat, Lugha, NizamArqam, TafasilLuba } from '@/mustalahat/awamir';
 import { HARAKAT_LAWHA, haraka } from '@/nizam/haraka';
 import type {
+  HalatIltiqat,
   HalatMarhala,
   HukmTilqai,
   KhataTilqai,
@@ -75,6 +76,27 @@ const ANZIMAT_ARQAM: Readonly<Record<NizamArqam, 'latn' | 'arab' | 'arabext'>> =
   arabi: 'arab',
   farisi: 'arabext',
 };
+
+/**
+ * When a recorded pass was written, in the reader's own calendar and digits.
+ *
+ * The same shape the game screen uses for the same kind of value, built per
+ * call because the panel that shows it draws at most once per screen. A value
+ * that is not a timestamp is shown as it arrived rather than as `Invalid Date`:
+ * the sentence around it is still true, and a filesystem that reported a time
+ * this document cannot parse is not a reason to say nothing.
+ */
+function nassWaqt(khaam: string, lugha: Lugha, arqam: NizamArqam): string {
+  const lahza = new Date(khaam);
+  if (Number.isNaN(lahza.getTime())) {
+    return khaam;
+  }
+  return new Intl.DateTimeFormat(wasm(lugha), {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    numberingSystem: ANZIMAT_ARQAM[arqam],
+  }).format(lahza);
+}
 
 const ASMA_MARAHIL: Readonly<Record<MarhalatTilqai, MiftahLugha>> = {
   istikhraj: 'tilqai.marhala.istikhraj',
@@ -436,6 +458,191 @@ function LawhatQira({ qira, lugha, munassiq }: KhasaisQira): JSX.Element {
   );
 }
 
+interface KhasaisJawla {
+  readonly lugha: Lugha;
+  readonly munassiq: Munassiqat;
+  /** The recorder's state, or null while it is being read and when it failed. */
+  readonly hala: HalatIltiqat | null;
+  /** When a waiting pass was written, already formatted. */
+  readonly waqtJalsa: string;
+  /** Whether a recorded pass is already in this run's own table. */
+  readonly multaqat: boolean;
+  /** Whether the recorder switch is in flight. */
+  readonly yantazir: boolean;
+  /** Whether the run this panel's primary button starts is in flight. */
+  readonly yantazirDamm: boolean;
+  /** Whether one of the screen's gates is holding every start. */
+  readonly mamnuBadi: boolean;
+  /** The id of the line saying why, for the button that is held. */
+  readonly sababTawaqquf: string | undefined;
+  /** The same sentence, for the pointer. */
+  readonly sababNass: string | undefined;
+  readonly alaTasjil: (mufaal: boolean) => void;
+  readonly alaTashghil: () => void;
+  readonly alaTahaqquq: () => void;
+  readonly alaDamm: () => void;
+}
+
+/**
+ * الجولة المسجَّلة — the panel that turns "your game is half translated" into
+ * something the reader can act on without knowing the word for it.
+ *
+ * ## Why this panel exists at all
+ *
+ * A Unity release build ships no type tree. Its localization tables read fine
+ * and every string a component draws does not, so the one-button run reads the
+ * menus, translates them, installs, and reports success — and the person launches
+ * a game whose menus are Arabic and whose heads-up display, tutorial and warnings
+ * are not. There is nothing wrong, nothing failed, and no sentence anywhere says
+ * so. The reasonable conclusion from inside that experience is that the product
+ * is broken.
+ *
+ * So the run does **not** stop and ask first. Stopping would withhold the menu
+ * translation the person can have today over a recording they have not made yet,
+ * on a game the product can genuinely serve in part. It runs, installs what it
+ * has, and then this panel states what is still missing and hands over the three
+ * presses that fetch it. That ordering is also what makes the offer honest:
+ * recording happens inside the game, through the same adapter that draws the
+ * Arabic, so the first install is what makes recording possible at all.
+ *
+ * ## The word "capture" is never used
+ *
+ * Not in the title, not in a button, not in the explanation. A person who has
+ * never translated anything does not know it, and a feature nobody can name is a
+ * feature nobody finds. What they read is that part of the game is not in its
+ * files, and what they press is *record a pass*.
+ *
+ * ## The four states, and the one that is a trap
+ *
+ * A waiting, unmerged pass is checked **before** the recorder's own switch, and
+ * that order is load-bearing. The adapter writes its session by truncating the
+ * file, so a second pass destroys an unmerged first one — which means this panel
+ * must never offer to record while a recording is waiting to be used. In that
+ * state there is exactly one button and it is the one that consumes the pass.
+ */
+function LawhatJawla({
+  lugha,
+  munassiq,
+  hala,
+  waqtJalsa,
+  multaqat,
+  yantazir,
+  yantazirDamm,
+  mamnuBadi,
+  sababTawaqquf,
+  sababNass,
+  alaTasjil,
+  alaTashghil,
+  alaTahaqquq,
+  alaDamm,
+}: KhasaisJawla): JSX.Element {
+  const jalsa = hala?.jalsa ?? null;
+  const muntazira = jalsa !== null && !jalsa.madmuja;
+
+  // Nothing to record with yet: the run has not installed a patch, so the
+  // adapter that records is not in the game. Stated, with no control, because a
+  // switch that cannot be thrown is worse than a sentence that says why.
+  if (hala === null || !hala.mutah) {
+    return (
+      <section className="tilqai__qism tilqai__qism--tanbeeh" aria-labelledby="tilqai-unwan-jawla">
+        <h2 id="tilqai-unwan-jawla" className="tilqai__unwan">
+          {t('tilqai.jawla.unwan', lugha)}
+        </h2>
+        <p className="tilqai__nass">{t('tilqai.jawla.sharh', lugha)}</p>
+        <p className="tilqai__nass">{t('tilqai.jawla.ghayr_mutah', lugha)}</p>
+      </section>
+    );
+  }
+
+  if (muntazira) {
+    return (
+      <section className="tilqai__qism tilqai__qism--tanbeeh" aria-labelledby="tilqai-unwan-jawla">
+        <h2 id="tilqai-unwan-jawla" className="tilqai__unwan">
+          {t('tilqai.jawla.jahiza_unwan', lugha)}
+        </h2>
+        <p className="tilqai__nass">
+          {t('tilqai.jawla.jahiza_sharh', lugha, {
+            nusus: jam('tilqai.nusus', lugha, jalsa.nusus, munassiq),
+            waqt: waqtJalsa,
+          })}
+        </p>
+        {jalsa.mabtura ? <p className="tilqai__nass">{t('tilqai.jawla.mabtura', lugha)}</p> : null}
+        <div className="tilqai__afal">
+          <button
+            type="button"
+            className="zir zir--tamyeez"
+            aria-busy={yantazirDamm}
+            aria-disabled={mamnuBadi}
+            aria-describedby={sababTawaqquf}
+            title={sababNass}
+            onClick={alaDamm}
+          >
+            {t(yantazirDamm ? 'tilqai.jawla.jari_damm' : 'tilqai.jawla.dumm', lugha)}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (hala.musajjil) {
+    return (
+      <section className="tilqai__qism tilqai__qism--tanbeeh" aria-labelledby="tilqai-unwan-jawla">
+        <h2 id="tilqai-unwan-jawla" className="tilqai__unwan">
+          {t('tilqai.jawla.tasjil_unwan', lugha)}
+        </h2>
+        <p className="tilqai__nass">{t('tilqai.jawla.tasjil_sharh', lugha)}</p>
+        <p className="tilqai__nass">{t('tilqai.jawla.tahdheer', lugha)}</p>
+        <div className="tilqai__afal">
+          <button type="button" className="zir zir--tamyeez" onClick={alaTashghil}>
+            {t('tilqai.jahiz.shaghghil', lugha)}
+          </button>
+          <button type="button" className="zir" onClick={alaTahaqquq}>
+            {t('tilqai.jawla.tahaqquq', lugha)}
+          </button>
+          <button
+            type="button"
+            className="zir"
+            aria-busy={yantazir}
+            onClick={() => {
+              alaTasjil(false);
+            }}
+          >
+            {t('tilqai.jawla.awqif', lugha)}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  // Nothing waiting and nothing recording. The heading is the difference
+  // between a person who has never done this and one who has: the second is
+  // told what the last pass reached and that another reaches more, which is the
+  // honest shape of a coverage that improves rather than completes.
+  return (
+    <section className="tilqai__qism tilqai__qism--tanbeeh" aria-labelledby="tilqai-unwan-jawla">
+      <h2 id="tilqai-unwan-jawla" className="tilqai__unwan">
+        {t(multaqat ? 'tilqai.jawla.madmuja_unwan' : 'tilqai.jawla.unwan', lugha)}
+      </h2>
+      <p className="tilqai__nass">
+        {t(multaqat ? 'tilqai.jawla.madmuja_sharh' : 'tilqai.jawla.sharh', lugha)}
+      </p>
+      <p className="tilqai__nass">{t('tilqai.jawla.tahdheer', lugha)}</p>
+      <div className="tilqai__afal">
+        <button
+          type="button"
+          className="zir zir--tamyeez"
+          aria-busy={yantazir}
+          onClick={() => {
+            alaTasjil(true);
+          }}
+        >
+          {t(multaqat ? 'tilqai.jawla.marra_ukhra' : 'tilqai.jawla.ibda', lugha)}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 interface KhasaisJawda {
   readonly lugha: Lugha;
   readonly muarrif: string;
@@ -643,7 +850,7 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
   // Which control is waiting on the backend, so the arc turns on the button
   // that was pressed and not on its neighbour in the same band. Read only while
   // a call is in flight; the value left behind by the last one is masked.
-  const [amalJari, setAmalJari] = useState<'ibda' | 'istinaf' | 'alghi' | null>(null);
+  const [amalJari, setAmalJari] = useState<'ibda' | 'istinaf' | 'alghi' | 'damm' | null>(null);
   const mashghul = yantazir ? amalJari : null;
 
   const umla = laqta?.takalif.umla ?? hukm?.takalif.umla ?? 'USD';
@@ -663,6 +870,32 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
   // this is Taarib saying not yet.
   const mamnu = !tasil(khasais.jahiziya ?? null);
   const yabda = wajh === 'hukm' || wajh === 'mulgha' || wajh === 'fashal';
+  /*
+   * Whether the panel about the untranslated half is drawn at all.
+   *
+   * `yanfa_iltiqat` comes off the run's own extraction report: the refusal
+   * report said some container holds text no file reader on this machine can
+   * open. It is therefore only ever true after a run has read this game, which
+   * is what keeps the panel off the verdict screen — there is nothing to say
+   * about coverage before anything has been read. Hidden while the run is
+   * moving, like every other standing statement here: it describes what the
+   * last pass concluded, and a list of stages is not the place for it.
+   */
+  const yanqusIltiqat = laqta !== null && laqta.yanfa_iltiqat && !yajri;
+
+  /*
+   * Whether that panel is about to offer a start of its own.
+   *
+   * It matters up here rather than only down at the panel, because the two
+   * acknowledgements — the first-run statement and the multiplayer risk — are
+   * drawn under the anchor and hidden on a face that offers no start. A finished
+   * run is exactly such a face, and its recorded-pass panel *does* offer one: on
+   * a multiplayer game the tick resets with the screen, so the button would be
+   * refused by a gate whose panel was nowhere on screen. The question has to
+   * stand wherever the press does.
+   */
+  const yudimm =
+    yanqusIltiqat && halat.iltiqat?.jalsa != null && !halat.iltiqat.jalsa.madmuja;
   const naqs = khasais.naqs ?? null;
 
   /* -------------------------------------------------------------------------
@@ -788,12 +1021,12 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
    * acknowledgement is read here rather than passed in, because what has to
    * reach the backend is the answer as it stands at the moment of the press.
    */
-  const ibdaMahmi = (istinaf: boolean): void => {
+  const ibdaMahmi = (istinaf: boolean, dammIltiqat = false): void => {
     if (yantazir || mamnuBadi) {
       return;
     }
-    setAmalJari(istinaf ? 'istinaf' : 'ibda');
-    halat.ibda(istinaf, iqrarShabaka);
+    setAmalJari(dammIltiqat ? 'damm' : istinaf ? 'istinaf' : 'ibda');
+    halat.ibda(istinaf, iqrarShabaka, dammIltiqat);
   };
 
   /** The one place a run is stopped from: the anchor's button and the palette's entry. */
@@ -984,6 +1217,29 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
   const marahil = laqta?.marahil ?? null;
   const mustanifa = wajh === 'mutawaqqifa';
 
+  /*
+   * The recorded pass is produced by a game running outside this window, so the
+   * moment its state can have changed is the moment this window gets focus back.
+   * Nothing polls: a person who launched a game is away for as long as they are
+   * playing, and a timer would read a directory every few seconds for an hour to
+   * catch an event the window is told about anyway.
+   *
+   * The panel also carries an explicit control that does the same read, because
+   * a game running borderless-fullscreen on a second display can leave this
+   * window focused the whole time.
+   */
+  const aidIltiqat = halat.aidIltiqat;
+  useEffect(() => {
+    const ala = (): void => {
+      aidIltiqat();
+    };
+    window.addEventListener('focus', ala);
+    return () => {
+      window.removeEventListener('focus', ala);
+    };
+  }, [aidIltiqat]);
+
+
   return (
     <div className="tilqai">
       <RaasShasha
@@ -1101,7 +1357,7 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
             {/* No Zuhur around this one: the panel runs its own reveal, and a
                 second one outside it would animate a wrapper whose content is
                 already animating. */}
-            {!mamnu && !maniQati && (yabda || mustanifa) ? (
+            {!mamnu && !maniQati && (yabda || mustanifa || yudimm) ? (
               <>
                 {/* Revealing a panel is not an announcement: a press refused at
                     the door has to say so to a reader who cannot see the panel
@@ -1121,7 +1377,7 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
             ) : null}
 
             <Zuhur
-              maftuh={yalzamShabaka && !mamnu && !maniQati && (yabda || mustanifa)}
+              maftuh={yalzamShabaka && !mamnu && !maniQati && (yabda || mustanifa || yudimm)}
               className="tilqai__iqrar-shabaka"
             >
                 {/* Revealing a panel is not an announcement. A press that was
@@ -1158,7 +1414,7 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                 />
             </Zuhur>
 
-            <Zuhur maftuh={mamnu && (yabda || mustanifa)}>
+            <Zuhur maftuh={mamnu && (yabda || mustanifa || yudimm)}>
               <section
                 className="tilqai__band tilqai__band--tanbeeh"
                 aria-labelledby="tilqai-unwan-jahiziya"
@@ -1383,6 +1639,18 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                   <section className="tilqai__qism tilqai__qism--najah">
                     <h2 className="tilqai__unwan">{t('tilqai.jahiz.unwan', lugha)}</h2>
                     <p className="tilqai__nass">{t('tilqai.jahiz.sharh', lugha)}</p>
+                    {/* The completion sentence, qualified where it would
+                        otherwise be a half-truth. A run on a Unity release
+                        build installs a patch that Arabizes the menus and
+                        leaves everything a component draws alone — and the
+                        unqualified "ready to play in Arabic" above is what
+                        turns that into "this product is broken" the moment the
+                        game starts. The panel below says what to do about it;
+                        this line is what stops the reader concluding there is
+                        nothing to do. */}
+                    {laqta !== null && laqta.yanfa_iltiqat && !laqta.multaqat ? (
+                      <p className="tilqai__nass">{t('tilqai.jawla.naqis', lugha)}</p>
+                    ) : null}
                     <p className="tilqai__jawda">{t('tilqai.jawda.jumla', lugha)}</p>
                     <div className="tilqai__afal">
                       <Link to="/warsha/$muarrif" params={{ muarrif }} className="zir">
@@ -1526,6 +1794,32 @@ export function ShashatTilqai(khasais: KhasaisShasha): JSX.Element {
                     </Zuhur>
                   </section>
                   )}
+                </Zuhur>
+
+                {/* The untranslated half, and the three presses that fetch it.
+                    Above the reading report rather than below it: the report
+                    explains in the extractor's own words which containers were
+                    refused, which is the evidence — and a reader meets the offer
+                    first and the evidence under it, not the other way round. */}
+                <Zuhur maftuh={yanqusIltiqat} asl="mahall">
+                  <LawhatJawla
+                    lugha={lugha}
+                    munassiq={munassiq}
+                    hala={halat.iltiqat}
+                    waqtJalsa={nassWaqt(halat.iltiqat?.jalsa?.waqt ?? '', lugha, arqam)}
+                    multaqat={laqta?.multaqat === true}
+                    yantazir={halat.yantazirIltiqat}
+                    yantazirDamm={mashghul === 'damm'}
+                    mamnuBadi={mamnuBadi}
+                    sababTawaqquf={sababTawaqquf}
+                    sababNass={sababNass}
+                    alaTasjil={halat.sajjil}
+                    alaTashghil={halat.shaghghil}
+                    alaTahaqquq={halat.aidIltiqat}
+                    alaDamm={() => {
+                      ibdaMahmi(true, true);
+                    }}
+                  />
                 </Zuhur>
 
                 <Zuhur maftuh={laqta?.qira != null}>

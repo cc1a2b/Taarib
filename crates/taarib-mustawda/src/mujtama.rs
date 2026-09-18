@@ -3,12 +3,18 @@
 //!
 //! `fahras/tarjamat.json` in the registry repository lists Arabic translations
 //! other teams published on their own pages, with the facts each page states.
-//! The registry links; it hosts nothing in the list, redistributes nothing and
-//! signs nothing here — an entry is a credit and an address, not a patch. So
-//! this module is deliberately weaker than [`crate::fahras`]: no manifest hash
-//! vouches for the bytes, because nothing is installed from them. What it keeps
-//! from the shard path is the rest of the discipline — the same source chain,
-//! the same repository-relative path, a byte cap, a schema version this build
+//! The registry links; it hosts nothing in the list and redistributes nothing.
+//! An entry is a credit and an address, not a patch — but an address is a
+//! decision about where this product sends a reader, and the hosts an index
+//! names are exactly the allow-list the Studio's browser-open command is held
+//! to. An allow-list fed by unsigned data decides nothing. So the index carries
+//! the owner's Ed25519 signature over its own canonical form, verified before a
+//! single entry is read, on the same terms as the revocation list: the same
+//! primitive, the same anchor, the same refusal grammar, and a writer that
+//! produces bytes and can never produce a verified value.
+//!
+//! The rest of the discipline is the shard path's — the same source chain, the
+//! same repository-relative path, a byte cap, a schema version this build
 //! refuses to guess past, validation of every field the product reads, an
 //! atomic cache under the data root, and a refresh record beside it so a stale
 //! answer can say how stale it is and which source last refused.
@@ -18,6 +24,7 @@ use std::path::PathBuf;
 
 use jiff::{SignedDuration, Timestamp};
 use serde::{Deserialize, Serialize};
+use taarib_khatm::{MiftahAam, MiftahKhass};
 use taarib_mustalahat::wahhid_ism;
 use taarib_usus::masarat::{Masarat, kitaba_dharra};
 
@@ -71,9 +78,19 @@ const HADD_TUL_MUARRIF: usize = 128;
 /// What a cache write is doing, for the failure that names it.
 const AMAL_KITABA: &str = "caching the community index";
 
+/// Domain separator for the signed canonical form, so these bytes can never be
+/// mistaken for any other signed message in the product.
+const FASIL: &[u8] = b"taarib.fahras-mujtama.v1\0";
+
+/// The document's signature field: the one field a cast adds to the body.
+const HAQL_TAWQEE: &str = "tawqee";
+
+/// The document's revision stamp, which a cast rewrites to the time it ran.
+const HAQL_WAQT: &str = "waqt";
+
 /// يقرأ اسمًا من الفهرس ويجيب بالمجهول عمّا لا يعرفه هذا الإصدار — reads a
 /// `snake_case` name from the index, answering the unknown variant for a name
-/// this build does not know.
+/// this build does not know, and spells that name back for the signed form.
 ///
 /// `#[serde(other)]` said exactly this in one line, and is what these seven
 /// enums carried. It was removed because `specta` refuses that attribute on an
@@ -99,6 +116,20 @@ macro_rules! naw_min_nass {
                     $($nass => Self::$farq,)+
                     _ => Self::$majhul,
                 })
+            }
+        }
+
+        impl $naw {
+            /// The name this value carries in the canonical signed form — the
+            /// index's own wire name, so what the owner signs is what the
+            /// index spells. A name this build does not know is signed as the
+            /// unknown variant, which is the whole of what the client reads of
+            /// it; none of these enums lists `majhul` itself.
+            const fn ism_qanuni(self) -> &'static str {
+                match self {
+                    $(Self::$farq => $nass,)+
+                    Self::$majhul => "majhul",
+                }
             }
         }
     };
@@ -379,55 +410,122 @@ pub struct Tarjama {
     pub tahaqquq: TahaqquqMujtama,
 }
 
-/// The community index.
+/// The index exactly as it is served, its signature included.
+///
+/// Private, and the only thing `serde` ever produces out of index bytes:
+/// [`FahrasMujtama`] has no `Deserialize`, so an index that did not go through
+/// the verifier cannot be represented anywhere in the product.
+#[derive(Deserialize)]
+struct FahrasKhaam {
+    isdar: u32,
+    waqt: String,
+    firaq: Vec<FariqMujtama>,
+    tarjamat: Vec<Tarjama>,
+    /// The owner's signature over the canonical form, 128 lowercase hex
+    /// digits. Absent in an index cast before this build's scheme, which is a
+    /// refusal of its own rather than a malformed signature.
+    #[serde(default)]
+    tawqee: Option<String>,
+}
+
+/// The community index, verified.
+///
+/// The only constructor is [`FahrasMujtama::min_bayt`]; it verifies the
+/// embedded signature over the canonical form before returning, so a value of
+/// this type is proof the owner cast exactly these entries — and in particular
+/// that every host [`Self::mudifun`] offers a browser came from the owner and
+/// not from whatever answered the fetch. There is no `Deserialize`: parsing
+/// goes through the private wire type and the verifier.
 ///
 /// Unknown fields are tolerated everywhere in it: the index is maintained by
 /// hand in a public repository and grows fields faster than this build ships,
 /// and a client that refused an index for carrying a field it does not read
 /// would refuse every index the day after any of them gained one. What is
-/// read is validated; see [`Self::min_bayt`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// read is validated and signed; see [`Self::min_bayt`].
+///
+/// The fields are private for the same reason the constructor is the only one:
+/// a struct literal is a constructor too, and one that skips the signature. Read
+/// them through [`Self::isdar`], [`Self::waqt`], [`Self::firaq`] and
+/// [`Self::tarjamat`].
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FahrasMujtama {
-    /// The index schema version.
-    pub isdar: u32,
-    /// When this revision of the index was cast, RFC 3339.
-    pub waqt: String,
-    /// Every team an entry may refer to.
-    pub firaq: Vec<FariqMujtama>,
-    /// Every translation.
-    pub tarjamat: Vec<Tarjama>,
+    isdar: u32,
+    waqt: String,
+    firaq: Vec<FariqMujtama>,
+    tarjamat: Vec<Tarjama>,
 }
 
 impl FahrasMujtama {
-    /// Parses an index, refusing one over the byte cap, one of a schema this
-    /// build does not read, and one whose read fields do not hold together.
+    /// Parses and verifies an index, refusing one over the byte cap, one of a
+    /// schema this build does not read, one the owner did not sign, and one
+    /// whose read fields do not hold together.
+    ///
+    /// The signature is judged before anything is read out of the document and
+    /// before the fields are checked against each other: a document nobody
+    /// signed is not one whose contents are worth describing.
     ///
     /// # Errors
     ///
     /// [`KhataMustawda::FahrasMujtamaKabir`] when the bytes pass
-    /// [`HADD_HAJM_FAHRAS_MUJTAMA`], and [`KhataMustawda::FahrasMujtamaTalif`]
-    /// when they are not JSON of this shape, when `isdar` is not
-    /// [`ISDAR_FAHRAS_MUJTAMA`], or when an entry names a team the index does
-    /// not list, an address that is not `https`, an identifier outside the
-    /// index's own alphabet, a date that is not `YYYY-MM-DD`, or a duplicate.
-    pub fn min_bayt(bayt: &[u8]) -> NatijatMustawda<Self> {
-        let hajm = u64::try_from(bayt.len()).unwrap_or(u64::MAX);
-        if hajm > HADD_HAJM_FAHRAS_MUJTAMA {
-            return Err(KhataMustawda::FahrasMujtamaKabir {
-                hajm,
-                hadd: HADD_HAJM_FAHRAS_MUJTAMA,
+    /// [`HADD_HAJM_FAHRAS_MUJTAMA`], [`KhataMustawda::FahrasMujtamaGhayrMuwaqqa`]
+    /// when the index carries no signature at all,
+    /// [`KhataMustawda::FahrasMujtamaTawqeeBatil`] when it carries one that
+    /// does not verify under `miftah_malik`, and
+    /// [`KhataMustawda::FahrasMujtamaTalif`] when the bytes are not JSON of
+    /// this shape, when `isdar` is not [`ISDAR_FAHRAS_MUJTAMA`], or when an
+    /// entry names a team the index does not list, an address that is not
+    /// `https`, an identifier outside the index's own alphabet, a date that is
+    /// not `YYYY-MM-DD`, or a duplicate.
+    pub fn min_bayt(bayt: &[u8], miftah_malik: &MiftahAam) -> NatijatMustawda<Self> {
+        let khaam = FahrasKhaam::min_bayt(bayt)?;
+
+        let Some(nass_tawqee) = khaam.tawqee.as_deref() else {
+            return Err(KhataMustawda::FahrasMujtamaGhayrMuwaqqa);
+        };
+        let Some(tawqee) = min_hex(nass_tawqee) else {
+            return Err(KhataMustawda::FahrasMujtamaTawqeeBatil {
+                sabab: "the signature is not 128 lowercase hexadecimal digits".to_owned(),
+            });
+        };
+        let matn = matn_lil_tawqee(khaam.isdar, &khaam.waqt, &khaam.firaq, &khaam.tarjamat);
+        if !miftah_malik.tahaqquq(&matn, &tawqee) {
+            return Err(KhataMustawda::FahrasMujtamaTawqeeBatil {
+                sabab: "the signature does not verify against this build's owner key".to_owned(),
             });
         }
-        let fahras: Self =
-            serde_json::from_slice(bayt).map_err(|khata| talif(khata.to_string()))?;
-        if fahras.isdar != ISDAR_FAHRAS_MUJTAMA {
-            return Err(talif(format!(
-                "index schema {} is not the {ISDAR_FAHRAS_MUJTAMA} this build reads",
-                fahras.isdar
-            )));
-        }
-        fahras.tahaqqaq()?;
-        Ok(fahras)
+
+        tahaqqaq(&khaam.waqt, &khaam.firaq, &khaam.tarjamat)?;
+        Ok(Self {
+            isdar: khaam.isdar,
+            waqt: khaam.waqt,
+            firaq: khaam.firaq,
+            tarjamat: khaam.tarjamat,
+        })
+    }
+
+    /// The schema version this revision was cast at, always
+    /// [`ISDAR_FAHRAS_MUJTAMA`] — the verifier refuses every other.
+    #[must_use]
+    pub const fn isdar(&self) -> u32 {
+        self.isdar
+    }
+
+    /// When this revision was cast, RFC 3339.
+    #[must_use]
+    pub fn waqt(&self) -> &str {
+        &self.waqt
+    }
+
+    /// Every team an entry may refer to, in the order the index credits them.
+    #[must_use]
+    pub fn firaq(&self) -> &[FariqMujtama] {
+        &self.firaq
+    }
+
+    /// Every translation, in the order the index lists them.
+    #[must_use]
+    pub fn tarjamat(&self) -> &[Tarjama] {
+        &self.tarjamat
     }
 
     /// The team an identifier names, when the index lists it.
@@ -457,107 +555,242 @@ impl FahrasMujtama {
             .filter_map(mudif_rabt)
             .collect()
     }
+}
 
-    fn tahaqqaq(&self) -> NatijatMustawda<()> {
-        if self.waqt.parse::<Timestamp>().is_err() {
+impl FahrasKhaam {
+    /// Reads the served document: the byte cap first, then the JSON, then the
+    /// schema stamp this build refuses to guess past. No field is trusted by
+    /// anything here; the value exists only to be verified.
+    fn min_bayt(bayt: &[u8]) -> NatijatMustawda<Self> {
+        let hajm = u64::try_from(bayt.len()).unwrap_or(u64::MAX);
+        if hajm > HADD_HAJM_FAHRAS_MUJTAMA {
+            return Err(KhataMustawda::FahrasMujtamaKabir {
+                hajm,
+                hadd: HADD_HAJM_FAHRAS_MUJTAMA,
+            });
+        }
+        let khaam: Self = serde_json::from_slice(bayt).map_err(|khata| talif(khata.to_string()))?;
+        if khaam.isdar != ISDAR_FAHRAS_MUJTAMA {
             return Err(talif(format!(
-                "the index stamp {:?} is not RFC 3339",
-                self.waqt
+                "index schema {} is not the {ISDAR_FAHRAS_MUJTAMA} this build reads",
+                khaam.isdar
             )));
         }
+        Ok(khaam)
+    }
+}
 
-        let mut firaq: BTreeSet<&str> = BTreeSet::new();
-        for fariq in &self.firaq {
-            if !muarrif_salih(&fariq.muarrif) {
+/// Everything the product reads out of an index, checked against itself.
+///
+/// A free function rather than a method because the caster runs it too, on the
+/// owner's machine, before a signature is put on anything: an entry a client
+/// would refuse is refused before it is cast rather than after a user fetches
+/// it.
+fn tahaqqaq(waqt: &str, firaq_kull: &[FariqMujtama], tarjamat: &[Tarjama]) -> NatijatMustawda<()> {
+    if waqt.parse::<Timestamp>().is_err() {
+        return Err(talif(format!("the index stamp {waqt:?} is not RFC 3339")));
+    }
+
+    let mut firaq: BTreeSet<&str> = BTreeSet::new();
+    for fariq in firaq_kull {
+        if !muarrif_salih(&fariq.muarrif) {
+            return Err(talif(format!(
+                "team identifier {:?} is outside the index's alphabet",
+                fariq.muarrif
+            )));
+        }
+        if !firaq.insert(fariq.muarrif.as_str()) {
+            return Err(talif(format!("team {:?} is listed twice", fariq.muarrif)));
+        }
+        if fariq.ism.trim().is_empty() {
+            return Err(talif(format!("team {:?} has no name", fariq.muarrif)));
+        }
+        if !rabt_salih(&fariq.rabt) {
+            return Err(talif(format!(
+                "team {:?} links to {:?}, which is not an https address",
+                fariq.muarrif, fariq.rabt
+            )));
+        }
+    }
+
+    let mut muarrifat: BTreeSet<&str> = BTreeSet::new();
+    for tarjama in tarjamat {
+        let muarrif = tarjama.muarrif.as_str();
+        if !muarrif_salih(muarrif) {
+            return Err(talif(format!(
+                "entry identifier {muarrif:?} is outside the index's alphabet"
+            )));
+        }
+        if !muarrifat.insert(muarrif) {
+            return Err(talif(format!("entry {muarrif:?} is listed twice")));
+        }
+        if tarjama.luba.ism.trim().is_empty() {
+            return Err(talif(format!("entry {muarrif:?} names no game")));
+        }
+        if tarjama.muallif.trim().is_empty() {
+            return Err(talif(format!("entry {muarrif:?} credits nobody")));
+        }
+        if tarjama.steam_appid == Some(0) {
+            return Err(talif(format!("entry {muarrif:?} carries Steam id 0")));
+        }
+        if let Some(fariq) = &tarjama.fariq
+            && !firaq.contains(fariq.as_str())
+        {
+            return Err(talif(format!(
+                "entry {muarrif:?} names team {fariq:?}, which the index does not list"
+            )));
+        }
+        if !rabt_salih(&tarjama.rabt) {
+            return Err(talif(format!(
+                "entry {muarrif:?} links to {:?}, which is not an https address",
+                tarjama.rabt
+            )));
+        }
+        if !rabt_salih(&tarjama.tahaqquq.rabt) {
+            return Err(talif(format!(
+                "entry {muarrif:?} was read from {:?}, which is not an https address",
+                tarjama.tahaqquq.rabt
+            )));
+        }
+        if !tareekh_salih(&tarjama.tahaqquq.waqt) {
+            return Err(talif(format!(
+                "entry {muarrif:?} was read on {:?}, which is not a date",
+                tarjama.tahaqquq.waqt
+            )));
+        }
+        for (ism, tareekh) in [
+            ("published", &tarjama.waqt_alnashr),
+            ("updated", &tarjama.akhir_tahdith),
+        ] {
+            if let Some(tareekh) = tareekh
+                && !tareekh_salih(tareekh)
+            {
                 return Err(talif(format!(
-                    "team identifier {:?} is outside the index's alphabet",
-                    fariq.muarrif
-                )));
-            }
-            if !firaq.insert(fariq.muarrif.as_str()) {
-                return Err(talif(format!("team {:?} is listed twice", fariq.muarrif)));
-            }
-            if fariq.ism.trim().is_empty() {
-                return Err(talif(format!("team {:?} has no name", fariq.muarrif)));
-            }
-            if !rabt_salih(&fariq.rabt) {
-                return Err(talif(format!(
-                    "team {:?} links to {:?}, which is not an https address",
-                    fariq.muarrif, fariq.rabt
+                    "entry {muarrif:?} was {ism} on {tareekh:?}, which is not a date"
                 )));
             }
         }
-
-        let mut muarrifat: BTreeSet<&str> = BTreeSet::new();
-        for tarjama in &self.tarjamat {
-            let muarrif = tarjama.muarrif.as_str();
-            if !muarrif_salih(muarrif) {
-                return Err(talif(format!(
-                    "entry identifier {muarrif:?} is outside the index's alphabet"
-                )));
-            }
-            if !muarrifat.insert(muarrif) {
-                return Err(talif(format!("entry {muarrif:?} is listed twice")));
-            }
-            if tarjama.luba.ism.trim().is_empty() {
-                return Err(talif(format!("entry {muarrif:?} names no game")));
-            }
-            if tarjama.muallif.trim().is_empty() {
-                return Err(talif(format!("entry {muarrif:?} credits nobody")));
-            }
-            if tarjama.steam_appid == Some(0) {
-                return Err(talif(format!("entry {muarrif:?} carries Steam id 0")));
-            }
-            if let Some(fariq) = &tarjama.fariq
-                && !firaq.contains(fariq.as_str())
-            {
-                return Err(talif(format!(
-                    "entry {muarrif:?} names team {fariq:?}, which the index does not list"
-                )));
-            }
-            if !rabt_salih(&tarjama.rabt) {
-                return Err(talif(format!(
-                    "entry {muarrif:?} links to {:?}, which is not an https address",
-                    tarjama.rabt
-                )));
-            }
-            if !rabt_salih(&tarjama.tahaqquq.rabt) {
-                return Err(talif(format!(
-                    "entry {muarrif:?} was read from {:?}, which is not an https address",
-                    tarjama.tahaqquq.rabt
-                )));
-            }
-            if !tareekh_salih(&tarjama.tahaqquq.waqt) {
-                return Err(talif(format!(
-                    "entry {muarrif:?} was read on {:?}, which is not a date",
-                    tarjama.tahaqquq.waqt
-                )));
-            }
-            for (ism, tareekh) in [
-                ("published", &tarjama.waqt_alnashr),
-                ("updated", &tarjama.akhir_tahdith),
-            ] {
-                if let Some(tareekh) = tareekh
-                    && !tareekh_salih(tareekh)
-                {
-                    return Err(talif(format!(
-                        "entry {muarrif:?} was {ism} on {tareekh:?}, which is not a date"
-                    )));
-                }
-            }
-            if tarjama.rukhsa.naw == NawRukhsa::Spdx
-                && tarjama
-                    .rukhsa
-                    .muarrif
-                    .as_deref()
-                    .is_none_or(|spdx| spdx.trim().is_empty())
-            {
-                return Err(talif(format!(
-                    "entry {muarrif:?} claims an SPDX licence and names none"
-                )));
-            }
+        if tarjama.rukhsa.naw == NawRukhsa::Spdx
+            && tarjama
+                .rukhsa
+                .muarrif
+                .as_deref()
+                .is_none_or(|spdx| spdx.trim().is_empty())
+        {
+            return Err(talif(format!(
+                "entry {muarrif:?} claims an SPDX licence and names none"
+            )));
         }
-        Ok(())
+    }
+    Ok(())
+}
+
+/// The owner's side of the format: the index body as its maintainer wrote it,
+/// signed into the document a client verifies.
+///
+/// It produces bytes and nothing else. It cannot produce a [`FahrasMujtama`],
+/// which keeps the one rule the verifier exists for: a value of that type
+/// always came through the signature check. The body is carried through as the
+/// JSON object it arrived as rather than re-serialised from the fields this
+/// build reads, so the fields it does not read — the maintainer's own notes,
+/// each team's social addresses, whatever the index grew since — survive a cast
+/// instead of being quietly dropped by the tool that signs it.
+#[derive(Debug, Clone)]
+pub struct KatibFahrasMujtama {
+    wathiqa: serde_json::Map<String, serde_json::Value>,
+    isdar: u32,
+    waqt: String,
+    firaq: Vec<FariqMujtama>,
+    tarjamat: Vec<Tarjama>,
+}
+
+impl KatibFahrasMujtama {
+    /// Reads an index body — the hand-maintained file, signed already or not.
+    ///
+    /// Every check a client runs is run here, on the machine that casts the
+    /// index. Any signature the body already carries is dropped: this is what
+    /// mints the one that replaces it.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataMustawda::FahrasMujtamaKabir`] when the body passes
+    /// [`HADD_HAJM_FAHRAS_MUJTAMA`], and [`KhataMustawda::FahrasMujtamaTalif`]
+    /// when it is not a JSON object of this shape, when `isdar` is not
+    /// [`ISDAR_FAHRAS_MUJTAMA`], or when anything a client reads does not hold
+    /// together.
+    pub fn min_bayt(bayt: &[u8]) -> NatijatMustawda<Self> {
+        let khaam = FahrasKhaam::min_bayt(bayt)?;
+        tahaqqaq(&khaam.waqt, &khaam.firaq, &khaam.tarjamat)?;
+        let mut wathiqa = match serde_json::from_slice(bayt) {
+            Ok(serde_json::Value::Object(wathiqa)) => wathiqa,
+            Ok(_) => return Err(talif("the index is not a JSON object".to_owned())),
+            Err(khata) => return Err(talif(khata.to_string())),
+        };
+        // `retain` rather than `remove`: with `preserve_order` the latter swaps
+        // the last field into the removed one's place, which would shuffle a
+        // hand-maintained document every time it is cast.
+        wathiqa.retain(|ism, _| ism != HAQL_TAWQEE);
+        Ok(Self {
+            wathiqa,
+            isdar: khaam.isdar,
+            waqt: khaam.waqt,
+            firaq: khaam.firaq,
+            tarjamat: khaam.tarjamat,
+        })
+    }
+
+    /// Restamps the revision with the moment it is being cast, RFC 3339.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataMustawda::FahrasMujtamaTalif`] when the stamp is not RFC 3339,
+    /// which every client parses and none would accept.
+    pub fn bi_waqt(mut self, waqt: &str) -> NatijatMustawda<Self> {
+        if waqt.parse::<Timestamp>().is_err() {
+            return Err(talif(format!("the index stamp {waqt:?} is not RFC 3339")));
+        }
+        waqt.clone_into(&mut self.waqt);
+        let _ = self.wathiqa.insert(
+            HAQL_WAQT.to_owned(),
+            serde_json::Value::String(waqt.to_owned()),
+        );
+        Ok(self)
+    }
+
+    /// When this revision says it was cast.
+    #[must_use]
+    pub fn waqt(&self) -> &str {
+        &self.waqt
+    }
+
+    /// How many teams the body credits.
+    #[must_use]
+    pub const fn adad_firaq(&self) -> usize {
+        self.firaq.len()
+    }
+
+    /// How many translations the body lists.
+    #[must_use]
+    pub const fn adad_tarjamat(&self) -> usize {
+        self.tarjamat.len()
+    }
+
+    /// The signed document: the body exactly as it was given, with the owner's
+    /// signature over its canonical form added.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataMustawda::FahrasMujtamaTalif`] when the document cannot be
+    /// serialised.
+    pub fn uktub(&self, khass: &MiftahKhass) -> NatijatMustawda<Vec<u8>> {
+        let matn = matn_lil_tawqee(self.isdar, &self.waqt, &self.firaq, &self.tarjamat);
+        let mut wathiqa = self.wathiqa.clone();
+        let _ = wathiqa.insert(
+            HAQL_TAWQEE.to_owned(),
+            serde_json::Value::String(hex::encode(khass.waqqi(&matn))),
+        );
+        serde_json::to_vec_pretty(&serde_json::Value::Object(wathiqa))
+            .map_err(|khata| talif(khata.to_string()))
     }
 }
 
@@ -655,6 +888,17 @@ pub enum NatijatJalbMujtama {
         /// Why the answer was refused.
         sabab: String,
     },
+    /// A source answered with an index the owner did not sign, or signed with
+    /// a key this build is not anchored to. Kept apart from an unreadable
+    /// answer because the two are different facts about the registry: one is a
+    /// source serving rubbish, the other a source serving a document that is
+    /// well-formed and vouched for by nobody.
+    TawqeeMarfud {
+        /// The source.
+        masdar: String,
+        /// Why the signature was refused.
+        sabab: String,
+    },
 }
 
 /// One attempt, with its time.
@@ -720,22 +964,40 @@ const fn dakhil_al_nafidha(umr: SignedDuration) -> bool {
     !umr.is_negative() && umr.as_secs() <= NAFIDHAT_FAHRAS_MUJTAMA.as_secs()
 }
 
-/// The cached index, when one is on disk and reads.
+/// The cached index, when one is on disk, reads and verifies.
 ///
-/// Synchronous and never a failure: this is what a library scan reads on the
-/// thread it runs on, and a missing, oversized or unreadable cache is a scan
-/// with no community marks rather than a scan that stops. Each of those is a
+/// `Ok(None)` is a machine with no cached index — or one whose cache file this
+/// build did not write and will not read at all. `Err` is a cached index that
+/// was read and refused: one cast before this build's signing scheme, one
+/// signed by a key this build is not anchored to, or one whose body no longer
+/// matches its signature. The caller decides what a refusal costs it; none of
+/// them may treat the contents as read.
+///
+/// A refused cache is left exactly where it is. Deleting it would turn a
+/// refusal that explains itself on every read into an empty panel that
+/// explained itself once, and the first verified fetch replaces the file
+/// atomically anyway.
+///
+/// Synchronous, and never the end of a scan: this is what a library scan reads
+/// on the thread it runs on, and every outcome but a verified index is a scan
+/// with no community marks rather than a scan that stops. Each of them is a
 /// line in the log, because a cache this build wrote and cannot read back is
 /// worth knowing about even when nothing depends on it.
-#[must_use]
-pub fn iqra_makhbaa(masarat: &Masarat) -> Option<FahrasMukhazzan> {
+///
+/// # Errors
+///
+/// Whatever [`FahrasMujtama::min_bayt`] refused the cached bytes.
+pub fn iqra_makhbaa(
+    masarat: &Masarat,
+    miftah_malik: &MiftahAam,
+) -> NatijatMustawda<Option<FahrasMukhazzan>> {
     let masar = masar_makhbaa_mujtama(masarat);
     let bayanat = match std::fs::metadata(&masar) {
         Ok(bayanat) => bayanat,
-        Err(khata) if khata.kind() == std::io::ErrorKind::NotFound => return None,
+        Err(khata) if khata.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(khata) => {
             tracing::warn!(masar = %masar.display(), khata = %khata, "the cached community index could not be examined");
-            return None;
+            return Ok(None);
         },
     };
     if !bayanat.is_file() || bayanat.len() > HADD_HAJM_FAHRAS_MUJTAMA {
@@ -744,26 +1006,22 @@ pub fn iqra_makhbaa(masarat: &Masarat) -> Option<FahrasMukhazzan> {
             hajm = bayanat.len(),
             "the cached community index is not a file this build wrote, and is ignored"
         );
-        return None;
+        return Ok(None);
     }
     let bayt = match std::fs::read(&masar) {
         Ok(bayt) => bayt,
         Err(khata) => {
             tracing::warn!(masar = %masar.display(), khata = %khata, "the cached community index could not be read");
-            return None;
+            return Ok(None);
         },
     };
-    let fahras = match FahrasMujtama::min_bayt(&bayt) {
-        Ok(fahras) => fahras,
-        Err(khata) => {
-            tracing::warn!(masar = %masar.display(), khata = %khata, "the cached community index is unreadable and is ignored");
-            return None;
-        },
-    };
-    Some(FahrasMukhazzan {
+    let fahras = FahrasMujtama::min_bayt(&bayt, miftah_malik).inspect_err(|khata| {
+        tracing::warn!(masar = %masar.display(), khata = %khata, "the cached community index was refused and nothing was read from it");
+    })?;
+    Ok(Some(FahrasMukhazzan {
         fahras,
         sijill: sijill_jalb(masarat),
-    })
+    }))
 }
 
 /// The refresh record, empty when there is none or it does not read.
@@ -866,27 +1124,38 @@ pub struct FahrasMujtamaMajlub {
 /// no source. A cache that cannot be written is logged and the fetched index is
 /// still answered; nothing about the answer depends on the write.
 ///
+/// A cached index this build refuses is never the answer and never the
+/// fallback: it is kept as the reason the fetch has to succeed, so a machine
+/// that upgraded into the signed scheme holding an unsigned copy is told what
+/// happened instead of being shown a panel that is empty for no stated reason.
+///
 /// # Errors
 ///
-/// Only when there is nothing to answer with: no cached index at all, and
-/// either [`KhataMustawda::FahrasMujtamaGhayrMutah`] because no source
-/// answered, or whatever [`FahrasMujtama::min_bytes`] refused the one answer
-/// that came.
+/// Only when there is nothing to answer with: no usable cached index, and
+/// either the refusal the cached one earned, or
+/// [`KhataMustawda::FahrasMujtamaGhayrMutah`] because no source answered, or
+/// whatever [`FahrasMujtama::min_bytes`] refused the one answer that came.
 ///
 /// [`FahrasMujtama::min_bytes`]: FahrasMujtama::min_bayt
 pub async fn jalb_fahras_mujtama(
     silsila: &SilsilatMasadir,
     masarat: &Masarat,
+    miftah_malik: &MiftahAam,
     al_aan: Timestamp,
 ) -> NatijatMustawda<FahrasMujtamaMajlub> {
     let mukhazzan = {
         let masarat = masarat.clone();
-        tokio::task::spawn_blocking(move || iqra_makhbaa(&masarat))
+        let miftah = miftah_malik.clone();
+        tokio::task::spawn_blocking(move || iqra_makhbaa(&masarat, &miftah))
             .await
             .unwrap_or_else(|khata| {
                 tracing::warn!(khata = %khata, "the community index cache read did not finish");
-                None
+                Ok(None)
             })
+    };
+    let (mukhazzan, rafd_makhbaa) = match mukhazzan {
+        Ok(mukhazzan) => (mukhazzan, None),
+        Err(khata) => (None, Some(khata)),
     };
     // Current: answered without a source being asked. Anything else on disk is
     // kept as the fallback for the fetch below.
@@ -904,7 +1173,7 @@ pub async fn jalb_fahras_mujtama(
     };
 
     let (natija, khata, sabab) = match silsila.jalb_maa_masdar(MASAR_FAHRAS_MUJTAMA).await {
-        Ok((bayt, masdar)) => match FahrasMujtama::min_bayt(&bayt) {
+        Ok((bayt, masdar)) => match FahrasMujtama::min_bayt(&bayt, miftah_malik) {
             Ok(fahras) => {
                 ila_makhbaa(masarat, bayt, masdar.clone(), al_aan).await;
                 return Ok(FahrasMujtamaMajlub {
@@ -915,16 +1184,24 @@ pub async fn jalb_fahras_mujtama(
             // A source that answers with something unreadable is recorded as
             // such rather than as unreachable: the two are different facts
             // about the registry, and the record is where the difference lives.
+            // A source that answers with an unsigned or wrongly signed index is
+            // a third fact again, and is recorded as itself.
             Err(khata) => {
                 let sabab = khata.to_string();
-                (
-                    NatijatJalbMujtama::FahrasTalif {
+                let natija = match &khata {
+                    KhataMustawda::FahrasMujtamaGhayrMuwaqqa
+                    | KhataMustawda::FahrasMujtamaTawqeeBatil { .. } => {
+                        NatijatJalbMujtama::TawqeeMarfud {
+                            masdar: masdar.clone(),
+                            sabab: sabab.clone(),
+                        }
+                    },
+                    _ => NatijatJalbMujtama::FahrasTalif {
                         masdar: masdar.clone(),
                         sabab: sabab.clone(),
                     },
-                    khata,
-                    format!("{masdar}: {sabab}"),
-                )
+                };
+                (natija, khata, format!("{masdar}: {sabab}"))
             },
         },
         Err(khata) => {
@@ -957,7 +1234,9 @@ pub async fn jalb_fahras_mujtama(
                 asl: AslFahrasMujtama::MakhbaaQadeem { umr, sabab },
             })
         },
-        None => Err(khata),
+        // The refusal a cached index earned outranks the fetch's own: it names
+        // what is wrong on this machine, and carries the step that fixes it.
+        None => Err(rafd_makhbaa.unwrap_or(khata)),
     }
 }
 
@@ -1044,6 +1323,122 @@ const fn talif(sabab: String) -> KhataMustawda {
     KhataMustawda::FahrasMujtamaTalif { sabab }
 }
 
+/// The canonical form the owner signs and every reader recomputes: a domain
+/// separator, then every field this build reads, length-prefixed, in the order
+/// the index lists them.
+///
+/// Built from the parsed values rather than from the served bytes — the way the
+/// revocation list's is — for two reasons. A mirror that re-indents the JSON,
+/// or a cast that appends a field, does not break a signature over what the
+/// client actually reads; and the form is recomputed identically from the cache
+/// on disk, so the signature holds for a copy read back a week later and not
+/// only for a fresh network fetch. What is not covered is what is not read: a
+/// field this build never looks at cannot move a decision it makes, and the
+/// index is expected to grow them.
+///
+/// Order is part of the message. The two lists are walked as given, not sorted,
+/// because the screen credits them in that order and a list nobody signed the
+/// order of is a list whose first entry anyone can choose.
+fn matn_lil_tawqee(
+    isdar: u32,
+    waqt: &str,
+    firaq: &[FariqMujtama],
+    tarjamat: &[Tarjama],
+) -> Vec<u8> {
+    let mut matn = Vec::new();
+    matn.extend_from_slice(FASIL);
+    matn.extend_from_slice(&isdar.to_le_bytes());
+    lp(&mut matn, waqt.as_bytes());
+
+    matn.extend_from_slice(&tul(firaq.len()).to_le_bytes());
+    for fariq in firaq {
+        lp(&mut matn, fariq.muarrif.as_bytes());
+        lp(&mut matn, fariq.ism.as_bytes());
+        ikhtiyari(&mut matn, fariq.ism_arabi.as_deref());
+        lp(&mut matn, fariq.rabt.as_bytes());
+    }
+
+    matn.extend_from_slice(&tul(tarjamat.len()).to_le_bytes());
+    for tarjama in tarjamat {
+        lp(&mut matn, tarjama.muarrif.as_bytes());
+        lp(&mut matn, tarjama.luba.ism.as_bytes());
+        ikhtiyari(&mut matn, tarjama.luba.ism_arabi.as_deref());
+        raqm_ikhtiyari(&mut matn, tarjama.steam_appid.map(u64::from));
+        ikhtiyari(&mut matn, tarjama.fariq.as_deref());
+        lp(&mut matn, tarjama.muallif.as_bytes());
+        lp(&mut matn, tarjama.mudif.ism_qanuni().as_bytes());
+        lp(&mut matn, tarjama.rabt.as_bytes());
+        lp(&mut matn, tarjama.taghtiya.ism_qanuni().as_bytes());
+        ikhtiyari(&mut matn, tarjama.taghtiya_nass.as_deref());
+        lp(&mut matn, tarjama.tareeqa.ism_qanuni().as_bytes());
+        lp(&mut matn, tarjama.rukhsa.naw.ism_qanuni().as_bytes());
+        ikhtiyari(&mut matn, tarjama.rukhsa.muarrif.as_deref());
+        ikhtiyari(&mut matn, tarjama.rukhsa.nass.as_deref());
+        lp(&mut matn, tarjama.tawzee.ism_qanuni().as_bytes());
+        lp(&mut matn, tarjama.hala.ism_qanuni().as_bytes());
+        ikhtiyari(&mut matn, tarjama.isdar.as_deref());
+        ikhtiyari(&mut matn, tarjama.waqt_alnashr.as_deref());
+        ikhtiyari(&mut matn, tarjama.akhir_tahdith.as_deref());
+        raqm_ikhtiyari(&mut matn, tarjama.tanzeelat);
+        ikhtiyari(
+            &mut matn,
+            tarjama.tanzeelat_naw.map(NawTanzeelat::ism_qanuni),
+        );
+        lp(&mut matn, tarjama.tahaqquq.waqt.as_bytes());
+        lp(&mut matn, tarjama.tahaqquq.rabt.as_bytes());
+        ikhtiyari(&mut matn, tarjama.tahaqquq.mulahaza.as_deref());
+    }
+    matn
+}
+
+/// One field: its length, then its bytes, so no two fields can be run together
+/// into a third that says something else.
+fn lp(matn: &mut Vec<u8>, bayt: &[u8]) {
+    matn.extend_from_slice(&tul(bayt.len()).to_le_bytes());
+    matn.extend_from_slice(bayt);
+}
+
+/// An optional field, marked present or absent before its value, so a field
+/// the index omits and one it gives as `""` are different messages.
+fn ikhtiyari(matn: &mut Vec<u8>, nass: Option<&str>) {
+    match nass {
+        Some(nass) => {
+            matn.push(1);
+            lp(matn, nass.as_bytes());
+        },
+        None => matn.push(0),
+    }
+}
+
+/// An optional number, on the same present-or-absent rule.
+fn raqm_ikhtiyari(matn: &mut Vec<u8>, raqm: Option<u64>) {
+    match raqm {
+        Some(raqm) => {
+            matn.push(1);
+            matn.extend_from_slice(&raqm.to_le_bytes());
+        },
+        None => matn.push(0),
+    }
+}
+
+fn tul(adad: usize) -> u64 {
+    u64::try_from(adad).unwrap_or(u64::MAX)
+}
+
+/// 64 signature bytes from 128 hexadecimal digits, lowercase only — the same
+/// canonical spelling the revocation list holds its signature to.
+fn min_hex(nass: &str) -> Option<[u8; 64]> {
+    if !nass
+        .bytes()
+        .all(|harf| harf.is_ascii_hexdigit() && !harf.is_ascii_uppercase())
+    {
+        return None;
+    }
+    let mut khaam = [0_u8; 64];
+    hex::decode_to_slice(nass, &mut khaam).ok()?;
+    Some(khaam)
+}
+
 /// Whether an identifier is in the alphabet the index's schema fixes:
 /// `^[a-z0-9][a-z0-9-]*$`, and not absurdly long.
 fn muarrif_salih(muarrif: &str) -> bool {
@@ -1101,20 +1496,52 @@ mod fuhus {
                   code, and honouring them here would mean a test that cannot fail"
     )]
 
+    use taarib_khatm::{MiftahAam, MiftahKhass};
+
     use super::{
-        FahrasMujtama, HADD_HAJM_FAHRAS_MUJTAMA, HalatTarjamaMujtama, MudifTarjama, NawRukhsa,
-        NawTanzeelat, TaghtiyaMujtama, TareeqaMujtama, TawzeeTarjama, tarjamat_li_luba,
+        FahrasMujtama, HADD_HAJM_FAHRAS_MUJTAMA, HalatTarjamaMujtama, KatibFahrasMujtama,
+        MudifTarjama, NawRukhsa, NawTanzeelat, TaghtiyaMujtama, TareeqaMujtama, TawzeeTarjama,
+        tarjamat_li_luba,
     };
     use crate::khata::KhataMustawda;
 
-    /// A trimmed copy of the live index: three teams, seven entries, two of
-    /// them for one Steam application, one with no Steam id at all.
+    /// A trimmed copy of the live index, unsigned: three teams, seven entries,
+    /// two of them for one Steam application, one with no Steam id at all. It
+    /// is the *body* a maintainer edits, so every test that needs a document
+    /// casts one here under a key of its own.
     const AYYINA: &str = include_str!("../tests/mujtama/tarjamat.json");
 
+    /// The throwaway owner key these tests cast under.
+    ///
+    /// Derived from a fixed seed inside the test, the way every signature test
+    /// in this workspace does it: the owner's own private half exists in one
+    /// keychain and in no repository, fixture, environment variable or test.
+    fn malik() -> MiftahKhass {
+        MiftahKhass::min_bayt(&[11_u8; 32])
+    }
+
+    /// A second key, for the one question that needs two: whether a valid
+    /// signature by the wrong signer is accepted.
+    fn ghareeb() -> MiftahKhass {
+        MiftahKhass::min_bayt(&[12_u8; 32])
+    }
+
+    /// The fixture body cast into a signed document under `khass`.
+    fn wathiqa(khass: &MiftahKhass) -> Vec<u8> {
+        match KatibFahrasMujtama::min_bayt(AYYINA.as_bytes()).and_then(|katib| katib.uktub(khass)) {
+            Ok(bayt) => bayt,
+            Err(khata) => panic!("the fixture index would not cast: {khata}"),
+        }
+    }
+
     fn fahras() -> FahrasMujtama {
-        match FahrasMujtama::min_bayt(AYYINA.as_bytes()) {
+        qra(&wathiqa(&malik()), &malik().aam())
+    }
+
+    fn qra(bayt: &[u8], miftah: &MiftahAam) -> FahrasMujtama {
+        match FahrasMujtama::min_bayt(bayt, miftah) {
             Ok(fahras) => fahras,
-            Err(khata) => panic!("the fixture index did not parse: {khata}"),
+            Err(khata) => panic!("the cast index did not verify: {khata}"),
         }
     }
 
@@ -1208,14 +1635,18 @@ mod fuhus {
         );
     }
 
+    /// The schema stamp is judged before the signature, so a document of a
+    /// version this build does not read is refused as that and not as unsigned.
     #[test]
     fn isdar_majhul_marfud() {
-        let nass = AYYINA.replacen("\"isdar\": 1,", "\"isdar\": 2,", 1);
+        let bayt = wathiqa(&malik());
+        let nass = String::from_utf8(bayt).expect("the cast document is text");
+        let muharraf = nass.replacen("\"isdar\": 1,", "\"isdar\": 2,", 1);
         assert_ne!(
-            nass, AYYINA,
-            "the fixture's schema stamp was not found to change"
+            muharraf, nass,
+            "the cast document's schema stamp was not found to change"
         );
-        match FahrasMujtama::min_bayt(nass.as_bytes()) {
+        match FahrasMujtama::min_bayt(muharraf.as_bytes(), &malik().aam()) {
             Err(KhataMustawda::FahrasMujtamaTalif { sabab }) => {
                 assert!(sabab.contains("schema 2"), "{sabab}");
             },
@@ -1227,7 +1658,7 @@ mod fuhus {
     fn al_hajm_al_mufrit_marfud_qabl_al_qira() {
         let hadd = usize::try_from(HADD_HAJM_FAHRAS_MUJTAMA).expect("the cap fits a usize");
         let kabir = vec![b' '; hadd + 1];
-        match FahrasMujtama::min_bayt(&kabir) {
+        match FahrasMujtama::min_bayt(&kabir, &malik().aam()) {
             Err(KhataMustawda::FahrasMujtamaKabir {
                 hajm,
                 hadd: muallan,
@@ -1237,6 +1668,12 @@ mod fuhus {
             },
             akhar => panic!("an index over the cap was not refused as such: {akhar:?}"),
         }
+        // And the caster refuses it on the owner's own machine, so an index
+        // past the cap is never cast, let alone served.
+        assert!(matches!(
+            KatibFahrasMujtama::min_bayt(&kabir),
+            Err(KhataMustawda::FahrasMujtamaKabir { .. })
+        ));
     }
 
     #[test]
@@ -1252,12 +1689,15 @@ mod fuhus {
                 "\"taghtiya\": \"sawt_faqat\"",
                 1,
             );
-        let fahras = match FahrasMujtama::min_bayt(nass.as_bytes()) {
-            Ok(fahras) => fahras,
+        let bayt = match KatibFahrasMujtama::min_bayt(nass.as_bytes())
+            .and_then(|katib| katib.uktub(&malik()))
+        {
+            Ok(bayt) => bayt,
             Err(khata) => {
                 panic!("a field and a value this build does not know were refused: {khata}")
             },
         };
+        let fahras = qra(&bayt, &malik().aam());
         let hesham = fahras
             .tarjamat
             .iter()
@@ -1267,13 +1707,22 @@ mod fuhus {
         assert_eq!(hesham.taghtiya, TaghtiyaMujtama::Majhul);
     }
 
+    /// The reader keeps its own copy of every check, but the caster is where
+    /// they bite: a body that would not read is refused on the owner's machine,
+    /// before a signature is put on it, so no such document is ever served.
     #[test]
     fn ma_yuqra_yuhaqqaq() {
+        let marfud = |nass: &str, wasf: &str| match KatibFahrasMujtama::min_bayt(nass.as_bytes()) {
+            Err(KhataMustawda::FahrasMujtamaTalif { .. }) => {},
+            akhar => panic!("{wasf} was not refused: {akhar:?}"),
+        };
+
         let fariq_majhul = AYYINA.replacen("\"fariq\": \"hesham\"", "\"fariq\": \"la-ahad\"", 1);
-        assert!(matches!(
-            FahrasMujtama::min_bayt(fariq_majhul.as_bytes()),
-            Err(KhataMustawda::FahrasMujtamaTalif { .. })
-        ));
+        assert_ne!(fariq_majhul, AYYINA);
+        marfud(
+            &fariq_majhul,
+            "an entry naming a team the index does not list",
+        );
 
         let rabt_http = AYYINA.replacen(
             "\"rabt\": \"https://www.nexusmods.com/007firstlight/mods/11\"",
@@ -1281,10 +1730,7 @@ mod fuhus {
             1,
         );
         assert_ne!(rabt_http, AYYINA);
-        assert!(matches!(
-            FahrasMujtama::min_bayt(rabt_http.as_bytes()),
-            Err(KhataMustawda::FahrasMujtamaTalif { .. })
-        ));
+        marfud(&rabt_http, "an address that is not https");
 
         let mukarrar = AYYINA.replacen(
             "\"muarrif\": \"007-first-light-play-in-arabic\"",
@@ -1292,10 +1738,7 @@ mod fuhus {
             1,
         );
         assert_ne!(mukarrar, AYYINA);
-        assert!(matches!(
-            FahrasMujtama::min_bayt(mukarrar.as_bytes()),
-            Err(KhataMustawda::FahrasMujtamaTalif { .. })
-        ));
+        marfud(&mukarrar, "an identifier listed twice");
 
         let tareekh = AYYINA.replacen(
             "\"waqt_alnashr\": \"2026-05-27\"",
@@ -1303,13 +1746,188 @@ mod fuhus {
             1,
         );
         assert_ne!(tareekh, AYYINA);
+        marfud(&tareekh, "a publication date that is not a date");
+
+        // Bytes that are not an index of this shape never reach the signature
+        // check: there is nothing to compute a canonical form over.
         assert!(matches!(
-            FahrasMujtama::min_bayt(tareekh.as_bytes()),
+            FahrasMujtama::min_bayt(b"{\"isdar\": 1}", &malik().aam()),
             Err(KhataMustawda::FahrasMujtamaTalif { .. })
         ));
+    }
+
+    /// The index as 1.0.1 served it: well-formed, valid, and vouched for by
+    /// nobody. Every reader refuses it by its own name.
+    #[test]
+    fn al_fahras_ghayr_almuwaqqa_marfud() {
+        assert!(matches!(
+            FahrasMujtama::min_bayt(AYYINA.as_bytes(), &malik().aam()),
+            Err(KhataMustawda::FahrasMujtamaGhayrMuwaqqa)
+        ));
+    }
+
+    /// A body edited after it was cast: the signature still parses, and covers
+    /// bytes that are no longer there.
+    #[test]
+    fn al_matn_almuharraf_marfud() {
+        let bayt = wathiqa(&malik());
+        let nass = String::from_utf8(bayt).expect("the cast document is text");
+        let muharraf = nass.replacen(
+            "https://www.nexusmods.com/007firstlight/mods/11",
+            "https://okshopsa.net/007firstlight",
+            1,
+        );
+        assert_ne!(muharraf, nass, "the address to substitute was not found");
+        match FahrasMujtama::min_bayt(muharraf.as_bytes(), &malik().aam()) {
+            Err(KhataMustawda::FahrasMujtamaTawqeeBatil { sabab }) => {
+                assert!(sabab.contains("does not verify"), "{sabab}");
+            },
+            akhar => panic!("a substituted address was accepted: {akhar:?}"),
+        }
+    }
+
+    /// The order of the entries is part of the signed message: a list whose
+    /// order nobody signed is a list whose first credit anyone can choose.
+    #[test]
+    fn tarteeb_al_madakhil_muwaqqa() {
+        let awwal = AYYINA
+            .find("\"007-first-light-hesham\"")
+            .expect("the fixture carries the entry");
+        let thani = AYYINA
+            .find("\"007-first-light-play-in-arabic\"")
+            .expect("the fixture carries the entry");
+        assert!(awwal < thani, "the fixture lists them in this order");
+
+        let bayt = wathiqa(&malik());
+        let nass = String::from_utf8(bayt).expect("the cast document is text");
+        let maqlub = nass
+            .replacen("\"007-first-light-hesham\"", "\"__awwal__\"", 1)
+            .replacen("\"007-first-light-play-in-arabic\"", "\"__thani__\"", 1)
+            .replacen("\"__awwal__\"", "\"007-first-light-play-in-arabic\"", 1)
+            .replacen("\"__thani__\"", "\"007-first-light-hesham\"", 1);
+        assert_ne!(maqlub, nass, "the two identifiers were not swapped");
+        assert!(matches!(
+            FahrasMujtama::min_bayt(maqlub.as_bytes(), &malik().aam()),
+            Err(KhataMustawda::FahrasMujtamaTawqeeBatil { .. })
+        ));
+    }
+
+    /// A perfectly valid signature by somebody who is not the owner.
+    #[test]
+    fn tawqee_min_miftah_akhar_marfud() {
+        let bayt = wathiqa(&ghareeb());
+        // It verifies under the key that made it, which is what makes the
+        // refusal below about the signer and not about the bytes.
+        assert_eq!(qra(&bayt, &ghareeb().aam()).tarjamat.len(), 7);
+        match FahrasMujtama::min_bayt(&bayt, &malik().aam()) {
+            Err(KhataMustawda::FahrasMujtamaTawqeeBatil { sabab }) => {
+                assert!(sabab.contains("owner key"), "{sabab}");
+            },
+            akhar => panic!("an index signed by another key was accepted: {akhar:?}"),
+        }
+    }
+
+    /// The signature's spelling is canonical: 128 lowercase hexadecimal digits
+    /// and nothing else, so the same signature has exactly one written form.
+    #[test]
+    fn tawqee_ghayr_qanuni_marfud() {
+        let bayt = wathiqa(&malik());
+        let nass = String::from_utf8(bayt).expect("the cast document is text");
+        let mawqi = nass.find("\"tawqee\": \"").expect("the document is signed");
+        let badiya = nass
+            .get(mawqi..)
+            .expect("the signature field starts inside the document");
+        let khaam = badiya
+            .split('"')
+            .nth(3)
+            .expect("the signature field holds a value");
+        assert_eq!(khaam.len(), 128);
+
+        for (badeel, wasf) in [
+            (khaam.to_ascii_uppercase(), "an uppercase signature"),
+            (khaam.get(2..).unwrap_or_default().to_owned(), "a short one"),
+            (format!("{khaam}ff"), "a long one"),
+            ("z".repeat(128), "one that is not hexadecimal"),
+        ] {
+            let muharraf = nass.replacen(khaam, &badeel, 1);
+            match FahrasMujtama::min_bayt(muharraf.as_bytes(), &malik().aam()) {
+                Err(KhataMustawda::FahrasMujtamaTawqeeBatil { sabab }) => {
+                    assert!(sabab.contains("hexadecimal"), "{wasf}: {sabab}");
+                },
+                akhar => panic!("{wasf} was accepted: {akhar:?}"),
+            }
+        }
+    }
+
+    /// A cast carries through every field the client does not read. The index
+    /// is a hand-maintained public document, and a signing tool that silently
+    /// dropped the maintainer's own notes would rewrite it every time it ran.
+    #[test]
+    fn al_sabk_yahfaz_ma_la_yuqra() {
+        let bayt = wathiqa(&malik());
+        let nass = String::from_utf8(bayt).expect("the cast document is text");
+        for haql in [
+            "\"muallif\"",
+            "\"wasf\"",
+            "\"discord\"",
+            "\"x\"",
+            "\"tareeqa\": \"safha\"",
+        ] {
+            assert!(nass.contains(haql), "the cast dropped {haql}");
+        }
+        assert!(nass.contains("\"tawqee\""), "the cast added no signature");
+    }
+
+    /// Casting the same body twice produces the same signature, and casting an
+    /// already-signed document replaces the signature rather than nesting one.
+    #[test]
+    fn al_sabk_mutakarrir_wa_thabit() {
+        let awwal = wathiqa(&malik());
+        assert_eq!(awwal, wathiqa(&malik()), "the cast is not deterministic");
+
+        let thani =
+            match KatibFahrasMujtama::min_bayt(&awwal).and_then(|katib| katib.uktub(&malik())) {
+                Ok(bayt) => bayt,
+                Err(khata) => panic!("an already-signed document would not re-cast: {khata}"),
+            };
+        assert_eq!(awwal, thani, "re-casting changed the document");
+        let nass = String::from_utf8(thani.clone()).expect("the cast document is text");
+        assert_eq!(
+            nass.matches("\"tawqee\"").count(),
+            1,
+            "the document carries more than one signature field"
+        );
+        assert_eq!(qra(&thani, &malik().aam()).tarjamat.len(), 7);
+    }
+
+    /// A restamped cast changes the revision's own time, which the signature
+    /// covers: the old document's signature does not travel with the new stamp.
+    #[test]
+    fn al_waqt_al_mustaad_muwaqqa() {
+        let katib = match KatibFahrasMujtama::min_bayt(AYYINA.as_bytes())
+            .and_then(|katib| katib.bi_waqt("2026-09-18T09:00:00Z"))
+        {
+            Ok(katib) => katib,
+            Err(khata) => panic!("the fixture would not restamp: {khata}"),
+        };
+        assert_eq!(katib.waqt(), "2026-09-18T09:00:00Z");
+        assert_eq!(katib.adad_firaq(), 3);
+        assert_eq!(katib.adad_tarjamat(), 7);
+
+        let bayt = match katib.uktub(&malik()) {
+            Ok(bayt) => bayt,
+            Err(khata) => panic!("the restamped body would not cast: {khata}"),
+        };
+        assert_eq!(qra(&bayt, &malik().aam()).waqt, "2026-09-18T09:00:00Z");
+        assert_ne!(
+            bayt,
+            wathiqa(&malik()),
+            "the stamp is not part of the message"
+        );
 
         assert!(matches!(
-            FahrasMujtama::min_bayt(b"{\"isdar\": 1}"),
+            KatibFahrasMujtama::min_bayt(AYYINA.as_bytes())
+                .and_then(|katib| katib.bi_waqt("last Tuesday")),
             Err(KhataMustawda::FahrasMujtamaTalif { .. })
         ));
     }

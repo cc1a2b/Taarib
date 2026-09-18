@@ -15,7 +15,7 @@
 use std::fs;
 use std::path::Path;
 
-use taarib_mustalahat::nass::MudkhalNass;
+use taarib_mustalahat::nass::{MudkhalNass, TasnifNass};
 use taarib_tarjama::alamat::AtabatAlamat;
 use taarib_tarjama::dufaat::{
     HasilatNass, KhiyaratJawla, SijillJawla, TaqaddumJawla, shaghghil_jawla, tabbiq_sijill,
@@ -103,7 +103,8 @@ pub fn uktub_nusus(masar: &Path, madakhil: &[MudkhalNass]) -> NatijatTilqai<()> 
 /// The denominator is exact and known before a request goes out: the strings
 /// this run is eligible to translate, which is the table minus the ones a
 /// previous run already answered, minus the ones a human froze, minus the ones
-/// already carrying a translation, minus the empty ones. Every one of those
+/// already carrying a translation, minus the empty ones, minus the ones the
+/// classifier named an identifier rather than a sentence. Every one of those
 /// exclusions is counted separately and reported, because "it only did half my
 /// game" needs an answer and one number labelled *skipped* is not one.
 ///
@@ -161,6 +162,10 @@ pub async fn ijri(
         lahza: khiyarat.lahza,
         waqt: khiyarat.waqt.clone(),
         atabat: AtabatAlamat::default(),
+        // The one-button run is the unattended case by definition. A row the
+        // classifier called internal is a key, and a provider asked about a key
+        // answers with prose the game would then draw in place of it.
+        yashmal_dakhili: false,
     };
 
     let (mursil, mut mustaqbil) = tokio::sync::watch::channel(TaqaddumJawla::default());
@@ -312,6 +317,7 @@ fn muahhal(mudkhal: &MudkhalNass, sijill: &SijillJawla) -> bool {
         && !mudkhal.muraja.mujammad()
         && mudkhal.hadaf.is_none()
         && !mudkhal.masdar.trim().is_empty()
+        && mudkhal.tasnif != TasnifNass::Dakhili
 }
 
 /// One run-state snapshot, as a progress report.
@@ -324,14 +330,15 @@ fn ballagh(muraqib: &mut Muraqib<'_>, hali: &TaqaddumJawla, muahhala: u64) {
         muahhala,
         format!(
             "{} translated, {} failed, {} skipped ({} already answered, {} already translated, \
-             {} frozen, {} empty)",
+             {} frozen, {} empty, {} identifiers)",
             hali.mutarjama,
             hali.fashila.len(),
             hali.mutakhattaha.majmu(),
             hali.mutakhattaha.fi_alsijill,
             hali.mutakhattaha.mutarjama_musbaqan,
             hali.mutakhattaha.mujammada,
-            hali.mutakhattaha.farigha
+            hali.mutakhattaha.farigha,
+            hali.mutakhattaha.dakhiliya
         ),
     );
 }

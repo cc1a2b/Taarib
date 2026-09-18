@@ -8,12 +8,19 @@
 //! the cache and never from the network, because the library scan runs on a
 //! thread that must not wait for one; the list is fetched on demand and the
 //! same refresh keeps the cache warm for the next scan.
+//!
+//! Every one of those paths reads the index through the owner's key. The index
+//! is what tells [`iftah_rabt`] which hosts it may hand to a browser, and a
+//! verified index is the only kind this module can hold: `FahrasMujtama` has no
+//! constructor but the verifier's, so there is nowhere in here for an unsigned
+//! entry to be credited, counted or opened.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use jiff::{SignedDuration, Timestamp};
+use taarib_khatm::MiftahAam;
 use taarib_makhzan::wasl::Makhzan;
 use taarib_mustalahat::luba::Luba;
 use taarib_mustalahat::wahhid_ism;
@@ -47,6 +54,22 @@ const MUDIFUN_MARUFA: [&str; 6] = [
 /// Longest address the open command accepts, the same bound the index holds
 /// its own addresses to.
 const HADD_TUL_RABT: usize = 2048;
+
+/// The anchor every community index is verified under.
+///
+/// The same key every installed patch and every revocation list is verified
+/// under, compiled into this build — `taarib_khatm::MIRSAT_MALIK`. There is no
+/// second anchor for the community index and no way to run without one: an
+/// anchor this build cannot read is a build that is inconsistent with itself,
+/// not a user who did anything.
+///
+/// # Errors
+///
+/// [`taarib_khatm::KhataKhatm::MiftahTalif`] when the compiled anchor is not a
+/// canonical Ed25519 public key.
+fn miftah_malik() -> Result<MiftahAam, taarib_khatm::KhataKhatm> {
+    MiftahAam::min_bayt(&taarib_khatm::MIRSAT_MALIK.miftah)
+}
 
 /// How long the background refresh waits after a fetch that failed or that
 /// had to serve the stale cache: long enough not to hammer a source that is
@@ -110,15 +133,25 @@ pub struct TarjamaMujtamaHie {
 ///
 /// The index is answered from the cache while it is current, fetched through
 /// the configured sources when it is not, and served stale when every source
-/// refuses. An empty answer therefore means the index was read and lists
-/// nothing for this game; a machine with no index at all is refused instead,
-/// so the screen never says "nothing is known" when nobody could look.
+/// refuses — and verified against the owner's key in every one of those cases
+/// before a maker is credited or an address is offered. An empty answer
+/// therefore means the index was read and lists nothing for this game; a
+/// machine with no index at all, or one holding an index nobody signed, is
+/// refused by name instead, so the screen never says "nothing is known" when
+/// nobody could look and never shows a panel that is blank for no stated
+/// reason.
 ///
 /// # Errors
 ///
 /// [`taarib_mustawda::KhataMustawda::FahrasMujtamaGhayrMutah`] when no source
-/// answered and nothing is cached, whatever the index parser refuses when the
-/// one answer that came was unreadable, and whatever the game lookup raises.
+/// answered and nothing is cached,
+/// [`taarib_mustawda::KhataMustawda::FahrasMujtamaGhayrMuwaqqa`] when the copy
+/// this machine holds carries no owner signature — the state a machine
+/// upgrading from a build that did not sign the index starts in —
+/// [`taarib_mustawda::KhataMustawda::FahrasMujtamaTawqeeBatil`] when a
+/// signature was offered and refused, whatever the index parser refuses when
+/// the one answer that came was unreadable, and whatever the game lookup
+/// raises.
 #[tauri::command]
 #[specta::specta]
 pub async fn tarjamat_mujtama(
@@ -129,6 +162,7 @@ pub async fn tarjamat_mujtama(
 ) -> Result<Vec<TarjamaMujtamaHie>, Khata> {
     let id = huwiya(muarrif)?;
     let hali = idadat.hali();
+    let miftah = miftah_malik()?;
     let luba = {
         let makhzan = Makhzan::clone(&makhzan);
         bil_hajb(move || ijlib_luba(&makhzan, id)).await?
@@ -137,7 +171,7 @@ pub async fn tarjamat_mujtama(
     // Offline mode with no local copy is a chain with nothing in it, not a
     // refusal: the fetch then answers from the cache or says there is none.
     let silsila = silsilat_masadir(&hali).unwrap_or_else(|_| SilsilatMasadir::jadida(Vec::new()));
-    let majlub = jalb_fahras_mujtama(&silsila, &masarat, Timestamp::now())
+    let majlub = jalb_fahras_mujtama(&silsila, &masarat, &miftah, Timestamp::now())
         .await
         .map_err(|khata| Khata::min_tafsir(&khata))?;
     sajjil_asl(&majlub.asl);
@@ -159,18 +193,38 @@ pub async fn tarjamat_mujtama(
 /// a user error, but a command that opens whatever it is handed is a command
 /// that opens whatever a compromised webview hands it.
 ///
+/// The hosts the index contributes come out of a *verified* cache and nowhere
+/// else. That is the whole reason the index is signed: an allow-list read from
+/// a document anybody could serve would let a compromised source name any host
+/// it liked and have this command open it. A cache that does not verify
+/// contributes nothing, which leaves the compiled-in platforms and refuses the
+/// rest — the panel that fetched the index is where the refusal is named to the
+/// user, and this command is not the place to raise it a second time.
+///
 /// # Errors
 ///
-/// [`KhataMujtamaAmr::RabtMarfud`] when the address fails any check above, and
-/// [`KhataMujtamaAmr::FathRabtFashil`] when the platform would not open it.
+/// [`KhataMujtamaAmr::RabtMarfud`] when the address fails any check above,
+/// [`KhataMujtamaAmr::FathRabtFashil`] when the platform would not open it, and
+/// [`taarib_khatm::KhataKhatm::MiftahTalif`] when this build's own trust anchor
+/// is unreadable.
 #[tauri::command]
 #[specta::specta]
 pub async fn iftah_rabt(rabt: String, masarat: tauri::State<'_, Masarat>) -> Result<bool, Khata> {
     let masarat = Masarat::clone(&masarat);
     bil_hajb(move || {
-        let mudifun = iqra_makhbaa(&masarat)
-            .map(|mukhazzan| mukhazzan.fahras.mudifun())
-            .unwrap_or_default();
+        let miftah = miftah_malik()?;
+        let mudifun = match iqra_makhbaa(&masarat, &miftah) {
+            Ok(mukhazzan) => mukhazzan
+                .map(|mukhazzan| mukhazzan.fahras.mudifun())
+                .unwrap_or_default(),
+            Err(khata) => {
+                tracing::warn!(
+                    khata = %khata,
+                    "the cached community index was refused; only the known platforms may be opened"
+                );
+                BTreeSet::new()
+            },
+        };
         let salim = rabt_salim(&rabt, &mudifun)?;
         tauri_plugin_opener::open_url(salim.as_str(), None::<&str>).map_err(|sabab| {
             Khata::from(KhataMujtamaAmr::FathRabtFashil {
@@ -186,11 +240,28 @@ pub async fn iftah_rabt(rabt: String, masarat: tauri::State<'_, Masarat>) -> Res
 
 /// The cached index, for a caller on a thread that must not wait for a network.
 ///
-/// `None` when nothing is cached or the cache does not read, which the library
-/// scan draws as no community marks; the refresh this module runs in the
-/// background is what fills it for the next scan.
+/// `None` when nothing is cached, when the cache does not read, or when it does
+/// not verify — the library scan draws all three as no community marks, because
+/// a card cannot raise an error and a mark drawn from an unverified index is a
+/// mark this product did not earn. The refresh this module runs in the
+/// background is what fills it for the next scan, and the game screen is where
+/// a refused index is named to the user.
 pub(crate) fn fahras_mukhazzan(masarat: &Masarat) -> Option<FahrasMujtama> {
-    iqra_makhbaa(masarat).map(|mukhazzan| mukhazzan.fahras)
+    let miftah = miftah_malik()
+        .inspect_err(|khata| {
+            tracing::error!(khata = %khata, "this build's trust anchor is unreadable; no community index can be verified");
+        })
+        .ok()?;
+    match iqra_makhbaa(masarat, &miftah) {
+        Ok(mukhazzan) => mukhazzan.map(|mukhazzan| mukhazzan.fahras),
+        Err(khata) => {
+            tracing::warn!(
+                khata = %khata,
+                "the cached community index was refused; the library shows no community marks until a signed one is fetched"
+            );
+            None
+        },
+    }
 }
 
 /// How many community translations the index lists for one game.
@@ -210,6 +281,14 @@ pub(crate) fn adad_li_luba(fahras: &FahrasMujtama, luba: &Luba) -> u32 {
 /// answer that had to be served stale or could not be served at all.
 pub(crate) fn dhamin_mujaddid_mujtama(masarat: &Masarat, idadat: &Arc<MakhzanIdadat>) {
     static MUJADDID: OnceLock<()> = OnceLock::new();
+    // Read once, outside the loop: the anchor is compiled in and cannot change
+    // between passes, and a build whose own anchor will not read has no refresh
+    // to run rather than one that fails every hour.
+    let Ok(miftah) = miftah_malik().inspect_err(|khata| {
+        tracing::error!(khata = %khata, "this build's trust anchor is unreadable; the community index refresh will not run");
+    }) else {
+        return;
+    };
     let masarat = masarat.clone();
     let idadat = Arc::clone(idadat);
     MUJADDID.get_or_init(|| {
@@ -218,17 +297,17 @@ pub(crate) fn dhamin_mujaddid_mujtama(masarat: &Masarat, idadat: &Arc<MakhzanIda
                 let hali = idadat.hali();
                 let silsila = silsilat_masadir(&hali)
                     .unwrap_or_else(|_| SilsilatMasadir::jadida(Vec::new()));
-                let raqda = match jalb_fahras_mujtama(&silsila, &masarat, Timestamp::now()).await
-                {
-                    Ok(majlub) => {
-                        sajjil_asl(&majlub.asl);
-                        raqdat_asl(&majlub.asl)
-                    },
-                    Err(khata) => {
-                        tracing::warn!(khata = %khata, "the community index refresh found nothing to serve");
-                        MUHLAT_IADA
-                    },
-                };
+                let raqda =
+                    match jalb_fahras_mujtama(&silsila, &masarat, &miftah, Timestamp::now()).await {
+                        Ok(majlub) => {
+                            sajjil_asl(&majlub.asl);
+                            raqdat_asl(&majlub.asl)
+                        },
+                        Err(khata) => {
+                            tracing::warn!(khata = %khata, "the community index refresh found nothing to serve");
+                            MUHLAT_IADA
+                        },
+                    };
                 tokio::time::sleep(raqda).await;
             }
         }));
@@ -324,10 +403,7 @@ fn mudif_ism(rabt: &str) -> String {
 }
 
 /// The address, when it is one this command will open.
-fn rabt_salim(
-    rabt: &str,
-    mudifun: &std::collections::BTreeSet<String>,
-) -> Result<reqwest::Url, Khata> {
+fn rabt_salim(rabt: &str, mudifun: &BTreeSet<String>) -> Result<reqwest::Url, Khata> {
     let marfud = |sabab: &str| {
         Khata::from(KhataMujtamaAmr::RabtMarfud {
             rabt: rabt.to_owned(),
@@ -399,7 +475,7 @@ const fn harf_khafi(harf: char) -> bool {
 
 /// Whether a host is one the cached index links to, or a known platform or a
 /// subdomain of one.
-fn mudif_masmuh(mudif: &str, mudifun: &std::collections::BTreeSet<String>) -> bool {
+fn mudif_masmuh(mudif: &str, mudifun: &BTreeSet<String>) -> bool {
     mudifun.contains(mudif)
         || MUDIFUN_MARUFA.iter().any(|maruf| {
             mudif == *maruf
@@ -503,9 +579,7 @@ khata_min!(KhataMujtamaAmr);
 
 #[cfg(test)]
 mod ikhtibarat {
-    use std::collections::BTreeSet;
-
-    use super::{mudif_ism, mudif_masmuh, rabt_salim};
+    use super::{BTreeSet, mudif_ism, mudif_masmuh, rabt_salim};
 
     fn mudifun() -> BTreeSet<String> {
         ["etrdream.com", "www.nexusmods.com"]

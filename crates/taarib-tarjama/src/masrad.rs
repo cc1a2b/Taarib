@@ -81,6 +81,23 @@
 //! severity and wording included. No parallel flag type: two flags meaning
 //! one thing is how an interface shows the same problem twice with two
 //! different sentences.
+//!
+//! ## Answering, which is not matching
+//!
+//! [`Masrad::ajib`] is the other half of the glossary's job and the one the
+//! batch runner uses: a string whose **whole text** is a term needs no
+//! provider, because the answer is already decided. `Menu` is «القائمة», and
+//! a machine handed the bare word has no way to know it is a button — the
+//! real run behind this module produced «قائمة طعام», a food menu, and
+//! «يبدأ» ("he starts") for `Start`.
+//!
+//! Answering is deliberately **whole-string only**, never substring. The
+//! in-sentence case already has its two answers and neither of them is
+//! replacement: [`Masrad::mustalahat_fi`] tells the model what the term must
+//! become, and [`Masrad::afhas`] checks the reply. Replacing a term inside
+//! prose would mean splicing «حفظ» into the middle of an Arabic sentence
+//! whose grammar the splicer cannot read, which is the classic way an
+//! automated glossary produces text no human would write.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -97,6 +114,15 @@ use crate::khata::KhataTarjama;
 /// intent than its name, and a loader that guessed would "successfully" read
 /// a CSV as a one-column TSV and import garbage with a clean conscience.
 pub const LAWAHIQ_MASRAD: &[&str] = &["json", "tsv", "tab"];
+
+/// The project's own glossary file, beside its strings.
+///
+/// Named here rather than in the collaboration crate that reads and writes it,
+/// because [`Masrad::li_mashru`] loads it from inside a batch run and the
+/// translation crate cannot depend on the crate above it. `taarib-warsha`
+/// re-exports this constant so the two can never drift into naming one file
+/// two ways.
+pub const MALAF_MASRAD_MASHRU: &str = "masrad.json";
 
 /// Where a term applies.
 #[derive(
@@ -120,6 +146,15 @@ pub enum NitaqMustalah {
     /// For the vocabulary that genuinely repeats across games — interface
     /// verbs, platform terms, the community's settled renderings.
     Aam,
+    /// Shipped with the product: [`MUSTALAHAT_MUDMAJA`].
+    ///
+    /// Not a scope the user can choose — nothing imports into it and nothing
+    /// writes it to a project file — because a built-in term is not the
+    /// user's data. It is a separate scope rather than a flag on [`Aam`] so
+    /// that "you pinned this" and "we shipped this" are never the same
+    /// sentence in the interface, and so that precedence can put it
+    /// underneath both of the scopes a person actually authored.
+    Mudmaj,
 }
 
 impl NitaqMustalah {
@@ -129,6 +164,7 @@ impl NitaqMustalah {
         match self {
             Self::MashruHali => "هذا المشروع",
             Self::Aam => "كل المشاريع",
+            Self::Mudmaj => "مُضمَّن",
         }
     }
 
@@ -138,6 +174,23 @@ impl NitaqMustalah {
         match self {
             Self::MashruHali => "this project",
             Self::Aam => "all projects",
+            Self::Mudmaj => "built in",
+        }
+    }
+
+    /// How loudly this scope speaks when two entries claim one term.
+    ///
+    /// Higher wins. The order is authorship: what this project decided beats
+    /// what the machine's shared vocabulary says, and both beat what the
+    /// product shipped — a built-in term is a default, and a default that
+    /// could overrule the person who typed a different answer is not a
+    /// default. Written as a rank rather than a match over pairs so that a
+    /// fourth scope orders itself against all three at once.
+    const fn rutba(self) -> u8 {
+        match self {
+            Self::Mudmaj => 0,
+            Self::Aam => 1,
+            Self::MashruHali => 2,
         }
     }
 }
@@ -200,6 +253,17 @@ impl MustalahMasrad {
     #[must_use]
     pub const fn aam(mut self) -> Self {
         self.nitaq = NitaqMustalah::Aam;
+        self
+    }
+
+    /// The same term, marked as shipped with the product.
+    ///
+    /// Only [`Masrad::min_mudmaj`] calls this. A term a person wrote never
+    /// passes through here, which is what keeps the "we shipped this" label
+    /// honest wherever the interface draws it.
+    #[must_use]
+    pub const fn mudmaj(mut self) -> Self {
+        self.nitaq = NitaqMustalah::Mudmaj;
         self
     }
 
@@ -404,9 +468,42 @@ fn yahtawi_shakl(hadaf: &str, shakl: &str) -> bool {
     }
 }
 
+/// Splits a label into the text to look up and the trailing ellipsis to keep.
+///
+/// Returns the trimmed body and the exact trailing run of `.` and `…` that
+/// followed it, as slices of the input. `Loading...` becomes `("Loading",
+/// "...")`; `Loading` becomes `("Loading", "")`; a string that is nothing but
+/// dots becomes `("", "...")`, whose empty body no lookup can match.
+///
+/// Only these two characters, and only at the end. A trailing `!` or `?`
+/// changes what a label *says* — `Quit` and `Quit?` are a menu item and a
+/// confirmation — while trailing dots only say the label is mid-action, which
+/// survives translation unchanged.
+fn iqsim_dhayl(nass: &str) -> (&str, &str) {
+    let matn = nass.trim();
+    let asas = matn.trim_end_matches(['.', '\u{2026}']);
+    let dhayl = matn.get(asas.len()..).unwrap_or_default();
+    (asas.trim_end(), dhayl)
+}
+
 // ---------------------------------------------------------------------------
 // المسرد — the assembled glossary
 // ---------------------------------------------------------------------------
+
+/// One string the glossary answers outright, with the term that answered it.
+///
+/// Carries the whole term rather than just its Arabic, because everything
+/// downstream of an answer needs to say *where it came from*: the journal
+/// line, the review history, and the interface badge that separates "you
+/// pinned this" from "we shipped this".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JawabMasrad {
+    /// The Arabic to write: the approved form plus whatever trailing
+    /// ellipsis the source carried.
+    pub hadaf: String,
+    /// The term that answered.
+    pub mustalah: MustalahMasrad,
+}
 
 /// One term with its matcher state precomputed.
 ///
@@ -469,17 +566,17 @@ impl Masrad {
 
     /// Adds one term, returning whether it took effect.
     ///
-    /// Collisions are decided by scope, and the rule is the reason the
-    /// method cannot just push: a **project term beats a global term** for
-    /// the same source form — the project deliberately overrode the shared
-    /// vocabulary, and an import order that happened to load the global
-    /// file second must not quietly undo that decision. Same-scope
-    /// collisions take the newcomer, because re-importing an updated file
-    /// is how a glossary is edited. An unenforceable term (empty source or
-    /// empty approved form after folding) is declined; file loaders refuse
-    /// those by name before ever reaching here, so a `false` from this
-    /// method on a hand-built term is the same message without a file to
-    /// blame.
+    /// Collisions are decided by [`NitaqMustalah::rutba`], and the rule is
+    /// the reason the method cannot just push: a **project term beats a
+    /// global term beats a built-in term** for the same source form — the
+    /// project deliberately overrode the shared vocabulary, and an import
+    /// order that happened to load the wider file second must not quietly
+    /// undo that decision. Same-scope collisions take the newcomer, because
+    /// re-importing an updated file is how a glossary is edited. An
+    /// unenforceable term (empty source or empty approved form after
+    /// folding) is declined; file loaders refuse those by name before ever
+    /// reaching here, so a `false` from this method on a hand-built term is
+    /// the same message without a file to blame.
     pub fn adkhil(&mut self, mustalah: MustalahMasrad) -> bool {
         if !mustalah.salih() {
             tracing::debug!(masdar = %mustalah.masdar, "term is unenforceable; not added");
@@ -503,18 +600,15 @@ impl Masrad {
                 let Some(qaim) = self.mustalahat.get_mut(*fahras) else {
                     return false;
                 };
-                let yahkum = match (qaim.mustalah.nitaq, muaadd.mustalah.nitaq) {
-                    // The project's own choice stands.
-                    (NitaqMustalah::MashruHali, NitaqMustalah::Aam) => false,
-                    // Global widened, or same scope refreshed.
-                    _ => true,
-                };
+                let yahkum = muaadd.mustalah.nitaq.rutba() >= qaim.mustalah.nitaq.rutba();
                 if yahkum {
                     *qaim = muaadd;
                 } else {
                     tracing::debug!(
                         masdar = %muaadd.mustalah.masdar,
-                        "global term yielded to the project's own entry"
+                        nitaq = muaadd.mustalah.nitaq.wasf_injilizi(),
+                        qaim = qaim.mustalah.nitaq.wasf_injilizi(),
+                        "a wider term yielded to a narrower one already in force"
                     );
                 }
                 yahkum
@@ -536,14 +630,70 @@ impl Masrad {
     /// with their approved forms and notes, are what the model is told to
     /// honour. The scan folds the string once and runs every needle over
     /// the one folded sequence.
+    ///
+    /// A **built-in term is returned only when the string is that term**, and
+    /// the exception is not a detail. `No` is «لا» on a dialog and nothing
+    /// like «لا» inside "there was no time left"; `Time`, `Level`, `Map`,
+    /// `Save` are the same story. Handing a model the label form of every
+    /// common word that happens to appear in a sentence would damage the
+    /// sentences this list exists to help. A term somebody pinned for this
+    /// game is different in kind — it is a name, an item, a system — and
+    /// binds wherever it occurs.
     #[must_use]
     pub fn mustalahat_fi(&self, nass: &str) -> Vec<&MustalahMasrad> {
         let matn = tasalsul_matwi(nass);
+        let miftah_kamil = miftah_muwahhad(iqsim_dhayl(nass).0);
         self.mustalahat
             .iter()
             .filter(|muaadd| !mawaqi_ibra(&matn, &muaadd.ibra).is_empty())
             .map(|muaadd| &muaadd.mustalah)
+            .filter(|mustalah| {
+                mustalah.nitaq != NitaqMustalah::Mudmaj || mustalah.miftah() == miftah_kamil
+            })
             .collect()
+    }
+
+    /// The answer for a string the glossary settles outright, if it settles
+    /// it.
+    ///
+    /// Matching is **whole-string**: the source, trimmed, must fold to a
+    /// term's own folded source form. Nothing else is answered, and the
+    /// restriction is the safety rather than a limitation of the matcher —
+    /// [`mawaqi_ibra`] finds terms inside sentences perfectly well, and
+    /// substituting one there would be splicing a fixed Arabic word into a
+    /// sentence this module cannot parse. A term buried in prose is handed
+    /// to the model as a requirement ([`Masrad::mustalahat_fi`]) and checked
+    /// on the way back ([`Masrad::afhas`]); only a string that *is* the term
+    /// is answered here, where the whole target is known exactly.
+    ///
+    /// There is deliberately **no length limit** on the source. With
+    /// whole-string matching the source is the pinned term, so a cap could
+    /// not prevent a bad substitution — it could only silently stop
+    /// answering a term somebody deliberately pinned, and a glossary entry
+    /// that quietly does nothing is worse than one that does something
+    /// arguable.
+    ///
+    /// A trailing run of `.` or `…` is carried across unchanged: `Loading…`
+    /// answers from `Loading` and keeps its ellipsis, because the dots are
+    /// the label's "still working" affordance rather than vocabulary, and a
+    /// glossary that refused every `Saving...` in a game would answer almost
+    /// no progress labels at all.
+    ///
+    /// Folding is the shared one, so the match is case- and
+    /// tashkeel-insensitive and whitespace runs collapse: `GAME OVER`,
+    /// `Game  Over` and `game over` are one string.
+    #[must_use]
+    pub fn ajib(&self, masdar: &str) -> Option<JawabMasrad> {
+        let (asas, dhayl) = iqsim_dhayl(masdar);
+        let miftah = miftah_muwahhad(asas);
+        if miftah.is_empty() {
+            return None;
+        }
+        let fahras = *self.faharis.get(&miftah)?;
+        let mustalah = self.mustalahat.get(fahras)?.mustalah.clone();
+        let mut hadaf = mustalah.arabi.trim().to_owned();
+        hadaf.push_str(dhayl);
+        Some(JawabMasrad { hadaf, mustalah })
     }
 
     /// Checks one string against every term in force.
@@ -556,6 +706,12 @@ impl Masrad {
     /// translation to be wrong yet, and an empty target is
     /// [`AlamJawda::Farigh`]'s finding, computed by the flag layer that owns
     /// emptiness — one condition, one flag, one sentence in the interface.
+    ///
+    /// **Built-in terms enforce nothing.** They are a default, and a default
+    /// that raised a quality flag the moment somebody chose otherwise would
+    /// be a rule wearing a default's name: a translator who prefers «لائحة»
+    /// to the shipped «القائمة» would have to add a glossary entry purely to
+    /// silence an accusation. What a project pinned is what this checks.
     #[must_use]
     pub fn afhas(&self, mudkhal: &MudkhalNass) -> Vec<AlamJawda> {
         let Some(hadaf) = mudkhal.hadaf.as_deref() else {
@@ -568,6 +724,9 @@ impl Masrad {
         let matn = tasalsul_matwi(&mudkhal.masdar);
         let mut alamat = Vec::new();
         for muaadd in &self.mustalahat {
+            if muaadd.mustalah.nitaq == NitaqMustalah::Mudmaj {
+                continue;
+            }
             if mawaqi_ibra(&matn, &muaadd.ibra).is_empty() {
                 continue;
             }
@@ -674,6 +833,60 @@ impl Masrad {
                 la_yutarjam,
             };
             let _ = masrad.adkhil(mustalah);
+        }
+        masrad
+    }
+
+    /// The built-in glossary: [`MUSTALAHAT_MUDMAJA`], assembled.
+    ///
+    /// Every entry lands at [`NitaqMustalah::Mudmaj`], so anything the user
+    /// or the project says about the same term wins whatever order the two
+    /// are merged in.
+    #[must_use]
+    pub fn min_mudmaj() -> Self {
+        let mut masrad = Self::jadeed();
+        for (masdar, arabi, mulahaza) in MUSTALAHAT_MUDMAJA {
+            let mut mustalah = MustalahMasrad::jadeed(*masdar, *arabi).mudmaj();
+            // An empty cell in the table is "no note", not a note that says
+            // nothing: an empty string would reach the suggestion panel as a
+            // blank line under the term.
+            if !mulahaza.is_empty() {
+                mustalah = mustalah.bi_mulahaza(*mulahaza);
+            }
+            let _ = masrad.adkhil(mustalah);
+        }
+        masrad
+    }
+
+    /// The glossary in force for one project directory: the built-in list
+    /// with the project's own [`MALAF_MASRAD_MASHRU`] over it.
+    ///
+    /// What a batch run consults before it dispatches anything. It
+    /// deliberately does **not** seed from the project's strings the way
+    /// [`Masrad::min_nusus`] does: those terms are harvested from earlier
+    /// machine output, and answering a new string with them would apply one
+    /// machine guess to another with the confidence of a decision nobody
+    /// made. Harvested names stay what they are — material for the
+    /// consistency pass.
+    ///
+    /// A glossary file that will not parse is logged and skipped rather than
+    /// failing the run, because the run's other thousands of strings are not
+    /// the file's fault; the same file is refused by name, loudly, wherever
+    /// the user imports it.
+    #[must_use]
+    pub fn li_mashru(mujallad_mashru: &Path) -> Self {
+        let mut masrad = Self::min_mudmaj();
+        let masar = mujallad_mashru.join(MALAF_MASRAD_MASHRU);
+        if !masar.is_file() {
+            return masrad;
+        }
+        match Self::min_malaf(&masar) {
+            Ok(mustalahat) => masrad.admij(mustalahat),
+            Err(khata) => tracing::warn!(
+                masar = %masar.display(),
+                sabab = %khata,
+                "لم يُقرأ مسرد المشروع؛ المضمَّن وحده هو الساري"
+            ),
         }
         masrad
     }
@@ -1097,4 +1310,546 @@ pub fn wahhid_tadarub(
         }
     }
     taadilat
+}
+
+// ---------------------------------------------------------------------------
+// المسرد المُضمَّن — the terminology every game reuses
+// ---------------------------------------------------------------------------
+
+/// The built-in glossary: standard game-interface Arabic, shipped with the
+/// product and in force in every project.
+///
+/// `(source, approved Arabic, note)`. Every entry is the Arabic a player
+/// would meet in a professionally localised game, which is a different
+/// question from the one a dictionary answers:
+///
+/// - **A button is an imperative, not a report.** `Start` is «ابدأ» — a
+///   machine handed the bare word answers «يبدأ», "he starts", which is a
+///   sentence about somebody else.
+/// - **A screen label is definite.** Arabic menus say «الإعدادات»,
+///   «الرسومات», «القائمة»; the indefinite forms read as fragments.
+/// - **A binding is a verbal noun.** `Jump`, `Crouch`, `Sprint` are «القفز»,
+///   «الانحناء», «الركض», the form a controls list uses throughout.
+/// - **Register beats literalness.** `Menu` is «القائمة» and never «قائمة
+///   طعام»; `Volume` is «مستوى الصوت» and never «مقدار»; `Resolution` is «دقة
+///   الشاشة»; `Medium` as a quality level is «متوسط», not the go-between.
+/// - **A family agrees with itself.** Quality levels are one masculine set
+///   agreeing with «مستوى» — «منخفض», «متوسط», «مرتفع», «فائق» — and every
+///   language name is a feminine noun — «الإنجليزية», «الفرنسية»,
+///   «الإسبانية» — so a language menu cannot come out half adjective and half
+///   noun the way the measured run did.
+///
+/// What is **not** here matters as much. A term whose Arabic depends on the
+/// game is left out, because a pinned term is applied with confidence and
+/// never reviewed, so a wrong one is worse than a machine guess a reviewer
+/// would catch: `Fire` is a binding in one game and an element in the next,
+/// `Escape` is an objective and a key, `Reload` is a weapon and a level.
+/// Those go to the provider, which at least sees the surrounding context.
+///
+/// Anything a project disagrees with is overridden by its own
+/// [`MALAF_MASRAD_MASHRU`] entry — see [`NitaqMustalah::rutba`].
+pub const MUSTALAHAT_MUDMAJA: &[(&str, &str, &str)] = &[
+    // القائمة والتنقل — menu and navigation
+    ("Start", "ابدأ", "زر أمر: فعل أمر لا خبر عن غائب"),
+    ("Start Game", "ابدأ اللعبة", "زر أمر"),
+    ("New Game", "لعبة جديدة", ""),
+    ("Continue", "متابعة", "زر القائمة الرئيسية لا خبر عن غائب"),
+    ("Load", "تحميل", ""),
+    ("Load Game", "تحميل لعبة", ""),
+    ("Save", "حفظ", ""),
+    ("Save Game", "حفظ اللعبة", ""),
+    ("Quit", "خروج", ""),
+    ("Exit", "خروج", ""),
+    ("Quit Game", "إنهاء اللعبة", ""),
+    ("Exit Game", "إنهاء اللعبة", ""),
+    ("Main Menu", "القائمة الرئيسية", ""),
+    ("Menu", "القائمة", "قائمة الواجهة لا قائمة الطعام"),
+    ("Pause", "إيقاف مؤقت", ""),
+    ("Resume", "استئناف", ""),
+    ("Restart", "إعادة التشغيل", ""),
+    ("Options", "الخيارات", ""),
+    ("Settings", "الإعدادات", ""),
+    ("Back", "رجوع", ""),
+    ("Next", "التالي", ""),
+    ("Previous", "السابق", ""),
+    ("Apply", "تطبيق", ""),
+    ("Cancel", "إلغاء", ""),
+    ("Confirm", "تأكيد", ""),
+    ("OK", "موافق", ""),
+    ("Yes", "نعم", ""),
+    ("No", "لا", ""),
+    ("Close", "إغلاق", ""),
+    ("Done", "تم", ""),
+    ("Reset", "إعادة تعيين", ""),
+    ("Retry", "إعادة المحاولة", ""),
+    ("Skip", "تخطي", ""),
+    ("Help", "المساعدة", ""),
+    ("About", "حول", ""),
+    ("Credits", "شكر وتقدير", "شاشة صنّاع اللعبة"),
+    ("Achievements", "الإنجازات", ""),
+    ("Leaderboard", "لوحة الصدارة", ""),
+    ("Multiplayer", "متعدد اللاعبين", ""),
+    ("Singleplayer", "لاعب واحد", ""),
+    ("Single Player", "لاعب واحد", ""),
+    ("Campaign", "الحملة", ""),
+    ("Story", "القصة", ""),
+    ("Difficulty", "مستوى الصعوبة", ""),
+    ("Easy", "سهل", "مستوى صعوبة: يوافق «مستوى» فيُذكَّر"),
+    ("Normal", "عادي", "مستوى صعوبة"),
+    ("Hard", "صعب", "مستوى صعوبة"),
+    ("Very Easy", "سهل جدًا", "مستوى صعوبة"),
+    ("Very Hard", "صعب جدًا", "مستوى صعوبة"),
+    // العرض والرسومات — display and graphics
+    ("Graphics", "الرسومات", ""),
+    ("Video", "الفيديو", ""),
+    ("Display", "العرض", ""),
+    ("Resolution", "دقة الشاشة", "دقة العرض لا القرار"),
+    ("Resolutions", "دقة الشاشة", "عنوان قائمة الدقات لا القرارات"),
+    ("Fullscreen", "ملء الشاشة", ""),
+    ("Full Screen", "ملء الشاشة", ""),
+    ("Windowed", "وضع النافذة", ""),
+    ("Borderless", "نافذة بلا إطار", ""),
+    ("Borderless Window", "نافذة بلا إطار", ""),
+    ("Quality", "الجودة", ""),
+    ("Graphics Quality", "جودة الرسومات", ""),
+    ("Low", "منخفض", "مستوى جودة: يوافق «مستوى» فيُذكَّر"),
+    ("Medium", "متوسط", "مستوى جودة لا وسيط بين طرفين"),
+    ("High", "مرتفع", "مستوى جودة"),
+    ("Ultra", "فائق", "مستوى جودة"),
+    ("Very Low", "منخفض جدًا", "مستوى جودة"),
+    ("Very High", "مرتفع جدًا", "مستوى جودة"),
+    ("Brightness", "السطوع", ""),
+    ("Contrast", "التباين", ""),
+    ("Gamma", "جاما", ""),
+    ("Shadows", "الظلال", ""),
+    ("Anti-Aliasing", "تنعيم الحواف", ""),
+    ("Antialiasing", "تنعيم الحواف", ""),
+    ("Motion Blur", "ضبابية الحركة", ""),
+    ("Field of View", "مجال الرؤية", ""),
+    ("FOV", "مجال الرؤية", ""),
+    ("VSync", "المزامنة الرأسية", ""),
+    ("V-Sync", "المزامنة الرأسية", ""),
+    ("Vertical Sync", "المزامنة الرأسية", ""),
+    ("FPS", "الإطارات في الثانية", "عدّاد الإطارات في الإعدادات"),
+    ("Frame Rate", "معدل الإطارات", ""),
+    ("Framerate", "معدل الإطارات", ""),
+    ("Head Bob", "اهتزاز الرأس", ""),
+    ("Headbob", "اهتزاز الرأس", ""),
+    // الصوت — audio
+    ("Audio", "الصوت", ""),
+    ("Sound", "الصوت", ""),
+    ("Volume", "مستوى الصوت", "شدّة الصوت لا المقدار"),
+    ("Master Volume", "الصوت العام", ""),
+    ("Music", "الموسيقى", ""),
+    ("Music Volume", "مستوى الموسيقى", ""),
+    ("SFX", "المؤثرات الصوتية", ""),
+    ("Sound Effects", "المؤثرات الصوتية", ""),
+    ("Voice Acting", "التمثيل الصوتي", ""),
+    ("Voiceacting", "التمثيل الصوتي", ""),
+    ("Dubbing", "الدبلجة", ""),
+    ("Mute", "كتم الصوت", ""),
+    ("Subtitles", "الترجمة", "النص المصاحب للحوار"),
+    ("Language", "اللغة", ""),
+    // الإدخال — input
+    ("Controls", "التحكم", ""),
+    ("Keyboard", "لوحة المفاتيح", ""),
+    ("Mouse", "الماوس", ""),
+    ("Controller", "ذراع التحكم", ""),
+    ("Gamepad", "ذراع التحكم", ""),
+    ("Key Bindings", "مفاتيح التحكم", ""),
+    ("Keybindings", "مفاتيح التحكم", ""),
+    ("Bindings", "مفاتيح التحكم", ""),
+    ("Sensitivity", "الحساسية", ""),
+    ("Mouse Sensitivity", "حساسية الماوس", ""),
+    ("Invert Mouse", "عكس الماوس", ""),
+    ("Invertmouse", "عكس الماوس", ""),
+    ("Invert Y Axis", "عكس المحور الرأسي", ""),
+    ("Move", "الحركة", "اسم إجراء في قائمة المفاتيح"),
+    ("Jump", "القفز", "اسم إجراء في قائمة المفاتيح"),
+    ("Crouch", "الانحناء", "اسم إجراء في قائمة المفاتيح"),
+    ("Sprint", "الركض", "اسم إجراء في قائمة المفاتيح"),
+    ("Walk", "المشي", "اسم إجراء في قائمة المفاتيح"),
+    ("Interact", "التفاعل", "اسم إجراء في قائمة المفاتيح"),
+    ("Use", "الاستخدام", "اسم إجراء في قائمة المفاتيح"),
+    ("Attack", "الهجوم", "اسم إجراء في قائمة المفاتيح"),
+    ("Aim", "التصويب", "اسم إجراء في قائمة المفاتيح"),
+    ("Inventory", "الحقيبة", ""),
+    ("Map", "الخريطة", ""),
+    ("Press any key", "اضغط أي مفتاح", ""),
+    ("Press any key to continue", "اضغط أي مفتاح للمتابعة", ""),
+    // الحالة ولوحة المعلومات — state and HUD
+    ("Loading", "جارٍ التحميل", ""),
+    ("Saving", "جارٍ الحفظ", ""),
+    ("Saved", "تم الحفظ", ""),
+    ("Autosave", "حفظ تلقائي", ""),
+    ("Paused", "متوقف مؤقتًا", ""),
+    ("Game Over", "انتهت اللعبة", ""),
+    ("Victory", "النصر", ""),
+    ("Defeat", "الهزيمة", ""),
+    ("You Win", "لقد فزت", ""),
+    ("You Lose", "لقد خسرت", ""),
+    (
+        "Checkpoint",
+        "نقطة حفظ",
+        "موضع استئناف اللعب لا نقطة تفتيش أمنية",
+    ),
+    ("Objective", "الهدف", ""),
+    ("Objectives", "الأهداف", ""),
+    ("Mission", "المهمة", ""),
+    ("Quest", "المهمة", ""),
+    ("Health", "الصحة", ""),
+    ("Ammo", "الذخيرة", ""),
+    ("Ammunition", "الذخيرة", ""),
+    ("Stamina", "التحمل", ""),
+    ("Score", "النقاط", ""),
+    ("Level", "المستوى", ""),
+    ("Time", "الوقت", ""),
+    ("Unknown", "مجهول", ""),
+    ("Contacts", "جهات الاتصال", "قائمة المتصلين لا الاتصالات"),
+    ("Connecting", "جارٍ الاتصال", ""),
+    ("Connected", "متصل", ""),
+    ("Disconnected", "غير متصل", ""),
+    ("On", "تشغيل", "حالة مفتاح"),
+    ("Off", "إيقاف", "حالة مفتاح"),
+    ("Enabled", "مفعّل", ""),
+    ("Disabled", "معطّل", ""),
+    ("None", "بلا", "خيار في قائمة"),
+    ("Auto", "تلقائي", ""),
+    ("Custom", "مخصص", ""),
+    ("Default", "الافتراضي", ""),
+    ("Defaults", "الإعدادات الافتراضية", ""),
+    ("Recommended", "مستحسن", ""),
+    // أسماء اللغات — language names, one feminine noun each
+    ("Arabic", "العربية", ""),
+    ("English", "الإنجليزية", ""),
+    ("French", "الفرنسية", ""),
+    ("German", "الألمانية", ""),
+    ("Spanish", "الإسبانية", ""),
+    ("Italian", "الإيطالية", ""),
+    ("Portuguese", "البرتغالية", ""),
+    ("Brazilian Portuguese", "البرتغالية البرازيلية", ""),
+    ("Russian", "الروسية", ""),
+    ("Japanese", "اليابانية", ""),
+    ("Korean", "الكورية", ""),
+    ("Chinese", "الصينية", ""),
+    ("Simplified Chinese", "الصينية المبسطة", ""),
+    ("Chinese (Simplified)", "الصينية المبسطة", ""),
+    ("Traditional Chinese", "الصينية التقليدية", ""),
+    ("Chinese (Traditional)", "الصينية التقليدية", ""),
+    ("Turkish", "التركية", ""),
+    ("Polish", "البولندية", ""),
+    ("Dutch", "الهولندية", ""),
+    ("Swedish", "السويدية", ""),
+    ("Norwegian", "النرويجية", ""),
+    ("Danish", "الدنماركية", ""),
+    ("Finnish", "الفنلندية", ""),
+    ("Czech", "التشيكية", ""),
+    ("Hungarian", "المجرية", ""),
+    ("Romanian", "الرومانية", ""),
+    ("Greek", "اليونانية", ""),
+    ("Ukrainian", "الأوكرانية", ""),
+    ("Thai", "التايلاندية", ""),
+    ("Vietnamese", "الفيتنامية", ""),
+    ("Indonesian", "الإندونيسية", ""),
+    ("Hindi", "الهندية", ""),
+    ("Persian", "الفارسية", ""),
+    ("Hebrew", "العبرية", ""),
+];
+
+#[cfg(test)]
+mod fuhus {
+    #![allow(
+        clippy::panic,
+        clippy::unwrap_used,
+        clippy::expect_used,
+        reason = "a test reports failure by panicking; the lints are written for library \
+                  code, and honouring them here would mean a test that cannot fail"
+    )]
+    #![expect(
+        clippy::disallowed_methods,
+        reason = "scratch teardown under `std::env::temp_dir()`, never a data root or a game \
+                  directory; the product's own recursive deletes go through `HadafHadhf`"
+    )]
+
+    use std::collections::BTreeSet;
+    use std::path::PathBuf;
+
+    use taarib_mustalahat::muraja::SijillMuraja;
+    use taarib_mustalahat::nass::{
+        AlamJawda, MasdarIstikhraj, MudkhalNass, NassId, QuyudNass, SiyaqNass, TasnifNass,
+    };
+
+    use super::{
+        MALAF_MASRAD_MASHRU, MUSTALAHAT_MUDMAJA, Masrad, MustalahMasrad, NitaqMustalah,
+        miftah_muwahhad,
+    };
+
+    /// A directory of this test's own, removed and recreated so a rerun starts
+    /// clean.
+    fn mujallad(ism: &str) -> PathBuf {
+        let masar = std::env::temp_dir().join(format!("taarib-masrad-fuhus-{ism}"));
+        let _ = std::fs::remove_dir_all(&masar);
+        assert!(std::fs::create_dir_all(&masar).is_ok());
+        masar
+    }
+
+    fn jawab(masrad: &Masrad, masdar: &str) -> Option<String> {
+        masrad.ajib(masdar).map(|jawab| jawab.hadaf)
+    }
+
+    /// The bare entry [`Masrad::afhas`] reads: a source, a translation, and
+    /// the defaults for everything it does not look at.
+    fn mudkhal_lil_fahs(masdar: &str, hadaf: Option<&str>) -> MudkhalNass {
+        MudkhalNass {
+            id: NassId::min_mawqi("fuhus", masdar, masdar),
+            masdar: masdar.to_owned(),
+            hadaf: hadaf.map(str::to_owned),
+            muraja: SijillMuraja::jadeed(),
+            siyaq: SiyaqNass::default(),
+            quyud: QuyudNass::default(),
+            nasq_masdar: Vec::new(),
+            nasq_hadaf: Vec::new(),
+            takrar: 1,
+            majmua: None,
+            alamat: Vec::new(),
+            tareeqa: None,
+            muzawwid: None,
+            muharrir: None,
+            akhir_tabdeel: None,
+            tasnif: TasnifNass::Qaima,
+            thiqat_tasnif: 90,
+            masdar_istikhraj: MasdarIstikhraj::Sakin,
+            tarmiz: None,
+        }
+    }
+
+    /// The shipped list says exactly one thing about each term.
+    ///
+    /// A duplicate would not fail loudly — [`Masrad::adkhil`] takes the
+    /// newcomer for a same-scope collision — so the table would ship with one
+    /// of the two renderings silently discarded, and a reader of the table
+    /// would have no way to tell which.
+    #[test]
+    fn almudmaj_la_yaqul_shayayn_fi_mustalah() {
+        let mut maruf: BTreeSet<String> = BTreeSet::new();
+        for (masdar, arabi, _) in MUSTALAHAT_MUDMAJA {
+            assert!(
+                maruf.insert(miftah_muwahhad(masdar)),
+                "{masdar:?} appears twice in the built-in glossary"
+            );
+            assert!(!miftah_muwahhad(masdar).is_empty(), "{masdar:?} folds away");
+            assert!(
+                !miftah_muwahhad(arabi).is_empty(),
+                "{masdar:?} has no approved form"
+            );
+        }
+        assert_eq!(Masrad::min_mudmaj().adad(), MUSTALAHAT_MUDMAJA.len());
+    }
+
+    /// The defects the measured run actually produced, and what the built-in
+    /// list answers instead.
+    ///
+    /// Every left-hand side here is a real source string from a shipped game's
+    /// tables; every rejected form beside it is what the provider returned for
+    /// it.
+    #[test]
+    fn alazrar_laysat_akhbaran_an_ghaib() {
+        let masrad = Masrad::min_mudmaj();
+
+        // «يبدأ» is "he starts" — a sentence about somebody else where a
+        // button belongs.
+        assert_eq!(jawab(&masrad, "Start").as_deref(), Some("ابدأ"));
+        assert_eq!(jawab(&masrad, "Continue").as_deref(), Some("متابعة"));
+        // «قائمة طعام» is a restaurant's menu.
+        assert_eq!(jawab(&masrad, "Menu").as_deref(), Some("القائمة"));
+        // «القرارات» is what a committee resolves.
+        assert_eq!(jawab(&masrad, "Resolutions").as_deref(), Some("دقة الشاشة"));
+        assert_eq!(jawab(&masrad, "Resolution").as_deref(), Some("دقة الشاشة"));
+        // «واسطة» is an intermediary; «قليل» is "few".
+        assert_eq!(jawab(&masrad, "Medium").as_deref(), Some("متوسط"));
+        assert_eq!(jawab(&masrad, "Low").as_deref(), Some("منخفض"));
+        // «مقدار» is an amount of something.
+        assert_eq!(jawab(&masrad, "Volume").as_deref(), Some("مستوى الصوت"));
+        // «اتصالات» is telecommunications.
+        assert_eq!(jawab(&masrad, "Contacts").as_deref(), Some("جهات الاتصال"));
+
+        // The quality levels are one masculine set agreeing with «مستوى», and
+        // the language names are one feminine-noun set: the measured run gave
+        // `French` a masculine adjective and `Spanish` a feminine noun.
+        for (masdar, arabi) in [
+            ("Low", "منخفض"),
+            ("Medium", "متوسط"),
+            ("High", "مرتفع"),
+            ("Ultra", "فائق"),
+        ] {
+            assert_eq!(jawab(&masrad, masdar).as_deref(), Some(arabi));
+        }
+        for (masdar, arabi) in [
+            ("English", "الإنجليزية"),
+            ("French", "الفرنسية"),
+            ("Spanish", "الإسبانية"),
+            ("German", "الألمانية"),
+            ("Japanese", "اليابانية"),
+        ] {
+            assert_eq!(jawab(&masrad, masdar).as_deref(), Some(arabi));
+        }
+    }
+
+    /// What the whole-string rule does and does not match.
+    #[test]
+    fn almutabaqa_kamilat_alnass_wa_bil_tayy() {
+        let masrad = Masrad::min_mudmaj();
+
+        // Folded: case, surrounding space, and internal whitespace runs.
+        assert_eq!(jawab(&masrad, "  start  ").as_deref(), Some("ابدأ"));
+        assert_eq!(jawab(&masrad, "GAME OVER").as_deref(), Some("انتهت اللعبة"));
+        assert_eq!(
+            jawab(&masrad, "game  over").as_deref(),
+            Some("انتهت اللعبة")
+        );
+
+        // A trailing ellipsis is punctuation, and it is carried across.
+        assert_eq!(
+            jawab(&masrad, "Loading...").as_deref(),
+            Some("جارٍ التحميل...")
+        );
+        assert_eq!(jawab(&masrad, "Saving…").as_deref(), Some("جارٍ الحفظ…"));
+        // Other trailing punctuation changes what the label says, so it is not
+        // stripped: `Quit?` is a confirmation, not the menu item.
+        assert!(masrad.ajib("Quit?").is_none());
+        assert!(masrad.ajib("...").is_none());
+        assert!(masrad.ajib("   ").is_none());
+
+        // The term occurring inside a longer string is never an answer.
+        assert!(masrad.ajib("Start the engine and drive away").is_none());
+        assert!(masrad.ajib("Press Start to begin").is_none());
+        assert!(masrad.ajib("Save your progress before you quit").is_none());
+        assert!(masrad.ajib("There was no time left").is_none());
+    }
+
+    /// A term buried in prose is a requirement for the model, not a
+    /// substitution — and a built-in interface label is not even that.
+    #[test]
+    fn almustalah_dakhil_aljumla_yublagh_wala_yustabdal() {
+        let jumla = "Save your progress before you leave the Guild Hall";
+        let mut masrad = Masrad::min_mudmaj();
+        masrad.admij(vec![MustalahMasrad::jadeed("Guild Hall", "قاعة النقابة")]);
+
+        assert!(masrad.ajib(jumla).is_none());
+
+        // The term this project pinned binds the sentence it appears in.
+        let mawjuda: BTreeSet<&str> = masrad
+            .mustalahat_fi(jumla)
+            .into_iter()
+            .map(|mustalah| mustalah.masdar.as_str())
+            .collect();
+        assert!(mawjuda.contains("Guild Hall"));
+        // `Save` is «حفظ» on a button and nothing like it in this sentence, so
+        // the built-in label informs nothing here and accuses nothing either.
+        assert!(!mawjuda.contains("Save"));
+        assert!(!mawjuda.contains("Level"));
+
+        // …but a string that *is* the label still carries it into the request,
+        // which is what a label with a placeholder over it needs.
+        let wahdah: BTreeSet<&str> = masrad
+            .mustalahat_fi("Save")
+            .into_iter()
+            .map(|mustalah| mustalah.masdar.as_str())
+            .collect();
+        assert!(wahdah.contains("Save"));
+    }
+
+    /// A built-in term is a default, so choosing otherwise is not a defect.
+    #[test]
+    fn almudmaj_la_yattahim() {
+        let mut masrad = Masrad::min_mudmaj();
+        masrad.admij(vec![MustalahMasrad::jadeed("Guild Hall", "قاعة النقابة")]);
+
+        // A translator preferred «لائحة» to the shipped «القائمة».
+        let mut saf = mudkhal_lil_fahs("Menu", Some("لائحة"));
+        assert!(masrad.afhas(&saf).is_empty());
+
+        // Prose whose Arabic says nothing about «حفظ» or «الوقت» is not two
+        // terminology violations.
+        saf = mudkhal_lil_fahs(
+            "There was no time to save anything",
+            Some("لم يكن هناك وقت لإنقاذ أي شيء"),
+        );
+        assert!(masrad.afhas(&saf).is_empty());
+
+        // What the project pinned is still enforced, inside a sentence and all.
+        saf = mudkhal_lil_fahs("Meet me at the Guild Hall", Some("قابلني عند دار الحرفيين"));
+        assert!(matches!(
+            masrad.afhas(&saf).as_slice(),
+            [AlamJawda::MustalahMukhtalif { mustalah, .. }] if mustalah == "Guild Hall"
+        ));
+    }
+
+    /// A project's own term beats a built-in one whichever order they merge in,
+    /// and a built-in one never displaces something narrower.
+    #[test]
+    fn mustalah_almashru_yaghlib_almudmaj() {
+        let mashru = MustalahMasrad::jadeed("Continue", "واصل");
+
+        let mut baad = Masrad::min_mudmaj();
+        baad.admij(vec![mashru.clone()]);
+        assert_eq!(jawab(&baad, "Continue").as_deref(), Some("واصل"));
+
+        let mut qabl = Masrad::bi_mustalahat(vec![mashru]);
+        qabl.admij(Masrad::min_mudmaj().mustalahat().cloned().collect());
+        assert_eq!(jawab(&qabl, "Continue").as_deref(), Some("واصل"));
+        // The terms it did not override are still in force.
+        assert_eq!(jawab(&qabl, "Start").as_deref(), Some("ابدأ"));
+
+        // A machine-wide term also outranks a built-in one, and is outranked
+        // by the project's own.
+        let mut aam = Masrad::min_mudmaj();
+        aam.admij(vec![MustalahMasrad::jadeed("Quit", "إنهاء").aam()]);
+        assert_eq!(jawab(&aam, "Quit").as_deref(), Some("إنهاء"));
+        aam.admij(vec![MustalahMasrad::jadeed("Quit", "مغادرة")]);
+        assert_eq!(jawab(&aam, "Quit").as_deref(), Some("مغادرة"));
+        aam.admij(Masrad::min_mudmaj().mustalahat().cloned().collect());
+        assert_eq!(jawab(&aam, "Quit").as_deref(), Some("مغادرة"));
+    }
+
+    /// The glossary a run consults: built-in underneath, the project's file
+    /// over it, and the scope each term reports.
+    #[test]
+    fn masrad_almashru_yudmaj_fawq_almudmaj() {
+        let jidhr = mujallad("li-mashru");
+        let malaf = jidhr.join(MALAF_MASRAD_MASHRU);
+        std::fs::write(
+            &malaf,
+            r#"[{"masdar":"Menu","arabi":"اللائحة"},{"masdar":"Barricade door","arabi":"تراس الباب"}]"#,
+        )
+        .unwrap();
+
+        let masrad = Masrad::li_mashru(&jidhr);
+        assert_eq!(jawab(&masrad, "Menu").as_deref(), Some("اللائحة"));
+        assert_eq!(
+            jawab(&masrad, "Barricade door").as_deref(),
+            Some("تراس الباب")
+        );
+        assert_eq!(jawab(&masrad, "Start").as_deref(), Some("ابدأ"));
+
+        let nitaq = |masdar: &str| masrad.ajib(masdar).map(|jawab| jawab.mustalah.nitaq);
+        assert_eq!(nitaq("Menu"), Some(NitaqMustalah::MashruHali));
+        assert_eq!(nitaq("Start"), Some(NitaqMustalah::Mudmaj));
+
+        // A project with no glossary file of its own still gets the built-in
+        // list, and an unreadable one does not take it down with it.
+        let faragh = mujallad("bila-malaf");
+        assert_eq!(
+            jawab(&Masrad::li_mashru(&faragh), "Start").as_deref(),
+            Some("ابدأ")
+        );
+        std::fs::write(faragh.join(MALAF_MASRAD_MASHRU), b"{ not json").unwrap();
+        assert_eq!(
+            jawab(&Masrad::li_mashru(&faragh), "Start").as_deref(),
+            Some("ابدأ")
+        );
+
+        let _ = std::fs::remove_dir_all(&jidhr);
+        let _ = std::fs::remove_dir_all(&faragh);
+    }
 }

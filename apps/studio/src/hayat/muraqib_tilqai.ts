@@ -79,7 +79,19 @@ export function useMuraqibTilqai(lugha: Lugha, ismLuba: (muarrif: string) => str
         };
         switch (laqta.wad) {
           case 'jahiz':
-            ansha({ naw: 'najah', nass: t('tilqai.tanbih.jahiz', hali.lugha, { ism }), amal });
+            ansha({
+              naw: 'najah',
+              nass: t('tilqai.tanbih.jahiz', hali.lugha, { ism }),
+              // A run that succeeded and still left half the game in its
+              // original language says so here as well as on its own screen: a
+              // person who pressed once and walked away learns what happened
+              // from this notice and from nothing else.
+              tafsil:
+                laqta.yanfa_iltiqat && !laqta.multaqat
+                  ? t('tilqai.tanbih.jahiz_naqis', hali.lugha)
+                  : null,
+              amal,
+            });
             return;
           case 'mulgha':
             ansha({ naw: 'najah', nass: t('tilqai.tanbih.mulgha', hali.lugha, { ism }), amal });

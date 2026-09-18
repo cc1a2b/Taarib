@@ -119,7 +119,7 @@ pub use crate::mashwar::{
 };
 pub use crate::natija::NatijatMashwar;
 pub use crate::talab::{KhiyaratTilqai, LubaTilqai, MudkhalatAman, TalabTilqai, WasfTilqai};
-pub use crate::tanfidh::arrib;
+pub use crate::tanfidh::{arrib, damm_jadeed};
 pub use crate::taqaddum::{MarhalaTilqai, MukhbirTaqaddum, Muraqib, Taqaddum};
 pub use crate::taqreer::{
     HalatMashwar, IhsaHuzma, IhsaIstikhraj, IhsaTarjama, IhsaTathbeet, TaqreerMarhala,

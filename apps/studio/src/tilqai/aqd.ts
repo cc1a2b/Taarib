@@ -59,6 +59,10 @@ const ASMA_AWAMIR = {
   ibda: 'ibda_tilqai',
   /** Asks the running job to stop. */
   alghi: 'alghi_tilqai',
+  /** Whether a pass can be recorded for this game, and what is waiting. */
+  iltiqat: 'halat_iltiqat',
+  /** Turns the in-game recorder on or off for the next launch. */
+  sajjil: 'sajjil_iltiqat',
 } as const;
 
 /**
@@ -188,6 +192,42 @@ export interface TaqreerQira {
 }
 
 /**
+ * A pass somebody recorded, sitting beside the installed patch.
+ *
+ * `madmuja` is the field that stops the offer repeating itself: a pass the
+ * newest run has already folded in is still on disk, and a panel that kept
+ * offering to add it would have the reader pressing a button that re-runs
+ * extraction to discover it has nothing new.
+ */
+export interface JalsatIltiqat {
+  /** How many distinct strings it holds. */
+  readonly nusus: number;
+  /** Whether the game was closed while it was still writing. */
+  readonly mabtura: boolean;
+  /** Whether this game's newest run has already folded it in. */
+  readonly madmuja: boolean;
+  /** When it was written, RFC 3339. */
+  readonly waqt: string;
+}
+
+/**
+ * Whether a pass can be recorded for one game, and what state it is in.
+ *
+ * `mutah` is false until a patch has been installed, and that is the real
+ * ordering rather than a limitation being worked around: recording happens
+ * inside the game, through the same adapter that draws the Arabic, so the first
+ * install is what makes it possible at all.
+ */
+export interface HalatIltiqat {
+  /** Whether the adapter that records is in the game. */
+  readonly mutah: boolean;
+  /** Whether the next launch records instead of replacing. */
+  readonly musajjil: boolean;
+  /** The pass waiting to be folded in, or null when there is none. */
+  readonly jalsa: JalsatIltiqat | null;
+}
+
+/**
  * Money, against the ceiling it may not cross.
  *
  * The ceiling travels with the amount rather than being read from settings,
@@ -288,6 +328,19 @@ export interface LaqtatTilqai {
    * the way back is removal on the game screen.
    */
   readonly muthabbata: boolean;
+  /**
+   * Whether this game's files hold text no reader can open, so a recorded pass
+   * would reach strings this run did not.
+   *
+   * True of runs that *succeeded*, which is the whole point of it being here. A
+   * Unity release build ships no type tree: its localization tables read and
+   * everything a component draws does not, so the patch Arabizes the menus,
+   * reports success, and leaves the reader with a game that looks half broken
+   * and no explanation anywhere.
+   */
+  readonly yanfa_iltiqat: boolean;
+  /** Whether a recorded pass has been folded into this run's table. */
+  readonly multaqat: boolean;
   /** When the run last moved, RFC 3339, for the resume line. */
   readonly waqt: string;
 }
@@ -318,9 +371,22 @@ export interface MinfathTilqai {
     muarrif: string,
     istinaf: boolean,
     iqrarShabaka: boolean,
+    dammIltiqat: boolean,
   ) => Promise<LaqtatTilqai>;
   /** Asks the run to stop, and answers with the snapshot that resulted. */
   readonly alghi: (muarrif: string) => Promise<LaqtatTilqai>;
+  /** Whether a pass can be recorded for this game, and what is waiting. */
+  readonly iltiqat: (muarrif: string) => Promise<HalatIltiqat>;
+  /**
+   * Turns the in-game recorder on or off, and answers with the state that
+   * resulted.
+   *
+   * Switching it on is also what makes the next launch show the game in its
+   * original language: the adapter refuses to replace text while it records,
+   * because a pass taken while Arabic was on screen would measure Taarib's
+   * boxes instead of the game's. The screen says that before the press.
+   */
+  readonly sajjil: (muarrif: string, mufaal: boolean) => Promise<HalatIltiqat>;
   /** Every snapshot the backend publishes, until the returned function runs. */
   readonly istami: (ala_wusul: (laqta: LaqtatTilqai) => void) => Promise<() => void>;
   /** Launches the game through its own launcher. */
@@ -581,7 +647,46 @@ export function fukkLaqta(khaam: unknown): LaqtatTilqai | null {
     takalif: fukkTakalif(sijill['takalif']),
     khata: fukkKhata(sijill['khata']),
     muthabbata: sijill['muthabbata'] === true,
+    // Strictly `=== true`, like `muthabbata`: a backend one version behind sends
+    // no such key, and the safe reading of a missing "there is more to reach" is
+    // that there is not — an offer invented from a missing field would send a
+    // person to play a recording pass for nothing.
+    yanfa_iltiqat: sijill['yanfa_iltiqat'] === true,
+    multaqat: sijill['multaqat'] === true,
     waqt: nass(sijill['waqt'], ''),
+  };
+}
+
+/** One recorded pass off the wire. */
+function fukkJalsa(khaam: unknown): JalsatIltiqat | null {
+  const sijill = kain(khaam);
+  if (sijill === null) {
+    return null;
+  }
+  return {
+    nusus: adad(sijill['nusus'], 0),
+    mabtura: sijill['mabtura'] === true,
+    madmuja: sijill['madmuja'] === true,
+    waqt: nass(sijill['waqt'], ''),
+  };
+}
+
+/**
+ * The recorder's state off the wire.
+ *
+ * An unreadable payload decodes to "not available", which is the honest
+ * fallback: the panel then states that recording needs an installed patch
+ * rather than offering a switch this build cannot drive.
+ */
+export function fukkIltiqat(khaam: unknown): HalatIltiqat {
+  const sijill = kain(khaam);
+  if (sijill === null) {
+    return { mutah: false, musajjil: false, jalsa: null };
+  }
+  return {
+    mutah: sijill['mutah'] === true,
+    musajjil: sijill['musajjil'] === true,
+    jalsa: fukkJalsa(sijill['jalsa']),
   };
 }
 
@@ -689,14 +794,24 @@ export const minfathTilqai: MinfathTilqai = {
     return khaam === null || khaam === undefined ? null : fukkLaqta(khaam);
   },
 
-  ibda: async (muarrif, istinaf, iqrarShabaka) => {
-    const khaam = await nadiKhaam(ASMA_AWAMIR.ibda, { muarrif, istinaf, iqrarShabaka });
+  ibda: async (muarrif, istinaf, iqrarShabaka, dammIltiqat) => {
+    const khaam = await nadiKhaam(ASMA_AWAMIR.ibda, {
+      muarrif,
+      istinaf,
+      iqrarShabaka,
+      dammIltiqat,
+    });
     const mafkuk = fukkLaqta(khaam);
     if (mafkuk === null) {
       throw khataHamula(ASMA_AWAMIR.ibda);
     }
     return mafkuk;
   },
+
+  iltiqat: async (muarrif) => fukkIltiqat(await nadiKhaam(ASMA_AWAMIR.iltiqat, { muarrif })),
+
+  sajjil: async (muarrif, mufaal) =>
+    fukkIltiqat(await nadiKhaam(ASMA_AWAMIR.sajjil, { muarrif, mufaal })),
 
   alghi: async (muarrif) => {
     const khaam = await nadiKhaam(ASMA_AWAMIR.alghi, { muarrif });

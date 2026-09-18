@@ -6179,6 +6179,7 @@ dependencies = [
  "object",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "taarib-aman",
  "taarib-kashf",
  "taarib-khatm",

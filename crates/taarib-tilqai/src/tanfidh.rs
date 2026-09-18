@@ -145,8 +145,23 @@ async fn ijri(
     taqreer.marhala = MarhalaTilqai::Istikhraj;
     talab.miqbad.tahaqquq(MarhalaTilqai::Istikhraj)?;
     let masar_jadwal = mashru.join(MALAF_JADWAL);
+    // The capture session's own fingerprint, taken before the journal is
+    // consulted, because it is half of the question "has extraction already
+    // done the work this run is asking for". The other half is the table on
+    // disk. A resume whose session is the one the journal recorded skips the
+    // stage; a resume carrying a pass the person has played since does not, and
+    // that is the only way a recording ever reaches a patch.
+    let basmat_jalsa = talab
+        .jalsat_iltiqat
+        .map(istikhraj::basmat_jalsa)
+        .transpose()?
+        .unwrap_or_default();
     let makhzun = match sijill.qayd(MarhalaTilqai::Istikhraj) {
-        Some(QaydMarhala::Istikhraj { maqrua, .. }) if masar_jadwal.is_file() => {
+        Some(QaydMarhala::Istikhraj {
+            maqrua,
+            basmat_jalsa: sabiqa,
+            ..
+        }) if masar_jadwal.is_file() && *sabiqa == basmat_jalsa => {
             let makhzun = JadwalMakhzun::iqra(&masar_jadwal)?;
             istanif(
                 taqreer,
@@ -182,6 +197,7 @@ async fn ijri(
                     maqrua,
                     marfuda: ihsa.marfuda,
                     multaqat: ihsa.multaqat,
+                    basmat_jalsa: basmat_jalsa.clone(),
                 },
                 maqrua,
                 Some(maqrua),
@@ -561,7 +577,8 @@ fn istanif(
 /// Returns the rows and how many were added, because "the merge found
 /// twenty-three strings and the project grew by twenty-three" is the only way a
 /// reader can tell a merge that worked from one that was thrown away.
-pub(crate) fn damm_jadeed(
+#[must_use]
+pub fn damm_jadeed(
     sabiqa: Vec<MudkhalNass>,
     jadwal: Vec<MudkhalNass>,
 ) -> (Vec<MudkhalNass>, usize) {

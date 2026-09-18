@@ -8,7 +8,7 @@ use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::musahim::MusahimId;
 use taarib_mustalahat::nass::MudkhalNass;
 use taarib_taqdeem::taaliq::Taaliq;
-use taarib_tarjama::masrad::MustalahMasrad;
+use taarib_tarjama::masrad::{MALAF_MASRAD_MASHRU, MustalahMasrad};
 use taarib_usus::khata::Khata;
 use taarib_usus::mukhattat::DhuMukhattat;
 use taarib_usus::{masarat, mukhattat};
@@ -32,8 +32,9 @@ pub const MUSTAWA_DAGHT: i32 = 3;
 /// The last-export snapshot beside the project, the merge's common ancestor.
 pub const MALAF_ASLAF: &str = "aslaf_tasdir.jsonl";
 
-/// The glossary member.
-pub const UDW_MASRAD: &str = "masrad.json";
+/// The glossary member, named identically inside a bundle and beside a
+/// project so an exported glossary drops straight back in.
+pub const UDW_MASRAD: &str = MALAF_MASRAD_MASHRU;
 
 /// The translation-memory database member.
 pub const UDW_DHAKIRA: &str = "dhakira.db";

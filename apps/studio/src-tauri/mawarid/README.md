@@ -5,6 +5,12 @@ it before a release bundle is built:
 
     cargo run -p taarib-tajmee -- --hadaf <target-triple> --jalb
 
+`--taqm nahif` stages the slim set instead — everything but the six IL2CPP
+BepInEx components, which are 449,711,337 of the component tree's 519,747,711
+bytes. `--taqm kamil` is the default and is what the offline bundle carries.
+Either way the tool reads, hashes and refuses-if-absent the whole matrix; the
+set decides only which of it lands here. See `docs/tawzee.md` §4a.
+
 `--jalb` is what permits the network, and a first run needs it. The BepInEx
 archives are not in this repository, and of the twenty-five font faces the lock
 pins only the eight IBM Plex faces the interface's own CSS names are committed
@@ -44,6 +50,13 @@ The two cases are not the same, and conflating them shipped an installer whose
 `bayan_mukawwinat.json` as one named problem at startup, after which the Studio
 continues and every install refuses each absent component by name rather than
 deploying a fraction of one.
+
+That refusal is also what a `nahif` bundle relies on: it lists only the
+components it carries, so `bayan_makhzan::kamil_hasab_bayan` refuses every other
+one by name, unchanged. `bayan_makhzan::hala_mukawwin` reads
+`fihris_mukawwinat.json` beside it to add the second half of the answer — how
+large the absent component is, and how many files — so the refusal can say what
+it would cost to have it rather than only that it is missing.
 
 **Fonts may not.** `taarib-saff` has no Arabic fallback shaper: with no font
 under `mawarid/khutut/`, and none imported by the user, every layout, preview

@@ -1652,11 +1652,36 @@ fn quyud_min_kaain(qeema: &QeemaHaql) -> QuyudNass {
 pub struct HasilatMulsal {
     /// Every string that was read.
     pub madakhil: Vec<MudkhalMustakhraj>,
+    /// Every Unity Localization string table that was read, one group per table,
+    /// each tagged with the locale the table declares.
+    ///
+    /// Held apart from [`HasilatMulsal::madakhil`] rather than folded into it
+    /// because which of these groups belongs in the project is not a question
+    /// one `SerializedFile` can answer: a game ships one locale per Addressables
+    /// bundle, so the file in hand knows its own locale and nothing about the
+    /// ten beside it. [`crate::unity::istakhrij`] decides once, when the walk is
+    /// over and the whole locale list exists.
+    pub tawtin: Vec<MajmuatLugha>,
     /// Every reason something was not.
     pub marfudat: Vec<SababRafd>,
     /// Whether the object index was truncated, so some strings carry a weaker
     /// structural position than they would have.
     pub manqus: bool,
+}
+
+/// One Unity Localization string table's rows, with the locale it is in.
+#[derive(Debug)]
+pub struct MajmuatLugha {
+    /// The locale the table declares, `None` when it declares none.
+    ///
+    /// A table with no locale code cannot be compared against another, so it is
+    /// never set aside — an unnamed locale makes the choice impossible, not
+    /// wrong.
+    pub lugha: Option<String>,
+    /// The string-table collection, for the report.
+    pub majmua: String,
+    /// The rows.
+    pub madakhil: Vec<MudkhalMustakhraj>,
 }
 
 /// The bench one file's extraction works on.
@@ -1669,6 +1694,7 @@ struct Warsha<'w> {
     hawiya: &'w str,
     asl: Option<&'w str>,
     madakhil: Vec<MudkhalMustakhraj>,
+    tawtin: Vec<MajmuatLugha>,
     linat: Vec<SababRafd>,
 }
 
@@ -1676,6 +1702,16 @@ impl Warsha<'_> {
     /// Records a string.
     fn adif(&mut self, mudkhal: MudkhalMustakhraj) {
         self.madakhil.push(mudkhal);
+    }
+
+    /// Records one locale's rows out of one string table.
+    ///
+    /// Empty groups are kept, not dropped: a locale whose table holds nothing
+    /// is still a locale the game ships, and the choice of which one to read is
+    /// made over the set of locales seen rather than over the ones that
+    /// happened to produce a row.
+    fn adif_jadwal(&mut self, majmua: MajmuatLugha) {
+        self.tawtin.push(majmua);
     }
 
     /// Records a refusal that cost one field rather than one object.
@@ -1730,18 +1766,17 @@ pub fn istakhrij_mulsal(mulsal: &Mulsal<'_>, hawiya: &str, asl: Option<&str>) ->
         // report telling the user to run capture for files that hold nothing.
         if adad == 0 {
             return HasilatMulsal {
-                madakhil: Vec::new(),
                 marfudat: vec![SababRafd::BilaNusus],
-                manqus: false,
+                ..HasilatMulsal::default()
             };
         }
         return HasilatMulsal {
-            madakhil: Vec::new(),
             marfudat: vec![SababRafd::BilaShajaratAnwa {
                 naw_kaen: None,
                 adad,
             }],
             manqus: true,
+            ..HasilatMulsal::default()
         };
     }
 
@@ -1756,6 +1791,7 @@ pub fn istakhrij_mulsal(mulsal: &Mulsal<'_>, hawiya: &str, asl: Option<&str>) ->
         hawiya,
         asl,
         madakhil: Vec::new(),
+        tawtin: Vec::new(),
         linat: Vec::new(),
     };
     let mut naqisa: BTreeMap<Option<String>, usize> = BTreeMap::new();
@@ -1795,6 +1831,7 @@ pub fn istakhrij_mulsal(mulsal: &Mulsal<'_>, hawiya: &str, asl: Option<&str>) ->
 
     HasilatMulsal {
         madakhil: warsha.madakhil,
+        tawtin: warsha.tawtin,
         marfudat,
         manqus: fahras.manqus(),
     }
@@ -1849,6 +1886,78 @@ fn ism_mukawwin(
 /// the same class across the package versions that moved it between namespaces.
 fn sath_akhir(ism: &str) -> &str {
     ism.rsplit('.').next().unwrap_or(ism)
+}
+
+/// Which Unity Localization asset a `MonoBehaviour` holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SanfTawtin {
+    /// A `StringTable`: one locale's rows for one collection.
+    Jadwal,
+    /// A `SharedTableData`: the entry-id-to-key map every locale's table shares.
+    Mushtarak,
+}
+
+/// The fields a Unity Localization `StringTable` declares.
+///
+/// All three together, and nothing else Unity serializes declares all three:
+/// `m_LocaleId` is the locale, `m_SharedData` the pointer to the key map, and
+/// `m_TableData` the rows.
+const HUQUL_JADWAL_TAWTIN: &[&str] = &["m_LocaleId", "m_SharedData", "m_TableData"];
+
+/// The same for `SharedTableData`.
+const HUQUL_BAYANAT_MUSHTARAKA: &[&str] = &["m_TableCollectionName", "m_Entries"];
+
+/// Which localization asset an object is, decided without reading it.
+///
+/// The class name first, and the **fields the type tree itself declares** when
+/// there is no class name to be had. That second path is not a relaxation of
+/// this module's no-inference rule, and the distinction is worth stating
+/// precisely: the rule forbids inferring what *bytes* mean without a layout, and
+/// here the layout is present and complete. What is missing is only the name
+/// Unity happened to write at its root — and a build that put its localization
+/// scripts in an Addressables bundle of their own leaves every localization
+/// asset with a root of `MonoBehaviour` and an external `m_Script`, so
+/// [`ism_mukawwin`] has nothing to answer with. The Stalked 3 is exactly that
+/// build: eleven string tables, three shared tables, a complete type tree over
+/// all of them, and not one resolvable class name.
+///
+/// Without this, the whole Unity Localization reader is dead on such a game.
+/// Every table falls into the generic component walk, which harvests the shared
+/// table's *keys* as prose, harvests all eleven locales, and gives none of the
+/// rows the developer's own key as
+/// [`MawqiNass::miftah_muharrik`][crate::jadwal::MawqiNass::miftah_muharrik].
+fn sanf_tawtin(ism: Option<&str>, shajara: Option<&ShajaratAnwa>) -> Option<SanfTawtin> {
+    if let Some(sath) = ism.map(sath_akhir) {
+        // A named class settles it outright, including by naming something else:
+        // matching an object's *shape* against a name the file already gave is
+        // how a reader ends up overruling the container.
+        return match sath {
+            "StringTable" => Some(SanfTawtin::Jadwal),
+            "SharedTableData" => Some(SanfTawtin::Mushtarak),
+            _ => None,
+        };
+    }
+    let shajara = shajara?;
+    if HUQUL_JADWAL_TAWTIN
+        .iter()
+        .all(|haql| shajara.ibn(0, haql).is_some())
+    {
+        return Some(SanfTawtin::Jadwal);
+    }
+    if HUQUL_BAYANAT_MUSHTARAKA
+        .iter()
+        .all(|haql| shajara.ibn(0, haql).is_some())
+    {
+        return Some(SanfTawtin::Mushtarak);
+    }
+    None
+}
+
+/// One object's field layout, when the build kept one.
+fn shajarat_kaain<'m>(mulsal: &'m Mulsal<'_>, madkhal: &MadkhalKaain) -> Option<&'m ShajaratAnwa> {
+    mulsal
+        .naw_kaain(madkhal)
+        .and_then(|naw| naw.shajara.as_ref())
 }
 
 // ---------------------------------------------------------------------------
@@ -2042,11 +2151,12 @@ fn iqra_nass_khaam(qari: &mut Qari<'_>, ism: &'static str) -> Result<Vec<u8>, Kh
 /// [`iqra_kaain`], so that every path into an object goes through it.
 ///
 /// With a tree, the object is walked generically and every string in it is
-/// collected with its field path. Three shapes are then recognised by the
-/// component's own class name and handled specially, because each carries a key
-/// the engine promises to keep stable and Taarib's derived identity should defer
-/// to it: Unity Localization's `StringTable`, its `SharedTableData`, and I2
-/// Localization's `LanguageSource`.
+/// collected with its field path. Three shapes are then recognised and handled
+/// specially, because each carries a key the engine promises to keep stable and
+/// Taarib's derived identity should defer to it: Unity Localization's
+/// `StringTable`, its `SharedTableData`, and I2 Localization's `LanguageSource`.
+/// The first two are recognised by [`sanf_tawtin`], which falls back to the
+/// fields the type tree declares when the build left no class name to match on.
 ///
 /// # Errors
 ///
@@ -2060,7 +2170,8 @@ fn istakhrij_suluk(
     warsha: &mut Warsha<'_>,
 ) -> Result<(), KhataKaain> {
     let ism_shajara = ism_mukawwin(mulsal, madkhal, fahras);
-    if ism_shajara.as_deref().map(sath_akhir) == Some("SharedTableData") {
+    let shajara = shajarat_kaain(mulsal, madkhal);
+    if sanf_tawtin(ism_shajara.as_deref(), shajara) == Some(SanfTawtin::Mushtarak) {
         // Consumed by the pre-pass. Its own strings are the entry keys, which
         // are the developer's identifiers rather than text, and they are already
         // carried by every entry that uses them as `miftah_muharrik`.
@@ -2090,7 +2201,7 @@ fn istakhrij_suluk(
     });
     let sath = mukawwin.as_deref().map_or("", sath_akhir);
 
-    if sath == "StringTable" {
+    if sanf_tawtin(mukawwin.as_deref(), shajara) == Some(SanfTawtin::Jadwal) {
         let bayanat = jadwal_mushtarak(&qeema, mushtarak, mulsal.kharijiyat());
         istakhrij_jadwal_tawtin(&qeema, bayanat.as_deref(), warsha);
         return Ok(());
@@ -2303,10 +2414,9 @@ fn ijma_bayanat_mushtaraka(
         if madkhal.sanf != SANF_MONOBEHAVIOUR {
             continue;
         }
-        if ism_mukawwin(mulsal, madkhal, fahras)
-            .as_deref()
-            .map(sath_akhir)
-            != Some("SharedTableData")
+        let ism = ism_mukawwin(mulsal, madkhal, fahras);
+        if sanf_tawtin(ism.as_deref(), shajarat_kaain(mulsal, madkhal))
+            != Some(SanfTawtin::Mushtarak)
         {
             continue;
         }
@@ -2371,14 +2481,16 @@ fn jadwal_mushtarak(
 
 /// Reads a Unity Localization `StringTable`.
 ///
-/// **Every locale's table is read, and the locale is part of the engine key.**
-/// A game ships one `StringTable` asset per locale and they all carry the same
-/// entry ids; folding them together would need a rule for which locale is the
-/// source, and there is nothing in the asset that says. Guessing "English"
-/// works until a Japanese game with no English table presents its French
-/// translation as the source text, and a translator produces Arabic translated
-/// from French without ever being told. So all of them are kept, distinguished,
-/// and the interface picks.
+/// **The locale is read with the rows and travels with them, and this function
+/// keeps every locale it is given.** A game ships one `StringTable` asset per
+/// locale, all of them carrying the same entry ids, and which one belongs in the
+/// project is decided once in [`crate::unity::istakhrij`] — see that module's
+/// header for why the choice cannot be made here and what it is made on.
+///
+/// The locale also stays in the engine key. That is not redundant with the
+/// choice: it is what stops two locales that *are* both read — a game shipping
+/// no locale Taarib can pick between — from deriving one identity for two
+/// different strings.
 fn istakhrij_jadwal_tawtin(
     qeema: &QeemaHaql,
     bayanat: Option<&BayanatMushtaraka>,
@@ -2394,6 +2506,7 @@ fn istakhrij_jadwal_tawtin(
         return;
     };
 
+    let mut madakhil: Vec<MudkhalMustakhraj> = Vec::new();
     for unsur in anasir {
         let Some(nass) = unsur.haql("m_Localized").and_then(QeemaHaql::nass) else {
             continue;
@@ -2435,12 +2548,18 @@ fn istakhrij_jadwal_tawtin(
         // table, which is the one act that settles whether a player reads it.
         // The shared classifier treats it as rank three and refuses to call any
         // of these internal, however key-shaped the entry's name looks.
-        warsha.adif(ansha_mudkhal(
+        madakhil.push(ansha_mudkhal(
             TalabMudkhal::jadeed(mawqi, nass)
                 .bi_nizam_tawtin()
                 .bi_tarmiz(Some(TARMIZ_MULSAL.to_owned())),
         ));
     }
+
+    warsha.adif_jadwal(MajmuatLugha {
+        lugha: (!lugha.is_empty()).then(|| lugha.to_owned()),
+        majmua: majmua.to_owned(),
+        madakhil,
+    });
 }
 
 /// The engine key one localization entry gets.

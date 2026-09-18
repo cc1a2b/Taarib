@@ -32,6 +32,10 @@ import './qism_iqrar.css';
  * shorter paraphrase with an "I agree" underneath would be asking somebody to
  * accept something this interface wrote rather than the thing being accepted.
  *
+ * **The rendering is recorded.** Which of the two texts was on screen goes to the
+ * backend with the acceptance, because a record that cannot say which words were
+ * accepted cannot show that the person was asked in a language they read.
+ *
  * **One record, everywhere.** Both screens read and write the same query key, so
  * accepting on either one makes the panel leave both, and a refusal recorded in
  * one place cannot disagree with a button in another.
@@ -114,7 +118,10 @@ export function QismIqrar({
   });
 
   const sajjil = useMutation<HalatIqrar, KhataJisr, void>({
-    mutationFn: () => nadi('sajjil_iqrar_aman'),
+    // The rendering below, not the stored preference: the record has to name
+    // the words this person read, and the panel draws one of the two by the
+    // session's own language.
+    mutationFn: () => nadi('sajjil_iqrar_aman', { lugha }),
     onSuccess: (hala) => {
       makhzan.setQueryData(mafatih.iqrar, hala);
       // The panel leaves the screen the moment this lands, so the notice is

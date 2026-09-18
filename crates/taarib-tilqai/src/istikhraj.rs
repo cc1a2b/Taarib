@@ -236,6 +236,31 @@ pub fn ijri(
     ))
 }
 
+/// The fingerprint of a capture session file, streamed.
+///
+/// What a resumed run compares against the one its journal recorded, so that a
+/// pass the person played *since* the last run is noticed and a pass that has
+/// already been folded in is not extracted a second time. Streamed rather than
+/// read whole because a long session is hundreds of megabytes and this is a
+/// comparison, not a load.
+///
+/// # Errors
+///
+/// [`KhataTilqai::JalsaGhayrMaqrua`] when the file cannot be opened or read —
+/// the same refusal the stage itself raises for the same file, brought forward
+/// so a resume never answers "nothing changed" about a session it could not
+/// read.
+pub fn basmat_jalsa(masar: &Path) -> NatijatTilqai<String> {
+    let ghayr_maqrua = |sabab: std::io::Error| KhataTilqai::JalsaGhayrMaqrua {
+        masar: masar.to_path_buf(),
+        sabab: sabab.to_string(),
+    };
+    let mut malaf = fs::File::open(masar).map_err(ghayr_maqrua)?;
+    let mut hasib = blake3::Hasher::new();
+    std::io::copy(&mut malaf, &mut hasib).map_err(ghayr_maqrua)?;
+    Ok(crate::bina::sittasi(hasib.finalize().as_bytes()))
+}
+
 /// The extractor for one engine family.
 ///
 /// A family with no extractor is not an error here: it returns an empty table

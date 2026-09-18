@@ -290,6 +290,18 @@ pub struct LaqtatTilqaiHie {
     pub khata: Option<KhataTilqaiHie>,
     /// Whether anything has been written into the game yet.
     pub muthabbata: bool,
+    /// Whether this game's files hold text no reader on this machine can open,
+    /// so a recorded pass would reach strings this run did not.
+    ///
+    /// The fact that makes a finished run honest. A Unity release build ships no
+    /// type tree, so its localization tables read and everything a component
+    /// draws does not — and the run then installs a patch that Arabizes the
+    /// menus and nothing else, reports success, and gives the reader no reason
+    /// anywhere. It is true of a run that succeeded, which is why it lives on
+    /// the snapshot beside the stages rather than inside a failure.
+    pub yanfa_iltiqat: bool,
+    /// Whether a recorded pass has been folded into this run's own table.
+    pub multaqat: bool,
     /// The revocation list the run's gate checks against, and where it stood
     /// the last time this run read it: as the door found the cache, then as
     /// the run's own refresh left it. Absent only for a snapshot read back from
@@ -819,6 +831,11 @@ fn laqta_min_qurs(masarat: &Masarat, hali: &Idadat, id: LubaId) -> Option<Laqtat
     }
 
     let munfaq = munfaq_min_sijill(&sijill);
+    // One parse of the stored table for both facts it carries. The refusal
+    // report is what says a recorded pass would reach further, and it is read
+    // from the same file the refusal groups are read from — twice would be two
+    // passes over a table that is megabytes on a real game.
+    let rafd = rafd_makhzun(&mawjuz.mujallad);
     Some(LaqtatTilqaiHie {
         muarrif: id.to_string(),
         tashghila: mawjuz.id.to_string(),
@@ -829,10 +846,15 @@ fn laqta_min_qurs(masarat: &Masarat, hali: &Idadat, id: LubaId) -> Option<Laqtat
         },
         marhala: if tammat { None } else { waqifa },
         marahil,
-        qira: qira_min_sijill(&sijill, &mawjuz.mujallad),
+        qira: qira_min_sijill(&sijill, rafd.as_ref()),
         takalif: takalif_hie(munfaq, hali),
         khata: None,
         muthabbata: tammat,
+        yanfa_iltiqat: rafd.as_ref().is_some_and(TaqreerRafd::yanfa_iltiqat),
+        multaqat: matches!(
+            sijill.qayd(MarhalaTilqai::Istikhraj),
+            Some(QaydMarhala::Istikhraj { multaqat: true, .. })
+        ),
         // The journal records stages, not what the registry said; a resumed
         // run reads the list again at its door and says so then.
         sahb: None,
@@ -934,7 +956,7 @@ fn tabbiq_qayd(marahil: &mut [TaqaddumMarhalaHie], qayd: &QaydMarhala) {
 }
 
 /// What extraction read, rebuilt from a journal record and the stored table.
-fn qira_min_sijill(sijill: &SijillMashwar, mujallad: &Path) -> Option<TaqreerQiraHie> {
+fn qira_min_sijill(sijill: &SijillMashwar, rafd: Option<&TaqreerRafd>) -> Option<TaqreerQiraHie> {
     let QaydMarhala::Istikhraj {
         adad_zahir,
         maqrua,
@@ -948,7 +970,7 @@ fn qira_min_sijill(sijill: &SijillMashwar, mujallad: &Path) -> Option<TaqreerQir
         maqru: raqm_u32(*maqrua),
         matruk: raqm_u32(*marfuda),
         nusus: raqm_u32(*adad_zahir),
-        asbab: asbab_rafd(mujallad),
+        asbab: rafd.map(asbab_rafd).unwrap_or_default(),
     })
 }
 
@@ -979,7 +1001,7 @@ fn akhir_mashwar(jidhr: &Path) -> Option<SijillMashwar> {
 /// Only the refusal report is deserialized: the same file holds the whole string
 /// table, and building a hundred thousand rows in order to render four lines is
 /// a cost this is asked to pay every time the screen opens.
-fn asbab_rafd(mujallad: &Path) -> Vec<SatrRafdHie> {
+fn rafd_makhzun(mujallad: &Path) -> Option<TaqreerRafd> {
     /// The stored table, read for its refusal report and nothing else.
     #[derive(serde::Deserialize)]
     struct RafdFaqat {
@@ -988,23 +1010,23 @@ fn asbab_rafd(mujallad: &Path) -> Vec<SatrRafdHie> {
     }
 
     let masar = mujallad.join(MUJALLAD_MASHRU).join(MALAF_JADWAL);
-    let Ok(malaf) = std::fs::File::open(&masar) else {
-        return Vec::new();
-    };
-    let makhzun: RafdFaqat = match serde_json::from_reader(std::io::BufReader::new(malaf)) {
-        Ok(makhzun) => makhzun,
+    let malaf = std::fs::File::open(&masar).ok()?;
+    match serde_json::from_reader::<_, RafdFaqat>(std::io::BufReader::new(malaf)) {
+        Ok(makhzun) => Some(makhzun.rafd),
         Err(sabab) => {
             tracing::warn!(
                 masar = %masar.display(),
                 %sabab,
                 "the stored extraction table would not read; its refusals are not shown"
             );
-            return Vec::new();
+            None
         },
-    };
-    makhzun
-        .rafd
-        .majmua()
+    }
+}
+
+/// The refusal groups, as the screen lists them.
+fn asbab_rafd(rafd: &TaqreerRafd) -> Vec<SatrRafdHie> {
+    rafd.majmua()
         .into_values()
         .filter_map(|majmua| {
             let awwal = majmua.first()?;
@@ -1072,6 +1094,7 @@ pub fn ibda_tilqai(
     muarrif: String,
     istinaf: bool,
     iqrar_shabaka: bool,
+    damm_iltiqat: bool,
     masarat: tauri::State<'_, Masarat>,
     makhzan: tauri::State<'_, Makhzan>,
     idadat: tauri::State<'_, Arc<MakhzanIdadat>>,
@@ -1084,6 +1107,7 @@ pub fn ibda_tilqai(
         muarrif,
         istinaf,
         iqrar_shabaka,
+        damm_iltiqat,
         &masarat,
         &makhzan,
         &idadat,
@@ -1114,6 +1138,7 @@ pub(crate) fn ibda(
     muarrif: String,
     istinaf: bool,
     iqrar_shabaka: bool,
+    damm_iltiqat: bool,
     masarat: &Masarat,
     makhzan: &Makhzan,
     idadat: &Arc<MakhzanIdadat>,
@@ -1206,6 +1231,28 @@ pub(crate) fn ibda(
     // give, and giving it is a tick rather than a wait or a lost account.
     shabakat_al_bab(&luba, &matjar, iqrar_shabaka)?;
 
+    // The recorded pass, resolved here rather than named by the interface. The
+    // screen presses "use the recording"; which file that is, and whether one
+    // exists at all, is this side's question — and a refusal by name is what the
+    // reader gets when they press it before there is anything to use.
+    let jalsat_iltiqat = if damm_iltiqat {
+        let masar = luba.jidhr.join(MALAF_JALSA);
+        if !masar.is_file() {
+            return Err(Khata::from(KhataTilqaiAmr::LaJalsatIltiqat {
+                ism: luba.ism,
+            }));
+        }
+        // Switched off before the run rather than after it. The run does not
+        // launch the game, so there is no race — and leaving it on would mean
+        // the next launch recorded a second pass instead of drawing the Arabic
+        // this run is about to compile, which is the one outcome that makes a
+        // person conclude the patch stopped working.
+        bdil_tasjil(&luba.jidhr, &luba.ism, false)?;
+        Some(masar)
+    } else {
+        None
+    };
+
     let mudkhalat = jahhiz(
         masarat,
         makhzan,
@@ -1214,6 +1261,7 @@ pub(crate) fn ibda(
         istinaf,
         jidhr_steam,
         iqrar_shabaka,
+        jalsat_iltiqat,
     )?;
     // A resumed run starts from what the journal already knows rather than from
     // five blank rows: the stages it will skip are finished, and a list that
@@ -1241,6 +1289,13 @@ pub(crate) fn ibda(
         },
         khata: None,
         muthabbata: false,
+        // Both carried over from whatever the last run of this game concluded,
+        // so the panel explaining why part of the game is untouched does not
+        // blink out the instant the button is pressed and back in when the
+        // stage closes again.
+        yanfa_iltiqat: sabiqa.as_ref().is_some_and(|sabiqa| sabiqa.yanfa_iltiqat),
+        multaqat: mudkhalat.jalsat_iltiqat.is_some()
+            || sabiqa.as_ref().is_some_and(|sabiqa| sabiqa.multaqat),
         sahb: Some(sahb_hie(&mudkhalat.qaima)),
         waqt: waqt_alaan(),
     };
@@ -1436,6 +1491,340 @@ pub(crate) fn alghi(muarrif: String, mashawir: &MashawirTilqai) -> Natija<Laqtat
 }
 
 // ---------------------------------------------------------------------------
+// Recording a pass
+// ---------------------------------------------------------------------------
+
+/// Where the installed adapter reads its own settings from, under the game root.
+const DALIL_IDADAT_BEPINEX: &str = "BepInEx/config";
+
+/// Where the installed adapter itself sits, under the game root.
+const DALIL_MULHAQ_BEPINEX: &str = "BepInEx/plugins/Taarib";
+
+/// The two adapters that can record, by file name and by the identity BepInEx
+/// names their settings file after.
+///
+/// Spelled here rather than derived, because the identity is the adapter's own
+/// `BepInPlugin` GUID and nothing on this side can compute it. It changes only
+/// when that attribute changes, which is a deliberate act on a file this crate
+/// does not own.
+const MULHAQAT_ILTIQAT: [(&str, &str); 2] = [
+    ("Taarib.Unity.Mono.dll", "com.cc1a2b.taarib.unity.mono"),
+    ("Taarib.Unity.Il2cpp.dll", "com.cc1a2b.taarib.unity.il2cpp"),
+];
+
+/// The settings section the adapter binds under, in the adapter's own spelling.
+const QISM_IDADAT: &str = "[عام]";
+
+/// The key inside it that turns recording on.
+const MIFTAH_ILTIQAT: &str = "iltiqat";
+
+/// The file the adapter writes a finished pass to, under the patch's folder.
+const MALAF_JALSA: &str = "taarib/iltiqat.jsonl";
+
+/// The recorded pass waiting on disk, as the screen reads it.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct JalsatIltiqatHie {
+    /// How many distinct strings it holds.
+    pub nusus: u32,
+    /// Whether the game was closed while it was still writing.
+    ///
+    /// Not a failure and not hidden: everything before the cut is intact and is
+    /// merged, and a person who alt-F4s out of a game should be told what that
+    /// cost rather than left to wonder.
+    pub mabtura: bool,
+    /// Whether this game's newest run has already folded this pass in.
+    pub madmuja: bool,
+    /// When it was written, RFC 3339.
+    pub waqt: String,
+}
+
+/// Whether a pass can be recorded for one game, and what state it is in.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct HalatIltiqatHie {
+    /// Whether the adapter that records is in the game at all.
+    ///
+    /// False until a run has installed one, which is the honest ordering:
+    /// recording happens inside the game, through the same adapter that draws
+    /// the Arabic, so there is nothing to switch on before the first install.
+    pub mutah: bool,
+    /// Whether the next launch records instead of replacing.
+    pub musajjil: bool,
+    /// The pass waiting to be folded in, when there is one.
+    pub jalsa: Option<JalsatIltiqatHie>,
+}
+
+/// Whether a pass can be recorded for this game, and what is waiting.
+///
+/// Three directory reads and, when a pass exists, one parse of it. Nothing here
+/// writes and nothing launches, so the screen may ask for it whenever it draws
+/// the panel.
+///
+/// # Errors
+///
+/// [`Khata`] when the identity is not a game, or the game is not in the store.
+#[tauri::command]
+#[specta::specta]
+pub fn halat_iltiqat(
+    muarrif: String,
+    masarat: tauri::State<'_, Masarat>,
+    makhzan: tauri::State<'_, Makhzan>,
+) -> Result<HalatIltiqatHie, Khata> {
+    let id = huwiya(muarrif)?;
+    let luba = ijlib_luba(&makhzan, id)?;
+    Ok(hal_iltiqat(&masarat, id, &luba.jidhr))
+}
+
+/// Turns the recorder on or off for the next launch of one game.
+///
+/// The one thing it writes is a single key in the adapter's own settings file,
+/// which is a file the adapter created and rewrites for itself. The adapter
+/// refuses to replace text while it records — a pass taken while Arabic was on
+/// screen would measure Taarib's boxes instead of the game's — so this switch is
+/// also what makes the next launch show the game in its original language, and
+/// the screen says so before the press rather than after it.
+///
+/// # Errors
+///
+/// [`KhataTilqaiAmr::IltiqatGhayrMutah`] when no adapter that can record is
+/// installed in the game, and [`KhataTilqaiAmr::IdadatIltiqat`] when its
+/// settings file cannot be written.
+#[tauri::command]
+#[specta::specta]
+pub fn sajjil_iltiqat(
+    muarrif: String,
+    mufaal: bool,
+    masarat: tauri::State<'_, Masarat>,
+    makhzan: tauri::State<'_, Makhzan>,
+) -> Result<HalatIltiqatHie, Khata> {
+    let id = huwiya(muarrif)?;
+    let luba = ijlib_luba(&makhzan, id)?;
+    bdil_tasjil(&luba.jidhr, &luba.ism, mufaal)?;
+    tracing::info!(luba = %id, mufaal, "the in-game recorder was switched");
+    Ok(hal_iltiqat(&masarat, id, &luba.jidhr))
+}
+
+/// The recorder's state for one game, from the game's own directory.
+fn hal_iltiqat(masarat: &Masarat, id: LubaId, jidhr: &Path) -> HalatIltiqatHie {
+    let mulhaq = mulhaq_iltiqat(jidhr);
+    let musajjil = mulhaq
+        .as_ref()
+        .and_then(|(_, hawiya)| std::fs::read_to_string(masar_idadat(jidhr, hawiya)).ok())
+        .is_some_and(|nass| yaqra_tasjil(&nass));
+    HalatIltiqatHie {
+        mutah: mulhaq.is_some(),
+        musajjil,
+        jalsa: jalsa_mawjuda(masarat, id, jidhr),
+    }
+}
+
+/// The recording adapter installed in this game, when one is.
+fn mulhaq_iltiqat(jidhr: &Path) -> Option<(PathBuf, &'static str)> {
+    MULHAQAT_ILTIQAT.into_iter().find_map(|(ism, hawiya)| {
+        let masar = jidhr.join(DALIL_MULHAQ_BEPINEX).join(ism);
+        masar.is_file().then_some((masar, hawiya))
+    })
+}
+
+/// The adapter's settings file for one game.
+fn masar_idadat(jidhr: &Path, hawiya: &str) -> PathBuf {
+    jidhr
+        .join(DALIL_IDADAT_BEPINEX)
+        .join(format!("{hawiya}.cfg"))
+}
+
+/// The pass sitting beside the installed patch, read.
+///
+/// A file that will not parse answers `None` rather than raising: the screen's
+/// question is "is there a pass to offer", and a file that is not one is not an
+/// error the reader can act on. The run refuses it by name if they press
+/// anyway, which is where the sentence belongs.
+fn jalsa_mawjuda(masarat: &Masarat, id: LubaId, jidhr: &Path) -> Option<JalsatIltiqatHie> {
+    let masar = jidhr.join(MALAF_JALSA);
+    let bayan = std::fs::metadata(&masar).ok()?;
+    let muhammala =
+        match taarib_istikhraj::iltiqat::iqra_jalsa(&masar, taarib_tilqai::istikhraj::HADD_JALSA) {
+            Ok(muhammala) => muhammala,
+            Err(sabab) => {
+                tracing::warn!(
+                    masar = %masar.display(),
+                    sabab = %sabab.injilizi,
+                    "a recorded pass is on disk and would not read"
+                );
+                return None;
+            },
+        };
+    Some(JalsatIltiqatHie {
+        nusus: raqm_u32(u64::try_from(muhammala.adad()).unwrap_or(u64::MAX)),
+        mabtura: muhammala.mabtura,
+        madmuja: madmuja(masarat, id, &masar),
+        waqt: bayan
+            .modified()
+            .ok()
+            .map(jiff::Timestamp::try_from)
+            .and_then(Result::ok)
+            .map_or_else(waqt_alaan, |waqt| waqt.to_string()),
+    })
+}
+
+/// Whether this game's newest run already folded that exact pass in.
+///
+/// The comparison is the session's own fingerprint against the one the run
+/// journal recorded, which is the same comparison the pipeline makes when it
+/// decides whether to re-extract. Two answers to one question would eventually
+/// disagree, and the one that matters is the pipeline's — so this reads the
+/// journal rather than keeping a record of its own.
+fn madmuja(masarat: &Masarat, id: LubaId, masar: &Path) -> bool {
+    let Ok(basma) = taarib_tilqai::istikhraj::basmat_jalsa(masar) else {
+        return false;
+    };
+    let Some(sijill) = akhir_mashwar(&jidhr_mashawir(masarat, id)) else {
+        return false;
+    };
+    matches!(
+        sijill.qayd(MarhalaTilqai::Istikhraj),
+        Some(QaydMarhala::Istikhraj { basmat_jalsa, .. }) if *basmat_jalsa == basma
+    )
+}
+
+/// Writes the recorder's switch into the adapter's settings file.
+fn bdil_tasjil(jidhr: &Path, ism: &str, mufaal: bool) -> Natija<()> {
+    let Some((_, hawiya)) = mulhaq_iltiqat(jidhr) else {
+        return Err(Khata::from(KhataTilqaiAmr::IltiqatGhayrMutah {
+            ism: ism.to_owned(),
+        }));
+    };
+    let masar = masar_idadat(jidhr, hawiya);
+    let khata = |sabab: String| {
+        Khata::from(KhataTilqaiAmr::IdadatIltiqat {
+            ism: ism.to_owned(),
+            masar: masar.display().to_string(),
+            sabab,
+        })
+    };
+    if let Some(walid) = masar.parent() {
+        std::fs::create_dir_all(walid).map_err(|sabab| khata(sabab.to_string()))?;
+    }
+    // A file that is not there yet is the ordinary case on a game that has been
+    // patched but never launched: BepInEx writes this file the first time the
+    // adapter binds its settings, which has not happened. An empty document is
+    // the right starting point — the adapter reads whatever keys are present and
+    // writes the rest back itself on that first launch.
+    let sabiq = match std::fs::read_to_string(&masar) {
+        Ok(sabiq) => sabiq,
+        Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(sabab) => return Err(khata(sabab.to_string())),
+    };
+    let jadeed = uktub_tasjil(&sabiq, mufaal);
+    taarib_usus::masarat::kitaba_dharra_nass(&masar, &jadeed)
+        .map_err(|sabab| khata(sabab.to_string()))
+}
+
+/// Whether the adapter's settings text has recording switched on.
+///
+/// Read positionally rather than with a parser, because this is one key in one
+/// section of a format the adapter owns: BepInEx writes `key = value` lines
+/// under a `[section]` header, with `#` comments between them. A parser here
+/// would be a second opinion about that format, and the one thing that must not
+/// happen is this side and the adapter disagreeing about whether a pass is being
+/// recorded.
+fn yaqra_tasjil(nass: &str) -> bool {
+    fi_qism(nass)
+        .and_then(|qism| {
+            qism.lines()
+                .filter_map(qeemat_miftah)
+                .next_back()
+                .map(|qeema| qeema.eq_ignore_ascii_case("true"))
+        })
+        .unwrap_or(false)
+}
+
+/// The same text with the switch set, adding the section or the key when either
+/// is missing.
+fn uktub_tasjil(nass: &str, mufaal: bool) -> String {
+    let satr = format!("{MIFTAH_ILTIQAT} = {mufaal}");
+    let Some(bidayat_qism) = mawqi_qism(nass) else {
+        let mut jadeed = nass.to_owned();
+        if !jadeed.is_empty() && !jadeed.ends_with('\n') {
+            jadeed.push('\n');
+        }
+        if !jadeed.is_empty() {
+            jadeed.push('\n');
+        }
+        jadeed.push_str(QISM_IDADAT);
+        jadeed.push('\n');
+        jadeed.push_str(&satr);
+        jadeed.push('\n');
+        return jadeed;
+    };
+
+    let (raas, baqiya) = nass.split_at(bidayat_qism);
+    let mut jadeed = String::with_capacity(nass.len() + satr.len() + 2);
+    jadeed.push_str(raas);
+    let mut kutiba = false;
+    let mut nihayat_qism = 0_usize;
+    for (martaba, satr_hali) in baqiya.lines().enumerate() {
+        if martaba > 0 && satr_hali.trim_start().starts_with('[') {
+            break;
+        }
+        if qeemat_miftah(satr_hali).is_some() {
+            jadeed.push_str(&satr);
+            kutiba = true;
+        } else {
+            jadeed.push_str(satr_hali);
+        }
+        jadeed.push('\n');
+        nihayat_qism = nihayat_qism
+            .saturating_add(satr_hali.len())
+            .saturating_add(1);
+    }
+    if !kutiba {
+        jadeed.push_str(&satr);
+        jadeed.push('\n');
+    }
+    // Everything from the next section header on, byte for byte: the adapter
+    // binds five settings and this owns one of them, so the atlas budget and the
+    // page size a person tuned must survive being written through.
+    jadeed.push_str(baqiya.get(nihayat_qism.min(baqiya.len())..).unwrap_or(""));
+    jadeed
+}
+
+/// Where the adapter's own section starts, when the text has one.
+fn mawqi_qism(nass: &str) -> Option<usize> {
+    let mut mawqi = 0_usize;
+    for satr in nass.lines() {
+        if satr.trim() == QISM_IDADAT {
+            return Some(mawqi);
+        }
+        mawqi = mawqi.saturating_add(satr.len()).saturating_add(1);
+    }
+    None
+}
+
+/// The adapter's own section, from its header to the next one.
+fn fi_qism(nass: &str) -> Option<&str> {
+    let bidaya = mawqi_qism(nass)?;
+    let baqiya = nass.get(bidaya..)?;
+    let mut tul = 0_usize;
+    for (martaba, satr) in baqiya.lines().enumerate() {
+        if martaba > 0 && satr.trim_start().starts_with('[') {
+            return baqiya.get(..tul);
+        }
+        tul = tul.saturating_add(satr.len()).saturating_add(1);
+    }
+    Some(baqiya)
+}
+
+/// The value of the recording key on one line, when the line carries it.
+fn qeemat_miftah(satr: &str) -> Option<&str> {
+    let matn = satr.trim();
+    if matn.starts_with('#') {
+        return None;
+    }
+    let (miftah, qeema) = matn.split_once('=')?;
+    (miftah.trim() == MIFTAH_ILTIQAT).then(|| qeema.trim())
+}
+
+// ---------------------------------------------------------------------------
 // The run's own inputs
 // ---------------------------------------------------------------------------
 
@@ -1491,6 +1880,9 @@ struct MudkhalatMashwar {
     jidhr_steam: Option<PathBuf>,
     /// How the run behaves.
     khiyarat: KhiyaratTilqai,
+    /// The recorded pass to fold into the extraction, when the person asked for
+    /// one. Resolved by [`ibda`] from the game's own folder; never invented.
+    jalsat_iltiqat: Option<PathBuf>,
     /// The ceiling, in whole currency units, for the snapshot.
     saqf_dolar: f64,
     /// What previous runs of this game already spent, in nano-dollars.
@@ -1517,6 +1909,7 @@ fn jahhiz(
     istinaf: bool,
     jidhr_steam: Option<PathBuf>,
     iqrar_shabaka: bool,
+    jalsat_iltiqat: Option<PathBuf>,
 ) -> Natija<MudkhalatMashwar> {
     let luba = ijlib_luba(makhzan, id)?;
     let masdar = luba.masadir.first().cloned().ok_or_else(|| {
@@ -1631,6 +2024,7 @@ fn jahhiz(
         appid: appid_steam(&luba),
         jidhr_steam,
         khiyarat,
+        jalsat_iltiqat,
         saqf_dolar: saqf_nano.map_or(0.0, dolar),
         munfaq_sabiq,
     })
@@ -1763,11 +2157,14 @@ async fn shaghghil(mudhee: MudheeLaqta, hay: Arc<MashwarHay>, mut mudkhalat: Mud
         muzawwid: &*mudkhalat.muzawwid,
         miftah: &mudkhalat.miftah,
         khutut: &mudkhalat.khutut,
-        // The capture route is offered by the screen, which then starts a run
-        // with the same id and the session file that pass wrote. Nothing here
-        // invents one, because a session nobody produced is a file that is not
-        // there.
-        jalsat_iltiqat: None,
+        // The recorded pass, when the person pressed the button that uses one.
+        // `ibda` resolved it from the game's own folder and refused by name when
+        // there was nothing there, so this is a file that exists. On a resume it
+        // is also what stops the pipeline taking the journal's shortcut past
+        // extraction: the stage compares this file's fingerprint with the one
+        // the journal recorded, so a pass played since the last run is merged
+        // and a pass already merged is not read twice.
+        jalsat_iltiqat: mudkhalat.jalsat_iltiqat.as_deref(),
         // The store this installation ships. Without it the run writes the
         // patch and its fonts into the game and no loader, and a game that was
         // never patched before starts in its original language with the whole
@@ -1987,6 +2384,11 @@ fn laqta_min_natija(
             .istikhraj
             .as_ref()
             .map(|ihsa| qira_hie(ihsa, &natija.mujallad)),
+        yanfa_iltiqat: taqreer
+            .istikhraj
+            .as_ref()
+            .is_some_and(|ihsa| ihsa.yanfa_iltiqat),
+        multaqat: taqreer.istikhraj.as_ref().is_some_and(|ihsa| ihsa.multaqat),
         takalif: TakalifHie {
             munfaq: dolar(munfaq),
             saqf: mudkhalat.saqf_dolar,
@@ -2010,7 +2412,10 @@ fn qira_hie(ihsa: &IhsaIstikhraj, mujallad: &Path) -> TaqreerQiraHie {
         maqru: raqm_u32(ihsa.maqrua),
         matruk: raqm_u32(ihsa.marfuda),
         nusus: raqm_u32(ihsa.adad_zahir),
-        asbab: asbab_rafd(mujallad),
+        asbab: rafd_makhzun(mujallad)
+            .as_ref()
+            .map(asbab_rafd)
+            .unwrap_or_default(),
     }
 }
 
@@ -2185,6 +2590,37 @@ pub enum KhataTilqaiAmr {
     #[error("the first-run statement has not been acknowledged")]
     IqrarNaqis,
 
+    /// A recorded pass was asked for and none is on disk.
+    #[error("no recorded pass is waiting for {ism}")]
+    LaJalsatIltiqat {
+        /// The game.
+        ism: String,
+    },
+
+    /// Recording was asked for on a game with no adapter that can record.
+    ///
+    /// Recording happens inside the game, through the same adapter that draws
+    /// the Arabic, so it is a thing the first install makes possible rather than
+    /// a thing that is available beforehand. Stated rather than hidden, because
+    /// the screen offers the switch from the same panel that explains why part
+    /// of the game is still in its original language.
+    #[error("{ism} has no Taarib adapter installed, so there is nothing to record with")]
+    IltiqatGhayrMutah {
+        /// The game.
+        ism: String,
+    },
+
+    /// The adapter's settings file could not be written.
+    #[error("the recorder switch for {ism} could not be written to {masar}: {sabab}")]
+    IdadatIltiqat {
+        /// The game.
+        ism: String,
+        /// The settings file.
+        masar: String,
+        /// Why.
+        sabab: String,
+    },
+
     /// The registry is answering and its revocation list is not.
     ///
     /// The manual path's `9031`, raised here at the start of the run — after
@@ -2225,6 +2661,9 @@ impl Tafsir for KhataTilqaiAmr {
                     // after them.
                     Self::QaimatSahbMahjuba { .. } => 137,
                     Self::IqrarNaqis => 138,
+                    Self::LaJalsatIltiqat { .. } => 139,
+                    Self::IltiqatGhayrMutah { .. } => 140,
+                    Self::IdadatIltiqat { .. } => 141,
                 },
         )
     }
@@ -2260,6 +2699,13 @@ impl Tafsir for KhataTilqaiAmr {
             // pass — about the registry rather than the account.
             Self::QaimatSahbMahjuba { .. } => Khutura::Tanbeeh,
             Self::IqrarNaqis => Khutura::Maluma,
+            // Neither is a fault: one is a button pressed before the recording
+            // it names exists, the other is an offer that only an installed
+            // patch makes possible and the panel says so beside it.
+            Self::LaJalsatIltiqat { .. } | Self::IltiqatGhayrMutah { .. } => Khutura::Maluma,
+            // This one is: the game's own folder refused a write, which is the
+            // same class of fault as a failed install.
+            Self::IdadatIltiqat { .. } => Khutura::Tanbeeh,
         }
     }
 
@@ -2332,6 +2778,20 @@ impl Tafsir for KhataTilqaiAmr {
                  الجولة ولم يُنفَق شيء: السؤال عنه هنا — قبل الاستخراج والترجمة — لأنّ \
                  الإجابة عنه لا تحتاج رقعةً أصلًا."
                 .to_owned(),
+            Self::LaJalsatIltiqat { .. } => {
+                "لا توجد جولة مسجَّلة بعد. فعّل التسجيل، شغّل اللعبة ومُرّ على الشاشات التي \
+                 تريد تعريبها، ثم أغلق اللعبة وعُد إلى هنا."
+                    .to_owned()
+            },
+            Self::IltiqatGhayrMutah { .. } => {
+                "التسجيل يجري داخل اللعبة، عبر المُلحق نفسه الذي يرسم العربية، فلا يتاح قبل \
+                 أن تُثبَّت رقعة أولى. أكمل الجولة التلقائية، ثم يظهر التسجيل هنا."
+                    .to_owned()
+            },
+            Self::IdadatIltiqat { masar, sabab, .. } => format!(
+                "تعذّرت كتابة مفتاح التسجيل في إعدادات المُلحق ({masar}): {sabab}. تحقّق من أنّ \
+                 مجلّد اللعبة قابل للكتابة وأنّ اللعبة ليست قيد التشغيل."
+            ),
         }
     }
 
@@ -2413,6 +2873,22 @@ impl Tafsir for KhataTilqaiAmr {
                  it is asked here, before extraction and translation, because answering it \
                  needs no patch at all."
                 .to_owned(),
+            Self::LaJalsatIltiqat { .. } => {
+                "No pass has been recorded yet. Switch recording on, launch the game and play \
+                 through the screens you want translated, then quit and come back here."
+                    .to_owned()
+            },
+            Self::IltiqatGhayrMutah { .. } => {
+                "Recording happens inside the game, through the same adapter that draws the \
+                 Arabic, so it is not available until a first patch has been installed. Finish \
+                 the automatic run and the option appears here."
+                    .to_owned()
+            },
+            Self::IdadatIltiqat { masar, sabab, .. } => format!(
+                "The recorder switch could not be written to the adapter's settings ({masar}): \
+                 {sabab}. Check that the game's folder is writable and that the game is not \
+                 running."
+            ),
         }
     }
 
@@ -2440,10 +2916,19 @@ impl Tafsir for KhataTilqaiAmr {
             // on the game's screen and has to be read there, so a button that
             // accepted it from here would be accepting it on the reader's
             // behalf.
+            //
+            // The three recording refusals join them from the other direction:
+            // each is already answered on the screen that raised it, because the
+            // panel holding the offer is the panel holding the switch, the
+            // launch and the retry. A route to somewhere else would send the
+            // reader away from the one place that can do anything about it.
             Self::LughaRasmiya { .. }
             | Self::HimayaMuktashafa { .. }
             | Self::ShabakaBilaIqrar { .. }
-            | Self::IqrarNaqis => Khutwa::LaShay,
+            | Self::IqrarNaqis
+            | Self::LaJalsatIltiqat { .. }
+            | Self::IltiqatGhayrMutah { .. }
+            | Self::IdadatIltiqat { .. } => Khutwa::LaShay,
             // The one refusal here with a mechanical remedy: the ceiling is a
             // field on a screen, so send the reader straight to it.
             Self::BilaSaqfInfaq { .. } => Khutwa::FathIdadat {
@@ -2466,7 +2951,9 @@ impl Tafsir for KhataTilqaiAmr {
             Self::MashwarJari { ism }
             | Self::LaMashwar { ism }
             | Self::LaIstinaf { ism }
-            | Self::LubaBilaMasdar { ism } => {
+            | Self::LubaBilaMasdar { ism }
+            | Self::LaJalsatIltiqat { ism }
+            | Self::IltiqatGhayrMutah { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
             },
             Self::LughaRasmiya {
@@ -2499,6 +2986,11 @@ impl Tafsir for KhataTilqaiAmr {
                 );
             },
             Self::LaKhattArabi | Self::IqrarNaqis => {},
+            Self::IdadatIltiqat { ism, masar, sabab } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("masar".to_owned(), QeemaSiyaq::Nass(masar.clone()));
+                let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
+            },
             Self::QaimatSahbMahjuba {
                 masdar,
                 sabab,
@@ -2879,6 +3371,7 @@ mod ikhtibarat {
             masrah.id.to_string(),
             false,
             false,
+            false,
             &masrah.masarat,
             &masrah.makhzan,
             &masrah.idadat,
@@ -2967,6 +3460,7 @@ mod ikhtibarat {
             masrah.id.to_string(),
             false,
             false,
+            false,
             &masrah.masarat,
             &masrah.makhzan,
             &idadat,
@@ -2989,6 +3483,7 @@ mod ikhtibarat {
         let ramz = ibda(
             mudhee_samit(),
             masrah.id.to_string(),
+            false,
             false,
             false,
             &masrah.masarat,
@@ -3032,6 +3527,7 @@ mod ikhtibarat {
         let ramz = ibda(
             mudhee_samit(),
             masrah.id.to_string(),
+            false,
             false,
             false,
             &masrah.masarat,
@@ -3143,6 +3639,7 @@ mod ikhtibarat {
             masrah.id.to_string(),
             false,
             false,
+            false,
             &masrah.masarat,
             &masrah.makhzan,
             &idadat,
@@ -3177,6 +3674,7 @@ mod ikhtibarat {
             masrah.id.to_string(),
             false,
             true,
+            false,
             &masrah.masarat,
             &masrah.makhzan,
             &idadat,
@@ -3206,6 +3704,7 @@ mod ikhtibarat {
             masrah.id.to_string(),
             false,
             true,
+            false,
             &masrah.masarat,
             &masrah.makhzan,
             &idadat,
@@ -3250,6 +3749,7 @@ mod ikhtibarat {
             masrah.id.to_string(),
             false,
             true,
+            false,
             &masrah.masarat,
             &masrah.makhzan,
             &idadat,
@@ -3511,6 +4011,7 @@ mod ikhtibarat {
             masrah.id.to_string(),
             false,
             false,
+            false,
             &masrah.masarat,
             &masrah.makhzan,
             &masrah.idadat,
@@ -3701,5 +4202,82 @@ mod ikhtibarat {
         );
         assert!(hukm.takalif.saqf.abs() < f64::EPSILON);
         Ok(())
+    }
+
+    /// A settings file the adapter has never written yet still gets the switch.
+    ///
+    /// The ordinary state of a game that was patched and not yet launched:
+    /// BepInEx writes this file the first time the adapter binds its settings,
+    /// which has not happened. A writer that needed the file to exist would make
+    /// the offer this panel exists for fail on the one press that follows every
+    /// first install.
+    #[test]
+    fn tasjil_yunshi_alqism_hin_la_yakun() {
+        let jadeed = uktub_tasjil("", true);
+        assert!(jadeed.contains(QISM_IDADAT), "{jadeed}");
+        assert!(yaqra_tasjil(&jadeed), "{jadeed}");
+        assert!(!yaqra_tasjil(&uktub_tasjil(&jadeed, false)), "{jadeed}");
+    }
+
+    /// Everything the adapter owns survives the one key this side writes.
+    ///
+    /// The adapter binds five settings and this owns one of them. A person who
+    /// tuned the atlas budget or the page size must not lose it to a recording
+    /// switch, and a comment block rewritten into something BepInEx does not
+    /// recognise would cost them all five on the next launch.
+    #[test]
+    fn tasjil_yahfaz_baqiyat_alidadat() {
+        let sabiq = "## Settings file was created by plugin Taarib v1.0.1\n\
+                     ## Plugin GUID: com.cc1a2b.taarib.unity.mono\n\
+                     \n\
+                     [عام]\n\
+                     \n\
+                     ## Whether Taarib replaces text at all.\n\
+                     # Setting type: Boolean\n\
+                     # Default value: true\n\
+                     mufaal = true\n\
+                     \n\
+                     ## Capture mode.\n\
+                     # Setting type: Boolean\n\
+                     # Default value: false\n\
+                     iltiqat = false\n\
+                     \n\
+                     [لوحة]\n\
+                     \n\
+                     bud = 4096\n\
+                     mizaniya = 128\n";
+        assert!(!yaqra_tasjil(sabiq));
+
+        let jadeed = uktub_tasjil(sabiq, true);
+        assert!(yaqra_tasjil(&jadeed), "{jadeed}");
+        assert!(jadeed.contains("mufaal = true"), "{jadeed}");
+        assert!(jadeed.contains("[لوحة]"), "{jadeed}");
+        assert!(jadeed.contains("bud = 4096"), "{jadeed}");
+        assert!(jadeed.contains("mizaniya = 128"), "{jadeed}");
+        assert!(
+            jadeed.contains("## Capture mode."),
+            "the adapter's own comments are left alone: {jadeed}"
+        );
+        assert_eq!(
+            jadeed.matches("iltiqat = ").count(),
+            1,
+            "the key is replaced, not appended beside itself: {jadeed}"
+        );
+        // And back, which is what the run does when it takes the recording.
+        assert!(!yaqra_tasjil(&uktub_tasjil(&jadeed, false)));
+    }
+
+    /// A commented-out key is a comment, and a key in another section is not
+    /// this one.
+    ///
+    /// Both appear in real files — BepInEx documents every setting above it with
+    /// `#`, and a game may carry other plugins' sections in the same folder — and
+    /// reading either as the switch would have the screen reporting a recording
+    /// that is not happening.
+    #[test]
+    fn tasjil_la_yaqra_altaliqat_wala_alaqsam_alukhra() {
+        assert!(!yaqra_tasjil("[عام]\n# iltiqat = true\n"));
+        assert!(!yaqra_tasjil("[آخر]\niltiqat = true\n"));
+        assert!(yaqra_tasjil("[عام]\n# iltiqat = false\niltiqat = true\n"));
     }
 }

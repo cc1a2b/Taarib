@@ -36,6 +36,22 @@
 //! says "3 failed" and cannot say why is asking the contributor to re-run the
 //! batch to find out, at full price.
 //!
+//! ## The glossary is asked first, and it is free
+//!
+//! Before a string is protected or packed, [`crate::masrad`] is asked whether
+//! it already has an answer. A string whose whole text is a pinned term — the
+//! built-in interface terminology, or the project's own `masrad.json` over it
+//! — is answered here, journaled at zero cost, and never dispatched. That is
+//! not an optimisation. A machine handed the bare word `Menu` has no way to
+//! know it is a button: the run this shape was measured against paid for
+//! «قائمة طعام», a restaurant's menu, and for «يبدأ» — "he starts" — where
+//! `Start` needed «ابدأ».
+//!
+//! The rest of the glossary reaches the provider as *context* rather than as
+//! substitution: [`Masrad::mustalahat_fi`] puts the terms a string contains
+//! into its request, where [`crate::siyaq`] states them as binding. Nothing in
+//! this module ever rewrites a term inside a sentence.
+//!
 //! ## Protection is not optional and has no second path
 //!
 //! Every string is tokenised by [`crate::hima::ihmi`] before a provider sees
@@ -78,7 +94,7 @@ use futures::StreamExt as _;
 use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use taarib_mustalahat::nass::{AlamJawda, MudkhalNass, NassId, NitaqNasq};
+use taarib_mustalahat::nass::{AlamJawda, MudkhalNass, NassId, NitaqNasq, TasnifNass};
 use taarib_mustalahat::ruqaa::TareeqaTarjama;
 
 use crate::alamat::{
@@ -86,9 +102,10 @@ use crate::alamat::{
 };
 use crate::hima::{NassMahmi, NassMustaad, ihmi, istaridd};
 use crate::khata::{KhataTarjama, tul_u64};
+use crate::masrad::{JawabMasrad, Masrad, NitaqMustalah};
 use crate::muraja_dakhiliya::SijillMuraja;
 use crate::muzawwidun::{Muzawwid, NatijatTarjama, QudratMuzawwid, TalabTarjama};
-use crate::siyaq::SiyaqTalab;
+use crate::siyaq::{MustalahMulzim, SiyaqTalab};
 
 /// The run journal's file name, inside the project directory.
 ///
@@ -98,6 +115,14 @@ use crate::siyaq::SiyaqTalab;
 /// else — a cache directory, a temp file — is a checkpoint that is not there
 /// on the machine the contributor resumes on.
 pub const MALAF_SIJILL_JAWLA: &str = "jawlat_tarjama.jsonl";
+
+/// What [`QaydJawla::muzawwid`] records for a string the glossary answered.
+///
+/// A glossary answer has no provider to name, and naming the run's provider
+/// would put a company's name on text it never saw. This marker is what goes
+/// in the field instead; the outcome's own variant, [`HasilatNass::MinMasrad`],
+/// is what anything reading the journal actually branches on.
+pub const MUZAWWID_MASRAD: &str = "masrad";
 
 /// How a batch run behaves. Everything a contributor can turn.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -156,6 +181,15 @@ pub struct KhiyaratJawla {
     pub waqt: String,
     /// The thresholds the arrival-time quality flags are computed against.
     pub atabat: AtabatAlamat,
+    /// Whether a row the classifier called internal may still be sent.
+    ///
+    /// False for anything unattended: a bulk run asking a provider about
+    /// `dialoguetext148` gets prose back, pays for it, and writes it where the
+    /// game expects a key. True for a person pointing at one row and pressing
+    /// translate — that press *is* the override, and refusing it silently while
+    /// the screen says the provider did not answer would be a lie about what
+    /// happened.
+    pub yashmal_dakhili: bool,
 }
 
 impl Default for KhiyaratJawla {
@@ -170,6 +204,9 @@ impl Default for KhiyaratJawla {
             lahza: 0,
             waqt: String::new(),
             atabat: AtabatAlamat::default(),
+            // The safe half of the question: a caller that never thought about
+            // internal rows is a caller running unattended.
+            yashmal_dakhili: false,
         }
     }
 }
@@ -276,6 +313,30 @@ pub enum HasilatNass {
         /// what lets a resumed project rebuild review state without a code
         /// path that could accidentally mint a different one.
         muraja: SijillMuraja,
+    },
+    /// Answered by the glossary, before any provider was asked.
+    ///
+    /// A separate outcome rather than a [`HasilatNass::Tarjumat`] with an odd
+    /// provider name, because everything about it differs: nothing was
+    /// dispatched, nothing was paid, no machine produced the Arabic, and the
+    /// entry it lands on must not come out claiming a provider answered it.
+    /// [`tabbiq_sijill`] matches over the outcomes without a wildcard, so a
+    /// fifth kind fails to compile there rather than quietly being filed as a
+    /// machine translation.
+    MinMasrad {
+        /// The Arabic to write: the approved form, plus whatever trailing
+        /// ellipsis the source carried.
+        hadaf: String,
+        /// The source form of the term that answered, for the review history
+        /// and the interface.
+        mustalah: String,
+        /// The approved Arabic the term itself carries, before the ellipsis.
+        arabi: String,
+        /// Where that term came from, so the history line can say whether the
+        /// project pinned it or the product shipped it.
+        nitaq: NitaqMustalah,
+        /// The quality flags computable at arrival time.
+        alamat: Vec<AlamJawda>,
     },
     /// Failed, with the reason a contributor reads.
     Fashilat {
@@ -494,6 +555,15 @@ pub struct TafsilTakhatti {
     pub mujammada: usize,
     /// The source itself is empty or whitespace.
     pub farigha: usize,
+    /// Classified internal: an identifier, a key, a token — not a sentence.
+    ///
+    /// The classifier already names these `TasnifNass::Dakhili`, and until this
+    /// counter existed nothing acted on that verdict. One real game shipped 366
+    /// identifier-shaped values in its localization tables, 271 of which came
+    /// back translated: `dialoguetext148` as `نص الحوار148`, `madisontitle` as
+    /// `com.madisontitle`. Every one of those is a string the game draws, so
+    /// the patch replaced a token with Arabic prose — and each was paid for.
+    pub dakhiliya: usize,
 }
 
 impl TafsilTakhatti {
@@ -504,6 +574,7 @@ impl TafsilTakhatti {
             .saturating_add(self.mutarjama_musbaqan)
             .saturating_add(self.mujammada)
             .saturating_add(self.farigha)
+            .saturating_add(self.dakhiliya)
     }
 }
 
@@ -516,7 +587,18 @@ impl TafsilTakhatti {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TaqaddumJawla {
     /// Successfully translated and committed, this run.
+    ///
+    /// Glossary answers are counted here too, because they are translated and
+    /// committed exactly as a provider's replies are — a progress bar that
+    /// left them out would stall short of its own denominator. What they cost
+    /// and where they came from is [`TaqaddumJawla::min_almasrad`].
     pub mutarjama: usize,
+    /// How many of `mutarjama` the glossary answered, free and instantly.
+    ///
+    /// Counted separately because it is the number that says how much of a
+    /// run never needed to be bought — and because "translated" and
+    /// "translated by the provider you are paying" are different claims.
+    pub min_almasrad: usize,
     /// Failed, with the reason each one failed.
     pub fashila: Vec<(NassId, String)>,
     /// Skipped, split by why.
@@ -663,6 +745,8 @@ struct HalatJawla<'a> {
     awqif: AtomicBool,
     /// The provider's request limiter.
     hadd: Option<DefaultDirectRateLimiter>,
+    /// The glossary in force, for the terms each request carries.
+    masrad: &'a Masrad,
     /// Where live progress is published, when the caller wants it.
     nashir: Option<&'a tokio::sync::watch::Sender<TaqaddumJawla>>,
 }
@@ -835,6 +919,84 @@ where
             },
         }
     }
+}
+
+/// The review-history line a glossary answer records.
+///
+/// Says which term answered and under which scope, because the one question a
+/// reviewer meeting an Arabic string nobody typed will ask is where it came
+/// from — and because "the product shipped this default" and "this project
+/// pinned this" are answered differently.
+fn sabab_masrad(mustalah: &str, arabi: &str, nitaq: NitaqMustalah) -> String {
+    format!(
+        "من المسرد ({}): «{mustalah}» ← «{arabi}»",
+        nitaq.wasf_arabi()
+    )
+}
+
+/// Builds the journal line for a string the glossary answered.
+///
+/// The flags are computed against the review record the fold will produce,
+/// not the entry's current one, so what the journal carries is the flags of
+/// the string as it will stand — and `LilMuraja` is not the machine-only
+/// state, so this line correctly does not carry
+/// [`AlamJawda::AaliyaBilaMuraja`].
+fn qayd_masrad(mudkhal: &MudkhalNass, khiyarat: &KhiyaratJawla, jawab: &JawabMasrad) -> QaydJawla {
+    let mut muraja = mudkhal.muraja.clone();
+    muraja.tlub_muraja(
+        None,
+        khiyarat.lahza,
+        Some(sabab_masrad(
+            &jawab.mustalah.masdar,
+            &jawab.mustalah.arabi,
+            jawab.mustalah.nitaq,
+        )),
+    );
+
+    let mut muswadda = mudkhal.clone();
+    muswadda.hadaf = Some(jawab.hadaf.clone());
+    muswadda.nasq_hadaf.clear();
+    let alamat = ihsib_alamat_nass(&muswadda, Some(&muraja), None, &[], None, &khiyarat.atabat);
+
+    QaydJawla {
+        id: mudkhal.id,
+        muzawwid: MUZAWWID_MASRAD.to_owned(),
+        taklifa: 0,
+        lahza: khiyarat.lahza,
+        hasila: HasilatNass::MinMasrad {
+            hadaf: jawab.hadaf.clone(),
+            mustalah: jawab.mustalah.masdar.clone(),
+            arabi: jawab.mustalah.arabi.clone(),
+            nitaq: jawab.mustalah.nitaq,
+            alamat,
+        },
+    }
+}
+
+/// The request context for one string, glossary terms included.
+///
+/// The terms are what [`crate::siyaq`] renders into the instruction as «المسرد
+/// حجة» — the project's vocabulary stated as authority — and until now nothing
+/// ever filled the field, so the prompt builder's glossary section was dead
+/// code on every request this crate has ever sent.
+///
+/// Which terms bind, and which only inform, is [`Masrad::mustalahat_fi`]'s
+/// rule rather than this function's: a built-in interface label is right on a
+/// button and wrong inside a sentence, so it reaches a request only when the
+/// string is that label.
+fn siyaq_lil_band(masrad: &Masrad, mudkhal: &MudkhalNass) -> SiyaqTalab {
+    let mut siyaq = SiyaqTalab::min_mudkhal(mudkhal);
+    siyaq.mustalahat = masrad
+        .mustalahat_fi(&mudkhal.masdar)
+        .into_iter()
+        .map(|mustalah| MustalahMulzim {
+            asl: mustalah.masdar.clone(),
+            arabi: mustalah.arabi.clone(),
+            thabit: mustalah.la_yutarjam,
+            mulahaza: mustalah.mulahaza.clone(),
+        })
+        .collect();
+    siyaq
 }
 
 /// Builds a failure journal line for one string.
@@ -1025,7 +1187,7 @@ async fn adi_band<M>(
             },
         };
 
-        let siyaq = SiyaqTalab::min_mudkhal(mudkhal);
+        let siyaq = siyaq_lil_band(hala.masrad, mudkhal);
         let talabat = [TalabTarjama {
             mahmi: &mahmi,
             talab: &siyaq,
@@ -1116,7 +1278,7 @@ async fn adi_dufa<M>(
     // the borrow it hands out is used.
     let siyaqat: Vec<SiyaqTalab> = dufa
         .iter()
-        .map(|band| SiyaqTalab::min_mudkhal(band.mudkhal))
+        .map(|band| siyaq_lil_band(hala.masrad, band.mudkhal))
         .collect();
     let talabat: Vec<TalabTarjama<'_>> = dufa
         .iter()
@@ -1232,13 +1394,19 @@ async fn adi_dufa<M>(
 ///    Frozen strings and already-translated strings are
 ///    never machine-retranslated by a bulk run — that is the freeze's whole
 ///    meaning.
-/// 3. **Every eligible string is protected by [`crate::hima::ihmi`]** before
+/// 3. **The glossary answers what it can, before anything is dispatched.** A
+///    string whose whole text is a pinned term is journaled as
+///    [`HasilatNass::MinMasrad`] at zero cost and leaves the run there. It is
+///    asked *after* the classification skip, so a run that keeps out of
+///    identifier-shaped rows keeps out of them here too.
+/// 4. **Every eligible string is protected by [`crate::hima::ihmi`]** before
 ///    anything else; a string protection refuses is failed on the spot, with
 ///    its [`AlamJawda::NasqMaksur`] flag, and never reaches a provider.
-/// 4. **Chunks are sized from the provider's own [`QudratMuzawwid`]**, never
+/// 5. **Chunks are sized from the provider's own [`QudratMuzawwid`]**, never
 ///    from a constant, and dispatched with at most [`KhiyaratJawla::tawazi`]
-///    requests in flight.
-/// 5. **Each result — success or failure, with reason — is appended to the
+///    requests in flight, each carrying the glossary terms its strings
+///    contain.
+/// 6. **Each result — success or failure, with reason — is appended to the
 ///    journal the moment it exists**, so a crash, a network death or a user
 ///    stop costs at most the requests literally in flight.
 ///
@@ -1298,9 +1466,16 @@ where
         );
     }
 
+    // The built-in terminology with the project's own glossary over it, read
+    // once for the whole run: `ajib` is called per string and `mustalahat_fi`
+    // per dispatched request, and re-reading a file inside either would be a
+    // syscall per string of the game.
+    let masrad = Masrad::li_mashru(mujallad_mashru);
+
     let mut mutakhattaha = TafsilTakhatti::default();
     let mut fashila: Vec<(NassId, String)> = Vec::new();
     let mut bunud: Vec<BandMuallaq<'_>> = Vec::new();
+    let mut min_almasrad = 0_usize;
 
     for mudkhal in madakhil {
         if sijill.ajaba(mudkhal.id) {
@@ -1317,6 +1492,46 @@ where
         }
         if mudkhal.masdar.trim().is_empty() {
             mutakhattaha.farigha = mutakhattaha.farigha.saturating_add(1);
+            continue;
+        }
+        // Acted on here rather than at extraction, because extraction is right
+        // to keep the row: a human in the workshop may recognise a token the
+        // classifier misjudged and translate it deliberately. What must not
+        // happen is a provider being asked, because a provider always answers —
+        // confidently, and with prose where a key belongs.
+        if !khiyarat.yashmal_dakhili && mudkhal.tasnif == TasnifNass::Dakhili {
+            mutakhattaha.dakhiliya = mutakhattaha.dakhiliya.saturating_add(1);
+            continue;
+        }
+        // The glossary is asked before the provider, never after. A string
+        // whose whole text is a pinned term is already answered correctly, so
+        // buying a guess at it is money spent to get `Menu` back as «قائمة
+        // طعام» — a food menu — which is what the measured run did.
+        //
+        // Only a string with no spans over it: the approved form is a fixed
+        // word with no placeholders and no markup, so a row carrying atoms
+        // has structure this answer cannot reproduce and belongs with the
+        // provider, which at least receives the term as a requirement.
+        if mudkhal.nasq_masdar.is_empty()
+            && let Some(jawab) = masrad.ajib(&mudkhal.masdar)
+        {
+            let qayd = qayd_masrad(mudkhal, khiyarat, &jawab);
+            if let Err(khata_sijill) = sijill.sajjil(qayd) {
+                return TaqreerJawla {
+                    taqaddum: TaqaddumJawla {
+                        mutarjama: min_almasrad,
+                        min_almasrad,
+                        fashila,
+                        mutakhattaha,
+                        mutabaqqiya: bunud.len(),
+                        munfaq: munfaq_sabiq,
+                        saqf: khiyarat.saqf_takalif,
+                    },
+                    tawaqquf: Some(khata_sijill),
+                    sijill_talif,
+                };
+            }
+            min_almasrad = min_almasrad.saturating_add(1);
             continue;
         }
         match ihmi(&mudkhal.masdar, &mudkhal.nasq_masdar) {
@@ -1344,7 +1559,8 @@ where
                 if let Err(khata_sijill) = sijill.sajjil(qayd) {
                     return TaqreerJawla {
                         taqaddum: TaqaddumJawla {
-                            mutarjama: 0,
+                            mutarjama: min_almasrad,
+                            min_almasrad,
                             fashila,
                             mutakhattaha,
                             mutabaqqiya: bunud.len(),
@@ -1364,7 +1580,8 @@ where
         daftar: Mutex::new(DaftarTakalif::min_sabiq(munfaq_sabiq)),
         sijill: Mutex::new(sijill),
         taqaddum: Mutex::new(TaqaddumJawla {
-            mutarjama: 0,
+            mutarjama: min_almasrad,
+            min_almasrad,
             fashila,
             mutakhattaha,
             mutabaqqiya: bunud.len(),
@@ -1374,6 +1591,7 @@ where
         tawaqquf: Mutex::new(None),
         awqif: AtomicBool::new(false),
         hadd: hadd_muadal(&qudrat),
+        masrad: &masrad,
         nashir,
     };
     hala.anshur();
@@ -1435,6 +1653,14 @@ pub struct TaqreerTatbiq {
 ///   existing record keeps its history and gains a transition rather than
 ///   being replaced by the journal's snapshot. The snapshot in the journal
 ///   stays what it is: the run's own record, for resume and audit.
+/// - **Say a machine produced what a machine did not.** A glossary answer
+///   ([`HasilatNass::MinMasrad`]) lands as [`TareeqaTarjama::BashariyaKamila`]
+///   with no provider named, because the Arabic came from a person — the
+///   glossary's author — and no model was asked. Its review record moves to
+///   "needs review" rather than to the machine-only state: an authoritative
+///   rendering arrived and nobody has read it *in this game* yet, which is a
+///   different fact from a model having guessed. The same protections apply
+///   to it as to any other outcome — a human's work in the way wins.
 ///
 /// Failed strings do not change workflow state — they stay untranslated — but
 /// their flags, including [`AlamJawda::NasqMaksur`] for protection refusals,
@@ -1490,6 +1716,49 @@ pub fn tabbiq_sijill(
 
                 taqreer.mutabbaqa = taqreer.mutabbaqa.saturating_add(1);
             },
+            HasilatNass::MinMasrad {
+                hadaf,
+                mustalah,
+                arabi,
+                nitaq,
+                alamat,
+            } => {
+                let aali_qadeem = matches!(mudkhal.tareeqa, Some(TareeqaTarjama::AaliyaFaqat));
+                let yuktab = mudkhal.muraja.qabil_lil_kitaba_aliyan()
+                    && (mudkhal.hadaf.is_none() || aali_qadeem);
+                if !yuktab {
+                    taqreer.mahmiya = taqreer.mahmiya.saturating_add(1);
+                    continue;
+                }
+                mudkhal.hadaf = Some(hadaf.clone());
+                // The approved form carries no placeholders and no markup, and
+                // the runner only answers strings that had none either.
+                mudkhal.nasq_hadaf.clear();
+                // Not `sajjil_aali`: no machine produced this Arabic, and the
+                // machine-only state would both misreport where it came from
+                // and let the next bulk run overwrite it. Not a draft either —
+                // `sajjil_musawwada` records an author, and no person made this
+                // transition. What is true is that an authoritative rendering
+                // landed and nobody has read it *here*, which is exactly the
+                // state `tlub_muraja` names, and it takes no author.
+                mudkhal.muraja.tlub_muraja(
+                    None,
+                    qayd.lahza,
+                    Some(sabab_masrad(mustalah, arabi, *nitaq)),
+                );
+                // A person wrote this Arabic — the glossary's author — and no
+                // model was asked, so the honest method is the human one and
+                // there is no provider to name. Claiming `AaliyaFaqat` would
+                // demand the machine-only acknowledgement at submission for
+                // text no machine touched.
+                mudkhal.tareeqa = Some(TareeqaTarjama::BashariyaKamila);
+                mudkhal.muzawwid = None;
+                mudkhal.muharrir = None;
+                mudkhal.akhir_tabdeel = Some(waqt.to_owned());
+                thabbit_alamat(mudkhal, alamat.clone());
+
+                taqreer.mutabbaqa = taqreer.mutabbaqa.saturating_add(1);
+            },
             HasilatNass::Fashilat { alamat, .. } => {
                 thabbit_alamat(mudkhal, alamat.clone());
                 taqreer.fashila_muallama = taqreer.fashila_muallama.saturating_add(1);
@@ -1528,4 +1797,267 @@ pub fn thiqat_min_sijill(sijill: &SijillJawla) -> BTreeMap<NassId, ThiqaMublagha
         }
     }
     thiqat
+}
+
+#[cfg(test)]
+mod fuhus {
+    #![allow(
+        clippy::panic,
+        clippy::unwrap_used,
+        clippy::expect_used,
+        reason = "a test reports failure by panicking; the lints are written for library \
+                  code, and honouring them here would mean a test that cannot fail"
+    )]
+    #![expect(
+        clippy::disallowed_methods,
+        reason = "scratch teardown under `std::env::temp_dir()`, never a data root or a game \
+                  directory; the product's own recursive deletes go through `HadafHadhf`"
+    )]
+
+    use std::path::PathBuf;
+
+    use parking_lot::Mutex;
+    use taarib_mustalahat::muraja::HalatMuraja;
+    use taarib_mustalahat::musahim::MusahimId;
+    use taarib_mustalahat::nass::{
+        MasdarIstikhraj, MudkhalNass, NassId, QuyudNass, SiyaqNass, TasnifNass,
+    };
+    use taarib_mustalahat::ruqaa::TareeqaTarjama;
+
+    use super::{HasilatNass, KhiyaratJawla, SijillJawla, shaghghil_jawla, tabbiq_sijill};
+    use crate::hima::NassMahmi;
+    use crate::khata::KhataTarjama;
+    use crate::masrad::MALAF_MASRAD_MASHRU;
+    use crate::muraja_dakhiliya::SijillMuraja;
+    use crate::muzawwidun::{
+        IdadatGoogleMajjani, Muzawwid, MuzawwidGoogleMajjani, NatijatTarjama, QudratMuzawwid,
+        TakalifJarya,
+    };
+    use crate::siyaq::SiyaqTalab;
+
+    /// A directory of this test's own, removed and recreated so a rerun starts
+    /// clean.
+    fn mujallad(ism: &str) -> PathBuf {
+        let masar = std::env::temp_dir().join(format!("taarib-dufaat-fuhus-{ism}"));
+        let _ = std::fs::remove_dir_all(&masar);
+        assert!(std::fs::create_dir_all(&masar).is_ok());
+        masar
+    }
+
+    /// A provider that answers nothing and writes down every string it was
+    /// asked about.
+    ///
+    /// The capability is borrowed from a real provider rather than built here,
+    /// because [`QudratMuzawwid`]'s confidence field is private to its own
+    /// module — which is the point of it. Nothing on this double touches the
+    /// network: the batch layer only ever calls `tarjim_dufa`.
+    #[derive(Debug)]
+    struct MuzawwidMuraqib {
+        qudrat: QudratMuzawwid,
+        takalif: TakalifJarya,
+        masmu: Mutex<Vec<String>>,
+    }
+
+    impl MuzawwidMuraqib {
+        fn jadeed() -> Self {
+            let haqiqi = MuzawwidGoogleMajjani::jadeed(IdadatGoogleMajjani::default()).unwrap();
+            Self {
+                qudrat: haqiqi.qudrat(),
+                takalif: TakalifJarya::majani(),
+                masmu: Mutex::new(Vec::new()),
+            }
+        }
+
+        fn talabat(&self) -> Vec<String> {
+            self.masmu.lock().clone()
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl Muzawwid for MuzawwidMuraqib {
+        fn ism(&self) -> &'static str {
+            "muraqib"
+        }
+
+        fn namudhaj(&self) -> &'static str {
+            "muraqib"
+        }
+
+        fn qudrat(&self) -> QudratMuzawwid {
+            self.qudrat.clone()
+        }
+
+        fn takalif(&self) -> &TakalifJarya {
+            &self.takalif
+        }
+
+        async fn tarjim(
+            &self,
+            mahmi: &NassMahmi,
+            _talab: &SiyaqTalab,
+        ) -> Result<NatijatTarjama, KhataTarjama> {
+            self.masmu.lock().push(mahmi.matn().to_owned());
+            Ok(NatijatTarjama::bila_thiqa("ترجمة المزوّد".to_owned(), 0))
+        }
+    }
+
+    /// A contributor identity, which is a key fingerprint and nothing else.
+    fn musahim() -> MusahimId {
+        MusahimId::jadeed("a".repeat(64)).unwrap()
+    }
+
+    fn mudkhal(masdar: &str) -> MudkhalNass {
+        MudkhalNass {
+            id: NassId::min_mawqi("fuhus", masdar, masdar),
+            masdar: masdar.to_owned(),
+            hadaf: None,
+            muraja: SijillMuraja::jadeed(),
+            siyaq: SiyaqNass::default(),
+            quyud: QuyudNass::default(),
+            nasq_masdar: Vec::new(),
+            nasq_hadaf: Vec::new(),
+            takrar: 1,
+            majmua: None,
+            alamat: Vec::new(),
+            tareeqa: None,
+            muzawwid: None,
+            muharrir: None,
+            akhir_tabdeel: None,
+            tasnif: TasnifNass::Qaima,
+            thiqat_tasnif: 90,
+            masdar_istikhraj: MasdarIstikhraj::Sakin,
+            tarmiz: None,
+        }
+    }
+
+    fn khiyarat() -> KhiyaratJawla {
+        KhiyaratJawla {
+            lahza: 1_700_000_000,
+            waqt: "2026-09-18T00:00:00Z".to_owned(),
+            ..KhiyaratJawla::default()
+        }
+    }
+
+    /// A pinned label never reaches the provider, and prose that merely
+    /// contains one does.
+    #[tokio::test]
+    async fn almasrad_yujib_qabl_almuzawwid() {
+        let jidhr = mujallad("qabl-almuzawwid");
+        let muzawwid = MuzawwidMuraqib::jadeed();
+        let mut madakhil = vec![
+            mudkhal("Start"),
+            mudkhal("Menu"),
+            mudkhal("Loading..."),
+            mudkhal("Start the engine and drive away"),
+        ];
+
+        let taqreer = shaghghil_jawla(&muzawwid, &madakhil, &jidhr, &khiyarat(), None).await;
+        assert!(taqreer.tawaqquf.is_none());
+        assert_eq!(taqreer.taqaddum.min_almasrad, 3);
+        assert_eq!(taqreer.taqaddum.mutarjama, 4);
+        assert!(taqreer.taqaddum.fashila.is_empty());
+
+        // The three labels cost one request between them: none.
+        let talabat = muzawwid.talabat();
+        assert_eq!(talabat.len(), 1);
+        assert_eq!(
+            talabat.first().map(String::as_str),
+            Some("Start the engine and drive away")
+        );
+        assert_eq!(taqreer.taqaddum.munfaq, 0);
+
+        let sijill = SijillJawla::iftah(&jidhr).unwrap();
+        let tatbiq = tabbiq_sijill(&mut madakhil, &sijill, "2026-09-18T00:00:00Z");
+        assert_eq!(tatbiq.mutabbaqa, 4);
+
+        let saf = |masdar: &str| {
+            madakhil
+                .iter()
+                .find(|mudkhal| mudkhal.masdar == masdar)
+                .unwrap()
+                .clone()
+        };
+        let bidaya = saf("Start");
+        assert_eq!(bidaya.hadaf.as_deref(), Some("ابدأ"));
+        // No machine produced this Arabic, so nothing claims one did.
+        assert_eq!(bidaya.tareeqa, Some(TareeqaTarjama::BashariyaKamila));
+        assert_eq!(bidaya.muzawwid, None);
+        assert_eq!(bidaya.muharrir, None);
+        // It asks for a reader without pretending it had one.
+        assert_eq!(bidaya.muraja.hala(), HalatMuraja::LilMuraja);
+        assert!(!bidaya.muraja.aali_faqat());
+        assert_eq!(saf("Menu").hadaf.as_deref(), Some("القائمة"));
+        // The ellipsis the label carried is still on it.
+        assert_eq!(saf("Loading...").hadaf.as_deref(), Some("جارٍ التحميل..."));
+
+        // The prose row went the ordinary way and says so.
+        let jumla = saf("Start the engine and drive away");
+        assert_eq!(jumla.hadaf.as_deref(), Some("ترجمة المزوّد"));
+        assert_eq!(jumla.tareeqa, Some(TareeqaTarjama::AaliyaFaqat));
+        assert_eq!(jumla.muzawwid.as_deref(), Some("muraqib"));
+
+        let _ = std::fs::remove_dir_all(&jidhr);
+    }
+
+    /// The project's own glossary answers in place of the built-in one, and
+    /// the journal line says which.
+    #[tokio::test]
+    async fn mustalah_almashru_yaghlib_fi_aljawla() {
+        let jidhr = mujallad("mashru-yaghlib");
+        std::fs::write(
+            jidhr.join(MALAF_MASRAD_MASHRU),
+            r#"[{"masdar":"Menu","arabi":"اللائحة"}]"#,
+        )
+        .unwrap();
+
+        let muzawwid = MuzawwidMuraqib::jadeed();
+        let mut madakhil = vec![mudkhal("Menu"), mudkhal("Start")];
+        let taqreer = shaghghil_jawla(&muzawwid, &madakhil, &jidhr, &khiyarat(), None).await;
+        assert!(taqreer.tawaqquf.is_none());
+        assert_eq!(taqreer.taqaddum.min_almasrad, 2);
+        assert!(muzawwid.talabat().is_empty());
+
+        let sijill = SijillJawla::iftah(&jidhr).unwrap();
+        let qayd = sijill.qayd(madakhil.first().unwrap().id).unwrap();
+        match &qayd.hasila {
+            HasilatNass::MinMasrad { hadaf, nitaq, .. } => {
+                assert_eq!(hadaf, "اللائحة");
+                assert_eq!(*nitaq, crate::masrad::NitaqMustalah::MashruHali);
+            },
+            ghayr => panic!("the glossary outcome was recorded as {ghayr:?}"),
+        }
+        assert_eq!(qayd.taklifa, 0);
+
+        let _ = tabbiq_sijill(&mut madakhil, &sijill, "2026-09-18T00:00:00Z");
+        assert_eq!(madakhil.first().unwrap().hadaf.as_deref(), Some("اللائحة"));
+        assert_eq!(madakhil.get(1).unwrap().hadaf.as_deref(), Some("ابدأ"));
+
+        let _ = std::fs::remove_dir_all(&jidhr);
+    }
+
+    /// A human's work is never overwritten by a glossary answer, exactly as it
+    /// is never overwritten by a provider's.
+    #[tokio::test]
+    async fn la_yuktab_fawq_amal_insan() {
+        let jidhr = mujallad("fawq-alinsan");
+        let muzawwid = MuzawwidMuraqib::jadeed();
+        let madakhil = vec![mudkhal("Start")];
+        let taqreer = shaghghil_jawla(&muzawwid, &madakhil, &jidhr, &khiyarat(), None).await;
+        assert_eq!(taqreer.taqaddum.min_almasrad, 1);
+
+        // Between the run and the fold, somebody translated it themselves.
+        let mut baad = madakhil;
+        if let Some(saf) = baad.first_mut() {
+            saf.hadaf = Some("انطلق".to_owned());
+            saf.muraja.sajjil_musawwada(musahim(), 1_700_000_100);
+            saf.tareeqa = Some(TareeqaTarjama::BashariyaKamila);
+        }
+        let sijill = SijillJawla::iftah(&jidhr).unwrap();
+        let tatbiq = tabbiq_sijill(&mut baad, &sijill, "2026-09-18T00:00:00Z");
+        assert_eq!(tatbiq.mutabbaqa, 0);
+        assert_eq!(tatbiq.mahmiya, 1);
+        assert_eq!(baad.first().unwrap().hadaf.as_deref(), Some("انطلق"));
+
+        let _ = std::fs::remove_dir_all(&jidhr);
+    }
 }

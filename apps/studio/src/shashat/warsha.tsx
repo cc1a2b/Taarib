@@ -497,6 +497,15 @@ function LawhatIqtirahat({
                 {/* Drawn from logical borders, so it turns with the document. */}
                 <span className="warsha__sahm" aria-hidden="true" />
                 <span className="warsha__mustalah-arabi">{mustalah.arabi}</span>
+                {/* A term is applied to the game's text whether or not anyone
+                    asked for it, so the panel says which ones the project
+                    pinned and which ones shipped with Taarib — the built-in
+                    one is the one a project entry can take over. */}
+                {mustalah.mudmaj ? (
+                  <span className="warsha__mustalah-wasm">
+                    {t('warsha.iqtirah.mudmaj', lugha)}
+                  </span>
+                ) : null}
                 {mustalah.mulahaza !== null ? (
                   <span className="warsha__mulahaza">{mustalah.mulahaza}</span>
                 ) : null}

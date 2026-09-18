@@ -138,7 +138,7 @@ interface TartibWusata {
   readonly azil_ruqaa: ['muarrif', 'matlab', 'siyasa'];
   readonly hal_tashtaghil: ['muarrif'];
   readonly iqrar_aman: [];
-  readonly sajjil_iqrar_aman: [];
+  readonly sajjil_iqrar_aman: ['lugha'];
   readonly thabbit_ruqaa: ['muarrif', 'masarMalaf', 'iqrarShabaka', 'iqrarTaqribi'];
   // What an install would write and what a removal would leave. Both are the
   // installer's own dry runs — the same `khutta` the write itself is handed —
@@ -224,8 +224,10 @@ interface TartibWusata {
   // One-button automatic arabization: the verdict, the run, and the stop.
   readonly hukm_tilqai: ['muarrif'];
   readonly laqtat_tilqai: ['muarrif'];
-  readonly ibda_tilqai: ['muarrif', 'istinaf', 'iqrarShabaka'];
+  readonly ibda_tilqai: ['muarrif', 'istinaf', 'iqrarShabaka', 'dammIltiqat'];
   readonly alghi_tilqai: ['muarrif'];
+  readonly halat_iltiqat: ['muarrif'];
+  readonly sajjil_iltiqat: ['muarrif', 'mufaal'];
 
   // Sharing what the overlay read off a screen. `jahhiz` gathers a draft and
   // hands back every entry it would send — never a sample, because a preview of

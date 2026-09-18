@@ -10,7 +10,7 @@ use taarib_tarjama::dhakira::{
 };
 use taarib_tarjama::khata::KhataTarjama;
 use taarib_tarjama::masrad::{
-    Masrad, MustalahMasrad, TadarubMustalah, TadeelMustalah, wahhid_tadarub,
+    Masrad, MustalahMasrad, NitaqMustalah, TadarubMustalah, TadeelMustalah, wahhid_tadarub,
 };
 use taarib_usus::khata::Tafsir;
 
@@ -255,10 +255,19 @@ impl DamjMasrad {
 /// «القوة» are one form — keeps the local entry, adopting the imported note
 /// only where the local has none. A term both carry with two approved forms
 /// is a [`NizaaMustalah`], held open until [`DamjMasrad::itmam`].
+///
+/// Built-in terms ([`NitaqMustalah::Mudmaj`]) are dropped from both sides
+/// before anything is compared, because the merged glossary is written to the
+/// project's own file and shared in bundles, and a built-in term is neither
+/// side's data: persisting it would freeze today's shipped list into a
+/// project that should simply get tomorrow's, and would raise a conflict card
+/// between two copies of a default neither collaborator wrote. Both machines
+/// already have the built-in list; it is in force either way.
 #[must_use]
 pub fn idmij_masrad(ana: &Masrad, hum: &Masrad) -> DamjMasrad {
     let mut ana_bil_miftah: BTreeMap<String, MustalahMasrad> = ana
         .mustalahat()
+        .filter(|mustalah| mustalah.nitaq != NitaqMustalah::Mudmaj)
         .map(|mustalah| (mustalah.miftah(), mustalah.clone()))
         .collect();
 
@@ -266,7 +275,10 @@ pub fn idmij_masrad(ana: &Masrad, hum: &Masrad) -> DamjMasrad {
     let mut nizaat = Vec::new();
     let mut taqreer = TaqreerMasrad::default();
 
-    for mustalah_hum in hum.mustalahat() {
+    for mustalah_hum in hum
+        .mustalahat()
+        .filter(|mustalah| mustalah.nitaq != NitaqMustalah::Mudmaj)
+    {
         let miftah = mustalah_hum.miftah();
         match ana_bil_miftah.remove(&miftah) {
             None => {

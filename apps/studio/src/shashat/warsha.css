@@ -724,6 +724,14 @@
   font-weight: var(--wazn-mutawassit);
 }
 
+/* Reads as an aside, never as a second term: no fill and no border, because a
+   chip beside the Arabic would compete with the thing the row exists to show. */
+.warsha__mustalah-wasm {
+  color: var(--nass-3);
+  font-size: var(--qiyas-1);
+  white-space: nowrap;
+}
+
 /* The mapping mark, drawn rather than typed.
    A literal ← is a glyph borrowed from whichever font happens to own U+2190 —
    a different weight and a different baseline from the text beside it — and it

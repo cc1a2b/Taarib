@@ -8,10 +8,18 @@
 //! ```text
 //! sabk --jidhr <repo> --tasalsul <n> --asas <https://...>
 //!      [--mira <https://...>] [--huzma <file> --luba <uuid> --ism <title>]...
+//! sabk --jidhr <repo> --mujtama <body.json>
 //! ```
 //!
 //! Run it after every publication, with the sequence number incremented: a
 //! client caches on that number and will not look again until it moves.
+//!
+//! The community index is cast the same way and by the same key. It is a
+//! separate run because it changes on its own schedule — a team publishes on
+//! their own page, not into this catalogue — and because it publishes no
+//! package and needs no sequence number. Every other document this tool signs
+//! decides what a client installs; that one decides which addresses a client
+//! will open, which is why it is signed at all.
 
 // The print ban exists so that no library writes to a terminal the application
 // owns. This is not a library: it is a maintainer's one-command tool, run by
@@ -42,6 +50,7 @@ use taarib_mustalahat::sawt::MulakhkhasSawt;
 use taarib_mustalahat::taghtiya::Taghtiya;
 use taarib_mustawda::fahras::{BayanMustawda, MuhtawaShareeha, TajawuzNashr, shareeha};
 use taarib_mustawda::masadir::{MASAR_BAYAN, masar_shareeha};
+use taarib_mustawda::mujtama::{KatibFahrasMujtama, MASAR_FAHRAS_MUJTAMA};
 use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_tarqee::irtibat::IrtibatBina;
 use taarib_tarqee::taghtiya_ruqaa::SababAdamAlnashr;
@@ -507,6 +516,44 @@ fn qaimat_sahb(
     katib.uktub(khass).map_err(|khata| khata.to_string())
 }
 
+/// Casts the community index: the maintainer's body in, the signed document a
+/// client verifies out.
+///
+/// Through `KatibFahrasMujtama`, which shares its canonical form with the
+/// verifier for the same reason `KatibQaima` does: a second spelling of the
+/// signed bytes is a second place for them to drift, and the drift produces
+/// documents that verify against nothing. The body is validated by the reader's
+/// own rules before it is signed, so an entry a client would refuse is refused
+/// here, on the owner's machine, and never reaches one.
+///
+/// # Errors
+///
+/// A sentence naming what in the body would not read, and whatever the write
+/// refused.
+fn fahras_mujtama(masdar: &Path, jidhr: &Path, khass: &MiftahKhass) -> Result<(), String> {
+    let bayt = fs::read(masdar).map_err(|khata| format!("{}: {khata}", masdar.display()))?;
+    let waqt = Timestamp::from_second(unix_alan())
+        .map_err(|khata| format!("the clock reads outside the calendar: {khata}"))?
+        .to_string();
+    let katib = KatibFahrasMujtama::min_bayt(&bayt)
+        .and_then(|katib| katib.bi_waqt(&waqt))
+        .map_err(|khata| khata.to_string())?;
+    let wathiqa = katib.uktub(khass).map_err(|khata| khata.to_string())?;
+    uktub(jidhr, MASAR_FAHRAS_MUJTAMA, &wathiqa)?;
+
+    println!("  read {}", masdar.display());
+    println!("    teams     {}", katib.adad_firaq());
+    println!("    entries   {}", katib.adad_tarjamat());
+    println!("    cast      {}", katib.waqt());
+    println!("    key       {}", hex::encode(khass.aam().bayt()));
+    println!(
+        "  wrote {} ({} byte(s))",
+        jidhr.join(MASAR_FAHRAS_MUJTAMA).display(),
+        wathiqa.len()
+    );
+    Ok(())
+}
+
 fn uktub(jidhr: &Path, nisbi: &str, bayt: &[u8]) -> Result<(), String> {
     let masar = jidhr.join(nisbi);
     if let Some(walid) = masar.parent() {
@@ -571,7 +618,9 @@ struct TalabNashr {
 /// What the command line asked for.
 struct Khiyarat {
     jidhr: Option<PathBuf>,
-    tasalsul: u64,
+    /// The manifest sequence, required by every mode that writes a manifest and
+    /// meaningless to the two that do not.
+    tasalsul: Option<u64>,
     asas: Option<String>,
     mira: Option<String>,
     talabat: Vec<TalabNashr>,
@@ -580,6 +629,9 @@ struct Khiyarat {
     /// Where to write the compiled-in revocation seed, when that is all this
     /// run is for.
     badhra: Option<PathBuf>,
+    /// The community index body to sign into the repository, when that is all
+    /// this run is for.
+    mujtama: Option<PathBuf>,
 }
 
 const ISTIMAL: &str = "\
@@ -591,6 +643,8 @@ const ISTIMAL: &str = "\
        [--mulgha <64-hex key> --sabab <why>]...
 
   sabk --badhra assets/qaimat_sahb.json --tasalsul <n> [--ism-miftah <account>]
+
+  sabk --jidhr <repo> --mujtama <body.json> [--ism-miftah <account>]
 
   --jidhr       the repository working tree to write into (required)
   --tasalsul    the manifest sequence number; a client caches on it and will
@@ -617,6 +671,15 @@ const ISTIMAL: &str = "\
                 seed the anchor cannot verify stops the safety layer at startup,
                 before a single game is scanned. Nothing else is written and no
                 repository is touched.
+  --mujtama     sign the community translations index and write it to
+                fahras/tarjamat.json under --jidhr, then stop. The body is the
+                hand-maintained file; every check a client runs is run here
+                first, the revision is restamped with the moment of the cast,
+                and any signature the body already carries is replaced. Fields
+                this build does not read are carried through untouched. A client
+                reads no entry, credits no maker and opens no address out of an
+                index this key did not sign, so an index cast without this is an
+                index nobody sees. Nothing else is written.
 
 Every listing field except the game's identity and title is read out of the
 package's own sealed metadata. A package with no signature is refused, and so is
@@ -629,6 +692,7 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
     let (mut jidhr, mut tasalsul, mut asas, mut mira, mut ism_miftah) =
         (None, None, None, None, None);
     let mut badhra: Option<PathBuf> = None;
+    let mut mujtama: Option<PathBuf> = None;
     let mut talabat: Vec<TalabNashr> = Vec::new();
     let mut mulghayat: Vec<(String, String)> = Vec::new();
     let baad = |hujaj: &mut std::iter::Skip<std::env::Args>, wasm: &str| {
@@ -649,6 +713,7 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             "--mira" => mira = Some(baad(&mut hujaj, "--mira")?),
             "--ism-miftah" => ism_miftah = Some(baad(&mut hujaj, "--ism-miftah")?),
             "--badhra" => badhra = Some(PathBuf::from(baad(&mut hujaj, "--badhra")?)),
+            "--mujtama" => mujtama = Some(PathBuf::from(baad(&mut hujaj, "--mujtama")?)),
             "--huzma" => {
                 talabat.push(TalabNashr {
                     huzma: PathBuf::from(baad(&mut hujaj, "--huzma")?),
@@ -722,6 +787,12 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             return Err(format!("--mulgha {miftah} was given no --sabab"));
         }
     }
+    // The two single-document modes are exclusive, of each other and of a cast:
+    // each writes one file for its own reasons and would say nothing coherent
+    // about a repository it also cast.
+    if badhra.is_some() && mujtama.is_some() {
+        return Err("--badhra and --mujtama each write one file; run them separately".to_owned());
+    }
     // Seed mode writes one file and reads no repository, so the two arguments
     // that name a repository are required for casting and meaningless here.
     if badhra.is_some() {
@@ -732,6 +803,20 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
                     .to_owned(),
             );
         }
+    } else if mujtama.is_some() {
+        // The index does name a repository — it is written into one — but it
+        // publishes no package and rides no manifest, so everything that
+        // belongs to a cast is refused rather than silently ignored.
+        if asas.is_some() || !talabat.is_empty() || !mulghayat.is_empty() || tasalsul.is_some() {
+            return Err(
+                "--mujtama writes only the community index; it takes neither a package, a \
+                 revocation nor a sequence number"
+                    .to_owned(),
+            );
+        }
+        if jidhr.is_none() {
+            return Err("--jidhr is required".to_owned());
+        }
     } else if jidhr.is_none() || asas.is_none() {
         return Err(if jidhr.is_none() {
             "--jidhr is required".to_owned()
@@ -739,15 +824,19 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             "--asas is required".to_owned()
         });
     }
+    if mujtama.is_none() && tasalsul.is_none() {
+        return Err("--tasalsul is required".to_owned());
+    }
     Ok(Some(Khiyarat {
         jidhr,
-        tasalsul: tasalsul.ok_or_else(|| "--tasalsul is required".to_owned())?,
+        tasalsul,
         asas,
         mira,
         talabat,
         ism_miftah,
         mulghayat,
         badhra,
+        mujtama,
     }))
 }
 
@@ -789,23 +878,34 @@ fn nafidh() -> Result<(), String> {
     .map_err(|khata| format!("no signing key in this machine's keychain: {khata}"))?;
 
     if let Some(wijha) = khiyarat.badhra.as_deref() {
+        let tasalsul = khiyarat
+            .tasalsul
+            .ok_or_else(|| "--tasalsul is required".to_owned())?;
         let waqt = Timestamp::from_second(unix_alan())
             .map_err(|khata| format!("the clock reads outside the calendar: {khata}"))?
             .to_string();
-        let qaima = qaimat_sahb(khiyarat.tasalsul, &waqt, &khass, &[])?;
+        let qaima = qaimat_sahb(tasalsul, &waqt, &khass, &[])?;
         if let Some(walid) = wijha.parent() {
             fs::create_dir_all(walid).map_err(|khata| format!("{}: {khata}", walid.display()))?;
         }
         fs::write(wijha, &qaima).map_err(|khata| format!("{}: {khata}", wijha.display()))?;
         println!("  seed      {}", wijha.display());
-        println!("    sequence  {}", khiyarat.tasalsul);
+        println!("    sequence  {tasalsul}");
         println!("    issued    {waqt}");
         println!("    key       {}", hex::encode(khass.aam().bayt()));
         return Ok(());
     }
 
+    if let Some(masdar) = khiyarat.mujtama.as_deref() {
+        let jidhr = khiyarat
+            .jidhr
+            .as_deref()
+            .ok_or_else(|| "--jidhr is required".to_owned())?;
+        return fahras_mujtama(masdar, jidhr, &khass);
+    }
+
     // Proved once here rather than unwrapped at each use: everything below
-    // writes a repository, and seed mode returned above.
+    // writes a repository, and the two single-document modes returned above.
     let jidhr = khiyarat
         .jidhr
         .as_deref()
@@ -814,6 +914,9 @@ fn nafidh() -> Result<(), String> {
         .asas
         .as_deref()
         .ok_or_else(|| "--asas is required".to_owned())?;
+    let tasalsul = khiyarat
+        .tasalsul
+        .ok_or_else(|| "--tasalsul is required".to_owned())?;
 
     let mut madakhil = Vec::with_capacity(khiyarat.talabat.len());
     for talab in &khiyarat.talabat {
@@ -855,7 +958,7 @@ fn nafidh() -> Result<(), String> {
         jidhr,
         madakhil,
         BTreeMap::new(),
-        khiyarat.tasalsul,
+        tasalsul,
         &min_unix(unix_alan()),
         &khass,
         &khiyarat.mulghayat,

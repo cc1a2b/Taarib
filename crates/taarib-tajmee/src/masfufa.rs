@@ -136,11 +136,13 @@ fn saf_bepinex(
     for (nizam, mimariya) in hamulat_alalaab(hadaf) {
         for khalfiya in KHALFIYAT {
             for jeel in AJYAL {
-                let mukawwin = format!(
-                    "mukawwinat/bepinex/{}/{khalfiya}-{jeel}-{}",
+                let ism_mukawwin = format!(
+                    "bepinex/{}/{khalfiya}-{jeel}-{}",
                     ism_hadaf(nizam),
                     mimariya.mujallad()
                 );
+                let mukawwin = format!("mukawwinat/{ism_mukawwin}");
+                mustaqarr.fi_mukawwin(Some(&ism_mukawwin));
 
                 // The redistributable itself, unpacked verbatim.
                 let muarrif = muarrif_bepinex(khalfiya, nizam, mimariya);
@@ -186,6 +188,7 @@ fn saf_bepinex(
             }
         }
     }
+    mustaqarr.fi_mukawwin(None);
     Ok(())
 }
 
@@ -196,11 +199,9 @@ fn saf_mudkhal(
     mustaqarr: &mut Mustaqarr,
 ) -> NatijatTajmee<()> {
     for (nizam, mimariya) in hamulat_alalaab(hadaf) {
-        let mukawwin = format!(
-            "mukawwinat/mudkhal/{}/{}",
-            ism_hadaf(nizam),
-            mimariya.mujallad()
-        );
+        let ism_mukawwin = format!("mudkhal/{}/{}", ism_hadaf(nizam), mimariya.mujallad());
+        let mukawwin = format!("mukawwinat/{ism_mukawwin}");
+        mustaqarr.fi_mukawwin(Some(&ism_mukawwin));
         let muthallath = muthallath_hamula(nizam, mimariya);
 
         // The loader, under muhammil/ because a split component deploys only
@@ -235,6 +236,7 @@ fn saf_mudkhal(
             )?;
         }
     }
+    mustaqarr.fi_mukawwin(None);
     Ok(())
 }
 
@@ -255,6 +257,7 @@ fn saf_mulhaq(
     // mulhaq/rpgmaker/mv and mulhaq/rpgmaker/mz separately.
     let mabni = masadir.jidhr.join("target/adapters/rpgmaker/taarib.js");
     for jeel in ["mv", "mz"] {
+        mustaqarr.fi_mukawwin(Some(&format!("mulhaq/rpgmaker/{jeel}")));
         let mukawwin = format!("mukawwinat/mulhaq/rpgmaker/{jeel}");
         mustaqarr.insakh("I2", &mabni, &format!("{mukawwin}/taarib.js"))?;
         mustaqarr.insakh("H1", &wasm, &format!("{mukawwin}/taarib/taarib_core.js"))?;
@@ -269,6 +272,7 @@ fn saf_mulhaq(
     // embeds it takes it as a caller-supplied string, so the component store
     // is where that caller reads it from.
     let mabni_electron = masadir.jidhr.join("target/adapters/electron/taarib.js");
+    mustaqarr.fi_mukawwin(Some("mulhaq/electron"));
     mustaqarr.insakh(
         "I1",
         &mabni_electron,
@@ -288,6 +292,7 @@ fn saf_mulhaq(
     // Ren'Py takes the package directory intact: __init__.py uses relative
     // imports, so a flattened copy raises ImportError at game start.
     let masdar = masadir.jidhr.join("adapters-script/renpy/taarib_renpy");
+    mustaqarr.fi_mukawwin(Some("mulhaq/renpy"));
     mustaqarr.insakh_mujallad("I3", &masdar, "mukawwinat/mulhaq/renpy/taarib_renpy")?;
 
     // The face that component registers. Ren'Py resolves a font path against
@@ -319,6 +324,7 @@ fn saf_mulhaq(
     // container beside the game's own, under the directory the engine reads
     // its fallback face from; there is no other step that would put a face
     // where that engine looks. Row J1 again, for the same reason as above.
+    mustaqarr.fi_mukawwin(Some("mulhaq/unreal"));
     for (muarrif, ism) in KHATT_UNREAL {
         khutut.ifragh(
             "J1",
@@ -330,6 +336,7 @@ fn saf_mulhaq(
         )?;
     }
 
+    mustaqarr.fi_mukawwin(None);
     Ok(())
 }
 

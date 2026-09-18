@@ -1097,6 +1097,8 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             tilqai_awamir::laqtat_tilqai,
             tilqai_awamir::ibda_tilqai,
             tilqai_awamir::alghi_tilqai,
+            tilqai_awamir::halat_iltiqat,
+            tilqai_awamir::sajjil_iltiqat,
             mujtama_awamir::tarjamat_mujtama,
             mujtama_awamir::iftah_rabt,
         ])

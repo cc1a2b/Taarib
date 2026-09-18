@@ -40,7 +40,7 @@ use std::process::ExitCode;
 
 use crate::khata::KhataTajmee;
 use crate::masfufa::MasadirTajmee;
-use crate::nasakh::Mustaqarr;
+use crate::nasakh::{Mustaqarr, Taqm};
 
 /// The workspace version this tool stamps into the manifest.
 const ISDAR: &str = env!("CARGO_PKG_VERSION");
@@ -51,6 +51,8 @@ struct Khiyarat {
     jidhr: PathBuf,
     ahdaf: PathBuf,
     kharij: PathBuf,
+    tawzee: Option<PathBuf>,
+    taqm: Taqm,
     jalb: bool,
 }
 
@@ -83,7 +85,8 @@ fn nafidh(khiyarat: &Khiyarat) -> Result<usize, KhataTajmee> {
         jalb: khiyarat.jalb,
     };
 
-    let mut mustaqarr = Mustaqarr::iftah(&khiyarat.kharij)?;
+    let mut mustaqarr =
+        Mustaqarr::iftah(&khiyarat.kharij, khiyarat.taqm, khiyarat.tawzee.as_deref())?;
     masfufa::jammi(hadaf, &masadir, &mut mustaqarr)?;
 
     let naqis = mustaqarr.naqis().len();
@@ -91,17 +94,27 @@ fn nafidh(khiyarat: &Khiyarat) -> Result<usize, KhataTajmee> {
         for khata in mustaqarr.naqis() {
             eprintln!("{}", khata.satr());
         }
-        eprintln!("\ntajmee: {naqis} artifact(s) missing; the manifest was not written");
+        eprintln!("\ntajmee: {naqis} artifact(s) missing; neither document was written");
         return Ok(naqis);
     }
 
-    let bayan = mustaqarr.akhtim(ISDAR, hadaf.muthallath)?;
+    let hisab = mustaqarr.hisab();
+    let _ = mustaqarr.akhtim(ISDAR, hadaf.muthallath)?;
     println!(
-        "tajmee: {} file(s) staged for {} in {}",
-        bayan.milaffat.len(),
+        "tajmee: {} file(s), {} byte(s) staged for {} in {} [{}]",
+        hisab.fi_alhuzma,
+        hisab.hajm_alhuzma,
         hadaf.muthallath,
-        khiyarat.kharij.display()
+        khiyarat.kharij.display(),
+        khiyarat.taqm.ism()
     );
+    println!(
+        "        catalogue: {} component(s), {} left out of this bundle, {} byte(s) to fetch",
+        hisab.mukawwinat, hisab.kharij, hisab.hajm_kharij
+    );
+    if let Some(tawzee) = khiyarat.tawzee.as_ref() {
+        println!("        objects:   {}", tawzee.display());
+    }
     Ok(0)
 }
 
@@ -111,6 +124,8 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
     let mut jidhr = PathBuf::from(".");
     let mut ahdaf: Option<PathBuf> = None;
     let mut kharij: Option<PathBuf> = None;
+    let mut tawzee: Option<PathBuf> = None;
+    let mut taqm = Taqm::Kamil;
     let mut jalb = false;
 
     let mut wusata = std::env::args().skip(1);
@@ -120,6 +135,13 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             "--jidhr" => jidhr = wusata.next().map(PathBuf::from).unwrap_or(jidhr),
             "--ahdaf" => ahdaf = wusata.next().map(PathBuf::from),
             "--kharij" => kharij = wusata.next().map(PathBuf::from),
+            "--tawzee" => tawzee = wusata.next().map(PathBuf::from),
+            "--taqm" => {
+                let ism = wusata.next().unwrap_or_default();
+                taqm = Taqm::min_ism(&ism).ok_or_else(|| {
+                    format!("tajmee: --taqm takes kamil or nahif, not {ism}\n\n{MUSAADA}")
+                })?;
+            },
             "--jalb" => jalb = true,
             "-h" | "--help" => {
                 println!("{MUSAADA}");
@@ -139,6 +161,8 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
         jidhr,
         ahdaf,
         kharij,
+        tawzee,
+        taqm,
         jalb,
     }))
 }
@@ -148,13 +172,32 @@ const MUSAADA: &str = "\
 تجميع تعريب — stage the bundle's resource tree
 
     taarib-tajmee --hadaf <target-triple> [--jidhr <workspace>] [--ahdaf <target dir>]
-                  [--kharij <out dir>] [--jalb]
+                  [--kharij <out dir>] [--taqm kamil|nahif] [--tawzee <dir>] [--jalb]
 
     --hadaf    one of the targets in docs/tawzee.md §2 (required)
     --jidhr    workspace root (default: .)
     --ahdaf    cargo target directory (default: <jidhr>/target)
     --kharij   staging root (default: <jidhr>/apps/studio/src-tauri/mawarid)
+    --taqm     which components the bundle carries (default: kamil)
+    --tawzee   write the release's content-addressed component objects here
     --jalb     permit fetching locked artifacts that are not cached yet
+
+Every run reads, hashes and refuses-if-absent every artifact of the matrix,
+whichever set is asked for. --taqm decides only what the bundle carries:
+
+    kamil   every component — 519,747,711 byte(s) of component tree on
+            x86_64-pc-windows-msvc. This is the offline bundle, and it is what
+            every build before the flag existed produced.
+    nahif   everything but the six IL2CPP BepInEx components, which are
+            449,711,337 of those bytes. A machine with no IL2CPP Unity game
+            needs none of it; one that has such a game fetches the component it
+            names, against the hashes in fihris_mukawwinat.json, which
+            bayan_mukawwinat.json vouches for and the installer's signature
+            covers.
+
+--tawzee writes every component's files as objects named by their own sha256,
+so the three byte-identical Unity generations of one backend and architecture
+are stored once. One object store serves both variants and every platform.
 
 This tool builds nothing, and on a clean checkout that means it stages nothing:
 fourteen files across rows B, E, F, G, H and I have to be built first. The one

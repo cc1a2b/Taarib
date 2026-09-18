@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { HukmTilqai, KhataTilqai, LaqtatTilqai, MinfathTilqai } from '@/tilqai/aqd';
+import type {
+  HalatIltiqat,
+  HukmTilqai,
+  KhataTilqai,
+  LaqtatTilqai,
+  MinfathTilqai,
+} from '@/tilqai/aqd';
 import { khataMin, minfathTilqai } from '@/tilqai/aqd';
 
 /**
@@ -33,6 +39,16 @@ export interface HalatShasha {
   /** Whether a start or a cancel is in flight and the buttons must refuse. */
   readonly yantazir: boolean;
   /**
+   * Whether a pass can be recorded for this game, and what is waiting.
+   *
+   * Null until the first answer arrives, and null again for a game whose state
+   * could not be read — the two behave the same way, which is that the recorder
+   * panel states the situation and offers nothing it cannot deliver.
+   */
+  readonly iltiqat: HalatIltiqat | null;
+  /** Whether the recorder switch is in flight. */
+  readonly yantazirIltiqat: boolean;
+  /**
    * Starts a run; `istinaf` resumes the unfinished one rather than replacing it.
    *
    * `iqrarShabaka` is the user's answer to the multiplayer warning, passed
@@ -40,10 +56,14 @@ export interface HalatShasha {
    * purpose: every caller has to have obtained an answer, and a default here
    * would be this layer answering for them.
    */
-  readonly ibda: (istinaf: boolean, iqrarShabaka: boolean) => void;
+  readonly ibda: (istinaf: boolean, iqrarShabaka: boolean, dammIltiqat: boolean) => void;
   readonly alghi: () => void;
   readonly aidHukm: () => void;
   readonly shaghghil: () => void;
+  /** Turns the in-game recorder on or off for the next launch. */
+  readonly sajjil: (mufaal: boolean) => void;
+  /** Reads the recorder's state again, after a launch or a run. */
+  readonly aidIltiqat: () => void;
 }
 
 /**
@@ -63,6 +83,8 @@ export function useTilqai(
   const [laqta, haddidLaqta] = useState<LaqtatTilqai | null>(null);
   const [khataAmal, haddidKhataAmal] = useState<KhataTilqai | null>(null);
   const [yantazir, haddidIntizar] = useState(false);
+  const [iltiqat, haddidIltiqat] = useState<HalatIltiqat | null>(null);
+  const [yantazirIltiqat, haddidIntizarIltiqat] = useState(false);
 
   // False the moment the screen unmounts or the game changes, so a settled
   // promise from the previous game cannot write into the new one's state.
@@ -164,20 +186,79 @@ export function useTilqai(
     };
   }, [minfath, muarrif, sajjilLaqta]);
 
+  /**
+   * The recorder's state, asked for once per game and again after anything that
+   * could have changed it.
+   *
+   * A rejection is deliberately silent and leaves the answer null: not knowing
+   * whether a pass is waiting must not stop the run's own screen from drawing,
+   * and the panel that reads this states the situation rather than offering a
+   * control it cannot drive.
+   */
+  const aidIltiqat = useCallback(() => {
+    minfath.iltiqat(muarrif).then(
+      (jawab) => {
+        if (hayy.current) {
+          haddidIltiqat(jawab);
+        }
+      },
+      () => undefined,
+    );
+  }, [minfath, muarrif]);
+
+  useEffect(() => {
+    haddidIltiqat(null);
+    haddidIntizarIltiqat(false);
+    aidIltiqat();
+  }, [muarrif, aidIltiqat]);
+
+  const sajjil = useCallback(
+    (mufaal: boolean) => {
+      if (!hayy.current) {
+        return;
+      }
+      haddidIntizarIltiqat(true);
+      haddidKhataAmal(null);
+      minfath.sajjil(muarrif, mufaal).then(
+        (jawab) => {
+          if (!hayy.current) {
+            return;
+          }
+          haddidIltiqat(jawab);
+          haddidIntizarIltiqat(false);
+        },
+        (khaam: unknown) => {
+          if (!hayy.current) {
+            return;
+          }
+          haddidKhataAmal(khataMin('sajjil', khaam));
+          haddidIntizarIltiqat(false);
+        },
+      );
+    },
+    [minfath, muarrif],
+  );
+
   const ibda = useCallback(
-    (istinaf: boolean, iqrarShabaka: boolean) => {
+    (istinaf: boolean, iqrarShabaka: boolean, dammIltiqat: boolean) => {
       if (!hayy.current) {
         return;
       }
       haddidIntizar(true);
       haddidKhataAmal(null);
-      minfath.ibda(muarrif, istinaf, iqrarShabaka).then(
+      minfath.ibda(muarrif, istinaf, iqrarShabaka, dammIltiqat).then(
         (jawab) => {
           if (!hayy.current) {
             return;
           }
           sajjilLaqta(jawab);
           haddidIntizar(false);
+          // A run that was handed the recording switched the recorder off and
+          // is about to consume the pass, so the panel's own state is stale the
+          // moment the call returns.
+          if (dammIltiqat) {
+            aidIltiqat();
+          }
         },
         (khaam: unknown) => {
           if (!hayy.current) {
@@ -188,7 +269,7 @@ export function useTilqai(
         },
       );
     },
-    [minfath, muarrif, sajjilLaqta],
+    [minfath, muarrif, sajjilLaqta, aidIltiqat],
   );
 
   const alghi = useCallback(() => {
@@ -217,14 +298,19 @@ export function useTilqai(
 
   const shaghghil = useCallback(() => {
     minfath.shaghghil(muarrif).then(
-      () => undefined,
+      () => {
+        // The launch is what produces a pass, so what is on disk is re-read the
+        // moment the person comes back to this window — which is the next time
+        // anything on this screen is touched, not when the game exits.
+        aidIltiqat();
+      },
       (khaam: unknown) => {
         if (hayy.current) {
           haddidKhataAmal(khataMin('shaghghil', khaam));
         }
       },
     );
-  }, [minfath, muarrif]);
+  }, [minfath, muarrif, aidIltiqat]);
 
   return {
     hukm,
@@ -233,9 +319,13 @@ export function useTilqai(
     laqta,
     khataAmal,
     yantazir,
+    iltiqat,
+    yantazirIltiqat,
     ibda,
     alghi,
     aidHukm,
     shaghghil,
+    sajjil,
+    aidIltiqat,
   };
 }
