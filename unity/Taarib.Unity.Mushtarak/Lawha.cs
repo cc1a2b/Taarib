@@ -49,6 +49,23 @@
 // successive changes, and hands the adapter the smallest rectangle that covers
 // them. Uploading a sub-rectangle costs what the sub-rectangle costs.
 //
+// The rectangle that goes up is the glyph's own plus the gutter the packer
+// reserved around it, because that gutter is what a bilinear tap at the glyph's
+// edge reads and it is only zero on the GPU if somebody sent the zeros. The
+// gutter width is not this file's to know — it is what the atlas was created
+// with — so it is handed in at construction rather than assumed, and the same
+// number goes to `taarib_lawha_insha` and to `Lawha` from one place in each
+// adapter.
+//
+// And a rectangle collected is not yet a rectangle sent. Looking a glyph up is
+// not the same event as writing one: a menu that has been on screen for ten
+// minutes looks every glyph it draws up on every frame, and dirtying each one
+// would upload the union of a screenful of them sixty times a second for a page
+// nothing has touched. Rasterizing, evicting and opening a page are the only
+// three things that change a texel and the atlas counts all three, so the
+// rectangles are held aside and promoted only when one of those counters has
+// moved. A frame that rasterized nothing uploads nothing.
+//
 // The union is deliberately a bounding box rather than a list of rectangles.
 // Two glyphs rasterized into opposite corners of a page produce a bounding box
 // covering the whole page, which is worse than uploading two small rectangles —
@@ -162,6 +179,44 @@ namespace Taarib.Unity.Mushtarak
             int a = Math.Min(A, akhar.A);
             int yameen = Math.Max(S + Ard, akhar.S + akhar.Ard);
             int asfal = Math.Max(A + Irtifa, akhar.A + akhar.Irtifa);
+            return new MustatilLawha(s, a, yameen - s, asfal - a);
+        }
+
+        /// <summary>
+        /// The rectangle grown by a gutter on every side and clipped to a page.
+        /// </summary>
+        /// <param name="hashw">The gutter, in texels.</param>
+        /// <param name="ard">The page's width in texels.</param>
+        /// <param name="irtifa">The page's height in texels.</param>
+        /// <returns>The grown rectangle, clipped to the page.</returns>
+        /// <remarks>
+        /// A bilinear tap at the edge of a glyph's rectangle reads one texel
+        /// outside it, and the packer reserves exactly that much around every
+        /// glyph and keeps it at zero. The zeros are on the CPU side; they reach
+        /// the GPU only if the upload carries them. An upload of the glyph's own
+        /// texels alone leaves the gutter holding whatever the letter that
+        /// occupied that space before this one put there, and the symptom is a
+        /// sliver of an unrelated letter along one edge of this one — the exact
+        /// defect the gutter exists to prevent, arriving through the uploader.
+        /// </remarks>
+        public MustatilLawha Wassi(int hashw, int ard, int irtifa)
+        {
+            if (Khali || hashw <= 0 || ard <= 0 || irtifa <= 0)
+            {
+                return this;
+            }
+            int s = S - hashw;
+            int a = A - hashw;
+            s = s < 0 ? 0 : s;
+            a = a < 0 ? 0 : a;
+            int yameen = S + Ard + hashw;
+            int asfal = A + Irtifa + hashw;
+            yameen = yameen > ard ? ard : yameen;
+            asfal = asfal > irtifa ? irtifa : asfal;
+            if (yameen <= s || asfal <= a)
+            {
+                return this;
+            }
             return new MustatilLawha(s, a, yameen - s, asfal - a);
         }
 
@@ -283,6 +338,363 @@ namespace Taarib.Unity.Mushtarak
     }
 
     /// <summary>
+    /// جدول الصفحات — which pages exist, how large each one is, and which of
+    /// their texels the GPU's copy is behind on.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Separated from <see cref="Lawha"/> because every decision here is
+    /// arithmetic over page indices and rectangles, and <see cref="Lawha"/>'s
+    /// other half is a native handle. A test that wanted to count what one
+    /// frame uploads would otherwise need a loaded <c>taarib_jisr</c> and a
+    /// rasterizer to ask a question that involves neither, so the part that can
+    /// be checked on a build machine is the part that is reachable from one.
+    /// </para>
+    /// <para>
+    /// A page is registered with <see cref="Qayyid"/>, dirtied with
+    /// <see cref="Wassikh"/>, collected with <see cref="Iltaqit"/> and marked
+    /// clean with <see cref="Rufia"/> — in that order, once per frame.
+    /// </para>
+    /// </remarks>
+    public sealed class JadwalSafahat
+    {
+        /// <summary>
+        /// The largest page dimension this bookkeeping will accept, in texels.
+        /// </summary>
+        /// <remarks>
+        /// Four thousand and ninety-six, which is the packer's own maximum and
+        /// the largest texture dimension every graphics API the product targets
+        /// guarantees. A page larger than this is not a page this build wrote,
+        /// and accepting it would mean trusting a number to size a rectangle
+        /// that an adapter is about to hand to a driver.
+        /// </remarks>
+        public const int AqsaBud = 4096;
+
+        /// <summary>
+        /// The most pages this bookkeeping will track.
+        /// </summary>
+        /// <remarks>
+        /// Sixty-four. The packer's documented maximum for the default profile
+        /// is eight, and a patch with sixty-four full pages would be a gigabyte
+        /// of atlas — so this is a ceiling on a hostile number rather than a
+        /// limit anything real approaches. It is also the width of the page
+        /// mask a mesh build reports, which is why the two numbers are one.
+        /// </remarks>
+        public const int AqsaSafahat = 64;
+
+        private readonly MustatilLawha[] wasikh = new MustatilLawha[AqsaSafahat];
+        private readonly MustatilLawha[] itar = new MustatilLawha[AqsaSafahat];
+        private readonly bool[] jadida = new bool[AqsaSafahat];
+        private readonly int[] abaad = new int[AqsaSafahat * 2];
+        private readonly int hashw;
+        private int adadSafahat;
+        private ulong jeel;
+
+        /// <summary>Builds an empty page table.</summary>
+        /// <param name="hashw">
+        /// The gutter the packer leaves around every glyph, in texels — the
+        /// same number the atlas was created with. See
+        /// <see cref="MustatilLawha.Wassi"/> for what an upload that ignored it
+        /// leaves on the screen.
+        /// </param>
+        public JadwalSafahat(ushort hashw)
+        {
+            this.hashw = hashw;
+        }
+
+        /// <summary>The gutter every dirty rectangle is grown by.</summary>
+        public int Hashw => hashw;
+
+        /// <summary>How many pages the table holds.</summary>
+        public int AdadSafahat => adadSafahat;
+
+        /// <summary>
+        /// A counter that increases whenever anything about the table changed.
+        /// </summary>
+        public ulong Jeel => jeel;
+
+        /// <summary>Whether anything at all needs uploading.</summary>
+        public bool Muattal
+        {
+            get
+            {
+                for (int i = 0; i < adadSafahat; i++)
+                {
+                    if (jadida[i] || !wasikh[i].Khali)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        /// <summary>One page's width in texels, or zero for a page it has not seen.</summary>
+        /// <param name="safha">The page index.</param>
+        /// <returns>The width.</returns>
+        public int Ard(int safha)
+        {
+            return (uint)safha < (uint)adadSafahat ? abaad[safha * 2] : 0;
+        }
+
+        /// <summary>One page's height in texels, or zero for a page it has not seen.</summary>
+        /// <param name="safha">The page index.</param>
+        /// <returns>The height.</returns>
+        public int Irtifa(int safha)
+        {
+            return (uint)safha < (uint)adadSafahat ? abaad[(safha * 2) + 1] : 0;
+        }
+
+        /// <summary>
+        /// Records a page's dimensions, marking it as needing a full upload the
+        /// first time it is seen.
+        /// </summary>
+        /// <param name="safha">The page index.</param>
+        /// <param name="ard">Its width in texels.</param>
+        /// <param name="irtifa">Its height in texels.</param>
+        /// <returns>Whether the page was accepted.</returns>
+        /// <remarks>
+        /// A page index past <see cref="AqsaSafahat"/>, or a dimension outside
+        /// <c>1..=<see cref="AqsaBud"/></c>, is refused rather than recorded: a
+        /// number this table believes becomes a rectangle an adapter hands to a
+        /// driver.
+        /// </remarks>
+        public bool Qayyid(int safha, int ard, int irtifa)
+        {
+            if ((uint)safha >= (uint)AqsaSafahat
+                || ard <= 0 || irtifa <= 0 || ard > AqsaBud || irtifa > AqsaBud)
+            {
+                return false;
+            }
+            if (safha >= adadSafahat)
+            {
+                for (int i = adadSafahat; i <= safha; i++)
+                {
+                    jadida[i] = true;
+                    wasikh[i] = MustatilLawha.Faragh;
+                }
+                adadSafahat = safha + 1;
+                jeel++;
+            }
+            abaad[safha * 2] = ard;
+            abaad[(safha * 2) + 1] = irtifa;
+            return true;
+        }
+
+        /// <summary>
+        /// Records that one glyph was drawn from, so that the texels it and the
+        /// gutter around it occupy are uploaded if anything wrote to the atlas.
+        /// </summary>
+        /// <param name="safha">The page the glyph sits on.</param>
+        /// <param name="shakl">The glyph's own rectangle, gutter excluded.</param>
+        /// <remarks>
+        /// <para>
+        /// The gutter is added here rather than by the caller because the caller
+        /// is handed the glyph's rectangle by the native atlas and has no reason
+        /// to know the packer reserved anything around it. One place adds it, so
+        /// one place can be wrong about it.
+        /// </para>
+        /// <para>
+        /// This does not itself make anything dirty: a glyph the atlas already
+        /// held is the same image in the same rectangle, and a menu that has
+        /// been on screen for ten minutes looks every one of its glyphs up on
+        /// every frame. The rectangles collected here are candidates, and
+        /// <see cref="Adrij"/> promotes them only when the atlas says it wrote
+        /// something.
+        /// </para>
+        /// </remarks>
+        public void Wassikh(int safha, MustatilLawha shakl)
+        {
+            if ((uint)safha >= (uint)adadSafahat || shakl.Khali)
+            {
+                return;
+            }
+            MustatilLawha mamsuh = shakl.Wassi(hashw, abaad[safha * 2], abaad[(safha * 2) + 1]);
+            itar[safha] = itar[safha].Ittihad(mamsuh);
+        }
+
+        /// <summary>
+        /// Settles the rectangles collected since the last call: dirty when the
+        /// atlas wrote something, discarded when it did not.
+        /// </summary>
+        /// <param name="kutiba">
+        /// Whether the atlas rasterized, evicted or grew since the last call.
+        /// Nothing else writes a texel, so a run of lookups with all three
+        /// counters unmoved cannot have changed a page — and the rectangles it
+        /// collected name texels the GPU already holds.
+        /// </param>
+        /// <remarks>
+        /// The gate is the whole of the frame-time fix. Without it every glyph
+        /// looked up dirties its own rectangle, the union of a screen's worth of
+        /// them approaches the page, and a scene that has not changed in minutes
+        /// uploads it on every frame. With it, a frame that rasterized nothing
+        /// uploads nothing.
+        /// </remarks>
+        public void Adrij(bool kutiba)
+        {
+            for (int i = 0; i < adadSafahat; i++)
+            {
+                MustatilLawha murashah = itar[i];
+                itar[i] = MustatilLawha.Faragh;
+                if (!kutiba || murashah.Khali)
+                {
+                    continue;
+                }
+                MustatilLawha sabiq = wasikh[i];
+                MustatilLawha jadid = sabiq.Ittihad(murashah);
+                if (jadid != sabiq)
+                {
+                    wasikh[i] = jadid;
+                    jeel++;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Collects what needs uploading, without changing anything.
+        /// </summary>
+        /// <param name="hadaf">
+        /// A buffer of at least <see cref="AdadSafahat"/> entries, which the
+        /// caller owns and reuses. Supplied by the caller rather than allocated
+        /// here so that collecting per frame costs nothing.
+        /// </param>
+        /// <returns>How many entries were written.</returns>
+        /// <exception cref="ArgumentException">The buffer is too small.</exception>
+        /// <remarks>
+        /// Nothing is marked clean here. The adapter calls <see cref="Rufia"/>
+        /// after its upload actually succeeded — because a graphics call that
+        /// threw, or a texture that failed to allocate, must leave the page dirty
+        /// so the next frame tries again. Marking clean on collection would lose
+        /// the change permanently and the glyph would never appear.
+        /// </remarks>
+        public int Iltaqit(Span<SijillRafa> hadaf)
+        {
+            if (hadaf.Length < adadSafahat)
+            {
+                throw new ArgumentException(
+                    $"The buffer holds {hadaf.Length} entries and the atlas has "
+                    + $"{adadSafahat} pages.",
+                    nameof(hadaf));
+            }
+
+            int adad = 0;
+            for (int i = 0; i < adadSafahat; i++)
+            {
+                bool jadid = jadida[i];
+                MustatilLawha mustatil = wasikh[i];
+                if (!jadid && mustatil.Khali)
+                {
+                    continue;
+                }
+                int budS = abaad[i * 2];
+                int budA = abaad[(i * 2) + 1];
+                if (jadid)
+                {
+                    // A texture the adapter is about to create has undefined
+                    // contents, so the whole page goes up, not just the part the
+                    // packer has filled.
+                    mustatil = new MustatilLawha(0, 0, budS, budA);
+                }
+                hadaf[adad] = new SijillRafa(i, budS, budA, mustatil, jadid);
+                adad++;
+            }
+            return adad;
+        }
+
+        /// <summary>
+        /// Marks one page clean after its upload succeeded.
+        /// </summary>
+        /// <param name="safha">The page index.</param>
+        /// <remarks>
+        /// Call this only when the upload actually completed. A page marked clean
+        /// after a failed upload keeps the stale texels forever, and the glyph
+        /// that was rasterized into it never appears — which looks like a missing
+        /// character rather than a failed texture write, and is diagnosed
+        /// accordingly and wrongly.
+        /// </remarks>
+        public void Rufia(int safha)
+        {
+            if ((uint)safha >= (uint)AqsaSafahat)
+            {
+                return;
+            }
+            wasikh[safha] = MustatilLawha.Faragh;
+            jadida[safha] = false;
+        }
+
+        /// <summary>Marks every page as needing a full upload.</summary>
+        /// <remarks>
+        /// For the cases where the GPU-side copy was lost rather than made stale:
+        /// a device reset, a scene load that destroyed the textures, or a
+        /// resolution change that recreated them. Nothing about the atlas
+        /// changed, so the dirty tracking would report nothing, and the adapter
+        /// would draw from textures that no longer hold anything.
+        /// </remarks>
+        public void Ajjil()
+        {
+            for (int i = 0; i < adadSafahat; i++)
+            {
+                jadida[i] = true;
+                wasikh[i] = new MustatilLawha(0, 0, abaad[i * 2], abaad[(i * 2) + 1]);
+                // Whole pages are going up; a candidate rectangle inside one of
+                // them has nothing left to add.
+                itar[i] = MustatilLawha.Faragh;
+            }
+            jeel++;
+        }
+
+        /// <summary>
+        /// The single atlas page a finished mesh build touched, if there is one.
+        /// </summary>
+        /// <param name="alamSafahat">
+        /// The page mask a mesh build reports: bit <c>i</c> set means at least
+        /// one glyph of that layout lives on page <c>i</c>.
+        /// </param>
+        /// <param name="safahatBaida">
+        /// Whether the build met a glyph on a page the mask cannot name.
+        /// </param>
+        /// <param name="safha">The page to draw from, meaningful on success.</param>
+        /// <returns>
+        /// Whether every glyph of the layout is on one page. A layout that drew
+        /// no glyph at all — a line of spaces — succeeds with page zero, because
+        /// there is nothing to pick a page for.
+        /// </returns>
+        /// <remarks>
+        /// A page is a texture and a texture is a draw call, so one mesh can
+        /// only sample one page. The caller's choice is therefore between
+        /// drawing the layout from the page it is on and leaving the whole
+        /// string to the engine: drawing it from page zero regardless emits
+        /// nothing for every glyph on any other page, which is a sentence with
+        /// letters missing and no report that they are.
+        /// </remarks>
+        public static bool SafhaWahida(ulong alamSafahat, bool safahatBaida, out ushort safha)
+        {
+            safha = 0;
+            if (safahatBaida)
+            {
+                return false;
+            }
+            if (alamSafahat == 0)
+            {
+                return true;
+            }
+            if ((alamSafahat & (alamSafahat - 1)) != 0)
+            {
+                return false;
+            }
+            ulong baqi = alamSafahat;
+            int fahras = 0;
+            while ((baqi & 1UL) == 0)
+            {
+                baqi >>= 1;
+                fahras++;
+            }
+            safha = (ushort)fahras;
+            return true;
+        }
+    }
+
+    /// <summary>
     /// لوحة — the atlas's managed side: page bookkeeping, dirty tracking, and
     /// the format decisions each adapter applies.
     /// </summary>
@@ -312,33 +724,17 @@ namespace Taarib.Unity.Mushtarak
         /// <summary>
         /// The largest page dimension this bookkeeping will accept, in texels.
         /// </summary>
-        /// <remarks>
-        /// Four thousand and ninety-six, which is the packer's own maximum and
-        /// the largest texture dimension every graphics API the product targets
-        /// guarantees. A page larger than this is not a page this build wrote,
-        /// and accepting it would mean trusting a number to size a rectangle
-        /// that an adapter is about to hand to a driver.
-        /// </remarks>
-        public const int AqsaBud = 4096;
+        public const int AqsaBud = JadwalSafahat.AqsaBud;
 
         /// <summary>
         /// The most pages this bookkeeping will track.
         /// </summary>
-        /// <remarks>
-        /// Sixty-four. The packer's documented maximum for the default profile
-        /// is eight, and a patch with sixty-four full pages would be a gigabyte
-        /// of atlas — so this is a ceiling on a hostile number rather than a
-        /// limit anything real approaches.
-        /// </remarks>
-        public const int AqsaSafahat = 64;
+        public const int AqsaSafahat = JadwalSafahat.AqsaSafahat;
 
         private readonly MaqbadLawha maqbad;
         private readonly bool yamlikMaqbad;
-        private readonly MustatilLawha[] wasikh = new MustatilLawha[AqsaSafahat];
-        private readonly bool[] jadida = new bool[AqsaSafahat];
-        private readonly int[] abaad = new int[AqsaSafahat * 2];
-        private int adadSafahat;
-        private ulong jeel;
+        private readonly JadwalSafahat jadwal;
+        private ulong kitabat;
         private bool mutlaf;
 
         /// <summary>
@@ -346,6 +742,12 @@ namespace Taarib.Unity.Mushtarak
         /// </summary>
         /// <param name="maqbad">The atlas. Not owned unless <paramref name="yamlik"/>.</param>
         /// <param name="namat">How its pages were rasterized.</param>
+        /// <param name="hashw">
+        /// The gutter the atlas was created with, in texels — the same value
+        /// that went to <see cref="MaqbadLawha.Insha"/>. It is what every dirty
+        /// rectangle is grown by, so an uploader that sends only what changed
+        /// still sends the zeros a bilinear tap at a glyph's edge reads.
+        /// </param>
         /// <param name="yamlik">
         /// Whether disposing this object should also dispose the handle. False
         /// for the normal case, where the plugin root owns the atlas and several
@@ -353,7 +755,7 @@ namespace Taarib.Unity.Mushtarak
         /// </param>
         /// <exception cref="ArgumentNullException"><paramref name="maqbad"/> is null.</exception>
         /// <exception cref="ArgumentException">The handle is already invalid.</exception>
-        public Lawha(MaqbadLawha maqbad, NamatLawha namat, bool yamlik = false)
+        public Lawha(MaqbadLawha maqbad, NamatLawha namat, ushort hashw, bool yamlik = false)
         {
             if (maqbad is null)
             {
@@ -366,6 +768,7 @@ namespace Taarib.Unity.Mushtarak
             }
             this.maqbad = maqbad;
             yamlikMaqbad = yamlik;
+            jadwal = new JadwalSafahat(hashw);
             Namat = namat;
             Tasfiya = TasfiyatLawha.Nuqta;
             Zamin();
@@ -400,31 +803,43 @@ namespace Taarib.Unity.Mushtarak
         public TasfiyatLawha Tasfiya { get; set; }
 
         /// <summary>How many pages the atlas currently holds.</summary>
-        public int AdadSafahat => adadSafahat;
+        public int AdadSafahat => jadwal.AdadSafahat;
 
         /// <summary>
         /// A counter that increases whenever anything about the atlas changed.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// What lets an adapter decide in one comparison whether its uploaded
         /// copy is stale, without walking the page table. Compare against the
         /// value held from the last upload; equal means nothing to do.
+        /// </para>
+        /// <para>
+        /// Reading it settles the rectangles <see cref="Sajjil"/> has collected
+        /// since the last read, which costs one call into the atlas for its
+        /// counters. That is deliberate rather than incidental: the answer to
+        /// "has anything changed" is the atlas's and not this object's, and an
+        /// adapter that asked the question without it would be told yes on every
+        /// frame that drew a glyph — which is every frame.
+        /// </para>
         /// </remarks>
-        public ulong Jeel => jeel;
+        public ulong Jeel
+        {
+            get
+            {
+                Adrij();
+                return jadwal.Jeel;
+            }
+        }
 
         /// <summary>Whether anything at all needs uploading.</summary>
+        /// <remarks>Settles the collected rectangles first, as <see cref="Jeel"/> does.</remarks>
         public bool Muattal
         {
             get
             {
-                for (int i = 0; i < adadSafahat; i++)
-                {
-                    if (jadida[i] || !wasikh[i].Khali)
-                    {
-                        return true;
-                    }
-                }
-                return false;
+                Adrij();
+                return jadwal.Muattal;
             }
         }
 
@@ -450,19 +865,15 @@ namespace Taarib.Unity.Mushtarak
             maqbad.Shakl(silsila, miftah, out mawdi);
 
             int safha = mawdi.Safha;
-            if (safha >= adadSafahat)
+            if (safha >= jadwal.AdadSafahat)
             {
                 // The lookup grew the atlas. Re-reading the page table is the
                 // expensive path and it runs only when it actually happened.
                 Zamin();
-                if (safha >= adadSafahat)
+                if (safha >= jadwal.AdadSafahat)
                 {
                     return;
                 }
-            }
-            if ((uint)safha >= (uint)AqsaSafahat)
-            {
-                return;
             }
 
             // A glyph with no image — a space — changed nothing, and marking its
@@ -474,8 +885,8 @@ namespace Taarib.Unity.Mushtarak
 
             MustatilLawha mustatil = new MustatilLawha(
                 mawdi.S, mawdi.A, mawdi.Ard, mawdi.Irtifa);
-            int budS = abaad[safha * 2];
-            int budA = abaad[(safha * 2) + 1];
+            int budS = jadwal.Ard(safha);
+            int budA = jadwal.Irtifa(safha);
             if (!mustatil.Dakhil(budS, budA))
             {
                 throw new KhataTaarib(
@@ -488,13 +899,7 @@ namespace Taarib.Unity.Mushtarak
                     Khutwa.IadatTarkibIttar);
             }
 
-            MustatilLawha sabiq = wasikh[safha];
-            MustatilLawha jadid = sabiq.Ittihad(mustatil);
-            if (jadid != sabiq)
-            {
-                wasikh[safha] = jadid;
-                jeel++;
-            }
+            jadwal.Wassikh(safha, mustatil);
         }
 
         /// <summary>
@@ -518,36 +923,8 @@ namespace Taarib.Unity.Mushtarak
         public int Iltaqit(Span<SijillRafa> hadaf)
         {
             LazimHay();
-            if (hadaf.Length < adadSafahat)
-            {
-                throw new ArgumentException(
-                    $"The buffer holds {hadaf.Length} entries and the atlas has "
-                    + $"{adadSafahat} pages.",
-                    nameof(hadaf));
-            }
-
-            int adad = 0;
-            for (int i = 0; i < adadSafahat; i++)
-            {
-                bool jadid = jadida[i];
-                MustatilLawha mustatil = wasikh[i];
-                if (!jadid && mustatil.Khali)
-                {
-                    continue;
-                }
-                int budS = abaad[i * 2];
-                int budA = abaad[(i * 2) + 1];
-                if (jadid)
-                {
-                    // A texture the adapter is about to create has undefined
-                    // contents, so the whole page goes up, not just the part the
-                    // packer has filled.
-                    mustatil = new MustatilLawha(0, 0, budS, budA);
-                }
-                hadaf[adad] = new SijillRafa(i, budS, budA, mustatil, jadid);
-                adad++;
-            }
-            return adad;
+            Adrij();
+            return jadwal.Iltaqit(hadaf);
         }
 
         /// <summary>One page's texels, borrowed from the native atlas.</summary>
@@ -569,10 +946,10 @@ namespace Taarib.Unity.Mushtarak
         public ReadOnlySpan<byte> Texelat(int safha)
         {
             LazimHay();
-            if ((uint)safha >= (uint)adadSafahat)
+            if ((uint)safha >= (uint)jadwal.AdadSafahat)
             {
                 throw new ArgumentOutOfRangeException(
-                    nameof(safha), safha, $"The atlas has {adadSafahat} pages.");
+                    nameof(safha), safha, $"The atlas has {jadwal.AdadSafahat} pages.");
             }
             maqbad.Safha((ushort)safha, out TaaribSafha wasf);
             return wasf.Muhtawa();
@@ -603,8 +980,8 @@ namespace Taarib.Unity.Mushtarak
         public int Nasakh(int safha, MustatilLawha mustatil, Span<byte> hadaf)
         {
             ReadOnlySpan<byte> kull = Texelat(safha);
-            int budS = abaad[safha * 2];
-            int budA = abaad[(safha * 2) + 1];
+            int budS = jadwal.Ard(safha);
+            int budA = jadwal.Irtifa(safha);
             if (!mustatil.Dakhil(budS, budA))
             {
                 throw new ArgumentException(
@@ -652,12 +1029,7 @@ namespace Taarib.Unity.Mushtarak
         public void Rufia(int safha)
         {
             LazimHay();
-            if ((uint)safha >= (uint)AqsaSafahat)
-            {
-                return;
-            }
-            wasikh[safha] = MustatilLawha.Faragh;
-            jadida[safha] = false;
+            jadwal.Rufia(safha);
         }
 
         /// <summary>Marks every page as needing a full upload.</summary>
@@ -672,29 +1044,37 @@ namespace Taarib.Unity.Mushtarak
         public void Ajjil()
         {
             LazimHay();
-            for (int i = 0; i < adadSafahat; i++)
-            {
-                jadida[i] = true;
-                wasikh[i] = new MustatilLawha(0, 0, abaad[i * 2], abaad[(i * 2) + 1]);
-            }
-            jeel++;
+            jadwal.Ajjil();
         }
 
-        /// <summary>Clears every glyph image the atlas holds.</summary>
+        /// <summary>
+        /// Begins a frame: releases the pins the last frame took, so the evictor
+        /// may reuse rectangles nothing on screen references any more.
+        /// </summary>
         /// <exception cref="KhataTaarib">The native side refused.</exception>
         /// <exception cref="ObjectDisposedException">This object was disposed.</exception>
         /// <remarks>
-        /// What a language change or a font-chain change calls. Every page's
-        /// contents become undefined, so every page is marked as needing a full
-        /// upload — the same posture as <see cref="Ajjil"/>, for a different
-        /// reason.
+        /// <para>
+        /// Call once per engine frame, before the frame's first
+        /// <see cref="Sajjil"/>. Every glyph looked up after this call is pinned
+        /// until the next one, which is what stops the evictor reassigning a
+        /// rectangle a vertex buffer already points at.
+        /// </para>
+        /// <para>
+        /// This does <b>not</b> touch the dirty tracking, and the distinction is
+        /// the whole of a frame-time defect that shipped: beginning a frame used
+        /// to call <see cref="Ajjil"/> as well, so every page of the atlas was
+        /// re-uploaded in full — four megabytes per 2048-square page, through
+        /// <c>LoadRawTextureData</c> on the main thread — on every frame that
+        /// drew a single string, whether or not one texel had changed. Losing a
+        /// frame's pins and losing a frame's upload state are different events
+        /// with different causes, and only the first one happens every frame.
+        /// </para>
         /// </remarks>
         public void Ibda()
         {
             LazimHay();
             maqbad.IbdaItar();
-            Zamin();
-            Ajjil();
         }
 
         /// <summary>The atlas's own counters, from the native side.</summary>
@@ -721,11 +1101,53 @@ namespace Taarib.Unity.Mushtarak
                 return;
             }
             mutlaf = true;
-            adadSafahat = 0;
             if (yamlikMaqbad)
             {
                 maqbad.Dispose();
             }
+        }
+
+        /// <summary>
+        /// Asks the atlas whether it has written anything since the last time,
+        /// and settles the collected rectangles accordingly.
+        /// </summary>
+        /// <remarks>
+        /// Rasterizing a glyph, reclaiming a rectangle and opening a page are
+        /// the only three things that change a texel, and the atlas counts all
+        /// three. A failure to read the counters is treated as "something was
+        /// written": the cost of being wrong that way is one upload nobody
+        /// needed, and the cost of being wrong the other way is a glyph that
+        /// never appears.
+        /// </remarks>
+        private void Adrij()
+        {
+            if (mutlaf)
+            {
+                return;
+            }
+            ulong hali;
+            try
+            {
+                TaaribIhsaatLawha ihsaat = maqbad.Ihsaat();
+                hali = ihsaat.Ikhfaqat + ihsaat.Ikhlaat + ihsaat.AhdathNamu;
+            }
+            catch (KhataTaarib)
+            {
+                jadwal.Adrij(true);
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                // The context this atlas belongs to was closed underneath it,
+                // which is teardown. Nothing will be uploaded again either way;
+                // the conservative answer costs nothing here and keeps a
+                // property from throwing during shutdown.
+                jadwal.Adrij(true);
+                return;
+            }
+            bool kutiba = hali != kitabat;
+            kitabat = hali;
+            jadwal.Adrij(kutiba);
         }
 
         /// <summary>Re-reads the page table from the native atlas.</summary>
@@ -733,12 +1155,6 @@ namespace Taarib.Unity.Mushtarak
         {
             uint adad = maqbad.AdadSafahat();
             int hadd = adad > AqsaSafahat ? AqsaSafahat : (int)adad;
-            for (int i = adadSafahat; i < hadd; i++)
-            {
-                jadida[i] = true;
-                wasikh[i] = MustatilLawha.Faragh;
-            }
-
             for (int i = 0; i < hadd; i++)
             {
                 maqbad.Safha((ushort)i, out TaaribSafha wasf);
@@ -774,14 +1190,7 @@ namespace Taarib.Unity.Mushtarak
                         Khutwa.IadatTarkibIttar);
                 }
 
-                abaad[i * 2] = ard;
-                abaad[(i * 2) + 1] = irtifa;
-            }
-
-            if (hadd != adadSafahat)
-            {
-                adadSafahat = hadd;
-                jeel++;
+                jadwal.Qayyid(i, ard, irtifa);
             }
         }
 

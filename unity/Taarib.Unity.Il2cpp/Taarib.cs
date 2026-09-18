@@ -232,6 +232,22 @@ namespace Taarib.Unity.Il2cpp
         /// <summary>The name of the capture file a recording session writes.</summary>
         public const string MalafIltiqat = "iltiqat.jsonl";
 
+        /// <summary>
+        /// The gutter the runtime atlas leaves around every glyph, in texels.
+        /// </summary>
+        /// <remarks>
+        /// One on each side, which puts two texels of zeros between any two
+        /// neighbouring glyphs — exactly what a bilinear tap at a rectangle's
+        /// edge can reach, and the packer's own default. It is named once
+        /// because two things need it and they must not disagree: the native
+        /// packer, which reserves it, and <see cref="Mushtarak.Lawha"/>, which
+        /// has to include it in every rectangle it sends to the GPU. A
+        /// <see cref="Mushtarak.Lawha"/> told the gutter is narrower than it is
+        /// uploads the glyph and not the zeros beside it, and the letter next
+        /// door bleeds a sliver into it.
+        /// </remarks>
+        private const ushort HashwLawha = 1;
+
         private readonly List<INizamIl2cpp> anzima = new List<INizamIl2cpp>();
 
         // Assigned by IqraIdadat, the first thing Load does and the only thing
@@ -582,9 +598,9 @@ namespace Taarib.Unity.Il2cpp
             int miza = mizaniyatLawha.Value;
             miza = miza < 8 ? 8 : (miza > 512 ? 512 : miza);
             MaqbadLawha maqbad = MaqbadLawha.Insha(
-                siyaqHali, (ushort)bud, (ushort)bud, 1, maftuha.Namat,
+                siyaqHali, (ushort)bud, (ushort)bud, HashwLawha, maftuha.Namat,
                 (nuint)((long)miza * 1024 * 1024));
-            return new Lawha(maqbad, maftuha.Namat, yamlik: true);
+            return new Lawha(maqbad, maftuha.Namat, HashwLawha, yamlik: true);
         }
 
         /// <summary>

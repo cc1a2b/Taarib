@@ -119,6 +119,16 @@ namespace Taarib.Unity.Mono.Suluk
         /// </summary>
         private const int HaddTajawuzat = 200;
 
+        private static readonly HashSet<ulong> Tashattutat = new HashSet<ulong>();
+
+        /// <summary>
+        /// How many distinct page-spanning strings are named individually. The
+        /// same bound and the same reason as <see cref="HaddTajawuzat"/>: once
+        /// the atlas has two pages this happens to a large share of what is on
+        /// screen, and the count is the number that matters, not the list.
+        /// </summary>
+        private const int HaddTashattutat = 200;
+
         /// <summary>
         /// How many newly-seen distinct strings pass between coverage lines.
         /// </summary>
@@ -184,11 +194,13 @@ namespace Taarib.Unity.Mono.Suluk
             int isabat;
             int fawtat;
             int tajawuzat;
+            int tashattutat;
             lock (Fawtat)
             {
                 isabat = Isabat.Count;
                 fawtat = Fawtat.Count;
                 tajawuzat = Tajawuzat.Count;
+                tashattutat = Tashattutat.Count;
                 int majmu = isabat + fawtat;
                 if (majmu - munduAkhirTaqreer < FasilTaghtiya)
                 {
@@ -209,6 +221,14 @@ namespace Taarib.Unity.Mono.Suluk
                     satr += $" | أُعيد تخطيط {tajawuzat} منها لأن تخطيط المُصرِّف لم يتّسع"
                         + $" | {tajawuzat} of them were laid out again at run time because the"
                         + " compiled layout did not fit its box.";
+                }
+                if (tashattutat > 0)
+                {
+                    satr += $" | تُرك {tashattutat} منها للّعبة لأن أشكاله موزَّعة على أكثر من"
+                        + " صفحة لوحة"
+                        + $" | {tashattutat} of them were left to the engine because their"
+                        + " glyphs are spread over more than one atlas page, which one mesh"
+                        + " cannot sample.";
                 }
                 sijill(satr);
             }
@@ -317,6 +337,78 @@ namespace Taarib.Unity.Mono.Suluk
                     $"تخطيط أعرض من صندوقه: {ardTakhtit:0.#} بدل {ardMutah:0.#} بكسل؛ أُعيد تخطيطه"
                     + $" | layout wider than its box: {ardTakhtit:0.#} against {ardMutah:0.#}"
                     + " px; laid out again at run time.");
+            }
+            catch (Exception)
+            {
+                // As above: a sink that throws is the host's problem, and this
+                // report is not worth a second failure on top of it.
+            }
+        }
+
+        /// <summary>
+        /// Reports a string whose glyphs are spread over more than one atlas
+        /// page, and which was therefore left to the engine to draw.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// One mesh samples one texture, and an atlas page is a texture, so a
+        /// string whose letters sit on two pages cannot be drawn by one mesh.
+        /// The choice is between drawing the part that happens to be on one page
+        /// — a sentence with letters missing, which in cursive Arabic reads as
+        /// fragments of words rather than as a rendering failure — and leaving
+        /// the whole string in the game's own language. The second is the honest
+        /// answer and this is where it is counted, because a string silently not
+        /// drawn is a defect nobody can see the cause of.
+        /// </para>
+        /// <para>
+        /// The first one goes to the ordinary log rather than to the
+        /// diagnostics sink, like <see cref="Tajawuz"/> and for the same reason:
+        /// it names a budget the owner can raise, and an owner reading a plain
+        /// log should learn it from the log. Distinct strings rather than draws.
+        /// </para>
+        /// </remarks>
+        /// <param name="miftah">The key of the string, so one string counts once.</param>
+        /// <param name="adadSafahat">
+        /// How many atlas pages this one string's glyphs are spread over, which
+        /// is the number that says whether the atlas is a little too small or
+        /// far too small.
+        /// </param>
+        public static void Tashattut(ulong miftah, int adadSafahat)
+        {
+            bool jadeed;
+            int adad;
+            lock (Fawtat)
+            {
+                jadeed = Tashattutat.Add(miftah);
+                adad = Tashattutat.Count;
+            }
+            if (!jadeed)
+            {
+                return;
+            }
+            if (adad == 1)
+            {
+                Ballagh(
+                    "أشكال نصٍّ في هذه اللوحة موزَّعة على أكثر من صفحة، والرسمة الواحدة تقرأ "
+                    + "صفحة واحدة؛ تُرك ذلك النص — وكل ما يشبهه — بلغة اللعبة بدل رسمه ناقص "
+                    + "الحروف. ميزانية اللوحة أو حجم صفحتها أصغر مما يعرضه هذا المشهد. | "
+                    + "A string's glyphs are spread over more than one atlas page, and one "
+                    + "mesh can sample only one page, so that string — and every other like "
+                    + "it — is left in the game's own language rather than drawn with letters "
+                    + "missing. The atlas budget or its page size is smaller than this scene "
+                    + "puts on screen; raise lawha/bud or lawha/mizaniya.");
+            }
+            Action<string>? sijill = SijillFawt;
+            if (sijill is null || adad > HaddTashattutat)
+            {
+                return;
+            }
+            try
+            {
+                sijill(
+                    $"أشكال هذا النص على {adadSafahat} صفحات لوحة؛ تُرك للّعبة"
+                    + $" | this string's glyphs sit on {adadSafahat} atlas pages; left to the"
+                    + " engine.");
             }
             catch (Exception)
             {

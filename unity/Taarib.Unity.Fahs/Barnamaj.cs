@@ -20,6 +20,8 @@ namespace Taarib.Unity.Fahs
         {
             List<Halat> halat = new List<Halat>();
             FahsLawn.Sajjil(halat);
+            FahsSafha.Sajjil(halat);
+            FahsRafa.Sajjil(halat);
 
             int najah = 0;
             int fashal = 0;
@@ -44,6 +46,12 @@ namespace Taarib.Unity.Fahs
                 fashal == 0
                     ? $"{najah} case(s) passed."
                     : $"{najah} case(s) passed, {fashal} failed.");
+
+            // Printed rather than asserted, because the number a person wants
+            // from this run is how much a frame costs and an assertion only
+            // shows it when it is wrong.
+            Console.WriteLine();
+            Console.WriteLine(FahsRafa.Qiyas());
             return fashal == 0 ? 0 : 1;
         }
 

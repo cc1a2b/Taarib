@@ -3907,10 +3907,37 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         private readonly List<Mirbat> marabit = new List<Mirbat>(4);
 
         /// <summary>
-        /// Every component this takeover owns, and which atlas its mesh was last
-        /// built from — the patch's or this session's.
+        /// Which atlas one component's mesh was built from, and which page of it
+        /// the mesh's texture coordinates are measured against.
         /// </summary>
-        private readonly Dictionary<int, bool> mamlukat = new Dictionary<int, bool>();
+        /// <remarks>
+        /// The page travels with the ownership record because
+        /// <see cref="Aabbir"/> runs later, from a material interception, with
+        /// nothing but the component in hand — and binding page zero's texture
+        /// to a mesh whose coordinates were measured against page one samples
+        /// whatever letters happen to sit at those coordinates on the wrong page.
+        /// </remarks>
+        private readonly struct MilkiyatRasm
+        {
+            public MilkiyatRasm(bool minRuqaa, ushort safha)
+            {
+                MinRuqaa = minRuqaa;
+                Safha = safha;
+            }
+
+            /// <summary>Whether the mesh indexes the patch's compiled atlas.</summary>
+            public bool MinRuqaa { get; }
+
+            /// <summary>The atlas page the mesh was built against.</summary>
+            public ushort Safha { get; }
+        }
+
+        /// <summary>
+        /// Every component this takeover owns, and which atlas and page its mesh
+        /// was last built from.
+        /// </summary>
+        private readonly Dictionary<int, MilkiyatRasm> mamlukat =
+            new Dictionary<int, MilkiyatRasm>();
 
         private readonly Dictionary<int, MaddaAsliya> maddatAsliya =
             new Dictionary<int, MaddaAsliya>();
@@ -3923,6 +3950,12 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         /// </summary>
         private readonly HashSet<ulong> tajawuzat = new HashSet<ulong>();
 
+        /// <summary>
+        /// Every distinct string whose glyphs are spread over more than one
+        /// atlas page, and which was therefore left to the engine to draw.
+        /// </summary>
+        private readonly HashSet<ulong> tashattutat = new HashSet<ulong>();
+
         private MasdarMushtarak? mushtarak;
         private MawaridIl2cpp? mawarid;
         private WaslMuharrik? wasl;
@@ -3932,7 +3965,6 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         private NassMuhaddar? muhaddar;
         private byte[] nassUtf8 = new byte[512];
         private bool amil;
-        private bool ballaghSafahat;
         private bool ballaghTakhtit;
 
         /// <inheritdoc/>
@@ -4080,6 +4112,16 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                     + "because the compiled layout did not fit the box the game drew it into.");
             }
             tajawuzat.Clear();
+            if (tashattutat.Count > 0)
+            {
+                mawarid?.Sijill.LogWarning(
+                    $"تُرك {tashattutat.Count} نصًّا مميَّزًا للّعبة لأن أشكاله موزَّعة على أكثر "
+                    + "من صفحة لوحة، والرسمة الواحدة تقرأ صفحة واحدة. | "
+                    + $"{tashattutat.Count} distinct string(s) were left to the engine because "
+                    + "their glyphs are spread over more than one atlas page, which one mesh "
+                    + "cannot sample.");
+            }
+            tashattutat.Clear();
             for (int i = marabit.Count - 1; i >= 0; i--)
             {
                 marabit[i].Dispose();
@@ -4190,14 +4232,14 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             {
                 return false;
             }
-            if (!mamlukat.TryGetValue(engine.Muarrif(kaen), out bool minRuqaa))
+            if (!mamlukat.TryGetValue(engine.Muarrif(kaen), out MilkiyatRasm milkiya))
             {
                 return false;
             }
             // The material and page that go with the atlas this component's mesh
             // was last built against; see the note on Wassil.
-            IntPtr madda = source.Madda(minRuqaa, 0);
-            IntPtr lawhaSafha = source.LawhatSafha(minRuqaa, 0);
+            IntPtr madda = source.Madda(milkiya.MinRuqaa, milkiya.Safha);
+            IntPtr lawhaSafha = source.LawhatSafha(milkiya.MinRuqaa, milkiya.Safha);
             if (madda == IntPtr.Zero)
             {
                 return false;
@@ -4378,6 +4420,10 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             talab.Lawn = LawnRasm.Min(LawnMuazzam(Lawn(LawnNass.Damj(in tarkeebLawn))));
             talab.Hajm = hajmFili;
             talab.HajmLawha = hajmLawha;
+            // Page zero to begin with, because it is the page almost every
+            // layout is entirely on and the first build then needs no second.
+            // Which page the glyphs actually landed on is only knowable once the
+            // map has been walked, and the walk is the build.
             talab.Safha = 0;
             // A coverage atlas holds one bitmap per size with the pen's
             // fractional position already folded into its coverage, so the quad
@@ -4387,13 +4433,35 @@ namespace Taarib.Unity.Il2cpp.Anzimat
             talab.Tathbit = tathbit;
 
             buffers.Wassi(huruf.Length);
-            NatijaNasij natija = Nasij.Ibni(
-                in talab, source.Khareeta(minRuqaa), buffers.Makhzan());
-            if (!natija.Kafa)
+            if (!Insuj(buffers, source, in talab, minRuqaa, out NatijaNasij natija))
             {
-                buffers.Wassi(natija.MatlubRuus / Nasij.RuusLiShakl);
-                natija = Nasij.Ibni(in talab, source.Khareeta(minRuqaa), buffers.Makhzan());
-                if (!natija.Kafa)
+                mawarid!.Sijill.LogWarning(
+                    "TextMeshPro: the mesh buffer refused a second time after growing to "
+                    + "the size it asked for; this string is left to TextMeshPro.");
+                Utruk(kaen);
+                return false;
+            }
+
+            if (!JadwalSafahat.SafhaWahida(
+                natija.AlamSafahat, natija.SafahatBaida, out ushort safha))
+            {
+                // One mesh samples one texture and an atlas page is a texture,
+                // so a string spread over two pages cannot be drawn by one mesh.
+                // Drawing the page that happens to be first would emit nothing
+                // for every glyph on the others, which in cursive Arabic reads
+                // as fragments of words on the line rather than as a failure.
+                Tashattut(mawarid!, miftah, AdadSafahat(in natija));
+                Utruk(kaen);
+                return false;
+            }
+            if (safha != talab.Safha)
+            {
+                // Every glyph is on one page and it is not the one the first
+                // build asked for — a whole string that landed on a page opened
+                // after page zero filled. Built against page zero it emitted no
+                // geometry at all and the label simply vanished.
+                talab.Safha = safha;
+                if (!Insuj(buffers, source, in talab, minRuqaa, out natija))
                 {
                     mawarid!.Sijill.LogWarning(
                         "TextMeshPro: the mesh buffer refused a second time after growing to "
@@ -4401,11 +4469,6 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                     Utruk(kaen);
                     return false;
                 }
-            }
-
-            if ((natija.AlamSafahat & ~1UL) != 0 || natija.SafahatBaida)
-            {
-                BallighSafahat();
             }
 
             // Only what this string actually built crosses into the IL2CPP
@@ -4422,14 +4485,65 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 Hudud(in natija));
 
             NazzifFuruu(engine, kaen, sathi);
-            if (!Wassil(engine, source, kaen, nasij, sathi, minRuqaa))
+            if (!Wassil(engine, source, kaen, nasij, sathi, minRuqaa, safha))
             {
                 Utruk(kaen);
                 return false;
             }
 
-            mamlukat[engine.Muarrif(kaen)] = minRuqaa;
+            mamlukat[engine.Muarrif(kaen)] = new MilkiyatRasm(minRuqaa, safha);
             return true;
+        }
+
+        /// <summary>
+        /// Builds the geometry, growing the destination once if the first
+        /// attempt did not fit.
+        /// </summary>
+        /// <param name="buffers">The reusable destination arrays.</param>
+        /// <param name="source">The glyph source the rectangles come from.</param>
+        /// <param name="talab">What to build, including the page to build for.</param>
+        /// <param name="minRuqaa">Which atlas the glyph rectangles come from.</param>
+        /// <param name="natija">What was written, or what would have been needed.</param>
+        /// <returns>Whether the destination held the geometry.</returns>
+        /// <remarks>
+        /// The growth negotiation is one call rather than two copies because the
+        /// page election below can need a second build, and a second copy of
+        /// "grow once and retry" is the copy that eventually grows by the wrong
+        /// amount.
+        /// </remarks>
+        private static bool Insuj(
+            MakhzanRusum buffers,
+            MasdarAshkal source,
+            in TalabNasij talab,
+            bool minRuqaa,
+            out NatijaNasij natija)
+        {
+            natija = Nasij.Ibni(in talab, source.Khareeta(minRuqaa), buffers.Makhzan());
+            if (natija.Kafa)
+            {
+                return true;
+            }
+            buffers.Wassi(natija.MatlubRuus / Nasij.RuusLiShakl);
+            natija = Nasij.Ibni(in talab, source.Khareeta(minRuqaa), buffers.Makhzan());
+            return natija.Kafa;
+        }
+
+        /// <summary>
+        /// How many atlas pages one layout's glyphs are spread over, for the
+        /// report that says the atlas is too small.
+        /// </summary>
+        /// <param name="natija">A finished build.</param>
+        /// <returns>The page count, at least two whenever this is asked.</returns>
+        private static int AdadSafahat(in NatijaNasij natija)
+        {
+            int adad = natija.SafahatBaida ? 1 : 0;
+            ulong alam = natija.AlamSafahat;
+            while (alam != 0)
+            {
+                adad++;
+                alam &= alam - 1;
+            }
+            return adad;
         }
 
         /// <summary>
@@ -4493,6 +4607,42 @@ namespace Taarib.Unity.Il2cpp.Anzimat
                 + "other like it — is laid out again on every draw rather than spilling outside "
                 + "its frame. The patch was measured against a width this game does not use; "
                 + "the fix is in the compiler, not here.");
+        }
+
+        /// <summary>
+        /// Reports a string whose glyphs are spread over more than one atlas
+        /// page, and which was therefore left to the engine to draw.
+        /// </summary>
+        /// <remarks>
+        /// One mesh samples one texture, and an atlas page is a texture, so a
+        /// string whose letters sit on two pages cannot be drawn by one mesh.
+        /// Drawing the part that happens to be on one page gives a sentence with
+        /// letters missing, which in cursive Arabic reads as fragments of words
+        /// on the line rather than as a rendering failure, so the whole string
+        /// is left in the game's own language instead — and counted here,
+        /// because a string silently not drawn is a defect nobody can see the
+        /// cause of. The first one is logged and the rest are counted, with the
+        /// total written when the takeover comes down; the same shape and the
+        /// same reason as <see cref="Tajawuz"/>.
+        /// </remarks>
+        /// <param name="shared">The session's shared resources, which hold the log.</param>
+        /// <param name="miftah">The key of the string, so one string counts once.</param>
+        /// <param name="adadSafahat">How many pages this one string is spread over.</param>
+        private void Tashattut(MawaridIl2cpp shared, ulong miftah, int adadSafahat)
+        {
+            if (!tashattutat.Add(miftah) || tashattutat.Count > 1)
+            {
+                return;
+            }
+            shared.Sijill.LogWarning(
+                $"أشكال نصٍّ في هذه اللوحة موزَّعة على {adadSafahat} صفحات، والرسمة الواحدة "
+                + "تقرأ صفحة واحدة؛ تُرك ذلك النص — وكل ما يشبهه — بلغة اللعبة بدل رسمه ناقص "
+                + "الحروف. ميزانية اللوحة أو حجم صفحتها أصغر مما يعرضه هذا المشهد. | "
+                + $"A string's glyphs are spread over {adadSafahat} atlas pages, and one mesh "
+                + "can sample only one page, so that string — and every other like it — is "
+                + "left in the game's own language rather than drawn with letters missing. "
+                + "The atlas budget or its page size is smaller than this scene puts on "
+                + "screen; raise lawha/bud or lawha/mizaniya.");
         }
 
         /// <summary>
@@ -4674,16 +4824,29 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         /// of solid white blocks because the Mono twin of this path preferred the
         /// patch's atlas here.
         /// </remarks>
+        /// <param name="engine">The engine binding.</param>
+        /// <param name="source">The glyph source whose pages were uploaded.</param>
+        /// <param name="kaen">The text component.</param>
+        /// <param name="nasij">The mesh that was just written.</param>
+        /// <param name="sathi">Whether it is the canvas-space component.</param>
+        /// <param name="minRuqaa">Which atlas the mesh indexes.</param>
+        /// <param name="safha">
+        /// Which page of it. The mesh's texture coordinates were divided by this
+        /// page's dimensions, so binding any other page's texture draws the
+        /// letters that happen to lie at those coordinates on that page.
+        /// </param>
+        /// <returns>Whether the mesh and its material were bound.</returns>
         private bool Wassil(
             WaslMuharrik engine,
             MasdarAshkal source,
             IntPtr kaen,
             IntPtr nasij,
             bool sathi,
-            bool minRuqaa)
+            bool minRuqaa,
+            ushort safha)
         {
-            IntPtr madda = source.Madda(minRuqaa, 0);
-            IntPtr lawhaSafha = source.LawhatSafha(minRuqaa, 0);
+            IntPtr madda = source.Madda(minRuqaa, safha);
+            IntPtr lawhaSafha = source.LawhatSafha(minRuqaa, safha);
             if (madda == IntPtr.Zero)
             {
                 return false;
@@ -5027,21 +5190,6 @@ namespace Taarib.Unity.Il2cpp.Anzimat
         {
             float mahsur = qeema < 0f ? 0f : (qeema > 1f ? 1f : qeema);
             return (uint)(mahsur * 255f + 0.5f);
-        }
-
-        private void BallighSafahat()
-        {
-            if (ballaghSafahat)
-            {
-                return;
-            }
-            ballaghSafahat = true;
-            mawarid?.Sijill.LogWarning(
-                "تخطيط تكست ميش برو يمسّ أكثر من صفحة لوحة واحدة؛ رُسمت الصفحة الأولى فقط، وميزانية اللوحة في الرقعة أصغر مما يحتاجه النص المعروض. | "
-                + "A TextMeshPro layout touches more than one atlas page; only the first was "
-                + "drawn, and the patch's atlas budget is smaller than the text on screen "
-                + "needs. Glyphs on the other pages are missing rather than drawn with the "
-                + "wrong texture.");
         }
 
         private void BallighTakhtit()

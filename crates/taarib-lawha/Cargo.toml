@@ -30,3 +30,9 @@ thiserror = { workspace = true }
 # pairs one correction could not serve — and a number nobody is told is a number
 # nobody acts on. Emitting it, not writing it: this crate still opens no file.
 tracing = { workspace = true }
+
+[dev-dependencies]
+# examples/safahat_al_ruqaa.rs opens an installed patch to count how many atlas
+# pages its own text needs. A dev-dependency and not a dependency: the library
+# still knows nothing about the container format, and still opens no file.
+taarib-ruqaa = { workspace = true }

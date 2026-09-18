@@ -241,6 +241,22 @@ namespace Taarib.Unity.Mono
         /// <summary>The name of the capture file a recording session writes.</summary>
         public const string MalafIltiqat = "iltiqat.jsonl";
 
+        /// <summary>
+        /// The gutter the runtime atlas leaves around every glyph, in texels.
+        /// </summary>
+        /// <remarks>
+        /// One on each side, which puts two texels of zeros between any two
+        /// neighbouring glyphs — exactly what a bilinear tap at a rectangle's
+        /// edge can reach, and the packer's own default. It is named once
+        /// because two things need it and they must not disagree: the native
+        /// packer, which reserves it, and <see cref="Mushtarak.Lawha"/>, which
+        /// has to include it in every rectangle it sends to the GPU. A
+        /// <see cref="Mushtarak.Lawha"/> told the gutter is narrower than it is
+        /// uploads the glyph and not the zeros beside it, and the letter next
+        /// door bleeds a sliver into it.
+        /// </remarks>
+        private const ushort HashwLawha = 1;
+
         private readonly List<INizamNass> anzima = new List<INizamNass>();
         // Assigned by IqraIdadat, which is the first thing Awake does and the
         // only thing that runs before anything reads them. Declared with the
@@ -788,13 +804,13 @@ namespace Taarib.Unity.Mono
             int bud = Mathf.Clamp(budLawha.Value, 256, Mushtarak.Lawha.AqsaBud);
             long mizaniya = (long)Mathf.Clamp(mizaniyatLawha.Value, 8, 512) * 1024 * 1024;
             MaqbadLawha maqbad = MaqbadLawha.Insha(
-                siyaqHali, (ushort)bud, (ushort)bud, 1, maftuha.Namat, (nuint)mizaniya);
+                siyaqHali, (ushort)bud, (ushort)bud, HashwLawha, maftuha.Namat, (nuint)mizaniya);
 
             // The mode comes from the patch's own header rather than from
             // configuration, because the glyph map was built against one of them
             // and drawing it as the other produces text that is legible in a
             // screenshot and wrong in motion.
-            Lawha mabniya = new Lawha(maqbad, maftuha.Namat, yamlik: true);
+            Lawha mabniya = new Lawha(maqbad, maftuha.Namat, HashwLawha, yamlik: true);
 
             return mabniya;
         }
