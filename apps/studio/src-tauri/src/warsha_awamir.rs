@@ -635,12 +635,43 @@ fn istaid_min_mashwar(
             _ => None,
         }
     });
-    let bayan = taarib_tilqai::warsha::bayan(
-        imkaniyat,
-        rafd_mashwar(&mawjuz.mujallad),
-        taarib_usus::ISDAR,
-        &mawjuz.waqt,
-    );
+    // The binding is read off the game itself, using the root the run recorded.
+    // A project whose record names neither a launcher build nor a fingerprint
+    // cannot be submitted, and that refusal lands on the submission screen where
+    // there is nothing left to do about it.
+    //
+    // But a game that has moved or been uninstalled since the run must not cost
+    // the user their rows: those are the part nobody can rebuild by hand, and
+    // the binding is repaired by the next run that stands in front of the game.
+    // So the project is recovered either way and the gap is reported.
+    let bayan = match imkaniyat.and_then(|taqreer| {
+        taarib_tilqai::warsha::bayan(
+            &mawjuz.jidhr_luba,
+            taqreer,
+            &rafd_mashwar(&mawjuz.mujallad),
+            taarib_usus::ISDAR,
+            &mawjuz.waqt,
+        )
+        .map_err(|sabab| {
+            tracing::warn!(
+                luba = %id,
+                jidhr = %mawjuz.jidhr_luba.display(),
+                %sabab,
+                "the game this run translated could not be fingerprinted; its project is \
+                 recovered without a build binding, and translating again from the game's \
+                 screen restores it"
+            );
+        })
+        .ok()
+    }) {
+        Some(bayan) => bayan,
+        None => taarib_tilqai::warsha::bayan_ghayr_murtabit(
+            imkaniyat,
+            rafd_mashwar(&mawjuz.mujallad),
+            taarib_usus::ISDAR,
+            &mawjuz.waqt,
+        ),
+    };
 
     let adad = sufuf.len();
     taarib_tilqai::warsha::anshir(

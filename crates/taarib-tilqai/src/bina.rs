@@ -230,7 +230,14 @@ pub fn basmat_tarjamat(nusus: &[MudkhalNass]) -> String {
 /// content hash, and the fingerprint the recipe produces over the game as it
 /// stands now. This is what makes a patch refuse to install onto a build it was
 /// not made for.
-fn bayan_istikhraj(
+/// The extraction record a project and a package are both bound by.
+///
+/// Public to the crate because the workshop publish needs the *same* record the
+/// compile stage builds, not a reduced one. A project whose record names neither
+/// a launcher build nor a fingerprint cannot be submitted at all — `IrtibatBina`
+/// refuses it, because a patch that declares nothing matches nothing safely —
+/// and a second, thinner construction of this value is exactly how that happened.
+pub(crate) fn bayan_istikhraj(
     luba: &Path,
     rafd: &TaqreerRafd,
     imkaniyat: &TaqreerImkaniyat,

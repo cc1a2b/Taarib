@@ -3,6 +3,15 @@
 //! `tauri::generate_context!()` expands into at compile time, and records the
 //! target triple this build is for.
 
+// A build script has no `Result` to return and no caller to return it to: the
+// only way it can refuse is to fail the process, and cargo prints the panic as
+// the build error. The workspace ban exists for production code paths, which
+// this is the opposite of — it is the check that stops a wrong build existing.
+#![expect(
+    clippy::panic,
+    reason = "a build script's only way to refuse a build is to fail the process"
+)]
+
 fn main() {
     // The update channel's manifest is keyed by Rust target triple, and the
     // only place that string is known exactly is here: `std::env::consts`

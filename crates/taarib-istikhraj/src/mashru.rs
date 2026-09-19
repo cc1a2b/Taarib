@@ -295,6 +295,31 @@ impl MashruMaftuh {
         &self.rasm
     }
 
+    /// Replaces the extraction record, for a project whose stored one cannot
+    /// bind a package to a build.
+    ///
+    /// Narrow on purpose. A project's record describes how its strings were
+    /// obtained and is not a field callers may edit at will; this exists because
+    /// a record naming neither a launcher build nor a fingerprint makes the
+    /// project unsubmittable, and the only party that can supply one is a run
+    /// standing in front of the game. Overwriting a record that *does* bind
+    /// would discard a fingerprint taken when the game was the build the project
+    /// was made from, so callers check first — see `taarib_tilqai::warsha::yarbut`.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataIstikhraj::TaadhurKitabatMashru`] when the header cannot be
+    /// written.
+    pub fn ashil_bayan(
+        &mut self,
+        bayan: BayanIstikhraj,
+        waqt: String,
+    ) -> Result<(), KhataIstikhraj> {
+        self.rasm.bayan = bayan;
+        self.rasm.waqt_tabdeel = waqt;
+        self.iktub_rasm()
+    }
+
     /// Adds strings, committing whenever a batch fills.
     ///
     /// # Errors

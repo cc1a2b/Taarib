@@ -311,11 +311,12 @@ async fn ijri(
             talab.luba.huwiya(),
             talab.luba.ism,
             crate::warsha::bayan(
-                Some(&imkaniyat),
-                makhzun.rafd.clone(),
+                talab.luba.jidhr,
+                &imkaniyat,
+                &makhzun.rafd,
                 &talab.wasf.isdar_taarib,
                 &talab.khiyarat.waqt,
-            ),
+            )?,
             &madakhil,
             &talab.khiyarat.waqt,
         )?;

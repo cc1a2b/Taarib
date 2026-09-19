@@ -76,6 +76,17 @@ pub fn anshir(
                 munsha: false,
             });
         }
+        // A project written before the record carried a binding cannot be
+        // submitted, and the refusal reaches the user at the submission screen
+        // where nothing can be done about it. This run is standing in front of
+        // the game and has just measured it, so it is the one party able to
+        // repair that — and only that: a record that already binds keeps its
+        // fingerprint, which was taken when the game was the build the project
+        // was made from.
+        if !yarbut(&mashru.rasm().bayan) {
+            mashru.ashil_bayan(bayan, waqt.to_owned()).map_err(rafd)?;
+        }
+
         let (madmuja, jadeeda) = crate::tanfidh::damm_jadeed(sabiqa, madakhil.to_vec());
         let majmu = madmuja.len();
         if jadeeda > 0 {
@@ -142,17 +153,48 @@ pub fn masar(talab: &TalabTilqai<'_>) -> Option<std::path::PathBuf> {
 
 /// What the project records about how its strings were obtained.
 ///
-/// The refusal report is carried over whole, because the question a
-/// contributor asks the workshop three weeks later — "why does this project
-/// only have the menus" — is answered by that report and by nothing else.
+/// The refusal report is carried over whole, because the question a contributor
+/// asks the workshop three weeks later — "why does this project only have the
+/// menus" — is answered by that report and by nothing else.
 ///
-/// The probe report is optional because the second caller is recovery: a
-/// project rebuilt from a finished run reads what it can out of that run's
-/// journal, and a journal written by a build that recorded no probe still has
-/// rows worth opening. A project that names no engine is worse than one that
-/// names the right one and better than no project at all.
-#[must_use]
+/// It delegates to the compile stage's own builder rather than assembling a
+/// thinner record of its own. That is not tidiness. `IrtibatBina::min_bayan`
+/// refuses a record naming neither a launcher build nor a fingerprint, because
+/// a patch that declares nothing matches nothing safely — the installer would
+/// have to refuse it always, which makes it useless, or accept it always, which
+/// makes it dangerous. A second construction of this value left both of those
+/// fields empty, so every project the automatic run published answered
+/// `TAARIB-E-6107` the moment somebody tried to submit it.
+///
+/// # Errors
+///
+/// Whatever the fingerprint plan raises. The game's own files are read here, so
+/// a game that has moved or been uninstalled cannot produce a binding.
 pub fn bayan(
+    jidhr_luba: &Path,
+    imkaniyat: &TaqreerImkaniyat,
+    rafd: &TaqreerRafd,
+    isdar_taarib: &str,
+    waqt: &str,
+) -> NatijatTilqai<BayanIstikhraj> {
+    crate::bina::bayan_istikhraj(jidhr_luba, rafd, imkaniyat, waqt, isdar_taarib)
+        .map(|(bayan, _, _)| bayan)
+}
+
+/// The same record for a caller that cannot reach the game.
+///
+/// Recovery rebuilds a project from a run that finished, possibly weeks ago, on
+/// a game that may since have moved or been uninstalled. Refusing to recover at
+/// all in that case would trade an unsubmittable project for no project — and
+/// the rows are the part a person cannot rebuild by hand, while the binding is
+/// repaired by the next run that stands in front of the game. So this records
+/// what is known and leaves the binding empty, and [`anshir`] fills it in later.
+///
+/// The run itself must never use this: publishing an unbindable project is the
+/// defect `TAARIB-E-6107` reports, and the run is by definition standing in
+/// front of the game.
+#[must_use]
+pub fn bayan_ghayr_murtabit(
     imkaniyat: Option<&TaqreerImkaniyat>,
     rafd: TaqreerRafd,
     isdar_taarib: &str,
@@ -171,6 +213,16 @@ pub fn bayan(
         waqt: waqt.to_owned(),
         isdar_taarib: isdar_taarib.to_owned(),
     }
+}
+
+/// Whether a project's stored record can still bind a package to a build.
+///
+/// The one question `IrtibatBina::min_bayan` asks, asked here so a project
+/// written before this record was carried properly is recognised and repaired
+/// rather than failing at submission with nothing the user can act on.
+#[must_use]
+pub fn yarbut(bayan: &BayanIstikhraj) -> bool {
+    bayan.bina_manassa.is_some() || bayan.basmat_luba.is_some()
 }
 
 #[cfg(test)]
@@ -239,15 +291,107 @@ mod ikhtibarat {
         }
     }
 
+    /// A record carrying a binding, as every real one does.
+    ///
+    /// Built by hand rather than through [`bayan`], because that reads the
+    /// game's own files and there is no game here. What matters to these tests
+    /// is that a published project carries a binding at all — see
+    /// `al_bayan_yahmil_irtibatan`.
+    fn bayan_murtabit() -> BayanIstikhraj {
+        BayanIstikhraj {
+            aila: "unity".to_owned(),
+            isdar: None,
+            bina_manassa: Some("14680755".to_owned()),
+            basmat_luba: None,
+            turuq: Vec::new(),
+            rafd: TaqreerRafd::default(),
+            waqt: WAQT.to_owned(),
+            isdar_taarib: "1.0.1".to_owned(),
+        }
+    }
+
     fn anshir_fi(jidhr: &Path, sufuf: &[MudkhalNass]) -> NatijatTilqai<NatijatNashr> {
         anshir(
             jidhr,
             LubaId::min_masdar(&MasdarLuba::Steam(480), "Luba Ikhtibar"),
             "Luba Ikhtibar",
-            bayan(Some(&imkaniyat()), TaqreerRafd::default(), "1.0.1", WAQT),
+            bayan_murtabit(),
             sufuf,
             WAQT,
         )
+    }
+
+    /// The defect behind `TAARIB-E-6107`: a project published with neither a
+    /// launcher build nor a fingerprint cannot be submitted, and the refusal
+    /// arrives at the submission screen with nothing the user can act on.
+    #[test]
+    fn al_bayan_yahmil_irtibatan() -> NatijatIkhtibar {
+        let muaqqat = tempfile::tempdir()?;
+        let jidhr = muaqqat.path().join("mashru");
+        let _ = anshir_fi(&jidhr, &[satr("a", Some("ألف"))])?;
+
+        let mashru = MashruMaftuh::iftah(jidhr)?;
+        assert!(
+            yarbut(&mashru.rasm().bayan),
+            "the published project records neither a launcher build nor a fingerprint, so              submission would refuse it"
+        );
+        Ok(())
+    }
+
+    /// A project written by an older build carries an unbindable record; the
+    /// next run standing in front of the game repairs it rather than leaving
+    /// the user to meet `TAARIB-E-6107` at the submission screen.
+    #[test]
+    fn nashr_yuslih_bayanan_la_yarbut() -> NatijatIkhtibar {
+        let muaqqat = tempfile::tempdir()?;
+        let jidhr = muaqqat.path().join("mashru");
+
+        // As the defective publish wrote it: rows, and a record binding nothing.
+        let mut kasir = bayan_murtabit();
+        kasir.bina_manassa = None;
+        kasir.basmat_luba = None;
+        {
+            let mut mashru = MashruMaftuh::ansha(
+                jidhr.clone(),
+                LubaId::min_masdar(&MasdarLuba::Steam(480), "Luba Ikhtibar"),
+                "Luba Ikhtibar".to_owned(),
+                kasir,
+                WAQT.to_owned(),
+            )?;
+            mashru.uktub_kul(&[satr("a", Some("ألف"))], WAQT.to_owned())?;
+        }
+        assert!(!yarbut(&MashruMaftuh::iftah(jidhr.clone())?.rasm().bayan));
+
+        let _ = anshir_fi(&jidhr, &[satr("a", Some("ألف")), satr("b", Some("باء"))])?;
+        assert!(
+            yarbut(&MashruMaftuh::iftah(jidhr)?.rasm().bayan),
+            "the run measured the game and the project still cannot be bound"
+        );
+        Ok(())
+    }
+
+    /// A record that already binds keeps what it has: its fingerprint was taken
+    /// when the game was the build the project was made from.
+    #[test]
+    fn nashr_la_yaktub_fawq_bayan_yarbut() -> NatijatIkhtibar {
+        let muaqqat = tempfile::tempdir()?;
+        let jidhr = muaqqat.path().join("mashru");
+        let _ = anshir_fi(&jidhr, &[satr("a", Some("ألف"))])?;
+
+        let qabl = MashruMaftuh::iftah(jidhr.clone())?.rasm().bayan.clone();
+        let _ = anshir_fi(&jidhr, &[satr("a", Some("ألف")), satr("b", Some("باء"))])?;
+        let baad = MashruMaftuh::iftah(jidhr)?.rasm().bayan.clone();
+        assert_eq!(qabl.bina_manassa, baad.bina_manassa);
+        Ok(())
+    }
+
+    /// And the check itself refuses a record that names neither.
+    #[test]
+    fn bayan_bila_huwiya_la_yarbut() {
+        let mut bayan = bayan_murtabit();
+        bayan.bina_manassa = None;
+        bayan.basmat_luba = None;
+        assert!(!yarbut(&bayan));
     }
 
     /// The defect this module was written for: a finished run left the workshop
