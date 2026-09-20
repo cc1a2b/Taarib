@@ -151,7 +151,8 @@ pub enum KhataTilqai {
 
     /// The run's string table is larger than this build will read.
     #[error(
-        "the run's string table at {} is {hajm} bytes, over the {hadd} this build reads",
+        "the run's string table at {} is {hajm} bytes, over the {hadd} this build reads. Move \
+         that file aside or delete this run's folder, then start the run again",
         masar.display()
     )]
     NususKabira {
@@ -259,9 +260,15 @@ impl Tafsir for KhataTilqai {
             },
             Self::TathbeetMarfud { .. } => "رفضت بوّابة الأمان تثبيت هذه الرقعة.".to_owned(),
             Self::KhataMalaf { .. } => "تعذّرت قراءة ملف في مجلّد الجولة أو الكتابة إليه.".to_owned(),
-            Self::NususKabira { .. } => {
-                "جدول نصوص هذه الجولة أكبر ممّا يقرأه هذا الإصدار، فلم يُقرأ منه شيء.".to_owned()
-            },
+            // The same condition as `KhataWarshaAmr::JadwalMashwarKabir`, and
+            // now the same answer: the remedy is a file the user moves, which
+            // the sentence has to name because no control in the product does
+            // it for them.
+            Self::NususKabira { masar, .. } => format!(
+                "جدول نصوص هذه الجولة أكبر ممّا يقرأه هذا الإصدار، فلم يُقرأ منه شيء. انقل \
+                 الملف {} جانبًا أو احذف مجلّد هذه الجولة، ثمّ أعد تشغيل الجولة.",
+                masar.display()
+            ),
             Self::SijillAhdath { .. } => {
                 "سجلّ الجولة مكتوب بنسخة أحدث من تعريب؛ حدِّث البرنامج.".to_owned()
             },
@@ -294,13 +301,18 @@ impl Tafsir for KhataTilqai {
             // There is a screen for this and it is the whole point of the
             // variant: capture is offered, not merely described.
             Self::YahtajIltiqat { .. } => Khutwa::FathNusus,
+            // The recording, not a launcher's install folder: the file that
+            // would not read is one play-through's own capture, and the screen
+            // that offers another is this game's automatic run.
             Self::JalsaGhayrMaqrua { .. } => Khutwa::IkhtiyarMasar {
-                matlub: MasarMatlub::MujalladManassa,
+                matlub: MasarMatlub::MalafJalsa,
             },
             Self::LaKhatt { .. } => Khutwa::IkhtiyarKhattAakhar,
-            Self::LaTarjama { .. } | Self::MarhalaMarfuda { .. } | Self::NususKabira { .. } => {
-                Khutwa::FathTashkhis
-            },
+            Self::LaTarjama { .. } | Self::MarhalaMarfuda { .. } => Khutwa::FathTashkhis,
+            // Half the remedy is a file the user moves, which no control here
+            // does for them and the sentence therefore names; the other half is
+            // the new run, and that is a screen. Diagnostics was neither.
+            Self::NususKabira { .. } => Khutwa::FathTilqai,
             Self::TathbeetMarfud { .. } => Khutwa::TahaqquqSalamatLuba,
             Self::KhataMalaf { sabab, .. } => {
                 taarib_usus::khata::khutwa_io(sabab, MasarMatlub::MujalladManassa)

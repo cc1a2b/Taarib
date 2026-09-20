@@ -48,9 +48,10 @@ pub use itlaq::{
     khiyarat_maa_amr, khiyarat_maa_isnad, khiyarat_maa_mutaghayyir, khiyarat_maa_tahmeel,
     naffidh_talabat_steam, tajawuz_maa, talabat_steam, yabda_bi_beea,
 };
-pub use khata::{IttijahDaght, KhataTathbeet, NatijatTathbeet};
+pub use khata::{IttijahDaght, KhataTathbeet, MasdarKhatt, NatijatTathbeet};
 pub use masar_tathbeet::{
-    NatijatTathbeetKamil, QararTawafuq, TalabTathbeet, WadaMuhtawa, la_tashtaghil, thabbit,
+    JidhrKhutut, NatijatTathbeetKamil, NawJidhrKhutut, QararTawafuq, TalabTathbeet, WadaMuhtawa,
+    la_tashtaghil, muhtawa_khutut, thabbit,
 };
 pub use mawdi::{MUJALLAD_TAARIB, NawWajhatNizam, WajhatLuba, WajhatNizam};
 pub use najat_tahdith::{

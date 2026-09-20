@@ -25,7 +25,7 @@ use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_tarqee::irtibat::IrtibatBina;
 use taarib_tathbeet::NatijatTathbeet;
 use taarib_tathbeet::bayan::{NawTathbeet, TarifLuba, Tathbeet};
-use taarib_tathbeet::masar_tathbeet::{TalabTathbeet, WadaMuhtawa, thabbit};
+use taarib_tathbeet::masar_tathbeet::{JidhrKhutut, TalabTathbeet, WadaMuhtawa, thabbit};
 use taarib_tathbeet::mawdi::WajhatLuba;
 use taarib_tathbeet::nusus::{self, IdhnNusus, Nashir};
 use taarib_tathbeet::taraju::{RadLaShay, SiyasatIstiada, istiada_nass};
@@ -257,7 +257,12 @@ pub fn ijri(
         taarib_tathbeet::masar_tathbeet::muhtawa_khutut(
             imkaniyat.muharrik.aila,
             &maqru.irtibat.khutut,
-            jidhr_khutut,
+            // The run's own staging directory, and therefore Taarib's set
+            // rather than the user's: `bina::hayyi` copied these faces in and
+            // the compiler shaped against them, so a face that will not resolve
+            // here is this build disagreeing with the package it just made, not
+            // a font the user has to go and find.
+            &[JidhrKhutut::bina(jidhr_khutut)],
         )
         .map_err(|khata| marfuda(MarhalaTilqai::Tathbeet, khata))?,
     );

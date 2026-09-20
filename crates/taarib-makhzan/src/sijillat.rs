@@ -34,6 +34,15 @@
 //! spot. The main write path of the whole crate cannot be done wrongly and stay
 //! quiet about it.
 //!
+//! The pairing above is the *shape*, not a claim that a library scan writes
+//! both. [`SijillBina::sajjil`] wants a [`BinaId`], whose fingerprint is
+//! `bina.basma` — `NOT NULL`, and half the primary key. Computing one means
+//! hashing a named selection of the game's containers, and that selection lives
+//! inside a patch package or a translation project; discovery has no such list
+//! for a game nobody has a patch for. So a build row is written where a recipe
+//! is in hand — the install, manual or automatic — and a scan writes the game
+//! alone.
+//!
 //! ## Prepared statements are cached where a scan repeats them
 //!
 //! [`SijillAlaab::sajjil`], [`SijillBina::sajjil`], [`SijillDhakira::sajjil`] and

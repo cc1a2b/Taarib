@@ -215,6 +215,8 @@ const fn raqm_khutwa(khutwa: &Khutwa) -> i32 {
         Khutwa::IblaghLilMalik => 16,
         Khutwa::TahrirMasaha => 17,
         Khutwa::ManhSalahiya => 18,
+        Khutwa::FathTabaqa => 19,
+        Khutwa::FathTilqai => 20,
     }
 }
 

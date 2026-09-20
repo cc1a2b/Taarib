@@ -208,6 +208,9 @@ pub enum QismIdadat {
     Lugha,
     /// Diagnostics level and log retention.
     Tashkhis,
+    /// Arabization behaviour: whether a patch replaces the game's official
+    /// language rather than sitting beside it.
+    Taareeb,
 }
 
 /// What kind of path the user is being asked to point at.
@@ -228,12 +231,29 @@ pub enum MasarMatlub {
     MalafKhatt,
     /// A patch file to import.
     MalafRuqaa,
+    /// A recorded capture session.
+    ///
+    /// Written by a play-through with capture armed, and read back by the
+    /// automatic run. Distinct from every other target here because it is not a
+    /// place a game or a font lives: it is one run's own recording, and the
+    /// screen that offers it is that game's automatic run.
+    MalafJalsa,
 }
 
 /// The one concrete thing the user can do next.
 ///
 /// This is not advice text — it is a value the interface turns into a button,
 /// so an error can never arrive with nothing actionable attached to it.
+///
+/// Three of these name something only the user can do, and only outside Taarib:
+/// [`Khutwa::TahaqquqSalamatLuba`] belongs to the game's own launcher,
+/// [`Khutwa::ManhSalahiya`] to the operating system, and
+/// [`Khutwa::IblaghLilMusahim`] to whatever the contributor published a way to
+/// be reached by — a patch listing carries a display name and no address. The
+/// interface states those three as their own directive rather than dressing
+/// them as controls it cannot make perform anything. Every other value here
+/// resolves to a control that does the thing, and adding one that does not is
+/// how this type stops meaning what it says.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "wajiha", derive(specta::Type))]
 #[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
@@ -265,6 +285,13 @@ pub enum Khutwa {
     FathTaqreerTajawuz,
     /// Open the offending strings in the workspace.
     FathNusus,
+    /// Open this game's overlay: its capture regions and its reading history.
+    ///
+    /// The tier-3 answer, offered wherever a game is outside what the adapters
+    /// reach or a stored region no longer fits the surface it was drawn on.
+    FathTabaqa,
+    /// Open this game's automatic run.
+    FathTilqai,
     /// Update Taarib itself — the data is newer than this build understands.
     TahdithTaarib,
     /// Reinstall the framework for this game.

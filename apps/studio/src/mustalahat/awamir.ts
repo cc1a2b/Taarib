@@ -355,17 +355,24 @@ export const commands = {
 	 *  command assembles its inputs from the store and the package manifest and
 	 *  reports each stage on [`ISM_HADATH_TATHBEET`].
 	 * 
+	 *  The build the package is judged against is measured here, by [`qis_bina`],
+	 *  from the recipe the package carries — not read out of the store. It used to
+	 *  be read out of the store, and nothing in this product had ever written the
+	 *  row, so every press of every install button on every game refused at
+	 *  `TAARIB-E-9028` and sent the reader to a probe that writes a different ledger.
+	 * 
 	 *  # Errors
 	 * 
-	 *  [`Khata`] naming whichever gate refused: an unreadable package, a build
-	 *  mismatch without acknowledgement, anti-cheat evidence, a revoked package,
-	 *  or the installer's own refusals — each in its own words. The safety layer's
-	 *  six refusals carry their own codes rather than one shared code, so a screen
-	 *  can tell the one the user answers ([`KhataTathbeetAmr::ShabakaBilaIqrar`],
-	 *  `TAARIB-E-9039`) from the ones nobody can. Also
-	 *  [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the game is a Steam
-	 *  game and Steam itself cannot be found, because the anti-cheat verdict would
-	 *  then be missing the half of its evidence that only Steam's catalogue holds.
+	 *  [`Khata`] naming whichever gate refused: an unreadable package, a build that
+	 *  cannot be measured, a build mismatch without acknowledgement, anti-cheat
+	 *  evidence, a revoked package, or the installer's own refusals — each in its
+	 *  own words. The safety layer's six refusals carry their own codes rather than
+	 *  one shared code, so a screen can tell the one the user answers
+	 *  ([`KhataTathbeetAmr::ShabakaBilaIqrar`], `TAARIB-E-9039`) from the ones
+	 *  nobody can. Also [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the
+	 *  game is a Steam game and Steam itself cannot be found, because the anti-cheat
+	 *  verdict would then be missing the half of its evidence that only Steam's
+	 *  catalogue holds.
 	 */
 	thabbitRuqaa: (muarrif: string, masarMalaf: string, iqrarShabaka: boolean, iqrarTaqribi: boolean) => typedError<NatijatTathbeetHie, Khata>(__TAURI_INVOKE("thabbit_ruqaa", { muarrif, masarMalaf, iqrarShabaka, iqrarTaqribi })),
 	/**
@@ -564,6 +571,10 @@ export const commands = {
 	/**
 	 *  The game's submission draft with a live checklist, or null when none exists.
 	 * 
+	 *  Opening this screen is also when a project that records no build identity is
+	 *  measured against the installed game and repaired — see [`qis_irtibat`]. A
+	 *  user who only opens the screen has it fixed before they press anything.
+	 * 
 	 *  # Errors
 	 * 
 	 *  [`KhataTaqdeemAmr::MashruGhayrMawjud`] when a draft exists but its project is
@@ -622,7 +633,10 @@ export const commands = {
 	 *  # Errors
 	 * 
 	 *  [`KhataTaqdeemAmr::TaqdeemMuallaq`] while a submission is with the owner,
-	 *  [`KhataTaqdeemAmr::KhututNaqisa`] when no usable Arabic font is bundled, and
+	 *  [`KhataTaqdeemAmr::KhututNaqisa`] when no usable Arabic font is bundled,
+	 *  [`KhataTaqdeemAmr::IrtibatBilaLuba`] and
+	 *  [`KhataTaqdeemAmr::IrtibatMutaadhdhir`] when the project records no build
+	 *  identity and the game it was made from cannot be measured to supply one, and
 	 *  whatever the compile pipeline, the keychain, or the draft store raise.
 	 */
 	jahhizTaqdeem: (muarrif: string, unwan: string, sharh: string, taghyeerat: string, rukhsa: string, rukhsaIsm: string | null, tareeqa: string) => typedError<MusawwadaHie, Khata>(__TAURI_INVOKE("jahhiz_taqdeem", { muarrif, unwan, sharh, taghyeerat, rukhsa, rukhsaIsm, tareeqa })),
@@ -2916,6 +2930,16 @@ export type Khutura =
  * 
  *  This is not advice text — it is a value the interface turns into a button,
  *  so an error can never arrive with nothing actionable attached to it.
+ * 
+ *  Three of these name something only the user can do, and only outside Taarib:
+ *  [`Khutwa::TahaqquqSalamatLuba`] belongs to the game's own launcher,
+ *  [`Khutwa::ManhSalahiya`] to the operating system, and
+ *  [`Khutwa::IblaghLilMusahim`] to whatever the contributor published a way to
+ *  be reached by — a patch listing carries a display name and no address. The
+ *  interface states those three as their own directive rather than dressing
+ *  them as controls it cannot make perform anything. Every other value here
+ *  resolves to a control that does the thing, and adding one that does not is
+ *  how this type stops meaning what it says.
  */
 export type Khutwa = 
 /**  Nothing to do; the message is complete on its own. */
@@ -2942,6 +2966,15 @@ qism: QismIdadat } |
 { naw: "fath_taqreer_tajawuz" } | 
 /**  Open the offending strings in the workspace. */
 { naw: "fath_nusus" } | 
+/**
+ *  Open this game's overlay: its capture regions and its reading history.
+ * 
+ *  The tier-3 answer, offered wherever a game is outside what the adapters
+ *  reach or a stored region no longer fits the surface it was drawn on.
+ */
+{ naw: "fath_tabaqa" } | 
+/**  Open this game's automatic run. */
+{ naw: "fath_tilqai" } | 
 /**  Update Taarib itself — the data is newer than this build understands. */
 { naw: "tahdith_taarib" } | 
 /**  Reinstall the framework for this game. */
@@ -3287,7 +3320,16 @@ export type MasarMatlub =
 /**  A font file. */
 "malaf_khatt" | 
 /**  A patch file to import. */
-"malaf_ruqaa";
+"malaf_ruqaa" | 
+/**
+ *  A recorded capture session.
+ * 
+ *  Written by a play-through with capture armed, and read back by the
+ *  automatic run. Distinct from every other target here because it is not a
+ *  place a game or a font lives: it is one run's own recording, and the
+ *  screen that offers it is that game's automatic run.
+ */
+"malaf_jalsa";
 
 /**  Which of the three routes a game takes, decided before anything runs. */
 export type MasarTilqaiHie = 
@@ -4012,7 +4054,12 @@ export type QismIdadat =
 /**  Interface language and digits. */
 "lugha" | 
 /**  Diagnostics level and log retention. */
-"tashkhis";
+"tashkhis" | 
+/**
+ *  Arabization behaviour: whether a patch replaces the game's official
+ *  language rather than sitting beside it.
+ */
+"taareeb";
 
 /**
  *  How much of a submission's overflow was actually measured.

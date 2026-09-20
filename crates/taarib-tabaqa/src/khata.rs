@@ -501,8 +501,12 @@ impl Tafsir for KhataTabaqa {
             | Self::IltiqatFashil { .. } => Khutwa::LaShay,
 
             // A region the user drew no longer fits, which the region editor is
-            // exactly the place to fix.
-            Self::MintaqaKharij { .. } => Khutwa::TahrirMasaha,
+            // exactly the place to fix. It reached the user as "free disk
+            // space" for two releases: the step named a remedy with nothing to
+            // do with the condition, and the interface drew no control for it
+            // either, so the one failure with an obvious fix arrived with
+            // nothing at all attached.
+            Self::MintaqaKharij { .. } => Khutwa::FathTabaqa,
 
             Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladManassa),
 

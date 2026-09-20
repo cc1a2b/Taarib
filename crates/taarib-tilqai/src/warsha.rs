@@ -225,6 +225,57 @@ pub fn yarbut(bayan: &BayanIstikhraj) -> bool {
     bayan.bina_manassa.is_some() || bayan.basmat_luba.is_some()
 }
 
+/// Measures the installed game and writes the binding a project is missing.
+///
+/// The value `IrtibatBina::min_bayan` wants is a measurement of an installed
+/// game, not something a person can type, so the only way out of `TAARIB-E-6107`
+/// for a project already on disk is to stand in front of the game and take it.
+/// Any surface that can reach the game can call this; the run's own publish does
+/// its own repair inline because it has a freshly measured record in hand.
+///
+/// Answers whether it wrote anything. A record that **already binds is left
+/// exactly as it is** and answers `false`: its fingerprint was taken when the
+/// game was the build the project was made from, and replacing it with a
+/// measurement of whatever is installed today would rebind somebody's work to a
+/// build it was not made against.
+///
+/// The repaired record keeps the project's own extraction time, its refusal
+/// report and the Taarib build that extracted it. Those describe how the strings
+/// were obtained, which this does not change — only `waqt`, the moment the
+/// header is written, is the caller's.
+///
+/// # Errors
+///
+/// [`KhataTilqai::MarhalaMarfuda`] carrying whatever the fingerprint plan said:
+/// the game's own files are read here, so a game that has moved, been
+/// uninstalled, or been updated past the containers the record names cannot be
+/// measured. The caller is the one that knows how to say that to a user.
+///
+/// [`KhataTilqai::MarhalaMarfuda`]: crate::khata::KhataTilqai::MarhalaMarfuda
+pub fn aslih(
+    mashru: &mut MashruMaftuh,
+    jidhr_luba: &Path,
+    imkaniyat: &TaqreerImkaniyat,
+    waqt: &str,
+) -> NatijatTilqai<bool> {
+    if yarbut(&mashru.rasm().bayan) {
+        return Ok(false);
+    }
+    let (rafd, isdar_taarib, waqt_istikhraj) = {
+        let sabiq = &mashru.rasm().bayan;
+        (
+            sabiq.rafd.clone(),
+            sabiq.isdar_taarib.clone(),
+            sabiq.waqt.clone(),
+        )
+    };
+    let maqis = bayan(jidhr_luba, imkaniyat, &rafd, &isdar_taarib, &waqt_istikhraj)?;
+    mashru
+        .ashil_bayan(maqis, waqt.to_owned())
+        .map_err(|khata| marfuda(MarhalaTilqai::Istikhraj, khata))?;
+    Ok(true)
+}
+
 #[cfg(test)]
 mod ikhtibarat {
     use taarib_mustalahat::luba::MasdarLuba;
@@ -233,6 +284,7 @@ mod ikhtibarat {
     };
     use taarib_mustalahat::muraja::SijillMuraja;
     use taarib_mustalahat::nass::{MasdarIstikhraj, NassId, QuyudNass, SiyaqNass, TasnifNass};
+    use taarib_tarqee::irtibat::IrtibatBina;
     use taarib_usus::manassa::Mimariya;
 
     use super::*;
@@ -240,6 +292,12 @@ mod ikhtibarat {
     type NatijatIkhtibar<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
     const WAQT: &str = "2026-01-01T00:00:00Z";
+
+    /// When a repair runs, which is later than the extraction it repairs.
+    const WAQT_ISLAH: &str = "2026-03-01T00:00:00Z";
+
+    /// The one container the fixture game ships and the fixture extraction read.
+    const HAWIYA: &str = "Luba_Data/resources.assets";
 
     fn satr(mawqi: &str, hadaf: Option<&str>) -> MudkhalNass {
         MudkhalNass {
@@ -463,6 +521,135 @@ mod ikhtibarat {
     fn qiraa_bila_mashru_tuid_la_shay() -> NatijatIkhtibar {
         let muaqqat = tempfile::tempdir()?;
         assert!(iqra(&muaqqat.path().join("ghayr_mawjud"))?.is_empty());
+        Ok(())
+    }
+
+    /// An installed game holding the one container the extraction read, and the
+    /// refusal report naming it — the shape a real extraction leaves behind.
+    fn luba_ala_alqurs(jidhr: &Path) -> NatijatIkhtibar<TaqreerRafd> {
+        let masar = jidhr.join(HAWIYA);
+        if let Some(mujallad) = masar.parent() {
+            std::fs::create_dir_all(mujallad)?;
+        }
+        std::fs::write(&masar, b"container bytes")?;
+        Ok(rafd_yaqra_alhawiya())
+    }
+
+    /// The same report, for a game that is not on disk.
+    fn rafd_yaqra_alhawiya() -> TaqreerRafd {
+        let mut rafd = TaqreerRafd::jadeed();
+        rafd.sajjil_qira(HAWIYA, 3, "fixture container");
+        rafd
+    }
+
+    /// A project as the defective publish left it: rows, a refusal report, and
+    /// a record binding nothing.
+    fn mashru_bila_irtibat(jidhr: &Path, rafd: TaqreerRafd) -> NatijatIkhtibar {
+        let mut bayan = bayan_murtabit();
+        bayan.bina_manassa = None;
+        bayan.basmat_luba = None;
+        bayan.rafd = rafd;
+        let mut mashru = MashruMaftuh::ansha(
+            jidhr.to_path_buf(),
+            LubaId::min_masdar(&MasdarLuba::Steam(480), "Luba Ikhtibar"),
+            "Luba Ikhtibar".to_owned(),
+            bayan,
+            WAQT.to_owned(),
+        )?;
+        mashru.uktub_kul(&[satr("a", Some("ألف"))], WAQT.to_owned())?;
+        Ok(())
+    }
+
+    /// The whole point: a project that answered `TAARIB-E-6107` passes the gate
+    /// afterwards, without anybody translating anything a second time.
+    #[test]
+    fn islah_yaqees_alluba_fayamurr_min_bawwabat_alirtibat() -> NatijatIkhtibar {
+        let muaqqat = tempfile::tempdir()?;
+        let jidhr_luba = muaqqat.path().join("luba");
+        let rafd = luba_ala_alqurs(&jidhr_luba)?;
+        let jidhr = muaqqat.path().join("mashru");
+        mashru_bila_irtibat(&jidhr, rafd)?;
+
+        let mut mashru = MashruMaftuh::iftah(jidhr.clone())?;
+        assert!(
+            IrtibatBina::min_bayan(&mashru.rasm().bayan, &[], None).is_err(),
+            "the fixture already binds, so it is not the project the owner is stuck on"
+        );
+        assert!(aslih(&mut mashru, &jidhr_luba, &imkaniyat(), WAQT_ISLAH)?);
+
+        let baad = MashruMaftuh::iftah(jidhr)?;
+        assert!(
+            baad.rasm().bayan.basmat_luba.is_some(),
+            "the game was measured and the fingerprint was not written"
+        );
+        // The gate the submission runs, run here rather than re-stated.
+        let irtibat = IrtibatBina::min_bayan(&baad.rasm().bayan, &[], None)?;
+        assert_eq!(irtibat.adad_malaffat, 1);
+        // The record still describes the extraction it always described; only
+        // the header's write time moved.
+        assert_eq!(baad.rasm().bayan.waqt, WAQT);
+        assert_eq!(baad.rasm().bayan.isdar_taarib, "1.0.1");
+        assert_eq!(baad.rasm().waqt_tabdeel, WAQT_ISLAH);
+        Ok(())
+    }
+
+    /// A game that is no longer there cannot be measured, and the project is
+    /// left exactly as it was rather than half-written.
+    #[test]
+    fn islah_yarfud_luba_ghayr_mawjuda() -> NatijatIkhtibar {
+        let muaqqat = tempfile::tempdir()?;
+        let jidhr = muaqqat.path().join("mashru");
+        mashru_bila_irtibat(&jidhr, rafd_yaqra_alhawiya())?;
+
+        let mut mashru = MashruMaftuh::iftah(jidhr.clone())?;
+        assert!(
+            aslih(
+                &mut mashru,
+                &muaqqat.path().join("ghayr_mawjuda"),
+                &imkaniyat(),
+                WAQT_ISLAH,
+            )
+            .is_err()
+        );
+        let baad = MashruMaftuh::iftah(jidhr)?;
+        assert!(!yarbut(&baad.rasm().bayan));
+        assert_eq!(baad.rasm().waqt_tabdeel, WAQT);
+        Ok(())
+    }
+
+    /// A record that already binds is not re-measured: its fingerprint was taken
+    /// when the game was the build the project was made from, and the installed
+    /// game may have moved on since.
+    #[test]
+    fn islah_la_yamiss_bayanan_yarbut() -> NatijatIkhtibar {
+        let muaqqat = tempfile::tempdir()?;
+        let jidhr_luba = muaqqat.path().join("luba");
+        let rafd = luba_ala_alqurs(&jidhr_luba)?;
+        let jidhr = muaqqat.path().join("mashru");
+        {
+            let mut bayan = bayan_murtabit();
+            bayan.rafd = rafd;
+            let mut mashru = MashruMaftuh::ansha(
+                jidhr.clone(),
+                LubaId::min_masdar(&MasdarLuba::Steam(480), "Luba Ikhtibar"),
+                "Luba Ikhtibar".to_owned(),
+                bayan,
+                WAQT.to_owned(),
+            )?;
+            mashru.uktub_kul(&[satr("a", Some("ألف"))], WAQT.to_owned())?;
+        }
+
+        let mut mashru = MashruMaftuh::iftah(jidhr.clone())?;
+        assert!(!aslih(&mut mashru, &jidhr_luba, &imkaniyat(), WAQT_ISLAH)?);
+
+        let baad = MashruMaftuh::iftah(jidhr)?;
+        assert_eq!(baad.rasm().bayan.bina_manassa.as_deref(), Some("14680755"));
+        assert_eq!(
+            baad.rasm().bayan.basmat_luba,
+            None,
+            "a record that already bound was re-measured against today's install"
+        );
+        assert_eq!(baad.rasm().waqt_tabdeel, WAQT);
         Ok(())
     }
 }

@@ -195,8 +195,15 @@ impl Tafsir for KhataIstikhraj {
     fn khutwa(&self) -> Khutwa {
         match self {
             Self::JidhrMafqud { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladLuba),
-            Self::MuharrikGhayrMadum { .. } | Self::MuharrikMajhul { .. } => Khutwa::FathTashkhis,
-            Self::HajmMufrit { .. } => Khutwa::IblaghLilMusahim,
+            // The sentence already names the remedy — the universal layer is
+            // still available for this game — so the step is that layer and not
+            // a log the reader has no question for.
+            Self::MuharrikGhayrMadum { .. } => Khutwa::FathTabaqa,
+            Self::MuharrikMajhul { .. } => Khutwa::FathTashkhis,
+            // A *game's* container declaring more than this build allocates.
+            // There is no patch here and so no contributor to reach: the
+            // ceiling is Taarib's, and the owner is who can raise it.
+            Self::HajmMufrit { .. } => Khutwa::IblaghLilMalik,
             // The extraction continues; there is nothing for the user to do.
             Self::NasqTalif { .. } => Khutwa::LaShay,
             Self::TaadhurKitabatMashru { .. } => Khutwa::TahrirMasaha,

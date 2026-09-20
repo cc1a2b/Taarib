@@ -51,7 +51,7 @@ use taarib_tarqee::taqrir_tajawuz::{
 use taarib_tathbeet::bayan::waqt_alaan;
 use taarib_usus::idadat::MakhzanIdadat;
 use taarib_usus::khata::{
-    Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
+    Khata, Khutura, Khutwa, MasarMatlub, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
 use taarib_usus::masarat::{Masarat, kitaba_dharra};
 use taarib_usus::{ISDAR, khata_min};
@@ -969,6 +969,94 @@ fn uktub_iqrarat(masarat: &Masarat, ruqaa: RuqaaId, iqrarat: &Iqrarat) -> Natija
     crate::warsha_awamir::uktub_janibi(&masar_iqrarat(masarat, ruqaa), &aslama)
 }
 
+/// Measures the installed game and writes the build binding into a project that
+/// records none.
+///
+/// `IrtibatBina::min_bayan` refuses a record naming neither a launcher build nor
+/// a content fingerprint, and it is right to: a patch that declares nothing
+/// matches nothing safely. But the value it wants is a *measurement of an
+/// installed game*, not something a person can type, and until this existed the
+/// only thing in the product that took that measurement was a full automatic
+/// run. So a project written without one answered `TAARIB-E-6107` at the
+/// submission screen, and the only way out on offer was to translate the whole
+/// game again to fill in one field. The game is on disk, the Studio knows where,
+/// and taking the measurement is a file walk.
+///
+/// Answers whether it wrote. A game with no project at all, and a record that
+/// already binds, both answer `false` and touch nothing: the first is
+/// [`KhataTaqdeemAmr::MashruGhayrMawjud`]'s to refuse where the user can see it,
+/// and the second holds a fingerprint taken when the game was the build the
+/// project was made from — re-measuring it against whatever is installed today
+/// would rebind somebody's work to a build it was never made against.
+///
+/// It takes no lock of its own. Two submissions cannot race, because both
+/// callers hold [`QuflTaqdeem`]; a workshop save landing in the same instant
+/// rewrites the header from its own copy, which costs this repair and not the
+/// rows, and the next open takes the measurement again.
+///
+/// # Errors
+///
+/// [`KhataTaqdeemAmr::IrtibatBilaLuba`] when the game is no longer on disk,
+/// [`KhataTaqdeemAmr::IrtibatMutaadhdhir`] when it is there and cannot be
+/// measured, [`KhataTaqdeemAmr::MuharrikMajhul`] when no capability report was
+/// ever recorded for it, and whatever the store and the project file raise.
+fn qis_irtibat(masarat: &Masarat, makhzan: &Makhzan, id: LubaId) -> Natija<bool> {
+    let jidhr = masarat.mashari().join(id.to_string());
+    if !jidhr.join(taarib_istikhraj::mashru::MALAF_MASHRU).is_file() {
+        return Ok(false);
+    }
+    let mut mashru = MashruMaftuh::iftah(jidhr).map_err(Khata::from)?;
+    if taarib_tilqai::warsha::yarbut(&mashru.rasm().bayan) {
+        return Ok(false);
+    }
+
+    let luba = ijlib_luba(makhzan, id)?;
+    if !luba.mawjuda || !luba.jidhr.is_dir() {
+        return Err(Khata::from(KhataTaqdeemAmr::IrtibatBilaLuba {
+            ism: luba.ism,
+            jidhr: luba.jidhr,
+        }));
+    }
+    let imkaniyat = makhzan
+        .bil_qira(|ittisal| SijillMuharrik::jadeed(ittisal).wahid(id))?
+        .ok_or_else(|| {
+            Khata::from(KhataTaqdeemAmr::MuharrikMajhul {
+                ism: luba.ism.clone(),
+            })
+        })?;
+
+    let kutiba = taarib_tilqai::warsha::aslih(&mut mashru, &luba.jidhr, &imkaniyat, &waqt_alaan())
+        .map_err(|khata| {
+            let tafsil = khata.to_string();
+            Khata::from(KhataTaqdeemAmr::IrtibatMutaadhdhir {
+                ism: luba.ism.clone(),
+                jidhr: luba.jidhr.clone(),
+                sabab: tafsil,
+            })
+            .bi_sabab(Khata::from(khata))
+        })?;
+    if kutiba {
+        tracing::info!(
+            luba = %id,
+            jidhr = %luba.jidhr.display(),
+            "the project recorded no build identity; the installed game was measured and now it does"
+        );
+    }
+    Ok(kutiba)
+}
+
+/// The same repair, off the thread that draws the window.
+///
+/// The fingerprint hashes every container the extraction read, which on a large
+/// Unity game is seconds of it. Both callers are `async` commands for this
+/// reason — a synchronous command runs on the thread the window is drawn from —
+/// and the walk goes to the blocking pool rather than onto a runtime worker.
+async fn aslih_irtibat(masarat: &Masarat, makhzan: &Makhzan, id: LubaId) -> Natija<bool> {
+    let masarat = masarat.clone();
+    let makhzan = makhzan.clone();
+    crate::tathbeet_awamir::bil_hajb(move || qis_irtibat(&masarat, &makhzan, id)).await
+}
+
 /// Opens the game's translation project rows, refusing when none exists.
 fn nusus_mashru(masarat: &Masarat, id: LubaId) -> Natija<(MashruMaftuh, Vec<MudkhalNass>)> {
     let jidhr = masarat.mashari().join(id.to_string());
@@ -1256,17 +1344,33 @@ async fn malik_bi_muhla() -> bool {
 
 /// The game's submission draft with a live checklist, or null when none exists.
 ///
+/// Opening this screen is also when a project that records no build identity is
+/// measured against the installed game and repaired — see [`qis_irtibat`]. A
+/// user who only opens the screen has it fixed before they press anything.
+///
 /// # Errors
 ///
 /// [`KhataTaqdeemAmr::MashruGhayrMawjud`] when a draft exists but its project is
 /// gone, and whatever the draft store raises.
 #[tauri::command]
 #[specta::specta]
-pub fn musawwadat_luba(
+pub async fn musawwadat_luba(
     muarrif: String,
     masarat: tauri::State<'_, Masarat>,
+    makhzan: tauri::State<'_, Makhzan>,
 ) -> Result<Option<MusawwadaHie>, Khata> {
     let id = huwiya(muarrif)?;
+    // Best effort on the way in, and deliberately not fatal: a game that has
+    // moved must not cost the user the draft and the checklist they opened the
+    // screen to read. `jahhiz_taqdeem` runs the same repair where it decides
+    // something, and raises the refusal with the step to take.
+    if let Err(sabab) = aslih_irtibat(&masarat, &makhzan, id).await {
+        tracing::warn!(
+            luba = %id,
+            khata = %sabab.li_sijill(),
+            "the project records no build identity and the game could not be measured on open"
+        );
+    }
     let Some(musawwada) = musawwadat_lil_luba(&masarat, id)? else {
         return Ok(None);
     };
@@ -1282,7 +1386,10 @@ pub fn musawwadat_luba(
 /// # Errors
 ///
 /// [`KhataTaqdeemAmr::TaqdeemMuallaq`] while a submission is with the owner,
-/// [`KhataTaqdeemAmr::KhututNaqisa`] when no usable Arabic font is bundled, and
+/// [`KhataTaqdeemAmr::KhututNaqisa`] when no usable Arabic font is bundled,
+/// [`KhataTaqdeemAmr::IrtibatBilaLuba`] and
+/// [`KhataTaqdeemAmr::IrtibatMutaadhdhir`] when the project records no build
+/// identity and the game it was made from cannot be measured to supply one, and
 /// whatever the compile pipeline, the keychain, or the draft store raise.
 #[tauri::command]
 #[specta::specta]
@@ -1292,7 +1399,7 @@ pub fn musawwadat_luba(
     reason = "each argument is a field of the wizard's IPC payload; the names are the JSON \
               keys the frontend sends, and `specta` allows ten"
 )]
-pub fn jahhiz_taqdeem(
+pub async fn jahhiz_taqdeem(
     muarrif: String,
     unwan: String,
     sharh: String,
@@ -1307,9 +1414,14 @@ pub fn jahhiz_taqdeem(
     use taarib_mustalahat::ruqaa::RuqaaRevision;
     use taarib_taqdeem::musawwada::HalatTaqdeem;
 
-    let _harasa = qufl.0.blocking_lock();
+    let _harasa = qufl.0.lock().await;
     let id = huwiya(muarrif)?;
     let luba: Luba = ijlib_luba(&makhzan, id)?;
+    // The compile below binds the package to a build, and refuses a project that
+    // records neither. Measured from the installed game before the compile asks,
+    // so the refusal a user meets is one about the game in front of them rather
+    // than about a field nobody can type.
+    let _ = aslih_irtibat(&masarat, &makhzan, id).await?;
     let (musahim, ism, itimad) = hawiyati(&masarat)?;
     let (mashru, sufuf) = nusus_mashru(&masarat, id)?;
 
@@ -2607,7 +2719,7 @@ pub fn sandooq_thabbit(
         taarib_tathbeet::masar_tathbeet::muhtawa_khutut(
             taqreer.muharrik.aila,
             &irtibat.khutut,
-            &masarat.khutut(),
+            &crate::mukawwinat_tahmil::judhur_khutut_musannafa(&masarat),
         )
         .map_err(Khata::from)?,
     );
@@ -2907,6 +3019,32 @@ pub enum KhataTaqdeemAmr {
         /// Why, as the list words it.
         sabab: String,
     },
+
+    /// The project records no build identity and the game it was made from is
+    /// not on disk, so none can be measured.
+    #[error("{ism} is no longer at {} and the project records no build identity", jidhr.display())]
+    IrtibatBilaLuba {
+        /// The game's name, as its launcher gives it.
+        ism: String,
+        /// Where the library last saw it.
+        jidhr: PathBuf,
+    },
+
+    /// The project records no build identity and measuring one from the
+    /// installed game failed.
+    ///
+    /// Its own refusal rather than a shared one, because the way out differs: a
+    /// game that is gone is pointed at or reinstalled, a game that is there and
+    /// will not measure has files the launcher's own verify repairs.
+    #[error("the build identity for {ism} could not be measured at {}: {sabab}", jidhr.display())]
+    IrtibatMutaadhdhir {
+        /// The game's name.
+        ism: String,
+        /// Where its files were read from.
+        jidhr: PathBuf,
+        /// What the measurement said.
+        sabab: String,
+    },
 }
 
 impl Tafsir for KhataTaqdeemAmr {
@@ -2938,6 +3076,8 @@ impl Tafsir for KhataTaqdeemAmr {
                     // first free number after them.
                     Self::MiftahMusahimMulgha { .. } => 79,
                     Self::TaqdeemMulgha { .. } => 85,
+                    Self::IrtibatBilaLuba { .. } => 86,
+                    Self::IrtibatMutaadhdhir { .. } => 87,
                 },
         )
     }
@@ -2966,6 +3106,10 @@ impl Tafsir for KhataTaqdeemAmr {
             | Self::IrsalGhayrMuhayya { .. }
             | Self::MustawdaGhayrMafhum { .. }
             | Self::TawthiqNaqis
+            // Both are a disagreement between the library and the disk that the
+            // user can see and settle. Nothing was written in either.
+            | Self::IrtibatBilaLuba { .. }
+            | Self::IrtibatMutaadhdhir { .. }
             | Self::TalabNaqis => Khutura::Tanbeeh,
         }
     }
@@ -3048,6 +3192,20 @@ impl Tafsir for KhataTaqdeemAmr {
                 "سحب المستودع سلسلة الرقعة {ruqaa} التي يبني عليها هذا التقديم: {sabab}. لا \
                  تُعاد سلسلة مسحوبة تحت الاسم نفسه، ولم يُرسل شيء. اسحب هذا التقديم ثم جهّز \
                  تقديمًا جديدًا من المشروع ليأخذ سلسلة جديدة."
+            ),
+            Self::IrtibatBilaLuba { ism, jidhr } => format!(
+                "لا يسجّل مشروع {ism} رقم بناءٍ ولا بصمةً تُربط بها الحزمة، وقياس أيٍّ منهما \
+                 يقرأ ملفات اللعبة نفسها — ولم يعد مجلدها في {}. أعد تثبيتها من مشغّلها أو \
+                 دلّ تعريب على مكانها الجديد، ثم أعد تجهيز التقديم. ترجمتك محفوظة في المشروع \
+                 ولا تحتاج إعادة.",
+                jidhr.display()
+            ),
+            Self::IrtibatMutaadhdhir { ism, jidhr, sabab } => format!(
+                "لا يسجّل مشروع {ism} رقم بناءٍ ولا بصمةً تُربط بها الحزمة، وتعذّر قياسها من \
+                 ملفات اللعبة في {}: {sabab}. القياس يقرأ الحاويات التي استُخرج منها النصّ، \
+                 فتحقّق من سلامة ملفات اللعبة من مشغّلها ثم أعد تجهيز التقديم. ترجمتك محفوظة \
+                 في المشروع ولا تحتاج إعادة.",
+                jidhr.display()
             ),
         }
     }
@@ -3137,6 +3295,22 @@ impl Tafsir for KhataTaqdeemAmr {
                  nothing was sent. Withdraw this submission, then prepare a new one from the \
                  project so it takes a new lineage."
             ),
+            Self::IrtibatBilaLuba { ism, jidhr } => format!(
+                "The project for {ism} records neither a build id nor a fingerprint to bind \
+                 the package to, and measuring either reads the game's own files — but {} is \
+                 no longer there. Reinstall it from its launcher, or point Taarib at where it \
+                 is now, then prepare the submission again. Your translation is kept in the \
+                 project and does not need redoing.",
+                jidhr.display()
+            ),
+            Self::IrtibatMutaadhdhir { ism, jidhr, sabab } => format!(
+                "The project for {ism} records neither a build id nor a fingerprint to bind \
+                 the package to, and measuring one from the game's files at {} failed: \
+                 {sabab}. The measurement reads the containers the text was extracted from, \
+                 so verify the game's files through its launcher, then prepare the submission \
+                 again. Your translation is kept in the project and does not need redoing.",
+                jidhr.display()
+            ),
         }
     }
 
@@ -3173,6 +3347,13 @@ impl Tafsir for KhataTaqdeemAmr {
             // A revoked key is the owner's to reissue, so the way out is the
             // owner rather than anything on this machine.
             Self::MiftahMusahimMulgha { .. } => Khutwa::IblaghLilMalik,
+            // The measurement needs the game's own files, so the two steps are
+            // the two ways of putting them back: a folder Taarib can find, or a
+            // folder whose contents the launcher has checked.
+            Self::IrtibatBilaLuba { .. } => Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MujalladLuba,
+            },
+            Self::IrtibatMutaadhdhir { .. } => Khutwa::TahaqquqSalamatLuba,
         }
     }
 
@@ -3221,6 +3402,15 @@ impl Tafsir for KhataTaqdeemAmr {
             },
             Self::TaqdeemMulgha { ruqaa, sabab } => {
                 let _ = siyaq.insert("ruqaa".to_owned(), QeemaSiyaq::Nass(ruqaa.clone()));
+                let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
+            },
+            Self::IrtibatBilaLuba { ism, jidhr } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
+            },
+            Self::IrtibatMutaadhdhir { ism, jidhr, sabab } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
                 let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
             },
         }
@@ -3551,5 +3741,283 @@ mod ikhtibarat_tajawuz {
             None,
             "an unknown cause is not worded"
         );
+    }
+}
+
+#[cfg(test)]
+mod ikhtibarat_irtibat {
+    use taarib_istikhraj::mashru::BayanIstikhraj;
+    use taarib_istikhraj::rafd::TaqreerRafd;
+    use taarib_makhzan::sijillat::{IdkhalLuba, SijillAlaab};
+    use taarib_mustalahat::luba::{MasdarLuba, SuwarLuba};
+    use taarib_mustalahat::muharrik::{AilatMuharrik, KhalfiyaBarmajiya, Muharrik};
+    use taarib_usus::manassa::{BeeatTawafuq, Mimariya};
+
+    use super::*;
+
+    /// What every test here answers with, so a fixture failure propagates with
+    /// `?`. `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar<T = ()> = Result<T, Box<dyn std::error::Error>>;
+
+    /// A Steam application identifier no real catalogue can hold, so a developer
+    /// machine's own Steam cannot change what these tests see.
+    const TATBEEQ_WAHMI: u32 = 4_000_000_000;
+
+    /// The one container the fixture game ships and its extraction read.
+    const HAWIYA: &str = "Luba_Data/resources.assets";
+
+    const WAQT: &str = "2026-01-01T00:00:00Z";
+
+    /// The launcher build the "already binds" fixture carries.
+    const BINA_MANASSA: &str = "14680755";
+
+    /// What the game looks like on disk when the repair runs.
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum HalatLuba {
+        /// Installed, holding the container the extraction read.
+        Kamila,
+        /// The folder is there; the container the record names is not.
+        BilaHawiya,
+        /// The folder itself is gone — uninstalled, or moved.
+        Ghaiba,
+    }
+
+    /// A scratch data root that removes itself, so an assertion that fails does
+    /// not leave a database behind in the machine's temporary directory.
+    struct JidhrMuaqqat(PathBuf);
+
+    impl Drop for JidhrMuaqqat {
+        fn drop(&mut self) {
+            // Best effort. A test that has already failed must not fail twice.
+            #[expect(
+                clippy::disallowed_methods,
+                reason = "a scratch directory under `std::env::temp_dir()` removing itself, never a data root or a game directory"
+            )]
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// A data root, a store, one Unity game with the capability report a scan
+    /// writes, and a translation project for it carrying `bayan`.
+    struct Masrah {
+        masarat: Masarat,
+        makhzan: Makhzan,
+        id: LubaId,
+        jidhr_luba: PathBuf,
+        jidhr_mashru: PathBuf,
+        /// Held for its [`Drop`]; nothing reads it. Last so that it runs after
+        /// the store's connection pool has closed — on Windows a directory
+        /// holding an open database file will not delete.
+        _jidhr: JidhrMuaqqat,
+    }
+
+    /// Sets one up.
+    ///
+    /// The game row and the report go in through the same ledgers a library scan
+    /// writes them through, and the project through `taarib_istikhraj`'s own
+    /// writer, so what `qis_irtibat` reads is what the product would have left
+    /// there rather than anything this fixture handed it.
+    fn masrah(bayan: BayanIstikhraj, hala: HalatLuba) -> NatijatIkhtibar<Masrah> {
+        let jidhr = std::env::temp_dir().join(format!("taarib-taqdeem-{}", uuid::Uuid::new_v4()));
+        let haris = JidhrMuaqqat(jidhr.clone());
+        let masarat = Masarat::min_judhur(jidhr.join("bayanat"), jidhr.join("idadat"));
+        // Creates the data root on the way: the store makes its own parent.
+        let makhzan = Makhzan::min_masar(&masarat.qaida_bayanat())?;
+
+        let jidhr_luba = jidhr.join("luba");
+        if hala != HalatLuba::Ghaiba {
+            std::fs::create_dir_all(&jidhr_luba)?;
+        }
+        if hala == HalatLuba::Kamila {
+            let masar = jidhr_luba.join(HAWIYA);
+            if let Some(mujallad) = masar.parent() {
+                std::fs::create_dir_all(mujallad)?;
+            }
+            std::fs::write(&masar, b"container bytes")?;
+        }
+
+        let masdar = MasdarLuba::Steam(TATBEEQ_WAHMI);
+        let luba = Luba {
+            id: LubaId::min_masdar(&masdar, "Luba Ikhtibar"),
+            masadir: vec![masdar],
+            ism: "Luba Ikhtibar".to_owned(),
+            jidhr: jidhr_luba.clone(),
+            tanfidhi: None,
+            hajm: 0,
+            akhir_laab: None,
+            akhir_tahdith: None,
+            bina: None,
+            suwar: SuwarLuba::default(),
+            beea: BeeatTawafuq::Asli,
+            mawjuda: hala != HalatLuba::Ghaiba,
+            mukhfiya: false,
+        };
+        let id = luba.id;
+        makhzan.bi_muamala(|muamala| {
+            SijillAlaab::jadeed(muamala).sajjil(&IdkhalLuba {
+                luba: &luba,
+                muktamila: true,
+                khiyarat_tashghil: None,
+                simat: &[],
+                fahs: 1,
+            })
+        })?;
+
+        let muharrik = Muharrik {
+            aila: AilatMuharrik::Unity,
+            isdar: None,
+            khalfiya: KhalfiyaBarmajiya::Mono,
+            itarat: Vec::new(),
+            rusum: Vec::new(),
+            mimariya: Mimariya::X8664,
+            thiqa: 95,
+            dalail: Vec::new(),
+        };
+        let taqreer = taarib_muharrik::imkaniyat::taqreer(muharrik, &[], WAQT.to_owned());
+        makhzan.bi_muamala(|muamala| SijillMuharrik::jadeed(muamala).sajjil(id, &taqreer, None))?;
+
+        let jidhr_mashru = masarat.mashari().join(id.to_string());
+        let mut mashru =
+            MashruMaftuh::ansha(jidhr_mashru.clone(), id, luba.ism, bayan, WAQT.to_owned())?;
+        mashru.ikhtim(WAQT.to_owned())?;
+
+        Ok(Masrah {
+            masarat,
+            makhzan,
+            id,
+            jidhr_luba,
+            jidhr_mashru,
+            _jidhr: haris,
+        })
+    }
+
+    /// The record the owner's project carries: an engine, a refusal report
+    /// naming the container the extraction read, and nothing to bind to.
+    fn bayan_bila_irtibat() -> BayanIstikhraj {
+        let mut rafd = TaqreerRafd::jadeed();
+        rafd.sajjil_qira(HAWIYA, 3, "fixture container");
+        BayanIstikhraj {
+            aila: "unity".to_owned(),
+            isdar: Some("6000.0.3f1".to_owned()),
+            bina_manassa: None,
+            basmat_luba: None,
+            turuq: Vec::new(),
+            rafd,
+            waqt: WAQT.to_owned(),
+            isdar_taarib: "1.0.1".to_owned(),
+        }
+    }
+
+    /// `TAARIB-E-6107` was a dead end: the project could not be submitted and
+    /// the only thing that wrote the missing value was a whole translation run.
+    /// The submission surface measures the installed game instead, and the gate
+    /// that refused the project accepts it afterwards.
+    #[test]
+    fn mashru_bila_irtibat_yuslah_fayamurr_min_bawwabat_altaqdeem() -> NatijatIkhtibar {
+        let masrah = masrah(bayan_bila_irtibat(), HalatLuba::Kamila)?;
+        let qabl = MashruMaftuh::iftah(masrah.jidhr_mashru.clone())?;
+        assert!(
+            IrtibatBina::min_bayan(&qabl.rasm().bayan, &[], None).is_err(),
+            "the fixture already binds, so it is not the project the owner is stuck on"
+        );
+
+        assert!(qis_irtibat(&masrah.masarat, &masrah.makhzan, masrah.id)?);
+
+        let baad = MashruMaftuh::iftah(masrah.jidhr_mashru.clone())?;
+        assert!(baad.rasm().bayan.basmat_luba.is_some());
+        // The compile's own gate, run here rather than restated.
+        let irtibat = IrtibatBina::min_bayan(&baad.rasm().bayan, &[], None)?;
+        assert_eq!(irtibat.adad_malaffat, 1);
+        // The record still describes the extraction it always described.
+        assert_eq!(baad.rasm().bayan.waqt, WAQT);
+        assert_eq!(baad.rasm().bayan.isdar_taarib, "1.0.1");
+        // And a second pass costs nothing: the walk happens once.
+        assert!(!qis_irtibat(&masrah.masarat, &masrah.makhzan, masrah.id)?);
+        Ok(())
+    }
+
+    /// A game that is gone cannot be measured, and the refusal names a step the
+    /// person in front of it can actually take — in both languages.
+    #[test]
+    fn luba_ghaiba_turfad_bikhutwa_yumkin_alqiyam_biha() -> NatijatIkhtibar {
+        let masrah = masrah(bayan_bila_irtibat(), HalatLuba::Ghaiba)?;
+        let khata = qis_irtibat(&masrah.masarat, &masrah.makhzan, masrah.id)
+            .err()
+            .ok_or("a game that is not on disk was measured anyway")?;
+
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 86);
+        assert_eq!(
+            khata.khutwa,
+            Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MujalladLuba,
+            }
+        );
+        let makan = masrah.jidhr_luba.display().to_string();
+        assert!(khata.arabi.contains(&makan), "{}", khata.arabi);
+        assert!(khata.injilizi.contains(&makan), "{}", khata.injilizi);
+        // The sentence that keeps this from reading as "translate it all again".
+        assert!(khata.arabi.contains("ولا تحتاج إعادة"), "{}", khata.arabi);
+        assert!(
+            khata.injilizi.contains("does not need redoing"),
+            "{}",
+            khata.injilizi
+        );
+        assert_eq!(
+            khata.siyaq.get("jidhr"),
+            Some(&QeemaSiyaq::Masar(masrah.jidhr_luba.clone()))
+        );
+        // Nothing was half-written on the way to refusing.
+        let baad = MashruMaftuh::iftah(masrah.jidhr_mashru)?;
+        assert!(!taarib_tilqai::warsha::yarbut(&baad.rasm().bayan));
+        Ok(())
+    }
+
+    /// The game is where the library says and its files are not the ones the
+    /// record names. A different refusal, because a different thing fixes it.
+    #[test]
+    fn luba_la_tuqas_turfad_bitahaqquq_alsalama() -> NatijatIkhtibar {
+        let masrah = masrah(bayan_bila_irtibat(), HalatLuba::BilaHawiya)?;
+        let khata = qis_irtibat(&masrah.masarat, &masrah.makhzan, masrah.id)
+            .err()
+            .ok_or("a game missing the container it was extracted from was measured anyway")?;
+
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 87);
+        assert_eq!(khata.khutwa, Khutwa::TahaqquqSalamatLuba);
+        assert!(
+            khata.injilizi.contains("does not need redoing"),
+            "{}",
+            khata.injilizi
+        );
+        // The measuring layer's own words travel underneath, for the bundle.
+        assert!(
+            khata.sabab.is_some(),
+            "the refusal that explains which file is missing was dropped"
+        );
+        Ok(())
+    }
+
+    /// A record that already binds is left alone: its fingerprint was taken when
+    /// the game was the build the project was made from, and the installed game
+    /// may have moved on since.
+    #[test]
+    fn bayan_yarbut_yabqa_kama_hua() -> NatijatIkhtibar {
+        let mut bayan = bayan_bila_irtibat();
+        bayan.bina_manassa = Some(BINA_MANASSA.to_owned());
+        let masrah = masrah(bayan, HalatLuba::Kamila)?;
+
+        assert!(!qis_irtibat(&masrah.masarat, &masrah.makhzan, masrah.id)?);
+
+        let baad = MashruMaftuh::iftah(masrah.jidhr_mashru)?;
+        assert_eq!(
+            baad.rasm().bayan.bina_manassa.as_deref(),
+            Some(BINA_MANASSA)
+        );
+        assert_eq!(
+            baad.rasm().bayan.basmat_luba,
+            None,
+            "a record that already bound was re-measured against today's install"
+        );
+        assert_eq!(baad.rasm().waqt_tabdeel, WAQT);
+        Ok(())
     }
 }

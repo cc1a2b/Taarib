@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getRouteApi } from '@tanstack/react-router';
 import { kasr } from '@/mustalahat/arqam';
 import type { JSX, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { MiftahQism } from '@/hayat/aqsam_idadat';
 import { hallil } from '@/hayat/ikhtisarat';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
@@ -39,6 +41,8 @@ import type {
 import './idadat.css';
 
 /** شاشة الإعدادات — a working copy of the whole tree, edited locally and written back in one save. */
+
+const wajihat = getRouteApi('/idadat');
 
 type MiftahManassa = Exclude<keyof IdadatManassat, 'mujalladat_idafiya' | 'fahs_tilqai'>;
 
@@ -308,20 +312,6 @@ function anshaKhatar(khata: KhataJisr, lugha: Lugha): void {
     ramz: khata.khata?.ramz ?? khata.amr,
   });
 }
-
-/** The eleven sections, each folding on its own. */
-type MiftahQism =
-  | 'ard'
-  | 'manassat'
-  | 'taareeb'
-  | 'takhzin'
-  | 'khutut'
-  | 'muzawwidun'
-  | 'masadir'
-  | 'tahdith'
-  | 'tashkhis'
-  | 'tabaqa'
-  | 'ikhtisarat';
 
 /**
  * A plain chevron. Symmetric about the grid's centre line, so the reading
@@ -811,6 +801,22 @@ export function IdadatShasha(): JSX.Element {
       unsur.focus();
     }
   });
+
+  // The other half of every "Open Settings" in the product. A failure that
+  // names a section carries it in the address, and the screen answers by
+  // unfolding that section and putting the caret on its heading — which
+  // scrolls it into view — instead of dropping the reader at the top of an
+  // eleven-section document to hunt for the row the failure was about. The
+  // heading only exists once the tree has loaded, so the request goes through
+  // the same waiting ref the palette uses rather than straight to `focus`.
+  const { qism } = wajihat.useSearch();
+  useEffect(() => {
+    if (qism === undefined) {
+      return;
+    }
+    iftahQism(qism);
+    marjiTarkeez.current = `idadat-unwan-${qism}`;
+  }, [qism, iftahQism]);
 
   const awamirShasha = useMemo<readonly AmrLawha[]>(
     () => [

@@ -14,7 +14,7 @@ use walkdir::WalkDir;
 
 use crate::bayan::{Muthabbit, NawTathbeet, TarifLuba, Tathbeet};
 use crate::itlaq;
-use crate::khata::{KhataTathbeet, NatijatTathbeet};
+use crate::khata::{KhataTathbeet, MasdarKhatt, NatijatTathbeet};
 use crate::mawdi::WajhatLuba;
 use crate::nusus::Nashir;
 use crate::tahaqquq::{NatijatTahaqquq, tahaqquq_kamil};
@@ -374,7 +374,58 @@ pub fn muhtawa_ruqaa(aila: AilatMuharrik, bayt: Vec<u8>, masar: &Path) -> Natija
         .map_err(|khata| khata_ruqaa(masar, &khata))
 }
 
-/// The font files a package names, read out of the font store so they can be
+/// Which font set a root holds, and therefore who is able to put a file in it.
+///
+/// Carried rather than inferred from position. The installer has to be able to
+/// say whose problem an unresolvable face is, and "the first root is the user's"
+/// is precisely the kind of agreement between two call sites that was already
+/// wrong once here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum NawJidhrKhutut {
+    /// The user's own font directory — the only root anybody can add a face to.
+    Mustakhdim,
+    /// A set the build ships. Read-only, the same in every install of the same
+    /// version, and deliberately never mirrored into the user's directory.
+    Bina,
+}
+
+/// One font root an install resolves the faces a package names against.
+///
+/// The list of these is assembled by whoever owns the build's layout — the
+/// studio, or an automatic run's own staging directory — because this crate
+/// knows nothing about where a bundle is unpacked. What it must be given is
+/// *every* root the compiler was allowed to bundle a face from: a face resolved
+/// against fewer roots than it was chosen from is a package that can be built
+/// and never installed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JidhrKhutut {
+    /// The directory searched.
+    pub masar: PathBuf,
+    /// Whose set it holds.
+    pub naw: NawJidhrKhutut,
+}
+
+impl JidhrKhutut {
+    /// A root holding the user's own imported faces.
+    #[must_use]
+    pub fn mustakhdim(masar: impl Into<PathBuf>) -> Self {
+        Self {
+            masar: masar.into(),
+            naw: NawJidhrKhutut::Mustakhdim,
+        }
+    }
+
+    /// A root holding a set the build ships.
+    #[must_use]
+    pub fn bina(masar: impl Into<PathBuf>) -> Self {
+        Self {
+            masar: masar.into(),
+            naw: NawJidhrKhutut::Bina,
+        }
+    }
+}
+
+/// The font files a package names, read out of the font stores so they can be
 /// placed beside the package.
 ///
 /// Only an engine whose adapter draws text itself takes fonts this way. The
@@ -385,26 +436,34 @@ pub fn muhtawa_ruqaa(aila: AilatMuharrik, bayt: Vec<u8>, masar: &Path) -> Natija
 /// its own text stack or is handed a face by its own deployment step (Ren'Py's
 /// arrives inside its component), and for those this returns nothing.
 ///
-/// A face is found by its exact file name anywhere under the store's font root
-/// and accepted only when its BLAKE3 equals the fingerprint the package
-/// recorded. The fingerprint is not a formality: a face replaced under the same
-/// name shapes differently from every layout the package precomputed, and the
-/// adapter would draw with metrics that belong to a different file.
+/// A face is found by its exact file name anywhere under a root and accepted
+/// only when its BLAKE3 equals the fingerprint the package recorded. The
+/// fingerprint is not a formality: a face replaced under the same name shapes
+/// differently from every layout the package precomputed, and the adapter would
+/// draw with metrics that belong to a different file. So every candidate is
+/// hashed and the first that matches wins, rather than the first that is named
+/// right.
 ///
-/// This existed as a gap for two phases. The Unity plugin looked for
-/// `khutut/` beside the package and refused at launch when it was absent, and
-/// no step anywhere placed it — so a Unity game installed cleanly, logged the
-/// refusal, and stayed English.
+/// **Every** root is searched, which is the correction this signature carries.
+/// It used to take one directory while every compile path chose faces from two
+/// — the user's own directory and the read-only set the build ships — so a
+/// patch built with a bundled face named a file the installer then refused to
+/// find, and told the user to update Taarib, which re-shipped the same set to
+/// the same place the installer was not looking. The only escape was to find the
+/// `.ttf` inside the application's own installation directory and import it as
+/// though it were a font of the user's own.
 ///
 /// # Errors
 ///
-/// [`KhataTathbeet::KhattMafqud`] naming the face when the store holds no file
-/// of that name or the one it holds has a different fingerprint, and
+/// [`KhataTathbeet::KhattMafqud`] naming the face when no root holds a file of
+/// that name carrying that fingerprint — and saying which set the face belongs
+/// to, because "update Taarib" and "add the file under Settings → Fonts" are
+/// different instructions and only one of them is ever right. And
 /// [`KhataTathbeet::MasarKharij`] when a recorded name is not a bare file name.
 pub fn muhtawa_khutut(
     aila: AilatMuharrik,
     khutut: &[BasmatKhatt],
-    jidhr_khutut: &Path,
+    judhur: &[JidhrKhutut],
 ) -> NatijatTathbeet<Vec<WadaMuhtawa>> {
     if aila != AilatMuharrik::Unity {
         return Ok(Vec::new());
@@ -418,34 +477,74 @@ pub fn muhtawa_khutut(
         if wajha.ism() != khatt.ism {
             return Err(KhataTathbeet::MasarKharij {
                 masar: PathBuf::from(&khatt.ism),
-                jidhr: jidhr_khutut.to_path_buf(),
+                jidhr: judhur
+                    .first()
+                    .map(|jidhr| jidhr.masar.clone())
+                    .unwrap_or_default(),
                 sabab: "a font name in the package is not a bare file name".to_owned(),
             });
         }
-        let masar =
-            jid_khatt(jidhr_khutut, &khatt.ism).ok_or_else(|| KhataTathbeet::KhattMafqud {
-                ism: khatt.ism.clone(),
-                jidhr: jidhr_khutut.to_path_buf(),
-                sabab: "no file of that name is in the store".to_owned(),
-            })?;
-        let bayt = std::fs::read(&masar).map_err(|sabab| KhataTathbeet::KhattMafqud {
-            ism: khatt.ism.clone(),
-            jidhr: jidhr_khutut.to_path_buf(),
-            sabab: format!("{} could not be read: {sabab}", masar.display()),
-        })?;
-        if blake3::hash(&bayt).as_bytes() != khatt.basma.bayt() {
-            return Err(KhataTathbeet::KhattMafqud {
-                ism: khatt.ism.clone(),
-                jidhr: jidhr_khutut.to_path_buf(),
-                sabab: format!(
-                    "{} is not the file the package was shaped against (fingerprint differs)",
-                    masar.display()
-                ),
-            });
-        }
-        muhtawa.push(WadaMuhtawa { wajha, bayt });
+        muhtawa.push(WadaMuhtawa {
+            wajha,
+            bayt: iqra_khatt(khatt, judhur)?,
+        });
     }
     Ok(muhtawa)
+}
+
+/// Reads one face out of the first root that holds it under the recorded
+/// fingerprint.
+///
+/// A candidate that hashes to something else is passed over rather than
+/// accepted or refused outright: the user's directory can hold a different
+/// `Amiri.ttf` from the build's, and finding the wrong one first is not a
+/// reason to stop looking for the right one. What is never passed over is the
+/// hash — a face resolved by name alone is a different font.
+fn iqra_khatt(khatt: &BasmatKhatt, judhur: &[JidhrKhutut]) -> NatijatTathbeet<Vec<u8>> {
+    let mut asbab: Vec<String> = Vec::new();
+    // Which set the face belongs to, decided by which root carries the name at
+    // all — the one signal on this machine that survives the file being wrong
+    // or unreadable. The package itself does not record it: every build of one
+    // version ships the same set, so a name a build root carries is a face
+    // Taarib owes the user, and a name no build root carries is one only the
+    // user can supply.
+    let mut masdar = MasdarKhatt::Mustakhdim;
+    for jidhr in judhur {
+        for masar in jid_khutut(&jidhr.masar, &khatt.ism) {
+            if jidhr.naw == NawJidhrKhutut::Bina {
+                masdar = MasdarKhatt::Bina;
+            }
+            match std::fs::read(&masar) {
+                Ok(bayt) if blake3::hash(&bayt).as_bytes() == khatt.basma.bayt() => {
+                    return Ok(bayt);
+                },
+                Ok(_) => asbab.push(format!(
+                    "{}: the file there is not the one the package was shaped against",
+                    masar.display()
+                )),
+                Err(sabab) => {
+                    asbab.push(format!("{} could not be read: {sabab}", masar.display()));
+                },
+            }
+        }
+    }
+    Err(KhataTathbeet::KhattMafqud {
+        ism: khatt.ism.clone(),
+        masdar,
+        judhur: judhur.iter().map(|jidhr| jidhr.masar.clone()).collect(),
+        sabab: if asbab.is_empty() {
+            format!(
+                "searched {}",
+                judhur
+                    .iter()
+                    .map(|jidhr| jidhr.masar.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        } else {
+            asbab.join("; ")
+        },
+    })
 }
 
 /// The directory under `taarib/` a Unity takeover reads its faces from.
@@ -458,15 +557,22 @@ const MUJALLAD_KHUTUT: &str = "khutut";
 /// rather than a walk.
 const UMQ_KHUTUT: usize = 3;
 
-/// Finds one face by exact file name under the font root.
-fn jid_khatt(jidhr: &Path, ism: &str) -> Option<PathBuf> {
+/// Every file of one exact name under a font root, in a stable order.
+///
+/// All of them rather than the first: a store is `<family>/<file>`, and the
+/// same file name can sit under two families with only one of them carrying the
+/// fingerprint the package recorded. Sorted so that two machines holding the
+/// same store report the same candidate in the same refusal.
+fn jid_khutut(jidhr: &Path, ism: &str) -> Vec<PathBuf> {
     WalkDir::new(jidhr)
         .max_depth(UMQ_KHUTUT)
         .follow_links(false)
+        .sort_by_file_name()
         .into_iter()
         .filter_map(Result::ok)
-        .find(|madkhal| madkhal.file_type().is_file() && madkhal.file_name() == ism)
+        .filter(|madkhal| madkhal.file_type().is_file() && madkhal.file_name() == ism)
         .map(walkdir::DirEntry::into_path)
+        .collect()
 }
 
 fn khata_ruqaa(jidhr: &Path, khata: &taarib_ruqaa::khata::KhataRuqaa) -> KhataTathbeet {

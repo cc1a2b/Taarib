@@ -36,6 +36,7 @@ use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use sha2::{Digest as _, Sha256};
+use taarib_tathbeet::masar_tathbeet::JidhrKhutut;
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, MasarMatlub, QeemaSiyaq, Ramz, Tafsir, arqam, khutwa_io, siyaq_io,
 };
@@ -1243,20 +1244,41 @@ pub(crate) fn jidhr_mawarid() -> Option<&'static Path> {
     JIDHR_MAWARID.get().map(PathBuf::as_path)
 }
 
-/// Every font root a session may read, in precedence order.
+/// Every font root a session may read, in precedence order, each carrying whose
+/// set it is.
 ///
 /// The user's own directory first, then the bundle's. Both, rather than a
 /// mirror into one: the bundled set is read-only and belongs to the build, and
 /// copying it into the user's directory would put thirty files a user never
 /// chose where they keep the ones they did — and put them back every launch
 /// after they deleted them.
+///
+/// The tag is not decoration. An install that cannot resolve a face has to say
+/// who is able to supply it, and the only thing on the machine that answers
+/// that is which root carries the name — so the answer has to travel with the
+/// root rather than be re-derived from its position by whoever receives it.
 #[must_use]
-pub(crate) fn judhur_khutut(masarat: &Masarat) -> Vec<PathBuf> {
-    let mut judhur = vec![masarat.khutut()];
+pub(crate) fn judhur_khutut_musannafa(masarat: &Masarat) -> Vec<JidhrKhutut> {
+    let mut judhur = vec![JidhrKhutut::mustakhdim(masarat.khutut())];
     if let Some(jidhr) = jidhr_mawarid() {
-        judhur.push(jidhr.join(BADIYAT_KHUTUT));
+        judhur.push(JidhrKhutut::bina(jidhr.join(BADIYAT_KHUTUT)));
     }
     judhur
+}
+
+/// The same roots as bare paths, for the readers that only browse files.
+///
+/// A projection of the list above and never a second list of its own. The two
+/// disagreeing is not a hypothetical: the compiler chose faces from both roots
+/// while the installer searched one, so every patch built with a bundled face
+/// compiled and then refused to install, pointing the user at an update that
+/// re-shipped the same set to the same place the installer was not looking.
+#[must_use]
+pub(crate) fn judhur_khutut(masarat: &Masarat) -> Vec<PathBuf> {
+    judhur_khutut_musannafa(masarat)
+        .into_iter()
+        .map(|jidhr| jidhr.masar)
+        .collect()
 }
 
 /// Every usable font file under a set of roots, recursively, sorted.
@@ -1308,4 +1330,46 @@ pub(crate) fn milaffat_khutut(judhur: &[PathBuf]) -> Vec<PathBuf> {
         }
     }
     khraj
+}
+
+#[cfg(test)]
+#[allow(
+    clippy::panic,
+    clippy::expect_used,
+    clippy::missing_panics_doc,
+    reason = "a test reports failure by panicking; the lints are written for library code, \
+              and honouring them here would mean a test that cannot fail"
+)]
+mod ikhtibarat {
+    use taarib_usus::masarat::Masarat;
+
+    use super::{judhur_khutut, judhur_khutut_musannafa};
+
+    /// The invariant the install path rests on: every root a compile may bundle
+    /// a face from is a root an install searches.
+    ///
+    /// It is a projection rather than an agreement between two lists, so this
+    /// cannot fail while the pair is written the way it is — which is the
+    /// point. It fails the moment somebody adds a root to one of them, which is
+    /// exactly how the two came apart the first time: the browsing list grew
+    /// the bundled root and the install call kept passing a single directory,
+    /// and every patch built with a bundled face became uninstallable.
+    #[test]
+    fn judhur_al_tathbeet_hiya_judhur_al_tajmee() {
+        let masarat = Masarat::min_judhur("/taarib/bayanat", "/taarib/idadat");
+        let musannafa: Vec<_> = judhur_khutut_musannafa(&masarat)
+            .into_iter()
+            .map(|jidhr| jidhr.masar)
+            .collect();
+        assert_eq!(
+            judhur_khutut(&masarat),
+            musannafa,
+            "a root the compiler can choose a face from and the installer does not search is a \
+             package that can be built and never installed"
+        );
+        assert!(
+            !musannafa.is_empty(),
+            "the user's own directory is always a root, bundle or no bundle"
+        );
+    }
 }

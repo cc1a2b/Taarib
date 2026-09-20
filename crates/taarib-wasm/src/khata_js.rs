@@ -77,6 +77,10 @@ pub enum Khutwa {
     TahrirMasaha = 17,
     /// Grant the permission the operating system refused.
     ManhSalahiya = 18,
+    /// Open this game's overlay: its capture regions and its reading history.
+    FathTabaqa = 19,
+    /// Open this game's automatic run.
+    FathTilqai = 20,
 }
 
 /// How badly a failure hurts, as JavaScript sees it.
@@ -176,6 +180,8 @@ fn raqm_khutwa(khutwa: &KhutwaDakhili) -> u32 {
         KhutwaDakhili::IblaghLilMalik => 16,
         KhutwaDakhili::TahrirMasaha => 17,
         KhutwaDakhili::ManhSalahiya => 18,
+        KhutwaDakhili::FathTabaqa => 19,
+        KhutwaDakhili::FathTilqai => 20,
     }
 }
 

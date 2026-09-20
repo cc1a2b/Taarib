@@ -620,6 +620,14 @@ fn maktaba(
             hajm: asasi.hajm,
             akhir_laab: asasi.akhir_laab.clone(),
             akhir_tahdith: asasi.akhir_tahdith.clone(),
+            // A scan cannot fingerprint a build and does not pretend to. The
+            // fingerprint is taken over a named selection of containers, that
+            // selection ships inside a patch package, and a scan of four hundred
+            // games holds no package for any of them — it would also be hashing
+            // every byte of every installed game to produce four hundred numbers
+            // nothing yet has anything to compare against. The install takes the
+            // measurement, with the recipe in hand, and records it; a scan writes
+            // the game and leaves the build to whoever can measure one.
             bina: None,
             suwar: taarib_mustalahat::luba::SuwarLuba::default(),
             beea: asasi.beea.clone(),

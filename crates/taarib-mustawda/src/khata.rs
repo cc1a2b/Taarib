@@ -313,8 +313,16 @@ impl Tafsir for KhataMustawda {
             Self::ShareehaMajhula { .. }
             | Self::ShareehaTalifa { .. }
             | Self::HajmMufrit { .. } => Khutwa::FathTashkhis,
-            Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladManassa),
-            Self::LaMutabaqa | Self::FahrasMujtamaKabir { .. } => Khutwa::LaShay,
+            // Every local file this crate touches is inside the patch store or
+            // an offline share, never a launcher's install; asking for a
+            // launcher location was a default nothing here had chosen.
+            Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladRuqaa),
+            // Nothing in the catalogue fits this build, which is what the
+            // automatic pipeline is for: it translates the game in front of
+            // the user rather than waiting for somebody to publish a match.
+            Self::LaMutabaqa => Khutwa::FathTilqai,
+            // A cap a Taarib release moves, like every other cap here.
+            Self::FahrasMujtamaKabir { .. } => Khutwa::TahdithTaarib,
             Self::MisahaGhayrKafiya { .. } => Khutwa::FathIdadat {
                 qism: QismIdadat::Takhzin,
             },

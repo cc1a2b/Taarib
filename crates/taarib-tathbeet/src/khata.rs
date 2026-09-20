@@ -115,6 +115,37 @@ impl IttijahDaght {
     }
 }
 
+/// Whose font set a face the package names belongs to.
+///
+/// Kept apart for the same reason as [`IttijahDaght`]: the remedies have
+/// nothing in common. A face the build ships is one Taarib owes the user, and
+/// the answer is a build that carries it. A face the build does not ship came
+/// off the font folder of whoever compiled the patch, and no Taarib release
+/// will ever contain it — the answer is the file itself, imported.
+///
+/// It is decided by which root carries the name, not claimed by the package:
+/// every build of one version ships the same set, so the set on this machine
+/// answers the question without the package having to have recorded it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum MasdarKhatt {
+    /// A face only the user can supply — no root the build ships carries the
+    /// name.
+    Mustakhdim,
+    /// A face the build ships, absent or wrong in the set on this machine.
+    Bina,
+}
+
+impl MasdarKhatt {
+    /// The name used in reports and log lines.
+    #[must_use]
+    pub const fn ism(self) -> &'static str {
+        match self {
+            Self::Mustakhdim => "a font the user added",
+            Self::Bina => "a font this build ships",
+        }
+    }
+}
+
 /// Failures of installation, restore and verification.
 #[derive(Debug, thiserror::Error)]
 pub enum KhataTathbeet {
@@ -391,8 +422,8 @@ pub enum KhataTathbeet {
         sabab: String,
     },
 
-    /// A font the package names is not in this build's font store, or the one
-    /// there is not the file the package was shaped against.
+    /// A font the package names is in none of the font stores this machine has,
+    /// or the files under that name are not the one it was shaped against.
     ///
     /// A Unity takeover rasterises text itself, through the faces the patch
     /// records by name and fingerprint, and it reads them from beside the
@@ -401,13 +432,26 @@ pub enum KhataTathbeet {
     /// from every layout the package precomputed. Both are refused before the
     /// backup is taken, because an install that placed the package without its
     /// face would be a game that logs a refusal at launch and stays English.
-    #[error("the font {ism} the package names is not in the store at {jidhr}")]
+    ///
+    /// `masdar` is what makes this an answerable refusal rather than a wall.
+    /// The two ways to reach it have opposite remedies, and for a phase both
+    /// were told to update Taarib — which re-ships the same read-only set the
+    /// installer was not searching, and does nothing at all for a face that was
+    /// never Taarib's to ship.
+    #[error("the font {ism} the package names is in none of the {} store(s) searched", .judhur.len())]
     KhattMafqud {
         /// The file name the package records.
         ism: String,
-        /// The font root that was searched.
-        jidhr: PathBuf,
-        /// Absent, or present with the wrong fingerprint.
+        /// Whose set the face belongs to, and so which of two remedies applies.
+        masdar: MasdarKhatt,
+        /// Every font root that was searched, in the order they were searched.
+        ///
+        /// All of them rather than the one that failed, because the refusal a
+        /// user reads has to be answerable: "not in the store" over a single
+        /// path, while a second store held the answer, is what made this
+        /// message a dead end for a whole phase.
+        judhur: Vec<PathBuf>,
+        /// Absent, or present with the wrong fingerprint, per candidate found.
         sabab: String,
     },
 
@@ -661,7 +705,9 @@ impl KhataTathbeet {
             Self::MunassaTaamal { malaf, .. } | Self::HalatManassaMajhula { malaf, .. } => {
                 Some(malaf)
             },
-            Self::KhattMafqud { jidhr, .. } => Some(jidhr),
+            // The user's own directory, which precedence puts first and which is
+            // the only one of the roots anybody can act on directly.
+            Self::KhattMafqud { judhur, .. } => judhur.first().map(PathBuf::as_path),
             Self::HajmMufrit { .. }
             | Self::IdadGhayrMustaad { .. }
             | Self::IdadGhayrMunaffadh { .. }
@@ -841,12 +887,21 @@ impl Tafsir for KhataTathbeet {
                 "تعذّر ضبط إعداد التشغيل ({mahall})، وبدونه لا تُحمَّل ملفات تعريب في اللعبة \
                  أصلًا. أُوقف التثبيت بدل أن يُقال إنه نجح واللعبة تعمل كما كانت."
             ),
-            Self::KhattMafqud { ism, .. } => format!(
-                "الخطّ «{ism}» الذي تسمّيه الرقعة ليس في مخزن خطوط هذا الإصدار من تعريب، أو \
-                 أنّ الموجود باسمه ليس الملف الذي شُكِّلت الرقعة به. لم يُكتب شيء: رقعة تُوضع \
-                 بلا خطّها تترك اللعبة بلغتها الأصلية وتسجّل رفضًا عند التشغيل. حدِّث تعريب \
-                 ثم أعد المحاولة."
-            ),
+            Self::KhattMafqud { ism, masdar, .. } => match masdar {
+                MasdarKhatt::Bina => format!(
+                    "الخطّ «{ism}» الذي تسمّيه الرقعة من الخطوط التي يشحنها هذا الإصدار، لكن لا \
+                     توجد على هذا الجهاز نسخةٌ صالحة منه. لم يُكتب شيء: رقعة تُوضع بلا خطّها \
+                     تترك اللعبة بلغتها الأصلية وتسجّل رفضًا عند التشغيل. حدِّث تعريب ثم أعد \
+                     المحاولة؛ لا يأتي هذا الخطّ إلا مع إصدارٍ يحمله."
+                ),
+                MasdarKhatt::Mustakhdim => format!(
+                    "الخطّ «{ism}» الذي تسمّيه الرقعة ليس من الخطوط التي يشحنها هذا الإصدار، فهو \
+                     من مجلّد خطوط الجهاز الذي بُنيت عليه الرقعة، وليس في أيّ من مخازن خطوط هذا \
+                     الجهاز. لم يُكتب شيء: رقعة تُوضع بلا خطّها تترك اللعبة بلغتها الأصلية \
+                     وتسجّل رفضًا عند التشغيل. أضِف ملفّ الخطّ نفسه من الإعدادات ← الخطوط ثم \
+                     أعد التثبيت؛ لن يجلبه أيّ تحديث لتعريب."
+                ),
+            },
             Self::LubaTashtaghil { amaliya, .. } => format!(
                 "اللعبة تعمل الآن ({amaliya}). أغلقها تمامًا ثم أعد المحاولة؛ لا يُعدَّل ملف \
                  واللعبة تقرؤه."
@@ -1078,13 +1133,25 @@ impl Tafsir for KhataTathbeet {
                  deployed would have loaded without it, so the install stopped rather than \
                  report success over a game that runs exactly as it did before."
             ),
-            Self::KhattMafqud { ism, jidhr, sabab } => format!(
-                "The font {ism} the package names is not in this build's font store at {} \
-                 ({sabab}). Nothing was written: a package placed without its face leaves the \
-                 game in its original language and logs a refusal at launch. Update Taarib and \
-                 try again.",
-                jidhr.display()
-            ),
+            Self::KhattMafqud {
+                ism, masdar, sabab, ..
+            } => match masdar {
+                MasdarKhatt::Bina => format!(
+                    "The font {ism} the package names is one this build ships, but this machine \
+                     has no usable copy of it ({sabab}). Nothing was written — a package placed \
+                     without its face leaves the game in its original language and logs a \
+                     refusal at launch. Update Taarib and try again: a build carrying that face \
+                     is the only thing that can supply it."
+                ),
+                MasdarKhatt::Mustakhdim => format!(
+                    "The font {ism} the package names is not one of the faces this build ships, \
+                     so it came from the font folder of the machine the patch was built on, and \
+                     no font store here holds it ({sabab}). Nothing was written — a package \
+                     placed without its face leaves the game in its original language and logs \
+                     a refusal at launch. Add that same font file under Settings → Fonts and \
+                     install again; no Taarib update will bring it."
+                ),
+            },
             Self::LubaTashtaghil { amaliya, tanfidhi } => format!(
                 "{amaliya} is running ({}) and the game cannot be modified until it exits \
                  completely. Close it and try again.",
@@ -1276,8 +1343,19 @@ impl Tafsir for KhataTathbeet {
 
             Self::IsdarBayanMajhul { .. }
             | Self::MukawwinMafqud { .. }
-            | Self::MukawwinNaqis { .. }
-            | Self::KhattMafqud { .. } => Khutwa::TahdithTaarib,
+            | Self::MukawwinNaqis { .. } => Khutwa::TahdithTaarib,
+
+            // The one refusal here whose remedy depends on whose file is
+            // missing. A face the build ships is Taarib's to deliver, so a
+            // newer build is the fix. A face the build does not ship will not
+            // arrive in any release however many the user installs, and sending
+            // them to the updater is the dead end this split exists to end.
+            Self::KhattMafqud { masdar, .. } => match masdar {
+                MasdarKhatt::Bina => Khutwa::TahdithTaarib,
+                MasdarKhatt::Mustakhdim => Khutwa::FathIdadat {
+                    qism: QismIdadat::Khutut,
+                },
+            },
 
             // A manifest that names a path outside the game, one that
             // contradicts itself, or a proof for the wrong subject reaching the
@@ -1464,9 +1542,23 @@ impl Tafsir for KhataTathbeet {
                 daa("mahall", QeemaSiyaq::Nass(mahall.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             },
-            Self::KhattMafqud { ism, jidhr, sabab } => {
+            Self::KhattMafqud {
+                ism,
+                masdar,
+                judhur,
+                sabab,
+            } => {
                 daa("khatt", QeemaSiyaq::Nass(ism.clone()));
-                daa("masar", QeemaSiyaq::Masar(jidhr.clone()));
+                daa("masdar", QeemaSiyaq::Nass(masdar.ism().to_owned()));
+                daa(
+                    "judhur",
+                    QeemaSiyaq::Qaima(
+                        judhur
+                            .iter()
+                            .map(|jidhr| jidhr.display().to_string())
+                            .collect(),
+                    ),
+                );
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             },
             Self::HalatLubaMajhula { sunduq, tanfidhi } => {

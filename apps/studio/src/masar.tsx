@@ -9,6 +9,8 @@ import {
 import type { JSX } from 'react';
 import { useEffect } from 'react';
 
+import type { MiftahQism } from '@/hayat/aqsam_idadat';
+import { huwaQism } from '@/hayat/aqsam_idadat';
 import { KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
 import { ittijah, t, wasm } from '@/lugha/lugha';
@@ -622,10 +624,23 @@ const masarTabaqa = createRoute({
   component: Tabaqa,
 });
 
-/** The settings tree. */
+/**
+ * The settings tree, and the section a caller wants it opened at.
+ *
+ * Settings is eleven folding sections and one scroll, so "open Settings" on
+ * its own lands the reader at the top of a document and leaves them hunting
+ * for the row the failure was about. Every failure that names a section
+ * already carries which one; the address is what carries it the rest of the
+ * way, and carrying it there rather than in a store means the deep link
+ * survives a reload and can be shared in a report.
+ */
 const masarIdadat = createRoute({
   getParentRoute: () => jidhr,
   path: '/idadat',
+  validateSearch: (khaam: Record<string, unknown>): { readonly qism?: MiftahQism } => {
+    const qism = khaam['qism'];
+    return huwaQism(qism) ? { qism } : {};
+  },
   component: IdadatShasha,
 });
 

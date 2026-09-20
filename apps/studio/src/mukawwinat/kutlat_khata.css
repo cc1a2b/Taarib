@@ -92,6 +92,32 @@
   margin-block-start: var(--misafa-16);
 }
 
+/* --- a step whose actor is not Taarib ---------------------------------------
+   Three of the next steps name something only the user can do, and only
+   outside this product: verifying a game through its own launcher, granting a
+   permission the operating system refused, reaching whoever contributed a
+   patch. None has a control here, and inventing one — a button labelled with a
+   thing the click cannot do — would be worse than the sentence. So it is drawn
+   as the directive it is, in the same shape the automatic run already gives a
+   next step: the accent rule on the leading edge, the reading weight, and no
+   affordance to press.
+
+   It takes the whole row rather than sitting in the flow of the action bar, so
+   that a control the caller adds beside it stays legible as the control and
+   the two never read as a pair of buttons. */
+
+.halat__khutwa {
+  flex: 1 1 100%;
+  margin: 0;
+  max-inline-size: 56ch;
+  padding-inline-start: var(--misafa-12);
+  font-weight: var(--wazn-mutawassit);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tamyeez);
+  text-wrap: pretty;
+}
+
 /* --- the foot: the code, and the one control that copies it -----------------
    Ruled off from the sentence and the action above it, in the smallest step
    the scale has: it is for the reader who is filing a report, not for the one

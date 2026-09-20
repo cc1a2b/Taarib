@@ -10,9 +10,9 @@ use taarib_aman::KhataAman;
 use taarib_aman::iqrar::{self, SijillIqrar};
 use taarib_aman::qaimat_sahb::{QaimaMuraqaba, QaimatSahb};
 use taarib_khatm::MiftahAam;
-use taarib_makhzan::sijillat::{SijillMuharrik, SijillRuqaa, SijillTathbeet};
+use taarib_makhzan::sijillat::{SijillBina, SijillMuharrik, SijillRuqaa, SijillTathbeet};
 use taarib_makhzan::wasl::{Makhzan, alaan};
-use taarib_mustalahat::bina::MutabaqaBina;
+use taarib_mustalahat::bina::{BinaId, MutabaqaBina};
 use taarib_mustalahat::luba::{Luba, LubaId};
 use taarib_mustalahat::muharrik::{Tabaqa, TaqreerImkaniyat};
 use taarib_mustalahat::ruqaa::{MulakhkhasRuqaa, RuqaaId, RuqaaRevision};
@@ -23,6 +23,7 @@ use taarib_mustawda::sahb::{NatijatTajdid, jaddid_qaimat_sahb, jaddid_qaimat_sah
 use taarib_mustawda::tanzeel::{self, MukhbirTaqaddum, TalabTanzeel, Taqaddum, nazzil};
 use taarib_mustawda::tarteeb::{FiatTaqyeem, KhiyaratTarteeb, MudkhalTarteeb, rattib};
 use taarib_mustawda::{FahrasMajlub, MarhalatTanzeel, jalb_fahras};
+use taarib_tarqee::irtibat::MukhattatBasma;
 use taarib_tathbeet::bayan::{NawTathbeet, Tathbeet};
 use taarib_tathbeet::khata::KhataTathbeet;
 use taarib_tathbeet::masar_tathbeet::la_tashtaghil;
@@ -35,7 +36,7 @@ use taarib_tathbeet::tarkib::{HajatItar, KhuttatTarkib, LubaMuhallala, NawMudkha
 use taarib_tathbeet::wukala::WakeelQaim;
 use taarib_usus::idadat::{Idadat, MakhzanIdadat};
 use taarib_usus::khata::{
-    Khata, Khutura, Khutwa, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
+    Khata, Khutura, Khutwa, MasarMatlub, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
 use taarib_usus::khata_min;
 use taarib_usus::masarat::Masarat;
@@ -1294,11 +1295,38 @@ pub enum KhataTathbeetAmr {
         tafsil: String,
     },
 
-    /// No build fingerprint is on record, so nothing can be matched against it.
-    #[error("{ism} has no stored build fingerprint; probe it first")]
-    BinaMajhula {
-        /// The game.
+    /// The build had to be measured and the game is not where the library left
+    /// it, so there is nothing to measure.
+    ///
+    /// Its own refusal rather than a shared one, because the way out differs: a
+    /// game that is gone is pointed at or reinstalled, a game that is there and
+    /// will not measure has files its own launcher's verify repairs.
+    #[error("{ism} is no longer at {}, so its build cannot be measured", jidhr.display())]
+    BinaBilaLuba {
+        /// The game's name, as its launcher gives it.
         ism: String,
+        /// Where the library last saw it.
+        jidhr: PathBuf,
+    },
+
+    /// The installed build could not be fingerprinted through the package's own
+    /// recipe.
+    ///
+    /// `9028` used to read "no build fingerprint is on record; probe the game
+    /// first", and nothing in this product has ever written that record — the
+    /// probe least of all, so the one step it named was the one action
+    /// guaranteed not to help. The measurement is taken here now. The number is
+    /// kept because it still says the same thing about the same game — the build
+    /// this package would be matched against could not be established — and an
+    /// old diagnostics bundle naming `9028` still reads as what it meant.
+    #[error("the build of {ism} could not be measured at {}: {sabab}", jidhr.display())]
+    BinaMutaadhdhira {
+        /// The game's name.
+        ism: String,
+        /// Where its files were read from.
+        jidhr: PathBuf,
+        /// What the fingerprint recipe said.
+        sabab: String,
     },
 
     /// The install pipeline refused, and carries its own sentence.
@@ -1457,7 +1485,7 @@ impl Tafsir for KhataTathbeetAmr {
                     Self::TanfidhiMajhul { .. } => 25,
                     Self::FuruqGhayrMaduma { .. } => 26,
                     Self::HuzmaTalifa { .. } => 27,
-                    Self::BinaMajhula { .. } => 28,
+                    Self::BinaMutaadhdhira { .. } => 28,
                     Self::TathbeetFashil { .. } => 29,
                     Self::LughaRasmiyaMawjuda { .. } => 30,
                     Self::IqrarNaqis => 34,
@@ -1473,12 +1501,16 @@ impl Tafsir for KhataTathbeetAmr {
                     // Its automatic-path twin is `9137`; the `9130` that would
                     // have aligned with it was taken by the sharing surface.
                     Self::QaimatSahbMahjuba { .. } => 31,
+                    // The last of the reserved three, spent on what the
+                    // measurement behind `9028` leaves over: a game that is not
+                    // on disk at all. It is the headroom the alignment below was
+                    // kept clear of, used for what it was kept for.
+                    Self::BinaBilaLuba { .. } => 32,
                     // The last digit is the automatic path's, deliberately: the
                     // two install routes refuse for the same three reasons out
                     // of the same scan, and `9037`/`9038`/`9039` against
                     // `9127`/`9128`/`9129` says so at a glance in a log, a
-                    // diagnostics bundle and a support thread. 32 stays free so
-                    // the alignment costs no headroom.
+                    // diagnostics bundle and a support thread.
                     Self::HimayaMuktashafa { .. } => 37,
                     Self::FahsHimayaLamYajri { .. } => 38,
                     Self::ShabakaBilaIqrar { .. } => 39,
@@ -1505,11 +1537,15 @@ impl Tafsir for KhataTathbeetAmr {
             | Self::TanfidhiMajhul { .. }
             | Self::FuruqGhayrMaduma { .. }
             | Self::HuzmaTalifa { .. }
-            | Self::BinaMajhula { .. }
             | Self::TathbeetFashil { .. }
             | Self::TawqeeMarfud { .. }
             | Self::RuqaaMulgha { .. } => Khutura::Khatar,
             Self::MuhimmaMutawaqqifa { .. } => Khutura::Tanbeeh,
+            // Both are a disagreement between the library and the disk that the
+            // user can see and settle, on the same reading the submission
+            // surface gives the same two refusals. Nothing was written in
+            // either: the measurement runs before the backup is taken.
+            Self::BinaBilaLuba { .. } | Self::BinaMutaadhdhira { .. } => Khutura::Tanbeeh,
             // Two questions waiting for their answers rather than two things
             // that went wrong, on the same reading `KhataTilqaiAmr` gives the
             // multiplayer refusal. Reporting either as a fault would teach a
@@ -1563,9 +1599,19 @@ impl Tafsir for KhataTathbeetAmr {
                 "تعذّرت قراءة ملف الرقعة؛ ربما لم يكتمل تنزيله. أعد تنزيله ثم أعد المحاولة."
                     .to_owned()
             },
-            Self::BinaMajhula { ism } => {
-                format!("لا توجد بصمة بناء محفوظة لـ{ism}. افحص اللعبة أولًا ثم أعد المحاولة.")
-            },
+            Self::BinaBilaLuba { ism, jidhr } => format!(
+                "قبل التثبيت تُقاس بصمة البناء من ملفات {ism} نفسها، ولم يعد مجلدها في {}. \
+                 لم يُكتب شيء. أعد تثبيت اللعبة من مشغّلها أو دلّ تعريب على مكانها الجديد ثم \
+                 أعد المحاولة.",
+                jidhr.display()
+            ),
+            Self::BinaMutaadhdhira { ism, jidhr, sabab } => format!(
+                "تعذّر قياس بصمة بناء {ism} من ملفاتها في {}: {sabab}. القياس يقرأ الحاويات \
+                 التي تسمّيها الرقعة نفسها، فإن نقص منها ملف فإمّا أنّ التنزيل لم يكتمل وإمّا \
+                 أنّ هذه الرقعة لنسخة أخرى من اللعبة. لم يُكتب شيء. تحقّق من سلامة ملفات \
+                 اللعبة من مشغّلها ثم أعد المحاولة.",
+                jidhr.display()
+            ),
             Self::TathbeetFashil { arabi, .. } => arabi.clone(),
             Self::LughaRasmiyaMawjuda { ism } => format!(
                 "{ism} تصدر بعربية رسمية من ناشرها، فلا تُثبَّت عليها رقعة. الرقعة تستبدل \
@@ -1656,9 +1702,20 @@ impl Tafsir for KhataTathbeetAmr {
             Self::HuzmaTalifa { tafsil } => {
                 format!("The package file could not be read: {tafsil}. Download it again.")
             },
-            Self::BinaMajhula { ism } => {
-                format!("{ism} has no stored build fingerprint; probe the game first.")
-            },
+            Self::BinaBilaLuba { ism, jidhr } => format!(
+                "Installing measures the build fingerprint from {ism}'s own files first, and \
+                 {} is no longer there. Nothing was written. Reinstall the game from its \
+                 launcher, or point Taarib at where it is now, and try again.",
+                jidhr.display()
+            ),
+            Self::BinaMutaadhdhira { ism, jidhr, sabab } => format!(
+                "The build fingerprint of {ism} could not be measured from its files at {}: \
+                 {sabab}. The measurement reads the containers the patch itself names, so a \
+                 missing one means either the game is still downloading or this patch is for a \
+                 different edition of it. Nothing was written. Verify the game's files through \
+                 its launcher and try again.",
+                jidhr.display()
+            ),
             Self::TathbeetFashil { injilizi, .. } => injilizi.clone(),
             Self::LughaRasmiyaMawjuda { ism } => format!(
                 "{ism} already ships official Arabic from its publisher, so no patch is \
@@ -1737,8 +1794,13 @@ impl Tafsir for KhataTathbeetAmr {
     )]
     fn khutwa(&self) -> Khutwa {
         match self {
+            // Both used to promise `IadatMutabaqaBina`, which neither can
+            // deliver: re-matching a patch against a build does not turn a
+            // malformed identity into a patch identity and does not bring back a
+            // listing the registry has withdrawn. Both sentences say to reload
+            // the list, and reloading it is the same operation attempted again.
             Self::MuarrifRuqaaGhayrSalih { .. } | Self::RuqaaGhayrMawjuda { .. } => {
-                Khutwa::IadatMutabaqaBina
+                Khutwa::AadaMuhawala
             },
             Self::LaTathbeet { .. } => Khutwa::LaShay,
             Self::GhayrMuttasil => Khutwa::FathIdadat {
@@ -1748,7 +1810,17 @@ impl Tafsir for KhataTathbeetAmr {
             // Lifted by the next refresh that finds the list, which the next
             // press of the same button runs; nothing on this machine is wrong.
             Self::QaimatSahbMahjuba { .. } => Khutwa::AadaMuhawala,
-            Self::TanfidhiMajhul { .. } | Self::BinaMajhula { .. } => Khutwa::AadaFahsMuharrik,
+            Self::TanfidhiMajhul { .. } => Khutwa::AadaFahsMuharrik,
+            // The measurement needs the game's own files, so the two steps are
+            // the two ways of putting them back: a folder Taarib can find, or a
+            // folder whose contents the launcher has checked. The game screen
+            // offers the picker for the first through its own children; the
+            // second is done in the launcher and nowhere else, which is why the
+            // sentence carries it rather than a button.
+            Self::BinaBilaLuba { .. } => Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MujalladLuba,
+            },
+            Self::BinaMutaadhdhira { .. } => Khutwa::TahaqquqSalamatLuba,
             Self::FuruqGhayrMaduma { .. } => Khutwa::TahdithTaarib,
             // The package is in hand and refused; the diagnostics bundle is
             // what a report of any of the three carries, and none of them is
@@ -1794,8 +1866,20 @@ impl Tafsir for KhataTathbeetAmr {
                 let _ = siyaq.insert("ruqaa".to_owned(), QeemaSiyaq::Nass(ruqaa.clone()));
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
             },
-            Self::LaTathbeet { ism } | Self::TanfidhiMajhul { ism } | Self::BinaMajhula { ism } => {
+            Self::LaTathbeet { ism } | Self::TanfidhiMajhul { ism } => {
                 let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+            },
+            // The same two keys the submission surface writes for the same two
+            // refusals, so one log filter reads the measurement wherever it was
+            // taken from.
+            Self::BinaBilaLuba { ism, jidhr } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
+            },
+            Self::BinaMutaadhdhira { ism, jidhr, sabab } => {
+                let _ = siyaq.insert("ism".to_owned(), QeemaSiyaq::Nass(ism.clone()));
+                let _ = siyaq.insert("jidhr".to_owned(), QeemaSiyaq::Masar(jidhr.clone()));
+                let _ = siyaq.insert("sabab".to_owned(), QeemaSiyaq::Nass(sabab.clone()));
             },
             // Neither carries a fact worth a column: one is a mode the user set
             // and the other is a statement they have not read yet.
@@ -2102,6 +2186,16 @@ pub(crate) fn sahb_hie(qaima: &QaimaMuraqaba) -> HalatSahbHie {
 
 /// One install stage, as the progress event names it.
 pub const ISM_HADATH_TATHBEET: &str = "taarib://marhalat-tathbeet";
+
+/// The stage label for the fingerprint that runs before the gate.
+///
+/// Announced like every other stage, and for the same reason the automatic path
+/// counts it as its own step: hashing a Unity game's containers is seconds of
+/// work, and a window that says nothing while it happens is a window that has
+/// frozen as far as the person in front of it can tell. The payload is an Arabic
+/// sentence because [`taarib_mustawda::tathbeet_bilnaqra::MarhalatTathbeet`]'s
+/// labels are, and the screen renders whatever arrives.
+const MARHALAT_QIYAS_BINA: &str = "قياس بصمة بناء اللعبة";
 
 /// What a completed one-click install reports.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -2446,17 +2540,24 @@ fn sutur(satrat: impl Iterator<Item = String>) -> String {
 /// command assembles its inputs from the store and the package manifest and
 /// reports each stage on [`ISM_HADATH_TATHBEET`].
 ///
+/// The build the package is judged against is measured here, by [`qis_bina`],
+/// from the recipe the package carries — not read out of the store. It used to
+/// be read out of the store, and nothing in this product had ever written the
+/// row, so every press of every install button on every game refused at
+/// `TAARIB-E-9028` and sent the reader to a probe that writes a different ledger.
+///
 /// # Errors
 ///
-/// [`Khata`] naming whichever gate refused: an unreadable package, a build
-/// mismatch without acknowledgement, anti-cheat evidence, a revoked package,
-/// or the installer's own refusals — each in its own words. The safety layer's
-/// six refusals carry their own codes rather than one shared code, so a screen
-/// can tell the one the user answers ([`KhataTathbeetAmr::ShabakaBilaIqrar`],
-/// `TAARIB-E-9039`) from the ones nobody can. Also
-/// [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the game is a Steam
-/// game and Steam itself cannot be found, because the anti-cheat verdict would
-/// then be missing the half of its evidence that only Steam's catalogue holds.
+/// [`Khata`] naming whichever gate refused: an unreadable package, a build that
+/// cannot be measured, a build mismatch without acknowledgement, anti-cheat
+/// evidence, a revoked package, or the installer's own refusals — each in its
+/// own words. The safety layer's six refusals carry their own codes rather than
+/// one shared code, so a screen can tell the one the user answers
+/// ([`KhataTathbeetAmr::ShabakaBilaIqrar`], `TAARIB-E-9039`) from the ones
+/// nobody can. Also [`crate::luba_awamir::KhataLuba::JidhrSteamMajhul`] when the
+/// game is a Steam game and Steam itself cannot be found, because the anti-cheat
+/// verdict would then be missing the half of its evidence that only Steam's
+/// catalogue holds.
 #[tauri::command]
 #[specta::specta]
 #[expect(
@@ -2530,13 +2631,13 @@ pub async fn thabbit_ruqaa(
                 ism: luba.ism.clone(),
             })
         })?;
-    let bina = makhzan
-        .bil_qira(|ittisal| taarib_makhzan::sijillat::SijillBina::jadeed(ittisal).haliya(id))?
-        .ok_or_else(|| {
-            Khata::min_tafsir(&KhataTathbeetAmr::BinaMajhula {
-                ism: luba.ism.clone(),
-            })
-        })?;
+    let _ = nafidha.emit(ISM_HADATH_TATHBEET, MARHALAT_QIYAS_BINA);
+    let bina = {
+        let makhzan = Makhzan::clone(&makhzan);
+        let luba = luba.clone();
+        let mukhattat = irtibat.mukhattat.clone();
+        bil_hajb(move || qis_bina(&makhzan, &luba, &mukhattat)).await?
+    };
     // Built once, here, and handed to both the plan and the manifest. It used to
     // be assembled inline further down, which meant the description of the game
     // the planner saw was constructed separately from the one the preview beside
@@ -2576,7 +2677,7 @@ pub async fn thabbit_ruqaa(
         taarib_tathbeet::masar_tathbeet::muhtawa_khutut(
             taqreer.muharrik.aila,
             &irtibat.khutut,
-            &masarat.khutut(),
+            &crate::mukawwinat_tahmil::judhur_khutut_musannafa(&masarat),
         )
         .map_err(Khata::from)?,
     );
@@ -2667,6 +2768,69 @@ pub async fn thabbit_ruqaa(
         tahaqquq_salim: natija.tahaqquq.salim(),
         sahb: sahb_hie(&qaima),
     })
+}
+
+/// Measures the installed build through the package's own recipe, and records it.
+///
+/// Measured, not remembered. The value decides whether this package may be
+/// written into this game at all — [`taarib_tarqee::irtibat::IrtibatBina::ihkum`]
+/// is handed exactly this fingerprint — and a fingerprint taken the last time
+/// somebody installed describes the files as they were then, so reusing it would
+/// pass a patch onto a build the store has replaced since. The automatic path
+/// measures on every run for that reason; this is the same measurement, through
+/// the same [`taarib_tarqee::irtibat::MukhattatBasma::ihsab`], against the recipe
+/// that travelled inside this package.
+///
+/// The row it writes is the first one anything in this product has ever written.
+/// A fingerprint needs a recipe and a recipe exists only inside a package, so a
+/// library scan cannot produce one — which is why `luba.basma_haliya` was NULL
+/// for every game, why [`rattib_murashshahat`] judged no listing against
+/// anything, and why the diagnostics screen showed no build. One install now
+/// settles all three.
+///
+/// # Errors
+///
+/// [`KhataTathbeetAmr::BinaBilaLuba`] when the game is not where the library
+/// left it, [`KhataTathbeetAmr::BinaMutaadhdhira`] when it is there and the
+/// recipe cannot be run over it, and whatever the store raises.
+fn qis_bina(makhzan: &Makhzan, luba: &Luba, mukhattat: &MukhattatBasma) -> Natija<BinaId> {
+    if !luba.mawjuda || !luba.jidhr.is_dir() {
+        return Err(Khata::from(KhataTathbeetAmr::BinaBilaLuba {
+            ism: luba.ism.clone(),
+            jidhr: luba.jidhr.clone(),
+        }));
+    }
+
+    let (basma, adad_malaffat) = mukhattat.ihsab(&luba.jidhr).map_err(|khata| {
+        Khata::min_tafsir(&KhataTathbeetAmr::BinaMutaadhdhira {
+            ism: luba.ism.clone(),
+            jidhr: luba.jidhr.clone(),
+            sabab: khata.to_string(),
+        })
+        .bi_sabab(Khata::from(khata))
+    })?;
+
+    // Left empty rather than carried over from whatever row was there before.
+    // A launcher's build identifier belongs to the files it was read beside, and
+    // a fingerprint that has moved is a different set of files; attaching the
+    // old identifier to it would claim an exact match for a build nobody looked
+    // at. The upsert keeps the identifier already stored against *this*
+    // fingerprint, which is the one case where it still describes these bytes.
+    let bina = BinaId {
+        manassa: None,
+        basma,
+        adad_malaffat,
+        waqt: makhzan.bil_qira(alaan)?,
+    };
+    makhzan.bi_muamala(|muamala| SijillBina::jadeed(muamala).sajjil(luba.id, &bina))?;
+
+    tracing::info!(
+        luba = %luba.id,
+        basma = %bina.basma,
+        adad_malaffat,
+        "the installed build was fingerprinted and recorded"
+    );
+    Ok(bina)
 }
 
 /// The game as [`taarib_tathbeet::tarkib`] needs it, assembled from the store.
@@ -2790,6 +2954,7 @@ mod ikhtibarat {
     use taarib_aman::kashf_shabaka::{DalalatShabaka, DaleelShabaka, IjmaaShabaka, NawDaleel};
     use taarib_aman::qaimat_sahb::{MuhawalatTajdid, NatijatMuhawala};
     use taarib_aman::tahaqquq_tawqee::SababTawqee;
+    use taarib_makhzan::sijillat::{IdkhalLuba, SijillAlaab};
     use taarib_mustalahat::bina::{Basma, BinaId};
     use taarib_mustalahat::luba::{MasdarLuba, SuwarLuba};
     use taarib_mustalahat::muharrik::{AilatMuharrik, KhalfiyaBarmajiya, Tabaqa};
@@ -3304,6 +3469,216 @@ mod ikhtibarat {
         let baad_ilaqa = iqrar_hie(iqrar::iqra(&malaf)?.as_ref());
         assert!(!baad_ilaqa.yahtaj, "and the answer survives a reread");
         assert_eq!(baad_ilaqa.lugha_nass, Some(Lugha::Injilizi));
+        Ok(())
+    }
+
+    /// The one container the fixture game ships and the fixture recipe names.
+    const HAWIYA: &str = "Luba_Data/resources.assets";
+
+    /// A store, a game directory, and the library row a scan would have left.
+    struct MasrahBina {
+        makhzan: Makhzan,
+        luba: Luba,
+        mukhattat: MukhattatBasma,
+        /// Held for its [`Drop`]; nothing reads it. Last so that it runs after
+        /// the store's connection pool has closed — on Windows a directory
+        /// holding an open database file will not delete.
+        _jidhr: JidhrMuaqqat,
+    }
+
+    /// Sets one up, with the game's one container present or absent.
+    ///
+    /// The row goes in through [`SijillAlaab::sajjil`] with nothing else beside
+    /// it, exactly as `main`'s library scan writes it, so what the measurement
+    /// finds is what a scanned library really holds rather than anything this
+    /// fixture arranged.
+    fn masrah_bina(bil_hawiya: bool) -> Result<MasrahBina, Box<dyn std::error::Error>> {
+        let jidhr = std::env::temp_dir().join(format!("taarib-bina-{}", uuid::Uuid::new_v4()));
+        let haris = JidhrMuaqqat(jidhr.clone());
+        let masarat = Masarat::min_judhur(jidhr.join("bayanat"), jidhr.join("idadat"));
+        let makhzan = Makhzan::min_masar(&masarat.qaida_bayanat())?;
+
+        let jidhr_luba = jidhr.join("luba");
+        std::fs::create_dir_all(&jidhr_luba)?;
+        if bil_hawiya {
+            let masar = jidhr_luba.join(HAWIYA);
+            if let Some(mujallad) = masar.parent() {
+                std::fs::create_dir_all(mujallad)?;
+            }
+            std::fs::write(&masar, b"container bytes")?;
+        }
+
+        let masdar = MasdarLuba::Steam(480);
+        let luba = Luba {
+            id: LubaId::min_masdar(&masdar, ISM),
+            masadir: vec![masdar],
+            ism: ISM.to_owned(),
+            jidhr: jidhr_luba,
+            tanfidhi: None,
+            hajm: 0,
+            akhir_laab: None,
+            akhir_tahdith: None,
+            bina: None,
+            suwar: SuwarLuba::default(),
+            beea: BeeatTawafuq::Asli,
+            mawjuda: true,
+            mukhfiya: false,
+        };
+        makhzan.bi_muamala(|muamala| {
+            SijillAlaab::jadeed(muamala).sajjil(&IdkhalLuba {
+                luba: &luba,
+                muktamila: true,
+                khiyarat_tashghil: None,
+                simat: &[],
+                fahs: 1,
+            })
+        })?;
+
+        Ok(MasrahBina {
+            makhzan,
+            luba,
+            mukhattat: MukhattatBasma::min_masarat([HAWIYA])?,
+            _jidhr: haris,
+        })
+    }
+
+    /// The whole finding: a scanned game carries no build row, and installing
+    /// into it used to stop there.
+    ///
+    /// Before the measurement the ledger is empty, which is the state every game
+    /// in every library was permanently in. After it the row exists, the game
+    /// points at it, and the listing screen has something to judge against.
+    #[test]
+    fn awwal_tathbeet_yaqees_al_bina_wa_yaktubuhu() -> NatijatIkhtibar {
+        let masrah = masrah_bina(true)?;
+        let id = masrah.luba.id;
+
+        let qabl = masrah
+            .makhzan
+            .bil_qira(|ittisal| SijillBina::jadeed(ittisal).haliya(id))?;
+        assert_eq!(qabl, None, "a scanned library records no build for a game");
+
+        let bina = qis_bina(&masrah.makhzan, &masrah.luba, &masrah.mukhattat)?;
+        assert_eq!(bina.adad_malaffat, 1);
+        assert_eq!(bina.manassa, None);
+
+        let baad = masrah
+            .makhzan
+            .bil_qira(|ittisal| SijillBina::jadeed(ittisal).haliya(id))?
+            .ok_or("the measurement was taken and not recorded")?;
+        assert_eq!(baad.basma, bina.basma);
+        assert_eq!(baad.adad_malaffat, 1);
+        Ok(())
+    }
+
+    /// A second install measures again rather than trusting the row it wrote,
+    /// and a game the store has changed underneath produces a different build.
+    ///
+    /// The reason the value is not read back out of the store: it is the
+    /// evidence `IrtibatBina::ihkum` decides on, and a remembered fingerprint
+    /// would pass a patch onto files that have been replaced since. Measuring
+    /// the same unchanged game twice adds no row — the ledger is keyed by the
+    /// fingerprint — so the cost of honesty here is one upsert.
+    #[test]
+    fn al_qiyas_yutakarrar_wa_yatba_al_luba_hina_tataghayyar() -> NatijatIkhtibar {
+        let masrah = masrah_bina(true)?;
+        let id = masrah.luba.id;
+
+        let awwal = qis_bina(&masrah.makhzan, &masrah.luba, &masrah.mukhattat)?;
+        let thani = qis_bina(&masrah.makhzan, &masrah.luba, &masrah.mukhattat)?;
+        assert_eq!(
+            awwal.basma, thani.basma,
+            "the same files fingerprint the same"
+        );
+        let tarikh = masrah
+            .makhzan
+            .bil_qira(|ittisal| SijillBina::jadeed(ittisal).tarikh(id))?;
+        assert_eq!(tarikh.len(), 1, "an unchanged build is one row, not two");
+
+        std::fs::write(
+            masrah.luba.jidhr.join(HAWIYA),
+            b"the store pushed an update",
+        )?;
+        let baad_tahdith = qis_bina(&masrah.makhzan, &masrah.luba, &masrah.mukhattat)?;
+        assert_ne!(
+            baad_tahdith.basma, awwal.basma,
+            "a changed container must not fingerprint as the old build"
+        );
+        let haliya = masrah
+            .makhzan
+            .bil_qira(|ittisal| SijillBina::jadeed(ittisal).haliya(id))?
+            .ok_or("the game lost its current build")?;
+        assert_eq!(haliya.basma, baad_tahdith.basma);
+        assert_eq!(
+            masrah
+                .makhzan
+                .bil_qira(|ittisal| SijillBina::jadeed(ittisal).tarikh(id))?
+                .len(),
+            2,
+            "the build it was at is kept beside the one it is at"
+        );
+        Ok(())
+    }
+
+    /// A game that is not on disk refuses with the step that puts it back.
+    #[test]
+    fn luba_ghayr_mawjuda_turfad_bi_ikhtiyar_al_mujallad() -> NatijatIkhtibar {
+        let mut masrah = masrah_bina(false)?;
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the scratch game directory this fixture made, removed to stage the game \
+                      being uninstalled; never a real game directory"
+        )]
+        std::fs::remove_dir_all(&masrah.luba.jidhr)?;
+        masrah.luba.mawjuda = false;
+
+        let khata = qis_bina(&masrah.makhzan, &masrah.luba, &masrah.mukhattat)
+            .err()
+            .ok_or("a game that is gone cannot be measured")?;
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 32);
+        assert_eq!(
+            khata.khutwa,
+            Khutwa::IkhtiyarMasar {
+                matlub: MasarMatlub::MujalladLuba
+            }
+        );
+        assert!(fiha_arabi(&khata.arabi));
+        assert!(!fiha_arabi(&khata.injilizi), "{}", khata.injilizi);
+        assert!(khata.injilizi.contains("Nothing was written"));
+        assert_eq!(
+            khata.siyaq.get("jidhr"),
+            Some(&QeemaSiyaq::Masar(masrah.luba.jidhr))
+        );
+        Ok(())
+    }
+
+    /// A game that is there and will not measure refuses with a different step,
+    /// and keeps the number the old dead refusal had.
+    #[test]
+    fn hawiya_mafquda_turfad_bi_tahaqquq_salamat_al_luba() -> NatijatIkhtibar {
+        let masrah = masrah_bina(false)?;
+
+        let khata = qis_bina(&masrah.makhzan, &masrah.luba, &masrah.mukhattat)
+            .err()
+            .ok_or("a recipe naming a file that is not there cannot be run")?;
+        assert_eq!(khata.ramz.raqm(), arqam::STUDIO + 28);
+        assert_eq!(khata.khutwa, Khutwa::TahaqquqSalamatLuba);
+        assert!(fiha_arabi(&khata.arabi));
+        assert!(!fiha_arabi(&khata.injilizi), "{}", khata.injilizi);
+        assert!(
+            khata.injilizi.contains("resources.assets"),
+            "the sentence names the container that is missing: {}",
+            khata.injilizi
+        );
+        assert!(
+            !khata.injilizi.contains("probe"),
+            "the step this refusal names must be one that can be taken: {}",
+            khata.injilizi
+        );
+        assert_eq!(
+            khata.siyaq.get("ism"),
+            Some(&QeemaSiyaq::Nass(ISM.to_owned()))
+        );
         Ok(())
     }
 }
