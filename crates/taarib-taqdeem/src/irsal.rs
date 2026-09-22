@@ -1840,6 +1840,7 @@ pub fn mulakhkhas(
         tabaqa: bayan.muharrik.tabaqa,
         tareeqa: bayan.wasf.tareeqa,
         rukhsa: bayan.wasf.rukhsa.clone(),
+        masdar_khariji: None,
         taqyeem: None,
         adad_taqyeemat: 0,
         // Both of these are rewritten by the publishing sequence: the record
@@ -3227,6 +3228,7 @@ mod ikhtibarat {
             tabaqa: Tabaqa::Kamil,
             tareeqa: TareeqaTarjama::BashariyaKamila,
             rukhsa: RukhsaRuqaa::Cc0,
+            masdar_khariji: None,
             taqyeem: None,
             adad_taqyeemat: 0,
             waqt_nashr: "2026-09-05T00:00:00Z".to_owned(),

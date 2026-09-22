@@ -175,6 +175,80 @@ pub enum RukhsaRuqaa {
 }
 
 impl RukhsaRuqaa {
+    /// Whether the licence itself grants the right to redistribute the work.
+    ///
+    /// All rights reserved is the author keeping them, and a licence this build
+    /// cannot name is one nobody here has read. Both answer "ask first", which
+    /// for a registry that publishes to strangers is the same answer as no.
+    #[must_use]
+    pub const fn tasmah_biiadat_alnashr(&self) -> bool {
+        match self {
+            Self::Cc0 | Self::CcBy | Self::CcBySa => true,
+            Self::MilkiyaKhassa | Self::Ukhra { .. } => false,
+        }
+    }
+}
+
+/// What establishes a right to redistribute somebody else's translation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "wajiha", derive(specta::Type))]
+#[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum IdhnMasdar {
+    /// The licence it was published under grants it.
+    Rukhsa,
+    /// The author granted it directly, and this is how they said so.
+    Katabi {
+        /// The permission in the importer's own words: where it was given and
+        /// when, so a reader can go and check it.
+        bayan: String,
+    },
+    /// Nothing establishes it.
+    ///
+    /// The default for anything found on the internet. No licence file is not a
+    /// permissive licence; it is the absence of one, and the absence of one
+    /// reserves every right.
+    LamYuthbat,
+}
+
+/// A translation this patch took from somebody outside Taarib.
+///
+/// Recorded so the people who did the work are named wherever the patch goes,
+/// and so the question that decides whether it may be published at all is
+/// answered before a signing key is put to it rather than after somebody
+/// complains. Attribution and permission are different things: a patch that
+/// credits an author it had no licence from is still a patch that should not
+/// have been published, and crediting them makes the breach easier to find, not
+/// smaller.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "wajiha", derive(specta::Type))]
+#[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
+pub struct MasdarKhariji {
+    /// Who made it, in their own spelling of their own name.
+    pub ism: String,
+    /// Where it was taken from, so the credit points somewhere.
+    pub rabt: String,
+    /// The licence it was offered under, as the importer read it.
+    pub rukhsa: RukhsaRuqaa,
+    /// What establishes the right to redistribute it.
+    pub idhn: IdhnMasdar,
+}
+
+impl MasdarKhariji {
+    /// Whether this may be redistributed through the registry.
+    #[must_use]
+    pub const fn yajuz_nashruh(&self) -> bool {
+        match self.idhn {
+            // A grant from the author outranks what the licence file says,
+            // because the author is who the licence file speaks for.
+            IdhnMasdar::Katabi { .. } => true,
+            IdhnMasdar::Rukhsa => self.rukhsa.tasmah_biiadat_alnashr(),
+            IdhnMasdar::LamYuthbat => false,
+        }
+    }
+}
+
+impl RukhsaRuqaa {
     /// The short identifier used in metadata and on listings.
     #[must_use]
     pub fn muarrif(&self) -> &str {
@@ -321,6 +395,15 @@ pub struct MulakhkhasRuqaa {
     pub tareeqa: TareeqaTarjama,
     /// Its licence.
     pub rukhsa: RukhsaRuqaa,
+    /// The translation it was taken from, when it was taken from one.
+    ///
+    /// Carried into the catalogue itself, not left behind in the contributor's
+    /// own record, because the credit is owed wherever the patch is read and a
+    /// listing is where most people will read it. Absent on every entry
+    /// published before this existed, and on every patch translated from
+    /// nothing but the game.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub masdar_khariji: Option<MasdarKhariji>,
     /// Average rating, when it has any.
     pub taqyeem: Option<f32>,
     /// How many ratings.
@@ -333,4 +416,64 @@ pub struct MulakhkhasRuqaa {
     pub rabt: String,
     /// A mirror, tried when the primary is unreachable.
     pub rabt_mira: Option<String>,
+}
+
+#[cfg(test)]
+mod ikhtibarat_masdar {
+    use super::{IdhnMasdar, MasdarKhariji, RukhsaRuqaa};
+
+    fn masdar(rukhsa: RukhsaRuqaa, idhn: IdhnMasdar) -> MasdarKhariji {
+        MasdarKhariji {
+            ism: "Emad Adel".to_owned(),
+            rabt: "https://github.com/emadadeldev/RTEA".to_owned(),
+            rukhsa,
+            idhn,
+        }
+    }
+
+    /// Work found with no licence may not be republished, however well credited.
+    ///
+    /// This is the case that matters, because it is the ordinary one: a
+    /// translation on a forge with no LICENSE file is not permissively
+    /// licensed, it is licensed to nobody. Crediting the author does not change
+    /// that — it only makes the breach easier to find — and the registry
+    /// publishes under the owner's signing key to strangers, so the question has
+    /// to be settled before the key is used.
+    #[test]
+    fn bila_rukhsa_la_yunshar() {
+        assert!(!masdar(RukhsaRuqaa::MilkiyaKhassa, IdhnMasdar::LamYuthbat).yajuz_nashruh());
+        assert!(!masdar(RukhsaRuqaa::Cc0, IdhnMasdar::LamYuthbat).yajuz_nashruh());
+        assert!(
+            !masdar(RukhsaRuqaa::MilkiyaKhassa, IdhnMasdar::Rukhsa).yajuz_nashruh(),
+            "all rights reserved is the author keeping them"
+        );
+        assert!(
+            !masdar(
+                RukhsaRuqaa::Ukhra {
+                    ism: "RTEA-custom".to_owned()
+                },
+                IdhnMasdar::Rukhsa
+            )
+            .yajuz_nashruh(),
+            "a licence this build cannot name is one nobody here has read"
+        );
+    }
+
+    /// A licence that grants redistribution, or the author saying so, is enough.
+    #[test]
+    fn rukhsa_aw_idhn_yasmah() {
+        for rukhsa in [RukhsaRuqaa::Cc0, RukhsaRuqaa::CcBy, RukhsaRuqaa::CcBySa] {
+            assert!(masdar(rukhsa, IdhnMasdar::Rukhsa).yajuz_nashruh());
+        }
+        // The author outranks the licence file, because the file speaks for them.
+        assert!(
+            masdar(
+                RukhsaRuqaa::MilkiyaKhassa,
+                IdhnMasdar::Katabi {
+                    bayan: "granted by email, 2026-09-22".to_owned()
+                }
+            )
+            .yajuz_nashruh()
+        );
+    }
 }

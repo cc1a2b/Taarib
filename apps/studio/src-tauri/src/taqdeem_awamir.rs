@@ -675,6 +675,7 @@ const fn slug_hasim(fahs: FahsHasim) -> &'static str {
         FahsHasim::Taghtiya => "taghtiya",
         FahsHasim::Takrar => "takrar",
         FahsHasim::IrtibatIstirad => "irtibat_istirad",
+        FahsHasim::HuquqAlmasdar => "huquq_almasdar",
         FahsHasim::LughaRasmiya => "lugha_rasmiya",
     }
 }

@@ -2995,6 +2995,7 @@ mod ikhtibarat {
         Ok(MulakhkhasRuqaa {
             id: RuqaaId::min_uuid(uuid::Uuid::new_v4()),
             murajaa: RuqaaRevision::AWWAL,
+            masdar_khariji: None,
             unwan: "رقعة اختبار".to_owned(),
             musahim: MusahimId::jadeed(MUSAHIM)?,
             ism_musahim: "مساهم اختبار".to_owned(),

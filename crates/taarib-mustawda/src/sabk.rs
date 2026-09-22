@@ -180,6 +180,15 @@ pub fn madkhal_min_huzma(
             .ok_or("the manifest declares no licence")?,
     )
     .map_err(|k| k.to_string())?;
+    // Absent on a patch translated from nothing but the game, and on every
+    // package sealed before the field existed; carried into the listing when
+    // it is there, because the catalogue is where the credit is read.
+    let masdar_khariji: Option<taarib_mustalahat::ruqaa::MasdarKhariji> = wasf
+        .get("masdar_khariji")
+        .filter(|qeema| !qeema.is_null())
+        .map(|qeema| serde_json::from_value(qeema.clone()))
+        .transpose()
+        .map_err(|k| k.to_string())?;
     let tareeqa: TareeqaTarjama = serde_json::from_value(
         wasf.get("tareeqa")
             .cloned()
@@ -262,6 +271,7 @@ pub fn madkhal_min_huzma(
         tabaqa,
         tareeqa,
         rukhsa,
+        masdar_khariji,
         taqyeem: None,
         adad_taqyeemat: 0,
         waqt_nashr,

@@ -2457,6 +2457,11 @@ impl KhaamRuqaa {
             tabaqa: min_ramz("ruqaa", "tabaqa", &self.tabaqa)?,
             tareeqa: min_ramz("ruqaa", "tareeqa", &self.tareeqa)?,
             rukhsa: ijma_rukhsa(&self.rukhsa),
+            // The local mirror of the catalogue has no column for it: this row
+            // is what a cached listing renders from, and the credit is read off
+            // the served catalogue entry rather than kept in two places that
+            // can disagree about who wrote something.
+            masdar_khariji: None,
             taqyeem: self.taqyeem.map(|q| q as f32),
             adad_taqyeemat: u32::try_from(self.adad_taqyeemat).unwrap_or(0),
             waqt_nashr: self.waqt_nashr,

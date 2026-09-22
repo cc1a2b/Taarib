@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 use taarib_mustalahat::bina::Basma;
 use taarib_mustalahat::luba::{LubaId, MasdarLuba};
 use taarib_mustalahat::nass::NassId;
-use taarib_mustalahat::ruqaa::{HalatRuqaa, RukhsaRuqaa, RuqaaId, RuqaaRevision, TareeqaTarjama};
+use taarib_mustalahat::ruqaa::{
+    HalatRuqaa, MasdarKhariji, RukhsaRuqaa, RuqaaId, RuqaaRevision, TareeqaTarjama,
+};
 use taarib_mustalahat::taghtiya::Taghtiya;
 use taarib_tarqee::bawwaba::ShahadatBawwaba;
 use taarib_tarqee::bayan::BayanHuzma;
@@ -358,6 +360,14 @@ pub struct SijillIstirad {
     pub sigha: SighatIstirad,
     /// The file it read.
     pub masdar: PathBuf,
+    /// Whose translation the file held, when it was somebody else's.
+    ///
+    /// A path on this machine says nothing about who wrote what is in it. This
+    /// is what carries the author, the licence and the right to redistribute
+    /// from the moment of import through to the published listing, so the
+    /// question is settled before a signature rather than after a complaint.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub masdar_khariji: Option<MasdarKhariji>,
     /// How many entries matched a string in the project.
     pub mutatabiqa: usize,
     /// How many matched nothing.
@@ -807,6 +817,33 @@ impl Musawwada {
         self.istirad
             .iter()
             .flat_map(|sijill| sijill.muallaqa.iter())
+            .collect()
+    }
+
+    /// Every outside translation this submission was built from.
+    #[must_use]
+    pub fn masadir_kharijiya(&self) -> Vec<&MasdarKhariji> {
+        self.istirad
+            .iter()
+            .filter_map(|sijill| sijill.masdar_khariji.as_ref())
+            .collect()
+    }
+
+    /// The outside translations there is no established right to redistribute.
+    ///
+    /// An import whose author is not recorded at all counts here too: a file
+    /// that came from somewhere, with nobody named and no licence read, is the
+    /// case this check exists for and not an exception to it.
+    #[must_use]
+    pub fn masadir_bila_haqq(&self) -> Vec<&SijillIstirad> {
+        self.istirad
+            .iter()
+            .filter(|sijill| {
+                sijill
+                    .masdar_khariji
+                    .as_ref()
+                    .is_none_or(|masdar| !masdar.yajuz_nashruh())
+            })
             .collect()
     }
 

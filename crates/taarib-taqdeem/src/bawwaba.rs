@@ -53,6 +53,8 @@ pub enum FahsHasim {
     Takrar,
     /// Import mappings nobody has decided on.
     IrtibatIstirad,
+    /// An outside translation with no established right to redistribute it.
+    HuquqAlmasdar,
     /// The game's publisher already ships Arabic.
     ///
     /// Last in the enum and **first** in [`Self::KULL`], because it is the one
@@ -65,13 +67,14 @@ pub enum FahsHasim {
 
 impl FahsHasim {
     /// Every blocking check, in the order the checklist shows them.
-    pub const KULL: [Self; 6] = [
+    pub const KULL: [Self; 7] = [
         Self::LughaRasmiya,
         Self::Fuhusat,
         Self::Shahada,
         Self::Taghtiya,
         Self::Takrar,
         Self::IrtibatIstirad,
+        Self::HuquqAlmasdar,
     ];
 
     /// The row's label, in Arabic.
@@ -83,6 +86,7 @@ impl FahsHasim {
             Self::Taghtiya => "التغطية",
             Self::Takrar => "تكرار رقعة منشورة",
             Self::IrtibatIstirad => "ارتباطات الاستيراد",
+            Self::HuquqAlmasdar => "حقوق المصدر المستورَد",
             Self::LughaRasmiya => "لغة رسمية من الناشر",
         }
     }
@@ -96,6 +100,7 @@ impl FahsHasim {
             Self::Taghtiya => "Coverage",
             Self::Takrar => "Duplicate of a published patch",
             Self::IrtibatIstirad => "Import mappings",
+            Self::HuquqAlmasdar => "Rights to the imported source",
             Self::LughaRasmiya => "Official Arabic from the publisher",
         }
     }
@@ -505,6 +510,7 @@ fn ijmaa(
     ));
     sutur.push(satr_takrar(mudkhalat));
     sutur.push(satr_irtibat(musawwada));
+    sutur.push(satr_huquq_masdar(musawwada));
 
     let (nusus_tajawuz, adad_tajawuz) = nusus_yastahiqq_iaada(musawwada.tajawuz());
     let yastahiqq = musawwada.tajawuz().mulakhkhas.yastahiqq_iaada();
@@ -734,6 +740,61 @@ fn satr_takrar(mudkhalat: &MudkhalatBawwaba<'_>) -> SatrFahs {
             "No patch you have published covers these builds.".to_owned(),
         ),
     }
+}
+
+/// Whether every outside translation this submission used may be redistributed.
+///
+/// Blocking, and deliberately so. A patch built from somebody else's work is
+/// published to strangers under the owner's signing key, and the moment to
+/// establish that there was a right to do that is before the key is used, not
+/// after the author finds their translation in a catalogue they were never
+/// asked about. An import that names no author at all fails this too: a file
+/// that came from somewhere with nobody recorded is exactly the case this
+/// exists for. Naming them is not the same as being allowed to publish them.
+fn satr_huquq_masdar(musawwada: &Musawwada) -> SatrFahs {
+    let band = BandFahs::Hasim(FahsHasim::HuquqAlmasdar);
+    let bila_haqq = musawwada.masadir_bila_haqq();
+    if bila_haqq.is_empty() {
+        let adad = musawwada.masadir_kharijiya().len();
+        let (arabi, injilizi) = if adad == 0 {
+            (
+                "لا ترجمة مستورَدة من خارج تعريب.".to_owned(),
+                "Nothing was imported from outside Taarib.".to_owned(),
+            )
+        } else {
+            (
+                format!("{adad} مصدرًا مستورَدًا، ولكلٍّ حقُّ إعادة نشرٍ مُثبَت."),
+                format!("{adad} imported source(s), each with an established right to republish."),
+            )
+        };
+        return satr(band, HalatBand::Ijtaz, Vec::new(), 0, arabi, injilizi);
+    }
+    let asmaa: Vec<String> = bila_haqq
+        .iter()
+        .map(|sijill| {
+            sijill.masdar_khariji.as_ref().map_or_else(
+                || sijill.masdar.display().to_string(),
+                |masdar| masdar.ism.clone(),
+            )
+        })
+        .collect();
+    let qaima = asmaa.join("، ");
+    let qaima_injilizi = asmaa.join(", ");
+    satr(
+        band,
+        HalatBand::Rasab,
+        Vec::new(),
+        bila_haqq.len(),
+        format!(
+            "لا يثبت حقُّ إعادة نشر ما استُورد من: {qaima}. سجّل رخصةً تسمح بإعادة النشر، أو \
+             إذنًا مكتوبًا من صاحب العمل، وإلّا فاحذف المستورَد قبل التقديم."
+        ),
+        format!(
+            "No right to republish what was imported from: {qaima_injilizi}. Record a licence \
+             that permits redistribution, or written permission from whoever made it, or remove \
+             the imported text before submitting."
+        ),
+    )
 }
 
 fn satr_irtibat(musawwada: &Musawwada) -> SatrFahs {
@@ -1074,6 +1135,10 @@ mod ikhtibarat {
         // A contributor reading the checklist top-down meets the one check
         // whose answer makes every other one pointless first.
         assert_eq!(FahsHasim::KULL.first(), Some(&FahsHasim::LughaRasmiya));
-        assert_eq!(FahsHasim::KULL.len(), 6);
+        // The count is the guard against a check being added to the enum and
+        // left out of the list the checklist actually walks, which would be a
+        // blocking check nobody is ever shown.
+        assert_eq!(FahsHasim::KULL.len(), 7);
+        assert!(FahsHasim::KULL.contains(&FahsHasim::HuquqAlmasdar));
     }
 }
