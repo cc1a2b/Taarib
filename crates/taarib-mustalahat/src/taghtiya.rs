@@ -81,24 +81,38 @@ impl Taghtiya {
     /// A single sentence for the interface, in Arabic.
     #[must_use]
     pub fn wasf_arabi(&self) -> String {
+        let awwal = if self.majmu_awwal == 0 {
+            "ولم تُسجَّل جلسة التقاط لأوّل ساعة لعب.".to_owned()
+        } else {
+            format!(
+                "و{:.0}٪ مما يظهر في أول ساعة لعب.",
+                self.nisba_awwal() * 100.0
+            )
+        };
         format!(
-            "{:.0}٪ من النصوص ({} من {})، و{:.0}٪ مما يظهر في أول ساعة لعب.",
+            "{:.0}٪ من النصوص ({} من {})، {awwal}",
             self.nisba() * 100.0,
             self.mutarjam,
             self.majmu,
-            self.nisba_awwal() * 100.0
         )
     }
 
     /// The same sentence in English.
     #[must_use]
     pub fn wasf_injilizi(&self) -> String {
+        let awwal = if self.majmu_awwal == 0 {
+            "and no capture session has recorded the first hour of play.".to_owned()
+        } else {
+            format!(
+                "and {:.0}% of what appears in the first hour.",
+                self.nisba_awwal() * 100.0
+            )
+        };
         format!(
-            "{:.0}% of strings ({} of {}), and {:.0}% of what appears in the first hour.",
+            "{:.0}% of strings ({} of {}), {awwal}",
             self.nisba() * 100.0,
             self.mutarjam,
             self.majmu,
-            self.nisba_awwal() * 100.0
         )
     }
 
@@ -130,4 +144,65 @@ fn nisba_min(juz: u64, kull: u64) -> f32 {
     // the wider of the two roundings and bought nothing, because both operands
     // are counts that f32 represents exactly.
     juz as f32 / kull as f32
+}
+
+#[cfg(test)]
+mod ikhtibarat {
+    use super::Taghtiya;
+
+    /// A project nobody has captured the opening of does not get told its
+    /// opening is perfectly covered.
+    ///
+    /// `nisba_awwal` answers `1.0` over an empty denominator on purpose — a
+    /// container holding no strings is covered — and the publish gate carries
+    /// `BilaJalsatAwwal` precisely because that answer must not be read as a
+    /// measurement. The sentence had no such guard: with nothing observed it
+    /// read "100% of what appears in the first hour", which is the one thing
+    /// the reader must not be told, and the gate then refused the package for
+    /// the very fact the sentence had just denied.
+    #[test]
+    fn bila_jalsa_la_yuqal_miat_bilmia() {
+        let taghtiya = Taghtiya {
+            majmu: 381,
+            mutarjam: 381,
+            muakkad: 0,
+            majmu_takrar: 403,
+            mutarjam_takrar: 403,
+            majmu_awwal: 0,
+            mutarjam_awwal: 0,
+        };
+        let injilizi = taghtiya.wasf_injilizi();
+        let arabi = taghtiya.wasf_arabi();
+        assert!(
+            !injilizi.contains("100% of what appears"),
+            "an unobserved opening was reported as a covered one: {injilizi}"
+        );
+        assert!(
+            injilizi.contains("no capture session"),
+            "the absence is not named: {injilizi}"
+        );
+        assert!(
+            arabi.contains("لم تُسجَّل جلسة التقاط"),
+            "the absence is not named in Arabic: {arabi}"
+        );
+        // And the part that was measured is still reported.
+        assert!(injilizi.contains("381 of 381"), "{injilizi}");
+    }
+
+    /// An opening that was observed still reports its share.
+    #[test]
+    fn maa_jalsa_tuqal_alnisba() {
+        let taghtiya = Taghtiya {
+            majmu: 100,
+            mutarjam: 100,
+            muakkad: 0,
+            majmu_takrar: 100,
+            mutarjam_takrar: 100,
+            majmu_awwal: 40,
+            mutarjam_awwal: 36,
+        };
+        let injilizi = taghtiya.wasf_injilizi();
+        assert!(injilizi.contains("90% of what appears"), "{injilizi}");
+        assert!(!injilizi.contains("no capture session"), "{injilizi}");
+    }
 }
