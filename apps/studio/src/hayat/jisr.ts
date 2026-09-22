@@ -95,6 +95,9 @@ export const HADATH_JAWLA_MUHARRIK = 'taarib://jawla-muharrik';
 /** The window event the launch-time update check raises when a newer version is offered; payload is a `HalatTahdith` in its `mutah` case. */
 export const HADATH_TAHDITH_MUTAH = 'taarib://tahdith-mutah';
 
+/** The window event the startup component mirror reports progress on; payload is a `TaqaddumTahmil`. */
+export const HADATH_TAHMIL = 'taarib://tahmil-mukawwinat';
+
 /**
  * The command surface: the name the backend registered, and the names its
  * parameters were declared under, in the order Rust declared them.
@@ -113,6 +116,7 @@ export const HADATH_TAHDITH_MUTAH = 'taarib://tahdith-mutah';
 interface TartibWusata {
   // Application and library.
   readonly idadat_hali: [];
+  readonly halat_tahmil: [];
   readonly maalumat_taarib: [];
   readonly maktaba: [];
   readonly fahs_akhir: [];

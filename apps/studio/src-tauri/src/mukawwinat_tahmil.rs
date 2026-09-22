@@ -21,19 +21,14 @@
 //! passes `app.path().resource_dir().join("mawarid")` in, so installs and this
 //! mirror never read the bundle through two different resolutions.
 
-// `main` declares this module private, so clippy reads every `pub(crate)` below as reachable
-// only from inside it and asks for plain `pub`. Writing `pub` makes `unreachable_pub`, which
-// the workspace denies, fire on the same item instead; the two rules only reconcile where the
-// module is declared.
-#![expect(
-    clippy::redundant_pub_crate,
-    reason = "`pub` here trips the workspace's denied `unreachable_pub` on a private module"
-)]
+// Declared `pub` in `main`: a private module reaches neither tauri's command
+// registry nor the generated bindings, and `halat_tahmil` needs both.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use sha2::{Digest as _, Sha256};
 use taarib_tathbeet::masar_tathbeet::JidhrKhutut;
@@ -185,7 +180,11 @@ enum HalatMalaf {
 /// starting either way; installs that need an absent component refuse by name
 /// later, at [`masar_mukawwin`] and `tarkib::hamil_mukawwin`.
 #[must_use]
-pub(crate) fn zamin_mukawwinat(jidhr_mawarid: &Path, masarat: &Masarat) -> NatijatZamin {
+pub(crate) fn zamin_mukawwinat(
+    jidhr_mawarid: &Path,
+    masarat: &Masarat,
+    taqaddum: &mut dyn FnMut(u32, u32),
+) -> NatijatZamin {
     let masar_bayan = jidhr_mawarid.join(ISM_MALAF_BAYAN);
     let bayt_bayan = match qira_bayan(&masar_bayan) {
         Ok(bayt) => bayt,
@@ -213,7 +212,14 @@ pub(crate) fn zamin_mukawwinat(jidhr_mawarid: &Path, masarat: &Masarat) -> Natij
     let mut natija = NatijatZamin::faragh();
     let mut maruda: BTreeSet<&str> = BTreeSet::new();
 
+    // Per file, not per byte: the manifest already carries the count.
+    let majmu = u32::try_from(bayan.milaffat.len()).unwrap_or(u32::MAX);
+    let mut munjaz = 0_u32;
+    taqaddum(munjaz, majmu);
+
     for malaf in &bayan.milaffat {
+        munjaz = munjaz.saturating_add(1);
+        taqaddum(munjaz, majmu);
         if !maruda.insert(malaf.masar.as_str()) {
             let tafsir = KhataMukawwinat::MasarMarfud {
                 masar: malaf.masar.clone(),
@@ -1223,6 +1229,61 @@ khata_min!(KhataMukawwinat);
 
 /// The subtree of the bundle the fonts are staged into.
 const BADIYAT_KHUTUT: &str = "khutut";
+
+/// The window event the component mirror reports its progress on.
+pub(crate) const ISM_HADATH_TAHMIL: &str = "taarib://tahmil-mukawwinat";
+
+/// How far the startup mirror has got.
+///
+/// Mirroring the offline set is half a gigabyte of copying and hashing between
+/// launch and a usable window; run on the painting thread it showed as a black
+/// "Not Responding" one, so it runs off it and reports instead.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct TaqaddumTahmil {
+    /// Files settled so far.
+    pub munjaz: u32,
+    /// Files the manifest lists.
+    pub majmu: u32,
+    /// Whether the mirror has finished — however it finished. A mirror that
+    /// failed still ends the wait: the product opens and names the component it
+    /// could not settle, rather than leaving a window that never arrives.
+    pub tamma: bool,
+}
+
+/// The mirror's standing, readable by a screen that mounted after it ended: the
+/// event alone would race, and a webview that loads after the last report would
+/// leave the loading screen standing over a product that is ready.
+#[derive(Debug)]
+pub struct HalatTahmil(parking_lot::Mutex<TaqaddumTahmil>);
+
+impl HalatTahmil {
+    /// Nothing mirrored yet, and not finished.
+    #[must_use]
+    pub const fn jadeeda() -> Self {
+        Self(parking_lot::Mutex::new(TaqaddumTahmil {
+            munjaz: 0,
+            majmu: 0,
+            tamma: false,
+        }))
+    }
+
+    /// Records a report, so a late reader sees the latest one.
+    pub fn sajjil(&self, taqaddum: &TaqaddumTahmil) {
+        *self.0.lock() = taqaddum.clone();
+    }
+}
+
+/// Where the startup component mirror stands.
+///
+/// # Errors
+///
+/// None: the value is always readable.
+#[must_use]
+#[tauri::command]
+#[specta::specta]
+pub fn halat_tahmil(hala: tauri::State<'_, Arc<HalatTahmil>>) -> TaqaddumTahmil {
+    hala.0.lock().clone()
+}
 
 /// The bundle's resource root, recorded once at startup.
 ///

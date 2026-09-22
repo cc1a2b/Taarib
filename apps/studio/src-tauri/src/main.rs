@@ -73,7 +73,7 @@ pub mod aql_awamir;
 mod bidaya;
 pub mod idadat_awamir;
 mod istiada_cli;
-mod mukawwinat_tahmil;
+pub mod mukawwinat_tahmil;
 pub mod musharaka_awamir;
 pub mod suwar_awamir;
 pub mod tabaqa_awamir;
@@ -1021,6 +1021,7 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
     let banni = tauri_specta::Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
             idadat_hali,
+            mukawwinat_tahmil::halat_tahmil,
             maalumat_taarib,
             maktaba,
             maktaba_awamir::fahs_akhir,
@@ -1130,7 +1131,10 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
         // on a window event, and the grid patches the row from that payload.
         // Its standing is a command's answer and generates itself; this one is
         // not, so it is registered here.
-        .typ::<jawla_awamir::FahsMuharrikHie>();
+        .typ::<jawla_awamir::FahsMuharrikHie>()
+        // The startup mirror reports on a window event as well as answering
+        // `halat_tahmil`, and the event's payload generates from neither.
+        .typ::<mukawwinat_tahmil::TaqaddumTahmil>();
 
     // Debug only: a release build ships the bindings that were generated when
     // it was developed, and must never write into the source tree it was
@@ -1222,21 +1226,106 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
         // is on the disk is the journal, which is what a run resumes from after
         // the application has been closed and reopened.
         .manage(tilqai_awamir::MashawirTilqai::default())
+        .manage(Arc::new(mukawwinat_tahmil::HalatTahmil::jadeeda()))
         .setup(move |tatbiq| {
             // The bundle's own tree, before anything reads a component or a
             // bundled font. A build launched from cargo has no resource
             // directory, and every reader treats that as "nothing bundled".
-            if let Ok(jidhr_mawarid) = tauri::Manager::path(tatbiq).resource_dir() {
-                let jidhr_mawarid = jidhr_mawarid.join(MUJALLAD_MAWARID);
-                mukawwinat_tahmil::sajjil_jidhr_mawarid(jidhr_mawarid.clone());
-                let natija = mukawwinat_tahmil::zamin_mukawwinat(&jidhr_mawarid, &masarat_zamin);
-                for satr in natija.taqreer() {
-                    if natija.salima() {
-                        tracing::info!("{satr}");
-                    } else {
-                        tracing::warn!("{satr}");
-                    }
+            // Off the thread the window is painted from. The mirror copies and
+            // hashes every file the manifest lists — half a gigabyte for the
+            // offline set — and run here it held the event loop before it ever
+            // spun: the window was created, painted black, and reported "Not
+            // Responding" for as long as the copy took, with nothing in the log
+            // after the startup line because the report is written at the end.
+            // The first frame now arrives at once and the interface draws the
+            // progress.
+            {
+                use tauri::Emitter as _;
+
+                let hala_tahmil = tauri::Manager::state::<Arc<mukawwinat_tahmil::HalatTahmil>>(
+                    tatbiq,
+                )
+                .inner()
+                .clone();
+                let tatbiq_tahmil = tauri::Manager::app_handle(tatbiq).clone();
+                let masarat_tahmil = masarat_zamin.clone();
+                let jidhr_mawarid = tauri::Manager::path(tatbiq)
+                    .resource_dir()
+                    .ok()
+                    .map(|jidhr| jidhr.join(MUJALLAD_MAWARID));
+                if let Some(jidhr_mawarid) = jidhr_mawarid.clone() {
+                    mukawwinat_tahmil::sajjil_jidhr_mawarid(jidhr_mawarid);
                 }
+
+                tauri::async_runtime::spawn(async move {
+                    if let Some(jidhr_mawarid) = jidhr_mawarid {
+                        let mukhbir = tatbiq_tahmil.clone();
+                        let hala_mukhbir = Arc::clone(&hala_tahmil);
+                        let natija = tokio::task::spawn_blocking(move || {
+                            // Throttled to whole percentage points: the offline
+                            // manifest lists sixteen hundred files, and an event
+                            // per file is sixteen hundred webview wake-ups to
+                            // draw a hundred distinct states.
+                            let mut akhir = u32::MAX;
+                            mukawwinat_tahmil::zamin_mukawwinat(
+                                &jidhr_mawarid,
+                                &masarat_tahmil,
+                                &mut |munjaz, majmu| {
+                                    // A manifest listing nothing is complete,
+                                    // which is the only way the divisor is zero.
+                                    let miawiya = munjaz
+                                        .saturating_mul(100)
+                                        .checked_div(majmu)
+                                        .unwrap_or(100);
+                                    if miawiya == akhir {
+                                        return;
+                                    }
+                                    akhir = miawiya;
+                                    let taqaddum = mukawwinat_tahmil::TaqaddumTahmil {
+                                        munjaz,
+                                        majmu,
+                                        tamma: false,
+                                    };
+                                    hala_mukhbir.sajjil(&taqaddum);
+                                    let _ = mukhbir.emit(
+                                        mukawwinat_tahmil::ISM_HADATH_TAHMIL,
+                                        taqaddum,
+                                    );
+                                },
+                            )
+                        })
+                        .await;
+                        match natija {
+                            Ok(natija) => {
+                                for satr in natija.taqreer() {
+                                    if natija.salima() {
+                                        tracing::info!("{satr}");
+                                    } else {
+                                        tracing::warn!("{satr}");
+                                    }
+                                }
+                            },
+                            Err(sabab) => {
+                                tracing::warn!(
+                                    sabab = %sabab,
+                                    "the component mirror task did not finish"
+                                );
+                            },
+                        }
+                    }
+
+                    // Sent on every path, including the one where this process
+                    // was launched from cargo and has no bundle to mirror. The
+                    // interface waits on it, and a wait nothing ever ends is a
+                    // product that never opens.
+                    let tamma = mukawwinat_tahmil::TaqaddumTahmil {
+                        munjaz: 0,
+                        majmu: 0,
+                        tamma: true,
+                    };
+                    hala_tahmil.sajjil(&tamma);
+                    let _ = tatbiq_tahmil.emit(mukawwinat_tahmil::ISM_HADATH_TAHMIL, tamma);
+                });
             }
 
             // The chrome wears the saved palette from the first frame the window

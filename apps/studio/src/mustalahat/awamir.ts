@@ -19,6 +19,14 @@ export const commands = {
 	 */
 	idadatHali: () => typedError<Idadat, Khata>(__TAURI_INVOKE("idadat_hali")),
 	/**
+	 *  Where the startup component mirror stands.
+	 * 
+	 *  # Errors
+	 * 
+	 *  None: the value is always readable.
+	 */
+	halatTahmil: () => __TAURI_INVOKE<TaqaddumTahmil>("halat_tahmil"),
+	/**
 	 *  What this build is and where it keeps its data.
 	 * 
 	 *  # Errors
@@ -5294,6 +5302,28 @@ export type TaqaddumMarhalaHie = {
 	majmu: number | null,
 	/**  The machine's own detail: a container, a batch, a font. */
 	tafsil: string | null,
+};
+
+/**
+ *  How far the startup mirror has got.
+ * 
+ *  The offline component set is half a gigabyte, and mirroring it is the one
+ *  thing between launch and a usable window. It used to run on the thread the
+ *  window is painted from, so the window existed, stayed black and reported
+ *  "Not Responding" until the copy finished. It now runs off that thread and
+ *  says where it is instead.
+ */
+export type TaqaddumTahmil = {
+	/**  Files settled so far. */
+	munjaz: number,
+	/**  Files the manifest lists. */
+	majmu: number,
+	/**
+	 *  Whether the mirror has finished — however it finished. A mirror that
+	 *  failed still ends the wait: the product opens and names the component it
+	 *  could not settle, rather than leaving a window that never arrives.
+	 */
+	tamma: boolean,
 };
 
 /**  One download progress report. */

@@ -18,6 +18,7 @@ import { mafatih } from '@/hayat/istifsar';
 import { ittijah, munassiqat, t, wasm } from '@/lugha/lugha';
 import { ansha } from '@/hayat/tanbihat';
 import { Hikal } from '@/mukawwinat/hikal';
+import { ShashatTahmil } from '@/mukawwinat/tahmil';
 // The router's own two states are drawn through the failure block's own parts,
 // so the two cannot drift apart from every other failure in the product.
 import { KutlatFashal, SatrRamz } from '@/mukawwinat/kutlat_khata';
@@ -612,7 +613,13 @@ function JidhrTakhtit(): JSX.Element {
 
   const ikhtisarat = idadat.data?.ikhtisarat ?? { lawha: 'ctrl+k', taraju: 'ctrl+z' };
   return (
-    <Hikal lugha={lugha} ikhtisarLawha={ikhtisarat.lawha} ikhtisarTaraju={ikhtisarat.taraju} />
+    <>
+      <Hikal lugha={lugha} ikhtisarLawha={ikhtisarat.lawha} ikhtisarTaraju={ikhtisarat.taraju} />
+      {/* Over the shell rather than instead of it: the product is built behind
+          the screen while the mirror runs, so the first frame after it lifts is
+          the finished interface and not another wait. */}
+      <ShashatTahmil lugha={lugha} />
+    </>
   );
 }
 

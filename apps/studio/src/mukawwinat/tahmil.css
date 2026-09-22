@@ -1,0 +1,119 @@
+/* شاشة التحميل — the startup screen, shown while the bundled component tree
+   mirrors into the store.
+
+   Design brief. Audience: one operator opening a desktop tool, every session,
+   for a few seconds. Tone: workshop, typographic — this is a type-engineering
+   instrument, not a consumer app. Density: spacious, because it holds one fact.
+   Type: the interface's own IBM Plex Sans Arabic at the display size; no second
+   face is introduced for four seconds of screen. Palette: the product's own
+   surfaces and its teal accent; nothing new is defined here.
+
+   Signature detail: the product's whole subject is Arabic contextual joining,
+   so progress is drawn as the word «تعريب» taking ink from the right — the
+   direction the script is read — over a kashida rule that extends beneath it as
+   the letters connect. A spinner would have said nothing about the subject. */
+
+.tahmil {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: var(--sath-0);
+}
+
+.tahmil__lawh {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--misafa-24);
+  padding-inline: var(--misafa-32);
+  max-inline-size: 34rem;
+  text-align: center;
+}
+
+/* The word takes ink from the right at exactly the mirror's percentage. A
+   hard stop rather than a soft one: a gradient that feathers reads as a
+   lighting effect, and this is meant to read as a measurement. */
+.tahmil__kalima {
+  margin: 0;
+  font-family: var(--khatt-wajiha);
+  font-size: clamp(3rem, 12vw, 5.5rem);
+  font-weight: var(--wazn-bariz);
+  line-height: 1.1;
+  letter-spacing: 0;
+  direction: rtl;
+  background-image: linear-gradient(
+    to left,
+    var(--tamyeez) var(--tahmil-nisba, 0%),
+    var(--nass-3) var(--tahmil-nisba, 0%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition: background-image var(--mudda-2, 200ms) var(--munhana, ease);
+}
+
+/* The kashida: the baseline an Arabic word is joined along, drawn only as far
+   as the mirror has got. It is the progress bar, and it is the same line the
+   letters above it sit on. */
+.tahmil__kashida {
+  inline-size: min(28rem, 70vw);
+  block-size: 2px;
+  border-radius: var(--nisf-hadd);
+  background: var(--hadd);
+  overflow: hidden;
+  direction: rtl;
+}
+
+.tahmil__kashida-madd {
+  display: block;
+  block-size: 100%;
+  inline-size: var(--tahmil-nisba, 0%);
+  background: var(--tamyeez);
+  transition: inline-size var(--mudda-2, 200ms) var(--munhana, ease);
+}
+
+.tahmil__satr {
+  margin: 0;
+  font-family: var(--khatt-wajiha);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3, 1.5);
+  color: var(--nass-2);
+}
+
+.tahmil__adad {
+  margin: 0;
+  font-family: var(--khatt-uhadi);
+  font-size: var(--qiyas-2);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Before the manifest is read there is no total, so there is no percentage to
+   claim. The word breathes instead of asserting a number it does not have. */
+.tahmil--majhul .tahmil__kalima {
+  animation: tahmil-nabd 2.4s var(--munhana, ease-in-out) infinite;
+}
+
+@keyframes tahmil-nabd {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tahmil--majhul .tahmil__kalima {
+    animation: none;
+    opacity: 0.8;
+  }
+
+  .tahmil__kalima,
+  .tahmil__kashida-madd {
+    transition: none;
+  }
+}

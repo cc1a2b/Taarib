@@ -52,6 +52,8 @@ export const istifsar = new QueryClient({
 export const mafatih = {
   /** The settings tree. */
   idadat: ['idadat'] as const,
+  /** How far the startup component mirror has got. */
+  tahmil: ['tahmil'] as const,
   /** The build and platform report. */
   maalumat: ['maalumat'] as const,
   /** The whole library. */
