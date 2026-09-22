@@ -1742,44 +1742,49 @@ fn yaqra_tasjil(nass: &str) -> bool {
 /// is missing.
 fn uktub_tasjil(nass: &str, mufaal: bool) -> String {
     let satr = format!("{MIFTAH_ILTIQAT} = {mufaal}");
+    let nihaya = nihayat_satr(nass);
     let Some(bidayat_qism) = mawqi_qism(nass) else {
-        let mut jadeed = nass.to_owned();
+        let mut jadeed = anzif_yatama(nass);
         if !jadeed.is_empty() && !jadeed.ends_with('\n') {
-            jadeed.push('\n');
+            jadeed.push_str(nihaya);
         }
         if !jadeed.is_empty() {
-            jadeed.push('\n');
+            jadeed.push_str(nihaya);
         }
         jadeed.push_str(QISM_IDADAT);
-        jadeed.push('\n');
+        jadeed.push_str(nihaya);
         jadeed.push_str(&satr);
-        jadeed.push('\n');
+        jadeed.push_str(nihaya);
         return jadeed;
     };
 
     let (raas, baqiya) = nass.split_at(bidayat_qism);
     let mut jadeed = String::with_capacity(nass.len() + satr.len() + 2);
-    jadeed.push_str(raas);
+    jadeed.push_str(&anzif_yatama(raas));
     let mut kutiba = false;
     let mut nihayat_qism = 0_usize;
-    for (martaba, satr_hali) in baqiya.lines().enumerate() {
+    for (martaba, satr_hali) in baqiya.split_inclusive('\n').enumerate() {
         if martaba > 0 && satr_hali.trim_start().starts_with('[') {
             break;
         }
+        nihayat_qism = nihayat_qism.saturating_add(satr_hali.len());
         if qeemat_miftah(satr_hali).is_some() {
+            // The adapter reads the last one, so a second copy inside the
+            // section is the same contradiction as one stranded above it.
+            if kutiba {
+                continue;
+            }
+            // The line's own ending, so a CRLF document stays one kind.
             jadeed.push_str(&satr);
+            jadeed.push_str(&satr_hali[satr_hali.trim_end_matches(['\r', '\n']).len()..]);
             kutiba = true;
         } else {
             jadeed.push_str(satr_hali);
         }
-        jadeed.push('\n');
-        nihayat_qism = nihayat_qism
-            .saturating_add(satr_hali.len())
-            .saturating_add(1);
     }
     if !kutiba {
         jadeed.push_str(&satr);
-        jadeed.push('\n');
+        jadeed.push_str(nihaya);
     }
     // Everything from the next section header on, byte for byte: the adapter
     // binds five settings and this owns one of them, so the atlas budget and the
@@ -1789,13 +1794,21 @@ fn uktub_tasjil(nass: &str, mufaal: bool) -> String {
 }
 
 /// Where the adapter's own section starts, when the text has one.
+///
+/// Walked with `split_inclusive` rather than `lines`, because the offset this
+/// answers is a byte index into the original text. `lines` drops the `\r` of a
+/// `\r\n` pair, so counting a line as its length plus one loses a byte on every
+/// line of the CRLF document BepInEx writes on Windows: by the header the index
+/// pointed some lines' worth earlier, the split landed mid-line, and the switch
+/// was written above the section instead of inside it — where the adapter never
+/// reads it and BepInEx preserves it forever as an orphan.
 fn mawqi_qism(nass: &str) -> Option<usize> {
     let mut mawqi = 0_usize;
-    for satr in nass.lines() {
+    for satr in nass.split_inclusive('\n') {
         if satr.trim() == QISM_IDADAT {
             return Some(mawqi);
         }
-        mawqi = mawqi.saturating_add(satr.len()).saturating_add(1);
+        mawqi = mawqi.saturating_add(satr.len());
     }
     None
 }
@@ -1805,13 +1818,43 @@ fn fi_qism(nass: &str) -> Option<&str> {
     let bidaya = mawqi_qism(nass)?;
     let baqiya = nass.get(bidaya..)?;
     let mut tul = 0_usize;
-    for (martaba, satr) in baqiya.lines().enumerate() {
+    for (martaba, satr) in baqiya.split_inclusive('\n').enumerate() {
         if martaba > 0 && satr.trim_start().starts_with('[') {
             return baqiya.get(..tul);
         }
-        tul = tul.saturating_add(satr.len()).saturating_add(1);
+        tul = tul.saturating_add(satr.len());
     }
     Some(baqiya)
+}
+
+/// The line ending the document already uses.
+///
+/// BepInEx writes this file with the platform's ending; a switch appended with
+/// the other one leaves a file of two kinds, which every later read of it has
+/// to survive.
+fn nihayat_satr(nass: &str) -> &'static str {
+    if nass.contains("\r\n") { "\r\n" } else { "\n" }
+}
+
+/// The text with any copy of the switch stranded above the first section
+/// removed.
+///
+/// BepInEx keeps a key it cannot place under a bound section and rewrites it
+/// above every header, so a single misplaced write survives for the life of the
+/// file and stands there contradicting the bound value. Writing the switch is
+/// the moment to leave exactly one of it. Only the orphan region above the first
+/// header is cleaned: a key under some other plugin's section is that section's
+/// business, not this one's.
+fn anzif_yatama(nass: &str) -> String {
+    let mut baad_tarwisa = false;
+    nass.split_inclusive('\n')
+        .filter(|satr| {
+            if satr.trim_start().starts_with('[') {
+                baad_tarwisa = true;
+            }
+            baad_tarwisa || qeemat_miftah(satr).is_none()
+        })
+        .collect()
 }
 
 /// The value of the recording key on one line, when the line carries it.
@@ -4279,5 +4322,114 @@ mod ikhtibarat {
         assert!(!yaqra_tasjil("[عام]\n# iltiqat = true\n"));
         assert!(!yaqra_tasjil("[آخر]\niltiqat = true\n"));
         assert!(yaqra_tasjil("[عام]\n# iltiqat = false\niltiqat = true\n"));
+    }
+
+    /// The switch reaches the section in the file BepInEx actually writes.
+    ///
+    /// Every case above is `\n`, and the document on a Windows machine is
+    /// `\r\n`. Walking it as lines and counting each as its length plus one
+    /// lost a byte per line, so the offset of the header pointed earlier than
+    /// the header, the split landed inside the preceding line, and the key was
+    /// written above the section — where the adapter never reads it. The game
+    /// then replaced text on every launch instead of measuring it, and a patch
+    /// built from it carried no measured size for any string.
+    #[test]
+    fn tasjil_yasil_ila_alqism_fi_malaf_crlf() {
+        let sabiq = "## Settings file was created by plugin Taarib v1.0.1\r\n\
+                     ## Plugin GUID: com.cc1a2b.taarib.unity.mono\r\n\
+                     \r\n\
+                     [عام]\r\n\
+                     \r\n\
+                     ## Whether Taarib replaces text at all.\r\n\
+                     mufaal = true\r\n\
+                     \r\n\
+                     ## Capture mode.\r\n\
+                     iltiqat = false\r\n\
+                     \r\n\
+                     [لوحة]\r\n\
+                     \r\n\
+                     bud = 2048\r\n";
+        assert!(!yaqra_tasjil(sabiq));
+
+        let jadeed = uktub_tasjil(sabiq, true);
+        assert!(yaqra_tasjil(&jadeed), "{jadeed:?}");
+        assert_eq!(
+            jadeed.matches("iltiqat = ").count(),
+            1,
+            "exactly one switch, inside the section: {jadeed:?}"
+        );
+        let mawqi = (
+            jadeed.find(QISM_IDADAT),
+            jadeed.find("iltiqat = true"),
+            jadeed.find("[لوحة]"),
+        );
+        assert!(
+            matches!(mawqi, (Some(ras), Some(miftah), Some(lawha))
+                if ras < miftah && miftah < lawha),
+            "the switch belongs between the two headers: {jadeed:?}"
+        );
+        assert!(jadeed.contains("mufaal = true"), "{jadeed:?}");
+        assert!(jadeed.contains("bud = 2048"), "{jadeed:?}");
+        assert!(
+            !jadeed.replace("\r\n", "").contains('\n'),
+            "a CRLF document stays one kind: {jadeed:?}"
+        );
+        assert!(!yaqra_tasjil(&uktub_tasjil(&jadeed, false)));
+    }
+
+    /// A file already carrying the misplaced key heals when the switch is next
+    /// written.
+    ///
+    /// This is the shape the defect left on disk: BepInEx cannot place a key
+    /// that belongs to no section, so it preserves it above every header and
+    /// rewrites it there on each launch, standing against the bound value
+    /// underneath. Two presses left two of them.
+    #[test]
+    fn tasjil_yunazzif_almiftah_alyateem() {
+        let sabiq = "## Settings file was created by plugin Taarib v1.0.1\r\n\
+                     \r\n\
+                     iltiqat = true\r\n\
+                     \r\n\
+                     iltiqat = true\r\n\
+                     [عام]\r\n\
+                     \r\n\
+                     mufaal = true\r\n\
+                     iltiqat = false\r\n";
+        // The stranded copies are not the switch, however they read.
+        assert!(!yaqra_tasjil(sabiq));
+
+        let jadeed = uktub_tasjil(sabiq, true);
+        assert_eq!(
+            jadeed.matches("iltiqat = ").count(),
+            1,
+            "the orphans are cleared, not carried: {jadeed:?}"
+        );
+        assert!(yaqra_tasjil(&jadeed), "{jadeed:?}");
+        let mawqi = (jadeed.find(QISM_IDADAT), jadeed.find("iltiqat = true"));
+        assert!(
+            matches!(mawqi, (Some(ras), Some(miftah)) if ras < miftah),
+            "the switch belongs below the header: {jadeed:?}"
+        );
+        assert!(jadeed.contains("mufaal = true"), "{jadeed:?}");
+    }
+
+    /// Cleaning the orphan region leaves other plugins' sections alone.
+    #[test]
+    fn tanzif_alyatama_la_yamiss_alaqsam_alukhra() {
+        let sabiq = "iltiqat = true\r\n\
+                     [آخر]\r\n\
+                     iltiqat = true\r\n\
+                     [عام]\r\n\
+                     iltiqat = false\r\n";
+        let jadeed = uktub_tasjil(sabiq, true);
+        assert!(
+            jadeed.contains("[آخر]\r\niltiqat = true"),
+            "another section's key is its own business: {jadeed:?}"
+        );
+        assert!(
+            !jadeed.starts_with("iltiqat"),
+            "the stranded key above every header goes: {jadeed:?}"
+        );
+        assert!(yaqra_tasjil(&jadeed), "{jadeed:?}");
     }
 }
