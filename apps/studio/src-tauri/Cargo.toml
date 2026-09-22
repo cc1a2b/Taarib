@@ -97,6 +97,9 @@ blake3 = { workspace = true }
 jiff = { workspace = true }
 # Verifying the bundled component tree against its staging manifest.
 sha2 = { workspace = true }
+# Rendering a third-party artifact's observed sha256 as the lowercase hex the
+# pin is written in, so the console compares one spelling against one spelling.
+hex = { workspace = true }
 # The self-update channel's signed manifest and its resumable download.
 reqwest = { workspace = true }
 # The uninstaller's confirmation dialog, for the path with no Studio window.

@@ -26,6 +26,7 @@
 pub mod badaa;
 pub mod bina;
 pub mod ghiyab;
+pub mod khariji;
 pub mod lawha_badila;
 pub mod luba;
 pub mod muharrik;

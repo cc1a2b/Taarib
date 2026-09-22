@@ -16,11 +16,17 @@ use std::error::Error;
 use std::path::Path;
 
 use taarib_khatm::MiftahKhass;
+use taarib_mustalahat::khariji::{HalatMira, RuqaaKharijiya};
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::musahim::MusahimId;
-use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
+use taarib_mustalahat::ruqaa::{IdhnMasdar, RuqaaId, RuqaaRevision};
+use taarib_mustawda::fahras::{BayanMustawda, ShareehaMuwaththaqa, shareeha};
+use taarib_mustawda::khariji::badhrat_rtea;
+use taarib_mustawda::masadir::masar_shareeha;
+use taarib_mustawda::sabk::masar_mira;
 use taarib_ruqaa::katib::Katib;
 use taarib_taqdeem::hawiya::SalahiyatMalik;
+use taarib_taqdeem::khata::KhataTaqdeem;
 use taarib_taqdeem::nashr::waqqi;
 use taarib_taqdeem::nashr_mustawda::{
     MadkhalNashr, NatijatNashrMustawda, SijillNashr, TalabNashrMustawda, unshur,
@@ -389,6 +395,118 @@ fn madkhal_manshur_la_yasqut_min_alfahras_bisamt() -> NatijatIkhtibar {
     Ok(())
 }
 
+/// A third-party entry is refused by the gate until the owner records the
+/// author's permission, and the seed ships with that statement empty.
+#[test]
+fn madkhal_khariji_bila_bayan_la_yadkhul_alsijill() -> NatijatIkhtibar {
+    let mut sijill = SijillNashr::default();
+    let khata = sijill
+        .sajjil_khariji(badhrat_rtea())
+        .err()
+        .ok_or("an entry with no recorded permission must not reach the ledger")?;
+    assert!(
+        sabab_albawwaba(&khata)?
+            .iter()
+            .any(|mithal| mithal.contains("no written permission on record")),
+        "{khata:?}"
+    );
+    assert_eq!(sijill.kharijiya().count(), 0);
+    Ok(())
+}
+
+/// The sentences a shut gate gave, which is where the refusal actually is —
+/// the error's own text is a count.
+fn sabab_albawwaba(khata: &KhataTaqdeem) -> Result<&[String], Box<dyn Error>> {
+    match khata {
+        KhataTaqdeem::BawwabaMaghlaqa { amthila, .. } => Ok(amthila),
+        akhar => Err(format!("the gate refused for another reason: {akhar}").into()),
+    }
+}
+
+/// Mirroring needs its own grant. The entry publishes from its author with a
+/// written permission on record, and asking the registry to serve the bytes is
+/// refused until the author has said that too.
+#[test]
+fn mira_marfuda_illa_bi_idhn_almuallif() -> NatijatIkhtibar {
+    let mut sijill = SijillNashr::default();
+
+    let mut mamnua = khariji_bi_bayan();
+    mamnua.mira = HalatMira::MinAlsijill {
+        rabt: masar_mira(mamnua.id, "update.zip"),
+    };
+    let khata = sijill
+        .sajjil_khariji(mamnua)
+        .err()
+        .ok_or("hosting somebody's bytes needs a grant that covers hosting")?;
+    assert!(
+        sabab_albawwaba(&khata)?
+            .iter()
+            .any(|mithal| mithal.contains("separate grants")),
+        "{khata:?}"
+    );
+
+    // From the author, which is the default and what the seed ships as.
+    sijill.sajjil_khariji(khariji_bi_bayan())?;
+    assert_eq!(sijill.kharijiya().count(), 1);
+    Ok(())
+}
+
+/// The whole path: a third-party entry in the ledger, cast, pushed, and read
+/// back out of the remote the way a client reads it — the manifest first, then
+/// the shard verified against the hash the manifest declares.
+#[test]
+fn madkhal_khariji_yasil_ila_shareeha_yaqrauha_alameel() -> NatijatIkhtibar {
+    let masrah = tempfile::tempdir()?;
+    let rabt = mustawda_baid(&masrah.path().join("baid"))?;
+    let manshurat = masrah.path().join("manshurat");
+    std::fs::create_dir_all(&manshurat)?;
+
+    let madkhal = khariji_bi_bayan();
+    let mut sijill = SijillNashr::default();
+    sijill.sajjil_khariji(madkhal.clone())?;
+
+    let natija = unshur_fi(
+        &sijill,
+        &masrah.path().join("nuskha"),
+        &manshurat,
+        &rabt,
+        "2026-09-20T15:51:00Z",
+    )?;
+    assert_eq!(natija.kharijiya.len(), 1);
+    assert!(
+        natija.fahras.is_empty(),
+        "a third-party entry is not a patch Taarib built"
+    );
+
+    let bayan = BayanMustawda::min_bayt(&min_almustawda(&rabt, "bayan.json")?, None)?;
+    let raqm = shareeha(madkhal.luba);
+    let bayt = min_almustawda(&rabt, &masar_shareeha(raqm)?)?;
+    // The client's own path: the bytes are hashed against the manifest before a
+    // single record is parsed, so this is what another machine would really see.
+    let shareeha = ShareehaMuwaththaqa::min_bayt(raqm, &bayt, &bayan)?;
+    let qaima = shareeha.kharijiya(madkhal.luba);
+    assert_eq!(qaima, &[madkhal.clone()][..]);
+    assert!(shareeha.ruqaa(madkhal.luba).is_empty());
+
+    let awwal = qaima.first().ok_or("the shard carries no entry")?;
+    assert_eq!(awwal.nasab(), "Emad Adel · Redemption Team");
+    assert_eq!(awwal.qitaa_li_bina("1491").len(), 1);
+    assert_eq!(awwal.qitaa_li_bina("1311").len(), 2);
+    Ok(())
+}
+
+/// The RTEA seed with the one fact nobody here can invent filled in.
+///
+/// The statement is a fixture's, not a claim about the real author: the seed
+/// ships blank precisely so that the owner has to go and ask.
+fn khariji_bi_bayan() -> RuqaaKharijiya {
+    let mut madkhal = badhrat_rtea();
+    madkhal.masdar.idhn = IdhnMasdar::Katabi {
+        bayan: "fixture only — no permission has actually been asked for".to_owned(),
+    };
+    madkhal
+}
+
 /// One ledger row for a package that is not on disk.
 fn madkhal(ruqaa: RuqaaId, tasalsul: Option<u64>) -> Result<MadkhalNashr, Box<dyn Error>> {
     Ok(MadkhalNashr {
@@ -458,8 +576,8 @@ fn huzma_manshura_tahmil_unwan_tanzil_haqiqi() -> NatijatIkhtibar {
 
     // Not only what the cast returned: what the registry is now serving. The
     // shard is the document a client actually reads.
-    let shareeha = taarib_mustawda::fahras::shareeha(luba());
-    let bayt = min_almustawda(&rabt, &format!("sharaih/{shareeha:02x}.json"))?;
+    let raqm = shareeha(luba());
+    let bayt = min_almustawda(&rabt, &format!("sharaih/{raqm:02x}.json"))?;
     let muhtawa: serde_json::Value = serde_json::from_slice(&bayt)?;
     let mansur = muhtawa
         .get("ruqaa")

@@ -3,7 +3,9 @@
 use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
+use taarib_aman::kharijiya::{idhn_katabi, mira_masmuha};
 use taarib_mustalahat::bina::Basma;
+use taarib_mustalahat::khariji::RuqaaKharijiya;
 use taarib_mustalahat::luba::HukmLughaRasmiya;
 use taarib_mustalahat::nass::{MudkhalNass, NassId};
 use taarib_mustalahat::ruqaa::{MulakhkhasRuqaa, RuqaaId, RuqaaRevision};
@@ -502,7 +504,7 @@ fn ijmaa(
 
     sutur.push(satr_lugha_rasmiya(mudkhalat.lugha_rasmiya));
     sutur.push(satr_fuhusat(mudkhalat, khata));
-    sutur.push(satr_shahada(musawwada.shahada()));
+    sutur.push(satr_shahada(musawwada));
     sutur.push(satr_taghtiya(
         musawwada,
         ghayr_mutarjama.clone(),
@@ -663,7 +665,23 @@ fn satr_fuhusat(mudkhalat: &MudkhalatBawwaba<'_>, khata: Option<&KhataTarqee>) -
     }
 }
 
-fn satr_shahada(shahada: &ShahadatBawwaba) -> SatrFahs {
+/// Reads the asset gate's certificate into a blocking row.
+///
+/// Takes the submission rather than the certificate, and that is the whole
+/// reason for the signature. The sentence this row renders — the package
+/// carries no byte of the game — is a count over the permitted content of a
+/// package Taarib compiled, and it is true of exactly that and nothing else. A
+/// third-party entry is the opposite kind of thing: an archive built out of the
+/// game's own containers by somebody else, which Taarib fetches and never
+/// compiled, and a mirrored one puts those bytes on Taarib's own
+/// infrastructure. Handed a bare [`ShahadatBawwaba`], any caller holding one
+/// could render that sentence over whatever they happened to be looking at.
+/// Taking a [`Musawwada`] means the row can only be built over the thing the
+/// certificate was computed from, and a [`RuqaaKharijiya`] has no path to one —
+/// which is why [`ifhas_khariji`] has no certificate row at all rather than a
+/// certificate row that says nothing.
+fn satr_shahada(musawwada: &Musawwada) -> SatrFahs {
+    let shahada = musawwada.shahada();
     let band = BandFahs::Hasim(FahsHasim::Shahada);
     match khalal_shahada(shahada) {
         Some((arabi, injilizi)) => satr(band, HalatBand::Rasab, Vec::new(), 0, arabi, injilizi),
@@ -795,6 +813,107 @@ fn satr_huquq_masdar(musawwada: &Musawwada) -> SatrFahs {
              the imported text before submitting."
         ),
     )
+}
+
+/// Whether one third-party entry may be published at all.
+///
+/// [`FahsHasim::HuquqAlmasdar`] again, deliberately: a row that answered the
+/// rights question differently depending on which screen asked would be two
+/// answers to one question. What differs is the subject.
+/// [`satr_huquq_masdar`] asks about *strings* a contributor imported into a
+/// patch Taarib compiled; this asks about a whole finished work republished
+/// under its author's name, fetched and installed by strangers on the
+/// registry's word — so the bar is the author's own written grant and a licence
+/// file nobody here read is not it.
+///
+/// Both halves are `taarib_aman::kharijiya`'s, which is where the pre-install
+/// gate and the installer read them from as well. A second spelling of "may
+/// this be published, may this be hosted" is a second place for it to drift,
+/// and drift here means publishing somebody's work without having asked.
+fn satr_huquq_khariji(madkhal: &RuqaaKharijiya) -> SatrFahs {
+    let band = BandFahs::Hasim(FahsHasim::HuquqAlmasdar);
+    let nasab = madkhal.nasab();
+    if !idhn_katabi(&madkhal.masdar) {
+        return satr(
+            band,
+            HalatBand::Rasab,
+            Vec::new(),
+            1,
+            format!(
+                "«{}» لـ{nasab}: عملٌ خارجيّ لا إذن مكتوبًا مسجَّلًا له من صاحبه. المستودع لا \
+                 ينشر عمل غيره بلا إذن، والرخصة وحدها لا تكفي هنا: اكتب أين أذِن صاحبُ العمل \
+                 ومتى، ليتمكّن القارئ من التحقّق.",
+                madkhal.unwan
+            ),
+            format!(
+                "{}, by {nasab}, has no written permission on record. The registry does not \
+                 publish somebody else's work without one, and a licence alone is not enough \
+                 here: write where the author granted it and when, so a reader can go and check.",
+                madkhal.unwan
+            ),
+        );
+    }
+    if madkhal.mira.min_sijill() && !mira_masmuha(&madkhal.masdar) {
+        return satr(
+            band,
+            HalatBand::Rasab,
+            Vec::new(),
+            1,
+            format!(
+                "«{}» لـ{nasab}: مضبوطٌ على استضافة ملفّاته في المستودع، والإذن المسجَّل لا \
+                 يشمل الاستضافة. إعادة النشر والاستضافة إذنان منفصلان، والملفّات تبقى عند \
+                 صاحبها حتى يأذن بنقلها.",
+                madkhal.unwan
+            ),
+            format!(
+                "{} is set to be served from the registry and the recorded permission does not \
+                 cover hosting. Redistribution and hosting are separate grants: the files stay \
+                 on {nasab}'s own endpoint until they say otherwise.",
+                madkhal.unwan
+            ),
+        );
+    }
+    let (min_arabi, min_injilizi) = if madkhal.mira.min_sijill() {
+        ("المستودع", "the registry")
+    } else {
+        ("صاحب العمل", "its author")
+    };
+    satr(
+        band,
+        HalatBand::Ijtaz,
+        Vec::new(),
+        0,
+        format!(
+            "«{}» لـ{nasab}: إذنٌ مكتوب مسجَّل، والملفّات تُجلَب من {min_arabi}.",
+            madkhal.unwan
+        ),
+        format!(
+            "{} by {nasab}: a written permission is on record, and the files are fetched from \
+             {min_injilizi}.",
+            madkhal.unwan
+        ),
+    )
+}
+
+/// The gate's verdict over one third-party entry.
+///
+/// One row, and the rows that are missing are as deliberate as the one that is
+/// here. Coverage, the hard checks, the duplicate check and the import mappings
+/// are all statements about a package Taarib compiled; there is no package
+/// here, so there is nothing for them to be true or false of, and emitting them
+/// would be the checklist asserting what nobody measured.
+///
+/// The certificate is the one that matters. It says a package carries zero
+/// bytes of the game, and a third-party artifact is the game's own containers
+/// repacked by somebody else — the sentence is simply false over one. It is
+/// absent here because [`satr_shahada`] takes a [`Musawwada`] and nothing turns
+/// a [`RuqaaKharijiya`] into one, so the exclusion holds without anybody
+/// remembering it.
+#[must_use]
+pub fn ifhas_khariji(madkhal: &RuqaaKharijiya) -> QaimatFahs {
+    QaimatFahs {
+        sutur: vec![satr_huquq_khariji(madkhal)],
+    }
 }
 
 fn satr_irtibat(musawwada: &Musawwada) -> SatrFahs {
@@ -1017,7 +1136,9 @@ fn khata_qaima(qaima: &QaimatFahs, mudkhalat: &MudkhalatBawwaba<'_>) -> KhataTaq
 
 #[cfg(test)]
 mod ikhtibarat {
+    use taarib_mustalahat::khariji::HalatMira;
     use taarib_mustalahat::luba::{DaleelLugha, HalatLughaRasmiya, NawDaleelLugha, TughtiyaLugha};
+    use taarib_mustalahat::ruqaa::IdhnMasdar;
 
     use super::*;
 
@@ -1128,6 +1249,81 @@ mod ikhtibarat {
         let satr = satr_lugha_rasmiya(None);
         assert_eq!(satr.hala, HalatBand::Ijtaz);
         assert!(satr.tafsil_injilizi.contains("was not checked"));
+    }
+
+    /// The seed as it ships: a written grant whose statement nobody filled in
+    /// is not a grant anybody can go and check, so the gate shuts.
+    #[test]
+    fn khariji_bila_bayan_yughliq_albawwaba() -> Result<(), Box<dyn std::error::Error>> {
+        let qaima = ifhas_khariji(&taarib_mustawda::khariji::badhrat_rtea());
+        assert!(!qaima.jahiza());
+        let satr = qaima
+            .satr(BandFahs::Hasim(FahsHasim::HuquqAlmasdar))
+            .ok_or("the third-party checklist has no rights row")?;
+        assert_eq!(satr.hala, HalatBand::Rasab);
+        assert!(
+            satr.tafsil_injilizi.contains("no written permission"),
+            "{}",
+            satr.tafsil_injilizi
+        );
+        assert!(
+            satr.tafsil_injilizi.contains("Emad Adel"),
+            "{}",
+            satr.tafsil_injilizi
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn khariji_bi_bayan_yajtaz() -> Result<(), Box<dyn std::error::Error>> {
+        let mut madkhal = taarib_mustawda::khariji::badhrat_rtea();
+        madkhal.masdar.idhn = IdhnMasdar::Katabi {
+            bayan: "granted by the author on X, 2026-09-21, https://x.example/post/1".to_owned(),
+        };
+        let qaima = ifhas_khariji(&madkhal);
+        assert!(qaima.jahiza());
+        let satr = qaima
+            .satr(BandFahs::Hasim(FahsHasim::HuquqAlmasdar))
+            .ok_or("the third-party checklist has no rights row")?;
+        assert_eq!(satr.hala, HalatBand::Ijtaz);
+        assert!(satr.tafsil_injilizi.contains("fetched from its author"));
+        Ok(())
+    }
+
+    /// Redistribution and hosting are separate grants, and the gate takes
+    /// `taarib_aman::kharijiya`'s answer on the second one.
+    #[test]
+    fn mira_bila_idhn_tughliq_albawwaba() -> Result<(), Box<dyn std::error::Error>> {
+        let mut madkhal = taarib_mustawda::khariji::badhrat_rtea();
+        madkhal.masdar.idhn = IdhnMasdar::Katabi {
+            bayan: "granted by the author on X, 2026-09-21, https://x.example/post/1".to_owned(),
+        };
+        madkhal.mira = HalatMira::MinAlsijill {
+            rabt: format!("khariji/{}/update.zip", madkhal.id),
+        };
+        let qaima = ifhas_khariji(&madkhal);
+        assert!(!qaima.jahiza());
+        let satr = qaima
+            .satr(BandFahs::Hasim(FahsHasim::HuquqAlmasdar))
+            .ok_or("the third-party checklist has no rights row")?;
+        assert_eq!(satr.hala, HalatBand::Rasab);
+        assert!(satr.tafsil_injilizi.contains("separate grants"));
+        Ok(())
+    }
+
+    /// The certificate says a package holds zero bytes of the game, and a
+    /// third-party artifact is the game's own containers repacked. The row is
+    /// absent rather than passing, and it is absent because `satr_shahada`
+    /// takes a submission and nothing turns one of these into one.
+    #[test]
+    fn qaimat_alkhariji_la_tahmil_shahadat_albawwaba() {
+        let qaima = ifhas_khariji(&taarib_mustawda::khariji::badhrat_rtea());
+        assert!(
+            qaima.satr(BandFahs::Hasim(FahsHasim::Shahada)).is_none(),
+            "a third-party entry has no package for the certificate to be about"
+        );
+        assert!(qaima.satr(BandFahs::Hasim(FahsHasim::Taghtiya)).is_none());
+        assert_eq!(qaima.sutur().len(), 1);
     }
 
     #[test]

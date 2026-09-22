@@ -1,0 +1,470 @@
+/* ==========================================================================
+   قسم الرقع الخارجية — other teams' patches, on the game screen.
+
+   The section is a `luba__qism` and every card in it is a `luba__lawhat-tathbeet`,
+   because the two listings on this screen must be the same card: a person is
+   choosing between them, and a different box would make the comparison about
+   the boxes. What differs is one thing, and it is not a colour.
+
+   THE MARKER. Every install card on this screen carries a two-hairline rule
+   along its leading edge in the game's own accent, and that rule is what
+   "Taarib's own" looks like here. These cards keep the box, the ground, the
+   hairline and the measurement, and replace that rule with a run of short
+   neutral segments — a stitch. The edge reads as bound in rather than built in;
+   the difference carries down a column of cards in peripheral vision; and
+   because it is a shape rather than a hue it survives a monochrome display,
+   both palettes, the high-contrast set, and a reader who cannot separate teal
+   from grey. The same stitch is drawn at glyph size on the category plate in
+   the card's head, so the two marks say one thing.
+
+   Nothing in this file is `--khatar` or `--tanbeeh`. This is legitimate work
+   being offered and the marker names a category, not a hazard. The one amber
+   rule below belongs to the maker's own safety sentences, which are a different
+   statement and appear only at the moment they apply.
+
+   SPECIFICITY. Every rule that changes something `luba.css` already declared is
+   written as a compound of both classes. A single class would score the same as
+   the one it is overriding and the winner would be decided by which stylesheet
+   the bundler happened to emit first — which is exactly how a destructive
+   button in this product once rendered identical to Cancel.
+   ========================================================================== */
+
+.qism-khariji__sharh {
+  max-inline-size: 56ch;
+  margin-block-end: var(--misafa-16);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+.qism-khariji__qaima {
+  display: grid;
+  gap: var(--misafa-12);
+}
+
+/* --- the marker ------------------------------------------------------------ */
+
+.luba__lawhat-tathbeet.qism-khariji__madkhal {
+  position: relative;
+  /* The rule stays a border, so the box, the padding and every measurement
+     inside this card are identical to a Taarib patch's — but it carries no
+     colour, and the stitch below is drawn over exactly the space it reserves. */
+  border-inline-start-color: transparent;
+}
+
+.luba__lawhat-tathbeet.qism-khariji__madkhal::before {
+  content: '';
+  position: absolute;
+  /* Absolute insets resolve against the padding box, so one border-width
+     outside it is the leading edge of the card. Held back from both ends by the
+     corner radius: a straight strip run into a rounded corner overshoots it,
+     and stopping short reads as binding rather than as a broken border. */
+  inset-block: var(--nisf-lawha);
+  inset-inline-start: calc(var(--misafa-2) * -1);
+  inline-size: var(--misafa-2);
+  /* Six on, six off. `--nass-2` rather than the quieter `--nass-3`: the solid
+     rule this replaces measures about 3.9:1 against the card, and a marker that
+     has to be caught in peripheral vision cannot be fainter than the thing it
+     is distinguished from. At the secondary text colour it reads at roughly
+     7.8:1 on the dark palette and stronger still on the light one. */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--nass-2) 0 var(--misafa-6),
+    transparent var(--misafa-6) var(--misafa-12)
+  );
+}
+
+/* --- the head -------------------------------------------------------------- */
+
+.qism-khariji__raas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--misafa-12);
+}
+
+.qism-khariji__unwan {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+/* The category plate, in the vocabulary the library card already uses for facts
+   about a game: the lowest surface, a hairline, and the label one step down
+   from the title. The stitch beside the words is the card's own leading edge at
+   glyph size. */
+.qism-khariji__wasm {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--misafa-6);
+  padding-inline: var(--misafa-8);
+  padding-block: var(--misafa-2);
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-2);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  white-space: nowrap;
+}
+
+.qism-khariji__wasm::before {
+  content: '';
+  flex: none;
+  inline-size: var(--samk-hadd-barz);
+  block-size: var(--misafa-12);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    currentColor 0 var(--misafa-4),
+    transparent var(--misafa-4) var(--misafa-8)
+  );
+}
+
+/* Whose work this is, directly under the title and at reading weight — the
+   fact this card exists to carry, set as the card's subject line rather than
+   as a byline in the corner. */
+.qism-khariji__itiman {
+  max-inline-size: 56ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+/* What Taarib did and did not do. A strong neutral rule and the lowest surface:
+   emphasis by structure, because every status colour in this product would be
+   making a claim the sentence is there to avoid — teal would read as Taarib
+   vouching for the work, amber as a warning about it, and it is neither. */
+.qism-khariji__tahaqquq {
+  max-inline-size: 60ch;
+  padding: var(--misafa-8) var(--misafa-12);
+  background-color: var(--sath-0);
+  border-inline-start: var(--samk-hadd-barz) solid var(--hadd-qawi);
+  border-radius: var(--nisf-tahakkum);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* --- fact rows ------------------------------------------------------------- */
+
+.qism-khariji__jadwal {
+  display: grid;
+  gap: var(--misafa-6);
+}
+
+.qism-khariji__saff {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--misafa-16);
+  align-items: baseline;
+}
+
+.qism-khariji__saff dt {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  white-space: nowrap;
+}
+
+.qism-khariji__saff dd {
+  min-inline-size: 0;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+}
+
+/* The maker's own permission statement, quoted under the kind it was filed as:
+   quieter than the kind, on its own line, and in its own direction, because a
+   grant is written in whatever language the maker wrote it in. */
+.qism-khariji__bayan {
+  display: block;
+  margin-block-start: var(--misafa-2);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.qism-khariji__nass-hadi {
+  max-inline-size: 60ch;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+.qism-khariji__unwan-farii {
+  margin-block-start: var(--misafa-12);
+  margin-block-end: var(--misafa-6);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-3);
+}
+
+.qism-khariji__unwan-farii:first-child {
+  margin-block-start: 0;
+}
+
+/* --- chips ----------------------------------------------------------------- */
+
+.qism-khariji__riqaq {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-6);
+}
+
+.qism-khariji__riqaqa {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--misafa-8);
+  padding-block: var(--misafa-2);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  background-color: var(--sath-3);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+/* --- the inventory --------------------------------------------------------- */
+
+.qism-khariji__tafsil {
+  padding: var(--misafa-8) var(--misafa-12);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.qism-khariji__tafsil-unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+  cursor: pointer;
+}
+
+.qism-khariji__tafsil-unwan:focus-visible {
+  outline: var(--samk-hadd-barz) solid var(--tamyeez-qawi);
+  outline-offset: var(--misafa-2);
+  border-radius: var(--nisf-hadd);
+}
+
+.qism-khariji__tafsil[open] .qism-khariji__tafsil-unwan {
+  margin-block-end: var(--misafa-8);
+  color: var(--nass-1);
+}
+
+.qism-khariji__qitaa-qaima {
+  display: grid;
+  gap: var(--misafa-12);
+}
+
+.qism-khariji__qitaa {
+  display: grid;
+  gap: var(--misafa-6);
+  padding: var(--misafa-8) var(--misafa-12);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.qism-khariji__qitaa-raas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--misafa-8);
+}
+
+.qism-khariji__qitaa-ism {
+  color: var(--nass-1);
+}
+
+.qism-khariji__qitaa-hajm {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* An address is longer than this column and truncating it would hide the one
+   thing the line is there to show: where the bytes actually come from. */
+.qism-khariji__rabt {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--nass-2);
+}
+
+.qism-khariji__masarat {
+  display: grid;
+  gap: var(--misafa-4);
+  padding: var(--misafa-12);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.qism-khariji__masarat li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--nass-2);
+}
+
+/* --- what is already in the way -------------------------------------------- */
+
+/* Amber, because this one *is* "read this before you act": the install will not
+   run, and the reason is a file another team put in the game directory. The
+   card's own marker stays neutral; a refusal is not the category. */
+.qism-khariji__tadakhul {
+  display: grid;
+  gap: var(--misafa-8);
+  padding: var(--misafa-12);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--samk-hadd-barz) solid var(--tanbeeh);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.qism-khariji__tadakhul-nass {
+  max-inline-size: 60ch;
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+/* --- the maker's own warnings ---------------------------------------------- */
+
+.qism-khariji__tahdheerat {
+  display: grid;
+  gap: var(--misafa-8);
+  padding: var(--misafa-12);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-inline-start: var(--samk-hadd-barz) solid var(--khatar);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.qism-khariji__tahdheer-qaima {
+  display: grid;
+  gap: var(--misafa-8);
+}
+
+.qism-khariji__tahdheer-qaima li {
+  position: relative;
+  max-inline-size: 60ch;
+  padding-inline-start: var(--misafa-16);
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-1);
+  text-wrap: pretty;
+}
+
+.qism-khariji__tahdheer-qaima li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: var(--misafa-8);
+  inline-size: var(--misafa-6);
+  block-size: var(--misafa-6);
+  border-radius: 50%;
+  background-color: var(--khatar);
+}
+
+/* --- actions and results --------------------------------------------------- */
+
+.qism-khariji__afal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+.qism-khariji__muthabbata {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+}
+
+/* The address beside the control that opens it, so the reader sees where the
+   button leads before pressing it and can copy it out when the browser will not
+   open. Never an anchor: this webview has no browser of its own, and the
+   command is where the address is checked before anything is launched. */
+.qism-khariji__rabt-muallif {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.qism-khariji__rafd {
+  color: var(--nass-2);
+}
+
+.qism-khariji__tawassu {
+  overflow: hidden;
+}
+
+.qism-khariji__tawassu-dakhil {
+  display: grid;
+  gap: var(--misafa-16);
+  padding-block-start: var(--misafa-8);
+}
+
+.qism-khariji__mintaqa {
+  display: grid;
+  gap: var(--misafa-12);
+  margin-block-start: var(--misafa-16);
+}
+
+.qism-khariji__mintaqa:empty {
+  display: none;
+}
+
+.qism-khariji__jari {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-2);
+}
+
+.qism-khariji__natija {
+  display: grid;
+  gap: var(--misafa-8);
+  padding: var(--misafa-16);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-lawha);
+}
+
+.qism-khariji__natija-nass {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  color: var(--nass-1);
+}
+
+.qism-khariji__adad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--misafa-16);
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.qism-khariji__haykal {
+  display: grid;
+  gap: var(--misafa-8);
+}

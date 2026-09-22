@@ -46,7 +46,9 @@ pub mod taaliq;
 pub mod tabur;
 pub mod talabat;
 
-pub use bawwaba::{BandFahs, IjtiyazTaqdeem, Iqrarat, MudkhalatBawwaba, QaimatFahs, ifhas, ijri};
+pub use bawwaba::{
+    BandFahs, IjtiyazTaqdeem, Iqrarat, MudkhalatBawwaba, QaimatFahs, ifhas, ifhas_khariji, ijri,
+};
 pub use hawiya::{HawiyatMusahim, Jalsa, SalahiyatMalik};
 pub use irsal::{IdadatIrsal, MarhalatIrsal, NatijatIrsal, TalabIrsal, irsal};
 pub use khata::{KhataTaqdeem, NatijatTaqdeem};

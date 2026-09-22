@@ -1135,8 +1135,17 @@ fn izala_hie(
     naw: NawTathbeet,
     natija: Option<&Result<TaqreerIstiada, KhataTathbeet>>,
 ) -> Option<TaqreerIzalaHie> {
-    let taqreer = natija?.as_ref().ok()?;
-    Some(TaqreerIzalaHie {
+    Some(taqreer_izala_hie(naw, natija?.as_ref().ok()?))
+}
+
+/// One restore report as the interface reads it.
+///
+/// Split out so a third-party removal renders through the same projection a
+/// Taarib removal does: the two run the same restore machinery over different
+/// backup roots, and a second projection would be a second place for "restored"
+/// and "was already original" to start meaning different things.
+pub(crate) fn taqreer_izala_hie(naw: NawTathbeet, taqreer: &TaqreerIstiada) -> TaqreerIzalaHie {
+    TaqreerIzalaHie {
         naw: NawTathbeetHie::min_asli(naw),
         luba: taqreer.luba.clone(),
         mustaada: adad(taqreer.mustaada),
@@ -1147,7 +1156,7 @@ fn izala_hie(
         idadat_mustaada: adad(taqreer.idadat_mustaada),
         mustabdala: taqreer.mustabdala.clone(),
         nazif: taqreer.nazif(),
-    })
+    }
 }
 
 /// The acknowledgement record as the first-run dialogue writes it.
@@ -1211,7 +1220,7 @@ pub(crate) fn masar_iqrar(masarat: &Masarat) -> PathBuf {
 }
 
 /// Parses the patch lineage the interface sends back.
-fn huwiyat_ruqaa(ruqaa: String) -> Natija<RuqaaId> {
+pub(crate) fn huwiyat_ruqaa(ruqaa: String) -> Natija<RuqaaId> {
     serde_json::from_value::<RuqaaId>(serde_json::Value::String(ruqaa.clone()))
         .map_err(|_| Khata::from(KhataTathbeetAmr::MuarrifRuqaaGhayrSalih { ruqaa }))
 }
@@ -1986,7 +1995,7 @@ pub(crate) fn asas_sahb() -> Result<AsasSahb, KhataAman> {
 /// the two to disagree. The settings layer already refuses anything under five
 /// minutes; the floor is repeated here so a hand-edited file cannot turn the
 /// background loop into a busy one.
-fn nafidhat_sahb(hali: &Idadat) -> SignedDuration {
+pub(crate) fn nafidhat_sahb(hali: &Idadat) -> SignedDuration {
     SignedDuration::from_mins(i64::from(hali.masadir.fatra_tahdith.max(5)))
 }
 

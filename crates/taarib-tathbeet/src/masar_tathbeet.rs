@@ -19,6 +19,7 @@ use crate::mawdi::WajhatLuba;
 use crate::nusus::Nashir;
 use crate::tahaqquq::{NatijatTahaqquq, tahaqquq_kamil};
 use crate::tarkib::QararTabaqa;
+use crate::tasadum::la_yatasadam_maa_khariji;
 
 /// One patch-content placement: a validated in-game destination and its bytes.
 #[derive(Debug)]
@@ -146,8 +147,9 @@ pub struct NatijatTathbeetKamil {
 /// [`KhataTathbeet::IdhnGhayrMutabiq`] when the safety proof covers a different
 /// game or package; [`KhataTathbeet::LubaTashtaghil`] when the game is running
 /// and [`KhataTathbeet::HalatLubaMajhula`] when a sandbox makes that
-/// unanswerable; [`KhataTathbeet::RuqaaMarfuda`] when the package fails
-/// verification;
+/// unanswerable; [`KhataTathbeet::TasadumRuqaa`] when a translation somebody
+/// else made is already in the game; [`KhataTathbeet::RuqaaMarfuda`] when the
+/// package fails verification;
 /// [`KhataTathbeet::TawafuqMarfud`] when the build does not match and no
 /// acknowledgement was given; [`KhataTathbeet::MunassaTaamal`] and
 /// [`KhataTathbeet::HalatManassaMajhula`] when the deployment needs a
@@ -171,6 +173,11 @@ where
     }
 
     la_tashtaghil(talab.tanfidhi)?;
+    // Before the package is opened, because the answer has nothing to do with
+    // the package: two translations of one game overwrite each other's files,
+    // and the third-party ones tell their users to delete the file Taarib's own
+    // loader is published as.
+    la_yatasadam_maa_khariji(&talab.luba.jidhr, jidhr_nusakh)?;
     tahaqquq_ruqaa(&talab.luba.jidhr, ruqaa, mudaqqiq)?;
     let tawafuq = qarrir_tawafuq(talab)?;
 

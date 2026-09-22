@@ -134,4 +134,19 @@ export const mafatih = {
   sijillat: ['sijillat'] as const,
   /** Every community translation the registry's index lists for one game. */
   mujtama: (muarrif: string) => ['mujtama', muarrif] as const,
+  /** Every third-party patch the registry offers for one game, ready to install. */
+  kharijiya: (muarrif: string) => ['kharijiya', muarrif] as const,
+  /**
+   * What is already in one game's directory that one third-party patch cannot
+   * sit beside.
+   *
+   * Per entry rather than per game, because the answer is about a particular
+   * loader slot: a game holding Taarib's own `version.dll` blocks one entry and
+   * not another. It reads the game directory, so it is its own key rather than
+   * a field on the catalogue, and it is invalidated by every install and every
+   * removal on that game.
+   */
+  tadakhul: (muarrif: string, ruqaa: string) => ['tadakhul', muarrif, ruqaa] as const,
+  /** The artifacts whose authors have shipped bytes the owner has not pinned. */
+  basmat: ['basmat'] as const,
 } as const;

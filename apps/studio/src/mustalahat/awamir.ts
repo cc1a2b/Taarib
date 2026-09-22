@@ -1350,6 +1350,19 @@ export const commands = {
 	 *  rest — the panel that fetched the index is where the refusal is named to the
 	 *  user, and this command is not the place to raise it a second time.
 	 * 
+	 *  ## The third-party panels
+	 * 
+	 *  They call this command too, with an author's own page, and that address does
+	 *  not come from the community index — so it used to be refused wherever the
+	 *  author does not happen to live on a platform this file names. The allowance
+	 *  added for them is deliberately not "these panels may open anything": it is
+	 *  [`crate::khariji_awamir::mudifu_muallifin`], the **exact hosts** of the
+	 *  author addresses that third-party catalogue entries name, drawn from the
+	 *  entries compiled into this binary and from those a verified registry shard or
+	 *  the owner's own ledger produced this session. They join `mudifun`, which is
+	 *  matched by membership and never by suffix, so nothing here widens to a
+	 *  subdomain and no address reaches the browser because a panel asked nicely.
+	 * 
 	 *  # Errors
 	 * 
 	 *  [`KhataMujtamaAmr::RabtMarfud`] when the address fails any check above,
@@ -1358,6 +1371,143 @@ export const commands = {
 	 *  is unreadable.
 	 */
 	iftahRabt: (rabt: string) => typedError<boolean, Khata>(__TAURI_INVOKE("iftah_rabt", { rabt })),
+	/**
+	 *  Every third-party patch the registry lists for one game.
+	 * 
+	 *  The registry's own listing path: only the shard this game's identity falls
+	 *  in is fetched, and a shard the manifest still vouches for is read from the
+	 *  cache. The compiled-in seed catalogue is listed beside it for any entry the
+	 *  shard does not already carry, so a machine whose registry has not published
+	 *  one yet still sees what this build knows about — credited, explained, and
+	 *  with its install refused by the gate for exactly the reason the entry
+	 *  carries.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataTathbeetAmr::GhayrMuttasil`] when offline mode leaves no source to
+	 *  try, and whatever the store, the registry client or the game lookup raise.
+	 */
+	ruqaaKharijiya: (muarrif: string) => typedError<MudkhalKharijiHie[], Khata>(__TAURI_INVOKE("ruqaa_kharijiya", { muarrif })),
+	/**
+	 *  What is already in one game's directory that one entry cannot sit beside.
+	 * 
+	 *  The same two refusals `thabbit_khariji` runs before it writes anything, in
+	 *  the same order — Taarib's own install first, then somebody else's — so the
+	 *  report and the refusal can never disagree about which one is in the way.
+	 *  Nothing is written and nothing is fetched beyond the catalogue read that
+	 *  establishes the entry is real.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataKharijiAmr::MadkhalGhayrMawjud`] when the catalogue lists no such
+	 *  entry for this game, and whatever the store, the registry client or the game
+	 *  lookup raise.
+	 */
+	tadakhulKharijiya: (muarrif: string, ruqaa: string) => typedError<TadakhulKharijiHie, Khata>(__TAURI_INVOKE("tadakhul_kharijiya", { muarrif, ruqaa })),
+	/**
+	 *  Fetches one third-party entry against its pins and installs it.
+	 * 
+	 *  The order is the installer's and is not negotiable here: the gate is asked
+	 *  first and is the only thing that can mint the permit, the permit is compared
+	 *  against the entry before a byte moves, every artifact is fetched into the
+	 *  quarantine and proved against both halves of its pin there, and only then is
+	 *  the manifest opened and anything written into the game.
+	 * 
+	 *  `iqrar` is the person's acknowledgement of the warnings the entry carries and
+	 *  of the online-play sentence the gate composes itself. It is passed through to
+	 *  [`TalabFahsKhariji::iqrar_tahdheerat`] and nowhere else: a caller that showed
+	 *  nothing and sends `true` is lying to its own user, and a caller that sends
+	 *  `false` gets back the list it should have shown.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataKharijiAmr::MadkhalGhayrMawjud`] when the catalogue lists no such
+	 *  entry, [`KhataKharijiAmr::BinaMajhula`] when the entry pins different files
+	 *  to different builds and no build has been measured for this game,
+	 *  [`KhataKharijiAmr::BawwabaRafadat`] carrying the gate's own refusal, and
+	 *  whatever the installer raises — a collision, a running game, a transfer that
+	 *  did not complete, or an artifact whose bytes did not reproduce its pin.
+	 */
+	thabbitKharijiya: (muarrif: string, ruqaa: string, iqrar: boolean) => typedError<NatijatKharijiyaHie, Khata>(__TAURI_INVOKE("thabbit_kharijiya", { muarrif, ruqaa, iqrar })),
+	/**
+	 *  Takes one third-party patch back off, and puts the game back.
+	 * 
+	 *  The reason this product is worth using for a patch it did not build. The
+	 *  author's own installer writes into the game and keeps no record of what was
+	 *  there before; this went in through the same manifest a Taarib patch does,
+	 *  with the original bytes of every file it overwrote **and** of every file the
+	 *  author's instructions told it to delete first. So the way out is the restore
+	 *  machinery unchanged — the one that verifies every byte against its recorded
+	 *  fingerprint, reapplies timestamps and permissions, resumes an interrupted
+	 *  run, and refuses to call a partial removal a success.
+	 * 
+	 *  It reads this entry's own backup root and no other, which is what keeps two
+	 *  patches installed side by side from removing each other's files.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataTathbeetAmr`] when the identity is not a game or the game is not in
+	 *  the store, [`taarib_tathbeet::khata::KhataTathbeet::LubaTashtaghil`] while
+	 *  the game is running, and whatever the restore refuses — a replaced file
+	 *  under [`SiyasatIstiada::Rafd`], a fingerprint that does not match, a backup
+	 *  that cannot be read.
+	 */
+	azilKharijiya: (muarrif: string, ruqaa: string) => typedError<TaqreerIzalaHie, Khata>(__TAURI_INVOKE("azil_kharijiya", { muarrif, ruqaa })),
+	/**
+	 *  Every pinned artifact whose author is now serving different bytes.
+	 * 
+	 *  The owner's, and only the owner's: the pins are theirs, the ledger this
+	 *  reads is the one the next cast rebuilds the catalogue from, and accepting a
+	 *  change is a decision nobody else can take.
+	 * 
+	 *  Each artifact is fetched from the author's own endpoint and hashed; nothing
+	 *  is written anywhere, because the answer is a digest over a stream. The poll
+	 *  is bounded by the registry's own refresh window — the interval
+	 *  `masadir.fatra_tahdith` names, which the manifest and the revocation list
+	 *  already refresh on — so a console opened twice in that window asks the
+	 *  author's server once. There is no second schedule and no second timer.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`crate::taqdeem_awamir::KhataTaqdeemAmr::MalikFaqat`] without the owner key,
+	 *  and whatever the ledger or the observation cache raise. A poll that could not
+	 *  reach an endpoint is logged and leaves that artifact's last observation
+	 *  standing, because "the author's server did not answer" is not "the bytes
+	 *  changed".
+	 */
+	basmatMualaqa: () => typedError<BasmaMualaqaHie[], Khata>(__TAURI_INVOKE("basmat_mualaqa")),
+	/**
+	 *  The owner accepting one artifact's new bytes, by echoing back their hash.
+	 * 
+	 *  `sha256` is what the owner read off the console and transcribed, and it is
+	 *  checked twice over: the artifact is fetched from the author's endpoint again
+	 *  here, and the pin is moved only if the bytes that arrive hash to exactly what
+	 *  was sent. A server that changes what it serves between the observation and
+	 *  the acceptance therefore pins nothing — which is the entire reason the hash
+	 *  travels in the request rather than being looked up from the last poll.
+	 * 
+	 *  The new pin is written into the owner's publication ledger, through the same
+	 *  gate that admits any third-party entry to it, so the next cast publishes it
+	 *  and every client verifies against it. Nothing on this machine installs
+	 *  anything differently until that cast happens: a client's install still checks
+	 *  the bytes it fetched against the pin the registry published, and this command
+	 *  touches neither.
+	 * 
+	 *  It answers `true`. The shape was never agreed and the interface ignores the
+	 *  value — it refetches the pending set instead — so the answer is the smallest
+	 *  thing that can mean "accepted", and the refusals carry everything else.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`crate::taqdeem_awamir::KhataTaqdeemAmr::MalikFaqat`] without the owner key,
+	 *  [`KhataKharijiAmr::MadkhalGhayrMawjud`] when the ledger lists no such entry,
+	 *  [`KhataKharijiAmr::QitaaGhayrMawjuda`] when it carries no such artifact,
+	 *  [`KhataKharijiAmr::BasmaGhayrSaliha`] when what was sent is not a sha256,
+	 *  [`KhataKharijiAmr::BasmaGhayrMutabaqa`] when the endpoint is not serving those
+	 *  bytes, [`KhataKharijiAmr::RasdMutaadhdhir`] when it could not be read at all,
+	 *  and whatever the ledger's own gate refuses.
+	 */
+	athbitBasma: (ruqaa: string, qitaa: string, sha256: string) => typedError<boolean, Khata>(__TAURI_INVOKE("athbit_basma", { ruqaa, qitaa, sha256 })),
 };
 
 /* Types */
@@ -1601,6 +1751,38 @@ export type BaqiyaMujalladHie = {
 	madakhil: string[],
 	/**  How many unrecorded entries there are in total. */
 	adad: number,
+};
+
+/**  One artifact whose bytes have moved since the owner pinned them. */
+export type BasmaMualaqaHie = {
+	/**  The entry the changed artifact belongs to. */
+	ruqaa: RuqaaId,
+	/**  The entry's title. */
+	unwan: string,
+	/**  Who made it. A console row is still somebody else's work. */
+	muallif: string,
+	/**  Their team, when the work is a team's. */
+	fariq: string | null,
+	/**  Their page. */
+	rabt_muallif: string,
+	/**  The release the entry declares the author ships. */
+	isdar: string,
+	/**  The release the standing pin was taken against. */
+	isdar_mathbut: string,
+	/**  Which artifact changed. */
+	qitaa: string,
+	/**  Where it was fetched from. */
+	rabt: string,
+	/**  Bytes, as the author's endpoint served them. */
+	hajm: number,
+	/**  Bytes, as the standing pin records them. */
+	hajm_mathbut: number,
+	/**  The hash the owner pinned, lowercase hex. */
+	sha256_mathbut: string,
+	/**  The hash the artifact actually has now, lowercase hex. */
+	sha256_marsud: string,
+	/**  When the change was observed, RFC 3339. */
+	waqt: string,
 };
 
 /**  The installed build, rendered. */
@@ -1932,6 +2114,24 @@ export type HalatMatjarHie =
  *  games were not marked absent on this scan's word.
  */
 "naqisa";
+
+/**
+ *  Where a third-party entry's bytes come from, as the catalogue panel reads it.
+ * 
+ *  A projection rather than [`HalatMira`] itself. The shared type is tagged
+ *  internally, because that is the shape the registry's shards are published in
+ *  and a shard's bytes decide its hash; the interface decodes the ordinary
+ *  external tagging. Projecting here changes nothing about the catalogue on
+ *  disk and keeps the two spellings from meeting.
+ */
+export type HalatMiraHie = 
+/**  Fetched from the author, always. The default. */
+"min_almuallif" | 
+/**  Mirrored on the registry. */
+{ min_alsijill: {
+	/**  The registry's own endpoint for the artifact. */
+	rabt: string,
+} };
 
 /**
  *  Where a translation stands.
@@ -2687,6 +2887,27 @@ export type IdadatTashkhis = {
 	hadd_hajm_mb: number,
 };
 
+/**  What establishes a right to redistribute somebody else's translation. */
+export type IdhnMasdar = 
+/**  The licence it was published under grants it. */
+"rukhsa" | 
+/**  The author granted it directly, and this is how they said so. */
+{ katabi: {
+	/**
+	 *  The permission in the importer's own words: where it was given and
+	 *  when, so a reader can go and check it.
+	 */
+	bayan: string,
+} } | 
+/**
+ *  Nothing establishes it.
+ * 
+ *  The default for anything found on the internet. No licence file is not a
+ *  permissive licence; it is the absence of one, and the absence of one
+ *  reserves every right.
+ */
+"lam_yuthbat";
+
 /**  Where the graphics-tier disclosure stands. */
 export type IfsahHie = {
 	/**  The disclosure text this build ships, in Arabic. */
@@ -3270,6 +3491,15 @@ export type LawnBariz = {
 };
 
 /**
+ *  Taarib's own stable identity for a game.
+ * 
+ *  A `UUIDv5` over the launcher identifier and the normalized name, so it is
+ *  identical on every machine, survives reinstalls, survives moving the game
+ *  between drives, and can be computed by the registry without coordination.
+ */
+export type LubaId = string;
+
+/**
  *  The interface language.
  * 
  *  Arabic is the default and the primary text everywhere: English strings are
@@ -3523,6 +3753,42 @@ export type MasarTilqaiHie =
 /**  The safety layer refuses this game outright. */
 "marfud";
 
+/**
+ *  A translation this patch took from somebody outside Taarib.
+ * 
+ *  Recorded so the people who did the work are named wherever the patch goes,
+ *  and so the question that decides whether it may be published at all is
+ *  answered before a signing key is put to it rather than after somebody
+ *  complains. Attribution and permission are different things: a patch that
+ *  credits an author it had no licence from is still a patch that should not
+ *  have been published, and crediting them makes the breach easier to find, not
+ *  smaller.
+ */
+export type MasdarKhariji = {
+	/**  Who made it, in their own spelling of their own name. */
+	ism: string,
+	/**  Where it was taken from, so the credit points somewhere. */
+	rabt: string,
+	/**  The licence it was offered under, as the importer read it. */
+	rukhsa: RukhsaRuqaa,
+	/**  What establishes the right to redistribute it. */
+	idhn: IdhnMasdar,
+	/**
+	 *  Whether that permission also covers Taarib hosting a copy of the file.
+	 * 
+	 *  A separate grant from redistribution, recorded separately. An author who
+	 *  agrees to their work being offered through Taarib has agreed to a
+	 *  listing, an installer and a credit; they have not thereby agreed to
+	 *  Taarib serving their bytes off its own infrastructure, which moves who
+	 *  pays for the bandwidth, who sees the download counts and who is
+	 *  answerable for the copy. Conflating the two would decide that for them.
+	 * 
+	 *  `false` unless somebody wrote otherwise, and serde-defaulted so every
+	 *  record written before this field existed reads as the answer nobody gave.
+	 */
+	yasmah_bilmira?: boolean,
+};
+
 /**  What one launcher's scan came to, with a sentence about it in each language. */
 export type MatjarMaktabaHie = {
 	/**  The launcher's identifier: `steam`, `epic`, `xbox`, … */
@@ -3651,6 +3917,50 @@ export type MudifTarjama =
  *  build shipped. The page's own address still says where it is.
  */
 "majhul";
+
+/**
+ *  One third-party entry, as the game screen lists it.
+ * 
+ *  The catalogue record whole, plus the two facts that are about this machine
+ *  rather than about the entry: which build it was matched against here, and
+ *  whether it is installed here right now.
+ */
+export type MudkhalKharijiHie = {
+	/**  The lineage the catalogue lists it under. */
+	id: RuqaaId,
+	/**  The title, as the work is known. */
+	unwan: string,
+	/**  The game it patches. */
+	luba: LubaId,
+	/**  The game as each launcher names it. */
+	hawiyat_manassa: string[],
+	/**  The game builds it supports; empty means every build. */
+	abniya: string[],
+	/**  Who made it, where, under what licence, and what permits carrying it. */
+	masdar: MasdarKhariji,
+	/**  The team name, when the work is a team's. */
+	fariq: string | null,
+	/**  The version the author released. */
+	isdar: string,
+	/**  Everything fetched, each pinned. */
+	qitaa: QitaatTanzeel[],
+	/**  What the install writes and what it clears first. */
+	takhtit: TakhtitKhariji,
+	/**  The author's own safety sentences, both languages. */
+	tahdheerat: TahdheerKhariji[],
+	/**  Where the bytes come from. */
+	mira: HalatMiraHie,
+	/**
+	 *  The installed build this entry was matched against, or [`None`] when no
+	 *  build has been measured for this game.
+	 * 
+	 *  The interface lists every artifact when this is absent, because the
+	 *  honest answer to "which of these apply" is then "we cannot tell".
+	 */
+	bina_mutabaqa: string | null,
+	/**  Whether this entry is installed into this game right now. */
+	muthabbata: boolean,
+};
 
 /**  One file the plan would write, and whether the game already has it. */
 export type MudkhalKhuttaHie = {
@@ -4028,6 +4338,18 @@ export type NashrMustawdaHie = {
 	adad_mulghayat: number,
 };
 
+/**  What an install of a third-party entry actually did. */
+export type NatijatKharijiyaHie = {
+	/**  Whether every fetched artifact reproduced its pinned hash. */
+	basmat_mutabiqa: boolean,
+	/**  How many paths the archives wrote into the game. */
+	adad_maktub: number,
+	/**  How many of the author's listed removals were backed up before removal. */
+	adad_muhtafaz: number,
+	/**  Where the record a removal reads back lives. */
+	sijill: string,
+};
+
 /**  One machine-translation outcome for one string. */
 export type NatijatTarjamaHie = {
 	/**  The row afterwards. */
@@ -4284,6 +4606,33 @@ export type QismIdadat =
  */
 "taareeb";
 
+/**  One fetched artifact, pinned by hash. */
+export type QitaatTanzeel = {
+	/**  The file name the artifact is stored and reported under. */
+	ism: string,
+	/**  The author's own endpoint. Never a mirror by default. */
+	rabt: string,
+	/**
+	 *  The size in bytes, as measured when the pin was taken.
+	 * 
+	 *  Carried beside the digest rather than instead of it: a size alone is
+	 *  trivially matched, and a digest alone lets a server stream until the disk
+	 *  fills before anything has a chance to disagree.
+	 */
+	hajm: number,
+	/**
+	 *  Lowercase hex sha256. A mismatch is refused by name, never accepted.
+	 * 
+	 *  sha256 rather than the BLAKE3 every Taarib-built artifact is pinned with,
+	 *  because this pin is taken over somebody else's file: the number a
+	 *  maintainer can check against the author's own publication is the one
+	 *  worth recording.
+	 */
+	sha256: string,
+	/**  Which game builds need this artifact; empty means all of them. */
+	abniya: string[],
+};
+
 /**
  *  How much of a submission's overflow was actually measured.
  * 
@@ -4346,6 +4695,30 @@ export type Ramz = string;
  *  player who has created 2^53 capture regions has other problems.
  */
 export type RaqmMintaqa = number;
+
+/**
+ *  The licence a contributor publishes their translation under.
+ * 
+ *  This covers the translated text and nothing else. A patch never contains any
+ *  original game asset, so no licence here has anything to say about the game
+ *  itself.
+ */
+export type RukhsaRuqaa = 
+/**  Public domain dedication. */
+{ naw: "cc0" } | 
+/**  Attribution. */
+{ naw: "cc_by" } | 
+/**  Attribution, share alike. */
+{ naw: "cc_by_sa" } | 
+/**
+ *  All rights reserved by the contributor; redistribution outside Taarib is
+ *  not granted.
+ */
+{ naw: "milkiya_khassa" } | 
+/**  Something else, named by the contributor. */
+{ naw: "ukhra"; 
+/**  The licence identifier or name. */
+ism: string };
 
 /**  A patch lineage, stable across every revision of the same work. */
 export type RuqaaId = string;
@@ -5053,6 +5426,28 @@ export type TaburHie = {
 	aqsa_umr_daqaiq: number,
 };
 
+/**  What is already in the game directory that one entry cannot sit beside. */
+export type TadakhulKharijiHie = {
+	/**  Whether anything conflicting is there right now. */
+	mutadakhil: boolean,
+	/**  What is installed, named, in Arabic. */
+	sahib_arabi: string,
+	/**  The same, in English. */
+	sahib_injilizi: string,
+	/**  The loader slot the two are fighting over, e.g. `dinput8.dll`. */
+	manfadh: string,
+	/**  Paths, relative to the game root, that must go first. */
+	yuzal: string[],
+	/**
+	 *  Whether Taarib's own removal can do it.
+	 * 
+	 *  True only when what is in the way is Taarib's own install, which the
+	 *  removal strip on the same screen takes off and restores. Another team's
+	 *  files are theirs; Taarib did not write them and does not delete them.
+	 */
+	taarib_yuzil: boolean,
+};
+
 /**  One terminology conflict across the project. */
 export type TadarubHie = {
 	/**  The source term. */
@@ -5168,6 +5563,14 @@ export type TaghtiyaMujtama =
 /**  A coverage kind this build does not know. */
 "majhul";
 
+/**  One safety sentence shown before an install, in both languages. */
+export type TahdheerKhariji = {
+	/**  The Arabic wording, which is the one most readers will see. */
+	arabi: string,
+	/**  The English wording. */
+	injilizi: string,
+};
+
 /**
  *  One warning the user must acknowledge by name before anything leaves.
  * 
@@ -5214,6 +5617,21 @@ export type TakalifHie = {
 	saqf: number | null,
 	/**  ISO 4217, for the interface's own number formatter. */
 	umla: string,
+};
+
+/**  What the install writes and what it must clear first. */
+export type TakhtitKhariji = {
+	/**  Paths, relative to the game root, the artifacts unpack to. */
+	yaktub: string[],
+	/**
+	 *  Paths the author's instructions say to remove before installing.
+	 * 
+	 *  Every one is backed up before removal and restored byte-identical on
+	 *  uninstall. That is the whole difference between this install and the one
+	 *  the author ships: their instructions say delete, and a deleted file is
+	 *  gone.
+	 */
+	yahdhif: string[],
 };
 
 /**  What the device-authorization step shows the user. */
@@ -5307,11 +5725,9 @@ export type TaqaddumMarhalaHie = {
 /**
  *  How far the startup mirror has got.
  * 
- *  The offline component set is half a gigabyte, and mirroring it is the one
- *  thing between launch and a usable window. It used to run on the thread the
- *  window is painted from, so the window existed, stayed black and reported
- *  "Not Responding" until the copy finished. It now runs off that thread and
- *  says where it is instead.
+ *  Mirroring the offline set is half a gigabyte of copying and hashing between
+ *  launch and a usable window; run on the painting thread it showed as a black
+ *  "Not Responding" one, so it runs off it and reports instead.
  */
 export type TaqaddumTahmil = {
 	/**  Files settled so far. */

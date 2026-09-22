@@ -1,0 +1,195 @@
+/* ==========================================================================
+   قسم البصمات المعلَّقة — the owner re-pinning bytes an author has changed.
+
+   It sits under the publishing block in the queue column and is ruled off from
+   it the same way, because both are about the catalogue as a whole rather than
+   about the one submission open in the pane beside them.
+
+   The panel's whole job is to make one difference readable before it is
+   accepted, so its layout is a comparison and nothing else competes with it:
+   two columns, the same groups in the same positions in both, and the marked
+   groups — weight, colour and a rule, in `basma.css` — lining up across.
+   ========================================================================== */
+
+.qism-basmat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-24);
+  padding-block-start: var(--misafa-16);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+.qism-basmat__unwan {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-2);
+}
+
+.qism-basmat__nass-hadi {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-3);
+  text-wrap: pretty;
+}
+
+.qism-basmat__qaima {
+  display: grid;
+  gap: var(--misafa-12);
+}
+
+.qism-basmat__saff {
+  display: grid;
+  gap: var(--misafa-8);
+  padding: var(--misafa-12);
+  background-color: var(--sath-1);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-lawha);
+}
+
+.qism-basmat__raas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--misafa-8);
+}
+
+.qism-basmat__saff-unwan {
+  font-size: var(--qiyas-3);
+  line-height: var(--irtifa-3);
+  font-weight: var(--wazn-mutawassit);
+  color: var(--nass-1);
+}
+
+.qism-basmat__qitaa {
+  color: var(--nass-3);
+}
+
+/* The credit, at reading weight: a console row is still a listing of somebody
+   else's work, and the owner is about to pin bytes that server will send to
+   every user who installs it. */
+.qism-basmat__itiman {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+/* --- the comparison -------------------------------------------------------- */
+
+/* Side by side wherever the column allows it, stacked where it does not.
+   Stacked, the marked groups are the only way to read the difference — which
+   is the reason the mark in `basma.css` is never colour alone. */
+.qism-basmat__muqarana {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20ch, 1fr));
+  gap: var(--misafa-12);
+  padding: var(--misafa-8) var(--misafa-12);
+  background-color: var(--sath-0);
+  border: var(--samk-hadd) solid var(--hadd-daif);
+  border-radius: var(--nisf-tahakkum);
+}
+
+.qism-basmat__amud {
+  display: grid;
+  gap: var(--misafa-4);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+/* A neutral rule between the two, which is also what separates them once the
+   column is too narrow to hold both. Not a status colour: neither hash is the
+   good one — one is what was promised and the other is what arrived. */
+.qism-basmat__amud--warid {
+  padding-inline-start: var(--misafa-12);
+  border-inline-start: var(--samk-hadd) solid var(--hadd);
+}
+
+.qism-basmat__tasmiya {
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.qism-basmat__tafsil {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The count of differing groups, in words. The mark on the groups themselves is
+   weight and a rule, and neither of those reaches a screen reader or a reader
+   skimming the panel. */
+.qism-basmat__farq {
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-2);
+  color: var(--nass-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.qism-basmat__rabt {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--nass-3);
+}
+
+/* --- the transcription ----------------------------------------------------- */
+
+.qism-basmat__taakid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-4);
+  align-items: start;
+}
+
+.qism-basmat__haql {
+  inline-size: 18ch;
+  min-block-size: var(--irtifa-band);
+  padding: var(--misafa-4) var(--misafa-8);
+  color: var(--nass-1);
+  background-color: var(--sath-2);
+  border: var(--samk-hadd) solid var(--hadd);
+  border-radius: var(--nisf-tahakkum);
+  transition: border-color var(--zaman-hala) var(--munhana);
+}
+
+.qism-basmat__haql:hover {
+  border-color: var(--hadd-qawi);
+  transition: none;
+}
+
+/* Why the acceptance is refused while the field is empty or wrong. It carries
+   an id because both the field and the button point at it. */
+.qism-basmat__matlub {
+  max-inline-size: 60ch;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.qism-basmat__afal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--misafa-8);
+}
+
+.qism-basmat__rabt-muallif {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--qiyas-1);
+  line-height: var(--irtifa-1);
+  color: var(--nass-3);
+}
+
+.qism-basmat__haykal {
+  display: grid;
+  gap: var(--misafa-8);
+}

@@ -6001,6 +6001,7 @@ name = "taarib-studio"
 version = "1.0.1"
 dependencies = [
  "blake3",
+ "hex",
  "jiff",
  "parking_lot",
  "reqwest 0.12.28",
@@ -6180,6 +6181,7 @@ name = "taarib-tathbeet"
 version = "1.0.1"
 dependencies = [
  "blake3",
+ "hex",
  "memmap2",
  "object",
  "serde",
@@ -6199,6 +6201,7 @@ dependencies = [
  "tracing",
  "walkdir",
  "windows 0.62.2",
+ "zip",
  "zstd",
 ]
 

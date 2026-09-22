@@ -20,12 +20,21 @@
 //! - **Nothing is trusted by declared type.** [`sandooq_fak`] validates every
 //!   quarantined path before a byte is written; traversal is unrepresentable,
 //!   not filtered.
+//! - **A patch Taarib did not build passes through the gate, not around it.**
+//!   [`fahs_khariji`] is the same shape as [`fahs`] for a third-party patch that
+//!   has no signature to check: it runs the same anti-cheat refusal, refuses an
+//!   entry with no written permission from its author, and mints an
+//!   [`idhn::IdhnTathbeetKhariji`] only once the warnings — including the one it
+//!   writes itself about playing a modified game online — have been
+//!   acknowledged.
 
 pub mod fahs;
+pub mod fahs_khariji;
 pub mod idhn;
 pub mod iqrar;
 pub mod kashf_himaya;
 pub mod kashf_shabaka;
+pub mod kharijiya;
 pub mod khata;
 pub mod matjar;
 pub mod qaimat_sahb;
@@ -33,5 +42,13 @@ pub mod sandooq_fak;
 pub mod tahaqquq_tawqee;
 
 pub use fahs::{NatijatFahs, Rafd, TalabFahs, fahs};
-pub use idhn::IdhnTathbeet;
+pub use fahs_khariji::{
+    NatijatFahsKhariji, RafdKhariji, TalabFahsKhariji, fahs_khariji, tahdheer_laab_shabaki,
+    tahdheerat,
+};
+pub use idhn::{IdhnTathbeet, IdhnTathbeetKhariji};
+pub use kharijiya::{
+    HalatMira, QitaatTanzeel, RuqaaKharijiya, TahdheerKhariji, TakhtitKhariji, idhn_katabi,
+    mira_masmuha,
+};
 pub use khata::{KhataAman, NatijatAman};

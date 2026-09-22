@@ -593,7 +593,7 @@ pub(crate) fn miftah_musahim() -> Natija<MiftahKhass> {
 }
 
 /// The owner authority, or the refusal a contributor session gets.
-fn salahiyat_malik() -> Natija<(SalahiyatMalik, MiftahKhass)> {
+pub(crate) fn salahiyat_malik() -> Natija<(SalahiyatMalik, MiftahKhass)> {
     let khass =
         taarib_khatm::malik::hat_malik().map_err(|_| Khata::from(KhataTaqdeemAmr::MalikFaqat))?;
     let salahiya = SalahiyatMalik::bi_miftah(&khass, &MIRSAT_MALIK.miftah)

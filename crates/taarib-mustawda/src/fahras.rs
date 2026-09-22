@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use taarib_mustalahat::bina::Basma;
+use taarib_mustalahat::khariji::RuqaaKharijiya;
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::musahim::MusahimId;
 use taarib_mustalahat::ruqaa::{MulakhkhasRuqaa, RuqaaId, RuqaaRevision};
@@ -212,8 +213,8 @@ impl MulakhkhasDhakira {
     }
 }
 
-/// One shard's contents: every patch, voice pack and memory share for the
-/// games in it.
+/// One shard's contents: every patch, voice pack, memory share and third-party
+/// entry for the games in it.
 ///
 /// `Default` is the empty shard, and it exists so that callers outside this
 /// crate never have to write an exhaustive struct literal: a literal naming
@@ -237,6 +238,27 @@ pub struct MuhtawaShareeha {
     /// that is a manifest revision every client fetches.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub dhakirat: BTreeMap<LubaId, Vec<MulakhkhasDhakira>>,
+    /// Patches somebody else made, keyed the same way.
+    ///
+    /// A fourth map rather than one list of a sum type over the kinds, for the
+    /// reason [`MulakhkhasDhakira`] is its own type rather than a flag: these
+    /// are not interchangeable with the others. A [`MulakhkhasRuqaa`] is a
+    /// package Taarib compiled, signed, and whose own asset gate certified as
+    /// carrying zero bytes of the game; a [`RuqaaKharijiya`] is an archive
+    /// somebody else built *out of* the game's own containers, which Taarib
+    /// fetches and verifies and never built. One list would hand every reader
+    /// a mixed sequence to re-sort, and the accident that follows is one
+    /// kind's guarantees being read over the other. Separate maps make that
+    /// unspellable: an accessor that returns [`MulakhkhasRuqaa`] cannot name
+    /// one of these, so the certificate's subject and a game-derived container
+    /// never arrive through the same call.
+    ///
+    /// `skip_serializing_if` for the same reason `dhakirat` has it: a
+    /// catalogue with no third-party entries casts byte-identical shards to
+    /// one cast before this field existed, and the live registry is already
+    /// published.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub kharijiya: BTreeMap<LubaId, Vec<RuqaaKharijiya>>,
 }
 
 /// A shard whose bytes hashed to what the manifest declared.
@@ -321,6 +343,16 @@ impl ShareehaMuwaththaqa {
     pub fn dhakirat(&self, luba: LubaId) -> &[MulakhkhasDhakira] {
         self.muhtawa.dhakirat.get(&luba).map_or(&[], Vec::as_slice)
     }
+
+    /// Every third-party entry listed for one game.
+    ///
+    /// Deliberately not folded into [`Self::ruqaa`]. A caller asking for the
+    /// patches Taarib built gets exactly those, and one asking for work
+    /// somebody else made has to say so.
+    #[must_use]
+    pub fn kharijiya(&self, luba: LubaId) -> &[RuqaaKharijiya] {
+        self.muhtawa.kharijiya.get(&luba).map_or(&[], Vec::as_slice)
+    }
 }
 
 #[cfg(test)]
@@ -334,17 +366,18 @@ mod fuhus {
     )]
 
     use super::{MuhtawaShareeha, MulakhkhasDhakira};
+    use crate::khariji::badhrat_rtea;
     use taarib_mustalahat::bina::Basma;
     use taarib_mustalahat::luba::{LubaId, MasdarLuba};
     use taarib_mustalahat::musahim::MusahimId;
 
-    /// A catalogue with no memory shares casts exactly the bytes it cast
-    /// before the field existed.
+    /// A catalogue with no memory shares and no third-party entries casts
+    /// exactly the bytes it cast before either field existed.
     ///
-    /// This is the compatibility claim `dhakirat`'s `skip_serializing_if`
-    /// makes, and it is worth a test because getting it wrong changes every
-    /// shard's hash, which changes the manifest, which every client on every
-    /// machine then refetches.
+    /// This is the compatibility claim those two `skip_serializing_if`s make,
+    /// and it is worth a test because getting it wrong changes every shard's
+    /// hash, which changes the manifest, which every client on every machine
+    /// then refetches.
     #[test]
     fn shareeha_bila_dhakirat_tabqa_kama_kanat() {
         let farigha = MuhtawaShareeha::default();
@@ -355,8 +388,12 @@ mod fuhus {
         assert_eq!(String::from_utf8_lossy(&bayt), r#"{"ruqaa":{},"aswat":{}}"#);
     }
 
-    /// A shard cast before this field existed still parses, `deny_unknown_fields`
-    /// notwithstanding — the absent key is the default.
+    /// A shard cast before these fields existed still parses,
+    /// `deny_unknown_fields` notwithstanding — the absent key is the default.
+    ///
+    /// The one that matters most: the live registry is already published, and
+    /// every shard in it is exactly these twenty-three bytes or a longer
+    /// document with the same two keys.
     #[test]
     fn shareeha_qadeema_tuqra() {
         let bayt = br#"{"ruqaa":{},"aswat":{}}"#;
@@ -365,6 +402,49 @@ mod fuhus {
             Err(khata) => panic!("an older shard no longer parses: {khata}"),
         };
         assert!(muhtawa.dhakirat.is_empty());
+        assert!(muhtawa.kharijiya.is_empty());
+    }
+
+    /// A published shard carrying real listings and neither of the two newer
+    /// keys parses too, so the claim is about catalogues and not only about
+    /// the empty document.
+    #[test]
+    fn shareeha_manshura_bila_kharijiya_tuqra() {
+        let bayt = br#"{
+            "ruqaa": {},
+            "aswat": {"51e4d2a0-0000-4000-8000-000000000001": []}
+        }"#;
+        let muhtawa: MuhtawaShareeha = match serde_json::from_slice(bayt) {
+            Ok(muhtawa) => muhtawa,
+            Err(khata) => panic!("a published shard no longer parses: {khata}"),
+        };
+        assert_eq!(muhtawa.aswat.len(), 1);
+        assert!(muhtawa.kharijiya.is_empty());
+    }
+
+    /// A cast including a third-party entry produces a shard a client reads
+    /// back whole, keyed by the game — and reads back as the third-party kind,
+    /// not as a patch Taarib built.
+    #[test]
+    fn shareeha_bi_ruqaa_kharijiya_tadur() {
+        let madkhal = badhrat_rtea();
+        let luba = madkhal.luba;
+        let mut muhtawa = MuhtawaShareeha::default();
+        let _ = muhtawa.kharijiya.insert(luba, vec![madkhal.clone()]);
+
+        let bayt = match serde_json::to_vec(&muhtawa) {
+            Ok(bayt) => bayt,
+            Err(khata) => panic!("the shard would not serialize: {khata}"),
+        };
+        let raji: MuhtawaShareeha = match serde_json::from_slice(&bayt) {
+            Ok(raji) => raji,
+            Err(khata) => panic!("the shard would not parse back: {khata}"),
+        };
+        assert_eq!(raji.kharijiya.get(&luba), Some(&vec![madkhal]));
+        assert!(
+            raji.ruqaa.is_empty(),
+            "a third-party entry is not a patch Taarib built"
+        );
     }
 
     /// A listed share round-trips whole, keyed by the game it came from.

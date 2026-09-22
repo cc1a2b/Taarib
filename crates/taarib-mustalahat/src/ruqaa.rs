@@ -232,6 +232,19 @@ pub struct MasdarKhariji {
     pub rukhsa: RukhsaRuqaa,
     /// What establishes the right to redistribute it.
     pub idhn: IdhnMasdar,
+    /// Whether that permission also covers Taarib hosting a copy of the file.
+    ///
+    /// A separate grant from redistribution, recorded separately. An author who
+    /// agrees to their work being offered through Taarib has agreed to a
+    /// listing, an installer and a credit; they have not thereby agreed to
+    /// Taarib serving their bytes off its own infrastructure, which moves who
+    /// pays for the bandwidth, who sees the download counts and who is
+    /// answerable for the copy. Conflating the two would decide that for them.
+    ///
+    /// `false` unless somebody wrote otherwise, and serde-defaulted so every
+    /// record written before this field existed reads as the answer nobody gave.
+    #[serde(default)]
+    pub yasmah_bilmira: bool,
 }
 
 impl MasdarKhariji {
@@ -428,6 +441,7 @@ mod ikhtibarat_masdar {
             rabt: "https://github.com/emadadeldev/RTEA".to_owned(),
             rukhsa,
             idhn,
+            yasmah_bilmira: false,
         }
     }
 
@@ -475,5 +489,18 @@ mod ikhtibarat_masdar {
             )
             .yajuz_nashruh()
         );
+    }
+
+    /// A record written before mirroring was a separate question reads as
+    /// nobody having answered it, which is the answer that keeps the bytes on
+    /// the author's own endpoint.
+    #[test]
+    fn sijill_qadeem_la_yasmah_bilmira() -> Result<(), serde_json::Error> {
+        let qadeem = br#"{"ism":"Emad Adel","rabt":"https://example.invalid",
+            "rukhsa":{"naw":"cc0"},"idhn":"rukhsa"}"#;
+        let masdar: MasdarKhariji = serde_json::from_slice(qadeem)?;
+        assert!(masdar.yajuz_nashruh());
+        assert!(!masdar.yasmah_bilmira);
+        Ok(())
     }
 }

@@ -33,12 +33,15 @@ use std::path::{Path, PathBuf};
 
 use jiff::Timestamp;
 use taarib_khatm::MiftahKhass;
+use taarib_mustalahat::khariji::RuqaaKharijiya;
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::ruqaa::RuqaaId;
 use taarib_mustawda::fahras::shareeha;
+use taarib_mustawda::khariji::badhrat_kharijiya;
 use taarib_mustawda::mujtama::{KatibFahrasMujtama, MASAR_FAHRAS_MUJTAMA};
 use taarib_mustawda::sabk::{
-    KhiyaratSabk, Mulghayat, ijri, madkhal_min_huzma, min_unix, qaimat_sahb, uktub,
+    KhiyaratSabk, MadkhalKhariji, Mulghayat, ijri, madkhal_khariji, madkhal_min_huzma, min_unix,
+    qaimat_sahb, uktub,
 };
 
 /// Casts the community index: the maintainer's body in, the signed document a
@@ -74,6 +77,38 @@ fn fahras_mujtama(masdar: &Path, jidhr: &Path, khass: &MiftahKhass) -> Result<()
     Ok(())
 }
 
+/// Writes the third-party entries this build knows about, one file each.
+///
+/// The seeds are compiled in because they are measurements — an artifact's size
+/// and digest, taken once from bytes that are gone — and what a maintainer has
+/// to add is the one thing no measurement produces: the author's own permission
+/// to publish their work. So the file that comes out of here is deliberately a
+/// file that will not cast, and the refusal it earns names the field to fill in.
+fn uktub_badhrat_kharijiya(wijha: &Path) -> Result<(), String> {
+    fs::create_dir_all(wijha).map_err(|khata| format!("{}: {khata}", wijha.display()))?;
+    for badhra in badhrat_kharijiya() {
+        let masar = wijha.join(format!("{}.json", badhra.id));
+        let bayt = serde_json::to_vec_pretty(&badhra).map_err(|khata| khata.to_string())?;
+        fs::write(&masar, &bayt).map_err(|khata| format!("{}: {khata}", masar.display()))?;
+        println!("  wrote {} ({} byte(s))", masar.display(), bayt.len());
+        println!("    entry     {} {}", badhra.id, badhra.unwan);
+        println!("    author    {}", badhra.nasab());
+        match badhra.sabab_rafd() {
+            Some(sabab) => println!("    TO FILL   {}", sabab.wasf_injilizi()),
+            None => println!("    ready     nothing stops this entry"),
+        }
+    }
+    Ok(())
+}
+
+/// Reads one `--khariji` file into a listing the cast will take.
+fn iqra_khariji(masar: &Path) -> Result<MadkhalKhariji, String> {
+    let bayt = fs::read(masar).map_err(|khata| format!("{}: {khata}", masar.display()))?;
+    let madkhal: RuqaaKharijiya =
+        serde_json::from_slice(&bayt).map_err(|khata| format!("{}: {khata}", masar.display()))?;
+    madkhal_khariji(madkhal).map_err(|khata| format!("{}: {khata}", masar.display()))
+}
+
 /// One `--huzma` and the facts that cannot be read out of it.
 struct TalabNashr {
     huzma: PathBuf,
@@ -91,11 +126,16 @@ struct Khiyarat {
     asas: Option<String>,
     mira: Option<String>,
     talabat: Vec<TalabNashr>,
+    /// Third-party entries to list, each read from a file a maintainer edited.
+    kharijiya: Vec<PathBuf>,
     ism_miftah: Option<String>,
     mulghayat: Mulghayat,
     /// Where to write the compiled-in revocation seed, when that is all this
     /// run is for.
     badhra: Option<PathBuf>,
+    /// Where to write the compiled-in third-party seeds, when that is all this
+    /// run is for.
+    badhra_kharijiya: Option<PathBuf>,
     /// The community index body to sign into the repository, when that is all
     /// this run is for.
     mujtama: Option<PathBuf>,
@@ -107,10 +147,13 @@ const ISTIMAL: &str = "\
   sabk --jidhr <repo> --tasalsul <n> --asas <https://base/>
        [--mira <https://mirror/>] [--ism-miftah <keychain account>]
        [--huzma <file.ruqaa> --luba <game-uuid> --ism <title> [--tajawuz <why>]]...
+       [--khariji <entry.json>]...
        [--mulgha <64-hex key> --sabab <why>]...
        [--mulgha-ruqaa <patch-uuid> --sabab <why>]...
 
   sabk --badhra assets/qaimat_sahb.json --tasalsul <n> [--ism-miftah <account>]
+
+  sabk --badhra-kharijiya <dir>
 
   sabk --jidhr <repo> --mujtama <body.json> [--ism-miftah <account>]
 
@@ -131,6 +174,20 @@ const ISTIMAL: &str = "\
   --tajawuz     publish the preceding --huzma even though its own coverage gate
                 refuses it, giving the reason; the reason is written into the
                 manifest, where every reader of the catalogue sees it
+  --khariji     a third-party entry to list: a patch somebody else made, which
+                Taarib fetches from its author, verifies against the pins in the
+                file and installs through the same backup machinery, and never
+                built. Repeatable. Nothing in the file is compiled and nothing
+                is signed by its author, so the entry is refused unless it
+                records written permission from whoever made the work — start
+                from --badhra-kharijiya and fill the statement in
+  --badhra-kharijiya
+                write the third-party entries this build knows about into this
+                directory, one JSON file each, and stop. Each ships with an
+                empty permission statement, which is the one fact nobody here
+                can supply: ask the author, write where they answered and when,
+                and feed the file back through --khariji. Nothing else is
+                written and no repository is touched.
   --mulgha      a signing key to revoke, as 64 lowercase hex; repeatable, and
                 each one must be followed by its --sabab
   --mulgha-ruqaa
@@ -165,8 +222,10 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
     let (mut jidhr, mut tasalsul, mut asas, mut mira, mut ism_miftah) =
         (None, None, None, None, None);
     let mut badhra: Option<PathBuf> = None;
+    let mut badhra_kharijiya: Option<PathBuf> = None;
     let mut mujtama: Option<PathBuf> = None;
     let mut talabat: Vec<TalabNashr> = Vec::new();
+    let mut kharijiya: Vec<PathBuf> = Vec::new();
     let mut mulghayat = Mulghayat::default();
     // Which revocation the next `--sabab` belongs to: the kinds interleave on
     // the command line and each keeps its own list, so a shared "last one" is
@@ -190,7 +249,11 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             "--mira" => mira = Some(baad(&mut hujaj, "--mira")?),
             "--ism-miftah" => ism_miftah = Some(baad(&mut hujaj, "--ism-miftah")?),
             "--badhra" => badhra = Some(PathBuf::from(baad(&mut hujaj, "--badhra")?)),
+            "--badhra-kharijiya" => {
+                badhra_kharijiya = Some(PathBuf::from(baad(&mut hujaj, "--badhra-kharijiya")?));
+            },
             "--mujtama" => mujtama = Some(PathBuf::from(baad(&mut hujaj, "--mujtama")?)),
+            "--khariji" => kharijiya.push(PathBuf::from(baad(&mut hujaj, "--khariji")?)),
             "--huzma" => {
                 talabat.push(TalabNashr {
                     huzma: PathBuf::from(baad(&mut hujaj, "--huzma")?),
@@ -296,11 +359,23 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             return Err(format!("--mulgha-ruqaa {ruqaa} was given no --sabab"));
         }
     }
-    // The two single-document modes are exclusive, of each other and of a cast:
-    // each writes one file for its own reasons and would say nothing coherent
-    // about a repository it also cast.
-    if badhra.is_some() && mujtama.is_some() {
-        return Err("--badhra and --mujtama each write one file; run them separately".to_owned());
+    // The single-document modes are exclusive, of each other and of a cast:
+    // each writes for its own reasons and would say nothing coherent about a
+    // repository it also cast.
+    let munfarida = [
+        badhra.is_some(),
+        badhra_kharijiya.is_some(),
+        mujtama.is_some(),
+    ]
+    .iter()
+    .filter(|wahid| **wahid)
+    .count();
+    if munfarida > 1 {
+        return Err(
+            "--badhra, --badhra-kharijiya and --mujtama each write on their own; run them \
+             separately"
+                .to_owned(),
+        );
     }
     // Seed mode writes one file and reads no repository, so the two arguments
     // that name a repository are required for casting and meaningless here.
@@ -312,11 +387,24 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
                     .to_owned(),
             );
         }
+    } else if badhra_kharijiya.is_some() {
+        if jidhr.is_some() || asas.is_some() || !talabat.is_empty() || !kharijiya.is_empty() {
+            return Err(
+                "--badhra-kharijiya writes only the third-party seeds; it takes neither a \
+                 repository nor an entry"
+                    .to_owned(),
+            );
+        }
     } else if mujtama.is_some() {
         // The index does name a repository — it is written into one — but it
         // publishes no package and rides no manifest, so everything that
         // belongs to a cast is refused rather than silently ignored.
-        if asas.is_some() || !talabat.is_empty() || mulghayat.adad() != 0 || tasalsul.is_some() {
+        if asas.is_some()
+            || !talabat.is_empty()
+            || !kharijiya.is_empty()
+            || mulghayat.adad() != 0
+            || tasalsul.is_some()
+        {
             return Err(
                 "--mujtama writes only the community index; it takes neither a package, a \
                  revocation nor a sequence number"
@@ -333,7 +421,7 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
             "--asas is required".to_owned()
         });
     }
-    if mujtama.is_none() && tasalsul.is_none() {
+    if mujtama.is_none() && badhra_kharijiya.is_none() && tasalsul.is_none() {
         return Err("--tasalsul is required".to_owned());
     }
     Ok(Some(Khiyarat {
@@ -342,9 +430,11 @@ fn iqra_khiyarat() -> Result<Option<Khiyarat>, String> {
         asas,
         mira,
         talabat,
+        kharijiya,
         ism_miftah,
         mulghayat,
         badhra,
+        badhra_kharijiya,
         mujtama,
     }))
 }
@@ -377,6 +467,12 @@ fn nafidh() -> Result<(), String> {
     let Some(khiyarat) = iqra_khiyarat().map_err(|khata| format!("{khata}\n\n{ISTIMAL}"))? else {
         return Ok(());
     };
+
+    // Before the keychain is touched: a seed is public data about somebody
+    // else's work and nothing here signs it.
+    if let Some(wijha) = khiyarat.badhra_kharijiya.as_deref() {
+        return uktub_badhrat_kharijiya(wijha);
+    }
 
     // The signing key never leaves the keychain; only its public half is ever
     // written into the repository, inside the revocation list's signature.
@@ -427,6 +523,29 @@ fn nafidh() -> Result<(), String> {
         .tasalsul
         .ok_or_else(|| "--tasalsul is required".to_owned())?;
 
+    let mut kharijiya = Vec::with_capacity(khiyarat.kharijiya.len());
+    for masar in &khiyarat.kharijiya {
+        let madkhal = iqra_khariji(masar)?;
+        println!("  read {}", masar.display());
+        println!(
+            "    entry     {} {}",
+            madkhal.madkhal().id,
+            madkhal.madkhal().unwan
+        );
+        println!("    shard     {:02x}", shareeha(madkhal.luba()));
+        println!("    author    {}", madkhal.madkhal().nasab());
+        println!("    release   {}", madkhal.madkhal().isdar);
+        println!("    builds    {}", madkhal.madkhal().abniya.join(", "));
+        for qitaa in &madkhal.madkhal().qitaa {
+            println!(
+                "    artifact  {} — {} byte(s), sha256 {}",
+                qitaa.ism, qitaa.hajm, qitaa.sha256
+            );
+        }
+        println!("    mirrored  {}", madkhal.madkhal().yajuz_mira());
+        kharijiya.push(madkhal);
+    }
+
     let mut madakhil = Vec::with_capacity(khiyarat.talabat.len());
     for talab in &khiyarat.talabat {
         let madkhal = madkhal_min_huzma(
@@ -470,6 +589,7 @@ fn nafidh() -> Result<(), String> {
         jidhr,
         madakhil,
         BTreeMap::new(),
+        kharijiya,
         KhiyaratSabk {
             tasalsul,
             waqt: &min_unix(unix_alan()),

@@ -29,6 +29,7 @@ import {
 } from '@/maktaba/tabaqat';
 import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { IqrarKhatar, muarrifMatlub } from '@/mukawwinat/iqrar_khatar';
+import { QismKhariji } from '@/mukawwinat/qism_khariji';
 import { QismIqrar, useIqrarAwwal } from '@/mukawwinat/qism_iqrar';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
 import { Mashhad } from '@/mukawwinat/mashhad';
@@ -68,7 +69,7 @@ import type {
   TarjamaMujtamaHie,
   TawzeeTarjama,
 } from '@/mustalahat/awamir';
-import { HARAKAT_LAWHA, haraka, ismIntiqalGhilaf } from '@/nizam/haraka';
+import { HARAKAT_LAWHA, haraka, ismIntiqalGhilaf, yufaddilTaqleelHaraka } from '@/nizam/haraka';
 
 import './luba.css';
 
@@ -3025,6 +3026,7 @@ export function Luba(): JSX.Element {
   const zirIstiadaRef = useRef<HTMLButtonElement | null>(null);
   const zirIlghaRef = useRef<HTMLButtonElement | null>(null);
   const mintaqatIzalaRef = useRef<HTMLDivElement | null>(null);
+  const qismAfalRef = useRef<HTMLElement | null>(null);
 
   const aidTahaqquq = tahaqquq.reset;
   const aidIzala = izala.reset;
@@ -3053,6 +3055,29 @@ export function Luba(): JSX.Element {
       mintaqatIzalaRef.current?.focus();
     }
   }, [izala.isPending]);
+
+  /**
+   * Takes the reader from a third-party entry to the removal strip below it.
+   *
+   * The collision report on such an entry can end in "what is in the way is
+   * Taarib's own install", and the answer to that is a control that already
+   * exists on this screen, three sections further down and usually off it. The
+   * restore button is focused when it is drawn, because focusing scrolls the
+   * control into view *and* puts the keyboard on it; the section is scrolled to
+   * when it is not, which is the case for a game with nothing of Taarib's
+   * installed. Smooth only when this session has not asked for less motion.
+   */
+  const alaIdhhabIzala = useCallback(() => {
+    const zir = zirIstiadaRef.current;
+    if (zir !== null) {
+      zir.focus();
+      return;
+    }
+    qismAfalRef.current?.scrollIntoView({
+      behavior: yufaddilTaqleelHaraka() ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  }, []);
 
   const alaFahsMuharrik = useCallback(() => {
     if (!fahsMuharrik.isPending) {
@@ -3351,6 +3376,21 @@ export function Luba(): JSX.Element {
                   istibdal={idadat.data?.istibdal_lugha_rasmiya === true}
                 />
 
+                {/* Between the two, because it is between the two: work Taarib
+                    did not make, which it nevertheless fetches, verifies against
+                    a pinned hash, writes into the game and can undo. The order
+                    down this column is what Taarib does with the thing — builds
+                    it, installs it, points at it. */}
+                <QismKhariji
+                  muarrif={muarrif}
+                  lugha={lugha}
+                  munassiq={munassiq}
+                  mahmiya={mahmiya}
+                  muqfal={muqfal}
+                  sababQafl={sababQafl}
+                  alaIzala={alaIdhhabIzala}
+                />
+
                 {/* Under the registry's own listing, because it answers the
                     same question from the other direction: what Arabic exists
                     for this game that Taarib did not make and will not install. */}
@@ -3358,6 +3398,7 @@ export function Luba(): JSX.Element {
 
                 <section
                   className="luba__qism"
+                  ref={qismAfalRef}
                   aria-labelledby="luba-unwan-afal"
                   aria-busy={izala.isPending || tahaqquq.isPending}
                 >

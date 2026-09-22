@@ -15,6 +15,13 @@
 //!   `ibda` flushes the manifest before returning. A path outside the game
 //!   root is unrepresentable: package content becomes a [`mawdi::WajhatLuba`]
 //!   or it is refused.
+//! - **A patch Taarib did not build goes through the same machinery.**
+//!   [`khariji::thabbit_khariji`] fetches somebody else's artifacts, proves both
+//!   halves of each pin in a staging area outside the game, and then writes
+//!   everything — including the files the author's own instructions say to
+//!   delete — through [`bayan::Tathbeet`]. So the uninstall that puts the game
+//!   back byte for byte is [`taraju`]'s, unchanged, and there is no second
+//!   restore path to be worse than it.
 //! - **The plan is an input, never a recomputation.** [`tarkib::khutta`] is the
 //!   one place the tier, the safety refusal, the loader directory and the loader
 //!   slot are decided, and every write on the install path receives its answer:
@@ -27,6 +34,8 @@
 pub mod bayan;
 pub mod bayan_makhzan;
 pub mod itlaq;
+pub mod jalb_khariji;
+pub mod khariji;
 pub mod khata;
 pub mod masar_tathbeet;
 pub mod mawdi;
@@ -35,6 +44,7 @@ pub mod nusus;
 pub mod tahaqquq;
 pub mod taraju;
 pub mod tarkib;
+pub mod tasadum;
 pub mod wukala;
 
 pub use bayan::{
@@ -47,6 +57,13 @@ pub use itlaq::{
     bidun_tajawuz, dam_tajawuz, fihi_ramz_amr, isnadat_talab, khiyarat_bidun_tahmeel,
     khiyarat_maa_amr, khiyarat_maa_isnad, khiyarat_maa_mutaghayyir, khiyarat_maa_tahmeel,
     naffidh_talabat_steam, tajawuz_maa, talabat_steam, yabda_bi_beea,
+};
+pub use jalb_khariji::{
+    AQSA_HAJM_QITAA, NaqilKhariji, QitaaMuhaqqaqa, ijlib_qitaa, nazzif_marhala,
+};
+pub use khariji::{
+    MUJALLAD_KHARIJI, NatijatTathbeetKhariji, TalabTathbeetKhariji, azil_khariji,
+    jidhr_nusakh_khariji, kharijiyat_mathbita, thabbit_khariji,
 };
 pub use khata::{IttijahDaght, KhataTathbeet, MasdarKhatt, NatijatTathbeet};
 pub use masar_tathbeet::{
@@ -75,6 +92,10 @@ pub use tarkib::{
     HajatItar, HalatIdadat, HalatSlot, KhuttatTarkib, LubaMuhallala, MalhuzatManassa, MukawwinItar,
     NatijatTarkib, QararTabaqa, SababLaHaja, SlotMuhammil, TalabItlaq, TaqreerMulhaqat, hajat_itar,
     khutta, nashr_bi_khutta, nashr_mulhaqat, rakkib_itar,
+};
+pub use tasadum::{
+    ALAMAT_KHARIJIYA, ALAMAT_MUSHTARAKA, ALAMAT_TAARIB, AtharTasadum, JihatTasadum, athar_khariji,
+    athar_taarib, la_yatasadam_maa_khariji, la_yatasadam_maa_taarib, masah_tasadum,
 };
 // Renamed on the way out: `masah` is unambiguous inside `wukala` and much less
 // so beside `khutta` and `nashr` at the crate root.

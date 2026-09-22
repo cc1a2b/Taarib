@@ -201,6 +201,19 @@ pub async fn tarjamat_mujtama(
 /// rest — the panel that fetched the index is where the refusal is named to the
 /// user, and this command is not the place to raise it a second time.
 ///
+/// ## The third-party panels
+///
+/// They call this command too, with an author's own page, and that address does
+/// not come from the community index — so it used to be refused wherever the
+/// author does not happen to live on a platform this file names. The allowance
+/// added for them is deliberately not "these panels may open anything": it is
+/// [`crate::khariji_awamir::mudifu_muallifin`], the **exact hosts** of the
+/// author addresses that third-party catalogue entries name, drawn from the
+/// entries compiled into this binary and from those a verified registry shard or
+/// the owner's own ledger produced this session. They join `mudifun`, which is
+/// matched by membership and never by suffix, so nothing here widens to a
+/// subdomain and no address reaches the browser because a panel asked nicely.
+///
 /// # Errors
 ///
 /// [`KhataMujtamaAmr::RabtMarfud`] when the address fails any check above,
@@ -213,7 +226,7 @@ pub async fn iftah_rabt(rabt: String, masarat: tauri::State<'_, Masarat>) -> Res
     let masarat = Masarat::clone(&masarat);
     bil_hajb(move || {
         let miftah = miftah_malik()?;
-        let mudifun = match iqra_makhbaa(&masarat, &miftah) {
+        let mut mudifun = match iqra_makhbaa(&masarat, &miftah) {
             Ok(mukhazzan) => mukhazzan
                 .map(|mukhazzan| mukhazzan.fahras.mudifun())
                 .unwrap_or_default(),
@@ -225,6 +238,7 @@ pub async fn iftah_rabt(rabt: String, masarat: tauri::State<'_, Masarat>) -> Res
                 BTreeSet::new()
             },
         };
+        mudifun.extend(crate::khariji_awamir::mudifu_muallifin());
         let salim = rabt_salim(&rabt, &mudifun)?;
         tauri_plugin_opener::open_url(salim.as_str(), None::<&str>).map_err(|sabab| {
             Khata::from(KhataMujtamaAmr::FathRabtFashil {

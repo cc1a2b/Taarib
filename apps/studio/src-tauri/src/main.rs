@@ -73,6 +73,7 @@ pub mod aql_awamir;
 mod bidaya;
 pub mod idadat_awamir;
 mod istiada_cli;
+pub mod khariji_awamir;
 pub mod mukawwinat_tahmil;
 pub mod musharaka_awamir;
 pub mod suwar_awamir;
@@ -1113,6 +1114,12 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             tilqai_awamir::sajjil_iltiqat,
             mujtama_awamir::tarjamat_mujtama,
             mujtama_awamir::iftah_rabt,
+            khariji_awamir::ruqaa_kharijiya,
+            khariji_awamir::tadakhul_kharijiya,
+            khariji_awamir::thabbit_kharijiya,
+            khariji_awamir::azil_kharijiya,
+            khariji_awamir::basmat_mualaqa,
+            khariji_awamir::athbit_basma,
         ])
         // A type the interface consumes that no command returns. The library
         // screen groups unavailable games into four headings and derives the

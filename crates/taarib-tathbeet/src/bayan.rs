@@ -1715,6 +1715,67 @@ impl Tathbeet {
         )
     }
 
+    /// Preserves a file's original and then removes the file.
+    ///
+    /// The operation a third-party patch's own instructions ask for and that no
+    /// other installer in this crate needs: the author of an RTEA-shaped patch
+    /// tells the user to delete `version.dll`, `ScriptHookRDR2.dll`, `vfs.asi`
+    /// and a dozen more before installing, because those files conflict with
+    /// what the patch is about to write. Taarib does delete them — the author is
+    /// right about the conflict — and the whole difference between this install
+    /// and theirs is that the bytes are in the backup directory, and the
+    /// manifest line naming them is on the device, *before* the file goes.
+    ///
+    /// It is one call rather than a preserve followed by a caller's own
+    /// `remove_file` for the reason every other write here is one call: a
+    /// caller that can delete without preserving is a caller that will, and the
+    /// file it deletes is the only copy the user has. [`HarisTathbeet`] cannot
+    /// express a deletion — its one method writes bytes — so this is the only
+    /// door, and it opens through [`Tathbeet::ihfaz`].
+    ///
+    /// Returns whether anything was there. A path in a remove-list that the
+    /// user's game never had is not an error and is not recorded: recording it
+    /// would put a line in the manifest for a file that never existed, and an
+    /// uninstall that "restores" one of those has written a file into a game
+    /// that did not have it.
+    ///
+    /// The line is left **outstanding**, exactly as a modification is, so the
+    /// uninstall writes the original back and verifies it. The restore path
+    /// treats a recorded modification whose file is missing as a file to write
+    /// back, which is precisely this case.
+    ///
+    /// # Errors
+    ///
+    /// Whatever [`Tathbeet::ihfaz`] raises when the original cannot be preserved
+    /// — in which case nothing is deleted — and
+    /// [`KhataTathbeet::MalafMaqful`], [`KhataTathbeet::SalahiyaMarfuda`] or
+    /// [`KhataTathbeet::KhataMalaf`] when the file cannot be removed afterwards.
+    pub fn ihfaz_wa_ihdhif(&mut self, nisbi: &str) -> Result<bool, KhataTathbeet> {
+        let masar = masar_muwahhad(nisbi);
+        let mutlaq = dakhil_aw_khata(&self.jidhr_luba, &masar)?;
+        // `symlink_metadata`, so a dangling link is seen as something that is
+        // there rather than as nothing. `ihfaz` refuses anything that is not a
+        // regular file, which is where a link is answered.
+        if fs::symlink_metadata(&mutlaq).is_err() {
+            return Ok(false);
+        }
+
+        // The guard is dropped without writing, which the manifest records as a
+        // file that was preserved and not modified. That is the state the
+        // deletion below then makes true.
+        drop(self.ihfaz(&masar)?);
+
+        let _ = SalahiyatMalaf::ataih_kitaba(&mutlaq)?;
+        fs::remove_file(&mutlaq).map_err(|sabab| {
+            min_khata_io(
+                &mutlaq,
+                "removing a file the patch's own instructions conflict with",
+                sabab,
+            )
+        })?;
+        Ok(true)
+    }
+
     /// Creates a directory for additions and records it so uninstall can remove
     /// it.
     ///

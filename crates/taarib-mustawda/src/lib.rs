@@ -30,6 +30,17 @@
 //! No client fetches the whole catalogue: only the shards covering identifiers
 //! the user owns are requested, and an unchanged manifest hits zero network.
 //!
+//! A shard carries a fourth kind besides patches, voice packs and memory
+//! shares: a `RuqaaKharijiya`, a patch somebody else made that Taarib lists and
+//! installs and never built. It is the installable escalation of [`mujtama`]'s
+//! index — the same work, additionally pinned by the owner, so a client can be
+//! handed the bytes rather than a link. It lives in its own map of its own
+//! type, because the guarantees are not the same ones: a Taarib package is
+//! sealed and certified to carry no byte of the game, and one of these is the
+//! game's own containers repacked by its author. [`khariji`] holds the entries
+//! the registry ships knowing about, each of them unpublishable until the owner
+//! records the author's permission.
+//!
 //! One more document rides the same chain: [`mujtama`] reads
 //! `fahras/tarjamat.json`, the registry's index of Arabic translations other
 //! teams published on their own pages. Nothing is installed from it, so no
@@ -41,6 +52,7 @@
 
 pub mod fahras;
 pub mod jalb;
+pub mod khariji;
 pub mod khata;
 pub mod masadir;
 pub mod mujtama;
@@ -61,6 +73,7 @@ pub use jalb::{
     FahrasMajlub, jalb_bayan, jalb_bayan_maa_masdar, jalb_fahras, jalb_qaimat_sahb,
     jalb_qaimat_sahb_maa_masdar, jalb_sharaih, jalb_shareeha,
 };
+pub use khariji::{badhrat_kharijiya, badhrat_rtea};
 pub use khata::{KhataMustawda, NatijatMustawda};
 pub use masadir::{MasdarMustawda, SilsilatMasadir};
 pub use mujtama::{
@@ -72,7 +85,8 @@ pub use mutabaqa::{
     ghayr_mutawafiqa, mutawafiqa,
 };
 pub use sabk::{
-    KhiyaratSabk, MadkhalManshur, Mulghayat, Mustawda, ijri, madkhal_min_huzma, rabt_asl,
+    KhiyaratSabk, MadkhalKhariji, MadkhalManshur, Mulghayat, Mustawda, ijri, madkhal_khariji,
+    madkhal_min_huzma, masar_mira, rabt_asl,
 };
 pub use sahb::{NatijatTajdid, jaddid_qaimat_sahb, jaddid_qaimat_sahb_bi_bayan};
 pub use sumaa::{AdadMuraja, HalatSumaa, MulakhkhasSumaa, TaqyeemManshur, ijma};

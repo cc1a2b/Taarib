@@ -58,7 +58,9 @@
 //! (framework installation), 6240–6259 to `najat_tahdith` (update survival)
 //! and 6260–6279 to `itlaq` (launch integration), so that no module ever has
 //! to renumber anything that has shipped. A code that has been seen by a user
-//! is permanent.
+//! is permanent. 6284–6291 are the third-party patch path — the pinned fetch,
+//! the archive, and the collision refusals that keep Taarib and somebody else's
+//! loader out of one another's way.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -650,6 +652,106 @@ pub enum KhataTathbeet {
         /// The configuration file it owns, which was not rewritten.
         malaf: PathBuf,
     },
+
+    // --- a patch Taarib did not build ---------------------------------------
+    /// The address a third-party artifact is pinned at could not be fetched.
+    #[error("{ism} could not be fetched from {rabt}: {sabab}")]
+    TanzeelMutaadhdhir {
+        /// The artifact, as the pin names it.
+        ism: String,
+        /// The address that was tried.
+        rabt: String,
+        /// What the transport reported.
+        sabab: String,
+    },
+
+    /// A fetched artifact is not the size its pin declares.
+    ///
+    /// Half of the pin, and the half that is checked first because it costs a
+    /// `stat` rather than a pass over the bytes. Refused by name rather than
+    /// accepted with a warning: a size that moved is a release that moved, and
+    /// which release this is is not the installer's to decide.
+    #[error("{ism} arrived at {hajm_wasil} byte(s) where its pin declares {hajm_mudam}")]
+    HajmQitaaGhayrMutabiq {
+        /// The artifact, as the pin names it.
+        ism: String,
+        /// The address it came from.
+        rabt: String,
+        /// The size the pin declares.
+        hajm_mudam: u64,
+        /// The size that actually arrived.
+        hajm_wasil: u64,
+    },
+
+    /// A fetched artifact does not hash to the digest its pin declares.
+    #[error("{ism} hashes to {sha_wasil} where its pin declares {sha_mudam}")]
+    BasmatQitaaGhayrMutabiqa {
+        /// The artifact, as the pin names it.
+        ism: String,
+        /// The address it came from.
+        rabt: String,
+        /// The digest the pin declares, lowercase hex.
+        sha_mudam: String,
+        /// The digest the bytes that arrived actually have, lowercase hex.
+        sha_wasil: String,
+    },
+
+    /// An entry's pin is not a digest, so nothing it fetched could ever match.
+    ///
+    /// Caught as a shape before a byte is fetched. The alternative is a refusal
+    /// nobody can act on: the bytes arrived, they hash to something, and the
+    /// entry declared a string that was never a hash.
+    #[error("the pin recorded for {ism} is not a sha256 digest: {sha}")]
+    BasmaGhayrSaliha {
+        /// The artifact, as the entry names it.
+        ism: String,
+        /// The string the entry recorded in place of a digest.
+        sha: String,
+    },
+
+    /// A verified artifact is not an archive this build can open.
+    #[error("{masar} is not a readable archive: {sabab}")]
+    ArshifTalif {
+        /// The staged artifact.
+        masar: PathBuf,
+        /// What the archive reader reported.
+        sabab: String,
+    },
+
+    /// An archive entry does not land where the entry's layout says it may.
+    ///
+    /// Covers both halves of the same question: an entry that escapes the game
+    /// root at all, and one that stays inside it but outside the paths the
+    /// catalogue entry declares the patch writes.
+    #[error("{madkhal} in {ism} is not a path this patch declares it writes: {sabab}")]
+    MadkhalKharijAlTakhtit {
+        /// The artifact the entry came out of.
+        ism: String,
+        /// The entry name, exactly as the archive carries it.
+        madkhal: String,
+        /// The game root it would have been written under.
+        jidhr: PathBuf,
+        /// Which rule refused it.
+        sabab: String,
+    },
+
+    /// Taarib's own work and somebody else's cannot both hold one game.
+    #[error("{} is already installed in {}", jiha.ism(), jidhr.display())]
+    TasadumRuqaa {
+        /// Which side is already installed, and therefore which was refused.
+        jiha: crate::tasadum::JihatTasadum,
+        /// The game directory both want.
+        jidhr: PathBuf,
+        /// What was found that proves it, in the order it was looked for.
+        alamat: Vec<String>,
+    },
+
+    /// The third-party authorisation does not cover the entry it was handed.
+    #[error("the third-party install authorisation does not cover this entry: {sabab}")]
+    IdhnKharijiGhayrMutabiq {
+        /// Which of the permit's facts the entry disagreed with.
+        sabab: String,
+    },
 }
 
 impl KhataTathbeet {
@@ -697,7 +799,11 @@ impl KhataTathbeet {
             | Self::NususMarfuda { masar, .. }
             | Self::MukawwinMafqud { masar, .. }
             | Self::MukawwinNaqis { masar, .. }
-            | Self::WakeelMashghul { masar, .. } => Some(masar),
+            | Self::WakeelMashghul { masar, .. }
+            | Self::ArshifTalif { masar, .. } => Some(masar),
+            Self::MadkhalKharijAlTakhtit { jidhr, .. } | Self::TasadumRuqaa { jidhr, .. } => {
+                Some(jidhr)
+            },
             Self::LubaTashtaghil { tanfidhi, .. } | Self::HalatLubaMajhula { tanfidhi, .. } => {
                 Some(tanfidhi)
             },
@@ -712,7 +818,15 @@ impl KhataTathbeet {
             | Self::IdadGhayrMustaad { .. }
             | Self::IdadGhayrMunaffadh { .. }
             | Self::TawafuqMarfud { .. }
-            | Self::IdhnGhayrMutabiq => None,
+            | Self::IdhnGhayrMutabiq
+            // A failed pin names an artifact and an address. The staged copy it
+            // was computed over is deleted the moment it disagrees, so naming
+            // its path would send a reader to a file that is deliberately gone.
+            | Self::TanzeelMutaadhdhir { .. }
+            | Self::HajmQitaaGhayrMutabiq { .. }
+            | Self::BasmatQitaaGhayrMutabiqa { .. }
+            | Self::BasmaGhayrSaliha { .. }
+            | Self::IdhnKharijiGhayrMutabiq { .. } => None,
             Self::IstiadaNaqisa { sabab, .. } => sabab.masar(),
         }
     }
@@ -732,9 +846,15 @@ impl KhataTathbeet {
     #[must_use]
     pub fn qabil_lil_iada(&self) -> bool {
         match self {
-            Self::MalafMaqful { .. } | Self::LubaTashtaghil { .. } | Self::MunassaTaamal { .. } => {
-                true
-            },
+            // The last of the four is the only one here that is not a file: a
+            // transfer that never completed meets a different network on the
+            // next attempt rather than the same machine. A pin that disagreed
+            // is deliberately not among them — retrying that fetches the same
+            // bytes and refuses them again.
+            Self::MalafMaqful { .. }
+            | Self::LubaTashtaghil { .. }
+            | Self::MunassaTaamal { .. }
+            | Self::TanzeelMutaadhdhir { .. } => true,
             Self::IstiadaNaqisa { sabab, .. } => sabab.qabil_lil_iada(),
             _ => false,
         }
@@ -780,6 +900,15 @@ impl Tafsir for KhataTathbeet {
                     Self::NususMarfuda { .. } => 81,
                     Self::HalatLubaMajhula { .. } => 82,
                     Self::KhattMafqud { .. } => 83,
+                    // The third-party patch band.
+                    Self::TanzeelMutaadhdhir { .. } => 84,
+                    Self::HajmQitaaGhayrMutabiq { .. } => 85,
+                    Self::BasmatQitaaGhayrMutabiqa { .. } => 86,
+                    Self::BasmaGhayrSaliha { .. } => 87,
+                    Self::ArshifTalif { .. } => 88,
+                    Self::MadkhalKharijAlTakhtit { .. } => 89,
+                    Self::TasadumRuqaa { .. } => 90,
+                    Self::IdhnKharijiGhayrMutabiq { .. } => 91,
                 },
         )
     }
@@ -998,6 +1127,65 @@ impl Tafsir for KhataTathbeet {
                  أعد التشغيل: تستأنف الإزالة من حيث توقّفت ولا تبدأ من جديد.",
                 mutabaqqi.len(),
                 sabab.arabi()
+            ),
+            Self::TanzeelMutaadhdhir { ism, rabt, sabab } => format!(
+                "تعذّر جلب «{ism}» من موضع صاحب الرقعة ({rabt}): {sabab}. لم يُكتب في اللعبة \
+                 شيء. أعد المحاولة."
+            ),
+            Self::HajmQitaaGhayrMutabiq {
+                ism,
+                hajm_mudam,
+                hajm_wasil,
+                ..
+            } => format!(
+                "«{ism}» وصل بحجم {hajm_wasil} بايت والمثبَّت في السجلّ {hajm_mudam} بايت. هذا \
+                 ملفّ آخر غير الذي رُوجع وثُبّتت بصمته، فلم يُكتب في اللعبة شيء. تثبيت إصدار \
+                 جديد يمرّ بمراجعة صاحب السجلّ، ولا يُقبل هنا تلقائيًّا."
+            ),
+            Self::BasmatQitaaGhayrMutabiqa {
+                ism,
+                sha_mudam,
+                sha_wasil,
+                ..
+            } => format!(
+                "«{ism}» بصمته {sha_wasil} والمثبَّت في السجلّ {sha_mudam}. الحجم طابق والبصمة \
+                 لم تطابق، وهذا ملفّ آخر غير الذي رُوجع؛ لم يُكتب في اللعبة شيء ولم تُحذف \
+                 النسخة المخالفة إلى مكان تُستأنف منه. تثبيت إصدار جديد يمرّ بمراجعة صاحب \
+                 السجلّ."
+            ),
+            Self::BasmaGhayrSaliha { ism, sha } => format!(
+                "البصمة المسجَّلة لـ«{ism}» ليست بصمة sha256 أصلًا: «{sha}». لا يُجلب شيء ببصمة \
+                 لا يمكن أن يطابقها ملفّ."
+            ),
+            Self::ArshifTalif { masar, sabab } => format!(
+                "{} طابق بصمته المثبَّتة ولا يُقرأ أرشيفًا: {sabab}. الملفّ هو الذي ثبّته صاحب \
+                 السجلّ، فالخلل في التثبيت نفسه لا في التنزيل.",
+                masar.display()
+            ),
+            Self::MadkhalKharijAlTakhtit {
+                ism,
+                madkhal,
+                sabab,
+                ..
+            } => format!(
+                "المدخل «{madkhal}» في «{ism}» ليس ممّا تعلن هذه الرقعة أنها تكتبه: {sabab}. \
+                 الأرشيف ملفّ آتٍ من الشبكة، ولا يُفكّ منه إلا ما يقع داخل مجلّد اللعبة وضمن \
+                 التخطيط المعلَن. لم يُكتب شيء."
+            ),
+            Self::TasadumRuqaa {
+                jiha,
+                jidhr,
+                alamat,
+            } => format!(
+                "{} في {}. {} الدليل:\n- {}",
+                jiha.wasf_arabi(),
+                jidhr.display(),
+                jiha.amal_arabi(),
+                alamat.join("\n- ")
+            ),
+            Self::IdhnKharijiGhayrMutabiq { sabab } => format!(
+                "إذن التثبيت الخارجيّ لا يغطّي هذا المدخل: {sabab}. الإذن يحمل ما أقرّته البوّابة \
+                 بالاسم والحجم والبصمة، والمدخل المسلَّم يخالفه، فلم يُجلب شيء ولم يُكتب شيء."
             ),
         }
     }
@@ -1278,6 +1466,70 @@ impl Tafsir for KhataTathbeet {
                 sabab.injilizi(),
                 mutabaqqi.join(", ")
             ),
+            Self::TanzeelMutaadhdhir { ism, rabt, sabab } => format!(
+                "{ism} could not be fetched from the author's own endpoint ({rabt}): {sabab}. \
+                 Nothing was written into the game. Try again."
+            ),
+            Self::HajmQitaaGhayrMutabiq {
+                ism,
+                hajm_mudam,
+                hajm_wasil,
+                ..
+            } => format!(
+                "{ism} arrived at {hajm_wasil} byte(s) where the registry's pin declares \
+                 {hajm_mudam}. That is a different file from the one that was reviewed and \
+                 pinned, so nothing was written into the game. Installing a new release goes \
+                 through the owner's review; it is never accepted here automatically."
+            ),
+            Self::BasmatQitaaGhayrMutabiqa {
+                ism,
+                sha_mudam,
+                sha_wasil,
+                ..
+            } => format!(
+                "{ism} hashes to {sha_wasil} where the registry's pin declares {sha_mudam}. The \
+                 size matched and the digest did not, so this is a different file from the one \
+                 that was reviewed. Nothing was written into the game, and the copy that \
+                 disagreed was deleted rather than left where a later run could resume from it. \
+                 Installing a new release goes through the owner's review."
+            ),
+            Self::BasmaGhayrSaliha { ism, sha } => format!(
+                "the pin recorded for {ism} is not a sha256 digest at all: {sha:?}. Nothing is \
+                 fetched against a pin no file could ever match."
+            ),
+            Self::ArshifTalif { masar, sabab } => format!(
+                "{} matched its pin and is not a readable archive: {sabab}. The file is the one \
+                 the owner pinned, so the fault is in the pin rather than in the download.",
+                masar.display()
+            ),
+            Self::MadkhalKharijAlTakhtit {
+                ism,
+                madkhal,
+                sabab,
+                ..
+            } => format!(
+                "the entry {madkhal:?} in {ism} is not one of the paths this patch declares it \
+                 writes: {sabab}. An archive is a file off the internet, and only what lands \
+                 inside the game directory and inside the declared layout is unpacked from one. \
+                 Nothing was written."
+            ),
+            Self::TasadumRuqaa {
+                jiha,
+                jidhr,
+                alamat,
+            } => format!(
+                "{} in {}. {} Evidence:\n- {}",
+                jiha.wasf_injilizi(),
+                jidhr.display(),
+                jiha.amal_injilizi(),
+                alamat.join("\n- ")
+            ),
+            Self::IdhnKharijiGhayrMutabiq { sabab } => format!(
+                "the third-party install authorisation does not cover the entry it was handed: \
+                 {sabab}. The permit carries what the gate approved by name, size and digest, \
+                 and the entry disagrees with it, so nothing was fetched and nothing was \
+                 written."
+            ),
         }
     }
 
@@ -1291,9 +1543,10 @@ impl Tafsir for KhataTathbeet {
             // Transient by nature: something is holding the file, or something
             // is running over it, and the user is the one who can let go. Close
             // it, then press the same button.
-            Self::MalafMaqful { .. } | Self::LubaTashtaghil { .. } | Self::MunassaTaamal { .. } => {
-                Khutwa::AadaMuhawala
-            },
+            Self::MalafMaqful { .. }
+            | Self::LubaTashtaghil { .. }
+            | Self::MunassaTaamal { .. }
+            | Self::TanzeelMutaadhdhir { .. } => Khutwa::AadaMuhawala,
 
             // The opposite of the three above: nothing the user does on this
             // machine changes the answer, because the sandbox will hand this
@@ -1362,9 +1615,26 @@ impl Tafsir for KhataTathbeet {
             // installer: each is a Taarib defect or a tampered file. None is
             // something the user can fix, and all are things the project needs
             // to see.
-            Self::MasarKharij { .. } | Self::BayanTalif { .. } | Self::IdhnGhayrMutabiq => {
-                Khutwa::IblaghLilMalik
-            },
+            // The same answer for a pin that disagreed, and not for the same
+            // reason: nothing is broken on this machine, and re-pinning a
+            // release is a decision the registry's owner takes in the review
+            // console. Offering the user a retry would be offering them a
+            // button that fetches the same bytes and refuses them again.
+            Self::MasarKharij { .. }
+            | Self::BayanTalif { .. }
+            | Self::IdhnGhayrMutabiq
+            | Self::HajmQitaaGhayrMutabiq { .. }
+            | Self::BasmatQitaaGhayrMutabiqa { .. }
+            | Self::BasmaGhayrSaliha { .. }
+            | Self::ArshifTalif { .. }
+            | Self::MadkhalKharijAlTakhtit { .. }
+            | Self::IdhnKharijiGhayrMutabiq { .. } => Khutwa::IblaghLilMalik,
+
+            // Which side is in the game decides which action there is. Taarib's
+            // own patch comes off with Taarib's own button; somebody else's mod
+            // is theirs to remove, and a product that offered to delete it
+            // would be making that decision for them.
+            Self::TasadumRuqaa { jiha, .. } => jiha.khutwa(),
 
             // The way to finish a partial restore is to clear whatever stopped
             // it and press the same button again, so the action is the inner
@@ -1464,7 +1734,8 @@ impl Tafsir for KhataTathbeet {
             Self::BayanTalif { masar, sabab }
             | Self::SalahiyatGhayrMustaada { masar, sabab }
             | Self::RuqaaMarfuda { masar, sabab }
-            | Self::NususMarfuda { masar, sabab } => {
+            | Self::NususMarfuda { masar, sabab }
+            | Self::ArshifTalif { masar, sabab } => {
                 daa("masar", QeemaSiyaq::Masar(masar.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             },
@@ -1623,6 +1894,60 @@ impl Tafsir for KhataTathbeet {
             Self::MunassaTaamal { manassa, malaf } => {
                 daa("manassa", QeemaSiyaq::Nass(manassa.clone()));
                 daa("malaf", QeemaSiyaq::Masar(malaf.clone()));
+            },
+            Self::TanzeelMutaadhdhir { ism, rabt, sabab } => {
+                daa("qitaa", QeemaSiyaq::Nass(ism.clone()));
+                daa("rabt", QeemaSiyaq::Nass(rabt.clone()));
+                daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
+            },
+            Self::HajmQitaaGhayrMutabiq {
+                ism,
+                rabt,
+                hajm_mudam,
+                hajm_wasil,
+            } => {
+                daa("qitaa", QeemaSiyaq::Nass(ism.clone()));
+                daa("rabt", QeemaSiyaq::Nass(rabt.clone()));
+                daa("hajm_mudam", QeemaSiyaq::Hajm(*hajm_mudam));
+                daa("hajm_wasil", QeemaSiyaq::Hajm(*hajm_wasil));
+            },
+            Self::BasmatQitaaGhayrMutabiqa {
+                ism,
+                rabt,
+                sha_mudam,
+                sha_wasil,
+            } => {
+                daa("qitaa", QeemaSiyaq::Nass(ism.clone()));
+                daa("rabt", QeemaSiyaq::Nass(rabt.clone()));
+                daa("muallana", QeemaSiyaq::Nass(sha_mudam.clone()));
+                daa("mahsuba", QeemaSiyaq::Nass(sha_wasil.clone()));
+            },
+            Self::BasmaGhayrSaliha { ism, sha } => {
+                daa("qitaa", QeemaSiyaq::Nass(ism.clone()));
+                daa("muallana", QeemaSiyaq::Nass(sha.clone()));
+            },
+            Self::MadkhalKharijAlTakhtit {
+                ism,
+                madkhal,
+                jidhr,
+                sabab,
+            } => {
+                daa("qitaa", QeemaSiyaq::Nass(ism.clone()));
+                daa("madkhal", QeemaSiyaq::Nass(madkhal.clone()));
+                daa("jidhr", QeemaSiyaq::Masar(jidhr.clone()));
+                daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
+            },
+            Self::TasadumRuqaa {
+                jiha,
+                jidhr,
+                alamat,
+            } => {
+                daa("jiha", QeemaSiyaq::Nass(jiha.ism().to_owned()));
+                daa("jidhr", QeemaSiyaq::Masar(jidhr.clone()));
+                daa("alamat", QeemaSiyaq::Qaima(alamat.clone()));
+            },
+            Self::IdhnKharijiGhayrMutabiq { sabab } => {
+                daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             },
         }
         siyaq

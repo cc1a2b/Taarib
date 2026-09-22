@@ -52,6 +52,14 @@ zstd = { workspace = true }
 # not a choice — it is the digest `taarib-tajmee` and `bayan_mukawwinat.json`
 # already speak, and a second algorithm here would mean re-hashing the release.
 sha2 = { workspace = true }
+# The digest a third-party pin is expressed in is hex on the registry row and in
+# the author's own announcement, so the comparison is made in hex rather than by
+# parsing the pin into bytes: what a maintainer can check by eye is the string.
+hex = { workspace = true }
+# Third-party patches ship as zip archives. Read-only here, and every entry is
+# checked against the game root and the entry's declared layout before a byte of
+# it is expanded — the reader is a parser, never an extractor.
+zip = { workspace = true }
 walkdir = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

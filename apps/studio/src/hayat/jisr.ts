@@ -258,7 +258,63 @@ interface TartibWusata {
   // checked the address against the index it came from.
   readonly tarjamat_mujtama: ['muarrif'];
   readonly iftah_rabt: ['rabt'];
+
+  // Patches other teams made: the catalogue, what is already in the way, the
+  // install, and the owner's re-pin of an artifact whose bytes have moved.
+  readonly ruqaa_kharijiya: ['muarrif'];
+  readonly tadakhul_kharijiya: ['muarrif', 'ruqaa'];
+  readonly thabbit_kharijiya: ['muarrif', 'ruqaa', 'iqrar'];
+  readonly azil_kharijiya: ['muarrif', 'ruqaa'];
+  readonly basmat_mualaqa: [];
+  readonly athbit_basma: ['ruqaa', 'qitaa', 'sha256'];
 }
+
+/**
+ * الأوامر الخارجية — the third-party patch surface, as the screens that came
+ * before it call it.
+ *
+ * All five are registered in Rust now and all five are in `TartibWusata` above,
+ * so the type checker does hold them to the generated signatures: a renamed
+ * parameter or a dropped one is a build error like every other command's. What
+ * this block still buys is the decoding — {@link nadiKhariji} hands every answer
+ * to a decoder from `mustalahat/khariji.ts` before a screen reads it, and that
+ * is not belt and braces here. A shell older than the webview it is serving
+ * answers these with shapes this build has never seen, which is the ordinary
+ * state of a dev server reloading against a running binary; the decoder turns
+ * that into a refusal with a code instead of `undefined` interpolated into a
+ * credit line.
+ */
+interface TartibKhariji {
+  /** Every third-party patch the registry lists for one game. */
+  readonly ruqaa_kharijiya: { readonly muarrif: string };
+  /** What is already in the game directory that one of them cannot sit beside. */
+  readonly tadakhul_kharijiya: { readonly muarrif: string; readonly ruqaa: string };
+  /** Fetch it against its pinned hashes and write it in, once the risk is accepted. */
+  readonly thabbit_kharijiya: {
+    readonly muarrif: string;
+    readonly ruqaa: string;
+    readonly iqrar: boolean;
+  };
+  /** Take it back off, restoring every file it wrote over and every one it removed. */
+  readonly azil_kharijiya: { readonly muarrif: string; readonly ruqaa: string };
+  /** The artifacts whose authors have shipped bytes the owner has not pinned. */
+  readonly basmat_mualaqa: Record<string, never>;
+  /**
+   * The owner accepting one changed artifact, by echoing back the hash they read.
+   *
+   * The hash travels in the request on purpose: the backend compares it against
+   * what it actually observed and refuses if the two differ, so an accept can
+   * only ever pin the bytes that were on the screen when the owner pressed it.
+   */
+  readonly athbit_basma: {
+    readonly ruqaa: string;
+    readonly qitaa: string;
+    readonly sha256: string;
+  };
+}
+
+/** A command name from the surface the bindings do not carry yet. */
+export type IsmAmrKhariji = keyof TartibKhariji;
 
 /** A command name the backend actually registered. */
 export type IsmAmr = keyof TartibWusata;
@@ -356,12 +412,17 @@ export type FahsTartib = Yajib<
  */
 export class KhataJisr extends Error {
   /** The command that failed. */
-  readonly amr: IsmAmr;
+  readonly amr: IsmAmr | IsmAmrKhariji;
 
   /** The backend's error, or null when the failure happened before it. */
   readonly khata: Khata | null;
 
-  constructor(amr: IsmAmr, khata: Khata | null, risala: string, sabab: unknown) {
+  constructor(
+    amr: IsmAmr | IsmAmrKhariji,
+    khata: Khata | null,
+    risala: string,
+    sabab: unknown,
+  ) {
     super(risala, { cause: sabab });
     this.name = 'KhataJisr';
     this.amr = amr;
@@ -405,7 +466,7 @@ function huwaKhata(qeema: unknown): qeema is Khata {
 }
 
 /** Normalises whatever a rejected invoke produced into one error type. */
-function hawwil(amr: IsmAmr, khaam: unknown): KhataJisr {
+function hawwil(amr: IsmAmr | IsmAmrKhariji, khaam: unknown): KhataJisr {
   if (huwaKhata(khaam)) {
     return new KhataJisr(amr, khaam, `${khaam.ramz} ${khaam.injilizi}`, khaam);
   }
@@ -433,4 +494,87 @@ export async function nadi<M extends IsmAmr>(
   } catch (khaam) {
     throw hawwil(amr, khaam);
   }
+}
+
+/**
+ * The code a payload this build cannot read is refused with.
+ *
+ * A permanent code in the same shape as every backend code, because it reaches
+ * the user through the same failure block and ends up in the same report: it
+ * says the answer arrived and did not fit, which is a different fault from the
+ * command failing and has to be reportable as one.
+ */
+export const RAMZ_JAWAB_GHAYR_MAQRU = 'wajiha.jawab_ghayr_maqru';
+
+/**
+ * A failure the interface raises about an answer, phrased for a person.
+ *
+ * `KhataJisr` carries the backend's sentences when the backend wrote any, and
+ * falls back to "the bridge did not answer" when it did not — which would be the
+ * wrong sentence here, because the bridge answered perfectly well and it was
+ * this build that could not read what came back.
+ */
+function khataQiraa(amr: IsmAmrKhariji): KhataJisr {
+  const khata: Khata = {
+    ramz: RAMZ_JAWAB_GHAYR_MAQRU,
+    khutura: 'khatar',
+    arabi:
+      'وصل جواب من خدمة تعريب لا تعرف هذه النسخة من الواجهة قراءته. حدِّث تعريب، فالخدمة أحدث من الواجهة.',
+    injilizi:
+      'The backend answered with something this build of the interface cannot read. Update Taarib: the backend is newer than the interface.',
+    khutwa: { naw: 'tahdith_taarib' },
+    siyaq: { amr: { naw: 'nass', qeema: amr } },
+    sabab: null,
+    mawqi: null,
+  };
+  return new KhataJisr(amr, khata, `${RAMZ_JAWAB_GHAYR_MAQRU} ${amr}`, null);
+}
+
+/**
+ * Calls a command the generated bindings do not carry yet, and decodes what it
+ * answers before anything renders it.
+ *
+ * The decoder is not belt and braces: it is the whole of the type safety these
+ * five calls get, standing in for the generated signature until there is one.
+ *
+ * @param amr the command name, from {@link TartibKhariji}
+ * @param wusata its arguments, keyed as Rust declares them
+ * @param qarrir the decoder for its answer, from `mustalahat/khariji.ts`
+ * @throws {KhataJisr} when the command fails, and when its answer will not decode
+ */
+export async function nadiKhariji<M extends IsmAmrKhariji, T>(
+  amr: M,
+  wusata: TartibKhariji[M],
+  qarrir: (jawab: unknown) => T | null,
+): Promise<T> {
+  let khaam: unknown;
+  try {
+    khaam = await invoke<unknown>(amr, wusata as InvokeArgs);
+  } catch (sabab) {
+    throw hawwil(amr, sabab);
+  }
+  const mafkuk = qarrir(khaam);
+  if (mafkuk === null) {
+    throw khataQiraa(amr);
+  }
+  return mafkuk;
+}
+
+/**
+ * Whether a failure is this shell simply not having the command at all.
+ *
+ * Tauri rejects an unregistered command with `Command <name> not found`, as a
+ * bare string rather than as a `Khata` — so the failure carries no code, no
+ * sentence and no step. It is a real and ordinary state for these five while
+ * the backend half of third-party support lands, and it is also reachable in
+ * normal use whenever the webview bundle is newer than the shell hosting it,
+ * which the dev server does every time it reloads against a running binary.
+ *
+ * A screen answers it by drawing nothing: this build of Taarib does not offer
+ * third-party patches, and a red failure block on every game screen would say
+ * something went wrong when nothing did. Every other failure is a failure and
+ * is drawn as one.
+ */
+export function ghayrMusajjal(khata: KhataJisr): boolean {
+  return khata.khata === null && khata.message.includes(khata.amr) && khata.message.includes('not found');
 }

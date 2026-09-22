@@ -15,6 +15,7 @@ import type { MiftahLugha, Munassiqat } from '@/lugha/lugha';
 import { jam, munassiqat, t } from '@/lugha/lugha';
 import { HalatFarigha } from '@/mukawwinat/halat_farigha';
 import { KutlatKhata } from '@/mukawwinat/kutlat_khata';
+import { QismBasmat } from '@/mukawwinat/qism_basmat';
 import { Mashhad } from '@/mukawwinat/mashhad';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
 import { Zuhur } from '@/mukawwinat/zuhur';
@@ -1576,6 +1577,13 @@ export function Muraja(): JSX.Element {
               </>
             )}
           </div>
+
+          {/* Under the publishing block and ruled off from it the same way:
+              both are about the catalogue as a whole rather than about the one
+              submission open in the pane beside them, and a pin the owner has
+              not renewed is the other thing that stops a user installing
+              something the catalogue is already offering. */}
+          <QismBasmat lugha={lugha} munassiq={munassiq} malik={malik} />
 
           <div className="muraja__sijill-kull">
             <button

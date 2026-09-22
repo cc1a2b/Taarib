@@ -1,0 +1,35 @@
+/* ==========================================================================
+   البصمة — a hash cut into groups so two of them can be compared.
+
+   Wrapping rather than scrolling: a hash is sixty-four characters and the
+   panes it appears in are narrow, and a run that scrolls sideways hides the
+   half of the comparison the reader has not reached. The groups keep their
+   own integrity — nothing breaks inside one — so a wrapped hash is still read
+   group by group.
+   ========================================================================== */
+
+.basma {
+  display: inline-flex;
+  flex-wrap: wrap;
+  /* No row gap: the underline on a differing group is part of the glyph run
+     and a row gap would leave it floating between two lines. The column gap is
+     what separates one group from the next. */
+  gap: 0 var(--misafa-8);
+  color: var(--nass-2);
+}
+
+.basma__majmua {
+  white-space: nowrap;
+}
+
+/* A group that differs from the hash beside it: the full text colour, the
+   medium weight, and a rule under it. Three signals rather than one, because
+   this is the mark the whole re-pin decision rests on and it has to survive a
+   monochrome display, a colour-blind reader, the light palette and the
+   high-contrast set. The rule is drawn as an inset shadow rather than as a
+   text decoration so it sits clear of the descenders in a hex run. */
+.basma__majmua--mukhtalifa {
+  color: var(--nass-1);
+  font-weight: var(--wazn-mutawassit);
+  box-shadow: inset 0 calc(var(--samk-hadd-barz) * -1) 0 var(--tanbeeh);
+}

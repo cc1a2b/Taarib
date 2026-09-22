@@ -28,16 +28,19 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use taarib_aman::qaimat_sahb::QaimatSahb;
 use taarib_khatm::MiftahKhass;
+use taarib_mustalahat::khariji::RuqaaKharijiya;
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::musahim::MusahimId;
 use taarib_mustalahat::ruqaa::{MulakhkhasRuqaa, RuqaaId, RuqaaRevision};
 use taarib_mustawda::fahras::BayanMustawda;
 use taarib_mustawda::masadir::MASAR_BAYAN;
 use taarib_mustawda::sabk::{
-    KhiyaratSabk, MASAR_QAIMAT_SAHB, MadkhalManshur, Mulghayat, ijri, madkhal_min_huzma,
+    KhiyaratSabk, MASAR_QAIMAT_SAHB, MadkhalKhariji, MadkhalManshur, Mulghayat, Mustawda, ijri,
+    madkhal_khariji, madkhal_min_huzma,
 };
 use taarib_usus::masarat::{self, Masarat};
 
+use crate::bawwaba::ifhas_khariji;
 use crate::hawiya::SalahiyatMalik;
 use crate::khata::{KhataTaqdeem, NatijatTaqdeem};
 
@@ -163,6 +166,16 @@ pub struct SijillNashr {
     madakhil: BTreeMap<RuqaaId, MadkhalNashr>,
     #[serde(default)]
     mulghayat: Vec<MulghaNashr>,
+    /// Third-party entries the owner listed: patches somebody else made, which
+    /// Taarib never built and never sealed.
+    ///
+    /// In the ledger for the reason everything else is: the cast rebuilds all
+    /// 256 shards from it in full, so an entry the ledger does not hold is an
+    /// entry the next cast deletes from the catalogue. They are kept whole
+    /// rather than as a reference to a package, because there is no package —
+    /// the index is the only place one of these exists.
+    #[serde(default)]
+    kharijiya: BTreeMap<RuqaaId, RuqaaKharijiya>,
 }
 
 impl SijillNashr {
@@ -263,12 +276,54 @@ impl SijillNashr {
     /// Pulls a lineage: it leaves the catalogue and joins the revocation list.
     pub fn ilghi(&mut self, ruqaa: RuqaaId, sabab: &str, waqt: &str) {
         let _ = self.madakhil.remove(&ruqaa);
+        let _ = self.kharijiya.remove(&ruqaa);
         self.mulghayat.retain(|mulgha| mulgha.ruqaa != ruqaa);
         self.mulghayat.push(MulghaNashr {
             ruqaa,
             sabab: sabab.to_owned(),
             waqt: waqt.to_owned(),
         });
+    }
+
+    /// Lists a third-party entry, replacing any earlier version of it.
+    ///
+    /// Runs the gate rather than trusting the caller, because this is where a
+    /// whole finished work somebody else made enters a catalogue that publishes
+    /// to strangers. The rules are [`ifhas_khariji`]'s, which are
+    /// `taarib_aman::kharijiya`'s, which the pre-install gate applies on the
+    /// other end; nothing is restated here.
+    ///
+    /// # Errors
+    ///
+    /// [`KhataTaqdeem::BawwabaMaghlaqa`] naming what the gate refused —
+    /// permission nobody recorded, or a mirror the permission does not cover.
+    pub fn sajjil_khariji(&mut self, madkhal: RuqaaKharijiya) -> NatijatTaqdeem<()> {
+        let qaima = ifhas_khariji(&madkhal);
+        let rasiba = qaima.rasiba();
+        if !rasiba.is_empty() {
+            return Err(KhataTaqdeem::BawwabaMaghlaqa {
+                adad: rasiba.len(),
+                amthila: rasiba
+                    .iter()
+                    .map(|rasib| {
+                        format!("{}: {}", rasib.band.wasf_injilizi(), rasib.tafsil_injilizi)
+                    })
+                    .collect(),
+            });
+        }
+        let _ = self.kharijiya.insert(madkhal.id, madkhal);
+        Ok(())
+    }
+
+    /// Every third-party entry the owner has listed.
+    pub fn kharijiya(&self) -> impl Iterator<Item = &RuqaaKharijiya> {
+        self.kharijiya.values()
+    }
+
+    /// One third-party entry.
+    #[must_use]
+    pub fn khariji(&self, ruqaa: RuqaaId) -> Option<&RuqaaKharijiya> {
+        self.kharijiya.get(&ruqaa)
     }
 
     /// Every approved package, oldest lineage first.
@@ -370,6 +425,10 @@ pub struct NatijatNashrMustawda {
     /// Every listing now in the catalogue, as the cast derived it from each
     /// sealed package — including the `rabt` a client will fetch it from.
     pub fahras: Vec<MulakhkhasRuqaa>,
+    /// Every third-party entry now in the catalogue, kept apart from the
+    /// listings above because they are not the same kind of thing: nothing
+    /// here was compiled, sealed, or certified as carrying no byte of the game.
+    pub kharijiya: Vec<RuqaaKharijiya>,
     /// Every entry the cast refused, each still approved and still unpublished.
     pub marfuda: Vec<MadkhalMarfud>,
     /// How many revocations the pushed list carries.
@@ -429,14 +488,16 @@ pub fn unshur(
     nazzif(&mustawda, talab.jidhr)?;
 
     let tasalsul = tasalsul_talia(talab.jidhr, khass)?;
-    let (madakhil, marfuda) = iqra_madakhil(sijill, talab)?;
+    let (madakhil, mut marfuda) = iqra_madakhil(sijill, talab)?;
+    let (kharijiya, marfuda_kharijiya) = iqra_kharijiya(sijill);
+    marfuda.extend(marfuda_kharijiya);
     let mulghayat = sijill.mulghayat_lil_sabk();
 
     // Everything the ledger holds was refused and there is nothing else to
     // serve. Casting anyway would push an empty catalogue at a fresh sequence
     // and send every client to refetch nothing, then report a publish that
     // published no patch.
-    if madakhil.is_empty() && !marfuda.is_empty() && mulghayat.adad() == 0 {
+    if madakhil.is_empty() && kharijiya.is_empty() && !marfuda.is_empty() && mulghayat.adad() == 0 {
         let asbab: Vec<String> = marfuda
             .iter()
             .map(|marfud| format!("{}: {}", marfud.ruqaa, marfud.sabab))
@@ -455,6 +516,7 @@ pub fn unshur(
         talab.jidhr,
         madakhil,
         BTreeMap::new(),
+        kharijiya,
         KhiyaratSabk {
             tasalsul,
             waqt: talab.waqt,
@@ -467,7 +529,7 @@ pub fn unshur(
     )
     .map_err(|sabab| fashil(MarhalatNashrMustawda::Sabk, sabab))?;
 
-    let risala = risalat_iltizam(tasalsul, &natija.madakhil, mulghayat.adad());
+    let risala = risalat_iltizam(tasalsul, &natija, mulghayat.adad());
     let iltizam = iltazim(&mustawda, asas, talab, &risala)?;
     idfa(&mustawda, talab)?;
 
@@ -475,6 +537,7 @@ pub fn unshur(
         tasalsul,
         iltizam = %iltizam,
         adad = natija.madakhil.len(),
+        adad_khariji = natija.kharijiya.len(),
         "the catalogue was cast and pushed to the registry"
     );
 
@@ -486,6 +549,11 @@ pub fn unshur(
             .madakhil
             .iter()
             .map(|madkhal| madkhal.mulakhkhas.clone())
+            .collect(),
+        kharijiya: natija
+            .kharijiya
+            .iter()
+            .map(|madkhal| madkhal.madkhal().clone())
             .collect(),
         marfuda,
         adad_mulghayat: mulghayat.adad(),
@@ -705,12 +773,40 @@ fn iqra_madakhil(
     Ok((madakhil, marfuda))
 }
 
+/// Turns every listed third-party entry into one the cast will take,
+/// collecting the ones it refuses.
+///
+/// No equivalent of `iqra_madakhil`'s "already in the catalogue" stop, because
+/// there is nothing to compare against: a third-party entry lives only in the
+/// index, so the served catalogue carries no record of it independent of this
+/// ledger. What keeps one from vanishing is that nothing removes it from the
+/// ledger except [`SijillNashr::ilghi`], and that the gate it is refused by is
+/// the same one it passed on the way in.
+fn iqra_kharijiya(sijill: &SijillNashr) -> (Vec<MadkhalKhariji>, Vec<MadkhalMarfud>) {
+    let mut kharijiya = Vec::new();
+    let mut marfuda = Vec::new();
+    for madkhal in sijill.kharijiya() {
+        let id = madkhal.id;
+        match madkhal_khariji(madkhal.clone()) {
+            Ok(qaid) => kharijiya.push(qaid),
+            Err(sabab) => marfuda.push(MadkhalMarfud { ruqaa: id, sabab }),
+        }
+    }
+    (kharijiya, marfuda)
+}
+
 /// What the commit says it did, so the registry's history reads without this
 /// application open.
-fn risalat_iltizam(tasalsul: u64, madakhil: &[MadkhalManshur], mulghayat: usize) -> String {
+///
+/// The two kinds are written under separate headings rather than in one list,
+/// because a reader of this history is being told what the registry now serves
+/// and the two answers are different: one is a package Taarib compiled, sealed
+/// and certified as holding no byte of the game; the other is an address and a
+/// digest for an archive its author built out of the game's own containers.
+fn risalat_iltizam(tasalsul: u64, natija: &Mustawda, mulghayat: usize) -> String {
     use std::fmt::Write as _;
     let mut matn = format!("Cast the catalogue at sequence {tasalsul}\n\n");
-    for madkhal in madakhil {
+    for madkhal in &natija.madakhil {
         let _ = writeln!(
             matn,
             "{} r{} — {}",
@@ -719,10 +815,28 @@ fn risalat_iltizam(tasalsul: u64, madakhil: &[MadkhalManshur], mulghayat: usize)
             madkhal.mulakhkhas.unwan
         );
     }
+    if !natija.kharijiya.is_empty() {
+        matn.push_str(
+            "\nThird-party entries — not built by Taarib, fetched from their authors \
+                       and outside the asset gate's certificate:\n",
+        );
+        for madkhal in &natija.kharijiya {
+            let khariji = madkhal.madkhal();
+            let _ = writeln!(
+                matn,
+                "{} {} — {} by {}",
+                khariji.id,
+                khariji.isdar,
+                khariji.unwan,
+                khariji.nasab()
+            );
+        }
+    }
     let _ = write!(
         matn,
-        "\n{} listing(s), {mulghayat} revocation(s).",
-        madakhil.len()
+        "\n{} listing(s), {} third-party entr(ies), {mulghayat} revocation(s).",
+        natija.madakhil.len(),
+        natija.kharijiya.len()
     );
     matn
 }

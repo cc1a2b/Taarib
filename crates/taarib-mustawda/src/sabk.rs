@@ -25,6 +25,7 @@ use jiff::{SignedDuration, Timestamp};
 use taarib_aman::qaimat_sahb::KatibQaima;
 use taarib_khatm::MiftahKhass;
 use taarib_mustalahat::bina::Basma;
+use taarib_mustalahat::khariji::{HalatMira, RuqaaKharijiya};
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::muharrik::{AilatMuharrik, KhalfiyaBarmajiya, Tabaqa};
 use taarib_mustalahat::musahim::MusahimId;
@@ -38,7 +39,7 @@ use taarib_tarqee::irtibat::IrtibatBina;
 use taarib_tarqee::taghtiya_ruqaa::SababAdamAlnashr;
 
 use crate::fahras::{BayanMustawda, MuhtawaShareeha, TajawuzNashr, shareeha};
-use crate::masadir::{MASAR_BAYAN, masar_shareeha};
+use crate::masadir::{MASAR_BAYAN, masar_salih, masar_shareeha};
 
 /// Where the revocation list sits inside the repository.
 ///
@@ -48,7 +49,23 @@ use crate::masadir::{MASAR_BAYAN, masar_shareeha};
 pub const MASAR_QAIMAT_SAHB: &str = "sahb/qaima.json";
 
 /// The directory release assets live under, inside the same repository.
+///
+/// Everything in here is a sealed Taarib package, and every one of those
+/// carries the asset gate's certificate in its own metadata: the claim, counted
+/// rather than asserted, that it holds zero bytes of the game.
 pub const MUJALLAD_ISDAR: &str = "isdar";
+
+/// The directory a mirrored third-party artifact is served from.
+///
+/// Beside [`MUJALLAD_ISDAR`] and never inside it, and that separation is the
+/// whole of it. A third-party artifact is the game's own containers repacked by
+/// somebody else — a loader set, replacement language databases — so it is
+/// exactly the file the release area's certificate is least true of. Filing the
+/// two together would make "everything served out of the release area is
+/// certified to carry no game content" false for the one file nobody would
+/// think to check, so [`madkhal_khariji`] refuses a mirror aimed anywhere but
+/// here and [`masar_mira`] is the only place the path is spelled.
+pub const MUJALLAD_KHARIJI: &str = "khariji";
 
 /// Everything one published patch contributes to the registry.
 #[derive(Debug)]
@@ -67,6 +84,41 @@ pub struct MadkhalManshur {
     pub tajawuz: Option<TajawuzNashr>,
 }
 
+/// One third-party entry the cast is publishing.
+///
+/// Not a [`MadkhalManshur`], and not reachable from one in either direction.
+/// That type is derived from a sealed package, and every sealed package carries
+/// the asset gate's certificate — the counted claim that it holds zero bytes of
+/// the game. This one is declared data about an archive somebody else built out
+/// of the game's own containers: there is no package here, no seal, and no
+/// certificate to be read over it. Two constructors, two input types, and no
+/// conversion between them, so the sentence that is true of one cannot arrive
+/// attached to the other.
+///
+/// The field is private and [`madkhal_khariji`] is the only constructor, so an
+/// entry the registry may not serve cannot be represented, let alone cast.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MadkhalKhariji {
+    madkhal: RuqaaKharijiya,
+}
+
+impl MadkhalKhariji {
+    /// The game the shard keys on.
+    ///
+    /// Read off the entry rather than carried beside it: a third-party entry
+    /// names its own game, which a sealed package's metadata does not.
+    #[must_use]
+    pub const fn luba(&self) -> LubaId {
+        self.madkhal.luba
+    }
+
+    /// The entry, as the shard will carry it.
+    #[must_use]
+    pub const fn madkhal(&self) -> &RuqaaKharijiya {
+        &self.madkhal
+    }
+}
+
 /// What a finished cast produced.
 #[derive(Debug)]
 pub struct Mustawda {
@@ -78,6 +130,9 @@ pub struct Mustawda {
     pub sharaih: Vec<u16>,
     /// Every listing published, in the order it was given.
     pub madakhil: Vec<MadkhalManshur>,
+    /// Every third-party entry published, kept apart from the listings above
+    /// for the reason [`MadkhalKhariji`] is its own type.
+    pub kharijiya: Vec<MadkhalKhariji>,
 }
 
 /// Everything the cast withdraws from circulation, carried into the signed
@@ -289,6 +344,94 @@ pub fn madkhal_min_huzma(
     })
 }
 
+/// Takes a declared third-party entry into the catalogue.
+///
+/// Nothing is read, opened or written here, and that is the difference from
+/// [`madkhal_min_huzma`]. A third-party entry is not compiled from anything: no
+/// package to open, no signature to verify, no sealed metadata to derive a
+/// listing from — the entry *is* the listing, and the registry's only job is to
+/// refuse the ones it may not serve.
+///
+/// Every rule applied is the entry's own. [`RuqaaKharijiya::sabab_rafd`]
+/// answers the permission question in one place, for the gate and the cast
+/// alike, and [`RuqaaKharijiya::qitaa_bila_basma`] answers whether a pin is a
+/// digest at all. What is added here is the two facts only the registry knows:
+/// that a client fetches over `https`, and that a mirrored artifact is served
+/// out of [`MUJALLAD_KHARIJI`] rather than out of the certified release area.
+///
+/// # Errors
+///
+/// A sentence naming what stops the entry: the permission it does not have, an
+/// artifact with no pin or an address a client would not fetch, or a mirror
+/// aimed somewhere the registry will not serve it from.
+pub fn madkhal_khariji(madkhal: RuqaaKharijiya) -> Result<MadkhalKhariji, String> {
+    let hawiya = format!("{} ({})", madkhal.unwan, madkhal.id);
+    if let Some(sabab) = madkhal.sabab_rafd() {
+        return Err(format!("{hawiya}: {}", sabab.wasf_injilizi()));
+    }
+    if madkhal.qitaa.is_empty() {
+        return Err(format!(
+            "{hawiya} names no artifact, so listing it would offer an install that fetches \
+             nothing"
+        ));
+    }
+    if let Some(qitaa) = madkhal.qitaa_bila_basma() {
+        return Err(format!(
+            "{hawiya}: {:?} is pinned to {:?}, which is not a 64-character hex sha256. A pin \
+             that cannot match any file turns the download's check into a refusal nobody can \
+             act on.",
+            qitaa.ism, qitaa.sha256
+        ));
+    }
+    for qitaa in &madkhal.qitaa {
+        let _ = tahaqquq_rabt(qitaa.rabt.clone())
+            .map_err(|khata| format!("{hawiya}: {:?} — {khata}", qitaa.ism))?;
+    }
+    if let HalatMira::MinAlsijill { rabt } = &madkhal.mira {
+        tahaqquq_masar_mira(&hawiya, rabt)?;
+    }
+    Ok(MadkhalKhariji { madkhal })
+}
+
+/// The repository path one mirrored third-party artifact occupies.
+///
+/// The only place the mirror path is spelled, so that "beside the release area
+/// and never inside it" is a thing the code does rather than a thing a
+/// maintainer remembers.
+#[must_use]
+pub fn masar_mira(id: RuqaaId, ism_malaf: &str) -> String {
+    format!("{MUJALLAD_KHARIJI}/{id}/{ism_malaf}")
+}
+
+/// Refuses a mirror address the registry will not serve the bytes from.
+///
+/// Repository-relative, inside [`MUJALLAD_KHARIJI`], and nothing else. An
+/// absolute address is refused for the reason [`MASAR_QAIMAT_SAHB`] is
+/// relative: a catalogue that could aim the fetch at a host of its choosing is
+/// a catalogue no offline mirror, bundled copy or LAN share can serve. The
+/// release area is refused for a different reason, and the one that matters
+/// here — it is where certified packages live.
+fn tahaqquq_masar_mira(hawiya: &str, rabt: &str) -> Result<(), String> {
+    let nisbi = rabt.trim_start_matches('/');
+    if !masar_salih(nisbi) {
+        return Err(format!(
+            "{hawiya}: the mirror address {rabt:?} is not a repository path this build resolves. \
+             A mirrored artifact is served out of this repository, at \
+             {MUJALLAD_KHARIJI}/<id>/<name>, so that an offline mirror and a LAN share can serve \
+             it too."
+        ));
+    }
+    if !nisbi.starts_with(&format!("{MUJALLAD_KHARIJI}/")) {
+        return Err(format!(
+            "{hawiya}: the mirror address {rabt:?} is not under {MUJALLAD_KHARIJI:?}. \
+             {MUJALLAD_ISDAR:?} holds sealed Taarib packages, each certified to carry zero bytes \
+             of the game; a third-party artifact is the game's own containers repacked, so it is \
+             served from {MUJALLAD_KHARIJI:?} and the certificate never reaches it."
+        ));
+    }
+    Ok(())
+}
+
 /// The file name one package is served under: the game's title, slugged, with
 /// its revision.
 #[must_use]
@@ -472,6 +615,12 @@ pub struct KhiyaratSabk<'a> {
 /// served list's own count, and going below it is refused here rather than
 /// discovered by whoever installs the patch that was pulled.
 ///
+/// **A third-party entry contributes a listing and no bytes.** Its artifacts
+/// are an address, a size and a digest; they stay where its author put them,
+/// and the mirrored case is an address inside [`MUJALLAD_KHARIJI`] that the
+/// operator fills by hand. Nothing here writes one, so nothing here can file
+/// one beside the certified packages in [`MUJALLAD_ISDAR`].
+///
 /// # Errors
 ///
 /// A sentence naming the write, the encoding, or the revocation count that
@@ -480,6 +629,7 @@ pub fn ijri(
     jidhr: &Path,
     madakhil: Vec<MadkhalManshur>,
     aswat: BTreeMap<LubaId, Vec<MulakhkhasSawt>>,
+    kharijiya: Vec<MadkhalKhariji>,
     khiyarat: KhiyaratSabk<'_>,
     miftah_malik: &MiftahKhass,
     mulghayat: &Mulghayat,
@@ -512,6 +662,16 @@ pub fn ijri(
             .or_default()
             .aswat
             .insert(luba, qaima);
+    }
+    for madkhal in &kharijiya {
+        let luba = madkhal.luba();
+        mahtawayat
+            .entry(shareeha(luba))
+            .or_default()
+            .kharijiya
+            .entry(luba)
+            .or_default()
+            .push(madkhal.madkhal().clone());
     }
 
     let mut basmat: BTreeMap<u16, Basma> = BTreeMap::new();
@@ -547,6 +707,7 @@ pub fn ijri(
         bayan,
         sharaih,
         madakhil,
+        kharijiya,
     })
 }
 
@@ -659,10 +820,15 @@ pub fn min_unix(thawani: i64) -> String {
 mod fahs {
     use std::error::Error;
 
-    use taarib_mustalahat::ruqaa::{RuqaaId, RuqaaRevision};
+    use taarib_mustalahat::khariji::HalatMira;
+    use taarib_mustalahat::ruqaa::{IdhnMasdar, RuqaaId, RuqaaRevision};
     use taarib_tarqee::taghtiya_ruqaa::SababAdamAlnashr;
 
-    use super::{bawwabat_taghtiya, ism_asl, masar_asl, rabt_asl};
+    use super::{
+        MUJALLAD_ISDAR, bawwabat_taghtiya, ism_asl, madkhal_khariji, masar_asl, masar_mira,
+        rabt_asl,
+    };
+    use crate::khariji::badhrat_rtea;
 
     /// Every test returns this so a setup failure propagates with `?`.
     /// `unwrap` and `expect` are denied workspace-wide, tests included.
@@ -865,5 +1031,136 @@ mod fahs {
     #[test]
     fn rabt_yarfud_asasan_la_yuhallal() {
         assert!(rabt_asl("not an address at all", ASL, ISM).is_err());
+    }
+
+    /// A written grant whose statement nobody filled in, which is how the seed
+    /// ships and what the owner has to answer before RTEA is in a catalogue.
+    fn bi_bayan() -> IdhnMasdar {
+        IdhnMasdar::Katabi {
+            bayan: "granted by the author on X, 2026-09-21, https://x.example/post/1".to_owned(),
+        }
+    }
+
+    #[test]
+    fn khariji_yarfud_madkhalan_bila_bayan() -> NatijatIkhtibar {
+        let khata = madkhal_khariji(badhrat_rtea())
+            .err()
+            .ok_or("the seed ships with a blank permission statement and must not cast")?;
+        assert!(khata.contains("RTEA"), "{khata}");
+        assert!(
+            khata.contains("permission is recorded with no statement"),
+            "{khata}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn khariji_yaqbal_madkhalan_bi_bayan() -> NatijatIkhtibar {
+        let mut badhra = badhrat_rtea();
+        badhra.masdar.idhn = bi_bayan();
+        let luba = badhra.luba;
+        let madkhal = madkhal_khariji(badhra)?;
+        assert_eq!(madkhal.luba(), luba);
+        assert_eq!(madkhal.madkhal().unwan, "RTEA");
+        Ok(())
+    }
+
+    /// The pin is what the download is checked against, so a pin that is not a
+    /// digest is caught before an address is ever handed to a client.
+    #[test]
+    fn khariji_yarfud_basmatan_ghayr_salima() -> NatijatIkhtibar {
+        let mut badhra = badhrat_rtea();
+        badhra.masdar.idhn = bi_bayan();
+        if let Some(qitaa) = badhra.qitaa.first_mut() {
+            qitaa.sha256.truncate(40);
+        }
+        let khata = madkhal_khariji(badhra)
+            .err()
+            .ok_or("a pin that is not a digest must be refused")?;
+        assert!(khata.contains("update.zip"), "{khata}");
+        assert!(khata.contains("hex sha256"), "{khata}");
+        Ok(())
+    }
+
+    #[test]
+    fn khariji_yarfud_unwanan_fi_alaraa() -> NatijatIkhtibar {
+        let mut badhra = badhrat_rtea();
+        badhra.masdar.idhn = bi_bayan();
+        if let Some(qitaa) = badhra.qitaa.first_mut() {
+            qitaa.rabt = "http://rt.example/?lml-update".to_owned();
+        }
+        let khata = madkhal_khariji(badhra)
+            .err()
+            .ok_or("a third-party artifact is never fetched in the clear")?;
+        assert!(khata.contains("not https"), "{khata}");
+        Ok(())
+    }
+
+    /// Mirroring needs the author's grant for hosting specifically, and the
+    /// entry's own rule is the one applied — this restates none of it.
+    #[test]
+    fn khariji_yarfud_miraan_bila_idhn() -> NatijatIkhtibar {
+        let mut badhra = badhrat_rtea();
+        badhra.masdar.idhn = bi_bayan();
+        badhra.mira = HalatMira::MinAlsijill {
+            rabt: masar_mira(badhra.id, "update.zip"),
+        };
+        let khata = madkhal_khariji(badhra.clone())
+            .err()
+            .ok_or("mirroring without a grant that covers it must be refused")?;
+        assert!(khata.contains("separate grants"), "{khata}");
+
+        badhra.masdar.yasmah_bilmira = true;
+        let madkhal = madkhal_khariji(badhra)?;
+        assert!(madkhal.madkhal().yajuz_mira());
+        Ok(())
+    }
+
+    /// The release area is where sealed packages live, and every one of them
+    /// carries the certificate that it holds no byte of the game. A mirrored
+    /// third-party artifact is the opposite kind of file, so it cannot be
+    /// filed there — not by convention, by refusal.
+    #[test]
+    fn khariji_yarfud_miraan_fi_mintaqat_alisdar() -> NatijatIkhtibar {
+        let mut badhra = badhrat_rtea();
+        badhra.masdar.idhn = bi_bayan();
+        badhra.masdar.yasmah_bilmira = true;
+        badhra.mira = HalatMira::MinAlsijill {
+            rabt: format!("{MUJALLAD_ISDAR}/{}/update.zip", badhra.id),
+        };
+        let khata = madkhal_khariji(badhra.clone())
+            .err()
+            .ok_or("a mirror aimed at the certified release area must be refused")?;
+        assert!(khata.contains("zero bytes of the game"), "{khata}");
+
+        // An absolute address is refused too: an offline mirror and a LAN
+        // share cannot serve a host the catalogue chose.
+        badhra.mira = HalatMira::MinAlsijill {
+            rabt: "https://cdn.example/khariji/update.zip".to_owned(),
+        };
+        let khata = madkhal_khariji(badhra)
+            .err()
+            .ok_or("an absolute mirror address must be refused")?;
+        assert!(khata.contains("repository path"), "{khata}");
+        Ok(())
+    }
+
+    #[test]
+    fn khariji_yarfud_madkhalan_bila_qitaa() -> NatijatIkhtibar {
+        let mut badhra = badhrat_rtea();
+        badhra.masdar.idhn = bi_bayan();
+        badhra.qitaa.clear();
+        let khata = madkhal_khariji(badhra)
+            .err()
+            .ok_or("an entry that fetches nothing installs nothing")?;
+        assert!(khata.contains("names no artifact"), "{khata}");
+        Ok(())
+    }
+
+    #[test]
+    fn masar_almira_yaqa_kharij_mintaqat_alisdar() {
+        let masar = masar_mira(RuqaaId::min_uuid(uuid::Uuid::nil()), "update.zip");
+        assert!(masar.starts_with("khariji/"));
+        assert!(!masar.contains(MUJALLAD_ISDAR));
     }
 }
