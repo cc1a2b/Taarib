@@ -1757,7 +1757,7 @@ pub async fn abda_tawthiq_taqdeem(
         .filter(|nass| !nass.trim().is_empty())
     else {
         return Err(Khata::from(KhataTaqdeemAmr::IrsalGhayrMuhayya {
-            naqis: "muarrif_amil",
+            naqis: HAQL_MUARRIF_AMIL,
         }));
     };
     // A device code the user must go and authorize is worse spent than a parse:
@@ -3710,9 +3710,16 @@ impl Tafsir for KhataTaqdeemAmr {
                 "ملف الحزمة لم يعد في {}. أعد تجهيز التقديم لتُبنى الحزمة من جديد.",
                 masar.display()
             ),
+            Self::IrsalGhayrMuhayya { naqis } if *naqis == HAQL_MUARRIF_AMIL => {
+                "تسجيل الدخول إلى GitHub غير مضبوط: حقل «معرّف عميل المستودع» فارغ في \
+                 الإعدادات ← المصادر. وهو معرّف العميل لتطبيق OAuth تُنشئه في إعدادات \
+                 المطوّر بحسابك على GitHub مع تفعيل «تدفّق الأجهزة»، ثمّ تلصق المعرّف في \
+                 ذلك الحقل. لا يُرفع شيء قبل ضبطه، ولا تُعاد المحاولة من تلقاء نفسها."
+                    .to_owned()
+            },
             Self::IrsalGhayrMuhayya { naqis } => format!(
-                "قناة الرفع إلى السجلّ غير مجهّزة بعد: الحقل {naqis} فارغ في الإعدادات. بقي \
-                 تقديمك مسجّلًا محليًا، ويُرفع تلقائيًا متى جهّز مشغّل السجلّ القناة."
+                "قناة الرفع إلى السجلّ غير مجهّزة: الحقل {naqis} فارغ في الإعدادات ← \
+                 المصادر. لا يُرفع شيء قبل ضبطه، ولا تُعاد المحاولة من تلقاء نفسها."
             ),
             Self::MustawdaGhayrMafhum { rasmi } => format!(
                 "عنوان «{rasmi}» لا يدلّ على مستودع في المنصّة. اضبط «مستودع التقديم» في \
@@ -3819,10 +3826,18 @@ impl Tafsir for KhataTaqdeemAmr {
                 "The package at {} is gone. Prepare the submission again to rebuild it.",
                 masar.display()
             ),
+            Self::IrsalGhayrMuhayya { naqis } if *naqis == HAQL_MUARRIF_AMIL => {
+                "GitHub sign-in is not configured: \"Repository client identifier\" is empty \
+                 in Settings, under Sources. It is the Client ID of an OAuth app you create \
+                 in your own GitHub developer settings with device flow enabled — create it, \
+                 then paste the Client ID into that field. Nothing is uploaded until it is \
+                 set, and nothing retries on its own."
+                    .to_owned()
+            },
             Self::IrsalGhayrMuhayya { naqis } => format!(
-                "The registry upload channel is not provisioned yet: the {naqis} field is \
-                 empty in Settings. Your submission stays recorded locally and is \
-                 sent the moment the registry operator provisions the channel."
+                "The registry upload channel is not provisioned: the {naqis} field is empty \
+                 in Settings, under Sources. Nothing is uploaded until it is set, and \
+                 nothing retries on its own."
             ),
             Self::MustawdaGhayrMafhum { rasmi } => format!(
                 "The registry address \"{rasmi}\" names no forge repository. Set the \

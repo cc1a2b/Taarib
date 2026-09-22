@@ -802,7 +802,7 @@
   "idadat.masadir.mahalliya": "مشاركات محلية",
   "idadat.masadir.mahalliya_mawdi": "مسار مشاركة محلية أو مجلد شبكة",
   "idadat.masadir.mustawda_taqdeem": "مستودع التقديم — اتركه فارغًا ليُستعمل السجلّ الرسمي أعلاه",
-  "idadat.masadir.muarrif_amil": "معرّف عميل المستودع — يوفّره مشغّل السجلّ",
+  "idadat.masadir.muarrif_amil": "معرّف عميل المستودع — معرّف العميل لتطبيق OAuth تُنشئه على GitHub مع تفعيل تدفّق الأجهزة",
   "idadat.masadir.rabt_tajheez": "رابط التجهيز",
   "idadat.masadir.fatra": "فترة التحديث بالدقائق (الأدنى 5)",
   "idadat.masadir.ghayr_muttasil": "الوضع غير المتصل: لا اتصال بالشبكة إطلاقًا",

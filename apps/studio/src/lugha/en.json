@@ -802,7 +802,7 @@
   "idadat.masadir.mahalliya": "Local shares",
   "idadat.masadir.mahalliya_mawdi": "A local share or network folder path",
   "idadat.masadir.mustawda_taqdeem": "Submission repository — leave empty to use the official registry above",
-  "idadat.masadir.muarrif_amil": "Repository client identifier — supplied by the registry operator",
+  "idadat.masadir.muarrif_amil": "Repository client identifier — the Client ID of a GitHub OAuth app you create, with device flow enabled",
   "idadat.masadir.rabt_tajheez": "Provisioning link",
   "idadat.masadir.fatra": "Refresh interval in minutes (minimum 5)",
   "idadat.masadir.ghayr_muttasil": "Offline mode: no network access at all",
