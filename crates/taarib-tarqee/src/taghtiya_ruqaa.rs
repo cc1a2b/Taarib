@@ -317,6 +317,26 @@ impl MajmuatAwwal {
     pub fn khaliya(&self) -> bool {
         self.nusus.is_empty()
     }
+
+    /// The opening session's strings, read from the rows' own provenance.
+    ///
+    /// A row runtime capture contributed to is a row a session drew, so the set
+    /// is derived from the same table the coverage is counted over and cannot
+    /// drift out of step with it. [`None`] when no row carries capture at all,
+    /// because that is [`SababAdamAlnashr::BilaJalsatAwwal`] — the state an
+    /// empty denominator cannot be told apart from on its own, and the reason
+    /// every caller passed [`None`] here before this existed: the set had no
+    /// producer, so no project could ever clear the opening floor.
+    #[must_use]
+    pub fn min_madakhil(nusus: &[MudkhalNass]) -> Option<Self> {
+        let mut majmua = Self::jadeeda();
+        for madkhal in nusus {
+            if madkhal.masdar_istikhraj.multaqat() {
+                majmua.adif(madkhal.id);
+            }
+        }
+        (!majmua.khaliya()).then_some(majmua)
+    }
 }
 
 /// Where one string's weight came from.

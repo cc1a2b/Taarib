@@ -1511,7 +1511,13 @@ pub async fn jahhiz_taqdeem(
 
     let irtibat =
         IrtibatBina::min_bayan(&mashru.rasm().bayan, &khutut, None).map_err(Khata::from)?;
-    let taghtiya = taarib_tarqee::taghtiya_ruqaa::ihsib_taghtiya(&sufuf, None, None);
+    // The draft's report answers the same question the package's will, so it
+    // reads the opening set from the same place: the rows the merged capture
+    // marked. Passed as `None` before, which is why the gate showed a coverage
+    // row that passed over a project the publish gate refused for having no
+    // opening session at all.
+    let awwal = taarib_tarqee::taghtiya_ruqaa::MajmuatAwwal::min_madakhil(&sufuf);
+    let taghtiya = taarib_tarqee::taghtiya_ruqaa::ihsib_taghtiya(&sufuf, None, awwal.as_ref());
     // The overflow report is not built here. The compiler measures it from the
     // layouts it ships, so the draft's copy is the package's own.
     let khiyarat = KhiyaratTasbeeq::default();

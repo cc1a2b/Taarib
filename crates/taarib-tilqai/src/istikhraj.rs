@@ -11,12 +11,13 @@
 //! and not a dead end. The session file that pass produces comes back in
 //! through [`crate::talab::TalabTilqai::jalsat_iltiqat`] and is merged here.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use taarib_istikhraj::dammij::{KhiyaratDammij, dammij_iltiqat};
-use taarib_istikhraj::iltiqat::iqra_jalsa;
+use taarib_istikhraj::iltiqat::{MulahazaMutakarrira, iqra_jalsa};
 use taarib_istikhraj::jadwal::JadwalNusus;
 use taarib_istikhraj::rafd::TaqreerRafd;
 use taarib_mustalahat::muharrik::AilatMuharrik;
@@ -105,6 +106,141 @@ pub fn ijri(
     jalsa: Option<&Path>,
     muraqib: &Muraqib<'_>,
 ) -> NatijatTilqai<(JadwalMakhzun, IhsaIstikhraj)> {
+    let (mulahazat, ism_jalsa) = match jalsa {
+        Some(masar) => (
+            iqra_mulahazat(masar)?,
+            masar.file_stem().map_or_else(
+                || ISM_JALSA_IFTIRADI.to_owned(),
+                |ism| ism.to_string_lossy().into_owned(),
+            ),
+        ),
+        None => (Vec::new(), ISM_JALSA_IFTIRADI.to_owned()),
+    };
+    ijri_bi_mulahazat(jidhr, aila, &mulahazat, &ism_jalsa, muraqib)
+}
+
+/// The name a merged observation's location carries when the session file's own
+/// name cannot be read.
+const ISM_JALSA_IFTIRADI: &str = "iltiqat";
+
+/// Everything runtime capture has ever observed for one game, beside its runs.
+///
+/// Extraction rebuilds its table from the game's files on every run, and the
+/// captured half of that table came from a session file living in the *game's*
+/// directory — which a game update, a store verify, or the next capture
+/// overwrites, and which nothing owns. So the first run after a pass carried the
+/// `Multaqat` rows and a later one silently did not: the fingerprints differed,
+/// the stage re-extracted with no session to merge, and every captured row —
+/// with the measured widths and the opening-session membership riding on it —
+/// was gone with no way back, because the session had been the only copy.
+///
+/// Kept here instead, under the game's own runs root, the observations outlive
+/// any single run and any single session file, and are re-applied every time
+/// extraction runs. This is what makes a capture survive a re-run the way a
+/// translation already does.
+pub const MALAF_MULAHAZAT: &str = "mulahazat_iltiqat.json";
+
+/// Folds a new session into the game's durable observations and answers all of
+/// them.
+///
+/// Idempotent in the session: re-offering a pass already folded in replaces its
+/// records rather than adding to their counts, so a resumed run cannot inflate
+/// an occurrence total by repeating work it already did.
+///
+/// # Errors
+///
+/// [`KhataTilqai::JalsaGhayrMaqrua`] when the offered session will not read, and
+/// a file error when the store itself cannot be read or written.
+pub fn ajmaa_mulahazat(
+    jidhr_amal: &Path,
+    jalsa: Option<&Path>,
+) -> NatijatTilqai<Vec<MulahazaMutakarrira>> {
+    let masar = jidhr_amal.join(MALAF_MULAHAZAT);
+    let mut majmua: BTreeMap<String, MulahazaMutakarrira> = match fs::read(&masar) {
+        Ok(bayt) => serde_json::from_slice::<Vec<MulahazaMutakarrira>>(&bayt)
+            .map_err(|sabab| KhataTilqai::JalsaGhayrMaqrua {
+                masar: masar.clone(),
+                sabab: sabab.to_string(),
+            })?
+            .into_iter()
+            .map(|mulahaza| (mulahaza.miftah.clone(), mulahaza))
+            .collect(),
+        Err(sabab) if sabab.kind() == std::io::ErrorKind::NotFound => BTreeMap::new(),
+        Err(sabab) => return Err(khata_malaf(&masar, "reading the capture store", sabab)),
+    };
+
+    let Some(masar_jalsa) = jalsa else {
+        return Ok(majmua.into_values().collect());
+    };
+    for mulahaza in iqra_mulahazat(masar_jalsa)? {
+        let _ = majmua.insert(mulahaza.miftah.clone(), mulahaza);
+    }
+    let mulahazat: Vec<MulahazaMutakarrira> = majmua.into_values().collect();
+
+    // Written before extraction reads it, so a run that dies part way through
+    // still leaves the pass recorded: the person played it once and must not be
+    // asked to play it again for want of a file this process could have written
+    // and did not.
+    let bayt = serde_json::to_vec(&mulahazat).map_err(|sabab| KhataTilqai::JalsaGhayrMaqrua {
+        masar: masar.clone(),
+        sabab: sabab.to_string(),
+    })?;
+    if let Some(walid) = masar.parent() {
+        fs::create_dir_all(walid)
+            .map_err(|sabab| khata_malaf(walid, "creating the capture store", sabab))?;
+    }
+    fs::write(&masar, &bayt)
+        .map_err(|sabab| khata_malaf(&masar, "writing the capture store", sabab))?;
+    Ok(mulahazat)
+}
+
+/// The fingerprint of a game's accumulated observations.
+///
+/// Answers the same question [`basmat_jalsa`] answers about one session file —
+/// "has extraction already done this work" — over the set extraction actually
+/// merges, so folding a new pass in changes it and re-running without one does
+/// not.
+#[must_use]
+pub fn basmat_mulahazat(mulahazat: &[MulahazaMutakarrira]) -> String {
+    let mut hasib = blake3::Hasher::new();
+    for mulahaza in mulahazat {
+        let _ = hasib.update(mulahaza.miftah.as_bytes());
+        let _ = hasib.update(&[0]);
+        let _ = hasib.update(&mulahaza.marrat.to_le_bytes());
+    }
+    crate::bina::sittasi(hasib.finalize().as_bytes())
+}
+
+/// Reads one capture session file into the observations it accumulated.
+///
+/// # Errors
+///
+/// [`KhataTilqai::JalsaGhayrMaqrua`] when the file cannot be opened or parsed.
+pub fn iqra_mulahazat(masar: &Path) -> NatijatTilqai<Vec<MulahazaMutakarrira>> {
+    let muhammala =
+        iqra_jalsa(masar, HADD_JALSA).map_err(|khata| KhataTilqai::JalsaGhayrMaqrua {
+            masar: masar.to_path_buf(),
+            sabab: khata.injilizi,
+        })?;
+    Ok(muhammala.sijill.mulahazat().cloned().collect())
+}
+
+/// Extraction over observations already in hand, whatever they were read from.
+///
+/// Split from [`ijri`] so the pipeline can merge everything runtime capture has
+/// *ever* recorded for a game rather than whatever single session file happens
+/// to be sitting in the game's own directory at the moment it runs.
+///
+/// # Errors
+///
+/// The same refusals [`ijri`] raises, minus the session read it no longer does.
+pub fn ijri_bi_mulahazat(
+    jidhr: &Path,
+    aila: AilatMuharrik,
+    mulahazat: &[MulahazaMutakarrira],
+    ism_jalsa: &str,
+    muraqib: &Muraqib<'_>,
+) -> NatijatTilqai<(JadwalMakhzun, IhsaIstikhraj)> {
     muraqib.ballagh_bila_majmu(
         MarhalaTilqai::Istikhraj,
         0,
@@ -131,18 +267,12 @@ pub fn ijri(
     );
 
     let mut multaqat = false;
-    if let Some(masar) = jalsa {
-        let muhammala =
-            iqra_jalsa(masar, HADD_JALSA).map_err(|khata| KhataTilqai::JalsaGhayrMaqrua {
-                masar: masar.to_path_buf(),
-                sabab: khata.injilizi,
-            })?;
-        let mulahazat: Vec<_> = muhammala.sijill.mulahazat().cloned().collect();
-        let ism_jalsa = masar.file_stem().map_or_else(
-            || "iltiqat".to_owned(),
-            |ism| ism.to_string_lossy().into_owned(),
+    if !mulahazat.is_empty() {
+        let taqreer = dammij_iltiqat(
+            &mut jadwal,
+            mulahazat,
+            &KhiyaratDammij::jadeeda(ism_jalsa.to_owned()),
         );
-        let taqreer = dammij_iltiqat(&mut jadwal, &mulahazat, &KhiyaratDammij::jadeeda(ism_jalsa));
         multaqat = true;
         muraqib.ballagh(
             MarhalaTilqai::Istikhraj,

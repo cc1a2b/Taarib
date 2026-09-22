@@ -372,7 +372,11 @@ pub fn ijmi(
 
     talab.miqbad.tahaqquq(MarhalaTilqai::Tarqee)?;
 
-    let taghtiya = ihsib_taghtiya(&mutarjama, None, None);
+    // The opening set comes from the rows themselves: whatever the merged
+    // capture marked, this counts. Passed as `None` before, so no package this
+    // pipeline ever built could clear the opening floor.
+    let awwal = taarib_tarqee::taghtiya_ruqaa::MajmuatAwwal::min_madakhil(&mutarjama);
+    let taghtiya = ihsib_taghtiya(&mutarjama, None, awwal.as_ref());
     let khiyarat = KhiyaratTasbeeq::default();
     // The overflow report is not built here: the compiler measures it from
     // the layouts it ships, so a captured width is compared against a real

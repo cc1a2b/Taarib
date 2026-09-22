@@ -24,7 +24,8 @@ use taarib_istikhraj::iltiqat::{JalsaMuhammala, iqra_jalsa};
 use taarib_istikhraj::jadwal::{JadwalNusus, MudkhalMustakhraj};
 use taarib_mustalahat::muharrik::AilatMuharrik;
 use taarib_mustalahat::nass::{MasdarIstikhraj, MudkhalNass};
-use taarib_tilqai::istikhraj::{HADD_JALSA, basmat_jalsa};
+use taarib_tarqee::taghtiya_ruqaa::{MajmuatAwwal, ihsib_taghtiya};
+use taarib_tilqai::istikhraj::{HADD_JALSA, ajmaa_mulahazat, basmat_jalsa, basmat_mulahazat};
 use taarib_tilqai::mashwar::{
     ISDAR_SIJILL, MashwarId, QaydMarhala, SijillMashwar, TarwisatMashwar,
 };
@@ -438,6 +439,82 @@ fn istinaf_yaarif_aljalsa_aljadida_wa_la_yuid_alqadima() -> NatijatIkhtibar {
     assert_ne!(
         *basmat_jalsa, kamila,
         "a pass played since is a different fingerprint, so extraction runs again"
+    );
+    Ok(())
+}
+
+/// A capture survives a re-run that is offered no session file.
+///
+/// This is the loss as it happened. The session file lives in the *game's* own
+/// directory and was the only copy of the pass; extraction rebuilds its table
+/// from the game's files on every run. One run folded the pass in, a later one
+/// was offered nothing — the file having been overwritten, cleaned, or consumed
+/// — re-extracted, and every `Multaqat` row went with it, taking the measured
+/// widths and the opening-session membership that ride on provenance. The
+/// person had played the game and there was nothing left to show for it.
+///
+/// The store beside the game's runs is what makes the second run carry what the
+/// first recorded, and this asserts all three things that were lost: the
+/// observations, the provenance on the rows, and the flag the publish gate
+/// reads off them.
+#[test]
+fn iltiqat_yanju_min_tashghila_bila_jalsa() -> NatijatIkhtibar {
+    let amal = tempfile::tempdir()?;
+
+    let awwal = ajmaa_mulahazat(amal.path(), Some(&jalsa(KAMILA)))?;
+    assert!(
+        !awwal.is_empty(),
+        "the offered pass was read into the store"
+    );
+    let basma_awwal = basmat_mulahazat(&awwal);
+
+    let mut jadwal_awwal = sakina()?;
+    let _ = dammij_iltiqat(
+        &mut jadwal_awwal,
+        &awwal,
+        &KhiyaratDammij::jadeeda("iltiqat"),
+    );
+    let sufuf_awwal = jadwal_awwal.ila_mudkhalat();
+    let multaqat_awwal: Vec<_> = sufuf_awwal
+        .iter()
+        .filter(|mudkhal| mudkhal.masdar_istikhraj.multaqat())
+        .map(|mudkhal| mudkhal.id)
+        .collect();
+    assert!(!multaqat_awwal.is_empty(), "the merge marked captured rows");
+
+    // The second run is offered nothing at all.
+    let thani = ajmaa_mulahazat(amal.path(), None)?;
+    assert_eq!(thani.len(), awwal.len(), "the store kept every observation");
+    assert_eq!(
+        basmat_mulahazat(&thani),
+        basma_awwal,
+        "an unchanged store fingerprints the same, so a resume still skips the stage"
+    );
+
+    let mut jadwal_thani = sakina()?;
+    let _ = dammij_iltiqat(
+        &mut jadwal_thani,
+        &thani,
+        &KhiyaratDammij::jadeeda("iltiqat"),
+    );
+    let sufuf_thani = jadwal_thani.ila_mudkhalat();
+    let multaqat_thani: Vec<_> = sufuf_thani
+        .iter()
+        .filter(|mudkhal| mudkhal.masdar_istikhraj.multaqat())
+        .map(|mudkhal| mudkhal.id)
+        .collect();
+    assert_eq!(
+        multaqat_thani, multaqat_awwal,
+        "every captured row, and its provenance, survived a run with no session"
+    );
+
+    let majmua = MajmuatAwwal::min_madakhil(&sufuf_thani)
+        .ok_or("the opening set is read back off the surviving rows")?;
+    assert!(!majmua.khaliya());
+    let taqrir = ihsib_taghtiya(&sufuf_thani, None, Some(&majmua));
+    assert!(
+        taqrir.jalsat_awwal_masjjala,
+        "the opening session stays recorded across a re-run"
     );
     Ok(())
 }

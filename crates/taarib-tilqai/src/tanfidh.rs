@@ -151,11 +151,13 @@ async fn ijri(
     // disk. A resume whose session is the one the journal recorded skips the
     // stage; a resume carrying a pass the person has played since does not, and
     // that is the only way a recording ever reaches a patch.
-    let basmat_jalsa = talab
-        .jalsat_iltiqat
-        .map(istikhraj::basmat_jalsa)
-        .transpose()?
-        .unwrap_or_default();
+    //
+    // Folded into the game's durable store first, and fingerprinted over that
+    // rather than over the offered file: the store is what extraction merges,
+    // it holds every pass ever recorded for this game, and it outlives the
+    // session file in the game's own directory that a later run would not find.
+    let mulahazat = istikhraj::ajmaa_mulahazat(talab.jidhr_amal, talab.jalsat_iltiqat)?;
+    let basmat_jalsa = istikhraj::basmat_mulahazat(&mulahazat);
     let makhzun = match sijill.qayd(MarhalaTilqai::Istikhraj) {
         Some(QaydMarhala::Istikhraj {
             maqrua,
@@ -176,10 +178,11 @@ async fn ijri(
         _ => {
             let bidaya = Instant::now();
             let (makhzun, ihsa) = hajiz(|| {
-                istikhraj::ijri(
+                istikhraj::ijri_bi_mulahazat(
                     talab.luba.jidhr,
                     imkaniyat.muharrik.aila,
-                    talab.jalsat_iltiqat,
+                    &mulahazat,
+                    istikhraj::MALAF_MULAHAZAT,
                     muraqib,
                 )
             })?;
