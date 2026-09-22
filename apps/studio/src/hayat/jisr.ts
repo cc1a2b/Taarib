@@ -263,7 +263,7 @@ interface TartibWusata {
   // install, and the owner's re-pin of an artifact whose bytes have moved.
   readonly ruqaa_kharijiya: ['muarrif'];
   readonly tadakhul_kharijiya: ['muarrif', 'ruqaa'];
-  readonly thabbit_kharijiya: ['muarrif', 'ruqaa', 'iqrar'];
+  readonly thabbit_kharijiya: ['muarrif', 'ruqaa', 'iqrar', 'iqrarBina'];
   readonly azil_kharijiya: ['muarrif', 'ruqaa'];
   readonly basmat_mualaqa: [];
   readonly athbit_basma: ['ruqaa', 'qitaa', 'sha256'];
@@ -289,11 +289,21 @@ interface TartibKhariji {
   readonly ruqaa_kharijiya: { readonly muarrif: string };
   /** What is already in the game directory that one of them cannot sit beside. */
   readonly tadakhul_kharijiya: { readonly muarrif: string; readonly ruqaa: string };
-  /** Fetch it against its pinned hashes and write it in, once the risk is accepted. */
+  /**
+   * Fetch it against its pinned hashes and write it in, once the risk is
+   * accepted.
+   *
+   * Two acknowledgements, never one. `iqrar` is the maker's own safety
+   * warnings; `iqrarBina` is the person accepting that files are about to be
+   * written for a build **nobody determined**, which the backend reads only
+   * when the build really is undetermined. Collapsing them would let a tick
+   * about anti-cheat stand in for a tick about an unidentified build.
+   */
   readonly thabbit_kharijiya: {
     readonly muarrif: string;
     readonly ruqaa: string;
     readonly iqrar: boolean;
+    readonly iqrarBina: boolean;
   };
   /** Take it back off, restoring every file it wrote over and every one it removed. */
   readonly azil_kharijiya: { readonly muarrif: string; readonly ruqaa: string };

@@ -212,7 +212,7 @@ struct TarwisaPe {
 }
 
 // ---------------------------------------------------------------------------
-// The two things a detector asks for
+// What a caller asks for
 // ---------------------------------------------------------------------------
 
 /// Reads what a binary's version resource says about itself.
@@ -238,6 +238,26 @@ pub(crate) fn bayan(masar: &Path) -> Option<BayanTanfidhi> {
     bayan.huquq = qeemat_mawrid(&kutla, "LegalCopyright");
     bayan.isdar_malaf = qeemat_mawrid(&kutla, "FileVersion");
     Some(bayan)
+}
+
+/// The dotted version a binary declares about itself, or [`None`] when it
+/// declares none, is not a PE image, or is not there at all.
+///
+/// The one field of [`BayanTanfidhi`] a caller outside this crate needs, exposed
+/// as a field rather than as the whole record: a game's own build number lives
+/// in its executable's version resource — which is how RDR2 is versioned — and
+/// nothing outside engine identification has any business with the other five.
+///
+/// `FileVersion` before `ProductVersion` because the first is the four-part
+/// number a build lives in and the second is whatever marketing wrote.
+/// `DarkSoulsRemastered.exe`, one of the two images this module's own tests are
+/// pinned against, declares `1,0,0,0` for the first and `1` for the second;
+/// preferring the product version would leave a caller indexing into a single
+/// component.
+#[must_use]
+pub fn isdar_muallan(masar: &Path) -> Option<String> {
+    let bayan = bayan(masar)?;
+    bayan.isdar_malaf.or(bayan.isdar_muntaj)
 }
 
 /// The file offset and on-disk length of the first section whose name begins

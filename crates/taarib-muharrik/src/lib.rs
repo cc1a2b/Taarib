@@ -17,6 +17,7 @@
 //! | `tahdid` | resolution: evidence weighted and combined into a `Muharrik` with a confidence value, the evidence retained alongside it |
 //! | `imkaniyat` | the capability report — a product artifact, written for a player first |
 //! | `bitaqa` | the per-game record persisted with the probe's own version stamp |
+//! | `isdar` | the version an install declares about itself, which is how a third-party patch's build vocabulary is resolved |
 //!
 //! ## Four sources, none of them trusted alone
 //!
@@ -76,6 +77,7 @@ pub mod bitaqa;
 pub mod dalail;
 pub mod fahs;
 pub mod imkaniyat;
+pub mod isdar;
 pub mod khata;
 pub mod tahdid;
 
@@ -91,6 +93,7 @@ pub use crate::bitaqa::{BitaqatMuharrik, SababFahs, SijillBitaqat};
 pub use crate::dalail::kul;
 pub use crate::fahs::{Fahis, HasilatFahs, JamiHasilat, SiyaqFahs};
 pub use crate::imkaniyat::ISDAR_FAHS;
+pub use crate::isdar::QariMawridIsdar;
 pub use crate::khata::KhataMuharrik;
 
 /// The probe.

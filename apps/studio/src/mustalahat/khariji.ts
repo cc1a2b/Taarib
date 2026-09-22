@@ -114,6 +114,29 @@ export type HalatMira =
    */
   | { readonly naw: 'min_alsijill'; readonly rabt: string };
 
+/**
+ * Where one entry's build question stands on this machine.
+ *
+ * Three states, and the third is the one that was missing. An entry pins the
+ * game's **own** version — Red Dead Redemption 2 calls its builds 1311, 1436
+ * and 1491 — while what Taarib records is what the *launcher* calls the same
+ * install: a Steam `buildid`, a GOG hash, or nothing at all. Two numbers
+ * written in different vocabularies failing to be equal establishes nothing, so
+ * a card that read that as "no file matches this game build" was stating a fact
+ * nobody had.
+ *
+ * `majhula` is not `ghayr_madumma`. "I could not tell" and "I can tell, and no"
+ * are different sentences and different decisions: the first has an explicit
+ * way past and the second has none.
+ */
+export type HalatBina =
+  /** Determined, and the entry pins files for it. */
+  | { readonly naw: 'mutabaqa'; readonly bina: string }
+  /** Determined, and the entry does not cover it. A real mismatch. */
+  | { readonly naw: 'ghayr_madumma'; readonly bina: string }
+  /** Not determined at all. The entry's own builds are what the reader checks. */
+  | { readonly naw: 'majhula' };
+
 /** A patch somebody else made, that Taarib lists and installs but never built. */
 export interface RuqaaKharijiya {
   readonly id: string;
@@ -135,11 +158,8 @@ export interface RuqaaKharijiya {
   readonly tahdheerat: readonly TahdheerKhariji[];
   /** Mirroring is off unless the permission covers it and the owner enabled it. */
   readonly mira: HalatMira;
-  /**
-   * The build of the installed game this entry was matched against, when the
-   * game screen knows one, or null when the build could not be read.
-   */
-  readonly bina_mutabaqa: string | null;
+  /** Where this entry's build question stands on this machine. */
+  readonly halat_bina: HalatBina;
   /** Whether this entry is installed into this game right now. */
   readonly muthabbata: boolean;
 }
@@ -395,6 +415,32 @@ function qarrirMira(qeema: unknown): HalatMira | null {
   return rabt === null ? null : { naw: 'min_alsijill', rabt };
 }
 
+/**
+ * Where the build question stands, internally tagged on `naw` as Rust writes
+ * it.
+ *
+ * An answer this build cannot read is **not** defaulted to undetermined and is
+ * not defaulted to a match: it refuses the whole entry. Each of the three
+ * states is a different sentence shown to somebody about to write files into a
+ * game, and choosing one of them for a payload nobody could read would be
+ * inventing exactly the determination this field exists to stop being invented.
+ */
+function qarrirHalatBina(qeema: unknown): HalatBina | null {
+  const kaen = kain(qeema);
+  if (kaen === null) {
+    return null;
+  }
+  const naw = nass(kaen['naw']);
+  if (naw === 'majhula') {
+    return { naw };
+  }
+  if (naw !== 'mutabaqa' && naw !== 'ghayr_madumma') {
+    return null;
+  }
+  const bina = nass(kaen['bina']);
+  return bina === null ? null : { naw, bina };
+}
+
 /** One third-party entry, or null when the payload is not one. */
 export function qarrirKharijiya(qeema: unknown): RuqaaKharijiya | null {
   const kaen = kain(qeema);
@@ -412,6 +458,7 @@ export function qarrirKharijiya(qeema: unknown): RuqaaKharijiya | null {
   const takhtit = qarrirTakhtit(kaen['takhtit']);
   const tahdheerat = qaima(kaen['tahdheerat'], qarrirTahdheer);
   const mira = qarrirMira(kaen['mira']);
+  const halatBina = qarrirHalatBina(kaen['halat_bina']);
   const muthabbata = mantiq(kaen['muthabbata']);
   if (
     id === null ||
@@ -425,6 +472,7 @@ export function qarrirKharijiya(qeema: unknown): RuqaaKharijiya | null {
     takhtit === null ||
     tahdheerat === null ||
     mira === null ||
+    halatBina === null ||
     muthabbata === null
   ) {
     return null;
@@ -442,7 +490,7 @@ export function qarrirKharijiya(qeema: unknown): RuqaaKharijiya | null {
     takhtit,
     tahdheerat,
     mira,
-    bina_mutabaqa: nassAw(kaen['bina_mutabaqa']),
+    halat_bina: halatBina,
     muthabbata,
   };
 }
@@ -569,26 +617,76 @@ export function qarrirBasmat(qeema: unknown): readonly BasmaMualaqa[] | null {
    =========================================================================== */
 
 /**
- * Which artifacts this install would actually fetch for a given game build.
+ * The artifacts that apply to one build.
  *
  * An artifact with an empty `abniya` applies to every build; one that names
  * builds applies only to those. RTEA is the shape this exists for: `update.zip`
  * is fetched for all three supported builds and `extra.zip` only for two of
  * them, so a screen that showed both to a 1491 player would be overstating what
  * is about to be downloaded by a megabyte and a half.
- *
- * With no known build — the probe has not run, or could not read one — every
- * artifact is listed, because the honest answer to "which of these apply" is
- * then "we cannot tell, so here is all of it".
  */
-export function qitaaLiBina(
-  madkhal: RuqaaKharijiya,
-  bina: string | null,
-): readonly QitaatTanzeel[] {
-  if (bina === null) {
-    return madkhal.qitaa;
-  }
+function qitaaLiBina(madkhal: RuqaaKharijiya, bina: string): readonly QitaatTanzeel[] {
   return madkhal.qitaa.filter((wahid) => wahid.abniya.length === 0 || wahid.abniya.includes(bina));
+}
+
+/**
+ * Which artifacts this install would fetch, given where the build question
+ * stands.
+ *
+ * Determined and covered selects the artifacts for that build. Determined and
+ * *not* covered selects none at all — the entry was never tested against this
+ * install, the gate refuses it, and listing the build-agnostic artifacts as
+ * though something were about to be downloaded would be describing a transfer
+ * that will not happen. Undetermined lists everything, because the honest
+ * answer to "which of these apply" is then "we cannot tell, so here is all of
+ * it".
+ */
+export function qitaaLiHala(madkhal: RuqaaKharijiya, hala: HalatBina): readonly QitaatTanzeel[] {
+  if (hala.naw === 'mutabaqa') {
+    return qitaaLiBina(madkhal, hala.bina);
+  }
+  return hala.naw === 'ghayr_madumma' ? [] : madkhal.qitaa;
+}
+
+/**
+ * The builds this entry names, out of the entry's own bytes and nowhere else.
+ *
+ * Its declared list when it has one, which is the maker's own statement of what
+ * the work supports. Otherwise the builds its artifacts are pinned to, in the
+ * order they were declared and without repeats — an entry that named no list
+ * but pinned `extra.zip` to two builds has still named two builds, and a
+ * sentence about which builds it covers cannot be written without them.
+ *
+ * Never a table, never a constant: a sentence that names 1311, 1436 and 1491
+ * names them because this entry does.
+ */
+export function abniyaMusamma(madkhal: RuqaaKharijiya): readonly string[] {
+  if (madkhal.abniya.length > 0) {
+    return madkhal.abniya;
+  }
+  const majmua: string[] = [];
+  for (const qitaa of madkhal.qitaa) {
+    for (const bina of qitaa.abniya) {
+      if (!majmua.includes(bina)) {
+        majmua.push(bina);
+      }
+    }
+  }
+  return majmua;
+}
+
+/**
+ * Whether the build question changes anything for this entry at all.
+ *
+ * True when the entry names any build — its own list, or a build one artifact
+ * is pinned to. RTEA's `extra.zip` is 1311 and 1436 alone while `update.zip` is
+ * every build, so which build this is decides what gets written. False when
+ * nothing in the entry distinguishes one build from another, and then an
+ * undetermined build is not a risk anybody has to accept: every file applies
+ * whatever this install turns out to be.
+ */
+export function yufarriqAbniya(madkhal: RuqaaKharijiya): boolean {
+  return abniyaMusamma(madkhal).length > 0;
 }
 
 /** What the listed artifacts weigh together, in bytes. */

@@ -183,6 +183,19 @@ impl RafdKhariji {
                  المرآة معطّلة افتراضيًّا ولا تُفتح إلا بإذنٍ يذكرها. يبقى موضع المؤلّف هو \
                  المصدر."
             ),
+            // An undetermined build reaches here as an empty string, and
+            // "البناء المثبَّت ()" names nothing. The two states get the two
+            // sentences they deserve: one says a build was read and is not
+            // covered, the other says no build was read at all.
+            Self::BinaGhayrMadumma {
+                unwan,
+                bina,
+                abniya,
+            } if bina.is_empty() => format!(
+                "لم يُحدَّد بناء اللعبة، ولم يُقبَل التثبيت على بناء غير محدَّد. تذكر «{unwan}» \
+                 الأبنية: {}. لم يُجلب شيء ولم يُكتب شيء.",
+                abniya.join("، ")
+            ),
             Self::BinaGhayrMadumma {
                 unwan,
                 bina,
@@ -247,6 +260,16 @@ impl RafdKhariji {
                 unwan,
                 bina,
                 abniya,
+            } if bina.is_empty() => format!(
+                "The game's build was never determined, and installing for an undetermined build \
+                 was not accepted. {unwan} names builds: {}. Nothing was fetched and nothing was \
+                 written.",
+                abniya.join(", ")
+            ),
+            Self::BinaGhayrMadumma {
+                unwan,
+                bina,
+                abniya,
             } => format!(
                 "{unwan} does not declare support for the installed build ({bina}). It declares: \
                  {}. Nothing was fetched and nothing was written.",
@@ -288,7 +311,19 @@ pub struct TalabFahsKhariji<'a> {
     /// The Steam install root, for the `appinfo.vdf` reads.
     pub jidhr_steam: Option<&'a Path>,
     /// The installed build, as the entry's build list spells them.
+    ///
+    /// Empty when nothing determined it — neither a correspondence the entry
+    /// declared nor a probe of the game's own files. That is a different state
+    /// from a build that was determined and is not covered, and it is the only
+    /// state [`Self::iqrar_bina_majhula`] can lift.
     pub bina: &'a str,
+    /// Whether the person accepted installing for a build nobody determined.
+    ///
+    /// Only consulted when [`Self::bina`] is empty. A build that *was*
+    /// determined and is not covered stays refused however this is set: that
+    /// refusal rests on something established, and an acknowledgement cannot
+    /// make an entry support a build its maker never tested it against.
+    pub iqrar_bina_majhula: bool,
     /// The catalogue entry being installed.
     pub ruqaa: &'a RuqaaKharijiya,
     /// The first-run acknowledgement record, when one exists.
@@ -383,7 +418,19 @@ pub fn fahs_khariji(talab: &TalabFahsKhariji<'_>) -> NatijatFahsKhariji {
         .into_iter()
         .cloned()
         .collect();
-    if !talab.ruqaa.yadam_bina(talab.bina) || qitaa.is_empty() {
+    // Nothing determined the build, and the person said to go ahead anyway. The
+    // build list cannot be checked against a value nobody established, so the
+    // one check left is the one that always mattered: that there is something to
+    // install. A build that *was* determined and is not covered is untouched by
+    // this — that refusal rests on a fact, and no acknowledgement makes an entry
+    // support a build its maker never tried.
+    let majhul = talab.bina.is_empty();
+    let marfud_lilbina = if majhul {
+        !talab.iqrar_bina_majhula
+    } else {
+        !talab.ruqaa.yadam_bina(talab.bina)
+    };
+    if marfud_lilbina || qitaa.is_empty() {
         return NatijatFahsKhariji::Marfud(Box::new(RafdKhariji::BinaGhayrMadumma {
             unwan: talab.ruqaa.unwan.clone(),
             bina: talab.bina.to_owned(),

@@ -18,6 +18,7 @@ import { Zuhur } from '@/mukawwinat/zuhur';
 import type { Lugha } from '@/mustalahat/awamir';
 import type { TaqreerIzalaHie } from '@/mustalahat/awamir';
 import type {
+  HalatBina,
   IdhnMasdar,
   NatijatKharijiya,
   QitaatTanzeel,
@@ -27,12 +28,14 @@ import type {
   TahdheerKhariji,
 } from '@/mustalahat/khariji';
 import {
+  abniyaMusamma,
   hajmQitaa,
   maadhun,
   qarrirKatalog,
   qarrirNatija,
   qarrirTadakhul,
-  qitaaLiBina,
+  qitaaLiHala,
+  yufarriqAbniya,
 } from '@/mustalahat/khariji';
 import { HARAKAT_LAWHA, haraka } from '@/nizam/haraka';
 
@@ -84,14 +87,30 @@ import './qism_khariji.css';
  * in the entry's own words rather than in this interface's. A collision names
  * what is already there and what has to go first.
  *
- * ## While the backend half is being written
+ * ## The build, which is three answers and not two
  *
- * The three commands behind this section are not in the generated bindings yet,
- * so they go through `nadiKhariji` and every answer is decoded before it is
- * read. A shell that has not registered them at all answers "command not found",
- * which {@link ghayrMusajjal} recognises: this build simply does not offer
- * third-party patches, the section draws nothing, and a red failure block on
- * every game screen would be saying something went wrong when nothing did.
+ * An entry pins the game's **own** version. Taarib records what the launcher
+ * calls the same install. Nothing connects the two but a statement the entry
+ * makes about itself, so the card says one of three things and they are three
+ * different things: the build was determined and this patch covers it; the
+ * build was determined and this patch does not cover it, which is a refusal
+ * with no way past; or nobody determined it, which is the state this card used
+ * to render as the second one. That third reading names the builds the entry
+ * declares and says plainly that Taarib could not tell which this install is,
+ * and it is the only one of the three that offers a way to go ahead — a second
+ * acknowledgement, in the install panel, separate from the one about the
+ * maker's warnings and carried into the install call so the record says the
+ * build was never determined.
+ *
+ * ## Why every answer here is decoded
+ *
+ * The commands behind this section go through `nadiKhariji`, which hands each
+ * answer to a decoder before anything renders it. A shell older than the webview
+ * it is serving answers with shapes this build has never seen, and one that has
+ * not registered them at all answers "command not found" — which
+ * {@link ghayrMusajjal} recognises: this build simply does not offer third-party
+ * patches, the section draws nothing, and a red failure block on every game
+ * screen would be saying something went wrong when nothing did.
  */
 
 /** The licence the work was offered under, named from the string set. */
@@ -129,6 +148,67 @@ function miftahIdhn(idhn: IdhnMasdar): MiftahLugha {
 /** The maker's own written grant, when that is what the permission is. */
 function bayanIdhn(idhn: IdhnMasdar): string | null {
   return typeof idhn === 'string' ? null : idhn.katabi.bayan;
+}
+
+/** The entry's own builds as one run, punctuated in the reader's language. */
+function qaimatAbniya(abniya: readonly string[], lugha: Lugha): string {
+  return abniya.join(lugha === 'arabi' ? '، ' : ', ');
+}
+
+/**
+ * Where the build question stands, as one of three different sentences.
+ *
+ * The card used to carry one line for two states and got the harder one wrong:
+ * an entry pins the game's **own** version — 1311, 1436, 1491 for Red Dead
+ * Redemption 2 — and what Taarib records is what the launcher calls the same
+ * install. Their not being equal was read as "no file matches this game build",
+ * which states a fact nobody established. So there are three readings now, and
+ * the third one says so in as many words.
+ *
+ * None of them is a hazard colour. A determined mismatch is a refusal and the
+ * actions below carry its reason where every other refusal on this card carries
+ * one; an undetermined build is an absence of information rather than a danger,
+ * and it is set quietly for exactly that reason. The amber and the red on these
+ * cards belong to the collision block and to the maker's own warnings, and
+ * neither of those is what this is.
+ */
+function QiraatBina({
+  hala,
+  abniya,
+  lugha,
+}: {
+  readonly hala: HalatBina;
+  /** The builds the entry itself names, empty when it names none. */
+  readonly abniya: readonly string[];
+  readonly lugha: Lugha;
+}): JSX.Element {
+  if (hala.naw === 'mutabaqa') {
+    return (
+      <span className="qism-khariji__bina">
+        {t('khariji.bina.mutabaqa', lugha, { bina: hala.bina })}
+      </span>
+    );
+  }
+  if (hala.naw === 'ghayr_madumma') {
+    return (
+      <span className="qism-khariji__bina">
+        {t('khariji.bina.ghayr_madumma', lugha, {
+          bina: hala.bina,
+          abniya: qaimatAbniya(abniya, lugha),
+        })}
+      </span>
+    );
+  }
+  // Undetermined. An entry that names no build at all has nothing to
+  // determine — every file it carries applies whatever this install is — so it
+  // gets its own sentence rather than one naming a list it does not have.
+  return (
+    <span className="qism-khariji__bina qism-khariji__nass-hadi">
+      {abniya.length > 0
+        ? t('khariji.bina.majhula', lugha, { abniya: qaimatAbniya(abniya, lugha) })
+        : t('khariji.bina.bila_abniya', lugha)}
+    </span>
+  );
 }
 
 interface KhasaisSaff {
@@ -331,6 +411,14 @@ interface KhasaisMadkhal {
   readonly maftuh: boolean;
   readonly muqirr: boolean;
   readonly alaIqrar: (muqirr: boolean) => void;
+  /**
+   * Whether this entry needs the second acknowledgement: the build was never
+   * determined, and which build this is decides what the install writes.
+   */
+  readonly yalzamIqrarBina: boolean;
+  /** The answer to that second question. Never defaulted, never carried over. */
+  readonly muqirrBina: boolean;
+  readonly alaIqrarBina: (muqirr: boolean) => void;
   /** Opens or closes this row's warnings. */
   readonly alaTalab: () => void;
   readonly alaIlgha: () => void;
@@ -360,6 +448,9 @@ function MadkhalKhariji({
   maftuh,
   muqirr,
   alaIqrar,
+  yalzamIqrarBina,
+  muqirrBina,
+  alaIqrarBina,
   alaTalab,
   alaIlgha,
   alaTanfidh,
@@ -385,26 +476,35 @@ function MadkhalKhariji({
     enabled: !madkhal.muthabbata,
   });
 
-  const qitaa = qitaaLiBina(madkhal, madkhal.bina_mutabaqa);
+  const abniya = abniyaMusamma(madkhal);
+  const qitaa = qitaaLiHala(madkhal, madkhal.halat_bina);
   const hajm = hajmQitaa(qitaa);
   const idhnMaadhun = maadhun(madkhal.masdar);
   const mutadakhil = tadakhul.data?.mutadakhil === true;
   const bayan = bayanIdhn(madkhal.masdar.idhn);
   const muarrifIqrar = `khariji-iqrar-${madkhal.id}`;
+  const muarrifIqrarBina = `khariji-iqrar-bina-${madkhal.id}`;
 
   // Refused, and every reason for it said rather than left to a grey button.
   // The collision is checked before the install is offered, not after: a
   // control that is going to be refused by the backend is worse than no control.
+  //
+  // A determined build the entry does not cover is refused here and has no way
+  // past anywhere on this card. That is the whole difference between it and an
+  // undetermined one: this is a mismatch somebody established, and the escape
+  // below answers "I could not tell", which is a different sentence.
   const sababRafd =
     sababQafl !== null
       ? sababQafl
       : !idhnMaadhun
         ? t('khariji.idhn.matlub', lugha)
-        : mutadakhil
-          ? t('khariji.tadakhul.matlub', lugha)
-          : tadakhul.error !== null
-            ? t('khariji.tadakhul.majhul', lugha)
-            : null;
+        : madkhal.halat_bina.naw === 'ghayr_madumma'
+          ? t('khariji.bina.matlub', lugha)
+          : mutadakhil
+            ? t('khariji.tadakhul.matlub', lugha)
+            : tadakhul.error !== null
+              ? t('khariji.tadakhul.majhul', lugha)
+              : null;
   // The lock is checked as well as its sentence, on the same terms the
   // registry's own listing uses: `sababQafl` is what a locked screen says, and
   // a control refused by the lock must not become live because a sentence went
@@ -451,11 +551,7 @@ function MadkhalKhariji({
           <span dir="auto">{madkhal.isdar}</span>
         </Saff>
         <Saff unwan={t('khariji.bina', lugha)}>
-          {madkhal.bina_mutabaqa === null ? (
-            <span className="qism-khariji__nass-hadi">{t('khariji.bina_majhul', lugha)}</span>
-          ) : (
-            <span className="mono-ltr">{madkhal.bina_mutabaqa}</span>
-          )}
+          <QiraatBina hala={madkhal.halat_bina} abniya={abniya} lugha={lugha} />
         </Saff>
         <Saff unwan={t('khariji.masdar', lugha)}>
           {madkhal.mira.naw === 'min_almuallif' ? (
@@ -656,12 +752,53 @@ function MadkhalKhariji({
                 alaTabdil={alaIqrar}
                 matlub={t('khariji.iqrar.matlub', lugha)}
               />
+              {/*
+                The second question, and it is a second question rather than a
+                second clause in the first. The tick above is about what the
+                maker wrote — anti-cheat, an online mode, a game's own files —
+                and this one is about installing files pinned to builds nobody
+                matched this install against. One tick standing for both would
+                let an answer about anti-cheat count as an answer about a build
+                that was never determined.
+
+                It is here only while the build really is undetermined *and*
+                which build this is changes what gets written. A determined
+                build the entry does not cover is never offered it: that install
+                is refused on the card above, with its reason, and nothing in
+                this panel lifts a refusal somebody established.
+              */}
+              {yalzamIqrarBina ? (
+                <IqrarKhatar
+                  muarrif={muarrifIqrarBina}
+                  unwan={t('khariji.iqrar_bina.unwan', lugha)}
+                  tahdheer={t('khariji.iqrar_bina.tahdheer', lugha, {
+                    abniya: qaimatAbniya(abniya, lugha),
+                  })}
+                  tafsil={t('khariji.bina.majhula', lugha, {
+                    abniya: qaimatAbniya(abniya, lugha),
+                  })}
+                  nassIqrar={t('khariji.iqrar_bina.nass', lugha)}
+                  muqirr={muqirrBina}
+                  alaTabdil={alaIqrarBina}
+                  matlub={t('khariji.iqrar_bina.matlub', lugha)}
+                />
+              ) : null}
               <div className="qism-khariji__afal">
                 <button
                   type="button"
                   className="zir zir--khatar"
-                  aria-disabled={!yaqbal || !muqirr}
-                  aria-describedby={muqirr ? undefined : muarrifMatlub(muarrifIqrar)}
+                  aria-disabled={!yaqbal || !muqirr || (yalzamIqrarBina && !muqirrBina)}
+                  // Both outstanding requirements, when both are: a reader who
+                  // has answered one of them is owed the one that is left
+                  // rather than the first in the list.
+                  aria-describedby={
+                    [
+                      muqirr ? null : muarrifMatlub(muarrifIqrar),
+                      yalzamIqrarBina && !muqirrBina ? muarrifMatlub(muarrifIqrarBina) : null,
+                    ]
+                      .filter((wahid): wahid is string => wahid !== null)
+                      .join(' ') || undefined
+                  }
                   onClick={alaTanfidh}
                 >
                   {t('khariji.iqrar.thabbit', lugha)}
@@ -707,14 +844,17 @@ export function QismKhariji({
   });
 
   /* -------------------------------------------------------------------------
-     The question, and the answer to it.
+     The questions, and the answers to them.
 
      `sual` is the entry whose warnings are open, so at most one is asked at a
-     time, and the tick starts false on every opening: a tick given about one
-     team's patch is not a tick about the next one's.
+     time, and both ticks start false on every opening: a tick given about one
+     team's patch is not a tick about the next one's, and an entry whose build
+     nobody could determine is not a standing permission to install the next one
+     the same way.
      ----------------------------------------------------------------------- */
   const [sual, setSual] = useState<string | null>(null);
   const [muqirr, setMuqirr] = useState(false);
+  const [muqirrBina, setMuqirrBina] = useState(false);
 
   const azrarTathbeet = useRef(new Map<string, HTMLButtonElement | null>());
   const zirIlghaRef = useRef<HTMLButtonElement | null>(null);
@@ -722,6 +862,7 @@ export function QismKhariji({
   useEffect(() => {
     setSual(null);
     setMuqirr(false);
+    setMuqirrBina(false);
   }, [muarrif]);
 
   // The safe control, as every other panel that can write into a game directory
@@ -779,14 +920,27 @@ export function QismKhariji({
     },
   });
 
-  const tathbeet = useMutation<NatijatKharijiya, KhataJisr, { readonly ruqaa: string }>({
-    mutationFn: ({ ruqaa }) =>
-      // The acknowledgement is always `true` here, and that is not a constant
-      // standing in for a decision: this call is only reachable from the button
-      // inside the panel below, which is refused until the tick is given. The
-      // backend is told what the person actually said, and the person said it
-      // on a screen that was showing the maker's own warnings.
-      nadiKhariji('thabbit_kharijiya', { muarrif, ruqaa, iqrar: true }, qarrirNatija),
+  const tathbeet = useMutation<
+    NatijatKharijiya,
+    KhataJisr,
+    { readonly ruqaa: string; readonly iqrarBina: boolean }
+  >({
+    mutationFn: ({ ruqaa, iqrarBina }) =>
+      // `iqrar` is always `true` here, and that is not a constant standing in
+      // for a decision: this call is only reachable from the button inside the
+      // panel below, which is refused until the tick is given. The backend is
+      // told what the person actually said, and the person said it on a screen
+      // that was showing the maker's own warnings.
+      //
+      // `iqrarBina` is the answer to the other question and is *not* a
+      // constant: it is false on every entry whose build was determined, and
+      // true only where the panel asked and the person answered. It travels so
+      // the install's own record says the build was never determined.
+      nadiKhariji(
+        'thabbit_kharijiya',
+        { muarrif, ruqaa, iqrar: true, iqrarBina },
+        qarrirNatija,
+      ),
     onSuccess: (natija, { ruqaa }) => {
       const madkhal = katalog.data?.find((wahid) => wahid.id === ruqaa);
       // Credit at the moment it lands, too: the notice is the one line that
@@ -841,14 +995,21 @@ export function QismKhariji({
       return;
     }
     setMuqirr(false);
+    setMuqirrBina(false);
     setSual(ruqaa);
   };
 
-  const alaTanfidh = (ruqaa: string): void => {
+  const alaTanfidh = (ruqaa: string, yalzamIqrarBina: boolean): void => {
     if (tathbeet.isPending || muqfal || !muqirr) {
       return;
     }
-    tathbeet.mutate({ ruqaa });
+    // The second question is asked per entry, so the guard is too: an entry
+    // that never asked it sends `false`, and one that asked it and was not
+    // answered does not start at all.
+    if (yalzamIqrarBina && !muqirrBina) {
+      return;
+    }
+    tathbeet.mutate({ ruqaa, iqrarBina: yalzamIqrarBina && muqirrBina });
     setSual(null);
   };
 
@@ -887,49 +1048,60 @@ export function QismKhariji({
           />
         ) : (
           <ul className="qism-khariji__qaima">
-            {katalog.data.map((madkhal) => (
-              <MadkhalKhariji
-                key={madkhal.id}
-                muarrif={muarrif}
-                madkhal={madkhal}
-                lugha={lugha}
-                munassiq={munassiq}
-                // A refused game is offered nothing to install, exactly as the
-                // registry's own listing is. The entry is still listed, still
-                // credited and still explained; only the verb is withheld.
-                muqfal={muqfal || mahmiya}
-                sababQafl={mahmiya ? t('khariji.mahmiya', lugha) : sababQafl}
-                yuthabbat={tathbeet.isPending && tathbeet.variables?.ruqaa === madkhal.id}
-                mashghul={tathbeet.isPending}
-                maftuh={sual === madkhal.id}
-                muqirr={muqirr}
-                alaIqrar={setMuqirr}
-                alaTalab={() => {
-                  alaTalab(madkhal.id);
-                }}
-                alaIlgha={alaIlgha}
-                alaTanfidh={() => {
-                  alaTanfidh(madkhal.id);
-                }}
-                sajjilZir={(uqda) => {
-                  azrarTathbeet.current.set(madkhal.id, uqda);
-                }}
-                marjaIlgha={(uqda) => {
-                  zirIlghaRef.current = uqda;
-                }}
-                alaIzala={alaIzala}
-                alaIzalatNafsiha={() => {
-                  izala.mutate({ ruqaa: madkhal.id });
-                }}
-                tuzal={izala.isPending && izala.variables?.ruqaa === madkhal.id}
-                yaftahRabt={fath.isPending && fath.variables === madkhal.masdar.rabt}
-                iftahRabt={(rabt) => {
-                  if (!fath.isPending) {
-                    fath.mutate(rabt);
-                  }
-                }}
-              />
-            ))}
+            {katalog.data.map((madkhal) => {
+              // Whether this entry's install turns on a build nobody
+              // determined. Computed here as well as read in the row, because
+              // the guard that starts the install and the panel that asks the
+              // question have to be answering the same fact.
+              const yalzamIqrarBina =
+                madkhal.halat_bina.naw === 'majhula' && yufarriqAbniya(madkhal);
+              return (
+                <MadkhalKhariji
+                  key={madkhal.id}
+                  muarrif={muarrif}
+                  madkhal={madkhal}
+                  lugha={lugha}
+                  munassiq={munassiq}
+                  // A refused game is offered nothing to install, exactly as the
+                  // registry's own listing is. The entry is still listed, still
+                  // credited and still explained; only the verb is withheld.
+                  muqfal={muqfal || mahmiya}
+                  sababQafl={mahmiya ? t('khariji.mahmiya', lugha) : sababQafl}
+                  yuthabbat={tathbeet.isPending && tathbeet.variables?.ruqaa === madkhal.id}
+                  mashghul={tathbeet.isPending}
+                  maftuh={sual === madkhal.id}
+                  muqirr={muqirr}
+                  alaIqrar={setMuqirr}
+                  yalzamIqrarBina={yalzamIqrarBina}
+                  muqirrBina={muqirrBina}
+                  alaIqrarBina={setMuqirrBina}
+                  alaTalab={() => {
+                    alaTalab(madkhal.id);
+                  }}
+                  alaIlgha={alaIlgha}
+                  alaTanfidh={() => {
+                    alaTanfidh(madkhal.id, yalzamIqrarBina);
+                  }}
+                  sajjilZir={(uqda) => {
+                    azrarTathbeet.current.set(madkhal.id, uqda);
+                  }}
+                  marjaIlgha={(uqda) => {
+                    zirIlghaRef.current = uqda;
+                  }}
+                  alaIzala={alaIzala}
+                  alaIzalatNafsiha={() => {
+                    izala.mutate({ ruqaa: madkhal.id });
+                  }}
+                  tuzal={izala.isPending && izala.variables?.ruqaa === madkhal.id}
+                  yaftahRabt={fath.isPending && fath.variables === madkhal.masdar.rabt}
+                  iftahRabt={(rabt) => {
+                    if (!fath.isPending) {
+                      fath.mutate(rabt);
+                    }
+                  }}
+                />
+              );
+            })}
           </ul>
         )}
       </Mashhad>
@@ -958,6 +1130,7 @@ export function QismKhariji({
                   const akhir = tathbeet.variables;
                   if (akhir !== undefined && !tathbeet.isPending && !muqfal) {
                     setMuqirr(false);
+                    setMuqirrBina(false);
                     setSual(akhir.ruqaa);
                   }
                 }}

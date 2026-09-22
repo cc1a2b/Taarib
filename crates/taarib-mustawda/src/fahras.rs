@@ -365,11 +365,18 @@ mod fuhus {
                   code, and honouring them here would mean a test that cannot fail"
     )]
 
+    use std::error::Error;
+
     use super::{MuhtawaShareeha, MulakhkhasDhakira};
     use crate::khariji::badhrat_rtea;
     use taarib_mustalahat::bina::Basma;
+    use taarib_mustalahat::khariji::{FapsBina, TahdidBina};
     use taarib_mustalahat::luba::{LubaId, MasdarLuba};
     use taarib_mustalahat::musahim::MusahimId;
+
+    /// What the tests added since the module-level allow was written return, so
+    /// a setup failure propagates with `?` rather than through a panic.
+    type NatijatIkhtibar = Result<(), Box<dyn Error>>;
 
     /// A catalogue with no memory shares and no third-party entries casts
     /// exactly the bytes it cast before either field existed.
@@ -445,6 +452,70 @@ mod fuhus {
             raji.ruqaa.is_empty(),
             "a third-party entry is not a patch Taarib built"
         );
+    }
+
+    /// The build declaration survives the shard, which is the whole of it: a
+    /// probe the cast drops resolves to `Majhula` on every machine that fetches
+    /// the catalogue, and the feature is dead without one line changing colour.
+    #[test]
+    fn tahdid_albina_yanju_min_alshareeha() -> NatijatIkhtibar {
+        let madkhal = badhrat_rtea();
+        let luba = madkhal.luba;
+        let mut muhtawa = MuhtawaShareeha::default();
+        let _ = muhtawa.kharijiya.insert(luba, vec![madkhal.clone()]);
+
+        let bayt = serde_json::to_vec(&muhtawa)?;
+        let raji: MuhtawaShareeha = serde_json::from_slice(&bayt)?;
+        let awwal = raji
+            .kharijiya
+            .get(&luba)
+            .and_then(|qaima| qaima.first())
+            .ok_or("the shard lost the entry")?;
+        assert_eq!(awwal.tahdid_bina, madkhal.tahdid_bina);
+        assert_eq!(
+            awwal.tahdid_bina.faps,
+            Some(FapsBina::MawridIsdar {
+                masar: "RDR2.exe".to_owned(),
+                juz: 2,
+            })
+        );
+        Ok(())
+    }
+
+    /// A shard whose entries predate the field parses, and the entry that comes
+    /// out declares nothing rather than failing to exist.
+    ///
+    /// The document is a real cast with the key deleted rather than JSON typed
+    /// by hand: a hand-written fixture stops representing a published shard the
+    /// moment any other field's wire form moves, and the claim being made here
+    /// is about catalogues that are already live.
+    #[test]
+    fn shareeha_bi_madkhal_bila_tahdid_bina_tuqra() -> NatijatIkhtibar {
+        let luba = badhrat_rtea().luba;
+        let mut muhtawa = MuhtawaShareeha::default();
+        let _ = muhtawa.kharijiya.insert(luba, vec![badhrat_rtea()]);
+        let mut wathiqa = serde_json::to_value(&muhtawa)?;
+
+        let madkhal = wathiqa
+            .get_mut("kharijiya")
+            .and_then(|qaima| qaima.get_mut(luba.to_string()))
+            .and_then(|qaima| qaima.get_mut(0))
+            .and_then(serde_json::Value::as_object_mut)
+            .ok_or("the shard carries no entry")?;
+        assert!(
+            madkhal.remove("tahdid_bina").is_some(),
+            "the cast wrote no tahdid_bina to remove"
+        );
+
+        let raji: MuhtawaShareeha = serde_json::from_value(wathiqa)?;
+        let awwal = raji
+            .kharijiya
+            .get(&luba)
+            .and_then(|qaima| qaima.first())
+            .ok_or("the shard lost the entry")?;
+        assert_eq!(awwal.tahdid_bina, TahdidBina::default());
+        assert!(awwal.tahdid_bina.faps.is_none());
+        Ok(())
     }
 
     /// A listed share round-trips whole, keyed by the game it came from.

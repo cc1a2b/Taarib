@@ -1419,16 +1419,25 @@ export const commands = {
 	 *  nothing and sends `true` is lying to its own user, and a caller that sends
 	 *  `false` gets back the list it should have shown.
 	 * 
+	 *  `iqrar_bina` is a different statement about a different risk, and the two are
+	 *  never collapsed into one tick: it is the person saying they accept installing
+	 *  files for a build **nobody determined**, and it is read only when
+	 *  [`RuqaaKharijiya::halat_bina`] answers [`HalatBina::Majhula`]. A determined
+	 *  build the entry does not cover is not an undetermined one and this cannot
+	 *  wave it through — "I could not tell" and "I can tell, and no" are different
+	 *  decisions, and only the first has a way past.
+	 * 
 	 *  # Errors
 	 * 
 	 *  [`KhataKharijiAmr::MadkhalGhayrMawjud`] when the catalogue lists no such
 	 *  entry, [`KhataKharijiAmr::BinaMajhula`] when the entry pins different files
-	 *  to different builds and no build has been measured for this game,
-	 *  [`KhataKharijiAmr::BawwabaRafadat`] carrying the gate's own refusal, and
-	 *  whatever the installer raises — a collision, a running game, a transfer that
-	 *  did not complete, or an artifact whose bytes did not reproduce its pin.
+	 *  to different builds, no build was determined for this game and `iqrar_bina`
+	 *  was not given, [`KhataKharijiAmr::BawwabaRafadat`] carrying the gate's own
+	 *  refusal, and whatever the installer raises — a collision, a running game, a
+	 *  transfer that did not complete, or an artifact whose bytes did not reproduce
+	 *  its pin.
 	 */
-	thabbitKharijiya: (muarrif: string, ruqaa: string, iqrar: boolean) => typedError<NatijatKharijiyaHie, Khata>(__TAURI_INVOKE("thabbit_kharijiya", { muarrif, ruqaa, iqrar })),
+	thabbitKharijiya: (muarrif: string, ruqaa: string, iqrar: boolean, iqrarBina: boolean) => typedError<NatijatKharijiyaHie, Khata>(__TAURI_INVOKE("thabbit_kharijiya", { muarrif, ruqaa, iqrar, iqrarBina })),
 	/**
 	 *  Takes one third-party patch back off, and puts the game back.
 	 * 
@@ -1974,6 +1983,32 @@ export type HaddHie = {
 	/**  Every input it rests on. */
 	shawahid: ShahidHie[],
 };
+
+/**
+ *  Which build an install is, as far as an entry can tell.
+ * 
+ *  Three states rather than a bool, because "I could not tell" and "I can tell,
+ *  and no" are different sentences leading to different decisions: the first
+ *  leaves room for the reader to proceed anyway as a recorded choice, and the
+ *  second is a refusal. Collapsing them is what made every third-party entry
+ *  read as incompatible on every install.
+ */
+export type HalatBina = 
+/**  Determined, and the entry pins files for it. */
+{ naw: "mutabaqa"; 
+/**  The game's own version, in the entry's numbering. */
+bina: string } | 
+/**  Determined, and the entry does not cover it. */
+{ naw: "ghayr_madumma"; 
+/**  The game's own version, in the entry's numbering. */
+bina: string } | 
+/**
+ *  Not determined at all.
+ * 
+ *  The reader is told which builds the patch declares and that Taarib could
+ *  not establish which one this install is. Never rendered as a match.
+ */
+{ naw: "majhula" };
 
 /**  Whether a pass can be recorded for one game, and what state it is in. */
 export type HalatIltiqatHie = {
@@ -3951,13 +3986,18 @@ export type MudkhalKharijiHie = {
 	/**  Where the bytes come from. */
 	mira: HalatMiraHie,
 	/**
-	 *  The installed build this entry was matched against, or [`None`] when no
-	 *  build has been measured for this game.
+	 *  Where this entry's build question stands on this machine.
 	 * 
-	 *  The interface lists every artifact when this is absent, because the
-	 *  honest answer to "which of these apply" is then "we cannot tell".
+	 *  The shared three-state answer, carried rather than projected: it is
+	 *  already tagged internally on `naw`, which is what the interface decodes,
+	 *  and a projection would only be a second spelling of the one distinction
+	 *  this whole field exists to keep straight.
+	 * 
+	 *  The interface lists every artifact while this is [`HalatBina::Majhula`],
+	 *  because the honest answer to "which of these apply" is then "we cannot
+	 *  tell, so here is all of it".
 	 */
-	bina_mutabaqa: string | null,
+	halat_bina: HalatBina,
 	/**  Whether this entry is installed into this game right now. */
 	muthabbata: boolean,
 };

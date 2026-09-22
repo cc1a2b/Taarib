@@ -199,6 +199,22 @@
   text-wrap: pretty;
 }
 
+/* Where the build question stands: a sentence rather than a number, because
+   two of the three things it can say are not numbers.
+
+   It carries no colour of its own. A build that was determined and is not
+   covered is a refusal, and the refusal line under the actions is where every
+   other refusal on this card states its reason; a build that was never
+   determined is an absence of information rather than a danger, and it takes
+   the quiet text colour the row already uses for a qualifying line. The amber
+   and the red on these cards are spoken for by the collision block and by the
+   maker's own warnings, and neither of those is what this is. */
+.qism-khariji__bina {
+  display: block;
+  max-inline-size: 60ch;
+  text-wrap: pretty;
+}
+
 .qism-khariji__unwan-farii {
   margin-block-start: var(--misafa-12);
   margin-block-end: var(--misafa-6);

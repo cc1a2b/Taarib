@@ -15,8 +15,10 @@
 //! publish: [`crate::sabk::madkhal_khariji`] refuses it, by name, until
 //! somebody fills the statement in.
 
+use std::collections::BTreeMap;
+
 use taarib_mustalahat::khariji::{
-    HalatMira, QitaatTanzeel, RuqaaKharijiya, TahdheerKhariji, TakhtitKhariji,
+    FapsBina, HalatMira, QitaatTanzeel, RuqaaKharijiya, TahdheerKhariji, TahdidBina, TakhtitKhariji,
 };
 use taarib_mustalahat::luba::{LubaId, MasdarLuba};
 use taarib_mustalahat::ruqaa::{IdhnMasdar, MasdarKhariji, RukhsaRuqaa, RuqaaId};
@@ -48,10 +50,13 @@ pub fn badhrat_kharijiya() -> Vec<RuqaaKharijiya> {
 /// RTEA — the Arabic translation of Red Dead Redemption 2 by Emad Adel and the
 /// Redemption Team, version 1.7.
 ///
-/// Everything here was measured against the release of 2026-09-11 and the
-/// author's own endpoints; the archives it was measured from have since been
-/// deleted, so these digests are the pins and a byte that disagrees with them
-/// is refused by name rather than installed.
+/// The artifacts, their sizes and their digests were measured against the
+/// release of 2026-09-11 and the author's own endpoints; the archives they were
+/// measured from have since been deleted, so these digests are the pins and a
+/// byte that disagrees with them is refused by name rather than installed.
+///
+/// `tahdid_bina` is the one field here that was **not** measured, and its own
+/// comment says why and what a correction costs.
 ///
 /// The entry fetches from the author. Mirroring is off — the repository
 /// declares no licence at all, which reserves every right, and nobody has
@@ -67,6 +72,25 @@ pub fn badhrat_rtea() -> RuqaaKharijiya {
         ),
         hawiyat_manassa: vec!["Red Dead Redemption 2".to_owned()],
         abniya: vec!["1311".to_owned(), "1436".to_owned(), "1491".to_owned()],
+        // **Not measured against an install.** RDR2 is on no machine this was
+        // written on — no `RDR2.exe`, no `appmanifest_1174180` — so this is
+        // written from how Rockstar versions the game rather than from a file
+        // anybody here opened. Declaring it instead of hardcoding it is what
+        // makes being wrong cheap: a wrong `masar` or `juz` is corrected here
+        // and every client picks the correction up on its next index refresh,
+        // with no build and no release.
+        //
+        // No `tanazur`. Steam's `buildid` moves per depot and per branch, so a
+        // correspondence nobody verified would resolve *confidently* to the
+        // wrong build — strictly worse than the `Majhula` the card already has
+        // words for.
+        tahdid_bina: TahdidBina {
+            tanazur: BTreeMap::new(),
+            faps: Some(FapsBina::MawridIsdar {
+                masar: "RDR2.exe".to_owned(),
+                juz: 2,
+            }),
+        },
         masdar: MasdarKhariji {
             ism: "Emad Adel".to_owned(),
             rabt: "https://github.com/emadadeldev/rtea".to_owned(),
@@ -166,7 +190,7 @@ pub fn badhrat_rtea() -> RuqaaKharijiya {
 mod fuhus {
     use std::error::Error;
 
-    use taarib_mustalahat::khariji::SababRafdKhariji;
+    use taarib_mustalahat::khariji::{FapsBina, SababRafdKhariji};
     use taarib_mustalahat::ruqaa::IdhnMasdar;
 
     use super::badhrat_rtea;
@@ -223,6 +247,29 @@ mod fuhus {
         assert_eq!(badhra.qitaa_li_bina("1311").len(), 2);
         assert_eq!(badhra.qitaa_li_bina("1436").len(), 2);
         assert!(!badhra.yadam_bina("1207"));
+        Ok(())
+    }
+
+    /// RDR2 is versioned by its own executable, so the seed says how to read it
+    /// and says nothing about Steam — the correspondence nobody here measured
+    /// is the one an entry must not invent.
+    #[test]
+    fn albadhra_tunassu_ala_faps_bila_tanazur() -> NatijatIkhtibar {
+        let badhra = badhrat_rtea();
+        assert!(
+            badhra.tahdid_bina.tanazur.is_empty(),
+            "a Steam buildid correspondence would be a claim nobody verified"
+        );
+        let faps = badhra
+            .tahdid_bina
+            .faps
+            .as_ref()
+            .ok_or("the seed states no way to read the installed build")?;
+        let FapsBina::MawridIsdar { masar, juz } = faps;
+        assert_eq!(masar, "RDR2.exe");
+        // `1.0.1491.50`, counting from zero, is the 1491 the entry pins for.
+        assert_eq!(*juz, 2);
+        assert!(badhra.yadam_bina("1491"));
         Ok(())
     }
 

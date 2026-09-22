@@ -16,7 +16,7 @@ use std::error::Error;
 use std::path::Path;
 
 use taarib_khatm::MiftahKhass;
-use taarib_mustalahat::khariji::{HalatMira, RuqaaKharijiya};
+use taarib_mustalahat::khariji::{FapsBina, HalatMira, RuqaaKharijiya, TahdidBina};
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::musahim::MusahimId;
 use taarib_mustalahat::ruqaa::{IdhnMasdar, RuqaaId, RuqaaRevision};
@@ -492,6 +492,103 @@ fn madkhal_khariji_yasil_ila_shareeha_yaqrauha_alameel() -> NatijatIkhtibar {
     assert_eq!(awwal.nasab(), "Emad Adel · Redemption Team");
     assert_eq!(awwal.qitaa_li_bina("1491").len(), 1);
     assert_eq!(awwal.qitaa_li_bina("1311").len(), 2);
+
+    // The build declaration, byte for byte, out of the document another machine
+    // would really fetch. A probe that does not survive this trip resolves to
+    // `Majhula` on every install, which is exactly the state this feature
+    // exists to leave — so the journey is the test, not the struct literal.
+    assert_eq!(awwal.tahdid_bina, madkhal.tahdid_bina);
+    assert_eq!(
+        awwal.tahdid_bina.faps,
+        Some(FapsBina::MawridIsdar {
+            masar: "RDR2.exe".to_owned(),
+            juz: 2,
+        })
+    );
+    assert!(
+        awwal.tahdid_bina.tanazur.is_empty(),
+        "the entry declares no launcher correspondence and the catalogue must not invent one"
+    );
+    Ok(())
+}
+
+/// An entry that declares no way to tell builds apart is published, reaches the
+/// shard, and reads back declaring nothing.
+///
+/// The ordinary third-party entry, and the one a gate written too tightly would
+/// delete from every catalogue: its author never related their numbering to a
+/// launcher's, which is not a malformed declaration but the absence of one.
+#[test]
+fn madkhal_khariji_bila_tahdid_bina_yunshar() -> NatijatIkhtibar {
+    let masrah = tempfile::tempdir()?;
+    let rabt = mustawda_baid(&masrah.path().join("baid"))?;
+    let manshurat = masrah.path().join("manshurat");
+    std::fs::create_dir_all(&manshurat)?;
+
+    let mut madkhal = khariji_bi_bayan();
+    madkhal.tahdid_bina = TahdidBina::default();
+    let mut sijill = SijillNashr::default();
+    sijill.sajjil_khariji(madkhal.clone())?;
+
+    let natija = unshur_fi(
+        &sijill,
+        &masrah.path().join("nuskha"),
+        &manshurat,
+        &rabt,
+        "2026-09-20T15:51:00Z",
+    )?;
+    assert_eq!(natija.kharijiya.len(), 1);
+
+    let bayan = BayanMustawda::min_bayt(&min_almustawda(&rabt, "bayan.json")?, None)?;
+    let raqm = shareeha(madkhal.luba);
+    let bayt = min_almustawda(&rabt, &masar_shareeha(raqm)?)?;
+    let shareeha = ShareehaMuwaththaqa::min_bayt(raqm, &bayt, &bayan)?;
+    let awwal = shareeha
+        .kharijiya(madkhal.luba)
+        .first()
+        .ok_or("the shard carries no entry")?;
+    assert_eq!(awwal.tahdid_bina, TahdidBina::default());
+    Ok(())
+}
+
+/// A probe aimed outside the game never reaches a catalogue.
+///
+/// The path is joined onto the player's game directory and read there, so this
+/// is the last machine that can refuse it — after the push it is a signed
+/// document telling every client which file to open.
+#[test]
+fn faps_kharij_alluba_la_yasil_ila_shareeha() -> NatijatIkhtibar {
+    let masrah = tempfile::tempdir()?;
+    let rabt = mustawda_baid(&masrah.path().join("baid"))?;
+    let manshurat = masrah.path().join("manshurat");
+    std::fs::create_dir_all(&manshurat)?;
+
+    let mut madkhal = khariji_bi_bayan();
+    madkhal.tahdid_bina.faps = Some(FapsBina::MawridIsdar {
+        masar: "../../../etc/passwd".to_owned(),
+        juz: 2,
+    });
+    let mut sijill = SijillNashr::default();
+    sijill.sajjil_khariji(madkhal)?;
+
+    let khata = unshur_fi(
+        &sijill,
+        &masrah.path().join("nuskha"),
+        &manshurat,
+        &rabt,
+        "2026-09-20T15:51:00Z",
+    )
+    .err()
+    .ok_or("a probe that leaves the game must not be published")?;
+    let matn = khata.to_string();
+    assert!(
+        matn.contains("every approved package was refused"),
+        "{matn}"
+    );
+    assert!(
+        min_almustawda(&rabt, "bayan.json").is_err(),
+        "nothing is served when the only entry was refused"
+    );
     Ok(())
 }
 

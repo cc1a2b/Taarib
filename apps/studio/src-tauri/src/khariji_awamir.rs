@@ -46,9 +46,10 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use taarib_aman::fahs_khariji::{NatijatFahsKhariji, RafdKhariji, TalabFahsKhariji, fahs_khariji};
 use taarib_makhzan::wasl::Makhzan;
+use taarib_muharrik::isdar::QariMawridIsdar;
 use taarib_mustalahat::bina::BinaId;
 use taarib_mustalahat::khariji::{
-    HalatMira, QitaatTanzeel, RuqaaKharijiya, TahdheerKhariji, TakhtitKhariji,
+    HalatBina, HalatMira, QitaatTanzeel, RuqaaKharijiya, TahdheerKhariji, TakhtitKhariji,
 };
 use taarib_mustalahat::luba::{Luba, LubaId};
 use taarib_mustalahat::ruqaa::{MasdarKhariji, RuqaaId, RuqaaRevision};
@@ -162,12 +163,17 @@ pub struct MudkhalKharijiHie {
     pub tahdheerat: Vec<TahdheerKhariji>,
     /// Where the bytes come from.
     pub mira: HalatMiraHie,
-    /// The installed build this entry was matched against, or [`None`] when no
-    /// build has been measured for this game.
+    /// Where this entry's build question stands on this machine.
     ///
-    /// The interface lists every artifact when this is absent, because the
-    /// honest answer to "which of these apply" is then "we cannot tell".
-    pub bina_mutabaqa: Option<String>,
+    /// The shared three-state answer, carried rather than projected: it is
+    /// already tagged internally on `naw`, which is what the interface decodes,
+    /// and a projection would only be a second spelling of the one distinction
+    /// this whole field exists to keep straight.
+    ///
+    /// The interface lists every artifact while this is [`HalatBina::Majhula`],
+    /// because the honest answer to "which of these apply" is then "we cannot
+    /// tell, so here is all of it".
+    pub halat_bina: HalatBina,
     /// Whether this entry is installed into this game right now.
     pub muthabbata: bool,
 }
@@ -285,30 +291,31 @@ pub async fn ruqaa_kharijiya(
         bil_hajb(move || jidhr_nusakh(&masarat, &makhzan, id)).await?
     };
 
-    // The manifests live on disk, so the installed-or-not question is a
-    // filesystem walk per entry and belongs off the window's thread.
+    // Both of the per-entry facts read the disk — the manifests say what is
+    // installed, and an entry that declares a probe has its build read out of a
+    // file inside the game — so the whole projection is built off the window's
+    // thread rather than only half of it.
     let jidhr_luba = luba.jidhr.clone();
-    let huwiyat: Vec<RuqaaId> = madakhil.iter().map(|madkhal| madkhal.id).collect();
-    let mathbita = bil_hajb(move || {
-        Ok(huwiyat
+    let maqisa = luba.bina.as_ref().map(BinaId::wasm);
+    bil_hajb(move || {
+        Ok(madakhil
             .into_iter()
-            .map(|id| {
-                muthabbat(
+            .map(|madkhal| {
+                let muthabbata = muthabbat(
                     &jidhr_luba,
-                    &jidhr_nusakh_khariji(&nusakh, id),
+                    &jidhr_nusakh_khariji(&nusakh, madkhal.id),
                     NawTathbeet::Nass,
-                )
+                );
+                // The rule and its order live on the entry, in the shared
+                // vocabulary, and are asked for here rather than restated:
+                // a stated correspondence for this launcher, then the probe the
+                // entry names, then undetermined.
+                let hala = madkhal.halat_bina(maqisa.as_deref(), &jidhr_luba, &QariMawridIsdar);
+                hie_madkhal(madkhal, hala, muthabbata)
             })
-            .collect::<Vec<bool>>())
+            .collect())
     })
-    .await?;
-
-    let bina = luba.bina.as_ref().map(BinaId::wasm);
-    Ok(madakhil
-        .into_iter()
-        .zip(mathbita)
-        .map(|(madkhal, muthabbata)| hie_madkhal(madkhal, bina.clone(), muthabbata))
-        .collect())
+    .await
 }
 
 /// What is already in one game's directory that one entry cannot sit beside.
@@ -373,20 +380,30 @@ pub async fn tadakhul_kharijiya(
 /// nothing and sends `true` is lying to its own user, and a caller that sends
 /// `false` gets back the list it should have shown.
 ///
+/// `iqrar_bina` is a different statement about a different risk, and the two are
+/// never collapsed into one tick: it is the person saying they accept installing
+/// files for a build **nobody determined**, and it is read only when
+/// [`RuqaaKharijiya::halat_bina`] answers [`HalatBina::Majhula`]. A determined
+/// build the entry does not cover is not an undetermined one and this cannot
+/// wave it through — "I could not tell" and "I can tell, and no" are different
+/// decisions, and only the first has a way past.
+///
 /// # Errors
 ///
 /// [`KhataKharijiAmr::MadkhalGhayrMawjud`] when the catalogue lists no such
 /// entry, [`KhataKharijiAmr::BinaMajhula`] when the entry pins different files
-/// to different builds and no build has been measured for this game,
-/// [`KhataKharijiAmr::BawwabaRafadat`] carrying the gate's own refusal, and
-/// whatever the installer raises — a collision, a running game, a transfer that
-/// did not complete, or an artifact whose bytes did not reproduce its pin.
+/// to different builds, no build was determined for this game and `iqrar_bina`
+/// was not given, [`KhataKharijiAmr::BawwabaRafadat`] carrying the gate's own
+/// refusal, and whatever the installer raises — a collision, a running game, a
+/// transfer that did not complete, or an artifact whose bytes did not reproduce
+/// its pin.
 #[tauri::command]
 #[specta::specta]
 pub async fn thabbit_kharijiya(
     muarrif: String,
     ruqaa: String,
     iqrar: bool,
+    iqrar_bina: bool,
     masarat: tauri::State<'_, Masarat>,
     makhzan: tauri::State<'_, Makhzan>,
     idadat: tauri::State<'_, Arc<MakhzanIdadat>>,
@@ -405,7 +422,31 @@ pub async fn thabbit_kharijiya(
     sajjil_mudifin(&madakhil);
     let madkhal = madkhal_bi_huwiya(madakhil, matlub, &luba.ism)?;
 
-    let bina = bina_lil_fahs(luba.bina.as_ref().map(BinaId::wasm), &luba.ism, &madkhal)?;
+    // Asked the same way the catalogue asks it, so the card and the install can
+    // never disagree about which of the three states this is. The probe reads a
+    // file inside the game directory, so it is asked off the window's thread.
+    let hala = {
+        let matn = madkhal.clone();
+        let jidhr = luba.jidhr.clone();
+        let maqisa = luba.bina.as_ref().map(BinaId::wasm);
+        bil_hajb(move || Ok(matn.halat_bina(maqisa.as_deref(), &jidhr, &QariMawridIsdar))).await?
+    };
+    // Whether this run is the one the escape opened. Kept before the gate's
+    // input is moved onto the blocking thread, so the log line at the end can
+    // say the build was never determined and the person went ahead by name.
+    let bina_ghayr_muhaddada = iqrar_bina && hala == HalatBina::Majhula;
+    let bina = match hala {
+        HalatBina::Mutabaqa { bina } | HalatBina::GhayrMadumma { bina } => {
+            bina_lil_fahs(Some(bina), &luba.ism, &madkhal)?
+        },
+        // Nobody determined which build this is, and the person said so and
+        // asked for it anyway. The value carried on is the same empty one an
+        // entry that draws no build distinction is installed with, because
+        // there is no version to compare against and inventing one to get past
+        // the gate would be the guess this whole answer exists to refuse.
+        HalatBina::Majhula if iqrar_bina => String::new(),
+        HalatBina::Majhula => bina_lil_fahs(None, &luba.ism, &madkhal)?,
+    };
     let tanfidhi = ism_tanfidhi(&luba)?;
     let jidhr_steam = jidhr_steam_lil_fahs(&masarat, &hali, &luba)?;
     let appid = crate::luba_awamir::appid_steam(&luba);
@@ -452,6 +493,11 @@ pub async fn thabbit_kharijiya(
             ruqaa: &madkhal,
             iqrar: sijill_iqrar.as_ref(),
             iqrar_tahdheerat: iqrar,
+            // Only the undetermined case, and only when the person said so on
+            // a screen that named the builds this patch does declare. The gate
+            // consults it for nothing else: a build that *was* read and is not
+            // covered stays refused however this is set.
+            iqrar_bina_majhula: bina_ghayr_muhaddada,
         };
         // The one place a third-party install authorisation exists. There is no
         // other constructor and nothing here builds one.
@@ -503,6 +549,10 @@ pub async fn thabbit_kharijiya(
         ruqaa = %matlub,
         maktub = natija.adad_maktub,
         muhtafaz = natija.adad_muhtafaz,
+        // Recorded on the run itself, so a game that comes back wrong can be
+        // read against the one fact that would explain it: the build was never
+        // determined and the person went ahead by name.
+        bina_ghayr_muhaddada,
         "a third-party patch was fetched against its pins and installed"
     );
     Ok(natija)
@@ -860,7 +910,7 @@ fn madkhal_bi_huwiya(
 /// One catalogue entry, projected for the game screen.
 fn hie_madkhal(
     madkhal: RuqaaKharijiya,
-    bina_mutabaqa: Option<String>,
+    halat_bina: HalatBina,
     muthabbata: bool,
 ) -> MudkhalKharijiHie {
     MudkhalKharijiHie {
@@ -876,21 +926,26 @@ fn hie_madkhal(
         takhtit: madkhal.takhtit,
         tahdheerat: madkhal.tahdheerat,
         mira: HalatMiraHie::min_asli(&madkhal.mira),
-        bina_mutabaqa,
+        halat_bina,
         muthabbata,
     }
 }
 
 /// The installed build the gate is handed, or the refusal that stands in for it.
 ///
-/// An entry that pins different files to different builds cannot be installed
-/// into a game whose build nobody has measured: `qitaa_li_bina` would select
-/// nothing and the gate would refuse with a build identifier the reader has
-/// never seen. So the case is named here instead, before anything is fetched.
+/// An entry that pins different files to different builds is not installed into
+/// a game whose build nobody determined, unless the person has said in so many
+/// words that they accept exactly that: `qitaa_li_bina` would select nothing and
+/// the gate would refuse with a build identifier the reader has never seen, so
+/// the case is named here instead, before anything is fetched. The escape is
+/// [`thabbit_kharijiya`]'s `iqrar_bina` and is applied there, which is why this
+/// takes no argument for it — a default parameter on a refusal is how a refusal
+/// stops being one.
 ///
 /// An entry that draws no build distinction at all is unaffected — every
 /// artifact applies to every build and the value is never compared against
-/// anything — so a game with no measured build still installs one of those.
+/// anything — so a game with no determined build still installs one of those
+/// with nothing acknowledged.
 fn bina_lil_fahs(
     maqisa: Option<String>,
     ism_luba: &str,
@@ -1482,7 +1537,8 @@ pub enum KhataKharijiAmr {
         qitaa: String,
     },
 
-    /// The installed build could not be measured and the entry needs one.
+    /// The build was never determined, the entry needs one, and the person has
+    /// not said they accept installing without one.
     #[error("the installed build of {ism} is unknown and {unwan} pins files per build")]
     BinaMajhula {
         /// The game.
@@ -1597,8 +1653,9 @@ impl Tafsir for KhataKharijiAmr {
                 format!("لا يحمل هذا المدخل ملفًّا باسم {qitaa}؛ لم يتغيّر شيء.")
             },
             Self::BinaMajhula { ism, unwan } => format!(
-                "«{unwan}» يربط ملفّات مختلفة بأبنية مختلفة، وبناء «{ism}» المثبَّت لم يُقس على \
-                 هذا الجهاز. لا يُجلب شيء ولا يُكتب شيء قبل معرفة البناء."
+                "«{unwan}» يربط ملفّات مختلفة بأبنية مختلفة، ولم يتحدّد أيّ بناء من «{ism}» هو \
+                 المثبَّت على هذا الجهاز. لا يُجلب شيء ولا يُكتب شيء حتى يتحدّد البناء أو تُقرّ \
+                 صراحةً بالتثبيت على بناءٍ لم يتحدّد."
             ),
             Self::BawwabaRafadat { arabi, .. } => arabi.clone(),
             Self::RasdMutaadhdhir { rabt, sabab, .. } => {
@@ -1640,9 +1697,10 @@ impl Tafsir for KhataKharijiAmr {
                 format!("This entry carries no artifact called {qitaa}; nothing was changed.")
             },
             Self::BinaMajhula { ism, unwan } => format!(
-                "{unwan} pins different files to different game builds, and the installed build of \
-                 {ism} has not been measured on this machine. Nothing is fetched and nothing is \
-                 written until the build is known."
+                "{unwan} pins different files to different game builds, and which build of {ism} \
+                 this install is was never determined. Nothing is fetched and nothing is written \
+                 until the build is determined, or until installing for an undetermined build is \
+                 accepted outright."
             ),
             Self::BawwabaRafadat { injilizi, .. } => injilizi.clone(),
             Self::RasdMutaadhdhir { rabt, sabab, .. } => {
@@ -1930,6 +1988,88 @@ mod ikhtibarat {
             Some(taarib_tathbeet::khata::KhataTathbeet::TanzeelMutaadhdhir { ref ism, .. })
                 if ism == "extra.zip"
         ));
+        Ok(())
+    }
+
+    /// What [`super::azil_kharijiya`] does once its managed-state lookups are
+    /// past.
+    ///
+    /// The command itself cannot be called from here: `tauri::State` has a
+    /// private field and no public constructor, so its arguments cannot be built
+    /// outside a running application. What this covers is the rest of the body —
+    /// the lineage string the interface sends parsed back into the identity the
+    /// backup root is named for, the `azil_khariji` call with the `Muhafiza`
+    /// policy the command passes, and the projection its last line performs. The
+    /// three state lookups, the running-game guard and the `spawn_blocking` hop
+    /// around the call are covered by inference only.
+    #[test]
+    fn azil_kharijiya_taqif_ala_nusakh_almudkhal_wahdaha() -> Result<(), Box<dyn std::error::Error>>
+    {
+        use taarib_mustalahat::luba::MasdarLuba;
+        use taarib_tathbeet::bayan::{Muthabbit as _, Tathbeet};
+        use taarib_tathbeet::taraju::SiyasatIstiada;
+
+        use super::{
+            LubaId, NawTathbeet, RuqaaId, RuqaaRevision, TarifLuba, azil_khariji, huwiyat_ruqaa,
+            jidhr_nusakh_khariji, taqreer_izala_hie,
+        };
+
+        let mujallad = tempfile::tempdir()?;
+        let luba = mujallad.path().join("luba");
+        let nusakh = mujallad.path().join("nusakh");
+        std::fs::create_dir_all(&luba)?;
+        std::fs::create_dir_all(&nusakh)?;
+        std::fs::write(luba.join("version.dll"), b"an earlier proxy")?;
+
+        // The interface hands the lineage back as a string, and the directory
+        // this removal opens is named for what that parses to.
+        let id = RuqaaId::jadeeda();
+        assert_eq!(huwiyat_ruqaa(id.to_string())?, id);
+
+        let tarif = TarifLuba {
+            luba: LubaId::min_masdar(&MasdarLuba::Steam(1_174_180), "Red Dead Redemption 2"),
+            masdar: MasdarLuba::Steam(1_174_180),
+            ism: "Red Dead Redemption 2".to_owned(),
+            jidhr: luba.clone(),
+            ruqaa: id,
+            murajaa: RuqaaRevision::AWWAL,
+            basma_bina: None,
+        };
+
+        let mut khariji = Tathbeet::ibda(
+            &jidhr_nusakh_khariji(&nusakh, id),
+            NawTathbeet::Nass,
+            &tarif,
+            id.to_string(),
+        )?;
+        assert!(khariji.ihfaz_wa_ihdhif("version.dll")?);
+        khariji.ansha(&luba.join("dinput8.dll"), b"the patch's own loader")?;
+        drop(khariji);
+
+        // Taarib's own installation, in the same game, under the root a
+        // third-party removal must have no expression for.
+        let mut taarib = Tathbeet::ibda(&nusakh, NawTathbeet::Nass, &tarif, "taarib-nafsuh")?;
+        taarib.ansha(&luba.join("taarib/nusus.ruqaa"), b"Taarib's own package")?;
+        drop(taarib);
+
+        let taqreer = azil_khariji(&luba, &nusakh, id, SiyasatIstiada::Muhafiza)?;
+        let hie = taqreer_izala_hie(taqreer.naw, &taqreer);
+        assert_eq!(hie.luba, "Red Dead Redemption 2");
+        assert_eq!(hie.mustaada, 1);
+        assert_eq!(hie.mahdhufa, 1);
+        assert_eq!(hie.mujalladat_matruka, 0);
+        assert!(hie.mustabdala.is_empty());
+        assert!(hie.nazif);
+
+        assert_eq!(
+            std::fs::read(luba.join("version.dll"))?,
+            b"an earlier proxy"
+        );
+        assert!(!luba.join("dinput8.dll").exists());
+        assert!(
+            luba.join("taarib/nusus.ruqaa").is_file(),
+            "the third-party removal reached into Taarib's own manifest"
+        );
         Ok(())
     }
 

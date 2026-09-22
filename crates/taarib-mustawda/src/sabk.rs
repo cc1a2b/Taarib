@@ -25,7 +25,7 @@ use jiff::{SignedDuration, Timestamp};
 use taarib_aman::qaimat_sahb::KatibQaima;
 use taarib_khatm::MiftahKhass;
 use taarib_mustalahat::bina::Basma;
-use taarib_mustalahat::khariji::{HalatMira, RuqaaKharijiya};
+use taarib_mustalahat::khariji::{FapsBina, HalatMira, RuqaaKharijiya, TahdidBina};
 use taarib_mustalahat::luba::LubaId;
 use taarib_mustalahat::muharrik::{AilatMuharrik, KhalfiyaBarmajiya, Tabaqa};
 use taarib_mustalahat::musahim::MusahimId;
@@ -37,6 +37,8 @@ use taarib_mustalahat::taghtiya::Taghtiya;
 use taarib_ruqaa::qari::MalafRuqaa;
 use taarib_tarqee::irtibat::IrtibatBina;
 use taarib_tarqee::taghtiya_ruqaa::SababAdamAlnashr;
+use taarib_tathbeet::WajhatLuba;
+use taarib_tathbeet::khata::KhataTathbeet;
 
 use crate::fahras::{BayanMustawda, MuhtawaShareeha, TajawuzNashr, shareeha};
 use crate::masadir::{MASAR_BAYAN, masar_salih, masar_shareeha};
@@ -359,11 +361,18 @@ pub fn madkhal_min_huzma(
 /// that a client fetches over `https`, and that a mirrored artifact is served
 /// out of [`MUJALLAD_KHARIJI`] rather than out of the certified release area.
 ///
+/// An entry that declares no way to tell which build an install is passes.
+/// Most will: an author who never said how their numbering relates to a
+/// launcher's has said nothing false, and the client renders that as
+/// `HalatBina::Majhula`. What does not pass is a declaration that is *malformed*
+/// — see [`tahaqquq_faps_bina`].
+///
 /// # Errors
 ///
 /// A sentence naming what stops the entry: the permission it does not have, an
-/// artifact with no pin or an address a client would not fetch, or a mirror
-/// aimed somewhere the registry will not serve it from.
+/// artifact with no pin or an address a client would not fetch, a build probe
+/// aimed outside the game, or a mirror aimed somewhere the registry will not
+/// serve it from.
 pub fn madkhal_khariji(madkhal: RuqaaKharijiya) -> Result<MadkhalKhariji, String> {
     let hawiya = format!("{} ({})", madkhal.unwan, madkhal.id);
     if let Some(sabab) = madkhal.sabab_rafd() {
@@ -387,10 +396,65 @@ pub fn madkhal_khariji(madkhal: RuqaaKharijiya) -> Result<MadkhalKhariji, String
         let _ = tahaqquq_rabt(qitaa.rabt.clone())
             .map_err(|khata| format!("{hawiya}: {:?} — {khata}", qitaa.ism))?;
     }
+    tahaqquq_faps_bina(&hawiya, &madkhal.tahdid_bina)?;
     if let HalatMira::MinAlsijill { rabt } = &madkhal.mira {
         tahaqquq_masar_mira(&hawiya, rabt)?;
     }
     Ok(MadkhalKhariji { madkhal })
+}
+
+/// Refuses a build probe that names a file outside the game.
+///
+/// `FapsBina::MawridIsdar` is a path a client joins onto the game root and
+/// opens, on somebody else's machine, to find out which build they have. A
+/// catalogue entry that could put `..`, a root or a drive letter in it would be
+/// choosing which file on a stranger's disk gets read — so the shape is settled
+/// here, once, on the machine that signs the catalogue, rather than on every
+/// machine that fetched it.
+///
+/// The containment rule is [`WajhatLuba`]'s, which is this workspace's one
+/// answer to "is this a relative path that stays inside a game directory" and
+/// already the only path type `taarib_tathbeet` accepts from a third-party
+/// entry's own archives. `TakhtitKhariji::yasmah` is deliberately *not* reused:
+/// it answers whether a path falls inside what the patch **writes**, and this
+/// path reads a file the **game** shipped — `RDR2.exe` is in no entry's
+/// `yaktub` and never should be.
+///
+/// One clause is spelled here rather than borrowed, and only because of where
+/// this runs. [`WajhatLuba::jadeed`] refuses a drive prefix through
+/// `Component::Prefix`, which a Unix path parser does not produce: `C:/x` walks
+/// as one ordinary component on the Linux machine casting the catalogue and as
+/// a drive on the Windows machine reading it. The colon is refused on every
+/// platform so the caster reaches the reader's verdict — the same rule
+/// `taarib_usus::masarat::dakhil` applies under `cfg(windows)`, evaluated for
+/// the machine the probe will actually run on.
+fn tahaqquq_faps_bina(hawiya: &str, tahdid: &TahdidBina) -> Result<(), String> {
+    let Some(FapsBina::MawridIsdar { masar, .. }) = &tahdid.faps else {
+        return Ok(());
+    };
+    let marfud = |sabab: &str| {
+        Err(format!(
+            "{hawiya}: the build probe names {masar:?}, and {sabab}. That path is joined onto the \
+             player's game directory and read there, so it has to stay inside it."
+        ))
+    };
+    if masar.trim().is_empty() {
+        return marfud("a probe with no path reads nothing while claiming to read a build");
+    }
+    let wajha = match WajhatLuba::jadeed(masar) {
+        Ok(wajha) => wajha,
+        // `WajhatLuba` builds its refusal against an empty root, so the rule it
+        // broke is the only part of it worth repeating here.
+        Err(KhataTathbeet::MasarKharij { sabab, .. }) => return marfud(&sabab),
+        Err(khata) => return marfud(&khata.to_string()),
+    };
+    if wajha.nisbi().contains(':') {
+        return marfud(
+            "a drive-qualified path resolves against that drive's own current directory rather \
+             than against the game",
+        );
+    }
+    Ok(())
 }
 
 /// The repository path one mirrored third-party artifact occupies.
@@ -820,7 +884,7 @@ pub fn min_unix(thawani: i64) -> String {
 mod fahs {
     use std::error::Error;
 
-    use taarib_mustalahat::khariji::HalatMira;
+    use taarib_mustalahat::khariji::{FapsBina, HalatMira, TahdidBina};
     use taarib_mustalahat::ruqaa::{IdhnMasdar, RuqaaId, RuqaaRevision};
     use taarib_tarqee::taghtiya_ruqaa::SababAdamAlnashr;
 
@@ -1154,6 +1218,85 @@ mod fahs {
             .err()
             .ok_or("an entry that fetches nothing installs nothing")?;
         assert!(khata.contains("names no artifact"), "{khata}");
+        Ok(())
+    }
+
+    /// An entry that says nothing about how to tell builds apart still
+    /// publishes. Most third-party entries will say nothing — their authors
+    /// never had a launcher to relate their numbering to — and the client has a
+    /// sentence for that. Refusing them would delete the ordinary case.
+    #[test]
+    fn khariji_yaqbal_madkhalan_bila_tahdid_bina() -> NatijatIkhtibar {
+        let mut badhra = badhrat_rtea();
+        badhra.masdar.idhn = bi_bayan();
+        badhra.tahdid_bina = TahdidBina::default();
+        let madkhal = madkhal_khariji(badhra)?;
+        assert!(madkhal.madkhal().tahdid_bina.faps.is_none());
+        assert!(madkhal.madkhal().tahdid_bina.tanazur.is_empty());
+        Ok(())
+    }
+
+    /// The declaration the seed ships reaches the catalogue intact: this is the
+    /// entry point a malformed one has to get past, so a well-formed one that
+    /// did not survive it would be the same dead feature by another route.
+    #[test]
+    fn khariji_yahmil_faps_albadhra() -> NatijatIkhtibar {
+        let mut badhra = badhrat_rtea();
+        badhra.masdar.idhn = bi_bayan();
+        let madkhal = madkhal_khariji(badhra)?;
+        assert_eq!(
+            madkhal.madkhal().tahdid_bina.faps,
+            Some(FapsBina::MawridIsdar {
+                masar: "RDR2.exe".to_owned(),
+                juz: 2,
+            })
+        );
+        Ok(())
+    }
+
+    /// The path is opened on the player's machine, joined onto their game
+    /// directory, so a declaration that leaves the directory is a catalogue
+    /// picking a file on a stranger's disk. Each of these is refused by name.
+    #[test]
+    fn khariji_yarfud_faps_yakhruj_min_alluba() -> NatijatIkhtibar {
+        for masar in [
+            "",
+            "   ",
+            "../../../etc/passwd",
+            "..\\..\\Windows\\System32\\cmd.exe",
+            "/etc/passwd",
+            "C:/Windows/System32/cmd.exe",
+            "C:\\Windows\\System32\\cmd.exe",
+            "\\\\forge.example\\share\\x.exe",
+        ] {
+            let mut badhra = badhrat_rtea();
+            badhra.masdar.idhn = bi_bayan();
+            badhra.tahdid_bina.faps = Some(FapsBina::MawridIsdar {
+                masar: masar.to_owned(),
+                juz: 2,
+            });
+            let khata = madkhal_khariji(badhra)
+                .err()
+                .ok_or_else(|| format!("{masar:?} must not reach a catalogue"))?;
+            assert!(khata.contains("build probe"), "{masar:?}: {khata}");
+            assert!(khata.contains("stay inside it"), "{masar:?}: {khata}");
+        }
+        Ok(())
+    }
+
+    /// A relative path inside the game is what the probe is for, and refusing
+    /// one would make the refusal above a refusal of the feature.
+    #[test]
+    fn khariji_yaqbal_faps_dakhil_alluba() -> NatijatIkhtibar {
+        for masar in ["RDR2.exe", "bin/Game.exe", "./RDR2.exe", "a\\b\\Game.exe"] {
+            let mut badhra = badhrat_rtea();
+            badhra.masdar.idhn = bi_bayan();
+            badhra.tahdid_bina.faps = Some(FapsBina::MawridIsdar {
+                masar: masar.to_owned(),
+                juz: 2,
+            });
+            let _ = madkhal_khariji(badhra).map_err(|khata| format!("{masar:?}: {khata}"))?;
+        }
         Ok(())
     }
 

@@ -22,6 +22,9 @@
 //! contains, a package is assembled out of `taarib_tarqee::bawwaba::MuhtawaMasmuh`,
 //! and none of these types can become one.
 
+use std::collections::BTreeMap;
+use std::path::Path;
+
 use serde::{Deserialize, Serialize};
 
 use crate::luba::LubaId;
@@ -50,6 +53,14 @@ pub struct RuqaaKharijiya {
     pub hawiyat_manassa: Vec<String>,
     /// Game builds this patch supports, e.g. `["1311", "1436", "1491"]`.
     pub abniya: Vec<String>,
+    /// How those builds relate to what a launcher reports about this install.
+    ///
+    /// Defaulted so that a catalogue written before the field existed keeps
+    /// parsing, and an entry that declares nothing is well-formed: it resolves
+    /// to [`HalatBina::Majhula`], which is the honest answer for a patch whose
+    /// author never said how their numbering maps onto anybody's launcher.
+    #[serde(default, skip_serializing_if = "TahdidBina::samita")]
+    pub tahdid_bina: TahdidBina,
     /// Who made it, where, under what licence, and what permits republishing it.
     pub masdar: MasdarKhariji,
     /// The team name, when the work is a team's.
@@ -141,6 +152,181 @@ impl QitaatTanzeel {
     pub fn basma_salima(&self) -> bool {
         self.sha256.len() == 64 && self.sha256.bytes().all(|harf| harf.is_ascii_hexdigit())
     }
+}
+
+/// How this entry's versions relate to what a launcher reports.
+///
+/// Declared per entry because the relationship is a fact about the game, not
+/// about Taarib. Steam reports a `buildid` that moves whenever the store pushes
+/// anything; a third-party patch pins the game's *own* version, which is a
+/// different number written by a different party. Nothing connects the two
+/// except a statement about that particular title — so a table of titles here
+/// would need editing for every game anyone ever adds, and adding a game would
+/// stop being a data change. The entry declares; this crate resolves.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "wajiha", derive(specta::Type))]
+#[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
+pub struct TahdidBina {
+    /// Launcher build id to the game's own version, when the entry states one.
+    ///
+    /// Keyed by [`crate::bina::BinaId::manassa`] verbatim — Steam's numeric
+    /// `buildid` as text, a GOG build hash, whatever that launcher reports.
+    /// Verbatim because normalising it would mean this crate guessing at a
+    /// launcher's format on the entry's behalf, and an entry that states a
+    /// correspondence it did not verify is worse than one that states none.
+    #[serde(default)]
+    pub tanazur: BTreeMap<String, String>,
+    /// Read the version out of the install itself, when no correspondence hits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub faps: Option<FapsBina>,
+}
+
+/// Where in the install the game's own version is written.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "wajiha", derive(specta::Type))]
+#[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
+#[serde(tag = "naw", rename_all = "snake_case")]
+pub enum FapsBina {
+    /// A Windows executable's version resource, which is how RDR2 is versioned.
+    MawridIsdar {
+        /// The executable, relative to the game root.
+        masar: String,
+        /// Which component of the dotted version carries the build, counting
+        /// from zero: `1.0.1491.50` with `juz: 2` yields `1491`.
+        juz: u8,
+    },
+}
+
+/// Which build an install is, as far as an entry can tell.
+///
+/// Three states rather than a bool, because "I could not tell" and "I can tell,
+/// and no" are different sentences leading to different decisions: the first
+/// leaves room for the reader to proceed anyway as a recorded choice, and the
+/// second is a refusal. Collapsing them is what made every third-party entry
+/// read as incompatible on every install.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "wajiha", derive(specta::Type))]
+#[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
+#[serde(tag = "naw", rename_all = "snake_case")]
+pub enum HalatBina {
+    /// Determined, and the entry pins files for it.
+    Mutabaqa {
+        /// The game's own version, in the entry's numbering.
+        bina: String,
+    },
+    /// Determined, and the entry does not cover it.
+    GhayrMadumma {
+        /// The game's own version, in the entry's numbering.
+        bina: String,
+    },
+    /// Not determined at all.
+    ///
+    /// The reader is told which builds the patch declares and that Taarib could
+    /// not establish which one this install is. Never rendered as a match.
+    Majhula,
+}
+
+impl HalatBina {
+    /// The build that was determined, when one was.
+    #[must_use]
+    pub fn bina(&self) -> Option<&str> {
+        match self {
+            Self::Mutabaqa { bina } | Self::GhayrMadumma { bina } => Some(bina),
+            Self::Majhula => None,
+        }
+    }
+
+    /// Whether the entry covers this install.
+    ///
+    /// The one place the three states are allowed to become two, so that a
+    /// caller cannot accidentally write the comparison that treats
+    /// [`Self::Majhula`] as a match.
+    #[must_use]
+    pub const fn mutabaqa(&self) -> bool {
+        matches!(self, Self::Mutabaqa { .. })
+    }
+}
+
+/// Reads the version a file inside an install declares about itself.
+///
+/// A trait because of where the two halves have to live. This crate is the
+/// shared vocabulary and opens no files; the single reader of a Windows PE
+/// version resource is `taarib_muharrik::dalail::tanfidhi`, which depends on
+/// this crate and documents three separate ways that read is done wrong. Stating
+/// the resolution order here and doing the reading there is the only arrangement
+/// that keeps both of those true without a second PE parser — and it is what
+/// lets [`RuqaaKharijiya::halat_bina`] be tested against a fixture instead of
+/// against whatever happens to be installed on the machine running the tests.
+pub trait QariIsdar {
+    /// The version `masar` declares, or [`None`] when the file is missing,
+    /// unreadable, or carries no version at all.
+    ///
+    /// Never an error. A probe that fails is a build nobody could determine,
+    /// which the card has words for; a card that will not render because a file
+    /// was absent is a dead screen.
+    fn isdar(&self, masar: &Path) -> Option<String>;
+}
+
+impl TahdidBina {
+    /// Whether the entry declares no way at all to identify a build.
+    ///
+    /// Kept off the wire when it says nothing, so a catalogue cast before this
+    /// field existed and one cast after it are byte-identical for every entry
+    /// that declares nothing. A shard's bytes decide its hash, a hash decides
+    /// the manifest, and a manifest that moved makes every client refetch the
+    /// whole catalogue — too much to spend on an empty object.
+    #[must_use]
+    pub fn samita(&self) -> bool {
+        self.tanazur.is_empty() && self.faps.is_none()
+    }
+
+    /// The game's own version for one install, or [`None`] when neither the
+    /// declared correspondence nor the probe answers.
+    ///
+    /// `manassa` is the launcher's build identifier, `jidhr` the game root.
+    /// Both are arguments rather than things this looks up, because a function
+    /// that finds its own inputs cannot be tested against a fixture.
+    #[must_use]
+    pub fn hall(
+        &self,
+        manassa: Option<&str>,
+        jidhr: &Path,
+        qari: &dyn QariIsdar,
+    ) -> Option<String> {
+        if let Some(mubayyan) = manassa.and_then(|manassa| self.tanazur.get(manassa)) {
+            return Some(mubayyan.clone());
+        }
+        self.faps.as_ref()?.iqra(jidhr, qari)
+    }
+}
+
+impl FapsBina {
+    /// The build this probe reads out of the install, when it can.
+    #[must_use]
+    pub fn iqra(&self, jidhr: &Path, qari: &dyn QariIsdar) -> Option<String> {
+        match self {
+            Self::MawridIsdar { masar, juz } => juz_isdar(&qari.isdar(&jidhr.join(masar))?, *juz),
+        }
+    }
+}
+
+/// One component of a version string, counting from zero.
+///
+/// Split on commas as well as dots because a resource compiler's
+/// `FILEVERSION 1,0,0,0` reaches the string field with its commas intact —
+/// `DarkSoulsRemastered.exe`, one of the fixtures the PE reader is pinned
+/// against, declares exactly that — and a reader that only knew dots would find
+/// one component where there are four.
+///
+/// The component has to be a number. A build identifier is one everywhere this
+/// is used, and a component that is not one means the file's version was not the
+/// dotted number the entry expected. Returning it anyway would turn "I read the
+/// wrong field" into [`HalatBina::GhayrMadumma`] — a confident refusal, with the
+/// honest answer and its escape hatch taken away.
+fn juz_isdar(isdar: &str, juz: u8) -> Option<String> {
+    let qeema = isdar.split(['.', ',']).nth(usize::from(juz))?.trim();
+    let raqm = !qeema.is_empty() && qeema.bytes().all(|harf| harf.is_ascii_digit());
+    raqm.then(|| qeema.to_owned())
 }
 
 /// What the install writes and what it must clear first.
@@ -360,6 +546,37 @@ impl RuqaaKharijiya {
         self.abniya.is_empty() || self.abniya.iter().any(|mudam| mudam == bina)
     }
 
+    /// Which build this install is, answered against what this entry declares.
+    ///
+    /// Strictly in this order, and the order is the point:
+    ///
+    /// 1. the correspondence the entry states for `manassa`, the launcher's own
+    ///    build identifier;
+    /// 2. the probe of the game's own files the entry specifies;
+    /// 3. neither — [`HalatBina::Majhula`], which is said plainly rather than
+    ///    defaulted into a match or a refusal.
+    ///
+    /// A stated correspondence wins because somebody verified it for this title
+    /// and this launcher, and a probe reads whatever the publisher last wrote
+    /// into a file. `manassa` and `jidhr` are handed in rather than looked up,
+    /// so the whole resolution is reproducible from a fixture.
+    #[must_use]
+    pub fn halat_bina(
+        &self,
+        manassa: Option<&str>,
+        jidhr: &Path,
+        qari: &dyn QariIsdar,
+    ) -> HalatBina {
+        let Some(bina) = self.tahdid_bina.hall(manassa, jidhr, qari) else {
+            return HalatBina::Majhula;
+        };
+        if self.yadam_bina(&bina) {
+            HalatBina::Mutabaqa { bina }
+        } else {
+            HalatBina::GhayrMadumma { bina }
+        }
+    }
+
     /// The author and team as one credit line, in the author's own spelling.
     ///
     /// Taarib never presents somebody else's work as its own, and the cheapest
@@ -382,8 +599,12 @@ impl RuqaaKharijiya {
 
 #[cfg(test)]
 mod ikhtibarat_khariji {
+    use std::collections::BTreeMap;
+    use std::path::{Path, PathBuf};
+
     use super::{
-        HalatMira, QitaatTanzeel, RuqaaKharijiya, SababRafdKhariji, TahdheerKhariji, TakhtitKhariji,
+        FapsBina, HalatBina, HalatMira, QariIsdar, QitaatTanzeel, RuqaaKharijiya, SababRafdKhariji,
+        TahdheerKhariji, TahdidBina, TakhtitKhariji,
     };
     use crate::luba::{LubaId, MasdarLuba};
     use crate::ruqaa::{IdhnMasdar, MasdarKhariji, RukhsaRuqaa, RuqaaId};
@@ -395,6 +616,7 @@ mod ikhtibarat_khariji {
             luba: LubaId::min_masdar(&MasdarLuba::Steam(1_174_180), "Red Dead Redemption 2"),
             hawiyat_manassa: vec!["Red Dead Redemption 2".to_owned()],
             abniya: vec!["1491".to_owned()],
+            tahdid_bina: TahdidBina::default(),
             masdar: MasdarKhariji {
                 ism: "Emad Adel".to_owned(),
                 rabt: "https://github.com/emadadeldev/rtea".to_owned(),
@@ -534,6 +756,190 @@ mod ikhtibarat_khariji {
         assert!(madkhal.takhtit.yasmah("lml/RTEA/Subtitles/texts/a.yldb"));
         assert!(!madkhal.takhtit.yasmah("lmlx/a.yldb"));
         assert!(!madkhal.takhtit.yasmah("dinput8.dll.bak"));
+    }
+
+    /// A version reader that answers from a table instead of from a disk.
+    ///
+    /// The probe's own reading is pinned in `taarib_muharrik`, against a real PE
+    /// image; what is pinned here is the resolution order around it, which is
+    /// where the decision the card shows is actually made.
+    #[derive(Debug, Default)]
+    struct QariMuallab(BTreeMap<PathBuf, String>);
+
+    impl QariMuallab {
+        fn min(masar: &str, isdar: &str) -> Self {
+            let mut jadwal = BTreeMap::new();
+            let _ = jadwal.insert(PathBuf::from(masar), isdar.to_owned());
+            Self(jadwal)
+        }
+    }
+
+    impl QariIsdar for QariMuallab {
+        fn isdar(&self, masar: &Path) -> Option<String> {
+            self.0.get(masar).cloned()
+        }
+    }
+
+    /// The entry's declaration for RDR2: no correspondence anybody verified, and
+    /// the build read out of the game's own executable.
+    fn tahdid_rtea() -> TahdidBina {
+        TahdidBina {
+            tanazur: BTreeMap::new(),
+            faps: Some(FapsBina::MawridIsdar {
+                masar: "RDR2.exe".to_owned(),
+                juz: 2,
+            }),
+        }
+    }
+
+    fn rtea(tahdid: TahdidBina) -> RuqaaKharijiya {
+        let mut madkhal = madkhal(bi_bayan(), false, HalatMira::MinAlmuallif);
+        madkhal.abniya = vec!["1311".to_owned(), "1436".to_owned(), "1491".to_owned()];
+        madkhal.tahdid_bina = tahdid;
+        madkhal
+    }
+
+    /// A correspondence the entry states is taken before the install is read.
+    ///
+    /// Both would answer here and they answer differently, so the assertion
+    /// cannot pass by accident: the launcher's build id maps to 1436 and the
+    /// executable on disk says 1491.
+    #[test]
+    fn tanazur_yasbiq_alfaps() {
+        let mut tahdid = tahdid_rtea();
+        let _ = tahdid
+            .tanazur
+            .insert("19607346".to_owned(), "1436".to_owned());
+
+        let madkhal = rtea(tahdid);
+        let qari = QariMuallab::min("/luba/RDR2.exe", "1.0.1491.50");
+
+        assert_eq!(
+            madkhal.halat_bina(Some("19607346"), Path::new("/luba"), &qari),
+            HalatBina::Mutabaqa {
+                bina: "1436".to_owned()
+            }
+        );
+    }
+
+    /// With no correspondence for this launcher, the probe answers — and it
+    /// takes the component the entry names, not the first number it meets.
+    #[test]
+    fn faps_yaqra_aljuz_almusamma() {
+        let madkhal = rtea(tahdid_rtea());
+        let qari = QariMuallab::min("/luba/RDR2.exe", "1.0.1491.50");
+
+        assert_eq!(
+            madkhal.halat_bina(Some("19607346"), Path::new("/luba"), &qari),
+            HalatBina::Mutabaqa {
+                bina: "1491".to_owned()
+            }
+        );
+        assert!(
+            madkhal
+                .halat_bina(None, Path::new("/luba"), &qari)
+                .mutabaqa(),
+            "a launcher that reports no build at all still reaches the probe"
+        );
+    }
+
+    /// A version with fewer components than the entry indexes into is not
+    /// determined, rather than answered with whatever component does exist.
+    #[test]
+    fn isdar_qaseer_majhul() {
+        let madkhal = rtea(tahdid_rtea());
+        let qari = QariMuallab::min("/luba/RDR2.exe", "1.0");
+
+        assert_eq!(
+            madkhal.halat_bina(None, Path::new("/luba"), &qari),
+            HalatBina::Majhula
+        );
+    }
+
+    /// An entry that declares nothing resolves to `Majhula`, with a reader
+    /// standing by that would have answered had it been asked.
+    #[test]
+    fn bila_tahdid_majhula() {
+        let madkhal = rtea(TahdidBina::default());
+        let qari = QariMuallab::min("/luba/RDR2.exe", "1.0.1491.50");
+
+        let halat = madkhal.halat_bina(Some("19607346"), Path::new("/luba"), &qari);
+        assert_eq!(halat, HalatBina::Majhula);
+        assert!(halat.bina().is_none());
+        assert!(!halat.mutabaqa());
+    }
+
+    /// A build that was determined and is not in the entry's list is named as
+    /// such. This is the case `Majhula` must never absorb: the reader is being
+    /// told a fact, not told that nothing could be established.
+    #[test]
+    fn bina_maqrua_ghayr_madumma() {
+        let madkhal = rtea(tahdid_rtea());
+        let qari = QariMuallab::min("/luba/RDR2.exe", "1.0.1207.80");
+
+        let halat = madkhal.halat_bina(None, Path::new("/luba"), &qari);
+        assert_eq!(
+            halat,
+            HalatBina::GhayrMadumma {
+                bina: "1207".to_owned()
+            }
+        );
+        assert_eq!(halat.bina(), Some("1207"));
+        assert!(!halat.mutabaqa());
+    }
+
+    /// A probe that answers nothing — the file is not there, or carries no
+    /// version — is not determined either.
+    #[test]
+    fn faps_samit_majhul() {
+        let madkhal = rtea(tahdid_rtea());
+
+        assert_eq!(
+            madkhal.halat_bina(None, Path::new("/luba"), &QariMuallab::default()),
+            HalatBina::Majhula
+        );
+    }
+
+    /// A catalogue written before this field existed still parses, and the entry
+    /// it produces declares nothing.
+    #[test]
+    fn madkhal_bila_tahdid_yufakk() -> Result<(), serde_json::Error> {
+        let mut qadeem = serde_json::to_value(madkhal(bi_bayan(), false, HalatMira::MinAlmuallif))?;
+        if let Some(kaen) = qadeem.as_object_mut() {
+            let _ = kaen.remove("tahdid_bina");
+        }
+        assert!(qadeem.get("tahdid_bina").is_none(), "the field is dropped");
+
+        let mufakkak: RuqaaKharijiya = serde_json::from_value(qadeem)?;
+        assert_eq!(mufakkak.tahdid_bina, TahdidBina::default());
+        assert_eq!(
+            mufakkak.halat_bina(
+                Some("19607346"),
+                Path::new("/luba"),
+                &QariMuallab::min("/luba/RDR2.exe", "1.0.1491.50")
+            ),
+            HalatBina::Majhula
+        );
+        Ok(())
+    }
+
+    /// The wire shape a catalogue author writes, pinned so that the declaration
+    /// and the code that reads it cannot drift apart silently.
+    #[test]
+    fn shakl_tahdid_alwire() -> Result<(), serde_json::Error> {
+        let mut tahdid = tahdid_rtea();
+        let _ = tahdid
+            .tanazur
+            .insert("19607346".to_owned(), "1436".to_owned());
+
+        assert_eq!(
+            serde_json::to_value(&tahdid)?,
+            serde_json::json!({
+                "tanazur": { "19607346": "1436" },
+                "faps": { "naw": "mawrid_isdar", "masar": "RDR2.exe", "juz": 2 }
+            })
+        );
+        Ok(())
     }
 
     /// A pin that is not a digest cannot match any file, so it is caught as a
