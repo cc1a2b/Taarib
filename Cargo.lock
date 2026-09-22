@@ -6036,6 +6036,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
  "tauri-specta",
+ "tempfile",
  "thiserror 2.0.20",
  "tokio",
  "tracing",
@@ -6084,6 +6085,7 @@ dependencies = [
  "sysinfo",
  "taarib-khatm",
  "taarib-usus",
+ "tempfile",
  "thiserror 2.0.20",
  "tokio",
 ]
@@ -6106,6 +6108,7 @@ name = "taarib-taqdeem"
 version = "1.0.1"
 dependencies = [
  "git2",
+ "hex",
  "jiff",
  "reqwest 0.12.28",
  "serde",
@@ -6119,6 +6122,7 @@ dependencies = [
  "taarib-tarqee",
  "taarib-tathbeet",
  "taarib-usus",
+ "tempfile",
  "thiserror 2.0.20",
  "tokio",
  "tokio-util",

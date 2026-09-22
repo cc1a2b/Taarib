@@ -92,6 +92,9 @@ export const HADATH_FAHS_MUHARRIK = 'taarib://fahs-muharrik';
  */
 export const HADATH_JAWLA_MUHARRIK = 'taarib://jawla-muharrik';
 
+/** The window event the launch-time update check raises when a newer version is offered; payload is a `HalatTahdith` in its `mutah` case. */
+export const HADATH_TAHDITH_MUTAH = 'taarib://tahdith-mutah';
+
 /**
  * The command surface: the name the backend registered, and the names its
  * parameters were declared under, in the order Rust declared them.
@@ -184,6 +187,12 @@ interface TartibWusata {
   readonly allaq_muraja: ['ruqaa', 'nass', 'matn'];
   readonly qarrir_muraja: ['ruqaa', 'ijra', 'sabab'];
   readonly iaatimad_muraja: ['ruqaa'];
+  // Approving seals a package on this machine; these two are the step that puts
+  // it in the registry, which is the only thing that makes it installable by
+  // anybody else.
+  readonly halat_nashr_mustawda: [];
+  readonly tajawuz_nashr: ['ruqaa', 'sabab'];
+  readonly unshur_mustawda: [];
   readonly sijill_muraja_kull: [];
   readonly sandooq_thabbit: ['ruqaa', 'muarrif'];
   readonly sandooq_atliq: ['ruqaa', 'muarrif'];

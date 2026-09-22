@@ -45,6 +45,7 @@ pub mod khata;
 pub mod masadir;
 pub mod mujtama;
 pub mod mutabaqa;
+pub mod sabk;
 pub mod sahb;
 pub mod sumaa;
 pub mod tanzeel;
@@ -69,6 +70,9 @@ pub use mujtama::{
 pub use mutabaqa::{
     IdafatIrtibat, MutabaqatLuba, MutabaqatRuqaa, MutabiqBina, SababGhayrTawafuq, afdal,
     ghayr_mutawafiqa, mutawafiqa,
+};
+pub use sabk::{
+    KhiyaratSabk, MadkhalManshur, Mulghayat, Mustawda, ijri, madkhal_min_huzma, rabt_asl,
 };
 pub use sahb::{NatijatTajdid, jaddid_qaimat_sahb, jaddid_qaimat_sahb_bi_bayan};
 pub use sumaa::{AdadMuraja, HalatSumaa, MulakhkhasSumaa, TaqyeemManshur, ijma};

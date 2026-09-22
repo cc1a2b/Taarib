@@ -603,8 +603,27 @@ export const commands = {
 	hala: string,
 	/**  The state, in Arabic. */
 	hala_arabi: string,
+	/**  The same, in English. */
+	hala_injilizi: string,
 	/**  Whether the contributor may still edit it. */
 	qabila_lil_tahreer: boolean,
+	/**
+	 *  The owner decisions this state accepts, by the stable keys
+	 *  [`taarib_taqdeem::muraja::NawIjraMuraja::ramz`] names them with — the
+	 *  same keys [`qarrir_muraja`] dispatches on.
+	 * 
+	 *  Sent rather than left for the interface to work out. The console draws
+	 *  one control per decision, and the only thing that knows which decisions
+	 *  a state accepts is the state machine that refuses the rest; deriving the
+	 *  set again in TypeScript would be a second copy of that machine, and a
+	 *  second copy is exactly what offered *Approve* on a published submission
+	 *  until the owner pressed it and got `TAARIB-E-9068`. It travels on the
+	 *  submission rather than as a query of its own so that the set and the
+	 *  state it belongs to can never be one refetch apart: both decision
+	 *  commands answer with this record, so the controls change in the same
+	 *  render as the state that changed them.
+	 */
+	afal_mutaha: string[],
 	/**  The package size, bytes. */
 	hajm_huzma: number,
 	/**  The package hash, abbreviated. */
@@ -710,8 +729,18 @@ export const commands = {
 	 */
 	qarrirMuraja: (ruqaa: string, ijra: string, sabab: string) => typedError<MusawwadaHie, Khata>(__TAURI_INVOKE("qarrir_muraja", { ruqaa, ijra, sabab })),
 	/**
-	 *  Approves a submission, signs it with the owner key, and publishes it into
-	 *  this machine's release area and listing index.
+	 *  Approves a submission and seals it with the owner key.
+	 * 
+	 *  It does **not** reach the registry here. The sealed package is written into
+	 *  this machine's publications directory and recorded in the publication
+	 *  ledger, and the submission stops at `mawafaq_yunshar` — approved, awaiting
+	 *  the cast. [`unshur_mustawda`] is what puts it where another user can install
+	 *  it, and only that marks it published.
+	 * 
+	 *  This used to end at `manshura`, with a listing whose download address was a
+	 *  path on this disk. Nothing had been sent anywhere, so the one thing the word
+	 *  promises — that somebody else can install it — was the one thing it did not
+	 *  mean.
 	 * 
 	 *  # Errors
 	 * 
@@ -720,6 +749,57 @@ export const commands = {
 	 *  transition's own refusal, and whatever signing or the stores raise.
 	 */
 	iaatimadMuraja: (ruqaa: string) => typedError<MusawwadaHie, Khata>(__TAURI_INVOKE("iaatimad_muraja", { ruqaa })),
+	/**
+	 *  Where the owner's approved catalogue stands against the registry.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataTaqdeemAmr::MalikFaqat`] without the owner key,
+	 *  [`KhataTaqdeemAmr::MustawdaGhayrMafhum`] when the configured registry source
+	 *  is not a repository address, and whatever the ledger raises.
+	 */
+	halatNashrMustawda: () => typedError<HalatNashrMustawdaHie, Khata>(__TAURI_INVOKE("halat_nashr_mustawda")),
+	/**
+	 *  Records the owner's reason for publishing one approved package over its own
+	 *  coverage gate's refusal.
+	 * 
+	 *  The gate is the package's own verdict about how much of the game it
+	 *  measured, and it is a different question from whether the owner accepts the
+	 *  translation: a patch nobody captured the opening of refuses itself however
+	 *  good it is. Without this, such a package would be approved, sealed and
+	 *  permanently unpublishable. The sentence is written into the manifest beside
+	 *  the gate's own reasons, where every reader of the catalogue sees it.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataTaqdeemAmr::MalikFaqat`] without the owner key,
+	 *  [`KhataTaqdeemAmr::SababFarigh`] for an empty sentence,
+	 *  [`KhataTaqdeemAmr::TaqdeemGhayrMawjud`] when the ledger has no such entry,
+	 *  and whatever the ledger raises.
+	 */
+	tajawuzNashr: (ruqaa: string, sabab: string) => typedError<HalatNashrMustawdaHie, Khata>(__TAURI_INVOKE("tajawuz_nashr", { ruqaa, sabab })),
+	/**
+	 *  Casts the owner's approved catalogue into the registry and pushes it.
+	 * 
+	 *  This is what makes an approved patch installable by anybody else, and it is
+	 *  the only thing that moves a submission to `manshura`. Everything it writes
+	 *  locally — the catalogue index, the ledger's sequence numbers, the state
+	 *  transitions — is written after the push returns, so a run that fails at any
+	 *  point leaves every submission saying it is approved and not published, and
+	 *  the same run is simply made again.
+	 * 
+	 *  # Errors
+	 * 
+	 *  [`KhataTaqdeemAmr::MalikFaqat`] without the owner key,
+	 *  [`KhataTaqdeemAmr::LaShayLilNashr`] with an empty ledger,
+	 *  [`KhataTaqdeemAmr::MustawdaGhayrMafhum`] when the configured registry source
+	 *  is not a repository address, [`KhataTaqdeemAmr::IrsalGhayrMuhayya`] with no
+	 *  client identifier, [`KhataTaqdeemAmr::TawthiqNaqis`] with no token and no
+	 *  device authorization in flight, and
+	 *  `KhataTaqdeem::NashrMustawdaFashil` naming the step the cast or the push
+	 *  failed at.
+	 */
+	unshurMustawda: () => typedError<NashrMustawdaHie, Khata>(__TAURI_INVOKE("unshur_mustawda")),
 	/**
 	 *  The whole audit log, newest first.
 	 * 
@@ -997,30 +1077,19 @@ export const commands = {
 	 */
 	idmijMusharaka: (basma: string, khiyarat: KhiyaratMusharakaHie) => typedError<TaqreerIstiradHie, Khata>(__TAURI_INVOKE("idmij_musharaka", { basma, khiyarat })),
 	/**
-	 *  Whether a newer version is offered for this build on its channel.
+	 *  What the channel offers this build, if anything.
 	 * 
-	 *  Answers `None` when this build is current, which is the ordinary case and
-	 *  not a failure.
+	 *  Answers [`HalatTahdith::Ahdath`] when this build is current and
+	 *  [`HalatTahdith::GhayrManshura`] when no source carries a channel manifest at
+	 *  all — both ordinary states, neither a failure.
 	 * 
 	 *  # Errors
 	 * 
-	 *  Whatever the channel, its signature, or the version comparison refuses —
+	 *  Whatever the transport, the signature, or the version comparison refuses —
 	 *  including a channel signed by the development key under a release build,
 	 *  which is refused by name.
 	 */
-	tahaqquqTahdith: () => typedError<{
-	/**  The version being offered. */
-	isdar: string,
-	/**  Its size in bytes. */
-	hajm: number,
-	/**  Which channel it came from. */
-	qanat: string,
-	/**
-	 *  Whether this installation can replace itself, or a package manager owns
-	 *  it and the user updates from there.
-	 */
-	qabil_lil_tabdil: boolean,
-} | null, Khata>(__TAURI_INVOKE("tahaqquq_tahdith")),
+	tahaqquqTahdith: () => typedError<HalatTahdith, Khata>(__TAURI_INVOKE("tahaqquq_tahdith")),
 	/**
 	 *  Downloads the offered update, verifies it, and stages the swap.
 	 * 
@@ -1030,8 +1099,10 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Whatever the channel, the download, the hash check, the free-space check or
-	 *  the swap refuses. A package-manager installation is refused by name.
+	 *  [`taarib_tahdith::KhataTahdith::QanatGhayrManshura`] when no source carries
+	 *  a channel manifest, and whatever the channel, the download, the hash check,
+	 *  the free-space check or the swap refuses. A package-manager installation is
+	 *  refused by name.
 	 */
 	nazzilTahdith: () => typedError<string, Khata>(__TAURI_INVOKE("nazzil_tahdith")),
 	/**
@@ -1899,6 +1970,32 @@ export type HalatMuzawwidinHie =
 /**  The default names a disabled or deleted provider, so another one is used — and billed. */
 "badeel";
 
+/**  Where the owner's catalogue stands against the registry. */
+export type HalatNashrMustawdaHie = {
+	/**  The repository the catalogue is pushed to. */
+	rabt_mustawda: string,
+	/**  The branch it is served from. */
+	far: string,
+	/**
+	 *  The settings field that has to be filled before a publish can run, when
+	 *  one is missing.
+	 */
+	naqis: string | null,
+	/**
+	 *  Whether a forge token is already stored, so the publish will not stop to
+	 *  ask for a device code.
+	 */
+	muwaththaq: boolean,
+	/**  Approved packages the registry does not have. */
+	muaallaqa: SatrMuaallaqHie[],
+	/**  How many listings the catalogue already carries. */
+	adad_manshura: number,
+	/**  How many lineages the revocation list carries. */
+	adad_mulghayat: number,
+	/**  The highest manifest sequence this machine has published at. */
+	akhir_tasalsul: number | null,
+};
+
 /**  Whether the string file read whole — three states no screen may confuse. */
 export type HalatNususHie = 
 /**  No file, or no rows: nothing has been extracted yet. */
@@ -1953,6 +2050,46 @@ export type HalatSawt =
 "mutabbaqa" | 
 /**  A pack is installed and a newer revision exists. */
 "tahdith";
+
+/**
+ *  What an update check found.
+ * 
+ *  Four answers rather than an offer and an error, because the three that are
+ *  not an offer have nothing in common. A channel nobody has published, a
+ *  machine that was told never to touch the network, and a connection that
+ *  broke are three different facts with three different remedies, and the
+ *  update check used to report the first two as the third: opening Settings on
+ *  a registry with no `tahdith.json` produced `TAARIB-E-8100`, "the update
+ *  channel could not be reached", over a request that had been answered.
+ */
+export type HalatTahdith = 
+/**
+ *  No source is configured to ask — offline mode, with no local copy of the
+ *  registry to read instead.
+ */
+{ hala: "ghayr_muttasil" } | 
+/**
+ *  Every configured source answered, and none of them carries a channel
+ *  manifest.
+ */
+{ hala: "ghayr_manshura"; 
+/**  The sources that were asked. */
+masdar: string } | 
+/**  The channel carries nothing newer for this build. */
+{ hala: "ahdath" } | 
+/**  A newer version is offered. */
+{ hala: "mutah"; 
+/**  The version being offered. */
+isdar: string; 
+/**  Its size in bytes. */
+hajm: number; 
+/**  Which channel it came from. */
+qanat: string; 
+/**
+ *  Whether this installation can replace itself, or a package manager
+ *  owns it and the user updates from there.
+ */
+qabil_lil_tabdil: boolean };
 
 /**  Where a translation stands, as its page states. */
 export type HalatTarjamaMujtama = 
@@ -2361,7 +2498,18 @@ export type IdadatManassat = {
 
 /**  Registry sources. */
 export type IdadatMasadir = {
-	/**  The canonical registry repository. */
+	/**
+	 *  The canonical registry repository, as a **content root**: documents are
+	 *  read by joining a repository path straight onto it, so the value is the
+	 *  forge's raw-content endpoint and not a repository's web page.
+	 * 
+	 *  Reading is the only thing this field is for. Submission needs the same
+	 *  repository spelled as a forge address, and deriving one from the other
+	 *  used to be the whole of it — which is why [`Self::mustawda_taqdeem`]
+	 *  exists: a root that is not a `raw.githubusercontent.com` address is a
+	 *  perfectly good place to read a registry from and tells a submission
+	 *  nothing, and there was no field to say so in.
+	 */
 	rasmi: string,
 	/**  Mirrors, tried in order when the canonical source is unreachable. */
 	maraya: string[],
@@ -2370,6 +2518,22 @@ export type IdadatMasadir = {
 	 *  make the whole product work with no internet at all.
 	 */
 	mahalliya: string[],
+	/**
+	 *  The forge address submissions are opened against, when it is not the one
+	 *  [`Self::rasmi`] spells.
+	 * 
+	 *  Absent is the ordinary case and means "the repository `rasmi` names":
+	 *  the two forms of a GitHub root, `https://github.com/<owner>/<repo>` and
+	 *  `https://raw.githubusercontent.com/<owner>/<repo>/<ref>`, both resolve
+	 *  to the same owner and repository, and the raw form carries the branch
+	 *  besides. Setting this is for the registry that is read from somewhere
+	 *  a forge address cannot be read out of — a self-hosted mirror, a CDN, a
+	 *  directory server — and whose submissions still belong on a forge.
+	 * 
+	 *  [`Self::unwan_mustawda`] resolves the pair, and is the only thing that
+	 *  should: nothing else may decide what a registry's forge address is.
+	 */
+	mustawda_taqdeem: string | null,
 	/**
 	 *  The forge OAuth client identifier for device-flow submission; absent
 	 *  until the registry operator provisions one, and submission stays a
@@ -2563,6 +2727,17 @@ export type IntiqalHie = {
 	min: string,
 	/**  The state it entered. */
 	ila: string,
+	/**
+	 *  That state as a person reads it, in Arabic.
+	 * 
+	 *  Beside the key because the Contributions screen draws this trail, and a
+	 *  contributor reading their own submission's history was being shown
+	 *  `mawafaq_yunshar` — a record key, in a list of things that happened to
+	 *  their work.
+	 */
+	ila_arabi: string,
+	/**  The same, in English. */
+	ila_injilizi: string,
 	/**  When, RFC 3339. */
 	waqt: string,
 };
@@ -3641,6 +3816,8 @@ export type MusahamaHie = {
 	unwan: string,
 	/**  The state, in Arabic. */
 	hala_arabi: string,
+	/**  The same, in English. */
+	hala_injilizi: string,
 	/**  Whether it has stopped moving. */
 	nihaiya: boolean,
 	/**  When the draft was started, RFC 3339. */
@@ -3673,8 +3850,27 @@ export type MusawwadaHie = {
 	hala: string,
 	/**  The state, in Arabic. */
 	hala_arabi: string,
+	/**  The same, in English. */
+	hala_injilizi: string,
 	/**  Whether the contributor may still edit it. */
 	qabila_lil_tahreer: boolean,
+	/**
+	 *  The owner decisions this state accepts, by the stable keys
+	 *  [`taarib_taqdeem::muraja::NawIjraMuraja::ramz`] names them with — the
+	 *  same keys [`qarrir_muraja`] dispatches on.
+	 * 
+	 *  Sent rather than left for the interface to work out. The console draws
+	 *  one control per decision, and the only thing that knows which decisions
+	 *  a state accepts is the state machine that refuses the rest; deriving the
+	 *  set again in TypeScript would be a second copy of that machine, and a
+	 *  second copy is exactly what offered *Approve* on a published submission
+	 *  until the owner pressed it and got `TAARIB-E-9068`. It travels on the
+	 *  submission rather than as a query of its own so that the set and the
+	 *  state it belongs to can never be one refetch apart: both decision
+	 *  commands answer with this record, so the controls change in the same
+	 *  render as the state that changed them.
+	 */
+	afal_mutaha: string[],
 	/**  The package size, bytes. */
 	hajm_huzma: number,
 	/**  The package hash, abbreviated. */
@@ -3803,6 +3999,25 @@ export type MuzawwidWarshaHie = {
 	wasf_arabi: string,
 	/**  The same sentence in English. */
 	wasf_injilizi: string,
+};
+
+/**  What one publish put in the registry. */
+export type NashrMustawdaHie = {
+	/**  The manifest sequence the catalogue now sits at. */
+	tasalsul: number,
+	/**  The commit that was pushed. */
+	iltizam: string,
+	/**  The branch it was pushed to. */
+	far: string,
+	/**  Every listing now served, with its download address. */
+	manshura: SatrManshurHie[],
+	/**
+	 *  Every approved package the cast refused, still approved and still
+	 *  unpublished.
+	 */
+	marfuda: SatrMarfudHie[],
+	/**  How many revocations the pushed list carries. */
+	adad_mulghayat: number,
 };
 
 /**  One machine-translation outcome for one string. */
@@ -4393,6 +4608,43 @@ export type SatrFahsHie = {
 	adad: number,
 };
 
+/**  One listing the cast put in the catalogue. */
+export type SatrManshurHie = {
+	/**  The patch lineage. */
+	ruqaa: string,
+	/**  The revision now served. */
+	murajaa: number,
+	/**  The patch title. */
+	unwan: string,
+	/**  The address a client downloads it from. */
+	rabt: string,
+};
+
+/**  One approved package the cast would not take. */
+export type SatrMarfudHie = {
+	/**  The patch lineage. */
+	ruqaa: string,
+	/**  What the cast said about it. */
+	sabab: string,
+};
+
+/**  One approved package the registry does not have yet. */
+export type SatrMuaallaqHie = {
+	/**  The patch lineage. */
+	ruqaa: string,
+	/**  The revision that was approved. */
+	murajaa: number,
+	/**  The game's title. */
+	ism_luba: string,
+	/**  When the owner approved it, RFC 3339. */
+	waqt: string,
+	/**
+	 *  The owner's written reason for publishing it over its own coverage
+	 *  gate's refusal, when one was recorded.
+	 */
+	tajawuz: string | null,
+};
+
 /**  One measured line of the preview. */
 export type SatrMuayanaHie = {
 	/**  The text of the line. */
@@ -4923,21 +5175,6 @@ export type TahdheerMusharakaHie = {
 	arabi: string,
 	/**  The same warning in English, verbatim from the crate. */
 	injilizi: string,
-};
-
-/**  What the interface draws when an update is offered. */
-export type TahdithHie = {
-	/**  The version being offered. */
-	isdar: string,
-	/**  Its size in bytes. */
-	hajm: number,
-	/**  Which channel it came from. */
-	qanat: string,
-	/**
-	 *  Whether this installation can replace itself, or a package manager owns
-	 *  it and the user updates from there.
-	 */
-	qabil_lil_tabdil: boolean,
 };
 
 /**  One overflow-report row, worst first. */

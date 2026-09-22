@@ -106,6 +106,8 @@ export const mafatih = {
   muraja: (ruqaa: string) => ['muraja', ruqaa] as const,
   /** The whole audit log. */
   sijill_muraja: ['sijill_muraja'] as const,
+  /** Where the owner's approved catalogue stands against the registry. */
+  nashr_mustawda: ['nashr_mustawda'] as const,
   /** The requests board. */
   talabat: ['talabat'] as const,
   /** One game's open request count. */

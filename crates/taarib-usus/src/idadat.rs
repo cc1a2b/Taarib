@@ -184,7 +184,7 @@ impl DhuMukhattat for Idadat {
     /// tree carries no serde defaults, for the reasons on [`Idadat`], so a field
     /// added without moving this number turns every existing file into a
     /// refusal.
-    const ISDAR: u32 = 2;
+    const ISDAR: u32 = 3;
 
     fn hijra(min: u32, qeema: Value) -> Natija<Value> {
         match min {
@@ -196,6 +196,21 @@ impl DhuMukhattat for Idadat {
                 "istibdal_lugha_rasmiya",
                 Value::Bool(false),
             )),
+            // `masadir.mustawda_taqdeem` — the forge address submission opens
+            // against, which used to be derived from the content root and could
+            // not be stated. Null means "the repository `rasmi` names", which is
+            // what every existing file meant already: a settings file that was
+            // reading a registry keeps reading it, and one whose root a forge
+            // address cannot be read out of gains somewhere to say so instead
+            // of a refusal with no field to fix.
+            2 => {
+                let mut qeema = qeema;
+                if let Some(masadir) = qeema.get_mut("masadir") {
+                    *masadir =
+                        mukhattat::adif_iftiradi(masadir.take(), "mustawda_taqdeem", Value::Null);
+                }
+                Ok(qeema)
+            },
             _ => Err(Khata::min_tafsir(&mukhattat::KhataMukhattat::HijraNaqisa {
                 ism: Self::ISM,
                 min,
@@ -647,13 +662,36 @@ impl HalatMuzawwidin {
 #[cfg_attr(feature = "mukhattatat", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct IdadatMasadir {
-    /// The canonical registry repository.
+    /// The canonical registry repository, as a **content root**: documents are
+    /// read by joining a repository path straight onto it, so the value is the
+    /// forge's raw-content endpoint and not a repository's web page.
+    ///
+    /// Reading is the only thing this field is for. Submission needs the same
+    /// repository spelled as a forge address, and deriving one from the other
+    /// used to be the whole of it — which is why [`Self::mustawda_taqdeem`]
+    /// exists: a root that is not a `raw.githubusercontent.com` address is a
+    /// perfectly good place to read a registry from and tells a submission
+    /// nothing, and there was no field to say so in.
     pub rasmi: String,
     /// Mirrors, tried in order when the canonical source is unreachable.
     pub maraya: Vec<String>,
     /// Local directories and network shares that carry a registry copy, which
     /// make the whole product work with no internet at all.
     pub mahalliya: Vec<PathBuf>,
+    /// The forge address submissions are opened against, when it is not the one
+    /// [`Self::rasmi`] spells.
+    ///
+    /// Absent is the ordinary case and means "the repository `rasmi` names":
+    /// the two forms of a GitHub root, `https://github.com/<owner>/<repo>` and
+    /// `https://raw.githubusercontent.com/<owner>/<repo>/<ref>`, both resolve
+    /// to the same owner and repository, and the raw form carries the branch
+    /// besides. Setting this is for the registry that is read from somewhere
+    /// a forge address cannot be read out of — a self-hosted mirror, a CDN, a
+    /// directory server — and whose submissions still belong on a forge.
+    ///
+    /// [`Self::unwan_mustawda`] resolves the pair, and is the only thing that
+    /// should: nothing else may decide what a registry's forge address is.
+    pub mustawda_taqdeem: Option<String>,
     /// The forge OAuth client identifier for device-flow submission; absent
     /// until the registry operator provisions one, and submission stays a
     /// local handoff that says so.
@@ -683,12 +721,107 @@ impl Default for IdadatMasadir {
             rasmi: "https://raw.githubusercontent.com/cc1a2b/taarib-registry/main".to_owned(),
             maraya: vec!["https://cdn.jsdelivr.net/gh/cc1a2b/taarib-registry@main".to_owned()],
             mahalliya: Vec::new(),
+            // The default root is a GitHub raw address, so the forge address is
+            // read out of it and there is nothing here to keep in step with it.
+            mustawda_taqdeem: None,
             muarrif_amil: None,
             rabt_tajheez: None,
             fatra_tahdith: 180,
             wadaa_ghayr_muttasil: false,
         }
     }
+}
+
+/// A registry repository as a forge names it.
+///
+/// Produced only by [`IdadatMasadir::unwan_mustawda`], so the question "which
+/// repository do submissions go to" has exactly one answer in the product.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnwanMustawda {
+    /// The account or organisation the repository is under.
+    pub malik: String,
+    /// The repository name.
+    pub mustawda: String,
+    /// The branch a submission is opened against.
+    pub far: String,
+}
+
+/// The branch a forge address with no branch in it means.
+const FAR_IFTIRADI: &str = "main";
+
+/// The prefix a raw-content root carries when the ref is fully qualified.
+const BADIYAT_MARJI: &str = "refs/heads/";
+
+impl IdadatMasadir {
+    /// The forge repository submissions are opened against, or [`None`] when
+    /// neither address says.
+    ///
+    /// [`Self::mustawda_taqdeem`] wins when it is set; otherwise the answer is
+    /// read out of [`Self::rasmi`]. Both fields accept either spelling of a
+    /// GitHub repository, so a value that reads a registry correctly also
+    /// submits to it correctly, and a value that cannot mean a forge — a CDN, a
+    /// directory server, a self-hosted mirror — answers [`None`] instead of a
+    /// guess.
+    ///
+    /// [`None`] is the caller's refusal to raise, and it is knowable from a
+    /// string in settings: nothing here touches a network, so a malformed
+    /// address must be refused before one is.
+    #[must_use]
+    pub fn unwan_mustawda(&self) -> Option<UnwanMustawda> {
+        self.mustawda_taqdeem
+            .as_deref()
+            .map(str::trim)
+            .filter(|nass| !nass.is_empty())
+            .map_or_else(|| fakk_unwan(self.rasmi.trim()), fakk_unwan)
+    }
+}
+
+/// Reads a GitHub repository out of either spelling of its address.
+///
+/// `https://github.com/<owner>/<repo>` — optionally with `.git` or a trailing
+/// slash — is the repository's own address and carries no branch, so the
+/// default one is assumed. `https://raw.githubusercontent.com/<owner>/<repo>/<ref>`
+/// is the raw-content root the registry client reads from and carries the
+/// branch besides, which is the one piece of information the forge form is
+/// missing.
+fn fakk_unwan(nass: &str) -> Option<UnwanMustawda> {
+    let nass = nass.trim_end_matches('/');
+    if let Some(baqi) = nass.strip_prefix("https://github.com/") {
+        let baqi = baqi.strip_suffix(".git").unwrap_or(baqi);
+        let (malik, mustawda) = baqi.split_once('/')?;
+        return juz_unwan(malik, mustawda, FAR_IFTIRADI);
+    }
+
+    let baqi = nass.strip_prefix("https://raw.githubusercontent.com/")?;
+    let (malik, baqi) = baqi.split_once('/')?;
+    let (mustawda, marji) = baqi.split_once('/')?;
+    // Everything after the repository is the ref — but only a fully qualified
+    // one says so about a remainder with slashes in it. Bare `main/sahb` is a
+    // root pointing into a subdirectory just as plausibly as a branch named
+    // with a slash, and a submission opened against the wrong base branch is
+    // worse than one that asks to be told the forge address.
+    let far = match marji.strip_prefix(BADIYAT_MARJI) {
+        Some(far) => far,
+        None if marji.contains('/') => return None,
+        None => marji,
+    };
+    juz_unwan(malik, mustawda, far)
+}
+
+/// The three parts, once each has been checked for the things that make an
+/// address unusable rather than merely unfamiliar.
+fn juz_unwan(malik: &str, mustawda: &str, far: &str) -> Option<UnwanMustawda> {
+    let salih = |juz: &str| {
+        !juz.is_empty() && !juz.contains('/') && !juz.bytes().any(|bayt| bayt.is_ascii_whitespace())
+    };
+    if !salih(malik) || !salih(mustawda) || far.is_empty() || far.contains(char::is_whitespace) {
+        return None;
+    }
+    Some(UnwanMustawda {
+        malik: malik.to_owned(),
+        mustawda: mustawda.to_owned(),
+        far: far.to_owned(),
+    })
 }
 
 /// Self-update behaviour.
@@ -1143,10 +1276,162 @@ khata_min!(KhataIdadat);
 
 #[cfg(test)]
 mod ikhtibarat {
+    use serde_json::{Value, json};
+
     use super::{
-        HalatMuzawwidin, Idadat, IdadatMuzawwid, IdadatMuzawwidin, MUARRIF_GOOGLE_MAJJANI,
-        NAMUDHAJ_GOOGLE_MAJJANI, NawMuzawwid,
+        HalatMuzawwidin, Idadat, IdadatMasadir, IdadatMuzawwid, IdadatMuzawwidin,
+        MUARRIF_GOOGLE_MAJJANI, NAMUDHAJ_GOOGLE_MAJJANI, NawMuzawwid,
     };
+    use crate::mukhattat::DhuMukhattat as _;
+
+    /// What every test here answers with, so a fixture failure propagates with
+    /// `?`. `unwrap` and `expect` are denied workspace-wide, tests included.
+    type NatijatIkhtibar<T = ()> = Result<T, Box<dyn std::error::Error>>;
+
+    fn masadir(rasmi: &str, taqdeem: Option<&str>) -> IdadatMasadir {
+        IdadatMasadir {
+            rasmi: rasmi.to_owned(),
+            mustawda_taqdeem: taqdeem.map(str::to_owned),
+            ..IdadatMasadir::default()
+        }
+    }
+
+    /// Both spellings of a GitHub root resolve to the same repository, and the
+    /// raw one — the form the registry client and the update channel are
+    /// actually read from — carries the branch the other has to assume.
+    #[test]
+    fn kilta_sighatay_al_unwan_tuhallan() -> NatijatIkhtibar {
+        let khaam = masadir(
+            "https://raw.githubusercontent.com/cc1a2b/taarib-registry/main",
+            None,
+        )
+        .unwan_mustawda()
+        .ok_or("the shipped default did not resolve")?;
+        assert_eq!(khaam.malik, "cc1a2b");
+        assert_eq!(khaam.mustawda, "taarib-registry");
+        assert_eq!(khaam.far, "main");
+
+        for nass in [
+            "https://github.com/cc1a2b/taarib-registry",
+            "https://github.com/cc1a2b/taarib-registry/",
+            "https://github.com/cc1a2b/taarib-registry.git",
+        ] {
+            let unwan = masadir(nass, None)
+                .unwan_mustawda()
+                .ok_or_else(|| format!("{nass} did not resolve"))?;
+            assert_eq!(unwan.malik, "cc1a2b");
+            assert_eq!(unwan.mustawda, "taarib-registry");
+            assert_eq!(unwan.far, "main", "a web address carries no branch");
+        }
+
+        let far = masadir(
+            "https://raw.githubusercontent.com/cc1a2b/taarib-registry/refs/heads/tajribi",
+            None,
+        )
+        .unwan_mustawda()
+        .ok_or("a fully qualified ref did not resolve")?;
+        assert_eq!(far.far, "tajribi");
+        Ok(())
+    }
+
+    /// A root a forge address cannot be read out of is refused, not guessed at
+    /// — and the explicit field is what makes that refusal fixable.
+    #[test]
+    fn jidhr_la_yadull_ala_manassa_yurfad_wa_yuqal() -> NatijatIkhtibar {
+        for nass in [
+            "https://cdn.jsdelivr.net/gh/cc1a2b/taarib-registry@main",
+            "https://mustawda.example.invalid/taarib",
+            "https://github.com/cc1a2b",
+            "https://raw.githubusercontent.com/cc1a2b/taarib-registry",
+            "https://raw.githubusercontent.com/cc1a2b/taarib-registry/main/far",
+            "",
+        ] {
+            assert_eq!(
+                masadir(nass, None).unwan_mustawda(),
+                None,
+                "{nass} was read as a forge address"
+            );
+        }
+
+        let mahsub = masadir(
+            "https://cdn.jsdelivr.net/gh/cc1a2b/taarib-registry@main",
+            Some("https://github.com/cc1a2b/taarib-registry"),
+        )
+        .unwan_mustawda()
+        .ok_or("the explicit forge address did not resolve")?;
+        assert_eq!(mahsub.mustawda, "taarib-registry");
+        Ok(())
+    }
+
+    /// The explicit field wins, so a registry read from one place and submitted
+    /// to another is expressible at all.
+    #[test]
+    fn al_haql_al_sareeh_yasbiq_al_jidhr() -> NatijatIkhtibar {
+        let unwan = masadir(
+            "https://raw.githubusercontent.com/cc1a2b/taarib-registry/main",
+            Some("https://github.com/fariq/taarib-registry"),
+        )
+        .unwan_mustawda()
+        .ok_or("the explicit forge address did not resolve")?;
+        assert_eq!(unwan.malik, "fariq");
+
+        let faragh = masadir(
+            "https://raw.githubusercontent.com/cc1a2b/taarib-registry/main",
+            Some("   "),
+        )
+        .unwan_mustawda()
+        .ok_or("a blank explicit address did not fall back to the root")?;
+        assert_eq!(unwan.mustawda, faragh.mustawda);
+        assert_eq!(faragh.malik, "cc1a2b");
+        Ok(())
+    }
+
+    /// A settings file written before the forge address had a field of its own
+    /// reads back with a working registry and nothing lost.
+    #[test]
+    fn hijrat_al_muntada_la_tufqid_mustawdaan_amilan() -> NatijatIkhtibar {
+        let mut qadeem = serde_json::to_value(Idadat::default())?;
+        let kain = qadeem
+            .as_object_mut()
+            .ok_or("the settings tree is not an object")?;
+        let _ = kain.insert("mukhattat".to_owned(), Value::from(2_u32));
+        let masadir = kain
+            .get_mut("masadir")
+            .and_then(Value::as_object_mut)
+            .ok_or("the settings tree carries no sources")?;
+        let _ = masadir.remove("mustawda_taqdeem");
+        let _ = masadir.insert(
+            "rasmi".to_owned(),
+            json!("https://raw.githubusercontent.com/fariq/mustawda/tajribi"),
+        );
+
+        let muhajjara: Idadat = crate::mukhattat::min_qeema(qadeem)?;
+        assert_eq!(muhajjara.masadir.mustawda_taqdeem, None);
+        assert_eq!(
+            muhajjara.masadir.rasmi, "https://raw.githubusercontent.com/fariq/mustawda/tajribi",
+            "the registry the user was reading is untouched"
+        );
+        let unwan = muhajjara
+            .masadir
+            .unwan_mustawda()
+            .ok_or("the migrated file lost its forge address")?;
+        assert_eq!(unwan.malik, "fariq");
+        assert_eq!(unwan.far, "tajribi");
+        Ok(())
+    }
+
+    /// The migration chain reaches the version this build writes, with no gap.
+    #[test]
+    fn silsilat_al_hijra_muttasila() -> NatijatIkhtibar {
+        let mut qeema = serde_json::to_value(Idadat::default())?;
+        if let Some(kain) = qeema.as_object_mut() {
+            let _ = kain.insert("mukhattat".to_owned(), Value::from(1_u32));
+        }
+        for khutwa in 1..Idadat::ISDAR {
+            qeema = Idadat::hijra(khutwa, qeema)?;
+        }
+        Ok(())
+    }
 
     fn tarif(muarrif: &str, mufaal: bool) -> IdadatMuzawwid {
         IdadatMuzawwid {

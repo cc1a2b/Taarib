@@ -24,9 +24,9 @@ use taarib_taqdeem::bawwaba::{
 };
 use taarib_taqdeem::hawiya::{HawiyatMusahim, SalahiyatMalik};
 use taarib_taqdeem::irsal::{
-    IdadatIrsal, IdadatMustawda, IdadatTawthiq, MUHLAT_TALAB, QalabRabt, TalabIrsal, TalabJihaz,
-    akmil_tawthiq, bina_amil, hat_ramz, ibda_tawthiq, irsal, khzin_ramz, mulakhkhas,
-    wasf_talab_damj,
+    HAQL_MUARRIF_AMIL, IdadatIrsal, IdadatMustawda, IdadatTawthiq, MUHLAT_TALAB, QalabRabt,
+    TalabIrsal, TalabJihaz, akmil_tawthiq, bina_amil, hat_ramz, hawiya_muwaththaqa, ibda_tawthiq,
+    irsal, khzin_ramz, mulakhkhas, wasf_talab_damj,
 };
 use taarib_taqdeem::muraja::{
     MarjiMuraja, MulakhkhasTaadil, SababRafd, SijillMuraja as SijillMurajaMalik, allaq, iaatimad,
@@ -34,6 +34,9 @@ use taarib_taqdeem::muraja::{
 };
 use taarib_taqdeem::musawwada::{BidayatMusawwada, Musawwada, masar_musawwada};
 use taarib_taqdeem::nashr::waqqi;
+use taarib_taqdeem::nashr_mustawda::{
+    MASAR_NUSKHAT_MUSTAWDA, MadkhalNashr, SijillNashr, TalabNashrMustawda, unshur,
+};
 use taarib_taqdeem::sandooq::BeeatSandooq;
 use taarib_taqdeem::taaliq::{NassTaaliq, Taaliq, TaaliqId};
 use taarib_taqdeem::tabur::{HalatFuhus, IhsaTabur, MudkhalTabur, ihsa};
@@ -49,7 +52,7 @@ use taarib_tarqee::taqrir_tajawuz::{
     HalatQiyasTajawuz, MulakhkhasTajawuz, NawAdamAltahaqquq, ShiddatTajawuz, TaqrirTajawuz,
 };
 use taarib_tathbeet::bayan::waqt_alaan;
-use taarib_usus::idadat::MakhzanIdadat;
+use taarib_usus::idadat::{Idadat, IdadatMasadir, MakhzanIdadat, UnwanMustawda};
 use taarib_usus::khata::{
     Khata, Khutura, Khutwa, MasarMatlub, Natija, QeemaSiyaq, QismIdadat, Ramz, Tafsir, arqam,
 };
@@ -129,6 +132,15 @@ pub struct IntiqalHie {
     pub min: String,
     /// The state it entered.
     pub ila: String,
+    /// That state as a person reads it, in Arabic.
+    ///
+    /// Beside the key because the Contributions screen draws this trail, and a
+    /// contributor reading their own submission's history was being shown
+    /// `mawafaq_yunshar` — a record key, in a list of things that happened to
+    /// their work.
+    pub ila_arabi: String,
+    /// The same, in English.
+    pub ila_injilizi: String,
     /// When, RFC 3339.
     pub waqt: String,
 }
@@ -158,8 +170,25 @@ pub struct MusawwadaHie {
     pub hala: String,
     /// The state, in Arabic.
     pub hala_arabi: String,
+    /// The same, in English.
+    pub hala_injilizi: String,
     /// Whether the contributor may still edit it.
     pub qabila_lil_tahreer: bool,
+    /// The owner decisions this state accepts, by the stable keys
+    /// [`taarib_taqdeem::muraja::NawIjraMuraja::ramz`] names them with — the
+    /// same keys [`qarrir_muraja`] dispatches on.
+    ///
+    /// Sent rather than left for the interface to work out. The console draws
+    /// one control per decision, and the only thing that knows which decisions
+    /// a state accepts is the state machine that refuses the rest; deriving the
+    /// set again in TypeScript would be a second copy of that machine, and a
+    /// second copy is exactly what offered *Approve* on a published submission
+    /// until the owner pressed it and got `TAARIB-E-9068`. It travels on the
+    /// submission rather than as a query of its own so that the set and the
+    /// state it belongs to can never be one refetch apart: both decision
+    /// commands answer with this record, so the controls change in the same
+    /// render as the state that changed them.
+    pub afal_mutaha: Vec<String>,
     /// The package size, bytes.
     #[specta(type = specta_typescript::Number)]
     pub hajm_huzma: u64,
@@ -227,6 +256,8 @@ pub struct MusahamaHie {
     pub unwan: String,
     /// The state, in Arabic.
     pub hala_arabi: String,
+    /// The same, in English.
+    pub hala_injilizi: String,
     /// Whether it has stopped moving.
     pub nihaiya: bool,
     /// When the draft was started, RFC 3339.
@@ -1123,6 +1154,8 @@ fn intiqalat(musawwada: &Musawwada) -> Vec<IntiqalHie> {
         natija.push(IntiqalHie {
             min: sabiq.clone(),
             ila: ila.clone(),
+            ila_arabi: qayd.ila.wasf_arabi().to_owned(),
+            ila_injilizi: qayd.ila.wasf_injilizi().to_owned(),
             waqt: qayd.waqt.clone(),
         });
         sabiq = ila;
@@ -1145,7 +1178,14 @@ fn musawwada_hie(musawwada: &Musawwada, qaima: QaimatFahsHie) -> MusawwadaHie {
         tareeqa_arabi: musawwada.tareeqa().wasf_arabi().to_owned(),
         hala: musawwada.hala().ism().to_owned(),
         hala_arabi: musawwada.hala().wasf_arabi().to_owned(),
+        hala_injilizi: musawwada.hala().wasf_injilizi().to_owned(),
         qabila_lil_tahreer: musawwada.hala().qabila_lil_tahreer(),
+        afal_mutaha: musawwada
+            .hala()
+            .afal_mutaha()
+            .into_iter()
+            .map(|ijra| ijra.ramz().to_owned())
+            .collect(),
         hajm_huzma: musawwada.hajm_huzma(),
         basmat_huzma: musawwada.basmat_huzma().mukhtasara(),
         adad_nusus: adad.majmu,
@@ -1642,33 +1682,49 @@ fn idadat_tawthiq(muarrif_amil: &str) -> IdadatTawthiq {
     }
 }
 
-/// The registry repository as `masadir.rasmi` names it, or the named refusal.
+/// The registry repository submissions and casts go to, or the named refusal.
+///
+/// The address is parsed once, in [`IdadatMasadir::unwan_mustawda`], which reads
+/// either spelling of a GitHub repository — the `github.com/<owner>/<repo>` page
+/// or the `raw.githubusercontent.com/<owner>/<repo>/<branch>` root the client
+/// already reads the manifest from — and prefers the dedicated submission field
+/// over that read-only root. This wrapper only turns its [`None`] into the error
+/// the console shows, naming whichever address was actually consulted so the fix
+/// points at the field the user set rather than at a default they never touched.
+fn mawdi_mustawda(masadir: &IdadatMasadir) -> Natija<UnwanMustawda> {
+    masadir.unwan_mustawda().ok_or_else(|| {
+        Khata::from(KhataTaqdeemAmr::MustawdaGhayrMafhum {
+            rasmi: masadir
+                .mustawda_taqdeem
+                .as_deref()
+                .map(str::trim)
+                .filter(|nass| !nass.is_empty())
+                .unwrap_or_else(|| masadir.rasmi.trim())
+                .to_owned(),
+        })
+    })
+}
+
+/// The full submission transport for the repository the sources name, or the
+/// named refusal. The repository is whichever of `mustawda_taqdeem`/`rasmi`
+/// [`mawdi_mustawda`] resolves; this wraps it in the forge URL templates the
+/// pull-request flow fills.
 #[expect(
     clippy::literal_string_with_formatting_args,
     reason = "`QalabRabt` holds a URL template whose `{malik}` and `{mustawda}` placeholders \
               the transport substitutes; they are not `format!` arguments"
 )]
-fn mustawda_min_rasmi(rasmi: &str, rabt_tajheez: &str) -> Natija<IdadatMustawda> {
-    let baqi = rasmi
-        .strip_prefix("https://github.com/")
-        .map(|nass| nass.trim_end_matches('/').trim_end_matches(".git"));
-    let (malik, mustawda) = match baqi.map(|nass| nass.split_once('/')) {
-        Some(Some((malik, mustawda)))
-            if !malik.is_empty() && !mustawda.is_empty() && !mustawda.contains('/') =>
-        {
-            (malik.to_owned(), mustawda.to_owned())
-        },
-        _ => {
-            return Err(Khata::from(KhataTaqdeemAmr::MustawdaGhayrMafhum {
-                rasmi: rasmi.to_owned(),
-            }));
-        },
-    };
+fn mustawda_min_rasmi(masadir: &IdadatMasadir, rabt_tajheez: &str) -> Natija<IdadatMustawda> {
+    let UnwanMustawda {
+        malik,
+        mustawda,
+        far,
+    } = mawdi_mustawda(masadir)?;
     let rabt_git = format!("https://github.com/{malik}/{mustawda}.git");
     Ok(IdadatMustawda {
         malik,
         mustawda,
-        far_asasi: "main".to_owned(),
+        far_asasi: far,
         bidayat_far: "taqdeem".to_owned(),
         rabt_git,
         qalab_git_shawka: QalabRabt::jadeed("https://github.com/{malik_shawka}/{mustawda}.git"),
@@ -1704,6 +1760,10 @@ pub async fn abda_tawthiq_taqdeem(
             naqis: "muarrif_amil",
         }));
     };
+    // A device code the user must go and authorize is worse spent than a parse:
+    // if the registry address cannot name a repository, say so now instead of
+    // after the round trip.
+    let _ = mawdi_mustawda(&hali.masadir)?;
     let tawthiq = idadat_tawthiq(muarrif_amil);
     let amil = bina_amil(MUHLAT_TALAB).map_err(Khata::from)?;
     let talab = ibda_tawthiq(&amil, &tawthiq).await.map_err(Khata::from)?;
@@ -1820,21 +1880,18 @@ pub async fn sallim_taqdeem(
     // transport, in that order; a draft already in the queue is re-sent
     // without a second transition.
     let _mahfudha = if musawwada.hala().qabila_lil_tahreer() {
-        let muqaddama = musawwada.ursilat(&ijtiyaz, &waqt).map_err(|marfud| {
-            Khata::from(KhataTaqdeemAmr::IntiqalMarfudAmr {
-                min: marfud.min().to_owned(),
-                ila: marfud.ila().to_owned(),
-            })
-        })?;
+        let muqaddama = musawwada
+            .ursilat(&ijtiyaz, &waqt)
+            .map_err(|marfud| Khata::from(KhataTaqdeemAmr::min_intiqal(&marfud)))?;
         ihfaz_musawwada(&masarat, &muqaddama)?;
         muqaddama
     } else if musawwada.hala().fi_intizar_almalik() {
         musawwada
     } else {
-        return Err(Khata::from(KhataTaqdeemAmr::IntiqalMarfudAmr {
-            min: musawwada.hala().ism().to_owned(),
-            ila: "muqaddama".to_owned(),
-        }));
+        return Err(Khata::from(KhataTaqdeemAmr::min_halatayn(
+            musawwada.hala(),
+            &taarib_taqdeem::musawwada::HalatTaqdeem::Muqaddama { waqt },
+        )));
     };
 
     let amil_id = hali
@@ -1852,6 +1909,10 @@ pub async fn sallim_taqdeem(
 
     let rabt_talab_damj = if let (Some(amil_id), Some(rabt_tajheez)) = (amil_id, rabt_tajheez) {
         let tawthiq = idadat_tawthiq(&amil_id);
+        // The registry address is a settings string; a malformed one is refused
+        // here, before the device-authorization round trip and the token it
+        // stores, rather than after the user has already authorized.
+        let mustawda = mustawda_min_rasmi(&hali.masadir, &rabt_tajheez)?;
         let ramz = if let Some(ramz) = hat_ramz("taqdeem").map_err(Khata::from)? {
             ramz
         } else {
@@ -1869,7 +1930,6 @@ pub async fn sallim_taqdeem(
             ramz
         };
 
-        let mustawda = mustawda_min_rasmi(&hali.masadir.rasmi, &rabt_tajheez)?;
         let idadat_irsal = IdadatIrsal { tawthiq, mustawda };
 
         let malaf_talab: MalafTalab = {
@@ -1942,6 +2002,7 @@ pub fn musahamati(masarat: tauri::State<'_, Masarat>) -> Result<Vec<MusahamaHie>
             ism_luba: musawwada.wasf().ism_luba.clone(),
             unwan: musawwada.wasf().unwan.clone(),
             hala_arabi: musawwada.hala().wasf_arabi().to_owned(),
+            hala_injilizi: musawwada.hala().wasf_injilizi().to_owned(),
             nihaiya: musawwada.hala().nihaiya(),
             waqt: musawwada.ansha().to_owned(),
             sijill: sijill
@@ -2167,12 +2228,9 @@ pub fn tafasil_muraja(
     let (_salahiya, _khass) = salahiyat_malik()?;
     let mut musawwada = musawwada_bil_ruqaa(&masarat, &ruqaa)?;
     if matches!(musawwada.hala(), HalatTaqdeem::Muqaddama { .. }) {
-        musawwada = musawwada.futihat(&waqt_alaan()).map_err(|marfud| {
-            Khata::from(KhataTaqdeemAmr::IntiqalMarfudAmr {
-                min: marfud.min().to_owned(),
-                ila: marfud.ila().to_owned(),
-            })
-        })?;
+        musawwada = musawwada
+            .futihat(&waqt_alaan())
+            .map_err(|marfud| Khata::from(KhataTaqdeemAmr::min_intiqal(&marfud)))?;
         ihfaz_musawwada(&masarat, &musawwada)?;
     }
 
@@ -2306,10 +2364,7 @@ pub fn qarrir_muraja(
     let waqt = waqt_alaan();
     let marji = MarjiMuraja::jadeed(musawwada.id(), musawwada.murajaa(), musahim);
     let intiqal = |marfud: taarib_taqdeem::musawwada::IntiqalMarfud| {
-        Khata::from(KhataTaqdeemAmr::IntiqalMarfudAmr {
-            min: marfud.min().to_owned(),
-            ila: marfud.ila().to_owned(),
-        })
+        Khata::from(KhataTaqdeemAmr::min_intiqal(&marfud))
     };
 
     let (qayd, baada) = match ijra.as_str() {
@@ -2345,6 +2400,16 @@ pub fn qarrir_muraja(
                 !(mulakhkhas.id == musawwada.id() && mulakhkhas.murajaa == musawwada.murajaa())
             });
             crate::warsha_awamir::uktub_janibi(&masar_fahras_manshurat(&masarat), &fahras)?;
+            // Dropping it from this machine's index is not what stops anyone
+            // installing it — the registry is. The ledger is what the next cast
+            // reads, so the lineage leaves the catalogue there and joins the
+            // signed revocation list every client checks.
+            let masar_sijill_nashr = SijillNashr::masar(&masarat).map_err(Khata::from)?;
+            let mut sijill_nashr = SijillNashr::iftah(&masar_sijill_nashr).map_err(Khata::from)?;
+            sijill_nashr.ilghi(musawwada.id(), &sabab_nass, &waqt);
+            sijill_nashr
+                .ihfadh(&masar_sijill_nashr)
+                .map_err(Khata::from)?;
             haddith_sumaa(&masarat, &musawwada.musahim().musahim, |sumaa| {
                 sumaa.masbuba = sumaa.masbuba.saturating_add(1);
             })?;
@@ -2373,8 +2438,18 @@ pub fn qarrir_muraja(
     Ok(musawwada_hie(&baada, qaima))
 }
 
-/// Approves a submission, signs it with the owner key, and publishes it into
-/// this machine's release area and listing index.
+/// Approves a submission and seals it with the owner key.
+///
+/// It does **not** reach the registry here. The sealed package is written into
+/// this machine's publications directory and recorded in the publication
+/// ledger, and the submission stops at `mawafaq_yunshar` — approved, awaiting
+/// the cast. [`unshur_mustawda`] is what puts it where another user can install
+/// it, and only that marks it published.
+///
+/// This used to end at `manshura`, with a listing whose download address was a
+/// path on this disk. Nothing had been sent anywhere, so the one thing the word
+/// promises — that somebody else can install it — was the one thing it did not
+/// mean.
 ///
 /// # Errors
 ///
@@ -2422,61 +2497,56 @@ pub fn iaatimad_muraja(
     let mujallad = mujallad_manshurat(&masarat);
     taarib_usus::masarat::insha_mujallad(&mujallad)?;
     let basmat_muhtawa = Basma::min_bayt(*blake3::hash(makhtuma.bayt()).as_bytes());
-    let masar_nashr = mujallad.join(format!(
+    let ism_malaf = format!(
         "{}-r{}-{}.ruqaa",
         musawwada.id(),
         musawwada.murajaa().qeema(),
         basmat_muhtawa.mukhtasara()
-    ));
-    kitaba_dharra(&masar_nashr, makhtuma.bayt())?;
+    );
+    kitaba_dharra(&mujallad.join(&ism_malaf), makhtuma.bayt())?;
 
-    let mut fahras: Vec<MulakhkhasRuqaa> =
-        crate::warsha_awamir::iqra_janibi(&masar_fahras_manshurat(&masarat))?;
-    let adad = musawwada.adad_nusus();
-    fahras.push(MulakhkhasRuqaa {
-        id: musawwada.id(),
+    // The ledger, not the catalogue index. A catalogue entry is written when
+    // the cast puts the package in the registry and can give it the address a
+    // client will fetch it from; until then there is an approved, sealed
+    // package on this disk, and this is the record of it.
+    let masar_sijill_nashr = SijillNashr::masar(&masarat).map_err(Khata::from)?;
+    let mut sijill_nashr = SijillNashr::iftah(&masar_sijill_nashr).map_err(Khata::from)?;
+    sijill_nashr.sajjil(MadkhalNashr {
+        ruqaa: musawwada.id(),
         murajaa: musawwada.murajaa(),
-        unwan: musawwada.wasf().unwan.clone(),
+        luba: musawwada.luba(),
+        ism_luba: musawwada.wasf().ism_luba.clone(),
+        // Recorded now because the seal stops saying: `waqqi` just replaced the
+        // package's signature with the owner's, so the file itself no longer
+        // names who made it.
         musahim: musawwada.musahim().musahim.clone(),
-        ism_musahim: musawwada.musahim().ism.clone(),
-        taghtiya: musawwada.taghtiya(),
-        adad_nusus: adad.majmu,
-        hajm: u64::try_from(makhtuma.bayt().len()).unwrap_or(u64::MAX),
-        bina_manassa: musawwada.irtibat().manassat.clone(),
-        basmat: musawwada.irtibat().basmat.clone(),
-        aila: aila_min_bayan(&musawwada),
-        khalfiya: khalfiya_min_bayan(&musawwada),
-        tabaqa: tabaqa_min_bayan(&musawwada),
-        tareeqa: musawwada.tareeqa(),
-        rukhsa: musawwada.wasf().rukhsa.clone(),
-        taqyeem: None,
-        adad_taqyeemat: 0,
-        waqt_nashr: waqt.clone(),
-        basmat_muhtawa,
-        rabt: masar_nashr.to_string_lossy().into_owned(),
-        rabt_mira: None,
+        ism_malaf,
+        waqt_iaatimad: waqt.clone(),
+        tasalsul: None,
+        tajawuz: None,
     });
-    crate::warsha_awamir::uktub_janibi(&masar_fahras_manshurat(&masarat), &fahras)?;
+    sijill_nashr
+        .ihfadh(&masar_sijill_nashr)
+        .map_err(Khata::from)?;
 
     let mut lawha: LawhatTalabat = crate::warsha_awamir::iqra_janibi(&masar_talabat(&masarat))?;
     let _ = lawha.ughliq(musawwada.luba(), musawwada.id());
     crate::warsha_awamir::uktub_janibi(&masar_talabat(&masarat), &lawha)?;
 
     let intiqal = |marfud: taarib_taqdeem::musawwada::IntiqalMarfud| {
-        Khata::from(KhataTaqdeemAmr::IntiqalMarfudAmr {
-            min: marfud.min().to_owned(),
-            ila: marfud.ila().to_owned(),
-        })
+        Khata::from(KhataTaqdeemAmr::min_intiqal(&marfud))
     };
     let mowafaqa = musawwada.wufiq_alayha(&waqt).map_err(intiqal)?;
-    let manshura = mowafaqa.nushirat(&waqt).map_err(intiqal)?;
-    ihfaz_musawwada(&masarat, &manshura)?;
+    ihfaz_musawwada(&masarat, &mowafaqa)?;
 
-    let bila_taadil = !manshura
+    // Reputation records the owner's acceptance of the work, which is what just
+    // happened. Holding it back until the cast would make a contributor's
+    // standing wait on the owner's network rather than on the owner's judgement.
+    let bila_taadil = !mowafaqa
         .tareekh()
         .iter()
         .any(|qayd_intiqal| matches!(qayd_intiqal.ila, HalatTaqdeem::MatlubTaadil { .. }));
-    haddith_sumaa(&masarat, &manshura.musahim().musahim, |sumaa| {
+    haddith_sumaa(&masarat, &mowafaqa.musahim().musahim, |sumaa| {
         sumaa.ruqaa_manshura = sumaa.ruqaa_manshura.saturating_add(1);
         if bila_taadil {
             sumaa.qubila_bila_taadil = sumaa.qubila_bila_taadil.saturating_add(1);
@@ -2487,34 +2557,451 @@ pub fn iaatimad_muraja(
     sijill.alhiq(qayd);
     uktub_sijill_malik(&masarat, &sijill)?;
 
-    let qaima = qaimat_lil(&masarat, &manshura).map_or(
+    let qaima = qaimat_lil(&masarat, &mowafaqa).map_or(
         QaimatFahsHie {
             sutur: Vec::new(),
             jahiza: false,
         },
-        |qaima| qaimat_hie(&qaima, manshura.tajawuz()),
+        |qaima| qaimat_hie(&qaima, mowafaqa.tajawuz()),
     );
-    Ok(musawwada_hie(&manshura, qaima))
+    Ok(musawwada_hie(&mowafaqa, qaima))
 }
 
-fn khalfiya_min_bayan(musawwada: &Musawwada) -> taarib_mustalahat::muharrik::KhalfiyaBarmajiya {
-    musawwada
-        .bayan()
-        .get("muharrik")
-        .and_then(|muharrik| muharrik.get("khalfiya"))
-        .cloned()
-        .and_then(|qeema| serde_json::from_value(qeema).ok())
-        .unwrap_or(taarib_mustalahat::muharrik::KhalfiyaBarmajiya::Majhula)
+/// One approved package the registry does not have yet.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct SatrMuaallaqHie {
+    /// The patch lineage.
+    pub ruqaa: String,
+    /// The revision that was approved.
+    pub murajaa: u32,
+    /// The game's title.
+    pub ism_luba: String,
+    /// When the owner approved it, RFC 3339.
+    pub waqt: String,
+    /// The owner's written reason for publishing it over its own coverage
+    /// gate's refusal, when one was recorded.
+    pub tajawuz: Option<String>,
 }
 
-fn tabaqa_min_bayan(musawwada: &Musawwada) -> taarib_mustalahat::muharrik::Tabaqa {
-    musawwada
-        .bayan()
-        .get("muharrik")
-        .and_then(|muharrik| muharrik.get("tabaqa"))
-        .cloned()
-        .and_then(|qeema| serde_json::from_value(qeema).ok())
-        .unwrap_or(taarib_mustalahat::muharrik::Tabaqa::TarjamaFawqiya)
+/// Where the owner's catalogue stands against the registry.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct HalatNashrMustawdaHie {
+    /// The repository the catalogue is pushed to.
+    pub rabt_mustawda: String,
+    /// The branch it is served from.
+    pub far: String,
+    /// The settings field that has to be filled before a publish can run, when
+    /// one is missing.
+    pub naqis: Option<String>,
+    /// Whether a forge token is already stored, so the publish will not stop to
+    /// ask for a device code.
+    pub muwaththaq: bool,
+    /// Approved packages the registry does not have.
+    pub muaallaqa: Vec<SatrMuaallaqHie>,
+    /// How many listings the catalogue already carries.
+    pub adad_manshura: u32,
+    /// How many lineages the revocation list carries.
+    pub adad_mulghayat: u32,
+    /// The highest manifest sequence this machine has published at.
+    #[specta(type = Option<specta_typescript::Number>)]
+    pub akhir_tasalsul: Option<u64>,
+}
+
+/// One listing the cast put in the catalogue.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct SatrManshurHie {
+    /// The patch lineage.
+    pub ruqaa: String,
+    /// The revision now served.
+    pub murajaa: u32,
+    /// The patch title.
+    pub unwan: String,
+    /// The address a client downloads it from.
+    pub rabt: String,
+}
+
+/// One approved package the cast would not take.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct SatrMarfudHie {
+    /// The patch lineage.
+    pub ruqaa: String,
+    /// What the cast said about it.
+    pub sabab: String,
+}
+
+/// What one publish put in the registry.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct NashrMustawdaHie {
+    /// The manifest sequence the catalogue now sits at.
+    #[specta(type = specta_typescript::Number)]
+    pub tasalsul: u64,
+    /// The commit that was pushed.
+    pub iltizam: String,
+    /// The branch it was pushed to.
+    pub far: String,
+    /// Every listing now served, with its download address.
+    pub manshura: Vec<SatrManshurHie>,
+    /// Every approved package the cast refused, still approved and still
+    /// unpublished.
+    pub marfuda: Vec<SatrMarfudHie>,
+    /// How many revocations the pushed list carries.
+    pub adad_mulghayat: u32,
+}
+
+/// The publication ledger, seeded once from whatever this machine approved
+/// before the ledger existed.
+///
+/// Approval used to write a catalogue entry straight into `manshurat/fahras.json`
+/// and call the submission published, with a link that was a path on this disk.
+/// Those packages are approved and sealed and nothing else, so they belong in
+/// the ledger as approved-and-not-yet-cast — which is what they are, and what
+/// lets the console finally publish them. Without this the one submission the
+/// owner already approved could never reach the registry: it is past every
+/// transition that would put it back in the queue.
+///
+/// The old index appended rather than replaced, so one lineage can appear in it
+/// several times. The ledger is keyed by lineage, and the newest listing wins —
+/// an earlier revision of the same patch is not a second thing to publish.
+///
+/// # Errors
+///
+/// Whatever the ledger, the old index or the draft store raise.
+fn ihmil_sijill_nashr(masarat: &Masarat) -> Natija<(PathBuf, SijillNashr)> {
+    let masar = SijillNashr::masar(masarat).map_err(Khata::from)?;
+    let mut sijill = SijillNashr::iftah(&masar).map_err(Khata::from)?;
+
+    let mut fahras: Vec<MulakhkhasRuqaa> =
+        crate::warsha_awamir::iqra_janibi(&masar_fahras_manshurat(masarat))?;
+    if fahras.is_empty() {
+        return Ok((masar, sijill));
+    }
+    fahras.sort_by(|awwal, thani| awwal.waqt_nashr.cmp(&thani.waqt_nashr));
+
+    let musawwadat = musawwadat_kul(masarat)?;
+    let mujallad = mujallad_manshurat(masarat);
+    let mut mudaf = false;
+    for mulakhkhas in &fahras {
+        if sijill.madkhal(mulakhkhas.id).is_some() {
+            continue;
+        }
+        // The game is the shard key and is not recoverable from the package, so
+        // an entry whose draft is gone cannot be cast and is left alone rather
+        // than guessed at.
+        let Some(musawwada) = musawwadat
+            .iter()
+            .find(|musawwada| musawwada.id() == mulakhkhas.id)
+        else {
+            continue;
+        };
+        let ism_malaf = format!(
+            "{}-r{}-{}.ruqaa",
+            mulakhkhas.id,
+            mulakhkhas.murajaa.qeema(),
+            mulakhkhas.basmat_muhtawa.mukhtasara()
+        );
+        if !mujallad.join(&ism_malaf).is_file() {
+            continue;
+        }
+        sijill.sajjil(MadkhalNashr {
+            ruqaa: mulakhkhas.id,
+            murajaa: mulakhkhas.murajaa,
+            luba: musawwada.luba(),
+            ism_luba: musawwada.wasf().ism_luba.clone(),
+            musahim: mulakhkhas.musahim.clone(),
+            ism_malaf,
+            waqt_iaatimad: mulakhkhas.waqt_nashr.clone(),
+            tasalsul: None,
+            tajawuz: None,
+        });
+        mudaf = true;
+    }
+    if mudaf {
+        sijill.ihfadh(&masar).map_err(Khata::from)?;
+    }
+    Ok((masar, sijill))
+}
+
+/// Where the owner's approved catalogue stands against the registry.
+///
+/// # Errors
+///
+/// [`KhataTaqdeemAmr::MalikFaqat`] without the owner key,
+/// [`KhataTaqdeemAmr::MustawdaGhayrMafhum`] when the configured registry source
+/// is not a repository address, and whatever the ledger raises.
+#[tauri::command]
+#[specta::specta]
+pub fn halat_nashr_mustawda(
+    masarat: tauri::State<'_, Masarat>,
+    idadat: tauri::State<'_, Arc<MakhzanIdadat>>,
+) -> Result<HalatNashrMustawdaHie, Khata> {
+    let (_salahiya, _khass) = salahiyat_malik()?;
+    let (_masar, sijill) = ihmil_sijill_nashr(&masarat)?;
+    hie_nashr(&idadat.hali(), &sijill)
+}
+
+/// The publish section as the console draws it, from the ledger and the
+/// settings. Shared so the status query and the override answer with the same
+/// picture rather than two that can disagree.
+fn hie_nashr(hali: &Idadat, sijill: &SijillNashr) -> Natija<HalatNashrMustawdaHie> {
+    let mawdi = mawdi_mustawda(&hali.masadir)?;
+    Ok(HalatNashrMustawdaHie {
+        rabt_mustawda: format!("https://github.com/{}/{}", mawdi.malik, mawdi.mustawda),
+        far: mawdi.far,
+        naqis: hali
+            .masadir
+            .muarrif_amil
+            .as_deref()
+            .is_none_or(|nass| nass.trim().is_empty())
+            .then(|| HAQL_MUARRIF_AMIL.to_owned()),
+        // A stored token is the difference between one click and a device code,
+        // so the console says which of the two the button is about to do.
+        muwaththaq: hat_ramz("taqdeem").map_err(Khata::from)?.is_some(),
+        muaallaqa: sijill
+            .muaallaqa()
+            .into_iter()
+            .map(|madkhal| SatrMuaallaqHie {
+                ruqaa: madkhal.ruqaa.to_string(),
+                murajaa: madkhal.murajaa.qeema(),
+                ism_luba: madkhal.ism_luba.clone(),
+                waqt: madkhal.waqt_iaatimad.clone(),
+                tajawuz: madkhal.tajawuz.clone(),
+            })
+            .collect(),
+        adad_manshura: crate::warsha_awamir::adad_u32(
+            sijill
+                .madakhil()
+                .filter(|madkhal| madkhal.manshura())
+                .count(),
+        ),
+        adad_mulghayat: crate::warsha_awamir::adad_u32(sijill.mulghayat().count()),
+        akhir_tasalsul: sijill
+            .madakhil()
+            .filter_map(|madkhal| madkhal.tasalsul)
+            .max(),
+    })
+}
+
+/// Records the owner's reason for publishing one approved package over its own
+/// coverage gate's refusal.
+///
+/// The gate is the package's own verdict about how much of the game it
+/// measured, and it is a different question from whether the owner accepts the
+/// translation: a patch nobody captured the opening of refuses itself however
+/// good it is. Without this, such a package would be approved, sealed and
+/// permanently unpublishable. The sentence is written into the manifest beside
+/// the gate's own reasons, where every reader of the catalogue sees it.
+///
+/// # Errors
+///
+/// [`KhataTaqdeemAmr::MalikFaqat`] without the owner key,
+/// [`KhataTaqdeemAmr::SababFarigh`] for an empty sentence,
+/// [`KhataTaqdeemAmr::TaqdeemGhayrMawjud`] when the ledger has no such entry,
+/// and whatever the ledger raises.
+#[tauri::command]
+#[specta::specta]
+pub async fn tajawuz_nashr(
+    ruqaa: String,
+    sabab: String,
+    masarat: tauri::State<'_, Masarat>,
+    idadat: tauri::State<'_, Arc<MakhzanIdadat>>,
+    qufl: tauri::State<'_, QuflTaqdeem>,
+) -> Result<HalatNashrMustawdaHie, Khata> {
+    let _harasa = qufl.0.lock().await;
+    let (_salahiya, _khass) = salahiyat_malik()?;
+    if sabab.trim().is_empty() {
+        return Err(Khata::from(KhataTaqdeemAmr::SababFarigh));
+    }
+    let id = RuqaaId::min_uuid(uuid::Uuid::parse_str(&ruqaa).map_err(|_| {
+        KhataTaqdeemAmr::TaqdeemGhayrMawjud {
+            ruqaa: ruqaa.clone(),
+        }
+    })?);
+    let (masar, mut sijill) = ihmil_sijill_nashr(&masarat)?;
+    if !sijill.tajawiz(id, &sabab) {
+        return Err(Khata::from(KhataTaqdeemAmr::TaqdeemGhayrMawjud { ruqaa }));
+    }
+    sijill.ihfadh(&masar).map_err(Khata::from)?;
+    hie_nashr(&idadat.hali(), &sijill)
+}
+
+/// Casts the owner's approved catalogue into the registry and pushes it.
+///
+/// This is what makes an approved patch installable by anybody else, and it is
+/// the only thing that moves a submission to `manshura`. Everything it writes
+/// locally — the catalogue index, the ledger's sequence numbers, the state
+/// transitions — is written after the push returns, so a run that fails at any
+/// point leaves every submission saying it is approved and not published, and
+/// the same run is simply made again.
+///
+/// # Errors
+///
+/// [`KhataTaqdeemAmr::MalikFaqat`] without the owner key,
+/// [`KhataTaqdeemAmr::LaShayLilNashr`] with an empty ledger,
+/// [`KhataTaqdeemAmr::MustawdaGhayrMafhum`] when the configured registry source
+/// is not a repository address, [`KhataTaqdeemAmr::IrsalGhayrMuhayya`] with no
+/// client identifier, [`KhataTaqdeemAmr::TawthiqNaqis`] with no token and no
+/// device authorization in flight, and
+/// `KhataTaqdeem::NashrMustawdaFashil` naming the step the cast or the push
+/// failed at.
+#[tauri::command]
+#[specta::specta]
+pub async fn unshur_mustawda(
+    masarat: tauri::State<'_, Masarat>,
+    idadat: tauri::State<'_, Arc<MakhzanIdadat>>,
+    jihaz: tauri::State<'_, JihazMuallaq>,
+    qufl: tauri::State<'_, QuflTaqdeem>,
+) -> Result<NashrMustawdaHie, Khata> {
+    use taarib_taqdeem::musawwada::HalatTaqdeem;
+
+    let _harasa = qufl.0.lock().await;
+    let (_salahiya, _khass) = salahiyat_malik()?;
+    let hali = idadat.hali();
+    let mawdi = mawdi_mustawda(&hali.masadir)?;
+
+    let (masar_sijill, sijill) = ihmil_sijill_nashr(&masarat)?;
+    if sijill.madakhil().next().is_none() && sijill.mulghayat().next().is_none() {
+        return Err(Khata::from(KhataTaqdeemAmr::LaShayLilNashr));
+    }
+
+    let Some(muarrif_amil) = hali
+        .masadir
+        .muarrif_amil
+        .as_deref()
+        .filter(|nass| !nass.trim().is_empty())
+    else {
+        return Err(Khata::from(KhataTaqdeemAmr::IrsalGhayrMuhayya {
+            naqis: HAQL_MUARRIF_AMIL,
+        }));
+    };
+    let tawthiq = idadat_tawthiq(muarrif_amil);
+    // The same device flow, the same keychain account and the same scope a
+    // contributor's submission uses. A second way to hold a forge credential
+    // would be a second place for one to leak.
+    let ramz = if let Some(ramz) = hat_ramz("taqdeem").map_err(Khata::from)? {
+        ramz
+    } else {
+        let muallaq = { jihaz.0.lock().take() };
+        let Some(talab_jihaz) = muallaq else {
+            return Err(Khata::from(KhataTaqdeemAmr::TawthiqNaqis));
+        };
+        let amil = bina_amil(MUHLAT_TALAB).map_err(Khata::from)?;
+        let ramz = akmil_tawthiq(&amil, &tawthiq, &talab_jihaz)
+            .await
+            .map_err(Khata::from)?;
+        khzin_ramz("taqdeem", &ramz).map_err(Khata::from)?;
+        ramz
+    };
+    let amil = bina_amil(MUHLAT_TALAB).map_err(Khata::from)?;
+    let login = hawiya_muwaththaqa(&amil, &tawthiq, &ramz)
+        .await
+        .map_err(Khata::from)?;
+
+    let (musahim, ism, _itimad) = hawiyati(&masarat)?;
+    let jidhr = taarib_usus::masarat::dakhil(masarat.jidhr_bayanat(), MASAR_NUSKHAT_MUSTAWDA)?;
+    let mujallad = mujallad_manshurat(&masarat);
+    let rabt_git = format!("https://github.com/{}/{}.git", mawdi.malik, mawdi.mustawda);
+    // The registry root the client reads is the base every asset address is
+    // resolved against, so the `rabt` in a listing is the address that same
+    // client will fetch the package from.
+    let asas_rabt = hali.masadir.rasmi.trim_end_matches('/').to_owned();
+    let far = mawdi.far.clone();
+    let waqt = waqt_alaan();
+    let barid = format!("{}@musahim.taarib.invalid", musahim.nass());
+    let sirr = ramz.sirr().to_owned();
+    let lil_sabk = sijill.clone();
+
+    let natija = tokio::task::spawn_blocking(move || {
+        // Re-proved inside the blocking task rather than carried into it: the
+        // owner authority and the private key are the two things this must not
+        // hold a stale copy of.
+        let (salahiya, khass) = salahiyat_malik()?;
+        unshur(
+            &salahiya,
+            &khass,
+            &lil_sabk,
+            &TalabNashrMustawda {
+                jidhr: &jidhr,
+                mujallad_manshurat: &mujallad,
+                rabt_git: &rabt_git,
+                far: &far,
+                asas_rabt: &asas_rabt,
+                login: &login,
+                sirr: &sirr,
+                ism_musahim: &ism,
+                barid: &barid,
+                waqt: &waqt,
+            },
+        )
+        .map_err(Khata::from)
+    })
+    .await
+    // The cast runs on a blocking thread because git2 is blocking; a join that
+    // fails means the task never finished, so nothing was pushed and nothing is
+    // marked published — the same guarantee every other failure here carries.
+    .map_err(|khata| {
+        Khata::from(taarib_taqdeem::khata::KhataTaqdeem::NashrMustawdaFashil {
+            marhala: taarib_taqdeem::nashr_mustawda::MarhalatNashrMustawda::Sabk.ism(),
+            sabab: khata.to_string(),
+        })
+    })??;
+
+    // Everything below is bookkeeping over a push that already landed. The
+    // ledger is re-read rather than reused so the write is over what is on disk
+    // now, and each entry is stamped with the sequence it actually reached.
+    let mut sijill = SijillNashr::iftah(&masar_sijill).map_err(Khata::from)?;
+    for mulakhkhas in &natija.fahras {
+        sijill.nushirat(mulakhkhas.id, natija.tasalsul);
+    }
+    sijill.ihfadh(&masar_sijill).map_err(Khata::from)?;
+    crate::warsha_awamir::uktub_janibi(&masar_fahras_manshurat(&masarat), &natija.fahras)?;
+
+    let waqt_nashr = waqt_alaan();
+    for mulakhkhas in &natija.fahras {
+        // A listing whose draft is gone is not a reason to report a failed
+        // publish: the bytes are in the registry, and the draft is this
+        // machine's own record of how they got there.
+        let Ok(musawwada) = musawwada_bil_ruqaa(&masarat, &mulakhkhas.id.to_string()) else {
+            tracing::warn!(
+                ruqaa = %mulakhkhas.id,
+                "the registry has this patch and no draft on this machine records it"
+            );
+            continue;
+        };
+        // Already published by an earlier cast: this run re-served it, which is
+        // not a second publication and writes no second transition.
+        if !matches!(musawwada.hala(), HalatTaqdeem::MawafaqYunshar { .. }) {
+            continue;
+        }
+        let manshura = musawwada
+            .nushirat(&waqt_nashr)
+            .map_err(|marfud| Khata::from(KhataTaqdeemAmr::min_intiqal(&marfud)))?;
+        ihfaz_musawwada(&masarat, &manshura)?;
+    }
+
+    Ok(NashrMustawdaHie {
+        tasalsul: natija.tasalsul,
+        iltizam: natija.iltizam,
+        far: natija.far,
+        manshura: natija
+            .fahras
+            .iter()
+            .map(|mulakhkhas| SatrManshurHie {
+                ruqaa: mulakhkhas.id.to_string(),
+                murajaa: mulakhkhas.murajaa.qeema(),
+                unwan: mulakhkhas.unwan.clone(),
+                rabt: mulakhkhas.rabt.clone(),
+            })
+            .collect(),
+        marfuda: natija
+            .marfuda
+            .iter()
+            .map(|marfud| SatrMarfudHie {
+                ruqaa: marfud.ruqaa.to_string(),
+                sabab: marfud.sabab.clone(),
+            })
+            .collect(),
+        adad_mulghayat: crate::warsha_awamir::adad_u32(natija.adad_mulghayat),
+    })
 }
 
 /// The whole audit log, newest first.
@@ -2941,12 +3428,25 @@ pub enum KhataTaqdeemAmr {
     },
 
     /// A state transition was refused.
+    ///
+    /// Each state travels twice: the key, which the diagnostics context is
+    /// filtered by, and the words, which the sentence a person reads is built
+    /// from. `manshura` and `mawafaq_yunshar` are record keys, and a refusal
+    /// that shows them has told the reader nothing.
     #[error("the submission cannot move from {min} to {ila}")]
     IntiqalMarfudAmr {
         /// The state it is in.
         min: String,
+        /// That state, in Arabic.
+        min_arabi: &'static str,
+        /// The same, in English.
+        min_injilizi: &'static str,
         /// The state that was asked for.
         ila: String,
+        /// That state, in Arabic.
+        ila_arabi: &'static str,
+        /// The same, in English.
+        ila_injilizi: &'static str,
     },
 
     /// An action that requires a written reason arrived without one.
@@ -2974,8 +3474,17 @@ pub enum KhataTaqdeemAmr {
         naqis: &'static str,
     },
 
+    /// A publish was asked for with nothing approved and nothing revoked.
+    ///
+    /// Not a failure of the cast: the cast rebuilds the whole catalogue from
+    /// the ledger, so running it over an empty one would publish an empty
+    /// catalogue at a fresh sequence number and tell every client to refetch
+    /// it. Approve something first.
+    #[error("nothing is approved and nothing is revoked, so there is nothing to publish")]
+    LaShayLilNashr,
+
     /// The registry address is not a repository this transport understands.
-    #[error("{rasmi} is not a github.com owner/repository address")]
+    #[error("{rasmi} is not a github.com or raw.githubusercontent.com repository address")]
     MustawdaGhayrMafhum {
         /// The address as settings carry it.
         rasmi: String,
@@ -3047,6 +3556,37 @@ pub enum KhataTaqdeemAmr {
     },
 }
 
+impl KhataTaqdeemAmr {
+    /// The refusal a transition answered with, worded from the two states it
+    /// names rather than from the two record keys they are stored under.
+    fn min_intiqal(marfud: &taarib_taqdeem::musawwada::IntiqalMarfud) -> Self {
+        Self::IntiqalMarfudAmr {
+            min: marfud.min().to_owned(),
+            min_arabi: marfud.min_arabi(),
+            min_injilizi: marfud.min_injilizi(),
+            ila: marfud.ila().to_owned(),
+            ila_arabi: marfud.ila_arabi(),
+            ila_injilizi: marfud.ila_injilizi(),
+        }
+    }
+
+    /// The same refusal for a move that was never attempted, because the state
+    /// it would have started from rules it out before the transition is run.
+    fn min_halatayn(
+        min: &taarib_taqdeem::musawwada::HalatTaqdeem,
+        ila: &taarib_taqdeem::musawwada::HalatTaqdeem,
+    ) -> Self {
+        Self::IntiqalMarfudAmr {
+            min: min.ism().to_owned(),
+            min_arabi: min.wasf_arabi(),
+            min_injilizi: min.wasf_injilizi(),
+            ila: ila.ism().to_owned(),
+            ila_arabi: ila.wasf_arabi(),
+            ila_injilizi: ila.wasf_injilizi(),
+        }
+    }
+}
+
 impl Tafsir for KhataTaqdeemAmr {
     fn ramz(&self) -> Ramz {
         Ramz::jadeed(
@@ -3078,6 +3618,7 @@ impl Tafsir for KhataTaqdeemAmr {
                     Self::TaqdeemMulgha { .. } => 85,
                     Self::IrtibatBilaLuba { .. } => 86,
                     Self::IrtibatMutaadhdhir { .. } => 87,
+                    Self::LaShayLilNashr => 88,
                 },
         )
     }
@@ -3106,6 +3647,7 @@ impl Tafsir for KhataTaqdeemAmr {
             | Self::IrsalGhayrMuhayya { .. }
             | Self::MustawdaGhayrMafhum { .. }
             | Self::TawthiqNaqis
+            | Self::LaShayLilNashr
             // Both are a disagreement between the library and the disk that the
             // user can see and settle. Nothing was written in either.
             | Self::IrtibatBilaLuba { .. }
@@ -3116,6 +3658,10 @@ impl Tafsir for KhataTaqdeemAmr {
 
     fn arabi(&self) -> String {
         match self {
+            Self::LaShayLilNashr => "لا شيء معتمَد ولا شيء مسحوب، والسبك يبني الفهرس كاملًا من \
+                 السجلّ؛ تشغيله الآن ينشر فهرسًا فارغًا بتسلسل جديد يدفع كل العملاء إلى إعادة \
+                 التنزيل. اعتمِد تقديمًا أولًا."
+                .to_owned(),
             Self::MalikFaqat => "هذه الشاشة تتطلب مفتاح المالك، وهذه الجلسة لا تحمله.".to_owned(),
             Self::TaqdeemGhayrMawjud { .. } => "لا تقديم بهذا المعرّف على هذا الجهاز.".to_owned(),
             Self::MashruGhayrMawjud { .. } => {
@@ -3147,9 +3693,14 @@ impl Tafsir for KhataTaqdeemAmr {
             Self::IjraMajhul { ijra } => {
                 format!("«{ijra}» ليس إجراء مراجعة تقدّمه هذه الشاشة.")
             },
-            Self::IntiqalMarfudAmr { min, ila } => format!(
-                "لا يمكن نقل التقديم من حالة «{min}» إلى «{ila}»؛ الحالة الحالية لا \
-                 تسمح بذلك."
+            Self::IntiqalMarfudAmr {
+                min_arabi,
+                ila_arabi,
+                ..
+            } => format!(
+                "هذا التقديم الآن «{min_arabi}»، والانتقال إلى «{ila_arabi}» لا يبدأ من هنا، \
+                 فلم يتغيّر شيء ولم يضع من عملك شيء. حدّث الشاشة لترى الإجراءات التي تقبلها \
+                 حالته الحالية."
             ),
             Self::SababFarigh => "هذا الإجراء يتطلب سببًا مكتوبًا، ولم يُكتب شيء.".to_owned(),
             Self::SandooqNaqis { sabab } => {
@@ -3164,8 +3715,9 @@ impl Tafsir for KhataTaqdeemAmr {
                  تقديمك مسجّلًا محليًا، ويُرفع تلقائيًا متى جهّز مشغّل السجلّ القناة."
             ),
             Self::MustawdaGhayrMafhum { rasmi } => format!(
-                "عنوان السجلّ «{rasmi}» ليس بصيغة github.com/مالك/مستودع التي يفهمها النقل. \
-                 صحّح العنوان في الإعدادات."
+                "عنوان «{rasmi}» لا يدلّ على مستودع في المنصّة. اضبط «مستودع التقديم» في \
+                 الإعدادات ← المصادر بصيغة github.com/مالك/مستودع، أو بجذر \
+                 raw.githubusercontent.com/مالك/مستودع/فرع الذي تقرأ منه السجلّ أصلًا."
             ),
             Self::TawthiqNaqis => {
                 "لا تفويض جهاز جاريًا ولا رمز وصول محفوظًا. ابدأ تفويض الجهاز أولًا ثم أعد \
@@ -3212,6 +3764,10 @@ impl Tafsir for KhataTaqdeemAmr {
 
     fn injilizi(&self) -> String {
         match self {
+            Self::LaShayLilNashr => "Nothing is approved and nothing is revoked, so a cast would \
+                 publish an empty catalogue at a fresh sequence number and send every client to \
+                 refetch it. Approve a submission first."
+                .to_owned(),
             Self::MalikFaqat => {
                 "This screen requires the owner key, and this session does not hold it.".to_owned()
             },
@@ -3246,9 +3802,14 @@ impl Tafsir for KhataTaqdeemAmr {
             Self::IjraMajhul { ijra } => {
                 format!("\"{ijra}\" is not a review action this console offers.")
             },
-            Self::IntiqalMarfudAmr { min, ila } => format!(
-                "The submission cannot move from \"{min}\" to \"{ila}\"; its current \
-                 state does not allow it."
+            Self::IntiqalMarfudAmr {
+                min_injilizi,
+                ila_injilizi,
+                ..
+            } => format!(
+                "This submission is now {min_injilizi}, and the move to {ila_injilizi} does \
+                 not start from there, so nothing changed and none of your work was lost. \
+                 Refresh the screen to see the decisions its current state does accept."
             ),
             Self::SababFarigh => {
                 "This action requires a written reason, and none was written.".to_owned()
@@ -3264,8 +3825,11 @@ impl Tafsir for KhataTaqdeemAmr {
                  sent the moment the registry operator provisions the channel."
             ),
             Self::MustawdaGhayrMafhum { rasmi } => format!(
-                "The registry address \"{rasmi}\" is not the github.com/owner/repository \
-                 form this transport understands. Correct it in Settings."
+                "The registry address \"{rasmi}\" names no forge repository. Set the \
+                 submission repository in Settings, under Sources — \
+                 github.com/owner/repository, or the \
+                 raw.githubusercontent.com/owner/repository/branch root you already read \
+                 the registry from."
             ),
             Self::TawthiqNaqis => {
                 "No device authorization is in flight and no access token is stored. Start \
@@ -3328,17 +3892,21 @@ impl Tafsir for KhataTaqdeemAmr {
             | Self::TareeqaMajhula { .. }
             | Self::TahdheerMajhul { .. }
             | Self::IjraMajhul { .. }
-            | Self::IntiqalMarfudAmr { .. }
             | Self::SababFarigh
             | Self::SandooqNaqis { .. }
             | Self::HuzmaMafquda { .. }
             | Self::TawthiqNaqis
             | Self::TalabNaqis => Khutwa::AadaMuhawala,
-            // Two refusals with no button, for two different reasons: the
+            // Three refusals with no button, for three different reasons: the
             // publisher's own Arabic is lifted only by a setting chosen
-            // deliberately elsewhere, and a withdrawn lineage is left behind by
-            // the contributor's own next submission, which its sentence names.
-            Self::LughaRasmiyaMawjuda { .. } | Self::TaqdeemMulgha { .. } => Khutwa::LaShay,
+            // deliberately elsewhere, a withdrawn lineage is left behind by the
+            // contributor's own next submission, which its sentence names, and
+            // a refused transition would answer a retry with the same refusal —
+            // the state it was refused from does not change by being asked
+            // twice, so offering "try again" would be offering the loop.
+            Self::LughaRasmiyaMawjuda { .. }
+            | Self::TaqdeemMulgha { .. }
+            | Self::IntiqalMarfudAmr { .. } => Khutwa::LaShay,
             Self::IrsalGhayrMuhayya { .. } | Self::MustawdaGhayrMafhum { .. } => {
                 Khutwa::FathIdadat {
                     qism: QismIdadat::Masadir,
@@ -3354,6 +3922,9 @@ impl Tafsir for KhataTaqdeemAmr {
                 matlub: MasarMatlub::MujalladLuba,
             },
             Self::IrtibatMutaadhdhir { .. } => Khutwa::TahaqquqSalamatLuba,
+            // The console's own review queue is where a submission is approved,
+            // which is the only thing that gives a cast something to publish.
+            Self::LaShayLilNashr => Khutwa::FathTashkhis,
         }
     }
 
@@ -3383,7 +3954,9 @@ impl Tafsir for KhataTaqdeemAmr {
             Self::IjraMajhul { ijra } => {
                 let _ = siyaq.insert("ijra".to_owned(), QeemaSiyaq::Nass(ijra.clone()));
             },
-            Self::IntiqalMarfudAmr { min, ila } => {
+            // The keys, not the wordings: a log filter matches on the state a
+            // record is stored under, and the words are the sentence's.
+            Self::IntiqalMarfudAmr { min, ila, .. } => {
                 let _ = siyaq.insert("min".to_owned(), QeemaSiyaq::Nass(min.clone()));
                 let _ = siyaq.insert("ila".to_owned(), QeemaSiyaq::Nass(ila.clone()));
             },
@@ -3396,7 +3969,15 @@ impl Tafsir for KhataTaqdeemAmr {
             Self::MustawdaGhayrMafhum { rasmi } => {
                 let _ = siyaq.insert("rasmi".to_owned(), QeemaSiyaq::Nass(rasmi.clone()));
             },
-            Self::MalikFaqat | Self::SababFarigh | Self::TawthiqNaqis | Self::TalabNaqis => {},
+            // Nothing to record on any of these: each is the absence of
+            // something — an owner key, a written reason, an authorization, the
+            // material beside a package, anything at all to publish — and
+            // naming the absence twice adds no fact.
+            Self::MalikFaqat
+            | Self::SababFarigh
+            | Self::TawthiqNaqis
+            | Self::TalabNaqis
+            | Self::LaShayLilNashr => {},
             Self::LughaRasmiyaMawjuda { ism } => {
                 let _ = siyaq.insert("luba".to_owned(), QeemaSiyaq::Nass(ism.clone()));
             },

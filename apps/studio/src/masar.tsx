@@ -4,22 +4,25 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  useNavigate,
   useRouterState,
 } from '@tanstack/react-router';
+import { listen } from '@tauri-apps/api/event';
 import type { JSX } from 'react';
 import { useEffect } from 'react';
 
 import type { MiftahQism } from '@/hayat/aqsam_idadat';
 import { huwaQism } from '@/hayat/aqsam_idadat';
-import { KhataJisr, nadi } from '@/hayat/jisr';
+import { HADATH_TAHDITH_MUTAH, KhataJisr, nadi } from '@/hayat/jisr';
 import { mafatih } from '@/hayat/istifsar';
-import { ittijah, t, wasm } from '@/lugha/lugha';
+import { ittijah, munassiqat, t, wasm } from '@/lugha/lugha';
+import { ansha } from '@/hayat/tanbihat';
 import { Hikal } from '@/mukawwinat/hikal';
 // The router's own two states are drawn through the failure block's own parts,
 // so the two cannot drift apart from every other failure in the product.
 import { KutlatFashal, SatrRamz } from '@/mukawwinat/kutlat_khata';
 import { RaasShasha } from '@/mukawwinat/raas_shasha';
-import type { Idadat, Kathafa, Lugha, Sima } from '@/mustalahat/awamir';
+import type { HalatTahdith, Idadat, Kathafa, Lugha, NizamArqam, Sima } from '@/mustalahat/awamir';
 import { anwaIntiqal, yufaddilTaqleelHaraka } from '@/nizam/haraka';
 import { IdadatShasha } from '@/shashat/idadat';
 import { Luba } from '@/shashat/luba';
@@ -571,6 +574,41 @@ function JidhrTakhtit(): JSX.Element {
       ihtiramHaraka: jawab.ihtiram_taqleel_haraka,
     });
   }, [idadat.data]);
+
+  // The launch-time update check's one visible effect: a notice raised only
+  // when a newer version is actually offered, carrying the way straight to the
+  // update section. Subscribed from the root route, which never unmounts, so a
+  // check that finishes after the first frame still lands. Digits fall back to
+  // Western, which the settings type documents as correct for build numbers.
+  const tanaqqul = useNavigate();
+  const arqam: NizamArqam = idadat.data?.arqam ?? 'latini';
+  useEffect(() => {
+    const munassiq = munassiqat(lugha, arqam);
+    const wad = listen<HalatTahdith>(HADATH_TAHDITH_MUTAH, (hadath) => {
+      if (hadath.payload.hala !== 'mutah') {
+        return;
+      }
+      ansha({
+        naw: 'maluma',
+        nass: t('idadat.tahdith.mutah', lugha, {
+          isdar: hadath.payload.isdar,
+          hajm: munassiq.hajm(hadath.payload.hajm),
+        }),
+        mudda: null,
+        amal: {
+          unwan: t('idadat.tahdith.urud', lugha),
+          nafidh: () => {
+            void tanaqqul({ to: '/idadat' });
+          },
+        },
+      });
+    });
+    return () => {
+      void wad.then((ilgha) => {
+        ilgha();
+      });
+    };
+  }, [tanaqqul, lugha, arqam]);
 
   const ikhtisarat = idadat.data?.ikhtisarat ?? { lawha: 'ctrl+k', taraju: 'ctrl+z' };
   return (

@@ -88,6 +88,21 @@ pub enum KhataTaqdeem {
         sabab: String,
     },
 
+    /// A package the owner approved did not reach the registry.
+    ///
+    /// Distinct from [`Self::NashrFashil`], which is the local seal failing.
+    /// This one is the cast and the push: the submission is approved, signed
+    /// and on this machine, and the catalogue another user reads does not have
+    /// it yet. Nothing is marked published when this is raised, so the same
+    /// publish run is simply made again once whatever it names is fixed.
+    #[error("the approved package did not reach the registry while {marhala}: {sabab}")]
+    NashrMustawdaFashil {
+        /// Which step.
+        marhala: &'static str,
+        /// Why.
+        sabab: String,
+    },
+
     /// Sandbox verification could not be run.
     #[error("sandbox verification could not run: {sabab}")]
     SandooqFashil {
@@ -126,6 +141,7 @@ impl Tafsir for KhataTaqdeem {
                     Self::NashrFashil { .. } => 8,
                     Self::SandooqFashil { .. } => 9,
                     Self::IrsalGhayrMuhayya { .. } => 10,
+                    Self::NashrMustawdaFashil { .. } => 11,
                 },
         )
     }
@@ -136,6 +152,10 @@ impl Tafsir for KhataTaqdeem {
             Self::BawwabaMaghlaqa { .. }
             | Self::TahdheerBilaIqrar { .. }
             | Self::IrsalGhayrMuhayya { .. } => Khutura::Tanbeeh,
+            // `NashrMustawdaFashil` lands here rather than beside `NashrFashil`
+            // above: nothing is half-published, the package is sealed and on
+            // disk, and the run is made again once the network or the forge
+            // allows it.
             _ => Khutura::Khatar,
         }
     }
@@ -160,6 +180,9 @@ impl Tafsir for KhataTaqdeem {
             Self::NashrFashil { .. } => {
                 "أخفق النشر وأُعيد ما رُفع إلى ما كان عليه؛ لا توجد رقعة نصف منشورة.".to_owned()
             },
+            Self::NashrMustawdaFashil { .. } => "لم تصل الرقعة المعتمدة إلى السجلّ؛ بقيت معتمدة \
+                 ومختومة على هذا الجهاز ولم يُعلَن نشرها. أعد النشر بعد معالجة السبب."
+                .to_owned(),
             Self::SandooqFashil { .. } => "تعذّر تشغيل التحقّق في البيئة المعزولة.".to_owned(),
             Self::IrsalGhayrMuhayya { naqis } => format!(
                 "قناة الرفع إلى السجلّ غير مجهّزة بعد: الحقل {naqis} فارغ في الإعدادات. بقي \
@@ -187,7 +210,9 @@ impl Tafsir for KhataTaqdeem {
         match self {
             Self::BawwabaMaghlaqa { .. } | Self::TahdheerBilaIqrar { .. } => Khutwa::FathNusus,
             Self::BayanNaqis { .. } | Self::Mukarrar { .. } => Khutwa::FathTashkhis,
-            Self::TawthiqFashil { .. } | Self::MustawdaRafad { .. } => Khutwa::AadaMuhawala,
+            Self::TawthiqFashil { .. }
+            | Self::MustawdaRafad { .. }
+            | Self::NashrMustawdaFashil { .. } => Khutwa::AadaMuhawala,
             Self::RafdBilaSabab | Self::NashrFashil { .. } | Self::SandooqFashil { .. } => {
                 Khutwa::IblaghLilMalik
             },
@@ -237,7 +262,7 @@ impl Tafsir for KhataTaqdeem {
                 daa("amal", QeemaSiyaq::Nass((*amal).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             },
-            Self::NashrFashil { marhala, sabab } => {
+            Self::NashrFashil { marhala, sabab } | Self::NashrMustawdaFashil { marhala, sabab } => {
                 daa("marhala", QeemaSiyaq::Nass((*marhala).to_owned()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));
             },

@@ -1069,6 +1069,9 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
             taqdeem_awamir::allaq_muraja,
             taqdeem_awamir::qarrir_muraja,
             taqdeem_awamir::iaatimad_muraja,
+            taqdeem_awamir::halat_nashr_mustawda,
+            taqdeem_awamir::tajawuz_nashr,
+            taqdeem_awamir::unshur_mustawda,
             taqdeem_awamir::sijill_muraja_kull,
             taqdeem_awamir::sandooq_thabbit,
             taqdeem_awamir::sandooq_atliq,
@@ -1304,6 +1307,20 @@ fn iqla(mujallad_sijillat: &mut Option<PathBuf>) -> Natija<()> {
                     }
                 }
             });
+
+            // The one thing `idadat.tahdith.fahs_ind_bad` switches on: a
+            // launch-time check of the update channel, off the window thread so
+            // the first frame is not held for a network round trip, that raises
+            // a notice only when a newer version is actually offered. The check
+            // reads the setting itself and is a no-op when it is off.
+            {
+                let tatbiq_handle = tauri::Manager::app_handle(tatbiq).clone();
+                let makhzan_idadat =
+                    tauri::Manager::state::<Arc<MakhzanIdadat>>(tatbiq).inner().clone();
+                tauri::async_runtime::spawn(async move {
+                    tahdith_awamir::fahs_bad_iqla(&tatbiq_handle, &makhzan_idadat).await;
+                });
+            }
 
             // The cold launch's half of the file association: this process was
             // started *by* a double-clicked `.ruqaa`, and the path is sitting in

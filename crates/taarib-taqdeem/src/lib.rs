@@ -21,6 +21,14 @@
 //!   [`nashr::HuzmaMakhtuma`], and it requires both the owner authority and the
 //!   owner's private key.
 //!
+//! Approving and publishing are two acts, not one. [`nashr::waqqi`] seals the
+//! package with the owner's key and [`nashr_mustawda`] puts it in the registry,
+//! and only the second is what makes it installable by anybody else. They are
+//! separate because the first is offline and always finishes once the owner has
+//! decided, while the second needs a network, a forge token and a push that can
+//! be refused — and a single state that means "in the catalogue" on a machine
+//! that was online and "in a folder" on one that was not is worse than either.
+//!
 //! The owner's own translations pass through the same submission object and the
 //! same publish step; no route through this crate skips either.
 
@@ -31,6 +39,7 @@ pub mod khata;
 pub mod muraja;
 pub mod musawwada;
 pub mod nashr;
+pub mod nashr_mustawda;
 pub mod sahb;
 pub mod sandooq;
 pub mod taaliq;
@@ -42,13 +51,17 @@ pub use hawiya::{HawiyatMusahim, Jalsa, SalahiyatMalik};
 pub use irsal::{IdadatIrsal, MarhalatIrsal, NatijatIrsal, TalabIrsal, irsal};
 pub use khata::{KhataTaqdeem, NatijatTaqdeem};
 pub use muraja::{
-    IjraMuraja, MarjiMuraja, QararIaatimad, QaydMuraja, SababRafd, SijillMuraja, iaatimad, urfud,
-    utlub_taadil,
+    IjraMuraja, MarjiMuraja, NawIjraMuraja, QararIaatimad, QaydMuraja, SababRafd, SijillMuraja,
+    iaatimad, urfud, utlub_taadil,
 };
 pub use musawwada::{
     HalatTaqdeem, Musawwada, MusawwadaMutaadhira, QaydMusawwada, SijillMusawwadat,
 };
 pub use nashr::{HuzmaMakhtuma, ItimadManshur, MarhalatNashr, TaqaddumNashr, waqqi};
+pub use nashr_mustawda::{
+    MadkhalMarfud, MadkhalNashr, MarhalatNashrMustawda, MulghaNashr, NatijatNashrMustawda,
+    SijillNashr, TalabNashrMustawda, unshur,
+};
 pub use sahb::{IshaarSahb, QaydSahb, SababSahb, ishab};
 pub use sandooq::{BeeatSandooq, HalatItlaq, HasilatSandooq, TaqreerSandooq};
 pub use taaliq::{Taaliq, TaaliqatMusawwada};

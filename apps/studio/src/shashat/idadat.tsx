@@ -22,6 +22,7 @@ import type { KhasaisRamz } from '@/mukawwinat/rumuz';
 import { ramz } from '@/mukawwinat/rumuz';
 import { Zuhur } from '@/mukawwinat/zuhur';
 import type {
+  HalatTahdith,
   Idadat,
   IdadatManassat,
   IdadatMuzawwid,
@@ -35,7 +36,6 @@ import type {
   NizamArqam,
   QanatTahdith,
   Sima,
-  TahdithHie,
 } from '@/mustalahat/awamir';
 
 import './idadat.css';
@@ -857,7 +857,7 @@ export function IdadatShasha(): JSX.Element {
     queryFn: () => nadi('khutut_mutaha'),
   });
 
-  const tahdith = useQuery<TahdithHie | null, KhataJisr>({
+  const tahdith = useQuery<HalatTahdith, KhataJisr>({
     queryKey: mafatih.tahdith,
     queryFn: () => nadi('tahaqquq_tahdith'),
     // The channel is a network round trip against a signed manifest; it is
@@ -866,24 +866,42 @@ export function IdadatShasha(): JSX.Element {
   });
 
   // The check on its own asks nothing of the reader when the screen opens; an
-  // explicit check answers where they are, whichever way it came out.
+  // explicit check answers where they are, whichever way it came out. A channel
+  // nobody has published and a machine that was told not to go looking are
+  // answers, not failures, so neither raises an alarm.
   const alaTahaqquq = (): void => {
     void tahdith.refetch().then((natija) => {
       if (natija.error !== null) {
         anshaKhatar(natija.error, lugha);
         return;
       }
-      if (natija.data === null || natija.data === undefined) {
-        ansha({ naw: 'najah', nass: t('idadat.tahdith.ahdath', lugha) });
+      const hala = natija.data;
+      if (hala === undefined) {
         return;
       }
-      ansha({
-        naw: 'maluma',
-        nass: t('idadat.tahdith.mutah', lugha, {
-          isdar: natija.data.isdar,
-          hajm: munassiq.hajm(natija.data.hajm),
-        }),
-      });
+      switch (hala.hala) {
+        case 'ahdath':
+          ansha({ naw: 'najah', nass: t('idadat.tahdith.ahdath', lugha) });
+          return;
+        case 'ghayr_manshura':
+          ansha({
+            naw: 'maluma',
+            nass: t('idadat.tahdith.ghayr_manshura', lugha),
+            tafsil: t('idadat.tahdith.ghayr_manshura_masdar', lugha, { masdar: hala.masdar }),
+          });
+          return;
+        case 'ghayr_muttasil':
+          ansha({ naw: 'maluma', nass: t('idadat.tahdith.ghayr_muttasil', lugha) });
+          return;
+        default:
+          ansha({
+            naw: 'maluma',
+            nass: t('idadat.tahdith.mutah', lugha, {
+              isdar: hala.isdar,
+              hajm: munassiq.hajm(hala.hajm),
+            }),
+          });
+      }
     });
   };
 
@@ -1023,9 +1041,93 @@ export function IdadatShasha(): JSX.Element {
     ? 'tahmil'
     : tahdith.error !== null
       ? 'khata'
-      : tahdith.data === null || tahdith.data === undefined
-        ? 'ahdath'
-        : 'mutah';
+      : (tahdith.data?.hala ?? 'ahdath');
+
+  // Five answers, not an offer and an error: a channel nobody has published and
+  // a machine that was told not to go looking are states with their own
+  // sentences, and only a source that could not be reached is worth a retry.
+  const rasmTahdith = (): ReactNode => {
+    if (tahdith.isPending) {
+      return (
+        <>
+          <span
+            className="idadat__haykal-satr idadat__haykal-satr--jumla zuhur-muakhkhar"
+            aria-hidden="true"
+          />
+          <span className="khafi">{t('idadat.tahdith.jari', lugha)}</span>
+        </>
+      );
+    }
+    if (tahdith.error !== null) {
+      return (
+        <KutlatKhata
+          unwan={t('idadat.tahdith.taadhur', lugha)}
+          khata={tahdith.error}
+          lugha={lugha}
+          aada={() => {
+            void tahdith.refetch();
+          }}
+        />
+      );
+    }
+    const hala = tahdith.data;
+    if (hala === undefined || hala.hala === 'ahdath') {
+      return <p className="idadat__nass-hadi">{t('idadat.tahdith.ahdath', lugha)}</p>;
+    }
+    if (hala.hala === 'ghayr_manshura') {
+      return (
+        <>
+          <p className="idadat__nass-hadi">{t('idadat.tahdith.ghayr_manshura', lugha)}</p>
+          <p className="idadat__nass-hadi mono-ltr" dir="ltr">
+            {t('idadat.tahdith.ghayr_manshura_masdar', lugha, { masdar: hala.masdar })}
+          </p>
+        </>
+      );
+    }
+    if (hala.hala === 'ghayr_muttasil') {
+      return <p className="idadat__nass-hadi">{t('idadat.tahdith.ghayr_muttasil', lugha)}</p>;
+    }
+    return (
+      <>
+        <p className="idadat__nass-hadi">
+          {t('idadat.tahdith.mutah', lugha, {
+            isdar: hala.isdar,
+            hajm: munassiq.hajm(hala.hajm),
+          })}
+        </p>
+        {hala.qabil_lil_tabdil ? (
+          <div className="idadat__saff-afal">
+            <button
+              type="button"
+              className="zir zir--tamyeez"
+              aria-busy={nazzil.isPending}
+              onClick={() => {
+                if (!nazzil.isPending) {
+                  nazzil.mutate();
+                }
+              }}
+            >
+              {t(nazzil.isPending ? 'idadat.tahdith.jari_tanzil' : 'idadat.tahdith.nazzil', lugha)}
+            </button>
+          </div>
+        ) : (
+          <p className="idadat__nass-hadi">{t('idadat.tahdith.mudar', lugha)}</p>
+        )}
+        <Zuhur maftuh={nazzil.data !== undefined} asl="fawq" className="idadat__najah">
+          {nazzil.data === undefined ? null : t('idadat.tahdith.jahiz', lugha)}
+        </Zuhur>
+        <Zuhur maftuh={nazzil.error !== null} asl="mahall">
+          {nazzil.error === null ? null : (
+            <KutlatKhata
+              unwan={t('idadat.tahdith.taadhur_tanzil', lugha)}
+              khata={nazzil.error}
+              lugha={lugha}
+            />
+          )}
+        </Zuhur>
+      </>
+    );
+  };
 
   return (
     <div className="idadat">
@@ -1667,6 +1769,26 @@ export function IdadatShasha(): JSX.Element {
                 />
               </div>
               <label className="idadat__saff">
+                <span className="idadat__tasmiya">
+                  {t('idadat.masadir.mustawda_taqdeem', lugha)}
+                </span>
+                <input
+                  className="idadat__haql mono-ltr"
+                  dir="ltr"
+                  value={nuskha.masadir.mustawda_taqdeem ?? ''}
+                  onChange={(hadath) => {
+                    const qeema = hadath.target.value;
+                    haddid((hali) => ({
+                      ...hali,
+                      masadir: {
+                        ...hali.masadir,
+                        mustawda_taqdeem: qeema === '' ? null : qeema,
+                      },
+                    }));
+                  }}
+                />
+              </label>
+              <label className="idadat__saff">
                 <span className="idadat__tasmiya">{t('idadat.masadir.muarrif_amil', lugha)}</span>
                 <input
                   className="idadat__haql mono-ltr"
@@ -1798,70 +1920,7 @@ export function IdadatShasha(): JSX.Element {
               </div>
               <div className="idadat__tahdith-hala idadat__mudakhkhal" role="status">
                 <Mashhad miftah={wajhTahdith} className="idadat__tahdith-mashhad">
-                  {tahdith.isPending ? (
-                    <>
-                      <span
-                        className="idadat__haykal-satr idadat__haykal-satr--jumla zuhur-muakhkhar"
-                        aria-hidden="true"
-                      />
-                      <span className="khafi">{t('idadat.tahdith.jari', lugha)}</span>
-                    </>
-                  ) : tahdith.error !== null ? (
-                    <KutlatKhata
-                      unwan={t('idadat.tahdith.taadhur', lugha)}
-                      khata={tahdith.error}
-                      lugha={lugha}
-                      aada={() => {
-                        void tahdith.refetch();
-                      }}
-                    />
-                  ) : tahdith.data === null || tahdith.data === undefined ? (
-                    <p className="idadat__nass-hadi">{t('idadat.tahdith.ahdath', lugha)}</p>
-                  ) : (
-                    <>
-                      <p className="idadat__nass-hadi">
-                        {t('idadat.tahdith.mutah', lugha, {
-                          isdar: tahdith.data.isdar,
-                          hajm: munassiq.hajm(tahdith.data.hajm),
-                        })}
-                      </p>
-                      {tahdith.data.qabil_lil_tabdil ? (
-                        <div className="idadat__saff-afal">
-                          <button
-                            type="button"
-                            className="zir zir--tamyeez"
-                            aria-busy={nazzil.isPending}
-                            onClick={() => {
-                              if (!nazzil.isPending) {
-                                nazzil.mutate();
-                              }
-                            }}
-                          >
-                            {t(
-                              nazzil.isPending
-                                ? 'idadat.tahdith.jari_tanzil'
-                                : 'idadat.tahdith.nazzil',
-                              lugha,
-                            )}
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="idadat__nass-hadi">{t('idadat.tahdith.mudar', lugha)}</p>
-                      )}
-                      <Zuhur maftuh={nazzil.data !== undefined} asl="fawq" className="idadat__najah">
-                        {nazzil.data === undefined ? null : t('idadat.tahdith.jahiz', lugha)}
-                      </Zuhur>
-                      <Zuhur maftuh={nazzil.error !== null} asl="mahall">
-                        {nazzil.error === null ? null : (
-                          <KutlatKhata
-                            unwan={t('idadat.tahdith.taadhur_tanzil', lugha)}
-                            khata={nazzil.error}
-                            lugha={lugha}
-                          />
-                        )}
-                      </Zuhur>
-                    </>
-                  )}
+                  {rasmTahdith()}
                 </Mashhad>
               </div>
             </QismIdadat>

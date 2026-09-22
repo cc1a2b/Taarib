@@ -887,6 +887,41 @@
   border-block-start: none;
 }
 
+/* Where the submission stands, said again inside the frame. The same fact is
+   already in the header, and the header is a scroll away from the controls on
+   any real case — so this carries it to where the decision is taken, and where
+   it also has to explain what the state leaves on offer. */
+.muraja__mawqif {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--misafa-4) var(--misafa-8);
+  margin: 0;
+  font-size: var(--qiyas-2);
+  line-height: var(--irtifa-qira);
+  color: var(--nass-2);
+  text-wrap: pretty;
+}
+
+.muraja__mawqif-wasm {
+  flex: none;
+  color: var(--nass-1);
+  font-weight: var(--wazn-mutawassit);
+}
+
+/* A state that has withdrawn a decision is not a failure and not a success; it
+   carries the same weight the gate's unresolved rows carry. */
+.muraja__mawqif--sahb_faqat .muraja__mawqif-wasm,
+.muraja__mawqif--nihaiya .muraja__mawqif-wasm,
+.muraja__mawqif--mughlaq .muraja__mawqif-wasm {
+  color: var(--tanbeeh);
+}
+
+.muraja__mawqif-sharh {
+  flex: 1 1 100%;
+  color: var(--nass-3);
+}
+
 .muraja__sabab {
   min-block-size: var(--misafa-56);
   resize: block;
@@ -987,4 +1022,24 @@
   font-size: var(--qiyas-2);
   line-height: var(--irtifa-qira);
   color: var(--nass-3);
+}
+
+/* --- publishing to the registry ----------------------------------------------
+   Sits under the queue rather than in the decision pane: approving is about one
+   submission, casting the catalogue is about all of them at once, and a control
+   that acts on everything does not belong beside one row's details. */
+
+.muraja__nashr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--misafa-8);
+  margin-block-start: var(--misafa-24);
+  padding-block-start: var(--misafa-16);
+  border-block-start: var(--samk-hadd) solid var(--hadd-daif);
+}
+
+/* Addresses wrap: a raw-content URL is longer than this column and truncating
+   it would hide the one thing the line is there to show. */
+.muraja__nashr .mono-ltr {
+  overflow-wrap: anywhere;
 }

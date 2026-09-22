@@ -112,6 +112,78 @@ impl<'de> Deserialize<'de> for MulakhkhasTaadil {
     }
 }
 
+/// One owner decision, named without the words that decision carries.
+///
+/// [`IjraMuraja`] cannot answer "which decisions does this submission accept":
+/// four of its five variants hold the reason, the summary or the comment that
+/// exists only once the decision has been made, so it can name an action
+/// already taken and never one merely on offer. This is the same five actions
+/// as subjects a state can be asked about before anything is written, which is
+/// what [`crate::musawwada::HalatTaqdeem::yaqbal`] answers and what the console
+/// draws its controls from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NawIjraMuraja {
+    /// A comment, which moves nothing.
+    Taaliq,
+    /// Returned to the contributor for revision.
+    TalabTaadil,
+    /// Rejected outright.
+    Rafd,
+    /// Approved.
+    Iaatimad,
+    /// A published revision withdrawn from circulation.
+    Sahb,
+}
+
+impl NawIjraMuraja {
+    /// Every decision, in the order the console lays its controls out.
+    pub const KULL: [Self; 5] = [
+        Self::Taaliq,
+        Self::Iaatimad,
+        Self::TalabTaadil,
+        Self::Rafd,
+        Self::Sahb,
+    ];
+
+    /// The stable key, which is the one the audit log is filtered and grouped
+    /// by and the one the console names a decision with.
+    #[must_use]
+    pub const fn ramz(self) -> &'static str {
+        match self {
+            Self::Taaliq => "taaliq",
+            Self::TalabTaadil => "talab_taadil",
+            Self::Rafd => "rafd",
+            Self::Iaatimad => "iaatimad",
+            Self::Sahb => "sahb",
+        }
+    }
+
+    /// The decision's name, in Arabic.
+    #[must_use]
+    pub const fn wasf_arabi(self) -> &'static str {
+        match self {
+            Self::Taaliq => "تعليق",
+            Self::TalabTaadil => "طلب تعديل",
+            Self::Rafd => "رفض",
+            Self::Iaatimad => "اعتماد",
+            Self::Sahb => "سحب بعد النشر",
+        }
+    }
+
+    /// The same, in English.
+    #[must_use]
+    pub const fn wasf_injilizi(self) -> &'static str {
+        match self {
+            Self::Taaliq => "comment",
+            Self::TalabTaadil => "changes requested",
+            Self::Rafd => "rejected",
+            Self::Iaatimad => "approved",
+            Self::Sahb => "revoked after publication",
+        }
+    }
+}
+
 /// What the owner did to a submission.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "ijra", rename_all = "snake_case")]
@@ -143,16 +215,22 @@ pub enum IjraMuraja {
 }
 
 impl IjraMuraja {
+    /// Which decision this is, without the words it carries.
+    #[must_use]
+    pub const fn naw(&self) -> NawIjraMuraja {
+        match self {
+            Self::Taaliq { .. } => NawIjraMuraja::Taaliq,
+            Self::TalabTaadil { .. } => NawIjraMuraja::TalabTaadil,
+            Self::Rafd { .. } => NawIjraMuraja::Rafd,
+            Self::Iaatimad => NawIjraMuraja::Iaatimad,
+            Self::Sahb { .. } => NawIjraMuraja::Sahb,
+        }
+    }
+
     /// The stable key the log is filtered and grouped by.
     #[must_use]
     pub const fn ramz(&self) -> &'static str {
-        match self {
-            Self::Taaliq { .. } => "taaliq",
-            Self::TalabTaadil { .. } => "talab_taadil",
-            Self::Rafd { .. } => "rafd",
-            Self::Iaatimad => "iaatimad",
-            Self::Sahb { .. } => "sahb",
-        }
+        self.naw().ramz()
     }
 
     /// The written reason or summary this action carries, when it carries one.
@@ -184,25 +262,13 @@ impl IjraMuraja {
     /// The action's name as the log renders it, in Arabic.
     #[must_use]
     pub const fn wasf_arabi(&self) -> &'static str {
-        match self {
-            Self::Taaliq { .. } => "تعليق",
-            Self::TalabTaadil { .. } => "طلب تعديل",
-            Self::Rafd { .. } => "رفض",
-            Self::Iaatimad => "اعتماد",
-            Self::Sahb { .. } => "سحب بعد النشر",
-        }
+        self.naw().wasf_arabi()
     }
 
     /// The same, in English.
     #[must_use]
     pub const fn wasf_injilizi(&self) -> &'static str {
-        match self {
-            Self::Taaliq { .. } => "comment",
-            Self::TalabTaadil { .. } => "changes requested",
-            Self::Rafd { .. } => "rejected",
-            Self::Iaatimad => "approved",
-            Self::Sahb { .. } => "revoked after publication",
-        }
+        self.naw().wasf_injilizi()
     }
 }
 

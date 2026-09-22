@@ -318,11 +318,73 @@ regression for every IL2CPP title, and the size win is not worth it.
 ## 6. Self-update
 
 New crate `crates/taarib-tahdith`. The channel manifest `tahdith.json` sits
-under the official registry root (the `masadir.rasmi` setting in
-`taarib_usus::idadat`), signed detached
-(Ed25519, `MudaqqiqEd25519`) by the identity the client trusts — a release
-client refuses a dev-signed channel exactly as it refuses a dev-signed patch.
-Per-target entries: `{ rabt, hajm, sha256, isdar, adna_isdar }`.
+under the official registry root — read through the same source chain as every
+other registry document, so local copies are asked first, the mirror stands in
+for the forge, and `masadir.wadaa_ghayr_muttasil` is honoured rather than worked
+around. It is signed **detached**: `tahdith.json.tawqee` beside it holds the
+64-byte Ed25519 signature as 128 lowercase hex digits, over the exact bytes of
+the manifest, by the identity the client trusts. A release client refuses a
+dev-signed channel exactly as it refuses a dev-signed patch. Both documents are
+taken from the *same* source, so a stale mirror's signature is never checked
+against a fresh forge's manifest.
+
+```json
+{
+  "isdar": 1,
+  "madakhil": [
+    {
+      "hadaf": "x86_64-pc-windows-msvc",
+      "qanat": "mustaqirr",
+      "isdar": "1.3.0",
+      "rabt": "https://github.com/cc1a2b/taarib/releases/download/v1.3.0/taarib-1.3.0-x64.exe",
+      "hajm": 41947136,
+      "sha256": "…64 lowercase hex…",
+      "adna_isdar": "1.0.0"
+    }
+  ]
+}
+```
+
+The root `isdar` is the **document format**, exactly as the revocation list
+carries its own; the entry `isdar` is the **product version** that entry offers.
+The version is per entry and not per document because that is what a channel is
+for: `tajribi` exists to run ahead of `mustaqirr`, and one version at the root
+would either hold the pre-release channel back or hand a released client a
+manifest with no entry it could use. `intiqa` filters by target and channel and
+takes the newest entry this build can actually install — the newest whose
+`adna_isdar` the running version already meets — so a channel can step a very
+old build forward through an intermediate release instead of refusing it.
+
+**Casting the manifest.** `crates/taarib-tahdith/src/bin/sabk_qanat.rs`, the
+maintainer-side counterpart to the reader and the only thing in the tree that
+writes a `tahdith.json`. It computes each entry's `hajm` and `sha256` from the
+package file itself — nothing a client verifies against is typed in — and signs
+through `taarib-khatm`, which stays the only crate that holds a private key or
+builds a signature. Casting a channel **replaces that channel**: the run reads
+the manifest already in the repository, verifies it against the same key it is
+about to sign with, drops the entries on the channel being cast, and adds its
+own. A manifest that does not verify is a refusal, not something to merge into.
+
+```sh
+cargo +1.95.0 run -p taarib-tahdith --bin sabk_qanat -- \
+  --jidhr ../taarib-registry --qanat mustaqirr --isdar 1.3.0 --adna 1.0.0 \
+  --asas 'https://github.com/cc1a2b/taarib/releases/download/v1.3.0/{ism}' \
+  --huzma dist/taarib-1.3.0-x64.exe      --hadaf x86_64-pc-windows-msvc \
+  --huzma dist/taarib-1.3.0-x86_64.AppImage --hadaf x86_64-unknown-linux-gnu
+```
+
+**Absent is not unreachable.** Three answers that are not an offer, each with
+its own remedy, because reporting them as one is what produced `TAARIB-E-8100`
+on a registry that had simply never had a channel cast into it:
+
+| condition | what the client does |
+| --- | --- |
+| every source answered and none carries `tahdith.json` (`404`, `410`, or no such file) | `HalatTahdith::GhayrManshura`, naming the sources asked. No error, no retry offered; `nazzil_tahdith` refuses by name with `TAARIB-E-8111` |
+| no source is configured to ask — offline mode with no local registry copy | `HalatTahdith::GhayrMuttasil`. The check was never made, and says so |
+| a source could not be reached, or broke mid-answer | `TAARIB-E-8100`, `QanatGhayrMutaha`, with retry — the only case where retrying means anything |
+
+A manifest published with no `tahdith.json.tawqee` beside it is a broken
+publication, not an absence: that source is passed over and the next one asked.
 
 Swap rules: download to `masarat.sandooq()`, verify hash, then per format —
 NSIS: run the verified installer silently on exit; AppImage: write beside the
@@ -349,7 +411,7 @@ unless they explicitly opt in to deleting it.
 | 3 steamdeck | `docs/tawzee/steamdeck.md` |
 | 4 macos | `docs/tawzee/macos.md`, `apps/studio/src-tauri/macos/taarib.entitlements` |
 | 5 staging | `crates/taarib-tajmee/` (whole crate), `crates/taarib-tathbeet/src/bayan_makhzan.rs`, `scripts/isdar.sh`, `assets/aqfal/qufl_bepinex.json`, `assets/aqfal/qufl_khutut.json` |
-| 6 update core | `crates/taarib-tahdith/src/{lib,bayan,jalb}.rs`, `crates/taarib-tahdith/Cargo.toml` |
+| 6 update core | `crates/taarib-tahdith/src/{lib,bayan,jalb}.rs`, `crates/taarib-tahdith/src/bin/sabk_qanat.rs`, `crates/taarib-tahdith/Cargo.toml` |
 | 7 update safety | `crates/taarib-tahdith/src/tabdil.rs` |
 | 8 restore-on-uninstall | `apps/studio/src-tauri/src/istiada_cli.rs` |
 | 9 first-run | `apps/studio/src-tauri/src/bidaya.rs` |

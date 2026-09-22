@@ -12,6 +12,13 @@ publish = false
 [lints]
 workspace = true
 
+[dev-dependencies]
+# The cast is exercised against a real registry directory on a real filesystem:
+# a first cast into an empty one, a second cast that must leave the other
+# channel standing, and a manifest signed by another key that must not be merged
+# into. All three are about files, and none of them is provable in memory.
+tempfile = { workspace = true }
+
 [dependencies]
 taarib-usus = { workspace = true }
 taarib-khatm = { workspace = true }

@@ -25,6 +25,13 @@ tauri-build = { workspace = true }
 taarib-aman = { workspace = true }
 taarib-khatm = { workspace = true }
 
+[dev-dependencies]
+# The update check's "the channel is absent" answer is produced by a registry
+# directory that genuinely has no manifest in it, on a real filesystem, so that
+# absence and unreachability are told apart by the same code that meets them in
+# the field rather than by a mocked status code.
+tempfile = { workspace = true }
+
 [dependencies]
 taarib-usus = { workspace = true, features = ["wajiha"] }
 taarib-mustalahat = { workspace = true, features = ["wajiha"] }

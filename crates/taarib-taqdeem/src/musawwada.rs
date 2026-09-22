@@ -21,6 +21,7 @@ use taarib_tarqee::taqrir_tajawuz::TaqrirTajawuz;
 use crate::bawwaba::IjtiyazTaqdeem;
 use crate::hawiya::HawiyatMusahim;
 use crate::khata::{KhataTaqdeem, NatijatTaqdeem};
+use crate::muraja::NawIjraMuraja;
 
 /// The draft schema this build writes and reads.
 pub const ISDAR_MUSAWWADA: u32 = 1;
@@ -153,6 +154,45 @@ impl HalatTaqdeem {
         )
     }
 
+    /// Whether this state accepts one owner decision.
+    ///
+    /// The single answer to "is this control worth offering", and the same
+    /// answer the transitions below gate on — each of them asks this rather
+    /// than restating its own condition, so a decision the console offers and
+    /// a transition that refuses it cannot become two different rules. An
+    /// offered decision that the state forbids is how the console came to
+    /// present *Approve* on an already published submission, which answered
+    /// `TAARIB-E-9068` when pressed.
+    #[must_use]
+    pub const fn yaqbal(&self, ijra: NawIjraMuraja) -> bool {
+        match ijra {
+            // A comment moves nothing, so no transition guards it; what it
+            // needs is somebody to address, and a local draft has not reached
+            // the owner yet.
+            NawIjraMuraja::Taaliq => !matches!(self, Self::Musawwada),
+            NawIjraMuraja::TalabTaadil | NawIjraMuraja::Rafd | NawIjraMuraja::Iaatimad => {
+                self.fi_intizar_almalik()
+            },
+            // Approved counts as well as published. Approval seals the package
+            // and a separate cast puts it in the registry; an approval the
+            // owner changed their mind about before that cast is past every
+            // other transition, so without this it would have no way out.
+            NawIjraMuraja::Sahb => {
+                matches!(self, Self::Manshura { .. } | Self::MawafaqYunshar { .. })
+            },
+        }
+    }
+
+    /// Every owner decision this state accepts, in the order the console lays
+    /// its controls out.
+    #[must_use]
+    pub fn afal_mutaha(&self) -> Vec<NawIjraMuraja> {
+        NawIjraMuraja::KULL
+            .into_iter()
+            .filter(|ijra| self.yaqbal(*ijra))
+            .collect()
+    }
+
     /// When the submission entered this state, where it was recorded.
     #[must_use]
     pub fn waqt(&self) -> Option<&str> {
@@ -182,6 +222,26 @@ impl HalatTaqdeem {
             | Self::Manshura { .. }
             | Self::Marfuda { .. }
             | Self::Mashuba { .. } => self.halat_ruqaa().wasf_arabi(),
+        }
+    }
+
+    /// The same, in English.
+    ///
+    /// Beside the Arabic because a refused transition names the state it is in
+    /// inside a sentence a person reads, and the slug this enum is keyed by is
+    /// not a word in either language.
+    #[must_use]
+    pub const fn wasf_injilizi(&self) -> &'static str {
+        match self {
+            Self::Musawwada => "a local draft",
+            Self::Muqaddama { .. } => "submitted",
+            Self::QaydMuraja { .. } => "under review",
+            Self::MatlubTaadil { .. } => "returned for revision",
+            Self::MawafaqYunshar { .. } => "approved, publishing",
+            Self::Manshura { .. } => "published",
+            Self::Marfuda { .. } => "rejected",
+            Self::Mashuba { .. } => "withdrawn by its contributor",
+            Self::Masbuba { .. } => "revoked after publication",
         }
     }
 }
@@ -217,12 +277,16 @@ pub enum SababManIntiqal {
 }
 
 /// A refused transition, carrying the submission it did not move.
+///
+/// Both states are kept whole rather than as their two keys: whoever shows
+/// this refusal has to word it, and `manshura` and `mawafaq_yunshar` are record
+/// keys rather than anything a person reads.
 #[derive(Debug, thiserror::Error)]
-#[error("a submission in {min} was not moved to {ila}")]
+#[error("a submission in {} was not moved to {}", .min.ism(), .ila.ism())]
 pub struct IntiqalMarfud {
     musawwada: Box<Musawwada>,
-    min: &'static str,
-    ila: &'static str,
+    min: HalatTaqdeem,
+    ila: HalatTaqdeem,
     sabab: SababManIntiqal,
 }
 
@@ -230,13 +294,37 @@ impl IntiqalMarfud {
     /// The state the submission is still in.
     #[must_use]
     pub const fn min(&self) -> &'static str {
-        self.min
+        self.min.ism()
+    }
+
+    /// That state, in Arabic.
+    #[must_use]
+    pub const fn min_arabi(&self) -> &'static str {
+        self.min.wasf_arabi()
+    }
+
+    /// The same, in English.
+    #[must_use]
+    pub const fn min_injilizi(&self) -> &'static str {
+        self.min.wasf_injilizi()
     }
 
     /// The state it was asked to move to.
     #[must_use]
     pub const fn ila(&self) -> &'static str {
-        self.ila
+        self.ila.ism()
+    }
+
+    /// That state, in Arabic.
+    #[must_use]
+    pub const fn ila_arabi(&self) -> &'static str {
+        self.ila.wasf_arabi()
+    }
+
+    /// The same, in English.
+    #[must_use]
+    pub const fn ila_injilizi(&self) -> &'static str {
+        self.ila.wasf_injilizi()
     }
 
     /// Why it did not move.
@@ -751,14 +839,11 @@ impl Musawwada {
             waqt: waqt.to_owned(),
         };
         if !ijtiyaz.yakhuss(&self) {
-            return Err(self.rafd(ila.ism(), SababManIntiqal::IjtiyazLaYakhussuha));
+            return Err(self.rafd(ila, SababManIntiqal::IjtiyazLaYakhussuha));
         }
         let muallaqa = self.adad_irtibatat_muallaqa();
         if muallaqa > 0 {
-            return Err(self.rafd(
-                ila.ism(),
-                SababManIntiqal::IrtibatMuallaq { adad: muallaqa },
-            ));
+            return Err(self.rafd(ila, SababManIntiqal::IrtibatMuallaq { adad: muallaqa }));
         }
         let masmuh = self.hala.qabila_lil_tahreer();
         self.hawwil(ila, waqt, masmuh)
@@ -798,14 +883,14 @@ impl Musawwada {
             mulakhkhas: mulakhkhas.to_owned(),
             nusus,
         };
-        if !self.hala.fi_intizar_almalik() {
-            return Err(self.rafd(ila.ism(), SababManIntiqal::HalaGhayrMulaima));
+        if !self.hala.yaqbal(NawIjraMuraja::TalabTaadil) {
+            return Err(self.rafd(ila, SababManIntiqal::HalaGhayrMulaima));
         }
         if mulakhkhas.trim().is_empty() {
             let sabab = SababManIntiqal::BayanNaqis {
                 haql: "a written summary of the changes",
             };
-            return Err(self.rafd(ila.ism(), sabab));
+            return Err(self.rafd(ila, sabab));
         }
         // The bump precedes the record, so the entry names the revision the
         // contributor is about to work on rather than the one being returned.
@@ -820,7 +905,7 @@ impl Musawwada {
     /// The submission unchanged, when it is not with the owner or the timestamp
     /// is blank.
     pub fn wufiq_alayha(self, waqt: &str) -> Result<Self, IntiqalMarfud> {
-        let masmuh = self.hala.fi_intizar_almalik();
+        let masmuh = self.hala.yaqbal(NawIjraMuraja::Iaatimad);
         self.hawwil(
             HalatTaqdeem::MawafaqYunshar {
                 waqt: waqt.to_owned(),
@@ -856,14 +941,14 @@ impl Musawwada {
             waqt: waqt.to_owned(),
             sabab: sabab.to_owned(),
         };
-        if !self.hala.fi_intizar_almalik() {
-            return Err(self.rafd(ila.ism(), SababManIntiqal::HalaGhayrMulaima));
+        if !self.hala.yaqbal(NawIjraMuraja::Rafd) {
+            return Err(self.rafd(ila, SababManIntiqal::HalaGhayrMulaima));
         }
         if sabab.trim().is_empty() {
             let naqis = SababManIntiqal::BayanNaqis {
                 haql: "a written reason for the rejection",
             };
-            return Err(self.rafd(ila.ism(), naqis));
+            return Err(self.rafd(ila, naqis));
         }
         self.hawwil(ila, waqt, true)
     }
@@ -886,26 +971,32 @@ impl Musawwada {
         )
     }
 
-    /// Records the owner revoking it after publication, which a written reason
-    /// is part of.
+    /// Records the owner pulling it, which a written reason is part of.
+    ///
+    /// Accepted from `MawafaqYunshar` as well as from `Manshura`: approval
+    /// seals the package and the registry cast publishes it, and between the
+    /// two there is a submission the owner has approved and may want back. If
+    /// this only took a published one, an approval the owner changed their mind
+    /// about would have no way out at all — it is past every contributor
+    /// transition and has not reached the one that would let it be revoked.
     ///
     /// # Errors
     ///
-    /// The submission unchanged, when it is not published, the reason is
-    /// blank, or the timestamp is blank.
+    /// The submission unchanged, when it is neither approved nor published, the
+    /// reason is blank, or the timestamp is blank.
     pub fn suhibat_min_almalik(self, waqt: &str, sabab: &str) -> Result<Self, IntiqalMarfud> {
         let ila = HalatTaqdeem::Masbuba {
             waqt: waqt.to_owned(),
             sabab: sabab.to_owned(),
         };
-        if !matches!(self.hala, HalatTaqdeem::Manshura { .. }) {
-            return Err(self.rafd(ila.ism(), SababManIntiqal::HalaGhayrMulaima));
+        if !self.hala.yaqbal(NawIjraMuraja::Sahb) {
+            return Err(self.rafd(ila, SababManIntiqal::HalaGhayrMulaima));
         }
         if sabab.trim().is_empty() {
             let naqis = SababManIntiqal::BayanNaqis {
                 haql: "a written reason for the revocation",
             };
-            return Err(self.rafd(ila.ism(), naqis));
+            return Err(self.rafd(ila, naqis));
         }
         self.hawwil(ila, waqt, true)
     }
@@ -917,13 +1008,13 @@ impl Musawwada {
         masmuh: bool,
     ) -> Result<Self, IntiqalMarfud> {
         if !masmuh {
-            return Err(self.rafd(ila.ism(), SababManIntiqal::HalaGhayrMulaima));
+            return Err(self.rafd(ila, SababManIntiqal::HalaGhayrMulaima));
         }
         if waqt.trim().is_empty() {
             let naqis = SababManIntiqal::BayanNaqis {
                 haql: "a timestamp",
             };
-            return Err(self.rafd(ila.ism(), naqis));
+            return Err(self.rafd(ila, naqis));
         }
         self.tareekh.push(QaydMusawwada {
             murajaa: self.murajaa,
@@ -934,8 +1025,8 @@ impl Musawwada {
         Ok(self)
     }
 
-    fn rafd(self, ila: &'static str, sabab: SababManIntiqal) -> IntiqalMarfud {
-        let min = self.hala.ism();
+    fn rafd(self, ila: HalatTaqdeem, sabab: SababManIntiqal) -> IntiqalMarfud {
+        let min = self.hala.clone();
         IntiqalMarfud {
             musawwada: Box::new(self),
             min,

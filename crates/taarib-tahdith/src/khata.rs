@@ -111,6 +111,19 @@ pub enum KhataTahdith {
         #[source]
         sabab: std::io::Error,
     },
+
+    /// Every source answered, and none of them carries a channel manifest.
+    ///
+    /// Distinct from [`Self::QanatGhayrMutaha`] because the remedies have
+    /// nothing in common: that one is a connection to retry, this one is a
+    /// document the owner has not published, and retrying it forever is what
+    /// the update check used to do.
+    #[error("no update channel is published; asked {masdar}")]
+    QanatGhayrManshura {
+        /// What was asked, so a publication that landed somewhere else is
+        /// visible from the message.
+        masdar: String,
+    },
 }
 
 impl Tafsir for KhataTahdith {
@@ -129,6 +142,7 @@ impl Tafsir for KhataTahdith {
                     Self::IstinafMutaadhdhir { .. } => 8,
                     Self::MisahaGhayrKafiya { .. } => 9,
                     Self::KhataMalaf { .. } => 10,
+                    Self::QanatGhayrManshura { .. } => 11,
                 },
         )
     }
@@ -189,6 +203,10 @@ impl Tafsir for KhataTahdith {
             Self::KhataMalaf { .. } => {
                 "تعذّرت قراءة ملف محلّي أو الكتابة إليه أثناء التحديث.".to_owned()
             }
+            Self::QanatGhayrManshura { .. } => {
+                "لا قناة تحديث منشورة لهذه النسخة بعد، فلا شيء يُنزَّل. نسختك الحالية تعمل كما هي، وتابع صفحة الإصدارات الرسمية."
+                    .to_owned()
+            }
         }
     }
 
@@ -203,7 +221,9 @@ impl Tafsir for KhataTahdith {
             Self::TawqeeGhayrSalih | Self::TawqeeTatwir | Self::TanzeelGhayrMutabiq { .. } => {
                 Khutwa::IblaghLilMalik
             },
-            Self::LaMadkhal { .. } | Self::AdnaIsdarFawq { .. } => Khutwa::LaShay,
+            Self::LaMadkhal { .. }
+            | Self::AdnaIsdarFawq { .. }
+            | Self::QanatGhayrManshura { .. } => Khutwa::LaShay,
             Self::MisahaGhayrKafiya { .. } => Khutwa::TahrirMasaha,
             Self::KhataMalaf { sabab, .. } => khutwa_io(sabab, MasarMatlub::MujalladRuqaa),
         }
@@ -244,6 +264,9 @@ impl Tafsir for KhataTahdith {
                 daa("mahsuba", QeemaSiyaq::Nass(mahsuba.clone()));
             },
             Self::HajmMufrit { muallan } => daa("muallan", QeemaSiyaq::Hajm(*muallan)),
+            Self::QanatGhayrManshura { masdar } => {
+                daa("masdar", QeemaSiyaq::Nass(masdar.clone()));
+            },
             Self::IstinafMutaadhdhir { rabt, sabab } => {
                 daa("rabt", QeemaSiyaq::Nass(rabt.clone()));
                 daa("sabab", QeemaSiyaq::Nass(sabab.clone()));

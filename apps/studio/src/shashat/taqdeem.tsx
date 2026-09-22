@@ -257,6 +257,8 @@ interface KhasaisFahs {
   readonly yajri: boolean;
   /** Whether this row's own acknowledgement is the one in flight. */
   readonly mashghul: boolean;
+  /** Whether the submission is still the contributor's to change. */
+  readonly qabilLilTahreer: boolean;
   readonly alaIqrar: (tahdheer: string, qeema: boolean) => void;
 }
 
@@ -267,6 +269,7 @@ function SaffFahs({
   munassiq,
   yajri,
   mashghul,
+  qabilLilTahreer,
   alaIqrar,
 }: KhasaisFahs): JSX.Element {
   const naw = nawBand(satr.hala);
@@ -304,9 +307,16 @@ function SaffFahs({
         ) : null}
         {/* A re-prepare can turn a warning into a pass or a pass into a
             warning; the acknowledgement arrives and leaves with the state
-            instead of blinking into a row that was already being read. */}
+            instead of blinking into a row that was already being read. It
+            leaves for good once the submission is out of the contributor's
+            hands: the only thing an acknowledgement unlocks is the submit
+            button, and that button is gone by then. */}
         <Zuhur
-          maftuh={!satr.hasim && (satr.hala === 'yantazir_iqrar' || satr.hala === 'muqarr')}
+          maftuh={
+            qabilLilTahreer &&
+            !satr.hasim &&
+            (satr.hala === 'yantazir_iqrar' || satr.hala === 'muqarr')
+          }
           className="taqdeem__iqrar-hawiya"
         >
           <label className="taqdeem__iqrar" aria-busy={mashghul}>
@@ -559,7 +569,9 @@ export function Taqdeem(): JSX.Element {
               <MasarKhutuwat khutuwat={khutuwat} lugha={lugha} munassiq={munassiq} />
               {bayanat !== null ? (
                 <p className="taqdeem__mawqif">
-                  <span className="taqdeem__mawqif-wasm">{bayanat.hala_arabi}</span>
+                  <span className="taqdeem__mawqif-wasm">
+                    {lugha === 'arabi' ? bayanat.hala_arabi : bayanat.hala_injilizi}
+                  </span>
                   <span className="taqdeem__mawqif-murajaa">
                     {t('taqdeem.hala.murajaa', lugha, {
                       raqm: munassiq.raqm(bayanat.murajaa),
@@ -621,7 +633,12 @@ export function Taqdeem(): JSX.Element {
                       {bayanat.tareekh.map((intiqal, fihris) => (
                         <li key={`${intiqal.ila}-${String(fihris)}`}>
                           <span className="taqdeem__waqt mono-ltr">{intiqal.waqt}</span>
-                          <span className="taqdeem__intiqal">{intiqal.ila}</span>
+                          {/* The worded state, not its key: this is a list of
+                              things that happened to the contributor's own
+                              work, and `mawafaq_yunshar` is not one of them. */}
+                          <span className="taqdeem__intiqal">
+                            {lugha === 'arabi' ? intiqal.ila_arabi : intiqal.ila_injilizi}
+                          </span>
                         </li>
                       ))}
                     </ol>
@@ -796,6 +813,7 @@ export function Taqdeem(): JSX.Element {
                         munassiq={munassiq}
                         yajri={iqrar.isPending}
                         mashghul={iqrar.isPending && iqrar.variables?.tahdheer === satr.band}
+                        qabilLilTahreer={bayanat.qabila_lil_tahreer}
                         alaIqrar={(tahdheer, qeema) => {
                           iqrar.mutate({ tahdheer, qeema });
                         }}
@@ -1018,7 +1036,9 @@ export function Taqdeem(): JSX.Element {
                       >
                         <p className="taqdeem__musahama-raas">
                           <span className="taqdeem__musahama-unwan">{musahama.unwan}</span>
-                          <span className="taqdeem__musahama-hala">{musahama.hala_arabi}</span>
+                          <span className="taqdeem__musahama-hala">
+                            {lugha === 'arabi' ? musahama.hala_arabi : musahama.hala_injilizi}
+                          </span>
                         </p>
                         <p className="taqdeem__musahama-luba">
                           {musahama.ism_luba}

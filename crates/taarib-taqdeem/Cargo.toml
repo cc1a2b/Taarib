@@ -43,3 +43,12 @@ tracing = { workspace = true }
 # beside it. `RuqaaId::jadeeda` mints a fresh v7 each call, so the identity has
 # to be written out.
 uuid = { workspace = true }
+# The registry publish is exercised against a real git remote on a real
+# filesystem — a fresh one, one already carrying a catalogue, and one that
+# refuses the push — because a rejection reported only through git2's update
+# callback is exactly the failure a mock would not reproduce.
+tempfile = { workspace = true }
+# The contributor identity in a package's manifest is the signing key's
+# fingerprint in hexadecimal, and the fixture has to spell it the same way the
+# caster reads it back.
+hex = { workspace = true }
