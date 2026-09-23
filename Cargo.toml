@@ -178,7 +178,7 @@ sha2 = "0.10"
 rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal", "pollster"] }
 ed25519-dalek = { version = "2.2", features = ["rand_core", "pkcs8", "serde"] }
 rand = "0.9"
-zstd = "0.13"
+zstd = "0.14"
 flate2 = "1.1"
 # UnityFS block compression. Every bundle a game shipped this decade uses LZ4 or
 # LZ4HC for its blocks, and both decode with the same raw-block decoder. Pure
