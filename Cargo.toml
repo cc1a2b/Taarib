@@ -120,7 +120,7 @@ image = { version = "0.25.10", default-features = false, features = ["png", "jpe
 # The portable recognizer for the overlay tier. Pure Rust with its own inference
 # runtime, so the fallback path needs no system OCR and no native toolchain on a
 # machine that has neither.
-ocrs = "0.12.2"
+ocrs = "0.13.0"
 
 # --- serialization / schema -------------------------------------------------
 serde = { version = "1.0", features = ["derive", "rc"] }
