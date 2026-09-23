@@ -285,7 +285,7 @@ console_error_panic_hook = "0.1"
 # exact version `windows` depends on: two copies in the graph would make the
 # operation the OCR engine returns a different type from the one waited on.
 [workspace.dependencies.windows-future]
-version = "=0.3.2"
+version = "=0.100.0"
 
 [workspace.dependencies.windows]
 version = "0.62.2"
