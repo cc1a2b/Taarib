@@ -43,9 +43,11 @@
 # one backend and architecture are byte-identical trees that an object named by
 # its own hash stores once.
 #
-# Artifacts are renamed per set: `Taarib_<v>_<arch>-nahif.<ext>` and
-# `-kamil.<ext>`. Neither keeps the bare name, so a release page can never offer
-# one of them under a name that says nothing about which it is.
+# When both sets are built, artifacts are renamed per set:
+# `Taarib_<v>_<arch>-nahif.<ext>` and `-kamil.<ext>`. Neither keeps the bare
+# name, so a release page can never offer one of them under a name that says
+# nothing about which it is. A run that builds one set keeps the bare name,
+# because there is no second artifact for it to be mistaken for.
 #
 # Any stage may be skipped with TAARIB_TAKHATTI=unity,wasm — which is safe by
 # construction, because `tajmee` refuses to write a manifest over a tree that is
@@ -529,14 +531,22 @@ if ! tuhmal huzma; then
     ( cd apps/studio \
         && "$TAURI" build --target "$hadaf" --config ../../target/isdar-tajawuz.json \
           ${SIMAT_ISDAR[@]+"${SIMAT_ISDAR[@]}"} )
-    samm_huzam "$taqm_hali" "$JIDHR_HUZAM"
+    if [ "${#ATQUM[@]}" -gt 1 ]; then
+      samm_huzam "$taqm_hali" "$JIDHR_HUZAM"
+      lahiqa="-$taqm_hali"
+    else
+      lahiqa=""
+    fi
 
     # The .deb's data member, recompressed. Skipped with a named line rather
     # than silently when the two tools are absent: a release that shipped a
     # 257 MB package where a 170 MB one was intended is not a failure anybody
     # would notice from the artifact list.
-    for deb in "$JIDHR_HUZAM/deb/"*-"$taqm_hali".deb; do
+    for deb in "$JIDHR_HUZAM/deb/"*"$lahiqa".deb; do
       [ -f "$deb" ] || continue
+      if [ -z "$lahiqa" ]; then
+        case "$deb" in *-nahif.deb|*-kamil.deb) continue ;; esac
+      fi
       if command -v ar >/dev/null 2>&1 && command -v xz >/dev/null 2>&1; then
         adghat_deb "$deb"
       else

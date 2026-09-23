@@ -1,7 +1,7 @@
 {
   "name": "taarib-studio",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "استوديو تعريب — the Taarib desktop interface: Arabic-first, right-to-left, dark by default.",
   "license": "MPL-2.0",
